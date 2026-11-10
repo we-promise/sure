@@ -38,37 +38,20 @@ class Chat < ApplicationRecord
 
   class << self
     def start!(prompt, model:)
-      # Ensure we have a valid model by using the default if none provided
-      effective_model = model.presence || default_model
-
-      create!(
-        title: generate_title(prompt),
-        messages: [ UserMessage.new(content: prompt, ai_model: effective_model) ]
-      )
+      chat = new(title: generate_title(prompt))
+      effective_model = model.presence || default_model(family: chat.user&.family)
+      chat.messages.build(type: "UserMessage", content: prompt, ai_model: effective_model)
+      chat.save!
+      chat
     end
 
     def generate_title(prompt)
       prompt.first(80)
     end
 
-    # Returns the default AI model to use for chats.
-    # Resolved from the configured llm_provider so installs that swap providers
-    # don't have to manually update every chat default. Falls through to a
-    # provider that actually has credentials configured, otherwise the chosen
-    # provider's classes would later raise "no LLM provider supports model …"
-    # even when the other provider is configured.
-    def default_model
-      prefers_anthropic = Setting.llm_provider == "anthropic"
-
-      if prefers_anthropic && Provider::Anthropic.configured?
-        Provider::Anthropic.effective_model.presence || Setting.anthropic_model
-      elsif Provider::Openai.configured?
-        Provider::Openai.effective_model.presence || Setting.openai_model
-      elsif Provider::Anthropic.configured?
-        Provider::Anthropic.effective_model.presence || Setting.anthropic_model
-      else
-        Provider::Openai.effective_model.presence || Setting.openai_model
-      end
+    # Resolve from the chat owner's family, including callers outside a request.
+    def default_model(family: nil)
+      Provider::Registry.default_llm_model(family: family)
     end
   end
 

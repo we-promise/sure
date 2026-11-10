@@ -22,8 +22,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
   test "shows default status caption on load and custom caption when edited" do
     visit settings_ai_prompts_path
 
-    all("summary").first.click
-    editor = all("[data-controller='ai-prompt-editor']").first
+    editor = open_prompt_editor(:main_system_prompt)
 
     within editor do
       assert_text "Using the built-in default"
@@ -41,8 +40,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
   test "user can edit both provider prompts from one editor" do
     visit settings_ai_prompts_path
 
-    all("summary", minimum: 3)[1].click
-    editor = find("[data-controller='ai-prompt-editor']")
+    editor = open_prompt_editor(:transaction_categorizer)
     anthropic_default = @user.family.ai_prompt_default(:categorizer_anthropic)
 
     within editor do
@@ -71,8 +69,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
   test "saving custom prompt can be cancelled via save confirmation dialog" do
     visit settings_ai_prompts_path
 
-    all("summary", minimum: 3)[1].click
-    editor = find("[data-controller='ai-prompt-editor']")
+    editor = open_prompt_editor(:transaction_categorizer)
 
     within editor do
       fill_in "Prompt", with: "Unsaved prompt"
@@ -93,8 +90,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
   test "saving custom prompt with dont show again remembers preference in subsequent saves" do
     visit settings_ai_prompts_path
 
-    all("summary", minimum: 3)[1].click
-    editor = find("[data-controller='ai-prompt-editor']")
+    editor = open_prompt_editor(:transaction_categorizer)
 
     within editor do
       fill_in "Prompt", with: "First custom prompt"
@@ -111,8 +107,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     assert_text "AI prompts updated"
 
     # Subsequent save with another custom prompt should bypass the dialog
-    all("summary", minimum: 3)[1].click
-    editor = find("[data-controller='ai-prompt-editor']")
+    editor = open_prompt_editor(:transaction_categorizer)
     within editor do
       fill_in "Prompt", with: "Second custom prompt"
     end
@@ -126,8 +121,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
   test "resetting prompt confirms with custom modal and restores default text" do
     visit settings_ai_prompts_path
 
-    all("summary", minimum: 3)[1].click
-    editor = find("[data-controller='ai-prompt-editor']")
+    editor = open_prompt_editor(:transaction_categorizer)
     default_text = @user.family.ai_prompt_default(:categorizer_openai)
 
     within editor do
@@ -169,8 +163,7 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
   test "displays formatted error and maintains red character counter when prompt exceeds limit" do
     visit settings_ai_prompts_path
 
-    all("summary").first.click
-    editor = all("[data-controller='ai-prompt-editor']").first
+    editor = open_prompt_editor(:main_system_prompt)
 
     within editor do
       find("textarea").fill_in with: "x" * 20_001
@@ -183,4 +176,13 @@ class Settings::AiPromptsTest < ApplicationSystemTestCase
     # Section with error remains open with red counter
     assert_selector "[data-controller='ai-prompt-editor'] [data-ai-prompt-editor-target='counter'].text-destructive", text: "20,001 / 20,000"
   end
+
+  private
+
+    def open_prompt_editor(section)
+      summary = find("summary", text: I18n.t("settings.ai_prompts.show.#{section}.title"))
+      disclosure = summary.ancestor("details")
+      summary.click unless disclosure.matches_css?("[open]")
+      disclosure.find("[data-controller='ai-prompt-editor']")
+    end
 end

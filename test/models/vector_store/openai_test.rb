@@ -129,4 +129,41 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     assert_includes @adapter.supported_extensions, ".docx"
     assert_includes @adapter.supported_extensions, ".csv"
   end
+
+  test "family client pins official routing and removes inherited operator headers" do
+    ::OpenAI.configuration.stubs(:uri_base).returns("https://operator.example/v1")
+    ::OpenAI.configuration.stubs(:organization_id).returns("operator-org")
+    ::OpenAI.configuration.stubs(:admin_token).returns("operator-admin")
+    ::OpenAI.configuration.stubs(:api_type).returns(:azure)
+    ::OpenAI.configuration.stubs(:api_version).returns("operator-version")
+    ::OpenAI.configuration.stubs(:extra_headers).returns("X-Operator-Secret" => "operator-secret")
+    request = stub_request(:post, "https://api.openai.com/v1/vector_stores")
+      .with do |outbound|
+        outbound.headers["Authorization"] == "Bearer family-key" &&
+          outbound.headers["Openai-Organization"].blank? &&
+          outbound.headers["Api-Key"].blank? &&
+          !outbound.headers.to_json.include?("operator-")
+      end.to_return(status: 200, body: { id: "vs_family" }.to_json, headers: { "Content-Type" => "application/json" })
+
+    adapter = VectorStore::Openai.new(access_token: "family-key", uri_base: "https://ignored.test", use_global_settings: false)
+    response = adapter.create_store(name: "Family documents")
+
+    assert response.success?
+    assert_requested request
+  end
+
+  test "family provider failures do not expose echoed credentials" do
+    client = mock("client")
+    stores = mock("stores")
+    client.stubs(:vector_stores).returns(stores)
+    stores.expects(:create).raises(StandardError, "Invalid API key: family-secret")
+    adapter = VectorStore::Openai.new(access_token: "family-secret", use_global_settings: false)
+    adapter.instance_variable_set(:@client, client)
+    Rails.logger.expects(:warn).with("Family document provider request failed: StandardError")
+
+    response = adapter.create_store(name: "Documents")
+
+    assert_not response.success?
+    assert_equal "Document provider request failed", response.error.message
+  end
 end

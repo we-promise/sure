@@ -5,7 +5,7 @@ nb:
       sign_out: Logg ut
       setup: Oppsett
       preferences: Innstillinger
-      goals: Mål
+      tools: Verktøy/KI
       start: Start
     logout:
       sign_out: Logg ut
@@ -33,17 +33,7 @@ nb:
       currency: Valuta
       date_format: Datoformat
       submit: Fullfør
-    goals:
-      title: Hva bringer deg hit?
-      subtitle: Velg ett eller flere mål du har med %{product_name} som ditt personlige økonomverktøy.
-      unified_accounts: Se alle kontoene mine på ett sted
-      cashflow: Forstå kontantstrøm og utgifter
-      budgeting: Administrere økonomiplaner og budsjetter
-      partner: Administrere økonomi med en partner
-      investments: Følge investeringer
-      ai_insights: La AI hjelpe meg å forstå økonomien min
-      optimization: Analysere og optimalisere kontoer
-      reduce_stress: Redusere økonomisk stress eller angst
+    tools:
       submit: Neste
     trial:
       title: Prøv Sure i 45 dager

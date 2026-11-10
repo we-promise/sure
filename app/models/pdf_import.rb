@@ -214,9 +214,8 @@ class PdfImport < Import
   end
 
   def process_with_ai
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # process_pdf (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
+    # Background processing resolves credentials from the import's family.
+    provider = Provider::Registry.preferred_llm_provider(family: family)
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
 
@@ -242,9 +241,8 @@ class PdfImport < Import
   def extract_transactions
     return unless statement_with_transactions?
 
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
+    # Extraction uses the same family credentials as document processing.
+    provider = Provider::Registry.preferred_llm_provider(family: family)
     raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
 
     response = provider.extract_bank_statement(
@@ -384,10 +382,11 @@ class PdfImport < Import
     already_recorded_count.positive?
   end
 
-  def send_next_steps_email(user)
+  def send_next_steps_email(user, document_uploaded_for_search: false)
     PdfImportMailer.with(
       user: user,
-      pdf_import: self
+      pdf_import: self,
+      document_uploaded_for_search: document_uploaded_for_search
     ).next_steps.deliver_later
   end
 

@@ -62,7 +62,7 @@ class RecurringTransaction
       end
 
       def llm_provider
-        Provider::Registry.preferred_llm_provider
+        Provider::Registry.preferred_llm_provider(family: family)
       end
 
       def charges_from(entries)

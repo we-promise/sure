@@ -103,7 +103,56 @@ class Api::V1::MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "omitted models use each authenticated user family configuration" do
+    [ [ @user, "openai", "family-openai-model" ], [ users(:empty), "anthropic", "family-anthropic-model" ] ].each do |user, provider, model|
+      user.family.create_ai_configuration!(provider: provider, model: model, api_key: "test-family-key")
+      api_key = create_api_key(user)
+      chat = user.chats.create!(title: "Family chat")
+      post "/api/v1/chats/#{chat.id}/messages",
+        params: { content: "Hello" },
+        headers: api_headers(api_key)
+
+      assert_response :created
+      assert_equal model, chat.messages.find(JSON.parse(response.body)["id"]).ai_model
+    end
+  end
+
+  test "explicit model overrides the family default" do
+    @user.family.create_ai_configuration!(provider: "openai", model: "family-model", api_key: "test-family-key")
+    api_key = create_api_key(@user)
+    chat = @chat
+    post "/api/v1/chats/#{chat.id}/messages",
+        params: { content: "Hello", model: "requested-model" },
+        headers: api_headers(api_key)
+
+    assert_response :created
+    assert_equal "requested-model", chat.messages.find(JSON.parse(response.body)["id"]).ai_model
+  end
+
+  test "omitted model preserves the installation default without a family configuration" do
+    assert_nil @user.family.ai_configuration
+    Setting.stubs(:llm_provider).returns("openai")
+    Provider::Openai.stubs(:configured?).returns(true)
+    Provider::Openai.stubs(:effective_model).returns("legacy-global-model")
+    api_key = create_api_key(@user)
+    chat = @chat
+    post "/api/v1/chats/#{chat.id}/messages",
+        params: { content: "Hello" },
+        headers: api_headers(api_key)
+
+    assert_response :created
+    assert_equal "legacy-global-model", chat.messages.find(JSON.parse(response.body)["id"]).ai_model
+  end
+
   private
+
+    def api_headers(api_key)
+      { "X-Api-Key" => api_key.display_key }
+    end
+
+    def create_api_key(user)
+      ApiKey.create!(user: user, name: "Family AI Test Key", scopes: [ "read_write" ], source: "web", display_key: ApiKey.generate_secure_key)
+    end
 
     def bearer_auth_header(token)
       { "Authorization" => "Bearer #{token.token}" }

@@ -5,7 +5,7 @@ en:
       sign_out: Sign out
       setup: Setup
       preferences: Preferences
-      goals: Goals
+      tools: Tools/AI
       start: Start
     logout:
       sign_out: Sign out
@@ -38,17 +38,112 @@ en:
       currency: Currency
       date_format: Date format
       submit: Complete
-    goals:
-      title: What brings you here?
-      subtitle: Select one or more goals that you have with using %{product_name} as your personal finance tool.
-      unified_accounts: See all my accounts in one place
-      cashflow: Understand cashflow and expenses
-      budgeting: Manage financial plans and budgeting
-      partner: Manage finances with a partner
-      investments: Track investments
-      ai_insights: Let AI help me understand my finances
-      optimization: Analyze and optimize accounts
-      reduce_stress: Reduce financial stress or anxiety
+    tools:
+      welcome_title: Make yourself at home.
+      welcome_subtitle: A couple of choices to help you get started with %{product_name}.
+      errors_title: Please review your choices
+      selected_count: "%{number} selected"
+      tools_question: What tool(s) do you use to manage your finances?
+      select_tools: Select your tools
+      search_label: Search finance tools
+      search_placeholder: Search tools, spreadsheets, or other…
+      no_results: No matching tools. Try another search or choose Other.
+      done: Done
+      other_label: Other tool (optional)
+      other_placeholder: Name of your tool
+      ai_question: How would you like to use %{product_name}?
+      default_badge: Default
+      ai_modes:
+        none:
+          label: No AI
+          description: Manage your finances without the in-app assistant.
+          title: Continue without the AI assistant
+          help: This turns off the in-app assistant for your user account. Other LLM-powered features, household automation, and provider settings are unchanged.
+        builtin:
+          label: Built-in AI
+          description: Use the assistant available inside Sure.
+          title: Set up AI without leaving onboarding
+          help: Choose a provider and save a key for your family below. Your in-app assistant is enabled when you continue.
+        external:
+          label: External Agent harness (OpenClaw, Instinct, etc.)
+          description: Let your preferred assistant guide setup, with your permission.
+          title: Give your agent a starting point
+          help: Copy these instructions into your assistant. Selecting this option does not connect an agent or grant access to your instance. Your in-app assistant stays off. Other LLM-powered features and provider settings are unchanged.
+      provider_setup:
+        provider_label: Provider
+        providers:
+          openai: OpenAI
+          anthropic: Anthropic
+          openrouter: OpenAI-compatible API
+        key_names:
+          openrouter: OpenAI-compatible
+        key_label: "%{provider} API key"
+        key_placeholder: "Enter your %{provider} API key"
+        model_label: OpenAI-compatible API model ID (required)
+        model_placeholder: "For example, openai/gpt-4.1-mini"
+        model_help: Enter the exact model ID from your OpenAI-compatible API. No model is selected automatically. Model capabilities vary.
+        openrouter_document_search: OpenAI-compatible API document search is not configured here. PDF analysis can use extracted text with the selected model; native PDF and vision support are not assumed.
+        document_index_notice: Document search is available here only with OpenAI. A different OpenAI API key starts a separate index. Existing files and indexes are kept, storage charges may continue, and you may need to upload originals again. Documents are not migrated automatically.
+        save_and_test: Save and test connection
+        details: How saving and testing works
+        key_hidden: A saved key is never displayed here. Saving a new key replaces it.
+        scope: Saving changes the provider, model, and encrypted API key only for your family, including its LLM-powered features. Other families and installation defaults are unchanged. The access check sends your key to the selected provider’s official API (OpenAI, Anthropic, or OpenAI-compatible API). No financial data is sent for this check.
+        continue_help: Saving is optional — you can continue without configuring a provider.
+        unavailable: A family administrator can configure your family’s provider key. Ask your family administrator for help.
+        current_family: Your family currently uses its own %{provider} key. Saving replaces it for your family only.
+        current_default: Your family currently uses this installation’s default AI setup (%{provider}). Saving a key overrides it for your family only.
+        current_none: No AI provider is configured for your family yet. Saving a key enables LLM-powered features for your family only.
+        messages:
+          checking: Checking provider access…
+          saved: Provider access checked and encrypted key saved for your family.
+          invalid_provider: Choose OpenAI, Anthropic, or OpenAI-compatible API.
+          missing_key: Enter an API key for the selected provider.
+          missing_model: Enter an OpenAI-compatible API model ID before saving.
+          invalid_model: Enter a valid OpenAI-compatible API model ID, such as openai/gpt-4.1-mini.
+          configuration_changed: Your family’s provider settings changed while this check was running. Review the current settings and try again.
+          timed_out: The request timed out. Your family’s provider settings may still have been saved. Reload to review the selected provider and model before trying again.
+          connection_failed: Provider access could not be confirmed. The new key was not saved. Check the key and provider model access, then try again.
+          save_failed: Your family’s key could not be saved. Try again.
+          unauthorized: You do not have permission to configure your family’s provider.
+          request_failed: The result could not be confirmed. Reload to review your family’s selected provider and model before trying again.
+      agent_instructions_label: Agent instructions
+      agent_instructions: |-
+        Help me get started with %{product_name} at %{instance_url}.
+
+        You can connect using either of these supported tools:
+
+        • MCP: Connect your MCP client to %{mcp_url}. Connection settings are at %{mcp_settings_url}. Use the client’s OAuth flow and let me sign in and approve access. The connection requests read/write access, so explain that before I approve it. Once connected, discover the available tools.
+
+        • Sure CLI: If you have terminal access, see https://github.com/we-promise/sure-cli. With my permission, install it with `brew install we-promise/tap/sure-cli`, then set the instance with `sure-cli config set api_url %{cli_instance_url}`. Have me run `sure-cli login` in my own terminal, then use `sure-cli --help` to explore the available commands.
+
+        Start by reviewing what’s already in Sure and ask what I want to bring in. Help me connect an account or import supported transactions, checking for duplicates first. Explain proposed changes and get my approval before importing, editing, or deleting data. Use dry-run previews where available.
+
+        Let me handle bank sign-in and consent. Never ask me to paste passwords, API keys, or tokens into chat.
+      copy: Copy instructions
+      copied: Instructions copied.
+      copy_fallback: Copy was unavailable. The instructions are selected so you can copy them manually.
+      tools:
+        quicken_classic: Quicken Classic
+        quicken_simplifi: Quicken Simplifi
+        monarch_money: Monarch Money
+        ynab: YNAB
+        firefly_iii: Firefly III
+        actual_budget: Actual Budget
+        maybe: Maybe
+        lunch_money: Lunch Money
+        copilot_money: Copilot Money
+        pocketsmith: PocketSmith
+        gnucash: GnuCash
+        money_manager_ex: Money Manager Ex
+        banktivity: Banktivity
+        moneywiz: MoneyWiz
+        empower: Empower / Personal Capital
+        mint: Mint (previously)
+        spreadsheets: Spreadsheets (Excel, Google Sheets, etc.)
+        bank_app: My bank’s app or website only
+        paper: Paper / notebook
+        nothing_yet: Nothing yet—Sure will be my first personal finance tool
+        other: Other
       submit: Next
     trial:
       title: Try Sure for 45 days

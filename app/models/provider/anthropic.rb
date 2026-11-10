@@ -9,6 +9,8 @@ class Provider::Anthropic < Provider
   DEFAULT_ANTHROPIC_MODEL_PREFIXES = %w[claude].freeze
   DEFAULT_MODEL = "claude-sonnet-4-6"
 
+  attr_reader :default_model
+
   # All Claude 3.5+ and 4.x models accept native document content blocks.
   VISION_CAPABLE_MODEL_PREFIXES = %w[claude].freeze
 
@@ -56,12 +58,28 @@ class Provider::Anthropic < Provider
       Setting.anthropic_access_token.present?
   end
 
-  def initialize(access_token, base_url: nil, model: nil)
+  # Anthropic's SDK unconditionally imports ANTHROPIC_CUSTOM_HEADERS, even with
+  # an explicit API key. Replace this client's public header hash before use,
+  # never process-wide ENV, so installation secrets cannot accompany family calls.
+  def self.build_family_client(access_token:, **options)
+    ::Anthropic::Client.new(**options, api_key: access_token, base_url: "https://api.anthropic.com", webhook_key: nil).tap do |client|
+      client.headers.replace(
+        "anthropic-version" => "2023-06-01", "accept" => "application/json", "content-type" => "application/json"
+      )
+    end
+  end
+
+  def initialize(access_token, base_url: nil, model: nil, use_global_settings: true)
+    base_url = nil unless use_global_settings
     client_options = { api_key: access_token }
     client_options[:base_url] = base_url if base_url.present?
     client_options[:timeout] = ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
 
-    @client = ::Anthropic::Client.new(**client_options)
+    @client = if use_global_settings
+      ::Anthropic::Client.new(**client_options)
+    else
+      self.class.build_family_client(access_token: access_token, timeout: client_options[:timeout])
+    end
     @base_url = base_url
 
     if custom_endpoint? && model.blank?

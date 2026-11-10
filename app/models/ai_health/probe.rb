@@ -83,13 +83,18 @@ class AiHealth
       seconds.positive? ? seconds : DEFAULT_TIMEOUT
     end
 
-    def initialize(force: false, cache: Rails.cache)
+    def initialize(force: false, cache: Rails.cache, family: nil)
       @force = force
       @cache = cache
+      @family = family
     end
 
     def llm(provider:, endpoint:, access_token:, model:, openai_compatible: false)
-      verification = openai_compatible ? :chat_completion : :models
+      verification = if provider == :openrouter
+        :authenticated_user_models
+      else
+        openai_compatible ? :chat_completion : :models
+      end
 
       run(
         component: "llm",
@@ -110,6 +115,8 @@ class AiHealth
         when :anthropic
           model_info = anthropic_client(access_token:, endpoint:).models.retrieve(model)
           model_info.respond_to?(:id) && model_info.id.present?
+        when :openrouter
+          openrouter_model_available?(access_token:, endpoint:, model:)
         else
           raise Failure, :unsupported_provider
         end
@@ -289,10 +296,13 @@ class AiHealth
       def openai_client(access_token:, endpoint:)
         options = { access_token: access_token, request_timeout: timeout }
         options[:uri_base] = endpoint if endpoint.present?
+        options.merge!(Provider::Openai.family_client_options) if @family
         ::OpenAI::Client.new(**options)
       end
 
       def anthropic_client(access_token:, endpoint:)
+        return Provider::Anthropic.build_family_client(access_token: access_token, max_retries: 0, timeout: timeout) if @family
+
         options = { api_key: access_token, max_retries: 0, timeout: timeout }
         options[:base_url] = endpoint if endpoint.present?
         ::Anthropic::Client.new(**options)
@@ -313,6 +323,38 @@ class AiHealth
         raise Failure, :invalid_response unless response.is_a?(Hash) && response["data"].is_a?(Array)
 
         response["data"].filter_map { |item| item["id"] || item[:id] }
+      end
+
+      # OpenRouter's public catalog is not proof that a key is valid. Authenticate
+      # first, then check the catalog filtered by that user's routing/privacy
+      # preferences. Both requests are metadata-only; no completion is generated.
+      def openrouter_model_available?(access_token:, endpoint:, model:)
+        raise Failure, :unsupported_provider unless endpoint == Provider::Openrouter::ENDPOINT
+
+        connection = Faraday.new(url: "#{Provider::Openrouter::ENDPOINT}/") do |faraday|
+          faraday.response :json
+          faraday.response :raise_error
+          faraday.headers["Authorization"] = "Bearer #{access_token}"
+          faraday.options.timeout = timeout
+          faraday.options.open_timeout = [ timeout, 3 ].min
+        end
+
+        key_response = connection.get("key")
+        key = key_response.body["data"] if key_response.body.is_a?(Hash)
+        raise Failure, :invalid_response unless key_response.status == 200 && key.is_a?(Hash) && key.present?
+        raise Failure, :invalid_credential if key["is_management_key"] || key["is_provisioning_key"] || key["is_disabled"]
+
+        response = connection.get("models/user")
+        models = response.body["data"] if response.body.is_a?(Hash)
+        raise Failure, :invalid_response unless response.status == 200 && models.is_a?(Array)
+
+        selected = models.find { |item| item.is_a?(Hash) && item["id"] == model }
+        return false unless selected
+
+        Array(selected.dig("architecture", "input_modalities")).include?("text") &&
+          Array(selected.dig("architecture", "output_modalities")).include?("text") &&
+          Array(selected["supported_parameters"]).include?("tools") &&
+          (selected["endpoints"].nil? || Array(selected["endpoints"]).include?("/api/v1/chat/completions"))
       end
 
       def openai_chat_completion_available?(access_token:, endpoint:, model:)
@@ -471,7 +513,7 @@ class AiHealth
 
       def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
         fingerprint = Digest::SHA256.hexdigest(
-          [ component, provider_key, endpoint, model, credential, dimensions, verification ].join("\0")
+          [ @family&.id, component, provider_key, endpoint, model, credential, dimensions, verification ].join("\0")
         )
         "#{CACHE_NAMESPACE}/#{fingerprint}"
       end
@@ -521,6 +563,7 @@ class AiHealth
           level: "error",
           message: message,
           source: self.class.name,
+          family: @family,
           provider_key: provider_key.to_s,
           metadata: metadata
         )
@@ -534,6 +577,7 @@ class AiHealth
           level: "warn",
           message: message,
           source: self.class.name,
+          family: @family,
           metadata: { exception_class: error.class.name }
         )
       end

@@ -143,4 +143,45 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "search_failed", result[:error]
     assert_equal "An error occurred while searching documents: Search unavailable", result[:message]
   end
+
+  test "explicit family non-OpenAI configuration cannot search a legacy store" do
+    family = @user.family
+    family.update!(vector_store_id: "vs_legacy")
+    Family::AiConfiguration.create!(family: family, provider: "anthropic", api_key: "family-key")
+    VectorStore::Registry.expects(:build_adapter).never
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal false, result[:success]
+    assert_equal "provider_not_configured", result[:error]
+  end
+
+  test "family search uses its credential store instead of the legacy store" do
+    family = @user.family
+    family.update!(vector_store_id: "vs_legacy")
+    Family::AiConfiguration.create!(family: family, provider: "openai", api_key: "family-key")
+    family.document_stores.create!(
+      provider: "openai", provider_store_id: "vs_family",
+      credential_fingerprint: Family::DocumentStore.fingerprint(family_id: family.id, provider: "openai", api_key: "family-key")
+    )
+    adapter = mock("family adapter")
+    VectorStore::Openai.expects(:new).with(access_token: "family-key", use_global_settings: false).returns(adapter)
+    adapter.expects(:search).with(store_id: "vs_family", query: "income", max_results: 10)
+      .returns(VectorStore::Response.new(success?: true, data: [], error: nil))
+
+    assert @function.call("query" => "income")[:success]
+  end
+
+  test "family search does not reuse legacy documents before its first upload" do
+    family = @user.family
+    family.update!(vector_store_id: "vs_legacy")
+    Family::AiConfiguration.create!(family: family, provider: "openai", api_key: "family-key")
+    adapter = mock("family adapter")
+    VectorStore::Openai.expects(:new).with(access_token: "family-key", use_global_settings: false).returns(adapter)
+    adapter.expects(:search).never
+
+    result = @function.call("query" => "income")
+
+    assert_equal "no_documents", result[:error]
+  end
 end

@@ -152,7 +152,7 @@
                           <%= t(".import_file") %>
                         </span>
                         <span class="text-xs text-secondary">
-                          <%= t(".import_file_description") %>
+                          <%= @document_search_available ? t(".import_file_description") : t(".import_pdf_analysis_description") %>
                         </span>
                       </div>
                     </div>

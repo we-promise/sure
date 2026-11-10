@@ -1,0 +1,6 @@
+<% if OnboardingAiConfiguration.allowed_for?(@user) %>
+  <%= render "shared/ai_provider_configuration", url: configure_provider_onboarding_path, enabled: @user.onboarding_ai_mode == "builtin" %>
+  <p class="text-xs text-secondary"><%= t("onboardings.tools.provider_setup.continue_help") %></p>
+<% else %>
+  <%= render DS::Alert.new(message: t("onboardings.tools.provider_setup.unavailable"), variant: :info) %>
+<% end %>

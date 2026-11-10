@@ -12,6 +12,15 @@ class MessagesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to chat_path(@chat, thinking: true)
   end
 
+  test "new messages in an existing chat use the family's current provider default" do
+    @user.family.create_ai_configuration!(provider: "anthropic", api_key: "test-family-key")
+    post chat_messages_url(@chat), params: { message: { content: "Continue with the selected provider" } }
+
+    assert_redirected_to chat_path(@chat, thinking: true)
+    message = @chat.messages.find_by!(type: "UserMessage", content: "Continue with the selected provider")
+    assert_equal Provider::Anthropic::DEFAULT_MODEL, message.ai_model
+  end
+
   test "redirects to chats when message save races with chat deletion" do
     UserMessage.any_instance.stubs(:save).raises(ActiveRecord::InvalidForeignKey)
 

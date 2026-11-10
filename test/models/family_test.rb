@@ -742,8 +742,8 @@ class FamilyTest < ActiveSupport::TestCase
 
   test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
-    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
+    provider = Provider::Anthropic.new("test-key", model: "claude-sonnet-test")
+    family.stubs(:resolved_categorization_provider).returns(provider)
 
     assert_equal "claude-sonnet-test", family.categorization_model_name
   end

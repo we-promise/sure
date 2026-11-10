@@ -5,7 +5,7 @@ zh-CN:
       sign_out: 退出登录
       setup: 设置
       preferences: 偏好设置
-      goals: 目标
+      tools: 工具/AI
       start: 开始
     logout:
       sign_out: 退出登录
@@ -38,17 +38,7 @@ zh-CN:
       currency: 货币
       date_format: 日期格式
       submit: 完成
-    goals:
-      title: 您使用这里的目的是什么？
-      subtitle: 请选择一个或多个您希望使用 %{product_name} 作为个人财务工具实现的目标。
-      unified_accounts: 在一个地方查看我的所有账户
-      cashflow: 理解现金流和支出
-      budgeting: 管理财务计划和预算
-      partner: 与伴侣一起管理财务
-      investments: 跟踪投资
-      ai_insights: 让 AI 帮我理解财务状况
-      optimization: 分析并优化账户
-      reduce_stress: 减轻财务压力或焦虑
+    tools:
       submit: 下一步
     trial:
       title: 试用 Sure 45 天

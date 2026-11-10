@@ -8,11 +8,13 @@
 # and issue search queries.
 class VectorStore::Openai < VectorStore::Base
   # Builds a vector-store client with the same OpenAI request timeout as chat and batch calls.
-  def initialize(access_token:, uri_base: nil)
+  def initialize(access_token:, uri_base: nil, use_global_settings: true)
+    @use_global_settings = use_global_settings
     client_options = { access_token: access_token }
     client_options[:uri_base] = uri_base if uri_base.present?
     client_options[:request_timeout] = Provider::Openai.request_timeout
 
+    client_options.merge!(Provider::Openai.family_client_options) unless use_global_settings
     @client = ::OpenAI::Client.new(**client_options)
   end
 
@@ -87,4 +89,15 @@ class VectorStore::Openai < VectorStore::Base
   private
 
     attr_reader :client
+
+    def with_response(&block)
+      return super if @use_global_settings
+
+      success(yield)
+    rescue StandardError => error
+      # Provider errors can echo API keys. Neither logging nor caller-visible
+      # errors may expose a family's credential or request details.
+      Rails.logger.warn("Family document provider request failed: #{error.class}")
+      failure(VectorStore::Error.new("Document provider request failed"))
+    end
 end

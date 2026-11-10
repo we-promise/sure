@@ -5,7 +5,7 @@ en:
     settings_nav:
       accounts_label: Accounts
       advanced_section_title: Advanced
-      ai_prompts_label: AI Prompts
+      ai_prompts_label: AI settings
       auto_matches_label: Auto Matches
       classifier_label: Classifier
       background_jobs_label: Background jobs

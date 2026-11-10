@@ -57,7 +57,10 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     Rails.logger.debug("[SearchFamilyFiles] query=#{query.inspect} max_results=#{max_results} family_id=#{family.id}")
 
-    unless family.vector_store_id.present?
+    context = family.document_store_context
+    adapter = context.adapter
+
+    unless context.store_id.present? || context.family_configured?
       Rails.logger.debug("[SearchFamilyFiles] family #{family.id} has no vector_store_id")
       return {
         success: false,
@@ -66,21 +69,25 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       }
     end
 
-    adapter = VectorStore.adapter
-
     unless adapter
       Rails.logger.debug("[SearchFamilyFiles] no VectorStore adapter configured")
       return {
         success: false,
         error: "provider_not_configured",
-        message: "No vector store is configured. Set VECTOR_STORE_PROVIDER " \
-                 "(openai | pgvector | qdrant), configure OpenAI, or — for " \
-                 "Anthropic-only installs — enable the pgvector adapter and " \
-                 "point EMBEDDING_URI_BASE at an embeddings endpoint."
+        message: "Document search is unavailable for the current AI configuration. " \
+                 "Family document search requires an OpenAI configuration. " \
+                 "Installation-managed configurations may also use pgvector or Qdrant."
       }
     end
 
-    store_id = family.vector_store_id
+    store_id = context.store_id
+    if store_id.blank?
+      return {
+        success: false,
+        error: "no_documents",
+        message: "No documents have been uploaded with the current AI configuration yet."
+      }
+    end
     Rails.logger.debug("[SearchFamilyFiles] searching store_id=#{store_id} via #{adapter.class.name}")
 
     trace = create_langfuse_trace(

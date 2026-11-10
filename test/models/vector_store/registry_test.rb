@@ -128,4 +128,44 @@ class VectorStore::RegistryTest < ActiveSupport::TestCase
       assert_not VectorStore::Registry.pgvector_effective?
     end
   end
+
+  test "family OpenAI ignores installation vector and embedding settings" do
+    family = families(:dylan_family)
+    Family::AiConfiguration.create!(family: family, provider: "openai", api_key: "family-key")
+    expected = mock("family document adapter")
+    VectorStore::Openai.expects(:new).with(access_token: "family-key", use_global_settings: false).returns(expected)
+    VectorStore::Pgvector.expects(:new).never
+    VectorStore::Qdrant.expects(:new).never
+
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: "pgvector", OPENAI_ACCESS_TOKEN: "operator-key", OPENAI_URI_BASE: "http://operator.test/v1") do
+      assert_same expected, VectorStore.adapter(family: family)
+    end
+  end
+
+  test "explicit family providers without hosted document support never fall back" do
+    family = families(:dylan_family)
+    configuration = Family::AiConfiguration.create!(family: family, provider: "anthropic", api_key: "family-key")
+    VectorStore::Openai.expects(:new).never
+    VectorStore::Pgvector.expects(:new).never
+    VectorStore::Qdrant.expects(:new).never
+
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: "qdrant", OPENAI_ACCESS_TOKEN: "operator-key") do
+      assert_nil VectorStore.adapter(family: family)
+      assert_not VectorStore.configured?(family: family)
+      configuration.update!(provider: "openrouter", model: "anthropic/claude-sonnet-4", api_key: "router-key")
+      assert_nil VectorStore.adapter(family: family)
+      assert_not VectorStore.configured?(family: family)
+    end
+  end
+
+  test "families without an override retain installation pgvector and Qdrant routing" do
+    family = families(:empty)
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: "pgvector") do
+      assert_instance_of VectorStore::Pgvector, VectorStore.adapter(family: family)
+    end
+    ClimateControl.modify(VECTOR_STORE_PROVIDER: "qdrant") do
+      assert_instance_of VectorStore::Qdrant, VectorStore.adapter(family: family)
+    end
+  end
 end

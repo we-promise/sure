@@ -43,9 +43,9 @@ class OnboardingsTest < ApplicationSystemTestCase
     # Submit preferences
     click_button I18n.t("onboardings.preferences.submit")
 
-    # Should redirect to goals page
-    assert_current_path goals_onboarding_path
-    assert_text I18n.t("onboardings.goals.title")
+    # Should redirect to tools page
+    assert_current_path tools_onboarding_path
+    assert_text I18n.t("onboardings.tools.welcome_title")
   end
 
   test "browser locale defaults onboarding country and currency" do
@@ -62,7 +62,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_equal "CAD", find("#user_family_attributes_currency").value
 
     click_button I18n.t("onboardings.preferences.submit")
-    assert_current_path goals_onboarding_path
+    assert_current_path tools_onboarding_path
 
     @family.reload
     assert_equal "CA", @family.country
@@ -157,8 +157,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     # Button text is in Spanish due to locale preview
     click_button I18n.t("onboardings.preferences.submit", locale: :es)
 
-    # Wait for redirect to goals page to ensure form was submitted
-    assert_current_path goals_onboarding_path
+    # Wait for redirect to tools page to ensure form was submitted
+    assert_current_path tools_onboarding_path
 
     # Verify data was saved
     @family.reload
@@ -171,14 +171,14 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_not_nil @user.set_onboarding_preferences_at
   end
 
-  test "goals page renders correctly" do
+  test "tools page renders correctly" do
     # Complete preferences first
     @user.update!(set_onboarding_preferences_at: Time.current)
 
-    visit goals_onboarding_path
+    visit tools_onboarding_path
 
-    assert_text I18n.t("onboardings.goals.title")
-    assert_button I18n.t("onboardings.goals.submit")
+    assert_text I18n.t("onboardings.tools.welcome_title")
+    assert_button I18n.t("onboardings.tools.submit")
   end
 
   test "trial page renders correctly" do
@@ -201,8 +201,8 @@ class OnboardingsTest < ApplicationSystemTestCase
     select "MM/DD/YYYY", from: "user_family_attributes_date_format"
     click_button I18n.t("onboardings.preferences.submit")
 
-    # Should be at goals
-    assert_current_path goals_onboarding_path
+    # Should be at tools
+    assert_current_path tools_onboarding_path
   end
 
   test "onboarding nav shows correct steps" do
@@ -217,6 +217,230 @@ class OnboardingsTest < ApplicationSystemTestCase
 
     # Should have logout option (rendered as a button component)
     assert_text I18n.t("onboardings.logout.sign_out")
+  end
+
+  test "starting tools are searchable and nothing yet is exclusive" do
+    visit tools_onboarding_path
+    find("details summary").click
+    fill_in I18n.t("onboardings.tools.search_label"), with: "ynab", enable_aria_label: true
+    check "YNAB"
+    assert_no_selector "label", text: "Quicken Classic"
+    fill_in I18n.t("onboardings.tools.search_label"), with: "", enable_aria_label: true
+    check "Other"
+    fill_in I18n.t("onboardings.tools.other_label"), with: "My ledger"
+    check I18n.t("onboardings.tools.tools.nothing_yet")
+    assert_unchecked_field "YNAB"
+    assert_unchecked_field "Other"
+    assert_no_field I18n.t("onboardings.tools.other_label")
+    check "YNAB"
+    assert_unchecked_field I18n.t("onboardings.tools.tools.nothing_yet")
+    click_button I18n.t("onboardings.tools.done")
+    assert_no_selector "details[open]"
+    assert_selector "details summary", text: "1 selected"
+    assert_selector "[data-onboarding-tools-target='chip']", text: "YNAB"
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_equal [ "ynab" ], @user.reload.starting_tools
+    assert_nil @user.starting_tool_other
+  end
+
+  test "AI modes reveal truthful setup panels without connecting providers" do
+    visit tools_onboarding_path
+    assert_checked_field "user_onboarding_ai_mode_none"
+    assert_selector "#ai-panel-none", text: "Other LLM-powered features"
+    assert_selector "#user_onboarding_ai_mode_none[aria-expanded='true']"
+    assert_no_selector "#ai-panel-builtin"
+    assert_no_selector "#ai-panel-external"
+    choose "user_onboarding_ai_mode_builtin"
+    assert_selector "#ai-panel-builtin", text: "Set up AI without leaving onboarding"
+    assert_no_selector "#ai-panel-none"
+    assert_selector "#user_onboarding_ai_mode_none[aria-expanded='false']"
+    assert_selector "#user_onboarding_ai_mode_builtin[aria-expanded='true']"
+
+    choose "user_onboarding_ai_mode_external"
+    assert_selector "#ai-panel-external"
+    assert_no_selector "#ai-panel-builtin"
+    assert_field I18n.t("onboardings.tools.agent_instructions_label"), readonly: true
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_equal "external", @user.reload.onboarding_ai_mode
+    assert_not @user.ai_enabled?
+  end
+
+  test "long selected tool chips stay inside the card padding on mobile" do
+    page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 844, deviceScaleFactor: 1, mobile: true)
+    visit tools_onboarding_path
+    find("details summary").click
+    check I18n.t("onboardings.tools.tools.spreadsheets")
+    click_button I18n.t("onboardings.tools.done")
+    assert_selector "[data-onboarding-tools-target='chip'][data-value='spreadsheets']"
+
+    bounds = page.evaluate_script <<~JS
+      (() => {
+        const card = document.querySelector('[aria-labelledby="starting-point-title"]');
+        const chip = card.querySelector('[data-onboarding-tools-target="chip"][data-value="spreadsheets"] > span');
+        const cardRect = card.getBoundingClientRect();
+        const chipRect = chip.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        return {
+          viewport: window.innerWidth,
+          contentLeft: cardRect.left + parseFloat(style.paddingLeft) + parseFloat(style.borderLeftWidth),
+          contentRight: cardRect.right - parseFloat(style.paddingRight) - parseFloat(style.borderRightWidth),
+          chipLeft: chipRect.left,
+          chipRight: chipRect.right,
+          title: chip.title
+        };
+      })()
+    JS
+    assert_equal 390, bounds.fetch("viewport")
+    assert_operator bounds.fetch("chipLeft"), :>=, bounds.fetch("contentLeft") - 1
+    assert_operator bounds.fetch("chipRight"), :<=, bounds.fetch("contentRight") + 1
+    assert_equal I18n.t("onboardings.tools.tools.spreadsheets"), bounds.fetch("title")
+  ensure
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+  end
+
+  test "numbered cards and provider inputs match the selected provider" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    visit tools_onboarding_path
+    assert_selector "[role='region'].bg-container[aria-labelledby='starting-point-title']", text: I18n.t("onboardings.tools.tools_question")
+    assert_selector "[role='region'].bg-container[aria-labelledby='ai-preference-title']", text: I18n.t("onboardings.tools.ai_question", product_name: Rails.configuration.x.product_name)
+    choose "user_onboarding_ai_mode_builtin"
+    select "OpenAI", from: "Provider"
+    assert_field "OpenAI API key", type: "password", with: ""
+    assert_selector "input[type='password']:not([name])"
+    assert_selector "select:not([name])"
+    fill_in "OpenAI API key", with: "test-placeholder-not-a-real-key"
+    select "Anthropic", from: "Provider"
+    assert_field "Anthropic API key", type: "password", with: ""
+    assert_selector "input[placeholder='Enter your Anthropic API key']"
+    click_button "Save and test connection"
+    assert_text "Enter an API key for the selected provider."
+    select "OpenAI-compatible API", from: "Provider"
+    assert_field "OpenAI-compatible API key", type: "password", with: ""
+    assert_field "OpenAI-compatible API model ID (required)", with: ""
+    assert_text "OpenAI-compatible API document search is not configured here."
+    fill_in "OpenAI-compatible API key", with: "test-placeholder-not-a-real-key"
+    click_button "Save and test connection"
+    assert_text "Enter an OpenAI-compatible API model ID before saving."
+    fill_in "OpenAI-compatible API model ID (required)", with: "openai/gpt-4.1-mini"
+    select "Anthropic", from: "Provider"
+    assert_no_selector "input#provider_configuration_model"
+    select "OpenAI-compatible API", from: "Provider"
+    assert_field "OpenAI-compatible API model ID (required)", with: "openai/gpt-4.1-mini"
+    assert_field "OpenAI-compatible API key", with: ""
+    choose "user_onboarding_ai_mode_none"
+    assert_no_selector "input[type='password']"
+    assert_selector "#ai-panel-builtin fieldset[disabled]", visible: :all
+  end
+
+  test "provider response without CSRF metadata shows errors and clears the key after each attempt" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    visit tools_onboarding_path
+    choose "user_onboarding_ai_mode_builtin"
+    select "OpenAI", from: "Provider"
+    page.execute_script <<~JS
+      document.querySelector('meta[name="csrf-token"]')?.remove();
+      const originalFetch = window.fetch;
+      window.fetch = (url, options) => {
+        if (url !== "#{configure_provider_onboarding_path}") return originalFetch(url, options);
+        return Promise.resolve(new Response(JSON.stringify({status: "failed", error: "connection_failed"}), {status: 422, headers: {"Content-Type": "application/json"}}));
+      };
+    JS
+    fill_in "OpenAI API key", with: "test-placeholder-not-a-real-key"
+    find_field("OpenAI API key").send_keys(:enter)
+    assert_current_path tools_onboarding_path
+    assert_text "Provider access could not be confirmed."
+    assert_field "OpenAI API key", with: ""
+    assert_button I18n.t("onboardings.tools.submit"), disabled: false
+
+    page.execute_script <<~JS
+      const fetchBeforePending = window.fetch;
+      window.fetch = (url, options) => {
+        if (url !== "#{configure_provider_onboarding_path}") return fetchBeforePending(url, options);
+        return new Promise((resolve) => { window.resolveProvider = resolve; });
+      };
+    JS
+    fill_in "OpenAI API key", with: "test-placeholder-not-a-real-key"
+    click_button "Save and test connection"
+    assert_button I18n.t("onboardings.tools.submit"), disabled: true
+    find("nav a[href='#{preferences_onboarding_path}']").click
+    assert_current_path preferences_onboarding_path
+    page.go_back
+    assert_current_path tools_onboarding_path
+    assert_field "OpenAI API key", with: "", disabled: true
+    assert_button I18n.t("onboardings.tools.submit"), disabled: true
+    page.execute_script <<~JS
+      window.resolveProvider(new Response(JSON.stringify({status: "saved", provider: "openai"}), {status: 200, headers: {"Content-Type": "application/json"}}));
+    JS
+    assert_button I18n.t("onboardings.tools.submit"), disabled: false
+    assert_field "OpenAI API key", with: "", disabled: false
+    assert_selector "#provider_configuration_provider:not([disabled])"
+    assert_text "The result could not be confirmed."
+  end
+
+  test "Next does not save a typed provider key" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    OnboardingAiConfiguration.expects(:new).never
+    saved = @family.create_ai_configuration!(provider: "anthropic", api_key: "original-family-key")
+    visit tools_onboarding_path
+    choose "user_onboarding_ai_mode_builtin"
+    assert_equal "anthropic", find("#provider_configuration_provider").value
+    fill_in "Anthropic API key", with: "unsaved-family-key"
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_equal "original-family-key", saved.reload.api_key
+  end
+
+  test "a missing OpenRouter model does not block continuing without a provider" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    OnboardingAiConfiguration.expects(:new).never
+    visit tools_onboarding_path
+    choose "user_onboarding_ai_mode_builtin"
+    select "OpenAI-compatible API", from: "Provider"
+    assert_field "OpenAI-compatible API model ID (required)", with: ""
+    click_button I18n.t("onboardings.tools.submit")
+    assert_current_path(Rails.application.config.app_mode.self_hosted? ? root_path : trial_onboarding_path)
+    assert_nil @family.reload.ai_configuration
+  end
+
+  test "family provider settings support explicit repeated saves outside onboarding" do
+    OnboardingAiConfiguration.stubs(:allowed_for?).returns(true)
+    @family.create_ai_configuration!(provider: "openrouter", model: "anthropic/claude-sonnet-4", api_key: "original-family-key")
+    visit settings_ai_prompts_path
+    assert_text "Family AI provider"
+    assert_field "OpenAI-compatible API key", with: ""
+    assert_field "OpenAI-compatible API model ID (required)", with: "anthropic/claude-sonnet-4"
+    find("summary", text: I18n.t("settings.ai_prompts.show.main_system_prompt.title")).click
+    assert_selector "textarea#family_ai_prompt_chat_system"
+    page.execute_script <<~JS
+      window.providerRequests = 0;
+      const originalFetch = window.fetch;
+      window.fetch = (url, options) => {
+        if (url !== "#{configure_provider_settings_ai_prompts_path}") return originalFetch(url, options);
+        window.providerRequests += 1;
+        return new Promise((resolve) => { window.resolveProvider = resolve; });
+      };
+    JS
+
+    %w[openai/gpt-4.1-mini anthropic/claude-sonnet-4].each do |model|
+      fill_in "OpenAI-compatible API model ID (required)", with: model
+      assert_no_text "Provider access checked and encrypted key saved for your family."
+      fill_in "OpenAI-compatible API key", with: "replacement-family-key"
+      click_button "Save and test connection"
+      assert_button "Save and test connection", disabled: true
+      assert_field "OpenAI-compatible API model ID (required)", disabled: true
+      page.execute_script <<~JS
+        document.querySelector('[data-onboarding-provider-target="button"]').dispatchEvent(new MouseEvent("click", {bubbles: true}));
+        window.resolveProvider(new Response(JSON.stringify({status: "saved", provider: "openrouter"}), {status: 200, headers: {"Content-Type": "application/json"}}));
+      JS
+      assert_text "Provider access checked and encrypted key saved for your family."
+      assert_field "OpenAI-compatible API key", with: "", disabled: false
+      assert_field "OpenAI-compatible API model ID (required)", with: model, disabled: false
+      assert_button "Save and test connection", disabled: false
+    end
+    assert_equal 2, page.evaluate_script("window.providerRequests")
+    assert_current_path settings_ai_prompts_path
   end
 
   private

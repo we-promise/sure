@@ -48,6 +48,7 @@ class Family < ApplicationRecord
   SHARING_DEFAULTS = %w[shared private].freeze
 
   has_many :users, dependent: :destroy
+  has_one :ai_configuration, class_name: "Family::AiConfiguration", dependent: :destroy
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 
@@ -199,9 +200,8 @@ class Family < ApplicationRecord
   def resolved_categorization_provider(&on_jev_error)
     jev = configured_jev_provider(&on_jev_error) if effective_categorization_provider == "jev"
 
-    # Honors Setting.llm_provider (#2113); Provider::Anthropic gained
-    # auto_categorize in #1984, so either LLM provider can serve this.
-    jev || Provider::Registry.preferred_llm_provider
+    # Use this family's LLM override, or the installation provider when absent.
+    jev || Provider::Registry.preferred_llm_provider(family: self)
   end
 
   def categorization_model_name
@@ -210,8 +210,7 @@ class Family < ApplicationRecord
 
     case provider
     when Provider::Jev then Provider::Jev.effective_model
-    when Provider::Anthropic then Provider::Anthropic.effective_model
-    else Provider::Openai.effective_model
+    else provider.default_model
     end
   end
 
@@ -236,7 +235,7 @@ class Family < ApplicationRecord
   # against the other without a second mechanism.
   def shadow_categorization_provider(&on_jev_error)
     if effective_categorization_provider == "jev"
-      Provider::Registry.preferred_llm_provider
+      Provider::Registry.preferred_llm_provider(family: self)
     else
       configured_jev_provider(&on_jev_error)
     end

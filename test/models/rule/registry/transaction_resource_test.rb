@@ -41,7 +41,8 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
   test "auto merchant detection is available when an LLM provider is configured" do
     rule = build_rule(action_type: "exclude_transaction")
     @family.stubs(:resolved_categorization_provider).returns(nil)
-    Provider::Registry.stubs(:preferred_llm_provider).returns(Provider::Anthropic.allocate)
+    Current.stubs(:user).returns(users(:family_admin))
+    Provider::Registry.expects(:preferred_llm_provider).with(family: @family).returns(Provider::Anthropic.allocate)
 
     keys = rule.registry.action_executors.map(&:key)
 

@@ -2,6 +2,7 @@ class User < ApplicationRecord
   has_many :financekit_items, dependent: :destroy
 
   include Encryptable
+  include OnboardingChoices
 
   # Allow nil password for SSO-only users (JIT provisioning).
   # Custom validation ensures password is present for non-SSO registration.
@@ -215,16 +216,24 @@ class User < ApplicationRecord
     when "external"
       Assistant::External.available_for?(self)
     else
-      openai_configured? || anthropic_configured?
+      if family&.ai_configuration
+        Provider::Registry.preferred_llm_provider(family: family).present?
+      else
+        openai_configured? || anthropic_configured?
+      end
     end
   end
 
   def openai_configured?
-    Provider::Openai.configured?
+    return Provider::Openai.configured? unless family&.ai_configuration
+
+    Provider::Registry.get_provider(:openai, family: family).present?
   end
 
   def anthropic_configured?
-    Provider::Anthropic.configured?
+    return Provider::Anthropic.configured? unless family&.ai_configuration
+
+    Provider::Registry.get_provider(:anthropic, family: family).present?
   end
 
   def ai_enabled?
@@ -860,7 +869,7 @@ class User < ApplicationRecord
         if guest?
           self.show_sidebar = false
           self.show_ai_sidebar = false
-          self.ai_enabled = true
+          self.ai_enabled = true unless preferences&.key?("onboarding_ai_mode")
         else
           self.ui_layout = "dashboard"
         end
@@ -868,7 +877,7 @@ class User < ApplicationRecord
         self.ui_layout = "intro"
         self.show_sidebar = false
         self.show_ai_sidebar = false
-        self.ai_enabled = true
+        self.ai_enabled = true unless preferences&.key?("onboarding_ai_mode")
       end
 
       if leaving_guest_role?

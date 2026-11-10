@@ -203,6 +203,13 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
     assert_not_nil result[:enrichment][:auto_categorize_rule]
   end
 
+  test "enrichment availability uses the injected family rather than Current" do
+    Current.stubs(:user).returns(users(:empty))
+    Provider::Registry.expects(:preferred_llm_provider).with(family: @family).returns(nil)
+
+    assert_not @fn.call[:enrichment][:llm_provider_configured]
+  end
+
   test "prefers a real merchant name over the cleaned label" do
     entry = create_uncategorized(name: "CB 02/09 SOMETHING RAW", amount: 20)
     entry.entryable.update!(merchant: merchants(:netflix))

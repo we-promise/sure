@@ -90,7 +90,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
     end
 
     def auto_merchant_detection_enabled?
-      Provider::Registry.preferred_llm_provider.present?
+      Provider::Registry.preferred_llm_provider(family: family).present?
     end
 
     def existing_action?(action_type)

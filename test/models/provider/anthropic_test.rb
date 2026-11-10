@@ -11,6 +11,43 @@ class Provider::AnthropicTest < ActiveSupport::TestCase
     @subject_model = "claude-sonnet-4-6"
   end
 
+  test "family-owned clients pin official routing and use their own model" do
+    with_env_overrides("ANTHROPIC_BASE_URL" => "https://operator.example/anthropic", "ANTHROPIC_MODEL" => "operator-model") do
+      Provider::Anthropic.expects(:effective_model).never
+      ::Anthropic::Client.expects(:new).with(
+        api_key: "synthetic-family-key", base_url: "https://api.anthropic.com",
+        timeout: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i, webhook_key: nil
+      ).returns(stub(headers: {}))
+
+      provider = Provider::Anthropic.new("synthetic-family-key", use_global_settings: false)
+
+      assert_equal Provider::Anthropic::DEFAULT_MODEL, provider.default_model
+      assert_not provider.custom_endpoint?
+      assert provider.supports_pdf_processing?
+    end
+  end
+
+  test "family SDK clients discard environment headers before sending credentials" do
+    with_env_overrides(
+      "ANTHROPIC_CUSTOM_HEADERS" => "Authorization: Bearer synthetic-operator-secret\nX-Operator-Token: synthetic-operator-secret\nContent-Type: text/plain",
+      "ANTHROPIC_BASE_URL" => "https://operator.example/anthropic"
+    ) do
+      request = stub_request(:get, "https://api.anthropic.com/v1/models/#{Provider::Anthropic::DEFAULT_MODEL}")
+        .with(headers: { "X-Api-Key" => "synthetic-family-key" }) do |outbound|
+          !outbound.headers.to_json.include?("synthetic-operator-secret") && outbound.headers["Content-Type"] != "text/plain"
+        end.to_return(
+          status: 200, headers: { "Content-Type" => "application/json" },
+          body: { id: Provider::Anthropic::DEFAULT_MODEL, type: "model", display_name: "Test model", created_at: "2026-01-01T00:00:00Z" }.to_json
+        )
+
+      client = Provider::Anthropic.build_family_client(access_token: "synthetic-family-key", max_retries: 0)
+      assert_equal "application/json", client.headers["content-type"]
+      assert_equal Provider::Anthropic::DEFAULT_MODEL, client.models.retrieve(Provider::Anthropic::DEFAULT_MODEL).id
+      assert_requested request
+      assert_includes ENV["ANTHROPIC_CUSTOM_HEADERS"], "synthetic-operator-secret"
+    end
+  end
+
   test "provider_name returns Anthropic for standard provider" do
     assert_equal "Anthropic", @subject.provider_name
   end

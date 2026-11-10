@@ -10,9 +10,9 @@
 
 <% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
   <p><%= t(".transactions_note") %></p>
-<% else %>
-  <p><%= t(".document_stored_note") %></p>
 <% end %>
+
+<p><%= @document_uploaded_for_search ? t(".document_search_upload_note") : t(".document_reference_only_note") %></p>
 
 <h2><%= t(".next_steps_label") %></h2>
 <p><%= t(".next_steps_intro") %></p>
@@ -21,7 +21,7 @@
   <% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
     <li><%= t(".option_extract_transactions") %></li>
   <% end %>
-  <li><%= t(".option_keep_reference") %></li>
+  <li><%= t(".option_keep_import_reference") %></li>
   <li><%= t(".option_delete") %></li>
 </ul>
 

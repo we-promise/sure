@@ -8,12 +8,16 @@ module VectorStore
   DEFAULT_EMBEDDING_DIMENSIONS = 1024
   DEFAULT_EMBEDDING_URI_BASE = "https://api.openai.com/v1/".freeze
 
-  def self.adapter
-    Registry.adapter
+  def self.adapter(family: nil)
+    family ? Registry.adapter(family: family) : Registry.adapter
   end
 
-  def self.configured?
-    Registry.configured?
+  def self.context(family:)
+    Registry.context(family: family)
+  end
+
+  def self.configured?(family: nil)
+    adapter(family: family).present?
   end
 
   def self.embedding_model

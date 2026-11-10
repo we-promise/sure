@@ -5,7 +5,7 @@ ro:
       sign_out: Deconectare
       setup: Configurare
       preferences: Preferințe
-      goals: Obiective
+      tools: Instrumente/IA
       start: Start
     logout:
       sign_out: Deconectare
@@ -33,17 +33,7 @@ ro:
       currency: Monedă
       date_format: Format dată
       submit: Finalizare
-    goals:
-      title: Ce te aduce aici?
-      subtitle: Selectează unul sau mai multe obiective pe care le ai cu %{product_name} ca instrument de finanțe personale.
-      unified_accounts: Să-mi văd toate conturile într-un singur loc
-      cashflow: Să înțeleg fluxul de numerar și cheltuielile
-      budgeting: Să gestionez planuri financiare și bugete
-      partner: Să gestionez finanțele împreună cu partenerul
-      investments: Să urmăresc investițiile
-      ai_insights: Să las AI să mă ajute să-mi înțeleg finanțele
-      optimization: Să analizez și să optimizez conturile
-      reduce_stress: Să reduc stresul financiar sau anxietatea
+    tools:
       submit: Următorul
     trial:
       title: Încearcă Sure timp de 45 de zile

@@ -104,6 +104,7 @@ module Assistant
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
       classes -= FAMILY_CONFIG_FUNCTION_CLASSES if user&.guest?
+      classes -= [ Function::SearchFamilyFiles ] unless user && VectorStore.configured?(family: user.family)
       classes
     end
 

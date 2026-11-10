@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_07_121000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -865,6 +865,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.boolean "early_access", default: false
     t.string "enabled_currencies", array: true
     t.boolean "household_budget_enabled", default: true, null: false
+    t.string "initial_onboarding_ai_mode"
     t.boolean "investment_contributions_as_spending", default: true, null: false
     t.datetime "last_sync_all_attempted_at"
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
@@ -884,12 +885,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.check_constraint "categorization_provider::text = ANY (ARRAY['llm'::character varying::text, 'jev'::character varying::text])", name: "chk_families_categorization_provider"
     t.check_constraint "categorization_shadow_rate >= 0::numeric AND categorization_shadow_rate <= 1::numeric", name: "chk_families_categorization_shadow_rate"
     t.check_constraint "default_account_sharing::text = ANY (ARRAY['shared'::character varying::text, 'private'::character varying::text])", name: "chk_families_default_account_sharing"
+    t.check_constraint "initial_onboarding_ai_mode::text = ANY (ARRAY['none'::character varying::text, 'builtin'::character varying::text, 'external'::character varying::text])", name: "chk_families_initial_onboarding_ai_mode"
     t.check_constraint "month_start_day >= 1 AND month_start_day <= 28", name: "month_start_day_range"
+  end
+
+  create_table "family_ai_configurations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "encrypted_api_key", null: false
+    t.uuid "family_id", null: false
+    t.string "model", null: false
+    t.string "provider", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_family_ai_configurations_on_family_id", unique: true
+    t.check_constraint "provider::text = ANY (ARRAY['openai'::character varying::text, 'anthropic'::character varying::text, 'openrouter'::character varying::text])", name: "chk_family_ai_configurations_provider"
+  end
+
+  create_table "family_document_stores", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "credential_fingerprint", null: false
+    t.uuid "family_id", null: false
+    t.string "provider", null: false
+    t.string "provider_store_id"
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "provider", "credential_fingerprint"], name: "index_family_document_stores_on_credential_context", unique: true
+    t.index ["family_id"], name: "index_family_document_stores_on_family_id"
+    t.check_constraint "provider::text = 'openai'::text", name: "chk_family_document_stores_provider"
   end
 
   create_table "family_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "content_type"
     t.datetime "created_at", null: false
+    t.uuid "family_document_store_id"
     t.uuid "family_id", null: false
     t.integer "file_size"
     t.string "filename", null: false
@@ -897,6 +923,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.string "provider_file_id"
     t.string "status", default: "pending", null: false
     t.datetime "updated_at", null: false
+    t.index ["family_document_store_id"], name: "index_family_documents_on_family_document_store_id"
     t.index ["family_id"], name: "index_family_documents_on_family_id"
     t.index ["provider_file_id"], name: "index_family_documents_on_provider_file_id"
     t.index ["status"], name: "index_family_documents_on_status"
@@ -3135,7 +3162,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"
   add_foreign_key "eval_samples", "eval_datasets"
+  add_foreign_key "family_ai_configurations", "families"
+  add_foreign_key "family_document_stores", "families"
   add_foreign_key "family_documents", "families"
+  add_foreign_key "family_documents", "family_document_stores"
   add_foreign_key "family_exports", "families"
   add_foreign_key "family_merchant_associations", "families"
   add_foreign_key "family_merchant_associations", "merchants"
