@@ -1,0 +1,55 @@
+---
+pl:
+  settings:
+    background_jobs:
+      cancel:
+        cancelled: "%{type} oznaczono jako utracone."
+        cancelled_error: Oznaczono jako nieudane przez administratora - zadanie w
+          tle uznano za utracone.
+        not_cancellable: Tej operacji nie można teraz zmodyfikować - jej zadanie może
+          być wciąż w kolejce albo w trakcie wykonywania. Spróbuj ponownie, gdy będzie
+          bezczynna przez 30 minut.
+      operation:
+        actions:
+          mark_failed: Oznacz jako nieudane
+          mark_stale: Oznacz jako nieaktualne
+          release_claim: Zwolnij przypisanie
+        ago: "%{time} temu"
+        confirm: Oznaczyć tę operację jako utraconą? Rekord zostanie przeniesiony
+          do statusu końcowego, aby można było spróbować ponownie. Dane źródłowe pozostają
+          nietknięte.
+        missing_value: "-"
+        queued: W kolejce
+        recent: Ostatnie
+        running: W trakcie
+        stuck: Zablokowane - uznane za utracone
+        sync_label: Synchronizacja · %{type}
+        unknown: Nieznane
+      show:
+        empty: Brak operacji w toku.
+        missing_value: "-"
+        operations_subtitle: Synchronizacje, importy i eksporty wszystkich gospodarstw
+          domowych, które nie osiągnęły statusu końcowego. Operacje bezczynne od ponad
+          30 minut bez widocznego zadania są uznawane za utracone i można je tak oznaczyć.
+        operations_title: Operacje w toku
+        page_title: Zadania w tle
+        redis_unreachable: Stan Sidekiq jest niedostępny (brak połączenia z Redis).
+          Status aktywności jest nieznany, więc akcje są wyłączone.
+        stats:
+          busy: Zajęte
+          dead: Martwe
+          enqueued: W kolejce
+          queue_label: "%{name}: %{size} · opóźnienie %{latency}s"
+          retries: Ponowienia
+          scheduled: Zaplanowane
+          workers: Procesy robocze
+        subtitle: 'Stan Sidekiq na żywo: procesy robocze, głębokość kolejek oraz zbiory
+          ponowień i martwych zadań.'
+        table:
+          action: Akcja
+          family: Gospodarstwo domowe
+          last_activity: Ostatnia aktywność
+          liveness: Aktywność
+          status: Status
+          type: Operacja
+        title: Status procesów roboczych

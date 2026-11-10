@@ -1,0 +1,6 @@
+---
+nl:
+  settings:
+    budget_shares:
+      update:
+        success: "Instellingen voor budget delen bijgewerkt"
