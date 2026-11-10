@@ -83,6 +83,28 @@ class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "impersonation sessions cannot register or manage the impersonated user's browser push devices" do
+    impersonation_session = impersonation_sessions(:in_progress)
+    impersonated = impersonation_session.impersonated
+    enable_web_push_preview(impersonated)
+    device = register_web_push(user: impersonated)
+
+    sign_in impersonation_session.impersonator
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonation_session.id }
+    assert_redirected_to root_path
+
+    assert_no_difference "WebPushSubscription.count" do
+      post "/web_push_subscriptions", params: @attributes, as: :json
+      assert_response :forbidden
+    end
+
+    delete "/web_push_subscriptions/#{device.id}", as: :json
+    assert_response :forbidden
+    post "/web_push_subscriptions/#{device.id}/test_notification", as: :json
+    assert_response :forbidden
+    assert WebPushSubscription.exists?(device.id)
+  end
+
   test "web registration retains Rails CSRF protection" do
     previous = ActionController::Base.allow_forgery_protection
     ActionController::Base.allow_forgery_protection = true
