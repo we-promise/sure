@@ -127,6 +127,10 @@ Sure implements the following JSON-RPC 2.0 methods:
 | `tools/list` | Lists available financial tools with schemas |
 | `tools/call` | Executes a tool with provided arguments |
 
+A JSON-RPC notification (a message without an `id`, such as `notifications/initialized`) gets
+`202 Accepted` with an empty body, as MCP's Streamable HTTP transport requires. A `tools/call`
+sent as a notification doesn't run.
+
 ### Available Tools
 
 The MCP endpoint exposes the same tool registry used by Sure's built-in assistant. Clients should treat `tools/list` as the source of truth.
