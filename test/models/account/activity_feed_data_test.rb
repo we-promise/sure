@@ -49,6 +49,22 @@ class Account::ActivityFeedDataTest < ActiveSupport::TestCase
 
     assert_not_nil day1_activity
     assert_nil day1_activity.balance
+    assert_nil day1_activity.projected_balance_money
+  end
+
+  test "projects a balance for a scheduled (future-dated) entry with no Balance row" do
+    scheduled_date = Date.current + 5.days
+    create_transaction(account: @checking, date: scheduled_date, amount: 150, name: "Scheduled bill")
+
+    entries = @checking.entries.includes(:entryable).to_a
+    feed_data = Account::ActivityFeedData.new(@checking, entries)
+
+    activities = feed_data.entries_by_date
+    scheduled_activity = find_activity_for_date(activities, scheduled_date)
+
+    assert_not_nil scheduled_activity
+    assert_nil scheduled_activity.balance
+    assert_equal @checking.balance_money - Money.new(150, "USD"), scheduled_activity.projected_balance_money
   end
 
   test "returns cash and holdings data for investment accounts" do

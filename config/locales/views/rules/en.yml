@@ -15,6 +15,46 @@ en:
     classifier_rules:
       category_classifier: Category classifier
       merchant_matcher: Merchant matcher
+    filters:
+      search_label: Search rules
+      search_placeholder: Search name, conditions and actions
+      reset: Reset
+      button: Filter
+      done: Done
+      active_label: Active filters
+      remove: "Remove filter %{filter}"
+      status:
+        label: Status
+        all: All statuses
+        active: Active
+        inactive: Inactive
+      action_type:
+        label: Action
+        all: All actions
+      condition_type:
+        label: Condition
+        all: All conditions
+      account:
+        label: Account
+        all: All accounts
+      group:
+        label: Group
+        all: All groups
+        none: No group
+    group:
+      rules_count:
+        one: 1 rule
+        other: "%{count} rules"
+      inactive_count:
+        one: 1 inactive
+        other: "%{count} inactive"
+      empty: No rules in this group yet. Choose the group in a rule's form.
+      activate_all: Turn on all rules
+      deactivate_all: Turn off all rules
+      rename: Rename
+      delete: Delete group
+      delete_confirm_title: Delete group "%{name}"?
+      delete_confirm_body: The rules stay where they are, without a group. No rule is deleted.
     rule:
       edit: Edit
       re_apply_rule: Re-apply rule
@@ -42,13 +82,25 @@ en:
       then: THEN
       stop_processing_label: Stop processing further rules
       stop_processing_description: Rules further down the list don't change transactions this rule matches.
+      group_label: Group (optional)
+      group_select_label: Group
+      no_group: No group
+      new_group_label: Or new group
+      new_group_placeholder: Name of a new group
+      group_hint: Groups only arrange the list. A rule in a group runs where the group stands in the list.
     index:
       page_title: Rules
       delete_all_rules: Delete all rules
       new_rule: New rule
       ai_cost_warning: AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
       rules_heading: Rules
-      order_hint: Rules run from top to bottom. Once a rule sets a field on a transaction, rules further down don't change that field. Tags are added by every matching rule. Drag rules to change the order.
+      order_hint: Rules run from top to bottom, including the rules inside groups. Once a rule sets a field on a transaction, rules further down don't change that field. Tags are added by every matching rule. Drag rules and groups to change the order.
+      new_group: New group
+      reorder_group: "Move group %{name}. Press Enter or Space to grab it, then use the arrow keys to move it."
+      filters:
+        no_matches: No rules match the search or filters.
+        drag_disabled: Sorting is off while a search or filter is active. Reset them to change the order.
+      fold_rule: "Fold or unfold rule %{name}"
       reorder_rule: "Move rule %{name}. Press Enter or Space to grab it, then use the arrow keys to move it."
       no_rules_title: No rules yet
       no_rules_description: Set up rules to perform actions to your transactions and other data on every account sync.

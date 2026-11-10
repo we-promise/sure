@@ -80,9 +80,8 @@ class ReportsController < ApplicationController
       sort_direction: params[:sort_direction]
     }.compact
 
-    # Build the full URL with the API key, if present
+    # The CSV URL the instructions tell people to add their API key to
     @csv_url = export_transactions_reports_url(base_params.merge(format: :csv))
-    @api_key_present = @csv_url.include?("api_key=")
 
     # This action will render `app/views/reports/google_sheets_instructions.html.erb`
     # It will render *inside* the modal frame.

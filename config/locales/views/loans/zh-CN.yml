@@ -4,33 +4,121 @@ zh-CN:
     edit:
       edit: 编辑%{account}
     form:
-      initial_balance: 原始贷款余额
       interest_rate: 利率
       interest_rate_placeholder: '5.25'
+      initial_balance: 原始贷款余额
+      day_count_convention: 计息基准
+      day_count_convention_actual_365: Actual/365
+      day_count_convention_actual_actual: Actual/actual
+      day_count_convention_hint: 您的贷款机构如何按年衡量每个周期。Actual/365 按月份实际天数计息，是英国和澳大利亚抵押贷款的标准。30/360 按固定的十二分之一计息，是 Sure 一贯使用的基准。
+      day_count_convention_thirty_360: 30/360（固定十二分之一）
       rate_type: 利率类型
       term_months: 期限（月）
       term_months_placeholder: '360'
       none: 无
       subtype_prompt: 选择贷款类型
       subtype_none: 无
+      rate_type_adjustable: 可调整
+      rate_type_fixed: 固定
+      rate_type_variable: 浮动
+      rate_changes: 利率变更
+      rate_changes_hint: 每一行设置从其生效日期起直至下一变更日适用的利率。重新输入已有日期将替换该行，而非添加新行。
+      rate_changes_empty: 暂无利率变更记录。该贷款以上述利率运行。
+      rate_change_effective_date: 生效日期
+      rate_change_rate: 利率
+      rate_change_add: 添加利率变更
+      rate_change_remove: 移除
+      start_date: 放款日期
+      start_date_hint: 贷款发放的日期。新贷款的余额历史从此日期开始，而非初始余额日期。留空则使用初始余额日期。
+      down_payment: 首付
+      insurance_rate: 保险费率
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_hint: 年费率，每月随还款一同收取。定期寿险按初始余额收取；递减定期寿险按剩余欠款收取。
+      insurance_rate_type: 保险类型
+      insurance_rate_type_decreasing_life: 递减
+      insurance_rate_type_level_term: 定期寿险
     new:
       title: 请输入贷款详情
     overview:
       interest_rate: 利率
       monthly_payment: 月还款额
       not_applicable: 不适用
+      original_payoff_date: 原始结清日期
       original_principal: 原始本金
       remaining_principal: 剩余本金
       term: 期限
       type: 类型
       unknown: 未知
     tabs:
+      extra_repayments:
+        amount_label: "额外还款"
+        amount_placeholder: "0.00"
+        apply: "应用"
+        baseline_not_cleared: "按当前还款额计算，此贷款在原始到期日无法结清，届时仍欠 %{balloon}，因此没有更早的结清日期或利息节省可供对比。加上此额外还款后，贷款将在上述日期结清。"
+        clear: "清除"
+        comparison_basis: "以今日余额为基准，与仅按当前计划还款且不追加额外还款进行对比。"
+        dated_note: "每周和每双周的额外还款将在每笔还款支付后的下一次还款日计入，因此节省的利息只会偏保守估计。"
+        extra_not_cleared: "即使加上此额外还款，该贷款在原始到期日仍无法结清。请尝试更大的金额。"
+        frequencies:
+          fortnightly: "每双周"
+          monthly: "每月"
+          weekly: "每周"
+        frequency_label: "还款频次"
+        interest_saved: "节省利息"
+        intro: "查看在定期还款的基础上，每周、每双周或每月额外还款时，贷款能提前多久还清以及能节省多少利息。"
+        invalid_amount: "请输入大于或等于零的数字金额。"
+        invalid_frequency: "请选择每周、每双周或每月。"
+        months_sooner:
+          one: "提前 %{count} 个月"
+          other: "提前 %{count} 个月"
+          zero: "在同一个月内结清"
+        no_scheduled_repayments: "此贷款没有剩余的计划还款，但仍有未还余额，因此无法添加额外还款。"
+        not_applicable: "此贷款已无剩余欠款，无需模拟额外还款。"
+        payoff_with_extra: "追加额外还款后结清"
+        total_cost: "自今日起的总成本"
+        total_cost_not_cleared: "在原始到期日无法结清"
+        total_cost_saved: "比不追加额外还款少 %{amount}"
+        variable_rate_notice: "此贷款的利率随时间变化。这些数值采用了已记录的利率变更；尚未记录的变更将影响这些数据。"
+      repayment_progress:
+        instalment: "第 %{number} 期还款 · %{date}"
+        insurance: 保险
+        interest: 利息
+        of_original: "共 %{amount}"
+        principal: 本金
+        repaid: 已还款
+        total: 总计
+      schedule:
+        date: 日期
+        description: "根据原始余额、利率和期限预测，自 %{start_date} 开始。额外还款未反映在内。"
+        variable_rate_notice: 此贷款的利率随时间变化。还款计划在每次记录的变更时重新摊销，保持原始结清日期并重新计算还款额；尚未记录的变更将会变动这些数字。
+        opening_payment: 首期还款
+        forecasted_payoff_date: 预计结清日期
+        forecasted_payoff_not_converged: 按当前还款额无法结清
+        interest: 利息
+        monthly_payment: 月还款额
+        not_applicable: 不适用
+        number: "#"
+        payment: 还款额
+        principal: 本金
+        remaining_balance: 剩余余额
+        total_cost: 总成本
+        total_interest: 总利息
       overview:
+        insurance_rate_only: "每年 %{rate}"
         interest_rate: 利率
+        leverage: 杠杆率
+        leverage_band_conservative: 保守
+        leverage_band_high: 高
+        leverage_band_moderate: 适中
+        leverage_multiple: "%{ratio}x"
         monthly_payment: 月供
         not_applicable: 不适用
+        original_payoff_date: 原始结清日期
         original_principal: 原始本金
         remaining_principal: 剩余本金
+        total_cost: 总成本
+        total_cost_with_insurance: 包含保险的总成本
+        total_insurance: 保险
         term: 期限
         type: 类型
         unknown: 未知
