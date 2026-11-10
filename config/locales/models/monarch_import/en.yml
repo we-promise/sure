@@ -1,0 +1,20 @@
+---
+en:
+  activerecord:
+    errors:
+      models:
+        monarch_import:
+          missing_columns: "The %{file} file is missing the columns %{columns}. Is it the right Monarch export?"
+          malformed_csv: "The %{file} file isn't a readable CSV: %{error}"
+          invalid_number: "%{value} isn't a number"
+          invalid_date: "%{value} isn't a date in the form 2024-01-31"
+          date_out_of_range: "%{value} is outside the dates Sure imports (%{from} to %{to})"
+          blank_account: "A row has no account name. Check that the file is a Monarch export."
+          blank_transaction_id: "A transaction has no Id. Check that the file is a Monarch transactions export."
+          opening_balance_changed: "The opening balance of %{account} changed while importing. Review the import and publish it again."
+          no_accounts: "The exports don't contain any accounts. Check that you exported the right files from Monarch."
+          files:
+            balances: balances
+            transactions: transactions
+        import/monarch_account_mapping:
+          target_taken: "%{account} is already the destination of another Monarch account. Choose a different account for %{monarch}, or import it as a new account."

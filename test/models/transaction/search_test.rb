@@ -350,6 +350,12 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     end
   end
 
+  test "apply_category_filter requires family when categories are present" do
+    assert_raises(ArgumentError) do
+      Transaction::Search.apply_category_filter(Transaction.all, [ "Food & Drink" ], nil)
+    end
+  end
+
   # Totals method tests (lifted from Transaction::TotalsTest)
 
   test "totals computes basic expense and income totals" do
@@ -374,6 +380,42 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_equal 2, totals.count
     assert_equal Money.new(100, "USD"), totals.expense_money # $100
     assert_equal Money.new(200, "USD"), totals.income_money  # $200
+  end
+
+  test "totals excludes scheduled (future-dated) transactions by default" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 5000, kind: "standard", date: 3.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family)
+    totals = search.totals
+
+    assert_equal 1, totals.count
+    assert_equal 1, totals.excluded_scheduled_count
+    assert_equal Money.new(100, "USD"), totals.expense_money
+  end
+
+  test "totals includes scheduled transactions when an explicit end_date filter is set" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 5000, kind: "standard", date: 3.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family, filters: { end_date: 10.days.from_now.to_date.to_s })
+    totals = search.totals
+
+    assert_equal 2, totals.count
+    assert_equal 0, totals.excluded_scheduled_count
+    assert_equal Money.new(5100, "USD"), totals.expense_money
+  end
+
+  test "totals includes scheduled transactions when start_date is after today" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard", date: Date.current)
+    create_transaction(account: @checking_account, amount: 200, kind: "standard", date: 10.days.from_now.to_date)
+
+    search = Transaction::Search.new(@family, filters: { start_date: 1.day.from_now.to_date.to_s })
+    totals = search.totals
+
+    assert_equal 1, totals.count
+    assert_equal 0, totals.excluded_scheduled_count
+    assert_equal Money.new(200, "USD"), totals.expense_money
   end
 
   test "totals handles multi-currency transactions with exchange rates" do

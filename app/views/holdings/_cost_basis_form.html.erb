@@ -19,10 +19,10 @@
   # the holdings-list frame and the drawer for the redirect to the account.
   form_data = { turbo_frame: "_top" }
   if holding.avg_cost
-    form_data[:turbo_confirm] = {
+    form_data[:turbo_confirm] = CustomConfirm.new(
       title: t("holdings.cost_basis_cell.overwrite_confirm_title"),
       body: t("holdings.cost_basis_cell.overwrite_confirm_body", current: format_money(holding.avg_cost))
-    }
+    ).to_data_attribute
   end
 %>
 

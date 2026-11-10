@@ -2,6 +2,8 @@
 vi:
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Liên kết tài khoản từ truy vấn Flex %{name}"
       name: Interactive Brokers
       connection_description: Kết nối báo cáo Flex Web Service của Interactive Brokers
       institution_name: Interactive Brokers

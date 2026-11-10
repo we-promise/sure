@@ -174,6 +174,23 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "password sign-in leaves a pending invitation for the user's address unaccepted" do
+    invitation = Invitation.create!(
+      email: "invitee-before-signup@example.com",
+      role: "member",
+      family: @user.family,
+      inviter: @user
+    )
+    invitation.update_columns(email: @user.email)
+
+    get new_session_url(invitation: invitation.token)
+    post sessions_url, params: { email: @user.email, password: user_password_test }
+
+    assert_redirected_to root_url
+    assert_nil invitation.reload.accepted_at
+    assert_equal "admin", @user.reload.role
+  end
+
   test "does not issue a session when user is deleted before row locking" do
     @user.stubs(:with_lock).raises(ActiveRecord::RecordNotFound)
     User.stubs(:authenticate_by).returns(@user)
@@ -1142,6 +1159,28 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     ])
     get "/auth/desktop/openid_connect"
     assert_redirected_to new_session_path
+  end
+
+  test "a session inactive past the timeout is rejected and destroyed" do
+    sign_in @user
+    session_record = Session.order(created_at: :desc).first
+    session_record.update_column(:updated_at, Session::INACTIVITY_TIMEOUT.ago - 1.day)
+
+    get root_url
+    assert_redirected_to new_session_url
+    assert_not Session.exists?(session_record.id)
+  end
+
+  test "an active session is touched at most once per touch interval" do
+    sign_in @user
+    session_record = Session.order(created_at: :desc).first
+    recent_activity = 5.minutes.ago
+    session_record.update_column(:updated_at, recent_activity)
+
+    get root_url
+    assert_response :success
+    session_record.reload
+    assert_in_delta recent_activity, session_record.updated_at, 10.seconds
   end
 
   # create_session_for refuses a deactivated user, so the OIDC callback cannot
