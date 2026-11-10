@@ -718,6 +718,53 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_not @account.entries.exists?(external_id: "trade_republic_settlement_evt_stock_bonus")
   end
 
+  test "a securities transfer in imports as a portfolio trade without a cash leg" do
+    cash_account, cash_sure = create_linked_cash_account!
+
+    transfer = securities_transfer_event(id: "evt_tr_in", event_type: "SSP_SECURITIES_TRANSFER_INCOMING", quantity: "10")
+    @tr_account.update!(raw_timeline_payload: [ transfer ])
+    cash_account.update!(raw_timeline_payload: [ transfer ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    trade = find_trade("trade_republic_event_evt_tr_in")
+    assert_not_nil trade
+    assert_equal "Trade", trade.entryable_type
+    assert_equal BigDecimal("10"), trade.entryable.qty
+    assert_equal "Transfer", trade.entryable.investment_activity_label
+    # A transfer moves shares between brokers the user owns, so no cash
+    # changes hands; the value stays in the price for the cost basis.
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("451.20"), trade.entryable.qty * trade.entryable.price, BigDecimal("0.01")
+    assert_equal "SSP_SECURITIES_TRANSFER_INCOMING", trade.entryable.extra.dig("trade_republic", "event_type")
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_tr_in")
+  end
+
+  test "a securities transfer out imports as a negative portfolio trade without a cash leg" do
+    cash_account, cash_sure = create_linked_cash_account!
+
+    transfer = securities_transfer_event(id: "evt_tr_out", event_type: "SSP_SECURITIES_TRANSFER_OUTGOING", quantity: "-10")
+    @tr_account.update!(raw_timeline_payload: [ transfer ])
+    cash_account.update!(raw_timeline_payload: [ transfer ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    trade = find_trade("trade_republic_event_evt_tr_out")
+    assert_not_nil trade
+    assert_equal "Trade", trade.entryable_type
+    assert_equal BigDecimal("-10"), trade.entryable.qty
+    # Labelled a transfer, not a sell, so it is not treated as a realized gain.
+    assert_equal "Transfer", trade.entryable.investment_activity_label
+    assert_equal 0, trade.amount
+    assert_in_delta BigDecimal("451.20"), trade.entryable.qty.abs * trade.entryable.price, BigDecimal("0.01")
+    assert_equal "SSP_SECURITIES_TRANSFER_OUTGOING", trade.entryable.extra.dig("trade_republic", "event_type")
+
+    assert_not Entry.exists?(account: cash_sure, external_id: "trade_republic_event_evt_tr_out")
+  end
+
   test "Private Markets bonus units import as a portfolio trade without a cash leg" do
     cash_account, cash_sure = create_linked_cash_account!
     @tr_account.update!(raw_timeline_payload: [ private_markets_event(id: "evt_pm_buy", subtitle: "Buy Order", quantity: "20.0", amount: "2001.0"), private_markets_event ])
@@ -2093,6 +2140,27 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
           quantity: "0.055",
           isin: "US0231351067",
           name: "Amazon.com"
+        }
+      }
+    end
+
+    # Shaped like a stored securities transfer: shares and price from the
+    # detail, no cash amount. The quantity is already signed by the client
+    # detail parser (negative for outgoing transfers).
+    def securities_transfer_event(id:, event_type:, quantity:)
+      {
+        id: id,
+        timestamp: "2026-10-20T09:00:00.000+0000",
+        eventType: event_type,
+        category: "orderExecution",
+        title: "STOXX Global Dividend 100 EUR (Dist)",
+        subtitle: "Securities transfer",
+        detail: {
+          currency: "EUR",
+          quantity: quantity,
+          price: "45.12",
+          isin: "DE000A0F5UH1",
+          name: "STOXX Global Dividend 100 EUR (Dist)"
         }
       }
     end
