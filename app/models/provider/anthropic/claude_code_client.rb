@@ -200,7 +200,11 @@ class Provider::Anthropic::ClaudeCodeClient
         end
 
         unless wait.join(timeout)
-          Process.kill("KILL", wait.pid)
+          begin
+            Process.kill("KILL", wait.pid)
+          rescue Errno::ESRCH
+            nil
+          end
           wait.join
           raise Error, "Claude Code timed out after #{timeout}s"
         end

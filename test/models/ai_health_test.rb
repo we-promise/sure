@@ -156,6 +156,7 @@ class AiHealthTest < ActiveSupport::TestCase
     health = ClimateControl.modify(AI_ENVIRONMENT.merge("CLAUDE_CODE_OAUTH_TOKEN" => "test-token")) { AiHealth.new }
 
     assert_equal :not_checked, health.llm_status
+    assert_equal :not_checked, health.function_calling_status
   end
 
   private

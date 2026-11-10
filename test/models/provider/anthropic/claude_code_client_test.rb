@@ -105,6 +105,10 @@ class Provider::Anthropic::ClaudeCodeClientTest < ActiveSupport::TestCase
     assert_match "Not logged in", error.message
   end
 
+  teardown do
+    Array(@fake_clis).each(&:unlink)
+  end
+
   private
     def fake_cli(body)
       file = Tempfile.new([ "claude", ".sh" ])

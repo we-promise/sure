@@ -60,7 +60,7 @@ class AiHealth
   # is only ever blamed for a refusal the service actually made.
   def function_calling_status
     return :unavailable unless llm_configured?
-    return :not_checked unless run_probes?
+    return :not_checked unless run_probes? && !@llm_via_claude_code
     return :supported if function_calling_probe.passing?
     return :not_used if function_calling_probe.failure_code == :no_tool_call
     return :unsupported if function_calling_probe.failure_code == :tools_refused
