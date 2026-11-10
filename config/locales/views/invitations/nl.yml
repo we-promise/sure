@@ -3,14 +3,13 @@ nl:
   invitations:
     accept_choice:
       create_account: "Nieuw account aanmaken"
+      existing_account_hint: "Heeft u al een account? Bestaande accounts kunnen niet via een uitnodiging lid worden van een ander huishouden."
       joined_household: "U bent lid geworden van het huishouden."
       message: "%{inviter} heeft u uitgenodigd om lid te worden als %{role}."
-      sign_in_existing: "Ik heb al een account"
       title: "Lid worden van %{family}"
     create:
-      existing_user_added: "Gebruiker is toegevoegd aan uw huishouden."
-      existing_user_has_family_data: "Deze gebruiker heeft al een huishouden met accounts. Die accounts moeten eerst worden verwijderd of overgedragen voordat de gebruiker lid kan worden van uw huishouden."
       failure: "Kon uitnodiging niet verzenden"
+      own_email: "U kunt uzelf niet uitnodigen."
       success: "Uitnodiging succesvol verzonden"
     destroy:
       failure: "Er was een probleem met het verwijderen van de uitnodiging."

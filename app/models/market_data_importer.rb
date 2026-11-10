@@ -181,4 +181,9 @@ class MarketDataImporter
 
       mode.to_sym
     end
+
+    # The windows and pairs import_security_prices and import_exchange_rates
+    # request, and the last date they request; MarketDataResetJob deletes only
+    # those before re-importing.
+    public :required_security_price_windows, :required_exchange_rate_pairs, :end_date
 end
