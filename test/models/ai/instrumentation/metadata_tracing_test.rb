@@ -65,6 +65,12 @@ class Ai::Instrumentation::MetadataTracingTest < ActiveSupport::TestCase
                  Ai::Instrumentation::MetadataTracing.parse_headers("Authorization=Basic%20abc%3D, x-team=home"))
   end
 
+  test "a literal + in a header value stays; %2B decodes to +" do
+    assert_equal({ "Authorization" => "Basic ab+c/d==" },
+                 Ai::Instrumentation::MetadataTracing.parse_headers("Authorization=Basic ab+c/d=="))
+    assert_equal({ "x-team" => "a+b" }, Ai::Instrumentation::MetadataTracing.parse_headers("x-team=a%2Bb"))
+  end
+
   private
     # A chat request inside a feature's call, as a generation makes it.
     def chat_call

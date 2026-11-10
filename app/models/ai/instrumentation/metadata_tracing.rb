@@ -47,11 +47,20 @@ module Ai::Instrumentation::MetadataTracing
     provider
   end
 
-  # OTLP_HEADERS uses the OpenTelemetry form: `key=value,key=value`, values URL-encoded.
+  # OTLP_HEADERS uses the OpenTelemetry form: `key=value,key=value`, values percent-encoded.
   def parse_headers(value)
     value.to_s.split(",").filter_map do |pair|
       key, header = pair.split("=", 2).map { _1.to_s.strip }
-      [ key, CGI.unescape(header.to_s) ] if key.present?
+      [ key, percent_decode(header) ] if key.present?
     end.to_h
+  end
+
+  # Percent-decoding only, as the OTLP exporter parses its own headers variable: a literal `+`
+  # stays, since a value is RFC 3986 text, not form data, so a base64 credential keeps its
+  # pluses. A malformed sequence stays as written rather than raising: the value is operator-set.
+  def percent_decode(value)
+    URI.decode_uri_component(value.to_s)
+  rescue ArgumentError
+    value.to_s
   end
 end
