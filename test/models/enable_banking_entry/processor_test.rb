@@ -295,6 +295,27 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Example Shop", name
   end
 
+  test "does not assign the holder as merchant when the remittance is only the holder's name" do
+    @family.merchants.create!(name: "Jane Doe")
+    @enable_banking_account.update!(raw_payload: { "uid" => "eb_uid_1", "name" => "JANE DOE" })
+
+    tx = {
+      entry_reference: "ref_holder_only_remittance",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "8.00", currency: "EUR" },
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Jane Doe" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+
+    assert_nil @account.entries.find_by!(external_id: "enable_banking_ref_holder_only_remittance").transaction.merchant
+  end
+
   test "matches known merchants regardless of retailer chain" do
     %w[Bipa Spar Hofer Lidl Penny].each do |chain_name|
       @family.merchants.create!(name: chain_name)

@@ -628,6 +628,8 @@ class EnableBankingEntry::Processor
 
       remittance = primary_remittance_information
       return nil if remittance.blank?
+      # The remittance may be nothing but the holder's name, which never names the payee.
+      return nil if account_holder_name?(remittance)
 
       # Trust remittance-derived text as a merchant candidate when either the
       # counterparty was a technical CARD-* placeholder (existing Wise case), or
