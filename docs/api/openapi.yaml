@@ -2303,8 +2303,6 @@ components:
           - CategoryImport
           - RuleImport
           - MerchantImport
-          - PdfImport
-          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -2392,6 +2390,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -2449,6 +2448,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -7801,6 +7801,7 @@ paths:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -7878,7 +7879,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -7989,7 +7992,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -8228,8 +8233,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -8343,8 +8346,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
