@@ -17,7 +17,7 @@ class AccountsHelperTest < ActionView::TestCase
     ActiveStorage.stubs(:urls_expire_in).returns(7.days)
 
     first_url, first_id = account.logo_url, sidebar_logo_wrapper_id("asset_depository", account, "#000")
-    travel 1.minute do
+    travel 1.day do
       assert_not_equal first_url, Account.find(account.id).logo_url, "the stored logo's URL carries its expiry"
       assert_equal first_id, sidebar_logo_wrapper_id("asset_depository", Account.find(account.id), "#000")
     end
