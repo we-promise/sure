@@ -11,6 +11,18 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "shows the saved timezone instead of another city sharing its zone" do
+    users(:family_admin).family.update!(timezone: "Europe/Moscow")
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[type=hidden][name='user[family_attributes][timezone]'][value='Europe/Moscow']"
+    assert_select "button#timezone_trigger", text: "(+03:00) Europe/Moscow"
+    assert_select "[role=option][data-value='Europe/Moscow']", count: 1
+    assert_select "[role=option][aria-selected=true][data-value='Europe/Moscow']", count: 1
+  end
+
   test "admins see the investing-as-spending toggle" do
     get settings_preferences_url
 

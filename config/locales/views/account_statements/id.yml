@@ -1,0 +1,118 @@
+---
+id:
+  account_statements:
+    account_tab:
+      coverage_title: Cakupan rekening koran
+      coverage_description: Bulan historis yang didukung oleh rekening koran yang diunggah dan pemeriksaan saldo.
+      coverage_range: "%{start} - %{end}"
+      empty: Belum ada rekening koran yang ditautkan ke rekening ini.
+      open_inbox: Kotak Masuk
+      statements_title: Rekening Koran
+      year_label: Tahun cakupan
+    balance:
+      unknown: Tidak diketahui
+    coverage:
+      status:
+        ambiguous: Ambigu
+        covered: Tercakup
+        duplicate: Duplikat
+        mismatched: Tidak cocok
+        missing: Tidak ada
+        not_expected: Tidak diharapkan
+    create:
+      duplicates:
+        one: 1 rekening koran duplikat dilewati.
+        other: "%{count} rekening koran duplikat dilewati."
+      invalid_file_type: Unggah rekening koran berformat PDF, CSV, atau XLSX di bawah batas ukuran.
+      no_files: Pilih setidaknya satu berkas rekening koran.
+      success:
+        one: 1 rekening koran diunggah.
+        other: "%{count} rekening koran diunggah."
+    destroy:
+      failure: Rekening koran tidak dapat dihapus.
+      success: Rekening koran dihapus.
+    form:
+      account_upload: Unggah rekening koran
+      files_hint: PDF, CSV, atau XLSX. Maks %{max_size}MB per berkas.
+      files_label: Berkas rekening koran
+      inbox_upload: Unggah
+      period_hint: "Sure membaca periode dari PDF jika tercantum, atau dari tanggal pada nama berkas (misalnya 2026-04). Anda juga dapat mengaturnya langsung pada rekening koran."
+    index:
+      account_label: Rekening
+      confidence: "%{confidence} cocok"
+      empty_linked: Belum ada rekening koran yang ditautkan.
+      empty_unmatched: Kotak masuk rekening koran bersih.
+      leave_unmatched: Biarkan tidak cocok
+      linked_title: Rekening koran tertaut
+      no_suggestion: Tidak ada saran
+      storage_used: Penyimpanan digunakan
+      title: Brankas Rekening Koran
+      unmatched_title: Kotak masuk belum cocok
+      upload_description: Unggah rekening koran ke kotak masuk, atau pilih rekening untuk langsung menautkannya.
+      upload_title: Unggah rekening koran
+    link:
+      no_account: Pilih rekening sebelum menautkan rekening koran ini.
+      success: Rekening koran ditautkan ke %{account}.
+    period:
+      unknown: Periode tidak diketahui
+    reconciliation:
+      checks:
+        closing_balance: Saldo akhir
+        opening_balance: Saldo awal
+        period_movement: Pergerakan periode
+        unknown_check: Pemeriksaan tidak diketahui
+      matched: Cocok
+      mismatched: Tidak cocok
+      unavailable: Belum diperiksa
+    reject:
+      success: Saran pencocokan rekening koran ditolak.
+    show:
+      account_label: Rekening
+      account_last4_hint: 4 digit terakhir rekening
+      account_name_hint: Petunjuk nama rekening
+      closing_balance: Saldo akhir
+      currency: Mata uang
+      delete: Hapus
+      difference: Selisih
+      download: Unduh
+      institution_name_hint: Petunjuk institusi
+      ledger_amount: Buku besar Sure
+      linked_to: Ditautkan ke %{account}.
+      linking_title: Tautan rekening
+      link_suggestion: Saran tautan
+      metadata_title: Metadata rekening koran
+      no_suggestion: Belum ada saran rekening.
+      opening_balance: Saldo awal
+      period_end_on: Akhir periode
+      period_start_on: Awal periode
+      reconciliation_title: Rekonsiliasi
+      reconciliation_unavailable: Tambahkan periode rekening koran serta saldo awal atau saldo akhir, lalu pastikan Sure memiliki riwayat saldo untuk tanggal-tanggal tersebut.
+      reject: Tolak
+      save: Simpan rekening koran
+      statement_amount: Rekening koran
+      suggested_account: "Saran rekening adalah %{account} (keyakinan %{confidence})."
+      title: Rekening Koran
+      unlink: Putuskan tautan
+      unmatched_account: Kotak masuk belum cocok
+      unknown_value: Tidak diketahui
+    status:
+      linked: Tertaut
+      rejected: Ditolak
+      unmatched: Belum cocok
+    table:
+      account: Rekening
+      actions: Tindakan
+      download: Unduh
+      edit: Edit
+      file: Berkas
+      link_suggestion: Saran tautan
+      period: Periode
+      reconciliation: Rekonsiliasi
+      reject: Tolak saran
+      suggestion: Saran
+      unlink: Putuskan tautan
+      view: Lihat
+    unlink:
+      success: Rekening koran dikembalikan ke kotak masuk belum cocok.
+    update:
+      success: Rekening koran diperbarui.

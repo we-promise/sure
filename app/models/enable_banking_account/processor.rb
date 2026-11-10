@@ -22,6 +22,8 @@ class EnableBankingAccount::Processor
       Rails.logger.error "EnableBankingAccount::Processor - Failed to process account #{enable_banking_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
       report_exception(e, "account")
+      # Whatever happened to the anchor here, it is not known to be verified.
+      enable_banking_account.update_column(:balance_verified, false) if enable_banking_account.persisted?
       raise
     end
 
@@ -87,6 +89,11 @@ class EnableBankingAccount::Processor
           # bank-reported balance — eliminating spurious cash adjustment spikes.
           result = account.set_current_balance(balance)
           raise ProcessingError, "Failed to set current balance: #{result.error}" unless result.success?
+
+          # The anchor now holds this balance, so its verification is the
+          # importer's evidence for it. Only set here, so a sync that stops
+          # before this point never vouches for an older anchor.
+          enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
         end
       end
 

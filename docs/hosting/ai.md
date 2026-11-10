@@ -37,7 +37,7 @@ Background jobs that classify transactions and detect merchants. These use the L
 
 If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
-With `mcp_only`, Sure also skips the features that need a user's AI consent: the LLM-written insight text and the bills AI shortcuts (review, smart fill, smart configuration).
+With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
 
 ### Where AI jobs run (Sidekiq lanes)
 
@@ -46,13 +46,14 @@ AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow mod
 | Lane | Queues | Threads | Jobs |
 |------|--------|---------|------|
 | default | `scheduled`, `high_priority`, `medium_priority`, `low_priority`, `default` | `RAILS_MAX_THREADS - RAILS_AI_MAX_THREADS` (3 - 1 = 2) | syncs, balances, rules, imports, scheduled jobs |
-| ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing, insights (`ai_low_priority`) |
+| ai | `ai_high_priority`, then `ai_low_priority` (strict order) | `RAILS_AI_MAX_THREADS` (default `1`) | chat (`ai_high_priority`); auto-categorization, merchant detection and enhancement, PDF processing (`ai_low_priority`) |
 
 - `RAILS_MAX_THREADS` is the worker's total thread count, as before, and also sizes its database pool. It must be greater than `RAILS_AI_MAX_THREADS` (so at least `2` by default): a lane with 0 threads stops the worker from starting ("Concurrency of 0 is not supported"). Puma reads the same variable, so if you lower it for the web service to save memory, set the worker's separately.
-- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs make one LLM call each, of `LLM_MAX_ITEMS_PER_CALL` items (default `25`), or more if the batch doesn't fit the context window; PDF import, insight and chat jobs can make several. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
-- **Busy notice:** when a chat would wait behind another AI job (a chat has waited over 30 seconds, or, with one AI thread, background AI work has), its "Thinking" bubble says the system is busy until the chat's job starts. `AI_RESPONSE_TIMEOUT` includes that wait.
+- **Strict order:** a waiting chat runs next, but it doesn't interrupt the AI job already running. Auto-categorization, merchant-detection and merchant-enhancement jobs make one LLM call each, of `LLM_MAX_ITEMS_PER_CALL` items (default `25`), or more if the batch doesn't fit the context window; PDF import and chat jobs can make several. With one AI thread, a PDF import or other `ai_low_priority` job waits behind earlier ones, and continuous chat use pauses background AI work.
+- **Busy notice:** with one AI thread in a single worker process running the AI queues, while another AI job (a background job or another chat) is running, a chat's "Thinking" bubble says the system is busy until the chat's job starts. `AI_RESPONSE_TIMEOUT` includes that wait.
+- **Chat reservation:** with one AI thread, clicking into or typing in the chat box, and each finished reply, hold back new background AI jobs for 60 seconds, so the message runs next. This applies when a single worker process runs the AI queues; with several, a chat can run on one while another runs background jobs, so nothing is held. Back-to-back holds stop after 15 minutes and resume 60 seconds later, so background AI work gets a turn. When you click into or type in the chat box while background AI jobs wait, a bubble above it shows the countdown, or says one is still finishing. A job that is already running is not interrupted.
 - **One AI thread suits a model that serves one request at a time,** such as a local model on CPU: a chat turn's calls then run back to back, keeping the model's prompt cache warm. If your provider serves requests in parallel (hosted APIs, or a local server with several slots), raise `RAILS_AI_MAX_THREADS`, and `RAILS_MAX_THREADS` by the same amount so the default lane keeps its threads.
-- **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads.
+- **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads, and the chat reservation doesn't hold them, since a chat can usually take another thread.
 - **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
 - **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Jobs already queued under the old names still run once, in the default lane.
 - **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. OpenAI-compatible providers split a batch that doesn't fit the context window; with the native Anthropic provider, raise `ANTHROPIC_MAX_TOKENS` (default `4096`) along with it, or replies are cut off.
@@ -188,7 +189,7 @@ Or in the UI: **Settings** → **Self-Hosting** → **AI Provider** → **Anthro
 |----------|---------|--------------|
 | `LLM_PROVIDER` | `openai` | `anthropic` selects this provider. If the selected provider has no key, Sure uses the other one. While a custom OpenAI-compatible provider is configured (`OPENAI_URI_BASE` with an access token and model), chat still goes to it, so remove those settings when switching. |
 | `ANTHROPIC_API_KEY` | — | API key. `ANTHROPIC_ACCESS_TOKEN` also works and wins if both are set. |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. Claude Opus 5.5, Sonnet 5.5 and Fable 5.1 work for chat only until [#4125](https://github.com/we-promise/sure/issues/4125) is fixed. |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for chat and all background jobs. Must start with `claude` unless a base URL is set. |
 | `ANTHROPIC_MAX_TOKENS` | `4096` | Reply limit, sent with every request (the Messages API requires one). |
 | `ANTHROPIC_REQUEST_TIMEOUT` | `600` | HTTP timeout per call, in seconds. |
 | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Anthropic-compatible endpoint. Requires `ANTHROPIC_MODEL`. |
@@ -199,7 +200,7 @@ How it differs from the OpenAI-compatible provider:
   - **Every provider:** below `4096`, the chat's system prompt lists accounts and categories only as counts, and the model fetches them with tools.
   - **OpenAI-compatible:** it is also the budget, with `LLM_MAX_RESPONSE_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE`, for splitting auto-categorization and merchant batches, and for trimming chat history on Chat Completions endpoints (`LLM_MAX_HISTORY_TOKENS`). The native OpenAI Responses API keeps history on OpenAI's side, so nothing is trimmed there.
   - **Native Anthropic:** only the system-prompt check applies. History is sent whole, batches aren't split, and `LLM_MAX_RESPONSE_TOKENS`, `LLM_MAX_HISTORY_TOKENS` and `LLM_SYSTEM_PROMPT_RESERVE` are ignored. Set `LLM_CONTEXT_WINDOW` by env (e.g. `200000`) so the prompt lists accounts and categories; its UI field is in the OpenAI panel.
-- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
+- **The reply limit is always sent.** A reply that needs more than `ANTHROPIC_MAX_TOKENS` is cut off, and on Claude 5 models the model's thinking counts toward it. Only bank statement extraction detects this (it logs a warning). Raise the limit if long answers or batch results come back incomplete.
 - **Batch size.** Auto-categorization, merchant detection and merchant enhancement send `LLM_MAX_ITEMS_PER_CALL` items per request (default `25`), with no splitting to fit the context window. Raise `ANTHROPIC_MAX_TOKENS` along with it, or replies are cut off (see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes)).
 - **Its own timeout.** `ANTHROPIC_REQUEST_TIMEOUT` replaces `OPENAI_REQUEST_TIMEOUT`. `AI_RESPONSE_TIMEOUT` still covers the whole chat turn. `OPENAI_EXTRA_HEADERS`, `LLM_JSON_MODE` and `OPENAI_SUPPORTS_*` don't apply.
 
@@ -1030,6 +1031,8 @@ Langfuse helps you:
 
 4. Restart Sure
 
+Sure sends completed observations through Langfuse's v4 OpenTelemetry ingestion path. Existing keys and host settings still apply. See the [Langfuse migration and validation notes](langfuse.md#langfuse-v4) before upgrading an existing project.
+
 All LLM operations will now be logged to Langfuse, including:
 - Chat messages and responses
 - Auto-categorization requests
@@ -1131,9 +1134,11 @@ Good test queries that exercise different capabilities:
 
 ### Cloud Costs
 
-**Pricing table last updated and verified: October 17, 2026.** Every model
+**Full pricing table last verified: October 17, 2026.** Every model
 listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
-official sources. `PRICING_VERIFIED_ON` supplies the verification date shown on
+official sources on that date, except the Claude and OpenAI rows: those were
+last reviewed on November 1, 2026, without re-checking the Gemini rows.
+`PRICING_VERIFIED_ON` supplies the full-table verification date shown on
 the LLM usage screen. This is a manual review date, not a claim that providers
 changed every price that day.
 
@@ -1141,11 +1146,11 @@ Rates are USD per million tokens at the Standard tier. The source coverage is:
 
 | Models in the code | Official pricing source |
 | --- | --- |
-| GPT-6 Sol/6.1 Sol, GPT-5.6, GPT-5.5, GPT-5.4, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1, o3, o4-mini (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
+| GPT-6 Astra, GPT-6 Sol/6.1 Sol, GPT-6.1 Terra, GPT-6 Luna, GPT-5.6 (and its `gpt-5.6` alias for Sol), GPT-5.6/5.5 Cyber, GPT-5.5, GPT-5.4, GPT-5.3 Codex, GPT-5.2, GPT-5.1, GPT-5, GPT-4.1, GPT-4o, o1/o1-pro, o3, o4-mini, chat-latest (including listed variants) | [OpenAI pricing](https://developers.openai.com/api/docs/pricing) |
 | GPT-5.2/5.1 Chat aliases | [GPT-5.2 Chat](https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest), [GPT-5.1 Chat](https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest) |
 | o1-mini | [o1-mini](https://developers.openai.com/api/docs/models/o1-mini) |
 | Gemini 4 Argon, 3.8/3.7/3.6/3.5 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro, 3 Flash, 2.5 Pro/Flash | [Google pricing](https://ai.google.dev/gemini-api/docs/pricing) |
-| Claude Opus 4.6/4.7, Sonnet 4.5/4.6, Haiku 4.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
+| Claude Fable 5/5.1, Opus 4/4.1/4.5/4.6/4.7/4.8/5/5.5, Sonnet 4/4.5/4.6/5/5.5, Haiku 4.5/5.5 | [Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing) |
 
 #### Dated pricing changes
 
@@ -1171,7 +1176,8 @@ and Gemini 3.8, 3.7, and 3.6 Flash through December 31, 2026.
 
 #### Context tiers and estimate limits
 
-OpenAI's listed GPT-6 Sol, GPT-6.1 Sol, GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
+OpenAI's listed GPT-6 Astra, GPT-6 Sol, GPT-6.1 Sol, GPT-6.1 Terra, GPT-6 Luna,
+GPT-5.6, GPT-5.5/Pro and GPT-5.4/Pro
 rates increase above 272,000 input tokens: input doubles and output increases
 by 50% for the entire request. GPT-5.4 mini/nano retain their flat rates.
 Gemini 4 Argon is $2.00 / $10.00 through November 2026 ($4.00 / $20.00 standard starting
@@ -1183,14 +1189,30 @@ $4.00 / $18.00 above 200,000 input tokens. Gemini 3.8 Flash, 3.7 Flash, and
 Gemini 3.5 Flash is $1.50 / $9.00, Gemini 3.5 Flash-Lite is $0.30 / $2.50,
 Gemini 3.1 Flash-Lite is $0.25 / $1.50, Gemini 3 Flash is $0.50 / $3.00,
 and Gemini 2.5 Flash remains $0.30 / $2.50.
-Claude 4.6/4.7 use standard rates throughout their context window.
+Claude Haiku 5.5 changes from $0.10 / $0.50 to $0.50 / $2.50 above 100,000
+prompt tokens, counting cache reads and writes. Other Claude models use
+standard rates throughout their context window. Claude cache reads cost 0.1x
+input, except Opus 5.5 and Sonnet 5.5 (0.05x) and Fable 5.1 (0.025x).
+A Claude model released after the last review (for example `claude-opus-6`)
+is estimated at the newest listed rate of its family (Fable, Opus, Sonnet or
+Haiku) until the table is updated. Likewise, an unlisted release of an OpenAI
+tier (for example `gpt-6.2-sol` or `gpt-7-astra`) is estimated at the newest
+listed Astra, Sol, Terra or Luna rate. A listed version row covers its dated snapshots but not
+later versions, so other unlisted OpenAI models (for example `gpt-5.9`) show
+no estimate instead of an older model's rate.
 
 Sure estimates individual requests using these tiers. Aggregate categorization
-previews assume short requests. Saved usage costs are historical estimates and
-are not recalculated by this update. Estimates exclude regional premiums,
+previews assume short requests. For [OpenRouter's official API endpoints](https://openrouter.ai/docs/cookbook/administration/usage-accounting), saved
+usage prefers a valid nonnegative provider-reported `usage.cost` in USD, including
+zero, over the token-price estimate. Other endpoints, or responses with absent or
+invalid costs, use the bundled estimates. Unknown models can therefore have a
+recorded post-call cost even when their pre-run estimate is N/A. Saved usage costs
+are not recalculated. Estimates exclude regional premiums,
 alternative service tiers, tool charges and audio-specific rates. Anthropic
-five-minute cache writes and reads are included when reported; OpenAI and Gemini
-cache discounts and cache-write/storage charges are not currently modeled.
+five-minute cache writes and reads are included when reported. For Claude models
+reached through an OpenAI-compatible endpoint, `cached_tokens` are priced at the
+Claude cache-read rate. OpenAI and Gemini cache discounts and
+cache-write/storage charges are not currently modeled.
 Custom endpoints may charge different rates.
 
 For comparison, GPT-4.1 is $2 input / $8 output, GPT-5 is $1.25 / $10,
@@ -1530,7 +1552,7 @@ Write:
 - `update_transaction`, `update_budget`, `create_goal`
 - `unmatch_transfer` - Unlink a wrongly matched transfer
 - `update_transfer` - Count a transfer into an investment account as spending or as a plain transfer
-- `create_tag` / `update_tag`, `create_category` / `update_category`
+- `create_tag` / `update_tag`, `create_category` / `update_category` / `delete_category`
 
 Documents:
 - `import_bank_statement` - Import bank statement data

@@ -17,6 +17,7 @@ de:
       date: Datum
       description: Beschreibung
       description_placeholder: Transaktion beschreiben
+      description_placeholder_optional: Leer lassen, um den Namen aus Kategorie/Händler zu übernehmen, oder zuerst eines davon wählen
       expense: Ausgabe
       income: Einnahme
       none: (keine)

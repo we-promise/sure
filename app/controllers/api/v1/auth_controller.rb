@@ -143,6 +143,29 @@ module Api
         end
       end
 
+      # Lists the providers GET /auth/mobile/:provider accepts, so clients can
+      # render one button per provider. Only display fields are exposed; the
+      # provider config also carries client secrets. Labels fall back the same
+      # way as the web sign-in page.
+      def sso_providers
+        providers = Rails.configuration.x.auth.sso_providers.map do |provider|
+          name = provider[:name].to_s
+          strategy = provider[:strategy].to_s
+          id = provider[:id].to_s
+          default_label = if id == "google" || strategy == "google_oauth2"
+            I18n.t("sessions.new.google_auth_connect")
+          elsif id.present?
+            I18n.t("sessions.new.#{id}", default: name.titleize)
+          else
+            name.titleize
+          end
+
+          { name: name, strategy: strategy, label: provider[:label].presence || default_label }
+        end
+
+        render json: { providers: providers }
+      end
+
       def sso_exchange
         code = sso_exchange_params
 
@@ -301,7 +324,7 @@ module Api
             invitation&.update!(accepted_at: Time.current)
 
             # Joining an existing family via invitation must honor the family's
-            # default sharing policy, matching Invitation#accept_for, so a mobile
+            # default sharing policy, matching token registration, so a mobile
             # SSO invitee sees the accounts the family shares by default.
             user.family.auto_share_existing_accounts_with(user) if invitation.present?
 

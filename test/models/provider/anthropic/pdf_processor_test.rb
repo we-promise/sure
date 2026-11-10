@@ -6,6 +6,24 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
     @pdf_content = "%PDF-1.4 fake bytes".b
   end
 
+  [ {}, { cache_creation_input_tokens: 30, cache_read_input_tokens: 50 } ].each do |cache_usage|
+    test "exports token usage with #{cache_usage.empty? ? 'missing' : 'populated'} cache fields" do
+      response = build_response(content: [ tool_use_block(id: "toolu_1", name: "report_document_analysis",
+        input: { "summary" => "Statement", "document_type" => "bank_statement" }) ],
+        usage: { input_tokens: 10, output_tokens: 20 }.merge(cache_usage))
+      span = mock
+      span.expects(:end).with do |args|
+        args[:usage] == { "input_tokens" => 10, "output_tokens" => 20, "total_tokens" => 30,
+          "cache_creation_input_tokens" => cache_usage.fetch(:cache_creation_input_tokens, 0),
+          "cache_read_input_tokens" => cache_usage.fetch(:cache_read_input_tokens, 0) }
+      end
+      result = Provider::Anthropic::PdfProcessor.new(stub_client(response), model: "claude-sonnet-4-6",
+        pdf_content: @pdf_content, langfuse_trace: stub(generation: span)).process
+
+      assert_equal "Statement", result.summary
+    end
+  end
+
   test "sends PDF as native document content block and parses tool response" do
     fake_response = build_response(content: [
       tool_use_block(
@@ -166,6 +184,28 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
     assert_match(/detail unavailable/i, captured_output[:error_detail])
   end
 
+  test "sends tool_choice auto to a model that rejects a forced tool" do
+    fake_response = build_response(content: [
+      tool_use_block(
+        id: "toolu_4",
+        name: "report_document_analysis",
+        input: { "document_type" => "bank_statement", "summary" => "Statement.", "extracted_data" => {} }
+      )
+    ])
+    captured = nil
+    client = stub_client(fake_response) { |params| captured = params }
+
+    result = Provider::Anthropic::PdfProcessor.new(
+      client,
+      model: "claude-sonnet-5-5",
+      pdf_content: @pdf_content
+    ).process
+
+    assert_equal({ type: "auto", disable_parallel_tool_use: true }, captured[:tool_choice])
+    assert_includes captured[:system_], "calling the report_document_analysis tool"
+    assert_equal "bank_statement", result.document_type
+  end
+
   private
     def stub_failing_client(error)
       messages = mock
@@ -179,7 +219,7 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
       span = mock
       span.expects(:end).with { |args| yield(args[:output]); true }
       trace = mock
-      trace.stubs(:span).returns(span)
+      trace.stubs(:generation).returns(span)
       trace
     end
 
@@ -199,7 +239,7 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
         id: "msg_test",
         model: "claude-sonnet-4-6",
         content: content,
-        usage: OpenStruct.new(input_tokens: usage[:input_tokens], output_tokens: usage[:output_tokens])
+        usage: OpenStruct.new(usage)
       )
     end
 

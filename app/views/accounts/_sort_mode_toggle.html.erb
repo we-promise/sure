@@ -1,0 +1,18 @@
+<%# locals: (sortable:) %>
+
+<%# Shown only with the manual account order. Switches the sidebar into sort
+    mode, the only time the drag handles are visible. %>
+<% if sortable %>
+  <%= render DS::Button.new(
+    variant: :outline,
+    size: :md,
+    icon: "arrow-up-down",
+    class: "shrink-0 aria-pressed:bg-surface-inset",
+    title: t("accounts.sidebar.sort_mode.start"),
+    aria: { label: t("accounts.sidebar.sort_mode.start"), pressed: "false" },
+    data: {
+      account_sort_mode_target: "toggle",
+      action: "account-sort-mode#toggle"
+    }
+  ) %>
+<% end %>
