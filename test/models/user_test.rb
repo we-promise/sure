@@ -832,6 +832,56 @@ class UserTest < ActiveSupport::TestCase
     assert_equal %w[transactions_breakdown], @user.preferences["reports_section_order"]
   end
 
+  test "Reports reads the order and collapsed set already stored under its original keys" do
+    # Written straight to the column, as preferences saved before the
+    # namespaced readers existed were.
+    @user.update_columns(preferences: {
+      "reports_section_order" => %w[transactions_breakdown net_worth trends_insights],
+      "reports_collapsed_sections" => { "net_worth" => true, "trends_insights" => false }
+    })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown net_worth trends_insights], @user.reports_section_order
+    assert_equal @user.reports_section_order, @user.section_order("reports")
+    assert @user.reports_section_collapsed?("net_worth")
+    assert @user.section_collapsed?("reports", "net_worth")
+    assert_not @user.reports_section_collapsed?("trends_insights")
+    assert_not @user.reports_section_collapsed?("transactions_breakdown")
+  end
+
+  test "update_reports_preferences keeps writing the original keys and merges each toggle" do
+    @user.update!(preferences: { "reports_section_order" => %w[net_worth], "reports_collapsed_sections" => { "net_worth" => true } })
+
+    @user.update_reports_preferences({ "reports_collapsed_sections" => { "trends_insights" => true } })
+    @user.reload
+
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"], "a toggle must not write an order"
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+
+    @user.update_reports_preferences({ "reports_section_order" => %w[trends_insights net_worth] })
+    @user.reload
+
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+    assert_equal %w[reports_collapsed_sections reports_section_order], @user.preferences.keys.sort
+  end
+
+  test "section preferences reject an unknown namespace" do
+    assert_raises(ArgumentError) { @user.section_order("dashboard") }
+    assert_raises(ArgumentError) { @user.section_collapsed?("dashboard", "net_worth") }
+    assert_raises(ArgumentError) { @user.update_section_preferences("settings", order: []) }
+  end
+
+  # Safe navigation skips its arguments when the receiver is nil, so the
+  # namespace check has to run before preferences is read.
+  test "section preferences reject an unknown namespace when preferences is nil" do
+    @user.preferences = nil
+
+    assert_raises(ArgumentError) { @user.section_order("dashboard") }
+    assert_raises(ArgumentError) { @user.section_collapsed?("dashboard", "net_worth") }
+    assert_not @user.section_collapsed?("reports", "net_worth")
+  end
+
   test "handles missing nested keys in preferences for collapsed sections" do
     @user.update!(preferences: { "section_order" => %w[cashflow] })
 
@@ -1061,6 +1111,28 @@ class UserTest < ActiveSupport::TestCase
     )
     assert_not user.valid?
     assert_includes user.errors[:password], "can't be blank"
+  end
+
+  test "only a super admin manages instance settings when the instance hosts several families" do
+    assert Family.count > 1
+
+    assert users(:sure_support_staff).manages_instance_settings?
+    assert_not users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "the admins of the only family on a self-hosted instance manage instance settings" do
+    Family.stubs(:count).returns(1)
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
   end
 
   # First user role assignment tests
@@ -1368,5 +1440,40 @@ class UserTest < ActiveSupport::TestCase
     assert api_key.reload.revoked?
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
+  end
+
+  test "update_manual_account_order keeps other groups and only accessible accounts" do
+    @user.update_manual_account_order("credit_card", [ accounts(:credit_card).id ])
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    assert @user.update_manual_account_order("depository", [ accounts(:connected).id, foreign.id, accounts(:depository).id, "not-a-uuid" ])
+
+    order = @user.reload.manual_account_order
+    assert_equal [ accounts(:connected).id, accounts(:depository).id ], order["depository"]
+    assert_equal [ accounts(:credit_card).id ], order["credit_card"]
+  end
+
+  test "update_manual_account_order drops family accounts not shared with the user" do
+    unshared = families(:dylan_family).accounts.create!(name: "Unshared", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:family_member))
+
+    assert @user.update_manual_account_order("depository", [ unshared.id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order drops accounts from another group" do
+    @user.update_manual_account_order("depository", [ accounts(:credit_card).id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order rejects account ids that are not a list" do
+    assert_not @user.update_manual_account_order("depository", { "0" => accounts(:depository).id })
+    assert_equal({}, @user.reload.manual_account_order)
+  end
+
+  test "update_manual_account_order rejects unknown groups" do
+    assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
+    assert_equal({}, @user.reload.manual_account_order)
   end
 end

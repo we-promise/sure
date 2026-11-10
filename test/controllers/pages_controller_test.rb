@@ -903,7 +903,11 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard spending trend header treats current month final day as in progress" do
-    selected_month = (0..24).map { |i| i.months.ago.beginning_of_month.to_date }
+    # A fully past month. In the first days of a month that follows a longer
+    # one the search would otherwise pick the current month, and the fixture
+    # transactions dated a few days ago would land in the previous month's
+    # total.
+    selected_month = (1..24).map { |i| i.months.ago.beginning_of_month.to_date }
       .find { |m| (m - 1.month).end_of_month.day > m.end_of_month.day }
     previous_month = (selected_month - 1.month).beginning_of_month
 
@@ -1224,7 +1228,84 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path(spending_month: selected_month.iso8601, customize: true, hidden_section: "spending_trend")
   end
 
+  test "dashboard hides the experimental Sankey comparison unless the user opts in" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "section[data-section-key='cashflow_sankey']"
+    assert_select "#cashflow-preview", count: 0
+    assert_cashflow_preview_opt_in checked: false
+  end
+
+  test "dashboard renders the experimental Sankey comparison once the user opts in" do
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => true,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-preview"
+    assert_cashflow_preview_opt_in checked: true
+  end
+
+  test "dashboard hides the Sankey comparison opt-in without preview features" do
+    @user.update!(preferences: (@user.preferences || {}).merge(
+      "preview_features_enabled" => false,
+      "cashflow_preview_enabled" => true
+    ))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-preview", count: 0
+    assert_select "input[name='preferences[cashflow_preview_enabled]']", count: 0
+  end
+
+  test "update_preferences persists the Sankey comparison opt-in" do
+    patch "/dashboard/preferences", params: { preferences: { cashflow_preview_enabled: true } }, as: :json
+    assert_response :ok
+    assert_equal true, @user.reload.cashflow_preview_enabled?
+
+    patch "/dashboard/preferences", params: { preferences: { cashflow_preview_enabled: false } }, as: :json
+    assert_response :ok
+    assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
+  test "an html Sankey comparison toggle redirects back to the dashboard" do
+    patch "/dashboard/preferences",
+      params: { preferences: { cashflow_preview_enabled: "1" } },
+      headers: { "HTTP_REFERER" => root_url(period: "last_30_days") }
+
+    assert_redirected_to root_url(period: "last_30_days")
+    assert_equal true, @user.reload.cashflow_preview_enabled?
+
+    patch "/dashboard/preferences",
+      params: { preferences: { cashflow_preview_enabled: "0" } },
+      headers: { "HTTP_REFERER" => root_url(period: "last_30_days") }
+
+    assert_redirected_to root_url(period: "last_30_days")
+    assert_equal false, @user.reload.cashflow_preview_enabled?
+  end
+
   private
+    def assert_cashflow_preview_opt_in(checked:)
+      assert_select "form[action='#{dashboard_preferences_path}'][data-controller='auto-submit-form']" do
+        assert_select "label[for='cashflow_preview_enabled']", text: /#{Regexp.escape(I18n.t("pages.dashboard.cashflow_preview.opt_in_title"))}/
+        assert_select "input[type=checkbox][name='preferences[cashflow_preview_enabled]'][role=switch][data-auto-submit-form-target=auto]" do |inputs|
+          assert_equal 1, inputs.size
+          if checked
+            assert inputs.first["checked"].present?
+          else
+            assert_nil inputs.first["checked"]
+          end
+        end
+      end
+    end
+
     def money_flow_bars
       JSON.parse(css_select("[data-controller='bar-chart']").first["data-bar-chart-data-value"])
     end

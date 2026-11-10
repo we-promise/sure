@@ -18,7 +18,7 @@ module Sure
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks generators])
+    config.autoload_lib(ignore: %w[assets tasks generators rubocop])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -33,6 +33,9 @@ module Sure
 
     # TODO: This is here for incremental adoption of localization.  This can be removed when all translations are implemented.
     config.i18n.fallbacks = true
+
+    # Exact opt-in: version metadata is authenticated by default.
+    config.public_version_endpoint = ENV["PUBLIC_VERSION_ENDPOINT"] == "true"
 
     config.app_mode = (ENV["SELF_HOSTED"] == "true" || ENV["SELF_HOSTING_ENABLED"] == "true" ? "self_hosted" : "managed").inquiry
 

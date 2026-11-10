@@ -30,8 +30,9 @@ module StreamExtensions
       flash[:notice] = notice if notice.present?
       flash[:alert] = alert if alert.present?
 
-      # Without a Referer, redirecting "back" would emit a redirect with no URL.
-      redirect_target_url = (redirect_back && request.referer.presence) || path
+      # A request without a Referer (a no-referrer policy, a direct POST) goes
+      # to the fallback rather than to a redirect with no target.
+      redirect_target_url = redirect_back ? (request.referer.presence || path) : path
       render turbo_stream: turbo_stream.action(:redirect, redirect_target_url)
     end
 end

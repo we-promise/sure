@@ -1,0 +1,14 @@
+---
+id:
+  activerecord:
+    attributes:
+      account/accountable:
+        purchase_date: Tanggal pembelian
+      vehicle:
+        purchase_date: Tanggal pembelian
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: harus sebelum entri tertua pada akun

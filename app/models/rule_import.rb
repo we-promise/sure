@@ -1,6 +1,7 @@
 class RuleImport < Import
   def import!
     transaction do
+      @rules_with_stored_email_action = Rule.ids_with_stored_email_notification_action(family.rules)
       rows.each do |row|
         create_or_update_rule_from_row(row)
       end
@@ -15,7 +16,7 @@ class RuleImport < Import
   end
 
   def column_keys
-    %i[name resource_type active effective_date conditions actions]
+    %i[name resource_type active effective_date conditions actions rule_group]
   end
 
   def required_column_keys
@@ -32,7 +33,7 @@ class RuleImport < Import
 
   def csv_template
     csv_string = CSV.generate do |csv|
-      csv << %w[name resource_type* active effective_date conditions* actions*]
+      csv << %w[name resource_type* active effective_date conditions* actions* group]
 
       csv << [
         "Categorize groceries",
@@ -40,7 +41,8 @@ class RuleImport < Import
         "true",
         "2024-01-01",
         '[{"condition_type":"transaction_name","operator":"like","value":"grocery"}]',
-        '[{"action_type":"set_transaction_category","value":"Groceries"}]'
+        '[{"action_type":"set_transaction_category","value":"Groceries"}]',
+        "Shopping"
       ]
 
       csv << [
@@ -49,7 +51,18 @@ class RuleImport < Import
         "true",
         "",
         '[{"condition_type":"transaction_name","operator":"like","value":"amazon"}]',
-        '[{"action_type":"auto_categorize"}]'
+        '[{"action_type":"auto_categorize"}]',
+        ""
+      ]
+
+      csv << [
+        "Split shared rent",
+        "transaction",
+        "true",
+        "",
+        '[{"condition_type":"transaction_name","operator":"like","value":"rent"}]',
+        '[{"action_type":"split_transaction","value":{"splits":[{"type":"percentage","name":"My share","share":"50","category":"Rent"},{"type":"percentage","name":"Partner share","share":"50","category":"Rent","tags":["Shared"]}]}}]',
+        ""
       ]
     end
 
@@ -59,8 +72,9 @@ class RuleImport < Import
   def generate_rows_from_csv
     rows.destroy_all
 
+    header_size = header_row_size
     csv_rows.each.with_index(1) do |row, index|
-      normalized_row = normalize_rule_row(row)
+      normalized_row = normalize_rule_row(row, header_size: header_size)
 
       rows.create!(
         source_row_number: index,
@@ -70,6 +84,7 @@ class RuleImport < Import
         effective_date: normalized_row[:effective_date].to_s.strip,
         conditions: normalized_row[:conditions].to_s.strip,
         actions: normalized_row[:actions].to_s.strip,
+        rule_group: normalized_row[:rule_group] && normalized_rule_text(normalized_row[:rule_group], attribute: :rule_group),
         currency: default_currency
       )
     end
@@ -81,8 +96,17 @@ class RuleImport < Import
 
   private
 
-    def normalize_rule_row(row)
-      fields = row.fields
+    # The optional group column is read by its header and left out of the
+    # positional fields, which re-assemble conditions and actions from
+    # everything after the fourth column.
+    def normalize_rule_row(row, header_size: row.headers.compact.size)
+      fields = row.fields.dup
+      headers = row.headers
+      group_index = headers.index { |header| header.to_s.strip.delete_suffix("*") == "group" }
+      # Counted from the end of the header row, so a row whose JSON was split
+      # into extra fields (CSV pads headers with nil for those) still gives up
+      # the right one.
+      group = fields.delete_at(group_index - header_size) if group_index
       name, resource_type, active, effective_date = fields[0..3]
       conditions, actions = extract_conditions_and_actions(fields[4..])
 
@@ -92,8 +116,17 @@ class RuleImport < Import
         active: row["active"].presence || active,
         effective_date: row["effective_date"].presence || effective_date,
         conditions: conditions,
-        actions: actions
+        actions: actions,
+        rule_group: group_index ? group.to_s : nil
       }
+    end
+
+    # The number of cells in the header row, blank ones included. A row's
+    # headers cannot tell a blank header cell from the nil CSV pads in for a
+    # row with more fields than the header.
+    def header_row_size
+      header = CSV.parse_line((raw_file_str || "").strip, col_sep: col_sep, liberal_parsing: true)
+      header ? header.size : 0
     end
 
     def normalized_rule_text(value, attribute:)
@@ -103,8 +136,8 @@ class RuleImport < Import
       text.strip
     end
 
-    def reject_invalid_text!(value, label:)
-      return if DatabaseTextValidator.acceptable?(value)
+    def reject_invalid_text!(value, label:, acceptable: DatabaseTextValidator.acceptable?(value))
+      return if acceptable
 
       errors.add(:base, :invalid, message: "#{label} #{I18n.t("errors.messages.invalid")}")
       raise ActiveRecord::RecordInvalid.new(self)
@@ -164,6 +197,13 @@ class RuleImport < Import
 
       rule.active = row.active || false
       rule.effective_date = parse_date(row.effective_date)
+      # A file without the group column leaves the rule's group as it is.
+      rule.rule_group = find_or_create_rule_group(row.rule_group) unless row.rule_group.nil?
+
+      # An email action replacing the rule's own keeps the baseline it recorded
+      # (see Rule::Action#keep_notification_baseline), as stored before this
+      # import: not one an earlier row of it wrote.
+      had_email_action = rule.persisted? && @rules_with_stored_email_action.include?(rule.id)
 
       # Clear existing conditions and actions. The conditions are marked rather
       # than destroyed now, so the rule's save removes them and sees its
@@ -178,10 +218,17 @@ class RuleImport < Import
 
       # Create actions
       actions_data.each do |action_data|
-        build_action(rule, action_data)
+        build_action(rule, action_data).keep_notification_baseline = had_email_action
       end
 
       rule.save!
+    end
+
+    def find_or_create_rule_group(name)
+      name = name.strip
+      return if name.empty?
+
+      family.rule_groups.find_or_create_named!(name)
     end
 
     def build_condition(rule, condition_data, parent: nil)
@@ -255,6 +302,8 @@ class RuleImport < Import
 
       return value unless value.present?
 
+      return resolve_import_split_value(value) if action_type == "split_transaction"
+
       # Map category names to UUIDs
       if action_type == "set_transaction_category"
         return find_or_create_category(value).id
@@ -283,6 +332,29 @@ class RuleImport < Import
       names.map { |name| find_or_create_tag(name).id }.join(",")
     end
 
+    # Names resolve like the other actions; a raw id is kept only if it belongs to the family.
+    def resolve_import_split_value(value)
+      reject_invalid_text!(value, label: Rule::Action.human_attribute_name(:value),
+                                  acceptable: Rule::ActionExecutor::SplitTransaction.acceptable_text?(value))
+
+      Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
+        next (id if family_record_ids(kind.to_s.pluralize.to_sym).include?(id)) unless name
+
+        case kind
+        when :category then find_or_create_category(name).id
+        # A split child is set like a manual split, which only offers the
+        # family's own merchants.
+        when :merchant then find_or_create_family_merchant(name).id
+        when :tag then find_or_create_tag(name).id
+        end
+      end
+    end
+
+    def family_record_ids(relation)
+      @family_record_ids ||= {}
+      @family_record_ids[relation] ||= family.public_send(relation).pluck(:id).to_set
+    end
+
     # Preloaded once per import and extended in place on cache-miss, so a
     # category/merchant/tag created for an earlier row is immediately visible
     # to a later row referencing the same name, instead of one query per
@@ -291,8 +363,19 @@ class RuleImport < Import
       @categories_by_name ||= family.categories.index_by(&:name)
     end
 
-    def merchants_by_name
-      @merchants_by_name ||= family.merchants.index_by(&:name)
+    def family_merchants_by_name
+      @family_merchants_by_name ||= family.merchants.index_by(&:name)
+    end
+
+    # An exported rule may name a provider merchant (see Family::DataExporter);
+    # reuse it while it is still on the family's transactions, so the rule
+    # keeps matching them. A name shared by several provider merchants is
+    # ambiguous and left out.
+    def provider_merchants_by_name
+      @provider_merchants_by_name ||= ProviderMerchant.where(id: family.transactions.select(:merchant_id))
+        .group_by(&:name)
+        .filter_map { |name, merchants| [ name, merchants.first ] if merchants.one? }
+        .to_h
     end
 
     def tags_by_name
@@ -307,8 +390,13 @@ class RuleImport < Import
       )
     end
 
+    # The family's own merchant wins on a name clash.
     def find_or_create_merchant(name)
-      merchants_by_name[name] ||= family.merchants.create!(name: name)
+      family_merchants_by_name[name] || provider_merchants_by_name[name] || find_or_create_family_merchant(name)
+    end
+
+    def find_or_create_family_merchant(name)
+      family_merchants_by_name[name] ||= family.merchants.create!(name: name)
     end
 
     def find_or_create_tag(name)

@@ -8,6 +8,11 @@ class PlaidItem::Syncer
   end
 
   def perform_sync(sync)
+    # The one "today" for this sync, handed to every account's processing. It
+    # is the family's date, not the job's: a sync at 06:00 in Sydney is still
+    # the previous day in UTC.
+    as_of = plaid_item.family.local_date
+
     # Phase 1: Import data from Plaid API
     sync.update!(status_text: "Importing accounts from Plaid...") if sync.respond_to?(:status_text)
     plaid_item.import_latest_plaid_data
@@ -17,7 +22,7 @@ class PlaidItem::Syncer
     # is what creates Account and AccountProvider records for new PlaidAccounts.
     sync.update!(status_text: "Processing accounts...") if sync.respond_to?(:status_text)
     mark_import_started(sync)
-    plaid_item.process_accounts
+    plaid_item.process_accounts(as_of: as_of)
 
     # Phase 3: Collect setup statistics (now that accounts have been processed)
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)

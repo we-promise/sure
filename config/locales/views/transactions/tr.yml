@@ -158,6 +158,7 @@ tr:
       date: Tarih
       description: Açıklama
       description_placeholder: İşlemi açıklayın
+      description_placeholder_optional: "Kategori/satıcı adını kullanmak için boş bırakın veya önce birini seçin"
       details: Detaylar
       expense: Gider
       income: Gelir
