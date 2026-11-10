@@ -1,8 +1,9 @@
 # Predicts the spending Bills doesn't track: each expense category's typical
 # month (the median of the last full months, so one big trip doesn't become
 # a monthly habit), less what it has spent so far this month.
-# Transactions matched to a bill are left out, because Bills already forecasts
-# them, and so are partial months before the family's first transaction.
+# Transactions a bill fully covers are left out, because Bills already
+# forecasts them, and so are partial months before the family's first
+# transaction.
 class SpendingForecast
   HISTORY_MONTHS = 3
 
@@ -89,7 +90,6 @@ class SpendingForecast
         family,
         transactions_scope: scope,
         date_range: range,
-        include_trades: false,
         included_account_ids: account_ids
       ).call
         .select { |row| row.classification == "expense" }
@@ -97,12 +97,15 @@ class SpendingForecast
         .transform_values { |rows| rows.sum { |row| row.total.to_d } }
     end
 
+    # A partly allocated entry stays in whole, so its bill share counts twice;
+    # dropping it would lose the unallocated rest, the larger error.
     def bill_entry_ids
       RecurringAllocation.confirmed
-                         .joins(:recurring_occurrence)
+                         .joins(:recurring_occurrence, :entry)
                          .where(recurring_occurrences: { family_id: family.id })
-                         .where.not(entry_id: nil)
-                         .select(:entry_id)
+                         .group("recurring_allocations.entry_id", "entries.amount")
+                         .having("SUM(COALESCE(recurring_allocations.source_amount, recurring_allocations.allocated_amount)) >= ABS(entries.amount)")
+                         .select("recurring_allocations.entry_id")
     end
 
     def account_ids

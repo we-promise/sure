@@ -4,10 +4,12 @@
     will go out", which the pulse above answers for bills alone. %>
 <% currency = Current.family.currency %>
 <% zero = Money.new(0, currency) %>
-<% rest_total = forecast.remaining_this_month + (bills_remaining || zero) %>
-<% next_total = forecast.next_month + (bills_next_month || zero) %>
+<% periods = [
+     { label: t(".rest_of_month", month: l(Date.current, format: "%B")), spending: forecast.remaining_this_month, bills: bills_remaining || zero },
+     { label: t(".next_month", month: l(Date.current.next_month, format: "%B")), spending: forecast.next_month, bills: bills_next_month || zero }
+   ] %>
 
-<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+<%= render DS::Card.new(class: "gap-4") do %>
   <div class="flex items-center justify-between gap-3">
     <p class="text-xs font-medium uppercase text-secondary"><%= t(".title") %></p>
     <% if bills_one_shot_ai_available? %>
@@ -24,20 +26,15 @@
   </div>
 
   <div class="grid grid-cols-2 gap-4">
-    <div>
-      <p class="text-2xl font-medium text-primary privacy-sensitive leading-tight"><%= format_money(rest_total) %></p>
-      <p class="text-sm text-secondary"><%= t(".rest_of_month", month: l(Date.current, format: "%B")) %></p>
-      <p class="text-xs text-secondary privacy-sensitive">
-        <%= t(".split", spending: format_money(forecast.remaining_this_month), bills: format_money(bills_remaining || zero)) %>
-      </p>
-    </div>
-    <div>
-      <p class="text-2xl font-medium text-primary privacy-sensitive leading-tight"><%= format_money(next_total) %></p>
-      <p class="text-sm text-secondary"><%= t(".next_month", month: l(Date.current.next_month, format: "%B")) %></p>
-      <p class="text-xs text-secondary privacy-sensitive">
-        <%= t(".split", spending: format_money(forecast.next_month), bills: format_money(bills_next_month || zero)) %>
-      </p>
-    </div>
+    <% periods.each do |period| %>
+      <div>
+        <p class="text-2xl font-medium text-primary privacy-sensitive leading-tight"><%= format_money(period[:spending] + period[:bills]) %></p>
+        <p class="text-sm text-secondary"><%= period[:label] %></p>
+        <p class="text-xs text-secondary privacy-sensitive">
+          <%= t(".split", spending: format_money(period[:spending]), bills: format_money(period[:bills])) %>
+        </p>
+      </div>
+    <% end %>
   </div>
 
   <div class="pt-3 border-t border-subdued space-y-2">
@@ -60,4 +57,4 @@
   <% end %>
 
   <p class="text-xs text-secondary"><%= t(".basis", count: forecast.history_months) %></p>
-</div>
+<% end %>

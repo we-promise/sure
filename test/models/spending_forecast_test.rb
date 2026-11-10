@@ -43,6 +43,22 @@ class SpendingForecastTest < ActiveSupport::TestCase
     assert_equal [ @food ], SpendingForecast.new(@family).rows.map(&:category)
   end
 
+  test "keeps an entry a bill only partly covers" do
+    entries = (1..3).map { |month| spend(@housing, 1500, Date.new(2026, month, 1)) }
+    match_to_bill(entries)
+
+    assert_equal [ @housing ], SpendingForecast.new(@family).rows.map(&:category)
+  end
+
+  test "leaves out investment transfers, as reports do" do
+    (1..3).each do |month|
+      create_transaction(account: @account, amount: 500, currency: @family.currency, date: Date.new(2026, month, 1))
+        .entryable.update!(investment_activity_label: "Transfer")
+    end
+
+    assert_not SpendingForecast.new(@family).any?
+  end
+
   test "skips the partial first month of history" do
     spend(@groceries, 100, Date.new(2026, 3, 10))
 
