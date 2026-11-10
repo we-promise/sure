@@ -95,9 +95,35 @@ class SharesightAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal({
       "VAS" => [ BigDecimal("100"), BigDecimal("105"), "AUD" ],
       "AAPL" => [ BigDecimal("10"), BigDecimal("290"), "USD" ],
+      # Fully sold: a zero-quantity row for today, so the position drops out
+      # of current holdings instead of lingering on the previous day's row.
+      "OLD" => [ BigDecimal("0"), BigDecimal("40"), "AUD" ],
       "BTC" => [ BigDecimal("0.25"), BigDecimal("116367.4"), "AUD" ]
     }, holdings)
     assert_equal "XNAS", @account.holdings.joins(:security).find_by(securities: { ticker: "AAPL" }).security.exchange_operating_mic
+  end
+
+  test "a fully sold holding leaves current holdings" do
+    process
+
+    assert_not_includes @account.reload.current_holdings.map { |holding| holding.security.ticker }, "OLD"
+  end
+
+  test "a holding sold between two syncs on the same day is zeroed instead of keeping its morning quantity" do
+    morning = HOLDINGS.map do |holding|
+      holding.dig("instrument", "code") == "OLD" ? holding.merge("quantity" => 10.0, "value" => 400.0) : holding
+    end
+    @sharesight_account.update!(raw_holdings_payload: morning)
+    process
+
+    sold = @account.holdings.find_by!(date: Date.current, security: Security.find_by!(ticker: "OLD"))
+    assert_equal BigDecimal("10"), sold.qty
+
+    @sharesight_account.update!(raw_holdings_payload: HOLDINGS)
+    process
+
+    assert_equal BigDecimal("0"), sold.reload.qty
+    assert_not_includes @account.reload.current_holdings.map { |holding| holding.security.ticker }, "OLD"
   end
 
   test "books buys, sells and opening balances, skipping splits" do

@@ -39,7 +39,8 @@ class SharesightItem::Syncer
       sharesight_item.schedule_account_syncs(
         parent_sync: sync,
         window_start_date: sync.window_start_date,
-        window_end_date: sync.window_end_date
+        window_end_date: sync.window_end_date,
+        extra_accounts: settlement_accounts(results)
       )
 
       account_ids = linked_accounts.includes(:account).filter_map { |sa| sa.account&.id }
@@ -78,5 +79,12 @@ class SharesightItem::Syncer
         warnings: notices.count { |notice| notice[:severity] == "warning" },
         details: notices
       )
+    end
+
+    # Manual settlement accounts the router just booked into, or removed stale
+    # counterparts from. Their stored balance changed, so they need their own
+    # sync once the portfolio accounts are done.
+    def settlement_accounts(results)
+      Array(results).flat_map { |result| Array(result.dig(:result, :settlement_accounts)) if result[:success] }.compact.uniq
     end
 end

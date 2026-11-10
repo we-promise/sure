@@ -123,6 +123,28 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-30"), @bank.entries.find_by!(external_id: "sharesight_counterpart_#{@sharesight_account.id}_payout_50").amount
   end
 
+  test "a manual settlement account that took counterparts is reported for its own sync" do
+    result = process
+
+    assert_equal [ @bank ], result[:settlement_accounts]
+  end
+
+  test "a bank-fed settlement account is not reported" do
+    bank_fed!
+
+    assert_empty process[:settlement_accounts]
+  end
+
+  test "switching manual settlement accounts reports both the old and the new account" do
+    process
+    ing = @family.accounts.create!(name: "ING Savings", balance: 0, currency: "AUD", accountable: Depository.new)
+    @sharesight_account.update!(settlement_account: ing)
+
+    result = process
+
+    assert_equal [ @bank, ing ].map(&:id).sort, result[:settlement_accounts].map(&:id).sort
+  end
+
   test "a reinvested dividend's leftover is linked when the bank feed shows it" do
     bank_fed!
     @sharesight_account.update!(raw_payouts_payload: [ REINVESTED ])
