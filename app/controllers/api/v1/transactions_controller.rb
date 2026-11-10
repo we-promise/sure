@@ -99,7 +99,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return render_existing_idempotent_entry(existing_entry)
     end
 
-    return render_validation_error("Malformed tag id") if malformed_tag_ids?
+    return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
+    return render_validation_error("Unknown tag id") if unknown_tag_ids?
+    return render_validation_error("Unknown category id") if unknown_category_id?
+    return render_validation_error("Unknown merchant id") if unknown_merchant_id?
 
     @entry = account.entries.new(entry_params_for_create)
 
@@ -146,7 +149,10 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    return render_validation_error("Malformed tag id") if tags_provided? && malformed_tag_ids?
+    return render_validation_error("tag_ids must be an array of tag ids") if malformed_tag_ids?
+    return render_validation_error("Unknown tag id") if tags_provided? && unknown_tag_ids?
+    return render_validation_error("Unknown category id") if unknown_category_id?
+    return render_validation_error("Unknown merchant id") if unknown_merchant_id?
 
     Entry.transaction do
       if @entry.update(entry_params_for_update)
@@ -155,7 +161,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         # Handle tags separately - only when explicitly provided in the request
         # This allows clearing tags with tag_ids: [] while preserving tags when not specified
         if tags_provided?
-          @entry.transaction.tag_ids = transaction_params[:tag_ids] || []
+          @entry.transaction.tag_ids = requested_tag_ids
           @entry.transaction.save!
           @entry.transaction.lock_attr!(:tag_ids) if @entry.transaction.tags.any?
         end
@@ -338,7 +344,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
         entryable_attributes: {
           category_id: transaction_params[:category_id],
           merchant_id: transaction_params[:merchant_id],
-          tag_ids: transaction_params[:tag_ids] || []
+          tag_ids: requested_tag_ids
         }
       }
       if idempotency_key_requested?
@@ -377,21 +383,67 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       params[:transaction].key?(:tag_ids)
     end
 
-    UUID_FORMAT = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
-    private_constant :UUID_FORMAT
-
-    # Assigning an id that is not a uuid raises RecordNotFound, which the
-    # actions' broad rescue answers with a 500. It is bad input.
-    #
-    # Read before `permit`, which drops anything but a list of strings where a
-    # list is permitted: the update would then clear every tag. `null`, `""`,
-    # `[]` and `[""]` still mean "no tags".
+    # Strong parameters drops a tag_ids of any other shape, which would read as
+    # "no tags" and clear them on update.
     def malformed_tag_ids?
-      raw = params.dig(:transaction, :tag_ids)
-      return false if raw.nil? || raw == ""
-      return true unless raw.is_a?(Array)
+      tag_ids = params.require(:transaction)[:tag_ids]
+      !(tag_ids.nil? || (tag_ids.is_a?(Array) && tag_ids.all?(String)))
+    end
 
-      raw.any? { |id| !id.is_a?(String) || (id.present? && !id.match?(UUID_FORMAT)) }
+    # Tags belong to a family: ids are resolved through the caller's own, so
+    # another family's tag is refused like one that does not exist.
+    # An id that is not a UUID casts to nil and is unknown. It has to be refused
+    # here: with only such ids the list is [nil], and the collection writer
+    # would drop the nil and clear every tag.
+    def unknown_tag_ids?
+      ids = requested_tag_ids
+      return true if ids.include?(nil)
+
+      ids.any? && current_resource_owner.family.tags.where(id: ids).count != ids.size
+    end
+
+    # A client re-sends the ids it read back, so the category or merchant a
+    # transaction already holds is not refused: no new link is made.
+    def unknown_category_id?
+      raw = transaction_params[:category_id].presence
+      return false if raw.nil?
+
+      id = canonical_uuid(raw)
+      return true if id.nil?
+      return false if id == @entry&.transaction&.category_id
+
+      !current_resource_owner.family.categories.exists?(id: id)
+    end
+
+    # The family's own merchants, and provider merchants the caller can reach.
+    # A family merchant on a reachable transaction isn't enough: it may be
+    # another family's, linked before this check.
+    def unknown_merchant_id?
+      raw = transaction_params[:merchant_id].presence
+      return false if raw.nil?
+
+      id = canonical_uuid(raw)
+      return true if id.nil?
+      return false if id == @entry&.transaction&.merchant_id
+
+      family = current_resource_owner.family
+      !family.merchants.exists?(id: id) &&
+        !family.available_merchants_for(current_resource_owner).where(type: "ProviderMerchant").exists?(id: id)
+    end
+
+    # The lowercase hyphenated form Postgres stores, so an id resent in another
+    # case still matches the one a transaction holds. Nil for a non-UUID.
+    def canonical_uuid(value)
+      Category.type_for_attribute(:id).cast(value)
+    end
+
+    # The request's tag ids in canonical UUID form, each once. Postgres matches
+    # a UUID in any case, so one tag spelled two ways is one tag, and writing
+    # the raw list would store it twice.
+    def requested_tag_ids
+      @requested_tag_ids ||= Array(transaction_params[:tag_ids]).compact_blank
+        .map { |id| Tag.type_for_attribute(:id).cast(id) }
+        .uniq
     end
 
     def split_financial_fields_changed?
