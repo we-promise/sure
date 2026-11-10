@@ -77,6 +77,23 @@ class Provider::Anthropic::ClaudeCodeClientTest < ActiveSupport::TestCase
     assert_equal "end_turn", message.stop_reason
   end
 
+  test "retries a forced-tool helper that got text back" do
+    text_only = { type: "result", subtype: "success", is_error: false, result: "Which one?", structured_output: nil, usage: {} }
+    structured = text_only.merge(result: "", structured_output: { "categorizations" => [ { "transaction_id" => "txn_1", "category_name" => "Fast Food" } ] })
+    Provider::Anthropic::ClaudeCodeClient.any_instance.stubs(:capture)
+      .returns([ text_only.to_json, "", stub(success?: true) ])
+      .then.returns([ structured.to_json, "", stub(success?: true) ])
+
+    result = Provider::Anthropic::AutoCategorizer.new(
+      @client,
+      model: "claude-haiku-5-5",
+      transactions: [ { id: "txn_1", name: "McDonalds", amount: 20 } ],
+      user_categories: [ { id: "c1", name: "Fast Food" } ]
+    ).auto_categorize
+
+    assert_equal "Fast Food", result.first.category_name
+  end
+
   test "raises when the CLI reports an error" do
     Provider::Anthropic::ClaudeCodeClient.any_instance.stubs(:capture).returns(
       [ { type: "result", subtype: "success", is_error: true, result: "Invalid API key" }.to_json, "", stub(success?: true) ]
