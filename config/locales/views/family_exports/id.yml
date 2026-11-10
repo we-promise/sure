@@ -19,10 +19,10 @@ id:
       whats_included: "Yang disertakan:"
       accounts_and_balances: Semua akun dan saldo
       transaction_history: Riwayat transaksi
-      investment_trades: Transaksi perdagangan investasi
+      investment_trades: Transaksi investasi
       categories_tags_rules: Kategori, tag, dan aturan
       note_label: Catatan
-      note_description: Ekspor ini mencakup semua data Anda, tetapi hanya sebagian data yang dapat diimpor kembali melalui fitur impor CSV. Kami mendukung impor akun, transaksi (dengan kategori dan tag), serta perdagangan. Data akun lainnya tidak dapat diimpor dan hanya untuk catatan Anda.
+      note_description: Ekspor ini mencakup semua data Anda, tetapi hanya sebagian data yang dapat diimpor kembali melalui fitur impor CSV. Kami mendukung impor akun, transaksi (dengan kategori dan tag), serta transaksi investasi. Data akun lainnya tidak dapat diimpor dan hanya untuk catatan Anda.
       cancel: Batal
       export_data: Ekspor data
     index:
@@ -44,5 +44,5 @@ id:
           delete: Hapus
           download: Unduh
           mark_failed: Tandai sebagai gagal
-          confirm_mark_failed: Ekspor ini telah tidak aktif selama beberapa waktu dan tugas latar belakangnya kemungkinan terputus. Tandai sebagai gagal? Anda dapat segera membuat ekspor baru.
+          confirm_mark_failed: Ekspor ini sudah tidak aktif cukup lama dan proses di latar belakang kemungkinan terputus. Tandai sebagai gagal? Anda dapat segera membuat ekspor baru.
       empty: Belum ada ekspor.

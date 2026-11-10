@@ -19,5 +19,5 @@ id:
       activated: Semua aturan di "%{name}" aktif
       deactivated: Semua aturan di "%{name}" nonaktif
       partially_switched:
-        one: 1 aturan tidak dapat dialihkan. Buka untuk melihat alasannya.
-        other: "%{count} aturan tidak dapat dialihkan. Buka untuk melihat alasannya."
+        one: Status 1 aturan tidak dapat diubah. Buka untuk melihat alasannya.
+        other: "Status %{count} aturan tidak dapat diubah. Buka untuk melihat alasannya."

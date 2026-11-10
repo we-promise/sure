@@ -3,7 +3,7 @@ id:
   rules:
     no_action: Tidak Ada Tindakan
     no_condition: Tanpa kondisi
-    notification_baseline_timed_out: Aturan ini masih nonaktif. Memeriksa transaksi mana yang sudah cocok memakan waktu terlalu lama, dan tanpa pemeriksaan itu semua transaksi akan dikirimi email. Sederhanakan kondisinya, lalu aktifkan kembali.
+    notification_baseline_timed_out: Aturan ini masih nonaktif. Memeriksa transaksi mana yang sudah cocok memakan waktu terlalu lama, dan tanpa pemeriksaan tersebut, email akan terkirim untuk semua transaksi. Sederhanakan kondisinya, lalu aktifkan kembali.
     category_rule_cta:
       close: Tutup
       create_rule: Buat aturan
@@ -92,7 +92,7 @@ id:
       page_title: Aturan
       delete_all_rules: Hapus semua aturan
       new_rule: Aturan baru
-      ai_cost_warning: Tindakan aturan yang mengaktifkan AI akan dikenakan biaya. Pastikan untuk memfilter sespesifik mungkin agar menghindari biaya yang tidak perlu.
+      ai_cost_warning: Tindakan aturan yang menggunakan AI akan dikenakan biaya. Pastikan untuk memfilter sespesifik mungkin guna menghindari biaya yang tidak perlu.
       rules_heading: Aturan
       order_hint: Aturan berjalan dari atas ke bawah, termasuk aturan di dalam grup. Setelah aturan menetapkan bidang pada transaksi, aturan di bawahnya tidak mengubah bidang tersebut. Tag ditambahkan oleh setiap aturan yang cocok. Seret aturan dan grup untuk mengubah urutan.
       new_group: Grup baru
@@ -100,7 +100,7 @@ id:
       filters:
         no_matches: Tidak ada aturan yang cocok dengan pencarian atau filter.
         drag_disabled: Pengurutan dinonaktifkan saat pencarian atau filter aktif. Atur ulang untuk mengubah urutan.
-      fold_rule: "Lipat atau buka lipatan aturan %{name}"
+      fold_rule: "Ciutkan atau rentangkan aturan %{name}"
       reorder_rule: "Pindahkan aturan %{name}. Tekan Enter atau Spasi untuk mengambilnya, lalu gunakan tombol panah untuk memindahkannya."
       no_rules_title: Belum ada aturan
       no_rules_description: Siapkan aturan untuk melakukan tindakan pada transaksi Anda dan data lainnya pada setiap sinkronisasi akun.
@@ -133,7 +133,7 @@ id:
         merchant_label: Merchant pembagian
         tags_label: "Tag pembagian"
         remove_split: "Hapus pembagian"
-        hint: "Pembagian tetap dikurangkan terlebih dahulu, sebagai jumlah pasti. Pembagian persentase kemudian membagi sisa yang ada. Jika setiap pembagian di sini menggunakan jumlah tetap, tambahkan juga kondisi yang cocok dengan jumlah transaksi yang tepat (misalnya Jumlah = 42,00), karena setiap transaksi yang cocok memerlukan total yang sama agar jumlah tetap sesuai. Aturan pembagian tidak boleh memiliki tindakan lain."
+        hint: "Pembagian tetap dikurangkan terlebih dahulu, sebagai jumlah pasti. Pembagian persentase kemudian membagi sisa yang ada. Jika setiap pembagian di sini menggunakan jumlah tetap, tambahkan juga kondisi yang cocok dengan jumlah transaksi yang tepat (misalnya Jumlah = 42,00), karena setiap transaksi yang cocok membutuhkan nominal yang sama agar total pembagian tetap ini pas. Aturan pembagian tidak boleh memiliki tindakan lain."
         fixed_summary_label: tetap
         summary:
           one: "%{count} pembagian"

@@ -10,7 +10,7 @@ id:
         rule:
           min_actions: "harus memiliki setidaknya satu tindakan"
           duplicate_actions: "Aturan tidak boleh memiliki tindakan duplikat %{types}"
-          nested_conditions: "Kondisi majemuk tidak dapat disarangkan"
+          nested_conditions: "Kondisi majemuk tidak boleh dibuat bertingkat"
           split_not_alone: "Aturan pembagian tidak boleh memiliki tindakan lain"
         rule/action:
           attributes:
