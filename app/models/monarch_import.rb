@@ -232,6 +232,11 @@ class MonarchImport < Import
   end
 
   def import!
+    # A retry after the data committed, when a later publishing step failed,
+    # only has to finish publishing. Importing again would replace the saved
+    # values that undoing the import restores.
+    return if data_committed?
+
     result = conversion
 
     transaction do
