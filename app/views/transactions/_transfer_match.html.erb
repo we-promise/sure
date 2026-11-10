@@ -73,7 +73,6 @@
             variant: :icon, size: :sm, icon: "x",
             href: transfer_path(transaction.transfer, transfer: { status: "rejected" }),
             method: :patch,
-            data: { turbo: false },
             title: t("transactions.transfer_match.reject_match"),
             aria: { label: t("transactions.transfer_match.reject_match") }
           ) %>

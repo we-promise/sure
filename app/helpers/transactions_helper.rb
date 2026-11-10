@@ -123,6 +123,8 @@ module TransactionsHelper
       view_ctx,
       in_split_group,
       split_parent,
+      # The "Transfer?" hint is drawn inside the cached row.
+      @transfer_hint_transaction_ids&.include?(transaction.id) || false,
       can_annotate_account?(entry.account),
       counterpart.present? && @accessible_account_ids&.include?(counterpart.id),
       Setting.brand_fetch_logo_size,
