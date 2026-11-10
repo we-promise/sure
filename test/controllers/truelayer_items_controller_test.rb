@@ -120,6 +120,22 @@ class TruelayerItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil item.reload.sync_start_date
   end
 
+  include ProviderLinkAuthorizationTests
+  provider_link_authorization_tests(
+    select_url: :select_existing_account_truelayer_items_url,
+    link_url: :link_existing_account_truelayer_items_url,
+    target: ->(owner) {
+      @family.accounts.create!(owner: owner, name: "Manual Current", balance: 0, currency: "GBP",
+                               accountable: Depository.new)
+    },
+    provider_account: -> {
+      (@truelayer_item ||= credentials_item).truelayer_accounts.create!(
+        account_id: SecureRandom.hex(6), name: "TrueLayer Current", currency: "GBP"
+      )
+    },
+    provider_param: :truelayer_account_id
+  )
+
   test "links an unlinked TrueLayer account to a manual account" do
     item = credentials_item
     truelayer_account = item.truelayer_accounts.create!(account_id: "a1", name: "Acc", currency: "GBP")
