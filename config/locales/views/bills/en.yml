@@ -76,6 +76,9 @@ en:
       category: Category
       spent_of_typical: Spent / typical month
       uncategorized: Uncategorized
+      unconvertible:
+        one: "1 bill next month is not included, no exchange rate available"
+        other: "%{count} bills next month are not included, no exchange rate available"
       basis:
         one: Each category's spending in the last full month, without bill payments.
         other: Each category's typical month (median of the last %{count} full months), without bill payments.

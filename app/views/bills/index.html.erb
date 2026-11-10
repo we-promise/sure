@@ -31,7 +31,7 @@
   <% end %>
 
   <% if @forecast.any? %>
-    <%= render "bills/forecast", forecast: @forecast, bills_remaining: @remaining_this_month, bills_next_month: @bills_next_month %>
+    <%= render "bills/forecast", forecast: @forecast, bills_remaining: @remaining_this_month, bills_next_month: @bills_next_month, bills_next_month_unconvertible: @bills_next_month_unconvertible %>
   <% end %>
 
   <% if bill_rows_empty %>

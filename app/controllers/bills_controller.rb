@@ -550,7 +550,7 @@ class BillsController < ApplicationController
     def load_forecast(today)
       @forecast = SpendingForecast.new(Current.family, user: Current.user, today: today)
       next_month = today.next_month.all_month
-      @bills_next_month, _ = total_of(@open_upcoming.select { |occurrence| next_month.cover?(occurrence.effective_due_on) }) { |occurrence| occurrence.remaining_amount_money }
+      @bills_next_month, @bills_next_month_unconvertible = total_of(@open_upcoming.select { |occurrence| next_month.cover?(occurrence.effective_due_on) }) { |occurrence| occurrence.remaining_amount_money }
     end
 
     # A trial converting tomorrow and a month-old one-dollar price rise are not

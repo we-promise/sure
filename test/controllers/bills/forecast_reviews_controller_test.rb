@@ -4,6 +4,9 @@ class Bills::ForecastReviewsControllerTest < ActionDispatch::IntegrationTest
   setup do
     sign_in @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    # ai_enabled? also depends on the install having credentials; the provider
+    # stub below is what each test varies.
+    User.any_instance.stubs(:ai_enabled?).returns(true)
   end
 
   test "seeds a chat with the forecast written into the prompt" do

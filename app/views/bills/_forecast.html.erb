@@ -1,4 +1,4 @@
-<%# locals: (forecast:, bills_remaining:, bills_next_month:) %>
+<%# locals: (forecast:, bills_remaining:, bills_next_month:, bills_next_month_unconvertible: 0) %>
 <%# Everyday spending Bills doesn't track, predicted from each category's
     typical month. Added to the bills still due, it answers "how much more
     will go out", which the pulse above answers for bills alone. %>
@@ -54,6 +54,10 @@
       </div>
     <% end %>
   </div>
+
+  <% if bills_next_month_unconvertible.positive? %>
+    <p class="text-xs text-warning"><%= t(".unconvertible", count: bills_next_month_unconvertible) %></p>
+  <% end %>
 
   <p class="text-xs text-secondary"><%= t(".basis", count: forecast.history_months) %></p>
 </div>
