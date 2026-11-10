@@ -1,0 +1,9 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        invitation:
+          attributes:
+            email:
+              own_email: "darf nicht deine eigene E-Mail-Adresse sein"
