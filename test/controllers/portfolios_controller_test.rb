@@ -127,6 +127,17 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal before, @user.reload.preferences
   end
 
+  test "an order that is not a list leaves the saved order alone" do
+    @user.update!(preferences: @user.preferences.merge("portfolio_section_order" => %w[accounts]))
+
+    [ "accounts", { accounts: 1 } ].each do |order|
+      patch update_preferences_portfolio_path, params: { preferences: { portfolio_section_order: order } }, as: :json
+
+      assert_response :ok
+      assert_equal %w[accounts], @user.reload.preferences["portfolio_section_order"], "order #{order.inspect} must not be stored"
+    end
+  end
+
   test "deduplicates the saved order, first occurrence winning" do
     patch update_preferences_portfolio_path,
       params: { preferences: { portfolio_section_order: %w[accounts accounts] } },

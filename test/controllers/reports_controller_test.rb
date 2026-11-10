@@ -53,6 +53,36 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
   end
 
+  test "a scalar section order is not stored and the page still renders" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_section_order" => %w[trends_insights net_worth]))
+
+    patch update_preferences_reports_path, params: { preferences: { reports_section_order: "x" } }, as: :json
+
+    assert_response :ok
+    assert_equal %w[trends_insights net_worth], @user.reload.preferences["reports_section_order"]
+
+    get reports_path
+    assert_response :success
+  end
+
+  test "a scalar collapsed set is not stored" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_collapsed_sections" => { "net_worth" => true }))
+
+    patch update_preferences_reports_path, params: { preferences: { reports_collapsed_sections: "net_worth" } }, as: :json
+
+    assert_response :ok
+    assert_equal({ "net_worth" => true }, @user.reload.preferences["reports_collapsed_sections"])
+  end
+
+  test "a preferences body that is not an object is refused and writes nothing" do
+    before = @user.reload.preferences
+
+    patch update_preferences_reports_path, params: { preferences: "x" }, as: :json
+
+    assert_response :bad_request
+    assert_equal before, @user.reload.preferences
+  end
+
   # The per-trade line under the realised-gains card rendered
   # `Money.new(gain.value, Current.family.currency)` -- taking the number out of
   # the Trend and re-labelling it as family currency with no conversion at all.

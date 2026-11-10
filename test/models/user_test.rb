@@ -916,6 +916,48 @@ class UserTest < ActiveSupport::TestCase
     assert_not @user.section_collapsed?("reports", "net_worth")
   end
 
+  # Both pages' endpoints write through this method, so the shapes the readers
+  # rely on (an array of keys, a hash of key => flag) are enforced here.
+  test "section preferences store only an array of keys and a hash of flags" do
+    @user.update!(preferences: { "reports_section_order" => %w[net_worth], "reports_collapsed_sections" => { "net_worth" => true } })
+
+    @user.update_section_preferences("reports", order: "net_worth", collapsed: "net_worth")
+    @user.reload
+
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"], "a scalar order must not replace the stored one"
+    assert_equal({ "net_worth" => true }, @user.preferences["reports_collapsed_sections"], "a scalar collapsed set must not be stored")
+
+    @user.update_section_preferences("reports", order: [ "trends_insights", :net_worth, "trends_insights" ],
+                                                collapsed: { "trends_insights" => "true", net_worth: "0" })
+    @user.reload
+
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => false, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+  end
+
+  test "a stored section order that repeats a key reads each key once" do
+    @user.update_columns(preferences: { "reports_section_order" => %w[net_worth trends_insights net_worth] })
+
+    assert_equal %w[net_worth trends_insights], @user.section_order("reports")
+  end
+
+  test "a stored section order that is not an array reads as the default" do
+    @user.update_columns(preferences: { "reports_section_order" => "net_worth", "portfolio_section_order" => { "a" => 1 } })
+
+    assert_equal %w[trends_insights transactions_breakdown], @user.section_order("reports")
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+  end
+
+  test "a stored collapsed set that is not a hash reads as nothing collapsed and is replaced by a toggle" do
+    @user.update_columns(preferences: { "reports_collapsed_sections" => "net_worth" })
+
+    assert_not @user.section_collapsed?("reports", "net_worth")
+
+    @user.update_section_preferences("reports", collapsed: { "net_worth" => true })
+
+    assert_equal({ "net_worth" => true }, @user.reload.preferences["reports_collapsed_sections"])
+  end
+
   test "handles missing nested keys in preferences for collapsed sections" do
     @user.update!(preferences: { "section_order" => %w[cashflow] })
 

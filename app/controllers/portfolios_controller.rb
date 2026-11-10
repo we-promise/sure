@@ -38,34 +38,21 @@ class PortfoliosController < ApplicationController
   end
 
   private
-    # Allow-list, mirroring ReportsController#preferences_params: only the two
-    # portfolio keys survive, so a payload naming another page's preference
-    # (or an arbitrary user attribute) is dropped rather than written.
+    # Allow-list: only the two portfolio keys, and within them only the
+    # registry's own section keys, so nothing is stored that the registry
+    # would never read. User#update_section_preferences drops any value that
+    # is not an array of keys or a hash of flags.
     def preferences_params
       @preferences_params ||= begin
         prefs = params.require(:preferences)
+        known = Portfolio::SectionRegistry::KEYS
+        order = prefs[:portfolio_section_order]
+        collapsed = prefs[:portfolio_collapsed_sections]
 
-        {}.tap do |permitted|
-          # A collapsed set is an object of key => flag; anything else (a
-          # bare string, an array) is not the contract and is dropped rather
-          # than raised on.
-          # Only the registry's own section keys are stored, in both
-          # shapes: anything else would sit in the user's preferences for
-          # good, and the registry would never read it.
-          known = Portfolio::SectionRegistry::KEYS
-          collapsed = prefs[:portfolio_collapsed_sections]
-          if collapsed.respond_to?(:to_unsafe_h)
-            permitted["portfolio_collapsed_sections"] = collapsed.to_unsafe_h
-              .slice(*known)
-              .transform_values { |v| ActiveModel::Type::Boolean.new.cast(v) == true }
-          end
-
-          # Deduplicated, first occurrence wins: the registry renders one
-          # section per saved key, so a repeated key would render it twice.
-          if prefs[:portfolio_section_order].present?
-            permitted["portfolio_section_order"] = Array(prefs[:portfolio_section_order]).map(&:to_s).uniq & known
-          end
-        end
+        {
+          "portfolio_section_order" => (order.map(&:to_s) & known if order.is_a?(Array)),
+          "portfolio_collapsed_sections" => (collapsed.to_unsafe_h.slice(*known) if collapsed.respond_to?(:to_unsafe_h))
+        }
       end
     end
 end
