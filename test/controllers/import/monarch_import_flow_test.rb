@@ -123,6 +123,25 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "trying again after a destination stopped qualifying goes back to the accounts step" do
+    upload_exports
+    target = accounts(:depository)
+    @import.account_mappings.find_by!(key: "Checking").update!(mappable: target)
+    security = Security.create!(ticker: "MONA", name: "Monarch Test")
+    target.entries.create!(date: Date.new(2024, 1, 4), amount: 10, currency: "USD", name: "Buy",
+      entryable: Trade.new(security: security, qty: 1, price: 10, currency: "USD"))
+    @import.publish
+    assert @import.reload.failed?
+
+    assert_no_enqueued_jobs(only: ImportJob) do
+      post publish_import_url(@import)
+    end
+    assert_redirected_to import_url(@import)
+    follow_redirect!
+    assert_redirected_to import_configuration_url(@import)
+    assert_match target.name, flash[:alert]
+  end
+
   private
     def csv_upload(name)
       fixture_file_upload("imports/#{name}", "text/csv")

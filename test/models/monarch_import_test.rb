@@ -131,6 +131,20 @@ class MonarchImportTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
   end
 
+  test "a destination moved to another family stops the import" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+    account.update_column(:family_id, families(:dylan_family).id)
+
+    @import.reload.publish
+    assert @import.reload.failed?
+    assert_match "My Checking", @import.error
+    assert_empty @import.entries
+    assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
+  end
+
   test "a lost job that committed is completed, not failed" do
     publish!
     @import.update_columns(status: "importing", updated_at: 2.hours.ago)

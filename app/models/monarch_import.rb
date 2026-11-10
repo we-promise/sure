@@ -261,7 +261,8 @@ class MonarchImport < Import
       return if ids.empty?
 
       Account.where(id: ids).order(:id).lock.pluck(:id)
-      unsupported = family.accounts.where(id: ids)
+      # Not family.accounts: an account moved to another family must fail too.
+      unsupported = Account.where(id: ids)
         .where.not(id: Import::MonarchAccountMapping.target_accounts_for(self).select(:id))
       return if unsupported.none?
 
