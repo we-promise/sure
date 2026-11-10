@@ -149,6 +149,12 @@ class MonarchImport < Import
     super || changed_existing_accounts?
   end
 
+  # Once data has committed, a retry only finishes publishing, so changed
+  # exports or choices would be ignored. Undoing the import unlocks them.
+  def configuration_locked?
+    data_committed?
+  end
+
   # A lost job may have died after its transaction committed. Then the import
   # is done, as Import.clean decides, and failing it would let a retry import
   # everything again.

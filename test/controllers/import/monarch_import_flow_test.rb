@@ -113,6 +113,23 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     assert_nil checking.reload.target
   end
 
+  test "an import whose data committed before failing can't change its files or choices" do
+    upload_exports
+    Family.any_instance.stubs(:sync_later).raises(StandardError, "queue down")
+    @import.publish
+    assert @import.reload.failed?
+    checking = @import.account_mappings.find_by!(key: "Checking")
+
+    patch import_configuration_url(@import), params: { accounts: { checking.id => { type: "Depository", include: "0" } } }
+    assert_redirected_to import_url(@import)
+    assert_equal I18n.t("imports.configuration_locked"), flash[:alert]
+    assert checking.reload.include
+
+    patch import_upload_url(@import), params: { import: { balances_file: csv_upload("monarch_balances.csv") } }
+    assert_redirected_to import_url(@import)
+    assert_equal 3, @import.account_mappings.count
+  end
+
   test "confirm shows the summary and publishes" do
     upload_exports
     get import_url(@import)
