@@ -6,9 +6,13 @@ class Provider::Anthropic::ClaudeCodeClientTest < ActiveSupport::TestCase
   end
 
   test "answers a structured-output helper through --json-schema" do
-    expect_cli(structured_output: { "categorizations" => [ { "transaction_id" => "txn_1", "category_name" => "Fast Food" } ] }) do |cmd, _prompt|
+    # The schema carries codes, not values: txn_1 is @1, Fast Food is @2.
+    expect_cli(structured_output: { "categorizations" => [ { "transaction_id" => "@1", "category_name" => "@2" } ] }) do |cmd, _prompt|
       schema = JSON.parse(cmd[cmd.index("--json-schema") + 1])
       assert_equal [ "categorizations" ], schema["required"]
+      assert_not_includes cmd.join(" "), "txn_1"
+      assert_not_includes cmd.join(" "), "Fast Food"
+      assert_includes File.read(cmd[cmd.index("--system-prompt-file") + 1]), %(@2 = "Fast Food")
       assert_equal "", cmd[cmd.index("--tools") + 1]
       assert_includes cmd, "--strict-mcp-config"
     end
@@ -25,8 +29,11 @@ class Provider::Anthropic::ClaudeCodeClientTest < ActiveSupport::TestCase
   end
 
   test "folds chat functions into text plus function calls" do
-    expect_cli(structured_output: { "text" => "", "function_calls" => [ { "name" => "get_accounts", "input" => { "limit" => 5 } } ] }) do |cmd, _prompt|
-      assert_includes cmd[cmd.index("--system-prompt") + 1], "get_accounts"
+    expect_cli(structured_output: { "text" => "", "function_calls" => [ { "name" => "@1", "input" => { "limit" => 5 } } ] }) do |cmd, _prompt|
+      system_prompt = File.read(cmd[cmd.index("--system-prompt-file") + 1])
+      assert_includes system_prompt, "You are a finance assistant."
+      assert_includes system_prompt, %(@1 = "get_accounts")
+      assert_not_includes cmd.join(" "), "finance assistant"
     end
 
     message = @client.messages.create(

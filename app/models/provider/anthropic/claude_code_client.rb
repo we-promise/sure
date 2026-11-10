@@ -13,6 +13,11 @@ require "open3"
 # answered through `--json-schema` structured output instead of native tool
 # use: a single structured-output tool returns its input directly, and chat's
 # function list is folded into one schema of text plus calls.
+#
+# Process arguments are visible to other processes, so nothing private goes
+# there: the system prompt travels in a 0600 temp file, and the schema's enum
+# values (transaction IDs, category and function names) are replaced by opaque
+# codes that the system prompt maps and the response is translated back from.
 class Provider::Anthropic::ClaudeCodeClient
   Error = Class.new(StandardError)
 
@@ -52,12 +57,16 @@ class Provider::Anthropic::ClaudeCodeClient
       elsif tools.any? then function_call_schema(tools)
       end
 
-    result = run(
-      prompt: transcript(messages),
-      system: [ system_text(system_), (tool_catalog(tools) if tools.any? && !structured) ].compact.join("\n\n").presence,
-      model: model,
-      schema: schema
-    )
+    aliases = {}
+    schema = alias_enums(JSON.parse(schema.to_json), aliases) if schema
+    system = [
+      system_text(system_),
+      (tool_catalog(tools) if tools.any? && !structured),
+      alias_legend(aliases)
+    ].compact.join("\n\n").presence
+
+    result = run(prompt: transcript(messages), system: system, model: model, schema: schema)
+    result["structured_output"] = unalias(result["structured_output"], aliases.invert) if aliases.any?
 
     build_message(result, model: model, structured: structured, function_calls: tools.any? && !structured)
   end
@@ -143,7 +152,38 @@ class Provider::Anthropic::ClaudeCodeClient
       block.respond_to?(key) ? block.public_send(key) : (block[key] || block[key.to_s])
     end
 
-    def command(model:, system:, schema:)
+    def alias_enums(node, aliases)
+      case node
+      when Hash
+        node.to_h do |key, value|
+          if key == "enum" && value.is_a?(Array)
+            [ key, value.map { |item| item.is_a?(String) ? (aliases[item] ||= "@#{aliases.size + 1}") : item } ]
+          else
+            [ key, alias_enums(value, aliases) ]
+          end
+        end
+      when Array then node.map { |item| alias_enums(item, aliases) }
+      else node
+      end
+    end
+
+    def alias_legend(aliases)
+      return if aliases.empty?
+
+      codes = aliases.map { |value, code| "#{code} = #{value.to_json}" }
+      "In your structured output, enum fields take these codes in place of the values they stand for:\n#{codes.join("\n")}"
+    end
+
+    def unalias(node, originals)
+      case node
+      when Hash then node.transform_values { |value| unalias(value, originals) }
+      when Array then node.map { |item| unalias(item, originals) }
+      when String then originals.fetch(node, node)
+      else node
+      end
+    end
+
+    def command(model:, system_path:, schema:)
       [
         executable, "-p",
         "--output-format", "json",
@@ -154,7 +194,7 @@ class Provider::Anthropic::ClaudeCodeClient
         "--disable-slash-commands",
         "--no-session-persistence"
       ].tap do |cmd|
-        cmd.push("--system-prompt", system) if system
+        cmd.push("--system-prompt-file", system_path) if system_path
         cmd.push("--json-schema", schema.to_json) if schema
       end
     end
@@ -173,7 +213,9 @@ class Provider::Anthropic::ClaudeCodeClient
     def run(prompt:, system:, model:, schema:)
       raise Error, "CLAUDE_CODE_OAUTH_TOKEN is not set" if token.blank?
 
-      out, err, status = capture(command(model: model, system: system, schema: schema), prompt)
+      out, err, status = with_system_prompt_file(system) do |system_path|
+        capture(command(model: model, system_path: system_path, schema: schema), prompt)
+      end
       result = parse_result(out)
 
       unless status.success? && result && result["is_error"] != true && result["subtype"] == "success"
@@ -182,6 +224,17 @@ class Provider::Anthropic::ClaudeCodeClient
       end
 
       result
+    end
+
+    def with_system_prompt_file(system)
+      return yield(nil) if system.blank?
+
+      file = Tempfile.new("claude-system-prompt")
+      file.write(system)
+      file.close
+      yield file.path
+    ensure
+      file&.close!
     end
 
     def capture(cmd, stdin_data)
