@@ -1,0 +1,59 @@
+<%# locals: (forecast:, bills_remaining:, bills_next_month:) %>
+<%# Everyday spending Bills doesn't track, predicted from each category's
+    typical month. Added to the bills still due, it answers "how much more
+    will go out", which the pulse above answers for bills alone. %>
+<% currency = Current.family.currency %>
+<% zero = Money.new(0, currency) %>
+<% rest_total = forecast.remaining_this_month + (bills_remaining || zero) %>
+<% next_total = forecast.next_month + (bills_next_month || zero) %>
+
+<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-4">
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-xs font-medium uppercase text-secondary"><%= t(".title") %></p>
+    <% if bills_one_shot_ai_available? %>
+      <%= render DS::Button.new(
+            text: t(".explain"),
+            icon: "sparkles",
+            variant: :ghost,
+            size: :sm,
+            href: forecast_review_bills_path,
+            frame: chat_frame,
+            data: { action: "app-layout#openRightSidebar" }
+          ) %>
+    <% end %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <p class="text-2xl font-medium text-primary privacy-sensitive leading-tight"><%= format_money(rest_total) %></p>
+      <p class="text-sm text-secondary"><%= t(".rest_of_month", month: l(Date.current, format: "%B")) %></p>
+      <p class="text-xs text-secondary privacy-sensitive">
+        <%= t(".split", spending: format_money(forecast.remaining_this_month), bills: format_money(bills_remaining || zero)) %>
+      </p>
+    </div>
+    <div>
+      <p class="text-2xl font-medium text-primary privacy-sensitive leading-tight"><%= format_money(next_total) %></p>
+      <p class="text-sm text-secondary"><%= t(".next_month", month: l(Date.current.next_month, format: "%B")) %></p>
+      <p class="text-xs text-secondary privacy-sensitive">
+        <%= t(".split", spending: format_money(forecast.next_month), bills: format_money(bills_next_month || zero)) %>
+      </p>
+    </div>
+  </div>
+
+  <div class="pt-3 border-t border-subdued space-y-2">
+    <div class="flex justify-between gap-3 text-xs text-secondary">
+      <span><%= t(".category") %></span>
+      <span><%= t(".spent_of_typical") %></span>
+    </div>
+    <% forecast.rows.first(5).each do |row| %>
+      <div class="flex items-center justify-between gap-3 text-sm">
+        <span class="text-primary truncate"><%= row.category&.name || t(".uncategorized") %></span>
+        <span class="text-secondary privacy-sensitive shrink-0">
+          <%= format_money(row.spent) %> / <%= format_money(row.typical) %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+
+  <p class="text-xs text-secondary"><%= t(".basis", count: forecast.history_months) %></p>
+</div>

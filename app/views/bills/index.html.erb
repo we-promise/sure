@@ -30,6 +30,10 @@
     <%= render "bills/ai_prompts", prompts: %w[due_before_paycheck subscriptions_up monthly_subscriptions] %>
   <% end %>
 
+  <% if @forecast.any? %>
+    <%= render "bills/forecast", forecast: @forecast, bills_remaining: @remaining_this_month, bills_next_month: @bills_next_month %>
+  <% end %>
+
   <% if bill_rows_empty %>
     <% if @suggested_series.none? %>
       <div class="bg-container rounded-xl shadow-border-xs p-4">
