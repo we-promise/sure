@@ -1,0 +1,23 @@
+---
+ca:
+  settings:
+    mcp:
+      show:
+        page_title: Servidor MCP
+        connect_title: Connecta un assistent d'IA
+        connect_subtitle: Enganxa aquest URL a Claude.ai (o a qualsevol client compatible amb MCP) per connectar-lo al teu compte de Sure.
+        copy_url: Copia
+        copied: Copiat!
+        how_to_connect_title: Com connectar Claude
+        step_1: Obre Claude.ai i ves a Settings → Customize → Connectors.
+        step_2: Fes clic a "Add connector" i enganxa l'URL del servidor MCP de dalt.
+        step_3: 'Fes clic a Connect: se''t redirigirà a Sure per iniciar sessió i autoritzar l''accés.'
+        step_4: Un cop autoritzat, Claude podrà llegir els teus comptes, transaccions i saldos.
+        connected_title: Clients connectats
+        connected_subtitle: Aquestes aplicacions tenen accés a les teves dades de Sure. Revoca les que ja no facis servir.
+        unknown_client: Client desconegut
+        connected_ago: Connectat fa %{time}
+        revoke: Revoca
+        revoke_confirm: Vols revocar l'accés d'aquest client?
+      revoke:
+        revoked: Connexió revocada.

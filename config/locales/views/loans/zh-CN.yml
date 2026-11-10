@@ -50,6 +50,35 @@ zh-CN:
       type: 类型
       unknown: 未知
     tabs:
+      extra_repayments:
+        amount_label: "额外还款"
+        amount_placeholder: "0.00"
+        apply: "应用"
+        baseline_not_cleared: "按当前还款额计算，此贷款在原始到期日无法结清，届时仍欠 %{balloon}，因此没有更早的结清日期或利息节省可供对比。加上此额外还款后，贷款将在上述日期结清。"
+        clear: "清除"
+        comparison_basis: "以今日余额为基准，与仅按当前计划还款且不追加额外还款进行对比。"
+        dated_note: "每周和每双周的额外还款将在每笔还款支付后的下一次还款日计入，因此节省的利息只会偏保守估计。"
+        extra_not_cleared: "即使加上此额外还款，该贷款在原始到期日仍无法结清。请尝试更大的金额。"
+        frequencies:
+          fortnightly: "每双周"
+          monthly: "每月"
+          weekly: "每周"
+        frequency_label: "还款频次"
+        interest_saved: "节省利息"
+        intro: "查看在定期还款的基础上，每周、每双周或每月额外还款时，贷款能提前多久还清以及能节省多少利息。"
+        invalid_amount: "请输入大于或等于零的数字金额。"
+        invalid_frequency: "请选择每周、每双周或每月。"
+        months_sooner:
+          one: "提前 %{count} 个月"
+          other: "提前 %{count} 个月"
+          zero: "在同一个月内结清"
+        no_scheduled_repayments: "此贷款没有剩余的计划还款，但仍有未还余额，因此无法添加额外还款。"
+        not_applicable: "此贷款已无剩余欠款，无需模拟额外还款。"
+        payoff_with_extra: "追加额外还款后结清"
+        total_cost: "自今日起的总成本"
+        total_cost_not_cleared: "在原始到期日无法结清"
+        total_cost_saved: "比不追加额外还款少 %{amount}"
+        variable_rate_notice: "此贷款的利率随时间变化。这些数值采用了已记录的利率变更；尚未记录的变更将影响这些数据。"
       repayment_progress:
         instalment: "第 %{number} 期还款 · %{date}"
         insurance: 保险
