@@ -111,7 +111,7 @@ end %>
 
     <%# DESKTOP - Left sidebar %>
     <%= tag.div class: class_names(
-        "hidden lg:block relative py-4 shrink-0 transition-all duration-300 border-divider",
+        "hidden lg:block relative py-4 shrink-0 transition-[width] duration-300 border-divider",
         Current.user.show_sidebar? ? [expanded_sidebar_class, "border-r"] : [collapsed_sidebar_class, "border-r-0"],
        ),
        style: "max-width: var(--left-sidebar-width, 320px)",
@@ -199,7 +199,7 @@ end %>
     <% if assistant_enabled %>
       <%# DESKTOP - Right sidebar %>
       <%= tag.div class: class_names(
-            "hidden lg:block relative h-full shrink-0 transition-all duration-300 border-divider",
+            "hidden lg:block relative h-full shrink-0 transition-[width] duration-300 border-divider",
             Current.user.show_ai_sidebar? ? [expanded_sidebar_class, "border-l"] : [collapsed_sidebar_class, "border-l-0"],
           ),
           style: "max-width: var(--right-sidebar-width, 400px)",

@@ -7,7 +7,7 @@ import {
 
 // Drives the draggable dividers on the left (accounts) and right (assistant)
 // sidebars. The chosen width is stored as a CSS variable on the root layout
-// element (consumed via `max-width: var(--left-sidebar-width)`) and persisted
+// element and on <html> (consumed via `max-width: var(--left-sidebar-width)`) and persisted
 // per-device in localStorage. Width changes compose with the show/hide toggle
 // owned by app_layout_controller — collapsing wins via `w-0`, reopening
 // restores the last width.
@@ -170,8 +170,14 @@ export default class extends Controller {
     }
   }
 
+  // Also on <html>, where the head script puts the stored widths before the
+  // first paint: a Turbo visit swaps in a new layout element without this
+  // inline width, so until this controller connects the sidebar takes the
+  // <html> one. Kept in step, a resize since the page loaded can't make the
+  // new page start at the old width and slide to this one.
   #setWidth(side, width) {
     this.element.style.setProperty(`--${side}-sidebar-width`, `${width}px`);
+    document.documentElement.style.setProperty(`--${side}-sidebar-width`, `${width}px`);
   }
 
   #currentWidth(side) {
