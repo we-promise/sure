@@ -32,6 +32,13 @@ class Portfolio::SectionRegistry
     @extra_sections = extra_sections || []
   end
 
+  # True when the viewer counts no investment account; the page shows its
+  # empty state instead of the sections. Reads the same loaded list as the
+  # cards, so the accounts are queried once per request.
+  def empty?
+    accounts_for_cards.empty?
+  end
+
   def sections
     all = built_in_sections + extra_sections
 
@@ -62,19 +69,20 @@ class Portfolio::SectionRegistry
           title: "portfolios.sections.accounts",
           partial: "portfolios/accounts",
           locals: shared_locals.merge(accounts: accounts_for_cards),
-          visible: statement.investment_accounts.any?,
+          visible: accounts_for_cards.any?,
           collapsible: true
         }
       ]
     end
 
-    # The accounts the cards show, in name order, with every record the logo
-    # reads (the attachment, the accountable's colour, the provider links and
-    # the provider each falls back to) loaded here rather than once per card.
+    # The accounts the cards show, in name order (id breaks ties, so
+    # same-named cards keep their places), with every record the logo reads
+    # (the attachment, the accountable's colour, the provider links and the
+    # provider each falls back to) loaded here rather than once per card.
     def accounts_for_cards
-      statement.investment_accounts.with_attached_logo
+      @accounts_for_cards ||= statement.investment_accounts.with_attached_logo
         .includes(:accountable, :plaid_account, :simplefin_account, account_providers: :provider)
-        .alphabetically.to_a
+        .alphabetically.order(:id).to_a
     end
 
     def shared_locals

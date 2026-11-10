@@ -11,12 +11,14 @@ class PortfoliosController < ApplicationController
     # Current.family lookups of their own).
     @as_of = Date.current
     @statement = Current.family.investment_statement(user: Current.user)
-    @sections = Portfolio::SectionRegistry.new(
+    registry = Portfolio::SectionRegistry.new(
       statement: @statement,
       period: @period,
       as_of: @as_of,
       user: Current.user
-    ).sections
+    )
+    @empty = registry.empty?
+    @sections = @empty ? [] : registry.sections
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.portfolio"), nil ] ]
   end

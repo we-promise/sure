@@ -3,8 +3,8 @@ de:
   portfolios:
     empty_state:
       add_account: Anlagekonto hinzufügen
-      description: Verbinde oder ergänze ein Depot-, Vorsorge- oder Krypto-Konto, dann erscheint es hier mit seinem Saldo.
-      title: Noch keine Anlagekonten
+      description: Depot-, Vorsorge- und Krypto-Konten, die du in deine Finanzen und Berichte einbeziehst, erscheinen hier mit ihrem Saldo.
+      title: Keine Anlagekonten zum Anzeigen
     sections:
       accounts: Konten
     show:

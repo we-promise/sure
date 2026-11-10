@@ -241,6 +241,53 @@ class PortfoliosControllerTest < ActionDispatch::IntegrationTest
     assert_equal one, three, "loading the linked accounts' providers grew with the number of cards"
   end
 
+  test "the investment accounts are queried once per page" do
+    queries = capture_sql_queries { get portfolio_path }
+
+    assert_response :success
+    assert_select "#portfolio-accounts a", minimum: 1
+    # The cards select `accounts.*`; an `any?`/`empty?` check selects `1 AS one`.
+    # The layout's sidebar reads accounts with its own select list.
+    matching = queries.select do |sql|
+      sql.match?(/\ASELECT (DISTINCT )?("accounts"\.\*|1 AS one) FROM "accounts"/) && sql.include?(%("accounts"."exclude_from_reports"))
+    end
+    assert_equal 1, matching.size, matching.join("\n")
+  end
+
+  # Without an id tiebreaker Postgres may return same-named accounts in any
+  # order, so the cards could swap places between requests. The ids descend
+  # in insertion order, so storage order and id order disagree.
+  test "accounts with the same name are listed in id order" do
+    same = %w[f d b].map do |digit|
+      @family.accounts.create!(id: "#{digit * 8}-0000-4000-8000-000000000000", name: "Same brokerage", balance: 100,
+                               currency: "USD", accountable: Investment.new, owner: @user)
+    end
+
+    get portfolio_path
+
+    assert_response :success
+    hrefs = css_select("#portfolio-accounts a").map { |a| a["href"] }
+    shown = hrefs.filter_map { |href| same.find { |account| href == account_path(account, tab: "holdings") } }
+    assert_equal same.sort_by(&:id), shown
+  end
+
+  # The empty state shows whenever the viewer counts no investment account,
+  # which includes a family whose investment accounts are all excluded.
+  test "the empty state does not claim the family has no investment accounts" do
+    user = users(:empty)
+    enable_preview(user)
+    sign_in user
+    user.family.accounts.create!(name: "Excluded brokerage", balance: 100, currency: "USD", accountable: Investment.new,
+                                 owner: user, exclude_from_reports: true)
+
+    get portfolio_path
+
+    assert_response :success
+    assert_select "[data-section-key]", count: 0
+    assert_match I18n.t("portfolios.empty_state.title"), response.body
+    assert_no_match(/yet/i, I18n.t("portfolios.empty_state.title"))
+  end
+
   private
     def enable_preview(user)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))

@@ -10,7 +10,7 @@
     <p class="text-sm text-secondary mt-1"><%= t(".subtitle") %></p>
   </header>
 
-  <% if @statement.investment_accounts.empty? %>
+  <% if @empty %>
     <%= render "portfolios/empty_state" %>
   <% else %>
     <%= render "shared/reorderable_sections",

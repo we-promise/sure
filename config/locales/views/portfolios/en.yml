@@ -3,8 +3,8 @@ en:
   portfolios:
     empty_state:
       add_account: Add an investment account
-      description: Connect or add a brokerage, retirement or crypto account and it will be listed here with its balance.
-      title: No investment accounts yet
+      description: Brokerage, retirement and crypto accounts you include in your finances and reports are listed here with their balance.
+      title: No investment accounts to show
     sections:
       accounts: Accounts
     show:
