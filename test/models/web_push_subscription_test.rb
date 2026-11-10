@@ -38,6 +38,25 @@ class WebPushSubscriptionTest < ActiveSupport::TestCase
     assert_equal other_user.id, replacement.user_id
   end
 
+  test "key proof is matched on the decoded bytes, across equivalent Base64 encodings" do
+    original = register_web_push(**@attributes)
+    assert original.matches_keys?(@attributes[:p256dh], @attributes[:auth])
+    assert original.matches_keys?(@attributes[:p256dh] + "=", @attributes[:auth] + "=")
+    assert_not original.matches_keys?(@attributes[:p256dh], web_push_attributes[:auth] + "=")
+    assert_not original.matches_keys?("nonsense", @attributes[:auth])
+    assert_not original.matches_keys?(nil, @attributes[:auth])
+  end
+
+  test "padded Base64 proof across users replaces the old row instead of colliding" do
+    original = register_web_push(**@attributes)
+    other_user = users(:family_member)
+    replacement = register_web_push(user: other_user, endpoint: @attributes[:endpoint],
+      p256dh: @attributes[:p256dh] + "=", auth: @attributes[:auth] + "=")
+    assert_not_equal original.id, replacement.id
+    assert_not WebPushSubscription.exists?(original.id)
+    assert_equal other_user.id, replacement.user_id
+  end
+
   test "a new session replaces the old registration even for the same user" do
     original = WebPushSubscription.register_for!(user: @user, session: @session, **@attributes)
     replacement = register_web_push(**@attributes)
@@ -116,5 +135,22 @@ class WebPushSubscriptionTest < ActiveSupport::TestCase
       assert_not_equal original.id, replacement.id
     end
     assert register_web_push(user: users(:family_member), endpoint: "https://fcm.googleapis.com/another-user").persisted?
+  end
+
+  test "test notification requests are throttled per device with a cooldown" do
+    subscription = WebPushSubscription.register_for!(user: @user, session: @session, **@attributes)
+    first = subscription.request_test_notification!
+    assert first.persisted?
+    assert_equal subscription.id, first.web_push_subscription_id
+
+    travel WebPushSubscription::TEST_NOTIFICATION_COOLDOWN - 1.second do
+      assert_nil subscription.request_test_notification!
+    end
+
+    travel WebPushSubscription::TEST_NOTIFICATION_COOLDOWN do
+      second = subscription.request_test_notification!
+      assert second.persisted?
+      assert_not_equal first.id, second.id
+    end
   end
 end
