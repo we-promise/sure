@@ -9,8 +9,8 @@ class PlaidTransactionsRefreshAllJobTest < ActiveJob::TestCase
     PlaidTransactionsRefreshAllJob.perform_now(family, source: "TestSync")
   end
 
-  # Issue #4858: a refresh is billed per call, and an item on its own schedule
-  # of a day or longer requests one when that schedule runs.
+  # A refresh is billed per call, and an item on its own schedule of a day or
+  # longer requests one when that schedule runs.
   test "skips Plaid items whose own schedule is a day or longer" do
     family = families(:dylan_family)
     family.plaid_items.syncable.each { |item| item.create_sync_schedule!(interval_minutes: 10080) }

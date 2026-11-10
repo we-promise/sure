@@ -53,8 +53,8 @@ class Family::SyncerTest < ActiveSupport::TestCase
     syncer.perform_sync(family_sync)
   end
 
-  # Issue #4858: a connection on its own schedule of a day or longer is synced
-  # by that schedule only, so the family sync must not sync it every day.
+  # A connection on its own schedule of a day or longer is synced by that
+  # schedule only, so the family sync must not sync it every day.
   test "leaves out connections whose own schedule is a day or longer" do
     family_sync = syncs(:family)
     plaid_item = @family.plaid_items.syncable.first
