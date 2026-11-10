@@ -190,7 +190,7 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert_equal({ "name" => "Account Org", "domain" => "bank.example" },
                  @item.simplefin_accounts.find_by!(account_id: "sf_v1_org").org_data)
   end
-  
+
   test "a regular sync after a long gap splits the range into requests the Bridge accepts" do
     travel_to Time.zone.parse("2026-11-07 12:00") do
       @item.stubs(:last_synced_at).returns(100.days.ago)
