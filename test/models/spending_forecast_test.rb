@@ -36,7 +36,7 @@ class SpendingForecastTest < ActiveSupport::TestCase
   end
 
   test "leaves out transactions matched to a bill" do
-    spend(@groceries, 100, Date.new(2026, 1, 1))
+    (1..3).each { |month| spend(@groceries, 100, Date.new(2026, month, 1)) }
     rent_entries = (1..3).map { |month| spend(@housing, 1000, Date.new(2026, month, 1)) }
     match_to_bill(rent_entries)
 
