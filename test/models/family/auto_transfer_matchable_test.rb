@@ -842,6 +842,52 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
     assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
     assert_equal 2, sql.scan(":require_common_writer = FALSE").size
+    assert_equal 2, sql.scan(":exclude_same_wise_item = FALSE").size
+  end
+
+  # Moves between one Wise connection's balances are linked from Wise's own
+  # activity feed (WiseItem#link_jar_transfers!); anything else the matcher
+  # pairs across them is a coincidence, like a GBP top-up "matching" a USD payout.
+  test "does not auto-match two balances of the same Wise connection" do
+    wise_item = wise_items(:one)
+    eur = link_wise_balance!(wise_item, "EUR")
+    eur_jar = link_wise_balance!(wise_item, "EUR")
+    gbp = link_wise_balance!(wise_item, "GBP")
+    usd = link_wise_balance!(wise_item, "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "GBP", date: Date.current, rate: 0.8156)
+
+    # Same currency, exact amount (first UNION branch)
+    jar_out = create_transaction(date: Date.current, account: eur, amount: 250.75, currency: "EUR")
+    jar_in = create_transaction(date: Date.current, account: eur_jar, amount: -250.75, currency: "EUR")
+    # Cross-currency inside the FX tolerance (second UNION branch)
+    top_up = create_transaction(date: Date.current, account: gbp, amount: -2465, currency: "GBP")
+    payout = create_transaction(date: Date.current, account: usd, amount: 3022.31, currency: "USD")
+
+    @family.auto_match_transfers!
+
+    assert_not Transfer.exists?(inflow_transaction_id: [ jar_in.entryable_id, top_up.entryable_id ])
+    assert_not Transfer.exists?(outflow_transaction_id: [ jar_out.entryable_id, payout.entryable_id ])
+
+    # The manual "match as transfer" dialog still offers both pairs.
+    assert_includes jar_in.transaction.transfer_match_candidates.map(&:outflow_transaction_id), jar_out.entryable_id
+    assert_includes top_up.transaction.transfer_match_candidates.map(&:outflow_transaction_id), payout.entryable_id
+  end
+
+  test "still auto-matches a Wise balance with a bank account or another Wise connection" do
+    usd = link_wise_balance!(wise_items(:one), "USD")
+    other_connection = WiseItem.create!(family: @family, name: "Personal Wise", token: "token", profile_id: "22222222",
+                                        profile_type: :personal)
+    other_usd = link_wise_balance!(other_connection, "USD")
+
+    payout = create_transaction(date: Date.current, account: usd, amount: 5482.37)
+    bank_credit = create_transaction(date: Date.current, account: @depository, amount: -5482.37)
+    move_out = create_transaction(date: Date.current, account: usd, amount: 512.34)
+    move_in = create_transaction(date: Date.current, account: other_usd, amount: -512.34)
+
+    @family.auto_match_transfers!
+
+    assert Transfer.exists?(inflow_transaction_id: bank_credit.entryable_id, outflow_transaction_id: payout.entryable_id)
+    assert Transfer.exists?(inflow_transaction_id: move_in.entryable_id, outflow_transaction_id: move_out.entryable_id)
   end
 
   test "does not auto-match transfers when the family has disabled auto match" do
@@ -923,6 +969,15 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
         current_balance: 0
       )
       AccountProvider.create!(account: account, provider: plaid_account)
+    end
+
+    # A new account linked to a balance of the given Wise connection.
+    def link_wise_balance!(wise_item, currency)
+      wise_account = wise_item.wise_accounts.create!(balance_id: SecureRandom.hex(6), name: "Wise #{currency}", currency: currency)
+      account = Account.create!(family: @family, owner: users(:family_admin), name: "Wise #{currency}",
+                                accountable: Depository.new(subtype: "checking"), balance: 0, currency: currency)
+      AccountProvider.create!(account: account, provider: wise_account)
+      account
     end
 
     def candidate_pairs

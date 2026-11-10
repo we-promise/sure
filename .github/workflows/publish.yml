@@ -40,7 +40,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   # Select the release channel and legacy alias through December; no date pin.
   COMPATIBILITY_CHANNEL: 'alpha'
-  COMPATIBILITY_VERSION: '0.7.7-alpha.3'
+  COMPATIBILITY_VERSION: '0.7.7-alpha.4'
 
 permissions:
   contents: write
@@ -90,6 +90,8 @@ jobs:
             exit 0
           fi
           version="${BUILD_DATE}-alpha"
+          # Scheduled image tags, OCI metadata and embedded identity must agree.
+          [[ "$GITHUB_EVENT_NAME" != schedule ]] || version="${BUILD_DATE}-nightly"
           # Selected tags determine identity; only tag pushes publish releases.
           selected_tag=""
           if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF" == refs/tags/* ]]; then
@@ -131,12 +133,13 @@ jobs:
             if [[ "$release" == true ]]; then
               echo "type=raw,value=$version"
               [[ -z "$compatibility" ]] || echo "type=raw,value=$compatibility"
-              # Hold stable/latest image promotion until CalVer releases are validated.
+              [[ "$stable" != true ]] || echo 'type=raw,value=stable'
+              [[ "$alpha" != true ]] || echo 'type=raw,value=latest'
             else
               echo "type=raw,value=sha-$(git rev-parse HEAD)"
               if [[ "$GITHUB_EVENT_NAME" == schedule ]]; then
                 echo 'type=schedule,pattern=nightly'
-                echo "type=raw,value=${BUILD_DATE}-nightly"
+                echo "type=raw,value=$version"
               fi
             fi
             echo 'RELEASE_TAGS'
@@ -375,6 +378,7 @@ jobs:
 
     steps:
       - name: Verify Render deployment configuration
+        id: render_config
         env:
           DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WEB_DEPLOY_HOOK_URL }}
@@ -387,11 +391,14 @@ jobs:
           [[ -n "${WORKER_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_DEMO_WORKER_DEPLOY_HOOK_URL)
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing demo environment configuration: %s\n' "${missing[*]}" >&2
-            exit 1
+            printf '::notice::Skipping Render demo deployment; missing configuration: %s\n' "${missing[*]}"
+            exit 0
           fi
 
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WEB_DEPLOY_HOOK_URL }}
         shell: bash
@@ -403,6 +410,7 @@ jobs:
             "${WEB_DEPLOY_HOOK_URL}"
 
       - name: Wait for web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
         shell: bash
@@ -427,6 +435,7 @@ jobs:
           exit 1
 
       - name: Smoke test sign-in page
+        if: steps.render_config.outputs.configured == 'true'
         env:
           DEMO_URL: ${{ vars.RENDER_DEMO_URL }}
         shell: bash
@@ -435,6 +444,7 @@ jobs:
             "${DEMO_URL%/}/sessions/new" > /dev/null
 
       - name: Deploy worker
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEMO_WORKER_DEPLOY_HOOK_URL }}
         shell: bash
@@ -468,28 +478,32 @@ jobs:
 
     steps:
       - name: Verify Render deployment configuration
+        id: render_config
         env:
           APP_URL: https://sure-web-6y53.onrender.com
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
           WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
         shell: bash
         run: |
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "Expected a stable vMAJOR.MINOR.PATCH tag." >&2
-            exit 1
-          fi
-
           missing=()
           [[ -n "${APP_URL}" ]] || missing+=(RENDER_APP_URL)
           [[ -n "${WEB_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_APP_WEB_DEPLOY_HOOK_URL)
           [[ -n "${WORKER_DEPLOY_HOOK_URL}" ]] || missing+=(RENDER_APP_WORKER_DEPLOY_HOOK_URL)
 
           if (( ${#missing[@]} > 0 )); then
-            printf 'Missing stable environment configuration: %s\n' "${missing[*]}" >&2
+            printf '::notice::Skipping Render stable deployment; missing configuration: %s\n' "${missing[*]}"
+            exit 0
+          fi
+
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Expected a stable vMAJOR.MINOR.PATCH tag." >&2
             exit 1
           fi
 
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
       - name: Deploy web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WEB_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WEB_DEPLOY_HOOK_URL }}
         shell: bash
@@ -501,6 +515,7 @@ jobs:
             "${WEB_DEPLOY_HOOK_URL}"
 
       - name: Wait for web service
+        if: steps.render_config.outputs.configured == 'true'
         env:
           APP_URL: https://sure-web-6y53.onrender.com
         shell: bash
@@ -525,6 +540,7 @@ jobs:
           exit 1
 
       - name: Smoke test sign-in page
+        if: steps.render_config.outputs.configured == 'true'
         env:
           APP_URL: https://sure-web-6y53.onrender.com
         shell: bash
@@ -533,6 +549,7 @@ jobs:
             "${APP_URL%/}/sessions/new" > /dev/null
 
       - name: Deploy worker
+        if: steps.render_config.outputs.configured == 'true'
         env:
           WORKER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_APP_WORKER_DEPLOY_HOOK_URL }}
         shell: bash
@@ -658,6 +675,75 @@ jobs:
           echo "Release assets:"
           ls -la "${{ runner.temp }}/release-assets/"
 
+      - name: Prepare release notes
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          ALIAS_NOTE: ${{ needs.prepare.outputs.alias_note }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const tag = process.env.RELEASE_TAG;
+            let body;
+            try {
+              const release = await github.rest.repos.getReleaseByTag({ ...context.repo, tag });
+              body = release.data.body ?? '';
+            } catch (error) {
+              // Never replace existing notes after an authentication or server error.
+              if (error.status !== 404) throw error;
+              const notes = await github.rest.repos.generateReleaseNotes({
+                ...context.repo, tag_name: tag
+              });
+              body = notes.data.body;
+            }
+
+            const mobile = [
+              '## Mobile Debug Builds',
+              '',
+              'This release includes debug builds of the mobile applications.  Download from the `Assets` area below.',
+              '',
+              '- **Android APK**: Debug build for testing on Android devices',
+              '- **iOS Build**: Unsigned iOS build (requires code signing for installation)',
+              '',
+              '> **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.'
+            ].join('\n');
+
+            // Move only the exact workflow-owned notice, never an entire Markdown section.
+            // Removing its separator too makes reruns idempotent without trimming user text.
+            for (const notice of [mobile, mobile.replace('applications.  Download', 'applications. Download')]) {
+              for (const lineEnding of ['\n', '\r\n']) {
+                const matchingNotice = notice.replace(/\n/g, lineEnding);
+                body = body.split(matchingNotice + lineEnding + lineEnding).join('').split(matchingNotice).join('');
+              }
+            }
+            const alias = process.env.ALIAS_NOTE || '';
+            const additions = alias && !body.split(/\r?\n/).includes(alias)
+              ? alias + '\n\n' + mobile : mobile;
+            // Track fenced examples without rewriting any authored line endings.
+            let fence = null;
+            let index = body.length;
+            for (const line of body.matchAll(/[^\n]*(?:\n|$)/g)) {
+              const text = line[0].replace(/\r?\n$/, '');
+              const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(text);
+              if (fence) {
+                if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && /^[ \t]*$/.test(marker[2])) {
+                  fence = null;
+                }
+                continue;
+              }
+              if (marker && (marker[1][0] !== '`' || !marker[2].includes('`'))) {
+                fence = marker[1];
+              } else if (/^#{1,6}[ \t]+What['’]s Changed[ \t]*#*[ \t]*$/.test(text)) {
+                index = line.index;
+                break;
+              }
+            }
+            const before = body.slice(0, index);
+            const separator = !before || /(?:\r?\n){2}$/.test(before) ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+            body = before + separator + additions + '\n\n' + body.slice(index);
+            fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'release-notes.md'), body);
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
@@ -665,17 +751,7 @@ jobs:
           name: ${{ needs.prepare.outputs.release_name }}
           draft: false
           prerelease: ${{ needs.prepare.outputs.stable != 'true' }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body_path: ${{ runner.temp }}/release-notes.md
           files: |
             ${{ runner.temp }}/release-assets/*
-          body: |
-            ${{ needs.prepare.outputs.alias_note }}
-
-            ## Mobile Debug Builds
-
-            This release includes debug builds of the mobile applications.  Download from the `Assets` area below.
-
-            - **Android APK**: Debug build for testing on Android devices
-            - **iOS Build**: Unsigned iOS build (requires code signing for installation)
-
-            > **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.
