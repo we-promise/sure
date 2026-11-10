@@ -495,7 +495,8 @@ class SimplefinItem::Importer
           consecutive_empty_chunks += 1
           # Stop after 3 consecutive empty chunks (allow for gaps in bank data)
           if consecutive_empty_chunks >= 3
-            Rails.logger.info "SimpleFin chunked sync: stopping early - #{consecutive_empty_chunks} consecutive empty chunks (SimpleFIN likely doesn't have more history)"
+            log_sync_event("info", "SimpleFIN chunked sync stopped early: #{consecutive_empty_chunks} consecutive empty chunks",
+              chunks_processed: chunk_count, oldest_requested: chunk_start_date.to_date)
             stopped_early = true
             break
           end
@@ -544,9 +545,11 @@ class SimplefinItem::Importer
       # connection keeps failing. Split it into ranges the Bridge accepts, and
       # stop at the same one-year lookback as the chunked history import.
       start_date = [ determine_sync_start_date, 1.year.ago.beginning_of_day ].max
-      Rails.logger.info "SimplefinItem::Importer - import_regular_sync: last_synced_at=#{simplefin_item.last_synced_at&.strftime('%Y-%m-%d %H:%M')} => start_date=#{start_date&.strftime('%Y-%m-%d')}"
+      windows = request_windows(start_date, Time.current)
+      log_sync_event("info", "SimpleFIN regular sync from #{start_date.to_date} in #{windows.size} request(s)",
+        last_synced_at: simplefin_item.last_synced_at, start_date: start_date.to_date, requests: windows.size)
 
-      request_windows(start_date, Time.current).each do |window_start, window_end|
+      windows.each do |window_start, window_end|
         accounts_data = fetch_accounts_data(start_date: window_start, end_date: window_end)
         return if accounts_data.nil? # Error already handled
 
@@ -570,7 +573,8 @@ class SimplefinItem::Importer
             rescue
               # no-op if account_data is missing keys
             end
-            Rails.logger.warn("SimpleFin: Skipping account during regular sync due to error: #{e.class} - #{e.message}")
+            log_sync_event("warn", "SimpleFIN regular sync skipped an account: #{e.class} - #{e.message}",
+              account_id: account_data[:id], window_start: window_start.to_date, window_end: window_end.to_date)
           ensure
             persist_stats!
           end
@@ -589,6 +593,19 @@ class SimplefinItem::Importer
         window_start = window_end
       end
       windows
+    end
+
+    # Records a sync event in the debug log, where self-hosters can see it.
+    def log_sync_event(level, message, **metadata)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: level,
+        message: message,
+        source: self.class.name,
+        family: simplefin_item.family,
+        provider_key: "simplefin",
+        metadata: metadata.merge(simplefin_item_id: simplefin_item.id)
+      )
     end
 
     #
