@@ -63,8 +63,7 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    source_account.sync_later
-    destination_account.sync_later
+    transfer.sync_account_later
 
     # After commit, including a caller's own transaction, so a reconcile
     # error can never roll back the transfer. Only the inflow can resolve a
