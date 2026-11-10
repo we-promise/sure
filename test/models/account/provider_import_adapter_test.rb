@@ -661,6 +661,35 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "security is required", exception.message
   end
 
+  test "an imported coin transfer into a goal-linked crypto account resolves its transfer pledge" do
+    crypto = accounts(:crypto)
+    goal = goals(:vacation_italy)
+    goal.goal_accounts.find_or_create_by!(account: crypto)
+    pledge = GoalPledge.create!(goal: goal, account: crypto, amount: 200, currency: "USD", kind: "transfer",
+                                status: "open", expires_at: 7.days.from_now)
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+
+    entry = Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-1", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
+
+    assert_equal "matched", pledge.reload.status
+    assert_equal pledge.id, entry.trade.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "an imported coin transfer on a crypto account linked to no goal runs no reconcile" do
+    crypto = accounts(:crypto)
+    GoalAccount.where(account: crypto).delete_all
+    btc = Security.find_or_create_by!(ticker: "CRYPTO:BTC") { |s| s.name = "Bitcoin" }
+    GoalPledge::Reconciler.any_instance.expects(:run).never
+
+    Account::ProviderImportAdapter.new(crypto).import_trade(
+      security: btc, quantity: BigDecimal("0.004"), price: 50_000, amount: 0, currency: "USD",
+      date: Date.current, external_id: "onchain-in-2", source: "onchain_wallet", activity_label: Trade::TRANSFER_LABEL
+    )
+  end
+
   test "imports trade with all parameters" do
     investment_account = accounts(:investment)
     adapter = Account::ProviderImportAdapter.new(investment_account)

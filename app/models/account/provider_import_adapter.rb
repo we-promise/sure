@@ -748,6 +748,15 @@ class Account::ProviderImportAdapter
       )
 
       entry.save!
+
+      # Coins arriving in a wallet are its deposits (GoalPledge.deposit_trade?).
+      # After commit, because a wallet writes the trade inside its own
+      # transaction. A re-imported trade is skipped by the reconciler once
+      # stamped.
+      if GoalPledge.deposit_trade?(entry) && account_linked_to_any_goal?
+        GoalPledge::Reconciler.run_after_commit(entry)
+      end
+
       entry
     end
   end

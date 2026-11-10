@@ -36,6 +36,8 @@ class GoalPledge::Reconciler
       begin
         if entry.entryable.is_a?(Transaction)
           pledge.resolve_with!(entry.transaction)
+        elsif entry.entryable.is_a?(Trade)
+          pledge.resolve_with_trade!(entry.trade)
         elsif entry.entryable.is_a?(Valuation)
           pledge.resolve_with_valuation!
         end
@@ -65,13 +67,13 @@ class GoalPledge::Reconciler
       return false if entry.account_id.blank?
       return false if entry.excluded?
 
-      entry.entryable.is_a?(Transaction) || entry.entryable.is_a?(Valuation)
+      entry.entryable.is_a?(Transaction) || entry.entryable.is_a?(Valuation) || GoalPledge.deposit_trade?(entry)
     end
 
     def already_stamped?
-      return false unless entry.entryable.is_a?(Transaction)
+      return false if entry.entryable.is_a?(Valuation)
 
-      entry.transaction.extra.dig("goal", "pledge_id").present?
+      entry.entryable.extra.dig("goal", "pledge_id").present?
     end
 
     def expected_kind
