@@ -48,6 +48,25 @@ class Provider::EtfConstituentsTest < ActiveSupport::TestCase
     assert_nil fetch(body).constituents
   end
 
+  test "a fund with a null holdings block yields no constituents" do
+    body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => nil } }.to_json
+
+    assert_nil fetch(body).constituents
+  end
+
+  # `false` and a blank string are blank, but they are not an empty holdings
+  # block. Read as "no holdings", they would wipe the fund's stored set and
+  # stamp it. Only null, {} and [] mean the fund lists nothing.
+  test "a holdings block that is false or a blank string fails the request" do
+    [ false, "", "   " ].each do |holdings|
+      body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
+      response = fetch_response(body)
+
+      assert_not response.success?, "for #{holdings.inspect}"
+      assert_kind_of Provider::Eodhd::Error, response.error
+    end
+  end
+
   # Anything else in the holdings block is a response this parser cannot read.
   # Answered as "no holdings", it would delete the fund's stored set and stamp
   # the fund, and the gate would not ask again.

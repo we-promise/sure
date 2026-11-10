@@ -177,6 +177,35 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
     assert_equal [ "MSFT" ], @security.constituents.pluck(:ticker), "a failed answer wiped the stored set"
   end
 
+  # End to end through EODHD's own parser: a holdings value that is blank but
+  # not an empty block is a failed answer, so the stored set and its stamp stay.
+  test "an EODHD holdings value of false or a blank string keeps the stored set and its stamp" do
+    [ false, "", "   " ].each do |holdings|
+      old_stamp = stored_fund_set
+
+      @security.stubs(:price_data_provider).returns(eodhd_answering(holdings))
+      @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+      assert_equal %w[AAA], @security.reload.constituents.pluck(:ticker), "#{holdings.inspect} wiped the stored set"
+      assert_equal old_stamp, @security.constituents_fetched_at, "#{holdings.inspect} moved the stamp"
+    end
+  end
+
+  # The other side of the boundary: null, {} and [] are EODHD saying the fund
+  # lists nothing, which replaces the stored set with nothing and stamps it.
+  test "an EODHD holdings value of null, {} or [] clears the stored set and stamps the fund" do
+    [ nil, {}, [] ].each do |holdings|
+      old_stamp = stored_fund_set
+
+      @security.stubs(:price_data_provider).returns(eodhd_answering(holdings))
+      @security.import_provider_details(clear_cache: true, include_constituents: true)
+
+      assert_empty @security.reload.constituents, "#{holdings.inspect} kept the stored set"
+      assert_operator @security.constituents_fetched_at, :>, old_stamp, "#{holdings.inspect} did not stamp"
+      assert_equal "eodhd", @security.constituents_fetched_from
+    end
+  end
+
   # The importers walk every security on every sync, so a caller that has not
   # opted in must not inherit that cost -- the same reason
   # `include_classification:` defaults to false.
@@ -591,6 +620,26 @@ class Security::ConstituentIngestionTest < ActiveSupport::TestCase
 
     def last_holdings_log
       DebugLogEntry.where(category: "security_holdings").order(:created_at, :id).last
+    end
+
+    # One stored holding and a day-old stamp from another provider, set
+    # directly so the test does not depend on an earlier import. Returns the
+    # stamp.
+    def stored_fund_set
+      @security.constituents.delete_all
+      @security.constituents.create!(ticker: "AAA", name: "Old", weight: 5)
+      @security.update_columns(constituents_fetched_at: 1.day.ago.change(usec: 0), constituents_fetched_from: "twelve_data")
+      @security.constituents_fetched_at
+    end
+
+    def eodhd_answering(holdings)
+      body = { "General" => { "Type" => "ETF" }, "ETF_Data" => { "Holdings" => holdings } }.to_json
+      provider = Provider::Eodhd.new("test_api_key")
+      provider.stubs(:enforce_daily_limit!)
+      provider.stubs(:throttle_request)
+      provider.stubs(:client).returns(client = mock)
+      client.stubs(:get).returns(stub(body: body))
+      provider
     end
 
     def constituent(ticker, name, weight)
