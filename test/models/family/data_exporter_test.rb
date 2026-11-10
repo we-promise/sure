@@ -200,7 +200,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
-      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions")
+      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions,group")
     end
   end
 
@@ -447,6 +447,19 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports the rule group name in CSV and NDJSON" do
+    @rule.update!(rule_group: @family.rule_groups.create!(name: "Food"))
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rules_csv = CSV.parse(zip.read("rules.csv"), headers: true)
+      assert_equal "Food", rules_csv.find { |row| row["name"] == "Test Rule" }["group"]
+
+      rule_line = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        .find { |line| line["type"] == "Rule" && line["data"]["name"] == "Test Rule" }
+      assert_equal "Food", rule_line["data"]["group"]
+    end
+  end
+
   test "exports rule conditions with proper structure" do
     zip_data = @exporter.generate_export
 
@@ -592,6 +605,33 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       condition = rule_data["data"]["conditions"].first
       assert_equal "Test Category", condition["value"]
       assert_equal({ "type" => "Category", "id" => @category.id, "name" => "Test Category" }, condition["value_ref"])
+    end
+  end
+
+  test "exports provider merchant rule operands by name" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid")
+    @account.entries.create!(
+      date: Date.current, amount: 10, name: "Groceries", currency: "USD",
+      entryable: Transaction.new(merchant: provider_merchant)
+    )
+    rule = @family.rules.build(name: "Provider Merchant Rule", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: provider_merchant.id)
+    rule.actions.build(action_type: "set_transaction_merchant", value: provider_merchant.id)
+    rule.save!
+
+    zip_data = @exporter.generate_export
+
+    Zip::File.open_buffer(zip_data) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").filter_map do |line|
+        parsed = JSON.parse(line)
+        parsed if parsed["type"] == "Rule" && parsed["data"]["name"] == "Provider Merchant Rule"
+      end.first
+
+      expected_ref = { "type" => "Merchant", "id" => provider_merchant.id, "name" => "Synced Grocer" }
+      assert_equal "Synced Grocer", rule_data["data"]["conditions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["conditions"].first["value_ref"]
+      assert_equal "Synced Grocer", rule_data["data"]["actions"].first["value"]
+      assert_equal expected_ref, rule_data["data"]["actions"].first["value_ref"]
     end
   end
 

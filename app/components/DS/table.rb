@@ -15,7 +15,7 @@ class DS::Table < DesignSystemComponent
   # markup or return a String: Rails' `capture` drops any other return value,
   # so a bare Integer renders as an empty cell (call `to_s` on it).
   renders_many :columns, ->(header, **options, &cell) do
-    DS::Table::Column.new(header, cell: cell, sticky: sticky_header, **options)
+    DS::Table::Column.new(header, cell: cell, sticky: sticky_header, inset: inset, **options)
   end
 
   attr_reader :rows, :inset, :sticky_header, :label, :row_class, :row_opts, :opts
@@ -24,6 +24,8 @@ class DS::Table < DesignSystemComponent
   # @param inset [Boolean] frame the table in container-inset, for a table that
   #   sits inside a card the way a list group does. A table on the page
   #   background is a card of its own.
+  #   Its header row takes the frame's container-inset, so the two read as one
+  #   surface.
   # @param sticky_header [Boolean] cap the height and keep the header row in view
   #   while the body scrolls under it, for long tables such as a loan schedule
   # @param label [String, nil] accessible name for the scroll area. Makes it a
