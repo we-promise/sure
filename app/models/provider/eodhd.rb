@@ -214,13 +214,14 @@ class Provider::Eodhd < Provider
   # bare one in `Code`. The bare ticker is what matches anything in `securities`,
   # so the key is used only as a fallback for a malformed entry.
   #
-  # An absent or empty block means the fund lists nothing. Any other shape, or a
-  # non-empty map whose entries are all malformed, is a response this cannot
-  # read and raises: answered as "no holdings", it would replace the fund's
-  # stored set with nothing and stamp it as asked.
+  # An absent block (null) or an empty map or list means the fund lists nothing.
+  # Any other shape, `false` or a blank string included, or a non-empty map
+  # whose entries are all malformed, is a response this cannot read and raises:
+  # answered as "no holdings", it would replace the fund's stored set with
+  # nothing and stamp it as asked.
   def etf_constituents(parsed)
     holdings = parsed.dig("ETF_Data", "Holdings")
-    return nil if holdings.blank?
+    return nil if holdings.nil? || holdings == {} || holdings == []
     raise Error, "Unexpected holdings format from fundamentals API" unless holdings.is_a?(Hash)
 
     readable = holdings.filter_map do |key, holding|
