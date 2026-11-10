@@ -2,6 +2,11 @@ require "set"
 class SimplefinItem::Importer
   include SimplefinNumericHelpers
   class RateLimitedError < StandardError; end
+
+  # SimpleFIN Bridge refuses a request whose date range is longer than this
+  # ("Requested date range exceeds recommended range of 45 days").
+  MAX_REQUEST_DAYS = 45
+
   attr_reader :simplefin_item, :simplefin_provider, :sync
 
   def initialize(simplefin_item, simplefin_provider:, sync: nil)
@@ -379,12 +384,13 @@ class SimplefinItem::Importer
     end
 
     def import_with_chunked_history
-      # SimpleFin's actual limit is 60 days per request (not 365 as documented).
+      # Each request stays within the Bridge's MAX_REQUEST_DAYS limit.
       # SimpleFin typically only provides 60-90 days of history (bank-dependent).
       # Use adaptive chunking: start with 2 chunks, continue if new data found,
-      # stop after 2 consecutive empty chunks. Max 6 chunks (360 days) for safety.
-      chunk_size_days = 60
-      max_requests = 6  # Down from 22 - SimpleFIN rarely provides >90 days anyway
+      # stop after 3 consecutive empty chunks (135 days, at least the 120 days
+      # two 60-day chunks used to cross). Max 8 chunks (360 days) for safety.
+      chunk_size_days = MAX_REQUEST_DAYS
+      max_requests = 8  # SimpleFIN rarely provides >90 days anyway
       current_end_date = Time.current
 
       # Decide how far back to walk:
@@ -487,9 +493,10 @@ class SimplefinItem::Importer
         # Adaptive stopping: if chunk returned no new transactions, increment counter
         if new_txns_in_chunk.zero?
           consecutive_empty_chunks += 1
-          # Stop after 2 consecutive empty chunks (allow for gaps in bank data)
-          if consecutive_empty_chunks >= 2
-            Rails.logger.info "SimpleFin chunked sync: stopping early - #{consecutive_empty_chunks} consecutive empty chunks (SimpleFIN likely doesn't have more history)"
+          # Stop after 3 consecutive empty chunks (allow for gaps in bank data)
+          if consecutive_empty_chunks >= 3
+            log_sync_event("info", "SimpleFIN chunked sync stopped early: #{consecutive_empty_chunks} consecutive empty chunks",
+              chunks_processed: chunk_count, oldest_requested: chunk_start_date.to_date)
             stopped_early = true
             break
           end
@@ -533,36 +540,72 @@ class SimplefinItem::Importer
       # Note: Don't pass explicit `pending:` here - let fetch_accounts_data use the
       # SIMPLEFIN_INCLUDE_PENDING config. This allows users to disable pending transactions
       # if their bank's SimpleFIN integration produces duplicates when pending→posted.
-      start_date = determine_sync_start_date
-      Rails.logger.info "SimplefinItem::Importer - import_regular_sync: last_synced_at=#{simplefin_item.last_synced_at&.strftime('%Y-%m-%d %H:%M')} => start_date=#{start_date&.strftime('%Y-%m-%d')}"
-      accounts_data = fetch_accounts_data(start_date: start_date)
-      return if accounts_data.nil? # Error already handled
+      #
+      # Failed syncs do not move last_synced_at, so the window grows while a
+      # connection keeps failing. Split it into ranges the Bridge accepts, and
+      # stop at the same one-year lookback as the chunked history import.
+      start_date = [ determine_sync_start_date, 1.year.ago.beginning_of_day ].max
+      windows = request_windows(start_date, Time.current)
+      log_sync_event("info", "SimpleFIN regular sync from #{start_date.to_date} in #{windows.size} request(s)",
+        last_synced_at: simplefin_item.last_synced_at, start_date: start_date.to_date, requests: windows.size)
 
-      # Store raw payload
-      simplefin_item.upsert_simplefin_snapshot!(accounts_data)
+      windows.each do |window_start, window_end|
+        accounts_data = fetch_accounts_data(start_date: window_start, end_date: window_end)
+        return if accounts_data.nil? # Error already handled
 
-      # Tally accounts for stats
-      count = accounts_data[:accounts]&.size.to_i
-      # Treat total as max unique accounts seen this run, not accumulation
-      stats["total_accounts"] = [ stats["total_accounts"].to_i, count ].max
+        # Store raw payload (windows run oldest first, so the newest one is kept)
+        simplefin_item.upsert_simplefin_snapshot!(accounts_data)
 
-      # Import accounts (merges transactions/holdings into existing rows), skipping failures per-account
-      accounts_data[:accounts]&.each do |account_data|
-        begin
-          import_account(account_data)
-        rescue => e
-          stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-          cat = classify_error(e)
+        # Tally accounts for stats
+        count = accounts_data[:accounts]&.size.to_i
+        # Treat total as max unique accounts seen this run, not accumulation
+        stats["total_accounts"] = [ stats["total_accounts"].to_i, count ].max
+
+        # Import accounts (merges transactions/holdings into existing rows), skipping failures per-account
+        accounts_data[:accounts]&.each do |account_data|
           begin
-            register_error(message: e.message.to_s, category: cat, account_id: account_data[:id], name: account_data[:name])
-          rescue
-            # no-op if account_data is missing keys
+            import_account(account_data)
+          rescue => e
+            stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+            cat = classify_error(e)
+            begin
+              register_error(message: e.message.to_s, category: cat, account_id: account_data[:id], name: account_data[:name])
+            rescue
+              # no-op if account_data is missing keys
+            end
+            log_sync_event("warn", "SimpleFIN regular sync skipped an account: #{e.class} - #{e.message}",
+              account_id: account_data[:id], window_start: window_start.to_date, window_end: window_end.to_date)
+          ensure
+            persist_stats!
           end
-          Rails.logger.warn("SimpleFin: Skipping account during regular sync due to error: #{e.class} - #{e.message}")
-        ensure
-          persist_stats!
         end
       end
+    end
+
+    # Splits start_date..end_date into consecutive ranges of at most
+    # MAX_REQUEST_DAYS, oldest first.
+    def request_windows(start_date, end_date)
+      windows = []
+      window_start = start_date
+      while window_start < end_date
+        window_end = [ window_start + MAX_REQUEST_DAYS.days, end_date ].min
+        windows << [ window_start, window_end ]
+        window_start = window_end
+      end
+      windows
+    end
+
+    # Records a sync event in the debug log, where self-hosters can see it.
+    def log_sync_event(level, message, **metadata)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: level,
+        message: message,
+        source: self.class.name,
+        family: simplefin_item.family,
+        provider_key: "simplefin",
+        metadata: metadata.merge(simplefin_item_id: simplefin_item.id)
+      )
     end
 
     #
