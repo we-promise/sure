@@ -1,0 +1,24 @@
+---
+pt-PT:
+  settings:
+    payments:
+      show:
+        page_title: Pagamentos
+        subscription_subtitle: Atualize os dados do seu cartão de crédito
+        subscription_title: Gerir contribuições
+        currently_on_plan: "Atualmente no"
+        trialing: "Atualmente a utilizar a demonstração aberta de %{product_name}"
+        trial_days_left:
+          one: "Os dados serão eliminados em %{count} dia"
+          other: "Os dados serão eliminados em %{count} dias"
+        not_contributing_prefix: "De momento está"
+        not_contributing_emphasis: "a não contribuir"
+        contributions_note: "As contribuições para %{product_name} serão mostradas aqui."
+        manage: "Gerir"
+        choose_level: "Escolher nível"
+        payment_via_stripe: "Pagamento via Stripe"
+  views:
+    settings:
+      payments:
+        renewal: "A sua contribuição continua em %{date}."
+        cancellation: "A sua contribuição termina em %{date}."

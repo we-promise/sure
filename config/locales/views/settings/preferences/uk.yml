@@ -1,0 +1,61 @@
+---
+uk:
+  settings:
+    preferences:
+      show:
+        country: Країна
+        currency: Валюта
+        date_format: Формат дати
+        general_subtitle: Налаштуйте свої уподобання
+        general_title: Загальні
+        default_period: Період за замовчуванням
+        default_account_order: Порядок рахунків за замовчуванням
+        language: Мова
+        language_auto: Мова браузера
+        page_title: Уподобання
+        timezone: Часовий пояс
+        month_start_day: Бюджетний місяць починається з
+        month_start_day_hint: Встановіть, коли починається ваш бюджетний місяць (наприклад, день зарплати)
+        month_start_day_warning: Ваші бюджети та розрахунки MTD використовуватимуть цей користувацький день початку замість 1-го числа кожного місяця.
+        translations_notice: Зверніть увагу, ми все ще працюємо над перекладами для різних мов.
+        currencies_title: "Валюти %{moniker}"
+        currencies_subtitle: Виберіть, які валюти відображатимуться в полях грошей для вашого %{moniker}
+        base_currency_label: Базова валюта
+        base_currency_badge: Базова валюта
+        additional_currencies_label: Додаткові валюти
+        no_additional_currencies: Не вибрано
+        currencies_more: "+%{count} ще"
+        manage_currencies: Керувати валютами
+        manage_currencies_subtitle: Скасуйте вибір валют, які ви ніколи не використовуєте, або скоротіть список до кількох.
+        select_all_currencies: Вибрати всі
+        select_base_only: Лише базова валюта
+        currency_search_placeholder: Пошук валют
+        no_matching_currencies: Валют не знайдено
+        selected_currencies_count:
+          one: "%{count} вибрано"
+          other: "%{count} вибрано"
+          few: '%{count} вибрано'
+          many: '%{count} вибрано'
+        save_currencies: Зберегти валюти
+        sharing_title: "Спільний доступ до %{moniker}"
+        sharing_subtitle: "Керуйте тим, як рахунки надаються у вашому %{moniker}"
+        sharing_default_label: Спільний доступ за замовчуванням для нових рахунків
+        sharing_shared: Поділитися з усіма учасниками
+        sharing_private: Зберігати приватним за замовчуванням
+        preview:
+          title: Увімкнути бета-функції
+          description: Отримайте доступ до функцій у розробці, позначених як бета (preview) або canary.
+        budget_title: Бюджет
+        budget_subtitle: Налаштуйте роботу своїх бюджетів
+        personal_budgets: Особисті бюджети
+        personal_budgets_hint: Увімкнути окремі бюджети для кожного учасника.
+        household_budget_enabled: Спільний бюджет домогосподарства
+        household_budget_enabled_hint: Вести спільний бюджет домогосподарства разом з особистими бюджетами. Вимкніть, щоб використовувати лише особисті бюджети.
+        budget_sharing_title: Спільний доступ до бюджету
+        budget_sharing_subtitle: Дозвольте іншим учасникам переглядати або редагувати ваш особистий бюджет
+        budget_sharing_no_members: Ваша %{moniker} не має інших учасників, з якими можна поділитися
+        budget_sharing_permission_label: 'Доступ: %{name}'
+        budget_sharing_permissions:
+          none: Немає доступу
+          read_only: Лише перегляд
+          read_write: Може редагувати

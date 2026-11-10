@@ -46,6 +46,14 @@ class ReportsTest < ApplicationSystemTestCase
     assert_equal %w[ArrowLeft], clicked_hotkeys
   end
 
+  test "the arrow keys scroll a focused breakdown table instead of changing the period" do
+    find("section[data-section-key='transactions_breakdown'] [role='region']", match: :first).send_keys(:arrow_left)
+    assert_empty clicked_hotkeys
+
+    find("body").send_keys(:arrow_left)
+    assert_equal %w[ArrowLeft], clicked_hotkeys
+  end
+
   test "a held arrow key steps one period" do
     page.execute_script(<<~JS)
       for (const repeat of [false, true, true]) {
