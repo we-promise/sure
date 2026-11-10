@@ -450,7 +450,12 @@ class EnableBankingEntry::Processor
       descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
       return descriptive if descriptive.blank?
 
-      matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(descriptive)
+      cleaned = strip_payment_processor_prefix(descriptive)
+      # Keep a holder-only remittance whole, so a known merchant matching part
+      # of the name ("Jane" in "Jane Doe") is not picked out of it.
+      return cleaned if account_holder_name?(cleaned)
+
+      matched_known_merchant_name(descriptive) || cleaned
     end
 
     # The remittance lines describing who was paid, one per element, with any
@@ -521,7 +526,7 @@ class EnableBankingEntry::Processor
 
         [
           payload.is_a?(Hash) ? (payload["name"] || payload[:name]) : nil,
-          data.dig(own_side, :name),
+          self.class.party_name(data, own_side),
           data[:"#{own_side}_name"]
         ].filter_map { |value| value.to_s.strip.presence }
       end
