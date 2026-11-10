@@ -26,7 +26,7 @@ id:
               split_merchant_invalid: "merchant pembagian #%{index} bukan milik keluarga ini"
               split_tags_invalid: "pembagian #%{index} memiliki tag yang bukan milik keluarga ini"
               percentages_must_total_100: "persentase harus berjumlah 100 (saat ini %{total})"
-              fixed_requires_exact_amount_condition: "pembagian jumlah tetap memerlukan kondisi aturan yang cocok dengan jumlah transaksi yang tepat (misalnya Jumlah = 42,00), jika tidak, porsi pembagian tidak dapat secara andal berjumlah sama dengan total setiap transaksi yang cocok"
+              fixed_requires_exact_amount_condition: "pembagian jumlah tetap memerlukan kondisi aturan yang cocok dengan jumlah transaksi yang tepat (misalnya Jumlah = 42,00), karena jika tidak, total pembagian tidak akan pas dengan nominal transaksi yang cocok"
               fixed_shares_must_equal_condition_amount: "porsi pembagian harus berjumlah %{amount}, jumlah pasti yang disyaratkan oleh kondisi aturan ini"
 
         rule/condition:
