@@ -155,7 +155,54 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert @item.reload.requires_update?
   end
 
+  test "a regular sync after a long gap splits the range into requests the Bridge accepts" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(100.days.ago)
+      provider, ranges = recording_provider
+
+      SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+
+      assert_equal 3, ranges.size
+      assert_equal 130.days.ago, ranges.first.first
+      assert_equal Time.current, ranges.last.last
+      ranges.each { |from, to| assert_operator to - from, :<=, SimplefinItem::Importer::MAX_REQUEST_DAYS.days }
+      ranges.each_cons(2) { |(_, previous_end), (next_start, _)| assert_equal previous_end, next_start }
+    end
+  end
+
+  test "a regular sync does not reach back more than a year" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(500.days.ago)
+      provider, ranges = recording_provider
+
+      SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+
+      assert_equal 1.year.ago.beginning_of_day, ranges.first.first
+      assert_equal Time.current, ranges.last.last
+    end
+  end
+
+  test "the chunked history import keeps every request within the Bridge limit" do
+    provider, ranges = recording_provider
+
+    SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_with_chunked_history)
+
+    assert_not_empty ranges
+    ranges.each { |from, to| assert_operator to - from, :<=, SimplefinItem::Importer::MAX_REQUEST_DAYS.days }
+  end
+
   private
+
+    # A provider that returns no accounts and records each dated request's range.
+    def recording_provider
+      ranges = []
+      provider = Object.new
+      provider.define_singleton_method(:get_accounts) do |_access_url, start_date: nil, end_date: nil, pending: nil|
+        ranges << [ start_date, end_date ] if start_date
+        { accounts: [] }
+      end
+      [ provider, ranges ]
+    end
 
     def create_pending_entry(account, name, provider, pending, amount)
       account.entries.create!(
