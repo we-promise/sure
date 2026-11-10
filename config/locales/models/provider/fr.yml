@@ -15,7 +15,7 @@ fr:
         area_required: Indiquez la surface habitable du bien pour l'estimer à partir des ventes DVF.
         not_enough_sales: Il n'y a pas assez de ventes comparables récentes près de cette adresse pour estimer sa valeur.
         unavailable: Le service de données ouvertes DVF est injoignable. Réessayez plus tard.
-        unsupported_property_type: DVF n'estime que les appartements et les maisons. Choisissez le type Appartement, Copropriété, Maison individuelle, Maison de ville ou Résidence secondaire.
+        unsupported_property_type: DVF n'estime que les appartements et les maisons. Choisissez le type Appartement, Copropriété, Maison individuelle ou Maison de ville.
     property_valuation:
       entry_name: Estimation %{provider}
       missing_fields: Indiquez un nom et une adresse américaine complète (rue, ville, État et code postal).

@@ -34,4 +34,4 @@ en:
         area_required: Enter the property's living area to value it from DVF sales.
         not_enough_sales: There are not enough recent comparable sales near this address to estimate its value.
         unavailable: The French open data service (DVF) could not be reached. Please try again later.
-        unsupported_property_type: DVF can only value apartments and houses. Set the property type to Apartment, Condominium, Single Family Home, Townhouse or Second Home.
+        unsupported_property_type: DVF can only value apartments and houses. Set the property type to Apartment, Condominium, Single Family Home or Townhouse.
