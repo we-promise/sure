@@ -959,6 +959,7 @@ DEPENDENCIES
   logtail-rails
   lookbook (= 2.3.11)
   lucide-rails
+  minitest (~> 5.27)
   mocha
   octokit
   omniauth (~> 2.2)
