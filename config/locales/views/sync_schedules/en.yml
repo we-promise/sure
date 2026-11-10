@@ -7,9 +7,12 @@ en:
       hours:
         one: Every hour
         other: Every %{count} hours
+      days:
+        one: Every day
+        other: Every %{count} days
     edit:
       title: Sync frequency
-      description: Every connection syncs with the family sync, once a day for most providers. Pick an interval to also sync %{name} on its own through the day.
+      description: Every connection syncs with the family sync, once a day for most providers. Pick an interval to also sync %{name} on its own through the day, or an interval of a day or longer to sync it only on that schedule instead.
       interval_label: Sync
       no_schedule: Usual sync only
       hint: Frequent syncs count against the provider's rate limits, and some providers bill per request.

@@ -45,4 +45,16 @@ class SyncSchedulesHelperTest < ActionView::TestCase
 
     assert_empty @menu.items
   end
+
+  test "labels every offered interval in minutes, hours or days" do
+    labels = sync_schedule_interval_options.to_h.invert
+
+    assert_equal "Every 30 minutes", labels[30]
+    assert_equal "Every hour", labels[60]
+    assert_equal "Every 12 hours", labels[720]
+    assert_equal "Every day", labels[1440]
+    assert_equal "Every 3 days", labels[4320]
+    assert_equal "Every 7 days", labels[10080]
+    assert_equal "Every 14 days", labels[20160]
+  end
 end

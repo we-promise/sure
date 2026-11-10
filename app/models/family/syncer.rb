@@ -43,9 +43,11 @@ class Family::Syncer
   end
 
   private
+    # A connection whose own schedule is a day or longer is synced by
+    # SyncScheduledItemsJob when that schedule comes due, not here.
     def child_syncables
       provider_items = self.class.syncable_item_associations.flat_map do |association|
-        family.public_send(association).syncable
+        SyncSchedule.without_own_daily_schedule(family.public_send(association).syncable)
       end
 
       provider_items + family.accounts.manual

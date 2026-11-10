@@ -53,6 +53,35 @@ class Family::SyncerTest < ActiveSupport::TestCase
     syncer.perform_sync(family_sync)
   end
 
+  # Issue #4858: a connection on its own schedule of a day or longer is synced
+  # by that schedule only, so the family sync must not sync it every day.
+  test "leaves out connections whose own schedule is a day or longer" do
+    family_sync = syncs(:family)
+    plaid_item = @family.plaid_items.syncable.first
+    plaid_item.create_sync_schedule!(interval_minutes: 10080)
+
+    Account.any_instance.stubs(:sync_later)
+    syncable_item_associations.reject { |association| association.name == :plaid_items }.each do |association|
+      association.klass.any_instance.stubs(:sync_later)
+    end
+    PlaidItem.any_instance.expects(:sync_later).times(@family.plaid_items.syncable.count - 1)
+
+    Family::Syncer.new(@family).perform_sync(family_sync)
+  end
+
+  test "still syncs connections whose own schedule is shorter than a day" do
+    family_sync = syncs(:family)
+    @family.plaid_items.syncable.first.create_sync_schedule!(interval_minutes: 720)
+
+    Account.any_instance.stubs(:sync_later)
+    syncable_item_associations.reject { |association| association.name == :plaid_items }.each do |association|
+      association.klass.any_instance.stubs(:sync_later)
+    end
+    PlaidItem.any_instance.expects(:sync_later).times(@family.plaid_items.syncable.count)
+
+    Family::Syncer.new(@family).perform_sync(family_sync)
+  end
+
   test "applies rules in one ordered run per family after sync" do
     syncer = Family::Syncer.new(@family)
 
