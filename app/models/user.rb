@@ -161,6 +161,17 @@ class User < ApplicationRecord
     super_admin? || role == "admin"
   end
 
+  # Setting values are shared by every family on the instance, so changing them
+  # is a super admin's job: a family admin is anyone who signed up. A
+  # self-hosted instance with a single family has no other tenant to protect,
+  # and installs that predate the super_admin role may not have one, so that
+  # family's admins keep access there.
+  def manages_instance_settings?
+    return true if super_admin?
+
+    admin? && Rails.application.config.app_mode.self_hosted? && Family.count == 1
+  end
+
   def accessible_accounts
     family.accounts.accessible_by(self)
   end
@@ -671,7 +682,7 @@ class User < ApplicationRecord
   def parsed_release_tag_version!(tag)
     raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
 
-    Semver.from_release_tag(tag).version
+    Calver.from_release_tag(tag).version
   end
 
   def parsed_release_tag_version(tag)
@@ -742,16 +753,35 @@ class User < ApplicationRecord
     end
   end
 
-  # Reports preferences management
-  def reports_section_collapsed?(section_key)
-    preferences&.dig("reports_collapsed_sections", section_key) == true
+  # Section preferences for the pages built on the Reports section
+  # framework. Each page is a namespace; its order lives under
+  # "<namespace>_section_order" and its collapsed set under
+  # "<namespace>_collapsed_sections", so two pages never read or write each
+  # other's keys. Reports' original keys are the "reports" namespace, so
+  # nothing already stored changes meaning.
+  SECTION_NAMESPACES = %w[reports].freeze
+
+  def section_order(namespace)
+    prefix = section_namespace!(namespace)
+    preferences&.[]("#{prefix}_section_order") || default_section_order(prefix)
   end
 
-  def reports_section_order
-    preferences&.[]("reports_section_order") || default_reports_section_order
+  def section_collapsed?(namespace, section_key)
+    prefix = section_namespace!(namespace)
+    preferences&.dig("#{prefix}_collapsed_sections", section_key) == true
   end
 
-  def update_reports_preferences(prefs)
+  # `order` replaces the namespace's order; `collapsed` merges into the
+  # namespace's collapsed set (one key per toggle, so quick successive
+  # toggles keep each other's state). The namespace decides which keys are
+  # written: a caller cannot reach another page's keys through this method.
+  def update_section_preferences(namespace, order: nil, collapsed: nil)
+    prefix = section_namespace!(namespace)
+    prefs = {}
+    prefs["#{prefix}_section_order"] = order unless order.nil?
+    prefs["#{prefix}_collapsed_sections"] = collapsed unless collapsed.nil?
+    return true if prefs.empty?
+
     with_locked_preferences do |updated_prefs|
       prefs.each do |key, value|
         if value.is_a?(Hash)
@@ -762,6 +792,23 @@ class User < ApplicationRecord
         end
       end
     end
+  end
+
+  # Reports preferences management
+  def reports_section_collapsed?(section_key)
+    section_collapsed?("reports", section_key)
+  end
+
+  def reports_section_order
+    section_order("reports")
+  end
+
+  def update_reports_preferences(prefs)
+    update_section_preferences(
+      "reports",
+      order: prefs["reports_section_order"],
+      collapsed: prefs["reports_collapsed_sections"]
+    )
   end
 
   # Transactions preferences management
@@ -794,6 +841,13 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
+  end
+
+  # The experimental Sankey comparison chart (and its feedback prompt) is
+  # opt-in on top of preview features, so a user can keep preview features
+  # enabled without a second chart rendering underneath the cash flow widget.
+  def cashflow_preview_enabled?
+    preferences&.dig("cashflow_preview_enabled") == true
   end
 
   private
@@ -854,6 +908,17 @@ class User < ApplicationRecord
 
     def default_reports_section_order
       %w[trends_insights transactions_breakdown]
+    end
+
+    def default_section_order(namespace)
+      send("default_#{section_namespace!(namespace)}_section_order")
+    end
+
+    def section_namespace!(namespace)
+      namespace = namespace.to_s
+      raise ArgumentError, "unknown section namespace #{namespace.inspect}" unless SECTION_NAMESPACES.include?(namespace)
+
+      namespace
     end
     def ensure_valid_profile_image
       return unless profile_image.attached?

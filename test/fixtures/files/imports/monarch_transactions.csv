@@ -1,0 +1,6 @@
+Date,Merchant,Category,Account,Original Statement,Notes,Amount,Tags,Owner,Reviewed,Reviewed At,Reviewed By,Pending,Id
+2024-01-02,Grocer,Groceries,Checking,GROCER #12,weekly shop,-10.00,Food,Me,true,,Me,false,1
+2024-01-04,Employer,Paychecks,Checking,PAYROLL,,7.00,,Me,false,,,false,2
+2024-01-02,Cafe,Restaurants,Card,CAFE,,-20.00,"Food, Treats",Me,false,,,false,3
+2024-01-04,Payment,Credit Card Payment,Checking,CC PMT,,-1.00,,Me,false,,,false,4
+2024-01-04,Later,Groceries,Checking,LATER,,-3.00,,Me,false,,,true,5

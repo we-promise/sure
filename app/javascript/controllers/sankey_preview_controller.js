@@ -75,6 +75,13 @@ export default class extends Controller {
     this.survey = null;
   }
 
+  // clear() runs before Turbo caches the page for a visit. A morph refresh
+  // keeps this controller, so it is told here that the page is live again
+  // and the graph fetched after the morph counts as displayed.
+  resume() {
+    this.active = true;
+  }
+
   update({ detail }) {
     if (detail.state === "loading") {
       this.displays.clear();

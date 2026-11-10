@@ -1,0 +1,24 @@
+---
+zh-TW:
+  settings:
+    payments:
+      show:
+        page_title: 付款
+        subscription_subtitle: 更新您的信用卡資訊
+        subscription_title: 管理貢獻
+        currently_on_plan: 目前使用的方案為
+        trialing: 目前使用的是 %{product_name} 的公開試用版
+        trial_days_left:
+          one: 資料將在 %{count} 天後刪除
+          other: 資料將在 %{count} 天後刪除
+        not_contributing_prefix: 您目前
+        not_contributing_emphasis: 尚未貢獻
+        contributions_note: 對 %{product_name} 的貢獻會顯示在這裡。
+        manage: 管理
+        choose_level: 選擇級距
+        payment_via_stripe: 透過 Stripe 付款
+  views:
+    settings:
+      payments:
+        renewal: 您的貢獻將於 %{date}繼續。
+        cancellation: 您的貢獻將於 %{date}結束。

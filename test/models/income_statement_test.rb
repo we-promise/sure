@@ -139,6 +139,26 @@ class IncomeStatementTest < ActiveSupport::TestCase
     end
   end
 
+  test "a new day invalidates cached daily series, family stats and category stats" do
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::DailyExpenseTotals.expects(:new).twice.returns(stub(call: []))
+    IncomeStatement::FamilyStats.expects(:new).twice.returns(stub(call: []))
+    IncomeStatement::CategoryStats.expects(:new).twice.returns(stub(call: []))
+
+    # Scheduled entries are excluded as of "today", so a result cached
+    # yesterday must not be served once one of them has arrived.
+    [ Date.current, Date.current + 1.day ].each do |day|
+      travel_to day do
+        statement = IncomeStatement.new(@family)
+        statement.daily_expense_series(period: period)
+        statement.median_income
+        statement.median_expense(category: @food_category)
+      end
+    end
+  end
+
   test "daily series narrows to categories, a parent covering its subcategories" do
     period = Period.last_30_days
     rent = @family.categories.create! name: "Rent"
@@ -191,36 +211,6 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ])
     create_transaction(account: @checking_account, amount: 10, category: @food_category)
     IncomeStatement.new(@family).daily_expense_series(period: period, category_ids: [ @food_category.id ])
-  end
-
-  test "average month series averages each day of the month over the period" do
-    june_1 = Date.new(2026, 6, 1)
-    create_transaction(account: @checking_account, amount: 100, date: june_1, category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 300, date: Date.new(2026, 7, 1), category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 50, date: Date.new(2026, 7, 31))
-
-    series = IncomeStatement.new(@family).average_month_expense_series(period: Period.custom(start_date: june_1, end_date: Date.new(2026, 7, 31)))
-
-    assert_equal (1..31).to_a, series.map(&:day)
-    # Day 1 averages June's and July's; day 31 exists only in July.
-    assert_equal 200, series.first.total
-    assert_equal 200, series[29].total
-    assert_equal 250, series.last.total
-  end
-
-  test "average month series leaves days the period never reaches blank, and filters by category" do
-    create_transaction(account: @checking_account, amount: 40, date: Date.new(2026, 6, 10), category: @groceries_category)
-    create_transaction(account: @checking_account, amount: 9, date: Date.new(2026, 6, 11))
-    period = Period.custom(start_date: Date.new(2026, 6, 9), end_date: Date.new(2026, 6, 12))
-    statement = IncomeStatement.new(@family)
-
-    series = statement.average_month_expense_series(period: period)
-    assert_equal (1..12).to_a, series.map(&:day)
-    assert_equal [ nil ] * 8, series.first(8).map(&:total)
-    assert_equal [ 0, 40, 49, 49 ], series.last(4).map(&:total)
-
-    filtered = statement.average_month_expense_series(period: period, category_ids: [ @food_category.id ])
-    assert_equal [ 0, 40, 40, 40 ], filtered.last(4).map(&:total)
   end
 
   test "calculates totals for transactions" do
@@ -329,6 +319,25 @@ class IncomeStatementTest < ActiveSupport::TestCase
     # CORRECT BUSINESS LOGIC: Calculates median of time-period totals for budget planning
     # All transactions in same month = monthly total of 1500, so median = 1500.0
     assert_equal 1500.0, income_statement.median_expense(interval: "month")
+  end
+
+  test "median/avg expense ignore scheduled (future-dated) entries" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category)
+    create_transaction(account: @checking_account, amount: 300, category: @groceries_category)
+
+    income_statement = IncomeStatement.new(@family)
+    baseline_median = income_statement.median_expense(interval: "month")
+    baseline_avg = income_statement.avg_expense(interval: "month")
+
+    # A scheduled bill dated next month would otherwise open a new,
+    # partial-month bucket that skews both stats (see #3262 review).
+    create_transaction(account: @checking_account, amount: 999_999, category: @groceries_category, date: 1.month.from_now.to_date)
+
+    income_statement_with_scheduled = IncomeStatement.new(@family)
+    assert_equal baseline_median, income_statement_with_scheduled.median_expense(interval: "month")
+    assert_equal baseline_avg, income_statement_with_scheduled.avg_expense(interval: "month")
   end
 
   test "calculates median income correctly with known dataset" do

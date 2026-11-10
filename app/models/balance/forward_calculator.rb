@@ -130,12 +130,20 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
         .find_by(date: @window_start_date - 1)
     end
 
+    def sync_cache
+      @sync_cache ||= Balance::SyncCache.new(account, start_date: (@window_start_date if incremental?))
+    end
+
     def calc_start_date
       incremental? ? @window_start_date : calculation_start_date
     end
 
     def calc_end_date
-      [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
+      # Scheduled (future-dated) entries must not extend the calculation window --
+      # otherwise their flows would materialize a balance dated in the future,
+      # and Balance::Materializer#update_account_info would surface that as the
+      # account's *current* balance. See Entry#scheduled? and Balance::SyncCache.
+      [ account.entries.excluding_pending.where(date: ..Date.current).maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
     end
 
     # Negative entries amount on an "asset" account means, "account value has increased"

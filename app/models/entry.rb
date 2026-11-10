@@ -30,7 +30,7 @@ class Entry < ApplicationRecord
   # already nullifies on delete, so this adds no lifecycle behaviour.
   has_many :recurring_allocations, dependent: nil, inverse_of: :entry
 
-  delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy
+  delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy, inverse_of: :entry
   accepts_nested_attributes_for :entryable
 
   validates :date, :name, :amount, :currency, presence: true
@@ -40,6 +40,22 @@ class Entry < ApplicationRecord
 
   validate :cannot_unexclude_split_parent
   validate :split_child_date_matches_parent
+
+  # new_record? && import_id.blank? keeps this to genuinely new manual
+  # entries -- excludes CSV imports (which have their own, separately
+  # decided blank-name handling) and any unrelated re-validation of an
+  # already-persisted entry (background jobs, resaves) that happens to see
+  # a blank name for some other reason. external_id/source are also excluded
+  # (via !cleared?) because Account::ProviderImportAdapter sets both at
+  # find_or_initialize_by time, before this callback runs -- without that
+  # guard, a first-time sync of a provider transaction with no name (e.g.
+  # Plaid omitting both merchant_name and original_description) would get a
+  # synthetic "Category - Merchant" name instead of surfacing the blank-name
+  # presence error the same way a manual blank submission would.
+  before_validation :set_default_name, if: -> {
+    new_record? && import_id.blank? && name.blank? && !cleared? &&
+      entryable_type == "Transaction" && account&.family&.auto_generate_transaction_names?
+  }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
@@ -99,10 +115,23 @@ class Entry < ApplicationRecord
     SQL
   }
 
+  # Future-dated entries haven't happened yet, so "actual" reporting (budgets,
+  # income statement, insights) should not count them until their date
+  # arrives -- see Entry#scheduled?.
+  scope :excluding_scheduled, -> { where("entries.date <= ?", Date.current) }
+
   # Find stale pending transactions (pending for more than X days with no matching posted version)
   scope :stale_pending, ->(days: 8) {
     pending.where("entries.date < ?", days.days.ago.to_date)
   }
+
+  # Ids among `entry_ids` that have split children, as a Set, in one query that
+  # loads no child rows. Shared by the web and API list views to avoid N+1.
+  def self.split_parent_ids_among(entry_ids)
+    return Set.new if entry_ids.blank?
+
+    where(parent_entry_id: entry_ids).distinct.pluck(:parent_entry_id).to_set
+  end
 
   # Family-scoped query for Enrichable#clear_ai_cache
   def self.family_scope(family)
@@ -316,6 +345,8 @@ class Entry < ApplicationRecord
     sync_start_date = [ @earliest_saved_date, date_previously_was, date ].compact.min unless destroyed?
     @earliest_saved_date = nil
     account.sync_later(window_start_date: sync_start_date)
+
+    EntryScheduledSyncJob.schedule_for(self) if !destroyed? && scheduled?
   end
 
   # Whether the last save changed anything a sync depends on. Call it right
@@ -331,12 +362,39 @@ class Entry < ApplicationRecord
     entryable_type.demodulize.underscore
   end
 
+  # True when this entry's name isn't distinguishing on its own -- either it's
+  # the auto-generated fallback label, or it just repeats the entryable's own
+  # category name. Used to keep name-based grouping/matching (Quick Categorize,
+  # recurring smart-fill evidence) from treating unrelated transactions that
+  # happen to share a generic name as if they were the same thing.
+  def generic_name?
+    return false if name.blank?
+
+    normalized = name.strip
+    # Checked across every supported locale, not just the current one -- a
+    # name generated (or saved by a background job) under one locale must
+    # still read as generic when this is later checked under another.
+    return true if LanguagesHelper::SUPPORTED_LOCALES.any? { |locale| normalized.casecmp?(I18n.t("transactions.unknown_name", locale: locale)) }
+    return false unless entryable_type == "Transaction"
+
+    category = entryable&.category
+    category.present? && category.any_locale_display_name_matches?(normalized)
+  end
+
   def balance_trend(entries, balances)
     Balance::TrendCalculator.new(self, entries, balances).trend
   end
 
   def linked?
     external_id.present?
+  end
+
+  # A manually entered entry dated after today (e.g. an upcoming bill or
+  # expected paycheck). Scheduled entries are excluded from balance
+  # calculations until their date arrives -- see Balance::SyncCache and
+  # Balance::ForwardCalculator#calc_end_date.
+  def scheduled?
+    date > Date.current
   end
 
   # Reconciliation state, following the Quicken uncleared / cleared / reconciled
@@ -565,8 +623,11 @@ class Entry < ApplicationRecord
   end
 
   class << self
-    def search(params)
-      EntrySearch.new(params).build_query(all)
+    # `family` is positional (not a keyword) on purpose: several callers pass
+    # the filters as a bare keyword-style hash (`search(status: [...])`), and
+    # a keyword parameter here would capture those as kwargs instead.
+    def search(params, family = nil)
+      EntrySearch.new(params, family: family).build_query(all)
     end
 
     # arbitrary cutoff date to avoid expensive sync operations
@@ -608,6 +669,10 @@ class Entry < ApplicationRecord
 
       return 0 unless has_updates
 
+      # account_id => earliest of old/new date, for entries whose date moved
+      sync_windows = {}
+      rescheduled_ids = []
+
       transaction do
         all.each do |entry|
           changed = false
@@ -624,6 +689,12 @@ class Entry < ApplicationRecord
               entry.update! attrs
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true
+
+              if entry.saved_change_to_date?
+                window_start = entry.saved_change_to_date.compact.min
+                sync_windows[entry.account] = [ sync_windows[entry.account], window_start ].compact.min
+                rescheduled_ids << entry.id
+              end
             end
           end
 
@@ -641,6 +712,11 @@ class Entry < ApplicationRecord
           end
         end
       end
+
+      # Moving a date changes balances (and may make an entry scheduled), so
+      # mirror Entry#sync_account_later -- once per account, not per entry.
+      sync_windows.each { |account, window_start| account.sync_later(window_start_date: window_start) }
+      EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: rescheduled_ids)) if rescheduled_ids.any?
 
       all.size
     end
@@ -688,5 +764,23 @@ class Entry < ApplicationRecord
       return if destroyed_by_association || unsplitting
 
       throw :abort
+    end
+
+    # Deliberately does not fall back to a generic label like "Unknown
+    # transaction" when neither is set -- leaving the name blank with no
+    # category or merchant selected either still fails the presence
+    # validation below, so a transaction can never end up with no
+    # information distinguishing it from any other.
+    def set_default_name
+      # Category#display_name, not #name -- default categories store the
+      # translated label in the `name` column itself (see Category#display_name),
+      # so using the raw column here would save whatever locale the category
+      # happened to be created under instead of the one the user just picked
+      # it in.
+      # entryable can be unset if entryable_type was assigned without the
+      # nested entryable_attributes that would normally build it (e.g. a
+      # malformed API request) -- guard the dereference instead of raising.
+      parts = [ entryable&.category&.display_name.presence, entryable&.merchant&.name.presence ].compact
+      self.name = parts.join(" - ") if parts.any?
     end
 end

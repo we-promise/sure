@@ -7,6 +7,7 @@ en:
     entries:
       default_name: Wise transaction
       fee_name: Wise fee
+      refund_name: Wise refund
     activities:
       jar_deposit: Transfer to Jar
       jar_withdrawal: Transfer from Jar
@@ -54,6 +55,9 @@ en:
       account_sync_failed:
         one: "%{count} Wise account sync could not be scheduled."
         other: "%{count} Wise account syncs could not be scheduled."
+      fetch_failed:
+        one: "%{count} Wise request failed. The next sync will retry it."
+        other: "%{count} Wise requests failed. The next sync will retry them."
     provider_panel:
       add_connection: Add Wise connection
       token_label: API token
@@ -64,7 +68,7 @@ en:
       sync_start_date_label: Import transactions from
       sync_start_date_help: Wise statements are imported from this date onward. Leave the default for up to one year of history.
       import_all_history_label: Import full transaction history
-      import_all_history_help: Fetch all historical Wise statements instead of only the last year.
+      import_all_history_help: Import the whole Wise history (transfers, activities and statements) instead of only the last year. Each balance then starts at 0 on the day Wise opened it.
       connect: Connect Wise
       update_connection: Update connection
       setup_accounts: Set up accounts
@@ -72,7 +76,7 @@ en:
       disconnect: Disconnect
       disconnect_label: "Disconnect %{name}"
       disconnect_confirm: "Are you sure you want to disconnect %{name}? This will remove all synced account data."
-      sandbox_note_html: "Use the <strong>sandbox</strong> base URL (<code>https://api.sandbox.transferwise.tech</code>) for testing. Set <code>WISE_BASE_URL</code> in your environment."
+      sandbox_note_html: "Use the <strong>sandbox</strong> base URL (<code>https://api.wise-sandbox.com</code>) for testing. Set <code>WISE_BASE_URL</code> in your environment."
       encryption_warning:
         title: Database encryption is not configured
         message: Configure Active Record encryption keys before adding Wise tokens in production. Without encryption, tokens are stored in plaintext.
@@ -152,6 +156,9 @@ en:
       failed: Failed to link Wise balance. Please try again.
     link_existing_account:
       not_found: Account or Wise balance not found.
+      account_already_linked: This account is already linked to a provider.
+      unsupported_account_type: Wise balances can only be linked to cash accounts.
+      currency_mismatch: "This Wise balance is in %{balance_currency}, but the account is in %{account_currency}. Choose a balance in the account's currency."
       success: "Successfully linked %{account_name} with Wise"
       failed: Failed to link account. Please try again.
     complete_account_setup:
