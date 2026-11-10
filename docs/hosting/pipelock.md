@@ -36,18 +36,20 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
    curl -o pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
    ```
 
-2. Start the stack:
+2. Make sure `.env` has a secret key unique to your install; the stack will not start without one. If this is an existing install that has been running without `SECRET_KEY_BASE`, read [Upgrading an install that ran without `SECRET_KEY_BASE`](docker.md#upgrading-an-install-that-ran-without-secret_key_base) first. Then add a key with the command in [Add a secret key to an existing `.env`](docker.md#add-a-secret-key-to-an-existing-env), which leaves a key you already have alone.
+
+3. Start the stack:
    ```bash
    docker compose -f compose.ai.yml up -d
    ```
 
-3. Verify Pipelock is healthy:
+4. Verify Pipelock is healthy:
    ```bash
    docker compose -f compose.ai.yml ps pipelock
    # Should show "healthy"
    ```
 
-4. Optional: enable signed action receipts.
+5. Optional: enable signed action receipts.
 
    Pipelock's flight recorder is on by default, but it writes nothing until it has a writable evidence directory and a receipt-signing key. Create the directories yourself first (so they are owned by your host user, not root), then generate the key with the Pipelock image so you do not need the binary installed locally:
 
