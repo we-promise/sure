@@ -87,6 +87,28 @@ class TransactionNameSuggestionsTest < ApplicationSystemTestCase
     assert_category categories(:food_and_drink)
   end
 
+  test "mobile free-text description survives dismissing the picker before suggestions return" do
+    page.current_window.resize_to(390, 844)
+    visit new_transaction_url(account_id: accounts(:depository).id)
+    find("#entry_name").click
+
+    within "dialog.hw-combobox__dialog" do
+      find("input[role='combobox']").set("Saturday market run")
+      # Dismiss the picker right away, without waiting for the suggestions
+      # round-trip and without picking an option, as on a phone. The typed
+      # description must stay in the field and save with the transaction.
+      find("input[role='combobox']").send_keys(:escape)
+    end
+
+    assert_field "entry_name", with: "Saturday market run"
+
+    find("input[name='entry[amount]']").set("12.34")
+    click_button "Add transaction"
+    assert_created_transaction "Saturday market run"
+    entry = accounts(:depository).entries.find_by!(name: "Saturday market run")
+    assert_equal "Saturday market run", entry.name
+  end
+
   private
     def open_new_transaction
       # Open the modal from its real parent page so submission returns to the
