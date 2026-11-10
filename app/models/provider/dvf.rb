@@ -17,13 +17,13 @@ class Provider::Dvf < Provider
   # Override with DVF_MAX_REQUESTS_PER_MONTH.
   MAX_REQUESTS_PER_MONTH = 500
 
-  # Sure subtypes DVF can value, by DVF `type_local`.
+  # Sure subtypes DVF can value, by DVF `type_local`. A second home is a use,
+  # not a structure (it can be an apartment), so it is not mapped.
   LOCAL_TYPES = {
     "apartment" => "Appartement",
     "condominium" => "Appartement",
     "single_family_home" => "Maison",
-    "townhouse" => "Maison",
-    "second_home" => "Maison"
+    "townhouse" => "Maison"
   }.freeze
 
   # Alsace-Moselle keeps its own land register (Livre foncier) and Mayotte
@@ -84,7 +84,8 @@ class Provider::Dvf < Provider
       record_monthly_request!
 
       location = geocode([ line1, postal_code, locality ].compact_blank.join(" "), postal_code)
-      sales = location[:communes].flat_map { |commune| sales_for(commune, local_type) }
+      rows = location[:communes].flat_map { |commune| rows_for(commune) }
+      sales = Provider::Dvf::Estimator.sales_from_rows(rows, local_type: local_type)
 
       estimate = Provider::Dvf::Estimator.new(
         sales,
@@ -134,19 +135,22 @@ class Provider::Dvf < Provider
       { latitude: latitude, longitude: longitude, communes: communes.compact.uniq }
     end
 
-    # A failed edge lookup only narrows the search to fewer communes.
+    # A failed lookup aborts the estimate: skipping a neighbouring commune
+    # would value the property on an incomplete set of sales.
     def commune_at(latitude, longitude)
       response = client.get("#{geocoder_url}/reverse", { lat: latitude, lon: longitude, limit: 1 })
       JSON.parse(response.body).dig("features", 0, "properties", "citycode")
-    rescue Faraday::Error, JSON::ParserError
-      nil
+    rescue JSON::ParserError
+      raise Error.new(I18n.t("providers.dvf.errors.unavailable"))
     end
 
-    def sales_for(commune, local_type)
+    # Rows are grouped by mutation across every commune before sales are
+    # picked, since a sale spanning two communes appears in both files.
+    def rows_for(commune)
       current_year = Date.current.year
       (current_year - YEARS_BACK..current_year).flat_map do |year|
-        Rails.cache.fetch([ "dvf", "sales", year, commune, local_type ], expires_in: 1.day) do
-          Provider::Dvf::Estimator.sales_from_rows(commune_rows(commune, year), local_type: local_type)
+        Rails.cache.fetch([ "dvf", "rows", year, commune ], expires_in: 1.day) do
+          commune_rows(commune, year)
         end
       end
     end
@@ -154,7 +158,9 @@ class Provider::Dvf < Provider
     def commune_rows(commune, year)
       department = commune.start_with?("97") ? commune[0, 3] : commune[0, 2]
       response = get_following_redirects("#{dvf_url}/#{year}/communes/#{department}/#{commune}.csv")
-      CSV.parse(response.body.to_s.dup.force_encoding(Encoding::UTF_8), headers: true).map(&:to_h)
+      CSV.parse(response.body.to_s.dup.force_encoding(Encoding::UTF_8), headers: true).map do |row|
+        row.to_h.slice(*Provider::Dvf::Estimator::ROW_COLUMNS)
+      end
     rescue Faraday::ResourceNotFound
       # The year isn't published yet, or the commune had no sales.
       []
@@ -172,6 +178,8 @@ class Provider::Dvf < Provider
       case error
       when Error
         error
+      when Faraday::TooManyRequestsError
+        RateLimitError.new(I18n.t("providers.dvf.errors.unavailable"))
       when Faraday::ResourceNotFound
         Error.new(I18n.t("providers.dvf.errors.address_not_found"))
       when Faraday::Error

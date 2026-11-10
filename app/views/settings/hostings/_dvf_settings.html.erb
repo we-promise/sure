@@ -2,7 +2,7 @@
 <div class="space-y-4">
   <div class="flex items-center justify-between gap-4">
     <div class="space-y-1">
-      <h2 class="font-medium mb-1"><%= t(".title") %></h2>
+      <h2 id="dvf-settings-label" class="font-medium mb-1"><%= t(".title") %></h2>
       <% if env_configured %>
         <p class="text-sm text-secondary"><%= t(".env_configured_message") %></p>
       <% else %>
@@ -18,6 +18,7 @@
                          method: :patch,
                          data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
       <%= form.toggle :dvf_enabled,
+                      "aria-labelledby": "dvf-settings-label",
                       checked: env_configured ? ENV["DVF_ENABLED"] == "true" : Setting.dvf_enabled,
                       disabled: env_configured,
                       data: { auto_submit_form_target: "auto" } %>

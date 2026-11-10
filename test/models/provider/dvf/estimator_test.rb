@@ -21,7 +21,7 @@ class Provider::Dvf::EstimatorTest < ActiveSupport::TestCase
     Provider::Dvf::Estimator.new(sales, latitude: LAT, longitude: LON, area: area).estimate
   end
 
-  def row(id:, type: "Appartement", price: "300000", built: "35", carrez: "", nature: "Vente", date: "2025-06-01")
+  def row(id:, type: "Appartement", price: "300000", built: "35", carrez: "", nature: "Vente", date: "2025-06-01", parcel: "75120000AB0001", lot: "")
     {
       "id_mutation" => id,
       "date_mutation" => date,
@@ -30,6 +30,8 @@ class Provider::Dvf::EstimatorTest < ActiveSupport::TestCase
       "type_local" => type,
       "surface_reelle_bati" => built,
       "lot1_surface_carrez" => carrez,
+      "lot1_numero" => lot,
+      "id_parcelle" => parcel,
       "latitude" => LAT.to_s,
       "longitude" => LON.to_s
     }
@@ -92,7 +94,7 @@ class Provider::Dvf::EstimatorTest < ActiveSupport::TestCase
     rows = [
       row(id: "apartment"),
       row(id: "with_cellar"), row(id: "with_cellar", type: "Dépendance", built: ""),
-      row(id: "two_apartments"), row(id: "two_apartments"),
+      row(id: "two_apartments", lot: "1"), row(id: "two_apartments", lot: "2"),
       row(id: "with_shop"), row(id: "with_shop", type: "Local industriel. commercial ou assimilé"),
       row(id: "exchange", nature: "Echange"),
       row(id: "house", type: "Maison", built: "90"),
@@ -104,6 +106,19 @@ class Provider::Dvf::EstimatorTest < ActiveSupport::TestCase
 
     houses = Provider::Dvf::Estimator.sales_from_rows(rows, local_type: "Maison")
     assert_equal [ 90 ], houses.map(&:area)
+  end
+
+  test "counts a house once when its parcel is split across land uses" do
+    rows = [
+      row(id: "split", type: "Maison", built: "90"),
+      row(id: "split", type: "Maison", built: "90"),
+      row(id: "two_houses", type: "Maison", built: "90", parcel: "75120000AB0002"),
+      row(id: "two_houses", type: "Maison", built: "90", parcel: "75120000AB0003")
+    ]
+
+    sales = Provider::Dvf::Estimator.sales_from_rows(rows, local_type: "Maison")
+
+    assert_equal 1, sales.size
   end
 
   test "uses the Carrez area when it is close to the built area" do

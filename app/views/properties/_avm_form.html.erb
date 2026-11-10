@@ -48,7 +48,7 @@
           <%= form.fields_for :property, (@avm_property || Property.new(area_unit: "sqm")) do |property_form| %>
             <% if provider.accepts_property_type? %>
               <%= property_form.select :subtype,
-                                       Property::SUBTYPES.select { |key, _| provider.property_type_supported?(key) }.map { |key, labels| [ labels[:long], key ] },
+                                       Property::SUBTYPES.select { |key, _| provider.property_type_supported?(key) }.map { |key, _| [ Property.long_subtype_label_for(key), key ] },
                                        { label: t("properties.overview_fields.property_type_label"), prompt: t("properties.form.subtype_prompt") },
                                        required: true %>
             <% end %>

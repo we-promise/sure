@@ -31,9 +31,9 @@ class Provider::DvfTest < ActiveSupport::TestCase
     }.to_json
   end
 
-  def sales_csv(count, price_per_sqm: 9_000)
+  def sales_csv(count, price_per_sqm: 9_000, prefix: "m")
     rows = (1..count).map do |i|
-      "m#{i},2025-#{format("%02d", (i % 12) + 1)}-10,Vente,#{price_per_sqm * 35},Appartement,35,,#{LAT + 0.001},#{LON}"
+      "#{prefix}#{i},2025-#{format("%02d", (i % 12) + 1)}-10,Vente,#{price_per_sqm * 35},Appartement,35,,#{LAT + 0.001},#{LON}"
     end
     ([ CSV_HEADER ] + rows).join("\n")
   end
@@ -77,12 +77,45 @@ class Provider::DvfTest < ActiveSupport::TestCase
     stub_request(:get, %r{\A#{Regexp.escape(GEOCODER)}/reverse})
       .to_return(status: 200, body: geocoder_body("75111"))
     stub_sales(sales_csv(8))
-    stub_sales(sales_csv(8), commune: "75111")
+    stub_sales(sales_csv(8, prefix: "n"), commune: "75111")
 
     response = fetch
 
     assert response.success?, response.error&.message
     assert_equal 315_000, response.data.valuation
+  end
+
+  test "counts a sale listed in two communes once" do
+    stub_request(:get, %r{\A#{Regexp.escape(GEOCODER)}/reverse})
+      .to_return(status: 200, body: geocoder_body("75111"))
+    stub_sales(sales_csv(8))
+    stub_sales(sales_csv(8), commune: "75111")
+
+    response = fetch
+
+    assert_not response.success?
+    assert_equal I18n.t("providers.dvf.errors.not_enough_sales"), response.error.message
+  end
+
+  test "gives up when a neighbouring commune can't be looked up" do
+    stub_request(:get, %r{\A#{Regexp.escape(GEOCODER)}/reverse}).to_return(status: 503)
+    stub_sales(sales_csv(15))
+
+    response = fetch
+
+    assert_not response.success?
+    assert_equal I18n.t("providers.dvf.errors.unavailable"), response.error.message
+  end
+
+  test "reports upstream throttling as a rate limit" do
+    stub_request(:get, "#{GEOCODER}/search")
+      .with(query: hash_including("postcode" => "75020"))
+      .to_return(status: 429)
+
+    response = fetch
+
+    assert_not response.success?
+    assert_kind_of Provider::Dvf::RateLimitError, response.error
   end
 
   test "rejects property types DVF can't value without a request" do
@@ -144,6 +177,7 @@ class Provider::DvfTest < ActiveSupport::TestCase
 
     assert Provider::Dvf.lookup_ready?(address, area: SQFT, property_type: "apartment")
     assert Provider::Dvf.lookup_ready?(address.merge(country: "FR"), area: SQFT, property_type: "townhouse")
+    assert_not Provider::Dvf.lookup_ready?(address, area: SQFT, property_type: "second_home")
     assert_not Provider::Dvf.lookup_ready?(address, area: nil, property_type: "apartment")
     assert_not Provider::Dvf.lookup_ready?(address, area: SQFT, property_type: "plot")
     assert_not Provider::Dvf.lookup_ready?(address.merge(country: "US"), area: SQFT, property_type: "apartment")

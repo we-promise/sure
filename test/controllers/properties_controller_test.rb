@@ -704,6 +704,19 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_match "Chimnie isn't configured", flash[:alert]
   end
 
+  test "refresh_valuation tells DVF users to enable it, not to add an API key" do
+    @account.property.update!(avm_provider: "dvf")
+    Provider::Registry.stubs(:dvf).returns(nil)
+
+    assert_no_enqueued_jobs(only: SyncPropertyValuationsJob) do
+      post refresh_valuation_property_path(@account)
+    end
+
+    assert_redirected_to account_path(@account)
+    assert_match "DVF isn't enabled", flash[:alert]
+    assert_no_match(/API key/, flash[:alert])
+  end
+
   test "method selector shows provider logos for valuation providers" do
     Provider::Registry.stubs(:chimnie).returns(mock)
 
@@ -962,6 +975,28 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "sqm", account.property.area_unit
     assert_equal "FR", account.property.address.country
     assert_equal "DVF valuation", account.entries.valuations.last.name
+  end
+
+  test "DVF confirm keeps the living area and unit as submitted" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).once.returns(dvf_avm_response)
+    Provider::Registry.stubs(:dvf).returns(provider)
+
+    params = dvf_lookup_params(area_value: "1000")
+    params[:account][:property][:area_unit] = "sqft"
+    post properties_path, params: params
+    token = css_select("input[name='avm_preview_token']").first["value"]
+
+    post properties_path, params: {
+      avm_provider: "dvf",
+      avm_step: "confirm",
+      avm_preview_token: token,
+      account: { accountable_type: "Property" }
+    }
+
+    property = Account.order(:created_at).last.property
+    assert_equal 1000, property.area_value
+    assert_equal "sqft", property.area_unit
   end
 
   private

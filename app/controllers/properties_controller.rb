@@ -82,8 +82,9 @@ class PropertiesController < ApplicationController
     end
 
     unless configured_avm_providers.map(&:to_s).include?(@property.avm_provider)
-      redirect_back_or_to account_path(@account),
-                          alert: t(".not_configured", provider: t("properties.avm_providers.#{@property.avm_provider}")) and return
+      provider_name = t("properties.avm_providers.#{@property.avm_provider}")
+      alert = @property.avm_provider == "dvf" ? t(".not_enabled", provider: provider_name) : t(".not_configured", provider: provider_name)
+      redirect_back_or_to account_path(@account), alert: alert and return
     end
 
     SyncPropertyValuationsJob.perform_later(property_id: @property.id, force: true)

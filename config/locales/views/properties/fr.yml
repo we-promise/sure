@@ -107,6 +107,7 @@ fr:
       year_built_placeholder: '1990'
     refresh_valuation:
       not_configured: "%{provider} n'est pas configuré. Ajoutez sa clé API dans Paramètres → Auto-hébergement pour actualiser cette estimation."
+      not_enabled: "%{provider} n'est pas activé. Activez-le dans Paramètres → Auto-hébergement (ou définissez DVF_ENABLED=true) pour actualiser cette estimation."
       not_linked: Ce bien n'est lié à aucun fournisseur d'estimation.
       queued: L'actualisation de l'estimation a démarré. La nouvelle valeur apparaîtra sous peu.
     subtypes:
@@ -119,12 +120,21 @@ fr:
       commercial:
         long: Propriété commerciale
         short: Commercial
+      condominium:
+        long: Copropriété
+        short: Copropriété
       plot:
         long: Terrain / Parcelle
         short: Terrain
       rented:
         long: Propriété louée
         short: Loué
+      single_family_home:
+        long: Maison individuelle
+        short: Maison
+      townhouse:
+        long: Maison de ville
+        short: Maison de ville
     tabs:
       overview:
         edit_account_details: Modifier les détails du compte

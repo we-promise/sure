@@ -15,7 +15,8 @@ class Property::AvmImport
     @name = name
     @address_attributes = address_attributes
     @external_id = external_id.to_s.strip.presence
-    @area_sqft = Property.new(area_value: area_value.presence, area_unit: area_unit.presence || "sqft").area_in_sqft
+    @submitted_area = { area_value: area_value.presence, area_unit: area_unit.presence || "sqft" }
+    @area_sqft = Property.new(**submitted_area).area_in_sqft
     @property_type = property_type.presence
   end
 
@@ -59,8 +60,7 @@ class Property::AvmImport
         accountable: Property.new(
           subtype: data.property_type,
           year_built: data.year_built,
-          area_value: data.area_value,
-          area_unit: data.area_unit,
+          **stored_area(data),
           avm_provider: provider_key,
           avm_external_id: data.external_id.presence || external_id,
           avm_last_synced_on: Date.current,
@@ -84,7 +84,16 @@ class Property::AvmImport
   end
 
   private
-    attr_reader :family, :owner, :provider_key, :name, :address_attributes, :external_id, :area_sqft, :property_type
+    attr_reader :family, :owner, :provider_key, :name, :address_attributes, :external_id, :area_sqft, :property_type, :submitted_area
+
+    # Where the area is the user's input, keep it as entered: the provider
+    # echoes it rounded to whole square metres, which would shift the value
+    # sent on every refresh.
+    def stored_area(data)
+      return submitted_area if provider_class.requires_area? && submitted_area[:area_value].present?
+
+      { area_value: data.area_value, area_unit: data.area_unit }
+    end
 
     def provider_class
       @provider_class ||= Provider::PropertyValuationConcept.provider_class(provider_key) ||

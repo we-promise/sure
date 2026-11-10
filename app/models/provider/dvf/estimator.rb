@@ -40,6 +40,12 @@ class Provider::Dvf::Estimator
 
   EARTH_RADIUS = 6_371_000
 
+  # CSV columns the estimate reads; rows are trimmed to these before caching.
+  ROW_COLUMNS = (%w[
+    id_mutation date_mutation nature_mutation valeur_fonciere type_local
+    surface_reelle_bati nombre_pieces_principales id_parcelle numero_volume latitude longitude
+  ] + (1..5).flat_map { |i| [ "lot#{i}_numero", "lot#{i}_surface_carrez" ] }).freeze
+
   # One sale per mutation, and only plain sales of a single property of
   # `local_type` ("Appartement" or "Maison"), optionally with outbuildings
   # ("Dépendance") or bare land rows. Mutations covering several units, or
@@ -48,7 +54,7 @@ class Provider::Dvf::Estimator
     rows.group_by { |row| row["id_mutation"] }.filter_map do |_id, group|
       next unless group.first["nature_mutation"] == "Vente"
 
-      locals = group.select { |row| row["type_local"] == local_type }
+      locals = group.select { |row| row["type_local"] == local_type }.uniq { |row| unit_key(row) }
       next unless locals.size == 1
       next if group.any? { |row| row["type_local"].present? && row["type_local"] != local_type && row["type_local"] != "Dépendance" }
 
@@ -69,6 +75,13 @@ class Provider::Dvf::Estimator
     rescue Date::Error
       nil
     end
+  end
+
+  # geo-DVF repeats a unit's row once per land-use subdivision of its parcel;
+  # those repeats share everything but the land columns.
+  def self.unit_key(row)
+    row.values_at("id_parcelle", "numero_volume", "surface_reelle_bati", "nombre_pieces_principales",
+                  *(1..5).map { |i| "lot#{i}_numero" })
   end
 
   def self.distance(lat1, lon1, lat2, lon2)

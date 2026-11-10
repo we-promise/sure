@@ -112,6 +112,7 @@ en:
       queued: "The valuation refresh has started. The new value will appear shortly."
       not_linked: "This property isn't linked to a valuation provider."
       not_configured: "%{provider} isn't configured. Add its API key in Settings → Self-Hosting to refresh this valuation."
+      not_enabled: "%{provider} isn't enabled. Turn it on in Settings → Self-Hosting (or set DVF_ENABLED=true) to refresh this valuation."
     link_valuation:
       linked: "Linked to %{provider} and updated the property's value."
       link_failed: "%{provider} couldn't value this property, so it wasn't linked. Check that the address is correct, then try again."
