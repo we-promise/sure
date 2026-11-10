@@ -21,7 +21,7 @@
         on links inside a section from cancelling the touch, which would stop
         the press-and-hold drag from ever starting. %>
     <section
-      class="rounded-xl transition-all mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-alpha-black-300 focus-visible:ring-offset-2 [-webkit-touch-callout:none]"
+      class="rounded-xl transition-all mb-6 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 [-webkit-touch-callout:none]"
       data-sortable-list-target="item"
       data-sortable-list-id="<%= section[:key] %>"
       data-section-key="<%= section[:key] %>"
@@ -55,7 +55,7 @@
         <% disclosure.with_summary_content do %>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <%= icon("chevron-right", size: "sm", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150") %>
+              <%= disclosure_chevron %>
               <h2 class="text-base font-medium">
                 <%= t(section[:title]) %>
               </h2>

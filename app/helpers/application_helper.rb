@@ -65,7 +65,7 @@ module ApplicationHelper
 
   # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
   def disclosure_chevron
-    icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90"
+    icon "chevron-right", size: "sm", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
   end
 
   # Convert alpha (0-1) to 8-digit hex (00-FF)
