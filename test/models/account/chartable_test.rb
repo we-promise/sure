@@ -1,6 +1,15 @@
 require "test_helper"
 
 class Account::ChartableTest < ActiveSupport::TestCase
+  test "batched sparkline versions match each account's own" do
+    AccountProvider.create!(account: accounts(:depository), provider: plaid_accounts(:one))
+    accounts(:depository).balances.create!(date: 400.days.ago.to_date, balance: 1, currency: "USD")
+    Sync.create!(syncable: accounts(:depository), status: "completed", completed_at: 1.hour.ago)
+    all = Account.all.to_a
+
+    assert_equal all.to_h { [ _1.id, Account.find(_1.id).sparkline_version ] }, Account.sparkline_versions(all)
+  end
+
   test "generates series and memoizes" do
     account = accounts(:depository)
 

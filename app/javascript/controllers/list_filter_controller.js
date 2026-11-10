@@ -89,10 +89,13 @@ export default class extends Controller {
   // modifier letters (e.g. the Hawaiian ʻokina) — so a query of just one of
   // those would normalize to "", and "".includes() matches everything,
   // silently showing every row instead of filtering.
+  // Underscores read as spaces, so an identifier typed as "America/New_York"
+  // finds its label "America/New York".
   normalize(value) {
     return value
       .normalize("NFD")
       .replace(/\p{Mark}/gu, "")
+      .replaceAll("_", " ")
       .toLowerCase();
   }
 

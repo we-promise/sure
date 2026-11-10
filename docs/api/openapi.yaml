@@ -32,6 +32,20 @@ components:
             read: Read access
             read_write: Read and write access
   schemas:
+    Version:
+      type: object
+      additionalProperties: false
+      required:
+      - version
+      - commit_sha
+      properties:
+        version:
+          type: string
+          description: Running Sure version, without a v prefix.
+        commit_sha:
+          type: string
+          nullable: true
+          description: Build commit SHA, or null when unavailable.
     SplitRequest:
       type: object
       required:
@@ -136,6 +150,127 @@ components:
         total_pages:
           type: integer
           minimum: 0
+    AccountStatementAccount:
+      type: object
+      required:
+      - id
+      - name
+      - currency
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currency:
+          type: string
+    AccountStatement:
+      type: object
+      required:
+      - id
+      - filename
+      - content_type
+      - byte_size
+      - content_sha256
+      - review_status
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+          minimum: 1
+        content_sha256:
+          type: string
+          description: SHA-256 of the file (lowercase hex); the vault stores each
+            file once per family
+        review_status:
+          type: string
+          enum:
+          - unmatched
+          - linked
+          - rejected
+        period_start_on:
+          type: string
+          format: date
+          nullable: true
+        period_end_on:
+          type: string
+          format: date
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        opening_balance:
+          type: string
+          nullable: true
+        closing_balance:
+          type: string
+          nullable: true
+        institution_name_hint:
+          type: string
+          nullable: true
+        account_last4_hint:
+          type: string
+          nullable: true
+        account:
+          allOf:
+          - "$ref": "#/components/schemas/AccountStatementAccount"
+          nullable: true
+          description: Account the statement is linked to
+        suggested_account:
+          allOf:
+          - "$ref": "#/components/schemas/AccountStatementAccount"
+          nullable: true
+          description: Account the vault suggests for an unlinked statement; linking
+            it is confirmed in the app
+        match_confidence:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AccountStatementResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          "$ref": "#/components/schemas/AccountStatement"
+        meta:
+          type: object
+          required:
+          - duplicate
+          properties:
+            duplicate:
+              type: boolean
+              description: True when the uploaded file was already in the vault; the
+                existing statement is returned and nothing is created
+    AccountStatementCollection:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          maxItems: 100
+          items:
+            "$ref": "#/components/schemas/AccountStatement"
+        meta:
+          "$ref": "#/components/schemas/Pagination"
     FamilyExportFile:
       type: object
       required:
@@ -2289,8 +2424,6 @@ components:
           - CategoryImport
           - RuleImport
           - MerchantImport
-          - PdfImport
-          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -2378,6 +2511,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -2435,6 +2569,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -3336,6 +3471,93 @@ components:
             "$ref": "#/components/schemas/SecurityPrice"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    SecurityPriceImportRequest:
+      type: object
+      required:
+      - security_id
+      - prices
+      properties:
+        security_id:
+          type: string
+          format: uuid
+          description: An offline security no provider has ever matched (no offline_reason
+            or price_provider), traded in an account the caller can write to, or held
+            in a linked one
+        prices:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          description: Daily closes, all in one currency. A date already stored is
+            replaced.
+          items:
+            type: object
+            required:
+            - date
+            - price
+            - currency
+            properties:
+              date:
+                type: string
+                format: date
+                description: Not after today in the family time zone
+              price:
+                type: string
+                description: Positive decimal with at most 4 decimal places
+                example: '12.3400'
+              currency:
+                type: string
+                description: ISO 4217 code; must match the security's existing prices,
+                  or the caller's trades in it
+    SecurityPriceImportResult:
+      type: object
+      required:
+      - security_id
+      - currency
+      - created
+      - updated
+      - start_date
+      - end_date
+      properties:
+        security_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+        created:
+          type: integer
+        updated:
+          type: integer
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+    SecurityPriceImportError:
+      type: object
+      required:
+      - error
+      - errors
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - index
+            - message
+            properties:
+              index:
+                type: integer
+                nullable: true
+                description: Position of the offending row in prices, or null for
+                  the request as a whole
+              message:
+                type: string
     Money:
       type: object
       required:
@@ -3769,6 +3991,7 @@ components:
           - balances
           - recurring_transactions
           - rules
+          - rule_groups
           - rule_actions
           - rule_conditions
           - rule_runs
@@ -3844,6 +4067,9 @@ components:
               type: integer
               minimum: 0
             rules:
+              type: integer
+              minimum: 0
+            rule_groups:
               type: integer
               minimum: 0
             rule_actions:
@@ -4722,6 +4948,195 @@ components:
         error:
           type: string
 paths:
+  "/api/v1/account_statements":
+    get:
+      summary: List statements in the Statement Vault
+      description: 'Lists statements the caller can see: unlinked statements and statements
+        linked to accounts shared with them. Requires an admin or member.'
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: account_id
+        in: query
+        format: uuid
+        required: false
+        description: Only statements linked to this account
+        schema:
+          type: string
+      - name: review_status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - unmatched
+          - linked
+          - rejected
+      - name: content_sha256
+        in: query
+        required: false
+        description: Find the statement for a file by its SHA-256 (hex)
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        format: date
+        required: false
+        description: Only statements whose period ends on or after this date
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        format: date
+        required: false
+        description: Only statements whose period starts on or before this date
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: statements listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Upload a statement to the Statement Vault
+      description: 'Stores a PDF, CSV or XLSX statement (max 25 MB). With account_id
+        the statement is linked to that account (needs write access to it); without
+        it the vault suggests a match to confirm in the app. The vault stores each
+        file once: uploading the same file again returns the existing statement with
+        meta.duplicate = true. Statements are archived only; no transactions are imported.'
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: statement stored
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '200':
+          description: file already in the vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest, or API key without write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account_id is not an account the caller can write to
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: file already in the vault, linked to an account the caller
+            cannot see
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing or invalid file
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account to link the statement to
+        required: true
+        description: Statement file (.pdf, .csv or .xlsx)
+  "/api/v1/account_statements/{id}":
+    parameters:
+    - name: id
+      in: path
+      format: uuid
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show a statement
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: statement found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: statement not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts":
     get:
       summary: List accounts
@@ -7696,6 +8111,7 @@ paths:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -7773,7 +8189,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -7884,7 +8302,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -8123,8 +8543,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -8238,8 +8656,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -8344,6 +8760,46 @@ paths:
                 "$ref": "#/components/schemas/InsightCollection"
         '403':
           description: preview features disabled
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/insights/{id}/acknowledge":
+    patch:
+      summary: Acknowledge a proactive insight
+      tags:
+      - Insights
+      description: Marks a visible family insight read and acknowledged, removing
+        it from the feed. Requires read_write scope and preview access. Repeated requests
+        are idempotent.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+          format: uuid
+        required: true
+      responses:
+        '204':
+          description: insight acknowledged
+        '401':
+          description: authentication required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: write scope, member access or preview features required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: insight not found or not visible to the family
           content:
             application/json:
               schema:
@@ -9354,6 +9810,51 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Import closing prices for a security no provider tracks
+      description: Self-hosted instances only. Stores daily closes for an offline
+        security no provider has ever matched (no offline_reason, no price_provider)
+        that is traded in an account the caller can write to, or held in a linked
+        one. All rows are validated first and stored together, or none are. A date
+        already stored is replaced. Security prices are shared, so the closes also
+        value any other family holding the same security. The caller's affected accounts
+        are synced afterwards. Requires the read_write scope.
+      tags:
+      - Security Prices
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: closes imported
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPriceImportResult"
+        '403':
+          description: insufficient scope, a guest, or a managed instance
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: security not found among the caller's writable accounts
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: online security or invalid rows; nothing was stored
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPriceImportError"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SecurityPriceImportRequest"
+        required: true
   "/api/v1/security_prices/{id}":
     parameters:
     - name: id
@@ -10231,7 +10732,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Transaction"
         '422':
-          description: validation error - missing required fields
+          description: validation error - missing required fields, malformed tag_ids,
+            or a tag, category or merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -10354,6 +10856,13 @@ paths:
                 "$ref": "#/components/schemas/Transaction"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - malformed tag_ids, or a tag, category or
+            merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -10839,3 +11348,26 @@ paths:
                       type: string
                       description: Additional notes
         required: true
+  "/api/v1/version":
+    get:
+      summary: Get the running Sure version
+      tags:
+      - Version
+      description: Requires read or read_write access. Operators may explicitly enable
+        anonymous access with PUBLIC_VERSION_ENDPOINT=true. Responses are not cacheable.
+        Supplied credentials are still validated in public mode.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: running version
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Version"
+        '401':
+          description: missing or invalid credentials (default configuration)
+        '403':
+          description: insufficient scope
