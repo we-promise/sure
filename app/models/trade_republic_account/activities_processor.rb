@@ -529,7 +529,10 @@ class TradeRepublicAccount::ActivitiesProcessor
       # A user who unlinked the pair keeps it unlinked.
       return if RejectedTransfer.exists?(inflow_transaction_id: inflow.id, outflow_transaction_id: outflow.id)
 
-      Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+      transfer = Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow, status: "confirmed")
+      # Created directly instead of through confirm!, so apply the
+      # Investment Contributions category the same way confirm! does.
+      transfer.assign_investment_contribution_category!
     end
 
     # Trade Republic settles in the currency of the portfolio and Crypto

@@ -1176,7 +1176,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Core S&P 500 USD (Acc)", buy_cash.name
     assert_equal "Buy", buy_cash.transaction.investment_activity_label
     assert_equal "investment_contribution", buy_cash.transaction.kind
-    assert_nil buy_cash.transaction.category_id
+    assert_equal @family.investment_contributions_category, buy_cash.transaction.category
 
     sell_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_sell")
     assert_equal BigDecimal("-529.0"), sell_cash.amount

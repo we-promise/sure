@@ -198,6 +198,23 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal categories(:income), transfer.outflow_transaction.reload.category
   end
 
+  test "assign_investment_contribution_category! assigns the category to an uncategorized investment contribution outflow" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
+    transfer.outflow_transaction.update!(kind: "investment_contribution")
+
+    transfer.assign_investment_contribution_category!
+
+    assert_equal families(:dylan_family).investment_contributions_category, transfer.outflow_transaction.reload.category
+  end
+
+  test "assign_investment_contribution_category! leaves a funds movement uncategorized" do
+    transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
+
+    transfer.assign_investment_contribution_category!
+
+    assert_nil transfer.outflow_transaction.reload.category_id
+  end
+
   test "reject! leaves the kind of a pending transfer's transactions alone" do
     transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:credit_card))
     transfer.outflow_transaction.update!(kind: "one_time")
