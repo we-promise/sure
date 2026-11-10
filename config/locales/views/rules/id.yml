@@ -1,0 +1,218 @@
+---
+id:
+  rules:
+    no_action: Tidak Ada Tindakan
+    no_condition: Tanpa kondisi
+    notification_baseline_timed_out: Aturan ini masih nonaktif. Memeriksa transaksi mana yang sudah cocok memakan waktu terlalu lama, dan tanpa pemeriksaan itu semua transaksi akan dikirimi email. Sederhanakan kondisinya, lalu aktifkan kembali.
+    category_rule_cta:
+      close: Tutup
+      create_rule: Buat aturan
+      description: Anda dapat membuat aturan untuk mengkategorikan transaksi seperti ini secara otomatis
+      dont_show_again: Jangan tampilkan lagi
+      hide_for_today: Sembunyikan untuk hari ini
+      hide_for_today_hint: "Sembunyikan untuk hari ini akan menjeda saran ini selama 24 jam."
+      message: Diperbarui ke %{category_name}
+    classifier_rules:
+      category_classifier: Pengklasifikasi kategori
+      merchant_matcher: Pencocok merchant
+    filters:
+      search_label: Cari aturan
+      search_placeholder: Cari nama, kondisi, dan tindakan
+      reset: Atur ulang
+      button: Filter
+      done: Selesai
+      active_label: Filter aktif
+      remove: "Hapus filter %{filter}"
+      status:
+        label: Status
+        all: Semua status
+        active: Aktif
+        inactive: Nonaktif
+      action_type:
+        label: Tindakan
+        all: Semua tindakan
+      condition_type:
+        label: Kondisi
+        all: Semua kondisi
+      account:
+        label: Akun
+        all: Semua akun
+      group:
+        label: Grup
+        all: Semua grup
+        none: Tanpa grup
+    group:
+      rules_count:
+        one: 1 aturan
+        other: "%{count} aturan"
+      inactive_count:
+        one: 1 nonaktif
+        other: "%{count} nonaktif"
+      empty: Belum ada aturan di grup ini. Pilih grup pada formulir aturan.
+      activate_all: Aktifkan semua aturan
+      deactivate_all: Nonaktifkan semua aturan
+      rename: Ganti nama
+      delete: Hapus grup
+      delete_confirm_title: Hapus grup "%{name}"?
+      delete_confirm_body: Aturan tetap berada di tempatnya, tanpa grup. Tidak ada aturan yang dihapus.
+    rule:
+      edit: Edit
+      re_apply_rule: Terapkan ulang aturan
+      delete: Hapus
+      then: MAKA
+      and_more_conditions:
+        one: dan 1 kondisi lagi
+        other: dan %{count} kondisi lagi
+      and_more_actions:
+        one: dan 1 tindakan lagi
+        other: dan %{count} tindakan lagi
+      action_label_to: "%{label} menjadi %{value}"
+      all_past_and_future: Semua %{resource} lalu dan mendatang
+      on_or_after: "%{resource} pada atau setelah %{date}"
+      stop_processing: Hentikan
+      stop_processing_hint: Aturan di bawahnya tidak mengubah transaksi yang cocok dengan aturan ini.
+    form:
+      rule_name_label: Nama aturan (opsional)
+      rule_name_placeholder: Masukkan nama untuk aturan ini
+      add_condition: Tambah kondisi
+      add_condition_group: Tambah grup kondisi
+      add_action: Tambah tindakan
+      all_past_and_future: Semua %{resource} lalu dan mendatang
+      starting_from: Mulai dari
+      then: MAKA
+      stop_processing_label: Hentikan pemrosesan aturan berikutnya
+      stop_processing_description: Aturan di bawah dalam daftar tidak mengubah transaksi yang cocok dengan aturan ini.
+      group_label: Grup (opsional)
+      group_select_label: Grup
+      no_group: Tanpa grup
+      new_group_label: Atau grup baru
+      new_group_placeholder: Nama grup baru
+      group_hint: Grup hanya mengatur daftar. Aturan dalam grup berjalan sesuai urutan grup dalam daftar.
+    index:
+      page_title: Aturan
+      delete_all_rules: Hapus semua aturan
+      new_rule: Aturan baru
+      ai_cost_warning: Tindakan aturan yang mengaktifkan AI akan dikenakan biaya. Pastikan untuk memfilter sespesifik mungkin agar menghindari biaya yang tidak perlu.
+      rules_heading: Aturan
+      order_hint: Aturan berjalan dari atas ke bawah, termasuk aturan di dalam grup. Setelah aturan menetapkan bidang pada transaksi, aturan di bawahnya tidak mengubah bidang tersebut. Tag ditambahkan oleh setiap aturan yang cocok. Seret aturan dan grup untuk mengubah urutan.
+      new_group: Grup baru
+      reorder_group: "Pindahkan grup %{name}. Tekan Enter atau Spasi untuk mengambilnya, lalu gunakan tombol panah untuk memindahkannya."
+      filters:
+        no_matches: Tidak ada aturan yang cocok dengan pencarian atau filter.
+        drag_disabled: Pengurutan dinonaktifkan saat pencarian atau filter aktif. Atur ulang untuk mengubah urutan.
+      fold_rule: "Lipat atau buka lipatan aturan %{name}"
+      reorder_rule: "Pindahkan aturan %{name}. Tekan Enter atau Spasi untuk mengambilnya, lalu gunakan tombol panah untuk memindahkannya."
+      no_rules_title: Belum ada aturan
+      no_rules_description: Siapkan aturan untuk melakukan tindakan pada transaksi Anda dan data lainnya pada setiap sinkronisasi akun.
+    confirm:
+      title: Konfirmasi perubahan
+      title_with_name: "Konfirmasi perubahan pada \"%{name}\""
+      apply_notice_html: "Anda akan menerapkan aturan ini ke <span class=\"text-primary font-medium\">%{count} %{resource}</span> yang memenuhi kriteria aturan yang ditentukan. Harap konfirmasi jika Anda ingin melanjutkan perubahan ini."
+      rules_above_notice:
+        one: Aturan aktif di atasnya berjalan terlebih dahulu, sehingga hasilnya sama seperti saat dijalankan penuh.
+        other: "%{count} aturan aktif di atasnya berjalan terlebih dahulu, sehingga hasilnya sama seperti saat dijalankan penuh."
+      ai_cost_title: Estimasi Biaya AI
+      ai_cost_with_estimate_html: "Ini akan menggunakan AI untuk mengkategorikan %{count} transaksi. Perkiraan biaya: <span class=\"font-semibold\">~$%{cost}</span>"
+      ai_cost_no_estimate_html: "Ini akan menggunakan AI untuk mengkategorikan %{count} transaksi."
+      cost_unavailable_model: "Estimasi biaya tidak tersedia untuk model \"%{model}\"."
+      cost_unavailable_no_provider: Estimasi biaya tidak tersedia (tidak ada penyedia LLM yang dikonfigurasi).
+      cost_warning: Anda mungkin dikenakan biaya, silakan hubungi penyedia model untuk harga terkini.
+      view_usage_history: Lihat riwayat penggunaan
+      confirm_changes: Konfirmasi perubahan
+    actions:
+      to_label: menjadi
+      value_placeholder: Masukkan nilai
+      split:
+        type_fixed: Jumlah tetap
+        type_percentage: Persentase
+        type_label: Jenis pembagian
+        add_split: Tambah pembagian
+        name_placeholder: Nama pembagian
+        share_label: Jumlah atau persentase pembagian
+        category_label: Kategori pembagian
+        merchant_label: Merchant pembagian
+        tags_label: "Tag pembagian"
+        remove_split: "Hapus pembagian"
+        hint: "Pembagian tetap dikurangkan terlebih dahulu, sebagai jumlah pasti. Pembagian persentase kemudian membagi sisa yang ada. Jika setiap pembagian di sini menggunakan jumlah tetap, tambahkan juga kondisi yang cocok dengan jumlah transaksi yang tepat (misalnya Jumlah = 42,00), karena setiap transaksi yang cocok memerlukan total yang sama agar jumlah tetap sesuai. Aturan pembagian tidak boleh memiliki tindakan lain."
+        fixed_summary_label: tetap
+        summary:
+          one: "%{count} pembagian"
+          other: "%{count} pembagian"
+    update:
+      success: Aturan berhasil diperbarui
+    destroy:
+      success: Aturan berhasil dihapus
+    destroy_all:
+      success: Semua aturan berhasil dihapus
+    apply_all:
+      button: Terapkan Semua
+      confirm_title: Terapkan Semua Aturan
+      confirm_message: Anda akan menerapkan %{count} aturan yang memengaruhi %{transactions} transaksi unik. Harap konfirmasi jika Anda ingin melanjutkan.
+      confirm_button: Konfirmasi dan Terapkan Semua
+      success: Semua aturan telah dimasukkan ke dalam antrean untuk dieksekusi
+      ai_cost_title: Estimasi Biaya AI
+      ai_cost_message: Ini akan menggunakan AI untuk mengkategorikan hingga %{transactions} transaksi.
+      estimated_cost: "Estimasi biaya: ~$%{cost}"
+      cost_unavailable_model: Estimasi biaya tidak tersedia untuk model "%{model}".
+      cost_unavailable_no_provider: Estimasi biaya tidak tersedia (tidak ada penyedia LLM yang dikonfigurasi).
+      cost_warning: Anda mungkin dikenakan biaya, silakan hubungi penyedia model untuk harga terkini.
+      view_usage: Lihat riwayat penggunaan
+    recent_runs:
+      title: Eksekusi Terbaru
+      description: Lihat riwayat eksekusi aturan Anda termasuk status berhasil/gagal dan jumlah transaksi.
+      unnamed_rule: Aturan Tanpa Nama
+      columns:
+        date_time: Tanggal/Waktu
+        execution_type: Jenis
+        status: Status
+        rule_name: Nama Aturan
+        transactions_counts:
+          queued: Dalam antrean
+          processed: Diproses
+          modified: Diubah
+          blocked: Diblokir
+      execution_types:
+        manual: Manual
+        scheduled: Terjadwal
+      statuses:
+        pending: Menunggu
+        success: Berhasil
+        failed: Gagal
+    clear_ai_cache:
+      button: Atur ulang cache AI
+      confirm_title: Atur ulang cache AI?
+      confirm_body: Apakah Anda yakin ingin mengatur ulang cache AI? Tindakan ini akan memungkinkan aturan AI memproses ulang semua transaksi. Tindakan ini dapat menimbulkan biaya API tambahan.
+      confirm_button: Atur Ulang Cache
+      success: Cache AI sedang dibersihkan. Proses ini mungkin memakan waktu beberapa saat.
+    condition_filters:
+      transaction_type:
+        income: Pemasukan
+        expense: Pengeluaran
+        transfer: Transfer
+        equal_to: Sama dengan
+      operators:
+        contains: Mengandung
+        does_not_contain: Tidak mengandung
+        starts_with: Diawali dengan
+        ends_with: Diakhiri dengan
+        matches_regex: Cocok dengan regex
+        equal_to: Sama dengan
+        is_equal_to: Sama dengan
+        not_equal_to: Tidak sama dengan
+        is_empty: Kosong
+        is_not_empty: Tidak kosong
+        greater_than: Lebih besar dari
+        greater_or_equal_to: Lebih besar atau sama dengan
+        less_than: Lebih kecil dari
+        less_than_or_equal_to: Lebih kecil atau sama dengan
+  rule:
+    conditions:
+      condition_group:
+        and_prefix: dan
+        match: cocok
+        all: semua
+        any: salah satu
+        of_the_following_conditions: dari kondisi berikut
+        add_condition: Tambah kondisi
+      condition:
+        value_placeholder: Masukkan nilai

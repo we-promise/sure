@@ -1,0 +1,46 @@
+---
+id:
+  activerecord:
+    attributes:
+      rule:
+        new_rule_group_name: "Grup baru"
+        rule_group: "Grup"
+    errors:
+      models:
+        rule:
+          min_actions: "harus memiliki setidaknya satu tindakan"
+          duplicate_actions: "Aturan tidak boleh memiliki tindakan duplikat %{types}"
+          nested_conditions: "Kondisi majemuk tidak dapat disarangkan"
+          split_not_alone: "Aturan pembagian tidak boleh memiliki tindakan lain"
+        rule/action:
+          attributes:
+            value:
+              invalid_config: "harus berupa konfigurasi pembagian yang valid"
+              invalid_split_count: "harus memiliki antara %{min} dan %{max} pembagian"
+              split_name_required: "pembagian #%{index} belum memiliki nama"
+              split_name_too_long: "nama pembagian #%{index} terlalu panjang (maksimum 255 karakter)"
+              split_name_invalid: "nama pembagian #%{index} mengandung karakter yang tidak valid"
+              split_type_invalid: "jenis pembagian #%{index} harus tetap atau persentase"
+              split_share_invalid: "porsi pembagian #%{index} harus berupa angka positif"
+              split_category_invalid: "kategori pembagian #%{index} bukan milik keluarga ini"
+              split_merchant_invalid: "merchant pembagian #%{index} bukan milik keluarga ini"
+              split_tags_invalid: "pembagian #%{index} memiliki tag yang bukan milik keluarga ini"
+              percentages_must_total_100: "persentase harus berjumlah 100 (saat ini %{total})"
+              fixed_requires_exact_amount_condition: "pembagian jumlah tetap memerlukan kondisi aturan yang cocok dengan jumlah transaksi yang tepat (misalnya Jumlah = 42,00), jika tidak, porsi pembagian tidak dapat dijumlahkan secara andal dengan total setiap transaksi yang cocok"
+              fixed_shares_must_equal_condition_amount: "porsi pembagian harus berjumlah %{amount}, jumlah pasti yang disyaratkan oleh kondisi aturan ini"
+
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: "bukan ekspresi reguler yang valid"
+              regex_too_complex: "terlalu rumit untuk dijalankan dengan aman"
+              regex_too_long: "terlalu panjang (maksimum %{count} karakter)"
+              regex_backreference: "tidak boleh menggunakan referensi balik (\\1 hingga \\9)"
+  rule:
+    actions:
+      set_transaction_merchant:
+        not_accessible: "Merchant pada akun yang tidak dapat Anda akses"
+        unassigned: "%{name} (tidak lagi ditetapkan)"
+        unavailable: "Merchant tidak lagi tersedia"
+    conditions:
+      unsupported_label: "Tidak didukung (%{type})"
