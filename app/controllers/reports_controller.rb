@@ -383,16 +383,15 @@ class ReportsController < ApplicationController
     # than counted at 1. No provider is called.
     def report_amount_converter(family_currency)
       rates = {}
-      connection = ExchangeRate.connection
+      rate_query = "SELECT #{ExchangeRate.rate_sql(from: ':from', to: ':to', on: 'CAST(:on AS date)')}"
       lambda do |entry|
         amount = entry.amount.abs
         next amount if entry.currency == family_currency
 
         key = [ entry.date, entry.currency ]
         unless rates.key?(key)
-          sql = ExchangeRate.rate_sql(from: connection.quote(entry.currency), to: connection.quote(family_currency),
-                                      on: "#{connection.quote(entry.date.iso8601)}::date")
-          value = connection.select_value("SELECT #{sql}")
+          sql = ExchangeRate.sanitize_sql_array([ rate_query, { from: entry.currency, to: family_currency, on: entry.date } ])
+          value = ExchangeRate.connection.select_value(sql)
           rates[key] = value && BigDecimal(value.to_s)
         end
         rates[key] && amount * rates[key]
