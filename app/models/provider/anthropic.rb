@@ -90,8 +90,12 @@ class Provider::Anthropic < Provider
     ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
   end
 
+  def claude_code?
+    client.is_a?(ClaudeCodeClient)
+  end
+
   def provider_name
-    return "Anthropic (Claude Code subscription)" if client.is_a?(ClaudeCodeClient)
+    return "Anthropic (Claude Code subscription)" if claude_code?
 
     custom_endpoint? ? "Custom Anthropic-compatible (#{@base_url})" : "Anthropic"
   end
@@ -223,6 +227,7 @@ class Provider::Anthropic < Provider
   end
 
   def supports_pdf_processing?(model: @default_model)
+    return false if claude_code?
     return true if custom_endpoint?
 
     VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }

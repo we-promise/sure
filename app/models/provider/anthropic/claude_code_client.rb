@@ -188,11 +188,20 @@ class Provider::Anthropic::ClaudeCodeClient
       Open3.popen3(child_env, *cmd, unsetenv_others: true, chdir: Dir.tmpdir) do |stdin, stdout, stderr, wait|
         out = Thread.new { stdout.read }
         err = Thread.new { stderr.read }
-        stdin.write(stdin_data)
-        stdin.close
+        # Written off the main thread so a CLI that stops reading can't hold
+        # the request past its timeout; one that exits early (EPIPE) still
+        # reports its own error through stdout.
+        Thread.new do
+          stdin.write(stdin_data)
+        rescue Errno::EPIPE, IOError
+          nil
+        ensure
+          stdin.close unless stdin.closed?
+        end
 
         unless wait.join(timeout)
           Process.kill("KILL", wait.pid)
+          wait.join
           raise Error, "Claude Code timed out after #{timeout}s"
         end
 

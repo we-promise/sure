@@ -86,7 +86,37 @@ class Provider::Anthropic::ClaudeCodeClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "times out a CLI that never reads its prompt" do
+    client = Provider::Anthropic::ClaudeCodeClient.new(token: "t", timeout: 0.5, executable: fake_cli("exec sleep 30"))
+
+    error = assert_raises(Provider::Anthropic::ClaudeCodeClient::Error) do
+      client.messages.create(model: "claude-haiku-5-5", messages: [ { role: "user", content: "x" * 1_000_000 } ])
+    end
+    assert_match "timed out", error.message
+  end
+
+  test "reports the CLI's own error when it exits without reading the prompt" do
+    script = %(echo '{"type":"result","subtype":"success","is_error":true,"result":"Not logged in"}'; exit 1)
+    client = Provider::Anthropic::ClaudeCodeClient.new(token: "t", executable: fake_cli(script))
+
+    error = assert_raises(Provider::Anthropic::ClaudeCodeClient::Error) do
+      client.messages.create(model: "claude-haiku-5-5", messages: [ { role: "user", content: "x" * 1_000_000 } ])
+    end
+    assert_match "Not logged in", error.message
+  end
+
   private
+    def fake_cli(body)
+      file = Tempfile.new([ "claude", ".sh" ])
+      file.write("#!/bin/sh
+#{body}
+")
+      file.close
+      File.chmod(0o755, file.path)
+      (@fake_clis ||= []) << file
+      file.path
+    end
+
     def expect_cli(structured_output: nil, result: "", &check)
       payload = {
         type: "result", subtype: "success", is_error: false, session_id: "sess_1",
