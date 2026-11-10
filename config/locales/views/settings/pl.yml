@@ -894,8 +894,3 @@ pl:
       change: Zmień zdjęcie
       choose: Prześlij zdjęcie
       choose_label: "(opcjonalne)"
-  views:
-    settings:
-      payments:
-        cancellation: Twoje wsparcie kończy się %{date}.
-        renewal: Twoje wsparcie będzie kontynuowane %{date}.

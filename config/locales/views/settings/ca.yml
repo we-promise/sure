@@ -862,8 +862,3 @@ ca:
       change: Canvia la foto
       choose: Puja una foto
       choose_label: "(opcional)"
-  views:
-    settings:
-      payments:
-        cancellation: La teva contribució finalitza el %{date}.
-        renewal: La teva contribució continua el %{date}.

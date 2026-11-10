@@ -144,7 +144,11 @@ class ImportsController < ApplicationController
 
   def show
     unless @import.requires_csv_workflow?
-      redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload") unless @import.uploaded?
+      if !@import.uploaded?
+        redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload")
+      elsif @import.is_a?(MonarchImport) && @import.pending? && !@import.publishable?
+        redirect_to import_configuration_path(@import), alert: t("imports.show.finalize_mappings")
+      end
       return
     end
 

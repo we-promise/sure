@@ -39,10 +39,10 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport MonarchImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
   # Imports that write family-wide configuration (categories, tags, rules,
   # merchants), which guests may view but not change.
-  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport].freeze
+  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport MonarchImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -250,6 +250,12 @@ class Import < ApplicationRecord
     update! status: :importing
 
     ImportJob.perform_later(self)
+  end
+
+  # Whether publishing would change existing records even when the dry run
+  # counts nothing new. Subclasses that do this override it.
+  def changes_existing_records?
+    false
   end
 
   # Whether import! already committed rows for this import. Distinguishes a

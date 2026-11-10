@@ -821,8 +821,3 @@ fr:
       change: Changer de photo
       choose: Charger une photo
       choose_label: "(facultatif)"
-  views:
-    settings:
-      payments:
-        cancellation: Votre contribution se termine le %{date}.
-        renewal: Votre contribution se poursuit le %{date}.
