@@ -53,6 +53,13 @@
               method: :get,
               data: { controller: "auto-submit-form" } do |form| %>
         <%= hidden_field_tag :tab, "activity" %>
+        <%# The chart's range and view, so the badges' clear links (built from
+            this search's query string) keep a range dragged on the chart. %>
+        <% %w[start_date end_date chart_view].each do |chart_param| %>
+          <% if helpers.params[chart_param].present? %>
+            <%= hidden_field_tag chart_param, helpers.params[chart_param], id: nil %>
+          <% end %>
+        <% end %>
         <div class="flex gap-2 mb-4">
           <div class="grow">
             <div class="flex items-center px-3 py-2 gap-2 border border-secondary rounded-lg focus-within:border-primary">

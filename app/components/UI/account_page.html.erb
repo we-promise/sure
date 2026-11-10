@@ -5,7 +5,7 @@
     <%= render "accounts/show/header", account: account, title: title, subtitle: subtitle, reconciliation_indicator: reconciliation_indicator %>
 
     <%= render UI::Account::Chart.new(account: account, period: chart_period, view: chart_view, loan_chart: loan_chart,
-                                     extra_repayment: extra_repayment) %>
+                                     extra_repayment: extra_repayment, activity_filters: activity_filters) %>
 
     <% if (fx_coverage_start = fx_coverage_start_date).present? %>
       <div class="px-3">

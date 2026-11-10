@@ -614,6 +614,69 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(@account, q: { search: "grocery" }, tab: "activity", page: nil, per_page: nil)
   end
 
+  test "clear_filter keeps the chart's range and view" do
+    delete clear_filter_account_url(@account), params: {
+      q: { start_date: "2026-01-05", end_date: "2026-02-10" },
+      start_date: "2026-01-05", end_date: "2026-02-10", chart_view: "balance",
+      param_key: "start_date",
+      param_value: "2026-01-05"
+    }
+
+    assert_redirected_to account_url(@account, q: { end_date: "2026-02-10" }, tab: "activity",
+                                               start_date: "2026-01-05", end_date: "2026-02-10", chart_view: "balance")
+  end
+
+  test "show's period links keep the activity filters but not the dates of the range they replace" do
+    get account_url(@account), params: {
+      start_date: "2026-01-05", end_date: "2026-02-10",
+      q: { start_date: "2026-01-05", end_date: "2026-02-10", search: "grocery" }
+    }
+
+    assert_response :success
+    preset = css_select("a[role='menuitemradio']").find { |link| link["href"].include?("period=last_90_days") }
+    query = Rack::Utils.parse_nested_query(URI.parse(preset["href"]).query)
+    assert_equal({ "search" => "grocery" }, query["q"])
+  end
+
+  test "show's chart-view select keeps a dragged range and the activity filters" do
+    get account_url(accounts(:investment)), params: {
+      start_date: "2026-01-05", end_date: "2026-02-10",
+      q: { start_date: "2026-01-05", end_date: "2026-02-10", search: "grocery" }
+    }
+
+    assert_response :success
+    form = css_select("form").find { |f| f.at_css("select[name='chart_view']") }
+    hidden = form.css("input[type='hidden']").to_h { |input| [ input["name"], input["value"] ] }
+    assert_equal "2026-01-05", hidden["start_date"]
+    assert_equal "2026-02-10", hidden["end_date"]
+    assert_equal "2026-01-05", hidden["q[start_date]"]
+    assert_equal "2026-02-10", hidden["q[end_date]"]
+    assert_equal "grocery", hidden["q[search]"]
+  end
+
+  test "show's chart-view select carries no range for a preset period" do
+    get account_url(accounts(:investment)), params: { period: "last_90_days" }
+
+    assert_response :success
+    form = css_select("form").find { |f| f.at_css("select[name='chart_view']") }
+    names = form.css("input[type='hidden']").map { |input| input["name"] }
+    assert_not_includes names, "start_date"
+    assert_not_includes names, "end_date"
+  end
+
+  test "show's activity search keeps the chart's range and view for its badges' clear links" do
+    get account_url(accounts(:investment)), params: {
+      start_date: "2026-01-05", end_date: "2026-02-10", chart_view: "holdings_balance", tab: "activity"
+    }
+
+    assert_response :success
+    form = css_select("form").find { |f| f.at_css("input[name='q[search]']") }
+    hidden = form.css("input[type='hidden']").to_h { |input| [ input["name"], input["value"] ] }
+    assert_equal "2026-01-05", hidden["start_date"]
+    assert_equal "2026-02-10", hidden["end_date"]
+    assert_equal "holdings_balance", hidden["chart_view"]
+  end
+
   test "clear_filter drops the amount_operator once amount is cleared" do
     delete clear_filter_account_url(@account), params: {
       q: { amount: "50", amount_operator: "equal" },
