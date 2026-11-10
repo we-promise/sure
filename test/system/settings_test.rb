@@ -29,7 +29,7 @@ class SettingsTest < ApplicationSystemTestCase
       merchants_index = @settings_links.index([ "Merchants", family_merchants_path ])
       @settings_links.insert(merchants_index + 1, [ "Statement Vault", account_statements_path ])
       @settings_links += [
-        [ I18n.t("settings.settings_nav.ai_prompts_label"), settings_ai_prompts_path ],
+        [ I18n.t("settings.settings_nav.ai_prompts_label"), settings_ai_prompts_path, I18n.t("settings.ai_prompts.show.page_title") ],
         [ "API Keys", settings_api_keys_path ]
       ]
     end
@@ -41,9 +41,9 @@ class SettingsTest < ApplicationSystemTestCase
       assert_selector "h1", text: "Accounts"
       assert_current_path accounts_path, ignore_query: true
 
-      @settings_links.each do |name, path|
+      @settings_links.each do |name, path, heading|
         click_link name, match: :first
-        assert_selector "h1", text: name
+        assert_selector "h1", text: heading || name
         assert_current_path path
       end
     end

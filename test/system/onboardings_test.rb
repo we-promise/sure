@@ -411,6 +411,7 @@ class OnboardingsTest < ApplicationSystemTestCase
     assert_text "Family AI provider"
     assert_field "OpenAI-compatible API key", with: ""
     assert_field "OpenAI-compatible API model ID (required)", with: "anthropic/claude-sonnet-4"
+    find("summary", text: I18n.t("settings.ai_prompts.show.main_system_prompt.title")).click
     assert_selector "textarea#family_ai_prompt_chat_system"
     page.execute_script <<~JS
       window.providerRequests = 0;
