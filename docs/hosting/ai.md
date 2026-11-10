@@ -206,6 +206,29 @@ How it differs from the OpenAI-compatible provider:
 
 **Bedrock, Vertex and proxies:** `ANTHROPIC_BASE_URL` can point at any endpoint that speaks the Anthropic Messages API, such as a gateway in front of AWS Bedrock or Google Vertex AI. Set `ANTHROPIC_MODEL` to that endpoint's model ID (for Bedrock, e.g. `anthropic.claude-sonnet-4-5-20250929-v1:0`); the `claude` prefix check is skipped. Sure sends the key as an Anthropic API key (`x-api-key`) and doesn't sign AWS or Google requests itself.
 
+#### Claude subscription via Claude Code
+
+A personal install can run the native Anthropic provider on its owner's Claude subscription instead of an API key. Sure then runs each request through the Claude Code CLI, the same way the Claude Agent SDK does.
+
+1. Build the image with the CLI: `docker build --build-arg INSTALL_CLAUDE_CODE=true .`
+2. Run `claude setup-token` on any machine signed in to your subscription, and set the token it prints:
+
+```bash
+CLAUDE_CODE_OAUTH_TOKEN=your-setup-token # pipelock:ignore
+LLM_PROVIDER=anthropic
+# ANTHROPIC_MODEL=claude-haiku-5-5
+```
+
+| Variable | Default | Notes |
+|----------|---------|-------|
+| `CLAUDE_CODE_OAUTH_TOKEN` | — | Used only when no Anthropic API key is set. |
+| `CLAUDE_CODE_EXECUTABLE` | `claude` | Path to the CLI. |
+
+- **Locked down.** The CLI runs with no built-in tools, settings, skills or MCP servers, no saved session, and only the token in its environment.
+- **Tool calls become structured output.** Background jobs work as with an API key. Chat's function calls are answered one round at a time, and replies arrive whole instead of streaming.
+- **Text only.** PDF and image inputs (bank statement import, vision) are rejected; use an API key for those.
+- **Personal use.** A subscription covers its owner's own use. Don't serve other people from it.
+
 ### Google Gemini
 
 You can connect to Google Gemini either directly via Google AI Studio's OpenAI-compatible endpoint or via OpenRouter.
