@@ -165,6 +165,7 @@ jobs:
       - name: Encryption tests
         if: ${{ !cancelled() }}
         env:
+          ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA: "true"
           ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: test
           ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: test
           ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: test

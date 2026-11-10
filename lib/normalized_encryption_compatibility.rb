@@ -6,6 +6,7 @@ module NormalizedEncryptionCompatibility
   Query = ActiveRecord::Encryption::ExtendedDeterministicQueries
 
   module NormalizedCast
+    # Return query markers unchanged so normalization never casts ciphertext as text.
     def cast(value)
       value.is_a?(Query::AdditionalValue) ? value : super
     end
@@ -13,12 +14,15 @@ module NormalizedEncryptionCompatibility
 
   module PreviousQueryValues
     private
+      # Normalize plaintext before serializing predicates for earlier schemes.
       def additional_values_for(value, type)
         super(type.cast(value), type)
       end
   end
 
   module PreviousUniquenessValues
+    # Validate current and previous ciphertext predicates through the base validator.
+    # Previous values are already serialized and must not be encrypted a second time.
     def validate_each(record, attribute, value)
       super(record, attribute, value)
 
@@ -35,6 +39,8 @@ module NormalizedEncryptionCompatibility
     end
   end
 
+  # Install the compatibility hooks once, rejecting unqualified Rails versions.
+  # Replacing the validator extension preserves its original super dispatch.
   def self.install!
     unless ActiveRecord.version.to_s == SUPPORTED_VERSION
       raise "Requalify normalized encryption compatibility before changing Rails #{SUPPORTED_VERSION}"
