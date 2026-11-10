@@ -50,7 +50,8 @@ class Ai::Judgements::CategorizeTransaction < Ai::Judgement
       end.merge(UNCATEGORIZED => "No listed category is a reasonable fit")
     end
 
+    # RubyLLM's judge takes only JSON values, and an entry's amount is a BigDecimal.
     def state_for(transaction)
-      transaction.slice(:description, :amount, :classification, :merchant, :hint).compact
+      transaction.slice(:description, :classification, :merchant, :hint).merge(amount: transaction[:amount]&.to_f).compact
     end
 end

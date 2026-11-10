@@ -46,6 +46,15 @@ class Ai::Judgements::CategorizeTransactionTest < ActiveSupport::TestCase
     assert_equal({ description: "STARBUCKS 1234", amount: 4.5, classification: "expense" }, requests.first.states.fetch("txn_1"))
   end
 
+  test "a decimal amount is sent as a number" do
+    requests = stub_ai(:categorize) { |request| request.states.keys.index_with { { category: "Salary" } } }
+
+    generation([ TRANSACTIONS.first.merge(amount: BigDecimal("4.50")) ]).call
+
+    assert_equal 4.5, requests.first.states.fetch("txn_1")[:amount]
+    assert_kind_of Float, requests.first.states.fetch("txn_1")[:amount]
+  end
+
   test "answers in the generation's shape, the opt-out as no category, with confidence and probabilities" do
     stub_ai(:categorize) { { "txn_1" => { category: [ "Coffee Shops", 0.93 ] }, "txn_2" => { category: [ "__uncategorized__", 0.4 ] } } }
 

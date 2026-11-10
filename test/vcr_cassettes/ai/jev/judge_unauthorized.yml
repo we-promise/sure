@@ -5,7 +5,7 @@ http_interactions:
     uri: https://opencode.ai/zen/v1/systemone
     body:
       encoding: UTF-8
-      string: '{"model":"jev-1.13-free","state":{"description":"STARBUCKS","amount":4.5,"classification":"expense"},"questions":{"category":{"type":"choice","instructions":"Which
+      string: '{"model":"jev-1.13-free","state":{"description":"STARBUCKS","classification":"expense","amount":4.5},"questions":{"category":{"type":"choice","instructions":"Which
         spending category best fits this bank transaction? Pick `__uncategorized__`
         only if no category is a reasonable fit.","criteria":{"Coffee Shops":null,"__uncategorized__":"No
         listed category is a reasonable fit"}}}}'
@@ -26,7 +26,7 @@ http_interactions:
       message: Unauthorized
     headers:
       Date:
-      - Fri, 06 Nov 2026 16:47:43 GMT
+      - Tue, 10 Nov 2026 00:00:07 GMT
       Content-Type:
       - application/json
       Content-Length:
@@ -36,15 +36,15 @@ http_interactions:
       Cf-Placement:
       - remote-IAD
       Server-Timing:
-      - gateway;dur=45, total;dur=45
+      - gateway;dur=36, total;dur=36
       X-Opencode-Log-Id:
-      - 01a1b1c2-4ddb-7bee-8649-7fee18e21a7a
+      - 01a1c2c1-414c-73d9-af4a-674c3f34b343
       Server:
       - cloudflare
       Cf-Ray:
-      - a56594e8afd35e90-BNE
+      - a580c66e1d04f0d6-MEL
     body:
       encoding: UTF-8
       string: '{"error":{"type":"authentication_error","message":"Invalid credential"}}'
-  recorded_at: Fri, 06 Nov 2026 16:47:43 GMT
+  recorded_at: Tue, 10 Nov 2026 00:00:07 GMT
 recorded_with: VCR 6.3.1
