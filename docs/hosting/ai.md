@@ -225,6 +225,8 @@ LLM_PROVIDER=anthropic
 | `CLAUDE_CODE_EXECUTABLE` | `claude` | Path to the CLI. |
 
 - **Locked down.** The CLI runs with no built-in tools, settings, skills or MCP servers, no saved session, and only the token in its environment.
+- **Nothing private in process arguments.** The system prompt goes through a private temp file, and the schema's allowed values (transaction IDs, category and function names) are replaced by opaque codes.
+- **Memory.** Each AI call starts a CLI process of roughly 200-300 MB next to Sidekiq. The AI lane runs `RAILS_AI_MAX_THREADS` jobs at once (default `1`); size the worker's memory limit for that many.
 - **Tool calls become structured output.** Background jobs work as with an API key. Chat's function calls are answered one round at a time, and replies arrive whole instead of streaming.
 - **Text only.** PDF and image inputs (bank statement import, vision) are rejected; use an API key for those.
 - **Personal use.** A subscription covers its owner's own use. Don't serve other people from it.
