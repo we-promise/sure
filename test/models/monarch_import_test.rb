@@ -85,6 +85,31 @@ class MonarchImportTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
   end
 
+  test "retrying an import whose data committed before publishing failed keeps what undo restores" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "EUR", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    ExchangeRate.create!(date: Date.new(2024, 1, 3), from_currency: "EUR", to_currency: "USD", rate: 1)
+    account.disable!
+    disabled_at = account.reload.disabled_at
+    mapping("Checking").update!(mappable: account, choices: { "closed" => false })
+    Family.any_instance.stubs(:sync_later).raises(StandardError, "queue down").then.returns(nil)
+
+    @import.reload.publish
+    assert @import.reload.failed?
+    assert @import.data_committed?
+    entry_ids = @import.entries.pluck(:id).sort
+
+    publish!
+    assert_equal entry_ids, @import.entries.pluck(:id).sort
+    assert account.reload.active?
+
+    @import.revert
+    assert_equal [ Date.new(2024, 1, 3), 500, "EUR" ], [ opening.reload.date, opening.amount, opening.currency ]
+    assert account.reload.disabled?
+    assert_in_delta disabled_at, account.disabled_at, 1.second
+  end
+
   test "an opening balance in another currency moves in the account's and comes back in its own" do
     account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
     opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "EUR", name: "Opening balance",
