@@ -387,7 +387,8 @@ class SimplefinItem::Importer
       # Each request stays within the Bridge's MAX_REQUEST_DAYS limit.
       # SimpleFin typically only provides 60-90 days of history (bank-dependent).
       # Use adaptive chunking: start with 2 chunks, continue if new data found,
-      # stop after 2 consecutive empty chunks. Max 8 chunks (360 days) for safety.
+      # stop after 3 consecutive empty chunks (135 days, at least the 120 days
+      # two 60-day chunks used to cross). Max 8 chunks (360 days) for safety.
       chunk_size_days = MAX_REQUEST_DAYS
       max_requests = 8  # SimpleFIN rarely provides >90 days anyway
       current_end_date = Time.current
@@ -492,8 +493,8 @@ class SimplefinItem::Importer
         # Adaptive stopping: if chunk returned no new transactions, increment counter
         if new_txns_in_chunk.zero?
           consecutive_empty_chunks += 1
-          # Stop after 2 consecutive empty chunks (allow for gaps in bank data)
-          if consecutive_empty_chunks >= 2
+          # Stop after 3 consecutive empty chunks (allow for gaps in bank data)
+          if consecutive_empty_chunks >= 3
             Rails.logger.info "SimpleFin chunked sync: stopping early - #{consecutive_empty_chunks} consecutive empty chunks (SimpleFIN likely doesn't have more history)"
             stopped_early = true
             break

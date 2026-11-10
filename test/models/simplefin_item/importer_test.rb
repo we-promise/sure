@@ -191,6 +191,14 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     ranges.each { |from, to| assert_operator to - from, :<=, SimplefinItem::Importer::MAX_REQUEST_DAYS.days }
   end
 
+  test "the chunked history import looks at least 120 days back before giving up on an empty account" do
+    provider, ranges = recording_provider
+
+    SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_with_chunked_history)
+
+    assert_operator ranges.first.last - ranges.last.first, :>=, 120.days
+  end
+
   private
 
     # A provider that returns no accounts and records each dated request's range.
