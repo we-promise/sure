@@ -530,21 +530,30 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     key2 = search2.cache_key_base
 
     assert_equal key1, key2
-    assert_not_nil cache.read("transaction_search_totals/v4/#{key2}")
+    assert_not_nil cache.read("transaction_search_totals/v5/#{key2}")
     assert_equal result1, search2.totals
   end
 
-  test "totals does not serve a value cached under the v3 key" do
+  # main's v4 shape: excluded_scheduled_count, but no transfer_count or
+  # expense_count, and sums that counted excluded entries. Named (not an
+  # anonymous Data class) so it can be Marshal-dumped into the cache.
+  V4Totals = Data.define(
+    :count, :excluded_scheduled_count, :income_money, :expense_money,
+    :transfer_inflow_money, :transfer_outflow_money
+  )
+
+  test "totals does not serve a value cached under the v4 key" do
     cache = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(cache)
     create_transaction(account: @checking_account, amount: 100, kind: "standard")
 
     search = Transaction::Search.new(@family)
-    stale = Transaction::Search::Totals.new(
-      count: 9, transfer_count: 0, income_money: Money.new(999, "USD"), expense_money: Money.new(999, "USD"),
+    stale = V4Totals.new(
+      count: 9, excluded_scheduled_count: 0, income_money: Money.new(999, "USD"),
+      expense_money: Money.new(999, "USD"),
       transfer_inflow_money: Money.new(0, "USD"), transfer_outflow_money: Money.new(0, "USD")
     )
-    cache.write("transaction_search_totals/v3/#{search.cache_key_base}", stale)
+    cache.write("transaction_search_totals/v4/#{search.cache_key_base}", stale)
 
     assert_equal Money.new(100, "USD"), search.totals.expense_money
   end
@@ -562,6 +571,19 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     assert_includes search.transactions_scope.map(&:id), excluded_income.entryable_id
     assert_equal search.transactions_scope.count, totals.count
     assert_equal 2, totals.count
+  end
+
+  test "expense_count covers only the rows the expense sum includes" do
+    create_transaction(account: @checking_account, amount: 100, kind: "standard")
+    create_transaction(account: @checking_account, amount: 200, kind: "standard", excluded: true)
+    create_transaction(account: @checking_account, amount: -50, kind: "standard") # income row, outside the expense sum
+
+    totals = Transaction::Search.new(@family).totals
+
+    assert_equal Money.new(100, "USD"), totals.expense_money
+    assert_equal 1, totals.expense_count
+    # The count still matches the list: all three rows.
+    assert_equal 3, totals.count
   end
 
   test "totals excludes excluded transfers" do

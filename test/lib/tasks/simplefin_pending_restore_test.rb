@@ -58,6 +58,22 @@ class SimplefinPendingRestoreTest < ActiveSupport::TestCase
     assert entry.reload.excluded
   end
 
+  # update_all bypasses the updated_at bump that Family#entries_cache_version
+  # keys on, so without it cached totals keep serving the pre-restore sums
+  # until the key rolls over (Date.current) the next day.
+  test "a live restore moves the family's entries cache version" do
+    @family = families(:empty)
+    entry = excluded_entry("simplefin" => { "pending" => "maybe" })
+
+    before = @family.reload.entries_cache_version
+    travel 1.minute do
+      restore
+    end
+
+    assert_not entry.reload.excluded
+    assert_not_equal before, @family.reload.entries_cache_version
+  end
+
   private
 
     def excluded_entry(extra)
