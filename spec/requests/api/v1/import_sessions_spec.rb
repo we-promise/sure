@@ -6,9 +6,15 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
   let(:user) { users(:empty) }
   let(:family) { user.family }
 
-  let(:api_key) { api_keys(:active_key) }
-  let(:api_key_without_write_scope) { api_keys(:one) }
-  let(:api_key_without_read_scope) { api_keys(:expired_key) }
+  let(:api_key) do
+    ApiKey.create!(user: user, name: 'API Docs Key', key: ApiKey.generate_secure_key, scopes: %w[read_write], source: 'web')
+  end
+  let(:api_key_without_write_scope) do
+    ApiKey.create!(user: user, name: 'API Docs Read-only Key', key: ApiKey.generate_secure_key, scopes: %w[read], source: 'web')
+  end
+  let(:api_key_without_read_scope) do
+    ApiKey.create!(user: user, name: 'API Docs Expired Key', key: ApiKey.generate_secure_key, scopes: %w[read], expires_at: 1.day.ago, source: 'web')
+  end
 
   let(:'X-Api-Key') { api_key.plain_key }
 

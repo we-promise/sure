@@ -7,7 +7,7 @@ When adding or modifying API v1 endpoints, follow this checklist after every API
 - **Location**: `test/controllers/api/v1/{resource}_controller_test.rb`
 - **Scope**: All new or changed actions must have Minitest coverage here. Do not rely on rswag specs for behavioral assertions.
 - **Pattern**:
-  - Use `ApiKey.create!` (read and read_write scopes) and `api_headers(api_key)` → `{ "X-Api-Key" => api_key.display_key }`. Do not use OAuth/Bearer in these tests.
+  - Use `ApiKey.create!` (read and read_write scopes) and `api_headers(api_key)` → `{ "X-Api-Key" => api_key.plain_key }`. Do not use OAuth/Bearer in these tests.
   - Cover: index/show (and create/update/destroy for write endpoints), read-only key blocking writes (403), invalid params (422), invalid date (422), not found (404), missing auth (401).
   - Follow existing API v1 test style: see [valuations_controller_test.rb](../../test/controllers/api/v1/valuations_controller_test.rb) and [transactions_controller_test.rb](../../test/controllers/api/v1/transactions_controller_test.rb).
 

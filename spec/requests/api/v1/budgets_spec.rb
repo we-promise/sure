@@ -26,7 +26,6 @@ RSpec.describe 'API V1 Budgets', type: :request do
       user: user,
       name: 'API Docs Key',
       key: key,
-      display_key: key,
       scopes: %w[read],
       source: 'web'
     )
@@ -38,7 +37,6 @@ RSpec.describe 'API V1 Budgets', type: :request do
       user: user,
       name: 'No Read Docs Key',
       key: key,
-      display_key: key,
       scopes: [],
       source: 'mobile'
     ).tap { |api_key| api_key.save!(validate: false) }

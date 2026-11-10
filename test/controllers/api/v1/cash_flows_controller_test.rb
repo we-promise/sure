@@ -6,7 +6,7 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     @user = users(:family_admin)
     @user.api_keys.active.destroy_all
     @auth = ApiKey.create!(user: @user, name: "Summary Read", scopes: [ "read" ],
-      display_key: "test_ro_#{SecureRandom.hex(8)}", source: "mobile")
+      key: "test_ro_#{SecureRandom.hex(8)}", source: "mobile")
     Redis.new.del("api_rate_limit:#{@auth.id}")
   end
 
@@ -118,6 +118,6 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
 
   private
     def api_headers(auth)
-      { "X-Api-Key" => auth.display_key }
+      { "X-Api-Key" => auth.plain_key }
     end
 end

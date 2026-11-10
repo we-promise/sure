@@ -125,8 +125,8 @@ class DailyWebUsageTest < ActionDispatch::IntegrationTest
 
   test "authenticated API JSON and non-GET UI requests do not count" do
     api_key = @user.api_keys.create!(name: "Usage test", scopes: [ "read" ],
-                             source: "web", display_key: "usage-test-#{SecureRandom.hex(8)}")
-    get "/api/v1/accounts", headers: { "X-Api-Key" => api_key.display_key, "Accept" => "text/html" }
+                             source: "web", key: "usage-test-#{SecureRandom.hex(8)}")
+    get "/api/v1/accounts", headers: { "X-Api-Key" => api_key.plain_key, "Accept" => "text/html" }
     assert_response :success
     assert_equal "application/json", response.media_type
     patch settings_preferences_url, params: { user: { preview_features_enabled: "1" } }

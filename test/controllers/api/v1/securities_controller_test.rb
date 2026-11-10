@@ -13,7 +13,7 @@ class Api::V1::SecuritiesControllerTest < ActionDispatch::IntegrationTest
       name: "Test Read Key",
       scopes: [ "read" ],
       source: "web",
-      display_key: "test_read_#{SecureRandom.hex(8)}"
+      key: "test_read_#{SecureRandom.hex(8)}"
     )
 
     @account = accounts(:investment)
@@ -163,7 +163,7 @@ class Api::V1::SecuritiesControllerTest < ActionDispatch::IntegrationTest
       name: "No Read Key",
       scopes: [],
       source: "web",
-      display_key: "no_read_#{SecureRandom.hex(8)}"
+      key: "no_read_#{SecureRandom.hex(8)}"
     )
     api_key_without_read.save!(validate: false)
 

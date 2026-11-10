@@ -8,8 +8,8 @@ class Api::V1::ImportSessionsControllerTest < ActionDispatch::IntegrationTest
   setup do
     @user = users(:family_admin)
     @family = @user.family
-    @api_key = api_keys(:active_key)
-    @read_only_api_key = api_keys(:one)
+    @api_key = fixture_api_key(:active_key)
+    @read_only_api_key = fixture_api_key(:one)
 
     Redis.new.del("api_rate_limit:#{@api_key.id}")
     Redis.new.del("api_rate_limit:#{@read_only_api_key.id}")
