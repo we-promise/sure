@@ -15,6 +15,52 @@ class SyncScheduleTest < ActiveSupport::TestCase
     assert schedule.valid?
   end
 
+  test "day-long intervals are offered" do
+    [ 1440, 4320, 10080, 20160 ].each do |minutes|
+      assert @item.build_sync_schedule(interval_minutes: minutes).valid?, "#{minutes} should be accepted"
+    end
+  end
+
+  # Multi-day boundaries are whole days from the epoch, so they land at
+  # midnight UTC like the daily one.
+  test "a day-long schedule next runs at a midnight UTC boundary" do
+    travel_to Time.utc(2026, 11, 1, 10, 7, 30) do
+      schedule = @item.create_sync_schedule!(interval_minutes: 1440)
+      assert_equal Time.utc(2026, 11, 2), schedule.next_run_at
+
+      schedule.update!(interval_minutes: 10080)
+      assert_equal 0, schedule.next_run_at.seconds_since_midnight
+      assert schedule.next_run_at > Time.current
+      assert schedule.next_run_at <= 7.days.from_now
+    end
+  end
+
+  test "only a schedule of a day or longer replaces the family sync" do
+    assert_not @item.build_sync_schedule(interval_minutes: 720).replaces_family_sync?
+    assert @item.build_sync_schedule(interval_minutes: 1440).replaces_family_sync?
+    assert @item.build_sync_schedule(interval_minutes: 10080).replaces_family_sync?
+  end
+
+  test "without_own_daily_schedule leaves out only items on a day-long schedule" do
+    other = wise_items(:one)
+    items = PlaidItem.where(id: @item.id)
+
+    assert_includes SyncSchedule.without_own_daily_schedule(items), @item
+
+    @item.create_sync_schedule!(interval_minutes: 720)
+    assert_includes SyncSchedule.without_own_daily_schedule(items), @item
+
+    @item.sync_schedule.update!(interval_minutes: 10080)
+    assert_not_includes SyncSchedule.without_own_daily_schedule(items), @item
+
+    # Matched by type as well as id: another provider's day-long schedule
+    # removes that provider's item, never a Plaid one.
+    @item.sync_schedule.update!(interval_minutes: 60)
+    other.create_sync_schedule!(interval_minutes: 10080)
+    assert_not_includes SyncSchedule.without_own_daily_schedule(WiseItem.where(id: other.id)), other
+    assert_includes SyncSchedule.without_own_daily_schedule(items), @item
+  end
+
   test "a connection carries at most one schedule" do
     @item.create_sync_schedule!(interval_minutes: 60)
     duplicate = SyncSchedule.new(syncable: @item, interval_minutes: 30)

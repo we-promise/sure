@@ -1,6 +1,8 @@
 # Ticks every SyncSchedule::TICK (config/schedule.yml) and syncs the provider
-# connections whose own schedule has come due. The daily family sync
-# (SyncAllJob) is untouched; this runs in between it.
+# connections whose own schedule has come due. Schedules shorter than a day
+# run in between the daily family sync (SyncAllJob); a schedule of a day or
+# longer is the only thing that syncs its connection (the family sync leaves
+# it out, see SyncSchedule.without_own_daily_schedule).
 class SyncScheduledItemsJob < ApplicationJob
   queue_as :scheduled
   sidekiq_options lock: :until_executed, on_conflict: :log
