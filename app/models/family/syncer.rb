@@ -27,27 +27,27 @@ class Family::Syncer
     ApplyRulesJob.perform_later(family)
   end
 
-  private
+  # Every `*_items` association whose model is Syncable, found by reflection
+  # so a new integration takes part in the nightly family sync (and may carry
+  # a SyncSchedule) as soon as it includes Syncable and exposes a `syncable`
+  # scope.
+  def self.syncable_item_associations
+    Family.reflect_on_all_associations(:has_many).filter_map do |association|
+      next unless association.name.to_s.end_with?("_items")
+      next unless association.klass.included_modules.include?(Syncable)
 
-    # Collect all syncable provider items via reflection so new `*_items`
-    # integrations participate in nightly family sync as soon as they include
-    # Syncable and expose a `syncable` scope.
+      association.name
+    rescue NameError
+      nil
+    end
+  end
+
+  private
     def child_syncables
-      provider_items = syncable_item_associations.flat_map do |association|
+      provider_items = self.class.syncable_item_associations.flat_map do |association|
         family.public_send(association).syncable
       end
 
       provider_items + family.accounts.manual
-    end
-
-    def syncable_item_associations
-      Family.reflect_on_all_associations(:has_many).filter_map do |association|
-        next unless association.name.to_s.end_with?("_items")
-        next unless association.klass.included_modules.include?(Syncable)
-
-        association.name
-      rescue NameError
-        nil
-      end
     end
 end
