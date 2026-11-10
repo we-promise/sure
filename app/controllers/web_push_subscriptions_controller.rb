@@ -28,13 +28,7 @@ class WebPushSubscriptionsController < ApplicationController
   end
 
   def test_notification
-    delivery = @subscription.with_lock do
-      if @subscription.last_test_requested_at && @subscription.last_test_requested_at > 30.seconds.ago
-        next nil
-      end
-      @subscription.update!(last_test_requested_at: Time.current)
-      @subscription.web_push_deliveries.create!
-    end
+    delivery = @subscription.request_test_notification!
     return render json: { error: t("web_push.errors.rate_limited") }, status: :too_many_requests unless delivery
 
     if delivery.enqueue!

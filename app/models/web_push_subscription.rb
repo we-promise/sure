@@ -8,6 +8,7 @@ class WebPushSubscription < ApplicationRecord
   include Encryptable
 
   MAX_SUBSCRIPTIONS_PER_USER = 20
+  TEST_NOTIFICATION_COOLDOWN = 30.seconds
 
   belongs_to :user
   belongs_to :session
@@ -78,9 +79,31 @@ class WebPushSubscription < ApplicationRecord
     false
   end
 
+  # Accepts both padded and unpadded Base64, rejecting non-base64 input.
+  def self.urlsafe_decode(value)
+    return unless value.is_a?(String) && value.match?(/\A[A-Za-z0-9_-]+={0,2}\z/)
+    Base64.urlsafe_decode64(value)
+  rescue ArgumentError
+    nil
+  end
+
+  def self.decode_key(value, length)
+    return unless value.is_a?(String)
+    decoded = urlsafe_decode(value)
+    return unless decoded && decoded.bytesize == length
+    return unless Base64.urlsafe_encode64(decoded, padding: false) == value.delete_suffix("==").delete_suffix("=")
+    decoded
+  end
+
   def matches_keys?(public_key, secret)
-    ActiveSupport::SecurityUtils.secure_compare(p256dh, public_key) &&
-      ActiveSupport::SecurityUtils.secure_compare(auth, secret)
+    decoded_public = self.class.urlsafe_decode(p256dh)
+    decoded_auth = self.class.urlsafe_decode(auth)
+    submitted_public = self.class.urlsafe_decode(public_key)
+    submitted_auth = self.class.urlsafe_decode(secret)
+    return false unless decoded_public && decoded_auth && submitted_public && submitted_auth
+
+    ActiveSupport::SecurityUtils.secure_compare(decoded_public, submitted_public) &&
+      ActiveSupport::SecurityUtils.secure_compare(decoded_auth, submitted_auth)
   end
 
   def eligible?
@@ -97,6 +120,19 @@ class WebPushSubscription < ApplicationRecord
       user.web_push_budget_warnings_enabled? && (insight.priority_high? || insight.priority_medium?)
     else
       insight.priority_high?
+    end
+  end
+
+  # Rate limits mirror the controller-level per-user limiter; this per-device
+  # cooldown keeps one browser tab with an auto-retrying script from spamming
+  # the delivery path.
+  def request_test_notification!
+    with_lock do
+      if last_test_requested_at && last_test_requested_at > TEST_NOTIFICATION_COOLDOWN.ago
+        next nil
+      end
+      update!(last_test_requested_at: Time.current)
+      web_push_deliveries.create!
     end
   end
 
@@ -118,19 +154,9 @@ class WebPushSubscription < ApplicationRecord
       errors.add(:session, :invalid) unless session && user && session.user_id == user.id && !session.expired? && user.active?
     end
 
-    def decode_key(value, length)
-      return unless value.is_a?(String) && value.match?(/\A[A-Za-z0-9_-]+={0,2}\z/)
-      decoded = Base64.urlsafe_decode64(value)
-      return unless decoded.bytesize == length
-      return unless Base64.urlsafe_encode64(decoded, padding: false) == value.delete_suffix("==").delete_suffix("=")
-      decoded
-    rescue ArgumentError
-      nil
-    end
-
     def validate_keys
-      public_key = decode_key(p256dh, 65)
-      secret = decode_key(auth, 16)
+      public_key = self.class.decode_key(p256dh, 65)
+      secret = self.class.decode_key(auth, 16)
       errors.add(:auth, :invalid) unless secret
       unless public_key && public_key.getbyte(0) == 4
         errors.add(:p256dh, :invalid)
