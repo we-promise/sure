@@ -460,6 +460,19 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "UI secret save encrypts storage and a masked update preserves ciphertext" do
+    patch settings_providers_url, params: { setting: { plaid_secret: "  synthetic-ui-secret  " } }
+    assert_redirected_to settings_providers_url
+    sql = "SELECT value FROM settings WHERE var = 'dynamic:plaid_secret'"
+    stored = Setting.connection.select_value(sql)
+    refute_includes stored, "synthetic-ui-secret"
+    assert_equal "synthetic-ui-secret", Provider::PlaidAdapter.config_value(:secret)
+
+    patch settings_providers_url, params: { setting: { plaid_secret: "********" } }
+    assert_redirected_to settings_providers_url
+    assert_equal stored, Setting.connection.select_value(sql)
+  end
+
   test "converts blank values to nil and removes from dynamic_fields" do
     with_self_hosting do
       # Set initial values
@@ -572,9 +585,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       # We'll force an error by making the []= method raise
       Setting.expects(:[]=).with("plaid_client_id", "test").raises(StandardError.new("Database error")).once
 
-      # Mock logger to verify error is logged (pin both the exception class
-      # name and the message so a regression that drops one still fails).
-      Rails.logger.expects(:error).with(regexp_matches(/Failed to update provider settings: StandardError - Database error/)).once
+      Rails.logger.expects(:error).with("Failed to update provider settings: StandardError - Database error").once
 
       patch settings_providers_url, params: {
         setting: { plaid_client_id: "test" }
@@ -584,6 +595,16 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_response :unprocessable_entity
       assert_equal "Failed to update provider settings. Please try again.", flash[:alert]
     end
+  end
+
+  test "omits exception messages when a secret update fails" do
+    Setting.expects(:[]=).with("plaid_secret", "synthetic-secret")
+      .raises(StandardError.new("synthetic-sensitive-details")).once
+    Rails.logger.expects(:error).with("Failed to update provider settings: StandardError").once
+
+    patch settings_providers_url, params: { setting: { plaid_secret: "synthetic-secret" } }
+
+    assert_response :unprocessable_entity
   end
 
   test "shows no changes message when no fields are updated" do

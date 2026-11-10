@@ -18,6 +18,8 @@ class Settings::ProvidersController < ApplicationController
   end
 
   def update
+    modifying_secret = false
+
     # Build index of valid configurable fields with their metadata
     Provider::Factory.ensure_adapters_loaded
     valid_fields = {}
@@ -44,6 +46,8 @@ class Settings::ProvidersController < ApplicationController
         if field.secret && value == "********"
           next
         end
+
+        modifying_secret ||= field.secret
 
         key_str = field.setting_key.to_s
 
@@ -73,7 +77,11 @@ class Settings::ProvidersController < ApplicationController
       redirect_to settings_providers_path, notice: t(".no_changes")
     end
   rescue => error
-    Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")
+    if modifying_secret
+      Rails.logger.error("Failed to update provider settings: #{error.class}")
+    else
+      Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")
+    end
     flash.now[:alert] = "Failed to update provider settings. Please try again."
     prepare_show_context
     render :show, status: :unprocessable_entity
