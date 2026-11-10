@@ -19,6 +19,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
     Rule::ActionExecutor::SetTransactionTags,
     Rule::ActionExecutor::SetTransactionMerchant,
     Rule::ActionExecutor::SetTransactionName,
+    Rule::ActionExecutor::SetTransactionNotes,
+    Rule::ActionExecutor::AppendTransactionNotes,
     Rule::ActionExecutor::SetInvestmentActivityLabel,
     Rule::ActionExecutor::ExcludeTransaction,
     Rule::ActionExecutor::SetAsTransferOrPayment,
