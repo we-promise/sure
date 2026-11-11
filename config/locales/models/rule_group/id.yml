@@ -1,0 +1,10 @@
+---
+id:
+  activerecord:
+    models:
+      rule_group:
+        one: "Grup"
+        other: "Grup"
+    attributes:
+      rule_group:
+        name: "Nama"
