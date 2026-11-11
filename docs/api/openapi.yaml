@@ -5325,6 +5325,13 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: 'bad request: the user payload is missing, or device information
+            is missing or invalid'
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
       requestBody:
         content:
           application/json:

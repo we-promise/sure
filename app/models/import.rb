@@ -482,6 +482,12 @@ class Import < ApplicationRecord
     complete? || revert_failed?
   end
 
+  # Whether the wizard's upload and configuration steps are closed even to
+  # someone who may edit the import. Subclasses that need this override it.
+  def configuration_locked?
+    false
+  end
+
   def family_config?
     FAMILY_CONFIG_TYPES.include?(type)
   end
