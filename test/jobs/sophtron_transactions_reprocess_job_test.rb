@@ -33,6 +33,46 @@ class SophtronTransactionsReprocessJobTest < ActiveJob::TestCase
     assert_equal BigDecimal("40"), entry.reload.amount
   end
 
+  test "retries when a transaction could not be re-signed" do
+    SophtronAccount::Transactions::Processor.any_instance.stubs(:process)
+      .returns({ success: false, total: 1, imported: 0, failed: 1, errors: [] })
+    Account.any_instance.expects(:sync_later).never
+
+    assert_enqueued_with(job: SophtronTransactionsReprocessJob, args: [ @sophtron_account ]) do
+      SophtronTransactionsReprocessJob.perform_now(@sophtron_account)
+    end
+  end
+
+  test "records the failure and still syncs once retries run out" do
+    SophtronAccount::Transactions::Processor.any_instance.stubs(:process)
+      .returns({ success: false, total: 1, imported: 0, failed: 1, errors: [] })
+    Account.any_instance.expects(:sync_later).once
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "sophtron", account: @account).count }, 1 do
+      perform_enqueued_jobs(only: SophtronTransactionsReprocessJob) do
+        SophtronTransactionsReprocessJob.perform_later(@sophtron_account)
+      end
+    end
+  end
+
+  test "waits for a running account sync instead of joining it" do
+    running = @account.syncs.create!(status: "syncing")
+
+    assert_enqueued_with(job: SophtronTransactionsReprocessJob, args: [ @sophtron_account ]) do
+      SophtronTransactionsReprocessJob.perform_now(@sophtron_account)
+    end
+    assert_equal [ running ], @account.syncs.reload.to_a
+  end
+
+  test "joins a pending account sync that has not read the amounts yet" do
+    pending_sync = @account.syncs.create!
+
+    assert_no_enqueued_jobs(only: SophtronTransactionsReprocessJob) do
+      SophtronTransactionsReprocessJob.perform_now(@sophtron_account)
+    end
+    assert_equal [ pending_sync ], @account.syncs.reload.to_a
+  end
+
   test "does nothing once the account is unlinked" do
     @sophtron_account.account_provider.destroy!
     SophtronAccount::Transactions::Processor.expects(:new).never
