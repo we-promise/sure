@@ -45,7 +45,7 @@ gem "rack-mini-profiler"
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "sentry-sidekiq"
-gem "posthog-ruby"
+gem "posthog-rails", "~> 3.26.0", require: false
 gem "logtail-rails"
 if ENV["SKYLIGHT_ENABLED"] == "true"
   gem "skylight", group: :development, require: false
@@ -147,6 +147,8 @@ end
 group :test do
   gem "capybara"
   gem "selenium-webdriver"
+  gem "minitest", "~> 6.1"
+  gem "minitest-mock"
   gem "mocha"
   gem "vcr"
   gem "webmock"
