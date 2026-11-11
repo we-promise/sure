@@ -16,6 +16,8 @@ Rails.application.config.after_initialize do
         ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
         ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
       Generate a set with: bin/rails db:encryption:init
+      If this instance already has data, convert it while setting the keys, or
+      nobody can sign in: see "Encrypting sensitive data" in docs/hosting/docker.md.
     WARN
   end
 end
