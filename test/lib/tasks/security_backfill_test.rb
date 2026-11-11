@@ -155,8 +155,12 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     tables = encrypted_models_for_backfill.map(&:table_name)
     assert_equal tables.uniq, tables, "two encrypted models share a table; their results would overwrite each other"
 
+    # Framework models (ActionText::EncryptedRichText) declare `encrypts`
+    # themselves; only models defined in this app must be ApplicationRecords.
+    app_dir = Rails.root.join("app").to_s
     outside = ActiveRecord::Base.descendants.reject { |model| model <= ApplicationRecord || model.abstract_class? }
       .select { |model| model.encrypted_attributes.present? }
+      .select { |model| Object.const_source_location(model.name.to_s)&.first.to_s.start_with?(app_dir) }
     assert_empty outside.map(&:name), "encrypted models outside ApplicationRecord are not backfilled"
   end
 

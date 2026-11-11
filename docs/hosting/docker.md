@@ -648,6 +648,8 @@ Rows written without keys must be converted before the app runs with the keys; o
 > [!NOTE]
 > Already added the keys and now sign-in fails? Remove the three lines from `.env`, run `docker compose up -d`, and start at step 1. Keep the three values and use the same ones in step 4: anything the app wrote while they were active is encrypted with them.
 
+Update Sure to a version that includes this guide first and let it start once, so its database migrations have run. Older versions convert only some of the tables. Don't combine the conversion with a version update.
+
 1. Check that your data is stored unencrypted. With your current settings, run:
 
    ```bash
@@ -670,7 +672,7 @@ Rows written without keys must be converted before the app runs with the keys; o
 
 4. Add the three keys to `.env` (and the three lines to `compose.yml` if they are missing; see above).
 
-5. Preview the conversion. This changes nothing and must list every table with `"failed_count":0`. If it still says `encryption_not_configured`, the keys don't reach the container (check `.env` and `compose.yml`). If rows fail, they hold data encrypted with other keys; stop and undo the change as described below:
+5. Preview the conversion. This changes nothing and must list every table with `"failed_count":0`. If it still says `encryption_not_configured`, the keys don't reach the container (check `.env` and `compose.yml`). If rows fail, they hold data encrypted with other keys; stop and undo the change as described below. If the output has no `session_ip_digests` entry, your Sure version is too old for this guide: remove the keys from `.env` again, run `docker compose up -d`, and update first:
 
    ```bash
    docker compose run --rm web bin/rails security:backfill_encryption
