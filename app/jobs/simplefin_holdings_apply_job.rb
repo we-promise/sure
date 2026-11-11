@@ -21,9 +21,6 @@ class SimplefinHoldingsApplyJob < ApplicationJob
     return unless account
     return unless [ "Investment", "Crypto" ].include?(account.accountable_type)
 
-    holdings = Array(sfa.raw_holdings_payload)
-    return if holdings.empty?
-
     begin
       SimplefinAccount::Investments::HoldingsProcessor.new(sfa).process
     rescue => e
