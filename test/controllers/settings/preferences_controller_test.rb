@@ -127,6 +127,7 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_select "select[name='user[family_attributes][month_start_recurring_transaction_id]'] option[value='#{salary.id}']"
     assert_select "select[name='user[family_attributes][month_start_recurring_transaction_id]'] option[value='#{recurring_transactions(:netflix_subscription).id}']", count: 0
     assert_includes response.body, I18n.t("settings.preferences.show.month_start_series_missing_warning")
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.preferences.show.month_start_series_hint"))
 
     family.update!(month_start_recurring_transaction: salary)
     get settings_preferences_url
