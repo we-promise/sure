@@ -155,7 +155,138 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert @item.reload.requires_update?
   end
 
+  test "a protocol v2 account takes its institution from the matching connection" do
+    provider = mock
+    provider.expects(:get_accounts).returns(
+      connections: [
+        { conn_id: "CON-other", name: "Other Bank", org_name: "Other Bank" },
+        { conn_id: "CON-schwab", name: "Charles Schwab US", org_id: "mx.69378", org_name: "Charles Schwab US",
+          org_url: "https://client.schwab.com/", sfin_url: "https://beta-bridge.simplefin.org/simplefin" }
+      ],
+      accounts: [ { id: "sf_brokerage_v2", name: "Brokerage ...123", conn_id: "CON-schwab", currency: "USD", balance: "1000" } ]
+    )
+
+    SimplefinItem::Importer.new(@item, simplefin_provider: provider).import_balances_only
+
+    simplefin_account = @item.simplefin_accounts.find_by!(account_id: "sf_brokerage_v2")
+    assert_equal(
+      { "id" => "mx.69378", "name" => "Charles Schwab US", "url" => "https://client.schwab.com/",
+        "sfin-url" => "https://beta-bridge.simplefin.org/simplefin" },
+      simplefin_account.org_data
+    )
+    assert SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account).send(:institution_reports_total_basis?)
+  end
+
+  test "an account that already has an org keeps it" do
+    provider = mock
+    provider.expects(:get_accounts).returns(
+      connections: [ { conn_id: "CON-1", name: "Connection Name", org_name: "Connection Org" } ],
+      accounts: [ { id: "sf_v1_org", name: "Checking", conn_id: "CON-1", org: { name: "Account Org", domain: "bank.example" },
+                    currency: "USD", balance: "10" } ]
+    )
+
+    SimplefinItem::Importer.new(@item, simplefin_provider: provider).import_balances_only
+
+    assert_equal({ "name" => "Account Org", "domain" => "bank.example" },
+                 @item.simplefin_accounts.find_by!(account_id: "sf_v1_org").org_data)
+  end
+
+  test "a regular sync after a long gap splits the range into requests the Bridge accepts" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(100.days.ago)
+      provider, ranges = recording_provider
+
+      SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+
+      assert_equal 3, ranges.size
+      assert_equal 130.days.ago, ranges.first.first
+      assert_equal Time.current, ranges.last.last
+      ranges.each { |from, to| assert_operator to - from, :<=, 45.days }
+      ranges.each_cons(2) { |(_, previous_end), (next_start, _)| assert_equal previous_end, next_start }
+
+      log = DebugLogEntry.find_by!(provider_key: "simplefin", source: "SimplefinItem::Importer")
+      assert_equal 3, log.metadata["requests"]
+    end
+  end
+
+  test "a regular sync keeps the transactions from every request" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(100.days.ago)
+      simplefin_account = link_simplefin_account("sf_windows_1")
+      provider, ranges = recording_provider(account_id: "sf_windows_1")
+
+      SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+
+      imported = simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+      assert_equal 3, imported.size
+      assert_equal ranges.map { |from, _| "tx_#{from.to_i}" }.sort, imported.sort
+    end
+  end
+
+  test "a regular sync does not reach back more than a year" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(500.days.ago)
+      provider, ranges = recording_provider
+
+      SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+
+      assert_equal 1.year.ago.beginning_of_day, ranges.first.first
+      assert_equal Time.current, ranges.last.last
+    end
+  end
+
+  test "the chunked history import keeps every request within the Bridge limit" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:sync_start_date).returns(100.days.ago.to_date)
+      link_simplefin_account("sf_history_1")
+      provider, ranges = recording_provider(account_id: "sf_history_1")
+
+      SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_with_chunked_history)
+
+      # Every chunk adds a transaction, so the import walks the whole range,
+      # ending with a clipped 10-day chunk.
+      assert_equal 3, ranges.size
+      assert_equal 100.days.ago.beginning_of_day, ranges.last.first
+      ranges.each { |from, to| assert_operator to - from, :<=, 45.days }
+    end
+  end
+
+  test "the chunked history import looks at least 120 days back before giving up on an empty account" do
+    provider, ranges = recording_provider
+
+    SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_with_chunked_history)
+
+    assert_operator ranges.first.last - ranges.last.first, :>=, 120.days
+  end
+
   private
+
+    # A provider that records each dated request's range. Without an account_id
+    # it returns no accounts; with one, it returns that account with one new
+    # transaction inside each dated request.
+    def recording_provider(account_id: nil)
+      ranges = []
+      provider = Object.new
+      provider.define_singleton_method(:get_accounts) do |_access_url, start_date: nil, end_date: nil, pending: nil|
+        ranges << [ start_date, end_date ] if start_date
+        next { accounts: [] } unless account_id
+
+        transactions = []
+        if start_date
+          transactions << { id: "tx_#{start_date.to_i}", posted: (start_date + 1.day).to_i,
+                            amount: "-5.00", description: "Coffee", payee: "Coffee" }
+        end
+        { accounts: [ { id: account_id, name: "Checking", currency: "USD", balance: "100.00",
+                        "balance-date": Time.current.to_i, transactions: transactions } ] }
+      end
+      [ provider, ranges ]
+    end
+
+    def link_simplefin_account(account_id)
+      simplefin_account = create_simplefin_account(account_id, "Checking", "checking", 100)
+      accounts(:depository).update!(simplefin_account_id: simplefin_account.id)
+      simplefin_account
+    end
 
     def create_pending_entry(account, name, provider, pending, amount)
       account.entries.create!(

@@ -23,6 +23,12 @@ class Balance::SyncCache
     @unconvertible_holding_count
   end
 
+  # Every entry the calculation uses: settled, without split parents or
+  # future-dated ones, and converted into the account's currency.
+  def entries
+    converted_entries
+  end
+
   def get_valuation(date)
     entries_by_date[date]&.find { |e| e.valuation? }
   end

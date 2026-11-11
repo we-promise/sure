@@ -83,7 +83,9 @@ class Family::DataImporter
     "Rule" => "rules"
   }.freeze
 
-  def initialize(family, ndjson_content, import_session: nil, import: nil)
+  # account_targets maps source account IDs to existing accounts that the
+  # import's records go into instead of accounts it creates.
+  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {})
     @family = family
     @ndjson_content = ndjson_content
     @import_session = import_session
@@ -101,6 +103,7 @@ class Family::DataImporter
       securities: {},
       rules: {}
     }
+    account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
     @created_accounts = []
@@ -964,6 +967,10 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
+        # Source-system metadata, such as the ID that lets a later import from
+        # that system recognise the transaction, kept out of external_id so
+        # provider sync can still claim the entry.
+        transaction.extra = transaction.extra.merge(data["extra"]) if data["extra"].is_a?(Hash)
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -979,6 +986,9 @@ class Family::DataImporter
           entry.external_id = session_entry_external_id("Transaction", old_id)
           entry.source = session_entry_source
         end
+        # Records from another system may lock the entry against provider sync
+        # overwrites, as the CSV importer does.
+        entry.import_locked = true if truthy?(data["import_locked"])
 
         entry.save!
 
