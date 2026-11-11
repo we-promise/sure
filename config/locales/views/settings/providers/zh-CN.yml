@@ -91,6 +91,8 @@ zh-CN:
         coinspot: 使用只读 API 密钥同步 CoinSpot 余额、澳元估值、转账、充值、提现及订单历史。
         onchain_wallet: 通过链上公开地址追踪比特币、EVM、Solana、Cosmos 和 Polkadot 自托管钱包。
         trading212: 使用只读 API 密钥同步您的 Trading 212 投资组合。
+        sharesight: 使用其 API 同步您在 Sharesight 中跟踪的投资组合。
+        truelayer: 通过 TrueLayer 开放银行同步英国银行账户与信用卡。
         trade_republic: 通过安全只读网页登录同步您的 Trade Republic 投资账户。
         questrade: 通过 Questrade API 直接同步您的 Questrade 投资账户。
         financekit: 通过 Sure iOS 应用程序同步（部分）FinanceKit 账户。
@@ -307,6 +309,22 @@ zh-CN:
           other: "%{count} 个 Trade Republic 账户。"
         status_configured_suffix: 标签页以管理已发现的账户。
         not_configured: 尚未配置。
+      sharesight_panel:
+        steps:
+          step_1: 联系 Sharesight 客服启用 API 访问权限。该功能适用于付费方案。
+          step_2: 在您的 Sharesight 账户设置中，打开 API 页面并复制 Client ID 和 Client Secret。
+          step_3: 将两者粘贴在下方并保存。Sure 随后会查找您的投资组合以便您进行关联。
+        client_id_label: Client ID
+        client_id_placeholder_new: 粘贴您的 Sharesight Client ID
+        client_id_placeholder_existing: 留空以保留当前 Client ID
+        client_secret_label: 客户端密钥
+        client_secret_placeholder_new: 粘贴您的 Sharesight 客户端密钥
+        client_secret_placeholder_existing: 留空以保留当前客户端密钥
+        save_configuration: 保存配置
+        update_configuration: 更新配置
+        status_configured_prefix: 已配置。请前往
+        accounts_tab: 账户
+        status_configured_suffix: 标签页以关联您的投资组合。
       trading212_panel:
         accounts_tab: 账户管理
         add_account: 添加其他账户

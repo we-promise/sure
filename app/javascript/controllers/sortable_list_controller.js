@@ -231,8 +231,11 @@ export default class extends Controller {
     this.showDropPosition(this.currentTouchX, this.currentTouchY);
   }
 
-  touchEnd() {
+  touchEnd(event) {
     this.cancelHold();
+    // Letting go of a hold is not a tap: keep the browser from clicking what
+    // is under the finger, such as a header that opens and closes the item.
+    if (this.holdActivated) event.preventDefault();
 
     if (!this.holdActivated || !this.isTouching || !this.draggedElement) {
       this.resetTouchState();
