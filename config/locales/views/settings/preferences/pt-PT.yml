@@ -20,6 +20,16 @@ pt-PT:
         month_start_day: O mês do orçamento começa em
         month_start_day_hint: Defina quando começa o seu mês orçamental (por exemplo, no dia do salário)
         month_start_day_warning: Os seus orçamentos e cálculos MTD utilizarão este dia de início personalizado em vez do dia 1 de cada mês.
+        month_start_day_fallback_hint: "Usado para os meses anteriores ao seu primeiro salário associado"
+        month_start_mode: "O mês do orçamento segue"
+        month_start_mode_hint: "Um dia fixo do mês, ou o dia em que o seu salário entra"
+        month_start_mode_options:
+          fixed_day: "Um dia fixo"
+          income: "O meu salário"
+        month_start_series: "Salário"
+        month_start_series_blank: "Escolha um rendimento declarado"
+        month_start_series_hint: "Cada mês começa no dia em que este rendimento declarado entra e termina no dia anterior ao seguinte, por isso a duração varia (cerca de 28–35 dias)."
+        month_start_series_missing_warning: "Nenhum salário ativo selecionado, por isso os meses do orçamento usam o dia de início fixo. Escolha um rendimento declarado ou reative o que está em pausa."
         personal_budgets: Orçamentos pessoais
         personal_budgets_hint: Ative orçamentos individuais para cada membro da família.
         household_budget_enabled: Orçamento do agregado familiar

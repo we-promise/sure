@@ -34,6 +34,16 @@ fr:
         month_start_day: Le mois budgétaire commence le
         month_start_day_hint: Définissez le jour de début de votre mois budgétaire (ex. jour de paie)
         month_start_day_warning: Vos budgets et vos calculs MTD utiliseront ce jour de début personnalisé au lieu du 1er de chaque mois.
+        month_start_day_fallback_hint: "Utilisé pour les mois avant votre premier salaire rapproché"
+        month_start_mode: "Le mois budgétaire suit"
+        month_start_mode_hint: "Un jour fixe du mois, ou le jour où votre salaire arrive"
+        month_start_mode_options:
+          fixed_day: "Un jour fixe"
+          income: "Mon salaire"
+        month_start_series: "Salaire"
+        month_start_series_blank: "Choisissez un revenu déclaré"
+        month_start_series_hint: "Chaque mois commence le jour où ce revenu déclaré arrive et se termine la veille du suivant, la durée varie donc (environ 28 à 35 jours)."
+        month_start_series_missing_warning: "Aucun salaire actif n'est sélectionné, les mois budgétaires utilisent donc le jour de début fixe. Choisissez un revenu déclaré ou réactivez celui en pause."
         no_additional_currencies: Aucune sélectionnée
         no_matching_currencies: Aucune devise trouvée
         page_title: Préférences

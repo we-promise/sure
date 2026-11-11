@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BudgetsControllerTest < ActionDispatch::IntegrationTest
+  include SalaryAnchorsTestHelper
+
   setup do
     @user = users(:family_admin)
     sign_in @user
@@ -168,6 +170,26 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_select free_row, "dd.privacy-sensitive", text: /#{Regexp.escape(budget.free_cash_money.format)}/
     assert_select free_row.parent, "dd.text-2xl", count: 1
     assert_select free_row, "dd.text-2xl", count: 1
+  end
+
+  test "income-anchored months open on the current salary month and link across a full-date param" do
+    family = @user.family
+    salary = declare_salary(family)
+    [ Date.new(2026, 8, 27), Date.new(2026, 9, 29), Date.new(2026, 10, 27) ].each { |date| land_salary(salary, date) }
+    anchor_months_to(family, salary)
+
+    travel_to Date.new(2026, 11, 11) do
+      get budgets_url
+      assert_redirected_to budget_path("oct-2026")
+
+      get budget_url("sep-2026")
+      assert_response :success
+      assert_select "a[href='#{budget_path("2026-08-27")}']"
+      assert_select "a[href='#{budget_path("oct-2026")}']"
+
+      get budget_url("2026-08-27")
+      assert_response :success
+    end
   end
 end
 

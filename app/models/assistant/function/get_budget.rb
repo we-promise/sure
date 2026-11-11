@@ -163,6 +163,14 @@ class Assistant::Function::GetBudget < Assistant::Function
     end
 
     def shift_months(date, n)
+      # Income-anchored months vary in length: step whole months, not days.
+      if family.income_anchored_months?
+        n.abs.times do
+          date = n.negative? ? family.custom_month_start_for(date - 1.day) : family.custom_month_end_for(date) + 1.day
+        end
+        return date
+      end
+
       shifted = date >> n
       if family.uses_custom_month_start?
         family.custom_month_start_for(shifted)

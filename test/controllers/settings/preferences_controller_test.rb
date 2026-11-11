@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
+  include SalaryAnchorsTestHelper
+
   setup do
     sign_in users(:family_admin)
   end
@@ -106,5 +108,53 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
     assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
+  end
+
+  test "fixed-day mode hides the salary picker" do
+    get settings_preferences_url
+
+    assert_select "select[name='user[family_attributes][month_start_mode]']"
+    assert_select "select[name='user[family_attributes][month_start_recurring_transaction_id]']", count: 0
+  end
+
+  test "income mode lists declared salaries and warns until one is active" do
+    family = users(:family_admin).family
+    salary = declare_salary(family)
+    family.update!(month_start_mode: "income")
+
+    get settings_preferences_url
+
+    assert_select "select[name='user[family_attributes][month_start_recurring_transaction_id]'] option[value='#{salary.id}']"
+    assert_select "select[name='user[family_attributes][month_start_recurring_transaction_id]'] option[value='#{recurring_transactions(:netflix_subscription).id}']", count: 0
+    assert_includes response.body, I18n.t("settings.preferences.show.month_start_series_missing_warning")
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("settings.preferences.show.month_start_series_hint"))
+
+    family.update!(month_start_recurring_transaction: salary)
+    get settings_preferences_url
+
+    assert_not_includes response.body, I18n.t("settings.preferences.show.month_start_series_missing_warning")
+  end
+
+  test "a paused salary stays selected so reactivating it restores income months" do
+    family = users(:family_admin).family
+    salary = declare_salary(family)
+    family.update!(month_start_mode: "income", month_start_recurring_transaction: salary)
+    salary.update!(status: "paused")
+
+    get settings_preferences_url
+
+    assert_select "select[name='user[family_attributes][month_start_recurring_transaction_id]'] option[selected][value='#{salary.id}']"
+    assert_includes response.body, I18n.t("settings.preferences.show.month_start_series_missing_warning")
+  end
+
+  test "a salary on an account the member cannot see is left out of the form" do
+    family = users(:family_admin).family
+    salary = declare_salary(family)
+    family.update!(month_start_mode: "income", month_start_recurring_transaction: salary)
+    RecurringTransaction.stubs(:accessible_by).returns(RecurringTransaction.none)
+
+    get settings_preferences_url
+
+    assert_select "select[name='user[family_attributes][month_start_recurring_transaction_id]']", count: 0
   end
 end

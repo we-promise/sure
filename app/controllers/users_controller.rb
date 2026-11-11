@@ -114,7 +114,7 @@ class UsersController < ApplicationController
     end
 
     def user_params
-      family_attrs = [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :id ]
+      family_attrs = [ :name, :currency, :country, :date_format, :timezone, :locale, :month_start_day, :month_start_mode, :month_start_recurring_transaction_id, :id ]
       if Current.user.admin?
         family_attrs.push(:personal_budgets, :household_budget_enabled, :investment_contributions_as_spending) # Needed for updating existing family
         family_attrs.push(:moniker, :default_account_sharing)

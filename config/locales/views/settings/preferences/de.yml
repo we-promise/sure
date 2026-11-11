@@ -23,6 +23,16 @@ de:
         month_start_day: Budgetmonat beginnt am
         month_start_day_hint: Lege fest, wann dein Budgetmonat beginnt (z. B. Gehaltstag)
         month_start_day_warning: Deine Budgets und MTD-Berechnungen verwenden diesen benutzerdefinierten Starttag anstelle des 1. jedes Monats.
+        month_start_day_fallback_hint: "Gilt für Monate vor Ihrem ersten zugeordneten Gehalt"
+        month_start_mode: "Budgetmonat richtet sich nach"
+        month_start_mode_hint: "Einem festen Tag im Monat oder dem Tag, an dem Ihr Gehalt eingeht"
+        month_start_mode_options:
+          fixed_day: "Fester Tag"
+          income: "Mein Gehalt"
+        month_start_series: "Gehalt"
+        month_start_series_blank: "Angegebenes Einkommen wählen"
+        month_start_series_hint: "Jeder Monat beginnt am Tag, an dem dieses angegebene Einkommen eingeht, und endet am Tag vor dem nächsten. Die Länge variiert daher (etwa 28–35 Tage)."
+        month_start_series_missing_warning: "Kein aktives Gehalt ausgewählt, daher verwenden Budgetmonate den festen Starttag. Wählen Sie ein angegebenes Einkommen oder aktivieren Sie das pausierte wieder."
         additional_currencies_label: Weitere Währungen
         base_currency_badge: Basiswährung
         base_currency_label: Basiswährung

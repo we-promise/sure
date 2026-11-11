@@ -44,7 +44,7 @@
     <%= render DS::Link.new(
         text: t(".today"),
         variant: "outline",
-        href: budget_path(Budget.date_to_param(Date.current), **budget_owner_query),
+        href: budget_path(Budget.date_to_param(Date.current, family: Current.family), **budget_owner_query),
     ) %>
   </div>
 </div>

@@ -2,6 +2,9 @@ class Budget < ApplicationRecord
   include Monetizable
 
   PARAM_DATE_FORMAT = "%b-%Y"
+  # Income-anchored months can start twice in one calendar month; the later
+  # one is addressed by its full start date.
+  ISO_PARAM_FORMAT = /\A\d{4}-\d{2}-\d{2}\z/
 
   attr_accessor :current_user
 
@@ -26,11 +29,26 @@ class Budget < ApplicationRecord
            :total_rolled_over
 
   class << self
-    def date_to_param(date)
+    # With an income-anchored family, `date` resolves to the month containing
+    # it, keyed by the calendar month it starts in.
+    def date_to_param(date, family: nil)
+      if family&.income_anchored_months?
+        periods = family.month_periods
+        date = periods.start_for(date)
+        return date.iso8601 unless periods.first_start_in_month(date) == date
+      end
+
       date.strftime(PARAM_DATE_FORMAT).downcase
     end
 
     def param_to_date(param, family: nil)
+      if family&.income_anchored_months?
+        return Date.iso8601(param) if param.match?(ISO_PARAM_FORMAT)
+
+        base_date = Date.strptime(param, PARAM_DATE_FORMAT)
+        return family.month_periods.first_start_in_month(base_date) || base_date
+      end
+
       base_date = Date.strptime(param, PARAM_DATE_FORMAT)
       if family&.uses_custom_month_start?
         Date.new(base_date.year, base_date.month, family.month_start_day)
@@ -71,14 +89,20 @@ class Budget < ApplicationRecord
 
         owner = (household || !family.personal_budgets?) ? nil : user
 
-        budget = Budget.find_or_create_by!(
-          family: family,
-          start_date: budget_start,
-          end_date: budget_end,
-          user: owner
-        ) do |b|
-          b.currency = family.currency
-        end
+        reconcile_income_periods!(family, owner: owner) if family.income_anchored_months?
+
+        # A row sharing only one boundary predates a change of month start
+        # (mode switch, or a salary that moved the month). It keeps its stored
+        # dates; creating a second row would break the per-owner uniqueness.
+        budget = family.budgets.where(user: owner).find_by(start_date: budget_start) ||
+          family.budgets.where(user: owner).find_by(end_date: budget_end) ||
+          Budget.create!(
+            family: family,
+            start_date: budget_start,
+            end_date: budget_end,
+            user: owner,
+            currency: family.currency
+          )
 
         budget.current_user = user
         budget.sync_budget_categories
@@ -89,7 +113,60 @@ class Budget < ApplicationRecord
       end
     end
 
+    # Runs after the recurring pipeline matches new transactions, for every
+    # owner that has budgets.
+    def reconcile_income_periods_for!(family)
+      return unless family.income_anchored_months?
+
+      family.budgets.distinct.pluck(:user_id).each do |user_id|
+        reconcile_owner_rows!(family, family.budgets.where(user_id: user_id))
+      end
+    end
+
+    # When a salary lands, the months around it move. The open month's
+    # projected end becomes the day before the salary, and a month projected
+    # to start a few days off now starts on the salary date, keeping its
+    # allocations. Months that ended before the previous salary are history
+    # and keep their stored dates.
+    def reconcile_income_periods!(family, owner:)
+      reconcile_owner_rows!(family, family.budgets.where(user: owner))
+    end
+
     private
+      def reconcile_owner_rows!(family, rows)
+        periods = family.month_periods
+        current_start, = periods.bounds_for(Date.current)
+        previous_start, previous_end = periods.bounds_for(current_start - 1.day)
+        gap = periods.min_gap_days
+
+        previous = rows.find_by(start_date: previous_start)
+        move_budget!(previous, previous_start, previous_end, rows) if previous
+
+        rows.where("start_date > ?", current_start - gap).order(:start_date).each do |budget|
+          target_start, target_end = nearest_period(periods, budget.start_date)
+          next if (target_start - budget.start_date).abs >= gap
+
+          move_budget!(budget, target_start, target_end, rows)
+        end
+      end
+
+      def nearest_period(periods, date)
+        containing = periods.bounds_for(date)
+        following = periods.bounds_for(containing.last + 1.day)
+
+        (following.first - date) < (date - containing.first) ? following : containing
+      end
+
+      # Skips when another of the owner's rows already holds either boundary.
+      def move_budget!(budget, start_date, end_date, rows)
+        return if budget.start_date == start_date && budget.end_date == end_date
+
+        others = rows.where.not(id: budget.id)
+        return if others.exists?(start_date: start_date) || others.exists?(end_date: end_date)
+
+        budget.update!(start_date: start_date, end_date: end_date)
+      end
+
       def oldest_valid_budget_date(family)
         two_years_ago = 2.years.ago.beginning_of_month
         oldest_entry_date = family.oldest_entry_date.beginning_of_month
@@ -110,7 +187,7 @@ class Budget < ApplicationRecord
   end
 
   def to_param
-    self.class.date_to_param(start_date)
+    self.class.date_to_param(start_date, family: family)
   end
 
   def sync_budget_categories
@@ -362,18 +439,20 @@ class Budget < ApplicationRecord
       .first(limit)
   end
 
+  # Income-anchored months vary in length, so step across this budget's own
+  # boundaries rather than by a calendar month.
   def previous_budget_param
-    previous_date = start_date - 1.month
+    previous_date = family.income_anchored_months? ? start_date - 1.day : start_date - 1.month
     return nil unless self.class.budget_date_valid?(previous_date, family: family)
 
-    self.class.date_to_param(previous_date)
+    self.class.date_to_param(previous_date, family: family)
   end
 
   def next_budget_param
-    next_date = start_date + 1.month
+    next_date = family.income_anchored_months? ? end_date + 1.day : start_date + 1.month
     return nil unless self.class.budget_date_valid?(next_date, family: family)
 
-    self.class.date_to_param(next_date)
+    self.class.date_to_param(next_date, family: family)
   end
 
   def to_donut_segments_json

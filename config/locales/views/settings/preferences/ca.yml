@@ -30,6 +30,16 @@ ca:
           ex., dia de cobrament)
         month_start_day_warning: Els teus pressupostos i càlculs MTD utilitzaran aquest
           dia d'inici personalitzat en lloc del dia 1 de cada mes.
+        month_start_day_fallback_hint: "S'utilitza per als mesos anteriors al teu primer sou conciliat"
+        month_start_mode: "El mes pressupostari segueix"
+        month_start_mode_hint: "Un dia fix del mes, o el dia que arriba el teu sou"
+        month_start_mode_options:
+          fixed_day: "Un dia fix"
+          income: "El meu sou"
+        month_start_series: "Sou"
+        month_start_series_blank: "Tria un ingrés declarat"
+        month_start_series_hint: "Cada mes comença el dia que arriba aquest ingrés declarat i acaba el dia abans del següent, per tant la durada varia (uns 28–35 dies)."
+        month_start_series_missing_warning: "No hi ha cap sou actiu seleccionat, així que els mesos pressupostaris fan servir el dia d'inici fix. Tria un ingrés declarat o reactiva el que està en pausa."
         translations_notice: Tingues en compte que encara estem treballant en les traduccions
           a diversos idiomes.
         no_additional_currencies: Cap seleccionada

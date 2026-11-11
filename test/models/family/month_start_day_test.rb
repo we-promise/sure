@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Family::MonthStartDayTest < ActiveSupport::TestCase
+  include SalaryAnchorsTestHelper
+
   setup do
     @family = families(:dylan_family)
   end
@@ -66,5 +68,55 @@ class Family::MonthStartDayTest < ActiveSupport::TestCase
       assert_equal Date.new(2026, 1, 25), period.start_date
       assert_equal Date.new(2026, 2, 24), period.end_date
     end
+  end
+
+  test "month_start_mode defaults to fixed_day and rejects unknown values" do
+    assert @family.month_start_fixed_day?
+
+    @family.month_start_mode = "weekly"
+    assert_not @family.valid?
+  end
+
+  test "only a declared income series of the family can anchor the month" do
+    @family.month_start_mode = "income"
+
+    @family.month_start_recurring_transaction = recurring_transactions(:netflix_subscription)
+    assert_not @family.valid?
+
+    detected = declare_salary(@family)
+    detected.update_columns(manual: false)
+    @family.month_start_recurring_transaction = detected
+    assert_not @family.valid?
+
+    other_family_salary = declare_salary(families(:empty), account: nil)
+    @family.month_start_recurring_transaction = other_family_salary
+    assert_not @family.valid?
+
+    @family.month_start_recurring_transaction = declare_salary(@family, name: "PAYROLL TWO")
+    assert @family.valid?
+  end
+
+  test "income mode makes the month custom and delegates to the salary dates" do
+    salary = declare_salary(@family)
+    land_salary(salary, Date.new(2026, 10, 27))
+    anchor_months_to(@family, salary)
+
+    assert @family.uses_custom_month_start?
+
+    travel_to Date.new(2026, 11, 11) do
+      assert_equal Date.new(2026, 10, 27), @family.custom_month_start_for(Date.current)
+      assert_equal Date.new(2026, 11, 26), @family.custom_month_end_for(Date.current)
+
+      period = @family.current_custom_month_period
+      assert_equal Date.new(2026, 10, 27), period.start_date
+      assert_equal Date.new(2026, 11, 26), period.end_date
+    end
+  end
+
+  test "income mode without a salary picked keeps fixed-day months" do
+    @family.update!(month_start_mode: "income", month_start_day: 1)
+
+    assert @family.month_start_series_missing?
+    assert_not @family.uses_custom_month_start?
   end
 end

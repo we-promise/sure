@@ -17,6 +17,16 @@ vi:
         month_start_day: Ngân sách tháng bắt đầu vào
         month_start_day_hint: "Đặt ngày bắt đầu tháng ngân sách (ví dụ: ngày nhận lương)"
         month_start_day_warning: Ngân sách và tính toán MTD của bạn sẽ dùng ngày bắt đầu tùy chỉnh này thay vì ngày 1 mỗi tháng.
+        month_start_day_fallback_hint: "Dùng cho các tháng trước lần lương đầu tiên được đối khớp"
+        month_start_mode: "Tháng ngân sách theo"
+        month_start_mode_hint: "Một ngày cố định trong tháng, hoặc ngày nhận lương"
+        month_start_mode_options:
+          fixed_day: "Ngày cố định"
+          income: "Lương của tôi"
+        month_start_series: "Lương"
+        month_start_series_blank: "Chọn một khoản thu nhập đã khai báo"
+        month_start_series_hint: "Mỗi tháng bắt đầu vào ngày khoản thu nhập đã khai báo này về và kết thúc vào ngày trước lần tiếp theo, nên độ dài thay đổi (khoảng 28–35 ngày)."
+        month_start_series_missing_warning: "Chưa chọn khoản lương đang hoạt động, nên tháng ngân sách dùng ngày bắt đầu cố định. Hãy chọn một khoản thu nhập đã khai báo hoặc kích hoạt lại khoản đang tạm dừng."
         translations_notice: Lưu ý, chúng tôi vẫn đang tiếp tục dịch cho các ngôn ngữ khác nhau.
         currencies_title: "Tiền tệ %{moniker}"
         currencies_subtitle: Chọn tiền tệ xuất hiện trong các trường tiền tệ cho %{moniker} của bạn

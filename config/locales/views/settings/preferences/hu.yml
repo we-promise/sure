@@ -17,6 +17,16 @@ hu:
         month_start_day: A költségvetési hónap kezdete
         month_start_day_hint: Állítsd be, mikor kezdődjön a költségvetési hónapod (pl. fizetési nap)
         month_start_day_warning: A költségvetéseid és a hónapközi számítások ezt az egyéni kezdőnapot használják az 1-je helyett.
+        month_start_day_fallback_hint: "Az első párosított fizetés előtti hónapokra érvényes"
+        month_start_mode: "A költségvetési hónap igazodik"
+        month_start_mode_hint: "A hónap egy fix napjához, vagy a fizetése érkezésének napjához"
+        month_start_mode_options:
+          fixed_day: "Fix nap"
+          income: "A fizetésem"
+        month_start_series: "Fizetés"
+        month_start_series_blank: "Válasszon megadott bevételt"
+        month_start_series_hint: "Minden hónap azon a napon kezdődik, amikor ez a megadott bevétel megérkezik, és a következő előtti napon ér véget, így a hossza változó (kb. 28–35 nap)."
+        month_start_series_missing_warning: "Nincs aktív fizetés kiválasztva, ezért a költségvetési hónapok a fix kezdőnapot használják. Válasszon megadott bevételt, vagy aktiválja újra a szüneteltetettet."
         currencies_title: "%{moniker} pénznemek"
         currencies_subtitle: Válaszd ki, mely pénznemek jelenjenek meg a pénzmezőkben a %{moniker} számára
         base_currency_label: Alappénznem

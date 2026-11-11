@@ -43,11 +43,24 @@
     <%= styled_form_with model: @user, class: "space-y-4", data: { controller: "auto-submit-form" } do |form| %>
       <%= form.hidden_field :redirect_to, value: "preferences" %>
       <%= form.fields_for :family do |family_form| %>
+        <%= family_form.select :month_start_mode,
+            Family.month_start_modes.keys.map { |mode| [t(".month_start_mode_options.#{mode}"), mode] },
+            { label: t(".month_start_mode"), help_text: t(".month_start_mode_hint") },
+            { data: { auto_submit_form_target: "auto" } } %>
+        <% if @user.family.month_start_income? && @salary_series_editable %>
+          <%= family_form.select :month_start_recurring_transaction_id,
+              @salary_series_options.map { |series| [series.display_name, series.id] },
+              { label: t(".month_start_series"), help_text: t(".month_start_series_hint"), include_blank: t(".month_start_series_blank") },
+              { data: { auto_submit_form_target: "auto" } } %>
+        <% end %>
+        <% if @user.family.month_start_series_missing? %>
+          <%= render DS::Alert.new(message: t(".month_start_series_missing_warning"), variant: :warning) %>
+        <% end %>
         <%= family_form.select :month_start_day,
             (1..28).map { |day| [localized_ordinal(day), day] },
-            { label: t(".month_start_day"), hint: t(".month_start_day_hint") },
+            { label: t(".month_start_day"), hint: t(".month_start_day_hint"), help_text: (t(".month_start_day_fallback_hint") if @user.family.month_start_income?) },
             { data: { auto_submit_form_target: "auto" } } %>
-        <% if @user.family.uses_custom_month_start? %>
+        <% if @user.family.month_start_fixed_day? && @user.family.uses_custom_month_start? %>
           <%= render DS::Alert.new(message: t(".month_start_day_warning"), variant: :warning) %>
         <% end %>
         <% if Current.user.admin? %>
