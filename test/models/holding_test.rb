@@ -499,6 +499,52 @@ class HoldingTest < ActiveSupport::TestCase
     end
   end
 
+  # The batch replays the trades as #avg_cost does, so a position that was
+  # closed and reopened starts its basis again, a split rescales it, and a
+  # tiny unit cost survives rounding. The expected column pins #avg_cost
+  # itself, so a rule dropped from both paths still fails.
+  test "the batch replays each holding's trades as its own fallback does" do
+    reopened = create_security("REOP", prices: [ { date: Date.current, price: 250 } ])
+    create_trade(reopened, account: @account, qty: 10, price: 100, date: 6.days.ago.to_date)
+    create_trade(reopened, account: @account, qty: -10, price: 150, date: 4.days.ago.to_date)
+    create_trade(reopened, account: @account, qty: 10, price: 200, date: 2.days.ago.to_date)
+
+    split = create_security("SPLT", prices: [ { date: Date.current, price: 60 } ])
+    create_trade(split, account: @account, qty: 10, price: 100, date: 6.days.ago.to_date)
+    split.splits.create!(ex_date: 3.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    tiny = create_security("TINY", prices: [ { date: Date.current, price: 0.00002 } ])
+    create_trade(tiny, account: @account, qty: 10_000_000, price: 0.00001, date: 2.days.ago.to_date)
+
+    cases = {
+      reopened: [ create_holding(reopened, Date.current, 10), BigDecimal("200") ],
+      split: [ create_holding(split, Date.current, 20), BigDecimal("50") ],
+      tiny: [ create_holding(tiny, Date.current, 10_000_000), BigDecimal("0.00001") ]
+    }
+
+    own = cases.transform_values { |(holding, _)| Holding.find(holding.id).avg_cost&.amount }
+    batch = Holding.where(id: cases.values.map { |(holding, _)| holding.id }).to_a
+    Holding.preload_avg_costs(batch)
+    batched = cases.transform_values { |(holding, _)| batch.find { |h| h.id == holding.id }.avg_cost&.amount }
+
+    assert_equal cases.transform_values(&:last), own, "#avg_cost moved"
+    assert_equal own, batched, "the batch disagrees with #avg_cost"
+  end
+
+  # Like the per-holding fallback, a foreign trade's own rate is used only up
+  # to 20 integer digits; past that the batch must not overflow the query.
+  test "the batch ignores a numeric rate too large to convert" do
+    entry = create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date, currency: "CAD")
+    entry.entryable.update_column(:extra, { "exchange_rate" => 10**131071 })
+
+    batch = [ Holding.find(@amzn.id) ]
+    Holding.preload_avg_costs(batch)
+
+    assert_nil batch.first.avg_cost
+  end
+
+  # The trades and the splits each come back in one query, however many
+  # holdings the batch answers for.
   test "the batched average cost reads every holding's trades in one query" do
     batch_sizes = [ 2, 4 ].map do |count|
       holdings = Array.new(count) do |i|
@@ -507,10 +553,25 @@ class HoldingTest < ActiveSupport::TestCase
         create_holding(security, Date.current, 1)
       end
 
-      capture_sql_queries { Holding.preload_avg_costs(holdings) }.size
+      queries = capture_sql_queries { Holding.preload_avg_costs(holdings) }
+      [ queries.count { |sql| sql.include?('FROM "trades"') || sql.include?("JOIN trades") }, queries.count { |sql| sql.include?('"security_splits"') }, queries.size ]
     end
 
-    assert_equal [ 1, 1 ], batch_sizes
+    assert_equal batch_sizes.first, batch_sizes.last
+    assert_equal [ 1, 1, 2 ], batch_sizes.first
+  end
+
+  # A save replaces the attributes the replayed cost was worked out from.
+  test "a saved holding replays its cost again" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100, date: 3.days.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 300, date: 1.day.ago.to_date)
+    holding = Holding.find(@amzn.id)
+    assert_equal Money.new(200), holding.avg_cost
+
+    holding.update!(date: 2.days.ago.to_date)
+
+    assert_equal Holding.find(holding.id).avg_cost, holding.avg_cost
+    assert_equal Money.new(100), holding.avg_cost
   end
 
   test "the batch leaves a stored cost basis alone and does not query for it" do

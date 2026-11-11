@@ -186,6 +186,26 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal BigDecimal(300), gain.value.amount
   end
 
+  # An import stamps a day's trades with one created_at, and the calculators
+  # then replay a buy before a sale whatever their ids
+  # (Holding::PortfolioCache#trades). The sale's cost must too, even when the
+  # sale's id sorts first.
+  test "a same-day sale imported with its buy realises its gain whatever the ids" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 4)
+    buy = create_trade(security, account: account, qty: 10, date: date, price: 100)
+    sell_entry = create_trade(security, account: account, qty: -10, date: date, price: 130)
+    stamp = Time.zone.local(2026, 3, 4, 9)
+    Entry.where(id: [ buy.id, sell_entry.id ]).update_all(created_at: stamp)
+    sell_entry.update_columns(id: "00000000-0000-0000-0000-000000000001")
+    closed_snapshot(account, security, date)
+
+    gain = Trade.find(sell_entry.entryable_id).realized_gain_loss
+
+    assert_not_nil gain, "the same day's buy is the cost"
+    assert_equal BigDecimal(300), gain.value.amount
+  end
+
   # A provider can hold a position in the security's currency rather than the
   # account's, and the replayed cost is then in that currency too. 10 bought
   # at 100 EUR and sold at 130 EUR is a 300 EUR gain; costing the units in
