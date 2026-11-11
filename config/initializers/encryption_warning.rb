@@ -38,6 +38,12 @@ Rails.application.config.after_initialize do
       so existing data still decrypts, generate new keys with
       bin/rails db:encryption:init as the current scheme, then re-run
       bin/rails security:backfill_encryption to re-encrypt under the new keys.
+      Stop the app for these steps. When every model reports failed_count 0,
+      remove the previous scheme before starting the app again: while it is
+      configured, Rails writes deterministically
+      encrypted values (emails, tokens, API keys) with the oldest key and
+      looks them up with it, so new writes would land under the compromised
+      key and lookups would miss the rows the backfill moved.
     WARN
   end
 end

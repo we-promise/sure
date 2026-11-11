@@ -153,4 +153,52 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       assert results.key?(key), "expected security:backfill_encryption to cover #{key}"
     end
   end
+
+  # Rails encrypts deterministic attributes with the oldest configured scheme
+  # while `previous` schemes exist. A rotation away from a compromised key
+  # must still move them to the current key.
+  test "backfill re-encrypts deterministic values under the current key during a rotation" do
+    old_key_provider = ActiveRecord::Encryption::DeterministicKeyProvider.new(SecureRandom.hex(32))
+    probe_class = Class.new(ApplicationRecord) do
+      self.table_name = "invite_codes"
+      def self.name = "InviteCodeRotationProbe"
+      encrypts :token, deterministic: true, previous: [ { deterministic: true, key_provider: old_key_provider } ]
+    end
+    current_key_provider = probe_class.type_for_attribute(:token).key_provider
+    encryptor = ActiveRecord::Encryption.encryptor
+
+    record = probe_class.create!(token: "rotation-probe-token")
+    old_ciphertext = record.read_attribute_before_type_cast(:token)
+    assert_equal "rotation-probe-token", encryptor.decrypt(old_ciphertext, key_provider: old_key_provider)
+    assert_raises(ActiveRecord::Encryption::Errors::Decryption) do
+      encryptor.decrypt(old_ciphertext, key_provider: current_key_provider)
+    end
+
+    backfill_model(probe_class.where(id: record.id), %i[token], 500, false)
+
+    new_ciphertext = probe_class.connection.select_value(
+      probe_class.where(id: record.id).select(:token).to_sql)
+    assert_equal "rotation-probe-token", encryptor.decrypt(new_ciphertext, key_provider: current_key_provider)
+    assert_raises(ActiveRecord::Encryption::Errors::Decryption) do
+      encryptor.decrypt(new_ciphertext, key_provider: old_key_provider)
+    end
+  end
+
+  # support_unencrypted_data returns ciphertext that no configured key
+  # decrypts as if it were plaintext. Encrypting that again would make the
+  # original value unrecoverable.
+  test "backfill refuses ciphertext that no configured key decrypts" do
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Foreign Key", api_key: "seed")
+    item.save!(validate: false)
+    foreign = ActiveRecord::Encryption.encryptor.encrypt(
+      "lost-key", key_provider: ActiveRecord::Encryption::DeterministicKeyProvider.new(SecureRandom.hex(32)),
+      cipher_options: { deterministic: true }
+    )
+    LunchflowItem.where(id: item.id).update_all([ "api_key = ?", foreign ])
+
+    result = backfill_model(LunchflowItem.where(id: item.id), %i[api_key], 500, false)
+
+    assert_equal 1, result[:failed_count]
+    assert_equal foreign, LunchflowItem.where(id: item.id).pick(Arel.sql("api_key"))
+  end
 end

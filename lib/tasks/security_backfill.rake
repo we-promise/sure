@@ -38,74 +38,12 @@ namespace :security do
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # User fields (MFA + PII)
-    # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
-    results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
-
-    # Invitation tokens and email
-    results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
-
-    # InviteCode tokens
-    results[:invite_codes] = backfill_model(InviteCode, %i[token], batch_size, dry_run)
+    SecurityBackfillManifest.each_model do |model_class, fields|
+      results[model_class.table_name.to_sym] = backfill_model(model_class, fields, batch_size, dry_run)
+    end
 
     # Session user_agent (encryption) and ip_address_digest (hashing)
     results[:sessions] = backfill_sessions(batch_size, dry_run)
-
-    # MobileDevice device_id
-    results[:mobile_devices] = backfill_model(MobileDevice, %i[device_id], batch_size, dry_run)
-
-    # Provider items
-    results[:plaid_items] = backfill_model(PlaidItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:simplefin_items] = backfill_model(SimplefinItem, %i[access_url raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload last_psu_ip], batch_size, dry_run)
-    results[:akahu_items] = backfill_model(AkahuItem, %i[app_token user_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:binance_items] = backfill_model(BinanceItem, %i[api_key api_secret raw_payload], batch_size, dry_run)
-    results[:brex_items] = backfill_model(BrexItem, %i[token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:coinbase_items] = backfill_model(CoinbaseItem, %i[api_key api_secret raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:coinstats_items] = backfill_model(CoinstatsItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:ibkr_items] = backfill_model(IbkrItem, %i[query_id token raw_payload], batch_size, dry_run)
-    results[:indexa_capital_items] = backfill_model(IndexaCapitalItem, %i[password api_token username document raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:kraken_items] = backfill_model(KrakenItem, %i[api_key api_secret raw_payload], batch_size, dry_run)
-    results[:mercury_items] = backfill_model(MercuryItem, %i[token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:onchain_wallet_items] = backfill_model(OnchainWalletItem, %i[etherscan_api_key], batch_size, dry_run)
-    results[:questrade_items] = backfill_model(QuestradeItem, %i[refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:redbark_items] = backfill_model(RedbarkItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:snaptrade_items] = backfill_model(SnaptradeItem, %i[client_id consumer_key snaptrade_user_secret oauth_access_token oauth_refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:sophtron_items] = backfill_model(SophtronItem, %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload], batch_size, dry_run)
-    results[:trading212_items] = backfill_model(Trading212Item, %i[api_key api_secret raw_instruments_payload], batch_size, dry_run)
-    results[:truelayer_items] = backfill_model(TruelayerItem, %i[client_secret access_token refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:up_items] = backfill_model(UpItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:wise_items] = backfill_model(WiseItem, %i[token raw_payload], batch_size, dry_run)
-
-    # Provider accounts
-    results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
-    results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:truelayer_accounts] = backfill_model(TruelayerAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload account_number], batch_size, dry_run)
-    results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:akahu_accounts] = backfill_model(AkahuAccount, %i[raw_payload raw_transactions_payload formatted_account], batch_size, dry_run)
-    results[:binance_accounts] = backfill_model(BinanceAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:brex_accounts] = backfill_model(BrexAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:ibkr_accounts] = backfill_model(IbkrAccount, %i[raw_holdings_payload raw_activities_payload raw_cash_report_payload raw_equity_summary_payload], batch_size, dry_run)
-    results[:indexa_capital_accounts] = backfill_model(IndexaCapitalAccount, %i[raw_payload raw_holdings_payload raw_activities_payload], batch_size, dry_run)
-    results[:kraken_accounts] = backfill_model(KrakenAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:onchain_wallet_accounts] = backfill_model(OnchainWalletAccount, %i[raw_payload raw_movements_payload], batch_size, dry_run)
-    results[:questrade_accounts] = backfill_model(QuestradeAccount, %i[raw_payload raw_holdings_payload raw_activities_payload raw_balances_payload], batch_size, dry_run)
-    results[:redbark_accounts] = backfill_model(RedbarkAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:sophtron_accounts] = backfill_model(SophtronAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:trading212_accounts] = backfill_model(Trading212Account, %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload], batch_size, dry_run)
-    results[:up_accounts] = backfill_model(UpAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:wise_accounts] = backfill_model(WiseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-
-    # Sure's own first-party secrets
-    results[:api_keys] = backfill_model(ApiKey, %i[display_key], batch_size, dry_run)
-    results[:sso_providers] = backfill_model(SsoProvider, %i[client_secret], batch_size, dry_run)
-    results[:sso_identity_blocks] = backfill_model(SsoIdentityBlock, %i[identity_label], batch_size, dry_run)
 
     puts({
       ok: true,
@@ -144,6 +82,12 @@ namespace :security do
             plaintext_values = {}
             fields.each do |field|
               value = safe_read_field(record, field)
+              # support_unencrypted_data hands back ciphertext that no
+              # configured key decrypts as if it were plaintext; encrypting it
+              # again would lose the original value for good.
+              if value.is_a?(String) && ActiveRecord::Encryption.encryptor.encrypted?(value)
+                raise ActiveRecord::Encryption::Errors::Decryption, "#{field} holds ciphertext that no configured key decrypts"
+              end
               plaintext_values[field] = value unless value.nil?
             end
 
@@ -156,14 +100,19 @@ namespace :security do
               encryptor.send("#{field}=", value)
             end
 
+            # During a key rotation Rails would write deterministic fields
+            # under the oldest key, so those get current-key ciphertext.
+            rotated = current_key_ciphertexts(encryptor, plaintext_values.keys)
+
             # Extract the encrypted values from the temporary instance
             encrypted_attrs = {}
-            plaintext_values.keys.each do |field|
+            (plaintext_values.keys - rotated.keys).each do |field|
               encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
             end
 
             # Write directly to database, bypassing callbacks/validations
-            record.update_columns(encrypted_attrs)
+            record.update_columns(encrypted_attrs) if encrypted_attrs.any?
+            write_raw_columns(record, rotated) if rotated.any?
             true
           end
           updated += 1 if written
@@ -182,6 +131,44 @@ namespace :security do
       failed_count: failed.size,
       failed_samples: failed.take(3)
     }
+  end
+
+  # While `previous` schemes are configured (a key rotation), Rails encrypts
+  # deterministic attributes with the OLDEST scheme so equality lookups keep
+  # matching. Re-encrypting that way would leave the data under the key
+  # being rotated out, so build ciphertext with the current scheme instead,
+  # the same way EncryptedAttributeType does when no previous scheme exists.
+  def current_key_ciphertexts(instance, fields)
+    fields.each_with_object({}) do |field, ciphertexts|
+      type = backfill_encrypted_type(instance.class, field)
+      next unless type.fixed? && type.previous_schemes.any?
+
+      value = type.cast_type.serialize(instance.read_attribute(field))
+      next if value.nil?
+
+      value = value.downcase if type.downcase?
+      ciphertexts[field] = type.with_context do
+        ActiveRecord::Encryption.encryptor.encrypt(
+          value.to_s, **{ key_provider: type.key_provider, cipher_options: { deterministic: true } }.compact
+        )
+      end
+    end
+  end
+
+  # `normalizes` wraps the encrypted type, so unwrap to reach it.
+  def backfill_encrypted_type(model_class, field)
+    type = model_class.type_for_attribute(field)
+    type = type.cast_type while !type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType) && type.respond_to?(:cast_type)
+    return type if type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType)
+
+    raise ArgumentError, "#{model_class.name}##{field} is not an encrypted attribute"
+  end
+
+  # Raw SQL so the attribute type does not encrypt the ciphertext again.
+  def write_raw_columns(record, values)
+    connection = record.class.connection
+    assignments = values.keys.map { |field| "#{connection.quote_column_name(field)} = ?" }.join(", ")
+    record.class.where(id: record.id).update_all([ assignments, *values.values ])
   end
 
   # Safely read a field value, handling both encrypted and plaintext data.
