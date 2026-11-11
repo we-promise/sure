@@ -51,6 +51,7 @@ en:
         accounts_syncing: accounts syncing
         last_synced: Last synced %{time} ago
       meta:
+        unreadable_secret: Credential unreadable
         sync_error: Sync error
         no_recent_sync: Sync overdue
         reconsent_required: Re-consent required
@@ -111,6 +112,8 @@ en:
         message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
       provider_form:
         save_and_connect: "Save and connect"
+        unreadable_secret_title: "%{field} could not be decrypted"
+        unreadable_secret_message: "Restore the original SECRET_KEY_BASE to recover the saved credential, or enter and save a replacement. Environment variables will not override an unreadable saved credential."
       coinbase_panel:
         setup_instructions: "To connect Coinbase:"
         step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>

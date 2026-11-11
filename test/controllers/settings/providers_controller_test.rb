@@ -473,6 +473,40 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_equal stored, Setting.connection.select_value(sql)
   end
 
+  test "unreadable provider secrets leave the summary and replacement form available" do
+    %w[plaid plaid_eu].each do |provider_key|
+      Setting["#{provider_key}_client_id"] = "synthetic-client-id"
+      envelope = { Setting::DynamicSecret::MARKER => 1, "ciphertext" => "synthetic-corrupt-ciphertext" }
+      Setting.upsert({ var: "dynamic:#{provider_key}_secret", value: envelope.to_yaml }, unique_by: :var)
+
+      with_env_overrides("#{provider_key.upcase}_SECRET" => "synthetic-env-secret") do
+        get settings_providers_url
+
+        assert_response :success
+        assert_includes @controller.view_assigns["needs_attention"].map { |entry| entry[:provider_key] }, provider_key
+
+        get connect_form_settings_providers_path(provider_key: provider_key)
+
+        assert_response :success
+        assert_select "input[name=?]", "setting[#{provider_key}_secret]" do |inputs|
+          assert inputs.first["value"].blank?
+        end
+        assert_includes response.body, I18n.t("settings.providers.provider_form.unreadable_secret_title", field: "Secret Key")
+        refute_includes response.body, "synthetic-corrupt-ciphertext"
+        refute_includes response.body, "synthetic-env-secret"
+        assert_raises(Setting::SecretError) { Setting["#{provider_key}_secret"] }
+
+        patch settings_providers_url, params: { setting: { "#{provider_key}_secret" => "synthetic-replacement-secret" } }
+
+        assert_redirected_to settings_providers_url
+        assert_equal "synthetic-replacement-secret", Setting["#{provider_key}_secret"]
+        get settings_providers_url
+        assert_response :success
+        assert_includes @controller.view_assigns["connected"].map { |entry| entry[:provider_key] }, provider_key
+      end
+    end
+  end
+
   test "converts blank values to nil and removes from dynamic_fields" do
     with_self_hosting do
       # Set initial values
