@@ -13,6 +13,7 @@ it:
     api_keys:
       create:
         success: "La tua chiave API è stata creata con successo"
+        creation_failed: "Impossibile creare la tua chiave API. Riprova."
       destroy:
         not_found: "Chiave API non trovata"
         cannot_revoke: "Questa chiave API non può essere revocata"
