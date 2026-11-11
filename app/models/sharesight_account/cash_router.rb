@@ -195,7 +195,9 @@ class SharesightAccount::CashRouter
         nil
       elsif unit.target && !bank_fed?(unit.target)
         counterpart = book_counterpart(unit)
-        @touched_accounts << unit.target if unit.target.manual?
+        # A target that isn't bank-fed is a manual account by definition
+        # (manual? is just !linked?), so no extra check is needed here.
+        @touched_accounts << unit.target
         link_transfer!(leg, counterpart)
         counterpart.id
       end
@@ -259,8 +261,9 @@ class SharesightAccount::CashRouter
         .where.not(id: current)
 
       # The old settlement account's copy goes with the counterpart, so its
-      # balance changes too.
-      Account.where(id: stale.distinct.pluck(:account_id)).select(&:manual?).each do |old_account|
+      # balance changes too — whether it is still a manual account or has
+      # since been linked to a bank feed.
+      Account.where(id: stale.distinct.pluck(:account_id)).each do |old_account|
         @touched_accounts << old_account
       end
 

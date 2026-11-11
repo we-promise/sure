@@ -50,4 +50,52 @@ class SharesightItem::SyncerTest < ActiveSupport::TestCase
     assert bank.syncs.exists?, "the manual settlement account was never synced"
     assert account.syncs.exists?
   end
+
+  test "a settlement account touched before a portfolio failure still gets its own sync" do
+    bank, _account, sharesight_account = setup_portfolio_with_manual_settlement
+    @item.expects(:import_latest_data)
+    # The broadcast fails after the router already booked the counterpart.
+    Account.any_instance.stubs(:broadcast_sync_complete).raises(RuntimeError, "broadcast boom")
+
+    SharesightItem::Syncer.new(@item).perform_sync(@sync)
+
+    assert bank.entries.find_by(external_id: "sharesight_counterpart_#{sharesight_account.id}_trade_1"),
+           "the router never booked the counterpart into the settlement account"
+    assert bank.syncs.exists?, "the settlement account was never synced after the portfolio failed"
+  end
+
+  test "a settlement account touched by the router syncs over the full range, not the sync window" do
+    bank, account, sharesight_account = setup_portfolio_with_manual_settlement
+    @item.expects(:import_latest_data)
+    windowed_sync = @item.syncs.create!(window_start_date: Date.new(2026, 9, 1), window_end_date: Date.current)
+
+    SharesightItem::Syncer.new(@item).perform_sync(windowed_sync)
+
+    assert_nil bank.syncs.first.window_start_date, "the settlement account was scheduled with the narrowed window"
+    assert_equal Date.new(2026, 9, 1), account.syncs.first.window_start_date
+  end
+
+  private
+
+    # A linked Sharesight portfolio whose trades settle into a manual account.
+    def setup_portfolio_with_manual_settlement
+      bank = @item.family.accounts.create!(name: "Macquarie CMA", balance: 0, currency: "AUD", accountable: Depository.new)
+      account = @item.family.accounts.create!(name: "Shares", balance: 0, currency: "AUD", accountable: Investment.new)
+      sharesight_account = @item.sharesight_accounts.create!(
+        name: "Shares", sharesight_account_id: "42", currency: "AUD", current_balance: 2100, cash_balance: 0,
+        raw_holdings_payload: [
+          { "id" => 1, "quantity" => 20.0, "value" => 2100.0, "instrument_price" => 105.0,
+            "instrument" => { "code" => "VAS", "market_code" => "ASX", "currency_code" => "AUD" }, "instrument_currency" => { "code" => "AUD" } }
+        ],
+        raw_trades_payload: [
+          { "id" => 1, "transaction_type" => "BUY", "transaction_date" => "2026-09-01", "symbol" => "VAS", "market" => "ASX",
+            "quantity" => 10, "price" => 100.0, "exchange_rate" => 1.0, "holding_id" => 1, "state" => "confirmed" }
+        ],
+        raw_payouts_payload: [],
+        cash_mode: "settlement", settlement_account: bank
+      )
+      sharesight_account.ensure_account_provider!(account)
+      Security.find_or_create_by!(ticker: "VAS", exchange_operating_mic: "XASX")
+      [ bank, account, sharesight_account ]
+    end
 end
