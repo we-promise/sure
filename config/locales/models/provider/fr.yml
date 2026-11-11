@@ -9,9 +9,17 @@ fr:
         not_found: Chimnie n'a trouvé aucun bien correspondant à cet UPRN.
         unauthorized: Chimnie a rejeté la clé API. Vérifiez la clé dans Paramètres → Auto-hébergement.
         unsupported_property: Chimnie n'estime que les biens résidentiels ; cet UPRN correspond à un bien commercial ou à usage mixte.
+    dvf:
+      errors:
+        address_not_found: Cette adresse est introuvable dans la Base Adresse Nationale. Vérifiez l'adresse et le code postal.
+        area_required: Indiquez la surface habitable du bien pour l'estimer à partir des ventes DVF.
+        not_enough_sales: Il n'y a pas assez de ventes comparables récentes près de cette adresse pour estimer sa valeur.
+        unavailable: Le service de données ouvertes DVF est injoignable. Réessayez plus tard.
+        unsupported_property_type: DVF n'estime que les appartements et les maisons. Choisissez le type Appartement, Copropriété, Maison individuelle ou Maison de ville.
     property_valuation:
       entry_name: Estimation %{provider}
       missing_fields: Indiquez un nom et une adresse américaine complète (rue, ville, État et code postal).
+      missing_fields_fr: Indiquez un nom, l'adresse et le code postal, le type de bien (appartement ou maison) et la surface habitable. DVF ne couvre pas l'Alsace-Moselle (57, 67, 68) ni Mayotte.
       missing_fields_gb: Veuillez indiquer un nom, l'adresse postale et le code postal, ainsi que l'UPRN du bien.
       not_configured: Ce fournisseur de données immobilières n'est pas configuré.
       preview_expired: Cet aperçu de bien a expiré, relancez la recherche sur l'adresse.

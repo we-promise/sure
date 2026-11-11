@@ -65,4 +65,26 @@ class PropertyTest < ActiveSupport::TestCase
     assert_equal "realie", property.avm_provider
     assert_equal Date.current, property.avm_last_synced_on
   end
+  test "a French property can link to DVF only with an area and a type it can value" do
+    property = Property.new(
+      subtype: "apartment",
+      area_value: 35,
+      area_unit: "sqm",
+      address: Address.new(line1: "82 rue Exemple", postal_code: "75020", country: "France")
+    )
+    property.account = Account.new(currency: "EUR", accountable: property)
+
+    assert property.avm_linkable?("dvf")
+
+    property.area_value = nil
+    assert_not property.avm_linkable?("dvf")
+
+    property.area_value = 35
+    property.subtype = "commercial"
+    assert_not property.avm_linkable?("dvf")
+
+    property.subtype = "apartment"
+    property.account.currency = "USD"
+    assert_not property.avm_linkable?("dvf")
+  end
 end

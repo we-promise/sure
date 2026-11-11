@@ -82,8 +82,9 @@ class PropertiesController < ApplicationController
     end
 
     unless configured_avm_providers.map(&:to_s).include?(@property.avm_provider)
-      redirect_back_or_to account_path(@account),
-                          alert: t(".not_configured", provider: t("properties.avm_providers.#{@property.avm_provider}")) and return
+      provider_name = t("properties.avm_providers.#{@property.avm_provider}")
+      alert = @property.avm_provider == "dvf" ? t(".not_enabled", provider: provider_name) : t(".not_configured", provider: provider_name)
+      redirect_back_or_to account_path(@account), alert: alert and return
     end
 
     SyncPropertyValuationsJob.perform_later(property_id: @property.id, force: true)
@@ -164,7 +165,8 @@ class PropertiesController < ApplicationController
           provider_key: payload["provider_key"],
           name: payload["name"],
           address_attributes: payload["address"].symbolize_keys,
-          external_id: payload["external_id"]
+          external_id: payload["external_id"],
+          **(payload["property"] || {}).symbolize_keys
         )
 
         @account = importer.create_account(avm_data_from_payload(payload))
@@ -187,7 +189,8 @@ class PropertiesController < ApplicationController
           provider_key: provider_key,
           name: params.dig(:account, :name),
           address_attributes: avm_address_params.to_h.symbolize_keys,
-          external_id: avm_external_id_param
+          external_id: avm_external_id_param,
+          **avm_property_params
         )
 
         @avm_preview = importer.lookup
@@ -197,6 +200,7 @@ class PropertiesController < ApplicationController
             "name" => params.dig(:account, :name),
             "address" => avm_address_params.to_h,
             "external_id" => avm_external_id_param,
+            "property" => avm_property_params.stringify_keys,
             "data" => @avm_preview.to_h.transform_values(&:to_s)
           },
           expires_in: 1.hour,
@@ -215,6 +219,7 @@ class PropertiesController < ApplicationController
       # defensively — an expired token re-renders an empty lookup form.
       @avm_address = Address.new(params.dig(:account, :address)&.permit(:line1, :locality, :region, :postal_code)&.to_h || {})
       @avm_external_id = avm_external_id_param
+      @avm_property = Property.new(avm_property_params.slice(:area_value, :area_unit).merge(subtype: avm_property_params[:property_type]))
       render :new, status: :unprocessable_entity
     end
 
@@ -226,6 +231,16 @@ class PropertiesController < ApplicationController
     # look properties up by ID rather than address.
     def avm_external_id_param
       params.dig(:account, :property, :avm_external_id).to_s.strip.presence
+    end
+
+    # Living area and subtype, for providers that value from them rather than
+    # from a record of the property (DVF).
+    def avm_property_params
+      property = params.dig(:account, :property)
+      return {} unless property.respond_to?(:permit)
+
+      permitted = property.permit(:area_value, :area_unit, :subtype)
+      { area_value: permitted[:area_value], area_unit: permitted[:area_unit], property_type: permitted[:subtype] }.compact_blank
     end
 
     def avm_preview_verifier

@@ -63,8 +63,8 @@
         <p class="text-sm text-secondary"><%= t("properties.new.avm_preview_no_record", provider: provider_name) %></p>
       <% end %>
 
-      <% if provider_key.to_s == "chimnie" %>
-        <p class="text-xs text-secondary"><%= t("properties.new.avm_attribution_chimnie") %></p>
+      <% if (attribution = t("properties.new.avm_attribution_#{provider_key}", default: "")).present? %>
+        <p class="text-xs text-secondary"><%= attribution %></p>
       <% end %>
     </div>
 
