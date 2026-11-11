@@ -1008,14 +1008,13 @@ class Api::V1::TransactionsControllerTest < ActionDispatch::IntegrationTest
 
   %w[category_id merchant_id].each do |attribute|
     test "update with a #{attribute} that does not exist is refused" do
-      before = @transaction.reload.public_send(attribute)
-
-      put api_v1_transaction_url(@transaction),
-          params: { transaction: { attribute => SecureRandom.uuid } },
-          headers: api_headers(@api_key)
+      assert_no_changes -> { @transaction.reload.public_send(attribute) } do
+        put api_v1_transaction_url(@transaction),
+            params: { transaction: { attribute => SecureRandom.uuid } },
+            headers: api_headers(@api_key)
+      end
 
       assert_response :unprocessable_entity
-      assert_equal before, @transaction.reload.public_send(attribute)
     end
 
     test "create with a #{attribute} that does not exist is refused and creates nothing" do
