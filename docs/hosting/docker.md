@@ -52,10 +52,12 @@ At this point, you should have `compose.yml` in your directory. It includes an o
 ### Step 3 (optional for a disposable local test): Configure your environment
 
 The sample `compose.example.yml` runs without extra configuration, but self-hosted
-instances store sensitive database attributes unencrypted at rest until Active Record
-Encryption is configured. You can skip this step for a disposable local test. Configure
-it before storing financial or account data, and review the other security settings
-before exposing your instance outside your local network.
+instances store sensitive database attributes unencrypted at rest without explicit
+Active Record Encryption keys. Configuring keys enables encryption for subsequent
+writes; existing plaintext values also need to be backfilled. You can skip this step
+for a disposable local test. Configure it before storing financial or account data,
+and review the other security settings before exposing your instance outside your
+local network.
 
 #### Create your environment file
 
@@ -118,11 +120,65 @@ x-rails-env: &rails_env
 ```
 
 `SECRET_KEY_BASE` does not enable Active Record Encryption. Keep the generated keys
-private and stable; changing or losing them can make encrypted data unreadable. For an
-existing instance, back up the database and files and follow migration guidance for
-your installed version before changing encryption settings.
+private and stable; changing or losing them can make encrypted data unreadable.
 
-Run `docker compose up -d` after editing `.env` or `compose.yml` to apply the settings.
+For a new instance, run `docker compose up -d` after editing `.env` or `compose.yml`
+to apply the settings. For an existing instance, follow the backfill procedure below
+before restarting the application with the new settings.
+
+##### Existing instances: backfill plaintext fields
+
+Adding keys does not automatically encrypt previously stored values. Back up the
+database and files first, retain the configured keys, and check the migration guidance
+for your installed version. Keep the database and Redis running, but stop application
+writes while migrating:
+
+```bash
+docker compose stop web worker
+```
+
+With all three keys configured as above, temporarily set
+`ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA=true` in `.env` and forward it
+through the shared `x-rails-env` mapping:
+
+```yaml
+  ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA: ${ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA:-false}
+```
+
+This compatibility setting allows existing plaintext values to remain readable and
+queryable during migration; it does not encrypt them. The
+`security:backfill_encryption` task defaults to a dry run. Preview it explicitly with
+batches of 100 records:
+
+```bash
+docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,true]'
+```
+
+The dry run does not write changes and cannot guarantee that every write will succeed.
+After reviewing its output and the task's coverage, run the backfill with `false` to
+write the encrypted values:
+
+```bash
+docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,false]'
+```
+
+Inspect each model's `failed_count` and `failed_samples` in the output; the top-level
+`ok: true` alone does not mean every record was migrated.
+
+The task covers only the models and fields listed in
+[`lib/tasks/security_backfill.rake`](../../lib/tasks/security_backfill.rake), not every
+encrypted attribute. For example, it does not backfill `ApiKey#display_key`,
+`SsoProvider#client_secret`, credentials on `SnaptradeItem` or `CoinbaseItem`, or
+`SnaptradeAccount#raw_balances_payload`. `User#otp_backup_codes` is also excluded
+because its PostgreSQL array column is incompatible with this encryption mechanism.
+Fields outside the task's scope need a separate migration appropriate to your
+installed version; a successful run does not certify that all sensitive data is
+encrypted.
+
+Once all required fields have been migrated and any failures addressed, remove the
+temporary compatibility setting or set it to `false`, then run `docker compose up -d`.
+Verify sign-in and connected providers. Do not disable compatibility while encrypted
+attributes still contain plaintext values, or those values may become unreadable.
 
 #### Using HTTPS
 
