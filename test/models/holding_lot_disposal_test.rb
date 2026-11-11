@@ -359,6 +359,41 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  # A transfer out consumes lots without recording a disposal, so a lot it
+  # emptied after the sale looks the same as one emptied before it. The lot
+  # was still open on the sale's date, so it stays offered and can be named.
+  test "a lot a later transfer out emptied is still offered" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMT", 30)
+      trade(security, 10, 20, 2)
+      second = trade(security, 10, 22, 3)
+      sale = trade(security, -5, 25, 4)
+      transfer_out(security, -15, 6)
+      materialize(:forward)
+
+      assert_equal 0, HoldingLot.derived.find_by!(source_entry_id: second.id).qty, "the transfer out empties the lot"
+      assert_includes Trade.find(sale.entryable_id).lot_choices.to_a, second
+      assert Trade.find(sale.entryable_id).update(lot_source_entry: second), "a lot open on the sale's date can be named"
+    end
+  end
+
+  test "lots a transfer out emptied before the sale are not offered" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMU", 30)
+      first = trade(security, 10, 20, 2)
+      second = trade(security, 10, 22, 3)
+      transfer_out(security, -20, 4)
+      third = trade(security, 10, 24, 5)
+      sale = trade(security, -5, 25, 6)
+      materialize(:forward)
+
+      assert_equal [ third ], Trade.find(sale.entryable_id).lot_choices.to_a
+      assert_not Trade.find(sale.entryable_id).update(lot_source_entry: first)
+    end
+  end
+
   # An opening lot has no acquisition, and an empty one (a clamp records
   # one) must not empty the list with it.
   test "an empty opening lot leaves the sale's choices alone" do
@@ -720,6 +755,12 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     # and the replay would order them by id; set the order they were entered.
     def entered_in_order(*entries)
       entries.each_with_index { |entry, index| entry.update_columns(created_at: TODAY + index.seconds) }
+    end
+
+    def transfer_out(security, qty, day)
+      entry = trade(security, qty, 25, day)
+      entry.entryable.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+      entry
     end
 
     def name_lot(sale, lot)

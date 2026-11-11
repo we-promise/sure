@@ -208,22 +208,38 @@ class Trade < ApplicationRecord
 
     # Acquisitions whose lot is now empty and was emptied before this sale:
     # no sale dated on or after it took anything from the lot.
+    #
+    # A transfer out consumes lots without recording a disposal, so once one
+    # replays at or after this sale an empty lot no longer says when it was
+    # emptied. Nothing is excluded then: a lot that turns out to be empty
+    # falls back to the account's method when the sale replays.
     def lots_emptied_before_sale
-      # Sales replay by date, then in the order they were entered (see
-      # Holding::PortfolioCache#trades), so a same-day sale entered earlier
-      # has already emptied its lots by the time this one runs.
-      later_disposals = HoldingLotDisposal.joins(:sale_entry)
-        .where(account_id: entry.account_id).where.not(lot_source_entry_id: nil)
-      later_disposals = if entry.persisted?
-        later_disposals.where("(entries.date, entries.created_at, entries.id) >= (:date, :created_at, :id)",
-                              date: entry.date, created_at: entry.created_at, id: entry.id)
-      else
-        later_disposals.where("(entries.date, entries.created_at) >= (:date, :created_at)",
-                              date: entry.date, created_at: Time.current)
-      end
+      later_transfers_out = on_or_after_sale(
+        entry.account.entries.where(entryable_type: "Trade",
+          entryable_id: Trade.where(security_id: security_id, investment_activity_label: INTERNAL_MOVEMENT_LABELS)
+                             .where("qty < 0").select(:id))
+      )
+      return HoldingLot.none.select(:source_entry_id) if later_transfers_out.exists?
+
+      later_disposals = on_or_after_sale(
+        HoldingLotDisposal.joins(:sale_entry).where(account_id: entry.account_id).where.not(lot_source_entry_id: nil)
+      )
       HoldingLot.derived.where(account_id: entry.account_id, qty: 0)
         .where.not(source_entry_id: later_disposals.select(:lot_source_entry_id))
         .select(:source_entry_id)
+    end
+
+    # Entries replay by date, then in the order they were entered (see
+    # Holding::PortfolioCache#trades), so a same-day entry made earlier has
+    # already run by the time this sale does. `scope` must expose `entries`.
+    def on_or_after_sale(scope)
+      if entry.persisted?
+        scope.where("(entries.date, entries.created_at, entries.id) >= (:date, :created_at, :id)",
+                    date: entry.date, created_at: entry.created_at, id: entry.id)
+      else
+        scope.where("(entries.date, entries.created_at) >= (:date, :created_at)",
+                    date: entry.date, created_at: Time.current)
+      end
     end
 
     def exchange_rate_must_be_valid
