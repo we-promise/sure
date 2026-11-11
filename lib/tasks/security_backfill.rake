@@ -58,7 +58,7 @@ namespace :security do
     results[:plaid_items] = backfill_model(PlaidItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
     results[:simplefin_items] = backfill_model(SimplefinItem, %i[access_url raw_payload raw_institution_payload], batch_size, dry_run)
     results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload], batch_size, dry_run)
+    results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload last_psu_ip], batch_size, dry_run)
     results[:akahu_items] = backfill_model(AkahuItem, %i[app_token user_token raw_payload raw_institution_payload], batch_size, dry_run)
     results[:binance_items] = backfill_model(BinanceItem, %i[api_key api_secret raw_payload], batch_size, dry_run)
     results[:brex_items] = backfill_model(BrexItem, %i[token raw_payload raw_institution_payload], batch_size, dry_run)
@@ -81,14 +81,14 @@ namespace :security do
     # Provider accounts
     results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
     results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
     results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:truelayer_accounts] = backfill_model(TruelayerAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload account_number], batch_size, dry_run)
     results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:akahu_accounts] = backfill_model(AkahuAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
+    results[:akahu_accounts] = backfill_model(AkahuAccount, %i[raw_payload raw_transactions_payload formatted_account], batch_size, dry_run)
     results[:binance_accounts] = backfill_model(BinanceAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:brex_accounts] = backfill_model(BrexAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
     results[:ibkr_accounts] = backfill_model(IbkrAccount, %i[raw_holdings_payload raw_activities_payload raw_cash_report_payload raw_equity_summary_payload], batch_size, dry_run)
@@ -136,31 +136,40 @@ namespace :security do
         next if dry_run
 
         begin
-          # Read plaintext values safely
-          plaintext_values = {}
-          fields.each do |field|
-            value = safe_read_field(record, field)
-            plaintext_values[field] = value unless value.nil?
+          # Read and write under a row lock: an app write between the read
+          # and update_columns (a new last_psu_ip, or DataCleanerJob clearing
+          # it) would otherwise be overwritten with the stale value.
+          written = record.with_lock do
+            # Read plaintext values safely
+            plaintext_values = {}
+            fields.each do |field|
+              value = safe_read_field(record, field)
+              plaintext_values[field] = value unless value.nil?
+            end
+
+            next false if plaintext_values.empty?
+
+            # Use a temporary instance to encrypt values (avoids triggering
+            # validations/callbacks that might read other encrypted fields)
+            encryptor = model_class.new
+            plaintext_values.each do |field, value|
+              encryptor.send("#{field}=", value)
+            end
+
+            # Extract the encrypted values from the temporary instance
+            encrypted_attrs = {}
+            plaintext_values.keys.each do |field|
+              encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
+            end
+
+            # Write directly to database, bypassing callbacks/validations
+            record.update_columns(encrypted_attrs)
+            true
           end
-
-          next if plaintext_values.empty?
-
-          # Use a temporary instance to encrypt values (avoids triggering
-          # validations/callbacks that might read other encrypted fields)
-          encryptor = model_class.new
-          plaintext_values.each do |field, value|
-            encryptor.send("#{field}=", value)
-          end
-
-          # Extract the encrypted values from the temporary instance
-          encrypted_attrs = {}
-          plaintext_values.keys.each do |field|
-            encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
-          end
-
-          # Write directly to database, bypassing callbacks/validations
-          record.update_columns(encrypted_attrs)
-          updated += 1
+          updated += 1 if written
+        rescue ActiveRecord::RecordNotFound
+          # Deleted since the batch was loaded; nothing left to encrypt.
+          next
         rescue => e
           failed << { id: record.id, error: e.class.name, message: e.message }
         end
