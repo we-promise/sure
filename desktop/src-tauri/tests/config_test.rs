@@ -17,3 +17,14 @@ fn local_webview_csp_is_enabled_and_restrictive() {
     }
     assert!(!csp.contains("connect-src *"));
 }
+
+// macOS refuses LAN connections from an app that does not declare why it needs
+// the local network, and keeps no privacy permission for an unsigned bundle.
+#[test]
+fn macos_bundle_can_reach_a_server_on_the_local_network() {
+    let plist = include_str!("../Info.plist");
+    assert!(plist.contains("<key>NSLocalNetworkUsageDescription</key>"));
+
+    let config: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+    assert_eq!(config["bundle"]["macOS"]["signingIdentity"], "-");
+}
