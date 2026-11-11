@@ -57,6 +57,6 @@ class AiJudgeLiveTest < ActiveSupport::TestCase
     def plan(api_key: ENV[KEY].presence || "recorded")
       endpoint = Ai::Config::Endpoint.new(name: "jev", protocol: :jev, preset: :jev, base_url: BASE_URL, api_key:, max_retries: 2)
       model = Ai::Config::Model.new(endpoint:, name: MODEL, capabilities: %i[judge calibrated_confidence])
-      Ai::Plan.new(feature: :categorize, lane: :background, routes: [ Ai::Route.new(feature: :categorize, position: 0, model:) ])
+      Ai::Plan.new(feature: :categorize, lane: :background, routes: [ Ai::Route.new(feature: :categorize, model:) ])
     end
 end

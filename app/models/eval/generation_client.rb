@@ -40,10 +40,10 @@ class Eval::GenerationClient
     judge = @endpoint.protocol == :jev
     model = Ai::Config::Model.new(endpoint: @endpoint, name: @model_name,
                                   capabilities: judge ? %i[judge calibrated_confidence] : %i[structured_output],
-                                  context_window: (@budget&.context_window || Assistant::TokenBudget.context_window unless judge),
+                                  context_window: (@budget ? @budget.context_window : (Assistant::TokenBudget.context_window if @endpoint.base_url) unless judge),
                                   max_output_tokens: @budget&.max_output_tokens,
                                   batch_size: @budget&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE)
-    route = Ai::Route.new(feature:, position: 0, model:, json_mode: json_mode.presence,
+    route = Ai::Route.new(feature:, model:, json_mode: json_mode.presence,
                           prompt: Ai::LegacyEnvConfig.prompt_for(feature, @endpoint))
     Ai::Config.new(endpoints: [ @endpoint ], models: [ model ], routes: { feature => [ route ] })
   end

@@ -82,24 +82,18 @@ class RecurringTransaction
         }.compact
       end
 
-      # Ai::Schema has already turned nulls, numeric strings and values outside the presets
-      # into nil; this resolves the category to the family's own and clamps the ranges.
+      # Ai::Schema has already typed every field and turned values outside the presets and
+      # ranges into nil; this resolves the category to the family's own, keeps only a positive
+      # amount and clamps the confidence.
       def normalize(raw)
         category = resolve_category(raw[:category_name])
 
         Suggestion.new(
-          name: raw[:name],
-          amount: positive_or_nil(raw[:amount]),
-          frequency: raw[:frequency].presence_in(FrequencyPreset::PRESETS),
-          day_of_month: in_range(raw[:day_of_month], 1..31),
-          weekday: in_range(raw[:weekday], 0..6),
-          month_of_year: in_range(raw[:month_of_year], 1..12),
+          **raw.slice(:name, :frequency, :day_of_month, :weekday, :month_of_year, :bill_type, :autopay, :rationale),
+          amount: (BigDecimal(raw[:amount].to_s) if raw[:amount]&.positive?),
           category_id: category&.id,
           category_name: category&.name,
-          bill_type: raw[:bill_type].presence_in(%w[bill subscription installment]),
-          autopay: [ true, false ].include?(raw[:autopay]) ? raw[:autopay] : nil,
-          confidence: raw[:confidence].is_a?(Numeric) ? raw[:confidence].to_f.clamp(0.0, 1.0) : nil,
-          rationale: raw[:rationale]
+          confidence: raw[:confidence]&.to_f&.clamp(0.0, 1.0)
         )
       end
 
@@ -110,16 +104,6 @@ class RecurringTransaction
 
         family.categories.find_by(name: name) ||
           family.categories.find_by(Category.arel_table[:name].lower.eq(name.downcase))
-      end
-
-      def positive_or_nil(value)
-        return nil unless value.is_a?(Numeric)
-
-        value.positive? ? BigDecimal(value.to_s).abs : nil
-      end
-
-      def in_range(value, range)
-        value.is_a?(Integer) && range.cover?(value) ? value : nil
       end
   end
 end

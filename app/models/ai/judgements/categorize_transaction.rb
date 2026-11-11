@@ -1,6 +1,5 @@
 # Categorizes each transaction with a decision model: one Choice question over the family's
-# categories, one request per transaction. Replaces Provider::Jev#auto_categorize; the
-# instructions, the opt-out, the hierarchy hints and the confidence rules are unchanged.
+# categories, one request per transaction.
 class Ai::Judgements::CategorizeTransaction < Ai::Judgement
   feature :categorize
 
@@ -51,7 +50,8 @@ class Ai::Judgements::CategorizeTransaction < Ai::Judgement
       end.merge(UNCATEGORIZED => "No listed category is a reasonable fit")
     end
 
+    # RubyLLM's judge takes only JSON values, and an entry's amount is a BigDecimal.
     def state_for(transaction)
-      transaction.slice(:description, :amount, :classification, :merchant, :hint).compact
+      transaction.slice(:description, :classification, :merchant, :hint).merge(amount: transaction[:amount]&.to_f).compact
     end
 end

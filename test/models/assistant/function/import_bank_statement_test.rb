@@ -51,6 +51,17 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert_equal PdfImport::READ_AS, @fn.params_schema.dig(:properties, :read_as, :enum)
   end
 
+  test "a route gone after the availability check is the same refusal, not a crash" do
+    use_no_ai
+    Ai.stubs(:availability).returns(Ai::Availability.available(:extract_pdf))
+
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_equal "unavailable", result[:error]
+    assert_equal "not_configured", result[:reason]
+    assert result[:message].present?, "the refusal carries the reason worded for the user"
+  end
+
   private
     def statement(closing: 44_079.83 - 24.5 + 2575.0)
       { bank_name: "YourBank", account_holder: nil, account_number: nil, currency: "GBP", opening_balance: 44_079.83, closing_balance: closing,

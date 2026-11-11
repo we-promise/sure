@@ -3,6 +3,7 @@
 # requester of :detect_merchants: Ai::GenerationJob runs it one batch at a time.
 class Family::AutoMerchantDetector
   include Ai::Requester
+  include RuleRun::AiProgress
   ai_feature :detect_merchants
 
   def self.from_ai_job(ids:, family_id:, rule_run_id: nil)
@@ -56,12 +57,18 @@ class Family::AutoMerchantDetector
       # Case 3: AI merchant or FamilyMerchant - skip (already good or user-set)
     end
 
+    report_batch(result, modified: modified_count)
     modified_count
   end
 
-  def ai_finished(count) = @rule_run&.complete_job!(modified_count: count)
+  # The modified counts reached the run per batch (apply_ai); this releases the rest.
+  def ai_finished(_count)
+    release_unhandled
+    @rule_run&.complete_job!
+  end
 
   def ai_failed(error)
+    release_unhandled
     @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
     DebugLogEntry.capture(
       category: "merchant_detection", level: "error", message: "AI merchant detection failed",
@@ -69,8 +76,6 @@ class Family::AutoMerchantDetector
       metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids }
     )
   end
-
-  def ai_correlation_id = @rule_run ? "rule_run:#{@rule_run.id}" : nil
 
   private
     attr_reader :family, :transaction_ids

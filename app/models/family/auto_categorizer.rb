@@ -8,6 +8,7 @@
 # always apply. Shadow runs are the generation's own (Ai::ShadowJob).
 class Family::AutoCategorizer
   include Ai::Requester
+  include RuleRun::AiProgress
   ai_feature :categorize
 
   Error = Class.new(StandardError)
@@ -82,12 +83,18 @@ class Family::AutoCategorizer
       }.compact
     )
 
+    report_batch(result, modified: modified_count)
     modified_count
   end
 
-  def ai_finished(count) = @rule_run&.complete_job!(modified_count: count)
+  # The modified counts reached the run per batch (apply_ai); this releases the rest.
+  def ai_finished(_count)
+    release_unhandled
+    @rule_run&.complete_job!
+  end
 
   def ai_failed(error)
+    release_unhandled
     @rule_run&.fail_job!(error:, source: self.class.name, transaction_ids:)
     DebugLogEntry.capture(
       category: "auto_categorization", level: "error", message: "AI categorization failed",
@@ -95,8 +102,6 @@ class Family::AutoCategorizer
       metadata: { error_class: error.class.name, error_message: error.message.truncate(500), requested_transaction_ids: transaction_ids }
     )
   end
-
-  def ai_correlation_id = @rule_run ? "rule_run:#{@rule_run.id}" : nil
 
   private
     attr_reader :family, :transaction_ids

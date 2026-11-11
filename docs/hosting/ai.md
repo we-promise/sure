@@ -56,8 +56,8 @@ AI work runs in the Sidekiq `worker`, in its own capsule ("lane"), so a slow mod
 - **The worker must load `config/sidekiq.yml`,** as `bundle exec sidekiq` does by default. A worker started with its own queue list (`sidekiq -q …`, a custom Helm `worker.command`) doesn't get the AI lane. If no worker polls `ai_high_priority` and `ai_low_priority`, **System health** (`/admin/system_health`) and the site-wide banner report "No worker is processing the AI queues", and the chat page warns that responses may not be delivered. Keep `-C config/sidekiq.yml`; adding `-q ai_high_priority -q ai_low_priority` also works, but AI jobs then share that worker's threads, and the chat reservation doesn't hold them, since a chat can usually take another thread.
 - **System health:** AI backlog doesn't count towards "queue backed up" (a large merchant-detection run can queue for hours), but "Oldest job age" still includes it. Check the queue table or `/sidekiq` to see which queue is waiting.
 - **Upgrading:** AI jobs moved from `high_priority` (chat), `medium_priority` and `scheduled` to the AI queues. Jobs already queued under the old names still run once, in the default lane.
-- **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. A batch is cut to fit the context window (`LLM_CONTEXT_WINDOW` minus the reply limit and the prompt itself), and a batch that still overflows, or whose answer stops at the reply limit, is halved and sent again. On Anthropic the window counts only when `LLM_CONTEXT_WINDOW` is set; raise `ANTHROPIC_MAX_TOKENS` (default `4096`) with the batch size so fewer answers get cut.
-- **Upgrading to 2c:** the old background job classes (`AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob`) are gone; every background AI feature runs as `Ai::GenerationJob`. Let the `ai_high_priority` and `ai_low_priority` queues drain before upgrading: a job still queued under an old class ends up in Sidekiq's dead set, and a rule run waiting on it stays pending.
+- **Large batches:** Sure doesn't limit `LLM_MAX_ITEMS_PER_CALL`. A batch is cut to fit the context window (`LLM_CONTEXT_WINDOW` minus the reply limit and the prompt itself), and a batch that still overflows, or whose answer stops at the reply limit, is halved and sent again. On OpenAI's own API and on Anthropic the window counts only when `LLM_CONTEXT_WINDOW` is set, so their batches are capped by `LLM_MAX_ITEMS_PER_CALL` alone; raise `ANTHROPIC_MAX_TOKENS` (default `4096`) with the batch size so fewer answers get cut.
+- **Upgrading:** every background AI feature now runs as `Ai::GenerationJob`, and the old job classes (`AutoCategorizeJob`, `AutoDetectMerchantsJob`, `EnhanceProviderMerchantsJob`) are gone. Let the `ai_high_priority` and `ai_low_priority` queues drain before upgrading: a job still queued under an old class ends up in Sidekiq's dead set, and a rule run waiting on it stays pending.
 
 ## Quickstart: OpenAI Token
 
@@ -1863,7 +1863,10 @@ endpoint**.
 
 Results are cached for 60 seconds by default. **Run checks again** bypasses the
 cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
-timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
+timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Five
+seconds is too short for a model running on CPU, such as llama.cpp without a GPU:
+the function-calling check can take 20 seconds there and shows as a timeout, so
+set `AI_HEALTH_PROBE_TIMEOUT=60` or more. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 

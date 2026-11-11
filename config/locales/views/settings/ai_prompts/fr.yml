@@ -1,0 +1,39 @@
+---
+fr:
+  settings:
+    ai_prompts:
+      prompt_field:
+        format_risk: 'Votre prompt %{provider} ne contient plus l''exemple {"%{key}": ...}. Chaque requête demande toujours ce format, donc l''analyse de la réponse fonctionne en général, mais un prompt qui demande un autre format de sortie la fera échouer.'
+        provider_openai: OpenAI
+        reset: Rétablir la valeur par défaut
+        reset_confirm_body: Votre prompt personnalisé sera supprimé et les instructions intégrées par défaut seront restaurées.
+        reset_confirm_title: Rétablir le prompt par défaut ?
+        status_custom: Votre prompt personnalisé est utilisé
+        status_default: Le prompt intégré par défaut est utilisé
+      show:
+        disable_ai: Désactiver l'assistant IA
+        insight_dig_in:
+          label: Message d'approfondissement
+          subtitle: Premier message de la discussion lorsque vous approfondissez une analyse avec l'IA
+          title: Approfondir une analyse
+        main_system_prompt:
+          label: Prompt système de la discussion
+          subtitle: Instructions fondamentales qui définissent le comportement de l'assistant AI dans toutes les conversations de chat
+          title: Prompt Système Principal
+        merchant_detector:
+          subtitle: L'IA identifie et enrichit les données de transaction avec des informations sur le marchand
+          title: Détection du marchand
+        page_title: Prompts IA
+        save: Enregistrer les prompts
+        save_confirm:
+          body: Les prompts personnalisés remplacent, pour votre foyer, les instructions système intégrées et les garde-fous de sécurité (comme les restrictions sur les conseils financiers).
+          cancel: Annuler
+          confirm: Confirmer
+          dont_show_again: Ne plus afficher cet avertissement
+          title: Enregistrer des prompts IA personnalisés ?
+        transaction_categorizer:
+          subtitle: L'IA catégorise automatiquement vos transactions en fonction de vos catégories définies
+          title: Catégorisation des transactions
+      update:
+        multiple_errors: Plusieurs prompts sont trop longs (maximum %{count} caractères)
+        success: Prompts IA mis à jour

@@ -37,6 +37,7 @@ class Ai::Comparison < ApplicationRecord
   # A categorize comparison's category for `side` (:primary or :shadow): the category's name, or
   # the name a migrated row recorded; nil for no category.
   def category_name(side, names)
-    names[public_send(:"#{side}_value").to_s].presence || metadata.to_h["#{side}_category_name"].presence
+    value = side == :primary ? primary_value : shadow_value
+    names[value.to_s].presence || metadata.to_h["#{side}_category_name"].presence
   end
 end

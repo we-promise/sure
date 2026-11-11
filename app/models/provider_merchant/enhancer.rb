@@ -5,13 +5,19 @@ class ProviderMerchant::Enhancer
   include Ai::Requester
   ai_feature :enhance_merchants
 
-  # Set by FamilyMerchantsController#enhance so a second click doesn't queue the same merchants
-  # again; released when the run finishes or gives up.
+  # Held from the click until the run finishes or gives up, so a second click doesn't queue the
+  # same merchants again.
   LOCK_TTL = 10.minutes
 
   def self.lock_key(family) = "enhance_provider_merchants:#{family.id}"
 
-  def self.enhance_later(family) = Ai::GenerationJob.perform_later(:enhance_merchants, { family_id: family.id })
+  # Queues a run unless one is already going. Returns false when one is.
+  def self.enhance_later(family)
+    return false unless Rails.cache.write(lock_key(family), true, expires_in: LOCK_TTL, unless_exist: true)
+
+    Ai::GenerationJob.perform_later(:enhance_merchants, { family_id: family.id })
+    true
+  end
 
   # ids: the merchants left from an earlier batch; nil on the first job, which starts the run.
   def self.from_ai_job(family_id:, ids: nil) = new(Family.find(family_id), merchant_ids: ids)

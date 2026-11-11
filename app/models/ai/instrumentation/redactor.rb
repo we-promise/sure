@@ -24,6 +24,17 @@ module Ai::Instrumentation::Redactor
     PATTERNS.reduce(scrubbed) { |memo, (pattern, replacement)| memo.gsub(pattern, replacement) }
   end
 
-  # A URL without credentials, query or fragment, the way AiHealth shows endpoints.
-  def url(value) = value.present? ? AiHealth.redact_endpoint(value) : nil
+  # A URL without credentials, query or fragment.
+  def url(value)
+    return if value.blank?
+
+    uri = URI.parse(value.to_s)
+    uri.user = nil if uri.respond_to?(:user=)
+    uri.password = nil if uri.respond_to?(:password=)
+    uri.query = nil if uri.respond_to?(:query=)
+    uri.fragment = nil if uri.respond_to?(:fragment=)
+    uri.to_s
+  rescue URI::InvalidURIError
+    MASK # an unparseable URL may still hold credentials, so none of it is shown
+  end
 end

@@ -43,4 +43,10 @@ class Ai::TokensTest < ActiveSupport::TestCase
     assert_in_delta 0.0042, Ai::Tokens.from_ruby_llm(tokens, 9.99).cost
     assert_in_delta 0.5, Ai::Tokens.from_ruby_llm(RubyLLM::Tokens.new(input: 1), 0.5).cost
   end
+
+  test "a negative or non-finite cost is dropped, so the row is kept and its cost estimated" do
+    assert_in_delta 0.5, Ai::Tokens.from_ruby_llm(RubyLLM::Tokens.new(input: 1, reported_cost: -0.1), 0.5).cost
+    assert_nil Ai::Tokens.from_ruby_llm(RubyLLM::Tokens.new(input: 1), -1).cost
+    assert_nil Ai::Tokens.from_ruby_llm(RubyLLM::Tokens.new(input: 1), Float::NAN).cost
+  end
 end

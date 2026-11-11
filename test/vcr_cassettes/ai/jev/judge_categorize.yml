@@ -5,7 +5,7 @@ http_interactions:
     uri: https://opencode.ai/zen/v1/systemone
     body:
       encoding: UTF-8
-      string: '{"model":"jev-1.13-free","state":{"description":"ACME CORP PAYROLL","amount":2500,"classification":"income"},"questions":{"category":{"type":"choice","instructions":"Which
+      string: '{"model":"jev-1.13-free","state":{"description":"STARBUCKS 1234 SEATTLE","classification":"expense","merchant":"Starbucks","amount":4.5},"questions":{"category":{"type":"choice","instructions":"Which
         spending category best fits this bank transaction? Pick `__uncategorized__`
         only if no category is a reasonable fit.","criteria":{"Food & Drink":null,"Coffee
         Shops":"Subcategory of Food & Drink","Salary":null,"Transportation":null,"__uncategorized__":"No
@@ -27,7 +27,7 @@ http_interactions:
       message: OK
     headers:
       Date:
-      - Fri, 06 Nov 2026 16:47:44 GMT
+      - Tue, 10 Nov 2026 00:00:07 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -37,26 +37,26 @@ http_interactions:
       Cf-Placement:
       - remote-IAD
       Server-Timing:
-      - gateway;dur=103, upstream;dur=52, total;dur=155
+      - gateway;dur=11, upstream;dur=42, total;dur=53
       X-Opencode-Log-Id:
-      - 01a1b1c2-4f66-7998-ab7d-e94c18791876
+      - 01a1c2c1-3f23-7a13-925f-6259a4c180b8
       X-Zen-Model:
       - jev-1.13-free
       Server:
       - cloudflare
       Cf-Ray:
-      - a56594eb1cbdd730-BNE
+      - a580c66a9c686c9e-MEL
     body:
       encoding: ASCII-8BIT
-      string: '{"model":"jev-1.13-free","answers":{"category":{"type":"choice","choice":"Salary","confidence":0.99,"probabilities":{"Food
-        & Drink":0,"Coffee Shops":0,"Salary":0.99,"Transportation":0,"__uncategorized__":0.01}}},"usage":{"input_tokens":396,"output_tokens":62,"cost":0,"opencode":{"billing_source":"free","list_cost":0,"tokens":{"input":396,"output":62,"reasoning":0,"cache_read":0,"cache_write_5m":0,"cache_write_1h":0}}}}'
-  recorded_at: Fri, 06 Nov 2026 16:47:44 GMT
+      string: '{"model":"jev-1.13-free","answers":{"category":{"type":"choice","choice":"Coffee
+        Shops","confidence":0.94,"probabilities":{"Food & Drink":0.05,"Coffee Shops":0.95,"Salary":0,"Transportation":0,"__uncategorized__":0}}},"usage":{"input_tokens":411,"output_tokens":63,"cost":0,"opencode":{"billing_source":"free","list_cost":0,"tokens":{"input":411,"output":63,"reasoning":0,"cache_read":0,"cache_write_5m":0,"cache_write_1h":0}}}}'
+  recorded_at: Tue, 10 Nov 2026 00:00:07 GMT
 - request:
     method: post
     uri: https://opencode.ai/zen/v1/systemone
     body:
       encoding: UTF-8
-      string: '{"model":"jev-1.13-free","state":{"description":"STARBUCKS 1234 SEATTLE","amount":4.5,"classification":"expense","merchant":"Starbucks"},"questions":{"category":{"type":"choice","instructions":"Which
+      string: '{"model":"jev-1.13-free","state":{"description":"ACME CORP PAYROLL","classification":"income","amount":2500.0},"questions":{"category":{"type":"choice","instructions":"Which
         spending category best fits this bank transaction? Pick `__uncategorized__`
         only if no category is a reasonable fit.","criteria":{"Food & Drink":null,"Coffee
         Shops":"Subcategory of Food & Drink","Salary":null,"Transportation":null,"__uncategorized__":"No
@@ -78,7 +78,7 @@ http_interactions:
       message: OK
     headers:
       Date:
-      - Fri, 06 Nov 2026 16:47:44 GMT
+      - Tue, 10 Nov 2026 00:00:07 GMT
       Content-Type:
       - application/json
       Transfer-Encoding:
@@ -88,18 +88,18 @@ http_interactions:
       Cf-Placement:
       - remote-IAD
       Server-Timing:
-      - gateway;dur=104, upstream;dur=75, total;dur=182
+      - gateway;dur=17, upstream;dur=86, total;dur=105
       X-Opencode-Log-Id:
-      - 01a1b1c2-5014-7277-9b0b-4326a3b29fd4
+      - 01a1c2c1-3f54-7fcc-b887-5d46dd02ff3c
       X-Zen-Model:
       - jev-1.13-free
       Server:
       - cloudflare
       Cf-Ray:
-      - a56594eb0d35d727-BNE
+      - a580c66aad0ff0c9-MEL
     body:
       encoding: ASCII-8BIT
-      string: '{"model":"jev-1.13-free","answers":{"category":{"type":"choice","choice":"Coffee
-        Shops","confidence":0.92,"probabilities":{"Food & Drink":0.06,"Coffee Shops":0.94,"Salary":0,"Transportation":0,"__uncategorized__":0}}},"usage":{"input_tokens":411,"output_tokens":63,"cost":0,"opencode":{"billing_source":"free","list_cost":0,"tokens":{"input":411,"output":63,"reasoning":0,"cache_read":0,"cache_write_5m":0,"cache_write_1h":0}}}}'
-  recorded_at: Fri, 06 Nov 2026 16:47:44 GMT
+      string: '{"model":"jev-1.13-free","answers":{"category":{"type":"choice","choice":"Salary","confidence":0.98,"probabilities":{"Food
+        & Drink":0,"Coffee Shops":0,"Salary":0.98,"Transportation":0,"__uncategorized__":0.02}}},"usage":{"input_tokens":396,"output_tokens":62,"cost":0,"opencode":{"billing_source":"free","list_cost":0,"tokens":{"input":396,"output":62,"reasoning":0,"cache_read":0,"cache_write_5m":0,"cache_write_1h":0}}}}'
+  recorded_at: Tue, 10 Nov 2026 00:00:07 GMT
 recorded_with: VCR 6.3.1

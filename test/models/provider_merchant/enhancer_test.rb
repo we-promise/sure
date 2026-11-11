@@ -42,10 +42,9 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     3.times { |i| provider_merchant("Shop #{i}") }
     requests = nil
 
-    with_ai_model_settings(batch_size: 2) do
-      requests = stub_websites({})
-      enhance
-    end
+    use_ai_model_settings(batch_size: 2)
+    requests = stub_websites({})
+    enhance
 
     assert_equal [ 2, 1 ], requests.map { _1.schema.dig(:properties, :merchants, :items, :properties, :merchant_id, :enum).size }
   end
@@ -72,10 +71,18 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert_equal lunchflow.id, duplicate.reload.merchant_id
   end
 
+  test "a second run isn't queued while one holds the lock" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
+      assert ProviderMerchant::Enhancer.enhance_later(@family)
+      assert_not ProviderMerchant::Enhancer.enhance_later(@family)
+    end
+  end
+
   test "makes no call when nothing needs a website, and releases the lock" do
     provider_merchant("Amazon", website_url: "amazon.com")
     Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
-    cache.write(ProviderMerchant::Enhancer.lock_key(@family), true)
     requests = stub_websites({})
 
     enhance
@@ -122,7 +129,6 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
   test "a failure is logged and releases the lock" do
     provider_merchant("Walmart")
     Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
-    cache.write(ProviderMerchant::Enhancer.lock_key(@family), true)
     stub_ai(:enhance_merchants, raises: Ai::Error::Refused.new("bad", status: 400))
 
     assert_difference -> { DebugLogEntry.where(category: "merchant_enhancement", level: "error").count }, 1 do

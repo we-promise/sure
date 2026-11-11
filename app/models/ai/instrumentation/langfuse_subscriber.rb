@@ -4,6 +4,7 @@
 # no family data and run every time an admin opens the health page.
 class Ai::Instrumentation::LangfuseSubscriber
   SKIPPED = %w[probe.ai].freeze
+  CREDENTIAL_FIELD = /\A(?:api[_-]?key|access[_-]?token|secret|password|authorization)\z/i
 
   def initialize(client: Rails.configuration.x.langfuse, environment: Rails.env)
     @client = client
@@ -45,10 +46,13 @@ class Ai::Instrumentation::LangfuseSubscriber
     def plain(value, scrub)
       case value
       when Data then plain(value.to_h, scrub)
-      when Hash then value.transform_values { plain(_1, scrub) }
+      when Hash then value.to_h { |key, item| [ key, credential_field?(key, item) ? Ai::Instrumentation::Redactor::MASK : plain(item, scrub) ] }
       when Array then value.map { plain(_1, scrub) }
       when String then scrub.call(value)
       else value
       end
     end
+
+    # A field named like a credential is masked whole, whatever its value looks like.
+    def credential_field?(key, value) = value.is_a?(String) && value.present? && key.to_s.match?(CREDENTIAL_FIELD)
 end

@@ -1,5 +1,5 @@
 # Helpers for testing AI code: the transport level (endpoints, models, call contexts, captured
-# events, cassettes) and routing (with_ai_routes, without_ai).
+# events, cassettes) and routing (use_ai_routes, use_no_ai).
 module AiTestHelper
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
@@ -35,7 +35,7 @@ module AiTestHelper
   def self.build_ai_config(models, routes, vector_store_backend: nil)
     lookup = models.index_by { "#{_1.endpoint.name}/#{_1.name}" }
     built = routes.to_h do |feature, names|
-      [ feature, names.each_with_index.map { |name, position| Ai::Route.new(feature:, position:, model: lookup.fetch(name)) } ]
+      [ feature, names.map { |name| Ai::Route.new(feature:, model: lookup.fetch(name)) } ]
     end
     Ai::Config.new(endpoints: models.map(&:endpoint).uniq, models:, routes: built, vector_store_backend:)
   end
@@ -139,24 +139,27 @@ module AiTestHelper
     requests
   end
 
-  # For the rest of a test (integration tests, setup blocks), instead of a block:
-  #   use_ai_routes(bill_setup: %w[gpu/qwen3-8b])
-  #   use_no_ai
-  def use_ai_routes(**routes) = Ai::Config.override = ai_routes_config(**routes)
-
-  def use_no_ai = Ai::Config.override = Ai::Config.new
-
-  # Runs the block with the test setup, its named features' routes replaced:
-  #   with_ai_routes(categorize: ["gpu/qwen3-8b", "openai/gpt-4.1-mini"]) { ... }
-  #   with_ai_routes(chat: []) { ... }   # chat :not_configured, everything else routed
-  def with_ai_routes(**routes, &block)
-    Ai::Config.with(ai_routes_config(**routes), &block)
-  end
-
-  def ai_routes_config(vector_store_backend: :pgvector, **routes)
+  # Routes AI through the test setup for the rest of the test, with the named features' routes
+  # replaced; the teardown restores the built config.
+  #   use_ai_routes
+  #   use_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
+  #   use_ai_routes(chat: [])   # chat :not_configured, everything else routed
+  def use_ai_routes(vector_store_backend: :pgvector, **routes)
     base = AiTestHelper.test_config
     names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
-    AiTestHelper.build_ai_config(base.models, names.merge(routes.transform_keys(&:to_sym)), vector_store_backend:)
+    Ai::Config.override = AiTestHelper.build_ai_config(base.models, names.merge(routes), vector_store_backend:)
+  end
+
+  # No AI configured for the rest of the test: every feature is :not_configured.
+  def use_no_ai = Ai::Config.override = Ai::Config.new
+
+  # Changes the test setup's openai/gpt-4.1-mini for the rest of the test, for budgets and the like:
+  #   use_ai_model_settings(batch_size: 2)
+  def use_ai_model_settings(**attributes)
+    base = AiTestHelper.test_config
+    models = base.models.map { _1.endpoint.name == "openai" ? _1.with(**attributes) : _1 }
+    names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
+    Ai::Config.override = AiTestHelper.build_ai_config(models, names, vector_store_backend: base.vector_store_backend)
   end
 
   # Runs the block with the test setup's openai/gpt-4.1-mini changed, for budgets and the like:
@@ -168,10 +171,6 @@ module AiTestHelper
     Ai::Config.with(AiTestHelper.build_ai_config(models, names, vector_store_backend: base.vector_store_backend), &block)
   end
 
-  # Runs the block with no AI configured: every feature is :not_configured.
-  def without_ai(&block)
-    Ai::Config.with(Ai::Config.new, &block)
-  end
   # A data URI's payload, as RubyLLM sends page images and PDFs.
   INLINE_FILE = %r{(data:[a-z]+/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=]+}
 
@@ -199,16 +198,6 @@ module AiTestHelper
     events
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
-  end
-
-  # Makes every transport for `protocol` answer `probe` with `returns` (or raise `raises`),
-  # without HTTP. Returns the recorded [model, check] pairs.
-  def stub_ai_transport(protocol = :compatible, returns: nil, raises: nil)
-    calls = []
-    klass = protocol == :anthropic ? Ai::Transport::Anthropic : Ai::Transport::Compatible
-    expectation = klass.any_instance.stubs(:run_probe).with { |model, check, **| calls << [ model, check ] }
-    raises ? expectation.raises(raises) : expectation.returns(returns)
-    calls
   end
 
   # Replays (or, with RECORD_CASSETTES=1 and the keys in ENV, records) a cassette under

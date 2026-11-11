@@ -27,6 +27,35 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "Ollama's `:latest` listing counts as the model it aliases; another tag doesn't" do
+    stub_request(:get, "https://ollama.example.test/v1/models")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" },
+                 body: { data: [ { id: "llama3:latest" }, { id: "qwen3:8b" } ] }.to_json)
+
+    probe = ->(model) { @probe.llm(provider: :openai, endpoint: "https://ollama.example.test/v1", access_token: "t", model:) }
+
+    assert probe.call("llama3").passing?
+    assert_equal "model_not_available", probe.call("qwen3").failure_code.to_s
+  end
+
+  test "a 200 whose body isn't JSON is an invalid response, not a refusal" do
+    stub_request(:get, "https://api.openai.example.test/v1/models")
+      .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: "<html>login</html>")
+
+    result = @probe.llm(provider: :openai, endpoint: "https://api.openai.example.test/v1", access_token: "t", model: "gpt-4.1")
+
+    assert_equal "invalid_response", result.failure_code.to_s
+  end
+
+  test "a rejected key on the vector store is reported by name" do
+    stub_request(:get, "https://api.openai.example.test/v1/vector_stores?limit=1")
+      .to_return(status: 401, headers: { "Content-Type" => "application/json" }, body: { error: { message: "bad key" } }.to_json)
+
+    result = @probe.openai_vector_store(endpoint: "https://api.openai.example.test/v1", access_token: "t")
+
+    assert_equal [ "unauthorized", 401 ], [ result.failure_code.to_s, result.http_status ]
+  end
+
   test "an unsupported provider is a failing result, not an exception" do
     result = @probe.llm(provider: :mistral, endpoint: "https://api.mistral.example.test/v1", access_token: "token", model: "small")
 
@@ -198,18 +227,8 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     end
   end
 
-  test "synthetic PDF is valid and contains no customer data" do
-    pdf = @probe.send(:synthetic_pdf)
-    reader = PDF::Reader.new(StringIO.new(pdf))
-
-    assert_equal 1, reader.page_count
-    AiHealth::Probe::PDF_TEST_LINES.each do |line|
-      assert_includes reader.pages.first.text, line
-    end
-  end
-
   test "PDF text-extraction probe sends the synthetic text layer through ReadPdf and validates its result" do
-    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::PDF_TEST_INSTITUTION))
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
     result = @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
                                         model: "text-model", openai_compatible: true)
@@ -217,14 +236,14 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert result.passing?
     request = requests.sole
     assert_empty request.attachments
-    assert_not_includes request.instructions, AiHealth::Probe::PDF_TEST_INSTITUTION
-    assert_includes request.input, AiHealth::Probe::PDF_TEST_INSTITUTION
+    assert_not_includes request.instructions, AiHealth::Probe::SyntheticPdf::INSTITUTION
+    assert_includes request.input, AiHealth::Probe::SyntheticPdf::INSTITUTION
     assert_equal "text-model", request.model.name
   end
 
   test "PDF vision probe sends the page as an image on a compatible server" do
     skip "pdftoppm isn't installed (poppler-utils)" unless system("pdftoppm", "-v", out: File::NULL, err: File::NULL)
-    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::PDF_TEST_INSTITUTION))
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
     result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
                                           model: "vision-model", openai_compatible: true)
@@ -246,7 +265,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   end
 
   test "PDF vision probe sends the synthetic PDF itself to Anthropic" do
-    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::PDF_TEST_INSTITUTION))
+    requests = stub_ai(:extract_pdf, returns: probe_answer(AiHealth::Probe::SyntheticPdf::INSTITUTION))
 
     result = @probe.pdf_vision_processing(provider: :anthropic, endpoint: "https://api.anthropic.com", access_token: "token",
                                           model: "claude-sonnet-4-6")
@@ -254,7 +273,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert result.passing?
     attachment = requests.sole.attachments.sole
     assert attachment.pdf?
-    assert_equal @probe.send(:synthetic_pdf), attachment.data
+    assert_equal AiHealth::Probe::SyntheticPdf.bytes, attachment.data
   end
 
   test "failed LLM probe writes a system-wide debug entry and Rails log without secrets" do

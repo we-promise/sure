@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -232,6 +232,40 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
       Ai::GenerationJob.perform_now(:detect_merchants, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
     end
     assert_equal "failed", rule_run.reload.status
+  end
+
+  test "a rule run counts its transactions down per batch and completes once" do
+    use_ai_model_settings(batch_size: 2)
+    ids = 5.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 5, executed_at: Time.current)
+    rule_run.await_ai!(5)
+    stub_ai(:detect_merchants) do |request|
+      batch = request.schema.dig(:properties, :merchants, :items, :properties, :transaction_id, :enum)
+      { merchants: batch.map { { transaction_id: _1, business_name: "Shop", business_url: "shop.example" } } }
+    end
+
+    Ai::GenerationJob.perform_later(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+    progress = []
+    until enqueued_jobs.empty?
+      ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys)
+      progress << rule_run.reload.slice(:transactions_awaiting_ai, :transactions_modified, :status).values
+    end
+
+    assert_equal [ [ 3, 2, "pending" ], [ 1, 4, "pending" ], [ 0, 5, "success" ] ], progress
+    assert_equal 0, rule_run.pending_jobs_count
+  end
+
+  test "a run that gives up stops waiting for its transactions" do
+    ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 2, executed_at: Time.current)
+    rule_run.await_ai!(2)
+    stub_ai(:detect_merchants, raises: Ai::Error::Unauthorized.new("bad key"))
+
+    Ai::GenerationJob.perform_now(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+
+    assert_equal [ 0, "failed" ], rule_run.reload.slice(:transactions_awaiting_ai, :status).values
   end
 
   private

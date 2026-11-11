@@ -47,16 +47,15 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
   end
 
   test "runs one batch per job and enqueues the rest at the back, then finishes once" do
-    with_ai_model_settings(batch_size: 2) do
-      stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
 
-      Ai::GenerationJob.perform_later(:detect_merchants, { ids: %w[a b c d e], family_id: @family.id })
-      assert_equal "ai_low_priority", enqueued_jobs.first["queue_name"]
-      run_queue
+    Ai::GenerationJob.perform_later(:detect_merchants, { ids: %w[a b c d e], family_id: @family.id })
+    assert_equal "ai_low_priority", enqueued_jobs.first["queue_name"]
+    run_queue
 
-      assert_equal [ [ :applied, @family.id, %w[a b] ], [ :applied, @family.id, %w[c d] ], [ :applied, @family.id, %w[e] ],
-                     [ :finished, @family.id, 5 ] ], Requester.log
-    end
+    assert_equal [ [ :applied, @family.id, %w[a b] ], [ :applied, @family.id, %w[c d] ], [ :applied, @family.id, %w[e] ],
+                   [ :finished, @family.id, 5 ] ], Requester.log
   end
 
   test "nothing to do finishes with zero and makes no call" do
@@ -69,9 +68,8 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
   end
 
   test "a feature that became unavailable is discarded, and the requester hears once" do
-    without_ai do
-      Ai::GenerationJob.perform_now(:detect_merchants, { ids: %w[a], family_id: @family.id })
-    end
+    use_no_ai
+    Ai::GenerationJob.perform_now(:detect_merchants, { ids: %w[a], family_id: @family.id })
 
     assert_equal [ [ :failed, @family.id, Ai::Error::Unavailable ] ], Requester.log
   end
@@ -112,16 +110,14 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal [ [ :failed, @family.id, ActiveRecord::StatementInvalid ] ], Requester.log
   end
 
-  test "a job queued under an old class is handed to Ai::GenerationJob" do
-    assert_enqueued_with(job: Ai::GenerationJob, args: [ :categorize, { ids: %w[a], family_id: @family.id, rule_run_id: "r1" } ]) do
-      AutoCategorizeJob.perform_now(@family, transaction_ids: %w[a], rule_run_id: "r1")
+  test "a job whose family was deleted while it waited is dropped, not retried" do
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+
+    assert_nothing_raised do
+      Ai::GenerationJob.perform_now(:detect_merchants, { ids: %w[a], family_id: SecureRandom.uuid })
     end
-    assert_enqueued_with(job: Ai::GenerationJob, args: [ :detect_merchants, { ids: %w[b], family_id: @family.id } ]) do
-      AutoDetectMerchantsJob.perform_now(@family, transaction_ids: %w[b])
-    end
-    assert_enqueued_with(job: Ai::GenerationJob, args: [ :enhance_merchants, { family_id: @family.id, ids: %w[m] } ]) do
-      EnhanceProviderMerchantsJob.perform_now(@family, merchant_ids: %w[m])
-    end
+    assert_empty Requester.log
+    assert_empty requests
   end
 
   test "an interactive feature's job goes to today's high-priority queue" do
@@ -133,13 +129,12 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
   # large runs take turns, so each gets its first result before either finishes.
   test "two families' runs on one thread each get a result before either finishes" do
     other = families(:empty)
-    with_ai_model_settings(batch_size: 2) do
-      stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
 
-      Ai::GenerationJob.perform_later(:detect_merchants, { ids: %w[a1 a2 a3 a4 a5 a6], family_id: @family.id })
-      Ai::GenerationJob.perform_later(:detect_merchants, { ids: %w[b1 b2 b3 b4 b5 b6], family_id: other.id })
-      run_queue
-    end
+    Ai::GenerationJob.perform_later(:detect_merchants, { ids: %w[a1 a2 a3 a4 a5 a6], family_id: @family.id })
+    Ai::GenerationJob.perform_later(:detect_merchants, { ids: %w[b1 b2 b3 b4 b5 b6], family_id: other.id })
+    run_queue
 
     first_applied = ->(family) { Requester.log.index { _1[0] == :applied && _1[1] == family.id } }
     finished = ->(family) { Requester.log.index { _1[0] == :finished && _1[1] == family.id } }

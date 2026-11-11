@@ -62,6 +62,9 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     ruby_openai = Faraday::UnauthorizedError.new("401", { status: 401, body: { "error" => "bad key" } })
     assert_instance_of Ai::Error::Unauthorized, Ai::Error.from_exception(ruby_openai)
 
+    garbled = Faraday::ParsingError.new(JSON::ParserError.new("unexpected token"), Faraday::Response.new(status: 200))
+    assert_instance_of Ai::Error::InvalidOutput, Ai::Error.from_exception(garbled)
+
     assert_nil Ai::Error.from_exception(RuntimeError.new("ours"))
   end
 

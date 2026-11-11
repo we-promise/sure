@@ -1,0 +1,29 @@
+---
+it:
+  settings:
+    llm_usages:
+      show:
+        page_title: "Utilizzo e costi LLM"
+        subtitle: "Monitora l'utilizzo AI e i costi stimati"
+        start_date: "Data inizio"
+        end_date: "Data fine"
+        filter: "Filtra"
+        total_calls: "Chiamate totali"
+        avg_cost_per_call: "Costo medio/chiamata"
+        based_on_calls: "Basato su %{with_cost} di %{total} chiamate con dati di costo"
+        total_tokens: "Token totali"
+        prompt: "prompt"
+        completion: "completamento"
+        total_cost: "Costo totale"
+        cost_by_operation: "Costo per operazione"
+        cost_by_model: "Costo per modello"
+        recent_usage: "Utilizzo recente"
+        col_date: "Data"
+        col_operation: "Operazione"
+        col_model: "Modello"
+        col_tokens: "Token"
+        col_cost: "Costo"
+        failed: "Fallita"
+        no_usage_data: "Nessun dato di utilizzo trovato per il periodo selezionato"
+        cost_estimates_title: "Informazioni sulle stime dei costi"
+        cost_estimates_description: "I costi sono stimati in base ai prezzi pubblicati dai fornitori, verificati l’ultima volta il %{date}. I costi effettivi possono variare. I prezzi sono per 1 milione di token e variano per modello. I modelli personalizzati o self-hosted mostreranno \"N/A\" e non sono inclusi nei totali dei costi."

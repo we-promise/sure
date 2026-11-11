@@ -158,7 +158,11 @@ class ImportsController < ApplicationController
 
   def show
     unless @import.requires_csv_workflow?
-      redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload") unless @import.uploaded?
+      if !@import.uploaded?
+        redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload")
+      elsif @import.is_a?(MonarchImport) && @import.pending? && !@import.publishable?
+        redirect_to import_configuration_path(@import), alert: t("imports.show.finalize_mappings")
+      end
       return
     end
 
@@ -267,7 +271,13 @@ class ImportsController < ApplicationController
     end
 
     def create_document_import(file)
-      adapter = document_store
+      availability = Ai.availability(:embed, family: Current.family, user: Current.user)
+      unless availability.available?
+        redirect_to new_import_path, alert: availability.message_for(Current.user)
+        return
+      end
+
+      adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
         return

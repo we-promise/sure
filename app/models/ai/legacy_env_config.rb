@@ -2,7 +2,7 @@
 # installs configured either way keep working while the router replaces today's lookups.
 #
 # Each value resolves the way the provider code resolves it. Wherever that code has a resolver
-# (Provider::Registry, Provider::*.effective_*, Assistant::External.config,
+# (Provider::Registry and the providers it builds, Assistant::External.config,
 # Ai::LegacyEnvConfig::Jev), this calls it, so the router and the calls not yet on the router
 # can't disagree. test/architecture/ai_config_test
 # checks that over every documented setup. The one deliberate difference: embeddings fall back
@@ -67,6 +67,7 @@ class Ai::LegacyEnvConfig
   end
 
   def build
+    @unbuildable = []
     backend = vector_store_backend
     llm = { openai: openai(vector_store: backend == :openai), anthropic: anthropic }.compact
     jev_model = jev
@@ -74,16 +75,17 @@ class Ai::LegacyEnvConfig
     embed_model = embedding_model if %i[pgvector qdrant].include?(backend)
     embed_route_model = embed_route(backend, llm[:openai], embed_model)
 
-    llm_models = Provider::Registry.llm_provider_order.filter_map { |name| llm[name]&.last }
-    # Generation routes list only the preferred LLM: failover never sends a family's data to a
-    # provider the install doesn't use for that feature. Chat keeps both, as it resolves its own
-    # provider.
-    preferred = llm_models.first(1)
+    # Both mirror Provider::Registry.preferred_llm_provider, which walks the LLM order and raises at
+    # a provider it can't build. Generations list only the provider it picks, so failover never
+    # sends a family's data to a provider the install doesn't use; chat lists every provider the
+    # walk reaches, as it resolves its own provider.
+    reached = reachable_llm_models(llm)
+    preferred = [ reached.first ].compact
     routes = LLM_FEATURES.index_with { |feature| route_list(feature, preferred) }
     # PDF import uses only a provider whose PDF support is on (supports_pdf_processing?,
     # which `vision` carries), so OPENAI_SUPPORTS_PDF_PROCESSING=false keeps it off.
     routes[:extract_pdf] = route_list(:extract_pdf, preferred.select { _1.capable?(:vision) }.map { pdf_model(_1) })
-    routes[:chat] = route_list(:chat, llm_models + [ agent_model ].compact)
+    routes[:chat] = route_list(:chat, reached + [ agent_model ].compact)
     # Jev or the LLM, never both, so a Jev outage doesn't send a batch to the LLM; the shadow
     # route runs the other one.
     jev_first = jev_model && self.class.categorization_provider == "jev"
@@ -92,7 +94,7 @@ class Ai::LegacyEnvConfig
     routes[:embed] = route_list(:embed, [ embed_route_model ].compact)
 
     endpoints = (llm.values.map(&:first) + [ jev_model, agent_model, embed_model ].compact.map(&:endpoint)).uniq
-    models = (llm_models + [ jev_model, agent_model, embed_model, embed_route_model ]).compact.uniq
+    models = (reached + [ jev_model, agent_model, embed_model, embed_route_model ]).compact.uniq
 
     Ai::Config.new(endpoints:, models:, routes: routes.reject { |_, list| list.empty? }, vector_store_backend: backend)
   end
@@ -116,7 +118,7 @@ class Ai::LegacyEnvConfig
       flag = env("OPENAI_SUPPORTS_PDF_PROCESSING")
       vision = (flag.nil? || flag.downcase.in?(%w[true 1 yes])) &&
                (uri_base.present? || Provider::Openai::VISION_CAPABLE_MODEL_PREFIXES.any? { name.start_with?(_1) })
-      model = provider && llm_model(endpoint, provider, name, context_window: context_window,
+      model = provider && llm_model(endpoint, provider, name, context_window: uri_base ? context_window : explicit_context_window,
                                     max_output_tokens: positive(env("LLM_MAX_RESPONSE_TOKENS"), Setting.llm_max_response_tokens),
                                     vision:, documents: vision && uri_base.nil?)
       [ endpoint, model ]
@@ -127,16 +129,15 @@ class Ai::LegacyEnvConfig
       return unless token
 
       base_url = env("ANTHROPIC_BASE_URL") || Setting.anthropic_base_url.presence
-      provider = buildable { Provider::Registry.get_provider(:anthropic) }
+      provider = buildable(:anthropic) { Provider::Registry.get_provider(:anthropic) }
       endpoint = Ai::Config::Endpoint.new(
         name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
-      # Anthropic batches were never token-sliced, so its window is known only when set.
       name = Provider::Anthropic.effective_model
       vision = base_url.present? || Provider::Anthropic::VISION_CAPABLE_MODEL_PREFIXES.any? { name.to_s.start_with?(_1) }
       model = provider && llm_model(endpoint, provider, name,
-                                    context_window: positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window),
+                                    context_window: explicit_context_window,
                                     max_output_tokens: positive(env("ANTHROPIC_MAX_TOKENS")) || ANTHROPIC_MAX_TOKENS,
                                     vision:, documents: vision)
       [ endpoint, model ]
@@ -156,8 +157,9 @@ class Ai::LegacyEnvConfig
       Ai::Config::Model.new(endpoint:, name:, capabilities:, context_window:, max_output_tokens:, batch_size:)
     end
 
-    # The deprecated budgets: Assistant::TokenBudget's window (2048 by default), the response cap only
-    # when someone set one, and LLM_MAX_ITEMS_PER_CALL items per call.
+    # The deprecated budgets: on a custom server, Assistant::TokenBudget's window (2048 by default,
+    # a guard for small local models); the response cap only when someone set one; and
+    # LLM_MAX_ITEMS_PER_CALL items per call.
     def context_window = Assistant::TokenBudget.context_window
 
     # Today's PDF import ignores the 2,048-token baseline chat and categorization assume: it sends
@@ -167,6 +169,10 @@ class Ai::LegacyEnvConfig
     def pdf_model(model)
       positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window) ? model : model.with(context_window: nil)
     end
+
+    # A cloud model's real window is far larger than the 2048 guard, which would split its batches
+    # into several calls, so native OpenAI and Anthropic are token-sliced only when one is set.
+    def explicit_context_window = positive(env("LLM_CONTEXT_WINDOW"), Setting.llm_context_window)
 
     def batch_size = positive(env("LLM_MAX_ITEMS_PER_CALL"), Setting.llm_max_items_per_call) || Ai::Config::Model::DEFAULT_BATCH_SIZE
 
@@ -250,9 +256,7 @@ class Ai::LegacyEnvConfig
     end
 
     def route_list(feature, models)
-      models.each_with_index.map do |model, position|
-        Ai::Route.new(feature:, position:, model:, prompt: prompt_for(feature, model))
-      end
+      models.map { |model| Ai::Route.new(feature:, model:, prompt: prompt_for(feature, model)) }
     end
 
     def prompt_for(feature, model) = self.class.prompt_for(feature, model.endpoint)
@@ -271,9 +275,18 @@ class Ai::LegacyEnvConfig
       :cloud
     end
 
-    def buildable
+    def reachable_llm_models(llm)
+      Provider::Registry.llm_provider_order.each_with_object([]) do |name, models|
+        break models if @unbuildable.include?(name)
+
+        models << llm[name].last if llm[name]&.last
+      end
+    end
+
+    def buildable(name)
       yield
     rescue Provider::Error
+      @unbuildable << name
       nil
     end
 

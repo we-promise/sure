@@ -1,15 +1,13 @@
 # AI pipeline
 
-Sure's AI layer is moving onto one path: routing, consent, generations, a sequencer and chat on
-thin transports over RubyLLM. The design and the order of the pull requests are in
-`docs/proposals/v0.8/ai-plumbing-redesign.md` (PR #4440). This guide covers what has landed. It
-grows with each part.
+Sure's AI calls go through thin transports over RubyLLM. The design is in
+`docs/proposals/v0.8/ai-plumbing-redesign.md`.
 
-## Transports and instrumentation (PR 2a)
+## Transports and instrumentation
 
 ```mermaid
 flowchart LR
-  Caller["AiHealth::Probe today;<br/>generations from 2c"] --> T["Ai::Transport.for(endpoint)<br/>Compatible | Anthropic"]
+  Caller["AiHealth::Probe"] --> T["Ai::Transport.for(endpoint)<br/>Compatible | Anthropic"]
   T --> CC["Ai::CallContext.call<br/>usage owner + workflow"]
   CC --> R["RubyLLM.context per endpoint"]
   R --> I["Ai::Transport::Instrumenter<br/>attempt budget"]
@@ -33,8 +31,7 @@ flowchart LR
 **Rules**
 
 - **A transport never reads ENV, `Setting` or ActiveRecord.** It takes an `Ai::Config::Endpoint`
-  and an `Ai::Config::Model`. Configuration reaches them through `Ai::Config` (2b) and the
-  `ai_*` tables (PR 7).
+  and an `Ai::Config::Model`, built by its caller.
 - **Build clients only in `Ai::Transport::Http`.** It applies the endpoint's timeout and
   headers, TLS options and the proxy. RubyLLM builds its own connections and takes no TLS
   options, so its contexts use `Http.ruby_llm_adapter`, a Net::HTTP adapter that adds them. The
@@ -54,26 +51,26 @@ flowchart LR
 - **Wrap every call in `Ai::CallContext.call`.** RubyLLM's `usage.ruby_llm` event then carries
   the family (the usage owner) and the call (the workflow), and `UsageSubscriber` writes one
   `llm_usages` row per request. A failed request's row takes its own error from the
-  `request.ruby_llm` event (`Ai::Transport::Instrumenter`). A job opens `Ai::CallContext.job(correlation_id)` first, with
-  the id from its arguments.
+  `request.ruby_llm` event (`Ai::Transport::Instrumenter`). A job opens
+  `Ai::CallContext.job(correlation_id)` first, with the id from its arguments; the id reaches
+  the usage rows, the Langfuse session and the OTel `session.id`.
 - **Never create `ruby_llm_usages`.** RubyLLM's ledger would then record every call a second time.
 
 **Tests**
 
-- `test/support/ai_test_helper.rb`: `ai_endpoint`, `ai_model`, `with_ai_call_context`,
-  `capture_ai_events`, `stub_ai_transport`, and `with_ai_cassette(preset, name)` for cassettes
-  under `test/vcr_cassettes/ai/<preset>/` (record with `RECORD_CASSETTES=1`).
+- `test/support/ai_test_helper.rb`: `ai_endpoint`, `ai_model`, `with_ai_call_context` and
+  `capture_ai_events`.
 - A new transport, or a new transport call, passes `ai_transport_contract_test.rb`: every HTTP
   status maps onto `Ai::Error`, retries follow the endpoint, usage counts cached tokens, and the
   proxy is resolved by `Http`.
 
-## Routing and consent (PR 2b)
+## Routing and consent
 
 ```mermaid
 flowchart LR
   Caller["a view, controller, job or tool"] -->|"Ai.available?(feature, family:, user:)"| R["Ai::Router"]
   R --> C["Ai::Config.current<br/>endpoints, models, routes"]
-  C --> L["Ai::LegacyEnvConfig<br/>today's ENV + Setting (until PR 7)"]
+  C --> L["Ai::LegacyEnvConfig<br/>deprecated ENV + Setting"]
   R --> M["Ai::Routes::MATRIX<br/>lane, needs, consent, sends"]
   R --> K["Ai::Consent<br/>the user's AI switch"]
   R -->|"Ai::Plan or Ai::Availability(reason)"| Caller
@@ -98,18 +95,18 @@ flowchart LR
   check `Ai.available?(:feature, family:, user:)` in a model or job. Don't test
   `Provider::Registry`, `Setting` or `VectorStore` for availability.
 - **No AI ENV.** The cop `Sure/NoAiEnv` flags `ENV` reads of AI-looking names outside
-  `Ai::LegacyEnvConfig`. Add a column, a preset field or a config file key instead (PR 7). The
+  `Ai::LegacyEnvConfig`. Add a column, a preset field or a config file key instead. The
   files on its allowlist in `.rubocop.yml` still read ENV until their part replaces them; the list
   only shrinks.
 - **A new feature is a row in `Ai::Routes::MATRIX`**, with `sends:` keys described in
   `config/locales/models/ai/en.yml`, and its key is permanent once released. Regenerate the table
   below with `bin/rails ai:routes_doc`; `ai_routing_matrix_test` fails when it's stale.
-- **Consent, until PR 7:** chat and bills need the user's own AI switch (`users.ai_enabled`);
-  nothing else needs consent. PR 7 adds the family's consent per row.
+- **Consent:** chat and bills need the user's own AI switch (`users.ai_enabled`); nothing else
+  needs consent yet.
 - **An AI tool declares its feature** (`ai_feature :extract_pdf` on an `Assistant::Function`), so
   chat and MCP list it only while the feature is available.
-- **`Ai::Config` is built in each process from its own ENV** until PR 7, so give the web and the
-  worker containers the same AI variables.
+- **`Ai::Config` is built in each process from its own ENV**, so give the web and the worker
+  containers the same AI variables.
 
 <!-- ai:routes_doc -->
 | Feature | Lane | Needs | Consent row | Sends |
@@ -127,17 +124,17 @@ flowchart LR
 
 **Tests**
 
-- `with_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini]) { }` runs the block with the
-  test setup (`AiTestHelper.test_config`), the named features' routes replaced; `without_ai { }`
-  with nothing configured. `use_ai_routes` and `use_no_ai` do the same for the rest of a test.
+- `use_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini])` routes the rest of the test
+  through the test setup (`AiTestHelper.test_config`), the named features' routes replaced;
+  `use_no_ai` configures nothing.
 - `test/architecture/ai_agreement_test.rb` asks every entry point in each setup today's code
   supports (`test/support/ai_legacy_setups.rb`) and fails when one disagrees with the router.
-  Chat's entry points are on its allowlist until PR 6.
+  Chat's entry points are on its allowlist, as chat doesn't go through the router yet.
 - `ai_config_test.rb` checks that the deprecated ENV path routes each feature to the provider and
   model today's code uses; `ai_feature_guard_test.rb` that every action starting an AI feature
   declares `requires_ai`.
 
-## Generations (PR 2c)
+## Generations
 
 Every structured-output feature (categorization, merchant detection and enhancement, bill setup)
 is one small `Ai::Generation` file, a prompt folder and a domain requester. Jobs, failover and
@@ -187,16 +184,23 @@ flowchart LR
   Anthropic.
 - **JSON modes** apply to chat-completions servers: `auto` walks strict, json_object, none, moving
   on when the answer doesn't parse or, for a list, when more than half the items are blank. A
-  400 about the JSON mode or the reasoning effort retries once in `none` without the effort; any
-  other 400 ends the call.
-- **Overflow splits, invalid output escalates.** `ContextTooLong` or an answer cut at the output
-  limit halves the batch on the same route; `InvalidOutput` moves to the next route; a
+  400 about the JSON mode or the reasoning effort, or any 400 to a request that sent an effort,
+  retries once in `none` without the effort; any other 400 ends the call.
+- **Overflow splits, invalid output escalates, then bisects.** `ContextTooLong` or an answer cut
+  at the output limit halves the batch on the same route; `InvalidOutput` moves to the next route,
+  and when every route fails it the batch is halved on the first route (`BISECT_DEPTH`, twice) to
+  find the transactions that break it. Items still unanswered are skipped and logged
+  (`ai_generation` debug entries, ids only), and the run goes on. A
   timeout, 5xx, 429, refused connection, bad key or missing model marks the smallest broken thing
   down for 60 seconds and moves on.
+- **Rule runs get one job per AI action.** The rule action counts the transactions onto
+  `RuleRun#transactions_awaiting_ai` and queues one `Ai::GenerationJob` with every id; the
+  requester reports each batch (`RuleRun#ai_handled!`) and completes the run once.
+  `GET /api/v1/rule_runs/:id/progress` lets a client watch the count reach 0.
 - **No prompt heredocs.** `Sure/NoPromptHeredoc` flags heredocs over ten lines in
   `app/models/ai/**` and controllers.
-- **Prompts change only with evals.** The prompts are today's, word for word
-  (`test/architecture/ai_prompts_test.rb` renders each against its golden text); a change is its
+- **Prompts change only with evals.** `test/architecture/ai_prompts_test.rb` renders each prompt
+  folder against its golden text in `test/fixtures/files/ai_prompts/`; a change to the text is its
   own PR, run with the `ai-live` label.
 
 **Tests**
@@ -204,13 +208,14 @@ flowchart LR
 - `stub_ai(:categorize, returns: { categorizations: [...] })` answers the feature's generations
   without HTTP, still running coercion, failover, instrumentation and the requester; it returns
   the requests sent. `raises: Ai::Error::Timeout` fails them; a block answers per request.
-- `with_ai_model_settings(batch_size: 2) { }` changes the test setup's OpenAI model.
-- `test/models/ai/live/` replays cassettes under `test/vcr_cassettes/ai/<preset>/`; record them
+- `use_ai_model_settings(batch_size: 2)` changes the test setup's OpenAI model for the rest of the test.
+- `test/models/ai/live/` replays cassettes with `with_ai_cassette(preset, name)` under
+  `test/vcr_cassettes/ai/<preset>/`; record them
   with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.
 - CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
   `ai-live` label runs the live tests and evals with repository secrets.
 
-## Judgements and shadow runs (PR 2d)
+## Judgements and shadow runs
 
 **Judgements.** A decision model (Jev) answers a feature through an `Ai::Judgement`, which the
 feature's generation declares with `judged_by`. The generation's loop builds it on a `judge`
@@ -225,7 +230,7 @@ shadow subject: "Transaction",
        compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
 ```
 
-is sampled after each successful call at the family's rate (until PR 7). On a hit, `Ai::Shadow`
+is sampled after each successful call at the family's rate. On a hit, `Ai::Shadow`
 enqueues `Ai::ShadowJob` with the items the call was sent and the primary's compared answer. The
 job runs the same class on the `shadow_<feature>` route; its calls are recorded under
 `shadow_<feature>` and tagged `shadow`, and its answer goes only to the `compare.ai_shadow`

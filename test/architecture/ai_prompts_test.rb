@@ -38,7 +38,7 @@ class AiPromptsTest < ActiveSupport::TestCase
   }.freeze
 
   def render(name, feature, **locals)
-    route = Ai::Route.new(feature:, position: 0, model: AiTestHelper.test_config.models.first, prompt: name)
+    route = Ai::Route.new(feature:, model: AiTestHelper.test_config.models.first, prompt: name)
     Ai::Prompt.for(feature, default: name, route:, family: nil, locale: nil, locals:)
   end
 

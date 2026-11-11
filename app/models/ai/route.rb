@@ -5,8 +5,8 @@
 # - prompt: the app/prompts folder it runs; nil means the feature's default;
 # - json_mode: overrides the endpoint's;
 # - reasoning_effort: one lowercase word sent as the model's effort; nil sends nothing (#3605).
-Ai::Route = Data.define(:feature, :position, :model, :prompt, :json_mode, :reasoning_effort) do
-  def initialize(feature:, position:, model:, prompt: nil, json_mode: nil, reasoning_effort: nil)
+Ai::Route = Data.define(:feature, :model, :prompt, :json_mode, :reasoning_effort) do
+  def initialize(feature:, model:, prompt: nil, json_mode: nil, reasoning_effort: nil)
     json_mode = json_mode&.to_sym
     if json_mode && !Ai::Config::Endpoint::JSON_MODES.include?(json_mode)
       raise ArgumentError, "unknown JSON mode #{json_mode.inspect}"
@@ -15,7 +15,7 @@ Ai::Route = Data.define(:feature, :position, :model, :prompt, :json_mode, :reaso
       raise ArgumentError, "reasoning effort must be one lowercase word"
     end
 
-    super(feature: feature.to_sym, position:, model:, prompt: prompt&.to_s, json_mode:,
+    super(feature: feature.to_sym, model:, prompt: prompt&.to_s, json_mode:,
           reasoning_effort: reasoning_effort&.to_s)
   end
 
@@ -47,6 +47,6 @@ Ai::Route = Data.define(:feature, :position, :model, :prompt, :json_mode, :reaso
     user&.email.present? && allowed.include?(user.email.downcase)
   end
 
-  def inspect = "#<Ai::Route #{feature}[#{position}] #{endpoint.name}/#{model.name}>"
+  def inspect = "#<Ai::Route #{feature} #{endpoint.name}/#{model.name}>"
   alias_method :to_s, :inspect
 end

@@ -1,0 +1,16 @@
+---
+ro:
+  settings:
+    ai_prompts:
+      show:
+        page_title: Prompturi AI
+        disable_ai: Dezactivează Asistentul AI
+        main_system_prompt:
+          title: Promptul principal de sistem
+          subtitle: Instrucțiuni de bază care definesc modul în care asistentul AI se comportă în toate conversațiile de chat
+        transaction_categorizer:
+          title: Categorizator de tranzacții
+          subtitle: AI categorizează automat tranzacțiile tale pe baza categoriilor definite
+        merchant_detector:
+          title: Detector de comercianți
+          subtitle: AI identifică și îmbogățește datele tranzacțiilor cu informații despre comercianți

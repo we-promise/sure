@@ -27,6 +27,9 @@ class Provider::Anthropic < Provider
       Setting.anthropic_access_token.present?
   end
 
+  # The model a call uses when it doesn't name one.
+  attr_reader :default_model
+
   def initialize(access_token, base_url: nil, model: nil)
     client_options = { api_key: access_token }
     client_options[:base_url] = base_url if base_url.present?

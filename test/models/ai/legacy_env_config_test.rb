@@ -116,14 +116,32 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1-mini", first_model(config, :bill_setup).name
   end
 
-  test "LLM_PROVIDER picks the one provider each generation route lists; chat keeps both" do
-    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic")
+  # Generations list only the provider today's walk picks; chat lists every provider its walk
+  # reaches, which stops at a provider it can't build.
+  test "routes follow the registry's walk: generations get its pick, chat every provider it reaches" do
+    keys = { "OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test" }
+    anthropic_unbuildable = keys.merge("ANTHROPIC_BASE_URL" => "https://gateway.example.test")   # a custom URL needs a model
+    cases = {
+      "both keys" => [ keys, %w[openai], %w[openai anthropic] ],
+      "both keys, LLM_PROVIDER=anthropic" => [ keys.merge("LLM_PROVIDER" => "anthropic"), %w[anthropic], %w[anthropic openai] ],
+      "Anthropic preferred but can't be built" => [ anthropic_unbuildable.merge("LLM_PROVIDER" => "anthropic"), [], [] ],
+      "Anthropic can't be built, OpenAI preferred" => [ anthropic_unbuildable, %w[openai], %w[openai] ]
+    }
 
-    %i[bill_setup extract_pdf detect_merchants enhance_merchants categorize].each do |feature|
-      assert_equal %w[anthropic], config.routes_for(feature).map { _1.endpoint.name }, feature
+    cases.each do |label, (env, generations, chat)|
+      config = build(env)
+      (Ai::LegacyEnvConfig::LLM_FEATURES + %i[categorize]).each do |feature|
+        assert_equal generations, config.routes_for(feature).map { _1.endpoint.name }, "#{label}: #{feature}"
+      end
+      assert_equal chat, config.routes_for(:chat).map { _1.endpoint.name }, "#{label}: chat"
+
+      today = with_env_overrides(AI_VARIABLES.index_with { nil }.merge(env)) do
+        generations.first && Provider::Registry.get_provider(generations.first.to_sym)&.default_model
+      rescue Provider::Error
+        nil
+      end
+      assert_equal today, first_model(config, :bill_setup)&.name, "#{label}: the same model as today"
     end
-    assert_equal %w[anthropic openai], config.routes_for(:chat).map { _1.endpoint.name }
-    assert_equal "claude-sonnet-4-6", first_model(config, :bill_setup).name
   end
 
   test "each generation entry names today's prompt variant" do
@@ -141,12 +159,14 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_nil native.routes_for(:chat).first.prompt
   end
 
-  test "today's budgets: OpenAI's window and caps, Anthropic's window only when set" do
+  test "budgets: a custom server's window defaults to 2048; cloud windows only when set" do
     defaults = build("OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test")
     openai = defaults.model(:openai, "gpt-4.1")
     anthropic = defaults.model(:anthropic, "claude-sonnet-4-6")
+    custom = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://localhost:8080/v1", "OPENAI_MODEL" => "qwen")
 
-    assert_equal 2048, openai.context_window
+    assert_equal 2048, custom.routes_for(:categorize).first.model.context_window
+    assert_nil openai.context_window
     assert_nil openai.max_output_tokens
     assert_equal 25, openai.batch_size
     assert_nil anthropic.context_window

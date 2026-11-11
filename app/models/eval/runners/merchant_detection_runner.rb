@@ -5,7 +5,7 @@ class Eval::Runners::MerchantDetectionRunner < Eval::Runners::Base
 
     def process_samples
       all_samples = samples.to_a
-      batch_size = Ai::Config.current.routes_for(:detect_merchants).first&.model&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE
+      batch_size = Ai::Config.current.batch_size_for(:detect_merchants)
       log_progress("Processing #{all_samples.size} samples in batches of #{batch_size}")
 
       all_samples.each_slice(batch_size).with_index do |batch, batch_idx|

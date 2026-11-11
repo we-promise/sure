@@ -93,13 +93,13 @@ and the family threshold's default `0.7` coincide by accident; don't share a con
 
 ## Endpoints, gateways and disclosure
 
-Until PR 7, the Jev endpoint comes from `JEV_API_KEY`, `JEV_ENDPOINT` and `JEV_MODEL` (or their
+The Jev endpoint comes from `JEV_API_KEY`, `JEV_ENDPOINT` and `JEV_MODEL` (or their
 settings), read by `Ai::LegacyEnvConfig::Jev`. Which model categorizes is one instance-wide
 choice, `Setting.categorization_provider`, which `CATEGORIZATION_PROVIDER` overrides.
 
 - **Paths.** RubyLLM 2.1.1's `typesafe` provider posts to `<base>/v1/systemone`, so only
   TypeSafe-style endpoints are reachable. OpenRouter's decisions gateway needs RubyLLM 2.2
-  (PR 5); any other path isn't supported. Both are left out of the config with a warning, and the
+  (crmne/ruby_llm#1264); any other path isn't supported. Both are left out of the config with a warning, and the
   settings form refuses them.
 - **Disclosure.** Default to the vendor's own API. When the endpoint is another host, the
   settings panel says so (`Ai::LegacyEnvConfig::Jev.effective_proxied?`, `.effective_host`):

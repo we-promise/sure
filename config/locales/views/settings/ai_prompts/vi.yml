@@ -1,0 +1,16 @@
+---
+vi:
+  settings:
+    ai_prompts:
+      show:
+        page_title: Câu lệnh AI
+        disable_ai: Tắt trợ lý AI
+        main_system_prompt:
+          title: Câu lệnh hệ thống chính
+          subtitle: Hướng dẫn cốt lõi xác định cách trợ lý AI hoạt động trong tất cả cuộc trò chuyện
+        transaction_categorizer:
+          title: Phân loại giao dịch
+          subtitle: AI tự động phân loại giao dịch dựa trên các danh mục bạn định nghĩa
+        merchant_detector:
+          title: Phát hiện nhà cung cấp
+          subtitle: AI xác định và làm phong phú dữ liệu giao dịch với thông tin nhà cung cấp

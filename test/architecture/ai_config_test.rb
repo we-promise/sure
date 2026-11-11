@@ -48,6 +48,18 @@ class AiConfigTest < ActiveSupport::TestCase
     end
   end
 
+  # The registry can't build the preferred provider (Anthropic on a custom URL with no model),
+  # so today nothing runs. The router plans nothing either, rather than falling through to
+  # OpenAI.
+  test "a preferred provider that can't be built: nothing runs today, and the router plans nothing" do
+    broken = OPENAI.merge(ANTHROPIC).merge("LLM_PROVIDER" => "anthropic", "ANTHROPIC_BASE_URL" => "https://gateway.example.test")
+
+    with_env_overrides(CONTROLLED.index_with { nil }.merge(broken)) do
+      assert_raises(Provider::Error) { Provider::Registry.get_provider(:anthropic) }
+      (LLM_FEATURES + %i[categorize]).each { |feature| assert_nil Ai.plan(feature, family: @family, user: @user), feature }
+    end
+  end
+
   test "Settings-only installs get the same embedding server as their LLM" do
     VectorStore::Pgvector.stubs(:available?).returns(true)
 
@@ -88,6 +100,6 @@ class AiConfigTest < ActiveSupport::TestCase
       end
 
       assert_includes ENDPOINTS_BY_PROVIDER.fetch(provider.class), plan.route.endpoint.name, message
-      assert_equal provider.instance_variable_get(:@default_model), plan.model.name, message
+      assert_equal provider.default_model, plan.model.name, message
     end
 end

@@ -1,7 +1,7 @@
 require "csv"
 
 class Assistant::Function::ImportBankStatement < Assistant::Function
-  ai_feature :extract_pdf
+  self.ai_feature = :extract_pdf
 
   class << self
     def name
@@ -103,14 +103,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     end
 
     availability = Ai.availability(:extract_pdf, family:, user:)
-    unless availability.available?
-      return {
-        success: false,
-        error: "provider_not_configured",
-        reason: availability.reason.to_s,
-        message: availability.message_for(user)
-      }
-    end
+    return ai_unavailable(availability) unless availability.available?
 
     read_as = params["read_as"].presence_in(PdfImport::READ_AS) || pdf_import.read_as || "auto"
     reading = Ai::PdfReading.new(content: pdf_import.pdf_file_content, filename: pdf_import.pdf_filename, family:, user:)
@@ -171,6 +164,11 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
   end
 
   private
+
+    # The refusal every AI gate on this path returns: the router's reason and its message.
+    def ai_unavailable(availability)
+      { success: false, error: "ai_unavailable", reason: availability.reason.to_s, message: availability.message_for(user) }
+    end
 
     def generate_csv(transactions)
       CSV.generate do |csv|

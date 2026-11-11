@@ -11,7 +11,6 @@ class LlmUsage::Call
   def id = first.call_id || first.id
   def created_at = first.created_at
   def operation = first.operation
-  def provider = last.provider
   def model = last.model
 
   # The last request decides: a call whose retry succeeded succeeded.

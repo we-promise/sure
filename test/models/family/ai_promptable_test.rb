@@ -34,7 +34,8 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
       assert_not_includes @family.ai_prompt_default(:categorize_transactions), '{"categorizations":'
       assert_not_includes @family.ai_prompt_default(:detect_merchants), '{"merchants":'
     end
-    without_ai { assert_equal RubyLLM.render_prompt("categorize_transactions/instructions"), @family.ai_prompt_default(:categorize_transactions) }
+    use_no_ai
+    assert_equal RubyLLM.render_prompt("categorize_transactions/instructions"), @family.ai_prompt_default(:categorize_transactions)
   end
 
   # Advisory only. It has to stay quiet for the pre-filled default, and on prompts that get their
@@ -124,7 +125,7 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
 
     def instructions(feature, prompt, protocol)
       endpoint = Ai::Config::Endpoint.new(name: protocol, protocol:, api_key: "test-key")
-      route = Ai::Route.new(feature:, position: 0, model: Ai::Config::Model.new(endpoint:, name: "m"), prompt:)
+      route = Ai::Route.new(feature:, model: Ai::Config::Model.new(endpoint:, name: "m"), prompt:)
       locals = { transactions: [], categories: [], merchants: [] }
       Ai::Prompt.for(feature, default: prompt, route:, family: @family, locale: nil, locals:).instructions
     end

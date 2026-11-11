@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Family::AutoCategorizerTest < ActiveSupport::TestCase
-  include EntriesTestHelper, ProviderTestHelper
+  include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
@@ -33,6 +33,43 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     # After auto-categorization, only successfully categorized transactions are locked
     # txn3 remains enrichable since it didn't get a category (allows retry)
     assert_equal 1, @account.transactions.reload.enrichable(:category_id).count
+  end
+
+  test "a rule run's progress moves with each batch" do
+    use_ai_model_settings(batch_size: 2)
+    category = @family.categories.create!(name: "Coffee")
+    ids = 3.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 3, executed_at: Time.current)
+    rule_run.await_ai!(3)
+    stub_ai(:categorize) do |request|
+      batch = request.schema.dig(:properties, :categorizations, :items, :properties, :transaction_id, :enum)
+      { categorizations: batch.map { { transaction_id: _1, category_name: category.name } } }
+    end
+
+    Ai::GenerationJob.perform_later(:categorize, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+    progress = []
+    until enqueued_jobs.empty?
+      ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys)
+      progress << rule_run.reload.slice(:transactions_awaiting_ai, :transactions_modified, :status).values
+    end
+
+    assert_equal [ [ 1, 2, "pending" ], [ 0, 3, "success" ] ], progress
+  end
+
+  test "a rule run on Jev counts a withheld answer as handled, not modified" do
+    use_ai_routes(categorize: %w[jev/jev-latest])
+    @family.update!(categorization_confidence_threshold: 0.7)
+    category = @family.categories.create!(name: "Coffee")
+    sure, unsure = 2.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 2, executed_at: Time.current)
+    rule_run.await_ai!(2)
+    stub_ai(:categorize) { { sure => { category: [ category.name, 0.9 ] }, unsure => { category: [ category.name, 0.3 ] } } }
+
+    Ai::GenerationJob.perform_now(:categorize, { ids: [ sure, unsure ], family_id: @family.id, rule_run_id: rule_run.id })
+
+    assert_equal [ 0, 1, "success" ], rule_run.reload.slice(:transactions_awaiting_ai, :transactions_modified, :status).values
   end
 
   test "a failed generation fails the rule run's job and is logged" do
