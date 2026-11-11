@@ -104,6 +104,44 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert account.reload.logo_automatic?
   end
 
+  test "restores an account's cost basis method" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Brokerage",
+          balance: "1500.00",
+          currency: "USD",
+          cost_basis_method: "fifo",
+          accountable_type: "Investment",
+          accountable: {}
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+
+    assert account.reload.cost_basis_fifo?
+  end
+
+  test "an export without a known cost basis method imports as average" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: { id: "old-account-1", name: "Older", balance: "100", currency: "USD", accountable_type: "Investment", accountable: {} }
+      },
+      {
+        type: "Account",
+        data: { id: "old-account-2", name: "Newer", balance: "100", currency: "USD", cost_basis_method: "some-future-method", accountable_type: "Investment", accountable: {} }
+      }
+    ])
+
+    accounts = Family::DataImporter.new(@family, ndjson).import![:accounts]
+
+    assert_equal %w[average average], accounts.map { |account| account.reload.cost_basis_method }
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {

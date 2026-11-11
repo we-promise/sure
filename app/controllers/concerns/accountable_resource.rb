@@ -114,8 +114,11 @@ module AccountableResource
       # Update remaining account attributes. Note: currency is intentionally allowed
       # here so all account types (depositories, credit cards, loans, etc.) can
       # have their currency changed via this shared update path.
-      unless @account.update(update_params) &&
-          (cost_basis_method.nil? || !@account.supports_trades? || @account.update(cost_basis_method: cost_basis_method))
+      # One save: lock_saved_attributes! below locks what this save changed,
+      # and a second save would leave it nothing to lock.
+      @account.assign_attributes(update_params)
+      @account.cost_basis_method = cost_basis_method if cost_basis_method && @account.supports_trades?
+      unless @account.save
         @error_message = @account.errors.full_messages.join(", ")
         raise ActiveRecord::Rollback
       end

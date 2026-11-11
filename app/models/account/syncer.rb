@@ -6,9 +6,8 @@ class Account::Syncer
   end
 
   def perform_sync(sync)
-    # Only the types with lot books record a method; this syncer is shared by
-    # every account type, and stamping depositories with a key nothing reads
-    # put the cost-basis question where the review on this PR belonged.
+    # This syncer is shared by every account type, and only investment and
+    # crypto accounts keep lot books, so only their syncs record the method.
     if account.accountable_type.in?(%w[Investment Crypto])
       sync.update!(data: (sync.data || {}).merge("cost_basis_method" => account.cost_basis_method))
     end

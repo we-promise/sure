@@ -89,9 +89,21 @@ class Holding::Materializer
     def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
       {
         account_id: account.id, security_id: security_id, source_entry_id: source_entry_id,
-        origin_security_id: source_entry_id ? nil : security_id, acquired_on: acquired_on,
+        origin_security_id: source_entry_id ? nil : opening_origin(security_id), acquired_on: acquired_on,
         qty: qty, unit_cost: unit_cost, currency: currency, clamped: clamped
       }
+    end
+
+    # An opening lot comes from the security the provider reports. A position
+    # remapped to another security still names that one on its holdings, so a
+    # reset can take the lot back there.
+    def opening_origin(security_id)
+      @provider_security_ids ||= account.holdings
+        .where.not(provider_security_id: nil)
+        .distinct
+        .pluck(:security_id, :provider_security_id)
+        .to_h
+      @provider_security_ids.fetch(security_id, security_id)
     end
 
     # The latest provider cost for the security, restated for today's share count.
@@ -336,9 +348,16 @@ class Holding::Materializer
       end
     end
 
+    # Lots can exist for a security with no calculated holdings (an old
+    # snapshot and no market prices), and they read the same provider costs
+    # and splits as the holdings do.
+    def costed_security_ids
+      @costed_security_ids ||= (@holdings.map(&:security_id) | @calculator.lots_by_security.keys)
+    end
+
     def splits_by_security
       @splits_by_security ||= Security::Split
-        .where(security_id: @holdings.map(&:security_id).uniq)
+        .where(security_id: costed_security_ids)
         .order(:ex_date)
         .group_by(&:security_id)
         .tap { |grouped| grouped.default = [] }
@@ -346,11 +365,10 @@ class Holding::Materializer
 
     def provider_cost_basis_snapshots
       @provider_cost_basis_snapshots ||= begin
-        ids = @holdings.map(&:security_id).uniq
         account.holdings
           .where.not(account_provider_id: nil)
           .where.not(cost_basis: nil)
-          .where(security_id: ids)
+          .where(security_id: costed_security_ids)
           .order(:date) # ascending required: carry_forward_provider_cost_basis scans and breaks on snap_date > holding.date
           .pluck(:security_id, :currency, :date, :cost_basis)
           .each_with_object(Hash.new { |h, k| h[k] = [] }) do |(security_id, currency, date, cost_basis), memo|

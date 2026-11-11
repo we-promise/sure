@@ -453,6 +453,25 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 1000 ], builder.gains_series.map { |v| v.value.amount }
   end
 
+  # A zero the trades worked out (a lot the user says cost nothing) is a cost,
+  # unlike a provider's zero, which stands for unknown.
+  test "gains series counts a calculated zero cost basis" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+
+    create_holding(account: account, security: securities(:aapl), date: Date.current, qty: 10, price: 100, cost_basis: 0)
+    account.holdings.update_all(cost_basis_source: "calculated")
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: Date.current, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1000 ], builder.gains_series.map { |v| v.value.amount }
+  end
+
   test "gains series converts holding gains to target currency with locf rates" do
     family = families(:dylan_family)
     account = family.accounts.create!(
