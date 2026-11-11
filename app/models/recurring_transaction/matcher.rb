@@ -236,9 +236,15 @@ class RecurringTransaction
                   .map { |group| group.min_by { |candidate| (candidate.entry.date - candidate.occurrence.effective_due_on).to_i.abs } }
       end
 
+      # Cycles of an ended series take no payments: such a series is usually the
+      # superseded twin of an active one and would only make every payment look
+      # ambiguous. Paused and inactive series keep theirs, so a late payment
+      # still reaches a paused bill's overdue leftover.
       def open_occurrences
         family.recurring_occurrences
               .open_status
+              .joins(:recurring_transaction)
+              .where.not(recurring_transactions: { status: "ended" })
               .includes(recurring_transaction: :recurrence_rules)
               .to_a
       end
@@ -251,14 +257,16 @@ class RecurringTransaction
           .to_set
       end
 
+      # Confirmed payments that spoke for an entry. Allocations of an ended
+      # series (a deleted or dismissed bill) are tombstones the Allocator
+      # ignores too, so an active series can still take the entry.
+      def confirmed_allocations
+        Allocator.active_allocations(RecurringAllocation.confirmed.where.not(entry_id: nil))
+                 .where(recurring_occurrences: { family_id: family.id })
+      end
+
       def confirmed_entry_ids
-        RecurringAllocation
-          .joins(:recurring_occurrence)
-          .where(recurring_occurrences: { family_id: family.id })
-          .where(state: "confirmed")
-          .where.not(entry_id: nil)
-          .pluck(:entry_id)
-          .to_set
+        confirmed_allocations.pluck(:entry_id).to_set
       end
 
       # One query over the envelope of every open occurrence's window.
@@ -279,7 +287,7 @@ class RecurringTransaction
               .not_excluded_or_split_parent
               .where(date: window_min..window_max)
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
-              .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
+              .where.not(id: confirmed_allocations.select(:entry_id))
               .includes(:entryable)
               .to_a
       end
