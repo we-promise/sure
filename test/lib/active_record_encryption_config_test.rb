@@ -137,4 +137,39 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
     assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
   end
+
+  # Regression coverage for jjmata's review on #3189: the boot check used to
+  # run partial_credentials? unconditionally, before the complete-ENV branch
+  # of the initializer was ever considered - so an installation with a
+  # complete, valid ACTIVE_RECORD_ENCRYPTION_* set AND a stale/incomplete
+  # credentials block stopped booting on upgrade, despite the documented
+  # ENV-first priority.
+  test "complete ENV configuration is not rejected by a partial credentials block" do
+    env = {
+      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "primary",
+      "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "deterministic",
+      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "salt"
+    }
+    encryption_config = OpenStruct.new(primary_key: "stale", deterministic_key: nil, key_derivation_salt: "stale")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.complete_env?(env)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    refute ActiveRecordEncryptionConfig.reject_partial_credentials?(env, credentials)
+  end
+
+  test "partial credentials are still rejected when the ENV configuration is absent or incomplete" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    # Absent ENV entirely: the credentials block is the only candidate
+    # configuration, and an incomplete one must still fail loudly.
+    assert ActiveRecordEncryptionConfig.reject_partial_credentials?({}, credentials)
+    # (A *partial* ENV set never reaches this predicate in the initializer -
+    # partial_env? raises first - but the predicate stays honest standalone.)
+    assert ActiveRecordEncryptionConfig.reject_partial_credentials?(
+      { "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "primary" }, credentials
+    )
+    refute ActiveRecordEncryptionConfig.reject_partial_credentials?({}, OpenStruct.new(active_record_encryption: nil))
+  end
 end
