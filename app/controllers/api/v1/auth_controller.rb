@@ -35,7 +35,9 @@ module Api
         end
 
         # Validate password
-        password_errors = validate_password(params[:user][:password])
+        # user_signup_params requires the `user` key; a missing payload raises
+        # ParameterMissing, which BaseController renders as a 400.
+        password_errors = validate_password(user_signup_params[:password])
         if password_errors.any?
           render json: { errors: password_errors }, status: :unprocessable_entity
           return
