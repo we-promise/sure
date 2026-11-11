@@ -13,6 +13,20 @@ class Provider::Eodhd < Provider
   # Maximum API calls per day (EODHD free/basic plans are very restrictive)
   MAX_REQUESTS_PER_DAY = 20
 
+  # The fundamentals response carries `General.Sector` / `General.Industry`,
+  # so this provider can answer for classification -- see
+  # `fetch_security_info` below. Without this declaration the classification
+  # gate in `Security::Provided` would never ask it.
+  def supplies_classification?
+    true
+  end
+
+  # The same response carries `ETF_Data.Holdings` for a fund -- see
+  # `etf_constituents` below.
+  def supplies_constituents?
+    true
+  end
+
   # EODHD free tier provides ~1 year of EOD data
   def max_history_days
     365
@@ -185,9 +199,48 @@ class Provider::Eodhd < Provider
         logo_url: general.dig("LogoURL"),
         description: general.dig("Description"),
         kind: general.dig("Type"),
-        exchange_operating_mic: exchange_operating_mic
+        exchange_operating_mic: exchange_operating_mic,
+        sector: general.dig("Sector"),
+        industry: general.dig("Industry"),
+        constituents: etf_constituents(parsed)
       )
     end
+  end
+
+  # A fund's own holdings, from the SAME fundamentals response the metadata and
+  # the classification already come from -- so they cost no additional request.
+  #
+  # EODHD keys the holdings hash by a suffixed ticker ("AAPL.US") and carries the
+  # bare one in `Code`. The bare ticker is what matches anything in `securities`,
+  # so the key is used only as a fallback for a malformed entry.
+  #
+  # An absent block (null) or an empty map or list means the fund lists nothing.
+  # Any other shape, `false` or a blank string included, or a non-empty map
+  # whose entries are all malformed, is a response this cannot read and raises:
+  # answered as "no holdings", it would replace the fund's stored set with
+  # nothing and stamp it as asked.
+  def etf_constituents(parsed)
+    holdings = parsed.dig("ETF_Data", "Holdings")
+    return nil if holdings.nil? || holdings == {} || holdings == []
+    raise Error, "Unexpected holdings format from fundamentals API" unless holdings.is_a?(Hash)
+
+    readable = holdings.filter_map do |key, holding|
+      next unless holding.is_a?(Hash)
+
+      ticker = holding["Code"].presence || key.to_s.split(".").first
+      next if ticker.blank?
+
+      { ticker: ticker, name: holding["Name"].presence, weight: holding["Assets_%"] }
+    end
+
+    # A non-empty holdings block that yields no readable entry is an answer this
+    # cannot read. Returned as nil it is answered as "no holdings": the stored
+    # set wiped and the fund stamped, and the gate would not ask again. Fail
+    # instead, so the stored set survives and the next sync asks again. A partial
+    # read (some entries malformed) still returns the readable subset.
+    raise Error, "Holdings block has no readable entries from fundamentals API" if readable.empty?
+
+    readable
   end
 
   def fetch_security_price(symbol:, exchange_operating_mic: nil, date:)
