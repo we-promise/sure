@@ -129,6 +129,8 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
   test "backfill counts invalid envelopes without rewriting and preserves progress" do
     store_legacy({ Setting::DynamicSecret::MARKER => 1, "ciphertext" => "broken" })
     before = raw_value
+    row = Setting.find_by!(var: "dynamic:plaid_secret")
+    Rails.logger.expects(:error).with("Provider secret backfill failed: id=#{row.id} var=dynamic:plaid_secret error=Setting::SecretError").twice
     Setting.upsert({ var: "dynamic:plaid_eu_secret", value: "synthetic-eu-secret".to_yaml }, unique_by: :var)
     counts = Setting::ProviderSecretBackfill.call(dry_run: false)
     assert_equal 1, counts[:failed]
@@ -136,6 +138,21 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
     assert_equal before, raw_value
     assert_equal "synthetic-eu-secret", Setting[:plaid_eu_secret]
     assert_equal 0, Setting::ProviderSecretBackfill.call(dry_run: false)[:encrypted]
+  end
+
+  test "backfill persistence failures log identifiers without values or exception messages" do
+    store_legacy("synthetic-sensitive-secret")
+    before = raw_value
+    row = Setting.find_by!(var: "dynamic:plaid_secret")
+    Setting.expects(:[]=).with("plaid_secret", "synthetic-sensitive-secret")
+      .raises(StandardError.new("synthetic-sensitive-error-details"))
+    Rails.logger.expects(:error).with("Provider secret backfill failed: id=#{row.id} var=dynamic:plaid_secret error=StandardError").once
+
+    counts = Setting::ProviderSecretBackfill.call(dry_run: false)
+
+    assert_equal 1, counts[:failed]
+    assert_equal 0, counts[:encrypted]
+    assert_equal before, raw_value
   end
 
   test "dynamic upsert does not log secrets or ciphertext" do

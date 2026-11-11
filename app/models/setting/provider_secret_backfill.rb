@@ -27,9 +27,10 @@ class Setting::ProviderSecretBackfill
             end
           end
         end
-      rescue StandardError
+      rescue StandardError => error
         # Each row has its own transaction so an interrupted run can resume.
         counts[:failed] += 1
+        Rails.logger.error("Provider secret backfill failed: id=#{row.id} var=#{row.var} error=#{error.class}")
       end
     end
 

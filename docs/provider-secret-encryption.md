@@ -28,11 +28,13 @@ write plaintext again; mixed-version operation is not supported.
 
 The task processes only stored registered dynamic secret rows, locking and
 reloading each row within its own transaction. It validates existing envelopes,
-skips empty values and clears settings caches on conversion. Output contains only
-counts. A failure produces a nonzero task exit status; successful rows remain
-converted and reruns safely resume. Investigate failed rows without logging their
-contents. Do not automatically decrypt rows back to plaintext for a downgrade;
-restoring the previous release is not a transparent rollback.
+skips empty values and clears settings caches on conversion. Task output contains
+only counts; failures log the row ID, setting name and exception class, never the
+stored value or exception message. A failure produces a nonzero task exit status;
+successful rows remain converted and reruns safely resume. Investigate failed
+rows without logging their contents. Do not automatically decrypt rows back to
+plaintext for a downgrade; restoring the previous release is not a transparent
+rollback.
 
 This protects current logical storage, not old backups, WAL or database pages.
 Credential rotation is a separate operator decision. Do not publish a security
