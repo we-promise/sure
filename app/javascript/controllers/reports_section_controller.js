@@ -1,10 +1,11 @@
 import { Controller } from "@hotwired/stimulus";
 
-// The collapse control for every page built on the Reports section
-// framework. It keeps the Reports name because renaming it would touch every
-// Reports data attribute for no behaviour change.
+// Saves whether a section on a page built on the Reports section framework is
+// collapsed. The section's <details> opens and closes itself; this saves the
+// state its `toggle` event reports. It keeps the Reports name because renaming
+// it would touch every Reports data attribute for no behaviour change.
 export default class extends Controller {
-  static targets = ["content", "chevron", "button"];
+  static targets = ["details"];
   // `url` and `preferenceKey` default to the Reports literals, so the Reports
   // page, which passes neither, posts to its own endpoint under its own key.
   // Another page passes both.
@@ -15,50 +16,14 @@ export default class extends Controller {
     preferenceKey: { type: String, default: "reports" },
   };
 
-  connect() {
-    if (this.collapsedValue) {
-      this.collapse(false);
-    }
-  }
+  // `toggle` also fires for the open state the page was rendered with, so
+  // only a change from the saved state is sent.
+  save() {
+    const collapsed = !this.detailsTarget.open;
+    if (collapsed === this.collapsedValue) return;
 
-  toggle(event) {
-    event.preventDefault();
-    if (this.collapsedValue) {
-      this.expand();
-    } else {
-      this.collapse();
-    }
-  }
-
-  handleToggleKeydown(event) {
-    // Handle Enter and Space keys for keyboard accessibility
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      event.stopPropagation(); // Prevent section's keyboard handler from firing
-      this.toggle(event);
-    }
-  }
-
-  collapse(persist = true) {
-    this.contentTarget.classList.add("hidden");
-    this.chevronTarget.classList.add("-rotate-90");
-    this.collapsedValue = true;
-    if (this.hasButtonTarget) {
-      this.buttonTarget.setAttribute("aria-expanded", "false");
-    }
-    if (persist) {
-      this.savePreference(true);
-    }
-  }
-
-  expand() {
-    this.contentTarget.classList.remove("hidden");
-    this.chevronTarget.classList.remove("-rotate-90");
-    this.collapsedValue = false;
-    if (this.hasButtonTarget) {
-      this.buttonTarget.setAttribute("aria-expanded", "true");
-    }
-    this.savePreference(false);
+    this.collapsedValue = collapsed;
+    this.savePreference(collapsed);
   }
 
   async savePreference(collapsed) {

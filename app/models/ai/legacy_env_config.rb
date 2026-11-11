@@ -52,7 +52,8 @@ class Ai::LegacyEnvConfig
     return unless base && endpoint.protocol != :jev
 
     if endpoint.protocol == :anthropic then "#{base}_anthropic"
-    elsif endpoint.name == "openai_compatible" && SIMPLE_PROMPTS.include?(feature.to_sym) then "#{base}_simple"
+    elsif endpoint.protocol == :compatible && SIMPLE_PROMPTS.include?(feature.to_sym) &&
+          Provider::Openai.custom_endpoint?(endpoint.base_url) then "#{base}_simple"
     else base
     end
   end
@@ -107,9 +108,11 @@ class Ai::LegacyEnvConfig
       return unless token
 
       uri_base = openai_uri_base
+      # A regional OpenAI host (us.api.openai.com) is native OpenAI, not a custom server (#4836).
+      custom = Provider::Openai.custom_endpoint?(uri_base)
       provider = Provider::Registry.get_provider(:openai)
       endpoint = Ai::Config::Endpoint.new(
-        name: uri_base ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless uri_base),
+        name: custom ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless custom),
         base_url: uri_base, api_key: token, extra_headers: static_openai_headers, location: location_for(uri_base),
         timeout_seconds: Provider::Openai.request_timeout, responses_api: provider&.supports_responses_endpoint? || false,
         vector_store:, json_mode: openai_json_mode
@@ -117,10 +120,10 @@ class Ai::LegacyEnvConfig
       name = Provider::Openai.effective_model
       flag = env("OPENAI_SUPPORTS_PDF_PROCESSING")
       vision = (flag.nil? || flag.downcase.in?(%w[true 1 yes])) &&
-               (uri_base.present? || Provider::Openai::VISION_CAPABLE_MODEL_PREFIXES.any? { name.start_with?(_1) })
-      model = provider && llm_model(endpoint, provider, name, context_window: uri_base ? context_window : explicit_context_window,
+               (custom || Provider::Openai::VISION_CAPABLE_MODEL_PREFIXES.any? { name.start_with?(_1) })
+      model = provider && llm_model(endpoint, provider, name, context_window: custom ? context_window : explicit_context_window,
                                     max_output_tokens: positive(env("LLM_MAX_RESPONSE_TOKENS"), Setting.llm_max_response_tokens),
-                                    vision:, documents: vision && uri_base.nil?)
+                                    vision:, documents: vision && !custom)
       [ endpoint, model ]
     end
 

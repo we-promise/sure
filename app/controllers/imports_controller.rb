@@ -40,6 +40,11 @@ class ImportsController < ApplicationController
   end
 
   def publish
+    # A failed import can stop being publishable, for example when a Monarch
+    # destination gained trades. The import page then sends it back to the
+    # step that needs a new choice.
+    return redirect_to import_path(@import) if @import.failed? && !@import.publishable?
+
     @import.publish_later
 
     redirect_to import_path(@import), notice: t(".started")
@@ -160,8 +165,8 @@ class ImportsController < ApplicationController
     unless @import.requires_csv_workflow?
       if !@import.uploaded?
         redirect_to import_upload_path(@import), alert: t("imports.show.finalize_upload")
-      elsif @import.is_a?(MonarchImport) && @import.pending? && !@import.publishable?
-        redirect_to import_configuration_path(@import), alert: t("imports.show.finalize_mappings")
+      elsif @import.is_a?(MonarchImport) && (@import.pending? || @import.failed?) && !@import.publishable?
+        redirect_to import_configuration_path(@import), alert: (@import.failed? && @import.error.presence) || t("imports.show.finalize_mappings")
       end
       return
     end
