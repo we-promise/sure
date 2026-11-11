@@ -280,6 +280,32 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # -- Unsupported methods --
+
+  test "GET /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream")
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "DELETE /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      delete "/mcp", headers: mcp_headers(@token)
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "GET /mcp without a token still returns 401" do
+    get "/mcp", headers: { "Accept" => "text/event-stream" }
+
+    assert_response :unauthorized
+  end
+
   # -- initialize --
 
   test "initialize returns server info and capabilities" do

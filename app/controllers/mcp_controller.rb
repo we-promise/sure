@@ -40,6 +40,15 @@ class McpController < ApplicationController
     render json: { jsonrpc: "2.0", id: request_id, result: result }
   end
 
+  # MCP's Streamable HTTP transport also uses GET (SSE stream) and DELETE
+  # (session termination) on this endpoint. Sure serves neither, so answer
+  # 405 Method Not Allowed: an unrouted 404 makes clients treat the session
+  # as dropped.
+  def method_not_allowed
+    response.set_header("Allow", "POST")
+    head :method_not_allowed
+  end
+
   private
 
     def parse_request_body
