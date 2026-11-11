@@ -49,12 +49,13 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-### Step 3 (optional): Configure your environment
+### Step 3 (optional for a disposable local test): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
-
-If you're running the app locally and don't care much about security, you can skip this step.
+The sample `compose.example.yml` runs without extra configuration, but self-hosted
+instances store sensitive database attributes unencrypted at rest until Active Record
+Encryption is configured. You can skip this step for a disposable local test. Configure
+it before storing financial or account data, and review the other security settings
+before exposing your instance outside your local network.
 
 #### Create your environment file
 
@@ -94,6 +95,34 @@ Fill in this file with the following variables:
 SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
+
+#### Encrypt sensitive database fields
+
+Generate three Active Record Encryption keys using the same image as your app:
+
+```bash
+docker compose run --rm --no-deps web ./bin/rails db:encryption:init
+```
+
+Copy the generated values into `.env` as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`,
+`ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY`, and
+`ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. Then add all three variables to the
+shared `x-rails-env` section in `compose.yml`, so both `web` and `worker` receive them:
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT}
+```
+
+`SECRET_KEY_BASE` does not enable Active Record Encryption. Keep the generated keys
+private and stable; changing or losing them can make encrypted data unreadable. For an
+existing instance, back up the database and files and follow migration guidance for
+your installed version before changing encryption settings.
+
+Run `docker compose up -d` after editing `.env` or `compose.yml` to apply the settings.
 
 #### Using HTTPS
 
