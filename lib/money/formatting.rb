@@ -8,28 +8,62 @@ module Money::Formatting
   SPACE_DELIMITER_SYMBOL_AFTER = %i[pl nb hu].freeze
   # European style: dot as thousands delimiter, comma as decimal separator, symbol before number
   EUROPEAN_SYMBOL_BEFORE = %i[nl pt-BR].freeze
+  # Currencies and locales that use the South Asian numbering system (lakh/crore).
+  # Grouping is decided once in #format_options so every caller (web, exports,
+  # API formatted strings) agrees on it.
+  INDIAN_GROUPING_CURRENCIES = %w[INR].freeze
+  INDIAN_LOCALES = %i[en-IN en-IND hi hi-IN mr-IN ta te bn gu kn ml pa].freeze
+  INDIAN_DELIMITER_PATTERN = /(\d+?)(?=(\d\d)+(\d)(?!\d))/.freeze
 
   FAST_FORMAT_KEYS = %i[unit precision delimiter separator format].freeze
   DELIMITER_REGEX = /(\d)(?=(\d\d\d)+(?!\d))/
 
   def format(options = {})
-    locale = options[:locale] || I18n.locale
-    opts = format_options(locale).merge(options.except(:locale))
+    options = options.dup
+    requested_locale = options.delete(:locale)
+    locale = requested_locale || I18n.locale
+    indian_grouping = options.delete(:indian_grouping)
+    opts = format_options(locale, indian_grouping: indian_grouping).merge(options)
 
-    fast_format(opts) || number_to_currency(amount, opts)
+    # Rails resolves number.format settings (strip_insignificant_zeros, ...)
+    # from the locale passed to number_to_currency. Bypass the fast path when
+    # the caller asked for a locale other than the active one so those settings
+    # come from the requested locale.
+    explicit_locale = requested_locale.present? && requested_locale.to_sym != I18n.locale.to_sym
+    fast = fast_format(opts) unless explicit_locale
+    return fast if fast
+
+    slow_opts = opts.merge(locale: locale)
+    # When the caller asked for a different locale, keep money at decimal
+    # precision instead of letting a locale such as hu round to significant
+    # digits. The ambient path keeps number_to_currency parity. A caller's
+    # own significant-digit option still wins.
+    slow_opts[:significant] = false if explicit_locale && !slow_opts.key?(:significant)
+    number_to_currency(amount, slow_opts)
   end
   alias_method :to_s, :format
 
-  def format_options(locale = nil)
-    local_option_overrides = locale_options(locale)
-
-    {
+  def format_options(locale = nil, indian_grouping: nil)
+    opts = {
       unit: get_symbol,
       precision: currency.default_precision,
       delimiter: currency.delimiter,
       separator: currency.separator,
       format: currency.default_format
-    }.merge(local_option_overrides)
+    }.merge(locale_options(locale))
+
+    indian = indian_grouping?(locale, indian_grouping)
+    opts[:delimiter_pattern] = INDIAN_DELIMITER_PATTERN if indian
+
+    # Indian grouping and Indian locales always use Indian punctuation. A
+    # currency's own separators can otherwise produce mixed output such as
+    # "€12.34.567,00" or "12 34 567,00 €".
+    if indian || indian_locale?(locale)
+      opts[:delimiter] = ","
+      opts[:separator] = "."
+    end
+
+    opts
   end
 
   private
@@ -62,6 +96,18 @@ module Money::Formatting
       number_s = precision.zero? ? whole : "#{whole}#{opts[:separator]}#{(fraction + "0" * precision)[0, precision]}"
 
       format.gsub("%n", number_s).gsub("%u", unit)
+    end
+
+    # Explicit :indian_grouping wins; otherwise Indian grouping follows the
+    # currency (INR) or the active locale.
+    def indian_grouping?(locale, override)
+      return override unless override.nil?
+
+      INDIAN_GROUPING_CURRENCIES.include?(currency.iso_code) || indian_locale?(locale)
+    end
+
+    def indian_locale?(locale)
+      INDIAN_LOCALES.include?((locale || I18n.locale || :en).to_sym)
     end
 
     def get_symbol
