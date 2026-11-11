@@ -311,7 +311,8 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   test "an update whose follow-up write fails changes nothing, and a retry completes it" do
     trade = Trade.find(create_buy_trade("CATROLL"))
     reset_update_side_effects(trade)
-    original_notes = trade.entry.notes
+    trade.entry.update_columns(notes: "Original notes")
+    original_notes = trade.entry.reload.notes
 
     Entry.any_instance.stubs(:mark_user_modified!).raises(ActiveRecord::StatementInvalid, "write failed")
     put api_v1_trade_url(trade), params: { trade: { notes: "Retried notes" } }, headers: api_headers(read_write_api_key)
