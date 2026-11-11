@@ -1186,8 +1186,8 @@ class Family::DataImporter
     def import_lot_total_cost(entry, raw)
       trade = entry.trade
       # Only a buy's entry keys a lot (source_entry_id is the acquiring
-      # trade's entry), so a sell never queries. This is the early skip the
-      # review asked for, per row and indexed, with no chunk-wide load.
+      # trade's entry), so a sell never queries. A buy's lookup is per row
+      # and indexed, with no chunk-wide load.
       lot = trade.qty.positive? ? HoldingLot.find_by(account_id: entry.account_id, source_entry_id: entry.id) : nil
 
       if raw.blank?
