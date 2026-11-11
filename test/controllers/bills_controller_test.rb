@@ -2599,9 +2599,8 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
       response.body
   end
 
-  # Ending a bill leaves its scheduled occurrences behind, and the matcher
-  # scores every scheduled occurrence, so it can still suggest a payment for a
-  # bill the user deleted. The queue asks only about bills the page lists.
+  # Ending a bill leaves its scheduled occurrences behind with any suggestion
+  # made before, so it can still suggest a payment for a bill the user deleted. The queue asks only about bills the page lists.
   test "a suggestion against an ended bill stays out of the payment review queue" do
     due = Date.current - 3
     bill = declare_bill(name: "OLD GYM", amount: 40, due: due)
