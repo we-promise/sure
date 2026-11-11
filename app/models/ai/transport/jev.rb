@@ -1,5 +1,7 @@
-# Jev and other servers that speak TypeSafe's System One protocol, through RubyLLM's `judge` on
-# its `typesafe` provider. Jev judges, it doesn't generate.
+# Jev and other servers that speak TypeSafe's System One protocol, through RubyLLM's `judge`.
+# TypeSafe-style `/v1/systemone` endpoints go through RubyLLM's `typesafe` provider; OpenRouter's
+# Decisions gateway (`…/alpha/decisions`) goes through its `openrouter` provider, which is what
+# posts there. Jev judges, it doesn't generate.
 #
 # Jev takes one state per request, and each request is latency-bound (~400-550 ms), so `judge`
 # fans a batch out on a pool of the endpoint's `parallel_requests`: 8 for cloud Jev, and 1 for a
@@ -7,8 +9,9 @@
 # call, as for an LLM. Every request goes through RubyLLM and Sure's instrumenter, so it writes a
 # usage row.
 #
-# RubyLLM 2.1.1 posts to `<base>/v1/systemone`; the endpoint's base_url is that base. OpenRouter's
-# decisions gateway needs RubyLLM 2.2 (#1264).
+# On TypeSafe-style endpoints the `typesafe` provider posts `v1/systemone` at the endpoint's
+# base_url; on the OpenRouter dialect the `openrouter` provider posts `../alpha/decisions`, which
+# the api_base resolves back onto the decisions URL.
 class Ai::Transport::Jev < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter
 
@@ -21,9 +24,8 @@ class Ai::Transport::Jev < Ai::Transport::Base
   private
     def run_judge(request)
       refuse_callables!(request.questions)
-      call = Ai::CallContext.current
       results = in_parallel(request.states.to_a) do |id, state|
-        Ai::CallContext.within(call, owner: request.family) { [ id, *judge_one(request, state) ] }
+        [ id, *judge_one(request, state) ]
       end
 
       answers = results.to_h { |id, answer, _usage| [ id, answer ] }
@@ -41,10 +43,8 @@ class Ai::Transport::Jev < Ai::Transport::Base
     def judge_one(request, state)
       judgment = attempt do
         mapping_errors do
-          judgment_errors do
-            ruby_llm_context.judge(state, questions: request.questions, model: request.model.name,
-                                          provider: :typesafe, assume_model_exists: true)
-          end
+          ruby_llm_context.judge(state, questions: request.questions, model: request.model.name,
+                                        provider: ruby_llm_provider, assume_model_exists: true)
         end
       end
       [ judgment.answers.to_h { |name, answer| [ name.to_sym, answer ] }, Ai::Tokens.from_ruby_llm(judgment.tokens) ]
@@ -53,19 +53,7 @@ class Ai::Transport::Jev < Ai::Transport::Base
       [ nil, nil ]
     end
 
-    # RubyLLM raises a plain RubyLLM::Error for a 200 it can't parse as a judgment.
-    def judgment_errors
-      yield
-    rescue RubyLLM::Error => error
-      status = error.response.respond_to?(:status) ? error.response.status : nil
-      raise unless status.to_i.between?(200, 299)
-
-      raise Ai::Error::InvalidOutput, error.message
-    end
-
-    # Questions and options go as Hashes. RubyLLM 2.1.1 evaluates a Proc in a builder that inherits
-    # from Object, so an option named like a Kernel method (a category called "system") would call
-    # it; RubyLLM fixed that after 2.1.1 (#1196). Category names are option keys, so no Proc.
+    # Questions are plain data by design, so a Proc is a caller's bug.
     def refuse_callables!(value)
       case value
       when Proc then raise ArgumentError, "Jev questions must be plain data, not a Proc"
@@ -93,12 +81,19 @@ class Ai::Transport::Jev < Ai::Transport::Base
       raise Ai::Error::Refused, "Jev has no health probe yet"
     end
 
-    def ruby_llm_provider = :typesafe
+    def ruby_llm_provider = endpoint.preset == :jev_openrouter ? :openrouter : :typesafe
     def ruby_llm_protocol = nil
     def ruby_llm_api_base = endpoint.base_url.presence || DEFAULT_BASE
 
     def configure_provider(config)
-      config.typesafe_api_key = endpoint.api_key.presence || "none"   # RubyLLM requires one; a local server may ignore it
-      config.typesafe_api_base = ruby_llm_api_base
+      if ruby_llm_provider == :openrouter
+        config.openrouter_api_key = endpoint.api_key.presence || "none"   # RubyLLM requires one
+        config.openrouter_api_base = ruby_llm_api_base
+        config.openrouter_app_name = OPENROUTER_APP_NAME
+        config.openrouter_app_url = OPENROUTER_APP_URL
+      else
+        config.typesafe_api_key = endpoint.api_key.presence || "none"   # RubyLLM requires one; a local server may ignore it
+        config.typesafe_api_base = ruby_llm_api_base
+      end
     end
 end

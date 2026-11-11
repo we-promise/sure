@@ -81,7 +81,7 @@ class Eval::Langfuse::ExperimentRunnerTest < ActiveSupport::TestCase
 
     error = assert_raises(Eval::ProviderFactory::Error) do
       runner(provider: "jev", model: "~typesafe/jev-latest",
-             provider_config: { "api_key" => "test-key", "endpoint" => "https://openrouter.ai/api/alpha/decisions" }).send(:build_provider)
+             provider_config: { "api_key" => "test-key", "endpoint" => "https://gw.example.test/v1/jev" }).send(:build_provider)
     end
     assert_match(/not supported/, error.message)
   end

@@ -33,13 +33,13 @@ flowchart LR
 - **A transport never reads ENV, `Setting` or ActiveRecord.** It takes an `Ai::Config::Endpoint`
   and an `Ai::Config::Model`, built by its caller.
 - **Build clients only in `Ai::Transport::Http`.** It applies the endpoint's timeout and
-  headers, TLS options and the proxy. RubyLLM builds its own connections and takes no TLS
-  options, so its contexts use `Http.ruby_llm_adapter`, a Net::HTTP adapter that adds them. The
-  contract test fails on `OpenAI::Client.new`, `Anthropic::Client.new` or `Faraday.new`
-  anywhere else under `app/models/ai/`.
+  headers, TLS options and the proxy. RubyLLM builds its own connections, so its contexts get
+  TLS options through the context's `config.ssl` and `Http.ruby_llm_adapter`, a Net::HTTP
+  adapter that applies the proxy decision. The contract test fails on `OpenAI::Client.new`,
+  `Anthropic::Client.new` or `Faraday.new` anywhere else under `app/models/ai/`.
 - **Use RubyLLM's public API only**: `RubyLLM.context`, `Context#chat`/`#embed`,
   `Chat#generate`, the `with_*` setters, `RubyLLM::Tool`, `RubyLLM.workflow`,
-  `RubyLLM.with_usage_owner`, `RubyLLM::OpenTelemetry.enable`. Nothing marked `:nodoc:`.
+  `RubyLLM.with_owner`, `RubyLLM::OpenTelemetry.enable`. Nothing marked `:nodoc:`.
   `test/architecture/ai_transport_contract_test.rb` lists the surface Sure uses.
 - **RubyLLM never retries.** Every context has `max_retries = 0`; `Ai::Transport::Base#attempt`
   retries rate limits, 5xx and timeouts up to the endpoint's `max_retries`. RubyLLM retries
@@ -220,8 +220,10 @@ flowchart LR
 **Judgements.** A decision model (Jev) answers a feature through an `Ai::Judgement`, which the
 feature's generation declares with `judged_by`. The generation's loop builds it on a `judge`
 route with the same items, so failover from Jev to an LLM switches class, and both return one
-value shape. `Ai::Transport::Jev#judge` goes through RubyLLM's `typesafe` provider, fanning a batch
-out on the endpoint's `parallel_requests`. See [Adding a judgement](adding-a-judgement.md).
+value shape. `Ai::Transport::Jev#judge` goes through RubyLLM's `typesafe` provider for
+TypeSafe-style endpoints (`…/v1/systemone`) and its `openrouter` provider for OpenRouter's
+Decisions gateway (`…/alpha/decisions`), fanning a batch out on the endpoint's
+`parallel_requests`. See [Adding a judgement](adding-a-judgement.md).
 
 **Shadow runs.** A generation that declares
 

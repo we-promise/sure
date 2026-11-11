@@ -269,7 +269,8 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
   end
 
   test "a Jev endpoint RubyLLM can't reach is left out with a warning" do
-    { "https://openrouter.ai/api/alpha/decisions" => /RubyLLM 2.2/, "https://gw.example.test/v1/jev" => %r{/v1/systemone} }.each do |url, reason|
+    { "https://openrouter.ai/api/v1/chat/completions" => /v1\/systemone/,
+      "https://gw.example.test/v1/jev" => /v1\/systemone/ }.each do |url, reason|
       Rails.logger.expects(:warn).with(regexp_matches(reason))
 
       config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => url)
@@ -278,13 +279,33 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     end
   end
 
+  test "an OpenRouter decisions URL routes categorize through the openrouter preset" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test",
+                   "JEV_ENDPOINT" => "https://openrouter.ai/api/alpha/decisions", "CATEGORIZATION_PROVIDER" => "jev")
+
+    jev = config.routes_for(:categorize).first
+    assert_equal :jev_openrouter, jev.endpoint.preset
+    assert_equal "https://openrouter.ai/api/v1", jev.endpoint.base_url
+    assert_equal :cloud, jev.endpoint.location
+    assert jev.model.capable?(:judge)
+  end
+
   test "one answer to whether a Jev endpoint can be reached" do
     jev = Ai::LegacyEnvConfig::Jev
 
     assert_nil jev.unreachable_reason("https://api.typesafe.ai/v1/systemone")
-    assert_equal :openrouter, jev.unreachable_reason("https://openrouter.ai/api/alpha/decisions")
+    assert_nil jev.unreachable_reason("https://openrouter.ai/api/alpha/decisions")
+    assert_nil jev.unreachable_reason("https://eu.openrouter.ai/api/alpha/decisions")
     assert_equal :path, jev.unreachable_reason("https://gw.example.test/v1/jev")
     assert_equal :path, jev.unreachable_reason("ftp://jev.example.test/v1/systemone")
+  end
+
+  test "an OpenRouter decisions URL derives the /v1 api base for the provider's relative judgments path" do
+    jev = Ai::LegacyEnvConfig::Jev
+
+    assert_equal "https://openrouter.ai/api/v1", jev.base_url("https://openrouter.ai/api/alpha/decisions")
+    assert_equal "https://openrouter.ai/v1", jev.base_url("https://openrouter.ai/alpha/decisions")
+    assert_equal "https://gw.example.test/or/api/v1", jev.base_url("https://gw.example.test/or/api/alpha/decisions")
   end
 
   test "the external assistant is an agent endpoint at the end of chat's list" do

@@ -186,7 +186,7 @@ en:
         endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (default)"
         model_label: Model (Optional)
         model_placeholder: "jev-latest (default)"
-        model_help: Defaults to TypeSafe directly. A self-hosted server works too if its URL ends in /v1/systemone. Jev through OpenRouter isn't supported until a later release.
+        model_help: Defaults to TypeSafe directly. A self-hosted server works too if its URL ends in /v1/systemone. Jev through OpenRouter works at https://openrouter.ai/api/alpha/decisions, with your OpenRouter key as JEV_API_KEY.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -333,7 +333,7 @@ en:
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
         invalid_jev_endpoint: Jev Endpoint must be an http or https URL. Use http only for a server on your own network.
-        unsupported_jev_endpoint: Jev Endpoint must end in /v1/systemone, as TypeSafe's does. Jev through OpenRouter isn't supported until a later release.
+        unsupported_jev_endpoint: Jev endpoint must be an http(s) URL ending in /v1/systemone (TypeSafe, or a server speaking its protocol) or /alpha/decisions (Jev through OpenRouter).
         invalid_categorization_rate: "%{field} must be a number between 0 and 1."
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:

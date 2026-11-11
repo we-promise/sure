@@ -1,16 +1,17 @@
 # Deprecated: the Jev settings (`JEV_*`, then the `jev_*` Setting fields), read for
 # Ai::LegacyEnvConfig, the eval runner and the hostings page.
 #
-# RubyLLM 2.1.1's `judge` posts to `<base>/v1/systemone`, so an endpoint must end in that path.
-# OpenRouter's decisions gateway needs RubyLLM 2.2 (#1264), and any other path can't be reached;
-# both are left out of the config with a warning, and the form refuses them.
+# RubyLLM speaks TypeSafe's System One protocol: to TypeSafe and the servers speaking it it posts
+# to `<base>/v1/systemone`; to OpenRouter's Decisions gateway (Jev over OpenRouter) it posts to
+# `<base>/api/alpha/decisions`, relative to `<base>/v1`. Those are the paths accepted; any other
+# path can't be reached, and is left out of the config with a warning, and the form refuses it.
 module Ai::LegacyEnvConfig::Jev
   DEFAULT_ENDPOINT = "https://api.typesafe.ai/v1/systemone".freeze
   DEFAULT_MODEL = "jev-latest".freeze
   RETRIES = 3
+  DECISIONS_PATH = "/alpha/decisions".freeze
   UNSUPPORTED = {
-    openrouter: "OpenRouter's Jev needs RubyLLM 2.2",
-    path: "only TypeSafe-style …/v1/systemone endpoints are supported"
+    path: "only TypeSafe-style …/v1/systemone endpoints and OpenRouter's …/alpha/decisions are supported"
   }.freeze
 
   # TypeSafe's own API. Anything else is a gateway or a self-hosted server, which the data-sharing
@@ -37,15 +38,26 @@ module Ai::LegacyEnvConfig::Jev
     false
   end
 
-  # Why RubyLLM can't reach the endpoint, or nil: :openrouter for OpenRouter's gateway, :path for any other.
+  # Why RubyLLM can't reach the endpoint, or nil: :path for a path it doesn't know.
   def unsupported_reason(url)
     uri = URI.parse(url.to_s)
-    return :openrouter if uri.host.to_s.end_with?("openrouter.ai") || uri.path.to_s.end_with?("/alpha/decisions")
-    return :path unless uri.path.to_s.chomp("/").end_with?(Ai::Transport::Jev::PATH) && uri.query.blank?
+    path = uri.path.to_s.chomp("/")
+    return :path if uri.query.present?
+    return :path unless openrouter?(uri) || path.end_with?(Ai::Transport::Jev::PATH)
 
     nil
   rescue URI::InvalidURIError
     :path
+  end
+
+  # The decisions dialect: any host with a `…/alpha/decisions` path (OpenRouter itself, its regional
+  # hosts, or a gateway speaking the same dialect). The provider posts to `../alpha/decisions`
+  # relative to the `<base>/v1` api_base.
+  def openrouter?(url)
+    path = URI.parse(url.to_s).path.to_s.chomp("/")
+    path.end_with?(DECISIONS_PATH)
+  rescue URI::InvalidURIError
+    false
   end
 
   # Why the endpoint can't be used, or nil: :path for a URL that isn't http(s) with a host, else
@@ -53,20 +65,31 @@ module Ai::LegacyEnvConfig::Jev
   def unreachable_reason(url) = endpoint_allowed?(url) ? unsupported_reason(url) : :path
 
   # The `jev` endpoint for a URL that unreachable_reason accepts. An http server is local, so the
-  # transport sends it one request at a time unless `parallel_requests` says otherwise.
+  # transport sends it one request at a time unless `parallel_requests` says otherwise. An OpenRouter
+  # decisions URL gets the `:jev_openrouter` preset, which the transport answers with RubyLLM's
+  # openrouter provider; TypeSafe-style URLs keep the `:typesafe` provider.
   def endpoint(url, api_key:, timeout_seconds:, parallel_requests: nil)
     base_url = base_url(url)
     location = URI.parse(base_url).scheme == "http" ? :local : :cloud
+    preset = openrouter?(url) ? :jev_openrouter : (location == :cloud ? :jev : :jev_local)
     Ai::Config::Endpoint.new(
-      name: "jev", protocol: :jev, preset: location == :cloud ? :jev : :jev_local, base_url:, api_key:, location:,
+      name: "jev", protocol: :jev, preset:, base_url:, api_key:, location:,
       timeout_seconds:, max_retries: RETRIES, parallel_requests:
     )
   end
 
-  # The base RubyLLM appends `/v1/systemone` to.
+  # The base RubyLLM posts to. For TypeSafe-style URLs the provider appends `v1/systemone` to it.
+  # For an OpenRouter decisions URL it resolves `../alpha/decisions` against `<stripped path>/v1`,
+  # so the two share a prefix and land back on the decisions URL.
   def base_url(url)
     uri = URI.parse(url.to_s)
-    uri.path = uri.path.chomp("/").delete_suffix(Ai::Transport::Jev::PATH)
+    path = uri.path.to_s.chomp("/")
+    if path.end_with?(DECISIONS_PATH)
+      uri.path = "#{path.delete_suffix(DECISIONS_PATH).chomp("/")}/v1"
+      return uri.to_s
+    end
+
+    uri.path = path.delete_suffix(Ai::Transport::Jev::PATH)
     uri.to_s
   end
 

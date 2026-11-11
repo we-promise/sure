@@ -32,6 +32,20 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     assert_equal 120, response.usage.input_tokens
   end
 
+  test "an OpenRouter decisions preset posts the OpenRouter dialect to the decisions URL" do
+    decisions_url = "https://openrouter.ai/api/alpha/decisions"
+    stub_request(:post, decisions_url).to_return(status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.8).to_json)
+
+    response = judge({ "txn_1" => { description: "ACME CORP", amount: 10.0 } },
+                     preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
+
+    assert_equal "Salary", response.answers.fetch("txn_1").fetch(:category).choice
+    assert_requested(:post, decisions_url,
+                     headers: { "Authorization" => "Bearer test-key",
+                                "X-OpenRouter-Title" => "Sure",
+                                "HTTP-Referer" => "https://sure.am" })
+  end
+
   test "fans a batch out on at most parallel_requests threads" do
     in_flight = Concurrent::AtomicFixnum.new
     peak = Concurrent::AtomicFixnum.new

@@ -713,8 +713,8 @@ class FamilyTest < ActiveSupport::TestCase
     assert_nil family.request_plaid_transactions_refreshes_later(source: "TestSync")
   end
 
-  # A path RubyLLM's judge can't reach (only TypeSafe-style /v1/systemone), which JEV_ENDPOINT
-  # can set without passing the settings form.
+  # A path RubyLLM's judge can't reach (only …/v1/systemone and …/alpha/decisions are), which
+  # JEV_ENDPOINT can set without passing the settings form.
   UNSUPPORTED_JEV_ENV = {
     "JEV_API_KEY" => "test_api_key",
     "JEV_ENDPOINT" => "https://internal-gateway.example.com/v1/jev",

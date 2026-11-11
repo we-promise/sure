@@ -83,6 +83,7 @@ fr:
         data_retention_direct: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à TypeSafe pour être catégorisés. Consultez sa politique de conservation avant d'activer cette option sur des données réelles.
         data_retention_heading: Partage des données
         data_retention_proxied: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à %{host}, qui les transmet à TypeSafe. Consultez les politiques de conservation des deux fournisseurs avant d'activer cette option sur des données réelles.
+        description: Choisissez le fournisseur qui catégorise les transactions pour toutes les familles de cette instance. Il est distinct du fournisseur d'IA ci-dessus, qui gère la discussion et le traitement des PDF.
         env_notice: Défini sur %{type} via les variables d'environnement.
         jev_configured: Clé API Jev configurée.
         jev_not_configured: Jev est sélectionné mais aucune clé API n'est configurée. La catégorisation continue d'utiliser le fournisseur d'IA tant que vous n'en ajoutez pas une ci-dessous.
@@ -156,6 +157,7 @@ fr:
         endpoint_label: Endpoint (Optionnel)
         endpoint_placeholder: https://api.typesafe.ai/v1/systemone (par défaut)
         env_configured_message: Configuré avec succès via les variables d'environnement.
+        model_help: Utilise TypeSafe directement par défaut. Un serveur auto-hébergé fonctionne aussi si son URL se termine par /v1/systemone. Jev via OpenRouter fonctionne à https://openrouter.ai/api/alpha/decisions, avec votre clé OpenRouter comme JEV_API_KEY.
         model_label: Modèle (Optionnel)
         model_placeholder: jev-latest (par défaut)
       llm_provider_selector:
@@ -332,10 +334,12 @@ fr:
         invalid_anthropic_base_url: L'URL de base d'Anthropic doit être une URL http(s).
         invalid_categorization_rate: "%{field} doit être un nombre compris entre 0 et 1."
         invalid_demo_family: La famille sélectionnée doit être propriétaire de l'e-mail de démo configuré.
+        invalid_jev_endpoint: L'endpoint Jev doit être une URL http ou https. N'utilisez le http que pour un serveur sur votre propre réseau.
         invalid_llm_budget: "%{field} doit être un nombre entier ≥ %{minimum}."
         invalid_onboarding_state: État d'intégration invalide
         invalid_sync_time: Format d'heure de synchronisation invalide. Veuillez utiliser le format HH:MM (ex. 02:30).
         scheduler_sync_failed: Paramètres enregistrés, mais la mise à jour du planning de synchronisation a échoué. Veuillez réessayer ou vérifier les journaux du serveur.
+        unsupported_jev_endpoint: L'endpoint Jev doit être une URL http ou https qui se termine par /v1/systemone (TypeSafe, ou un serveur parlant son protocole) ou par /alpha/decisions (Jev via OpenRouter).
         select_demo_family: Sélectionnez d'abord une famille de démo jetable.
         success: Paramètres mis à jour
       yahoo_finance_settings:

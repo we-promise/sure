@@ -47,8 +47,9 @@ end
 - **The generation's value shape.** `value_from` returns exactly what the generation returns
   (for categorize, `{ categorizations: [{ transaction_id:, category_name:, confidence:,
   probabilities: }] }`), so the requester doesn't know which model answered.
-- **Questions are plain data.** RubyLLM 2.1.1 evaluates a Proc in a builder that inherits from
-  `Object`, so an option named like a Kernel method would call it; the transport refuses a Proc.
+- **Questions are plain data.** RubyLLM evaluates any Proc in a question in a builder whose
+  missing methods fall through to the judgement instance's scope, so a call that names one of its
+  methods would run that method; the transport refuses a Proc.
 - **A malformed answer fails its item.** RubyLLM rejects an answer with no confidence or an
   option that wasn't asked; that item comes back `nil` and is left out. All malformed raises
   `Ai::Error::InvalidOutput`.
@@ -97,10 +98,11 @@ The Jev endpoint comes from `JEV_API_KEY`, `JEV_ENDPOINT` and `JEV_MODEL` (or th
 settings), read by `Ai::LegacyEnvConfig::Jev`. Which model categorizes is one instance-wide
 choice, `Setting.categorization_provider`, which `CATEGORIZATION_PROVIDER` overrides.
 
-- **Paths.** RubyLLM 2.1.1's `typesafe` provider posts to `<base>/v1/systemone`, so only
-  TypeSafe-style endpoints are reachable. OpenRouter's decisions gateway needs RubyLLM 2.2
-  (crmne/ruby_llm#1264); any other path isn't supported. Both are left out of the config with a warning, and the
-  settings form refuses them.
+- **Paths.** The endpoint speaks one of two dialects: `…/v1/systemone` reached through RubyLLM's
+  `typesafe` provider (TypeSafe and the servers speaking its protocol, including a self-hosted
+  one), or `…/alpha/decisions` reached through its `openrouter` provider (Jev through OpenRouter,
+  for `https://openrouter.ai/api/alpha/decisions` with your OpenRouter key as `JEV_API_KEY`).
+  Anything else is left out of the config with a warning, and the settings form refuses it.
 - **Disclosure.** Default to the vendor's own API. When the endpoint is another host, the
   settings panel says so (`Ai::LegacyEnvConfig::Jev.effective_proxied?`, `.effective_host`):
   telling someone their transactions go to TypeSafe is wrong when they pass through another
@@ -114,7 +116,7 @@ choice, `Setting.categorization_provider`, which `CATEGORIZATION_PROVIDER` overr
 
 One state per request makes a batch a batch of requests. They're independent and latency-bound,
 so `Ai::Transport::Jev` runs them on a pool of the endpoint's `parallel_requests` (8 on cloud Jev,
-1 on a local server). Each pool thread re-enters the call (`Ai::CallContext.within`), so every
+1 on a local server). Each pool thread inherits the call's context from fiber storage, so every
 request writes its usage row with the call's id. Retries are the transport's (`attempt`), as for
 every call.
 
