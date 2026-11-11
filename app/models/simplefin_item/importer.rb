@@ -555,6 +555,12 @@ class SimplefinItem::Importer
         last_synced_at: simplefin_item.last_synced_at, start_date: start_date.to_date, requests: windows.size,
         resumed_from: resume_at&.to_date)
 
+      # The resume point only moves past windows that were fully imported:
+      # a complete provider response with every account imported. A window
+      # that skipped an account, or came back with provider errors, leaves
+      # data behind, so a failure in a later window must retry from before
+      # it instead of resuming past it.
+      complete = true
       windows.each do |window_start, window_end|
         accounts_data = fetch_accounts_data(start_date: window_start, end_date: window_end)
         return if accounts_data.nil? # Error already handled
@@ -568,6 +574,7 @@ class SimplefinItem::Importer
         stats["total_accounts"] = [ stats["total_accounts"].to_i, count ].max
 
         # Import accounts (merges transactions/holdings into existing rows), skipping failures per-account
+        skipped_before = stats.fetch("accounts_skipped", 0)
         accounts_data[:accounts]&.each do |account_data|
           begin
             import_account(account_data)
@@ -586,9 +593,11 @@ class SimplefinItem::Importer
           end
         end
 
-        # This window is fully imported; remember its end so a failure in a
-        # later window resumes here instead of from the start of the gap.
-        persist_regular_sync_resume_at(window_end)
+        complete &&= !partial_provider_response?(accounts_data) &&
+          stats.fetch("accounts_skipped", 0) == skipped_before
+        # Only a fully imported window moves the resume point; a partial one
+        # leaves the marker where it was, so a later failure retries it.
+        persist_regular_sync_resume_at(window_end) if complete
       end
 
       # Every window is in. Nothing left to resume, and last_synced_at moves

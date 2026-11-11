@@ -252,6 +252,10 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
         simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
 
       # The retry resumes from the remembered window end instead of the start.
+      # Capture the first run's log id first: the frozen clock stamps every
+      # log row with the same created_at, and the ids are random UUIDs, so
+      # neither created_at nor id order can pick out the retry's row.
+      first_log_ids = DebugLogEntry.where(provider_key: "simplefin", source: "SimplefinItem::Importer").pluck(:id)
       healthy_provider, healthy_ranges = recording_provider(account_id: "sf_resume_1")
       SimplefinItem::Importer.new(@item, simplefin_provider: healthy_provider).send(:import_regular_sync)
 
@@ -260,15 +264,70 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
       assert_equal Time.current, healthy_ranges.last.last
       assert_nil @item.reload.regular_sync_resume_at
 
-      # Order by id, not created_at: the frozen clock gives every log row in
-      # this test the same timestamp, so created_at ties are nondeterministic.
       log = DebugLogEntry.where(provider_key: "simplefin", source: "SimplefinItem::Importer")
-        .order(id: :desc).first
+        .where.not(id: first_log_ids).sole
       assert_equal 2, log.metadata["requests"]
       assert_equal 85.days.ago.to_date.to_s, log.metadata["resumed_from"]
 
       imported = simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
       assert_equal 3, imported.size
+    end
+  end
+
+  test "a regular sync does not resume past a window with a skipped account" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(100.days.ago)
+      simplefin_account = link_simplefin_account("sf_partial_1")
+      provider, ranges = partial_then_failing_provider(fail_on_request: 2, account_id: "sf_partial_1")
+
+      assert_raises(Provider::Simplefin::SimplefinError) do
+        SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+      end
+
+      # The first window imported one account but skipped another, so it was
+      # not fully imported: the resume point must stay at the start of the gap.
+      assert_equal 2, ranges.size
+      assert_nil @item.reload.regular_sync_resume_at
+      assert_equal [ "tx_#{(130.days.ago).to_i}" ],
+        simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+
+      # The retry re-requests the partial window instead of resuming past it.
+      healthy_provider, healthy_ranges = recording_provider(account_id: "sf_partial_1")
+      SimplefinItem::Importer.new(@item, simplefin_provider: healthy_provider).send(:import_regular_sync)
+
+      assert_equal 3, healthy_ranges.size
+      assert_equal 130.days.ago, healthy_ranges.first.first
+      assert_nil @item.reload.regular_sync_resume_at
+
+      imported = simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+      assert_equal 3, imported.size
+    end
+  end
+
+  test "a regular sync does not resume past a window with a partial provider response" do
+    travel_to Time.zone.parse("2026-11-07 12:00") do
+      @item.stubs(:last_synced_at).returns(100.days.ago)
+      simplefin_account = link_simplefin_account("sf_partial_1")
+      provider, ranges = partial_response_then_failing_provider(fail_on_request: 2, account_id: "sf_partial_1")
+
+      assert_raises(Provider::Simplefin::SimplefinError) do
+        SimplefinItem::Importer.new(@item, simplefin_provider: provider).send(:import_regular_sync)
+      end
+
+      # The first window came back with a provider error alongside its
+      # accounts, so it was not fully imported: the resume point must stay put.
+      assert_equal 2, ranges.size
+      assert_nil @item.reload.regular_sync_resume_at
+      assert_equal [ "tx_#{(130.days.ago).to_i}" ],
+        simplefin_account.reload.raw_transactions_payload.map { |tx| tx["id"] }
+
+      # The retry re-requests the partial window instead of resuming past it.
+      healthy_provider, healthy_ranges = recording_provider(account_id: "sf_partial_1")
+      SimplefinItem::Importer.new(@item, simplefin_provider: healthy_provider).send(:import_regular_sync)
+
+      assert_equal 3, healthy_ranges.size
+      assert_equal 130.days.ago, healthy_ranges.first.first
+      assert_nil @item.reload.regular_sync_resume_at
     end
   end
 
@@ -353,6 +412,60 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
                            amount: "-5.00", description: "Coffee", payee: "Coffee" } ]
         { accounts: [ { id: account_id, name: "Checking", currency: "USD", balance: "100.00",
                         "balance-date": Time.current.to_i, transactions: transactions } ] }
+      end
+      [ provider, ranges ]
+    end
+
+    # Like failing_provider, but the first window also returns an account
+    # without a name, whose import fails validation and is skipped, so the
+    # window is only partially imported.
+    def partial_then_failing_provider(fail_on_request:, account_id: nil)
+      ranges = []
+      count = 0
+      provider = Object.new
+      provider.define_singleton_method(:get_accounts) do |_access_url, start_date: nil, end_date: nil, pending: nil|
+        next { accounts: [] } unless start_date
+
+        count += 1
+        ranges << [ start_date, end_date ]
+        if count == fail_on_request
+          raise Provider::Simplefin::SimplefinError.new("SimpleFIN Bridge unavailable", :api_error)
+        end
+        next { accounts: [] } unless account_id
+
+        transactions = [ { id: "tx_#{start_date.to_i}", posted: (start_date + 1.day).to_i,
+                           amount: "-5.00", description: "Coffee", payee: "Coffee" } ]
+        { accounts: [
+          { id: account_id, name: "Checking", currency: "USD", balance: "100.00",
+            "balance-date": Time.current.to_i, transactions: transactions },
+          { id: "sf_partial_bad", currency: "USD", balance: "0.00",
+            "balance-date": Time.current.to_i }
+        ] }
+      end
+      [ provider, ranges ]
+    end
+
+    # Like failing_provider, but the first window's response also carries a
+    # per-account provider error, so the window is only partially imported.
+    def partial_response_then_failing_provider(fail_on_request:, account_id: nil)
+      ranges = []
+      count = 0
+      provider = Object.new
+      provider.define_singleton_method(:get_accounts) do |_access_url, start_date: nil, end_date: nil, pending: nil|
+        next { accounts: [] } unless start_date
+
+        count += 1
+        ranges << [ start_date, end_date ]
+        if count == fail_on_request
+          raise Provider::Simplefin::SimplefinError.new("SimpleFIN Bridge unavailable", :api_error)
+        end
+        next { accounts: [] } unless account_id
+
+        transactions = [ { id: "tx_#{start_date.to_i}", posted: (start_date + 1.day).to_i,
+                           amount: "-5.00", description: "Coffee", payee: "Coffee" } ]
+        { accounts: [ { id: account_id, name: "Checking", currency: "USD", balance: "100.00",
+                        "balance-date": Time.current.to_i, transactions: transactions } ],
+          errlist: [ { code: "act.expired", account_id: "sf_other", message: "Account needs attention" } ] }
       end
       [ provider, ranges ]
     end
