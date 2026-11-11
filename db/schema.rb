@@ -1197,6 +1197,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.decimal "unit_cost", precision: 25, scale: 10
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_holding_lot_disposals_on_account_id"
+    t.index ["lot_source_entry_id"], name: "index_holding_lot_disposals_on_lot_source_entry_id"
     t.index ["sale_entry_id"], name: "index_holding_lot_disposals_on_sale_entry_id"
     t.check_constraint "qty > 0::numeric", name: "holding_lot_disposals_qty_positive"
   end
