@@ -297,7 +297,7 @@ class RecurringTransaction
       # Partial payments and accumulations keep the capped behaviour.
       def settles_bill?(entry, entry_total)
         return false if occurrence.allocations.confirmed.exists?
-        return false if RecurringAllocation.where(entry: entry).exists?
+        return false if active_allocations_for(entry).exists?
 
         within_settlement_band?(entry_total)
       end
@@ -319,7 +319,7 @@ class RecurringTransaction
         entry = allocation.entry
         return allocation unless entry.currency == occurrence.currency
         return allocation unless occurrence.allocations.confirmed.count == 1
-        return allocation unless RecurringAllocation.where(entry: entry).count == 1
+        return allocation unless active_allocations_for(entry).count == 1
 
         entry_total = entry.amount.abs
         return allocation if allocation.allocated_amount == entry_total
@@ -329,17 +329,28 @@ class RecurringTransaction
         allocation
       end
 
-      # True once any allocation on this entry lacks a source amount, which
-      # makes every capacity sum over it meaningless.
+      # Allocations that count toward an entry's capacity: everything except
+      # tombstones from ended series (a deleted or dismissed bill). Counting
+      # those would permanently consume the entry and block re-use on a new
+      # bill (see #3592). Defined once so the capacity checks stay in sync.
+      def active_allocations_for(entry)
+        RecurringAllocation
+          .where(entry: entry)
+          .joins(recurring_occurrence: :recurring_transaction)
+          .where.not(recurring_transactions: { status: "ended" })
+      end
+
+      # True once any allocation on this entry (excluding those from ended
+      # series) lacks a source amount, which makes every capacity sum over it
+      # meaningless.
       def unmeasurable_entry?(entry)
-        RecurringAllocation.where(entry: entry, source_amount: nil).exists?
+        active_allocations_for(entry).where(source_amount: nil).exists?
       end
 
       # How much of the entry is not yet spoken for, in the entry's currency.
       def entry_capacity(entry, entry_total)
-        already = RecurringAllocation.where(entry: entry).sum(
-          "COALESCE(source_amount, allocated_amount)"
-        )
+        already = active_allocations_for(entry)
+          .sum("COALESCE(recurring_allocations.source_amount, recurring_allocations.allocated_amount)")
 
         [ entry_total - already, 0 ].max
       end
@@ -401,10 +412,11 @@ class RecurringTransaction
       # The first such allocation is a judgement the user made about a
       # transaction they can see. A second one is a transaction silently paying
       # an unbounded number of bills, so an unmeasurable entry takes no more
-      # than one.
+      # than one. Allocations from ended series are excluded throughout so a
+      # deleted bill never blocks re-use of the same entry on a replacement.
       def guard_entry_capacity!(entry, source_amount)
         if source_amount.nil? || unmeasurable_entry?(entry)
-          return if RecurringAllocation.where(entry: entry).none?
+          return if active_allocations_for(entry).none?
 
           raise OverAllocationError, I18n.t("recurring_transactions.allocator.unmeasurable",
                                             currency: entry.currency, date: entry.date)

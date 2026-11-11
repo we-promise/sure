@@ -38,6 +38,12 @@ class SettingTest < ActiveSupport::TestCase
     assert_match(/OpenAI model is required/, error.message)
   end
 
+  test "validate_openai_config! passes for a regional OpenAI host without a model" do
+    assert_nothing_raised do
+      Setting.validate_openai_config!(uri_base: "https://us.api.openai.com", model: "")
+    end
+  end
+
   test "validate_openai_config! uses current settings when parameters are nil" do
     Setting.openai_uri_base = "https://api.example.com"
     Setting.openai_model = "gpt-4"
