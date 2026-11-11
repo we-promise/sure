@@ -63,7 +63,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
   test "update does not let a user without a local password set one here" do
     @user.update_column(:password_digest, nil)
 
-    assert_password_unchanged do
+    assert_no_difference "SecurityAuditLog.count" do
       patch password_path, params: { user: {
         password_challenge: "",
         password: "NewSecure1!",
@@ -71,6 +71,7 @@ class PasswordsControllerTest < ActionDispatch::IntegrationTest
       } }
     end
 
+    assert_response :unprocessable_entity
     assert_nil @user.reload.password_digest
   end
 
