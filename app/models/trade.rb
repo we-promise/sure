@@ -209,9 +209,18 @@ class Trade < ApplicationRecord
     # Acquisitions whose lot is now empty and was emptied before this sale:
     # no sale dated on or after it took anything from the lot.
     def lots_emptied_before_sale
+      # Sales replay by date, then in the order they were entered (see
+      # Holding::PortfolioCache#trades), so a same-day sale entered earlier
+      # has already emptied its lots by the time this one runs.
       later_disposals = HoldingLotDisposal.joins(:sale_entry)
         .where(account_id: entry.account_id).where.not(lot_source_entry_id: nil)
-        .where("entries.date >= ?", entry.date)
+      later_disposals = if entry.persisted?
+        later_disposals.where("(entries.date, entries.created_at, entries.id) >= (:date, :created_at, :id)",
+                              date: entry.date, created_at: entry.created_at, id: entry.id)
+      else
+        later_disposals.where("(entries.date, entries.created_at) >= (:date, :created_at)",
+                              date: entry.date, created_at: Time.current)
+      end
       HoldingLot.derived.where(account_id: entry.account_id, qty: 0)
         .where.not(source_entry_id: later_disposals.select(:lot_source_entry_id))
         .select(:source_entry_id)
