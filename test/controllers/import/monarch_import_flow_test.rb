@@ -113,6 +113,23 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     assert_nil checking.reload.target
   end
 
+  test "an import whose data committed before failing can't change its files or choices" do
+    upload_exports
+    Family.any_instance.stubs(:sync_later).raises(StandardError, "queue down")
+    @import.publish
+    assert @import.reload.failed?
+    checking = @import.account_mappings.find_by!(key: "Checking")
+
+    patch import_configuration_url(@import), params: { accounts: { checking.id => { type: "Depository", include: "0" } } }
+    assert_redirected_to import_url(@import)
+    assert_equal I18n.t("imports.configuration_locked"), flash[:alert]
+    assert checking.reload.include
+
+    patch import_upload_url(@import), params: { import: { balances_file: csv_upload("monarch_balances.csv") } }
+    assert_redirected_to import_url(@import)
+    assert_equal 3, @import.account_mappings.count
+  end
+
   test "confirm shows the summary and publishes" do
     upload_exports
     get import_url(@import)
@@ -121,6 +138,25 @@ class Import::MonarchImportFlowTest < ActionDispatch::IntegrationTest
     assert_enqueued_with(job: ImportJob) do
       post publish_import_url(@import)
     end
+  end
+
+  test "trying again after a destination stopped qualifying goes back to the accounts step" do
+    upload_exports
+    target = accounts(:depository)
+    @import.account_mappings.find_by!(key: "Checking").update!(mappable: target)
+    security = Security.create!(ticker: "MONA", name: "Monarch Test")
+    target.entries.create!(date: Date.new(2024, 1, 4), amount: 10, currency: "USD", name: "Buy",
+      entryable: Trade.new(security: security, qty: 1, price: 10, currency: "USD"))
+    @import.publish
+    assert @import.reload.failed?
+
+    assert_no_enqueued_jobs(only: ImportJob) do
+      post publish_import_url(@import)
+    end
+    assert_redirected_to import_url(@import)
+    follow_redirect!
+    assert_redirected_to import_configuration_url(@import)
+    assert_match target.name, flash[:alert]
   end
 
   private

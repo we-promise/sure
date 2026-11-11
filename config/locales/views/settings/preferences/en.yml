@@ -16,6 +16,8 @@ en:
         page_title: Preferences
         timezone: Timezone
         translations_notice: Please note, we are still working on translations for various languages.
+        rule_suggestions: "Rule suggestions"
+        rule_suggestions_hint: "Offer to create a rule after you change a transaction's category"
         budget_title: Budget
         budget_subtitle: Configure how your budgets behave
         month_start_day: Budget month starts on
