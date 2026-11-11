@@ -50,21 +50,66 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_equal original_anchor, account.current_anchor_balance
   end
 
-  test "lender_signed? follows the override and the reported balance sign" do
-    sophtron_account = build_sophtron_account
-    AccountProvider.create!(account: accounts(:credit_card), provider: sophtron_account)
-
+  test "detects the feed convention from the override and the reported balance sign" do
     {
-      [ nil, 25 ] => false,
+      [ nil, 25 ] => nil,
       [ "debt", 25 ] => true,
       [ "debt", -25 ] => false,
       [ "credit", -25 ] => true,
       [ "credit", 25 ] => false,
-      [ "debt", 0 ] => false
+      [ "debt", 0 ] => nil
     }.each do |(override, balance), expected|
-      sophtron_account.assign_attributes(balance_sign_override: override, balance: balance)
-      assert_equal expected, sophtron_account.lender_signed?, "override=#{override.inspect} balance=#{balance}"
+      sophtron_account = build_sophtron_account
+      sophtron_account.update!(balance: balance, balance_sign_override: override)
+
+      if expected.nil?
+        assert_nil sophtron_account.lender_signed, "override=#{override.inspect} balance=#{balance}"
+      else
+        assert_equal expected, sophtron_account.lender_signed, "override=#{override.inspect} balance=#{balance}"
+      end
+      sophtron_account.destroy!
     end
+  end
+
+  test "keeps the detected convention when the balance reaches zero or changes sign" do
+    sophtron_account = build_sophtron_account
+    sophtron_account.update!(balance_sign_override: "debt")
+    assert sophtron_account.lender_signed
+
+    [ 0, -10, 30 ].each do |balance|
+      sophtron_account.update!(balance: balance)
+      assert sophtron_account.reload.lender_signed, "balance=#{balance}"
+    end
+  end
+
+  test "detects the convention once a non-zero balance arrives" do
+    sophtron_account = build_sophtron_account
+    sophtron_account.update!(balance: 0, balance_sign_override: "debt")
+    assert_nil sophtron_account.lender_signed
+
+    sophtron_account.update!(balance: 25)
+    assert sophtron_account.lender_signed
+  end
+
+  test "changing the override re-detects the convention and automatic clears it" do
+    sophtron_account = build_sophtron_account
+    sophtron_account.update!(balance_sign_override: "debt")
+    assert sophtron_account.lender_signed
+
+    sophtron_account.update!(balance_sign_override: "credit")
+    assert_equal false, sophtron_account.lender_signed
+
+    sophtron_account.update!(balance_sign_override: nil)
+    assert_nil sophtron_account.lender_signed
+  end
+
+  test "lender_signed? is true only for a lender-signed credit card" do
+    sophtron_account = build_sophtron_account
+    AccountProvider.create!(account: accounts(:credit_card), provider: sophtron_account)
+    assert_not sophtron_account.lender_signed?
+
+    sophtron_account.update!(balance_sign_override: "debt")
+    assert sophtron_account.lender_signed?
   end
 
   test "lender_signed? is false for accounts that are not credit cards" do

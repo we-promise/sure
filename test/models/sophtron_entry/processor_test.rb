@@ -42,6 +42,16 @@ class SophtronEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("-100"), process(sophtron_account, id: "payment", amount: "100").amount
   end
 
+  test "paying a lender-signed card down to zero keeps charges as outflows on reprocessing" do
+    sophtron_account = create_sophtron_account(account_id: "cc_paid_off", balance: 25, balance_sign_override: "debt")
+    link_account(accounts(:credit_card), sophtron_account)
+    assert_equal BigDecimal("40"), process(sophtron_account, id: "charge", amount: "40").amount
+
+    sophtron_account.update!(balance: 0)
+
+    assert_equal BigDecimal("40"), process(sophtron_account, id: "charge", amount: "40").amount
+  end
+
   private
     def process(sophtron_account, id:, amount:)
       SophtronEntry::Processor.new(

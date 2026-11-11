@@ -17,6 +17,7 @@
 # @attr [JSONB] raw_transactions_payload Raw transaction data from Sophtron API
 # @attr [DateTime] last_updated When Sophtron last updated this account
 # @attr [String, nil] balance_sign_override Credit card meaning: "credit", "debt", or nil for automatic
+# @attr [Boolean, nil] lender_signed Detected feed convention while an override is set
 class SophtronAccount < ApplicationRecord
   include CurrencyNormalizable
 
@@ -33,6 +34,8 @@ class SophtronAccount < ApplicationRecord
   validates :name, :currency, presence: true
   validates :balance_sign_override, inclusion: { in: %w[credit debt], allow_nil: true }
   validate :has_balance
+
+  before_save :detect_sign_convention
 
   # Returns the linked Maybe Account for this Sophtron account.
   #
@@ -68,18 +71,12 @@ class SophtronAccount < ApplicationRecord
   end
 
   # Whether this credit card's feed signs amounts from the lender's side, with
-  # debt and charges positive. Sophtron institutions differ, so this is only
-  # known once the user says what the balance means: a debt reported as
-  # positive, or a credit reported as negative, comes from such a feed.
-  # Automatic mode and a zero balance keep the account-holder convention.
+  # debt and charges positive. Automatic mode keeps the account-holder
+  # convention.
   #
   # @return [Boolean]
   def lender_signed?
-    return false unless balance_sign_override.present?
-    return false unless current_account&.accountable_type == "CreditCard"
-    return false if observed_balance.zero?
-
-    (balance_sign_override == "debt") == observed_balance.positive?
+    lender_signed == true && current_account&.accountable_type == "CreditCard"
   end
 
   def institution_name
@@ -160,6 +157,19 @@ class SophtronAccount < ApplicationRecord
   end
 
   private
+
+    # Sophtron institutions differ in sign convention, so it is only known once
+    # the user says what the balance means: a debt reported as positive, or a
+    # credit reported as negative, comes from a lender-signed feed. The result
+    # is kept until the override changes, because a later zero or overpaid
+    # balance says nothing new about the feed and must not re-sign history.
+    def detect_sign_convention
+      if balance_sign_override.blank?
+        self.lender_signed = nil
+      elsif will_save_change_to_balance_sign_override? || lender_signed.nil?
+        self.lender_signed = observed_balance.zero? ? nil : (balance_sign_override == "debt") == observed_balance.positive?
+      end
+    end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for Sophtron account #{id}, defaulting to USD")
