@@ -1,0 +1,8 @@
+<%# locals: (settings:) %>
+<%# The amount, then its direction. Amounts are only ever compared within
+    one currency. %>
+<%= classifier_section_form do %>
+  <%= render "settings/classifiers/option", key: :amount_field, settings: settings, label: t(".amount_field"), hint: t(".amount_field_hint") %>
+  <%= render "settings/classifiers/option", key: :amount_by_direction, settings: settings, indent: true, disabled: !settings.amount_field,
+        label: t(".amount_by_direction"), hint: t(".amount_by_direction_hint") %>
+<% end %>

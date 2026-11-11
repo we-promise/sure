@@ -8,9 +8,11 @@
           { label: t(".language"), include_blank: t(".language_auto") },
           { data: { auto_submit_form_target: "auto" } } %>
       <%= form.fields_for :family do |family_form| %>
-        <%= family_form.select :timezone,
-            timezone_options,
-            { label: t(".timezone") },
+        <%= family_form.collection_select :timezone,
+            timezone_options(family_form.object.timezone),
+            :last,
+            :first,
+            { label: t(".timezone"), searchable: true },
             { data: { auto_submit_form_target: "auto" } } %>
         <%= family_form.select :date_format,
             Family::DATE_FORMATS,
@@ -24,6 +26,15 @@
             { data: { auto_submit_form_target: "auto" } } %>
         <p class="text-xs italic pl-2 text-secondary"><%= t(".translations_notice") %></p>
       <% end %>
+      <div class="flex items-center justify-between gap-4">
+        <div class="space-y-1">
+          <p class="text-sm" id="rule_suggestions_label"><%= t(".rule_suggestions") %></p>
+          <p class="text-secondary text-sm"><%= t(".rule_suggestions_hint") %></p>
+        </div>
+        <%= render DS::Toggle.new(id: "user_rule_suggestions", name: "user[rule_prompts_disabled]",
+              checked: !@user.rule_prompts_disabled, checked_value: "false", unchecked_value: "true",
+              "aria-labelledby": "rule_suggestions_label", data: { auto_submit_form_target: "auto" }) %>
+      </div>
     <% end %>
   </div>
 <% end %>
