@@ -1513,6 +1513,8 @@ end
     def capture_sql_queries
       queries = []
       callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        # Unlike count_db_queries, cache hits are skipped on purpose: callers
+        # assert on the SQL sent to the database, not on a query count.
         next if payload[:cached]
         next if %w[SCHEMA TRANSACTION].include?(payload[:name])
 
