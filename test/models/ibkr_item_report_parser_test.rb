@@ -24,6 +24,35 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal 1, second_account[:equity_summary_in_base].size
   end
 
+  test "sums position values across asset categories instead of reading a single row" do
+    xml = <<~XML
+      <FlexQueryResponse queryName="Sure Test" type="AF">
+        <FlexStatements count="1">
+          <FlexStatement accountId="U1234567" fromDate="2026-05-01" toDate="2026-05-08" whenGenerated="2026-05-08;12:00:00">
+            <AccountInformation accountId="U1234567" currency="USD" />
+            <ChangeInPositionValues>
+              <ChangeInPositionValue accountId="U1234567" currency="BASE_SUMMARY" assetCategory="WAR" endOfPeriodValue="0.00" />
+              <ChangeInPositionValue accountId="U1234567" currency="BASE_SUMMARY" assetCategory="STK" endOfPeriodValue="50000.00" />
+              <ChangeInPositionValue accountId="U1234567" currency="BASE_SUMMARY" assetCategory="OPT" endOfPeriodValue="2500.00" />
+              <ChangeInPositionValue accountId="U1234567" currency="USD" assetCategory="WAR" endOfPeriodValue="0.00" />
+              <ChangeInPositionValue accountId="U1234567" currency="USD" assetCategory="STK" endOfPeriodValue="50000.00" />
+              <ChangeInPositionValue accountId="U1234567" currency="USD" assetCategory="OPT" endOfPeriodValue="2500.00" />
+            </ChangeInPositionValues>
+            <CashReport>
+              <CashReportCurrency currency="BASE_SUMMARY" endingCash="10000.00" />
+              <CashReportCurrency currency="USD" endingCash="10000.00" />
+            </CashReport>
+          </FlexStatement>
+        </FlexStatements>
+      </FlexQueryResponse>
+    XML
+
+    account = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+
+    assert_equal BigDecimal("52500.00"), account[:current_balance] - account[:cash_balance]
+    assert_equal BigDecimal("62500.00"), account[:current_balance]
+  end
+
   test "raises parse error for malformed xml" do
     error = assert_raises(IbkrItem::ReportParser::ParseError) do
       IbkrItem::ReportParser.new("<FlexQueryResponse><FlexStatement>").parse
