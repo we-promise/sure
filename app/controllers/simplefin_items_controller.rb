@@ -216,8 +216,11 @@ class SimplefinItemsController < ApplicationController
       }
     }
 
-    # Detect stale accounts: linked in DB but no longer in upstream SimpleFin API
+    # Detect stale accounts: linked in DB but no longer in upstream SimpleFin API.
+    # Only those the user can write are offered, since complete_account_setup
+    # refuses delete and move on the rest.
     @stale_simplefin_accounts = detect_stale_simplefin_accounts
+      .select { |sfa| writable_account_ids.include?(sfa.current_account.id) }
     if @stale_simplefin_accounts.any?
       # Build list of target accounts for "move transactions to" dropdown
       # Only show accounts from this SimpleFin connection (excluding stale ones)

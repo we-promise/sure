@@ -1,7 +1,7 @@
 require "test_helper"
 
 # Every provider that can link to an existing account must run the shared
-# ProviderLinkAuthorizationTests, so a new provider cannot ship the #3534 gap.
+# ProviderLinkAuthorizationTests, so a new provider cannot ship without them.
 class ProviderLinkAuthorizationCoverageTest < ActiveSupport::TestCase
   LINK_ACTIONS = %w[select_existing_account link_existing_account].freeze
 

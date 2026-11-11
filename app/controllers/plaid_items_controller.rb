@@ -90,11 +90,6 @@ class PlaidItemsController < ApplicationController
 
     @region = params[:region] || "us"
 
-    # A non-admin reaches this action now, so the target account needs its own
-    # check -- family membership alone is not authorisation to attach a feed to
-    # someone else's account.
-    return if !Current.user.admin? && !require_account_permission!(@account)
-
     # Get all Plaid accounts from this family's Plaid items for the specified region
     # that are not yet linked to any account. A member only sees the items they
     # own; an admin sees the family's.
@@ -125,8 +120,6 @@ class PlaidItemsController < ApplicationController
       redirect_to account_path(@account), alert: t(".invalid_account")
       return
     end
-
-    return if !Current.user.admin? && !require_account_permission!(@account)
 
     # Verify the Plaid account is not already linked
     if plaid_account.account_provider.present? || plaid_account.account.present?

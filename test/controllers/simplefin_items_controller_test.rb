@@ -1203,7 +1203,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   end
   # The stale-account actions delete an account, or move its entries into
   # another account and then delete it. Both write the accounts involved, so
-  # the admin role alone is not enough (#3534).
+  # the admin role alone is not enough.
   test "complete_account_setup does not delete a stale account the admin cannot write" do
     stale_sfa, stale_account = stale_member_link(:read_write, account_id: "stale_rw_delete")
 
@@ -1286,6 +1286,20 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     target_select = "select[name='stale_account_actions[#{stale_sfa.id}][target_account_id]']"
     assert_select "#{target_select} option[value=?]", fc_target.id, count: 1
     assert_select "#{target_select} option[value=?]", rw_target.id, count: 0
+  end
+
+  # complete_account_setup refuses delete and move on a stale account the user
+  # cannot write, so the form does not offer them.
+  test "setup_accounts offers stale-account actions only on accounts the user can write" do
+    writable_sfa, _ = stale_member_link(:full_control, account_id: "stale_fc_row")
+    read_only_sfa, _ = stale_member_link(:read_write, account_id: "stale_rw_row")
+    @simplefin_item.update!(raw_payload: { accounts: [ { id: "still_upstream" } ] })
+
+    get setup_accounts_simplefin_item_url(@simplefin_item)
+
+    assert_response :success
+    assert_select "input[name='stale_account_actions[#{writable_sfa.id}][action]']", minimum: 1
+    assert_select "input[name='stale_account_actions[#{read_only_sfa.id}][action]']", count: 0
   end
 
   test "complete_account_setup's stream lists only the manual accounts the viewer can access" do

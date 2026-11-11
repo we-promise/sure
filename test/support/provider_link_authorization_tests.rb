@@ -1,5 +1,5 @@
 # Shared authorization tests for a provider's select_existing_account and
-# link_existing_account actions (#3534). The including test must sign in
+# link_existing_account actions. The including test must sign in
 # users(:family_admin); the linked-to accounts belong to users(:family_member).
 #
 #   include ProviderLinkAuthorizationTests
@@ -71,7 +71,7 @@ module ProviderLinkAuthorizationTests
       end
 
       # The modal's form submits as turbo_stream. With no Referer the refusal
-      # used to emit a redirect stream with no URL, leaving the dialog open.
+      # must still redirect somewhere, or the dialog is left open.
       test "link_existing_account refuses a turbo_stream request without a referer" do
         account = provider_link_member_account("read_write")
         provider_record = provider_link_new_provider_account
@@ -145,17 +145,23 @@ module ProviderLinkAuthorizationTests
       # The pre-lock check answers about the mapping as it was when it looked.
       # A second request can move the link between that read and the lock, and
       # the mutation then runs against a holder nobody authorized -- one that
-      # several providers go on to queue for deletion. Answering the early
-      # check the way a stale read would, with the DB already holding the
-      # account the user cannot write, is that interleaving without threads.
+      # several providers go on to queue for deletion. Here the early check
+      # reads a holder the user can write, loading it onto the controller's
+      # record as the real check does, and the link then moves to one they
+      # cannot: that interleaving without threads. The check under the lock
+      # must read the holder afresh, not the one loaded before it.
       test "link_existing_account refuses a relink when the holder changed before the lock" do
-        holder = provider_link_member_account("read_write")
+        early_holder = provider_link_member_account("full_control")
+        moved_to = provider_link_member_account("read_write")
         provider_record = provider_link_new_provider_account
-        AccountProvider.create!(account: holder, provider: provider_record)
+        AccountProvider.create!(account: early_holder, provider: provider_record)
         target_account = provider_link_admin_account
 
-        ApplicationController.any_instance
-          .stubs(:require_relinkable_provider_account!).returns(true)
+        ApplicationController.any_instance.stubs(:require_relinkable_provider_account!).with do |provider_account, _target|
+          provider_account.account_provider&.account
+          AccountProvider.where(provider: provider_record).update_all(account_id: moved_to.id)
+          true
+        end.returns(true)
 
         assert_no_enqueued_jobs(only: DestroyJob) do
           assert_no_difference "AccountProvider.count" do
@@ -164,8 +170,8 @@ module ProviderLinkAuthorizationTests
         end
 
         assert_provider_link_refused
-        assert_equal holder, provider_record.reload.account_provider.account
-        refute holder.reload.pending_deletion?
+        assert_equal moved_to, provider_record.reload.account_provider.account
+        refute moved_to.reload.pending_deletion?
       end
 
       { "owns" => :owner, "holds full_control on" => "full_control" }.each do |label, access|

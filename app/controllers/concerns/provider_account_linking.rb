@@ -4,7 +4,7 @@
 # provider writes to the account, which needs owner or full_control;
 # auto_share_with_family! only grants members read_write. Every
 # select_existing_account / link_existing_account goes through these so the
-# providers cannot drift apart again (#3534).
+# providers apply one rule.
 module ProviderAccountLinking
   extend ActiveSupport::Concern
 

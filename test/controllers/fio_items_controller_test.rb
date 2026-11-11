@@ -251,10 +251,8 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Depository", selected_option["value"]
   end
 
-  # Upstream added Fio after this branch was written, so the coverage guard in
-  # `ProviderLinkAuthorizationCoverageTest` flagged it the moment this branch
-  # merged `main` -- which is the guard doing exactly its job: a provider that
-  # can link to an existing account must not ship without the #3534 checks.
+  # A provider that can link to an existing account runs the shared checks
+  # (see ProviderLinkAuthorizationCoverageTest).
   include ProviderLinkAuthorizationTests
   provider_link_authorization_tests(
     select_url: :select_existing_account_fio_items_url,
