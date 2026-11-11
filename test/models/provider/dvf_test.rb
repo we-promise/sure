@@ -85,6 +85,21 @@ class Provider::DvfTest < ActiveSupport::TestCase
     assert_equal 315_000, response.data.valuation
   end
 
+  test "finds a commune that only touches the search circle diagonally" do
+    stub_request(:get, %r{\A#{Regexp.escape(GEOCODER)}/reverse}).to_return do |request|
+      point = request.uri.query_values
+      north_east = point["lat"].to_f > LAT + 0.005 && point["lon"].to_f > LON + 0.005
+      { status: 200, body: geocoder_body(north_east ? "75111" : "75120") }
+    end
+    stub_sales(sales_csv(8))
+    stub_sales(sales_csv(8, prefix: "n"), commune: "75111")
+
+    response = fetch
+
+    assert response.success?, response.error&.message
+    assert_equal 315_000, response.data.valuation
+  end
+
   test "counts a sale listed in two communes once" do
     stub_request(:get, %r{\A#{Regexp.escape(GEOCODER)}/reverse})
       .to_return(status: 200, body: geocoder_body("75111"))

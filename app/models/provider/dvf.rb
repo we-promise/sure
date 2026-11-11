@@ -116,9 +116,9 @@ class Provider::Dvf < Provider
     end
 
     # Coordinates of the address and the communes whose sales can fall within
-    # the widest search radius. DVF is filed per commune (per arrondissement in
-    # Paris, Lyon and Marseille), so a property near a boundary needs its
-    # neighbours too.
+    # the widest search radius, found by reverse-geocoding points around it.
+    # DVF is filed per commune (per arrondissement in Paris, Lyon and
+    # Marseille), so a property near a boundary needs its neighbours too.
     def geocode(query, postal_code)
       response = client.get("#{geocoder_url}/search", { q: query, postcode: postal_code.to_s.strip, limit: 1 })
       feature = JSON.parse(response.body).dig("features", 0)
@@ -127,9 +127,12 @@ class Provider::Dvf < Provider
       longitude, latitude = feature.dig("geometry", "coordinates")
       communes = [ feature.dig("properties", "citycode") ]
 
+      # Eight points on the edge of the widest search circle (N, NE, E, ...).
       reach = radius * 2 / 111_320.0
-      [ [ reach, 0 ], [ -reach, 0 ], [ 0, reach ], [ 0, -reach ] ].each do |d_lat, d_lon|
-        communes << commune_at(latitude + d_lat, longitude + d_lon / Math.cos(latitude * Math::PI / 180))
+      cos_latitude = Math.cos(latitude * Math::PI / 180)
+      (0...8).each do |step|
+        angle = step * Math::PI / 4
+        communes << commune_at(latitude + reach * Math.sin(angle), longitude + reach * Math.cos(angle) / cos_latitude)
       end
 
       { latitude: latitude, longitude: longitude, communes: communes.compact.uniq }
