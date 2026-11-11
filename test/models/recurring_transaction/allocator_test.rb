@@ -241,6 +241,13 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 2000, allocation.allocated_amount
   end
 
+  test "the displayed learned tolerance is capped the same way as the matcher's" do
+    @rent.update!(matcher_hints: { "learned_tolerance_pct" => 100 })
+
+    assert_equal 25, @rent.reload.learned_amount_tolerance_pct.to_f
+    assert_equal 25, @rent.effective_amount_tolerance_pct.to_f
+  end
+
   test "the first manual link of a payment outside the default band records the actual amount" do
     # The Codex case: a 40.00 bill, a 46.80 payment (17% over). The first link
     # teaches a 17% band and records 46.80, not the 40.00 estimate.
