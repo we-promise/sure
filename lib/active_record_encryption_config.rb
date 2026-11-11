@@ -33,7 +33,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 8
+  CURRENT_BACKFILL_VERSION = 9
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -63,7 +63,7 @@ module ActiveRecordEncryptionConfig
     plaid_items: [ "PlaidItem", %i[access_token raw_payload raw_institution_payload] ],
     simplefin_items: [ "SimplefinItem", %i[access_url raw_payload raw_institution_payload] ],
     lunchflow_items: [ "LunchflowItem", %i[api_key raw_payload raw_institution_payload] ],
-    enable_banking_items: [ "EnableBankingItem", %i[client_certificate session_id raw_payload raw_institution_payload] ],
+    enable_banking_items: [ "EnableBankingItem", %i[client_certificate session_id raw_payload raw_institution_payload last_psu_ip] ],
     truelayer_items: [ "TruelayerItem", %i[client_secret access_token refresh_token raw_payload raw_institution_payload] ],
     fio_items: [ "FioItem", %i[token raw_payload raw_institution_payload] ],
     akahu_items: [ "AkahuItem", %i[app_token user_token raw_payload raw_institution_payload] ],
@@ -89,7 +89,7 @@ module ActiveRecordEncryptionConfig
     wise_items: [ "WiseItem", %i[token raw_payload sca_private_key] ],
     plaid_accounts: [ "PlaidAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload] ],
     simplefin_accounts: [ "SimplefinAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
-    lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload] ],
+    lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
     enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload] ],
     truelayer_accounts: [ "TruelayerAccount", %i[raw_payload raw_transactions_payload] ],
     fio_accounts: [ "FioAccount", %i[raw_payload raw_transactions_payload iban] ],
@@ -99,7 +99,7 @@ module ActiveRecordEncryptionConfig
     coinstats_accounts: [ "CoinstatsAccount", %i[raw_payload raw_transactions_payload] ],
     mercury_accounts: [ "MercuryAccount", %i[raw_payload raw_transactions_payload] ],
     monobank_accounts: [ "MonobankAccount", %i[raw_payload raw_transactions_payload] ],
-    akahu_accounts: [ "AkahuAccount", %i[raw_payload raw_transactions_payload] ],
+    akahu_accounts: [ "AkahuAccount", %i[raw_payload raw_transactions_payload formatted_account] ],
     binance_accounts: [ "BinanceAccount", %i[raw_payload raw_transactions_payload] ],
     brex_accounts: [ "BrexAccount", %i[raw_payload raw_transactions_payload] ],
     ibkr_accounts: [ "IbkrAccount", %i[raw_holdings_payload raw_activities_payload raw_cash_report_payload raw_equity_summary_payload] ],

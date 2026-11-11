@@ -391,6 +391,46 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     assert_column_not_plaintext(PlaidAccount, account.id, :raw_holdings_payload, "sec_probe")
   end
 
+  test "provider account identifiers are encrypted at rest" do
+    family = families(:dylan_family)
+
+    eb_item = EnableBankingItem.create!(
+      family: family, name: "EB probe", country_code: "FI", application_id: "app", client_certificate: "cert",
+      last_psu_ip: "203.0.113.42"
+    )
+    akahu_account = AkahuAccount.create!(
+      akahu_item: AkahuItem.create!(family: family, name: "Akahu probe", app_token: "app", user_token: "user"),
+      name: "Everyday", account_id: "acc_probe", currency: "NZD", formatted_account: "12-3456-7654321-00"
+    )
+    lunchflow_account = lunchflow_items(:one).lunchflow_accounts.create!(
+      name: "Brokerage", currency: "GBP", account_id: "holdings-probe",
+      raw_holdings_payload: [ { "symbol" => "HOLDPROBE" } ]
+    )
+
+    assert_equal "203.0.113.42", eb_item.reload.last_psu_ip
+    assert_equal "12-3456-7654321-00", akahu_account.reload.formatted_account
+    assert_equal "HOLDPROBE", lunchflow_account.reload.raw_holdings_payload.first["symbol"]
+
+    assert_column_not_plaintext(EnableBankingItem, eb_item.id, :last_psu_ip, "203.0.113.42")
+    assert_column_not_plaintext(AkahuAccount, akahu_account.id, :formatted_account, "7654321")
+    assert_column_not_plaintext(LunchflowAccount, lunchflow_account.id, :raw_holdings_payload, "HOLDPROBE")
+  end
+
+  test "provider identifiers stored before encryption stay readable" do
+    eb_item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "EB legacy", country_code: "FI", application_id: "app", client_certificate: "cert"
+    )
+    EnableBankingItem.where(id: eb_item.id).update_all("last_psu_ip = '203.0.113.50'")
+
+    # The global fallback is on until the backfill completes; turn it off so
+    # only the attribute's own support_unencrypted_data option can cover it.
+    global_fallback = ActiveRecord::Encryption.config.support_unencrypted_data
+    ActiveRecord::Encryption.config.support_unencrypted_data = false
+    assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
+  ensure
+    ActiveRecord::Encryption.config.support_unencrypted_data = global_fallback unless global_fallback.nil?
+  end
+
   # ============================================================================
   # DATABASE VERIFICATION TESTS
   # ============================================================================
