@@ -200,6 +200,34 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   end
 
   # ============================================================================
+  # SECURITY AUDIT LOG MODEL TESTS
+  # ============================================================================
+
+  test "security audit log user_email, ip_address and user_agent are encrypted at rest" do
+    request = ActionDispatch::TestRequest.create
+    request.remote_addr = "203.0.113.5"
+    request.user_agent = "EncryptionVerification/1.0"
+
+    log = SecurityAuditLog.log_mfa_enabled!(user: users(:family_admin), request: request)
+
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+
+    raw_email = log.read_attribute_before_type_cast(:user_email).to_s
+    raw_ip = log.read_attribute_before_type_cast(:ip_address).to_s
+    raw_agent = log.read_attribute_before_type_cast(:user_agent).to_s
+    assert_not_includes raw_email, users(:family_admin).email
+    assert_not_includes raw_ip, "203.0.113.5"
+    assert_not_includes raw_agent, "EncryptionVerification/1.0"
+
+    log.reload
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+  end
+
+  # ============================================================================
   # MOBILE DEVICE MODEL TESTS
   # ============================================================================
 
