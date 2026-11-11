@@ -226,6 +226,25 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # A snapshot two or more days old, with no market prices, leaves the
+  # position without calculated holdings; its opening lot still takes the
+  # provider's cost.
+  test "an opening lot takes the provider cost when the position has no calculated holdings" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = Security.create!(ticker: "LOTU", name: "LOTU")
+      @account.holdings.create!(
+        security: security, date: 5.days.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD",
+        cost_basis: 50, cost_basis_source: "provider", account_provider: @account_provider
+      )
+
+      materialize(:reverse)
+
+      assert_equal 50, HoldingLot.opening.find_by!(security: security).unit_cost
+    end
+  end
+
   # Today the figure averages the imported trades only: 10 @ 100, 4 sold, then
   # 2 @ 110 is (600 + 220) / 8 = 102.5. The 2 units held before the first
   # trade are the opening lot, which the sale relieves pro rata.
