@@ -1,6 +1,8 @@
 require "test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
+  include SqlQueryCapture
+
   setup do
     sign_in users(:family_admin)
     @account = accounts(:investment)
@@ -10,6 +12,29 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
   test "gets holdings" do
     get holdings_url(account_id: @account.id)
     assert_response :success
+  end
+
+  # Each row shows its average cost, so the list loads them all together
+  # rather than running the per-holding fallback once per row.
+  test "the holdings list reads every row's average cost together" do
+    trade_queries = [ 2, 4 ].map do |count|
+      account = @account.family.accounts.create!(name: "Batch #{count}", balance: 0, cash_balance: 0, currency: "USD",
+                                                 accountable: Investment.new, cost_basis_method: "fifo")
+      count.times do |i|
+        security = Security.create!(ticker: "HB#{count}#{i}", name: "HB#{count}#{i}")
+        entry = account.entries.create!(name: "Buy", date: 2.days.ago.to_date, amount: 100, currency: "USD",
+                                        entryable: Trade.new(security: security, qty: 10, price: 10, currency: "USD"))
+        HoldingLot.create!(account: account, security: security, source_entry: entry, qty: 10, unit_cost: 10,
+                           currency: "USD", acquired_on: entry.date)
+        account.holdings.create!(security: security, date: Date.current, qty: 10, price: 12, amount: 120, currency: "USD")
+      end
+
+      queries = capture_sql_queries { get holdings_url(account_id: account.id) }
+      assert_response :success
+      queries.count { |sql| sql.include?('FROM "trades"') || sql.include?('FROM "holding_lots"') }
+    end
+
+    assert_equal trade_queries.first, trade_queries.last
   end
 
   test "gets holding" do
