@@ -1,6 +1,8 @@
 require "test_helper"
 
 class UsersControllerTest < ActionDispatch::IntegrationTest
+  include SalaryAnchorsTestHelper
+
   setup do
     sign_in @user = users(:family_admin)
   end
@@ -215,5 +217,39 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_url
     assert_not User.find(@admin.id).active?
     assert_enqueued_with(job: UserPurgeJob, args: [ @admin ])
+  end
+
+  test "can anchor budget months to a declared salary" do
+    family = @user.family
+    salary = declare_salary(family)
+
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: family.id, month_start_mode: "income", month_start_recurring_transaction_id: salary.id }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    family.reload
+    assert family.month_start_income?
+    assert_equal salary, family.month_start_recurring_transaction
+  end
+
+  test "rejects a salary that is not declared income" do
+    family = @user.family
+
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: {
+          id: family.id,
+          month_start_mode: "income",
+          month_start_recurring_transaction_id: recurring_transactions(:netflix_subscription).id
+        }
+      }
+    }
+
+    assert_nil family.reload.month_start_recurring_transaction_id
   end
 end

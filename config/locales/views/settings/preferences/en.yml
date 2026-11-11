@@ -23,6 +23,16 @@ en:
         month_start_day: Budget month starts on
         month_start_day_hint: Set when your budget month starts (e.g., payday)
         month_start_day_warning: Your budgets and MTD calculations will use this custom start day instead of the 1st of each month.
+        month_start_day_fallback_hint: "Used for months before your first matched salary"
+        month_start_mode: "Budget month follows"
+        month_start_mode_hint: "A fixed day of the month, or the day your salary lands"
+        month_start_mode_options:
+          fixed_day: "A fixed day"
+          income: "My salary"
+        month_start_series: "Salary"
+        month_start_series_blank: "Choose a declared income"
+        month_start_series_hint: "Each month starts on the day this declared income lands and ends the day before the next one, so months vary in length (about 28–35 days)."
+        month_start_series_missing_warning: "No active salary is selected, so budget months use the fixed start day. Choose a declared income, or reactivate the paused one."
         investment_contributions_as_spending: Count investing as spending
         investment_contributions_as_spending_hint: Money moved into investment accounts counts as spending in budgets, reports and the cash flow chart. Turn off to show it as invested instead.
         personal_budgets: Personal budgets

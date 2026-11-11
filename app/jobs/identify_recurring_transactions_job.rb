@@ -22,6 +22,8 @@ class IdentifyRecurringTransactionsJob < ApplicationJob
     # Use advisory lock as final safety net against concurrent execution
     RecurringTransaction::Pipeline.with_family_lock(family_id) do
       RecurringTransaction::Pipeline.new(family).run!
+      # A newly matched salary moves income-anchored budget months.
+      Budget.reconcile_income_periods_for!(family)
     end
   end
 

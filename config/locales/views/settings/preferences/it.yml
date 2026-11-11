@@ -17,6 +17,16 @@ it:
         month_start_day: Il mese budget inizia il
         month_start_day_hint: Imposta quando inizia il mese del budget (es. giorno di paga)
         month_start_day_warning: I tuoi budget e i calcoli MTD useranno questo giorno di inizio personalizzato invece del 1° di ogni mese.
+        month_start_day_fallback_hint: "Usato per i mesi precedenti al primo stipendio abbinato"
+        month_start_mode: "Il mese di budget segue"
+        month_start_mode_hint: "Un giorno fisso del mese, o il giorno in cui arriva lo stipendio"
+        month_start_mode_options:
+          fixed_day: "Un giorno fisso"
+          income: "Il mio stipendio"
+        month_start_series: "Stipendio"
+        month_start_series_blank: "Scegli un'entrata dichiarata"
+        month_start_series_hint: "Ogni mese inizia il giorno in cui arriva questa entrata dichiarata e termina il giorno prima della successiva, quindi la durata varia (circa 28–35 giorni)."
+        month_start_series_missing_warning: "Nessuno stipendio attivo selezionato, quindi i mesi di budget usano il giorno di inizio fisso. Scegli un'entrata dichiarata o riattiva quella in pausa."
         translations_notice: Nota che stiamo ancora lavorando alle traduzioni per varie lingue.
         currencies_title: "Valute %{moniker}"
         currencies_subtitle: Scegli quali valute appaiono nei campi importo per il tuo %{moniker}

@@ -17,6 +17,16 @@ pt-BR:
         month_start_day: O mês do orçamento começa em
         month_start_day_hint: Defina quando começa o seu mês de orçamento (por exemplo, no dia do pagamento).
         month_start_day_warning: Seus orçamentos e cálculos MTD usarão essa data de início personalizada em vez do dia 1º de cada mês.
+        month_start_day_fallback_hint: "Usado para os meses anteriores ao seu primeiro salário conciliado"
+        month_start_mode: "O mês do orçamento segue"
+        month_start_mode_hint: "Um dia fixo do mês, ou o dia em que seu salário cai"
+        month_start_mode_options:
+          fixed_day: "Um dia fixo"
+          income: "Meu salário"
+        month_start_series: "Salário"
+        month_start_series_blank: "Escolha uma renda declarada"
+        month_start_series_hint: "Cada mês começa no dia em que esta renda declarada cai e termina no dia anterior à próxima, então a duração varia (cerca de 28–35 dias)."
+        month_start_series_missing_warning: "Nenhum salário ativo selecionado, então os meses do orçamento usam o dia de início fixo. Escolha uma renda declarada ou reative a que está pausada."
         sharing_title: "Compartilhamento %{moniker}"
         sharing_subtitle: "Controle como as contas são compartilhadas no seu %{moniker}"
         sharing_default_label: Compartilhamento padrão para novas contas

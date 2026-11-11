@@ -43,6 +43,16 @@ pl:
           dzień wypłaty)
         month_start_day_warning: Twoje budżety i obliczenia MTD będą używać tego niestandardowego
           dnia startowego zamiast 1. dnia każdego miesiąca.
+        month_start_day_fallback_hint: "Używany dla miesięcy przed pierwszym dopasowanym wynagrodzeniem"
+        month_start_mode: "Miesiąc budżetowy zależy od"
+        month_start_mode_hint: "Stałego dnia miesiąca lub dnia wpływu wynagrodzenia"
+        month_start_mode_options:
+          fixed_day: "Stały dzień"
+          income: "Moje wynagrodzenie"
+        month_start_series: "Wynagrodzenie"
+        month_start_series_blank: "Wybierz zadeklarowany dochód"
+        month_start_series_hint: "Każdy miesiąc zaczyna się w dniu wpływu tego zadeklarowanego dochodu i kończy dzień przed następnym, więc długość się zmienia (ok. 28–35 dni)."
+        month_start_series_missing_warning: "Nie wybrano aktywnego wynagrodzenia, więc miesiące budżetowe używają stałego dnia początkowego. Wybierz zadeklarowany dochód lub wznów wstrzymany."
         no_additional_currencies: Nic nie wybrano
         no_matching_currencies: Nie znaleziono walut
         page_title: Preferencje

@@ -72,6 +72,10 @@ class Family < ApplicationRecord
   has_many :budgets, dependent: :destroy
   has_many :budget_categories, through: :budgets
 
+  # The declared salary series that starts each budget month in income mode.
+  belongs_to :month_start_recurring_transaction, class_name: "RecurringTransaction", optional: true
+  enum :month_start_mode, { fixed_day: "fixed_day", income: "income" }, prefix: :month_start, validate: true
+
   has_many :goals, dependent: :destroy
 
   # Net inflow into every depository account linked to any primary-currency
@@ -163,6 +167,7 @@ class Family < ApplicationRecord
   validates :locale, inclusion: { in: I18n.available_locales.map(&:to_s) }
   validates :date_format, inclusion: { in: DATE_FORMATS.map(&:last) }
   validates :month_start_day, inclusion: { in: 1..28 }
+  validate :month_start_series_is_declared_income, if: :month_start_recurring_transaction_id_changed?
   validates :moniker, inclusion: { in: MONIKERS }
   validates :assistant_type, inclusion: { in: ASSISTANT_TYPES }
   validates :categorization_provider, inclusion: { in: CATEGORIZATION_PROVIDERS }
@@ -417,27 +422,50 @@ class Family < ApplicationRecord
   end
 
   def uses_custom_month_start?
-    month_start_day != 1
+    month_start_day != 1 || income_anchored_months?
+  end
+
+  # The salary series months follow, or nil when income mode cannot apply
+  # (none picked, or it was paused, ended or deleted) and fixed-day rules hold.
+  def month_start_series
+    return nil unless month_start_income?
+
+    series = month_start_recurring_transaction
+    series if series&.active?
+  end
+
+  def income_anchored_months?
+    month_start_series.present?
+  end
+
+  # Income mode was chosen but no active salary series backs it.
+  def month_start_series_missing?
+    month_start_income? && !income_anchored_months?
+  end
+
+  def month_periods
+    Family::MonthPeriods.new(self)
+  end
+
+  # Declared income the user may pick as the salary (as in PaycheckPlanner,
+  # detected inflows never define paydays): active series, plus the current
+  # pick while paused so it stays selected until reactivated.
+  def month_start_series_options_for(user)
+    declared = recurring_transactions.typed_income.where(manual: true).accessible_by(user)
+    declared.active.or(declared.where(id: month_start_recurring_transaction_id))
+      .includes(:merchant).order(:name)
   end
 
   def custom_month_start_for(date)
-    if date.day >= month_start_day
-      Date.new(date.year, date.month, month_start_day)
-    else
-      previous_month = date - 1.month
-      Date.new(previous_month.year, previous_month.month, month_start_day)
-    end
+    month_periods.start_for(date)
   end
 
   def custom_month_end_for(date)
-    start_date = custom_month_start_for(date)
-    next_month_start = start_date + 1.month
-    next_month_start - 1.day
+    month_periods.end_for(date)
   end
 
   def current_custom_month_period
-    start_date = custom_month_start_for(Date.current)
-    end_date = custom_month_end_for(Date.current)
+    start_date, end_date = month_periods.bounds_for(Date.current)
     Period.custom(start_date: start_date, end_date: end_date)
   end
 
@@ -1023,5 +1051,15 @@ class Family < ApplicationRecord
       return if timezone.blank?
 
       errors.add(:timezone, :invalid) if ActiveSupport::TimeZone[timezone].blank?
+    end
+
+    # Only declared income may anchor the month, matching PaycheckPlanner:
+    # detected inflows never define paydays.
+    def month_start_series_is_declared_income
+      series = month_start_recurring_transaction
+      return if series.nil?
+      return if series.family_id == id && series.typed_income? && series.manual?
+
+      errors.add(:month_start_recurring_transaction, :invalid)
     end
 end

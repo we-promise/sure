@@ -17,6 +17,16 @@ zh-TW:
         month_start_day: 預算月份起始日
         month_start_day_hint: 設定您的預算月份從哪一天開始（例如發薪日）
         month_start_day_warning: 您的預算與月初至今計算將採用這個自訂的起始日，而不是每個月的 1 號。
+        month_start_day_fallback_hint: "用於首次比對薪資之前的月份"
+        month_start_mode: "預算月依據"
+        month_start_mode_hint: "每月固定日期，或薪資入帳日"
+        month_start_mode_options:
+          fixed_day: "固定日期"
+          income: "我的薪資"
+        month_start_series: "薪資"
+        month_start_series_blank: "選擇一項已申報收入"
+        month_start_series_hint: "每個月從這筆已申報收入入帳當天開始，到下一次入帳前一天結束，因此長度會變化（約 28–35 天）。"
+        month_start_series_missing_warning: "未選擇有效的薪資，因此預算月使用固定開始日。請選擇一項已申報收入，或重新啟用已暫停的收入。"
         translations_notice: 請注意，我們仍在進行各語言的翻譯工作。
         currencies_title: '%{moniker}貨幣'
         currencies_subtitle: 選擇哪些貨幣要出現在您%{moniker}的金額欄位中

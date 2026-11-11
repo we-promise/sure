@@ -17,6 +17,16 @@ es:
         month_start_day: El mes de presupuesto comienza el
         month_start_day_hint: Establece cuándo empieza tu mes financiero (ej. el día de cobro)
         month_start_day_warning: Tus presupuestos y cálculos del mes en curso utilizarán este día personalizado en lugar del día 1 de cada mes.
+        month_start_day_fallback_hint: "Se usa para los meses anteriores a tu primer salario conciliado"
+        month_start_mode: "El mes presupuestario sigue"
+        month_start_mode_hint: "Un día fijo del mes, o el día en que llega tu salario"
+        month_start_mode_options:
+          fixed_day: "Un día fijo"
+          income: "Mi salario"
+        month_start_series: "Salario"
+        month_start_series_blank: "Elige un ingreso declarado"
+        month_start_series_hint: "Cada mes empieza el día en que llega este ingreso declarado y termina el día anterior al siguiente, por lo que la duración varía (unos 28–35 días)."
+        month_start_series_missing_warning: "No hay un salario activo seleccionado, así que los meses presupuestarios usan el día de inicio fijo. Elige un ingreso declarado o reactiva el que está en pausa."
         translations_notice: Ten en cuenta que todavía estamos trabajando en las traducciones a varios idiomas.
         currencies_title: Divisas de %{moniker}
         currencies_subtitle: Elige qué divisas aparecen en los campos de dinero de tu %{moniker}

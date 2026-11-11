@@ -28,6 +28,16 @@ tr:
           maaş günü)
         month_start_day_warning: Bütçeleriniz ve ay-başı-bugüne hesaplamalarınız,
           her ayın 1'i yerine bu özel başlangıç gününü kullanacaktır.
+        month_start_day_fallback_hint: "İlk eşleşen maaşınızdan önceki aylar için kullanılır"
+        month_start_mode: "Bütçe ayı şuna göre belirlenir"
+        month_start_mode_hint: "Ayın sabit bir günü veya maaşınızın yattığı gün"
+        month_start_mode_options:
+          fixed_day: "Sabit gün"
+          income: "Maaşım"
+        month_start_series: "Maaş"
+        month_start_series_blank: "Beyan edilen bir gelir seçin"
+        month_start_series_hint: "Her ay bu beyan edilen gelirin yattığı gün başlar ve bir sonrakinden önceki gün biter, bu yüzden süre değişir (yaklaşık 28–35 gün)."
+        month_start_series_missing_warning: "Etkin maaş seçili değil, bu yüzden bütçe ayları sabit başlangıç gününü kullanır. Beyan edilen bir gelir seçin veya duraklatılanı yeniden etkinleştirin."
         no_additional_currencies: Hiçbiri seçilmedi
         no_matching_currencies: Para birimi bulunamadı
         page_title: Tercihler

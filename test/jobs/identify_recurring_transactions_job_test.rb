@@ -54,4 +54,13 @@ class IdentifyRecurringTransactionsJobTest < ActiveJob::TestCase
 
     assert_nil IdentifyRecurringTransactionsJob.new.perform(@family.id, @scheduled_at)
   end
+
+  test "reconciles income-anchored budgets after matching" do
+    Sync.for_family(@family).incomplete.find_each(&:destroy)
+    RecurringTransaction::Pipeline.any_instance.stubs(:run!).returns(0)
+
+    Budget.expects(:reconcile_income_periods_for!).with(@family).once
+
+    IdentifyRecurringTransactionsJob.new.perform(@family.id, @scheduled_at)
+  end
 end

@@ -18,6 +18,16 @@ zh-CN:
         month_start_day: 预算月份开始于
         month_start_day_hint: 设置预算月份的起始日期（例如发薪日）
         month_start_day_warning: 您的预算和月度累计计算将使用此自定义起始日，而不是每月 1 日。
+        month_start_day_fallback_hint: "用于首次匹配工资之前的月份"
+        month_start_mode: "预算月依据"
+        month_start_mode_hint: "每月固定日期，或工资到账日"
+        month_start_mode_options:
+          fixed_day: "固定日期"
+          income: "我的工资"
+        month_start_series: "工资"
+        month_start_series_blank: "选择一项已申报收入"
+        month_start_series_hint: "每个月从这笔已申报收入到账当天开始，到下一次到账前一天结束，因此长度会变化（约 28–35 天）。"
+        month_start_series_missing_warning: "未选择有效的工资，因此预算月使用固定开始日。请选择一项已申报收入，或重新启用已暂停的收入。"
         translations_notice: 请注意，我们仍在完善多种语言的翻译。
         budget_title: 预算
         budget_subtitle: 配置预算的行为方式

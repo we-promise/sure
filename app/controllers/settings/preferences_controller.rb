@@ -5,6 +5,11 @@ class Settings::PreferencesController < ApplicationController
     @user = Current.user
     @family_members = Current.family.users.where.not(id: @user.id).where(active: true)
     @budget_shares = @user.budget_shares_given.index_by(&:viewer_id)
+    @salary_series_options = Current.family.month_start_series_options_for(@user)
+    # A salary on an account this user cannot see stays out of the auto-submitting
+    # form, so their other changes never clear it.
+    current_salary_id = Current.family.month_start_recurring_transaction_id
+    @salary_series_editable = current_salary_id.nil? || @salary_series_options.any? { |series| series.id == current_salary_id }
   end
 
   # Writes per-user boolean preferences stored in the JSONB `users.preferences`
