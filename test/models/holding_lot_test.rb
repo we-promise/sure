@@ -266,6 +266,25 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # A snapshot two or more days old, with no market prices, leaves the
+  # position without calculated holdings; its opening lot still takes the
+  # provider's cost.
+  test "an opening lot takes the provider cost when the position has no calculated holdings" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = Security.create!(ticker: "LOTU", name: "LOTU")
+      @account.holdings.create!(
+        security: security, date: 5.days.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "USD",
+        cost_basis: 50, cost_basis_source: "provider", account_provider: @account_provider
+      )
+
+      materialize(:reverse)
+
+      assert_equal 50, HoldingLot.opening.find_by!(security: security).unit_cost
+    end
+  end
+
   # Today the figure averages the imported trades only: 10 @ 100, 4 sold, then
   # 2 @ 110 is (600 + 220) / 8 = 102.5. The 2 units held before the first
   # trade are the opening lot, which the sale relieves pro rata.
@@ -338,6 +357,25 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       assert_not HoldingLot.opening.exists?(security: @opening), "8 reported against 8 traded"
       assert_equal 8, HoldingLot.where(security: @opening).sum(:qty)
+    end
+  end
+
+  # A scheduled sale has not happened, so it explains none of the position.
+  test "a scheduled sale does not open a lot" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTZ", 30)
+      trade(security, 60, 12, 2)
+      trade(security, 40, 20, 4)
+      trade(security, -40, 25, 6)
+      trade(security, -10, 30, 15)
+      provider_holding(security, 60, nil)
+
+      materialize(:reverse)
+
+      assert_not HoldingLot.opening.exists?(security: security)
+      assert_equal 60, HoldingLot.derived.where(security: security).sum(:qty)
     end
   end
 
@@ -452,6 +490,32 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # The opening lot first appears after the remap, under the replacement;
+  # it came from the provider's security, so a reset takes it back there.
+  test "an opening lot created after a remap belongs to the provider security" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      original = priced_security("LOTA2", 30)
+      replacement = priced_security("LOTB2", 30)
+      trade(original, 10, 40, 3)
+      provider_row = provider_holding(original, 10, nil)
+      materialize(:reverse)
+      assert_not HoldingLot.opening.exists?, "the trade explains the whole position"
+
+      provider_row.remap_security!(replacement)
+      provider_row.reload.update!(qty: 15, amount: 450)
+      materialize(:reverse)
+
+      assert_equal original.id, HoldingLot.opening.find_by!(security: replacement).origin_security_id
+
+      provider_row.reload.reset_security_to_provider!
+
+      assert_not HoldingLot.exists?(security: replacement)
+      assert_equal 5, HoldingLot.opening.find_by!(security: original).qty
+    end
+  end
+
   test "remap onto a position with its own opening lot merges the two" do
     setup_account
     old_security = priced_security("LOTQ", 30)
@@ -504,6 +568,22 @@ class HoldingLotTest < ActiveSupport::TestCase
 
     assert_equal [ 5, 50 ], [ kept.reload.qty, kept.unit_cost ]
     assert_not HoldingLot.exists?(empty.id)
+  end
+
+  # A clamp row holds no units, so the units moved onto it keep their cost,
+  # and the merged lot is no longer a clamp.
+  test "merging an opening lot onto a clamp row keeps the moved lot's cost" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD")
+    opening_lot(old_security, 10).update!(unit_cost: 5)
+    clamp = opening_lot(new_security, 0)
+    clamp.update!(clamped: true)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 10, 5, false ], [ clamp.reload.qty, clamp.unit_cost, clamp.clamped ]
   end
 
   # With nothing to merge into, the clamp row moves as any opening lot does.
@@ -676,6 +756,71 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  test "a user-set lot cost of zero is the holding's cost, alone and in a batch" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTN", 60)
+      buy = trade(security, 10, 50, 2)
+      materialize(:forward)
+
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(0)
+      materialize(:forward)
+
+      holding = @account.holdings.find_by!(security: security, date: d(10))
+      assert_equal [ 0, "calculated", false ], [ holding.cost_basis, holding.cost_basis_source, holding.cost_basis_locked ]
+      assert_equal Money.new(0, "USD"), holding.avg_cost
+
+      batched = Holding.find(holding.id)
+      Holding.preload_avg_costs([ batched ])
+      assert_equal Money.new(0, "USD"), batched.avg_cost
+    end
+  end
+
+  # With no rate for the buy's currency, the trade's own price converts to
+  # nothing, so clearing the user's figure leaves the cost unknown.
+  test "clearing a lot cost whose buy has no rate leaves the basis unknown, forward" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTX", 60)
+      buy = create_trade(security, account: @account, qty: 10, price: 45, currency: "EUR", date: d(2))
+      lot_cost_set_then_cleared(security, buy, date: d(10)) { materialize(:forward) }
+    end
+  end
+
+  test "clearing a lot cost whose buy has no rate leaves the basis unknown, reverse" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTW", 60)
+      buy = create_trade(security, account: @account, qty: 10, price: 45, currency: "EUR", date: d(2))
+      provider_holding(security, 10, nil)
+      # d(10) is the provider's own row, which the materializer leaves alone.
+      lot_cost_set_then_cleared(security, buy, date: d(9)) { materialize(:reverse) }
+    end
+  end
+
+  # A trade can move to another security before its lot does, and a run
+  # scoped to the new security still reads the user's figure for it.
+  test "a user-set lot cost holds for a trade moved ahead of its lot" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      old_security = priced_security("LOTA", 60)
+      new_security = priced_security("LOTB", 60)
+      buy = trade(old_security, 10, 80, 2)
+      provider_holding(old_security, 10, nil)
+      materialize(:reverse)
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(500)
+
+      Trade.where(id: buy.entryable_id).update_all(security_id: new_security.id)
+      @account.holdings.where(security: old_security).update_all(security_id: new_security.id)
+      assert_equal old_security.id, HoldingLot.find_by!(source_entry: buy).security_id, "the lot has not moved"
+      materialize(:reverse, security_ids: [ new_security.id ])
+
+      assert_equal 50, @account.holdings.find_by!(security: new_security, date: d(9)).cost_basis
+    end
+  end
+
   # A run scoped to one security (a remap, a price sync) books lots for that
   # security only: neither the provider snapshot, which covers the whole
   # account, nor the account's other trades open a book.
@@ -762,6 +907,21 @@ class HoldingLotTest < ActiveSupport::TestCase
       provider_holding(@provider_only, 10, 50)
       provider_holding(@opening, 10, nil)
       provider_holding(@gapped, 3, nil)
+    end
+
+    def lot_cost_set_then_cleared(security, buy, date:)
+      yield
+      lot = HoldingLot.find_by!(source_entry: buy)
+      lot.set_manual_total_cost!(500)
+      yield
+      assert_equal 50, @account.holdings.find_by!(security: security, date: date).cost_basis
+
+      lot.reload.unlock_cost!
+      yield
+
+      holding = @account.holdings.find_by!(security: security, date: date)
+      assert_nil holding.cost_basis
+      assert_nil holding.avg_cost
     end
 
     def materialize(strategy, security_ids: nil)

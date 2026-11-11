@@ -47,9 +47,11 @@ class Holding < ApplicationRecord
 
   # The stored per-share cost when it is a real value:
   # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+  # - If worked out from the trades and lots, trust 0 too: a lot the user
+  #   says cost nothing, or a buy at a price of 0
   # - Otherwise require positive since providers sometimes return 0 when unknown
   def known_cost_basis
-    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive?)
+    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive? || cost_basis_source == "calculated")
   end
 
   # Returns average cost per share, or nil if unknown.

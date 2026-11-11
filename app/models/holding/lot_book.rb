@@ -122,6 +122,13 @@ class Holding::LotBook
     @total_cost / @total_qty
   end
 
+  # Whether the pool took a buy at a price nothing here knows (no rate for its
+  # currency on the day), which leaves the average unknown until the position
+  # closes.
+  def unpriced?
+    @unknown
+  end
+
   # An open lot a trade brought in at a cost nothing here knows.
   def unknown_cost?
     @lots.any? { |lot| lot.source_id && lot.unit_cost.nil? }
