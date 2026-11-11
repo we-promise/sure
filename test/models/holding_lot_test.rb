@@ -650,6 +650,29 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # With no rate for the buy's currency, the trade's own price converts to
+  # nothing, so clearing the user's figure leaves the cost unknown.
+  test "clearing a lot cost whose buy has no rate leaves the basis unknown, forward" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTX", 60)
+      buy = create_trade(security, account: @account, qty: 10, price: 45, currency: "EUR", date: d(2))
+      lot_cost_set_then_cleared(security, buy, date: d(10)) { materialize(:forward) }
+    end
+  end
+
+  test "clearing a lot cost whose buy has no rate leaves the basis unknown, reverse" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTW", 60)
+      buy = create_trade(security, account: @account, qty: 10, price: 45, currency: "EUR", date: d(2))
+      provider_holding(security, 10, nil)
+      # d(10) is the provider's own row, which the materializer leaves alone.
+      lot_cost_set_then_cleared(security, buy, date: d(9)) { materialize(:reverse) }
+    end
+  end
+
   # A run scoped to one security (a remap, a price sync) books lots for that
   # security only: neither the provider snapshot, which covers the whole
   # account, nor the account's other trades open a book.
@@ -736,6 +759,21 @@ class HoldingLotTest < ActiveSupport::TestCase
       provider_holding(@provider_only, 10, 50)
       provider_holding(@opening, 10, nil)
       provider_holding(@gapped, 3, nil)
+    end
+
+    def lot_cost_set_then_cleared(security, buy, date:)
+      yield
+      lot = HoldingLot.find_by!(source_entry: buy)
+      lot.set_manual_total_cost!(500)
+      yield
+      assert_equal 50, @account.holdings.find_by!(security: security, date: date).cost_basis
+
+      lot.reload.unlock_cost!
+      yield
+
+      holding = @account.holdings.find_by!(security: security, date: date)
+      assert_nil holding.cost_basis
+      assert_nil holding.avg_cost
     end
 
     def materialize(strategy, security_ids: nil)

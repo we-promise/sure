@@ -268,20 +268,24 @@ class Holding::ReverseCalculator
       events.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
     end
 
-    # [date, cost basis, whether an open lot's cost is unknown]. A transfer-in
-    # leaves the average where it was, so its entry repeats the last figure.
+    # [date, cost basis, whether the cost is unknown]: under fifo, whether an
+    # open lot's cost is; under average, whether the pool took an unpriced buy.
+    # A transfer-in leaves the average where it was, so its entry repeats the
+    # last figure.
     def record_cost_basis(security_id, date)
       book = @lot_books[security_id]
-      @cost_basis_snapshots[security_id] << [ date, book.average_cost, account.cost_basis_fifo? && book.unknown_cost? ]
+      unknown = account.cost_basis_fifo? ? book.unknown_cost? : book.unpriced?
+      @cost_basis_snapshots[security_id] << [ date, book.average_cost, unknown ]
     end
 
-    # Under fifo a transfer-in stops mattering once its lot is sold, so the
-    # book's own answer on the day counts; under average it is unknown until
-    # the position closes.
+    # Under fifo a transfer-in or an unpriced buy stops mattering once its lot
+    # is sold, so the book's own answer on the day counts; under average either
+    # is unknown until the position closes.
     def transferred_by?(security_id, date)
-      return cost_basis_snapshot(security_id, date)&.last || false if account.cost_basis_fifo?
+      recorded = cost_basis_snapshot(security_id, date)&.last || false
+      return recorded if account.cost_basis_fifo?
 
-      @unknown_spans[security_id].any? { |start, stop| start <= date && (stop.nil? || date < stop) }
+      recorded || @unknown_spans[security_id].any? { |start, stop| start <= date && (stop.nil? || date < stop) }
     end
 
     def cost_basis_for(security_id, date)
