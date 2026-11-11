@@ -3,7 +3,7 @@
 <div data-breadcrumbs class="py-2 flex items-center gap-2">
   <% breadcrumbs.each_with_index do |(name, path), index| %>
     <% if index > 0 %>
-      <%= icon("chevron-right", color: "gray", size: "sm") %>
+      <%= icon("chevron-right", color: "default", size: "sm") %>
     <% end %>
 
     <% if path.present? && index < breadcrumbs.size - 1 %>

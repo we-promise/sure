@@ -40,15 +40,27 @@ module ApplicationHelper
     end
   end
 
+  # Icon colours resolve to functional design tokens so they invert in dark
+  # mode. An unsupported key yields no colour class at all, so keep this list
+  # and the call sites in step; test/architecture/icon_colors_test.rb enforces it.
+  ICON_COLORS = {
+    default: "text-secondary",
+    white: "text-inverse",
+    success: "text-success",
+    warning: "text-warning",
+    destructive: "text-destructive",
+    info: "text-info",
+    current: "text-current"
+  }.freeze
+
   def icon(key, size: "md", color: "default", custom: false, as_button: false, **opts)
     extra_classes = opts.delete(:class)
     sizes = { xs: "w-3 h-3", sm: "w-4 h-4", md: "w-5 h-5", lg: "w-6 h-6", xl: "w-7 h-7", "2xl": "w-8 h-8" }
-    colors = { default: "text-secondary", white: "text-inverse", success: "text-success", warning: "text-warning", destructive: "text-destructive", info: "text-info", current: "text-current" }
 
     icon_classes = class_names(
       "shrink-0",
       sizes[size.to_sym],
-      colors[color.to_sym],
+      ICON_COLORS[color.to_sym],
       extra_classes
     )
 
