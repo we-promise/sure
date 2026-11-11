@@ -130,11 +130,27 @@ module AccountableResource
     end
 
     apply_logo_choice
+    @account_updated = true
 
-    redirect_back_or_to account_path(@account), notice: t("accounts.update.success", type: accountable_type.name.underscore.humanize)
+    notice = t("accounts.update.success", type: accountable_type.name.underscore.humanize)
+    respond_to do |format|
+      format.html { redirect_back_or_to account_path(@account), notice: notice }
+      # The form submitted through Turbo from the modal: return to the page it
+      # was opened on with a "replace" visit, which Turbo turns into a
+      # morphing refresh of the same page, keeping its scroll position.
+      format.turbo_stream do
+        flash[:notice] = notice
+        render turbo_stream: turbo_stream.action(:redirect, url_from(request.referer) || account_path(@account))
+      end
+    end
   end
 
   private
+    # Whether `update` saved the account, for controllers that save more after it.
+    def account_updated?
+      @account_updated.present?
+    end
+
     def logo_choice
       params.dig(:account, :logo_choice).presence
     end
