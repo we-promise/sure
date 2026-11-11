@@ -458,12 +458,15 @@ class Family::DataExporter
       # Export trades with full data. Lots are rebuilt from trades on sync, so
       # a trade carries only what the user set on its lot: the lot's total
       # cost, and, on a sale, the trade whose lot it names to sell from. Trades
-      # go oldest first and buys before sales on a day, so a named lot is
-      # always ahead of its sale, even when an import arrives in chunks.
+      # go in the order Holding::PortfolioCache#trades replays them: by date,
+      # then as entered, buys before sales entered together. An import stamps
+      # entries in file order, so the file's order is the imported replay
+      # order, and a named lot, which replays before its sale, is always
+      # ahead of it, even when an import arrives in chunks.
       lot_total_costs = HoldingLot.derived.joins(:account).where(accounts: { family_id: @family.id })
         .where.not(manual_total_cost: nil).pluck(:source_entry_id, :manual_total_cost).to_h
       @family.trades.includes(:security, :lot_source_entry, entry: :account)
-        .order("entries.date ASC, trades.qty DESC, trades.id ASC").each do |trade|
+        .order(Arel.sql("entries.date ASC, entries.created_at ASC, CASE WHEN trades.qty < 0 THEN 1 ELSE 0 END ASC, entries.id ASC")).each do |trade|
         lines << {
           type: "Trade",
           data: {

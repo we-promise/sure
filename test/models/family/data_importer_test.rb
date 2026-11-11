@@ -1424,6 +1424,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 600, HoldingLot.find_by!(source_entry: trades.fetch(60)).manual_total_cost
   end
 
+  # An import stamps entries in file order, so the file's order of a day's
+  # trades becomes the order they replay in.
+  test "a fifo round trip replays a day's trades in the order they were entered" do
+    assert_equal 180, round_trip_cost_basis("fifo", [ [ 10, 100 ], [ 20, 200 ], [ -5, 100 ] ]),
+      "the sale took the 10 at $100 entered first, leaving 5 at $100 and 20 at $200"
+  end
+
+  test "an average round trip replays a sell-off before a same-day repurchase entered after it" do
+    assert_equal 20, round_trip_cost_basis("average", [ [ 1, 10 ], [ -1, 10 ], [ 1, 20 ] ]),
+      "the sale closed the position, so the repurchase starts a fresh basis"
+  end
+
   test "an unusable lot cost or lot name is dropped and counted, and the trade still imports" do
     # Each edit names the check that tells its drop from a clean import, where
     # the first buy's lot carries the user's 600 and the sale names the $20 lot.
@@ -3440,6 +3452,30 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       ndjson = nil
       Zip::File.open_buffer(Family::DataExporter.new(source).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
       ndjson
+    end
+
+    # Exports a one-day run of trades entered in the given order, imports it
+    # into a fresh family, and returns the imported position's cost basis.
+    def round_trip_cost_basis(method, trades)
+      source = Family.create!(name: "Order Source", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      account = source.accounts.create!(name: "Order Round Trip", accountable: Investment.new, balance: 0, cash_balance: 0, currency: "USD")
+      account.update!(cost_basis_method: method)
+      security = Security.create!(ticker: "ORT#{SecureRandom.hex(3).upcase}", name: "Order Round Trip")
+      day = 2.days.ago.to_date
+      Security::Price.insert_all((day..Date.current).map { |date| { security_id: security.id, date: date, price: 30, currency: "USD" } })
+      trades.each_with_index do |(qty, price), index|
+        create_trade(security, account: account, qty: qty, price: price, date: day)
+          .update_columns(created_at: 1.hour.ago + index.minutes)
+      end
+
+      ndjson = nil
+      Zip::File.open_buffer(Family::DataExporter.new(source).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
+      target = Family.create!(name: "Order Target", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+      Family::DataImporter.new(target, ndjson).import!
+
+      imported = target.accounts.find_by!(name: "Order Round Trip")
+      Holding::Materializer.new(imported, strategy: :forward).materialize_holdings
+      imported.holdings.where(date: day).sole.cost_basis
     end
 
     def edit_trades(ndjson)
