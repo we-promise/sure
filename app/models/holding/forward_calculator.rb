@@ -153,11 +153,12 @@ class Holding::ForwardCalculator
       @lot_books[security_id].average_cost
     end
 
-    # Under fifo a transfer-in stops mattering once its lot is sold, so the
-    # book answers; under average it is unknown until the position closes.
+    # Under fifo a transfer-in or an unpriced buy stops mattering once its lot
+    # is sold, so the book answers; under average either is unknown until the
+    # position closes.
     def cost_unknown?(security_id)
       return @lot_books[security_id].unknown_cost? if account.cost_basis_fifo?
 
-      @transferred_security_ids.include?(security_id)
+      @transferred_security_ids.include?(security_id) || @lot_books[security_id].unpriced?
     end
 end
