@@ -250,8 +250,10 @@ class Balance::ChartSeriesBuilder
     # moved to another record, stopped reporting without a closing row, or reports at
     # zero, is no longer held, and a calculated row after the snapshot (the reverse
     # calculator gap-fills to today, and stale calculated rows are not purged) does not
-    # bring it back. An account with no provider snapshot yet keeps every security's
-    # latest row, carried forward.
+    # bring it back, unless the account bought the security after the snapshot: the
+    # reverse calculator then rebuilds that position from its trades, so it counts from
+    # the trade until the next snapshot says otherwise. An account with no provider
+    # snapshot yet keeps every security's latest row, carried forward.
     def gains_query
       <<~SQL
         WITH dates AS (
@@ -317,6 +319,20 @@ class Balance::ChartSeriesBuilder
                         AND ph.date = provider_snapshot.snapshot_date
                         AND ph.qty <> 0
                     )
+                    -- Acquired since that snapshot: the reverse calculator rebuilds the
+                    -- position from its trades until the next snapshot reports it. A sale
+                    -- cannot open a position the snapshot lacks, so only a buy counts.
+                    OR EXISTS (
+                      SELECT 1
+                      FROM entries te
+                      JOIN trades t ON t.id = te.entryable_id
+                      WHERE te.entryable_type = 'Trade'
+                        AND te.account_id = accounts.id
+                        AND t.security_id = sec.security_id
+                        AND t.qty > 0
+                        AND te.date > provider_snapshot.snapshot_date
+                        AND te.date <= d.date
+                    )
                   )
                 THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
                 ELSE 0
@@ -330,7 +346,7 @@ class Balance::ChartSeriesBuilder
            AND provider_snapshot.account_id = accounts.id
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
-            SELECT h.date, h.amount, h.qty, h.currency
+            SELECT h.amount, h.qty, h.currency
             FROM holdings h
             WHERE h.account_id = accounts.id
               AND h.security_id = sec.security_id

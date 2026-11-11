@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
-  include BalanceTestHelper
+  include BalanceTestHelper, EntriesTestHelper
   include EntriesTestHelper
 
   setup do
@@ -667,7 +667,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal tab_gain, gains_amounts(account, start_date: Date.current).last
   end
 
-  # Review of we-promise/sure#4149 (Codex, P1). A linked account's provider snapshot
+  # A linked account's provider snapshot
   # is dated before today, so the reverse calculator gap-fills calculated rows for
   # its securities through today. When the next snapshot moves the position to
   # another record, the old record's calculated row on today is not purged: the
@@ -692,7 +692,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal [ 100, tab_gain ], gains_amounts(account, start_date: 1.day.ago.to_date)
   end
 
-  # Review of we-promise/sure#4149 (CodeRabbit). Editing one holding re-materializes
+  # Editing one holding re-materializes
   # only that security (HoldingsController -> Balance::Materializer with
   # security_ids:), so its rows reach today while the others' end at the last full
   # sync. An account with no provider snapshot keeps every security's latest row,
@@ -717,7 +717,7 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal yesterday, today
   end
 
-  # Review of we-promise/sure#4149 (CodeRabbit). Plaid dates a holding by its
+  # Plaid dates a holding by its
   # price, so a sync can report a position it has already sold at zero quantity
   # on a snapshot dated before the sale. The reverse calculator reads that
   # snapshot as today's position and undoes the sale, so the calculated rows
@@ -768,6 +768,37 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     # The same row holding shares keeps MSFT's later row counting: 5 x (60 - 50) on each day.
     msft_snapshot.update!(qty: 5, amount: 300, cost_basis: 50)
     assert_equal [ 150, 250 ], gains_amounts(account, start_date: 1.day.ago.to_date)
+  end
+
+  # Between two provider snapshots the reverse calculator rebuilds the position
+  # from trades. A security bought after the earlier snapshot is held from its
+  # trade on, so its gain counts on the days in between, not only from the next
+  # snapshot.
+  test "gains series counts a position bought between provider snapshots" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    account.entries.destroy_all
+    link = AccountProvider.create!(account: account, provider: plaid_accounts(:one))
+    aapl = securities(:aapl)
+    msft = securities(:msft)
+    [ aapl, msft ].each do |security|
+      Security::Price.where(security: security).delete_all
+      (0..4).each { |days_ago| Security::Price.create!(security: security, date: days_ago.days.ago.to_date, price: security == aapl ? 100 : 60, currency: "USD") }
+    end
+
+    provider_row = ->(security, date, qty, basis) do
+      account.holdings.create!(security: security, date: date, qty: qty, price: security == aapl ? 100 : 60,
+                               amount: qty * (security == aapl ? 100 : 60), currency: "USD",
+                               cost_basis: basis, cost_basis_source: "provider", account_provider: link)
+    end
+    provider_row.(aapl, 4.days.ago.to_date, 10, 90)
+    create_trade(msft, account: account, qty: 5, price: 50, date: 3.days.ago.to_date)
+    provider_row.(aapl, Date.current, 10, 90)
+    provider_row.(msft, Date.current, 5, 50)
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+
+    # AAPL 10 * (100 - 90) = 100 every day; MSFT 5 * (60 - 50) = 50 from its trade on.
+    assert_equal [ 100, 150, 150, 150, 150 ], gains_amounts(account, start_date: 4.days.ago.to_date)
   end
 
   private
