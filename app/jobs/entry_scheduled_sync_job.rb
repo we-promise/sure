@@ -33,10 +33,14 @@ class EntryScheduledSyncJob < ApplicationJob
   # Batch variant for paths that write many entries without going through
   # Entry#sync_account_later (imports, bulk updates). Enqueues one job per
   # (account, date) -- they'd all sync the same account on the same day.
-  # The date filter lives in schedule_for: "future" depends on the family's
-  # time zone, so it cannot be judged once for the whole batch in SQL.
+  # A loose lower bound only: whether a date is "future" depends on the
+  # family's time zone, so the exact check lives in schedule_for. Time-zone
+  # skew is at most a day, so entries older than yesterday can never be
+  # scheduled -- filtering them in SQL avoids loading account + family for
+  # every distinct date in a large historical import.
   def self.schedule_for_entries(entries)
-    entries.select("DISTINCT ON (entries.account_id, entries.date) entries.*")
+    entries.where("entries.date >= ?", Date.current - 1.day)
+           .select("DISTINCT ON (entries.account_id, entries.date) entries.*")
            .order("entries.account_id, entries.date")
            .each { |entry| schedule_for(entry) }
   end
