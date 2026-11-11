@@ -298,6 +298,7 @@ en:
         hint_html: Upload the <strong>all.ndjson</strong> file from your data export ZIP
         ndjson_invalid: Must be valid NDJSON with at least one record
   imports:
+    configuration_locked: "This import's data is already in Sure, so its files and choices can't change. Try again to finish it, or delete it to start over."
     mapping_labels:
       account_type: "Account Type"
       account: "Account"
