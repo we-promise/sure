@@ -40,4 +40,16 @@ class Ai::Comparison < ApplicationRecord
     value = side == :primary ? primary_value : shadow_value
     names[value.to_s].presence || metadata.to_h["#{side}_category_name"].presence
   end
+
+  # Resolves each comparison's category names now, so a caller renders them without
+  # re-querying or threading `names` through its own code. The view gets `primary_name`
+  # and `shadow_name` on the returned records.
+  def self.with_display_names(comparisons, family)
+    names = category_names(comparisons, family)
+    comparisons.map do |comparison|
+      comparison.define_singleton_method(:primary_name) { category_name(:primary, names) }
+      comparison.define_singleton_method(:shadow_name) { category_name(:shadow, names) }
+      comparison
+    end
+  end
 end

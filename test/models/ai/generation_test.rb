@@ -25,6 +25,16 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert_equal 0.0, request.failed_ratio.call(AiTestGeneration.answer(request).deep_stringify_keys)
   end
 
+  test "a batch slice that is a prefix keeps value-equal twins later in the list as remaining" do
+    use_ai_model_settings(batch_size: 2)
+    stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+    twins = Array.new(4) { { id: "t0", description: "SHOP", merchant: nil } }
+
+    result = AiTestGeneration.new(transactions: twins, family: @family).call(batches: 1)
+
+    assert_equal 2, result.remaining.size
+  end
+
   test "batches by the model's batch size; call(batches: 1) leaves the rest as remaining" do
     use_ai_model_settings(batch_size: 2)
     requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }

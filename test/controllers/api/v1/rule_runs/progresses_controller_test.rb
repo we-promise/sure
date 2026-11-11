@@ -61,4 +61,16 @@ class Api::V1::RuleRuns::ProgressesControllerTest < ActionDispatch::IntegrationT
 
     assert_response :unauthorized
   end
+
+  test "requires the read scope" do
+    api_key_without_read = ApiKey.new(user: @user, name: "No Read Key", scopes: [], source: "web",
+                                      display_key: "no_read_#{SecureRandom.hex(8)}")
+    api_key_without_read.save!(validate: false)
+
+    get api_v1_rule_run_progress_url(@rule_run), headers: { "X-Api-Key" => api_key_without_read.display_key }
+
+    assert_response :forbidden
+  ensure
+    api_key_without_read&.destroy
+  end
 end

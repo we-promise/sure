@@ -33,7 +33,7 @@ module Ai::Shadow
     return unless rate.positive? && rand < rate
     return unless Ai::Router.new(family: generation.family).resolve(feature_for(feature)).is_a?(Ai::Plan)
 
-    sent = generation.items && generation.with_items(generation.items - result.remaining)
+    sent = generation.items && generation.with_items(generation.items.reject { |item| result.remaining.any? { |r| r.equal?(item) } })
     arguments = (sent || generation).arguments
     primary = { route: result.route.to_event, values: generation.compared(result.value) }
     Ai::ShadowJob.perform_later(generation.class.name, generation.family.id, arguments, primary)

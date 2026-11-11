@@ -1,6 +1,6 @@
 <%
   locked = ENV["CATEGORIZATION_PROVIDER"].present?
-  effective = Ai::LegacyEnvConfig.categorization_provider
+  effective = effective_categorization_provider
   jev_active = effective == "jev"
   threshold_locked = ENV["CATEGORIZATION_CONFIDENCE_THRESHOLD"].present?
   shadow_locked = ENV["CATEGORIZATION_SHADOW_RATE"].present?
@@ -50,7 +50,7 @@
       external-assistant fields in _assistant_settings. %>
   <% if jev_active %>
     <div class="flex items-center gap-2 text-sm">
-      <% if Ai::LegacyEnvConfig::Jev.configured? %>
+      <% if jev_configured? %>
         <span class="inline-block w-2 h-2 rounded-full bg-success"></span>
         <span class="text-secondary"><%= t(".jev_configured") %></span>
       <% else %>
@@ -91,8 +91,8 @@
         wrong whenever a gateway is in front of it — the descriptions transit
         that party too. %>
     <%= render DS::Note.new(title: t(".data_retention_heading")) do %>
-      <% if Ai::LegacyEnvConfig::Jev.effective_proxied? %>
-        <p><%= t(".data_retention_proxied", host: Ai::LegacyEnvConfig::Jev.effective_host) %></p>
+      <% if jev_effective_proxied? %>
+        <p><%= t(".data_retention_proxied", host: jev_effective_host) %></p>
       <% else %>
         <p><%= t(".data_retention_direct") %></p>
       <% end %>

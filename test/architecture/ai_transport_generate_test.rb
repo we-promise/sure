@@ -125,6 +125,18 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal FULL.deep_stringify_keys, generate(json_mode: :none).json
   end
 
+  test "a fence that was never closed still parses" do
+    stub_chat(answer("```json\n#{FULL.to_json}"))
+
+    assert_equal FULL.deep_stringify_keys, generate(json_mode: :none).json
+  end
+
+  test "a think block that was never closed swallows the answer" do
+    stub_chat(answer("<think>still reasoning, never closed, so nothing else reaches the parser\n#{FULL.to_json}"))
+
+    assert_raises(Ai::Error::InvalidOutput) { generate(json_mode: :none) }
+  end
+
   test "an answer cut at the output limit is OutputCut, so the batch is split" do
     stub_chat(answer('{"items": [{"id": "a", "na', finish_reason: "length"))
 
@@ -153,6 +165,24 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal true, requests.first.dig("text", "format", "strict")
     assert_equal({ "effort" => "low" }, requests.first["reasoning"].slice("effort"))
     assert_equal FULL.deep_stringify_keys, response.json
+  end
+
+  test "a Responses API 400 to a request with an effort retries once without the effort" do
+    requests = stub_json(RESPONSES_URL, error(400, "Request contains an invalid argument."), [ 200, responses_answer(FULL) ])
+    endpoint = ai_endpoint(name: "openai", preset: :openai, base_url: "https://api.openai.example.test/v1", responses_api: true)
+
+    response = generate(json_mode: :none, reasoning_effort: "low", endpoint_value: endpoint)
+
+    assert_equal({ "effort" => "low" }, requests.first["reasoning"].slice("effort"))
+    assert_nil requests.second["reasoning"]
+    assert_equal FULL.deep_stringify_keys, response.json
+  end
+
+  test "an Anthropic answer cut at max_tokens is OutputCut, so the batch is split" do
+    stub_json(MESSAGES_URL, [ 200, anthropic_answer(FULL, stop_reason: "max_tokens") ])
+    endpoint = ai_endpoint(name: "anthropic", protocol: :anthropic, base_url: "https://anthropic.example.test")
+
+    assert_raises(Ai::Error::OutputCut) { generate(json_mode: :strict, endpoint_value: endpoint) }
   end
 
   test "Anthropic gets the schema as native structured output, with no tool" do
@@ -223,8 +253,8 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
         usage: { input_tokens: 100, output_tokens: 5, total_tokens: 105 } }
     end
 
-    def anthropic_answer(json)
+    def anthropic_answer(json, stop_reason: "end_turn")
       { id: "m1", type: "message", role: "assistant", model: "test-model", content: [ { type: "text", text: json.to_json } ],
-        stop_reason: "end_turn", usage: { input_tokens: 100, output_tokens: 5 } }
+        stop_reason:, usage: { input_tokens: 100, output_tokens: 5 } }
     end
 end

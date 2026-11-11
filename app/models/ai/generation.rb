@@ -181,7 +181,7 @@ class Ai::Generation
           served = answered_by
           values << value
         end
-        remaining = unanswered + (remaining - slice)
+        remaining = unanswered + (remaining[slice.size..] || [])
         done += 1
         break if unanswered.any?   # the routes failed over; a later job retries these
       end
