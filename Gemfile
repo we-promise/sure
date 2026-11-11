@@ -45,7 +45,7 @@ gem "rack-mini-profiler"
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "sentry-sidekiq"
-gem "posthog-ruby"
+gem "posthog-rails", "~> 3.26.0"
 gem "logtail-rails"
 if ENV["SKYLIGHT_ENABLED"] == "true"
   gem "skylight", group: :development, require: false
