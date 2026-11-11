@@ -25,7 +25,7 @@ class Ai::Transport::Anthropic < Ai::Transport::Base
       end
     end
 
-    # RubyLLM 2.1.1 has no public per-context model listing, so this is a plain GET through
+    # RubyLLM has no public per-context model listing, so this is a plain GET through
     # Faraday with Ai::Transport::Http's proxy and TLS options, as every other call gets. The
     # anthropic gem, used here before, reads only HTTP_PROXY: live, it went direct when only
     # HTTPS_PROXY was set, so the probe checked a different path from the calls it vouches for.

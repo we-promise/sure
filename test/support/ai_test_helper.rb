@@ -95,7 +95,7 @@ module AiTestHelper
       # (3 when it has none), each text's own so a search can tell them apart.
       def run_embed(request)
         vectors = @responder.call(request) || request.texts.map { AiTestHelper.vector_for(_1, request.model.embedding_dimensions || 3) }
-        EmbedResponse.new(vectors: checked_vectors!(request.model, vectors, request.texts.size),
+        EmbedResponse.new(vectors: checked_vectors!(request.model, vectors),
                           usage: Ai::Tokens.new(input_tokens: 4 * request.texts.size, output_tokens: 0))
       end
   end

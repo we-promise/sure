@@ -88,8 +88,8 @@ module Ai::Transport::Http
       Faraday.new(request: { timeout:, open_timeout: timeout }, &faraday_options(url))
     end
 
-    # The Faraday adapter for RubyLLM's contexts, which take no TLS options of their own.
-    def ruby_llm_adapter = TlsNetHttp
+    # The Faraday adapter for RubyLLM's contexts, whose config can't force a direct connection.
+    def ruby_llm_adapter = ProxyNetHttp
 
     # A Faraday block for a client built elsewhere (ruby-openai): the resolved proxy, which
     # also stops Faraday's own ENV lookup when the resolver says direct, and TLS options.
@@ -118,16 +118,13 @@ module Ai::Transport::Http
       end
   end
 
-  # Net::HTTP with Sure's TLS settings (SSL_VERIFY, SSL_CA_FILE) and Sure's proxy decision on
-  # every request. RubyLLM 2.1.1 builds its own Faraday connections and takes only an adapter,
-  # so this is how a self-hosted server with its own certificate is reached by RubyLLM as by every
-  # other client. RubyLLM sets a proxy only when given one; without this, a request
-  # Ai::Transport::Http.proxy_for sends direct would fall back to Faraday's own ENV lookup, which
-  # ignores the port in a NO_PROXY entry such as `10.0.0.5:8080`.
-  class TlsNetHttp < Faraday::Adapter::NetHttp
+  # Net::HTTP with Sure's proxy decision on every request, including a download's redirects.
+  # RubyLLM's config carries a proxy only when one is resolved, so a request
+  # Ai::Transport::Http.proxy_for sends direct would fall back to Faraday's own ENV lookup,
+  # which ignores the port in a NO_PROXY entry such as `10.0.0.5:8080`. TLS options travel with
+  # the context instead, through RubyLLM's config.ssl.
+  class ProxyNetHttp < Faraday::Adapter::NetHttp
     def build_connection(env)
-      ssl = Ai::Transport::Http.faraday_ssl_options
-      env[:ssl] = env[:ssl] ? env[:ssl].merge(ssl) : Faraday::SSLOptions.from(ssl) if ssl.present?
       proxy = Ai::Transport::Http.proxy_for(env[:url].to_s)
       env[:request][:proxy] = proxy && Faraday::ProxyOptions.from(proxy)
       super

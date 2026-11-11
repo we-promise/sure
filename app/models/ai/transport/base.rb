@@ -45,16 +45,14 @@ class Ai::Transport::Base
     def to_event = answers.transform_values { _1&.transform_values(&:to_h) }
   end
 
-  # One embedding request: a vector per text, in order. `task_type` is the provider's
-  # retrieval hint (RETRIEVAL_DOCUMENT, RETRIEVAL_QUERY): Gemini and Vertex read it, the OpenAI
-  # API ignores it.
-  EmbedRequest = Data.define(:feature, :family, :model, :texts, :task_type) do
-    def initialize(feature:, model:, texts:, family: nil, task_type: nil)
-      super(feature: feature.to_sym, family:, model:, texts: Array(texts), task_type:)
+  # One embedding request: a vector per text, in order.
+  EmbedRequest = Data.define(:feature, :family, :model, :texts) do
+    def initialize(feature:, model:, texts:, family: nil)
+      super(feature: feature.to_sym, family:, model:, texts: Array(texts))
     end
 
     # The `.ai` event records how many texts, never the texts (a family's documents).
-    def to_event = { items: texts.size, task_type: }.compact
+    def to_event = { items: texts.size }
   end
 
   EmbedResponse = Data.define(:vectors, :usage) do
@@ -71,7 +69,8 @@ class Ai::Transport::Base
   end
 
   # The transcription, one text per request page when the server reads pages one at a time, or
-  # one text for them all, and the summed usage (RubyLLM 2.1.1 reports none for `ocr`).
+  # one text for them all, and the summed usage (RubyLLM reports a raw usage block for `ocr`,
+  # pages not tokens, so page-reading requests record none).
   OcrResponse = Data.define(:texts, :usage) do
     def text = texts.join("\n\n")
     def to_event = { texts: texts.size, characters: texts.sum(&:size) }
@@ -168,12 +167,11 @@ class Ai::Transport::Base
     def run_embed(request) = raise(NotImplementedError, "#{self.class.name} doesn't embed")
     def run_ocr(request) = raise(NotImplementedError, "#{self.class.name} doesn't read pages")
 
-    # RubyLLM 2.1.1 doesn't check the row count (#1269; 2.2 raises, #1297) and returns a flat
-    # vector for a single text.
-    def checked_vectors!(model, vectors, expected)
+    # A flat vector for a single text, wrapped; every component a finite number; the dimensions
+    # the model promised.
+    def checked_vectors!(model, vectors)
       vectors = Array(vectors)
       vectors = [ vectors ] if vectors.first.is_a?(Numeric)
-      raise Ai::Error::InvalidOutput, "expected #{expected} vectors, got #{vectors.size}" unless vectors.size == expected
       unless vectors.all? { |vector| vector.is_a?(Array) && vector.all? { _1.is_a?(Numeric) && _1.finite? } }
         raise Ai::Error::InvalidOutput, "the embedding has components that aren't finite numbers"
       end
@@ -185,13 +183,14 @@ class Ai::Transport::Base
       vectors
     end
 
-    # Tolerant parsing, the one copy of what each worker did: a reasoning model's
-    # <think> block, fenced JSON (closed or not), prose around the object, or a bare array.
+    # Tolerant parsing, the one copy of what each worker did: fenced JSON (closed or not), prose
+    # around the object, or a bare array. Chat Completions content arrives with any think block
+    # already split out (split_think_tags); those are the only protocols Sure sends here.
     # Returns a Hash or an Array, or nil when nothing parses.
     def parse_json(text)
       return if text.blank?
 
-      cleaned = strip_thinking(text.to_s)
+      cleaned = text.to_s
       fenced = cleaned.scan(/```(?:json)?\s*([\[{][\s\S]*?[\]}])\s*```/m).flatten.reverse
       unclosed = cleaned[/```(?:json)?\s*([\[{][\s\S]*[\]}])\s*\z/m, 1]
       object = cleaned[/\{[\s\S]*\}/m]
@@ -204,16 +203,6 @@ class Ai::Transport::Base
         next
       end
       nil
-    end
-
-    # The answer after a closed <think> block; with no close (a cut-off model), what's inside it.
-    def strip_thinking(text)
-      return text unless text.include?("<think>")
-
-      after = text[%r{</think>\s*([\s\S]*)}m, 1]
-      return after if after.present?
-
-      text[/<think>([\s\S]*)/m, 1] || text
     end
 
     # RubyLLM's finish reasons for "stopped at the output limit": :length on the OpenAI

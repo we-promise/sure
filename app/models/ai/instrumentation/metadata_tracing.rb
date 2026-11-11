@@ -6,9 +6,9 @@ require "opentelemetry-exporter-otlp"
 # prompt, tool result or answer. It loses the route, the prompt key, Sure's error class and
 # errors raised before RubyLLM is called.
 #
-# RubyLLM 2.1.1 has no code to put content on spans. 2.2 adds `enable(content: true)` (RubyLLM #1333),
-# off by default; `content: false` is passed explicitly whenever the gem accepts it, and
-# test/models/ai/instrumentation/metadata_tracing_test.rb fails if any span carries content.
+# RubyLLM's `enable(content:)` defaults to no content on spans; `content: false` is passed
+# explicitly anyway, and test/models/ai/instrumentation/metadata_tracing_test.rb fails if any
+# span carries content.
 module Ai::Instrumentation::MetadataTracing
   # RubyLLM can't set a session, and Langfuse doesn't copy a parent span's session to its
   # children, so every span gets the job's correlation id when it starts.
@@ -49,11 +49,7 @@ module Ai::Instrumentation::MetadataTracing
     provider.add_span_processor(processor)
     OpenTelemetry.tracer_provider = provider
 
-    if RubyLLM::OpenTelemetry.method(:enable).parameters.any? { |_, name| name == :content }
-      RubyLLM::OpenTelemetry.enable(content: false)
-    else
-      RubyLLM::OpenTelemetry.enable
-    end
+    RubyLLM::OpenTelemetry.enable(content: false)
     provider
   end
 
