@@ -1,6 +1,9 @@
 ---
 de:
   bills:
+    show:
+      edit: Rechnung bearbeiten
+      edit_plan: Planbedingungen bearbeiten
     due_label:
       overdue:
         one: Seit 1 Tag überfällig · fällig am %{date}

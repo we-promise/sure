@@ -25,12 +25,32 @@ class RecurringTransaction
             .find_each do |recurring_transaction|
         next unless recurring_transaction.should_be_inactive?
 
+        # A financed plan with installments still due is not stale.
+        if recurring_transaction.financed? &&
+           recurring_transaction.recurring_occurrences
+             .where(status: "scheduled")
+             .where("due_on >= ?", Date.current)
+             .exists?
+          next
+        end
+
         # Double-check if there are any recent matching transactions
         threshold = recurring_transaction.staleness_threshold_date
         recent_matches = recurring_transaction.matching_transactions.select { |entry| entry.date >= threshold }
 
         if recent_matches.empty?
-          recurring_transaction.mark_inactive!
+          if recurring_transaction.financed?
+            # A plan with any allocation, including a suggestion that can still
+            # be confirmed, stays locked to its purchase. Only a plan with no
+            # allocation at all may release the purchase.
+            if recurring_transaction.financed_allocations_present?
+              recurring_transaction.mark_inactive!
+            else
+              recurring_transaction.update!(status: "ended")
+            end
+          else
+            recurring_transaction.mark_inactive!
+          end
           stale_count += 1
         end
       end
@@ -43,6 +63,9 @@ class RecurringTransaction
     def remove_old_inactive_transactions
       six_months_ago = 6.months.ago
 
+      # Financed plans are manual series, so `manual: false` already keeps them
+      # here; an allocated plan's destroy is further blocked by the
+      # before_destroy callback.
       family.recurring_transactions
         .inactive
         .where(manual: false)

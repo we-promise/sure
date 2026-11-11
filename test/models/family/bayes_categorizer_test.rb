@@ -499,6 +499,35 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
     assert_equal [ @coffee.id, @groceries.id ].sort, tuned.category_ids.sort
   end
 
+  test "classify_and_apply leaves a plan-owned purchase untouched" do
+    train_two_categories
+    purchase = create_transaction(account: @account, name: "Starbucks Coffee")
+    @family.recurring_transactions.create!(
+      name: "Laptop plan",
+      account: @account,
+      amount: 100,
+      currency: "USD",
+      bill_type: "installment",
+      end_mode: "after_count",
+      end_after_count: 12,
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: Date.current,
+      status: "active",
+      manual: true,
+      financed_principal_amount: 1200,
+      financed_interest_rate: 12,
+      financed_source_entry_id: purchase.id
+    )
+
+    result = tuned(lock_results: true).classify_and_apply([ purchase.transaction.id ])
+
+    assert_empty result.categorized_ids
+    assert_equal 0, result.modified_count
+    assert_nil purchase.transaction.reload.category
+    assert_not purchase.transaction.locked_attributes.key?("category_id")
+  end
+
   test "classify_and_apply returns categorized_ids and modified_count separately" do
     train_two_categories
     categorizer = Family::BayesCategorizer.new(@family)

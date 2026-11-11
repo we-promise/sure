@@ -40,6 +40,38 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_equal 1, @account.transactions.reload.enrichable(:merchant_id).count
   end
 
+  test "a plan-owned purchase is left out of merchant detection" do
+    purchase = create_transaction(account: @account, name: "Laptop").transaction
+    normal = create_transaction(account: @account, name: "Chipotle").transaction
+    @family.recurring_transactions.create!(
+      name: "Laptop plan",
+      account: @account,
+      amount: 100,
+      currency: "USD",
+      bill_type: "installment",
+      end_mode: "after_count",
+      end_after_count: 12,
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: Date.current,
+      status: "active",
+      manual: true,
+      financed_principal_amount: 1200,
+      financed_interest_rate: 12,
+      financed_source_entry_id: purchase.entry.id
+    )
+    provider_response = provider_success_response([
+      AutoDetectedMerchant.new(transaction_id: normal.id, business_name: "Chipotle", business_url: "chipotle.com")
+    ])
+    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+
+    Family::AutoMerchantDetector.new(@family, transaction_ids: [ purchase.id, normal.id ]).auto_detect
+
+    assert_nil purchase.reload.merchant
+    assert_not purchase.locked_attributes.key?("merchant_id")
+    assert_equal "Chipotle", normal.reload.merchant.name
+  end
+
   test "an invalid AI merchant name leaves that transaction unassigned without failing the batch" do
     invalid_txn = create_transaction(account: @account, name: "Weird").transaction
     valid_txn = create_transaction(account: @account, name: "Chipotle").transaction

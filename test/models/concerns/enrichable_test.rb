@@ -77,6 +77,28 @@ class EnrichableTest < ActiveSupport::TestCase
     refute_includes Account.enrichable(:name), @enrichable
   end
 
+  test "a plan-owned purchase's transaction refuses enrichment" do
+    user = users(:family_admin)
+    family = user.family
+    card = family.accounts.create!(
+      name: "Enrich Plan Card", accountable: CreditCard.new, balance: 0,
+      currency: "USD", owner: user, status: "active"
+    )
+    purchase = card.entries.create!(
+      date: Date.current, name: "Laptop", amount: 1200, currency: "USD",
+      entryable: Transaction.new(kind: "standard", category: family.categories.first)
+    )
+    RecurringTransaction::InstallmentPlan.new(
+      family: family, user: user, entry: purchase,
+      interest_rate: 0, term_months: 12
+    ).call
+
+    txn = purchase.reload.transaction
+
+    refute txn.enrich_attribute(:tag_ids, [ tags(:one).id ], source: "rule")
+    assert_empty txn.reload.tag_ids
+  end
+
   # DataEnrichment rows record who set an attribute, so they are written only
   # after a save the record accepted, and only for records that already
   # existed when the call began.

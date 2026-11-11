@@ -49,6 +49,32 @@ class Category::MergerTest < ActiveSupport::TestCase
     assert_not Category.exists?(source.id)
   end
 
+  test "merging moves a plan's interest category even with no transactions" do
+    target = create_category(@family, "Merge Interest Target")
+    source = create_category(@family, "Merge Interest Source")
+    plan = @family.recurring_transactions.create!(
+      name: "Interest category plan",
+      amount: 100,
+      currency: "USD",
+      bill_type: "installment",
+      expected_day_of_month: 1,
+      last_occurrence_date: Date.current,
+      next_expected_date: Date.current,
+      status: "active",
+      manual: true,
+      financed_interest_category_id: source.id
+    )
+
+    merger = Category::Merger.new(
+      family: @family,
+      target_category: target,
+      source_categories: [ source ]
+    )
+
+    assert merger.merge!
+    assert_equal target.id, plan.reload.financed_interest_category_id
+  end
+
   test "merging categories invalidates entries_cache_version" do
     target = create_category(@family, "Cache Merge Target")
     source = create_category(@family, "Cache Merge Source")

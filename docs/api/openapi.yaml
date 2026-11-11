@@ -9978,8 +9978,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Split"
         '422':
-          description: amounts do not sum to the parent, or the transaction cannot
-            be split
+          description: amounts do not sum to the parent, the transaction cannot be
+            split, or an installment plan owns it
       requestBody:
         content:
           application/json:
@@ -10019,6 +10019,8 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Split"
+        '422':
+          description: the transaction is owned by an installment plan
       requestBody:
         content:
           application/json:
@@ -10036,6 +10038,8 @@ paths:
           description: split removed
         '404':
           description: transaction is not split
+        '422':
+          description: the transaction is owned by an installment plan
   "/api/v1/syncs":
     get:
       summary: Lists sync history

@@ -353,7 +353,7 @@ class Category < ApplicationRecord
 
   def replace_and_destroy!(replacement)
     transaction do
-      Transaction.reassign_category!(transactions, replacement&.id)
+      Transaction.reassign_category!(transactions, replacement&.id, from_category_ids: [ id ])
       destroy!
     end
   end
@@ -440,7 +440,7 @@ class Category < ApplicationRecord
     end
 
     def reassign_transactions_to_nothing
-      Transaction.reassign_category!(transactions, nil)
+      Transaction.reassign_category!(transactions, nil, from_category_ids: [ id ])
     end
 
     def category_level_limit

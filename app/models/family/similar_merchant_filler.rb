@@ -23,8 +23,11 @@ class Family::SimilarMerchantFiller
 
     matcher = Family::SimilarMatcher.new(pool, threshold: settings.similar_threshold, min_neighbours: settings.similar_min_neighbours,
                                                common_share: settings.similar_common_share)
-    eligible(family.transactions.where(id: transaction_ids, merchant_id: nil).enrichable(:merchant_id))
-      .includes(:entry).find_each.count do |transaction|
+    eligible(
+      family.transactions.where(id: transaction_ids, merchant_id: nil)
+                         .excluding_installment_plan_purchases
+                         .enrichable(:merchant_id)
+    ).includes(:entry).find_each.count do |transaction|
         merchant_id = matcher.agreed(transaction, :merchant_id)
         next false unless merchant_id
 

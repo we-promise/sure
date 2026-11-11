@@ -354,6 +354,22 @@ module TransactionsHelper
     value.to_s
   end
 
+  # A manual card purchase that can become an installment plan. Preview-gated
+  # with the Bills surface, and hidden while a plan already owns the purchase.
+  def installment_plan_available?(entry)
+    return false unless preview_features_enabled?
+    return false if Current.family.recurring_transactions_disabled?
+    return false unless entry.entryable.is_a?(Transaction)
+
+    RecurringTransaction::InstallmentPlan.new(
+      family: Current.family,
+      user: Current.user,
+      entry: entry,
+      interest_rate: nil,
+      term_months: nil
+    ).eligible?
+  end
+
   # A pending transfer match as the viewer may see it from `transaction`'s
   # row. The accounts and transactions pages set @accessible_account_ids;
   # a view that does not, such as the turbo stream that redraws a match,

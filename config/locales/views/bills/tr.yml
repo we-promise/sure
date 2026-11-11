@@ -250,6 +250,7 @@ tr:
         other: Diğer
     show:
       edit: Faturayı düzenle
+      edit_plan: Plan koşullarını düzenle
     index:
       left_to_pay: ödenecek
       paid_so_far: Şu ana kadar ödenen

@@ -14,6 +14,12 @@ class RecurringTransaction < ApplicationRecord
   belongs_to :merchant, optional: true
   belongs_to :category, optional: true
   belongs_to :replaced_by, optional: true, class_name: "RecurringTransaction"
+  # The purchase an installment plan took over. The plan's charges replace it,
+  # so the purchase stops counting towards the budget and the balance.
+  belongs_to :financed_source_entry, class_name: "Entry", optional: true
+  # Where the interest portion of each plan charge goes. Without it, the whole
+  # charge stays under the purchase category.
+  belongs_to :financed_interest_category, class_name: "Category", optional: true
   # autosave: FrequencyPreset marks old rules for destruction and builds
   # replacements in one assignment, and only autosave honors that on save.
   has_many :recurrence_rules, -> { order(:position) }, dependent: :destroy, autosave: true
@@ -58,8 +64,24 @@ class RecurringTransaction < ApplicationRecord
   validate :anchor_required_for_intervals
   validate :end_mode_fields_consistent
   validate :bill_type_matches_shape
+  validate :financing_terms_only_on_installment_series
+  validate :financed_source_entry_belongs_to_family
+  validate :financed_interest_category_belongs_to_family
+  validate :financed_terms_locked_on_update, on: :update
+  validates :financed_principal_amount, numericality: { greater_than: 0 }, allow_nil: true
+  validates :financed_interest_rate,
+            numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 100 },
+            allow_nil: true
 
   normalizes :payment_url, with: ->(url) { normalize_payment_url(url) }
+
+  # Terms the loan schedule was built from. The generic bill editor must not
+  # rewrite these: its occurrence stream and the amortisation would drift.
+  FINANCED_TERMS_ATTRIBUTES = %w[
+    account_id amount anchor_date currency end_after_count end_mode end_on
+    expected_day_of_month financed_interest_category_id financed_interest_rate
+    financed_principal_amount financed_source_entry_id
+  ].freeze
 
   before_validation :derive_transfer_bill_type
 
@@ -71,9 +93,15 @@ class RecurringTransaction < ApplicationRecord
 
   # Set by FrequencyPreset when it rewrites the rules; cleared after the
   # post-commit regeneration consumes it.
-  attr_accessor :rules_rewritten
+  attr_accessor :rules_rewritten, :financed_terms_update
 
   after_commit :generate_occurrences, on: :create
+  # A plan that is over -- cancelled, or retired as stale -- gives the
+  # purchase back, so the money it took over is counted again. A plan that
+  # already took a payment keeps the purchase out: the charges replaced it.
+  after_update :release_financed_purchase_when_over
+  before_destroy :release_financed_purchase_before_destroy, prepend: true
+
   # Ahead of regeneration: activation changes status, so both run, and with
   # load_defaults 7.1+ these run in the order defined. An exception in one
   # stops the rest, so a failed regeneration must not cost the bill its
@@ -200,6 +228,48 @@ class RecurringTransaction < ApplicationRecord
     errors.add(:payment_url, :invalid_scheme) unless self.class.valid_payment_url?(payment_url)
   end
 
+  # Loan terms only mean something on a plan: a bill or a subscription has no
+  # principal to amortise.
+  def financing_terms_only_on_installment_series
+    return if financed_principal_amount.blank? &&
+              financed_interest_rate.blank? &&
+              financed_interest_category_id.blank?
+    return if typed_installment?
+
+    errors.add(:base, :financing_terms_not_installment)
+  end
+
+  # Only the plan-terms editor may rewrite schedule inputs. The generic bill
+  # form can change a name or a note, but not the money or cadence the loan
+  # schedule was built from.
+  def financed_terms_locked_on_update
+    return if financed_terms_update
+    return unless financed?
+    return unless rules_rewritten ||
+                  will_save_change_to_attribute?(:weekend_adjust) ||
+                  FINANCED_TERMS_ATTRIBUTES.any? { |attribute| will_save_change_to_attribute?(attribute) }
+
+    errors.add(:base, :installment_plan_terms_locked)
+  end
+
+  # The purchase a plan replaced belongs to this family. A crafted id would
+  # otherwise let a plan suppress another family's entry from the balance.
+  def financed_source_entry_belongs_to_family
+    return if financed_source_entry_id.blank? || family_id.blank?
+    return if Entry.where(id: financed_source_entry_id, account: Account.where(family_id: family_id)).exists?
+
+    errors.add(:financed_source_entry_id, :invalid)
+  end
+
+  # The split category belongs to this family. A crafted id would otherwise
+  # attribute interest to another family's category.
+  def financed_interest_category_belongs_to_family
+    return if financed_interest_category_id.blank? || family_id.blank?
+    return if Category.where(id: financed_interest_category_id, family_id: family_id).exists?
+
+    errors.add(:financed_interest_category_id, :invalid)
+  end
+
   def generate_occurrences
     OccurrenceGenerator.new(self).generate!
   end
@@ -258,6 +328,7 @@ class RecurringTransaction < ApplicationRecord
   def regenerate_future_occurrences
     self.rules_rewritten = false
     OccurrenceGenerator.new(self).regenerate_future!
+    stamp_financed_instalment_amounts! if financed?
   end
 
   def schedule_shape_changed?
@@ -386,6 +457,173 @@ class RecurringTransaction < ApplicationRecord
     return nil unless typed_installment? && end_after_count.present?
 
     [ recurring_occurrences.paid.count, end_after_count ]
+  end
+
+  # An installment plan that carries loan terms: the principal it finances and
+  # the annual rate it carries.
+  def financed?
+    financed_principal_amount.present? && financed_interest_rate.present?
+  end
+
+  # The loan layer's amortisation schedule for this plan, so a plan and a loan
+  # cannot drift apart: same engine, same rounding, same payment split.
+  # nil when the series carries no financing terms.
+  def financed_schedule
+    cache_key = [ financed?, anchor_date, financed_principal_amount, financed_interest_rate, end_after_count, currency ]
+    return @financed_schedule if defined?(@financed_schedule_key) && @financed_schedule_key == cache_key
+
+    @financed_schedule_key = cache_key
+    @financed_schedule =
+      if financed? && anchor_date.present?
+        Loan::AmortizationSchedule.new(
+          principal: financed_principal_amount,
+          annual_rate: financed_interest_rate,
+          term_months: end_after_count,
+          start_date: financed_start_date,
+          currency: currency
+        )
+      end
+  end
+
+  # The plan is written from the purchase date, so the first instalment falls
+  # on the first due date and the loan engine counts a period of interest for
+  # each one.
+  def financed_start_date
+    anchor_date&.prev_month
+  end
+
+  # What the plan costs in interest over its whole life.
+  def financed_total_interest
+    financed_schedule&.total_interest
+  end
+
+  # The date the last instalment is due. The occurrences carry the dates, so
+  # the plan and the schedule it was built from agree on when the money moves.
+  def financed_payoff_date
+    last = recurring_occurrences.maximum(:due_on)
+    last || financed_schedule&.payoff_date
+  end
+
+  # The plan's instalments in order: the date each one falls on, what it
+  # costs, and how that splits into principal and interest. The dates come
+  # from the occurrences and the money from the loan layer's schedule, so a
+  # plan and a loan cannot drift apart.
+  def financed_installments
+    occurrences = recurring_occurrences.order(:due_on).to_a
+    cache_key = [
+      financed?, anchor_date, financed_principal_amount, financed_interest_rate,
+      end_after_count, currency, occurrences.map { |occurrence| [ occurrence.id, occurrence.due_on ] }
+    ]
+    return @financed_installments if @financed_installments_key == cache_key
+
+    payments = financed_schedule&.payments || []
+    @financed_installments_key = cache_key
+    @financed_installments = occurrences.each_with_index.filter_map do |occurrence, index|
+      payment = payments[index]
+      next if payment.nil?
+
+      {
+        number: index + 1,
+        occurrence_id: occurrence.id,
+        date: occurrence.due_on,
+        amount: payment.payment,
+        principal: payment.principal,
+        interest: payment.interest
+      }
+    end
+  end
+
+  # The series carries one amount, but the loan layer sizes the last payment
+  # to clear the balance exactly. Stamp each occurrence with its schedule row.
+  def stamp_financed_instalment_amounts!
+    payments = financed_schedule&.payments || []
+
+    recurring_occurrences.order(:due_on).each_with_index do |occurrence, index|
+      payment = payments[index]
+      occurrence.override_amount!(payment.payment.amount) if payment && occurrence.scheduled?
+    end
+  end
+
+  # The principal and interest of one instalment, for the charge that lands
+  # for it. The number of the period, counted from the first.
+  def financed_installment(number)
+    financed_installments.find { |instalment| instalment[:number] == number }
+  end
+
+  # The schedule row for one occurrence. Occurrence order is the schedule
+  # order, so a charge can name the principal and interest it carries even
+  # when its amount differs from the estimate.
+  def financed_installment_for(occurrence)
+    return nil if occurrence.blank? || !financed?
+
+    financed_installments.find { |installment| installment[:occurrence_id] == occurrence.id }
+  end
+
+  # True once any instalment of the plan has been paid. From then on the
+  # purchase must stay out: its charges already count in the budget.
+  def financed_charges_recorded?
+    return false if financed_source_entry_id.blank?
+
+    recurring_occurrences.joins(:allocations).merge(RecurringAllocation.confirmed).exists?
+  end
+
+  # A suggested allocation is not a payment, but it still decides what the
+  # purchase may do: ending the plan or releasing the purchase while the
+  # suggestion can still be confirmed would count both sides.
+  def financed_allocations_present?
+    return false if financed_source_entry_id.blank?
+
+    recurring_occurrences.joins(:allocations).exists?
+  end
+
+  # Terms can move only before anything has been matched to the plan. A
+  # suggestion or a user skip counts too: rebuilding the schedule would
+  # delete that decision.
+  def financed_terms_editable?
+    return false unless financed? && active? && financed_source_entry_id.present?
+    return false if recurring_occurrences.joins(:allocations).exists?
+
+    !recurring_occurrences.where.not(status: "scheduled").exists?
+  end
+
+  # True while the plan still owns the purchase: active, paused or inactive,
+  # or ended after any allocation, including a suggestion. An uncharged plan
+  # that ended gave it back.
+  def financed_purchase_locked?
+    return false if financed_source_entry_id.blank?
+
+    %w[active paused inactive].include?(status) || financed_allocations_present?
+  end
+
+  # Hands the purchase back and ends the plan. Only an uncharged plan can do
+  # this: once a payment is recorded, the charges take the purchase's place,
+  # and counting both would double the money.
+  def release_financed_purchase!
+    return false if financed_source_entry_id.blank?
+
+    released = false
+    Entry.transaction do
+      # Plan first, then occurrences, then the entry advisory/row. This matches
+      # the terms editor and stops a new allocation racing into a row about to
+      # be deleted.
+      lock!
+      candidate = releasable_financed_entry
+      next unless candidate
+
+      entry, occurrences = candidate
+      next if RecurringAllocation.where(recurring_occurrence_id: occurrences.map(&:id)).exists?
+
+      entry.unexclude_by_installment_plan!
+      entry.sync_account_later
+      # Skip callbacks: releasing already ended the plan, and re-entering the
+      # after_update hook would repeat the same work. No allocation exists
+      # here, so every open row is stale: an ended plan must not leave any for
+      # the matcher to attach charges to.
+      update_columns(status: "ended", updated_at: Time.current)
+      RecurringOccurrence.where(id: occurrences.select(&:scheduled?).map(&:id)).delete_all
+      released = true
+    end
+    released
   end
 
   # The occurrence the user most needs to see: the earliest still-open one
@@ -908,6 +1146,67 @@ class RecurringTransaction < ApplicationRecord
   end
 
   private
+    def release_financed_purchase_when_over
+      return unless saved_change_to_status?(to: "ended")
+      return unless financed_source_entry&.excluded?
+      # A plan with allocations keeps the purchase. Skip release so lock!
+      # does not clear saved_changes before the after_commit regeneration runs.
+      return if financed_allocations_present?
+
+      release_financed_purchase!
+    end
+
+    # Locks the plan's occurrences and source entry, then returns them when the
+    # purchase can still be handed back: still excluded, and no other plan owns
+    # it. Both release paths call this under their own transaction, so the
+    # decision and the lock are one step. Returns [ entry, occurrences ] or nil.
+    def releasable_financed_entry
+      occurrences = recurring_occurrences.lock.to_a
+      entry = Entry.find_by(id: financed_source_entry_id)
+      return nil unless entry
+
+      Allocator.lock_entry!(entry)
+      entry.lock!
+
+      return nil unless financed_source_entry_id == entry.id
+      return nil unless entry.excluded?
+      return nil if RecurringTransaction
+        .where(financed_source_entry_id: entry.id)
+        .where.not(id: id)
+        .any?(&:financed_purchase_locked?)
+
+      [ entry, occurrences ]
+    end
+
+    # Deleting a plan nulls the purchase's link to it. An uncharged purchase
+    # must count again before that link is gone, or it stays excluded with no
+    # plan to explain why. A plan that took a payment cannot be deleted: the
+    # purchase must stay hidden, and only the link keeps it out of the balance.
+    def release_financed_purchase_before_destroy
+      return if financed_source_entry_id.blank?
+
+      # Destroy already runs in a transaction. Lock in the same order as the
+      # allocator and the terms editor: occurrences, then the entry advisory
+      # lock, then the entry row. This makes the confirmed-charge check and the
+      # release one decision.
+      candidate = releasable_financed_entry
+      return unless candidate
+
+      entry, = candidate
+
+      if financed_charges_recorded?
+        errors.add(:base, :installment_plan_has_payments)
+        throw :abort
+      end
+
+      # An ended, uncharged plan already gave the purchase back. A later
+      # exclusion belongs to the user, and deleting the plan must not undo it.
+      return unless financed_purchase_locked?
+
+      entry.unexclude_by_installment_plan!
+      entry.sync_account_later
+    end
+
     # Issue #1590: a recurring transfer's future occurrences rarely share the
     # seed's name (user free-text, importer wording, the auto-matcher's
     # "Transfer to ..."), so name-based matching returns [] and the Cleaner

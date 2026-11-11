@@ -8,7 +8,7 @@ class Rule::ActionExecutor::ExcludeTransaction < Rule::ActionExecutor
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
-    scope = transaction_scope.with_entry
+    scope = transaction_scope.excluding_installment_plan_purchases.with_entry
 
     unless ignore_attribute_locks
       # Filter by entry's locked_attributes, not transaction's

@@ -70,6 +70,36 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
     }
   end
 
+  let(:plan_card) do
+    Account.create!(
+      family: family,
+      name: 'Plan Card',
+      balance: 0,
+      currency: 'USD',
+      accountable: CreditCard.create!
+    )
+  end
+
+  let(:locked_entry) do
+    plan_card.entries.create!(
+      name: 'Locked purchase',
+      date: Date.current,
+      amount: 1200,
+      currency: 'USD',
+      entryable: Transaction.new(kind: 'standard')
+    )
+  end
+
+  def lock_entry_with_plan(entry)
+    RecurringTransaction::InstallmentPlan.new(
+      family: family,
+      user: user,
+      entry: entry,
+      interest_rate: 0,
+      term_months: 12
+    ).call
+  end
+
   path '/api/v1/transactions/{transaction_id}/split' do
     parameter name: :transaction_id, in: :path, type: :string,
               description: 'Transaction ID. A split child resolves to its parent.'
@@ -91,7 +121,7 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
         run_test!
       end
 
-      response '422', 'amounts do not sum to the parent, or the transaction cannot be split' do
+      response '422', 'amounts do not sum to the parent, the transaction cannot be split, or an installment plan owns it' do
         let(:split) { { split: { splits: [ { name: 'Too small', amount: '1.0' } ] } } }
         run_test!
       end
@@ -132,6 +162,13 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
         before { transaction.entry.split!([ { name: 'A', amount: 70 }, { name: 'B', amount: 30 } ]) }
         run_test!
       end
+
+      response '422', 'the transaction is owned by an installment plan' do
+        let(:transaction_id) { locked_entry.entryable_id }
+
+        before { lock_entry_with_plan(locked_entry) }
+        run_test!
+      end
     end
 
     delete 'Remove a transaction split' do
@@ -145,6 +182,13 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
       end
 
       response '404', 'transaction is not split' do
+        run_test!
+      end
+
+      response '422', 'the transaction is owned by an installment plan' do
+        let(:transaction_id) { locked_entry.entryable_id }
+
+        before { lock_entry_with_plan(locked_entry) }
         run_test!
       end
     end

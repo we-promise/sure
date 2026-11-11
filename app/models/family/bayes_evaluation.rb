@@ -308,7 +308,10 @@ class Family::BayesEvaluation
     # Each month's pool and test transactions, loaded once for every cutoff.
     months = month_starts.map do |start|
       filler = Family::SimilarMerchantFiller.new(family, settings: settings, as_of: start - 1.day)
-      [ filler.pool, filler.confirmed.where(entries: { date: start...(start >> 1) }).preload(:entry).to_a ]
+      tested = filler.confirmed
+                      .excluding_installment_plan_purchases
+                      .where(entries: { date: start...(start >> 1) })
+      [ filler.pool, tested.preload(:entry).to_a ]
     end
     names = Merchant.where(id: months.flat_map { |pool, tested| (pool + tested).map(&:merchant_id) }.uniq).pluck(:id, :name).to_h
     by_cutoff = cutoffs.index_with do |cutoff|

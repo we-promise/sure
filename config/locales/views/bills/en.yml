@@ -67,6 +67,12 @@ en:
       cancelled_chip: "Cancelled %{date}"
       price_changes: Price changes
       price_change_line: "%{from} → %{to}"
+      financing: Financing
+      installment_split: "%{principal} principal + %{interest} interest"
+      financing_total: "Total interest %{amount}"
+      financing_more:
+        one: "1 more installment is on the schedule"
+        other: "%{count} more installments are on the schedule"
     month_pulse:
       bill_count:
         one: 1 bill
@@ -89,6 +95,8 @@ en:
     summary:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
+      financed_total_interest: "%{amount} total interest"
+      installment_split: "%{principal} principal + %{interest} interest"
     add_bill: Add bill
     manage: View
     find_payment: Find payment
@@ -267,6 +275,7 @@ en:
         other: Other
     show:
       edit: Edit bill
+      edit_plan: Edit plan terms
     index:
       left_to_pay: left to pay
       paid_so_far: Paid so far

@@ -280,6 +280,7 @@ uk:
         other: Інше
     show:
       edit: Редагувати платіж
+      edit_plan: Редагувати умови плану
     index:
       left_to_pay: залишилося сплатити
       paid_so_far: Уже сплачено

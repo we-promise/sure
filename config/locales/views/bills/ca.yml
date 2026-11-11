@@ -250,6 +250,7 @@ ca:
         other: Altres
     show:
       edit: Edita la factura
+      edit_plan: Edita els termes del pla
     index:
       left_to_pay: per pagar
       paid_so_far: Pagat fins ara

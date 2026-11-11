@@ -16,6 +16,14 @@
         <%# Pause and remove answer with the whole page, so they leave the
             drawer's frame. Edit and AI open as modals over the drawer. %>
         <%= render DS::Menu.new do |menu| %>
+          <% if @series.financed_terms_editable? %>
+            <% menu.with_item(
+                 variant: "link",
+                 text: t("bills.show.edit_plan"),
+                 icon: "sliders-horizontal",
+                 href: edit_bill_installment_plan_path(@series),
+                 data: { turbo_frame: :modal }) %>
+          <% end %>
           <% menu.with_item(
                variant: "link",
                text: t("bills.show.edit"),

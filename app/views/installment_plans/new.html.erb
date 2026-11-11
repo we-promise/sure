@@ -1,0 +1,93 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header do %>
+    <h2 id="<%= dialog.title_id %>" class="text-lg font-semibold text-primary"><%= @form_title %></h2>
+    <p class="text-sm text-secondary"><%= @form_description %></p>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= styled_form_with url: @form_url,
+          scope: :installment_plan,
+          method: @form_method,
+          class: "space-y-4",
+          data: {
+            controller: "installment-plan-estimate",
+            installment_plan_estimate_url_value: @preview_url,
+            installment_plan_estimate_error_value: t("installment_plans.estimate.unavailable_error"),
+            action: "input->installment-plan-estimate#update change->installment-plan-estimate#update"
+          } do |f| %>
+      <% if @plan_errors.present? %>
+        <%= render DS::Alert.new(
+              variant: :error,
+              title: t(".errors_title"),
+              message: @plan_errors.to_sentence
+            ) %>
+      <% end %>
+
+      <div class="space-y-1 rounded-lg border border-primary bg-surface-inset p-3 text-sm">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-secondary"><%= t(".purchase_label") %></span>
+          <span class="font-medium text-primary"><%= @entry.name %></span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-secondary"><%= t(".amount_label") %></span>
+          <span class="font-medium text-primary privacy-sensitive"><%= format_money(@entry.amount_money.abs) %></span>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-secondary"><%= t(".account_label") %></span>
+          <span class="font-medium text-primary"><%= @entry.account.name %></span>
+        </div>
+      </div>
+
+      <div data-installment-plan-estimate-target="estimate">
+        <%= render "installment_plans/estimate", estimate: @estimate %>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <%= f.number_field :interest_rate,
+              label: t(".interest_rate"),
+              value: @interest_rate,
+              step: 0.01,
+              min: 0,
+              max: 100,
+              required: true %>
+        <%= f.number_field :term_months,
+              label: t(".term_months"),
+              value: @term_months,
+              step: 1,
+              min: 1,
+              max: RecurringTransaction::MAX_END_AFTER_COUNT,
+              required: true %>
+      </div>
+
+      <%= render DS::Select.new(
+            form: f,
+            method: :interest_category_id,
+            items: @categories,
+            selected: @interest_category_id,
+            label: t(".interest_category"),
+            include_blank: t(".no_interest_category"),
+            variant: :badge,
+            searchable: true
+          ) %>
+      <p class="text-xs text-secondary"><%= t(".interest_category_hint") %></p>
+
+      <%= f.date_field :first_due_on,
+            label: t(".first_due_on"),
+            value: @first_due_on,
+            min: [ @entry.date, Date.current ].max,
+            required: true %>
+
+      <p class="text-xs text-secondary"><%= t(".hint") %></p>
+
+      <div class="flex justify-end gap-2">
+        <%= render DS::Button.new(
+              text: t(".cancel"),
+              variant: :secondary,
+              type: :button,
+              data: { action: "DS--dialog#close" }
+            ) %>
+        <%= render DS::Button.new(text: @submit_label, type: :submit) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

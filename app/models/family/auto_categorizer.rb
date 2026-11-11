@@ -313,6 +313,7 @@ class Family::AutoCategorizer
 
     def scope
       family.transactions.where(id: transaction_ids, category_id: nil)
+                         .excluding_installment_plan_purchases
                          .enrichable(:category_id)
                          .includes(:category, :merchant, :entry)
     end

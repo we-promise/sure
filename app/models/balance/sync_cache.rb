@@ -129,7 +129,7 @@ class Balance::SyncCache
     end
 
     def entries_scope
-      scope = account.entries.excluding_pending.excluding_split_parents.where(date: ..Date.current).includes(:entryable).order(:date)
+      scope = account.entries.excluding_pending.excluding_split_parents.excluding_planned_purchases.where(date: ..Date.current).includes(:entryable).order(:date)
       @start_date ? scope.where(date: @start_date..) : scope
     end
 

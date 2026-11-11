@@ -25,6 +25,7 @@ class Api::V1::SplitsController < Api::V1::BaseController
   before_action :set_transaction
   before_action :resolve_to_parent
   before_action :ensure_account_write_permission, only: [ :create, :update, :destroy ]
+  before_action :ensure_not_owned_by_installment_plan, only: [ :create, :update, :destroy ]
 
   # GET /api/v1/transactions/:transaction_id/split
   def show
@@ -120,6 +121,13 @@ class Api::V1::SplitsController < Api::V1::BaseController
         error: "forbidden",
         message: "You do not have write access to this account"
       }, status: :forbidden
+    end
+
+    def ensure_not_owned_by_installment_plan
+      return if performed?
+      return unless @entry.installment_plan_locked?
+
+      render_unprocessable("Transaction is owned by an installment plan")
     end
 
     def set_transaction

@@ -5,6 +5,8 @@ en:
       models:
         transaction:
           attributes:
+            base:
+              installment_plan_locked: cannot delete or change this purchase while an installment plan owns it
             attachments:
               too_many: "cannot exceed %{max} files per transaction"
               too_large: "file %{index} is too large (maximum %{max_mb}MB)"
