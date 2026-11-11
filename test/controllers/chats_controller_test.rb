@@ -7,6 +7,23 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     sign_in @user
   end
 
+  test "demo notices link to usage settings in every locale and chat view" do
+    ApplicationController.any_instance.stubs(:show_demo_warning?).returns(true)
+
+    locales = Rails.root.glob("config/locales/views/chats/*.yml").map { |path| path.basename(".yml").to_s }
+
+    locales.each do |locale|
+      @user.update!(locale: locale)
+      [ chats_url, new_chat_url, chat_url(@user.chats.first) ].each do |url|
+        get url
+
+        assert_response :success
+        assert_select "[role='status'] a[href=?][data-turbo-frame='_top']", settings_llm_usage_path,
+          text: I18n.t("chats.demo_banner_link", locale: locale, fallback: false), count: 1
+      end
+    end
+  end
+
   test "gets index" do
     Usage.stubs(:capture)
     Usage.expects(:capture).with("ai_assistant_served_daily").never

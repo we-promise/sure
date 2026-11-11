@@ -1,0 +1,4 @@
+<%= render "shared/demo_warning",
+  title: t("chats.demo_banner_title"),
+  message: t("chats.demo_banner_message_html",
+    link: render(DS::Link.new(text: t("chats.demo_banner_link"), href: settings_llm_usage_path, frame: "_top"))) %>
