@@ -4,23 +4,34 @@
   <% is_open = open.nil? ? (account_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key)) : open %>
   <%= render DS::Disclosure.new(align: :left, open: is_open) do |disclosure| %>
     <% disclosure.with_summary_content do %>
-      <div class="flex items-center gap-3">
-        <%= icon "chevron-right", class: "group-open:transform group-open:rotate-90" %>
-        <%= tag.span class: class_names("text-sm text-primary font-medium", "animate-pulse" => account_group.syncing?) do %>
-          <%= account_group.name %>
-        <% end %>
-      </div>
+      <%# The name gives way (truncating) to the total, so a long group name
+          can't push the total out of line at a narrow sidebar width; the
+          title shows the full name on hover. With no hover (a touch screen)
+          or with keyboard focus, a cut name slides once to show its end
+          (sidebar_name_marquee_controller). With reduced motion the name
+          keeps its full width there instead, and a total that no longer
+          fits moves to the line below, still on the right. %>
+      <div class="flex items-center w-full min-w-0 gap-x-2 pointer-coarse:motion-reduce:flex-wrap [summary:focus-visible_&]:motion-reduce:flex-wrap">
+        <div class="flex items-center gap-3 min-w-0 pointer-coarse:motion-reduce:shrink-0 pointer-coarse:motion-reduce:max-w-full [summary:focus-visible_&]:motion-reduce:shrink-0 [summary:focus-visible_&]:motion-reduce:max-w-full">
+          <%= icon "chevron-right", class: "shrink-0 group-open:transform group-open:rotate-90" %>
+          <%= tag.span class: class_names("text-sm text-primary font-medium truncate pointer-coarse:motion-reduce:whitespace-normal [summary:focus-visible_&]:motion-reduce:whitespace-normal", "animate-pulse" => account_group.syncing?),
+                title: account_group.name,
+                data: { controller: "sidebar-name-marquee" } do %>
+            <%= tag.span account_group.name, data: { sidebar_name_marquee_target: "text" } %>
+          <% end %>
+        </div>
 
-      <div class="ml-auto text-right grow">
-        <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary privacy-sensitive" %>
-        <%= turbo_frame_tag "#{account_group.key}_sparkline",
-                            src: accountable_sparkline_path(account_group.key, v: sidebar_sparkline_versions(Current.family)[account_group.accountable_type]),
-                            loading: "lazy",
-                            data: sparkline_frame_data do %>
-          <div class="flex items-center w-8 h-4 ml-auto">
-            <div class="w-6 h-px bg-loader"></div>
-          </div>
-        <% end %>
+        <div class="ml-auto text-right shrink-0">
+          <%= tag.p format_money(account_group.total_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
+          <%= turbo_frame_tag "#{account_group.key}_sparkline",
+                              src: accountable_sparkline_path(account_group.key, v: sidebar_sparkline_versions(Current.family)[account_group.accountable_type]),
+                              loading: "lazy",
+                              data: sparkline_frame_data do %>
+            <div class="flex items-center w-8 h-4 ml-auto">
+              <div class="w-6 h-px bg-loader"></div>
+            </div>
+          <% end %>
+        </div>
       </div>
     <% end %>
 
