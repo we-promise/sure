@@ -5,6 +5,11 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
     travel_to Date.new(2026, 10, 22)
     @user = users(:family_admin)
     @family = @user.family
+    # These tests build their own budgets and ledger. Fixture rows are dated
+    # relative to the real calendar, so they can fall inside the fixed periods
+    # asserted below.
+    @family.budgets.delete_all
+    @family.accounts.find_each { |account| account.entries.destroy_all }
     @category = categories(:one)
     @interest_category = categories(:food_and_drink)
     # A card of its own, so the balance is the plan's business and nothing
@@ -147,13 +152,15 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
     assert_equal 106.62, principal_budget.bills_reserved.amount.to_f
     assert_equal 0, interest_budget.bills_reserved.amount.to_f
 
-    pay_instalment(plan)
+    charge = pay_instalment(plan)
     principal_budget = BudgetCategory.find(principal_budget.id)
     interest_budget = BudgetCategory.find(interest_budget.id)
 
-    assert_equal 0, principal_budget.bills_reserved.amount.to_f
-    assert_equal 94.62, principal_budget.actual_spending.to_f
-    assert_equal 12.00, interest_budget.actual_spending.to_f
+    travel_to charge.date do
+      assert_equal 0, principal_budget.bills_reserved.amount.to_f
+      assert_equal 94.62, principal_budget.actual_spending.to_f
+      assert_equal 12.00, interest_budget.actual_spending.to_f
+    end
   end
 
   test "a plan charge splits into principal and interest" do
@@ -173,8 +180,10 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
     assert_equal @interest_category.id, interest.entryable.category_id
     assert_equal "Laptop Store (interest)", interest.name
 
-    assert_equal 106.62, card_balance,
-      "the split changes attribution, not the card balance"
+    travel_to charge.date do
+      assert_equal 106.62, card_balance,
+        "the split changes attribution, not the card balance"
+    end
   end
 
   test "a charge that differs from the estimate keeps the scheduled interest" do
@@ -210,7 +219,9 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
     RecurringTransaction::Allocator.new(occurrence).allocate!(entry: charge, amount: 50)
 
     refute charge.reload.split_parent?
-    assert_equal 106.62, card_balance
+    travel_to charge.date do
+      assert_equal 106.62, card_balance
+    end
   end
 
   test "a plan without an interest category leaves the charge whole" do
@@ -218,7 +229,9 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
     charge = pay_instalment(plan)
 
     refute charge.reload.split_parent?
-    assert_equal 106.62, card_balance
+    travel_to charge.date do
+      assert_equal 106.62, card_balance
+    end
   end
 
   test "unlinking the last payment from an ended plan releases the purchase" do
@@ -248,7 +261,9 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
     refute charge.reload.split_parent?
     refute charge.excluded?
     assert_equal 0, charge.child_entries.count
-    assert_equal 106.62, card_balance
+    travel_to charge.date do
+      assert_equal 106.62, card_balance
+    end
   end
 
   test "a failed split rolls back the payment" do
@@ -567,15 +582,17 @@ class RecurringTransaction::InstallmentPlanTest < ActiveSupport::TestCase
   test "a plan that took a payment keeps the purchase out when it ends" do
     purchase = create_purchase
     plan = build_plan(entry: purchase)
-    pay_instalment(plan)
+    charge = pay_instalment(plan)
 
     plan.update!(status: "ended")
 
     assert purchase.reload.excluded?, "the charge replaced the purchase"
     assert_empty plan.recurring_occurrences.open_status
-    assert_equal 106.62, card_balance
-    assert_equal 106.62,
-      budget_spend(purchase.date.beginning_of_month, purchase.date.next_month.end_of_month, account: @card)
+    travel_to charge.date do
+      assert_equal 106.62, card_balance
+      assert_equal 106.62,
+        budget_spend(purchase.date.beginning_of_month, purchase.date.next_month.end_of_month, account: @card)
+    end
   end
 
   test "deleting an uncharged plan returns the purchase" do
