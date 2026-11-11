@@ -479,7 +479,12 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       holding.remap_security!(new_security)
 
-      assert_equal merged_cost, kept.reload.unit_cost, "moved #{moved_cost.inspect} onto #{kept_cost.inspect}"
+      message = "moved #{moved_cost.inspect} onto #{kept_cost.inspect}"
+      if merged_cost.nil?
+        assert_nil kept.reload.unit_cost, message
+      else
+        assert_equal merged_cost, kept.reload.unit_cost, message
+      end
     end
   end
 
