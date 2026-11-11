@@ -450,9 +450,15 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     )
     EnableBankingItem.where(id: eb_item.id).update_all("last_psu_ip = '203.0.113.50'")
 
-    # No global support_unencrypted_data: the attribute's own option must cover it
-    assert_not ActiveRecord::Encryption.config.support_unencrypted_data
-    assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
+    # Turn the global fallback off so only the attribute's own option can cover it
+    config = ActiveRecord::Encryption.config
+    previous = config.support_unencrypted_data
+    config.support_unencrypted_data = false
+    begin
+      assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
+    ensure
+      config.support_unencrypted_data = previous
+    end
   end
 
   # ============================================================================
