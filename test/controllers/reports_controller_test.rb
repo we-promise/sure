@@ -9,6 +9,80 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     @family = @user.family
   end
 
+  test "renders sections in the order and collapse state stored under the reports keys" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge(
+      "reports_section_order" => %w[transactions_breakdown trends_insights],
+      "reports_collapsed_sections" => { "trends_insights" => true }
+    ))
+
+    get reports_path
+
+    assert_response :success
+    keys = css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[transactions_breakdown trends_insights], keys.first(2)
+    assert_select "[data-section-key=trends_insights][data-reports-section-collapsed-value=?]", "true"
+    assert_select "[data-section-key=transactions_breakdown][data-reports-section-collapsed-value=?]", "false"
+    assert_select "[data-section-key=trends_insights] > details:not([open])"
+    assert_select "[data-section-key=transactions_breakdown] > details[open]"
+  end
+
+  # Reports renders the shared section list with its own endpoint, param and
+  # labels, and leaves the collapse control on its default endpoint.
+  test "the section list posts to the reports endpoint under the reports keys" do
+    get reports_path
+
+    assert_response :success
+    assert_select "[data-controller~=sortable-list][data-sortable-list-url-value=?][data-sortable-list-param-value=?][aria-label=?]",
+                  update_preferences_reports_path, "preferences.reports_section_order", I18n.t("reports.index.sections_aria")
+    assert_select "[data-section-key=net_worth][aria-label=?]",
+                  "#{I18n.t("reports.net_worth.title")} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
+    assert_select "[data-section-key=net_worth] > details > summary h2", text: I18n.t("reports.net_worth.title")
+    assert_select "[data-reports-section-url-value], [data-reports-section-preference-key-value]", count: 0
+  end
+
+  test "the reports preferences endpoint stores order and collapse under the reports keys" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_collapsed_sections" => { "net_worth" => true }))
+
+    patch update_preferences_reports_path,
+      params: { preferences: { reports_section_order: %w[trends_insights net_worth], reports_collapsed_sections: { trends_insights: true } } },
+      as: :json
+
+    assert_response :ok
+    @user.reload
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+  end
+
+  test "a scalar section order is not stored and the page still renders" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_section_order" => %w[trends_insights net_worth]))
+
+    patch update_preferences_reports_path, params: { preferences: { reports_section_order: "x" } }, as: :json
+
+    assert_response :ok
+    assert_equal %w[trends_insights net_worth], @user.reload.preferences["reports_section_order"]
+
+    get reports_path
+    assert_response :success
+  end
+
+  test "a scalar collapsed set is not stored" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_collapsed_sections" => { "net_worth" => true }))
+
+    patch update_preferences_reports_path, params: { preferences: { reports_collapsed_sections: "net_worth" } }, as: :json
+
+    assert_response :ok
+    assert_equal({ "net_worth" => true }, @user.reload.preferences["reports_collapsed_sections"])
+  end
+
+  test "a preferences body that is not an object is refused and writes nothing" do
+    before = @user.reload.preferences
+
+    patch update_preferences_reports_path, params: { preferences: "x" }, as: :json
+
+    assert_response :bad_request
+    assert_equal before, @user.reload.preferences
+  end
+
   # The per-trade line under the realised-gains card rendered
   # `Money.new(gain.value, Current.family.currency)` -- taking the number out of
   # the Trend and re-labelling it as family currency with no conversion at all.
@@ -564,6 +638,14 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     # Subcategories
     assert_select "tr[data-category='category-#{subcategory_movies.id}']", text: /^Movies/
     assert_select "tr[data-category='category-#{subcategory_games.id}']", text: /^Games/
+  end
+
+  test "index lets keyboard users scroll the breakdown table" do
+    create_transaction(account: @family.accounts.first, name: "Lunch", amount: 15, category: categories(:food_and_drink))
+
+    get reports_path(period_type: :monthly)
+
+    assert_select "[role=region][tabindex='0'][aria-label=?] table", "Expenses"
   end
 
   test "index links income and expense categories to filtered transactions" do

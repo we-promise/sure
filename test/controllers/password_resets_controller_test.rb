@@ -27,6 +27,15 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
       params: { user: { password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
     assert_redirected_to new_session_url
     assert @user.reload.authenticate("NewSecure1!")
+    assert SecurityAuditLog.exists?(user: @user, event_type: "password_changed")
+  end
+
+  test "update with an invalid password does not write an audit log" do
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "short", password_confirmation: "short" } }
+    end
+    assert_response :unprocessable_entity
   end
 
   test "update rejects a password that does not meet the sign-up rules" do
@@ -52,8 +61,10 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update rejects a mismatched confirmation" do
-    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
-      params: { user: { password: "NewSecure1!", password_confirmation: "Different1!" } }
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+        params: { user: { password: "NewSecure1!", password_confirmation: "Different1!" } }
+    end
 
     assert_response :unprocessable_entity
     assert @user.reload.authenticate(user_password_test)
@@ -63,13 +74,26 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
   test "update rejects a blank password and keeps the reset link valid" do
     token = @user.generate_token_for(:password_reset)
 
-    patch password_reset_path(token: token),
-      params: { user: { password: "", password_confirmation: "" } }
+    assert_no_difference "SecurityAuditLog.count" do
+      patch password_reset_path(token: token),
+        params: { user: { password: "", password_confirmation: "" } }
+    end
 
     assert_response :unprocessable_entity
     assert @user.reload.authenticate(user_password_test)
     assert_select "p.text-destructive", text: /can't be blank/
     assert_equal @user, User.find_by_token_for(:password_reset, token)
+  end
+
+  test "rolls back the password change when the audit log write fails" do
+    SecurityAuditLog.stubs(:log_password_changed!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+    original_digest = @user.password_digest
+
+    patch password_reset_path(token: @user.generate_token_for(:password_reset)),
+      params: { user: { password: "NewSecure1!", password_confirmation: "NewSecure1!" } }
+
+    assert_response :unprocessable_entity
+    assert_equal original_digest, @user.reload.password_digest
   end
 
   test "all actions redirect when password features are disabled" do

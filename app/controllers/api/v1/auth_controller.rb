@@ -43,7 +43,9 @@ module Api
         end
 
         # Validate password
-        password_errors = validate_password(params[:user][:password])
+        # user_signup_params requires the `user` key; a missing payload raises
+        # ParameterMissing, which BaseController renders as a 400.
+        password_errors = validate_password(user_signup_params[:password])
         if password_errors.any?
           render json: { errors: password_errors }, status: :unprocessable_entity
           return
@@ -332,7 +334,7 @@ module Api
             invitation&.update!(accepted_at: Time.current)
 
             # Joining an existing family via invitation must honor the family's
-            # default sharing policy, matching Invitation#accept_for, so a mobile
+            # default sharing policy, matching token registration, so a mobile
             # SSO invitee sees the accounts the family shares by default.
             user.family.auto_share_existing_accounts_with(user) if invitation.present?
 

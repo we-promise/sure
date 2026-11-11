@@ -1,0 +1,442 @@
+---
+en:
+  settings:
+    providers:
+      update:
+        updated_successfully: Provider settings updated successfully
+        no_changes: No changes were made
+      not_authorized: Not authorized
+      bank_sync:
+        page_title: Bank sync
+        lede: Connect external accounts so transactions, balances and holdings flow into Sure automatically.
+      status:
+        ok: Connected
+        warn: Action needed
+        err: Error
+        "off": Not configured
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Read-only access. Sure can never move money, and your credentials are stored encrypted."
+      drawer_trust_statement_encryption_unconfigured: "Read-only access. Sure can never move money. Configure explicit encryption keys before storing provider credentials in production."
+      provider_setup_encryption_warning:
+        title: Encryption keys missing
+        message: "This self-hosted install has not configured explicit Active Record encryption keys. Configure primary_key, deterministic_key and key_derivation_salt before saving provider credentials in production."
+      setup_steps:
+        eyebrow: Setup
+        need_help: "Need help?"
+      connect: Connect
+      financekit:
+        app_store: App Store
+        coming_soon: Coming soon!
+        description: "Manage Apple Wallet connections in the Sure iOS app. Wallet data syncs while the app is open; unattended background sync is not available yet."
+        summary: Wallet sync
+        accounts: Linked accounts
+        linked_accounts:
+          one: 1 linked account
+          other: "%{count} linked accounts"
+        status:
+          active: Sync active
+          repair_required: Repair required — open the Sure iOS app
+        last_accepted_at: Last accepted by Sure
+        last_imported_at: Last imported into your family
+        not_yet: Not yet
+      groups:
+        your_connections: Your connections
+        available: Available
+        empty_available: All available providers are connected.
+      health_strip:
+        connected: connected
+        needs_attention: needs attention
+        accounts_syncing: accounts syncing
+        last_synced: Last synced %{time} ago
+      meta:
+        sync_error: Sync error
+        no_recent_sync: Sync overdue
+        reconsent_required: Re-consent required
+        login_required: Login required
+        login_expires_soon: "Login expires in %{time} (%{at})"
+        reconsent_needed:
+          one: Re-consent needed in 1 day
+          other: Re-consent needed in %{count} days
+        last_synced: Synced %{time} ago
+      sync_all: Sync all
+      sync_all_in_progress: Syncing all connected providers…
+      sync_all_recently: Sync already in progress. Try again in a moment.
+      sync_provider: Sync now
+      sync_provider_in_progress: Sync started.
+      recently_synced: Synced recently. Try again in a moment.
+      taglines:
+        financekit: Sync (some) FinanceKit accounts through the Sure iOS app.
+        akahu: Sync New Zealand financial institutions via Akahu.
+        simplefin: Connect US bank accounts via the open SimpleFIN protocol.
+        lunchflow: Connect 20k+ banks from 40+ countries (UK, EU, USA and more!)
+        redbark: Sync Australian bank accounts via Redbark open banking.
+        up: Sync Australian Up bank accounts with a personal access token.
+        monobank: Sync Ukrainian Monobank cards and jars with a personal API token.
+        fio: Sync a Fio banka account with a read-only API token.
+        enable_banking: Sync European bank accounts via PSD2 open banking.
+        truelayer: Sync UK bank accounts and credit cards via TrueLayer open banking.
+        coinstats: Track your entire crypto portfolio across wallets and exchanges.
+        wise: Sync your Wise multi-currency balances and international transfers automatically.
+        mercury: Sync your Mercury business banking accounts automatically.
+        brex: Sync Brex cash and corporate card activity with read-only access.
+        coinbase: Import your Coinbase crypto holdings and track performance.
+        binance: Sync your Binance spot balances using a read-only API key.
+        kraken: Sync Kraken balances and spot trade fills using a read-only API key.
+        coinspot: Sync CoinSpot balances, AUD values, transfers, deposits, withdrawals, and order history using a read-only API key.
+        onchain_wallet: Track self-custody Bitcoin, EVM, Solana, Cosmos and Polkadot wallets from their public addresses.
+        snaptrade: Connect brokerage accounts via the SnapTrade aggregation network.
+        trading212: Sync your Trading 212 investment portfolio using a read-only API key.
+        sharesight: Sync the portfolios you track in Sharesight using its API.
+        trade_republic: Sync your Trade Republic investment account via secure read-only web login.
+        ibkr: Sync Interactive Brokers investment accounts via Flex Query imports.
+        questrade: Sync your Questrade investment accounts directly via the Questrade API.
+        indexa_capital: Track your Indexa Capital automated investment portfolio.
+        sophtron: Connect US & Canadian banks and utilities.
+        plaid: Connect thousands of US financial institutions via Plaid.
+        plaid_eu: Connect European financial institutions via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Search providers
+        placeholder: Search providers
+        chips:
+          all: All
+          bank: Banks
+          crypto: Crypto
+          investment: Investments
+      empty_filter: No providers match your filter.
+      clear_filter: Clear filters
+      encryption_error:
+        title: Encryption keys missing
+        message: "Bank sync needs Active Record encryption configured. Set primary_key, deterministic_key and key_derivation_salt in your Rails credentials or environment variables."
+      provider_form:
+        save_and_connect: "Save and connect"
+      coinbase_panel:
+        setup_instructions: "To connect Coinbase:"
+        step1_html: Go to <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Coinbase API Settings</a>
+        step2: Create a new API key with read-only permissions (view accounts, view transactions)
+        step3: Copy your API key and API secret and paste them below
+        api_key_label: API Key
+        api_key_placeholder: Enter your Coinbase API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Enter your Coinbase API secret
+        connect_button: Connect Coinbase
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: Are you sure you want to disconnect this Coinbase connection? Your synced accounts will become manual accounts.
+      binance_panel:
+        setup_instructions: "To connect Binance, create a read-only API key:"
+        step1_html: 'Go to <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Binance API Management</a>'
+        step2: "Create a new API key with Enable Reading permission only"
+        step3: "Paste your API Key and Secret below"
+        no_withdraw_title: "Read-only key only"
+        no_withdraw_body: "Don't enable withdrawal permissions when creating your Binance API key. Sure only needs read access."
+        ip_hint_title: "IP whitelisting required"
+        ip_hint_body: "Add the app server's egress IP to the Binance API Key whitelist:"
+        ip_hint_contact_admin: "Contact your administrator to obtain the app server's egress IP address."
+        api_key_label: API Key
+        api_key_placeholder: Paste your Binance API Key
+        api_secret_label: API Secret
+        api_secret_placeholder: Paste your Binance API Secret
+        connect_button: Connect Binance
+        syncing: Syncing...
+        sync: Sync
+        historical_import: "Historical Import Settings"
+        sync_start_date_label: "Import data from"
+        sync_start_date_help: "Select how far back to fetch historical trades."
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect Binance?"
+      kraken_panel:
+        step1_html: 'Go to <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Kraken API settings</a>'
+        step2: "Create an API key with Query Funds and Query Closed Orders & Trades only."
+        step3: "Paste the API key and private key below."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Do not grant trading, cancellation, withdrawal, export, ledger, Earn, staking, or transfer permissions. Sure only imports balances, holdings, and spot trade fills."
+        default_connection_name: Kraken
+        add_connection: Add Kraken connection
+        update_connection: Update connection
+        connection_name_label: Connection name
+        connection_name_placeholder: Main Kraken
+        api_key_label: API Key
+        api_key_placeholder: Paste your Kraken API key
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        api_secret_label: Private Key
+        api_secret_placeholder: Paste your Kraken private key
+        keep_api_secret_placeholder: Leave blank to keep the existing private key
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      coinspot_panel:
+        step1_html: 'Go to <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener noreferrer" class="underline">CoinSpot API settings</a>'
+        step2: "Create an API key with read-only access to balances and history."
+        step3: "Paste the API key and secret below."
+        read_only_title: "Read-only exchange sync only"
+        read_only_body: "Do not grant send, withdrawal, trading, or transfer permissions. Sure only imports balances, AUD values, transfers, deposits, withdrawals, and completed order history."
+        default_connection_name: CoinSpot
+        add_connection: Add CoinSpot connection
+        update_connection: Update connection
+        connection_name_label: Connection name
+        connection_name_placeholder: Main CoinSpot
+        api_key_label: API Key
+        api_key_placeholder: Paste your CoinSpot API key
+        keep_api_key_placeholder: Leave blank to keep the existing API key
+        api_secret_label: API Secret
+        api_secret_placeholder: Paste your CoinSpot API secret
+        keep_api_secret_placeholder: Leave blank to keep the existing API secret
+        setup_accounts: Setup account
+        syncing: Syncing...
+        sync: Sync
+        disconnect: Disconnect
+        disconnect_confirm: "Are you sure you want to disconnect %{name}?"
+      onchain_wallet_panel:
+        add_wallet: Add wallet
+        advanced: Advanced
+        disconnect_all: Disconnect all wallets
+        disconnect_all_confirm: This removes every tracked address and its accounts. Continue?
+        etherscan_api_key_label: Etherscan API key (optional)
+        etherscan_api_key_placeholder: Paste an Etherscan API key
+        etherscan_hint: Ethereum reads work without a key. Adding an Etherscan key only raises the rate limit for Ethereum.
+        keep_etherscan_api_key: Leave blank to keep the existing key
+        manage_wallets: Manage wallets
+        keyless_body: Sure only ever reads public chain data. No keys, seed phrases or signatures are involved, and nothing can be spent.
+        keyless_title: Read-only, no keys required
+        save: Save
+        sync_start_date_hint: Transfers before this date are ignored. Leave blank to import everything the explorer reports.
+        sync_start_date_label: Ignore transfers before
+      enable_banking_panel:
+        callback_url_instruction: "For the callback URL, use %{callback_url}."
+        connection_error: Connection Error
+        step_1_html: "Go to %{link} and grab your developer credentials."
+        step_2: "Pick your country and paste the Application ID + Client Certificate below."
+        step_3: "Save, then use Add Connection to link your bank."
+        config_locked_title: "Configuration locked"
+        config_locked_message: "Disconnect all linked banks before changing these credentials."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Enter application ID"
+        application_id_placeholder_update: "Enter new ID to update"
+        client_certificate_label: "Client Certificate (with Private Key)"
+        keep_client_certificate_hint: "Leave blank to keep the current certificate"
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+        connected_bank: "Connected Bank"
+        session_expires: "Session expires: %{date}"
+        unknown: "Unknown"
+        connection: "Connection"
+        session_expired_reconnect: "Session expired - reconnect"
+        configured: "Configured"
+        ready_to_link: "Ready to link accounts"
+        sync: "Sync"
+        reconnect: "Reconnect"
+        connect_bank: "Connect bank"
+        remove: "Remove"
+        remove_confirm: "Are you sure you want to remove this connection?"
+        add_connection: "Add Connection"
+        syncing: "Syncing"
+        select_country: "Select country..."
+        country_label: "Country"
+      lunchflow_panel:
+        step_1_html: "Go to %{link} and create an API key."
+        step_2: "Paste your key below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        api_key_label: "API Key"
+        api_key_placeholder_new: "Paste API key here"
+        api_key_placeholder_update: "Enter new API key to update"
+        base_url_label: "Base URL (Optional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (default)"
+        sync_start_date_label: "Import transactions from"
+        sync_start_date_help: "Leave blank to import everything Lunch Flow has. Moving the date earlier imports the missing period on the next sync. Moving it later doesn't affect transactions already imported."
+        save_and_connect: "Save and connect"
+        update_connection: "Update connection"
+      akahu_panel:
+        step_1_html: "Go to %{link} and create a personal app."
+        step_2: "Copy your app token and user token."
+        step_3: "Paste the tokens below, save, then link your synced accounts."
+      up_panel:
+        step_1_html: "Go to %{link} and generate a personal access token."
+        step_2: "Copy your personal access token."
+        step_3: "Paste the token below, save, then link your synced accounts."
+      monobank_panel:
+        step_1_html: "Go to %{link}, sign in with the Monobank app and generate a personal token."
+        step_2: "Copy the token — it is shown only once."
+        step_3: "Paste the token below, save, then link the cards and jars you want to track."
+      fio_panel:
+        step_1_html: "Sign in to %{link} internet banking and open Settings → API."
+        step_2: 'Create a token with read-only access ("Sledování účtu"). It needs strong authorization and is valid for up to 180 days.'
+        step_3: "Paste the token below and save. One token reaches one account, so add a connection per Fio account."
+      simplefin_panel:
+        step_1_html: "Go to %{link} for a one-time setup token."
+        step_2: "Paste the token below and connect."
+        step_3: "Then head to Accounts to link your synced accounts."
+        setup_token_label: "Setup Token"
+        setup_token_placeholder: "Paste SimpleFIN setup token"
+        save_and_connect: "Save and connect"
+      plaid_panel:
+        step_1_html: "Open the %{link} and copy your Client ID and Secret Key."
+        step_2: "Pick an environment. Use sandbox for testing and production for real accounts."
+        step_3: "Paste your credentials below and connect."
+      plaid_eu_panel:
+        step_1_html: "Open the %{link} and copy your EU Client ID and Secret Key."
+      not_found: Provider not found.
+      sync_provider_no_items: No connections available to sync.
+      ibkr_panel:
+        add_connection: Add Interactive Brokers connection
+        connection_name_label: Connection name
+        connection_name_placeholder: e.g. IBKR Ireland, IBKR US
+        disconnect: Disconnect
+        disconnect_confirm_named: Disconnect %{name}?
+        setup_accounts: Set up accounts
+        steps:
+          step_1: 'In your IBKR Client Portal, navigate to "Performance & Reports" > "Flex Queries".'
+          step_2: 'Click the "+" icon in the "Activity Flex Query" section to create a new query.'
+          step_3: 'Name your query (e.g., "Sure Sync"), then review the Flex Query details below and enable the listed sections, fields, and configuration options.'
+          step_4: 'Save the query, note your "Query ID", then use the gear icon in the "Flex Web Service Configuration" section to generate an access Token.'
+          step_5: "Paste your Query ID and Token below, save the configuration, then head to Accounts to link discovered IBKR accounts."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Sections, fields, and configuration
+          summary: Expand to see the exact sections, fields, and settings your IBKR Activity Flex Query must include.
+          sections_heading: Enable these sections and fields
+          configuration_heading: Set these query options
+        sections:
+          account_information: "Account Information: Account ID, Currency"
+          cash_report: "Cash Report:"
+          cash_report_options: "Options: None"
+          cash_report_fields: "Fields: Currency, Ending Cash"
+          cash_transactions: "Cash Transactions:"
+          cash_transactions_options: "Options: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Fields: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Change In Position Value Summary: Currency, End Of Period Value"
+          net_asset_value: "Net Asset Value (NAV) in Base:"
+          net_asset_value_options: "Options: None"
+          net_asset_value_fields: "Fields: Currency, Report Date, Total"
+          open_positions: "Open Positions:"
+          open_positions_options: "Options: Summary"
+          open_positions_fields: "Fields: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Trades:"
+          trades_options: "Options: Execution"
+          trades_fields: "Fields: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Models: Optional"
+          format: "Format: XML"
+          period: "Period: Last 365 Calendar Days"
+          date_format: "Date Format: yyyy-MM-dd"
+          time_format: "Time Format: HH:mm:ss"
+          date_time_separator: "Date/Time Separator: ; (semi-colon)"
+          profit_and_loss: "Profit and Loss: Default"
+          all_other_options: 'All other configuration options: "No"'
+        report_window_note: "IBKR Flex reports are limited to the query window you configured in IBKR. Sure will import full current holdings plus up to the last 365 days of activity from this report."
+        sync: Sync
+        query_id_label: Query ID
+        query_id_placeholder_new: Enter your IBKR Flex Query ID
+        query_id_placeholder_existing: Leave blank to keep the current Query ID
+        token_label: Token
+        token_placeholder_new: Enter your IBKR Flex Web Service Token
+        token_placeholder_existing: Leave blank to keep the current Token
+        update_configuration: Update Configuration
+        not_configured: Not configured.
+      trade_republic_panel:
+        encryption_warning:
+          title: Encryption is not configured
+          message: Trade Republic credentials and session data cannot be stored securely until Active Record Encryption is configured.
+        steps:
+          step_1: Enter the phone number and PIN or password you use for the Trade Republic app, then save.
+          step_2: Enter the code from your authenticator app when requested.
+          step_3: Approve the login in your Trade Republic app when prompted.
+        phone_number_label: Phone number
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: Leave blank to keep the current phone number
+        pin_label: PIN or password
+        pin_placeholder_new: Your Trade Republic PIN or password
+        pin_placeholder_existing: Leave blank to keep the current PIN or password
+        currency_label: Account currency
+        connect: Log in
+        confirm_login: Check login
+        complete_login: Continue
+        authenticator_code_label: Authenticator code (if prompted)
+        authenticator_code_placeholder: "6-digit code"
+        push_login_notice: Approve the login in your Trade Republic app now. Sure checks automatically in the background. You can also check the status yourself.
+        check_login_status: Check status now
+        authenticator_code_notice: Enter the code from your authenticator app.
+        approval_pending: Login started. Approve it in the Trade Republic app; Sure is checking automatically.
+        awaiting_confirmation: Approval in the Trade Republic app is pending.
+        awaiting_authenticator_code: Authenticator code required.
+        login_expired: The approval request has expired.
+        restart_login: Start login again
+        connection_success:
+          title: Trade Republic connected successfully
+          message: Your Trade Republic connection is ready.
+          description: Sure is now syncing your Trade Republic data in the background.
+          close: Done
+        qr_login: Log in with QR code
+        qr_cancel: Cancel QR login
+        qr_back_to_credentials: Back to phone number and PIN or password
+        qr_loading: Preparing QR code …
+        qr_instruction: Scan the QR code with your phone's camera, then approve the login in the Trade Republic app.
+        qr_success: Login approved. Sure is refreshing the provider page.
+        qr_error: QR login could not be started. Please try again.
+        requires_update: Log in again to resume syncing.
+        session_expires_in: "Login expires in %{time} (%{at})."
+        add_account: Add another connection
+        save_configuration: Save & Start Login
+        update_configuration: Update Configuration
+        sync: Sync
+        syncing: Syncing...
+        disconnect: Disconnect Trade Republic
+        disconnect_confirm: Disconnect Trade Republic? Your synced accounts will become manual accounts.
+        disconnect_confirm_with_identifier: "Disconnect the Trade Republic connection ending in %{last4}? Your synced accounts will become manual accounts."
+        identifier_phone: Phone
+        identifier_account: Account
+        status_configured_prefix: "Connected. Visit the"
+        accounts_tab: Accounts
+        setup_accounts: Set up accounts
+        accounts_discovered:
+          one: 1 Trade Republic account discovered.
+          other: "%{count} Trade Republic accounts discovered."
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.
+      sharesight_panel:
+        steps:
+          step_1: Ask Sharesight support to enable API access. It's available on paid plans.
+          step_2: In your Sharesight account settings, open the API page and copy the client ID and client secret.
+          step_3: Paste both below and save. Sure then finds your portfolios so you can link them.
+        client_id_label: Client ID
+        client_id_placeholder_new: Paste your Sharesight client ID
+        client_id_placeholder_existing: Leave blank to keep the current client ID
+        client_secret_label: Client secret
+        client_secret_placeholder_new: Paste your Sharesight client secret
+        client_secret_placeholder_existing: Leave blank to keep the current client secret
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to link your portfolios.
+      trading212_panel:
+        steps:
+          step_1: Go to Trading 212 → Settings → API (web or mobile app).
+          step_2: Generate a new API key — Trading 212 will show you an API ID and a Secret Key.
+          step_3: Paste both below, select your environment and account currency, then save.
+        api_key_label: API ID
+        api_key_placeholder_new: Paste your Trading 212 API ID
+        api_key_placeholder_existing: Leave blank to keep the current API ID
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Paste your Trading 212 Secret Key
+        api_secret_placeholder_existing: Leave blank to keep the current Secret Key
+        environment_label: Environment
+        environment_live: Live account
+        environment_demo: Demo account
+        currency_label: Account currency
+        save_configuration: Save Configuration
+        update_configuration: Update Configuration
+        sync: Sync
+        syncing: Syncing...
+        disconnect: Disconnect Trading 212 account
+        disconnect_confirm: Disconnect Trading 212?
+        default_account_name: Trading 212 Account
+        add_account: Add another account
+        status_configured_prefix: "Configured. Visit the"
+        accounts_tab: Accounts
+        status_configured_suffix: tab to manage discovered accounts.
+        not_configured: Not configured.
