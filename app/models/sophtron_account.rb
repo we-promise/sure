@@ -56,8 +56,31 @@ class SophtronAccount < ApplicationRecord
       next unless saved_change_to_balance_sign_override? && current_account.present?
 
       SophtronAccount::Processor.new(self).process_account!
+      SophtronAccount::Transactions::Processor.new(self).process
       current_account.sync_later
     end
+  end
+
+  # The provider balance before Sure applies its sign convention.
+  #
+  # @return [Numeric]
+  def observed_balance
+    balance || available_balance || 0
+  end
+
+  # Whether this credit card's feed signs amounts from the lender's side, with
+  # debt and charges positive. Sophtron institutions differ, so this is only
+  # known once the user says what the balance means: a debt reported as
+  # positive, or a credit reported as negative, comes from such a feed.
+  # Automatic mode and a zero balance keep the account-holder convention.
+  #
+  # @return [Boolean]
+  def lender_signed?
+    return false unless balance_sign_override.present?
+    return false unless current_account&.accountable_type == "CreditCard"
+    return false if observed_balance.zero?
+
+    (balance_sign_override == "debt") == observed_balance.positive?
   end
 
   def institution_name

@@ -50,6 +50,48 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_equal original_anchor, account.current_anchor_balance
   end
 
+  test "lender_signed? follows the override and the reported balance sign" do
+    sophtron_account = build_sophtron_account
+    AccountProvider.create!(account: accounts(:credit_card), provider: sophtron_account)
+
+    {
+      [ nil, 25 ] => false,
+      [ "debt", 25 ] => true,
+      [ "debt", -25 ] => false,
+      [ "credit", -25 ] => true,
+      [ "credit", 25 ] => false,
+      [ "debt", 0 ] => false
+    }.each do |(override, balance), expected|
+      sophtron_account.assign_attributes(balance_sign_override: override, balance: balance)
+      assert_equal expected, sophtron_account.lender_signed?, "override=#{override.inspect} balance=#{balance}"
+    end
+  end
+
+  test "lender_signed? is false for accounts that are not credit cards" do
+    sophtron_account = build_sophtron_account
+    sophtron_account.update!(balance_sign_override: "debt")
+    AccountProvider.create!(account: accounts(:loan), provider: sophtron_account)
+
+    assert_not sophtron_account.lender_signed?
+  end
+
+  test "applying an override re-signs already imported transactions" do
+    sophtron_account = build_sophtron_account
+    account = accounts(:credit_card)
+    AccountProvider.create!(account: account, provider: sophtron_account)
+    sophtron_account.update!(raw_transactions_payload: [
+      { id: "charge", amount: "40", currency: "USD", date: "2026-05-01", merchant: "Coffee Shop" }
+    ])
+    SophtronAccount::Transactions::Processor.new(sophtron_account).process
+    entry = account.entries.find_by!(external_id: "sophtron_charge")
+    assert_equal BigDecimal("-40"), entry.amount
+
+    Account.any_instance.stubs(:sync_later)
+    sophtron_account.apply_balance_sign_override!("debt")
+
+    assert_equal BigDecimal("40"), entry.reload.amount
+  end
+
   private
     def build_sophtron_account
       item = families(:dylan_family).sophtron_items.create!(
