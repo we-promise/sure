@@ -93,7 +93,8 @@ class Holding < ApplicationRecord
   SQL
 
   # #calculate_avg_cost for every holding given, in one query: the same
-  # trades, rates, fees and internal-movement rule, read through the same SQL
+  # trades, rates, fees, internal-movement and lot rules (a user-costed lot
+  # counts at its cost; a clamped position has none), read through the same SQL
   # (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals), so
   # the batch cannot answer differently from the holding on its own. Holdings
   # with a stored cost basis are skipped, since #avg_cost never reaches the
@@ -108,17 +109,30 @@ class Holding < ApplicationRecord
       .joins("JOIN entries ON entries.account_id = holdings.account_id AND entries.entryable_type = 'Trade' AND entries.date <= holdings.date")
       .joins("JOIN trades ON trades.id = entries.entryable_id AND trades.security_id = holdings.security_id AND trades.qty > 0")
       .joins(avg_cost_rates_join)
+      .joins(<<~SQL.squish)
+        LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
+          AND lots.source_entry_id = entries.id
+          AND lots.manual_total_cost IS NOT NULL
+      SQL
       .group("holdings.id")
       .pluck(
         Arel.sql("holdings.id"),
-        Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?))", Trade::INTERNAL_MOVEMENT_LABELS ])),
-        *avg_cost_totals_sql
+        Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?) AND lots.id IS NULL)", Trade::INTERNAL_MOVEMENT_LABELS ])),
+        Arel.sql(<<~SQL.squish),
+          BOOL_OR(EXISTS (
+            SELECT 1 FROM holding_lots clamped_lots
+            WHERE clamped_lots.account_id = holdings.account_id
+              AND clamped_lots.security_id = holdings.security_id
+              AND clamped_lots.clamped
+          ))
+        SQL
+        *avg_cost_totals_sql(lots: true)
       )
       .index_by(&:first)
 
     pending.each do |holding|
-      _id, internal_movement, total_cost, total_qty, rate_missing = rows[holding.id]
-      value = avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency) unless internal_movement
+      _id, internal_movement, clamped, total_cost, total_qty, rate_missing = rows[holding.id]
+      value = avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency) unless internal_movement || clamped
       holding.preload_avg_cost(value)
     end
   end
