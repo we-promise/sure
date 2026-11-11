@@ -128,6 +128,19 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
   end
 
+  test "should return bad request when signup payload has no user key" do
+    assert_no_difference([ "User.count", "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/signup", params: {
+        email: "newuser@example.com",
+        password: "SecurePass123!",
+        device: @device_info
+      }, as: :json
+    end
+
+    assert_response :bad_request
+    assert_equal "bad_request", JSON.parse(response.body)["error"]
+  end
+
   test "should not signup with invalid password" do
     assert_no_difference("User.count") do
       post "/api/v1/auth/signup", params: {

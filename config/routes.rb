@@ -505,6 +505,11 @@ Rails.application.routes.draw do
   # Hub page fronting budgets + goals under a single "Plan" nav entry.
   resource :plan, only: :show
 
+  # Family-wide investment hub, built on the Reports section framework.
+  resource :portfolio, only: :show do
+    patch :update_preferences
+  end
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     get :picker, on: :collection
@@ -827,6 +832,7 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
+      resources :account_statements, only: [ :index, :show, :create ]
       resources :balances, only: [ :index, :show ]
       resources :budgets, only: [ :index, :show ]
       resources :budget_categories, only: [ :index, :show ]
