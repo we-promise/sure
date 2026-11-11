@@ -436,7 +436,10 @@ GEM
       benchmark
       logger
     mini_mime (1.1.5)
-    minitest (5.27.0)
+    minitest (6.1.0)
+      drb (~> 2.0)
+      prism (>= 1.5, < 3)
+    minitest-mock (5.27.0)
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
     msgpack (1.8.2)
@@ -579,7 +582,7 @@ GEM
     pp (0.6.3)
       prettyprint
     prettyprint (0.2.0)
-    prism (1.4.0)
+    prism (1.9.0)
     propshaft (1.1.0)
       actionpack (>= 7.0.0)
       activesupport (>= 7.0.0)
@@ -959,7 +962,8 @@ DEPENDENCIES
   logtail-rails
   lookbook (= 2.3.11)
   lucide-rails
-  minitest (~> 5.27)
+  minitest (~> 6.1)
+  minitest-mock
   mocha
   octokit
   omniauth (~> 2.2)
