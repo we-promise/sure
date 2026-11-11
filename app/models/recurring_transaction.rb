@@ -55,6 +55,7 @@ class RecurringTransaction < ApplicationRecord
   validate :amount_variance_consistency
   validate :transfer_endpoints_consistent
   validate :payment_url_is_http
+  validate :bank_reference_is_distinctive
   validate :anchor_required_for_intervals
   validate :end_mode_fields_consistent
   validate :bill_type_matches_shape
@@ -160,6 +161,55 @@ class RecurringTransaction < ApplicationRecord
     matcher_hints.to_h["detected_name"].presence || name
   end
 
+  # The stable token a bank puts in this series' payment notes (a contract or
+  # customer number, a transfer's Verwendungszweck), kept in matcher_hints so
+  # the matcher can recognise variable-amount payments by it. User-entered;
+  # see Matcher::REFERENCE_BONUS for what it can and cannot do.
+  def bank_reference
+    matcher_hints.to_h["bank_reference"].presence
+  end
+
+  def bank_reference=(value)
+    cleaned = value.to_s.squish
+    hints = matcher_hints.to_h.except("bank_reference")
+    hints["bank_reference"] = cleaned if cleaned.present?
+    self.matcher_hints = hints
+  end
+
+
+  # "Match by reference only": the bank reference is then the bill's whole
+  # identity for the matcher (see Matcher#reference_only?). Meaningless
+  # without a reference, so it reads false then.
+  def reference_only?
+    bank_reference.present? && reference_effective? && matcher_hints.to_h["reference_only"] == true
+  end
+
+  # Whether the text carries this bill's bank reference, ignoring case and
+  # whitespace the way the matcher does.
+  def note_carries_reference?(text)
+    return false if bank_reference.blank? || text.blank?
+
+    needle = Matcher.normalize_name(bank_reference)
+    needle.length >= Matcher::MIN_REFERENCE_LENGTH && Matcher.normalize_name(text).include?(needle)
+  end
+
+  # A reference only ever matches payments on this bill's account, and never
+  # income (see Matcher#matched_reference).
+  def reference_effective?
+    account_id.present? && !typed_income?
+  end
+
+  # The stored switch as the form shows it, effective or not.
+  def reference_only
+    matcher_hints.to_h["reference_only"] == true
+  end
+
+  def reference_only=(value)
+    hints = matcher_hints.to_h.except("reference_only")
+    hints["reference_only"] = true if ActiveModel::Type::Boolean.new.cast(value)
+    self.matcher_hints = hints
+  end
+
   # A bill first renamed without a stored detected name keeps its original name, so the detector can still claim it.
   def preserve_detected_name
     self.matcher_hints = matcher_hints.to_h.merge("detected_name" => name_was)
@@ -192,6 +242,15 @@ class RecurringTransaction < ApplicationRecord
 
       errors.add(attribute, :wrong_family)
     end
+  end
+
+  def bank_reference_is_distinctive
+    return if bank_reference.blank?
+
+    errors.add(:bank_reference, :needs_account_and_expense) unless reference_effective?
+    min = RecurringTransaction::Matcher::MIN_REFERENCE_LENGTH
+    errors.add(:bank_reference, :too_short, count: min) if bank_reference.length < min
+    errors.add(:bank_reference, :too_long, count: 100) if bank_reference.length > 100
   end
 
   def payment_url_is_http
@@ -592,6 +651,17 @@ class RecurringTransaction < ApplicationRecord
          .where.not(id: RecurringMatchRejection.where(entry_id: entry.id).select(:recurring_transaction_id))
          .order(:created_at)
          .find do |series|
+           # A reference-only bill is identified by the note alone, whatever the
+           # amount, but never across signs: a refund is not its payment.
+           same_sign = series.amount.positive? == entry.amount.positive?
+           next same_sign && series.note_carries_reference?(entry.notes) if series.reference_only?
+
+           # Any bill's reference in the note identifies its payment too, unless
+           # the bill is bound to a different merchant than the payment's.
+           if same_sign && series.reference_effective? && series.note_carries_reference?(entry.notes) &&
+              !(series.merchant_id.present? && merchant&.id.present? && merchant.id != series.merchant_id)
+             next true
+           end
            next false unless amount_within_variance_band?(entry.amount, series.amount)
 
            if series.merchant_id.present?

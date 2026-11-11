@@ -221,6 +221,33 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "https://pay.example.com/bill", @recurring_transaction.reload.payment_url
   end
 
+  test "update saves and clears a bank reference" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711" } }
+    assert_equal "VN 4711", @recurring_transaction.reload.bank_reference
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "" } }
+    assert_nil @recurring_transaction.reload.bank_reference
+  end
+
+  test "update toggles match by reference only" do
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711", reference_only: "1" } }
+    assert @recurring_transaction.reload.reference_only?
+
+    patch recurring_transaction_url(@recurring_transaction),
+          params: { recurring_transaction: { bank_reference: "VN 4711", reference_only: "0" } }
+    assert_not @recurring_transaction.reload.reference_only?
+  end
+
+  test "edit offers the bank reference field" do
+    get edit_recurring_transaction_url(@recurring_transaction), headers: { "Turbo-Frame" => "modal" }
+
+    assert_match "recurring_transaction[bank_reference]", response.body
+    assert_match "recurring_transaction[reference_only]", response.body
+  end
+
   test "new renders the create dialog in a single modal frame" do
     get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
 

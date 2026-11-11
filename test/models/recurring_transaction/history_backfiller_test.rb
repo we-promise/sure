@@ -28,6 +28,64 @@ class RecurringTransaction::HistoryBackfillerTest < ActiveSupport::TestCase
     end
   end
 
+  test "a variable-amount bill with a bank reference keeps its history instead of being pruned" do
+    travel_to Date.new(2026, 8, 10) do
+      series = create_series(name: "CITY WATER", amount: 80, day_offset: -1)
+      series.update!(bank_reference: "VN 4711")
+      create_entry(amount: 131.40, date: Date.new(2026, 7, 9), name: "CITY WATER", notes: "VN 4711 Abschlag")
+      create_entry(amount: 52.10, date: Date.new(2026, 6, 9), name: "CITY WATER", notes: "VN 4711 Abschlag")
+
+      Backfiller.new(@family, months: 4).run!
+
+      assert_includes series.recurring_occurrences.paid.pluck(:due_on), Date.new(2026, 7, 9)
+      # Underpaid, so linked but not closed; the point is that it is not pruned.
+      june = series.recurring_occurrences.find_by!(due_on: Date.new(2026, 6, 9))
+      assert_equal 52.10, june.allocations.sole.allocated_amount.to_f
+    end
+  end
+
+  # Live case: a quarterly insurance whose premium dropped 15% for four quarters
+  # and then came back, every payment carrying the reference.
+  test "a deviating payment identified by the reference is linked and its occurrence is never pruned" do
+    travel_to Date.new(2026, 11, 11) do
+      series = create_series(name: "Home Insurance", amount: 400.00, day_offset: 0)
+      series.update!(bank_reference: "POL-04-123456")
+      series.update_columns(expected_day_of_month: 12, anchor_date: Date.new(2025, 1, 12))
+      RecurringTransaction::FrequencyPreset.apply(series, preset: "quarterly", day_of_month: 12, month_of_year: 1)
+      series.save!
+
+      payments = { Date.new(2025, 4, 23) => 340.00, Date.new(2025, 7, 14) => 340.00, Date.new(2025, 10, 13) => 340.00,
+                   Date.new(2026, 1, 12) => 340.00, Date.new(2026, 4, 13) => 400.00, Date.new(2026, 7, 13) => 400.00,
+                   Date.new(2026, 10, 12) => 400.00 }
+      entries = payments.map { |date, amount| create_entry(amount: amount, date: date, name: "Example Insurer", notes: "POL-04-123456 Beitrag") }
+
+      Backfiller.new(@family, months: 24).run!
+
+      assert_equal 7, RecurringAllocation.where(entry_id: entries.map(&:id)).count
+      assert_includes series.recurring_occurrences.pluck(:due_on), Date.new(2026, 1, 12)
+      assert_equal 7, series.recurring_occurrences.paid.count,
+        "a payment the reference identified settles its quarter whatever its amount"
+      assert_equal 340.00, series.recurring_occurrences.find_by!(due_on: Date.new(2026, 1, 12)).allocations.sole.allocated_amount.to_f
+    end
+  end
+
+  test "two reference payments around one due date both link to that occurrence" do
+    travel_to Date.new(2026, 11, 11) do
+      series = create_series(name: "Example Energy", amount: 150, day_offset: -1)
+      series.update!(bank_reference: "Example")
+      RecurringTransaction::OccurrenceGenerator.new(series).backfill!(from: Date.new(2026, 5, 1))
+      # Due on the 10th: both payments are nearest to the July occurrence.
+      first = create_entry(amount: 160.00, date: Date.new(2026, 7, 9), name: "Example Energy", notes: "Example Abschlag")
+      second = create_entry(amount: 140.00, date: Date.new(2026, 7, 12), name: "Example Energy", notes: "Example Abschlag")
+
+      Backfiller.new(@family, months: 8).run!
+
+      allocations = RecurringAllocation.where(entry_id: [ first.id, second.id ])
+      assert_equal 2, allocations.count, "neither payment of the cycle may be dropped"
+      assert_equal 1, allocations.distinct.count(:recurring_occurrence_id)
+    end
+  end
+
   test "running twice is byte-identical" do
     travel_to Date.new(2026, 8, 10) do
       series = create_series(name: "CITY WATER", amount: 80, day_offset: -1)
@@ -101,9 +159,10 @@ class RecurringTransaction::HistoryBackfillerTest < ActiveSupport::TestCase
       )
     end
 
-    def create_entry(amount:, date:, name:)
+    def create_entry(amount:, date:, name:, notes: nil)
       @account.entries.create!(
         date: date,
+        notes: notes,
         amount: amount,
         currency: "USD",
         name: name,

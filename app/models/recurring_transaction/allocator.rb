@@ -105,7 +105,17 @@ class RecurringTransaction
     def allocate_matched!(entry:, state:, confidence:, signals:)
       occurrence.with_lock do
         with_entry_lock(entry) do
-          allocated, source_amount, source_currency = resolve_amounts(nil, entry)
+          # A payment the series' bank reference identified is the bill's own
+          # whatever it amounted to, so it is recorded at what was really paid
+          # instead of being capped at what the cycle still needed.
+          whole_payment = signals.to_h.with_indifferent_access[:reference].present? && entry.currency == occurrence.currency
+
+          # A suggestion pins nothing, so a confirmed reference payment replaces any
+          # it already has (a leftover from an earlier run) rather than being blocked
+          # by the capacity it holds or by the unique index.
+          RecurringAllocation.where(entry_id: entry.id, state: "suggested").destroy_all if whole_payment && state == "confirmed"
+
+          allocated, source_amount, source_currency = resolve_amounts(whole_payment ? entry_capacity(entry, entry.amount.abs) : nil, entry)
           return nil unless allocated.positive?
 
           guard_entry_capacity!(entry, source_amount)
@@ -220,6 +230,10 @@ class RecurringTransaction
 
         confirmed = occurrence.allocations.confirmed.to_a
         return false if confirmed.empty?
+
+        # Identified by the series' bank reference: that is the cycle's payment
+        # whatever it amounted to, under- or overpaid.
+        return true if confirmed.any? { |allocation| allocation.match_signals.to_h["reference"].present? }
 
         total = confirmed.sum(&:allocated_amount)
 

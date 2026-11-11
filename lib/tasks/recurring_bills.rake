@@ -48,3 +48,35 @@ namespace :recurring do
     end
   end
 end
+
+namespace :recurring do
+  diagnose = lambda do |bill, months|
+    found = false
+    Family.find_each do |family|
+      next if family.recurring_transactions_disabled?
+
+      begin
+        puts RecurringTransaction::ReferenceDiagnostics.new(family, bill, months: months || 12).report
+        found = true
+      rescue ArgumentError
+        next
+      end
+    end
+
+    abort "no bill with id, name or bank reference #{bill.inspect}" unless found
+  end
+
+  desc "Read-only: explain per payment why it is or is not linked to a bill. BILL is a recurring transaction id or its bank reference; MONTHS defaults to 12."
+  task :diagnose_reference, [ :bill, :months ] => :environment do |_task, args|
+    abort "usage: rake recurring:diagnose_reference[<bill id or bank reference>,<months>]" if args[:bill].blank?
+
+    diagnose.call(args[:bill], args[:months])
+  end
+
+  desc "Read-only: like diagnose_reference, for a bill without a bank reference (a recurring transfer, say): every payment on its account with its amount. BILL is a recurring transaction id, its name or its bank reference; MONTHS defaults to 12."
+  task :diagnose_series, [ :bill, :months ] => :environment do |_task, args|
+    abort "usage: rake recurring:diagnose_series[<bill id or name>,<months>]" if args[:bill].blank?
+
+    diagnose.call(args[:bill], args[:months])
+  end
+end

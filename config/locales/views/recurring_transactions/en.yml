@@ -107,6 +107,11 @@ en:
       payment_url_label: Payment link
       payment_url_placeholder: bank.example.com/pay
       payment_url_hint: Where you go to pay this bill. Opens in a new tab from your recurring and upcoming lists.
+      bank_reference_label: Bank reference
+      bank_reference_placeholder: Contract or customer number
+      reference_only_label: Match by reference only
+      reference_only_hint: Ignore the bill's name and the payee; only payments whose note contains the reference match. Needs a bank reference.
+      bank_reference_hint: A stable token from the payment note (Verwendungszweck). Payments on this account whose note contains it match this bill whatever the amount or date, unless the payment carries a different merchant than a merchant-bound bill. Use something distinctive, at least 3 characters.
       autopay_label: Pays automatically
       autopay_hint: Keep it on your bills list, but stop treating it as something to do.
       more_options: More options

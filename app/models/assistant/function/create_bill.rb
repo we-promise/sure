@@ -50,7 +50,9 @@ class Assistant::Function::CreateBill < Assistant::Function
         category_name: { type: "string", description: "Exact category name from get_categories." },
         autopay: { type: "boolean" },
         payment_url: { type: "string", description: "Where this bill gets paid." },
-        notes: { type: "string" }
+        notes: { type: "string" },
+        bank_reference: { type: "string", description: BANK_REFERENCE_DESCRIPTION },
+        reference_only: { type: "boolean", description: REFERENCE_ONLY_DESCRIPTION }
       }
     )
   end
@@ -85,7 +87,9 @@ class Assistant::Function::CreateBill < Assistant::Function
         account_id: account&.id,
         payment_url: params["payment_url"],
         autopay: autopay,
-        notes: params["notes"]
+        notes: params["notes"],
+        bank_reference: params["bank_reference"],
+        reference_only: params["reference_only"]
       }
     ).build
 
