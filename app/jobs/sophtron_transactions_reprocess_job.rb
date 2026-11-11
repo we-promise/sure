@@ -10,26 +10,34 @@ class SophtronTransactionsReprocessJob < ApplicationJob
 
   queue_as :medium_priority
 
+  SYNC_WAIT = 30.seconds
+
   # A transaction that failed to save keeps its old sign, and no other sync
-  # retries it for a manual-sync card.
+  # retries it for a manual-sync card. Once retries run out, the transactions
+  # that were re-signed still get a fresh calculation, behind the same guard.
   retry_on IncompleteReprocess, wait: :polynomially_longer, attempts: 5 do |job, error|
-    job.record_failure(error)
-    job.account&.sync_later
+    job.record_failure(error, "Failed to re-sign Sophtron transactions after a sign convention change")
+    job.class.perform_later(job.arguments.first, reprocess: false)
   end
 
   # A running sync may have read the amounts before they were re-signed, and
-  # sync_later would join it rather than start a fresh calculation.
-  retry_on AccountSyncInProgress, wait: 30.seconds, attempts: 20 do |job, _error|
-    job.account&.sync_later
+  # sync_later would join it rather than start a fresh calculation. sync_later
+  # only joins a sync for Sync::VISIBLE_FOR after it was created, so these
+  # retries outlast the guard, and running out of them means something else
+  # is wrong; it is logged rather than joined.
+  retry_on AccountSyncInProgress, wait: SYNC_WAIT, attempts: (Sync::VISIBLE_FOR / SYNC_WAIT).ceil + 2 do |job, error|
+    job.record_failure(error, "Gave up waiting for a running sync after re-signing Sophtron transactions")
   end
 
-  def perform(sophtron_account)
+  def perform(sophtron_account, reprocess: true)
     @sophtron_account = sophtron_account
     return unless account.present?
 
-    result = SophtronAccount::Transactions::Processor.new(sophtron_account).process
-    unless result[:success]
-      raise IncompleteReprocess, "#{result[:failed]} of #{result[:total]} Sophtron transactions could not be re-signed"
+    if reprocess
+      result = SophtronAccount::Transactions::Processor.new(sophtron_account).process
+      unless result[:success]
+        raise IncompleteReprocess, "#{result[:failed]} of #{result[:total]} Sophtron transactions could not be re-signed"
+      end
     end
 
     raise AccountSyncInProgress if account.syncs.visible.where(status: "syncing").exists?
@@ -41,11 +49,11 @@ class SophtronTransactionsReprocessJob < ApplicationJob
     sophtron_account&.current_account
   end
 
-  def record_failure(error)
+  def record_failure(error, message)
     DebugLogEntry.capture(
       category: "provider_sync_error",
       level: "error",
-      message: "Failed to re-sign Sophtron transactions after a sign convention change",
+      message: message,
       source: self.class.name,
       provider_key: "sophtron",
       family: account&.family,

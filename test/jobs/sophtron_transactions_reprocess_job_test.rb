@@ -55,6 +55,33 @@ class SophtronTransactionsReprocessJobTest < ActiveJob::TestCase
     end
   end
 
+  test "after retries run out, the follow-up sync still waits for a running sync" do
+    SophtronAccount::Transactions::Processor.any_instance.stubs(:process)
+      .returns({ success: false, total: 1, imported: 0, failed: 1, errors: [] })
+    running = @account.syncs.create!(status: "syncing")
+    Account.any_instance.expects(:sync_later).never
+
+    perform_enqueued_jobs(only: SophtronTransactionsReprocessJob) do
+      SophtronTransactionsReprocessJob.perform_later(@sophtron_account)
+    end
+
+    assert_equal [ running ], @account.syncs.reload.to_a
+    assert_equal 2, DebugLogEntry.where(provider_key: "sophtron", account: @account).count
+  end
+
+  test "a sync-only run does not re-sign transactions" do
+    SophtronAccount::Transactions::Processor.expects(:new).never
+    Account.any_instance.expects(:sync_later).once
+
+    SophtronTransactionsReprocessJob.perform_now(@sophtron_account, reprocess: false)
+  end
+
+  test "waiting for a running sync outlasts the window in which sync_later would join it" do
+    attempts = (Sync::VISIBLE_FOR / SophtronTransactionsReprocessJob::SYNC_WAIT).ceil + 2
+
+    assert_operator (attempts - 1) * SophtronTransactionsReprocessJob::SYNC_WAIT, :>, Sync::VISIBLE_FOR
+  end
+
   test "waits for a running account sync instead of joining it" do
     running = @account.syncs.create!(status: "syncing")
 
