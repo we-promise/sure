@@ -225,6 +225,17 @@ class SharesightAccount::CashRouterTest < ActiveSupport::TestCase
     assert_linked offset("trade_1"), ing.entries.find_by!(external_id: "sharesight_counterpart_#{@sharesight_account.id}_trade_1")
   end
 
+  test "an account that lost a counterpart is reported even after it is linked to a bank feed" do
+    process
+    ing = @family.accounts.create!(name: "ING Savings", balance: 0, currency: "AUD", accountable: Depository.new)
+    @sharesight_account.update!(settlement_account: ing)
+    bank_fed!
+
+    result = process
+
+    assert_includes result[:settlement_accounts], @bank
+  end
+
   test "untracked cash is offset without a counterpart anywhere" do
     @sharesight_account.update!(cash_mode: "untracked", settlement_account: nil)
 

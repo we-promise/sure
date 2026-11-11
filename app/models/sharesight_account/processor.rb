@@ -5,8 +5,15 @@ class SharesightAccount::Processor
 
   attr_reader :sharesight_account
 
+  # Settlement accounts the router booked counterparts into, or removed stale
+  # counterparts from, on this run — kept even when a later step fails, since
+  # the router's writes are already committed and those balances still need
+  # their own sync.
+  attr_reader :touched_accounts
+
   def initialize(sharesight_account)
     @sharesight_account = sharesight_account
+    @touched_accounts = []
   end
 
   def process
@@ -17,7 +24,11 @@ class SharesightAccount::Processor
     activities = SharesightAccount::ActivitiesProcessor.new(sharesight_account)
     result = activities.process
     router = SharesightAccount::CashRouter.new(sharesight_account, activities.movements)
-    router.route
+    begin
+      router.route
+    ensure
+      @touched_accounts = router.touched_accounts.to_a
+    end
     SharesightAccount::FundingMirror.new(sharesight_account).mirror
 
     update_account_balance!

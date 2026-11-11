@@ -52,8 +52,9 @@ class SharesightItem < ApplicationRecord
       next unless account
       next if account.pending_deletion? || account.disabled?
 
+      processor = SharesightAccount::Processor.new(sharesight_account)
       begin
-        result = SharesightAccount::Processor.new(sharesight_account).process
+        result = processor.process
         results << { sharesight_account_id: sharesight_account.id, success: true, result: result }
       rescue => e
         DebugLogEntry.capture(
@@ -65,19 +66,38 @@ class SharesightItem < ApplicationRecord
           provider_key: "sharesight",
           account_provider_id: sharesight_account.account_provider&.id
         )
-        results << { sharesight_account_id: sharesight_account.id, success: false, error: e.message }
+        # The router's writes are already committed, so the settlement
+        # accounts it touched still need their own sync even though this
+        # account failed — a retry can't rediscover a counterpart that was
+        # already removed.
+        results << {
+          sharesight_account_id: sharesight_account.id,
+          success: false,
+          error: e.message,
+          settlement_accounts: processor.touched_accounts
+        }
       end
     end
   end
 
   def schedule_account_syncs(parent_sync: nil, window_start_date: nil, window_end_date: nil, extra_accounts: [])
-    (accounts + Array(extra_accounts)).uniq.reject { |account| account.pending_deletion? || account.disabled? }.each_with_object([]) do |account, results|
+    portfolio_accounts = accounts
+    portfolio_account_ids = portfolio_accounts.map(&:id).to_set
+    (portfolio_accounts + Array(extra_accounts)).uniq.reject { |account| account.pending_deletion? || account.disabled? }.each_with_object([]) do |account, results|
       begin
-        account.sync_later(
-          parent_sync: parent_sync,
-          window_start_date: window_start_date,
-          window_end_date: window_end_date
-        )
+        if portfolio_account_ids.include?(account.id)
+          account.sync_later(
+            parent_sync: parent_sync,
+            window_start_date: window_start_date,
+            window_end_date: window_end_date
+          )
+        else
+          # Settlement accounts the router just changed can carry entries
+          # dated before this sync's window, so they sync over the full range
+          # instead of the window — otherwise the pre-window change never
+          # reaches their balance.
+          account.sync_later(parent_sync: parent_sync)
+        end
         results << { account_id: account.id, success: true }
       rescue => e
         DebugLogEntry.capture(
