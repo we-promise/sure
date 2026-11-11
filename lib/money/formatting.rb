@@ -147,7 +147,7 @@ module Money::Formatting
       case [ currency.iso_code, locale_sym ]
       when [ "EUR", :pt ]
         { delimiter: ".", separator: ",", format: "%u %n" }
-      when [ "EUR", :en ], [ "EUR", :en_IE ]
+      when [ "EUR", :en ], [ "EUR", :"en-IE" ], [ "EUR", :en_IE ]
         { delimiter: ",", separator: "." }
       else
         {}
