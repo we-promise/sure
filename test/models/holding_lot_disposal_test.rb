@@ -338,6 +338,27 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  # Two sales on one day replay in the order they were entered, so a lot the
+  # first one emptied is gone before the second runs. Offering it would let
+  # the second name a lot the replay can no longer find, and the book would
+  # fall back to oldest-first without saying so.
+  test "a lot an earlier sale on the same day emptied is not offered" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMS", 30)
+      first = trade(security, 10, 20, 2)
+      second = trade(security, 10, 22, 3)
+      first_sale = trade(security, -10, 25, 5)
+      later_sale = trade(security, -5, 25, 5)
+      entered_in_order(first_sale, later_sale)
+      materialize(:forward)
+
+      assert_equal [ first, second ], Trade.find(first_sale.entryable_id).lot_choices.to_a, "both lots are open when the first sale runs"
+      assert_equal [ second ], Trade.find(later_sale.entryable_id).lot_choices.to_a, "the lot the earlier sale that day emptied was offered"
+      assert_not Trade.find(later_sale.entryable_id).update(lot_source_entry: first)
+    end
+  end
+
   # An opening lot has no acquisition, and an empty one (a clamp records
   # one) must not empty the list with it.
   test "an empty opening lot leaves the sale's choices alone" do

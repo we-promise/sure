@@ -137,9 +137,12 @@ class Holding < ApplicationRecord
   SQL
 
   # #calculate_avg_cost for every holding given, in one query: the same
-  # trades, rates, fees and internal-movement rule, read through the same SQL
-  # (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals), so
-  # the batch cannot answer differently from the holding on its own. Holdings
+  # trades, rates, fees, internal-movement and lot rules (a user-costed lot
+  # counts at its cost; a clamped position has none), read through the same
+  # SQL (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals),
+  # so the batch cannot answer differently from the holding on its own.
+  # Holdings in accounts that sell by fifo read their open lots instead, all
+  # of them together through .fifo_avg_costs, in a few more queries. Holdings
   # with a stored cost basis are skipped, since #avg_cost never reaches the
   # fallback for them. So are holdings with unsaved changes, unsaved ones
   # included: the query reads the stored row, which is not what they hold.
@@ -152,17 +155,44 @@ class Holding < ApplicationRecord
       .joins("JOIN entries ON entries.account_id = holdings.account_id AND entries.entryable_type = 'Trade' AND entries.date <= holdings.date")
       .joins("JOIN trades ON trades.id = entries.entryable_id AND trades.security_id = holdings.security_id AND trades.qty > 0")
       .joins(avg_cost_rates_join)
+      .joins(<<~SQL.squish)
+        LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
+          AND lots.source_entry_id = entries.id
+          AND lots.manual_total_cost IS NOT NULL
+      SQL
       .group("holdings.id")
       .pluck(
         Arel.sql("holdings.id"),
-        Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?))", Trade::INTERNAL_MOVEMENT_LABELS ])),
-        *avg_cost_totals_sql
+        Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?) AND lots.id IS NULL)", Trade::INTERNAL_MOVEMENT_LABELS ])),
+        Arel.sql(<<~SQL.squish),
+          BOOL_OR(EXISTS (
+            SELECT 1 FROM holding_lots clamped_lots
+            WHERE clamped_lots.account_id = holdings.account_id
+              AND clamped_lots.security_id = holdings.security_id
+              AND clamped_lots.clamped
+          ))
+        SQL
+        Arel.sql("BOOL_OR(accounts.cost_basis_method = 'fifo')"),
+        *avg_cost_totals_sql(lots: true)
       )
       .index_by(&:first)
 
+    # The account decides fifo. A holding with no row (no buy dated on or
+    # before it, as with a provider row that predates its trade) still reads
+    # its lots, so its account is looked up; nothing extra runs otherwise.
+    unrowed = pending.reject { |holding| rows.key?(holding.id) }
+    fifo_account_ids = unrowed.any? ? Account.where(id: unrowed.map(&:account_id).uniq, cost_basis_method: "fifo").pluck(:id).to_set : Set.new
+    lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id][3] : fifo_account_ids.include?(holding.account_id) })
+
     pending.each do |holding|
-      _id, internal_movement, total_cost, total_qty, rate_missing = rows[holding.id]
-      value = avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency) unless internal_movement
+      _id, internal_movement, clamped, _fifo, total_cost, total_qty, rate_missing = rows[holding.id]
+      value = if clamped
+        nil
+      elsif lot_costs.key?(holding.id)
+        lot_costs[holding.id]
+      elsif !internal_movement
+        avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency)
+      end
       holding.preload_avg_cost(value)
     end
   end
