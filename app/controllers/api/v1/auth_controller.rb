@@ -13,6 +13,15 @@ module Api
       rescue_from SsoIdentityBlock::BlockedIdentity, with: :render_removed_identity
 
       def signup
+        # RegistrationsController refuses to register a user while the instance
+        # is closed. That gate is declared `if: :self_hosted?`, but
+        # onboarding_state only ever reaches "closed" on a self-hosted
+        # instance, so checking the state alone matches its effect.
+        if Setting.onboarding_state == "closed"
+          render json: { error: "Registration is currently closed" }, status: :forbidden
+          return
+        end
+
         # Check if invite code is required
         if invite_code_required? && params[:invite_code].blank?
           render json: { error: "Invite code is required" }, status: :forbidden
@@ -26,7 +35,9 @@ module Api
         end
 
         # Validate password
-        password_errors = validate_password(params[:user][:password])
+        # user_signup_params requires the `user` key; a missing payload raises
+        # ParameterMissing, which BaseController renders as a 400.
+        password_errors = validate_password(user_signup_params[:password])
         if password_errors.any?
           render json: { errors: password_errors }, status: :unprocessable_entity
           return
@@ -74,6 +85,11 @@ module Api
 
       def login
         user = User.find_by(email: params[:email])
+
+        unless local_login_permitted_for?(user)
+          render json: { error: "Local login is disabled. Please use SSO." }, status: :forbidden
+          return
+        end
 
         if user&.authenticate(params[:password])
           unless user.active?
@@ -127,6 +143,29 @@ module Api
         else
           render json: { error: "Invalid email or password" }, status: :unauthorized
         end
+      end
+
+      # Lists the providers GET /auth/mobile/:provider accepts, so clients can
+      # render one button per provider. Only display fields are exposed; the
+      # provider config also carries client secrets. Labels fall back the same
+      # way as the web sign-in page.
+      def sso_providers
+        providers = Rails.configuration.x.auth.sso_providers.map do |provider|
+          name = provider[:name].to_s
+          strategy = provider[:strategy].to_s
+          id = provider[:id].to_s
+          default_label = if id == "google" || strategy == "google_oauth2"
+            I18n.t("sessions.new.google_auth_connect")
+          elsif id.present?
+            I18n.t("sessions.new.#{id}", default: name.titleize)
+          else
+            name.titleize
+          end
+
+          { name: name, strategy: strategy, label: provider[:label].presence || default_label }
+        end
+
+        render json: { providers: providers }
       end
 
       def sso_exchange
@@ -287,7 +326,7 @@ module Api
             invitation&.update!(accepted_at: Time.current)
 
             # Joining an existing family via invitation must honor the family's
-            # default sharing policy, matching Invitation#accept_for, so a mobile
+            # default sharing policy, matching token registration, so a mobile
             # SSO invitee sees the accounts the family shares by default.
             user.family.auto_share_existing_accounts_with(user) if invitation.present?
 
@@ -391,6 +430,14 @@ module Api
       end
 
       private
+
+        # Mirrors SessionsController#create: with SSO-only mode on, the only
+        # local sign-in allowed is a super admin using the emergency override.
+        def local_login_permitted_for?(user)
+          return true if AuthConfig.local_login_enabled?
+
+          AuthConfig.local_admin_override_enabled? && user&.super_admin?
+        end
 
         def user_signup_params
           params.require(:user).permit(:email, :password, :first_name, :last_name)

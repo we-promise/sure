@@ -78,7 +78,9 @@ class Assistant::Function::ApplyRule < Assistant::Function
     current = nil
     unchanged = false
     rule.with_lock do
-      current = rule.affected_resource_count
+      # Not affected_resource_count, which reads a timeout as 0: a rule
+      # previewed with no matches would then compare equal and be activated.
+      current = rule.matching_scope.count
       unchanged = definition_digest(rule) == token["definition"] && current == token["match_count"]
       rule.update!(active: true) if unchanged
     end
@@ -92,6 +94,16 @@ class Assistant::Function::ApplyRule < Assistant::Function
       )
     end
 
+    # Activating an email rule records its current matches as delivered. If that
+    # timed out the rule was left off, and running it now would email them all.
+    if rule.notification_baseline_timed_out?
+      return error(
+        "baseline_timed_out",
+        "The rule was not activated: checking which transactions it already matches took too long, and without that check its email action would send all of them. Simplify its conditions, preview it again and retry.",
+        rule: serialize_rule(rule.reload)
+      )
+    end
+
     rule.apply_later(ignore_attribute_locks: override_locked)
 
     {
@@ -101,5 +113,7 @@ class Assistant::Function::ApplyRule < Assistant::Function
       override_locked: override_locked,
       message: "Rule activated and queued to apply to #{current} transactions. It will also run on future syncs."
     }
+  rescue Rule::SafeRegex::TimeoutError
+    regex_timeout_error(rule, "Nothing was applied.")
   end
 end

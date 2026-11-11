@@ -3,14 +3,57 @@ en:
   rules:
     no_action: No Action
     no_condition: No condition
+    notification_baseline_timed_out: This rule is still off. Checking which transactions it already matches took too long, and without that check it would email all of them. Simplify its conditions, then turn it on again.
     category_rule_cta:
       close: Close
       create_rule: Create rule
-      description: You can create a rule to automatically categorize transactions like this one
-      dont_show_again: Don't show this again
-      hide_for_today: Hide for today
-      hide_for_today_hint: "Hide for today pauses these suggestions for 24 hours."
+      description: "Always categorize similar transactions?"
+      not_today: "Not today"
+      turn_off_suggestions: "Turn off rule suggestions"
       message: Updated to %{category_name}
+    classifier_rules:
+      category_classifier: Category classifier
+      merchant_matcher: Merchant matcher
+    filters:
+      search_label: Search rules
+      search_placeholder: Search name, conditions and actions
+      reset: Reset
+      button: Filter
+      done: Done
+      active_label: Active filters
+      remove: "Remove filter %{filter}"
+      status:
+        label: Status
+        all: All statuses
+        active: Active
+        inactive: Inactive
+      action_type:
+        label: Action
+        all: All actions
+      condition_type:
+        label: Condition
+        all: All conditions
+      account:
+        label: Account
+        all: All accounts
+      group:
+        label: Group
+        all: All groups
+        none: No group
+    group:
+      rules_count:
+        one: 1 rule
+        other: "%{count} rules"
+      inactive_count:
+        one: 1 inactive
+        other: "%{count} inactive"
+      empty: No rules in this group yet. Choose the group in a rule's form.
+      activate_all: Turn on all rules
+      deactivate_all: Turn off all rules
+      rename: Rename
+      delete: Delete group
+      delete_confirm_title: Delete group "%{name}"?
+      delete_confirm_body: The rules stay where they are, without a group. No rule is deleted.
     rule:
       edit: Edit
       re_apply_rule: Re-apply rule
@@ -38,13 +81,25 @@ en:
       then: THEN
       stop_processing_label: Stop processing further rules
       stop_processing_description: Rules further down the list don't change transactions this rule matches.
+      group_label: Group (optional)
+      group_select_label: Group
+      no_group: No group
+      new_group_label: Or new group
+      new_group_placeholder: Name of a new group
+      group_hint: Groups only arrange the list. A rule in a group runs where the group stands in the list.
     index:
       page_title: Rules
       delete_all_rules: Delete all rules
       new_rule: New rule
       ai_cost_warning: AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
       rules_heading: Rules
-      order_hint: Rules run from top to bottom. Once a rule sets a field on a transaction, rules further down don't change that field. Tags are added by every matching rule. Drag rules to change the order.
+      order_hint: Rules run from top to bottom, including the rules inside groups. Once a rule sets a field on a transaction, rules further down don't change that field. Tags are added by every matching rule. Drag rules and groups to change the order.
+      new_group: New group
+      reorder_group: "Move group %{name}. Press Enter or Space to grab it, then use the arrow keys to move it."
+      filters:
+        no_matches: No rules match the search or filters.
+        drag_disabled: Sorting is off while a search or filter is active. Reset them to change the order.
+      fold_rule: "Fold or unfold rule %{name}"
       reorder_rule: "Move rule %{name}. Press Enter or Space to grab it, then use the arrow keys to move it."
       no_rules_title: No rules yet
       no_rules_description: Set up rules to perform actions to your transactions and other data on every account sync.
@@ -66,6 +121,22 @@ en:
     actions:
       to_label: to
       value_placeholder: Enter a value
+      split:
+        type_fixed: Fixed amount
+        type_percentage: Percentage
+        type_label: Split type
+        add_split: Add split
+        name_placeholder: Split name
+        share_label: Split amount or percentage
+        category_label: Split category
+        merchant_label: Split merchant
+        tags_label: "Split tags"
+        remove_split: "Remove split"
+        hint: "Fixed splits are subtracted first, as exact amounts. Percentage splits then divide whatever's left. If every split here uses a fixed amount, also add a condition that matches an exact transaction amount (e.g. Amount = 42.00), since every matching transaction needs the same total for the fixed amounts to add up. A split rule can't have other actions."
+        fixed_summary_label: fixed
+        summary:
+          one: "%{count} split"
+          other: "%{count} splits"
     update:
       success: Rule updated
     destroy:
@@ -121,6 +192,9 @@ en:
       operators:
         contains: Contains
         does_not_contain: Does not contain
+        starts_with: Starts with
+        ends_with: Ends with
+        matches_regex: Matches regex
         equal_to: Equal to
         is_equal_to: Is equal to
         not_equal_to: Not equal to

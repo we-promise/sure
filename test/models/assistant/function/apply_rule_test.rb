@@ -31,6 +31,27 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal 1, @rule.rule_runs.count
   end
 
+  # Activating a rule with an email action records its current matches as
+  # delivered. If that times out the rule stays off (Rule#seed_notification_baseline),
+  # and queuing the run anyway would email every past match.
+  test "an email rule whose baseline times out on activation stays off and is not queued" do
+    create_transaction(name: "ZXQ Coffee Shop")
+    @rule.actions.create!(action_type: "send_email_notification")
+    NotificationDelivery.where(rule: @rule).delete_all
+    token = preview_token
+    Rule.any_instance.stubs(:matching_transaction_ids).raises(Rule::SafeRegex::TimeoutError)
+
+    result = nil
+    assert_no_enqueued_jobs only: RuleJob do
+      result = @fn.call("rule_id" => @rule.id, "preview_token" => token)
+    end
+
+    assert_not result[:success]
+    assert_equal "baseline_timed_out", result[:error]
+    assert_not @rule.reload.active
+    assert_equal 0, NotificationDelivery.where(rule: @rule).count
+  end
+
   test "the match count from get_rules alone cannot apply a rule" do
     create_transaction(name: "ZXQ Coffee Shop")
     match_count = Assistant::Function::GetRules.new(@user).call("rule_id" => @rule.id)[:rule][:match_count]
@@ -147,6 +168,41 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
 
     @rule.actions.create!(action_type: "auto_categorize")
     assert_equal "ai_action", @fn.call("rule_id" => @rule.id, "preview_token" => "x")[:error]
+  end
+
+  # The match count reads as zero when the pattern times out, so the token no
+  # longer agrees and the stale branch previews the rule again. That preview
+  # times out too: nothing is applied, and the error says why.
+  test "a pattern that times out at apply time applies nothing and reports a regex_timeout error" do
+    create_transaction(name: "ZXQ Coffee Shop")
+    token = preview_token
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = nil
+    assert_no_enqueued_jobs only: RuleJob do
+      result = @fn.call("rule_id" => @rule.id, "preview_token" => token)
+    end
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_match "Nothing was applied", result[:message]
+    assert_not @rule.reload.active
+  end
+
+  # A rule matching nothing is previewed with a match count of 0. A timeout at
+  # apply time must not read as that same 0 and activate the rule.
+  test "a rule previewed with no matches that times out at apply time is not activated" do
+    preview = Assistant::Function::PreviewRule.new(@user).call("rule_id" => @rule.id)[:preview]
+    assert_equal 0, preview[:match_count]
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = nil
+    assert_no_enqueued_jobs only: RuleJob do
+      result = @fn.call("rule_id" => @rule.id, "preview_token" => preview[:preview_token])
+    end
+
+    assert_equal "regex_timeout", result[:error]
+    assert_not @rule.reload.active
   end
 
   private

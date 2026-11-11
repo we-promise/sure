@@ -13,6 +13,7 @@ The helper always injects:
 - optional REDIS_URL + REDIS_PASSWORD (includeRedis=true and helper can compute a Redis URL)
 - optional HTTPS_PROXY / HTTP_PROXY / NO_PROXY (pipelock.enabled=true)
 - rails.settings / rails.extraEnv / rails.extraEnvVars
+- optional email SMTP settings
 - optional additional per-workload env / envFrom blocks via extraEnv / extraEnvFrom.
 */}}
 
@@ -97,6 +98,45 @@ The helper always injects:
 {{- range $k, $v := $ctx.Values.rails.settings }}
 - name: {{ $k }}
   value: {{ $v | quote }}
+{{- end }}
+{{- $railsExtraEnv := (default (dict) $ctx.Values.rails.extraEnv) -}}
+{{- $railsSettings := (default (dict) $ctx.Values.rails.settings) -}}
+{{- $email := (default (dict) $ctx.Values.email) -}}
+{{- if and $email.sender (not (or (hasKey $railsExtraEnv "EMAIL_SENDER") (hasKey $railsSettings "EMAIL_SENDER"))) }}
+- name: EMAIL_SENDER
+  value: {{ $email.sender | quote }}
+{{- end }}
+{{- if and $email.appDomain (not (or (hasKey $railsExtraEnv "APP_DOMAIN") (hasKey $railsSettings "APP_DOMAIN"))) }}
+- name: APP_DOMAIN
+  value: {{ $email.appDomain | quote }}
+{{- end }}
+{{- if and $email.smtpAddress (not (or (hasKey $railsExtraEnv "SMTP_ADDRESS") (hasKey $railsSettings "SMTP_ADDRESS"))) }}
+- name: SMTP_ADDRESS
+  value: {{ $email.smtpAddress | quote }}
+{{- end }}
+{{- if and $email.smtpPort (not (or (hasKey $railsExtraEnv "SMTP_PORT") (hasKey $railsSettings "SMTP_PORT"))) }}
+- name: SMTP_PORT
+  value: {{ $email.smtpPort | quote }}
+{{- end }}
+{{- if and $email.smtpUsername (not (or (hasKey $railsExtraEnv "SMTP_USERNAME") (hasKey $railsSettings "SMTP_USERNAME"))) }}
+- name: SMTP_USERNAME
+  value: {{ $email.smtpUsername | quote }}
+{{- end }}
+{{- $secretValues := (default (dict) $ctx.Values.rails.secret.values) -}}
+{{- if and $ctx.Values.rails.secret.enabled (not $ctx.Values.rails.existingSecret) (hasKey $secretValues "SMTP_PASSWORD") (index $secretValues "SMTP_PASSWORD") (not (or (hasKey $railsExtraEnv "SMTP_PASSWORD") (hasKey $railsSettings "SMTP_PASSWORD"))) }}
+- name: SMTP_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "sure.appSecretName" $ctx }}
+      key: SMTP_PASSWORD
+{{- end }}
+{{- if and (ne (toString $email.smtpTlsEnabled) "") (not (or (hasKey $railsExtraEnv "SMTP_TLS_ENABLED") (hasKey $railsSettings "SMTP_TLS_ENABLED"))) }}
+- name: SMTP_TLS_ENABLED
+  value: {{ $email.smtpTlsEnabled | quote }}
+{{- end }}
+{{- if and (ne (toString $email.smtpTlsSkipVerify) "") (not (or (hasKey $railsExtraEnv "SMTP_TLS_SKIP_VERIFY") (hasKey $railsSettings "SMTP_TLS_SKIP_VERIFY"))) }}
+- name: SMTP_TLS_SKIP_VERIFY
+  value: {{ $email.smtpTlsSkipVerify | quote }}
 {{- end }}
 {{- if $ctx.Values.rails.externalAssistant.enabled }}
 - name: EXTERNAL_ASSISTANT_URL

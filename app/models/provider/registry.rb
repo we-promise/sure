@@ -24,12 +24,15 @@ class Provider::Registry
     # one configured) keeps working. Returns nil when neither is configured —
     # callers guard on that.
     def preferred_llm_provider
-      order = Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
-      order.each do |name|
+      llm_provider_order.each do |name|
         provider = get_provider(name)
         return provider if provider
       end
       nil
+    end
+
+    def llm_provider_order
+      Setting.llm_provider == "anthropic" ? %i[anthropic openai] : %i[openai anthropic]
     end
 
     def plaid_provider_for_region(region)
@@ -84,7 +87,7 @@ class Provider::Registry
         uri_base = ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
         model = ENV["OPENAI_MODEL"].presence || Setting.openai_model
 
-        if uri_base.present? && model.blank?
+        if Provider::Openai.custom_endpoint?(uri_base) && model.blank?
           Rails.logger.error("Custom OpenAI provider configured without a model; please set OPENAI_MODEL or Setting.openai_model")
           return nil
         end

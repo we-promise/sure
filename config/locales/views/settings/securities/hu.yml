@@ -4,33 +4,45 @@ hu:
     securities:
       show:
         disable_mfa: 2FA letiltása
-        disable_mfa_confirm: Biztosan le szeretnéd tiltani a kétlépéses hitelesítést?
-          Ez kevésbé biztonságossá teszi a fiókodat.
+        disable_mfa_confirm: Biztosan le szeretnéd tiltani a kétlépéses hitelesítést? Ez kevésbé biztonságossá teszi a fiókodat.
         enable_mfa: 2FA engedélyezése
-        mfa_enabled_status_html: "A kétlépéses hitelesítés <span class=\"font-medium text-green-600\">engedélyezve</span>"
+        mfa_enabled_status_html: A kétlépéses hitelesítés <span class="font-medium text-green-600">engedélyezve</span>
         mfa_enabled_description: A fiókod egy extra biztonsági réteggel védett.
-        mfa_disabled_status_html: "A kétlépéses hitelesítés <span class=\"font-medium text-red-600\">letiltva</span>"
+        mfa_disabled_status_html: A kétlépéses hitelesítés <span class="font-medium text-red-600">letiltva</span>
         mfa_disabled_description: Engedélyezd a 2FA-t, hogy extra védelmet adj a fiókodnak.
-        mfa_description: Adj egy extra biztonsági réteget a fiókodhoz azzal, hogy bejelentkezéskor
-          kódot kérsz az hitelesítő alkalmazásodtól
+        mfa_description: Adj egy extra biztonsági réteget a fiókodhoz azzal, hogy bejelentkezéskor kódot kérsz az hitelesítő alkalmazásodtól
         mfa_title: Kétlépéses hitelesítés
         webauthn_add: Hozzáférési kulcs vagy biztonsági kulcs hozzáadása
-        webauthn_added: "Hozzáadva: %{date}"
-        webauthn_description: Használj hozzáférési kulcsot, Touch ID-t, Windows Hello-t vagy hardveres
-          biztonsági kulcsot második hitelesítési tényezőként bejelentkezéskor.
+        webauthn_added: 'Hozzáadva: %{date}'
+        webauthn_description: Használj hozzáférési kulcsot, Touch ID-t, Windows Hello-t vagy hardveres biztonsági kulcsot második hitelesítési tényezőként bejelentkezéskor.
         webauthn_empty: Még nincsenek regisztrált hozzáférési kulcsok vagy biztonsági kulcsok.
         webauthn_last_used: Utoljára használva %{time_ago} ezelőtt
         webauthn_name_label: Kulcsnév
+        webauthn_code_label: Hitelesítő- vagy tartalékkód
+        webauthn_code_placeholder: Aktuális hitelesítőkód vagy egy fel nem használt tartalékkód
         webauthn_name_placeholder: MacBook Touch ID, YubiKey stb.
         webauthn_remove: Eltávolítás
-        webauthn_remove_confirm: Biztosan el szeretnéd távolítani ezt a hozzáférési kulcsot vagy
-          biztonsági kulcsot?
-        webauthn_remove_confirm_body: A hozzáférési kulcsot vagy biztonsági kulcsot újra kell regisztrálnod,
-          mielőtt ismét bejelentkezési azonosításra használhatnád.
+        webauthn_remove_confirm: Biztosan el szeretnéd távolítani ezt a hozzáférési kulcsot vagy biztonsági kulcsot?
+        webauthn_remove_confirm_body: A hozzáférési kulcsot vagy biztonsági kulcsot újra kell regisztrálnod, mielőtt ismét bejelentkezési azonosításra használhatnád.
         webauthn_title: Hozzáférési kulcsok és biztonsági kulcsok
-        webauthn_unsupported: Ez a böngésző nem támogatja a hozzáférési kulcsokat és biztonsági
-          kulcsokat.
+        webauthn_unsupported: Ez a böngésző nem támogatja a hozzáférési kulcsokat és biztonsági kulcsokat.
+        page_title: Biztonság
+        sso_title: Kapcsolt fiókok
+        sso_subtitle: Egyszeri bejelentkezési fiókkapcsolatok kezelése
+        sso_disconnect: Leválasztás
+        sso_last_used: Utoljára használva
+        sso_never: Soha
+        sso_no_email: Nincs e-mail cím
+        sso_no_identities: Nincs kapcsolt egyszeri bejelentkezési fiók
+        sso_connect_hint: Jelentkezz ki, majd jelentkezz be egy SSO-szolgáltatóval a fiók összekapcsolásához.
+        sso_confirm_title: Fiók leválasztása?
+        sso_confirm_body: Biztosan le szeretnéd választani a %{provider} fiókodat? Később újra összekapcsolhatod, ha azzal a szolgáltatóval jelentkezel be.
+        sso_confirm_button: Leválasztás
+        sso_warning_message: Ez az egyetlen bejelentkezési módod. Mielőtt leválasztanád, állíts be jelszót a biztonsági beállításokban, különben kizárhatod magad a fiókodból.
   webauthn_credentials:
+    code_already_used: Ezt a kódot már felhasználták. Várd meg a következő kódot a hitelesítő alkalmazásban.
+    invalid_code: Ez a kód érvénytelen. Adj meg egy aktuális kódot a hitelesítő alkalmazásból vagy egy fel nem használt tartalékkódot.
+    rate_limited: Túl sok próbálkozás. Várj egy percet, majd próbáld újra.
     default_name: Biztonsági kulcs
     failure: Nem sikerült menteni a hozzáférési kulcsot vagy biztonsági kulcsot. Kérjük, próbáld újra.
     mfa_required: Engedélyezd a kétlépéses hitelesítést, mielőtt hozzáférési kulcsot vagy biztonsági kulcsot adsz hozzá.

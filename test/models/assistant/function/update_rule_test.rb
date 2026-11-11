@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @user = users(:family_admin)
@@ -16,6 +16,23 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
       conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq coffee" } ],
       actions_attributes: [ { action_type: "set_transaction_category", value: @category.id } ]
     )
+  end
+
+  test "keeps a saved merchant the user can't see when replacing actions" do
+    hidden = ProviderMerchant.create!(name: "ZXQ Hidden Merchant", source: "plaid")
+    private_account = @family.accounts.create!(name: "Private", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
+    create_transaction(account: private_account, name: "ZXQ hidden", merchant: hidden)
+    @rule.actions.create!(action_type: "set_transaction_merchant", value: hidden.id)
+    fn = Assistant::Function::UpdateRule.new(users(:family_member))
+    assert_not_includes @family.assignable_merchants_for(users(:family_member)).ids, hidden.id
+
+    result = fn.call("rule_id" => @rule.id, "actions" => [
+      { "action_type" => "set_transaction_category", "value" => @category.id },
+      { "action_type" => "set_transaction_merchant", "value" => hidden.id }
+    ])
+
+    assert result[:success], result.inspect
+    assert_equal hidden.id, @rule.reload.actions.find_by!(action_type: "set_transaction_merchant").value
   end
 
   test "renaming keeps an active rule active" do
@@ -96,4 +113,58 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
     assert result[:success], result.inspect
     assert result.dig(:preview, :preview_token).present?
   end
+
+  test "resending an unchanged email action keeps the baseline, so a pending match is still emailed" do
+    old = create_transaction(name: "ZXQ Coffee Old").transaction
+    rule = email_rule
+    assert_equal [ old.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+    pending = create_transaction(name: "ZXQ Coffee New").transaction
+
+    result = @fn.call("rule_id" => rule.id, "actions" => [ { "action_type" => "send_email_notification" } ])
+
+    assert result[:success], result.inspect
+    assert_equal [ old.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+    # update_rule leaves a changed rule inactive, and apply_rule switches it back
+    # on before running it. Do the same here without callbacks, so only the
+    # baseline update_rule left is under test.
+    rule.update_columns(active: true)
+    assert_enqueued_with(job: RuleEmailNotificationJob, args: [ rule.id, [ pending.id ] ]) do
+      Rule.find(rule.id).apply
+    end
+  end
+
+  test "replacing a rule's actions with an email action records the baseline" do
+    old = create_transaction(name: "ZXQ Coffee Old").transaction
+
+    result = @fn.call("rule_id" => @rule.id, "actions" => [ { "action_type" => "send_email_notification" } ])
+
+    assert result[:success], result.inspect
+    assert_equal [ old.id ], NotificationDelivery.where(rule: @rule).pluck(:transaction_id)
+    assert_no_enqueued_jobs(only: RuleEmailNotificationJob) { Rule.find(@rule.id).apply }
+  end
+
+  test "a pattern that times out in the preview reports the updated rule with a regex_timeout error" do
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = @fn.call("rule_id" => @rule.id, "conditions" => [
+      { "condition_type" => "transaction_name", "operator" => "matches_regex", "value" => "zxq" }
+    ])
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_match "updated", result[:message]
+    assert_equal [ "zxq" ], @rule.reload.conditions.map(&:value)
+    assert_not result[:rule][:active]
+  end
+
+  private
+    def email_rule
+      @family.rules.create!(
+        name: "Coffee alerts",
+        resource_type: "transaction",
+        active: true,
+        conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq coffee" } ],
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
+    end
 end

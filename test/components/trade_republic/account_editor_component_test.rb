@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
+  include TradeRepublicSessionTestHelper
+
   # The account fixtures ship unlinked (no account_providers rows); pairing
   # each with a Sure account puts an item into the fully set up state.
   def link_all_accounts(item)
@@ -170,5 +172,35 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     render_inline(TradeRepublic::AccountEditorComponent.new(items: [], family: family, new_item: failed_item))
 
     assert_selector "input[name='trade_republic_item[phone_number]'][value='+491701234567']"
+  end
+
+  test "a connected card shows when its login expires" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 5.hours.from_now))
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
+
+    assert_text I18n.t("settings.providers.trade_republic_panel.session_expires_in", time: "about 5 hours", at: I18n.l(item.session_expires_at, format: :short))
+  end
+
+  test "a card whose session expired asks to log in again" do
+    item = trade_republic_items(:configured_item)
+    item.update!(session_blob: trade_republic_session_blob(expires_at: 1.minute.ago))
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
+
+    assert_selector "p.text-destructive", text: I18n.t("settings.providers.trade_republic_panel.requires_update")
+    assert_no_text I18n.t("settings.providers.trade_republic_panel.status_configured_prefix")
+  end
+
+  test "a card whose QR login lapsed can start a QR login again" do
+    item = trade_republic_items(:requires_update_item)
+    item.update!(pending_login_state: "lapsed-qr")
+    item.stubs(:login_stage).returns("expired")
+
+    render_inline(TradeRepublic::ConnectionCardComponent.new(item: item))
+
+    assert_text I18n.t("settings.providers.trade_republic_panel.login_expired")
+    assert_button I18n.t("settings.providers.trade_republic_panel.qr_login")
   end
 end

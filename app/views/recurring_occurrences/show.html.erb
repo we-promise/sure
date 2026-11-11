@@ -10,10 +10,7 @@
     is why it is its own drawer, one link away from the bill's.
 
     frame: "drawer", responsive: true matches every other detail surface in the
-    app -- a centred card on a phone, a right-hand drawer from lg up. The close
-    button is ours rather than dialog.close_button, because that one carries
-    `hidden lg:flex` under `responsive`, which leaves a phone with no visible
-    way out. %>
+    app -- a centred card on a phone, a right-hand drawer from lg up. %>
 
 <%= render DS::Dialog.new(frame: "drawer", responsive: true) do |dialog| %>
   <% dialog.with_header(custom_header: true) do %>
@@ -26,15 +23,7 @@
           <%= occurrence_due_label(@occurrence) %>
         </p>
       </div>
-      <%= render DS::Button.new(
-            variant: "icon",
-            size: :sm,
-            icon: "x",
-            class: "ml-auto shrink-0",
-            title: t("ds.dialog.close"),
-            aria_label: t("ds.dialog.close"),
-            data: { action: "DS--dialog#close" }
-          ) %>
+      <%= dialog.close_button %>
     </div>
   <% end %>
 
@@ -270,7 +259,8 @@
                         min: step %>
                   <%= form.date_field :paid_on, label: t(".manual_date_label"), value: Date.current %>
                 </div>
-                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true) %>
+                <%# DS::Button defaults to type="button"; this one has to submit the form. %>
+                <%= render DS::Button.new(text: t(".record_payment"), variant: "secondary", full_width: true, type: "submit") %>
               <% end %>
             </div>
           <% end %>

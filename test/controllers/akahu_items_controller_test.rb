@@ -332,6 +332,17 @@ class AkahuItemsControllerTest < ActionDispatch::IntegrationTest
     refute_includes flash[:alert], raw_message
   end
 
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    AkahuItem.any_instance.stubs(:credentials_configured?).returns(false)
+
+    get select_accounts_akahu_items_url, params: { akahu_item_id: @akahu_item.id }, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("akahu_items.select_accounts.no_credentials_configured"), flash[:alert]
+  end
+
   private
 
     def unsafe_return_paths

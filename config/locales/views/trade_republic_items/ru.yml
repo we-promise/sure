@@ -14,6 +14,7 @@ ru:
     trade_republic_item:
       syncing: "Синхронизация"
       requires_update: "Требуется повторная аутентификация"
+      session_expires_in: "Вход истекает через %{time} (%{at})."
       error: "Ошибка"
       synced: "Синхронизировано %{time} назад. %{summary}."
       setup_accounts: "Настроить счета"

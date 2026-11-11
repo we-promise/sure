@@ -132,4 +132,83 @@ class IbkrItemsControllerTest < ActionDispatch::IntegrationTest
     ibkr_account.reload
     assert_equal original_account, ibkr_account.current_account
   end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    families(:dylan_family).ibkr_items.update_all(scheduled_for_deletion: true)
+
+    get select_accounts_ibkr_items_url, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("ibkr_items.select_accounts.not_configured"), flash[:alert]
+  end
+
+  test "create adds a second connection with a unique default name" do
+    assert_difference "@user.family.ibkr_items.count", 1 do
+      post ibkr_items_url, params: { ibkr_item: { query_id: "QUERY2", token: "TOKEN2" } }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal "Interactive Brokers 2", @user.family.ibkr_items.order(:created_at).last.name
+  end
+
+  test "create keeps the connection name the user typed" do
+    post ibkr_items_url, params: { ibkr_item: { name: "IBKR Ireland", query_id: "QUERY2", token: "TOKEN2" } }
+
+    assert @user.family.ibkr_items.exists?(name: "IBKR Ireland")
+  end
+
+  test "update renames a connection and keeps credentials when left blank" do
+    patch ibkr_item_url(@ibkr_item), params: { ibkr_item: { name: "IBKR US", query_id: "", token: "" } }
+
+    @ibkr_item.reload
+    assert_equal "IBKR US", @ibkr_item.name
+    assert_equal "QUERY123", @ibkr_item.query_id
+    assert_equal "TOKEN123", @ibkr_item.token
+  end
+
+  test "update with a blank name keeps the current name" do
+    patch ibkr_item_url(@ibkr_item), params: { ibkr_item: { name: "", query_id: "", token: "" } }
+
+    assert_equal "Interactive Brokers", @ibkr_item.reload.name
+  end
+
+  test "select_accounts opens the connection given by ibkr_item_id" do
+    second = @user.family.ibkr_items.create!(name: "IBKR Ireland", query_id: "Q2", token: "T2")
+
+    get select_accounts_ibkr_items_url(ibkr_item_id: second.id)
+
+    assert_redirected_to setup_accounts_ibkr_item_path(second)
+  end
+
+  test "select_existing_account only lists accounts from the chosen connection" do
+    second = @user.family.ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+    other = second.ibkr_accounts.create!(name: "US IBKR", ibkr_account_id: "U7654321", currency: "USD")
+
+    get select_existing_account_ibkr_items_url, params: { account_id: accounts(:investment).id, ibkr_item_id: second.id }
+
+    assert_response :success
+    assert_includes response.body, other.name
+    assert_not_includes response.body, ibkr_accounts(:main_account).name
+  end
+
+  test "invalid create keeps the typed connection name but never the credentials" do
+    post ibkr_items_url,
+         params: { ibkr_item: { name: "IBKR Ireland", query_id: "", token: "SECRET-TOKEN" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "ibkr-providers-panel"
+    assert_includes response.body, 'value="IBKR Ireland"'
+    assert_not_includes response.body, "SECRET-TOKEN"
+  end
+
+  test "select_existing_account skips connections scheduled for deletion" do
+    @ibkr_item.update!(scheduled_for_deletion: true)
+
+    get select_existing_account_ibkr_items_url, params: { account_id: accounts(:investment).id }
+
+    assert_response :success
+    assert_not_includes response.body, ibkr_accounts(:main_account).name
+  end
 end

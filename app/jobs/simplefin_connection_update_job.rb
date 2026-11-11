@@ -4,9 +4,19 @@ class SimplefinConnectionUpdateJob < ApplicationJob
   # Disable automatic retries for this job since the setup token is single-use.
   # If the token claim succeeds but sync fails, retrying would fail at claim.
   discard_on Provider::Simplefin::SimplefinError do |job, error|
+    args = job.arguments.first
     Rails.logger.error(
       "SimplefinConnectionUpdateJob discarded: #{error.class} - #{error.message} " \
-      "(family_id=#{job.arguments.first[:family_id]}, item_id=#{job.arguments.first[:old_simplefin_item_id]})"
+      "(family_id=#{args[:family_id]}, item_id=#{args[:old_simplefin_item_id]})"
+    )
+    DebugLogEntry.capture(
+      category: "provider_sync",
+      level: "error",
+      message: "SimpleFIN reconnect failed: #{error.message}",
+      source: "SimplefinConnectionUpdateJob",
+      family_id: args[:family_id],
+      provider_key: "simplefin",
+      metadata: { simplefin_item_id: args[:old_simplefin_item_id], error_type: error.error_type }
     )
   end
 

@@ -14,6 +14,7 @@ uk:
     trade_republic_item:
       syncing: "Синхронізація"
       requires_update: "Потрібна повторна автентифікація"
+      session_expires_in: "Вхід завершиться через %{time} (%{at})."
       error: "Помилка"
       synced: "Синхронізовано %{time} тому. %{summary}."
       setup_accounts: "Налаштувати рахунки"

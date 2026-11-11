@@ -20,10 +20,11 @@ class Provider::TradeRepublicSession
 
   attr_reader :phone_number, :pin
 
-  def initialize(phone_number:, pin:, session_blob: nil)
+  def initialize(phone_number:, pin:, session_blob: nil, device_id: nil)
     @phone_number = phone_number.to_s
     @pin = pin.to_s
     @cookies = decode_cookies(session_blob)
+    @device_id = device_id.presence
     @device_info = nil
     @session_expires_at = Time.at(0)
   end
@@ -34,6 +35,23 @@ class Provider::TradeRepublicSession
 
   def get(path, headers: {}, body: nil)
     request(Net::HTTP::Get, path, body: body, headers: headers)
+  end
+
+  def self.expires_at(session_blob)
+    new(phone_number: nil, pin: nil, session_blob: session_blob).expires_at
+  end
+
+  # A session ends when the tr_refresh JWT expires, 24 hours after login.
+  # Refreshing renews only tr_session, never tr_refresh. The token is not
+  # verified; the time is only used to show and plan around the expiry.
+  def expires_at
+    payload = @cookies["tr_refresh"].to_s.split(".")[1]
+    return if payload.blank?
+
+    claims = JSON.parse(Base64.urlsafe_decode64(payload))
+    Time.zone.at(claims["exp"]) if claims.is_a?(Hash) && claims["exp"].is_a?(Integer)
+  rescue ArgumentError, JSON::ParserError
+    nil
   end
 
   def cookies_blob
@@ -166,8 +184,10 @@ class Provider::TradeRepublicSession
       ))
     end
 
+    # A connection keeps its device identity when the container hostname
+    # changes.
     def stable_device_id
-      configured = ENV["TRADE_REPUBLIC_DEVICE_ID"].presence
+      configured = ENV["TRADE_REPUBLIC_DEVICE_ID"].presence || @device_id
       return Digest::SHA512.hexdigest(configured) if configured
 
       Digest::SHA512.hexdigest([ Socket.gethostname, RUBY_PLATFORM, Etc.uname[:machine], Etc.uname[:sysname] ].join("|"))

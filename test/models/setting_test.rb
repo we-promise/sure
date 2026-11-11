@@ -38,6 +38,12 @@ class SettingTest < ActiveSupport::TestCase
     assert_match(/OpenAI model is required/, error.message)
   end
 
+  test "validate_openai_config! passes for a regional OpenAI host without a model" do
+    assert_nothing_raised do
+      Setting.validate_openai_config!(uri_base: "https://us.api.openai.com", model: "")
+    end
+  end
+
   test "validate_openai_config! uses current settings when parameters are nil" do
     Setting.openai_uri_base = "https://api.example.com"
     Setting.openai_model = "gpt-4"
@@ -158,6 +164,21 @@ class SettingTest < ActiveSupport::TestCase
 
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     assert_nil Setting.brand_fetch_icon_url("example.com")
+  end
+
+  test "LLM_PROVIDER env wins over a stored llm_provider" do
+    original = Setting.raw_llm_provider
+    Setting.llm_provider = "anthropic"
+
+    with_env_overrides("LLM_PROVIDER" => "openai") do
+      assert_equal "openai", Setting.llm_provider
+    end
+
+    with_env_overrides("LLM_PROVIDER" => nil) do
+      assert_equal "anthropic", Setting.llm_provider
+    end
+  ensure
+    Setting.llm_provider = original
   end
 
   test "enabled_securities_providers falls back to twelve_data when nothing is configured" do
