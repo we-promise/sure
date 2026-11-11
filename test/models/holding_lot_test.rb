@@ -505,6 +505,22 @@ class HoldingLotTest < ActiveSupport::TestCase
     assert_not HoldingLot.exists?(empty.id)
   end
 
+  # A clamp row holds no units, so the units moved onto it keep their cost,
+  # and the merged lot is no longer a clamp.
+  test "merging an opening lot onto a clamp row keeps the moved lot's cost" do
+    setup_account
+    old_security = priced_security("LOTZ", 30)
+    new_security = priced_security("LOTY", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 10, price: 30, amount: 300, currency: "USD")
+    opening_lot(old_security, 10).update!(unit_cost: 5)
+    clamp = opening_lot(new_security, 0)
+    clamp.update!(clamped: true)
+
+    holding.remap_security!(new_security)
+
+    assert_equal [ 10, 5, false ], [ clamp.reload.qty, clamp.unit_cost, clamp.clamped ]
+  end
+
   # With nothing to merge into, the clamp row moves as any opening lot does.
   # Dropping it would lose the flag that keeps the position's basis unknown.
   test "an opening lot with no units and no target moves with its clamp" do
