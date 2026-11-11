@@ -204,21 +204,21 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
   test "bulk update skips entries from accounts the user can only read" do
     read_only_account = accounts(:credit_card) # shared read_only with family_member
     entry = create_transaction(account: read_only_account, name: "Starbucks")
-    original_category = entry.transaction.category
 
     sign_in users(:family_member)
 
-    post transactions_bulk_update_url, params: {
-      bulk_update: {
-        entry_ids: [ entry.id ],
-        category_id: categories(:food_and_drink).id,
-        notes: "Changed by a read-only member"
+    assert_no_changes -> { entry.reload.transaction.category } do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ entry.id ],
+          category_id: categories(:food_and_drink).id,
+          notes: "Changed by a read-only member"
+        }
       }
-    }
+    end
 
     assert_redirected_to transactions_url
     assert_equal "0 transactions updated", flash[:notice]
-    assert_equal original_category, entry.reload.transaction.category
     assert_nil entry.notes
   end
 
