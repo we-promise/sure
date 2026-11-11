@@ -44,6 +44,8 @@ class Eval::ProviderFactory
       raise Error, "OpenAI access token not configured" unless access_token.present?
 
       uri_base = config[:uri_base].presence || installed&.base_url
+      # A regional OpenAI host (us.api.openai.com) is native OpenAI, not a custom server (#4836).
+      custom = Provider::Openai.custom_endpoint?(uri_base)
       own_server = installed && uri_base == installed.base_url
       endpoint =
         if own_server
@@ -51,8 +53,8 @@ class Eval::ProviderFactory
           installed.with(api_key: access_token)
         else
           Ai::Config::Endpoint.new(
-            name: uri_base ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless uri_base),
-            base_url: uri_base, api_key: access_token, responses_api: uri_base.nil?,
+            name: custom ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless custom),
+            base_url: uri_base, api_key: access_token, responses_api: !custom,
             location: uri_base.to_s.start_with?("http:") ? :local : :cloud, timeout_seconds: installed&.timeout_seconds || 60,
             json_mode: installed&.json_mode || :auto
           )

@@ -104,7 +104,11 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
       rescue Provider::Error
         nil
       end
-      assert_equal today&.default_model, first_model(config, :bill_setup)&.name, "#{label}: the same model as today"
+      if today.nil?
+        assert_nil first_model(config, :bill_setup), "#{label}: no provider means no model"
+      else
+        assert_equal today.default_model, first_model(config, :bill_setup)&.name, "#{label}: the same model as today"
+      end
     end
   end
 
@@ -121,6 +125,19 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "bill_setup", custom.routes_for(:bill_setup).first.prompt
     assert_equal "bill_setup_anthropic", anthropic.routes_for(:bill_setup).first.prompt
     assert_nil native.routes_for(:chat).first.prompt
+  end
+
+  # #4836: a regional OpenAI host is native OpenAI — its client uses the Responses API, so its
+  # prompt must not be the simplified one written for small local models.
+  test "a regional OpenAI host keeps the native endpoint, preset and detailed prompt" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "https://us.api.openai.com", "OPENAI_MODEL" => "gpt-4.1")
+
+    endpoint = config.endpoints.find { _1.protocol == :compatible }
+    assert_equal "openai", endpoint.name
+    assert_equal :openai, endpoint.preset
+    assert endpoint.responses_api
+    assert_equal "categorize_transactions", config.routes_for(:categorize).first.prompt
+    assert_nil config.routes_for(:categorize).first.model.context_window
   end
 
   test "budgets: a custom server's window defaults to 2048; cloud windows only when set" do
