@@ -1406,6 +1406,47 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_not_nil pea.reload.timeline_backfilled_at
   end
 
+  test "PEA backfill follows the history cursors instead of restarting" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio", trade_republic_account_id: "CTO-SEC", name: "Portfolio", currency: "EUR",
+      raw_timeline_payload: [ { "id" => "evt_old", "timestamp" => "2026-10-01T10:00:00Z", "category" => "orderExecution" } ]
+    )
+    @item.update!(newest_event_id: "evt_old")
+    pending_history = { "timelineTransactions" => { "newest_event_id" => "evt_cto_buy", "backfill_cursor" => "older-page" } }
+
+    provider = mock("trade_republic_provider")
+    first = sequence("backfill_start")
+    provider.expects(:sync).with { |args| args[:known_newest_event_id] == "evt_old" }
+      .in_sequence(first).returns(client_result(pea_sync_data("events" => [])))
+    provider.expects(:sync).with { |args| args[:known_newest_event_id].nil? }
+      .in_sequence(first).returns(client_result(pea_sync_data("timeline_cursors" => pending_history)))
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    pea = @item.trade_republic_accounts.find_by(kind: "pea")
+    assert_not_nil pea.timeline_backfill_started_at
+    assert_nil pea.timeline_backfilled_at
+
+    # History pages remain: the next sync continues them, no new full fetch.
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).once.with { |args| args[:known_newest_event_id].present? && args[:timeline_cursors] == pending_history }
+      .returns(client_result(pea_sync_data("events" => [], "timeline_cursors" => { "timelineTransactions" => { "newest_event_id" => "evt_cto_buy" } })))
+    TradeRepublicItem::Importer.new(@item.reload, provider: provider).import
+
+    assert_not_nil pea.reload.timeline_backfilled_at
+  end
+
+  test "first PEA balance uses the known positions when its cash fails" do
+    wrapper = pea_sync_data["tax_wrapper_accounts"].first.except("cash").merge(
+      "domain_statuses" => { "cash" => "failed", "portfolio" => "success" }
+    )
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(pea_sync_data("tax_wrapper_accounts" => [ wrapper ])))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal BigDecimal("300"), @item.trade_republic_accounts.find_by(kind: "pea").current_balance
+  end
+
   test "first PEA balance uses the known cash when its positions fail" do
     wrapper = pea_sync_data["tax_wrapper_accounts"].first.merge(
       "positions" => [],
@@ -1423,7 +1464,8 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
 
   test "known PEA does not trigger a full timeline refetch" do
     @item.trade_republic_accounts.create!(
-      kind: "pea", trade_republic_account_id: "pea:PEA-SEC", name: "PEA", currency: "EUR", timeline_backfilled_at: 1.day.ago
+      kind: "pea", trade_republic_account_id: "pea:PEA-SEC", name: "PEA", currency: "EUR",
+      timeline_backfill_started_at: 2.days.ago, timeline_backfilled_at: 1.day.ago
     )
     @item.update!(newest_event_id: "evt_old")
 

@@ -953,10 +953,24 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     def protected_primary_copy?(event)
       external_id = "trade_republic_event_#{event[:id]}"
-      ids = [ external_id, settlement_counterpart_external_id(external_id) ]
-      %w[portfolio cash crypto].any? do |kind|
+      protected_primary_external_ids.include?(external_id) ||
+        protected_primary_external_ids.include?(settlement_counterpart_external_id(external_id))
+    end
+
+    # External ids of user-edited Trade Republic entries on the primary
+    # accounts, loaded once per pass.
+    def protected_primary_external_ids
+      @protected_primary_external_ids ||= %w[portfolio cash crypto].each_with_object(Set.new) do |kind, ids|
         primary_account = @trade_republic_account.sibling(kind)&.current_account
-        primary_account&.entries&.where(source: "trade_republic", external_id: ids)&.any?(&:protected_from_sync?)
+        next unless primary_account
+
+        ids.merge(
+          primary_account.entries
+            .where(source: "trade_republic")
+            .where("entries.excluded OR entries.user_modified OR entries.import_locked")
+            .where.not(external_id: nil)
+            .pluck(:external_id)
+        )
       end
     end
 

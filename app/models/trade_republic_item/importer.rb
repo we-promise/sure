@@ -22,12 +22,14 @@ class TradeRepublicItem::Importer
     whole_timeline = full_fetch || trade_republic_item.newest_event_id.blank?
     result = fetch_from_provider(full_timeline: full_fetch, session_txt: trade_republic_item.session_blob)
 
-    # Until a PEA has been through one complete timeline fetch, past PEA
+    # Until a PEA has been through one complete timeline read, past PEA
     # trades may still sit on the primary account without the cash account
-    # number that routes them. Fetch the whole timeline so they can move.
-    # The backfill is only marked done once such a fetch succeeds, so a
-    # failed one is retried on the next sync.
-    if !whole_timeline && stored_events && pea_backfill_pending?(result.data)
+    # number that routes them. Start a whole-timeline fetch so they can move.
+    # Older pages the fetch could not reach are read by the following syncs
+    # through the history cursors; the backfill counts as done only once
+    # those are exhausted, and restarts if it stalls without them.
+    pea_backfill_running = pea_backfill_running?
+    if !whole_timeline && stored_events && !pea_backfill_running && pea_backfill_pending?(result.data)
       whole_timeline = true
       result = fetch_from_provider(
         full_timeline: true,
@@ -37,7 +39,7 @@ class TradeRepublicItem::Importer
 
     data = result.data
     domain_statuses = normalized_domain_statuses(data)
-    @timeline_backfilled = whole_timeline && complete_timeline_fetched?(data, domain_statuses)
+    @pea_backfill_reading = whole_timeline || pea_backfill_running
 
     if data["status"] == "session_expired"
       trade_republic_item.update!(status: :requires_update)
@@ -54,6 +56,7 @@ class TradeRepublicItem::Importer
         timeline_cursors: timeline_cursors_for(data, domain_statuses, capped_topics: capped_topics),
         session_blob: data["session_txt"].presence || trade_republic_item.session_blob
       )
+      finish_pea_backfill!(data, domain_statuses)
     end
 
     record_provider_warnings(Array(data["warnings"]) + importer_warnings(capped_topics: capped_topics))
@@ -76,8 +79,22 @@ class TradeRepublicItem::Importer
       Array(data["tax_wrapper_accounts"]).any?
     end
 
-    def complete_timeline_fetched?(data, domain_statuses)
-      domain_statuses["timeline"] == "success" && data["timeline_pagination_complete"] != false
+    def pea_backfill_running?
+      pea = trade_republic_item.trade_republic_accounts.find_by(kind: "pea")
+      return false unless pea&.timeline_backfill_started_at && pea.timeline_backfilled_at.nil?
+
+      Provider::TradeRepublicClient.pending_timeline_backfills(trade_republic_item.timeline_cursors).positive?
+    end
+
+    # Runs after the item's cursors are saved: the backfill is done once a
+    # read that started from the whole timeline leaves no history pages.
+    def finish_pea_backfill!(data, domain_statuses)
+      pea = trade_republic_item.trade_republic_accounts.find_by(kind: "pea")
+      return unless pea && pea.timeline_backfilled_at.nil? && @pea_backfill_reading
+      return unless domain_statuses["timeline"] == "success" && data["timeline_pagination_complete"] != false
+      return if Provider::TradeRepublicClient.pending_timeline_backfills(trade_republic_item.timeline_cursors).positive?
+
+      pea.update!(timeline_backfilled_at: Time.current)
     end
 
     def fetch_from_provider(full_timeline:, session_txt:)
@@ -178,10 +195,10 @@ class TradeRepublicItem::Importer
       # partial balance.
       current_balance = if positions_total && cash
         positions_total + cash.to_d
-      elsif pea.nil? && cash
-        cash.to_d
+      elsif pea.nil?
+        positions_total || cash&.to_d
       else
-        pea&.current_balance
+        pea.current_balance
       end
 
       capped = upsert_kind(
@@ -206,7 +223,7 @@ class TradeRepublicItem::Importer
 
       pea = trade_republic_item.trade_republic_accounts.find_by!(kind: "pea")
       pea.provider_cash_account_id = wrapper["cash_account_id"] if wrapper["cash_account_id"].present?
-      pea.timeline_backfilled_at ||= Time.current if @timeline_backfilled
+      pea.timeline_backfill_started_at ||= Time.current if @pea_backfill_reading
       pea.save! if pea.changed?
       capped
     end
