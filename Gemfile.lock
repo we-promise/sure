@@ -439,6 +439,7 @@ GEM
     minitest (6.1.0)
       drb (~> 2.0)
       prism (>= 1.5, < 3)
+    minitest-mock (5.27.0)
     mocha (2.7.1)
       ruby2_keywords (>= 0.0.5)
     msgpack (1.8.2)
@@ -961,7 +962,8 @@ DEPENDENCIES
   logtail-rails
   lookbook (= 2.3.11)
   lucide-rails
-  minitest (~> 5.27)
+  minitest (~> 6.1)
+  minitest-mock
   mocha
   octokit
   omniauth (~> 2.2)

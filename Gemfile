@@ -145,10 +145,10 @@ group :development, :test do
 end
 
 group :test do
-  # Minitest 6 removes minitest/mock and requires a separate test-suite migration.
-  gem "minitest", "~> 5.27"
   gem "capybara"
   gem "selenium-webdriver"
+  gem "minitest", "~> 6.1"
+  gem "minitest-mock"
   gem "mocha"
   gem "vcr"
   gem "webmock"
