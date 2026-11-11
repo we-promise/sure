@@ -176,6 +176,7 @@ class Holding < ApplicationRecord
     remove_instance_variable(:@preloaded_avg_cost) if defined?(@preloaded_avg_cost)
     remove_instance_variable(:@trend) if defined?(@trend)
     remove_instance_variable(:@day_change) if defined?(@day_change)
+    remove_instance_variable(:@splits) if defined?(@splits)
     super
   end
 

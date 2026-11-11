@@ -310,6 +310,18 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal Money.new(4000), @amzn.day_change.current
   end
 
+  # The splits are read once per instance; a reload must read them again, as
+  # it must for a remap, which changes the security they belong to.
+  test "a reload reads the security's splits again" do
+    create_trade(@amzn.security, account: @account, qty: 15, price: 200.00, date: 10.days.ago.to_date)
+    assert_equal Money.new(200), @amzn.avg_cost
+    @amzn.security.splits.create!(ex_date: 5.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    @amzn.reload
+
+    assert_equal Money.new(100), @amzn.avg_cost
+  end
+
   # The batch reads the stored rows, so for a holding that is unsaved or has
   # unsaved changes it would answer for another holding -- or for none.
   test "the batch leaves unsaved and changed holdings to their own attributes" do
