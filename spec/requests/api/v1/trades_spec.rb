@@ -51,14 +51,6 @@ RSpec.describe 'API V1 Trades', type: :request do
     )
   end
 
-  let(:category) do
-    family.categories.create!(
-      name: 'Investments',
-      color: '#2196F3',
-      lucide_icon: 'trending-up'
-    )
-  end
-
   let!(:trade) do
     trade_record = Trade.new(
       security: security,

@@ -99,19 +99,25 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     updatable = build_entry_params_for_update
 
-    if @entry.update(updatable.except(:nature))
-      # Read before the follow-up writes below reset saved_changes. A request
-      # that changes nothing must not mark the entry user-modified, which would
-      # stop provider imports from updating it.
-      if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
-        @entry.lock_saved_attributes!
-        @entry.mark_user_modified!
-        @entry.sync_account_later
+    # The edit and its follow-up writes commit together, as in
+    # TransactionsController#update: if one fails, a retry still finds the
+    # change to make.
+    Entry.transaction do
+      if @entry.update(updatable.except(:nature))
+        # Read before the follow-up writes below reset saved_changes. A request
+        # that changes nothing must not mark the entry user-modified, which would
+        # stop provider imports from updating it.
+        if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
+          @entry.lock_saved_attributes!
+          @entry.mark_user_modified!
+          @entry.sync_account_later
+        end
+        @trade = @entry.trade
+        render :show
+      else
+        render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+        raise ActiveRecord::Rollback
       end
-      @trade = @entry.trade
-      render :show
-    else
-      render_validation_error("Trade could not be updated", @entry.errors.full_messages)
     end
   rescue => e
     log_and_render_error("update", e)

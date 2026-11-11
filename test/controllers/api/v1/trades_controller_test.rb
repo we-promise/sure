@@ -305,6 +305,29 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The update and its follow-up writes are one change: if marking fails, the
+  # edit rolls back too, so a retry finds the change still to make and marks,
+  # locks and syncs it then.
+  test "an update whose follow-up write fails changes nothing, and a retry completes it" do
+    trade = Trade.find(create_buy_trade("CATROLL"))
+    reset_update_side_effects(trade)
+    original_notes = trade.entry.notes
+
+    Entry.any_instance.stubs(:mark_user_modified!).raises(ActiveRecord::StatementInvalid, "write failed")
+    put api_v1_trade_url(trade), params: { trade: { notes: "Retried notes" } }, headers: api_headers(read_write_api_key)
+    assert_response :internal_server_error
+    assert_equal original_notes, trade.entry.reload.notes, "the edit was kept without its follow-ups"
+    Entry.any_instance.unstub(:mark_user_modified!)
+
+    assert_enqueued_with(job: SyncJob) do
+      put api_v1_trade_url(trade), params: { trade: { notes: "Retried notes" } }, headers: api_headers(read_write_api_key)
+    end
+    assert_response :ok
+    assert_equal "Retried notes", trade.entry.reload.notes
+    assert trade.entry.user_modified?
+    assert_includes trade.entry.locked_attributes.keys, "notes"
+  end
+
   test "create deposit returns 201" do
      post "/api/v1/trades",
        params: { trade: {
