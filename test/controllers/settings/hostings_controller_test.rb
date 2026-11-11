@@ -391,6 +391,60 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "saving a new market data api key queues a family sync" do
+    with_self_hosting do
+      Family.any_instance.expects(:sync_later).once
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+
+      assert_redirected_to settings_hosting_url
+    end
+  end
+
+  test "changing the exchange rate provider queues a family sync" do
+    with_self_hosting do
+      Setting.exchange_rate_provider = "twelve_data"
+      Family.any_instance.expects(:sync_later).once
+
+      patch settings_hosting_url, params: { setting: { exchange_rate_provider: "yahoo_finance" } }
+
+      assert_equal "yahoo_finance", Setting.exchange_rate_provider
+    end
+  end
+
+  test "resubmitting unchanged market data settings does not queue a family sync" do
+    with_self_hosting do
+      Setting.twelve_data_api_key = "1234567890"
+      Setting.exchange_rate_provider = "twelve_data"
+      Family.any_instance.expects(:sync_later).never
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********", exchange_rate_provider: "twelve_data" } }
+
+      assert_redirected_to settings_hosting_url
+    end
+  end
+
+  test "changing a setting unrelated to market data does not queue a family sync" do
+    with_self_hosting do
+      Family.any_instance.expects(:sync_later).never
+
+      patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-key" } }
+
+      assert_redirected_to settings_hosting_url
+    end
+  end
+
+  test "a failure to queue the refresh still saves the market data setting" do
+    with_self_hosting do
+      Family.any_instance.stubs(:sync_later).raises(StandardError, "queue unavailable")
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "1234567890", Setting.twelve_data_api_key
+    end
+  end
+
   test "submitting the masked placeholder leaves an encrypted api key unchanged" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }

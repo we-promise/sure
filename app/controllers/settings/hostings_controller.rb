@@ -1,6 +1,13 @@
 class Settings::HostingsController < ApplicationController
   layout "settings"
 
+  # Settings that decide where exchange rates and security prices come from.
+  MARKET_DATA_SETTINGS = %i[
+    exchange_rate_provider securities_provider securities_providers
+    twelve_data_api_key tiingo_api_key eodhd_api_key alpha_vantage_api_key
+    tinkoff_invest_api_key mansa_api_key
+  ].freeze
+
   # Minimum accepted value for each configurable numeric LLM field. Mirrors the
   # `min:` attribute on the form inputs in `_openai_settings.html.erb` and
   # `_llm_provider_selector.html.erb`, so the controller rejects what the
@@ -65,6 +72,8 @@ class Settings::HostingsController < ApplicationController
   end
 
   def update
+    market_data_config_before = market_data_config
+
     if hosting_params.key?(:onboarding_state)
       onboarding_state = hosting_params[:onboarding_state].to_s
       Setting.onboarding_state = onboarding_state
@@ -155,6 +164,8 @@ class Settings::HostingsController < ApplicationController
     update_encrypted_setting(:rentcast_api_key)
     update_encrypted_setting(:realie_api_key)
     update_encrypted_setting(:chimnie_api_key)
+
+    refresh_market_data_later if market_data_config != market_data_config_before
 
     if hosting_params.key?(:syncs_include_pending)
       Setting.syncs_include_pending = hosting_params[:syncs_include_pending] == "1"
@@ -552,6 +563,20 @@ class Settings::HostingsController < ApplicationController
       Rails.logger.error(error.backtrace.join("\n"))
       MarketDataScheduler.capture_sync_failure(error, source: self.class.name, user: Current.user)
       flash[:alert] = t(".scheduler_sync_failed")
+    end
+
+    def market_data_config
+      MARKET_DATA_SETTINGS.map { |key| Setting.public_send(key) }
+    end
+
+    # Rates and prices are otherwise only fetched by account syncs and the
+    # nightly market data import, so a newly usable provider would leave
+    # balances converted at 1:1 until then. A family sync imports the market
+    # data each account needs and recalculates its balances.
+    def refresh_market_data_later
+      Current.family.sync_later
+    rescue StandardError => error
+      Rails.logger.error("[Settings::Hostings] Failed to queue market data refresh: #{error.message}")
     end
 
     def update_encrypted_setting(param_key)
