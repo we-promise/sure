@@ -1439,10 +1439,10 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to root_path
 
-    original_name = @recurring_transaction.name
-    patch recurring_transaction_url(@recurring_transaction), params: { recurring_transaction: { name: "Renamed" } }
+    assert_no_changes -> { @recurring_transaction.reload.name } do
+      patch recurring_transaction_url(@recurring_transaction), params: { recurring_transaction: { name: "Renamed" } }
+    end
     assert_redirected_to root_path
-    assert_equal original_name, @recurring_transaction.reload.name
 
     suggestion = create_series(name: "Maybe A Bill", status: "suggested")
     post confirm_recurring_transaction_url(suggestion)

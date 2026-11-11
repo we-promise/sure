@@ -753,26 +753,74 @@ class User < ApplicationRecord
     end
   end
 
-  # Reports preferences management
-  def reports_section_collapsed?(section_key)
-    preferences&.dig("reports_collapsed_sections", section_key) == true
+  # Section preferences for the pages built on the Reports section
+  # framework (Reports, the portfolio hub). Each page is a namespace; its
+  # order lives under "<namespace>_section_order" and its collapsed set under
+  # "<namespace>_collapsed_sections", so two pages never read or write each
+  # other's keys. Reports' original keys are the "reports" namespace, so
+  # nothing already stored changes meaning. Each namespace maps to its
+  # default order; the portfolio's is read from its registry so the two
+  # lists cannot drift.
+  SECTION_DEFAULT_ORDERS = {
+    "reports" => %w[trends_insights transactions_breakdown].freeze,
+    "portfolio" => Portfolio::SectionRegistry::KEYS
+  }.freeze
+
+  def section_order(namespace)
+    prefix = section_namespace!(namespace)
+    stored = preferences&.[]("#{prefix}_section_order")
+    stored.is_a?(Array) ? stored.map(&:to_s).uniq : SECTION_DEFAULT_ORDERS.fetch(prefix).dup
   end
 
-  def reports_section_order
-    preferences&.[]("reports_section_order") || default_reports_section_order
+  def section_collapsed?(namespace, section_key)
+    prefix = section_namespace!(namespace)
+    collapsed = preferences&.[]("#{prefix}_collapsed_sections")
+    collapsed.is_a?(Hash) && collapsed[section_key] == true
   end
 
-  def update_reports_preferences(prefs)
+  # `order` replaces the namespace's order; `collapsed` merges into the
+  # namespace's collapsed set (one key per toggle, so quick successive
+  # toggles keep each other's state). The namespace decides which keys are
+  # written: a caller cannot reach another page's keys through this method.
+  # Only an array of keys (deduplicated) and a hash of key => flag are stored;
+  # any other shape is dropped, since the readers index into them.
+  def update_section_preferences(namespace, order: nil, collapsed: nil)
+    prefix = section_namespace!(namespace)
+    prefs = {}
+    prefs["#{prefix}_section_order"] = order.map(&:to_s).uniq if order.is_a?(Array)
+    collapsed = collapsed.to_unsafe_h if collapsed.respond_to?(:to_unsafe_h)
+    if collapsed.is_a?(Hash)
+      prefs["#{prefix}_collapsed_sections"] = collapsed.to_h { |key, flag| [ key.to_s, ActiveModel::Type::Boolean.new.cast(flag) == true ] }
+    end
+    return true if prefs.empty?
+
     with_locked_preferences do |updated_prefs|
       prefs.each do |key, value|
         if value.is_a?(Hash)
-          updated_prefs[key] ||= {}
-          updated_prefs[key] = updated_prefs[key].merge(value)
+          stored = updated_prefs[key]
+          updated_prefs[key] = (stored.is_a?(Hash) ? stored : {}).merge(value)
         else
           updated_prefs[key] = value
         end
       end
     end
+  end
+
+  # Reports preferences management
+  def reports_section_collapsed?(section_key)
+    section_collapsed?("reports", section_key)
+  end
+
+  def reports_section_order
+    section_order("reports")
+  end
+
+  def update_reports_preferences(prefs)
+    update_section_preferences(
+      "reports",
+      order: prefs["reports_section_order"],
+      collapsed: prefs["reports_collapsed_sections"]
+    )
   end
 
   # Transactions preferences management
@@ -870,8 +918,11 @@ class User < ApplicationRecord
       %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
 
-    def default_reports_section_order
-      %w[trends_insights transactions_breakdown]
+    def section_namespace!(namespace)
+      namespace = namespace.to_s
+      raise ArgumentError, "unknown section namespace #{namespace.inspect}" unless SECTION_DEFAULT_ORDERS.key?(namespace)
+
+      namespace
     end
     def ensure_valid_profile_image
       return unless profile_image.attached?

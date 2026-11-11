@@ -6,7 +6,6 @@ vi:
       subtitle: Thông tin chi tiết toàn diện về sức khỏe tài chính của bạn
       export: Xuất CSV
       print_report: In báo cáo
-      toggle_section: "Bật/tắt hiển thị phần"
       periods:
         monthly: Hàng tháng
         quarterly: Hàng quý
