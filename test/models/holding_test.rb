@@ -218,6 +218,39 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal [ 1, 1 ], batch_sizes
   end
 
+  # The lot rules #calculate_avg_cost applies, which the batch must apply too:
+  # a lot the user has costed counts at that cost (an internal movement
+  # included), and a clamped position has no cost at all. The expected
+  # column pins #avg_cost itself, so a rule dropped from both paths at once
+  # still fails.
+  test "the batch follows the holding's own lot rules" do
+    day = 1.day.ago.to_date
+    costed = create_security("LOTC", prices: [ { date: Date.current, price: 100 } ])
+    create_trade(costed, account: @account, qty: 5, price: 100, date: day)
+    moved_in = create_trade(costed, account: @account, qty: 5, price: 100, date: day)
+    moved_in.entryable.update!(investment_activity_label: "Sweep In")
+    HoldingLot.create!(account: @account, security: costed, source_entry: moved_in, qty: 5,
+                       currency: "USD", acquired_on: day, manual_total_cost: 400)
+
+    clamped = create_security("LOTK", prices: [ { date: Date.current, price: 100 } ])
+    create_trade(clamped, account: @account, qty: 10, price: 100, date: day)
+    HoldingLot.create!(account: @account, security: clamped, origin_security: clamped, qty: 0, currency: "USD", clamped: true)
+
+    cases = { costed: create_holding(costed, Date.current, 10), clamped: create_holding(clamped, Date.current, 10) }
+    expected = {
+      costed: BigDecimal("90"), # (5 * 100 + the lot's 400) / 10
+      clamped: nil
+    }
+
+    batch = Holding.where(id: cases.values.map(&:id)).to_a
+    Holding.preload_avg_costs(batch)
+    batched = cases.transform_values { |holding| batch.find { |h| h.id == holding.id }.avg_cost&.amount }
+    own = cases.transform_values { |holding| holding.reload.avg_cost&.amount }
+
+    assert_equal expected, own, "#avg_cost moved"
+    assert_equal own, batched, "the batch disagrees with #avg_cost"
+  end
+
   test "the batch leaves a stored cost basis alone and does not query for it" do
     @amzn.update!(cost_basis: 100)
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: Date.current)
