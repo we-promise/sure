@@ -391,9 +391,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "saving a new market data api key queues a family sync" do
+  test "saving a new market data api key queues a market data refresh" do
     with_self_hosting do
-      Family.any_instance.expects(:sync_later).once
+      MarketDataRefreshJob.expects(:perform_later).once
 
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
@@ -401,10 +401,10 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "changing the exchange rate provider queues a family sync" do
+  test "changing the exchange rate provider queues a market data refresh" do
     with_self_hosting do
       Setting.exchange_rate_provider = "twelve_data"
-      Family.any_instance.expects(:sync_later).once
+      MarketDataRefreshJob.expects(:perform_later).once
 
       patch settings_hosting_url, params: { setting: { exchange_rate_provider: "yahoo_finance" } }
 
@@ -412,11 +412,11 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "resubmitting unchanged market data settings does not queue a family sync" do
+  test "resubmitting unchanged market data settings does not queue a market data refresh" do
     with_self_hosting do
       Setting.twelve_data_api_key = "1234567890"
       Setting.exchange_rate_provider = "twelve_data"
-      Family.any_instance.expects(:sync_later).never
+      MarketDataRefreshJob.expects(:perform_later).never
 
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********", exchange_rate_provider: "twelve_data" } }
 
@@ -424,9 +424,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "changing a setting unrelated to market data does not queue a family sync" do
+  test "changing a setting unrelated to market data does not queue a market data refresh" do
     with_self_hosting do
-      Family.any_instance.expects(:sync_later).never
+      MarketDataRefreshJob.expects(:perform_later).never
 
       patch settings_hosting_url, params: { setting: { rentcast_api_key: "rentcast-key" } }
 
@@ -436,7 +436,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "a failure to queue the refresh still saves the market data setting" do
     with_self_hosting do
-      Family.any_instance.stubs(:sync_later).raises(StandardError, "queue unavailable")
+      MarketDataRefreshJob.stubs(:perform_later).raises(StandardError, "queue unavailable")
 
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 

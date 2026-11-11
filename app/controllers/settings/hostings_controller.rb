@@ -571,10 +571,10 @@ class Settings::HostingsController < ApplicationController
 
     # Rates and prices are otherwise only fetched by account syncs and the
     # nightly market data import, so a newly usable provider would leave
-    # balances converted at 1:1 until then. A family sync imports the market
-    # data each account needs and recalculates its balances.
+    # balances converted at 1:1 until then. The settings apply to every family,
+    # so every account is rebuilt.
     def refresh_market_data_later
-      Current.family.sync_later
+      MarketDataRefreshJob.perform_later
     rescue StandardError => error
       Rails.logger.error("[Settings::Hostings] Failed to queue market data refresh: #{error.message}")
     end
