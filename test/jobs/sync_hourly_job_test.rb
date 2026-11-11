@@ -39,12 +39,9 @@ class SyncHourlyJobTest < ActiveJob::TestCase
     weekly = family.coinstats_items.create!(name: "Weekly", api_key: "key-weekly")
     weekly.create_sync_schedule!(interval_minutes: 10080)
 
-    CoinstatsItem.any_instance.expects(:sync_later).times(CoinstatsItem.active.count - 1)
-
     SyncHourlyJob.perform_now
 
-    swept = SyncSchedule.without_own_daily_schedule(CoinstatsItem.active)
-    assert_includes swept, hourly
-    assert_not_includes swept, weekly
+    assert_equal 1, hourly.syncs.count
+    assert_equal 0, weekly.syncs.count
   end
 end

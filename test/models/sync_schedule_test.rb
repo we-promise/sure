@@ -21,6 +21,18 @@ class SyncScheduleTest < ActiveSupport::TestCase
     end
   end
 
+  # Keeps clock-time alignment, and keeps the daily boundary meaningful: an
+  # interval below a day must divide it, one at or above must be whole days.
+  test "every interval divides a day or is a whole number of days" do
+    SyncSchedule::INTERVALS.each do |minutes|
+      if minutes < SyncSchedule::DAILY_MINUTES
+        assert_equal 0, SyncSchedule::DAILY_MINUTES % minutes, "#{minutes} does not divide a day"
+      else
+        assert_equal 0, minutes % SyncSchedule::DAILY_MINUTES, "#{minutes} is not a whole number of days"
+      end
+    end
+  end
+
   # Multi-day boundaries are whole days from the epoch, so they land at
   # midnight UTC like the daily one.
   test "a day-long schedule next runs at a midnight UTC boundary" do
