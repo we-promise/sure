@@ -1436,6 +1436,32 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       "the sale closed the position, so the repurchase starts a fresh basis"
   end
 
+  # Replay puts a same-day trade entered later after the sale, so the sale
+  # cannot have sold from it.
+  test "a same-day lot listed after the sale that names it is dropped and counted" do
+    lines = lot_export.split("\n")
+    trade_lines = lines.select { |line| JSON.parse(line)["type"] == "Trade" }
+    sale_line = trade_lines.find { |line| JSON.parse(line).dig("data", "lot_source_trade_id") }
+    lot_line = trade_lines.find { |line| JSON.parse(line).dig("data", "id") == JSON.parse(sale_line).dig("data", "lot_source_trade_id") }
+    assert_operator lines.index(lot_line), :<, lines.index(sale_line), "precondition: the export lists the lot first"
+
+    { "lot listed first" => lines, "sale listed first" => lines.map { |line| { lot_line => sale_line, sale_line => lot_line }.fetch(line, line) } }
+      .each do |label, ordered|
+        family = Family.create!(name: "Target #{label}", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+        result = Family::DataImporter.new(family, ordered.join("\n")).import!
+        sale = lot_trades(family.accounts.find_by!(name: "Lot Round Trip")).fetch(-10).trade
+
+        if label == "lot listed first"
+          assert_equal JSON.parse(lot_line).dig("data", "date"), JSON.parse(sale_line).dig("data", "date"), "precondition: bought the sale's day"
+          assert_not_nil sale.lot_source_entry_id, label
+          assert_equal 0, result[:summary].dig("trades", "skipped").to_i, label
+        else
+          assert_nil sale.lot_source_entry_id, label
+          assert_equal 1, result[:summary].dig("trades", "skipped"), label
+        end
+      end
+  end
+
   test "an unusable lot cost or lot name is dropped and counted, and the trade still imports" do
     # Each edit names the check that tells its drop from a clean import, where
     # the first buy's lot carries the user's 600 and the sale names the $20 lot.

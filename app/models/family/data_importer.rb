@@ -1209,7 +1209,9 @@ class Family::DataImporter
     # The choice is restored as stored, whatever the account's method, since
     # an average account keeps but ignores it (Trade#lot_choices); it must
     # still be a sale, not a transfer out, naming an acquisition of its
-    # security, in its account, on or before its date. A file without one
+    # security, in its account, that replays before it: an earlier date, or
+    # the same date and entered no later. Entries are stamped in file order,
+    # so a same-day lot listed after its sale is refused. A file without one
     # clears an earlier import's choice.
     def import_lot_sources(records, imported)
       unnamed = []
@@ -1240,7 +1242,8 @@ class Family::DataImporter
     # account's method and of whether the lot is still open.
     def lot_source_for?(sale, source)
       sale.trade.qty.negative? && !sale.trade.internal_movement? && source.trade.qty.positive? &&
-        source.account_id == sale.account_id && source.trade.security_id == sale.trade.security_id && source.date <= sale.date
+        source.account_id == sale.account_id && source.trade.security_id == sale.trade.security_id &&
+        ([ source.date, source.created_at ] <=> [ sale.date, sale.created_at ]) <= 0
     end
 
     def import_holdings(records)
