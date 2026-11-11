@@ -7,7 +7,7 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(valuation) do %>
-    <div class="p-3 lg:p-4 grid grid-cols-12 items-center text-primary text-sm font-medium">
+    <div class="p-3 lg:p-4 grid grid-cols-12 items-center text-primary text-sm font-medium [html[data-layout-animating]_&:not(:has([aria-expanded=true]))]:[content-visibility:auto] [contain-intrinsic-size:auto_--spacing(18)]">
       <div class="col-span-8 flex items-center gap-3 lg:gap-4">
         <%= check_box_tag dom_id(entry, "selection"),
                         class: "checkbox checkbox--light hidden lg:block",
