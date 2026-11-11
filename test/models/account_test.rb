@@ -930,6 +930,26 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal %w[CHF EUR], account.current_holdings.pluck(:currency).sort
   end
 
+  test "a closed provider cannot hide an earlier active provider snapshot" do
+    account = accounts(:investment)
+    account.holdings.delete_all
+    item = @family.simplefin_items.create!(name: "Snapshot providers", access_url: "https://example.com/access")
+    closed = item.simplefin_accounts.create!(name: "Closed", account_id: "closed", currency: "USD", account_type: "investment", current_balance: 0, raw_holdings_payload: [])
+    active_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    active = active_item.coinstats_accounts.create!(name: "Active", currency: "USD")
+    closed_link = account.account_providers.create!(provider: closed)
+    active_link = account.account_providers.create!(provider: active)
+    account.holdings.create!(account_provider: closed_link, security: securities(:aapl), date: Date.current,
+      qty: 0, amount: 0, price: 100, currency: "USD")
+    holding = account.holdings.create!(account_provider: active_link, security: securities(:aapl), date: Date.yesterday,
+      qty: 2, amount: 200, price: 100, currency: "USD")
+
+    assert_equal [ holding.id ], account.current_holdings.pluck(:id)
+
+    holding.update!(account_provider: nil)
+    assert_empty account.current_holdings
+  end
+
   test "on account destroyed cascade transfer destroyed" do
     outflow_account = @family.accounts.create!({
       owner: @admin,

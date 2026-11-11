@@ -13,7 +13,6 @@ class SimplefinItem::Importer
     @simplefin_item = simplefin_item
     @simplefin_provider = simplefin_provider
     @sync = sync
-    @enqueued_holdings_job_ids = Set.new
     @reconciled_account_ids = Set.new  # Debounce pending reconciliation per run
   end
 
@@ -102,12 +101,19 @@ class SimplefinItem::Importer
   private
 
     # Minimal upsert and balance update for balances-only mode
-    def import_account_minimal_and_balance(account_data)
+    def import_account_minimal_and_balance(account_data, requested_at: @requested_at || Time.current)
+      simplefin_item.with_lock { import_balance_snapshot(account_data, requested_at: requested_at) }
+    end
+
+    def import_balance_snapshot(account_data, requested_at:)
       account_id = account_data[:id].to_s
       return if account_id.blank?
 
       sfa = simplefin_item.simplefin_accounts.find_or_initialize_by(account_id: account_id)
-      sfa.assign_attributes(
+      return if sfa.account_requested_at && requested_at < sfa.account_requested_at
+
+      attrs = {
+        account_requested_at: requested_at,
         name: account_data[:name],
         account_type: (account_data["type"].presence || account_data[:type].presence || sfa.account_type.presence || "unknown"),
         currency: (account_data[:currency].presence || account_data["currency"].presence || sfa.currency.presence || sfa.current_account&.currency.presence || simplefin_item.family&.currency.presence || "USD"),
@@ -116,7 +122,11 @@ class SimplefinItem::Importer
         balance_date: normalize_balance_date(account_data["balance-date"] || account_data[:"balance-date"]),
         raw_payload: account_data,
         org_data: account_data[:org]
-      )
+      }
+      if attrs[:balance_date] && sfa.balance_date && attrs[:balance_date] < sfa.balance_date
+        attrs.except!(:current_balance, :available_balance, :balance_date)
+      end
+      sfa.assign_attributes(attrs)
       begin
         sfa.save!
       rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid => e
@@ -136,9 +146,9 @@ class SimplefinItem::Importer
         adapter = Account::ProviderImportAdapter.new(acct)
 
         # Normalize balances for SimpleFIN liabilities so immediate UI is correct after discovery
-        bal   = to_decimal(account_data[:balance])
-        avail = to_decimal(account_data[:"available-balance"])
-        observed = account_data[:balance].nil? ? avail : bal
+        bal   = to_decimal(sfa.current_balance)
+        avail = to_decimal(sfa.available_balance)
+        observed = sfa.current_balance.nil? ? avail : bal
 
         is_linked_liability = [ "CreditCard", "Loan" ].include?(acct.accountable_type)
         inferred = begin
@@ -229,7 +239,7 @@ class SimplefinItem::Importer
 
         adapter.update_balance(
           balance: normalized,
-          cash_balance: is_liability ? normalized : account_data[:"available-balance"],
+          cash_balance: is_liability ? normalized : sfa.available_balance,
           source: "simplefin"
         )
       end
@@ -743,6 +753,7 @@ class SimplefinItem::Importer
       begin
         # Track API request count for quota awareness
         stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+        @requested_at = Time.current
         accounts_data = simplefin_provider.get_accounts(
           simplefin_item.access_url,
           start_date: start_date,
@@ -930,7 +941,11 @@ class SimplefinItem::Importer
       [ id_rotation, merged_transactions ]
     end
 
-    def import_account(account_data)
+    def import_account(account_data, requested_at: @requested_at || Time.current)
+      simplefin_item.with_lock { import_account_snapshot(account_data, requested_at: requested_at) }
+    end
+
+    def import_account_snapshot(account_data, requested_at:)
       account_id = account_data[:id].to_s
 
       # Validate required account_id to prevent duplicate creation
@@ -972,6 +987,7 @@ class SimplefinItem::Importer
 
       # Update all attributes; only update transactions if present to avoid wiping prior data
       attrs = {
+        account_requested_at: requested_at,
         name: account_data[:name],
         account_type: (account_data["type"].presence || account_data[:type].presence || "unknown"),
         currency: (account_data[:currency].presence || account_data["currency"].presence || simplefin_account.currency.presence || simplefin_account.current_account&.currency.presence || simplefin_item.family&.currency.presence || "USD"),
@@ -981,6 +997,14 @@ class SimplefinItem::Importer
         raw_payload: account_data,
         org_data: account_data[:org]
       }
+
+      if attrs[:balance_date] && simplefin_account.balance_date && attrs[:balance_date] < simplefin_account.balance_date
+        attrs.except!(:current_balance, :available_balance, :balance_date)
+      end
+
+      stale_snapshot = simplefin_account.account_requested_at && requested_at < simplefin_account.account_requested_at
+      attrs = {} if stale_snapshot
+      holdings = nil if simplefin_account.holdings_requested_at && requested_at < simplefin_account.holdings_requested_at
 
       # Merge transactions from chunked/regular imports (accumulate history).
       # Prefer non-pending records with a real posted timestamp over earlier
@@ -1008,24 +1032,17 @@ class SimplefinItem::Importer
 
       # Track whether incoming holdings are new/changed so we can materialize and refresh balances
       holdings_changed = false
-      if holdings.is_a?(Array) && holdings.any?
-        prior = simplefin_account.raw_holdings_payload.to_a
-        if prior != holdings
-          attrs[:raw_holdings_payload] = holdings
-          # Also mirror into raw_payload['holdings'] so downstream calculators can use it
-          raw = simplefin_account.raw_payload.is_a?(Hash) ? simplefin_account.raw_payload.deep_dup : {}
-          raw = raw.with_indifferent_access
-          raw[:holdings] = holdings
-          attrs[:raw_payload] = raw
-          holdings_changed = true
-        end
+      if holdings.is_a?(Array)
+        holdings_changed = simplefin_account.raw_holdings_payload != holdings.as_json
+        attrs[:raw_holdings_payload] = holdings
+        attrs[:holdings_requested_at] = requested_at
       end
 
       simplefin_account.assign_attributes(attrs)
 
       # Inactive detection/toggling (non-blocking)
       begin
-        update_inactive_state(simplefin_account, account_data)
+        update_inactive_state(simplefin_account, account_data) unless stale_snapshot
       rescue => e
         Rails.logger.warn("SimpleFin: inactive-state evaluation failed for sfa=#{simplefin_account.id || account_id}: #{e.class} - #{e.message}")
       end
@@ -1037,7 +1054,7 @@ class SimplefinItem::Importer
 
       begin
         # Entries move to their new ids only if the payload naming those ids saves.
-        SimplefinAccount.transaction do
+        SimplefinAccount.transaction(requires_new: true) do
           # Another sync of this account may have saved since the payload was read
           # (syncs can overlap once the first is over five minutes old). The row
           # lock serialises the two; pairing again against what is stored keeps
@@ -1087,11 +1104,7 @@ class SimplefinItem::Importer
 
           # If holdings changed for an investment/crypto account, enqueue holdings apply job and recompute cash balance
           if holdings_changed && [ "Investment", "Crypto" ].include?(acct.accountable_type)
-            # Debounce per importer run per SFA
-            unless @enqueued_holdings_job_ids.include?(simplefin_account.id)
-              SimplefinHoldingsApplyJob.perform_later(simplefin_account.id)
-              @enqueued_holdings_job_ids << simplefin_account.id
-            end
+            SimplefinHoldingsApplyJob.perform_later(simplefin_account.id)
 
             # Recompute cash balance using existing calculator; avoid altering canonical ledger balances
             begin
