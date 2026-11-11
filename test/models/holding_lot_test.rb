@@ -630,6 +630,26 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  test "a user-set lot cost of zero is the holding's cost, alone and in a batch" do
+    travel_to TODAY do
+      setup_account
+      security = priced_security("LOTN", 60)
+      buy = trade(security, 10, 50, 2)
+      materialize(:forward)
+
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(0)
+      materialize(:forward)
+
+      holding = @account.holdings.find_by!(security: security, date: d(10))
+      assert_equal [ 0, "calculated", false ], [ holding.cost_basis, holding.cost_basis_source, holding.cost_basis_locked ]
+      assert_equal Money.new(0, "USD"), holding.avg_cost
+
+      batched = Holding.find(holding.id)
+      Holding.preload_avg_costs([ batched ])
+      assert_equal Money.new(0, "USD"), batched.avg_cost
+    end
+  end
+
   # A run scoped to one security (a remap, a price sync) books lots for that
   # security only: neither the provider snapshot, which covers the whole
   # account, nor the account's other trades open a book.

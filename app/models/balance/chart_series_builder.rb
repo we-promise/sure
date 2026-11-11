@@ -302,7 +302,7 @@ class Balance::ChartSeriesBuilder
               AND h2.security_id = sec.security_id
               AND h2.date <= d.date
               AND h2.cost_basis IS NOT NULL
-              AND (h2.cost_basis_locked OR h2.cost_basis > 0)
+              AND (h2.cost_basis_locked OR h2.cost_basis > 0 OR h2.cost_basis_source = 'calculated')
             ORDER BY h2.date DESC
             LIMIT 1
           ) last_basis ON TRUE
