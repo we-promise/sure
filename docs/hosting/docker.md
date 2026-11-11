@@ -461,6 +461,17 @@ Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption key
 
 If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot. Rotate as that warning describes: keep the keys derived from the old value as a `previous` encryption scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), make new keys from `bin/rails db:encryption:init` the current scheme, then run the backfill task below. Do this with the `web` and `worker` services stopped (`docker compose stop web worker`, then `docker compose run --rm web bin/rails "security:backfill_encryption[100,0]"`). Check that every model reports `failed_count: 0`, then remove the previous scheme before starting the app again: while it is configured, Rails writes and looks up deterministically encrypted values (emails, tokens, API keys) with the oldest key. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
 
+Changing `SECRET_KEY_BASE` also affects settings. API keys and tokens saved on the self-hosting settings page (OpenAI and Anthropic tokens, market data and property valuation keys, and similar) are encrypted with a key derived from `SECRET_KEY_BASE` itself, not with the Active Record keys above, so the `previous` scheme does not cover them. Right after the change those settings no longer decrypt: the app does not show an error, it sends the stored ciphertext as the key and the provider rejects it. Re-encrypt them once, with the old value in `OLD_SECRET_KEY_BASE`:
+
+```bash
+read -rs OLD_SECRET_KEY_BASE && export OLD_SECRET_KEY_BASE   # paste the previous value; keeps it out of your shell history
+docker compose run --rm -e OLD_SECRET_KEY_BASE web bin/rails security:rotate_setting_secrets        # dry run: lists what would change
+docker compose run --rm -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[0]"   # writes
+unset OLD_SECRET_KEY_BASE
+```
+
+The dry run marks fields it would move as `would_reencrypt`; after the second command they read `reencrypted`. If nothing decrypts with the value you gave, the task stops with `old_secret_key_base_did_not_match`: check the value. Anything listed under `not_decryptable` was saved under neither value (or as plaintext before settings encryption existed); re-enter those keys on the settings page. If you prefer not to run the task, note the keys before the change and re-enter them afterwards.
+
 ### Re-encrypting data after an encryption-related update
 
 If a release note mentions a fix to Active Record encryption configuration, any data written before you updated may still be stored as plaintext even though it's supposed to be encrypted. After updating, run the backfill task once to encrypt it in place:

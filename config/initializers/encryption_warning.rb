@@ -44,6 +44,11 @@ Rails.application.config.after_initialize do
       encrypted values (emails, tokens, API keys) with the oldest key and
       looks them up with it, so new writes would land under the compromised
       key and lookups would miss the rows the backfill moved.
+      Changing SECRET_KEY_BASE afterwards also changes the key for API keys
+      and tokens saved in the settings (not covered by the previous scheme):
+      re-encrypt them with bin/rails "security:rotate_setting_secrets[0]",
+      with the old value in the OLD_SECRET_KEY_BASE environment variable
+      (see the Docker hosting guide; keep it out of your shell history).
     WARN
   end
 end

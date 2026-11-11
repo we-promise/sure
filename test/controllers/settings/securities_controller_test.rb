@@ -64,6 +64,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+    assert_includes response.body, "security:rotate_setting_secrets"
   end
 
   test "hides compromised secret warning when encryption is not configured at all" do
