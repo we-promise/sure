@@ -375,10 +375,26 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "can update settings when self hosting is enabled" do
     with_self_hosting do
+      users(:family_admin).family.expects(:sync_later).once
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
       assert_equal "1234567890", Setting.twelve_data_api_key
     end
+  end
+
+  test "changing the exchange rate provider schedules a family sync" do
+    previous_provider = Setting.exchange_rate_provider
+
+    with_self_hosting do
+      Setting.exchange_rate_provider = "twelve_data"
+      users(:family_admin).family.expects(:sync_later).once
+
+      patch settings_hosting_url, params: { setting: { exchange_rate_provider: "yahoo_finance" } }
+
+      assert_equal "yahoo_finance", Setting.exchange_rate_provider
+    end
+  ensure
+    Setting.exchange_rate_provider = previous_provider
   end
 
   test "can clear an encrypted api key by submitting a blank value" do
@@ -393,6 +409,7 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
 
   test "submitting the masked placeholder leaves an encrypted api key unchanged" do
     with_self_hosting do
+      users(:family_admin).family.expects(:sync_later).once
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
 
       patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********" } }
