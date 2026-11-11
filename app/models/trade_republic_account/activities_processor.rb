@@ -171,6 +171,9 @@ class TradeRepublicAccount::ActivitiesProcessor
         return false if @trade_republic_account.portfolio? && crypto_split?
         return false if @trade_republic_account.crypto? && protected_portfolio_trade?(event)
       end
+      # A primary copy the user edited stays the booking; importing the PEA
+      # copy too would count the event twice.
+      return false if @trade_republic_account.pea? && !pea_transfer_event?(event) && protected_primary_copy?(event)
 
       return @trade_republic_account.holds_securities? if broker_funded_trade_event?(event)
       return true if round_up_event?(event_type)
@@ -901,9 +904,9 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     # PEA trades, dividends and fees imported on the primary accounts before
     # the PEA account was linked now live on the PEA. Remove the primary
-    # copies (and the settlement counterparts of trades), except entries the
-    # user edited. The funding transfers stay: the primary cash account books
-    # them too.
+    # copies (and the settlement counterparts of trades) once the PEA holds
+    # its own entry, except entries the user edited. The funding transfers
+    # stay: the primary cash account books them too.
     def reconcile_moved_pea_entries!
       return unless @trade_republic_account.pea?
 
@@ -915,9 +918,10 @@ class TradeRepublicAccount::ActivitiesProcessor
 
         "trade_republic_event_#{event[:id]}"
       end
-      return if event_ids.empty?
+      moved_ids = event_ids.empty? ? [] : account.entries.where(source: "trade_republic", external_id: event_ids).pluck(:external_id)
+      return if moved_ids.empty?
 
-      external_ids = event_ids + event_ids.map { |external_id| settlement_counterpart_external_id(external_id) }
+      external_ids = moved_ids + moved_ids.map { |external_id| settlement_counterpart_external_id(external_id) }
       %w[portfolio cash crypto].each do |kind|
         primary_account = @trade_republic_account.sibling(kind)&.usable_account
         next unless primary_account
@@ -944,6 +948,15 @@ class TradeRepublicAccount::ActivitiesProcessor
           account: primary_account,
           metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
         )
+      end
+    end
+
+    def protected_primary_copy?(event)
+      external_id = "trade_republic_event_#{event[:id]}"
+      ids = [ external_id, settlement_counterpart_external_id(external_id) ]
+      %w[portfolio cash crypto].any? do |kind|
+        primary_account = @trade_republic_account.sibling(kind)&.current_account
+        primary_account&.entries&.where(source: "trade_republic", external_id: ids)&.any?(&:protected_from_sync?)
       end
     end
 

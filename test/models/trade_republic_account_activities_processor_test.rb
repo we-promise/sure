@@ -2019,6 +2019,23 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil find_trade("trade_republic_event_evt_pea_buy")
     assert_not_nil find_trade("trade_republic_event_evt_pea_edited")
     assert_not_nil pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_buy")
+    # The edited primary copy stays the only booking of its event.
+    assert_nil pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_edited")
+  end
+
+  test "PEA keeps the primary copy while it has no entry of its own" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    @tr_account.update!(raw_timeline_payload: [ pea_buy_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    assert_not_nil find_trade("trade_republic_event_evt_pea_buy")
+
+    # Routed to the PEA, but without the detail its trade import needs.
+    @tr_account.update!(raw_timeline_payload: [])
+    pea_provider.update!(raw_timeline_payload: [ pea_buy_event.except(:detail) ])
+    process_all(@tr_account, pea_provider)
+
+    assert_not_nil find_trade("trade_republic_event_evt_pea_buy")
+    assert_nil pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_buy")
   end
 
   private

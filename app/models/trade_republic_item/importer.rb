@@ -16,16 +16,19 @@ class TradeRepublicItem::Importer
   end
 
   def import
-    pea_known = trade_republic_item.trade_republic_accounts.any?(&:pea?)
-    full_fetch = force_full_timeline_fetch?
     stored_events = trade_republic_item.trade_republic_accounts.any? { |account| Array(account.raw_timeline_payload).any? }
+    full_fetch = force_full_timeline_fetch?
+    # Without a newest known event the first fetch already reads it all.
+    whole_timeline = full_fetch || trade_republic_item.newest_event_id.blank?
     result = fetch_from_provider(full_timeline: full_fetch, session_txt: trade_republic_item.session_blob)
 
-    # The first time a PEA shows up, its past trades are still stored on the
-    # primary account without the cash account number that routes them.
-    # Fetch the whole timeline once so they can move to the PEA.
-    if !full_fetch && !pea_known && stored_events && result.data["status"] != "session_expired" &&
-        Array(result.data["tax_wrapper_accounts"]).any?
+    # Until a PEA has been through one complete timeline fetch, past PEA
+    # trades may still sit on the primary account without the cash account
+    # number that routes them. Fetch the whole timeline so they can move.
+    # The backfill is only marked done once such a fetch succeeds, so a
+    # failed one is retried on the next sync.
+    if !whole_timeline && stored_events && pea_backfill_pending?(result.data)
+      whole_timeline = true
       result = fetch_from_provider(
         full_timeline: true,
         session_txt: result.data["session_txt"].presence || trade_republic_item.session_blob
@@ -34,6 +37,7 @@ class TradeRepublicItem::Importer
 
     data = result.data
     domain_statuses = normalized_domain_statuses(data)
+    @timeline_backfilled = whole_timeline && complete_timeline_fetched?(data, domain_statuses)
 
     if data["status"] == "session_expired"
       trade_republic_item.update!(status: :requires_update)
@@ -62,6 +66,19 @@ class TradeRepublicItem::Importer
   end
 
   private
+
+    def pea_backfill_pending?(data)
+      return false if data["status"] == "session_expired"
+
+      pea = trade_republic_item.trade_republic_accounts.find_by(kind: "pea")
+      return pea.timeline_backfilled_at.nil? if pea
+
+      Array(data["tax_wrapper_accounts"]).any?
+    end
+
+    def complete_timeline_fetched?(data, domain_statuses)
+      domain_statuses["timeline"] == "success" && data["timeline_pagination_complete"] != false
+    end
 
     def fetch_from_provider(full_timeline:, session_txt:)
       provider.sync(
@@ -157,13 +174,22 @@ class TradeRepublicItem::Importer
       elsif pea
         pea.current_balance.to_d - pea.cash_balance.to_d
       end
+      # Before the positions are first known, the known cash is the best
+      # partial balance.
+      current_balance = if positions_total && cash
+        positions_total + cash.to_d
+      elsif pea.nil? && cash
+        cash.to_d
+      else
+        pea&.current_balance
+      end
 
-      upsert_kind(
+      capped = upsert_kind(
         kind: "pea",
         external_id: "pea:#{sec_acc_no}",
         name: build_account_name(sec_acc_no, kind: "pea"),
-        currency: wrapper["currency"].presence || currency,
-        current_balance: positions_total.nil? || cash.nil? ? pea&.current_balance : positions_total + cash.to_d,
+        currency: wrapper["currency"].presence || pea&.currency.presence || currency,
+        current_balance: current_balance,
         cash_balance: cash || 0,
         positions: positions,
         events: Array(data["events"]),
@@ -177,6 +203,12 @@ class TradeRepublicItem::Importer
         ),
         keep_event: ->(event) { tax_wrapper_event?(event, pea_cash_ids) || pea_transfer_event?(event) }
       )
+
+      pea = trade_republic_item.trade_republic_accounts.find_by!(kind: "pea")
+      pea.provider_cash_account_id = wrapper["cash_account_id"] if wrapper["cash_account_id"].present?
+      pea.timeline_backfilled_at ||= Time.current if @timeline_backfilled
+      pea.save! if pea.changed?
+      capped
     end
 
     # One PEA per login. When this sync could not list the account pairs, a
@@ -189,22 +221,16 @@ class TradeRepublicItem::Importer
       sec_acc_no = pea&.trade_republic_account_id.to_s.delete_prefix("pea:").presence
       return [] unless sec_acc_no
 
-      [ { "securities_account_id" => sec_acc_no, "domain_statuses" => {}, "positions" => [], "position_warnings" => [] } ]
+      [ { "securities_account_id" => sec_acc_no, "currency" => pea.currency, "domain_statuses" => {}, "positions" => [], "position_warnings" => [] } ]
     end
 
-    # Cash account numbers of the PEA: from this sync, and from the events
-    # stored on the PEA account, so its events stay off the primary account
-    # when a sync fails to list the account pairs.
+    # Cash account numbers of the PEA: from this sync, and the one stored on
+    # the PEA account, so its events stay off the primary account when a sync
+    # fails to list the account pairs.
     def tax_wrapper_cash_account_ids(wrappers)
       ids = wrappers.filter_map { |wrapper| wrapper["cash_account_id"].to_s.presence }
-      pea = trade_republic_item.trade_republic_accounts.find_by(kind: "pea")
-      stored = Array(pea&.raw_timeline_payload).filter_map do |event|
-        next unless event.is_a?(Hash)
-        next if pea_transfer_event?(event)
-
-        (event["cashAccountNumber"] || event[:cashAccountNumber]).to_s.presence
-      end
-      (ids + stored).uniq.to_set
+      stored = trade_republic_item.trade_republic_accounts.find_by(kind: "pea")&.provider_cash_account_id
+      (ids + [ stored ]).compact_blank.uniq.to_set
     end
 
     def tax_wrapper_event?(event, pea_cash_ids)

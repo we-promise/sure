@@ -1338,6 +1338,8 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal BigDecimal("340"), pea.current_balance
     assert_equal [ "FR0011550185" ], pea.raw_positions_payload.map { |position| position["isin"] }
     assert pea.holdings_snapshot_complete?
+    assert_equal "PEA-CASH", pea.provider_cash_account_id
+    assert_not_nil pea.timeline_backfilled_at
     assert_equal %w[evt_pea_buy evt_pea_transfer], pea.raw_timeline_payload.map { |event| event["id"] }.sort
 
     portfolio = @item.trade_republic_accounts.find_by(kind: "portfolio")
@@ -1372,10 +1374,57 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal %w[evt_cto_buy evt_pea_transfer], portfolio.reload.raw_timeline_payload.map { |event| event["id"] }.sort
     pea = @item.trade_republic_accounts.find_by(kind: "pea")
     assert_includes pea.raw_timeline_payload.map { |event| event["id"] }, "evt_pea_buy"
+    assert_not_nil pea.timeline_backfilled_at
+  end
+
+  test "PEA backfill is retried until a whole timeline fetch completes" do
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio", trade_republic_account_id: "CTO-SEC", name: "Portfolio", currency: "EUR",
+      raw_timeline_payload: [ { "id" => "evt_old", "timestamp" => "2026-10-01T10:00:00Z", "category" => "orderExecution" } ]
+    )
+    pea = @item.trade_republic_accounts.create!(
+      kind: "pea", trade_republic_account_id: "pea:PEA-SEC", name: "PEA", currency: "EUR", provider_cash_account_id: "PEA-CASH"
+    )
+    @item.update!(newest_event_id: "evt_old")
+
+    provider = mock("trade_republic_provider")
+    incomplete = sequence("incomplete_backfill")
+    provider.expects(:sync).with { |args| args[:known_newest_event_id] == "evt_old" }
+      .in_sequence(incomplete).returns(client_result(pea_sync_data("events" => [])))
+    provider.expects(:sync).with { |args| args[:known_newest_event_id].nil? }
+      .in_sequence(incomplete).returns(client_result(pea_sync_data("timeline_pagination_complete" => false)))
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+    assert_nil pea.reload.timeline_backfilled_at
+
+    provider = mock("trade_republic_provider")
+    complete = sequence("complete_backfill")
+    provider.expects(:sync).with { |args| args[:known_newest_event_id].present? }
+      .in_sequence(complete).returns(client_result(pea_sync_data("events" => [])))
+    provider.expects(:sync).with { |args| args[:known_newest_event_id].nil? }
+      .in_sequence(complete).returns(client_result(pea_sync_data))
+    TradeRepublicItem::Importer.new(@item.reload, provider: provider).import
+    assert_not_nil pea.reload.timeline_backfilled_at
+  end
+
+  test "first PEA balance uses the known cash when its positions fail" do
+    wrapper = pea_sync_data["tax_wrapper_accounts"].first.merge(
+      "positions" => [],
+      "domain_statuses" => { "cash" => "success", "portfolio" => "failed" }
+    )
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(pea_sync_data("tax_wrapper_accounts" => [ wrapper ])))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    pea = @item.trade_republic_accounts.find_by(kind: "pea")
+    assert_equal BigDecimal("40"), pea.current_balance
+    assert_equal BigDecimal("40"), pea.cash_balance
   end
 
   test "known PEA does not trigger a full timeline refetch" do
-    @item.trade_republic_accounts.create!(kind: "pea", trade_republic_account_id: "pea:PEA-SEC", name: "PEA", currency: "EUR")
+    @item.trade_republic_accounts.create!(
+      kind: "pea", trade_republic_account_id: "pea:PEA-SEC", name: "PEA", currency: "EUR", timeline_backfilled_at: 1.day.ago
+    )
     @item.update!(newest_event_id: "evt_old")
 
     provider = mock("trade_republic_provider")
@@ -1391,6 +1440,8 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       trade_republic_account_id: "pea:PEA-SEC",
       name: "PEA",
       currency: "EUR",
+      provider_cash_account_id: "PEA-CASH",
+      timeline_backfilled_at: 1.day.ago,
       cash_balance: BigDecimal("40"),
       current_balance: BigDecimal("340"),
       raw_positions_payload: [ { "isin" => "FR0011550185", "quantity" => "10", "price" => "30" } ],
@@ -1400,11 +1451,14 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     )
 
     provider = mock("trade_republic_provider")
-    provider.expects(:sync).returns(client_result(pea_sync_data("tax_wrapper_accounts" => [])))
+    data = pea_sync_data("tax_wrapper_accounts" => [])
+    data["account"] = data["account"].merge("currency" => "USD")
+    provider.expects(:sync).returns(client_result(data))
 
     TradeRepublicItem::Importer.new(@item, provider: provider).import
 
     pea.reload
+    assert_equal "EUR", pea.currency
     assert_equal BigDecimal("40"), pea.cash_balance
     assert_equal BigDecimal("340"), pea.current_balance
     assert_equal 1, pea.raw_positions_payload.size
