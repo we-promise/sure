@@ -56,7 +56,6 @@ class SophtronAccount < ApplicationRecord
       next unless saved_change_to_balance_sign_override? && current_account.present?
 
       SophtronAccount::Processor.new(self).process_account!
-      SophtronAccount::Transactions::Processor.new(self).process
       current_account.sync_later
     end
   end

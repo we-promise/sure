@@ -33,7 +33,8 @@ en:
       sophtron_balance_sign_debt: Debt (you owe the bank)
       sophtron_balance_sign_description: Use an override only when Sophtron reports
         an ambiguous sign. Automatic continues negating credit card balances and
-        transactions. An override also corrects the sign of this card's transactions.
+        transactions. An override also corrects this card's transaction signs on the
+        next sync.
       sophtron_balance_sign_label: Sophtron balance meaning
       simplefin_balance_sign_auto: Automatic
       simplefin_balance_sign_credit: Credit (bank owes you)

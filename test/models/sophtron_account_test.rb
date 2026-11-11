@@ -75,7 +75,7 @@ class SophtronAccountTest < ActiveSupport::TestCase
     assert_not sophtron_account.lender_signed?
   end
 
-  test "applying an override re-signs already imported transactions" do
+  test "the next processing run re-signs transactions imported before an override" do
     sophtron_account = build_sophtron_account
     account = accounts(:credit_card)
     AccountProvider.create!(account: account, provider: sophtron_account)
@@ -88,6 +88,7 @@ class SophtronAccountTest < ActiveSupport::TestCase
 
     Account.any_instance.stubs(:sync_later)
     sophtron_account.apply_balance_sign_override!("debt")
+    SophtronAccount::Transactions::Processor.new(sophtron_account).process
 
     assert_equal BigDecimal("40"), entry.reload.amount
   end
