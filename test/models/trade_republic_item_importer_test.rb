@@ -1325,7 +1325,124 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal [ "NL0000303709" ], isins
   end
 
+  test "import creates a PEA account with its positions, cash and timeline events" do
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(pea_sync_data))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    pea = @item.trade_republic_accounts.find_by(kind: "pea")
+    assert_equal "pea:PEA-SEC", pea.trade_republic_account_id
+    assert_equal "Trade Republic PEA (PEA-SEC)", pea.name
+    assert_equal BigDecimal("40"), pea.cash_balance
+    assert_equal BigDecimal("340"), pea.current_balance
+    assert_equal [ "FR0011550185" ], pea.raw_positions_payload.map { |position| position["isin"] }
+    assert pea.holdings_snapshot_complete?
+    assert_equal %w[evt_pea_buy evt_pea_transfer], pea.raw_timeline_payload.map { |event| event["id"] }.sort
+
+    portfolio = @item.trade_republic_accounts.find_by(kind: "portfolio")
+    assert_equal %w[evt_cto_buy evt_pea_transfer], portfolio.raw_timeline_payload.map { |event| event["id"] }.sort
+    assert_equal BigDecimal("200"), portfolio.current_balance
+    cash = @item.trade_republic_accounts.find_by(kind: "cash")
+    assert_equal [ "evt_pea_transfer" ], cash.raw_timeline_payload.map { |event| event["id"] }
+  end
+
+  test "first PEA sync refetches the whole timeline to move stored PEA trades" do
+    portfolio = @item.trade_republic_accounts.create!(
+      kind: "portfolio",
+      trade_republic_account_id: "CTO-SEC",
+      name: "Trade Republic Portfolio",
+      currency: "EUR",
+      raw_timeline_payload: [
+        { "id" => "evt_pea_buy", "timestamp" => "2026-11-01T10:00:00Z", "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED" },
+        { "id" => "evt_cto_buy", "timestamp" => "2026-11-02T10:00:00Z", "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED" }
+      ]
+    )
+    @item.update!(newest_event_id: "evt_cto_buy")
+
+    provider = mock("trade_republic_provider")
+    sequence = sequence("pea_first_sync")
+    provider.expects(:sync).with { |args| args[:known_newest_event_id] == "evt_cto_buy" }
+      .in_sequence(sequence).returns(client_result(pea_sync_data("events" => [])))
+    provider.expects(:sync).with { |args| args[:known_newest_event_id].nil? && args[:timeline_cursors] == {} }
+      .in_sequence(sequence).returns(client_result(pea_sync_data))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal %w[evt_cto_buy evt_pea_transfer], portfolio.reload.raw_timeline_payload.map { |event| event["id"] }.sort
+    pea = @item.trade_republic_accounts.find_by(kind: "pea")
+    assert_includes pea.raw_timeline_payload.map { |event| event["id"] }, "evt_pea_buy"
+  end
+
+  test "known PEA does not trigger a full timeline refetch" do
+    @item.trade_republic_accounts.create!(kind: "pea", trade_republic_account_id: "pea:PEA-SEC", name: "PEA", currency: "EUR")
+    @item.update!(newest_event_id: "evt_old")
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).once.with { |args| args[:known_newest_event_id] == "evt_old" }
+      .returns(client_result(pea_sync_data))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+  end
+
+  test "PEA keeps its snapshot and still takes its events when the account pairs fail" do
+    pea = @item.trade_republic_accounts.create!(
+      kind: "pea",
+      trade_republic_account_id: "pea:PEA-SEC",
+      name: "PEA",
+      currency: "EUR",
+      cash_balance: BigDecimal("40"),
+      current_balance: BigDecimal("340"),
+      raw_positions_payload: [ { "isin" => "FR0011550185", "quantity" => "10", "price" => "30" } ],
+      raw_timeline_payload: [
+        { "id" => "evt_pea_old", "timestamp" => "2026-10-01T10:00:00Z", "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED", "cashAccountNumber" => "PEA-CASH" }
+      ]
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(pea_sync_data("tax_wrapper_accounts" => [])))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    pea.reload
+    assert_equal BigDecimal("40"), pea.cash_balance
+    assert_equal BigDecimal("340"), pea.current_balance
+    assert_equal 1, pea.raw_positions_payload.size
+    assert_equal %w[evt_pea_buy evt_pea_old evt_pea_transfer], pea.raw_timeline_payload.map { |event| event["id"] }.sort
+    portfolio = @item.trade_republic_accounts.find_by(kind: "portfolio")
+    assert_not_includes portfolio.raw_timeline_payload.map { |event| event["id"] }, "evt_pea_buy"
+  end
+
   private
+
+    def pea_sync_data(overrides = {})
+      {
+        "status" => "ok",
+        "account" => { "brokerage_account_id" => "CTO-SEC", "currency" => "EUR", "cash_account_id" => "CTO-CASH" },
+        "cash" => { "amount" => "100", "currency" => "EUR" },
+        "positions" => [ { "isin" => "US0378331005", "name" => "Apple Inc.", "quantity" => "2", "price" => "100" } ],
+        "tax_wrapper_accounts" => [
+          {
+            "product_type" => "TAX_WRAPPER",
+            "securities_account_id" => "PEA-SEC",
+            "cash_account_id" => "PEA-CASH",
+            "currency" => "EUR",
+            "cash" => { "amount" => "40", "currency" => "EUR" },
+            "positions" => [ { "isin" => "FR0011550185", "name" => "ETF", "quantity" => "10", "price" => "30" } ],
+            "position_warnings" => [],
+            "domain_statuses" => { "cash" => "success", "portfolio" => "success" }
+          }
+        ],
+        "events" => [
+          { "id" => "evt_cto_buy", "timestamp" => "2026-11-02T10:00:00Z", "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED", "cashAccountNumber" => "CTO-CASH" },
+          { "id" => "evt_pea_buy", "timestamp" => "2026-11-01T10:00:00Z", "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED", "cashAccountNumber" => "PEA-CASH" },
+          { "id" => "evt_pea_transfer", "timestamp" => "2026-11-01T09:00:00Z", "eventType" => "PEA_DEPOSIT_DEBIT", "cashAccountNumber" => "CTO-CASH", "detail" => { "amount" => "300", "currency" => "EUR" } }
+        ],
+        "newest_event_id" => "evt_cto_buy",
+        "timeline_pagination_complete" => true,
+        "warnings" => []
+      }.merge(overrides)
+    end
 
     def client_result(data)
       Provider::TradeRepublicClient::Result.new(data: data)

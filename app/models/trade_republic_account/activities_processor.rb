@@ -67,6 +67,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
     reconcile_split_portfolio_transactions!
     reconcile_moved_crypto_trades!
+    reconcile_moved_pea_entries!
     reconcile_stale_broker_funded_cash_transactions!
     reconcile_non_importable_entries!
     reconcile_settlement_counterparts!
@@ -197,6 +198,11 @@ class TradeRepublicAccount::ActivitiesProcessor
       detail = event[:detail] || {}
       event_type = event[:eventType].to_s
 
+      # The PEA receives the cash its transfer takes from the primary account,
+      # which books the same event as a withdrawal.
+      if @trade_republic_account.pea? && pea_transfer_event?(event)
+        return import_labeled_cash_movement(event, detail, external_id, date, "contribution", sign: -1)
+      end
       return process_broker_funded_trade(event, detail, external_id, date) if broker_funded_trade_event?(event)
       return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
       # Trade Republic turns a stamp duty charge's timeline item into its
@@ -887,6 +893,58 @@ class TradeRepublicAccount::ActivitiesProcessor
         account: portfolio_account,
         metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
       )
+    end
+
+    def pea_transfer_event?(event)
+      PEA_TRANSFER_EVENT_TYPES.include?(event[:eventType].to_s)
+    end
+
+    # PEA trades, dividends and fees imported on the primary accounts before
+    # the PEA account was linked now live on the PEA. Remove the primary
+    # copies (and the settlement counterparts of trades), except entries the
+    # user edited. The funding transfers stay: the primary cash account books
+    # them too.
+    def reconcile_moved_pea_entries!
+      return unless @trade_republic_account.pea?
+
+      event_ids = timeline_events.filter_map do |event|
+        next unless event.is_a?(Hash)
+
+        event = event.with_indifferent_access
+        next if pea_transfer_event?(event) || event[:id].blank?
+
+        "trade_republic_event_#{event[:id]}"
+      end
+      return if event_ids.empty?
+
+      external_ids = event_ids + event_ids.map { |external_id| settlement_counterpart_external_id(external_id) }
+      %w[portfolio cash crypto].each do |kind|
+        primary_account = @trade_republic_account.sibling(kind)&.usable_account
+        next unless primary_account
+
+        removed_count = 0
+        primary_account.entries
+          .where(source: "trade_republic", external_id: external_ids)
+          .includes(:entryable)
+          .find_each do |entry|
+            next if entry.protected_from_sync? || entry.split_parent? || entry.split_child?
+
+            entry.destroy!
+            removed_count += 1
+          end
+        next unless removed_count.positive?
+
+        DebugLogEntry.capture(
+          category: "sync",
+          level: "info",
+          message: "Moved #{removed_count} Trade Republic PEA entr#{removed_count == 1 ? "y" : "ies"} from the #{kind} account to the PEA",
+          source: "trade_republic",
+          family: @trade_republic_account.trade_republic_item.family,
+          provider_key: "trade_republic",
+          account: primary_account,
+          metadata: { trade_republic_account_id: @trade_republic_account.id, removed_count: removed_count }
+        )
+      end
     end
 
     def protected_portfolio_trade?(event)

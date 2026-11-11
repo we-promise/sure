@@ -13,7 +13,10 @@ class TradeRepublicAccount < ApplicationRecord
   # development schema cache has refreshed after a migration. Declaring the
   # type explicitly keeps the enum valid in that reload window as well.
   attribute :kind, :string, default: "portfolio"
-  enum :kind, { portfolio: "portfolio", cash: "cash", crypto: "crypto" }, default: :portfolio
+  # pea: a French PEA (Trade Republic TAX_WRAPPER account). Unlike the
+  # primary account it is one Investment account holding both its positions
+  # and its own cash, since Trade Republic keeps a separate cash account for it.
+  enum :kind, { portfolio: "portfolio", cash: "cash", crypto: "crypto", pea: "pea" }, default: :portfolio
 
   # Trade Republic lists crypto under pseudo-ISINs starting with XF000.
   CRYPTO_ISIN_PREFIX = "XF000"
@@ -57,7 +60,7 @@ class TradeRepublicAccount < ApplicationRecord
   def linkable_to?(account)
     case account.accountable_type
     when "Investment" then true
-    when "Depository" then !crypto?
+    when "Depository" then !crypto? && !pea?
     when "Crypto" then crypto? && account.accountable&.subtype == "exchange"
     else false
     end
@@ -66,7 +69,12 @@ class TradeRepublicAccount < ApplicationRecord
   # Portfolio and Crypto accounts hold securities; the Cash account settles
   # their trades.
   def holds_securities?
-    portfolio? || crypto?
+    portfolio? || crypto? || pea?
+  end
+
+  # The PEA keeps its cash on the same Sure account as its positions.
+  def holds_cash?
+    cash? || pea?
   end
 
   # Crypto moves to its own account once the user linked the Crypto account.
@@ -85,6 +93,8 @@ class TradeRepublicAccount < ApplicationRecord
     when "portfolio"
       positions = Array(raw_positions_payload)
       crypto_split? ? positions.reject { |position| self.class.crypto_position?(position) } : positions
+    when "pea"
+      Array(raw_positions_payload)
     else
       []
     end
