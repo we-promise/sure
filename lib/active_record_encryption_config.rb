@@ -19,6 +19,36 @@ module ActiveRecordEncryptionConfig
     a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13
   ].freeze
 
+  # Set only for the one-off commands of a key rotation (see the Docker
+  # hosting guide): the SECRET_KEY_BASE whose derived keys encrypted the
+  # existing data, so it still decrypts while the backfill moves it to the
+  # current keys.
+  PREVIOUS_SECRET_KEY_BASE_ENV = "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE"
+
+  # Previous-scheme key provider for keys derived from an old
+  # SECRET_KEY_BASE. Rails derives every scheme's keys with the globally
+  # configured salt, so the old salt needs a provider of its own. Keys are
+  # derived on first use, once Rails has settled hash_digest_class.
+  class DerivedKeyProvider
+    def initialize(password, salt)
+      @password = password
+      @salt = salt
+    end
+
+    def encryption_key
+      @encryption_key ||= begin
+        config = ActiveRecord::Encryption.config
+        secret = ActiveSupport::KeyGenerator.new(@password, hash_digest_class: config.hash_digest_class)
+          .generate_key(@salt, ActiveRecord::Encryption.cipher.key_length)
+        ActiveRecord::Encryption::Key.new(secret)
+      end
+    end
+
+    def decryption_keys(_encrypted_message)
+      [ encryption_key ]
+    end
+  end
+
   CONFIG_KEYS = %i[
     primary_key
     deterministic_key
@@ -76,6 +106,29 @@ module ActiveRecordEncryptionConfig
     KNOWN_COMPROMISED_SECRET_KEY_BASES.include?(secret_key_base)
   rescue NoMethodError
     false
+  end
+
+  # The keys config/initializers/active_record_encryption.rb derives from
+  # SECRET_KEY_BASE when no explicit keys are configured.
+  def derived_keys(secret_key_base)
+    CONFIG_KEYS.to_h do |key|
+      [ key, Digest::SHA256.hexdigest("#{secret_key_base}:#{key}")[0..63] ]
+    end
+  end
+
+  # Previous schemes for `config.active_record.encryption.previous`, built
+  # from the keys derived from PREVIOUS_SECRET_KEY_BASE_ENV. Rails applies a
+  # global previous scheme only to attributes with the same determinism, so
+  # there is one scheme for each kind.
+  def previous_schemes(env = ENV)
+    old_base = env[PREVIOUS_SECRET_KEY_BASE_ENV]
+    return [] if old_base.blank?
+
+    keys = derived_keys(old_base)
+    [
+      { key_provider: DerivedKeyProvider.new(keys[:primary_key], keys[:key_derivation_salt]) },
+      { deterministic: true, key_provider: DerivedKeyProvider.new(keys[:deterministic_key], keys[:key_derivation_salt]) }
+    ]
   end
 
   def env_value_present?(env, key)

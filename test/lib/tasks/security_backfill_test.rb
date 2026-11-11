@@ -201,4 +201,43 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_equal 1, result[:failed_count]
     assert_equal foreign, LunchflowItem.where(id: item.id).pick(Arel.sql("api_key"))
   end
+
+  # Rails stores encrypted json/jsonb values as a JSON object envelope, so
+  # a foreign-key ciphertext there reads back as a Hash, not a String.
+  test "backfill refuses jsonb ciphertext that no configured key decrypts" do
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Foreign Json", api_key: "seed")
+    item.save!(validate: false)
+    account = item.lunchflow_accounts.create!(
+      name: "Backfill Foreign Json Account", currency: "GBP", account_id: "backfill-foreign-json")
+    foreign = ActiveRecord::Encryption.encryptor.encrypt(
+      { "lost" => true }.to_json, key_provider: ActiveRecord::Encryption::DerivedSecretKeyProvider.new(SecureRandom.hex(32))
+    )
+    LunchflowAccount.where(id: account.id).update_all([ "raw_payload = ?::jsonb", foreign ])
+
+    result = backfill_model(LunchflowAccount.where(id: account.id), %i[raw_payload], 500, false)
+
+    assert_equal 1, result[:failed_count]
+    assert_equal 0, result[:updated]
+    stored = ActiveRecord::Base.connection.select_value(
+      LunchflowAccount.where(id: account.id).select("raw_payload::text").to_sql)
+    assert_equal JSON.parse(foreign), JSON.parse(stored)
+  end
+
+  # Encryptor#encrypted? only checks for a "p" key; a plaintext payload of
+  # that shape must still be converted, not refused.
+  test "backfill converts plaintext json that only resembles an envelope" do
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Lookalike", api_key: "seed")
+    item.save!(validate: false)
+    account = item.lunchflow_accounts.create!(
+      name: "Backfill Lookalike Account", currency: "GBP", account_id: "backfill-lookalike")
+    payload = { "p" => nil, "h" => "header" }
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_accounts SET raw_payload = ?::jsonb WHERE id = ?", payload.to_json, account.id ]))
+
+    result = backfill_model(LunchflowAccount.where(id: account.id), %i[raw_payload], 500, false)
+
+    assert_equal 0, result[:failed_count]
+    assert_equal payload, account.reload.raw_payload
+    assert_match(/"iv"/, account.read_attribute_before_type_cast(:raw_payload).to_s)
+  end
 end

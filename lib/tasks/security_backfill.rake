@@ -82,10 +82,10 @@ namespace :security do
             plaintext_values = {}
             fields.each do |field|
               value = safe_read_field(record, field)
-              # support_unencrypted_data hands back ciphertext that no
-              # configured key decrypts as if it were plaintext; encrypting it
+              # Ciphertext that no configured key decrypts comes back as its
+              # raw envelope (a Hash on json/jsonb columns); encrypting it
               # again would lose the original value for good.
-              if value.is_a?(String) && ActiveRecord::Encryption.encryptor.encrypted?(value)
+              if undecryptable_ciphertext?(value)
                 raise ActiveRecord::Encryption::Errors::Decryption, "#{field} holds ciphertext that no configured key decrypts"
               end
               plaintext_values[field] = value unless value.nil?
@@ -171,6 +171,25 @@ namespace :security do
     record.class.where(id: record.id).update_all([ assignments, *values.values ])
   end
 
+  # Rails' encryption envelope: {"p": payload, "h": {"iv": ..., "at": ..., ...}}.
+  # Matches the whole shape, since Encryptor#encrypted? accepts any object
+  # with a "p" key and would flag plaintext payloads such as {"p": null}.
+  def undecryptable_ciphertext?(value)
+    envelope = value
+    if value.is_a?(String)
+      return false unless value.start_with?("{")
+
+      envelope = begin
+        JSON.parse(value)
+      rescue JSON::ParserError
+        return false
+      end
+    end
+
+    envelope.is_a?(Hash) && envelope.keys.sort == %w[h p] && envelope["p"].is_a?(String) &&
+      envelope["h"].is_a?(Hash) && envelope["h"].key?("iv") && envelope["h"].key?("at")
+  end
+
   # Safely read a field value, handling both encrypted and plaintext data.
   # When encryption is configured but the value is plaintext, the getter
   # raises ActiveRecord::Encryption::Errors::Decryption. In this case,
@@ -181,7 +200,10 @@ namespace :security do
   # String, breaking every consumer of the payload.
   def safe_read_field(record, field)
     record.send(field)
-  rescue ActiveRecord::Encryption::Errors::Decryption
+  rescue ActiveRecord::Encryption::Errors::Base, NoMethodError, TypeError
+    # Rails reads any json/jsonb object with a "p" key as an encryption
+    # envelope, so plaintext like {"p": 1, "h": "x"} can fail with
+    # NoMethodError or TypeError instead of a Decryption error.
     raw = record.read_attribute_before_type_cast(field)
     column = record.class.columns_hash[field.to_s]
     if raw.is_a?(String) && [ :json, :jsonb ].include?(column&.type)

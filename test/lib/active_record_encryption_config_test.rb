@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "open3"
 
 class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
   test "detects complete encryption environment" do
@@ -80,4 +81,79 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
 
     refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
   end
+
+  test "derived_keys returns the keys derived from SECRET_KEY_BASE" do
+    keys = ActiveRecordEncryptionConfig.derived_keys("old-base")
+
+    assert_equal Digest::SHA256.hexdigest("old-base:primary_key")[0..63], keys[:primary_key]
+    assert_equal Digest::SHA256.hexdigest("old-base:deterministic_key")[0..63], keys[:deterministic_key]
+    assert_equal Digest::SHA256.hexdigest("old-base:key_derivation_salt")[0..63], keys[:key_derivation_salt]
+  end
+
+  test "previous_schemes is empty without a previous SECRET_KEY_BASE" do
+    assert_empty ActiveRecordEncryptionConfig.previous_schemes({})
+    assert_empty ActiveRecordEncryptionConfig.previous_schemes(ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV => "")
+  end
+
+  # The old salt differs from the configured one, which Rails' own key
+  # providers would use.
+  test "previous_schemes decrypt data encrypted with keys derived from an old SECRET_KEY_BASE" do
+    old_base = SecureRandom.hex(64)
+    texts = encrypt_as_derived_from(old_base, "nd-secret", "det-secret")
+
+    schemes = ActiveRecordEncryptionConfig.previous_schemes(ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV => old_base)
+    non_deterministic = schemes.find { |scheme| !scheme[:deterministic] }
+    deterministic = schemes.find { |scheme| scheme[:deterministic] }
+    encryptor = ActiveRecord::Encryption.encryptor
+
+    assert_equal "nd-secret", encryptor.decrypt(texts[:non_deterministic], key_provider: non_deterministic[:key_provider])
+    assert_equal "det-secret", encryptor.decrypt(texts[:deterministic], key_provider: deterministic[:key_provider])
+  end
+
+  # Boots the app the way an operator's one-off command does, so the
+  # initializer wiring and Rails' merge of global previous schemes into each
+  # encrypted attribute are covered.
+  test "an old SECRET_KEY_BASE in the environment makes old data readable through the models" do
+    old_base = SecureRandom.hex(64)
+    texts = encrypt_as_derived_from(old_base, "Ada", "old-key@example.com")
+    script = <<~RUBY
+      puts User.type_for_attribute(:first_name).deserialize(ENV.fetch("PROBE_ND"))
+      puts User.type_for_attribute(:email).deserialize(ENV.fetch("PROBE_DET"))
+    RUBY
+    env = {
+      ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV => old_base,
+      "PROBE_ND" => texts[:non_deterministic],
+      "PROBE_DET" => texts[:deterministic]
+    }
+
+    output, status = Open3.capture2e(env, Rails.root.join("bin/rails").to_s, "runner", script, chdir: Rails.root.to_s)
+
+    assert status.success?, output
+    assert_equal [ "Ada", "old-key@example.com" ], output.lines.last(2).map(&:strip)
+  end
+
+  private
+
+    # Encrypts like an install whose keys were derived from old_base: Rails'
+    # key providers with that install's salt as the configured one. A fresh
+    # KeyGenerator reads the salt on first use; the shared one has it cached.
+    def encrypt_as_derived_from(old_base, non_deterministic_text, deterministic_text)
+      keys = ActiveRecordEncryptionConfig.derived_keys(old_base)
+      config = ActiveRecord::Encryption.config
+      original_salt = config.key_derivation_salt
+      config.key_derivation_salt = keys[:key_derivation_salt]
+      non_deterministic = ActiveRecord::Encryption::DerivedSecretKeyProvider.new(
+        keys[:primary_key], key_generator: ActiveRecord::Encryption::KeyGenerator.new)
+      deterministic = ActiveRecord::Encryption::DerivedSecretKeyProvider.new(
+        keys[:deterministic_key], key_generator: ActiveRecord::Encryption::KeyGenerator.new)
+      config.key_derivation_salt = original_salt
+
+      encryptor = ActiveRecord::Encryption.encryptor
+      {
+        non_deterministic: encryptor.encrypt(non_deterministic_text, key_provider: non_deterministic),
+        deterministic: encryptor.encrypt(deterministic_text, key_provider: deterministic, cipher_options: { deterministic: true })
+      }
+    ensure
+      config.key_derivation_salt = original_salt
+    end
 end

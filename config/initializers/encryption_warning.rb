@@ -6,6 +6,16 @@
 require Rails.root.join("lib/active_record_encryption_config").to_s
 
 Rails.application.config.after_initialize do
+  if ENV[ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV].present?
+    Rails.logger.warn(<<~WARN)
+      [SECURITY] #{ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV} is set, so the
+      keys derived from that old SECRET_KEY_BASE are a previous encryption scheme.
+      Set it only for the commands of a key rotation, not for the running app:
+      while it is set, Rails writes deterministically encrypted values (emails,
+      tokens, API keys) with the old key.
+    WARN
+  end
+
   app_mode = Rails.application.config.app_mode
   next unless app_mode.self_hosted?
 
@@ -31,19 +41,17 @@ Rails.application.config.after_initialize do
       the compromised key, the backfill task cannot tell that ciphertext
       apart from real plaintext, will re-encrypt it under the new key on
       top of the old encryption, and the original data becomes
-      unrecoverable. Rotate safely instead: keep
-      ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY (and friends) derived from this
-      SECRET_KEY_BASE configured as a `previous` encryption scheme
-      (https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)
-      so existing data still decrypts, generate new keys with
-      bin/rails db:encryption:init as the current scheme, then re-run
-      bin/rails security:backfill_encryption to re-encrypt under the new keys.
-      Stop the app for these steps. When every model reports failed_count 0,
-      remove the previous scheme before starting the app again: while it is
-      configured, Rails writes deterministically
-      encrypted values (emails, tokens, API keys) with the oldest key and
-      looks them up with it, so new writes would land under the compromised
-      key and lookups would miss the rows the backfill moved.
+      unrecoverable. Rotate safely instead, with the app stopped: generate
+      new keys with bin/rails db:encryption:init and set them as
+      ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY, ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+      and ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT, then run
+      bin/rails "security:backfill_encryption[100,0]" with this
+      SECRET_KEY_BASE in #{ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV}
+      for that command only, so existing data still decrypts and is
+      re-encrypted under the new keys (see the Docker hosting guide). When
+      every model reports failed_count 0, start the app without that
+      variable: while it is set, Rails writes deterministically encrypted
+      values (emails, tokens, API keys) with the old key.
       Changing SECRET_KEY_BASE afterwards also changes the key for API keys
       and tokens saved in the settings (not covered by the previous scheme):
       re-encrypt them with bin/rails "security:rotate_setting_secrets[0]",

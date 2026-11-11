@@ -459,7 +459,23 @@ Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Curren
 
 Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
 
-If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot. Rotate as that warning describes: keep the keys derived from the old value as a `previous` encryption scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), make new keys from `bin/rails db:encryption:init` the current scheme, then run the backfill task below. Do this with the `web` and `worker` services stopped (`docker compose stop web worker`, then `docker compose run --rm web bin/rails "security:backfill_encryption[100,0]"`). Check that every model reports `failed_count: 0`, then remove the previous scheme before starting the app again: while it is configured, Rails writes and looks up deterministically encrypted values (emails, tokens, API keys) with the oldest key. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
+If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot. Move your data to new encryption keys first, with a backup taken and the app stopped:
+
+1. Generate new keys with `docker compose run --rm web bin/rails db:encryption:init` and put the three values into `.env` as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. Keep `SECRET_KEY_BASE` unchanged for now.
+2. Stop the app and re-encrypt everything under the new keys. `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` holds the `SECRET_KEY_BASE` your data was encrypted with; it makes the keys derived from it a `previous` scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), so existing data still decrypts:
+
+```bash
+docker compose stop web worker
+read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE   # paste the SECRET_KEY_BASE the data was encrypted with
+docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails security:backfill_encryption           # dry run
+docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,0]"  # writes
+unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE
+docker compose up -d
+```
+
+Check that every model reports `failed_count: 0` before starting the app. Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old key. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
+
+If you already changed `SECRET_KEY_BASE` and logins or syncs broke, run step 2 with the old value in `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE`, then re-encrypt the settings as described next.
 
 Changing `SECRET_KEY_BASE` also affects settings. API keys and tokens saved on the self-hosting settings page (OpenAI and Anthropic tokens, market data and property valuation keys, and similar) are encrypted with a key derived from `SECRET_KEY_BASE` itself, not with the Active Record keys above, so the `previous` scheme does not cover them. Right after the change those settings no longer decrypt: the app does not show an error, it sends the stored ciphertext as the key and the provider rejects it. Re-encrypt them once, with the old value in `OLD_SECRET_KEY_BASE`:
 
