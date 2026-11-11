@@ -24,6 +24,25 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "demo notices preserve localized warnings without usage links for members and guests" do
+    ApplicationController.any_instance.stubs(:show_demo_warning?).returns(true)
+    locales = Rails.root.glob("config/locales/views/chats/*.yml").map { |path| path.basename(".yml").to_s }
+
+    %w[member guest].each do |role|
+      @user.update!(role: role)
+      locales.each do |locale|
+        @user.update!(locale: locale)
+        [ chats_url, new_chat_url, chat_url(@user.chats.first) ].each do |url|
+          get url
+
+          assert_response :success
+          assert_select "[role='status'] p", text: I18n.t("chats.demo_banner_message", locale: locale, fallback: false)
+          assert_select "[role='status'] a[href=?]", settings_llm_usage_path, count: 0
+        end
+      end
+    end
+  end
+
   test "gets index" do
     Usage.stubs(:capture)
     Usage.expects(:capture).with("ai_assistant_served_daily").never

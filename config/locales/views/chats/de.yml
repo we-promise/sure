@@ -2,6 +2,7 @@
 de:
   chats:
     demo_banner_title: "Demo-Modus aktiv"
+    demo_banner_message: "Kostenlose LLM-Tokens dank Vercel AI Gateway. Die Ergebnisse können variieren, da wir die Modellgewichte häufig zu Testzwecken wechseln. In der Dokumentation von Vercel erfährst du, wohin deine Gespräche gelangen! 🤖"
     demo_banner_message_html: "Kostenlose LLM-Tokens dank Vercel AI Gateway. Die Ergebnisse können variieren, da wir die Modellgewichte häufig zu Testzwecken wechseln. In der Dokumentation von Vercel erfährst du, wohin deine Gespräche gelangen! 🤖 (siehe %{link})"
     demo_banner_link: "hier"
     thinking: "Wird verarbeitet ..."

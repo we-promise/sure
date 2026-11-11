@@ -2,5 +2,6 @@
 nb:
   chats:
     demo_banner_title: "Demomodus aktiv"
+    demo_banner_message: "Gratis LLM-tokener levert av Vercel AI Gateway. Resultatene kan variere fordi vi ofte endrer modellvektene for testing. Se Vercels dokumentasjon for å finne ut hvor samtalene dine sendes! 🤖"
     demo_banner_message_html: "Gratis LLM-tokener levert av Vercel AI Gateway. Resultatene kan variere fordi vi ofte endrer modellvektene for testing. Se Vercels dokumentasjon for å finne ut hvor samtalene dine sendes! 🤖 (se %{link})"
     demo_banner_link: "her"
