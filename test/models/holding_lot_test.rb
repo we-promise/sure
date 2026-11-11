@@ -689,6 +689,28 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # A trade can move to another security before its lot does, and a run
+  # scoped to the new security still reads the user's figure for it.
+  test "a user-set lot cost holds for a trade moved ahead of its lot" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      old_security = priced_security("LOTA", 60)
+      new_security = priced_security("LOTB", 60)
+      buy = trade(old_security, 10, 80, 2)
+      provider_holding(old_security, 10, nil)
+      materialize(:reverse)
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(500)
+
+      Trade.where(id: buy.entryable_id).update_all(security_id: new_security.id)
+      @account.holdings.where(security: old_security).update_all(security_id: new_security.id)
+      assert_equal old_security.id, HoldingLot.find_by!(source_entry: buy).security_id, "the lot has not moved"
+      materialize(:reverse, security_ids: [ new_security.id ])
+
+      assert_equal 50, @account.holdings.find_by!(security: new_security, date: d(9)).cost_basis
+    end
+  end
+
   # A run scoped to one security (a remap, a price sync) books lots for that
   # security only: neither the provider snapshot, which covers the whole
   # account, nor the account's other trades open a book.
