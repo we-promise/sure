@@ -4,7 +4,14 @@ This guide will help you setup, update, and maintain your self-hosted Sure appli
 
 ## Setup Guide
 
-Follow the guide below to get your app running.
+The setup steps below are for a new installation.
+
+**Already running Sure?** Keep your existing `.env`, `compose.yml`, `SECRET_KEY_BASE`,
+and encryption keys. Do not download the sample files over your existing
+configuration or replace existing keys. Skip the new-installation steps below. For
+encryption changes, follow
+[Existing instances: backfill plaintext fields](#existing-instances-backfill-plaintext-fields);
+for app upgrades, see [How to update your app](#how-to-update-your-app).
 
 ### Step 1: Install Docker
 
@@ -23,7 +30,7 @@ docker run hello-world
 
 #### Create a directory for your app to run
 
-Open your terminal and create a directory where your app will run. Below is an example command with a recommended directory:
+Open your terminal and choose a directory that does not already contain a Sure installation or its configuration. Below is an example; use a different directory if this one is already in use:
 
 ```bash
 # Create a directory on your computer for Docker files (name it whatever you like)
@@ -58,11 +65,6 @@ writes; existing plaintext values also need to be backfilled. You can skip this 
 for a disposable local test. Configure it before storing financial or account data,
 and review the other security settings before exposing your instance outside your
 local network.
-
-**Already running Sure?** Keep your existing `.env`, `compose.yml`, `SECRET_KEY_BASE`,
-and encryption keys. Skip the new-installation setup below and follow
-[Existing instances: backfill plaintext fields](#existing-instances-backfill-plaintext-fields)
-before changing encryption settings. Do not download `.env` over an existing file.
 
 #### Create your environment file
 
@@ -130,16 +132,19 @@ x-rails-env: &rails_env
 `SECRET_KEY_BASE` does not enable Active Record Encryption. Keep the generated keys
 private and stable; changing or losing them can make encrypted data unreadable.
 
-For a new instance, run `docker compose up -d` after editing `.env` or `compose.yml`
-to apply the settings. Existing instances must reuse their existing encryption keys
-and backfill before restarting with the updated settings. Generate keys only if
-encryption has never been configured and no existing data was previously encrypted.
+For a new instance, skip the existing-instance procedure below, finish the remaining
+configuration, and start the app in [Step 4](#step-4-run-the-app).
 
 ##### Existing instances: backfill plaintext fields
 
 Adding keys does not automatically encrypt previously stored values. This procedure
 migrates plaintext fields using the instance's existing keys; it is not a key-rotation
 or lost-key recovery procedure. Keep the current app image throughout the migration.
+
+Run the commands below from the directory containing this instance's existing
+`compose.yml` and `.env`, using the same Compose project as the running instance.
+If your deployment uses a different Compose file or project name, retain its usual
+`-f` and `-p` options on every command so they target the same services and volumes.
 
 **1. Identify the existing keys and check the task's coverage.**
 
