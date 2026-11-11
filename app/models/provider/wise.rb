@@ -55,8 +55,20 @@ class Provider::Wise
     get("/v1/me")
   end
 
+  # v1 leaves out some business profiles the token can read (one with an
+  # empty companyRole); v2 lists them all. Each profile is returned in the v1
+  # shape the profile picker reads: a lowercase type and the name in details.
   def get_profiles
-    get("/v1/profiles")
+    Array(get("/v2/profiles")).map do |profile|
+      business = profile["type"].to_s.casecmp?("business")
+      name = business ? profile["businessName"] : profile["fullName"]
+
+      {
+        "id" => profile["id"],
+        "type" => business ? "business" : "personal",
+        "details" => profile["details"].presence || { "name" => name.presence }.compact
+      }
+    end
   end
 
   def get_balances(profile_id)
