@@ -143,6 +143,9 @@ class Holding::ReverseCalculator
       # Re-sorting by date alone is unstable and could reorder same-day trades,
       # which matters because the lot book is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
+      # A scheduled trade has not happened yet, so it explains none of today's
+      # position.
+      trades = trades.reject { |te| te.date > Date.current }
       # A scoped run (a remap, a price sync) replays only its own securities;
       # the cache holds every trade in the account.
       trades = trades.select { |te| @security_ids.include?(te.entryable.security_id) } if @security_ids

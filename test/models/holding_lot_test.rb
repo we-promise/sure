@@ -300,6 +300,25 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # A scheduled sale has not happened, so it explains none of the position.
+  test "a scheduled sale does not open a lot" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTZ", 30)
+      trade(security, 60, 12, 2)
+      trade(security, 40, 20, 4)
+      trade(security, -40, 25, 6)
+      trade(security, -10, 30, 15)
+      provider_holding(security, 60, nil)
+
+      materialize(:reverse)
+
+      assert_not HoldingLot.opening.exists?(security: security)
+      assert_equal 60, HoldingLot.derived.where(security: security).sum(:qty)
+    end
+  end
+
   # Unlinking an account turns its syncs forward, and the forward calculator
   # knows nothing of units held before the trades.
   test "a forward sync after unlinking leaves the opening lots alone" do
