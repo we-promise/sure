@@ -206,11 +206,19 @@ class Transfer < ApplicationRecord
   # confirmed transfers directly instead of going through confirm!, so they
   # call this themselves (see TradeRepublicAccount::ActivitiesProcessor).
   def assign_investment_contribution_category!
-    return unless outflow_transaction.kind == "investment_contribution"
-    return if outflow_transaction.category_id.present?
+    Transfer.transaction do
+      # Lock before reading the category, so a concurrent category change is
+      # not overwritten by a value derived from a stale read (same pattern as
+      # update_investment_contribution!). A category the user explicitly
+      # cleared stays cleared: a locked nil is their choice, not an absence.
+      outflow_transaction.lock!
+      return unless outflow_transaction.kind == "investment_contribution"
+      return if outflow_transaction.category_id.present?
+      return if outflow_transaction.locked?(:category_id)
 
-    category = to_account.family.investment_contributions_category
-    outflow_transaction.update!(category: category) if category.present?
+      category = to_account.family.investment_contributions_category
+      outflow_transaction.update!(category: category) if category.present?
+    end
   end
 
   def date
