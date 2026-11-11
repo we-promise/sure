@@ -16,6 +16,30 @@ class Provider::Openai < Provider
   SUPPORTED_MODELS = %w[gpt-4 gpt-5 gpt-6 o1 o3].freeze
   VISION_CAPABLE_MODEL_PREFIXES = %w[gpt-4o gpt-4-turbo gpt-4.1 gpt-5 gpt-6 o1 o3].freeze
   PDF_COMPLETION_LIMIT_MODEL_PREFIXES = %w[gpt-6 o1 o3].freeze
+  # api.openai.com and its regional hosts (us.api.openai.com), which some keys must use
+  HOSTED_API_HOST = /\A(?:[a-z0-9-]+\.)?api\.openai\.com\z/
+
+  # Whether a base URL points at OpenAI's own API rather than an
+  # OpenAI-compatible provider, so OpenAI-only features stay enabled.
+  # @param uri_base [String, nil] the configured base URL
+  # @return [Boolean]
+  def self.hosted_endpoint?(uri_base)
+    uri = URI.parse(uri_base.to_s)
+    normalized_path = uri.path.to_s.sub(%r{/+\z}, "")
+
+    uri.scheme == "https" && uri.host.to_s.downcase.match?(HOSTED_API_HOST) &&
+      uri.port == 443 && normalized_path.in?([ "", "/v1" ])
+  rescue URI::InvalidURIError
+    false
+  end
+
+  # Whether a base URL points at an OpenAI-compatible provider other than
+  # OpenAI. A blank base URL means OpenAI's default endpoint.
+  # @param uri_base [String, nil] the configured base URL
+  # @return [Boolean]
+  def self.custom_endpoint?(uri_base)
+    uri_base.present? && !hosted_endpoint?(uri_base)
+  end
 
   # Keep the provider's response budget and the PDF request parameter in sync.
   # @return [Boolean] whether native PDF vision uses max_completion_tokens
@@ -131,7 +155,7 @@ class Provider::Openai < Provider
   end
 
   def custom_provider?
-    @uri_base.present?
+    self.class.custom_endpoint?(@uri_base)
   end
 
   # Token-budget knobs. Precedence: ENV > Setting > default. Defaults match

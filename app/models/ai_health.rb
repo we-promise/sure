@@ -370,12 +370,7 @@ class AiHealth
     end
 
     def hosted_openai_endpoint?(value)
-      uri = URI.parse(value.to_s)
-      normalized_path = uri.path.to_s.sub(%r{/+\z}, "")
-
-      uri.scheme == "https" && uri.host == "api.openai.com" && uri.port == 443 && normalized_path.in?([ "", "/v1" ])
-    rescue URI::InvalidURIError
-      false
+      Provider::Openai.hosted_endpoint?(value)
     end
 
     def redact_endpoint(value) = Ai::Instrumentation::Redactor.url(value)
