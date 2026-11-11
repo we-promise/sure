@@ -257,6 +257,33 @@ class SidebarSparklinesTest < ApplicationSystemTestCase
       "a wrapper whose logo failed is still permanent"
   end
 
+  # iOS Safari can fail a stored logo it only revalidated (a 304 for an image
+  # whose data it already dropped). One failure must not cost the logo: the
+  # image is fetched again once, at a fresh URL, before the initials show.
+  test "a logo that fails once is fetched again at a fresh URL and shown" do
+    account = accounts(:depository)
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+
+    visit root_path
+    expand_first_group
+
+    image = "[id^='logo_keep_'][id*='#{account.id}'] img"
+    assert_selector image, minimum: 1
+    page.execute_script(<<~JS)
+      const img = Array.from(document.querySelectorAll(#{image.to_json})).find((el) => el.offsetParent);
+      img.dataset.probe = "1";
+      img.dispatchEvent(new Event("error"));
+    JS
+
+    assert_selector "img[data-probe][src*='retry=']", visible: :all, wait: 5
+    page.document.synchronize(5) do
+      loaded = page.evaluate_script(%((() => { const img = document.querySelector("img[data-probe]"); return !!img && img.complete && img.naturalWidth > 0 })()))
+      raise Capybara::ExpectationNotMet, "the retried logo did not load" unless loaded
+    end
+    assert page.evaluate_script(%(document.querySelector("img[data-probe]").closest("[id^='logo_keep_']").hasAttribute("data-turbo-permanent"))),
+      "a logo that recovered stopped being kept"
+  end
+
   test "a visit fetches a sparkline again once its series has changed" do
     visit root_path
     expand_first_group
