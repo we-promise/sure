@@ -55,6 +55,16 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_not_includes @family.ai_prompt_default(:merchant_openai), '{"merchants":'
   end
 
+  test "a regional OpenAI host counts as native OpenAI for prompt defaults" do
+    ClimateControl.modify("OPENAI_URI_BASE" => "https://us.api.openai.com") do
+      assert_not Family::AiPromptable.custom_openai_provider?
+    end
+
+    ClimateControl.modify("OPENAI_URI_BASE" => "https://llm.example.com/v1") do
+      assert Family::AiPromptable.custom_openai_provider?
+    end
+  end
+
   # Advisory only. It has to stay quiet for the pre-filled default (which now
   # carries the key on custom providers), or admins learn to ignore it.
   test "flags only an openai override that dropped the wrapper key" do
