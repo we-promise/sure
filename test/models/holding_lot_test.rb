@@ -449,6 +449,32 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # The opening lot first appears after the remap, under the replacement;
+  # it came from the provider's security, so a reset takes it back there.
+  test "an opening lot created after a remap belongs to the provider security" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      original = priced_security("LOTA2", 30)
+      replacement = priced_security("LOTB2", 30)
+      trade(original, 10, 40, 3)
+      provider_row = provider_holding(original, 10, nil)
+      materialize(:reverse)
+      assert_not HoldingLot.opening.exists?, "the trade explains the whole position"
+
+      provider_row.remap_security!(replacement)
+      provider_row.reload.update!(qty: 15, amount: 450)
+      materialize(:reverse)
+
+      assert_equal original.id, HoldingLot.opening.find_by!(security: replacement).origin_security_id
+
+      provider_row.reload.reset_security_to_provider!
+
+      assert_not HoldingLot.exists?(security: replacement)
+      assert_equal 5, HoldingLot.opening.find_by!(security: original).qty
+    end
+  end
+
   test "remap onto a position with its own opening lot leaves one opening lot there" do
     setup_account
     old_security = priced_security("LOTQ", 30)

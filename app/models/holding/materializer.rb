@@ -72,9 +72,21 @@ class Holding::Materializer
     def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
       {
         account_id: account.id, security_id: security_id, source_entry_id: source_entry_id,
-        origin_security_id: source_entry_id ? nil : security_id, acquired_on: acquired_on,
+        origin_security_id: source_entry_id ? nil : opening_origin(security_id), acquired_on: acquired_on,
         qty: qty, unit_cost: unit_cost, currency: currency, clamped: clamped
       }
+    end
+
+    # An opening lot comes from the security the provider reports. A position
+    # remapped to another security still names that one on its holdings, so a
+    # reset can take the lot back there.
+    def opening_origin(security_id)
+      @provider_security_ids ||= account.holdings
+        .where.not(provider_security_id: nil)
+        .distinct
+        .pluck(:security_id, :provider_security_id)
+        .to_h
+      @provider_security_ids.fetch(security_id, security_id)
     end
 
     # The latest provider cost for the security, restated for today's share count.
