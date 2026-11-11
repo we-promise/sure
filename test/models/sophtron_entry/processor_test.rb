@@ -61,17 +61,19 @@ class SophtronEntry::ProcessorTest < ActiveSupport::TestCase
     end
 
     def create_sophtron_account(account_id:, balance:, balance_sign_override: nil)
-      @item.sophtron_accounts.create!(
+      sophtron_account = @item.sophtron_accounts.create!(
         account_id: account_id,
         name: account_id,
         currency: "USD",
-        balance: balance,
-        balance_sign_override: balance_sign_override
+        balance: balance
       )
+      sophtron_account.apply_balance_sign_override!(balance_sign_override) if balance_sign_override
+      sophtron_account
     end
 
     def link_account(account, sophtron_account)
       AccountProvider.create!(account: account, provider: sophtron_account)
+      sophtron_account.reload
       account
     end
 end
