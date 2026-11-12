@@ -94,6 +94,23 @@ class EntryTest < ActiveSupport::TestCase
     end
   end
 
+  test "bulk_update! clears the merchant when merchant_id is explicitly blank" do
+    entry = create_transaction(account: accounts(:depository), merchant: merchants(:netflix))
+
+    Entry.where(id: entry.id).bulk_update!({ merchant_id: nil })
+
+    assert_nil entry.reload.transaction.merchant
+  end
+
+  test "bulk_update! leaves the merchant unchanged when merchant_id is omitted" do
+    entry = create_transaction(account: accounts(:depository), merchant: merchants(:netflix))
+
+    Entry.where(id: entry.id).bulk_update!({ notes: "Updated" })
+
+    assert_equal merchants(:netflix), entry.reload.transaction.merchant
+    assert_equal "Updated", entry.notes
+  end
+
   test "blank name is invalid when auto-generate transaction names is off" do
     families(:dylan_family).update!(auto_generate_transaction_names: false)
 

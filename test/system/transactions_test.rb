@@ -388,6 +388,47 @@ class TransactionsTest < ApplicationSystemTestCase
   end
 
 
+  test "can clear a merchant from the bulk edit drawer" do
+    transaction = transaction_with_merchant
+    transaction_checkbox(transaction).check
+
+    within "#entry-selection-bar" do
+      find("a[title='#{I18n.t("transactions.selection_bar.edit")}']").click
+    end
+
+    within "turbo-frame#bulk_transaction_edit_drawer" do
+      find("#merchant_id_trigger").click
+      find("[role='option'][data-filter-name='(none)']").click
+
+      click_button I18n.t("transactions.bulk_updates.new.save")
+    end
+
+    assert_text "1 transactions updated"
+    assert_nil transaction.reload.transaction.merchant
+  end
+
+  test "saving the bulk edit drawer without touching the merchant preserves it" do
+    transaction = transaction_with_merchant
+    merchant = transaction.transaction.merchant
+    transaction_checkbox(transaction).check
+
+    within "#entry-selection-bar" do
+      find("a[title='#{I18n.t("transactions.selection_bar.edit")}']").click
+    end
+
+    within "turbo-frame#bulk_transaction_edit_drawer" do
+      assert_selector "input[name='bulk_update[merchant_id]'][disabled]", visible: :all
+
+      fill_in I18n.t("transactions.bulk_updates.new.notes_label"), with: "Bulk note"
+      click_button I18n.t("transactions.bulk_updates.new.save")
+    end
+
+    assert_text "1 transactions updated"
+    transaction.reload
+    assert_equal "Bulk note", transaction.notes
+    assert_equal merchant, transaction.transaction.merchant
+  end
+
   test "can create deposit transaction for investment account" do
     investment_account = accounts(:investment)
     investment_account.entries.create!(name: "Investment account", date: Date.current, amount: 1000, currency: "USD", entryable: Transaction.new)
@@ -433,6 +474,10 @@ class TransactionsTest < ApplicationSystemTestCase
         amount: amount,
         currency: "USD",
         entryable: Transaction.new(category: category, merchant: merchant, tags: tags)
+    end
+
+    def transaction_with_merchant
+      @transactions.find { |entry| entry.transaction.merchant_id.present? }
     end
 
     def number_of_transactions_on_page

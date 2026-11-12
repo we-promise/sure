@@ -7,6 +7,7 @@
         <% unless disabled? %>
           <%= form.hidden_field method,
               value: @selected_value,
+              disabled: hidden_field_disabled?,
               data: {
                 "form-dropdown-target": "input",
                 "auto-submit-target": "auto",

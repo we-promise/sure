@@ -648,20 +648,26 @@ class Entry < ApplicationRecord
     # - category_id: nil means "no category" (column value)
     # - tag_ids: [] means "delete all taggings" (join table operation)
     #
+    # merchant_id behaves like a column: an explicitly provided nil/blank value
+    # clears the merchant, while omitting the key leaves it unchanged.
+    #
     # To avoid accidentally clearing tags when only updating other fields,
     # tags are only modified when explicitly requested via update_tags: true.
     #
     # @param bulk_update_params [Hash] The parameters to update
     # @param update_tags [Boolean] Whether to update tags (default: false)
     def bulk_update!(bulk_update_params, update_tags: false)
+      entryable_attributes = { category_id: bulk_update_params[:category_id] }.compact_blank
+
+      if bulk_update_params.key?(:merchant_id)
+        entryable_attributes[:merchant_id] = bulk_update_params[:merchant_id].presence
+      end
+
       bulk_attributes = {
         date: bulk_update_params[:date],
         notes: bulk_update_params[:notes],
         name: bulk_update_params[:name],
-        entryable_attributes: {
-          category_id: bulk_update_params[:category_id],
-          merchant_id: bulk_update_params[:merchant_id]
-        }.compact_blank
+        entryable_attributes: entryable_attributes
       }.compact_blank
 
       tag_ids = Array.wrap(bulk_update_params[:tag_ids]).reject(&:blank?)

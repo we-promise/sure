@@ -83,6 +83,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         menu_placement: options[:menu_placement],
         variant: options.fetch(:variant, :simple),
         include_blank: options[:include_blank],
+        omit_unless_selected: options.fetch(:omit_unless_selected, false),
         label: options[:label],
         container_class: options[:container_class],
         label_tooltip: options[:label_tooltip],

@@ -8,7 +8,7 @@ module DS
     RGB_COLOR_REGEX = /\Argb\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*\)\z/
     DEFAULT_COLOR = "#737373"
 
-    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, menu_placement: :auto, scoped_ids: false, **options)
+    def initialize(form:, method:, items:, selected: nil, placeholder: I18n.t("helpers.select.default_label"), variant: :simple, include_blank: nil, searchable: false, menu_placement: :auto, scoped_ids: false, omit_unless_selected: false, **options)
       @form = form
       @method = method
       @placeholder = placeholder
@@ -16,6 +16,7 @@ module DS
       @searchable = searchable
       @menu_placement = normalize_menu_placement(menu_placement)
       @scoped_ids = scoped_ids
+      @omit_unless_selected = omit_unless_selected
       @options = options
 
       normalized_items = normalize_items(items)
@@ -92,6 +93,13 @@ module DS
     # trigger does not open and no field is submitted.
     def disabled?
       options[:disabled].present?
+    end
+
+    # Forms that use a select to change only part of a record need to tell an
+    # untouched picker apart from an explicit blank choice. The hidden field
+    # stays disabled (and therefore unsubmitted) until the user picks an option.
+    def hidden_field_disabled?
+      @omit_unless_selected && selected_value.blank?
     end
 
     def trigger_logo?

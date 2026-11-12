@@ -256,7 +256,9 @@ export default class extends Controller {
       this.close()
       return
     }
-    if (event.key === "Enter" && event.target.dataset.value) { event.preventDefault(); event.target.click(); return }
+    // Accept any option with a data-value, including the blank "(none)" option
+    // whose value is an empty string.
+    if (event.key === "Enter" && "value" in event.target.dataset) { event.preventDefault(); event.target.click(); return }
 
     // WAI-ARIA APG listbox keyboard pattern: ArrowUp/Down moves focus
     // between options, Home/End jump to first/last. Options stay at
