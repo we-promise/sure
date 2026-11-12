@@ -626,7 +626,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal @lunchflow_account.account_provider, log_entry.account_provider
     assert_equal CardAuthorizationHold::HOLD_DIAGNOSTIC_MESSAGE, log_entry.message
     assert_equal true, log_entry.metadata["sign_inverted"]
-    assert_equal "14.97", log_entry.metadata["raw_amount"]
+    assert_equal "[REDACTED]", log_entry.metadata["raw_amount"]
 
     # Re-processing the same hold on subsequent sync does not write duplicate DebugLogEntry
     assert_no_difference -> { DebugLogEntry.count } do
@@ -657,7 +657,7 @@ class LunchflowEntry::ProcessorTest < ActiveSupport::TestCase
 
     log_entry = DebugLogEntry.last
     assert_equal false, log_entry.metadata["sign_inverted"]
-    assert_equal "-14.97", log_entry.metadata["raw_amount"]
+    assert_equal "[REDACTED]", log_entry.metadata["raw_amount"]
   end
 
   test "does not capture DebugLogEntry for regular transactions" do

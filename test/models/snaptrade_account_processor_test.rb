@@ -596,9 +596,12 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     @account.reload
     assert_equal BigDecimal("-3900.00"), @account.cash_balance, "negative cash is preserved, not floored"
 
+    # DebugLogEntry redacts any *_balance-shaped metadata key at write time (see
+    # DebugLogEntry::SENSITIVE_METADATA_KEY_PATTERN) -- the before/after figures
+    # are still recorded to confirm an exclusion happened, just not in the clear.
     entry = DebugLogEntry.where(category: "provider_sync", provider_key: "snaptrade").order(created_at: :desc).first
-    assert_equal "100.0", entry.metadata["cash_balance_before"]
-    assert_equal "-3900.0", entry.metadata["cash_balance_after"]
+    assert_equal "[REDACTED]", entry.metadata["cash_balance_before"]
+    assert_equal "[REDACTED]", entry.metadata["cash_balance_after"]
   end
 
   test "cash-equivalent positions are subtracted in the stored cash currency when it falls back to USD" do

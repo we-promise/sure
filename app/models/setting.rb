@@ -50,6 +50,16 @@ class Setting < RailsSettings::Base
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 
+  # Set by `bin/rails security:backfill_encryption` once every model/field it
+  # covers has been re-encrypted with zero failures. Read at boot (see
+  # ActiveRecordEncryptionConfig.backfill_completed?) to decide whether the
+  # legacy-plaintext fallback (support_unencrypted_data/extend_queries in
+  # config/initializers/active_record_encryption.rb) is still needed.
+  # Versioned rather than a plain boolean so that a *future* expansion of the
+  # backfill task's model coverage doesn't get silently skipped for installs
+  # that completed a backfill under an older, narrower version.
+  field :encryption_backfill_completed_version, type: :integer, default: 0
+
   BRAND_FETCH_LOGO_SIZE_STANDARD = 40
   BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
   # Matches both legacy single-segment URLs (`/apple.com/icon/...`) and
@@ -136,15 +146,51 @@ class Setting < RailsSettings::Base
       end
     end
 
+    # The settings key is derived from SECRET_KEY_BASE alone, so it is not
+    # covered by Active Record encryption's `previous` schemes. After a
+    # SECRET_KEY_BASE change, stored values only decrypt with the old value;
+    # the getters above would then return the ciphertext itself. This moves
+    # every value the old key decrypts to the current key. Values neither key
+    # decrypts are left alone: they are either plaintext from before
+    # encryption (still readable) or need to be re-entered.
+    def reencrypt_secrets_from(old_secret_key_base, dry_run: true)
+      raise ArgumentError, "old secret_key_base is blank" if old_secret_key_base.blank?
+
+      old_encryptor = build_setting_encryptor(old_secret_key_base)
+      stored = where(var: ENCRYPTED_FIELDS.map(&:to_s)).to_h { |row| [ row.var.to_sym, row.value ] }
+
+      transaction do
+        ENCRYPTED_FIELDS.index_with do |field_name|
+          value = stored[field_name]
+          next :not_stored if value.blank?
+          next :current unless try_decrypt(setting_encryptor, value).nil?
+
+          plaintext = try_decrypt(old_encryptor, value)
+          next :not_decryptable if plaintext.nil?
+          next :would_reencrypt if dry_run
+
+          public_send(:"#{field_name}=", plaintext)
+          :reencrypted
+        end
+      end
+    end
+
     private
 
       def setting_encryptor
-        @setting_encryptor ||= begin
-          key = ActiveSupport::KeyGenerator.new(
-            Rails.application.secret_key_base
-          ).generate_key("setting_encryption", 32)
-          ActiveSupport::MessageEncryptor.new(key)
-        end
+        @setting_encryptor ||= build_setting_encryptor(Rails.application.secret_key_base)
+      end
+
+      def build_setting_encryptor(secret_key_base)
+        key = ActiveSupport::KeyGenerator.new(secret_key_base).generate_key("setting_encryption", 32)
+        ActiveSupport::MessageEncryptor.new(key)
+      end
+
+      def try_decrypt(encryptor, value)
+        encryptor.decrypt_and_verify(value)
+      rescue ActiveSupport::MessageVerifier::InvalidSignature,
+             ActiveSupport::MessageEncryptor::InvalidMessage
+        nil
       end
 
       def encrypt_setting(value)
@@ -154,12 +200,10 @@ class Setting < RailsSettings::Base
 
       def decrypt_setting(value)
         return value if value.blank?
-        setting_encryptor.decrypt_and_verify(value)
-      rescue ActiveSupport::MessageVerifier::InvalidSignature,
-             ActiveSupport::MessageEncryptor::InvalidMessage
+
         # Value was stored before encryption was enabled — return as-is.
         # It will be re-encrypted on next write.
-        value
+        try_decrypt(setting_encryptor, value) || value
       end
   end
 

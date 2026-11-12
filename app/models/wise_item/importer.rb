@@ -1572,7 +1572,6 @@ class WiseItem::Importer
         metadata: {
           wise_item_id: wise_item.id,
           wise_account_id: wise_account&.id,
-          balance_id: wise_account&.balance_id,
           currency: wise_account&.currency,
           sca_private_key_configured: wise_item.sca_private_key.present?
         }.merge(metadata).compact

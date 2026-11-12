@@ -337,6 +337,6 @@ class WiseAccount::ProcessorTest < ActiveSupport::TestCase
     end
 
     def anchor_notes
-      DebugLogEntry.where(provider_key: "wise").where("metadata ->> 'operation' = ?", "opening_anchor")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise"), operation: "opening_anchor")
     end
 end

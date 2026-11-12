@@ -227,7 +227,7 @@ class CoinspotItem::Importer
             source: self.class.name,
             provider_key: "coinspot",
             family: coinspot_item.family,
-            metadata: { coinspot_item_id: coinspot_item.id, symbol: symbol.to_s.upcase, balance: balance.to_s("F") }
+            metadata: { coinspot_item_id: coinspot_item.id, symbol: symbol.to_s.upcase }
           )
           raise MissingAssetPriceError, "CoinSpot returned #{symbol.to_s.upcase} without an AUD balance or rate"
         end

@@ -124,8 +124,8 @@ class MonobankEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "provider_sync_error", log.category
     assert_equal "warn", log.level
     assert_equal "monobank", log.provider_key
-    assert_equal "monobank_tx_bad_op", log.metadata["external_id"]
     assert_equal "EUR", log.metadata["operation_currency"]
+    assert_not log.metadata.key?("external_id"), "the raw transaction id is not worth surfacing in the diagnostic"
   end
 
   test "leaves fx metadata unset when currencyCode is unrecognized" do

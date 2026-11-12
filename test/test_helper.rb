@@ -139,6 +139,13 @@ module ActiveSupport
       email
     end
 
+    # DebugLogEntry metadata is encrypted, so SQL can't filter on its keys.
+    # Matches in Ruby and returns a relation, so callers can keep chaining.
+    def debug_log_entries_with(scope, **metadata)
+      ids = scope.select { |entry| metadata.all? { |key, value| entry.metadata[key.to_s] == value } }.map(&:id)
+      DebugLogEntry.where(id: ids)
+    end
+
     def uploaded_file(filename:, content_type:, content: "date,amount\n2024-01-01,1\n")
       tempfile = Tempfile.new([ File.basename(filename, ".*"), File.extname(filename) ])
       tempfile.binmode

@@ -511,7 +511,6 @@ class PdfImport < Import
           account_statement_id: account_statement_id,
           source_row_number: row.source_row_number,
           raw_date: row.date,
-          raw_amount: row.amount,
           error_class: e.class.name
         }
       )
