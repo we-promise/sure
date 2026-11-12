@@ -10,7 +10,7 @@ class DebugLogEntry < ApplicationRecord
   # importers that this class has no direct visibility into, on top of the individual
   # sites that were audited and fixed not to pass these in the first place.
   MONETARY_METADATA_KEY_PATTERN = /amount|balance|qty/i
-  IDENTIFYING_METADATA_KEY_PATTERN = /address|body|\buid\b|api_account_id|api_key|token(?!s)|password|authorization|secret|iban|account_number|email/i
+  IDENTIFYING_METADATA_KEY_PATTERN = /address|body(?![a-z_])|\buid\b|api_account_id|api_key|token(?!s)|password|authorization|secret|iban|account_number|email/i
   SENSITIVE_METADATA_KEY_PATTERN = /#{MONETARY_METADATA_KEY_PATTERN.source}|#{IDENTIFYING_METADATA_KEY_PATTERN.source}/i
 
   # Monetary keys whose value is a list or hash (e.g. other_balances: [{currency:,

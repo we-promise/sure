@@ -184,7 +184,8 @@ class DebugLogEntryTest < ActiveSupport::TestCase
         authToken: "tok-1",
         response_body: "account 123",
         responseBody: "account 456",
-        total_tokens: 42
+        total_tokens: 42,
+        body_bytes: 21
       }
     )
 
@@ -193,6 +194,7 @@ class DebugLogEntryTest < ActiveSupport::TestCase
     assert_equal "[REDACTED]", entry.metadata["response_body"]
     assert_equal "[REDACTED]", entry.metadata["responseBody"]
     assert_equal 42, entry.metadata["total_tokens"]
+    assert_equal 21, entry.metadata["body_bytes"]
   end
 
   test "capture redacts metadata passed as a string or a list" do
