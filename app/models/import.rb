@@ -780,7 +780,7 @@ class Import < ApplicationRecord
 
       if debit_col_label.blank? || credit_col_label.blank?
         errors.add(:base, I18n.t("imports.errors.debit_credit_columns_require_both"))
-      elsif debit_col_label == credit_col_label
+      elsif normalize_header(debit_col_label) == normalize_header(credit_col_label)
         errors.add(:base, I18n.t("imports.errors.debit_credit_columns_must_differ"))
       end
     end

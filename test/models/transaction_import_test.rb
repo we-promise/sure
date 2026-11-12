@@ -298,6 +298,13 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_includes @import.errors.full_messages, I18n.t("imports.errors.debit_credit_columns_must_differ")
   end
 
+  test "debit and credit column labels that resolve to the same column are rejected" do
+    @import.assign_attributes(amount_type_strategy: "debit_credit_columns", debit_col_label: "Amount", credit_col_label: " amount ")
+
+    assert_not @import.valid?
+    assert_includes @import.errors.full_messages, I18n.t("imports.errors.debit_credit_columns_must_differ")
+  end
+
   test "debit and credit column imports require both columns" do
     @import.assign_attributes(amount_type_strategy: "debit_credit_columns", debit_col_label: "debit", credit_col_label: nil)
 
