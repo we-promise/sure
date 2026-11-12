@@ -79,14 +79,16 @@ class Holding::Materializer
 
     # An opening lot comes from the security the provider reports. A position
     # remapped to another security still names that one on its holdings, so a
-    # reset can take the lot back there.
+    # reset can take the lot back there. With several provider securities
+    # remapped onto one, it is the one behind the latest snapshot, which the
+    # opening lot is built from.
     def opening_origin(security_id)
       @provider_security_ids ||= account.holdings
-        .where.not(provider_security_id: nil)
-        .distinct
+        .where.not(account_provider_id: nil)
+        .order(:date, :id)
         .pluck(:security_id, :provider_security_id)
         .to_h
-      @provider_security_ids.fetch(security_id, security_id)
+      @provider_security_ids[security_id] || security_id
     end
 
     # The latest provider cost for the security, restated for today's share count.
