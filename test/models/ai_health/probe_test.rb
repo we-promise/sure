@@ -304,8 +304,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert @result.failing?
     assert_equal :model_not_available, @result.failure_code
 
-    entry = DebugLogEntry.where(category: "ai_health")
-                         .where("metadata ->> 'model' = ?", "missing-model")
+    entry = debug_log_entries_with(DebugLogEntry.where(category: "ai_health"), model: "missing-model")
                          .order(:id)
                          .last
     assert_equal "error", entry.level

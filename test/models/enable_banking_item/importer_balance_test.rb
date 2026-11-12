@@ -687,7 +687,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     @enable_banking_account.reload
     assert_equal BigDecimal("1234.56"), @enable_banking_account.current_balance
     assert @enable_banking_account.balance_evidence_verified?
-    assert_empty DebugLogEntry.where("metadata ->> 'stage' IS NOT NULL")
+    assert_empty DebugLogEntry.all.select { |entry| entry.metadata.key?("stage") }
   end
 
   test "duplicate balances pointing to different bookings prefer the newer booking" do

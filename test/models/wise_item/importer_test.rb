@@ -825,7 +825,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_equal %w[10000001 10000002 10000003], provider.statement_requests.map { |request| request[:balance_id] }.sort
     assert result[:complete]
     assert_equal 0, result[:fetch_failures]
-    assert_empty DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balance_statement")
+    assert_empty debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "balance_statement")
   end
 
   # Only the balances without statement rows go unasked once statements prove
@@ -849,7 +849,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     assert_includes provider.statement_requests.map { |request| request[:balance_id] }, "10000002"
     assert result[:complete]
     assert_equal 0, result[:fetch_failures]
-    note = DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balance_statement").sole
+    note = debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "balance_statement").sole
     assert_equal DebugLogEntry::REDACTED, note.metadata["balance_count"]
   end
 
@@ -885,8 +885,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     end
 
     assert_equal [ [ true, true, 0 ] ] * 2, results.map { |result| result.values_at(:success, :complete, :fetch_failures) }
-    assert_equal 2, DebugLogEntry.where(provider_key: "wise", category: "provider_sync", level: "info")
-                                 .where("metadata ->> 'operation' = ?", "balance_statement").count
+    assert_equal 2, debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync", level: "info"), operation: "balance_statement").count
     assert_equal [ "CARD-1" ], @wise_item.wise_accounts.first.raw_transactions_payload.map { |t| t["referenceNumber"] }
   end
 
@@ -1413,7 +1412,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     WiseItem::Importer.new(@wise_item, wise_provider: FakeWiseProvider.new(statements: rows.reverse)).import
 
-    note = DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "running_balance").sole
+    note = debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "running_balance").sole
     assert_equal "warn", note.level
     assert_equal [ 5, 1, 1 ], note.metadata.values_at("row_count", "break_count", "fee_explained_count")
   end
@@ -3609,7 +3608,7 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
     # The activity Wise lists for a transfer (resource TRANSFER, same id).
     # What the importer reports about transfers it cannot book in full.
     def transfer_notes
-      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "transfers")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "transfers")
     end
 
     def build_transfer_activity(transfer_id, primary:, secondary: nil, id: "transfer-activity-#{transfer_id}",
@@ -3684,27 +3683,27 @@ class WiseItem::ImporterTest < ActiveSupport::TestCase
 
     # What the importer reports about rows waiting for a statement row.
     def statement_migration_notes
-      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "statement_migration")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "statement_migration")
     end
 
     # What the importer reports about activities it books on no balance.
     def activity_notes
-      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "activity_routing")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "activity_routing")
     end
 
     # What processing reports about the stale entries it deleted or kept.
     def prune_notes
-      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "prune")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "prune")
     end
 
     # What the importer reports about the balance replay.
     def replay_notes
-      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balance_replay")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "balance_replay")
     end
 
     # What the importer reports about balances it marks closed or open.
     def balance_notes
-      DebugLogEntry.where(provider_key: "wise", category: "provider_sync").where("metadata ->> 'operation' = ?", "balances")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise", category: "provider_sync"), operation: "balances")
     end
 
     def standard_balance(id, currency, value)
