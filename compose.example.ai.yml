@@ -210,6 +210,9 @@ services:
       - "11434:11434"
     environment:
       - OLLAMA_KEEP_ALIVE=1h
+      # Must cover LLM_CONTEXT_WINDOW plus tool definitions and the reply;
+      # Ollama's 4096-token default truncates requests silently (see docs/hosting/ai.md).
+      - OLLAMA_CONTEXT_LENGTH=16384
     healthcheck:
       test: ["CMD", "ollama", "list"]
       interval: 5s
