@@ -74,10 +74,10 @@ x-rails-env: &rails_env
   # forge session cookies and, since ACTIVE_RECORD_ENCRYPTION_* below are
   # deterministically derived from it when unset, compute your encryption
   # keys too. Generate your own with: openssl rand -hex 64
-  # UPGRADING an existing install that ran on the old built-in default? Put
-  # that old value in .env first: a new value makes everything already
-  # encrypted under it unreadable. Rotate it later only as described in
-  # docs/hosting/docker.md ("Upgrading from the old built-in SECRET_KEY_BASE").
+  # Upgrading an existing install? Do NOT generate a new value: keep the one
+  # it already runs with (the old default if you never set one), or data
+  # already encrypted under keys derived from it becomes unreadable. See
+  # "Upgrading an install that is already running" in docs/hosting/docker.md.
   SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file. Existing install: copy the value from your previous compose.yml, do not generate a new one. New install: openssl rand -hex 64}"
   # Optional but recommended: set these explicitly instead of relying on the
   # SECRET_KEY_BASE auto-derivation fallback. Generate with: bin/rails db:encryption:init

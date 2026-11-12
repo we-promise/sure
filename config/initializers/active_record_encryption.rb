@@ -177,16 +177,14 @@ elsif Rails.application.config.app_mode.self_hosted? && !Rails.application.crede
   # For self-hosted instances without credentials or env vars, auto-generate keys
   # Use SECRET_KEY_BASE as the seed for deterministic key generation
   # This ensures keys are consistent across container restarts
-  secret_base = Rails.application.secret_key_base
-
-  # Generate deterministic keys from the secret base
-  primary_key = Digest::SHA256.hexdigest("#{secret_base}:primary_key")[0..63]
-  deterministic_key = Digest::SHA256.hexdigest("#{secret_base}:deterministic_key")[0..63]
-  key_derivation_salt = Digest::SHA256.hexdigest("#{secret_base}:key_derivation_salt")[0..63]
-
-  # Configure Active Record encryption
-  ActiveRecordEncryptionConfig.apply_keys!(
-    primary_key: primary_key, deterministic_key: deterministic_key, key_derivation_salt: key_derivation_salt
-  )
+  ActiveRecordEncryptionConfig.apply_keys!(**ActiveRecordEncryptionConfig.derived_keys(Rails.application.secret_key_base))
 end
 # If none of the above conditions are met, credentials from application.rb will be used
+
+# During a key rotation, data encrypted with the keys derived from an old
+# SECRET_KEY_BASE stays readable through a previous scheme. Set on the live
+# engine config: the snapshot described above has already fired, and
+# `previous=` only appends, so setting the Rails config as well would add
+# every scheme twice if the snapshot ran later.
+previous_schemes = ActiveRecordEncryptionConfig.previous_schemes
+ActiveRecord::Encryption.config.previous = previous_schemes if previous_schemes.any?

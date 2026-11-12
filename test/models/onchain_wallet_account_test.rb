@@ -224,7 +224,7 @@ class OnchainWalletAccountTest < ActiveSupport::TestCase
   test "declares raw payloads as encrypted" do
     skip "Encryption not configured" unless OnchainWalletAccount.encryption_ready?
 
-    encrypted = OnchainWalletAccount.encrypted_attributes.map(&:to_s)
+    encrypted = Array(OnchainWalletAccount.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "raw_payload"
     assert_includes encrypted, "raw_movements_payload"
   end

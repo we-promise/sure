@@ -228,7 +228,7 @@ class CoinbaseItemTest < ActiveSupport::TestCase
   test "declares credentials and raw payloads as encrypted" do
     skip "Encryption not configured" unless CoinbaseItem.encryption_ready?
 
-    encrypted = CoinbaseItem.encrypted_attributes.map(&:to_s)
+    encrypted = Array(CoinbaseItem.encrypted_attributes).map(&:to_s)
     assert_includes encrypted, "api_key"
     assert_includes encrypted, "api_secret"
     assert_includes encrypted, "raw_payload"

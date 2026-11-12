@@ -19,6 +19,43 @@ module ActiveRecordEncryptionConfig
     a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13
   ].freeze
 
+  # Set only for the one-off commands of a key rotation (see the Docker
+  # hosting guide): the SECRET_KEY_BASE whose derived keys encrypted the
+  # existing data, so it still decrypts while the backfill moves it to the
+  # current keys.
+  PREVIOUS_SECRET_KEY_BASE_ENV = "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE"
+
+  # The same for old keys that were set explicitly rather than derived.
+  PREVIOUS_ENV_KEYS = {
+    primary_key: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY",
+    deterministic_key: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_DETERMINISTIC_KEY",
+    key_derivation_salt: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT"
+  }.freeze
+
+  # Previous-scheme key provider for keys derived from an old
+  # SECRET_KEY_BASE. Rails derives every scheme's keys with the globally
+  # configured salt, so the old salt needs a provider of its own. Keys are
+  # derived on first use, once Rails has settled hash_digest_class.
+  class DerivedKeyProvider
+    def initialize(password, salt)
+      @password = password
+      @salt = salt
+    end
+
+    def encryption_key
+      @encryption_key ||= begin
+        config = ActiveRecord::Encryption.config
+        secret = ActiveSupport::KeyGenerator.new(@password, hash_digest_class: config.hash_digest_class)
+          .generate_key(@salt, ActiveRecord::Encryption.cipher.key_length)
+        ActiveRecord::Encryption::Key.new(secret)
+      end
+    end
+
+    def decryption_keys(_encrypted_message)
+      [ encryption_key ]
+    end
+  end
+
   CONFIG_KEYS = %i[
     primary_key
     deterministic_key
@@ -54,7 +91,9 @@ module ActiveRecordEncryptionConfig
   # whenever this changes. Session is deliberately excluded: its backfill
   # (lib/tasks/security_backfill.rake#backfill_sessions) also hashes
   # ip_address into ip_address_digest, which isn't a 1:1 encrypted copy of an
-  # existing field the way every entry below is.
+  # existing field the way every entry below is. otp_backup_codes is not
+  # listed: it is a PostgreSQL array column, which Active Record encryption
+  # does not support.
   BACKFILL_MANIFEST = {
     users: [ "User", %i[otp_secret email unconfirmed_email first_name last_name] ],
     invitations: [ "Invitation", %i[token email] ],
@@ -256,6 +295,44 @@ module ActiveRecordEncryptionConfig
     KNOWN_COMPROMISED_SECRET_KEY_BASES.include?(secret_key_base)
   rescue NoMethodError
     false
+  end
+
+  # The keys config/initializers/active_record_encryption.rb derives from
+  # SECRET_KEY_BASE when no explicit keys are configured.
+  def derived_keys(secret_key_base)
+    CONFIG_KEYS.to_h do |key|
+      [ key, Digest::SHA256.hexdigest("#{secret_key_base}:#{key}")[0..63] ]
+    end
+  end
+
+  # Previous schemes for `config.active_record.encryption.previous`, built
+  # from the keys derived from PREVIOUS_SECRET_KEY_BASE_ENV or from the
+  # PREVIOUS_ENV_KEYS. Rails applies a global previous scheme only to
+  # attributes with the same determinism, so there is one scheme for each kind.
+  def previous_schemes(env = ENV)
+    keys = previous_keys(env)
+    return [] unless keys
+
+    [
+      { key_provider: DerivedKeyProvider.new(keys[:primary_key], keys[:key_derivation_salt]) },
+      { deterministic: true, key_provider: DerivedKeyProvider.new(keys[:deterministic_key], keys[:key_derivation_salt]) }
+    ]
+  end
+
+  def previous_keys(env = ENV)
+    if env_value_present?(env, PREVIOUS_SECRET_KEY_BASE_ENV)
+      derived_keys(env[PREVIOUS_SECRET_KEY_BASE_ENV])
+    elsif PREVIOUS_ENV_KEYS.values.any? { |key| env_value_present?(env, key) }
+      missing = PREVIOUS_ENV_KEYS.values.reject { |key| env_value_present?(env, key) }
+      raise "Previous Active Record encryption keys are partially configured. Missing: #{missing.join(', ')}" if missing.any?
+
+      PREVIOUS_ENV_KEYS.transform_values { |key| env[key] }
+    end
+  end
+
+  def previous_keys_configured?(env = ENV)
+    env_value_present?(env, PREVIOUS_SECRET_KEY_BASE_ENV) ||
+      PREVIOUS_ENV_KEYS.values.any? { |key| env_value_present?(env, key) }
   end
 
   def env_value_present?(env, key)
