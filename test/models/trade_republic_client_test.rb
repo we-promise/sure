@@ -1115,6 +1115,17 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
   end
 
+  test "maps securities transfers to order executions so their detail is fetched" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "orderExecution", categories["SSP_SECURITIES_TRANSFER_INCOMING"]
+    assert_equal "orderExecution", categories["SSP_SECURITIES_TRANSFER_OUTGOING"]
+
+    %w[SSP_SECURITIES_TRANSFER_INCOMING SSP_SECURITIES_TRANSFER_OUTGOING].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+      assert Provider::TradeRepublicClient.requires_trade_detail?("eventType" => event_type), event_type
+    end
+  end
+
   test "maps credit card top-ups and stock bonuses" do
     categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
     assert_equal "PAYMENT_RECEIVED", categories["PAYMENT_INBOUND_CREDIT_CARD"]
