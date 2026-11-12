@@ -518,6 +518,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
         get connect_form_settings_providers_path(provider_key: provider_key)
         assert_response :success
         assert_select "input[type=checkbox][name='setting[clear_secrets][]'][value='#{provider_key}_secret']"
+        assert_select "input[type=hidden][name='setting[unreadable_secrets][]'][value='#{provider_key}_secret']"
 
         patch settings_providers_url, params: { setting: {
           "#{provider_key}_client_id" => "changed-client",
@@ -538,6 +539,61 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
         assert_not Setting.key?("#{provider_key}_secret")
         assert_equal "synthetic-env-secret", Provider::ConfigurationRegistry.get(provider_key).get_value(:secret)
       end
+    end
+  end
+
+  test "stale unreadable forms preserve replacement secrets unless explicitly changed" do
+    %w[plaid plaid_eu].each do |provider_key|
+      key = "#{provider_key}_secret"
+      envelope = { Setting::DynamicSecret::MARKER => 1, "ciphertext" => "synthetic-corrupt-ciphertext" }
+      Setting.upsert({ var: "dynamic:#{key}", value: envelope.to_yaml }, unique_by: :var)
+
+      get connect_form_settings_providers_path(provider_key: provider_key)
+      assert_response :success
+      assert_select "input[type=hidden][name='setting[unreadable_secrets][]'][value='#{key}']"
+
+      Setting[key] = "another-admin-replacement"
+      stored = Setting.find_by!(var: "dynamic:#{key}").value
+
+      patch settings_providers_url, params: { setting: {
+        "#{provider_key}_client_id" => "changed-client",
+        key => "  ", unreadable_secrets: [ key ]
+      } }
+
+      assert_redirected_to settings_providers_url
+      assert_equal "changed-client", Setting["#{provider_key}_client_id"]
+      assert_equal stored, Setting.find_by!(var: "dynamic:#{key}").value
+      assert_equal "another-admin-replacement", Setting[key]
+
+      patch settings_providers_url, params: { setting: {
+        key => "intentional-replacement", unreadable_secrets: [ key ]
+      } }
+
+      assert_redirected_to settings_providers_url
+      assert_equal "intentional-replacement", Setting[key]
+
+      patch settings_providers_url, params: { setting: {
+        key => "", unreadable_secrets: [ key ], clear_secrets: [ key ]
+      } }
+
+      assert_redirected_to settings_providers_url
+      assert_not Setting.key?(key)
+    end
+  end
+
+  test "blank submissions from readable secret forms still delete the saved secret" do
+    %w[plaid plaid_eu].each do |provider_key|
+      key = "#{provider_key}_secret"
+      Setting[key] = "readable-secret"
+
+      get connect_form_settings_providers_path(provider_key: provider_key)
+      assert_response :success
+      assert_select "input[type=hidden][name='setting[unreadable_secrets][]'][value='#{key}']", count: 0
+
+      patch settings_providers_url, params: { setting: { key => "" } }
+
+      assert_redirected_to settings_providers_url
+      assert_not Setting.key?(key)
     end
   end
 

@@ -66,6 +66,7 @@
                               placeholder: field.default || (field.required ? "" : "Optional"),
                               value: presentation[:value] %>
           <% if presentation[:unreadable] %>
+            <%= hidden_field_tag "setting[unreadable_secrets][]", field.setting_key %>
             <%= form.label "clear_#{field.setting_key}", class: "flex items-center gap-2 text-sm text-primary" do %>
               <%= check_box_tag "setting[clear_secrets][]", field.setting_key, false, id: "setting_clear_#{field.setting_key}", class: "checkbox checkbox--light" %>
               <%= t(".clear_unreadable_secret") %>

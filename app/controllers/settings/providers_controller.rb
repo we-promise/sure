@@ -44,7 +44,9 @@ class Settings::ProvidersController < ApplicationController
 
         if field.secret && Array(params.dig(:setting, :clear_secrets)).include?(param_key.to_s)
           value = nil
-        elsif field.secret && value.nil? && unreadable_secret?(field.setting_key)
+        elsif field.secret && value.nil? &&
+            (Array(params.dig(:setting, :unreadable_secrets)).include?(param_key.to_s) || unreadable_secret?(field.setting_key))
+          # A repair form may predate another administrator's replacement.
           next
         end
 

@@ -22,6 +22,7 @@ class ProviderSecretRecoveryTest < ApplicationSystemTestCase
     end
 
     assert_current_path settings_providers_path
+    assert_text I18n.t("settings.providers.update.updated_successfully")
     find("details", text: I18n.t("settings.providers.meta.unreadable_secret")).find("summary").click
     assert_field "setting_plaid_client_id", with: "changed-client"
     assert_equal envelope, Setting.find_by!(var: "dynamic:plaid_secret").value

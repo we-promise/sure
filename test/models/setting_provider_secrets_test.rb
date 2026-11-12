@@ -23,6 +23,7 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
     script = <<~RUBY
       abort "eager loading enabled" if Rails.application.config.eager_load
       envelope = Setting::DynamicSecret.encrypt("plaid_secret", "synthetic-process-secret")
+      abort "encryption missing" unless Setting::DynamicSecret.marked?(envelope)
       abort "round trip failed" unless Setting::DynamicSecret.decrypt("plaid_secret", envelope) == "synthetic-process-secret"
       keys = Provider::ConfigurationRegistry.secret_setting_keys
       abort "missing metadata" unless keys.include?("plaid_secret") && keys.include?("plaid_eu_secret")
