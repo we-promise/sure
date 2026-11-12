@@ -17,6 +17,7 @@ class ExchangeRateTest < ActiveSupport::TestCase
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
       assert_instance_of Provider::Frankfurter, ExchangeRate.provider
+      assert_equal "frankfurter", ExchangeRate.provider_name
     end
   end
 
@@ -26,6 +27,7 @@ class ExchangeRateTest < ActiveSupport::TestCase
 
     with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => "test-key") do
       assert_instance_of Provider::TwelveData, ExchangeRate.provider
+      assert_equal "twelve_data", ExchangeRate.provider_name
     end
   end
 
