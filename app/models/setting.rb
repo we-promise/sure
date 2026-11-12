@@ -50,6 +50,16 @@ class Setting < RailsSettings::Base
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 
+  # Set by `bin/rails security:backfill_encryption` once every model/field it
+  # covers has been re-encrypted with zero failures. Read at boot (see
+  # ActiveRecordEncryptionConfig.backfill_completed?) to decide whether the
+  # legacy-plaintext fallback (support_unencrypted_data/extend_queries in
+  # config/initializers/active_record_encryption.rb) is still needed.
+  # Versioned rather than a plain boolean so that a *future* expansion of the
+  # backfill task's model coverage doesn't get silently skipped for installs
+  # that completed a backfill under an older, narrower version.
+  field :encryption_backfill_completed_version, type: :integer, default: 0
+
   BRAND_FETCH_LOGO_SIZE_STANDARD = 40
   BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
   # Matches both legacy single-segment URLs (`/apple.com/icon/...`) and
@@ -343,8 +353,9 @@ class Setting < RailsSettings::Base
     uri_base_value = uri_base.nil? ? openai_uri_base : uri_base
     model_value = model.nil? ? openai_model : model
 
-    # If custom URI base is set, model must also be set
-    if uri_base_value.present? && model_value.blank?
+    # If a custom URI base is set, model must also be set. OpenAI's own
+    # hosts (including regional ones) fall back to the default model.
+    if Provider::Openai.custom_endpoint?(uri_base_value) && model_value.blank?
       raise ValidationError, "OpenAI model is required when custom URI base is configured"
     end
   end

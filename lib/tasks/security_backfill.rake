@@ -10,6 +10,13 @@ namespace :security do
   # the #2611 fix and provider payloads now decrypt to Strings (symptom:
   # zero balances on every provider-linked account after a sync), run the
   # manual recovery script in issue #2611 first, then re-run this task.
+  #
+  # During a key rotation (docs/hosting/encryption.md) the write pass also
+  # re-encrypts existing ciphertext under the current key - EXCEPT for
+  # deterministic attributes, which Rails re-serializes under the OLDEST
+  # configured scheme while any previous scheme exists. This task therefore
+  # cannot migrate deterministic columns off a compromised key; see step 3
+  # of the rotation procedure.
   desc "Backfill encryption for sensitive fields (idempotent). Args: batch_size, dry_run"
   task :backfill_encryption, [ :batch_size, :dry_run ] => :environment do |_, args|
     raw_batch = args[:batch_size].presence || ENV["BATCH_SIZE"].presence || "100"
@@ -35,47 +42,48 @@ namespace :security do
       exit 1
     end
 
+    # Invalidate any previous completion flag before this run starts (not just
+    # on failure at the end): if a prior run already completed successfully
+    # and this run then fails or aborts partway through, leaving the old flag
+    # in place would let ActiveRecordEncryptionConfig.backfill_completed?
+    # report "complete" while this run's still-plaintext rows are unencrypted.
+    Setting.encryption_backfill_completed_version = nil unless dry_run
+
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # User fields (MFA + PII)
-    # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
-    results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
+    # Field lists live in ActiveRecordEncryptionConfig::BACKFILL_MANIFEST
+    # (lib/active_record_encryption_config.rb), kept in sync with each model's
+    # `encrypts` declarations by test/lib/tasks/security_backfill_test.rb.
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      results[key] = backfill_model(model_class_name.constantize, fields, batch_size, dry_run)
+    end
 
-    # Invitation tokens and email
-    results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
+    results[:sessions] = backfill_model(Session, Session.encrypted_attributes.to_a, batch_size, dry_run)
+    results[:session_ip_digests] = backfill_session_ip_digests(batch_size, dry_run)
 
-    # InviteCode tokens
-    results[:invite_codes] = backfill_model(InviteCode, %i[token], batch_size, dry_run)
+    all_succeeded = results.values.all? { |r| r[:failed_count].zero? }
 
-    # Session user_agent (encryption) and ip_address_digest (hashing)
-    results[:sessions] = backfill_sessions(batch_size, dry_run)
+    # Only mark the backfill complete on a clean, non-dry-run pass: a partial
+    # failure leaves some rows still plaintext, and flipping the flag would
+    # disable the legacy-plaintext fallback (config/initializers/
+    # active_record_encryption.rb) for models that still need it, turning a
+    # readable row into a boot-time ActiveRecord::Encryption::Errors::Decryption.
+    if !dry_run && all_succeeded
+      Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    end
 
-    # MobileDevice device_id
-    results[:mobile_devices] = backfill_model(MobileDevice, %i[device_id], batch_size, dry_run)
-
-    # Provider items
-    results[:plaid_items] = backfill_model(PlaidItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:simplefin_items] = backfill_model(SimplefinItem, %i[access_url raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload], batch_size, dry_run)
-
-    # Provider accounts
-    results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
-    results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload account_number], batch_size, dry_run)
-    results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-
+    # A row that fails here stays unreadable once the app runs with the keys,
+    # so any failure makes the whole run fail.
+    failed_count = results.values.sum { |result| result[:failed_count] }
     puts({
-      ok: true,
+      ok: failed_count.zero?,
       dry_run: dry_run,
       batch_size: batch_size,
+      failed_count: failed_count,
       results: results
     }.to_json)
+    exit 1 unless failed_count.zero?
   end
 
   def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)
@@ -96,34 +104,54 @@ namespace :security do
         # the encrypted getters raise on once keys are live.
         next unless fields.any? { |f| !safe_read_field(record, f).nil? }
 
-        next if dry_run
+        if dry_run
+          # Report the rows the real run would refuse, so the preview shows them.
+          refused = fields.find { |f| undecryptable_ciphertext?(safe_read_field(record, f)) }
+          failed << { id: record.id, error: ActiveRecord::Encryption::Errors::Decryption.name, message: "#{refused} holds ciphertext that no configured key decrypts" } if refused
+          next
+        end
 
         begin
-          # Read plaintext values safely
-          plaintext_values = {}
-          fields.each do |field|
-            value = safe_read_field(record, field)
-            plaintext_values[field] = value unless value.nil?
+          # Read and write under a row lock: an app write between the read
+          # and update_columns (a new last_psu_ip, or DataCleanerJob clearing
+          # it) would otherwise be overwritten with the stale value.
+          written = record.with_lock do
+            # Read plaintext values safely
+            plaintext_values = {}
+            fields.each do |field|
+              value = safe_read_field(record, field)
+              # Ciphertext that no configured key decrypts comes back as its
+              # raw envelope (a Hash on json/jsonb columns); encrypting it
+              # again would lose the original value for good.
+              if undecryptable_ciphertext?(value)
+                raise ActiveRecord::Encryption::Errors::Decryption, "#{field} holds ciphertext that no configured key decrypts"
+              end
+              plaintext_values[field] = value unless value.nil?
+            end
+
+            next false if plaintext_values.empty?
+
+            # Use a temporary instance to encrypt values (avoids triggering
+            # validations/callbacks that might read other encrypted fields)
+            encryptor = model_class.new
+            plaintext_values.each do |field, value|
+              encryptor.send("#{field}=", value)
+            end
+
+            # Extract the encrypted values from the temporary instance
+            encrypted_attrs = {}
+            plaintext_values.keys.each do |field|
+              encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
+            end
+
+            # Write directly to database, bypassing callbacks/validations
+            record.update_columns(encrypted_attrs)
+            true
           end
-
-          next if plaintext_values.empty?
-
-          # Use a temporary instance to encrypt values (avoids triggering
-          # validations/callbacks that might read other encrypted fields)
-          encryptor = model_class.new
-          plaintext_values.each do |field, value|
-            encryptor.send("#{field}=", value)
-          end
-
-          # Extract the encrypted values from the temporary instance
-          encrypted_attrs = {}
-          plaintext_values.keys.each do |field|
-            encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
-          end
-
-          # Write directly to database, bypassing callbacks/validations
-          record.update_columns(encrypted_attrs)
-          updated += 1
+          updated += 1 if written
+        rescue ActiveRecord::RecordNotFound
+          # Deleted since the batch was loaded; nothing left to encrypt.
+          next
         rescue => e
           failed << { id: record.id, error: e.class.name, message: e.message }
         end
@@ -138,6 +166,25 @@ namespace :security do
     }
   end
 
+  # Rails' encryption envelope: {"p": payload, "h": {"iv": ..., "at": ..., ...}}.
+  # Matches the whole shape, since Encryptor#encrypted? accepts any object
+  # with a "p" key and would flag plaintext payloads such as {"p": null}.
+  def undecryptable_ciphertext?(value)
+    envelope = value
+    if value.is_a?(String)
+      return false unless value.start_with?("{")
+
+      envelope = begin
+        JSON.parse(value)
+      rescue JSON::ParserError
+        return false
+      end
+    end
+
+    envelope.is_a?(Hash) && envelope.keys.sort == %w[h p] && envelope["p"].is_a?(String) &&
+      envelope["h"].is_a?(Hash) && envelope["h"].key?("iv") && envelope["h"].key?("at")
+  end
+
   # Safely read a field value, handling both encrypted and plaintext data.
   # When encryption is configured but the value is plaintext, the getter
   # raises ActiveRecord::Encryption::Errors::Decryption. In this case,
@@ -148,7 +195,10 @@ namespace :security do
   # String, breaking every consumer of the payload.
   def safe_read_field(record, field)
     record.send(field)
-  rescue ActiveRecord::Encryption::Errors::Decryption
+  rescue ActiveRecord::Encryption::Errors::Base, NoMethodError, TypeError
+    # Rails reads any json/jsonb object with a "p" key as an encryption
+    # envelope, so plaintext like {"p": 1, "h": "x"} can fail with
+    # NoMethodError or TypeError instead of a Decryption error.
     raw = record.read_attribute_before_type_cast(field)
     column = record.class.columns_hash[field.to_s]
     if raw.is_a?(String) && [ :json, :jsonb ].include?(column&.type)
@@ -162,37 +212,22 @@ namespace :security do
     end
   end
 
-  def backfill_sessions(batch_size, dry_run)
+  # Hashes legacy session IP addresses into ip_address_digest. The encrypted
+  # Session columns go through backfill_model like every other model.
+  def backfill_session_ip_digests(batch_size, dry_run)
     processed = 0
     updated = 0
     failed = []
 
-    Session.order(:id).in_batches(of: batch_size) do |batch|
+    Session.where.not(ip_address: [ nil, "" ]).where(ip_address_digest: [ nil, "" ])
+      .select(:id, :ip_address, :ip_address_digest).order(:id).in_batches(of: batch_size) do |batch|
       batch.each do |session|
         processed += 1
         next if dry_run
 
         begin
-          changes = {}
-
-          # Re-save user_agent to trigger encryption (use safe read for plaintext)
-          user_agent_value = safe_read_field(session, :user_agent)
-          unless user_agent_value.nil?
-            # Use temporary instance to encrypt
-            encryptor = Session.new
-            encryptor.user_agent = user_agent_value
-            changes[:user_agent] = encryptor.read_attribute_before_type_cast(:user_agent)
-          end
-
-          # Hash IP address into ip_address_digest if not already done
-          if session.ip_address.present? && session.ip_address_digest.blank?
-            changes[:ip_address_digest] = Digest::SHA256.hexdigest(session.ip_address.to_s)
-          end
-
-          if changes.present?
-            session.update_columns(changes)
-            updated += 1
-          end
+          session.update_columns(ip_address_digest: Digest::SHA256.hexdigest(session.ip_address.to_s))
+          updated += 1
         rescue => e
           failed << { id: session.id, error: e.class.name, message: e.message }
         end

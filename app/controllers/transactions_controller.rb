@@ -28,7 +28,7 @@ class TransactionsController < ApplicationController
                        .reverse_chronological
                        .includes(
                          { entry: :account },
-                         :category, :merchant, :tags,
+                         :category, { merchant: { logo_attachment: :blob } }, :tags,
                          # Union of #2643 counterpart UI + Skylight category-menu N+1:
                          # - outflow rows need inflow_transaction (to_account) for both
                          #   counterpart display and Transfer#categorizable?/#payment?
@@ -52,6 +52,8 @@ class TransactionsController < ApplicationController
     @pagy, @transactions = pagy(base_scope, limit: safe_per_page(stored_params["per_page"]))
     Transaction::ActivitySecurityPreloader.new(@transactions).preload
 
+    @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates(@transactions, user: Current.user)
+
     # Preload split parent data
     entry_ids = @transactions.map { |t| t.entry.id }
 
@@ -60,7 +62,7 @@ class TransactionsController < ApplicationController
       split_parent_ids = @transactions.filter_map { |t| t.entry.parent_entry_id }.uniq
       if split_parent_ids.any?
         Entry.where(id: split_parent_ids)
-             .includes(:account, entryable: [ :category, :merchant ])
+             .includes(:account, entryable: [ :category, { merchant: { logo_attachment: :blob } } ])
              .index_by(&:id)
       else
         {}
@@ -94,7 +96,7 @@ class TransactionsController < ApplicationController
       []
     else
       Current.family.recurring_transactions.accessible_by(Current.user)
-                    .where(id: projected_recurring_ids).includes(:merchant).to_a
+                    .where(id: projected_recurring_ids).includes(merchant: { logo_attachment: :blob }).to_a
     end
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.transactions"), nil ] ]
@@ -212,6 +214,9 @@ class TransactionsController < ApplicationController
         format.html { redirect_back_or_to account_path(@entry.account), notice: t(".updated") }
         format.turbo_stream do
           in_split_group = helpers.in_split_group?(@entry, params[:grouped])
+          # The row draws the "Transfer?" hint, and its cache key records
+          # whether it applies, so the hint is worked out as the list does.
+          @transfer_hint_transaction_ids = Current.family.transaction_ids_with_transfer_candidates([ @entry.transaction ], user: Current.user)
           render turbo_stream: [
             turbo_stream.replace(
               dom_id(@entry, :header),
@@ -444,6 +449,48 @@ class TransactionsController < ApplicationController
     @entry.unlock_for_sync!
     flash[:notice] = t("entries.unlock.success")
 
+    redirect_back_or_to transactions_path
+  end
+
+  # Advances the manual reconciled_status through unreconciled -> cleared ->
+  # reconciled -> unreconciled. Scoped to manual (unsynced) accounts — synced
+  # accounts already get duplicate-matching (Account::ProviderImportAdapter)
+  # and statement-level reconciliation (AccountStatement).
+  def reconcile
+    return head :not_found unless Current.family.manual_reconciliation?
+
+    transaction = accessible_transactions.includes(entry: :account).find(params[:id])
+    entry = transaction.entry
+
+    return unless require_account_permission!(entry.account)
+
+    unless entry.account.manual?
+      flash[:alert] = t("transactions.reconcile.not_manual_account")
+      redirect_back_or_to transactions_path
+      return
+    end
+
+    entry.advance_reconciled_status!
+    flash[:notice] = t("transactions.reconcile.success", status: t("transactions.reconcile.statuses.#{entry.reconciled_status}"))
+
+    redirect_back_or_to transactions_path
+  rescue ActiveRecord::RecordInvalid => e
+    DebugLogEntry.capture(
+      category: "reconciliation",
+      level: "error",
+      message: "Failed to update reconciled_status for transaction #{params[:id]}: #{e.message}",
+      source: "TransactionsController#reconcile",
+      family: Current.family,
+      user: Current.user,
+      account: entry&.account,
+      metadata: {
+        transaction_id: params[:id],
+        entry_id: entry&.id,
+        error_class: e.class.name,
+        error_message: e.message
+      }
+    )
+    flash[:alert] = t("transactions.reconcile.failure")
     redirect_back_or_to transactions_path
   end
 
@@ -723,7 +770,7 @@ class TransactionsController < ApplicationController
         .includes(:account_providers, logo_attachment: :blob)
         .to_a
       @categories = Current.family.categories.alphabetically_by_hierarchy.to_a
-      @merchants = Current.family.available_merchants_for(Current.user).alphabetically.to_a
+      @merchants = Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically.to_a
       @tags = Current.family.tags.alphabetically.to_a
     end
 
@@ -798,7 +845,7 @@ class TransactionsController < ApplicationController
                 :amount_operator, :active_accounts_only,
                 accounts: [], account_ids: [],
                 categories: [], merchants: [], types: [], tags: [], status: [], ai_status: [],
-                attachment_status: []
+                attachment_status: [], reconcile_status: []
               )
               .to_h
               .compact_blank

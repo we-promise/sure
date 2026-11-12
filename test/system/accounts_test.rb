@@ -14,6 +14,43 @@ class AccountsTest < ApplicationSystemTestCase
     assert_account_created("Depository")
   end
 
+  test "pick icon waits for a whole institution domain" do
+    click_link Accountable.from_type("Depository").singular_display_name
+    click_link "Enter account balance"
+    find("summary", text: "Additional details").click
+
+    assert_equal "true", find_button("Pick icon")["aria-disabled"]
+    click_button "Pick icon"
+    assert_text "Enter the institution domain"
+
+    fill_in "Institution domain", with: "tbank"
+    assert_equal "true", find_button("Pick icon")["aria-disabled"]
+
+    fill_in "Institution domain", with: "https://www.tbank.ru/"
+    assert_no_text "Enter the institution domain"
+    assert_equal "false", find_button("Pick icon")["aria-disabled"]
+  end
+
+  test "pick icon is ready in the edit form of an account with a saved domain" do
+    account = accounts(:depository)
+    account.update!(institution_domain: "tbank.ru")
+    visit account_url(account)
+    open_account_edit_dialog
+    find("summary", text: "Additional details").click
+
+    assert_equal "false", find_button("Pick icon")["aria-disabled"]
+  end
+
+  test "an account logo the browser cannot load gives way to the initials" do
+    Account.any_instance.stubs(:logo_url).returns("/missing-account-logo.png")
+    visit account_url(accounts(:depository))
+
+    within("header span.relative", match: :first) do
+      assert_no_selector "img"
+      assert_selector "div", text: accounts(:depository).name.first
+    end
+  end
+
   test "can create investment account" do
     assert_account_created("Investment")
   end
@@ -192,11 +229,7 @@ class AccountsTest < ApplicationSystemTestCase
 
       click_button "Create Account"
 
-      within_testid("account-sidebar-tabs") do
-        click_on "All"
-        find("details", text: Accountable.from_type(accountable_type).display_name).click
-        assert_text account_name
-      end
+      assert_account_in_sidebar(accountable_type, account_name)
 
       visit accounts_url
       assert_text account_name
@@ -226,6 +259,29 @@ class AccountsTest < ApplicationSystemTestCase
       assert_equal updated_institution_name, created_account[:institution_name]
       assert_equal updated_institution_domain, created_account[:institution_domain]
       assert_equal updated_notes, created_account[:notes]
+    end
+
+    # The account page issues a Turbo morph refresh shortly after it loads.
+    # Reading the sidebar while that refresh is in flight can detach the node
+    # ("Node with given id does not belong to the document"), which Capybara
+    # does not retry. Retry until the account appears in the sidebar.
+    def assert_account_in_sidebar(accountable_type, account_name)
+      3.times do
+        begin
+          within_testid("account-sidebar-tabs") do
+            click_on "All"
+            details = find("details", text: Accountable.from_type(accountable_type).display_name)
+            details.click unless details[:open]
+            assert_text account_name
+          end
+          return
+        rescue Selenium::WebDriver::Error::WebDriverError => e
+          raise unless e.message.match?(
+            /does not belong to the document|stale element reference/i,
+          )
+        end
+      end
+      assert_text account_name
     end
 
     # Fill + submit the account edit dialog, retrying when a Turbo morph

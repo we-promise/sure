@@ -17,6 +17,30 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "account reconciliation indicators only render when manual reconciliation is enabled" do
+    get accounts_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+
+    @user.family.update!(manual_reconciliation: true)
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+  end
+
+  test "show points an unmatched transaction with a counterpart to the transfer matcher" do
+    outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
+    create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "a[href='#{new_transaction_transfer_match_path(outflow)}']", text: I18n.t("transactions.transaction.transfer_hint")
+  end
+
   test "show filters account activity to uncategorized transactions" do
     uncategorized = create_transaction(account: @account, name: "Uncategorized Filter Target", category: nil)
     categorized = create_transaction(account: @account, name: "Categorized Filter Decoy", category: categories(:food_and_drink))
@@ -58,6 +82,18 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     get accounts_url
     assert_response :success
     assert_select "##{dom_id(kraken_item)}"
+  end
+
+  test "index titles each ibkr connection with its own name" do
+    first = ibkr_items(:configured_item)
+    first.update!(name: "IBKR Ireland")
+    second = @user.family.ibkr_items.create!(name: "IBKR US", query_id: "Q2", token: "T2")
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "##{dom_id(first)}", text: /IBKR Ireland/
+    assert_select "##{dom_id(second)}", text: /IBKR US/
   end
 
   test "index renders on-chain wallet items" do
@@ -470,6 +506,32 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show renders the scheduled balance tooltip when a scheduled transaction exists" do
+    create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "[data-controller='DS--tooltip']"
+  end
+
+  test "show adds the scheduled projection to the investment value tooltip" do
+    investment_account = accounts(:investment)
+    create_transaction(account: investment_account, amount: 200, date: 3.days.from_now.to_date)
+
+    get account_url(investment_account)
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/
+  end
+
+  test "show omits the scheduled projection from the investment value tooltip without scheduled entries" do
+    get account_url(accounts(:investment))
+
+    assert_response :success
+    assert_select "[role='tooltip']", text: /#{I18n.t("investments.value_tooltip.projected")}/, count: 0
+  end
+
   test "show renders the balance chart as drag-selectable for a custom date range" do
     get account_url(@account)
 
@@ -822,6 +884,190 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("credit_cards.tabs.overview.statement_balance"), response.body
   end
 
+  test "credit card overview hides the APR card when APR is blank" do
+    sign_in users(:family_admin)
+    accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: nil, minimum_payment: nil)
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_select "h4", text: I18n.t("credit_cards.tabs.overview.annual_percentage_rate"), count: 0
+    assert_select "[data-testid='credit-card-summary-grid'][class*='sm:grid-cols-2']", count: 1
+    assert_select "[data-testid='credit-card-summary-grid'][class*='@3xl:grid-cols-3']", count: 0
+  end
+
+  test "credit card overview shows the APR card when APR is present" do
+    sign_in users(:family_admin)
+    accounts(:credit_card).credit_card.update!(statement_close_day: 25, due_day: 5, apr: 18.99, minimum_payment: nil)
+
+    get account_url(accounts(:credit_card), tab: "overview")
+
+    assert_response :success
+    assert_select "h4", text: I18n.t("credit_cards.tabs.overview.annual_percentage_rate"), count: 1
+    assert_select "[data-testid='credit-card-summary-grid'][class*='sm:grid-cols-2']", count: 1
+    assert_select "[data-testid='credit-card-summary-grid'][class*='@3xl:grid-cols-3']", count: 1
+  end
+
+  test "credit card overview shows the estimated monthly interest for the APR" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26, apr: 12, minimum_payment: nil)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 1200, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.estimated_interest_label"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.per_month", amount: Money.new(12, "USD").format), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.monthly_rate_label"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.balance_carried_label"), response.body
+      assert_match "1.000%", response.body
+    end
+  end
+
+  test "credit card overview hides the minimum warning when minimum payment is blank" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26, minimum_payment: nil)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_no_match "This statement came to", response.body
+    end
+  end
+
+  test "credit card overview shows the remaining amount and partial status" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Card payment", date: Date.new(2026, 10, 12), amount: -40, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.remaining_due", amount: Money.new(60, "USD").format), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.status_partial"), response.body
+    end
+  end
+
+  test "credit card overview shows the cycle breakdown and next close" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 10, 12), amount: 100, currency: "USD",
+        entryable: Transaction.new
+      )
+      account.entries.create!(
+        name: "Card payment", date: Date.new(2026, 10, 14), amount: -40, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t("credit_cards.tabs.overview.charges"), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.payments_credits"), response.body
+      assert_match Money.new(100, "USD").format, response.body
+      assert_match Money.new(40, "USD").format, response.body
+      assert_match I18n.t("credit_cards.tabs.overview.closes_on", date: I18n.l(Date.new(2026, 11, 10), format: :long)), response.body
+    end
+  end
+
+  test "credit card overview shows the next open scheduled card payment" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+
+    travel_to Date.new(2026, 10, 16) do
+      series = account.inbound_recurring_transfers.create!(
+        family: account.family,
+        account: accounts(:depository),
+        name: "Card payment",
+        amount: 40,
+        currency: "USD",
+        expected_day_of_month: 24,
+        last_occurrence_date: Date.new(2026, 9, 24),
+        next_expected_date: Date.new(2026, 10, 24),
+        manual: true
+      )
+      open_due = series.recurring_occurrences.open_status.minimum(:due_on)
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_match I18n.t(
+        "credit_cards.tabs.overview.scheduled_payment",
+        amount: Money.new(40, "USD").format,
+        date: I18n.l(open_due, format: :long)
+      ), response.body
+    end
+  end
+
+  test "credit card overview hides a scheduled payment from a member without its source" do
+    sign_in users(:family_member)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 10, due_day: 26)
+    account.inbound_recurring_transfers.create!(
+      family: account.family,
+      account: accounts(:investment),
+      name: "Card payment",
+      amount: 40,
+      currency: "USD",
+      expected_day_of_month: 24,
+      last_occurrence_date: 2.months.ago.to_date,
+      next_expected_date: 1.month.from_now.to_date,
+      bill_type: "transfer",
+      manual: true
+    )
+
+    get account_url(account, tab: "overview")
+
+    assert_response :success
+    assert_no_match "Scheduled payment", response.body
+  end
+
+  test "credit card overview highlights an overdue statement" do
+    sign_in users(:family_admin)
+    account = accounts(:credit_card)
+    account.credit_card.update!(statement_close_day: 5, due_day: 21)
+
+    travel_to Date.new(2026, 10, 30) do
+      account.entries.create!(
+        name: "Cycle charge", date: Date.new(2026, 9, 20), amount: 552, currency: "USD",
+        entryable: Transaction.new
+      )
+
+      get account_url(account, tab: "overview")
+
+      assert_response :success
+      assert_select "span.text-destructive", text: I18n.t("credit_cards.due.overdue", count: 9)
+    end
+  end
+
   test "credit card overview shows the payment due this month for an early close day" do
     sign_in users(:family_admin)
     accounts(:credit_card).credit_card.update!(statement_close_day: 10, due_day: 26)
@@ -884,7 +1130,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_match I18n.t("credit_cards.tabs.overview.credit_toward_next"), response.body
-      assert_no_match I18n.t("credit_cards.tabs.overview.due_on", date: ""), response.body
+      assert_no_match I18n.l(Date.new(2026, 11, 26), format: :long), response.body
     end
   end
 
@@ -1031,6 +1277,121 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   test "should get sparkline" do
     get sparkline_account_url(@account)
     assert_response :success
+  end
+
+  test "sparkline stays fresh when another account syncs" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    @account.family.touch(:latest_sync_completed_at)
+    get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+
+    assert_response :not_modified
+  end
+
+  test "sparkline is re-rendered when the account's balances change" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+    before = response.body
+
+    travel 1.minute do
+      @account.balances.create!(date: 3.days.ago.to_date, balance: 1234, start_cash_balance: 1234, currency: @account.currency)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+    assert_not_equal before, response.body
+  end
+
+  test "sparkline is re-rendered after the account's own sync completes" do
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.syncs.create!(status: "completed", completed_at: Time.current)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  # AccountProvider rows don't touch the account, and swapping one keeps it linked.
+  test "sparkline is re-rendered when the account's provider link changes" do
+    AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    get sparkline_account_url(@account)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      @account.account_providers.destroy_all
+      other = PlaidAccount.create!(
+        plaid_item: plaid_items(:one), plaid_id: "acc_mock_swap", name: "Swapped", plaid_type: "depository",
+        currency: "USD", current_balance: 1
+      )
+      AccountProvider.create!(account: @account, provider: other)
+      get sparkline_account_url(@account), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  test "an investment sparkline is re-rendered after any family sync" do
+    investment = accounts(:investment)
+    get sparkline_account_url(investment)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      investment.family.touch(:latest_sync_completed_at)
+      get sparkline_account_url(investment), headers: { "If-None-Match" => etag }
+    end
+
+    assert_response :success
+  end
+
+  test "sidebar sparkline URLs carry a version the browser may reuse" do
+    get account_url(@account)
+
+    [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ].each do |src|
+      assert_match(/[?&]v=\h{16}\z/, src)
+      get src
+      assert_response :success
+      assert_includes response.headers["Cache-Control"], "max-age=86400"
+    end
+  end
+
+  test "a sparkline URL with an outdated version must be revalidated" do
+    get sparkline_account_url(@account, v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+
+    get accountable_sparkline_url("depository", v: "outdated")
+    assert_response :success
+    assert_includes response.headers["Cache-Control"], "max-age=0"
+  end
+
+  test "a sidebar sparkline URL changes when the account's balances do" do
+    get account_url(@account)
+    before = sidebar_sparkline_src(dom_id(@account, :sparkline))
+
+    travel 1.minute do
+      @account.balances.create!(date: 40.days.ago.to_date, balance: 1, currency: @account.currency)
+      get account_url(@account)
+    end
+
+    assert_not_equal before, sidebar_sparkline_src(dom_id(@account, :sparkline))
+  end
+
+  test "sidebar sparkline URLs change the next day" do
+    get account_url(@account)
+    before = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+    travel 1.day do
+      get account_url(@account)
+      after = [ sidebar_sparkline_src(dom_id(@account, :sparkline)), sidebar_sparkline_src("depository_sparkline") ]
+
+      assert_not_equal before[0], after[0]
+      assert_not_equal before[1], after[1]
+    end
   end
 
   test "sparkline renders an empty series without a trend" do
@@ -1230,6 +1591,73 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     sign_in users(:family_member)
 
     patch toggle_exclude_from_reports_account_url(accounts(:credit_card))
+    assert_redirected_to account_url(accounts(:credit_card))
+  end
+
+  test "logo_options shows the icons found and Brandfetch inside the logo frame without saving" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+    @account.update!(institution_domain: "krungsri.com")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "krungsri.com.png",
+                         metadata: { "logo_source" => "yandex", "logo_key" => "yandex", "logo_auto" => true })
+    icons = [ logo_icon("appstore:123", "appstore", 512, name: "krungsri"),
+              logo_icon("yandex", "yandex", 120, body: file_fixture("square-placeholder.png").binread) ]
+    Account::LogoFetcher.any_instance.stubs(:candidates).returns(icons)
+
+    get logo_options_account_url(@account), headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
+
+    assert_response :success
+    assert_select "turbo-frame##{dom_id(@account, :logo_field)}"
+    assert_select "button[type=button][data-account-logo-picker-choice-param='appstore:123'][title=krungsri]"
+    assert_select "button[type=button][data-account-logo-picker-choice-param=brandfetch]"
+    assert_select "button[type=button][data-account-logo-picker-choice-param]", 2, "the current icon only resets the choice"
+    assert_select "button[type=submit]:not([form])", 0, "choosing an icon saves nothing"
+    assert_select "img[src^='data:image/png;base64,']", 2
+  end
+
+  test "logo_options searches the domain typed in the form without saving it" do
+    @account.update!(institution_domain: "tbank.ru")
+    Account::LogoFetcher.expects(:new).with { |account| account.institution_domain == "krungsri.com" && account.institution_name == "Krungsri" }
+      .returns(stub(candidates: []))
+
+    get logo_options_account_url(@account), params: { institution_domain: "https://www.krungsri.com/", institution_name: "Krungsri" },
+                                            headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
+
+    assert_response :success
+    assert_equal "tbank.ru", @account.reload.institution_domain
+  end
+
+  test "logo_options for a new account searches the typed domain" do
+    Account::LogoFetcher.expects(:new).with { |account| account.new_record? && account.institution_domain == "krungsri.com" }
+      .returns(stub(candidates: []))
+
+    get logo_options_accounts_url, params: { institution_domain: "krungsri.com", institution_name: "Krungsri" },
+                                   headers: { "Turbo-Frame" => "logo_field_account" }
+
+    assert_response :success
+    assert_select "turbo-frame#logo_field_account"
+  end
+
+  test "logo_options keeps an icon selectable when its source now serves a different image" do
+    @account.update!(institution_domain: "krungsri.com")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "krungsri.com.png",
+                         metadata: { "logo_source" => "yandex", "logo_key" => "yandex", "logo_auto" => true })
+    Account::LogoFetcher.any_instance.stubs(:candidates).returns([ logo_icon("yandex", "yandex", 120) ])
+
+    get logo_options_account_url(@account), headers: { "Turbo-Frame" => dom_id(@account, :logo_field) }
+
+    assert_select "button[data-account-logo-picker-choice-param=yandex]"
+  end
+
+  test "logo_options outside the frame goes to the account" do
+    get logo_options_account_url(@account)
+
+    assert_redirected_to account_url(@account)
+  end
+
+  test "logo_options requires write permission" do
+    sign_in users(:family_member)
+
+    get logo_options_account_url(accounts(:credit_card))
     assert_redirected_to account_url(accounts(:credit_card))
   end
 
@@ -1471,6 +1899,14 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def sidebar_sparkline_src(frame_id)
+      css_select("turbo-frame##{frame_id}").first["src"]
+    end
+
+    def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
+      Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
+    end
+
     # #3630. Links a shared and an unshared account to +item+ through two fresh
     # provider rows built by the block, and returns them in that order. Shares
     # are reset first so the member's access is exactly the one granted here.

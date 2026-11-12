@@ -432,6 +432,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     travel_to Date.current.end_of_month - 2.days
     occurrence = snoozed_late_bill
     travel_to occurrence.reload.effective_due_on - 2.days
+    # Run in the first days of a month, this lands more than
+    # Session::INACTIVITY_TIMEOUT after setup signed in, with no request in
+    # between to keep the session alive; the user would sign in again.
+    sign_in @user
     pay(occurrence)
 
     get bills_url
@@ -563,6 +567,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.month_pulse.pulse_paid"), body
     assert_match I18n.t("bills.month_pulse.pulse_overdue"), body
     assert_match I18n.t("bills.month_pulse.pulse_next_seven"), body
+    assert_match I18n.t("bills.month_pulse.pulse_until", date: ApplicationController.helpers.format_date(6.days.from_now.to_date)), body
 
     # And it ends by saying what actually happens next.
     assert_match I18n.t("bills.month_pulse.next_up"), body
@@ -945,7 +950,33 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match "$77.00", response.body
   end
 
-  test "the all view lists every series and filters compose" do
+  # The seven-day figure must count every occurrence inside the window, even
+  # when the window crosses the month end and one bill has two occurrences in it.
+  test "next seven days counts every occurrence across the month end" do
+    travel_to Date.new(2026, 10, 29) do
+      bill = create_bill(name: "Gym membership", amount: 25, manual: true,
+                         anchor_date: Date.new(2026, 11, 1), expected_day_of_month: 1,
+                         last_occurrence_date: Date.new(2026, 10, 1),
+                         next_expected_date: Date.new(2026, 11, 1))
+      # Creating the bill already materializes its first occurrence (Nov 1), so
+      # only add the second one and let find_or_create_by! reuse the first.
+      [ Date.new(2026, 11, 1), Date.new(2026, 11, 3) ].each do |due|
+        bill.recurring_occurrences.find_or_create_by!(original_due_on: due) do |occurrence|
+          occurrence.family = @family
+          occurrence.due_on = due
+          occurrence.currency = "USD"
+        end
+      end
+
+      get bills_url
+      assert_response :success
+
+      assert_match "$50.00", response.body
+      assert_match ApplicationController.helpers.format_date(Date.new(2026, 11, 4)), response.body
+    end
+  end
+
+  test "the all view lists every current series and filters compose" do
     create_bill(name: "Alpha bill", amount: 10)
     create_bill(name: "Beta paused", amount: 20, status: "paused")
     create_bill(name: "Gamma income", amount: -500)
@@ -976,6 +1007,64 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     get bills_url(view: "all", q: { search: "gamma" })
     assert_match "Gamma income", response.body
     assert_no_match "Beta paused", response.body
+  end
+
+  # A removed detected bill stays as an ended tombstone so detection does not
+  # recreate it. It is not a current bill, so the default list hides it and the
+  # Dismissed filter is the way to find it.
+  test "the all view hides dismissed bills unless the dismissed filter asks for them" do
+    create_bill(name: "Live bill", amount: 10)
+    create_bill(name: "Dismissed bill", amount: 20, status: "ended", manual: false)
+
+    get bills_url(view: "all")
+    assert_response :success
+    assert_match "Live bill", response.body
+    assert_no_match "Dismissed bill", response.body
+    assert_select "select[name='q[status]'] option", text: I18n.t("bills.all.current_bills")
+
+    get bills_url(view: "all", q: { status: "ended" })
+    assert_response :success
+    assert_match "Dismissed bill", response.body
+    assert_no_match "Live bill", response.body
+  end
+
+  # With only tombstones left, the default list is empty. The empty state must
+  # point at the filter that shows them instead of telling the user to clear a
+  # filter they never set.
+  test "the all view points to the dismissed filter when only dismissed bills remain" do
+    create_bill(name: "Dismissed bill", amount: 20, status: "ended", manual: false)
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_match I18n.t("bills.all.dismissed_hidden_description"), response.body
+    assert_select "a[href=?]", bills_path(view: "all", q: { status: "ended" }),
+                  text: I18n.t("bills.all.status_filters.ended")
+  end
+
+  test "the all view dismissed state is localized in German" do
+    @user.update!(locale: "de")
+    create_bill(name: "Dismissed bill", amount: 20, status: "ended", manual: false)
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_select "select[name='q[status]'] option",
+                  text: I18n.t("bills.all.current_bills", locale: :de, fallback: false)
+    assert_match I18n.t("bills.all.no_matches_title", locale: :de, fallback: false), response.body
+    assert_match I18n.t("bills.all.dismissed_hidden_description", locale: :de, fallback: false), response.body
+    assert_select "a[href=?]", bills_path(view: "all", q: { status: "ended" }),
+                  text: I18n.t("bills.all.status_filters.ended", locale: :de, fallback: false)
+  end
+
+  test "the all view empty state is localized in German" do
+    @user.update!(locale: "de")
+
+    get bills_url(view: "all")
+
+    assert_response :success
+    assert_match I18n.t("bills.all.no_matches_title", locale: :de, fallback: false), response.body
+    assert_match I18n.t("bills.all.no_matches_description", locale: :de, fallback: false), response.body
   end
 
   # Content sits on a surface everywhere else in the app. The filters belong to
@@ -1649,6 +1738,52 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_match I18n.t("bills.all.subscription_price_changes"), response.body
   end
 
+  # The price-change list is historical, but a dismissed subscription is no
+  # longer a bill. Showing its name here would put back the tombstone the list
+  # just hid.
+  test "the subscription price-change list skips dismissed subscriptions" do
+    active = create_bill(name: "STREAMFLIX", amount: 24.99, bill_type: "subscription")
+    active.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+    dismissed = create_bill(name: "OLD STREAMFLIX", amount: 9.99, bill_type: "subscription",
+                            status: "ended", manual: false)
+    dismissed.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 7.99, new_amount: 9.99,
+      currency: "USD", source: "detected"
+    )
+
+    get bills_url(view: "all", q: { bill_type: "subscription" })
+
+    assert_response :success
+    assert_match I18n.t("bills.all.subscription_price_changes"), response.body
+    assert_match "STREAMFLIX", response.body
+    assert_no_match "OLD STREAMFLIX", response.body
+  end
+
+  # The subscription filter must also apply to the price-change list. Otherwise
+  # a bill or installment price change appears under the subscriptions heading.
+  test "the subscription price-change list skips other bill types" do
+    sub = create_bill(name: "STREAMFLIX", amount: 24.99, bill_type: "subscription")
+    sub.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 19.99, new_amount: 24.99,
+      currency: "USD", source: "detected"
+    )
+    bill = create_bill(name: "CITY WATER", amount: 45, bill_type: "bill")
+    bill.recurring_price_changes.create!(
+      effective_on: 2.months.ago.to_date, previous_amount: 40, new_amount: 45,
+      currency: "USD", source: "detected"
+    )
+
+    get bills_url(view: "all", q: { bill_type: "subscription" })
+
+    assert_response :success
+    assert_match I18n.t("bills.all.subscription_price_changes"), response.body
+    assert_match "STREAMFLIX", response.body
+    assert_no_match "CITY WATER", response.body
+  end
+
   # Bare, the filters read as loose words with a chevron and had no focus
   # ring. Each sits in the boxed field the form builder draws.
   test "the All bills filters are boxed fields like the search beside them" do
@@ -2096,7 +2231,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#{routine} .px-4.py-2\\.5", text: /#{I18n.t("bills.index.notices_routine", count: 2)}/
     assert_select "#{routine}[class^='bg-'], #{routine}[class*=' bg-']", count: 0
     # One chevron for both folds, not copies that drift apart.
-    chevron = "svg[class*='group-open:rotate-90']"
+    chevron = "svg[class*=':rotate-90']"
     chevrons = css_select("[data-persisted-disclosure-key-value='bills-suggested'] > summary #{chevron}, #{routine} #{chevron}")
     assert_equal 2, chevrons.size
     assert_equal 1, chevrons.map(&:to_html).uniq.size, "the folds' chevrons differ: #{chevrons.map { |svg| svg["class"] }.inspect}"

@@ -1,6 +1,8 @@
 class Balance::SyncCache
-  def initialize(account)
+  # start_date skips entries before it; only safe when the caller seeds balances from a persisted prior day.
+  def initialize(account, start_date: nil)
     @account = account
+    @start_date = start_date
     @unconvertible_entry_count = 0
     @unconvertible_holding_count = 0
   end
@@ -21,6 +23,12 @@ class Balance::SyncCache
     @unconvertible_holding_count
   end
 
+  # Every entry the calculation uses: settled, without split parents or
+  # future-dated ones, and converted into the account's currency.
+  def entries
+    converted_entries
+  end
+
   def get_valuation(date)
     entries_by_date[date]&.find { |e| e.valuation? }
   end
@@ -31,6 +39,18 @@ class Balance::SyncCache
 
   def get_entries(date)
     entries_by_date[date]&.select { |e| e.transaction? || e.trade? } || []
+  end
+
+  # Every entry converted to the account currency, in date order.
+  def entries
+    converted_entries
+  end
+
+  # One replay per loan per cache, so a calculator that asks twice does not
+  # walk the ledger twice.
+  def loan_principal_payments(loan)
+    @loan_principal_payments ||= {}
+    @loan_principal_payments[loan.id] ||= Loan::PrincipalPayments.for(loan, entries: entries)
   end
 
   private
@@ -72,10 +92,14 @@ class Balance::SyncCache
     end
 
     def converted_entries
+      # Scheduled (future-dated) entries are excluded from balance calculations
+      # entirely -- they must not affect the account's current balance until
+      # their date arrives. A daily sync naturally picks them up once "today"
+      # reaches their date (see Entry#scheduled?).
       @converted_entries ||= begin
         missing_rate_pairs = []
 
-        converted = account.entries.excluding_pending.excluding_split_parents.includes(:entryable).order(:date).to_a.filter_map do |e|
+        converted = entries_scope.to_a.filter_map do |e|
           custom_rate = e.entryable.exchange_rate if e.entryable.respond_to?(:exchange_rate)
 
           # Use Money#exchange_to with custom rate if available, standard lookup otherwise.
@@ -114,6 +138,11 @@ class Balance::SyncCache
 
         converted
       end
+    end
+
+    def entries_scope
+      scope = account.entries.excluding_pending.excluding_split_parents.where(date: ..Date.current).includes(:entryable).order(:date)
+      @start_date ? scope.where(date: @start_date..) : scope
     end
 
     def report_missing_rates(message:, counts:, missing_rate_pairs:)

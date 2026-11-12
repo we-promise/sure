@@ -1,143 +1,254 @@
 ---
 nl:
+  account:
+    entries:
+      destroy:
+        success: "Item verwijderd."
   accounts:
+    not_authorized: "U heeft geen toestemming om dit account te beheren"
     account:
-      link_lunchflow: Koppel met Lunch Flow
-      link_provider: Koppel met provider
-      unlink_provider: Verbreek verbinding met provider
-      troubleshoot: Problemen oplossen
+      complete_setup: "Instellen voltooien"
+      edit: "Bewerken"
+      link_lunchflow: "Koppel met Lunch Flow"
+      link_provider: "Koppelen met provider"
+      unlink_provider: "Koppeling met provider verbreken"
+      change_simplefin_account: "SimpleFIN-account wijzigen"
+      troubleshoot: "Problemen oplossen"
+      enable: "Account inschakelen"
+      disable: "Account uitschakelen"
+      exclude_from_reports: "Uitsluiten van alle rapporten"
+      include_in_reports: "Opnemen in rapporten"
+      excluded_from_reports_indicator: "Uitgesloten van rapporten"
+      set_default: "Als standaard instellen"
+      remove_default: "Niet meer als standaard"
+      default_label: "Standaard"
+      delete: "Account verwijderen"
+      sharing: "Delen"
     chart:
-      data_not_available: Gegevens niet beschikbaar voor de geselecteerde periode
+      data_not_available: "Gegevens niet beschikbaar voor de geselecteerde periode"
     create:
       success: "%{type} account aangemaakt"
+    logo_caption:
+      appstore: "Uit de App Store"
+      brandfetch: "Van Brandfetch"
+      duckduckgo: "Van DuckDuckGo"
+      google: "Van Google"
+      googleplay: "Van Google Play"
+      none: "Nog geen pictogram"
+      rustore: "Van RuStore"
+      uploaded: "Door u geüpload"
+      yandex: "Van Yandex"
+    logo_field:
+      current: "huidig"
+      domain_needed: "Voer het domein van de instelling in, zoals tbank.ru, om een pictogram te kiezen."
+      empty: "Geen pictogrammen gevonden voor dit domein. Upload hieronder uw eigen pictogram."
+      pick: "Pictogram kiezen"
+      pending: "Wordt toegepast bij opslaan"
+      remove: "Verwijderen"
+      removal: "Wordt verwijderd bij opslaan; het automatische pictogram komt terug"
+      searching: "Zoeken…"
+    logo_options:
+      size: "%{size} px"
+      sources:
+        appstore: "App Store"
+        brandfetch: "Brandfetch"
+        duckduckgo: "DuckDuckGo"
+        google: "Google"
+        googleplay: "Google Play"
+        rustore: "RuStore"
+        yandex: "Yandex"
+      stored: "Opgeslagen pictogram"
+    set_default:
+      depository_only: "Alleen betaal-, spaar- en creditcardaccounts kunnen als standaard worden ingesteld."
     destroy:
       success: "%{type} account gepland voor verwijdering"
       cannot_delete_linked: "Kan een gekoppeld account niet verwijderen. Koppel het eerst los."
+      failed: "Verwijderen mislukt. Probeer het later opnieuw."
     empty:
-      empty_message: Voeg een account toe via verbinding, importeren of handmatig invoeren.
-      new_account: Nieuw account
-      no_accounts: Nog geen accounts
+      empty_message: "Voeg een account toe via koppeling, importeren of handmatig invoeren."
+      new_account: "Nieuw account"
+      no_accounts: "Nog geen accounts"
     form:
-      balance: Huidig saldo
-      name_label: Accountnaam
-      name_placeholder: Voorbeeld accountnaam
-      additional_details: Extra details
-      institution_name_label: Naam instelling
-      institution_name_placeholder: bijv. Chase Bank
-      institution_domain_label: Domein instelling
-      institution_domain_placeholder: bijv. chase.com
-      notes_label: Notities
-      notes_placeholder: Sla aanvullende informatie op zoals rekeningnummers, sorteer codes, IBAN, routenummers, enz.
+      balance: "Saldo op datum:"
+      opening_balance_date_label: "Datum beginsaldo"
+      name_label: "Accountnaam"
+      name_placeholder: "Voorbeeld accountnaam"
+      additional_details: "Extra details"
+      institution_name_label: "Naam instelling"
+      institution_name_placeholder: "bijv. Chase Bank"
+      institution_domain_label: "Domein instelling"
+      institution_domain_placeholder: "bijv. chase.com"
+      institution_domain_hint: "Wordt gebruikt om het pictogram van de instelling te vinden."
+      institution_domain_missing_logo_key_hint: "Wordt gebruikt om het pictogram van de instelling te vinden. Brandfetch-logo's zijn niet beschikbaar omdat er geen Brandfetch-client-ID is ingesteld."
+      institution_domain_settings_link: "Voeg er een toe in de instellingen voor zelfhosting"
+      logo_label: "Pictogram"
+      logo_hint: "Of upload uw eigen PNG-, JPEG-, GIF-, WebP- of ICO-afbeelding van maximaal 1 MB. Deze vervangt het Brandfetch-logo."
+      notes_label: "Notities"
+      notes_placeholder: "Sla aanvullende informatie op zoals rekeningnummers, sorteercodes, IBAN, routenummers, enz."
+      exclude_from_reports: "Uitsluiten van alle rapporten"
+      enable_category_matcher_label: "Categoriekoppeling inschakelen"
+      enable_category_matcher_hint: "Indien ingeschakeld wordt de door de provider voorgestelde categorie toegepast op geïmporteerde transacties. Schakel uit om nieuwe transacties zonder categorie te laten."
     index:
-      accounts: Accounts
+      accounts: "Accounts"
+      financekit_accounts:
+        title: "Apple Wallet"
+        description: "Beheer Apple Wallet-koppelingen en synchronisatie in de Sure-app voor iOS."
+      cancel_sync: "Synchronisatie annuleren"
       manual_accounts:
-        other_accounts: Andere accounts
-      new_account: Nieuw account
-      sync: Synchroniseer alles
+        other_accounts: "Andere accounts"
+      new_account: "Nieuw account"
+      sync: "Alles synchroniseren"
     sync_all:
       syncing: "Accounts synchroniseren..."
     new:
-      import_accounts: Accounts importeren
+      import_accounts: "Accounts importeren"
+      container:
+        select: "Selecteren"
+        navigate: "Navigeren"
+        close: "Sluiten"
+        next: "Volgende"
+        previous: "Vorige"
       method_selector:
-        connected_entry: Account koppelen
-        connected_entry_eu: EU-account koppelen
+        connected_entry: "Account koppelen"
+        connected_entry_eu: "EU-account koppelen"
         link_with_provider: "Koppel met %{provider}"
-        lunchflow_entry: Koppel Lunch Flow account
-        manual_entry: Voer accountsaldo in
-        title: Hoe wilt u het toevoegen?
-      title: Wat wilt u toevoegen?
+        lunchflow_entry: "Lunch Flow-account koppelen"
+        manual_entry: "Accountsaldo invoeren"
+        title: "Hoe wilt u het toevoegen?"
+      title: "Wat wilt u toevoegen?"
     show:
+      limited_fx_history_warning: "Wisselkoersgeschiedenis is pas beschikbaar vanaf %{date}. Transacties vóór deze datum gebruiken benaderde valutaomrekeningen — dit kan gebeuren als de wisselkoersprovider maar een beperkte historische periode aanbiedt."
+      tabs:
+        activity: "Activiteit"
+        extra_repayments: "Extra aflossingen"
+        holdings: "Posities"
+        overview: "Overzicht"
+        schedule: "Schema"
+        statements: "Afschriften"
       activity:
-        amount: Bedrag
-        balance: Saldo
-        confirmed: Bevestigd
-        date: Datum
-        entries: vermeldingen
-        entry: vermelding
-        filter: Filter
-        new: Nieuw
-        new_activity: Nieuwe activiteit
-        new_balance: Nieuw saldo
-        new_transaction: Nieuwe transactie
-        no_entries: Geen vermeldingen gevonden
-        pending: In afwachting
+        amount: "Bedrag"
+        balance: "Saldo"
+        date: "Datum"
+        entries: "items"
+        entry: "item"
+        filter: "Filter"
+        new: "Nieuw"
+        new_activity: "Nieuwe activiteit"
+        new_balance: "Nieuw saldo"
+        new_trade: "Nieuwe handelstransactie"
+        new_transaction: "Nieuwe transactie"
+        new_transfer: "Nieuwe overboeking"
+        no_entries: "Geen items gevonden"
         search:
-          placeholder: Zoek vermeldingen op naam
-        status: Status
-        title: Activiteit
+          placeholder: "Zoek items op naam"
+        search_placeholder: "Items zoeken op naam"
+        title: "Activiteit"
+        confirmed: "Bevestigd"
+        pending: "In behandeling"
+        status: "Status"
       chart:
-        balance: Saldo
-        owed: Bedrag verschuldigd
+        balance: "Saldo"
+        owed: "Bedrag verschuldigd"
+      header:
+        complete_setup: "Instellen voltooien"
       menu:
-        confirm_accept: Verwijder "%{name}"
-        confirm_body_html: "<p>Door dit account te verwijderen, wist u de waarde geschiedenis, wat verschillende aspecten van uw totale account beïnvloedt. Deze actie heeft een directe impact op uw netto waarde berekeningen en de account grafieken.</p><br /> <p>Na verwijdering is er geen manier om de account informatie te herstellen omdat u het als een nieuw account moet toevoegen.</p>"
-        confirm_title: Account verwijderen?
-        edit: Bewerken
-        import: Transacties importeren
-        manage: Beheer accounts
+        confirm_accept: "Verwijder \"%{name}\""
+        confirm_body_html: "<p>Door dit account te verwijderen, wist u de waardegeschiedenis, wat verschillende aspecten van uw totale account beïnvloedt. Deze actie heeft een directe impact op de berekening van uw netto vermogen en de accountgrafieken.</p><br /> <p>Na verwijdering is er geen manier om de accountgegevens te herstellen omdat u het als een nieuw account moet toevoegen.</p>"
+        confirm_title: "Account verwijderen?"
+        delete_account: "Account verwijderen"
+        edit: "Bewerken"
+        import: "Transacties importeren"
+        import_trades: "Handelstransacties importeren"
+        import_transactions: "Transacties importeren"
+        manage: "Accounts beheren"
+        sharing: "Delen"
+        statements: "Afschriften"
+        exclude_from_reports: "Uitsluiten van alle rapporten"
+        include_in_reports: "Opnemen in rapporten"
     update:
       success: "%{type} account bijgewerkt"
+      logo_not_applied: "Het account is opgeslagen, maar het gekozen pictogram kon niet worden gedownload. Probeer het opnieuw of upload uw eigen pictogram."
     sidebar:
-      missing_data: Ontbrekende historische gegevens
-      missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, beveiligingsprijzen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountbalansen te berekenen."
-      configure_providers: Configureer hier uw providers.
+      missing_data: "Ontbrekende historische gegevens"
+      missing_data_description: "%{product} gebruikt externe providers om historische wisselkoersen, effectenkoersen en meer op te halen. Deze gegevens zijn nodig om nauwkeurige historische accountsaldi te berekenen."
+      configure_providers: "Configureer hier uw providers."
       tabs:
-        all: Alle
-        assets: Activa
-        debts: Schulden
-      new_asset: Nieuwe activa
-      new_debt: Nieuwe schuld
-      new_account: Nieuw account
-      new_account_group: "Nieuwe %{account_group}"
+        all: "Alle"
+        assets: "Bezittingen"
+        debts: "Schulden"
+      new_asset: "Nieuwe bezitting"
+      new_debt: "Nieuwe schuld"
+      new_account: "Nieuw account"
+      new_account_group: "%{account_group} toevoegen"
+      expand_all: "Alles uitvouwen"
+      collapse_all: "Alles samenvouwen"
+      reorder_account: "%{account} verplaatsen"
+      reorder_hint: "Sleep om de volgorde te wijzigen. Druk met het toetsenbord op Enter en daarna op de pijltjestoetsen."
+      sort_mode:
+        start: "Accounts sorteren"
+        hint: "Sleep accounts aan hun greep om de volgorde te wijzigen."
+        done: "Klaar"
     types:
-      depository: Cash
-      investment: Investering
-      crypto: Crypto
-      property: Eigendom
-      vehicle: Voertuig
-      gift_card: Cadeaukaart
-      other_asset: Overige activa
-      credit_card: Creditcard
-      loan: Lening
-      other_liability: Overige verplichting
+      depository: "Bankrekening"
+      investment: "Belegging"
+      crypto: "Crypto"
+      property: "Vastgoed"
+      vehicle: "Voertuig"
+      gift_card: "Cadeaukaart"
+      other_asset: "Overige bezittingen"
+      credit_card: "Creditcard"
+      loan: "Lening"
+      other_liability: "Overige schuld"
+    types_plural:
+      depository: "Bankrekeningen"
+      investment: "Beleggingen"
+      crypto: "Crypto"
+      property: "Vastgoed"
+      vehicle: "Voertuigen"
+      gift_card: "Cadeaukaarten"
+      other_asset: "Overige bezittingen"
+      credit_card: "Creditcards"
+      loan: "Leningen"
+      other_liability: "Overige schulden"
     tax_treatments:
-      taxable: Belastbaar
-      tax_deferred: Uitgesteld
-      tax_exempt: Vrijgesteld
-      tax_advantaged: Fiscaal voordeel
+      taxable: "Belastbaar"
+      tax_deferred: "Uitgesteld"
+      tax_exempt: "Vrijgesteld"
+      tax_advantaged: "Fiscaal voordeel"
     tax_treatment_descriptions:
-      taxable: Winst belast bij realisatie
-      tax_deferred: Bijdragen aftrekbaar, belast bij opname
-      tax_exempt: Bijdragen na belasting, winst niet belast
-      tax_advantaged: Speciale fiscale voordelen met voorwaarden
+      taxable: "Winst belast bij realisatie"
+      tax_deferred: "Bijdragen aftrekbaar, belast bij opname"
+      tax_exempt: "Bijdragen na belasting, winst niet belast"
+      tax_advantaged: "Speciale fiscale voordelen met voorwaarden"
     subtype_regions:
-      us: Verenigde Staten
-      uk: Verenigd Koninkrijk
-      ca: Canada
-      au: Australië
-      eu: Europa
-      generic: Algemeen
+      us: "Verenigde Staten"
+      uk: "Verenigd Koninkrijk"
+      ca: "Canada"
+      au: "Australië"
+      eu: "Europa"
+      in: "India"
+      generic: "Algemeen"
     confirm_unlink:
-      title: Account ontkoppelen van provider?
+      title: "Account ontkoppelen van provider?"
       description_html: "U staat op het punt om <strong>%{account_name}</strong> te ontkoppelen van <strong>%{provider_name}</strong>. Dit zal het omzetten naar een handmatig account."
-      warning_title: Wat dit betekent
-      warning_no_sync: Het account zal niet langer automatisch synchroniseren met uw provider
-      warning_manual_updates: U moet handmatig transacties toevoegen en saldi bijwerken
-      warning_transactions_kept: Alle bestaande transacties en saldi blijven behouden
-      warning_can_delete: Na het ontkoppelen kunt u het account indien nodig verwijderen
-      confirm_button: Bevestigen en ontkoppelen
+      warning_title: "Wat dit betekent"
+      warning_wallet_connection: "Alle accounts in deze Apple Wallet-koppeling worden ontkoppeld. Hun transacties en saldi blijven behouden. U kunt opnieuw koppelen via de Sure-app voor iOS met een nieuwe Wallet-configuratie."
+      warning_no_sync: "Het account zal niet langer automatisch synchroniseren met uw provider"
+      warning_manual_updates: "U moet handmatig transacties toevoegen en saldi bijwerken"
+      warning_transactions_kept: "Alle bestaande transacties en saldi blijven behouden"
+      warning_can_delete: "Na het ontkoppelen kunt u het account indien nodig verwijderen"
+      confirm_button: "Bevestigen en ontkoppelen"
     unlink:
       success: "Account succesvol ontkoppeld. Het is nu een handmatig account."
       not_linked: "Account is niet gekoppeld aan een provider"
       error: "Het ontkoppelen is mislukt: %{error}"
       generic_error: "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     select_provider:
-      title: Selecteer een provider om te verbinden
+      title: "Selecteer een provider om te koppelen"
       description: "Kies welke provider u wilt gebruiken om %{account_name} te koppelen"
       already_linked: "Account is al gekoppeld aan een provider"
       no_providers: "Er zijn momenteel geen providers geconfigureerd"
-
   email_confirmations:
     new:
-      invalid_token: Ongeldige of verlopen bevestigingslink.
-      success_login: Uw e-mail is bevestigd. Log in met uw nieuwe e-mailadres.
+      invalid_token: "Ongeldige of verlopen bevestigingslink."
+      success_login: "Uw e-mail is bevestigd. Log in met uw nieuwe e-mailadres."

@@ -67,6 +67,7 @@ module Assistant
       classes = [
         Function::GetTransactions,
         Function::GetRecurringTransactions,
+        Function::GetUncategorizedTransactions,
         Function::GetAccounts,
         Function::GetHoldings,
         Function::GetBalanceSheet,

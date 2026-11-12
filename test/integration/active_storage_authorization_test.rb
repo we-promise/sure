@@ -446,7 +446,7 @@ class ActiveStorageAuthorizationTest < ActionDispatch::IntegrationTest
   test "every attachment is either access-checked or intentionally public" do
     # Logos and avatars are not sensitive. Archived exports have no owning family;
     # ArchivedExportsController releases them by download token.
-    public_attachments = %w[User#profile_image ArchivedExport#export_file Account#logo]
+    public_attachments = %w[User#profile_image ArchivedExport#export_file Account#logo Merchant#logo]
 
     Rails.application.eager_load!
     unchecked = ActiveRecord::Base.descendants.reject(&:abstract_class?).flat_map do |model|

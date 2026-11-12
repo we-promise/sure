@@ -27,9 +27,11 @@ class McpController < ApplicationController
 
     request_id = body["id"]
 
-    # JSON-RPC notifications omit the id field — server must not respond
+    # JSON-RPC notifications omit the id field, so there's nothing to answer. MCP's Streamable
+    # HTTP transport says a server that accepts one returns 202 Accepted with no body; proxies
+    # such as Pipelock's MCP reverse proxy reject any other status, which ends the handshake.
     unless body.key?("id")
-      return head(:no_content)
+      return head(:accepted)
     end
 
     result = dispatch_jsonrpc(request_id, body["method"], body["params"])
@@ -108,6 +110,7 @@ class McpController < ApplicationController
       end
 
       fn = fn_class.new(mcp_user)
+      Usage.capture("mcp_call_served_daily")
       result = fn.call(arguments)
 
       { content: [ { type: "text", text: result.to_json } ] }
@@ -151,7 +154,7 @@ class McpController < ApplicationController
         OpenSSL::Digest::SHA256.hexdigest(expected)
       )
 
-      user = User.find_by(email: ENV["MCP_USER_EMAIL"])
+      user = User.find_by_email_with_legacy_fallback(ENV["MCP_USER_EMAIL"])
 
       unless user
         Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match any user — check environment configuration"
@@ -222,7 +225,7 @@ class McpController < ApplicationController
     def render_mcp_unauthorized
       response.set_header(
         "WWW-Authenticate",
-        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource\", scope=\"#{REQUIRED_SCOPE}\""
+        "Bearer resource_metadata=\"#{configured_base_url}/.well-known/oauth-protected-resource/mcp\", scope=\"#{REQUIRED_SCOPE}\""
       )
       render json: { error: "unauthorized" }, status: :unauthorized
     end

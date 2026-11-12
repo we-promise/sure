@@ -71,6 +71,11 @@ RSpec.describe 'API V1 Auth', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
         run_test!
       end
+
+      response '400', 'bad request: the user payload is missing, or device information is missing or invalid' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
     end
   end
 
@@ -130,6 +135,34 @@ RSpec.describe 'API V1 Auth', type: :request do
 
       response '403', 'local login is disabled: the instance is SSO-only, and this account is not a super admin using the emergency override' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
+        run_test!
+      end
+    end
+  end
+
+  path '/api/v1/auth/sso_providers' do
+    get 'List configured SSO providers' do
+      tags 'Auth'
+      produces 'application/json'
+      description 'Lists the SSO providers configured on this instance. Each name can be used with GET /auth/mobile/{name} to start mobile SSO.'
+
+      response '200', 'providers listed' do
+        schema type: :object,
+               properties: {
+                 providers: {
+                   type: :array,
+                   items: {
+                     type: :object,
+                     properties: {
+                       name: { type: :string, description: 'Provider name used in /auth/mobile/{name}' },
+                       strategy: { type: :string, description: 'OmniAuth strategy, e.g. openid_connect, google_oauth2, github, saml' },
+                       label: { type: :string, description: 'Button label' }
+                     },
+                     required: %w[name strategy label]
+                   }
+                 }
+               },
+               required: %w[providers]
         run_test!
       end
     end
