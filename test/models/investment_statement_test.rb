@@ -1187,6 +1187,8 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     [ liquidity, cash_sub, position ].each_with_index do |segment, level|
       assert_in_delta 550, segment&.amount&.amount.to_f, 0.0001, "level #{level}"
     end
+
+    assert_in_delta 1100, @statement.allocation_by("account").sole.amount.amount, 0.0001
   end
 
   # Margin in one account cannot net against cash in another: A is 200 below
@@ -1207,7 +1209,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
   # grouping, weight and top_holdings weight is what either source gives.
   test "a coherent portfolio is unchanged" do
     first = create_investment_account(balance: 3000, cash_balance: 1000)
-    create_investment_account(balance: 500, cash_balance: 500)
+    second = create_investment_account(balance: 500, cash_balance: 500)
     stock = create_classified_security(ticker: "STK646", name: "Stock", asset_class: "equity", asset_sub_class: "stock", sector: "Technology", region: "north_america")
     bond = create_classified_security(ticker: "BND646", name: "Bond", asset_class: "fixed_income", asset_sub_class: "bond")
     Holding.create!(account: first, security: stock, date: Date.current, qty: 1, price: 1200, amount: 1200, currency: "USD")
@@ -1217,8 +1219,23 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     assert_equal [ [ "liquidity", 1500, 42.86 ], [ "equity", 1200, 34.29 ], [ "fixed_income", 800, 22.86 ] ], figures.("asset_class")
     assert_equal [ [ "unclassified", 2300, 65.71 ], [ "Technology", 1200, 34.29 ] ], figures.("sector")
+    assert_equal [ [ first.id, 3000, 85.71 ], [ second.id, 500, 14.29 ] ], figures.("account")
+    assert_equal [ [ "standard", 2000, 57.14 ], [ "cash", 1500, 42.86 ] ], figures.("kind")
+    assert_equal [ [ "USD", 3500, 100.0 ] ], figures.("currency")
     assert_equal [ [ "STK646", 34.29 ], [ "BND646", 22.86 ] ], @statement.top_holdings.map { |h| [ h.ticker, h.weight.to_f ] }
     assert_every_grouping_and_level_sums_to 3500
+  end
+
+  # A stale zero balance beside real holdings: the account shows its holdings
+  # rather than dropping out of the account grouping, and there is no cash.
+  test "a stale zero balance keeps the account in the account grouping" do
+    account = create_investment_account(balance: 0, cash_balance: 0)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    assert_equal [ [ account.id.to_s, 1000 ] ], @statement.allocation_by("account").map { |s| [ s.id, s.amount.amount ] }
+    assert_nil @statement.allocation_by("kind").find { |s| s.id == "cash" }
+    assert_every_grouping_and_level_sums_to 1000
   end
 
   # Each grouping must answer from its own column. One security with all four
@@ -1231,11 +1248,125 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
 
     expected = { "asset_class" => "equity", "asset_sub_class" => "stock", "sector" => "Technology", "region" => "north_america" }
-    assert_equal expected.keys, InvestmentStatement::ALLOCATION_GROUPINGS
+    assert_empty expected.keys - InvestmentStatement::ALLOCATION_GROUPINGS
 
     expected.each do |grouping, bucket|
       assert_equal [ bucket ], @statement.allocation_by(grouping).map(&:id), "#{grouping} did not group by its own column"
     end
+  end
+
+  test "allocation_by groups the portfolio by account, currency and kind with weights summing to 100" do
+    usd = create_investment_account(balance: 3000, cash_balance: 1000, currency: "USD")
+    eur = create_investment_account(balance: 2000, cash_balance: -50, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    stock = Security.create!(ticker: "AAPL", name: "Apple")
+    coin = Security.create!(ticker: "BTCUSD", name: "Bitcoin", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    cash_security = Security.cash_for(eur)
+
+    Holding.create!(account: usd, security: stock, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    Holding.create!(account: usd, security: coin, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    Holding.create!(account: eur, security: stock, date: Date.current, qty: 5, price: 200, amount: 1000, currency: "EUR")
+    Holding.create!(account: eur, security: cash_security, date: Date.current, qty: 500, price: 1, amount: 500, currency: "EUR")
+
+    by_account = @statement.allocation_by(:account)
+    assert_equal [ usd.id, eur.id ].map(&:to_s), by_account.map(&:id)
+    assert_equal Money.new(3000, "USD"), by_account.first.amount
+    assert_in_delta 100.0, by_account.sum(&:weight), 0.01
+
+    by_currency = @statement.allocation_by("currency")
+    # Account cash is balance less holdings, not cash_balance: the EUR account's
+    # 2,000 balance less its 1,500 of holdings is 500 EUR of cash, whatever its
+    # cash_balance of -50 says. USD: 1000 + 1000 holdings + 1000 cash = 3000;
+    # EUR: (1000 + 500 + 500) * 1.1 = 2200.
+    assert_equal %w[USD EUR], by_currency.map(&:id)
+    assert_equal Money.new(3000, "USD"), by_currency.first.amount
+    assert_in_delta 2200, by_currency.last.amount.amount, 0.001
+    assert_in_delta 100.0, by_currency.sum(&:weight), 0.01
+
+    by_kind = @statement.allocation_by(:kind).index_by(&:id)
+    # standard: 1000 + 1100; cash: 1000 USD account cash + 550 EUR cash
+    # security + 550 EUR account cash; crypto: 1000
+    assert_equal %w[cash crypto standard], by_kind.keys.sort
+    assert_in_delta 2100, by_kind["standard"].amount.amount, 0.001
+    assert_in_delta 2100, by_kind["cash"].amount.amount, 0.001
+    assert_in_delta 1000, by_kind["crypto"].amount.amount, 0.001
+    assert_in_delta 100.0, by_kind.values.sum(&:weight), 0.01
+  end
+
+  # The position groupings cut one portfolio three ways, so each must add up to
+  # the same money as the classification groupings. The shape they could
+  # disagree on: one security in two accounts and two currencies, account cash
+  # in both currencies, a negative cash account, a cash security and a coin.
+  # Cash goes where each grouping files it: inside its account, under its
+  # account's currency, and under the cash kind.
+  test "account, currency and kind each sum to the portfolio, with cash where each files it" do
+    usd = create_investment_account(balance: 2500, cash_balance: 500, currency: "USD")
+    eur = create_investment_account(balance: 1200, cash_balance: 200, currency: "EUR")
+    create_investment_account(balance: 0, cash_balance: -100, currency: "USD")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    stock = create_classified_security(asset_class: "equity", asset_sub_class: "stock")
+    coin = Security.create!(ticker: "BTCUSD", name: "Bitcoin", exchange_operating_mic: Provider::BinancePublic::BINANCE_MIC)
+    euro_cash = Security.cash_for(eur)
+    Holding.create!(account: usd, security: stock, date: Date.current, qty: 1, price: 1500, amount: 1500, currency: "USD")
+    Holding.create!(account: usd, security: coin, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    Holding.create!(account: eur, security: stock, date: Date.current, qty: 1, price: 800, amount: 800, currency: "EUR")
+    Holding.create!(account: eur, security: euro_cash, date: Date.current, qty: 200, price: 1, amount: 200, currency: "EUR")
+
+    assert_equal %w[asset_class asset_sub_class sector region account currency kind], InvestmentStatement::ALLOCATION_GROUPINGS
+
+    figures = ->(by) { @statement.allocation_by(by).map { |s| [ s.id, s.amount.amount.to_f.round(2) ] } }
+
+    # Each account at its balance: USD 1500 + 500 + 500 cash; EUR (800 + 200 + 200) * 1.1.
+    assert_equal [ [ usd.id.to_s, 2500.0 ], [ eur.id.to_s, 1320.0 ] ], figures.call("account")
+    # The two-account stock splits by the currency each position is priced in;
+    # each account's cash joins its own currency, and the negative one is left out.
+    assert_equal [ [ "USD", 2500.0 ], [ "EUR", 1320.0 ] ], figures.call("currency")
+    # The two-account stock is one standard figure (1500 + 880); cash is the euro
+    # cash security (220) plus both accounts' positive cash (500 + 220).
+    assert_equal [ [ "standard", 2380.0 ], [ "cash", 940.0 ], [ "crypto", 500.0 ] ], figures.call("kind")
+
+    portfolio = @statement.allocation_by("asset_class").sum { |s| s.amount.amount }
+    assert_in_delta 3820, portfolio, 0.001, "precondition: the classification grouping measures the whole portfolio"
+    assert_in_delta @statement.portfolio_value, portfolio, 0.001
+
+    %w[account currency kind].each do |by|
+      segments = @statement.allocation_by(by)
+      assert_in_delta portfolio, segments.sum { |s| s.amount.amount }, 0.001, "#{by} did not add up to the portfolio"
+      assert_in_delta 100.0, segments.sum(&:weight), 0.01, "#{by} weights must sum to 100"
+      assert_empty @statement.allocation_children(by, segments.first.id), "#{by} invented a child level"
+    end
+  end
+
+  # The currency grouping is the currency a position is priced in, not the
+  # currency of the account holding it; account cash is the account's currency.
+  # Only a provider's import keeps a row priced in another currency current, so
+  # the account is provider-linked.
+  test "a position priced in another currency than its account groups under its own currency" do
+    account = create_investment_account(balance: 1600, cash_balance: 500, currency: "USD")
+    item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Brokerage", currency: "USD"))
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    asml = create_classified_security(ticker: "ASML1")
+    Holding.create!(account: account, security: asml, date: Date.current, qty: 2, price: 500, amount: 1000, currency: "EUR",
+                    account_provider: provider)
+
+    assert_equal [ [ "EUR", 1100.0 ], [ "USD", 500.0 ] ],
+                 @statement.allocation_by("currency").map { |s| [ s.id, s.amount.amount.to_f.round(2) ] }
+  end
+
+  # Same per-row rule as the classification ladder: a negative amount is corrupt
+  # data (upsert_all skips Holding's validations) and must not net against a good
+  # row before the grouping sums.
+  test "a corrupt negative holding nets into neither the currency nor the kind grouping" do
+    account = create_investment_account(balance: 1000, cash_balance: 0)
+    good = create_classified_security(ticker: "POS2")
+    bad = create_classified_security(ticker: "NEG2")
+    Holding.create!(account: account, security: good, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+    corrupt = Holding.create!(account: account, security: bad, date: Date.current, qty: 1, price: 500, amount: 500, currency: "USD")
+    corrupt.update_columns(amount: -500)
+
+    assert_equal [ [ "USD", 1000 ] ], @statement.allocation_by("currency").map { |s| [ s.id, s.amount.amount.to_i ] }
+    assert_equal [ [ "standard", 1000 ] ], @statement.allocation_by("kind").map { |s| [ s.id, s.amount.amount.to_i ] }
   end
 
   # A grouping name comes from a query string, so one that is not offered

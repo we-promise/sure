@@ -470,7 +470,9 @@ class TradeRepublicAccount::ActivitiesProcessor
         currency: detail[:currency].presence || currency,
         date: date,
         name: event[:title].presence || label,
-        notes: event[:subtitle].presence,
+        # The payment reference. The subtitle only names a status ("Sent"),
+        # so it stays in `extra` and is not used as the note.
+        notes: detail[:note].presence,
         source: "trade_republic",
         category_id: category_for(event, label)&.id,
         kind: kind || (transfer_event?(event) && !@trade_republic_account.cash? ? "funds_movement" : nil),
@@ -488,10 +490,21 @@ class TradeRepublicAccount::ActivitiesProcessor
           }.compact
         }
       )
+      clear_status_note!(entry, event) if detail[:note].blank?
       reset_legacy_cash_kind!(entry, event, legacy_kind) if legacy_kind && kind.nil?
       link_settlement_counterpart!(entry) if settles_trade
 
       true
+    end
+
+    # Earlier syncs stored the status subtitle ("Sent") as the note. Without a
+    # payment reference that text is removed again, unless the user edited it.
+    def clear_status_note!(entry, event)
+      subtitle = event[:subtitle].presence
+      return unless subtitle && entry&.notes == subtitle
+      return if entry.protected_from_sync?
+
+      entry.enrich_attribute(:notes, nil, source: "trade_republic")
     end
 
     # The portfolio account holds no cash: Trade Republic settles every trade
