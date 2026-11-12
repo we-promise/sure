@@ -12,7 +12,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
     assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                   count: 1
   end
 
@@ -39,7 +39,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
     assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                   count: 0
   end
 
@@ -51,7 +51,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
     assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
-                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  "https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#encrypting-sensitive-data",
                   count: 0
   end
 
