@@ -59,6 +59,29 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
 
   let(:transaction_id) { transaction.id }
 
+  let(:loan_account) do
+    Account.create!(
+      family: family,
+      name: 'Mortgage',
+      balance: 100_000,
+      currency: 'USD',
+      accountable: Loan.create!
+    )
+  end
+
+  # Splits the transaction and links its first part to a loan as a payment.
+  def split_with_transferred_part
+    part = transaction.entry.split!([ { name: 'Principal', amount: 60 }, { name: 'Interest', amount: 40 } ]).first
+    loan_entry = loan_account.entries.create!(
+      name: 'Payment',
+      date: Date.current,
+      amount: -60,
+      currency: 'USD',
+      entryable: Transaction.new
+    )
+    Transfer.create!(inflow_transaction: loan_entry.transaction, outflow_transaction: part.transaction, status: 'confirmed', amount: 60)
+  end
+
   let(:split_payload) do
     {
       split: {
@@ -132,6 +155,11 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
         before { transaction.entry.split!([ { name: 'A', amount: 70 }, { name: 'B', amount: 30 } ]) }
         run_test!
       end
+
+      response '422', 'a part of the split is linked as a transfer; remove that transfer first' do
+        before { split_with_transferred_part }
+        run_test!
+      end
     end
 
     delete 'Remove a transaction split' do
@@ -141,6 +169,11 @@ RSpec.describe 'API V1 Transaction Split', type: :request do
 
       response '204', 'split removed' do
         before { transaction.entry.split!([ { name: 'A', amount: 60 }, { name: 'B', amount: 40 } ]) }
+        run_test!
+      end
+
+      response '422', 'a part of the split is linked as a transfer; remove that transfer first' do
+        before { split_with_transferred_part }
         run_test!
       end
 

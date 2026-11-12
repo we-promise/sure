@@ -144,7 +144,28 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
+  test "update refuses while a part is linked as a transfer" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    patch api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json
+
+    assert_response :unprocessable_entity
+    assert_equal "validation_failed", JSON.parse(response.body)["error"]
+    assert_equal %w[Interest Principal], @entry.reload.child_entries.order(:name).pluck(:name)
+  end
+
   # DESTROY
+
+  test "destroy refuses while a part is linked as a transfer" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    delete api_v1_transaction_split_url(@transaction), headers: api_headers(@api_key)
+
+    assert_response :unprocessable_entity
+    assert @entry.reload.split_parent?
+  end
 
   test "unsplits a transaction" do
     post api_v1_transaction_split_url(@transaction), params: halves, headers: api_headers(@api_key), as: :json

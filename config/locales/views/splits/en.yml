@@ -41,6 +41,7 @@ en:
       description: Modify the split entries for this transaction.
       submit: Update Split
       not_split: This transaction is not split.
+      part_transferred: A part of this split is linked as a transfer. Remove that transfer before you edit or unsplit the split.
     update:
       success: Split updated successfully
     child:
