@@ -853,29 +853,67 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert second_elapsed >= (min_interval - 0.05), "Second request should wait at least #{min_interval - 0.05}s"
   end
 
-  test "throttle_request shares the request budget across provider instances" do
+  test "wait_for_request_slot shares the request budget across provider instances" do
     other = Provider::YahooFinance.new
     [ @provider, other ].each { |provider| provider.stubs(:min_request_interval).returns(0.5) }
 
     travel_to Time.zone.at(1_800_000_000) do
       @provider.expects(:sleep).never
-      @provider.send(:throttle_request)
+      @provider.send(:wait_for_request_slot)
 
       other.expects(:sleep).with { |seconds| (seconds - 0.5).abs < 0.001 }
-      other.send(:throttle_request)
+      other.send(:wait_for_request_slot)
     end
   end
 
-  test "throttle_request does not wait when the shared cache refuses every claim" do
+  test "wait_for_request_slot queues behind a full horizon instead of bypassing the budget" do
+    @provider.stubs(:min_request_interval).returns(0.5)
+    @provider.stubs(:max_request_wait).returns(1.0)
+    @provider.expects(:sleep).with { |seconds| (seconds - 0.5).abs < 0.001 }.once
+    @provider.expects(:sleep).with { |seconds| (seconds - 1.0).abs < 0.001 }.once
+
+    travel_to Time.zone.at(1_800_000_000) do
+      3.times { @provider.send(:wait_for_request_slot) }
+    end
+  end
+
+  test "wait_for_request_slot tries the cache once and does not wait when it refuses claims" do
     refusing_cache = ActiveSupport::Cache::MemoryStore.new
-    refusing_cache.stubs(:write).returns(false)
+    refusing_cache.expects(:write).once.returns(false)
     Rails.stubs(:cache).returns(refusing_cache)
     @provider.stubs(:min_request_interval).returns(0.5)
 
     travel_to Time.zone.at(1_800_000_000) do
       @provider.expects(:sleep).never
-      @provider.send(:throttle_request)
+      @provider.send(:wait_for_request_slot)
     end
+  end
+
+  test "every Yahoo client claims a request slot after its retry middleware" do
+    [ @provider.send(:client), @provider.send(:authenticated_client, "cookie") ].each do |connection|
+      handlers = connection.builder.handlers.map(&:klass)
+
+      assert_operator handlers.index(Provider::YahooFinance::BeforeEachAttempt), :>, handlers.index(Faraday::Retry::Middleware)
+    end
+    assert_includes @provider.send(:auth_client).builder.handlers.map(&:klass), Provider::YahooFinance::BeforeEachAttempt
+  end
+
+  test "BeforeEachAttempt runs again for each retried attempt" do
+    claims = 0
+    attempts = 0
+    connection = Faraday.new do |faraday|
+      faraday.request :retry, max: 2, interval: 0, retry_statuses: [ 429 ]
+      faraday.use Provider::YahooFinance::BeforeEachAttempt, -> { claims += 1 }
+      faraday.adapter :test do |stub|
+        stub.get("/quote") do
+          attempts += 1
+          attempts == 1 ? [ 429, {}, "" ] : [ 200, {}, "ok" ]
+        end
+      end
+    end
+
+    assert_equal 200, connection.get("/quote").status
+    assert_equal 2, claims
   end
 
   # ================================
