@@ -121,6 +121,40 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "saving a market data API key starts a family sync to convert balances" do
+    with_self_hosting do
+      Family.any_instance.expects(:sync_later).once
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "own-key" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "own-key", Setting.twelve_data_api_key
+    end
+  end
+
+  test "changing the exchange rate provider starts a family sync to convert balances" do
+    with_self_hosting do
+      Family.any_instance.expects(:sync_later).once
+
+      patch settings_hosting_url, params: { setting: { exchange_rate_provider: "yahoo_finance" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "yahoo_finance", Setting.exchange_rate_provider
+    end
+  end
+
+  test "re-submitting a masked market data key does not start a sync" do
+    with_self_hosting do
+      Setting.twelve_data_api_key = "existing-key"
+      Family.any_instance.expects(:sync_later).never
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "********" } }
+
+      assert_redirected_to settings_hosting_url
+      assert_equal "existing-key", Setting.twelve_data_api_key
+    end
+  end
+
   test "demo households preserve the real admin's provider controls but cannot use them" do
     with_self_hosting do
       real_admin = users(:empty)
