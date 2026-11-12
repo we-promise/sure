@@ -58,12 +58,12 @@ At this point, you should have `compose.yml` in your directory. It includes an o
 
 ### Step 3 (optional for a disposable local test): Configure your environment
 
-The sample `compose.example.yml` runs without extra configuration, but self-hosted
-instances store sensitive database attributes unencrypted at rest without explicit
-Active Record Encryption keys. Configuring keys enables encryption for subsequent
-writes; existing plaintext values also need to be backfilled. You can skip this step
-for a disposable local test. Configure it before storing financial or account data,
-and review the other security settings before exposing your instance outside your
+The sample `compose.example.yml` runs without extra configuration, but its fallback
+`SECRET_KEY_BASE` is public. For a new installation, generate your own secret below
+before storing financial or account data. Explicit Active Record Encryption keys do
+not make a public `SECRET_KEY_BASE` safe: sessions and `Setting`-stored values use
+that secret independently. Skip configuration only for a disposable local test, and
+review the other security settings before exposing your instance outside your
 local network.
 
 #### Create your environment file
@@ -105,21 +105,31 @@ SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
 
-#### Encrypt sensitive database fields
+#### Encryption keys and existing data
 
-For a **new instance**, generate three Active Record Encryption keys using the same
-image as your app. Existing instances must follow the
-[backfill procedure](#existing-instances-backfill-plaintext-fields) instead; do not
-replace keys already used to encrypt data:
+With the encryption gating fix in [#3189](https://github.com/we-promise/sure/pull/3189),
+self-hosted instances can encrypt declared attributes using keys derived from
+`SECRET_KEY_BASE` when neither explicit encryption environment variables nor Rails
+credentials supply them. You do not need to generate separate keys just to enable
+this path. Check that your deployed image includes the fix; older images could skip
+encryption despite having derived keys available.
+
+For a new installation using derived keys, keep the unique `SECRET_KEY_BASE` you
+generated above private, stable, and backed up. Encryption with keys derived from a
+public example secret does not protect the data. On an existing installation, do
+not replace that secret or switch key sources as a setup step; use the procedure
+below to distinguish plaintext backfill from key rotation.
+
+**Optional explicit keys for a new installation.** Generate a set with the app image:
 
 ```bash
 docker compose run --rm --no-deps web ./bin/rails db:encryption:init
 ```
 
-Copy the generated values into `.env` as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`,
-`ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY`, and
-`ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. Then add all three variables to the
-shared `x-rails-env` section in `compose.yml`, so both `web` and `worker` receive them:
+Put all three generated values in `.env` and add them to the shared `x-rails-env`
+mapping in `compose.yml`, so both `web` and `worker` receive them. A partial set
+prevents startup; setting them only in `.env` does not pass them to the containers.
+Explicit environment keys take precedence over derived keys and Rails credentials.
 
 ```yaml
 x-rails-env: &rails_env
@@ -129,117 +139,74 @@ x-rails-env: &rails_env
   ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT}
 ```
 
-`SECRET_KEY_BASE` does not enable Active Record Encryption. Keep the generated keys
-private and stable; changing or losing them can make encrypted data unreadable.
-
 For a new instance, skip the existing-instance procedure below, finish the remaining
 configuration, and start the app in [Step 4](#step-4-run-the-app).
 
 ##### Existing instances: backfill plaintext fields
 
-Adding keys does not automatically encrypt previously stored values. This procedure
-migrates plaintext fields using the instance's existing keys; it is not a key-rotation
-or lost-key recovery procedure. Keep the current app image throughout the migration.
+Upgrading to an image with #3189 enables encryption for subsequent writes but does
+not rewrite all existing plaintext rows. This procedure backfills covered fields
+**without changing keys**. It is not key rotation or lost-key recovery.
 
-Run the commands below from the directory containing this instance's existing
-`compose.yml` and `.env`, using the same Compose project as the running instance.
-If your deployment uses a different Compose file or project name, retain its usual
-`-f` and `-p` options on every command so they target the same services and volumes.
+Run these commands from your existing configuration directory, retaining the same
+Compose project, files, and environment. Keep any usual `-f`, `-p`, and `--env-file`
+options on every command so it targets the same services and volumes.
 
-**1. Identify the existing keys and check the task's coverage.**
+1. **Identify the key source before changing anything.** Preserve the existing
+   `SECRET_KEY_BASE`, explicit encryption keys, or Rails credentials and their
+   decryption key. If the instance uses a public example secret or leaked keys,
+   follow [Encryption key rotation](encryption.md) instead. Adding fresh explicit
+   keys overrides the derived keys; simply doing so and running the backfill can
+   re-encrypt old ciphertext as if it were plaintext. Keep old data decryptable
+   during rotation, including the separate deterministic-attribute migration in
+   that guide. Missing keys must be recovered before proceeding. A successful dry
+   run does not prove the keys are correct.
 
-Reuse the exact primary key, deterministic key, and derivation salt already used by
-this instance. Check the existing configuration before generating anything. If keys
-came from Rails credentials or were derived by an older version, follow migration
-guidance for that version to preserve the effective keys; do not override them with
-newly generated environment values. If existing encrypted data cannot be decrypted
-or its keys are missing, stop here and recover the original keys before backfilling.
-A dry run is not proof that the keys are correct.
+2. **Check coverage, stop writes, and back up.** The task covers only the fields
+   listed in [`lib/tasks/security_backfill.rake`](../../lib/tasks/security_backfill.rake).
+   For example, it does not cover `ApiKey#display_key`, `SsoProvider#client_secret`,
+   or credentials on `SnaptradeItem`. Plan separately for uncovered fields; a
+   successful task is not proof that every sensitive field has been encrypted.
+   Keep the database and Redis running, stop `web`, `worker`, and any other writers,
+   then back up the database, uploads, and original configuration. With the sample
+   Compose backup service:
 
-The task covers only the models and fields listed in
-[`lib/tasks/security_backfill.rake`](../../lib/tasks/security_backfill.rake), not every
-encrypted attribute. For example, it does not backfill `ApiKey#display_key`,
-`SsoProvider#client_secret`, credentials on `SnaptradeItem` or `CoinbaseItem`, or
-`SnaptradeAccount#raw_balances_payload`. `User#otp_backup_codes` is also excluded
-because its PostgreSQL array column is incompatible with this encryption mechanism.
-Plan a version-appropriate migration for fields outside the task's scope before
-starting; a successful run does not certify that all sensitive data is encrypted.
+   ```bash
+   docker compose stop web worker
+   docker compose run --rm --no-deps backup create
+   ```
 
-**2. Stop writes, then take and verify a backup.**
+   Keep writers stopped throughout the backfill. Confirm the backup succeeded and
+   preserve external keys/credentials separately; see
+   [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks). Keep the same
+   app image and key configuration for the following commands.
 
-Keep the database and Redis running. Stop `web` and `worker`, and any other processes
-that write to this instance, before taking the backup. Keep them stopped throughout
-the migration:
+3. **Preview, then write and inspect the results.** The task defaults to a dry run;
+   these arguments make each mode explicit:
 
-```bash
-docker compose stop web worker
-```
+   ```bash
+   docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,true]'
+   ```
 
-Once writes have stopped, back up the database, uploaded files, and original
-configuration. With the sample Compose backup service:
+   Review the preview before running the write pass:
 
-```bash
-docker compose run --rm --no-deps backup create
-```
+   ```bash
+   docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,false]'
+   ```
 
-See [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks) for other
-versions and storage configurations. Confirm the backup succeeded and that you have
-the exact keys needed to restore it. Securely preserve any keys or Rails credentials
-stored outside `.env` as well; they are not automatically included in that file's
-backup. Do not proceed if the backup or required keys are unavailable.
+   Inspect every model's `failed_count` and `failed_samples`. The top-level
+   `ok: true` does not mean every record succeeded. If the task aborts or reports
+   failures, keep writers stopped and investigate; restore only with the matching
+   backup, image, configuration, and keys. After verifying the results and handling
+   required fields outside the task's scope, run `docker compose up -d` and check
+   sign-in and connected providers.
 
-**3. Configure the same keys and temporary plaintext compatibility.**
-
-For the environment-variable configuration described here, provide all three keys
-and forward them through `x-rails-env` as shown above, using the existing values.
-Only if encryption has never been configured and no existing data was previously
-encrypted should you generate a new set with `db:encryption:init` as shown above.
-Save those keys securely before writing encrypted data. Keep `SECRET_KEY_BASE` and
-other existing settings unchanged.
-
-Temporarily set `ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA=true` in `.env`
-and forward it through the shared `x-rails-env` mapping:
-
-```yaml
-  ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA: ${ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA:-false}
-```
-
-This compatibility setting requires all three environment variables. It allows
-existing plaintext values to remain readable and queryable during migration; it does
-not encrypt them. The one-off commands below read the updated configuration without
-restarting `web` or `worker`.
-
-**4. Preview the backfill.**
-
-The `security:backfill_encryption` task defaults to a dry run. Preview it explicitly
-with batches of 100 records:
-
-```bash
-docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,true]'
-```
-
-The dry run does not write changes and cannot guarantee that every write will succeed.
-Review its output and the coverage from step 1 before proceeding.
-
-**5. Write the encrypted values and check every result.**
-
-```bash
-docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,false]'
-```
-
-Inspect each model's `failed_count` and `failed_samples`; the top-level `ok: true`
-alone does not mean every record was migrated. Also complete and verify the separate
-migrations for required fields outside this task's scope. If the task aborts, reports
-failures, or leaves required fields unmigrated, keep application writes stopped and
-investigate before continuing. If restoring, use the pre-migration backup with its
-matching image, original configuration, and keys.
-
-**6. Disable compatibility and restart only after verification.**
-
-Once all required fields have been migrated and any failures addressed, remove the
-temporary compatibility setting or set it to `false`, then run `docker compose up -d`.
-Verify sign-in and connected providers. Do not disable compatibility while encrypted
-attributes still contain plaintext values, or those values may become unreadable.
+**Compatibility is not proof of encryption.** Images with #3189 enable
+`support_unencrypted_data` and `extend_queries` in the initializer to support legacy
+rows. Do not add a temporary `ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA`
+toggle for this procedure: removing it or setting it to `false` does not disable
+those initializer defaults. Successful reads or sign-in can still involve plaintext;
+verify migration results and coverage instead of treating them as an at-rest check.
 
 #### Using HTTPS
 
@@ -671,7 +638,8 @@ The version comes from the running app: every time `web` starts it records its v
 > [!WARNING]
 > Preserve `SECRET_KEY_BASE` and the exact Active Record Encryption keys used for
 > the backed-up data. `SECRET_KEY_BASE` alone does not replace explicitly configured
-> encryption keys. Keys or Rails credentials stored outside `.env`, including the
+> encryption keys. For derived keys, restoring the exact original `SECRET_KEY_BASE`
+> is essential. Keys or Rails credentials stored outside `.env`, including the
 > key needed to decrypt those credentials, need their own secure backup. Keep the
 > backup folder private, and encrypt off-site copies (for example with
 > [rclone crypt](https://rclone.org/crypt/)).
