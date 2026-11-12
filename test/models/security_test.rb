@@ -186,6 +186,17 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal "XETR", found.reload.exchange_operating_mic
   end
 
+  test "saving a legacy GER row keeps its MIC when an XETR row already exists" do
+    Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
+    legacy = Security.new(ticker: "SXR8.DE", exchange_operating_mic: "GER")
+    legacy.save!(validate: false)
+
+    # e.g. Security::HealthChecker bumping its counters on the legacy row
+    legacy.reload.update!(failed_fetch_count: 1)
+
+    assert_equal "GER", legacy.reload.exchange_operating_mic
+  end
+
   test "cash_for lazily creates a per-account synthetic cash security" do
     account = accounts(:investment)
 

@@ -299,7 +299,12 @@ class Security < ApplicationRecord
 
     def upcase_symbols
       self.ticker = ticker.upcase
-      self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic) if exchange_operating_mic.present?
+      # Only canonicalize a MIC being written. A stored legacy alias is upgraded by
+      # find_by_ticker_and_exchange, which checks for a canonical twin first;
+      # rewriting it on an unrelated save would collide with that twin.
+      if exchange_operating_mic.present? && will_save_change_to_exchange_operating_mic?
+        self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic)
+      end
     end
 
     def should_generate_logo?
