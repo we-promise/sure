@@ -461,7 +461,11 @@ Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Curren
 
 Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
 
-If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot. Move your data to new encryption keys first, with a backup taken and the app stopped:
+If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot.
+
+If your `.env` already sets `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`, your data is encrypted with those keys, not with keys derived from `SECRET_KEY_BASE`. Keep them unchanged and skip steps 1 and 2: change `SECRET_KEY_BASE` and re-encrypt the settings as described below. To rotate explicit keys as well, follow [Encryption key rotation](encryption.md), which keeps the replaced keys readable as a `previous` scheme.
+
+Otherwise, move your data to new encryption keys first, with a backup taken and the app stopped:
 
 1. Generate new keys with `docker compose run --rm web bin/rails db:encryption:init` and put the three values into `.env` as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. Keep `SECRET_KEY_BASE` unchanged for now.
 2. Stop the app and re-encrypt everything under the new keys. `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` holds the `SECRET_KEY_BASE` your data was encrypted with; it makes the keys derived from it a `previous` scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), so existing data still decrypts:
@@ -472,15 +476,20 @@ read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECO
 docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,1]"  # dry run
 ```
 
-Continue only if the dry run lists every table with `"failed_count":0`. Then write the changes and start the app:
+Continue only if the dry run lists every table with `"failed_count":0`. Then write the changes:
 
 ```bash
 docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,0]"  # writes
 unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE
+```
+
+Start the app only if the JSON report on the last line of the write shows `"ok":true` and `"failed_count":0`; otherwise keep it stopped, restore the backup or fix the listed rows and run the write again:
+
+```bash
 docker compose up -d
 ```
 
-Start the app only if the JSON report on the last line of the write shows `"ok":true` and `"failed_count":0`. Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old key. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
+Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old key. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
 
 If you already changed `SECRET_KEY_BASE` and logins or syncs broke, run step 2 with the old value in `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE`, then re-encrypt the settings as described next.
 
@@ -488,12 +497,12 @@ Changing `SECRET_KEY_BASE` also affects settings. API keys and tokens saved on t
 
 ```bash
 read -rs OLD_SECRET_KEY_BASE && export OLD_SECRET_KEY_BASE   # paste the previous value; keeps it out of your shell history
-docker compose run --rm -e OLD_SECRET_KEY_BASE web bin/rails security:rotate_setting_secrets        # dry run: lists what would change
+docker compose run --rm -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[1]"   # dry run: lists what would change
 docker compose run --rm -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[0]"   # writes
 unset OLD_SECRET_KEY_BASE
 ```
 
-The dry run marks fields it would move as `would_reencrypt`; after the second command they read `reencrypted`. If nothing decrypts with the value you gave, the task stops with `old_secret_key_base_did_not_match`: check the value. Anything listed under `not_decryptable` was saved under neither value (or as plaintext before settings encryption existed); re-enter those keys on the settings page. If you prefer not to run the task, note the keys before the change and re-enter them afterwards.
+Check that the dry run's report shows `"dry_run":true`. It marks fields it would move as `would_reencrypt`; after the second command they read `reencrypted`. If nothing decrypts with the value you gave, the task stops with `old_secret_key_base_did_not_match`: check the value. Anything listed under `not_decryptable` was saved under neither value (or as plaintext before settings encryption existed); re-enter those keys on the settings page. If you prefer not to run the task, note the keys before the change and re-enter them afterwards.
 
 ### Re-encrypting data after an encryption-related update
 
