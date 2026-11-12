@@ -189,7 +189,10 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
 
   # --- The partition guard ----------------------------------------------------
 
-  test "unlink, forward sync, then read: lots out of partition fall back to the snapshot figure" do
+  # The snapshot is the open lots' mean after the sale, not what the sale
+  # consumed, so under fifo a sale its lot records do not cover has an unknown
+  # gain rather than one priced off the snapshot.
+  test "unlink, forward sync, then read: lots out of partition leave a fifo gain unknown" do
     travel_to TODAY do
       # 6 units before the trades: the sale takes 4 of them, and 2 stay open.
       build_reverse_fixture(pre_history: 6)
@@ -202,9 +205,7 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       assert_equal 18, HoldingLot.where(security: @security).sum(:qty), "the retained opening lot's 2"
       assert_equal 400, HoldingLotDisposal.where(sale_entry: @sale).sum("qty * unit_cost"), "the forward run's record"
 
-      snapshot_basis = @account.holdings.find_by!(security: @security, date: d(5)).avg_cost.amount * 4
-      assert_equal 650, snapshot_basis
-      assert_equal 4 * 300 - 650, gain(@sale)
+      assert_nil gain(@sale), "not the snapshot's $650, which is not what the sale consumed"
     end
   end
 
@@ -219,7 +220,7 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
-  test "lots short of the holding fall back to the snapshot figure" do
+  test "lots short of the holding leave a fifo gain unknown" do
     travel_to TODAY do
       build_reverse_fixture(pre_history: 0)
       materialize(:reverse)
@@ -227,7 +228,7 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       lot.update_columns(qty: lot.qty - 2)
 
       assert_equal 14, HoldingLot.where(security: @security).sum(:qty), "2 short of the holding's 16"
-      assert_equal 4 * 300 - 650, gain(@sale), "the snapshot's $650, not the lot record's $400"
+      assert_nil gain(@sale), "neither the lot record's $400 nor the snapshot's $650"
     end
   end
 
