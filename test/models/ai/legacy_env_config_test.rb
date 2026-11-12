@@ -296,6 +296,21 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     end
   end
 
+  test "a misconfigured Jev endpoint is logged once per process, not once per build" do
+    Ai::LegacyEnvConfig.unreachably_warned = nil
+
+    assert_difference -> { DebugLogEntry.count }, 1 do
+      2.times { build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test", "JEV_ENDPOINT" => "https://gw.example.test/v1/jev") }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "ai_configuration", entry.category
+    assert_equal "error", entry.level
+    assert_equal "jev", entry.provider_key
+    assert_equal "path", entry.metadata["reason"]
+    assert_includes entry.metadata["endpoint"], "gw.example.test"
+  end
+
   test "an OpenRouter decisions URL routes categorize through the openrouter preset" do
     config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "JEV_API_KEY" => "jev-test",
                    "JEV_ENDPOINT" => "https://openrouter.ai/api/alpha/decisions", "CATEGORIZATION_PROVIDER" => "jev")

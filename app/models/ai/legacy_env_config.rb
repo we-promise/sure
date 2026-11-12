@@ -10,6 +10,10 @@
 #
 # It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
+  class << self
+    attr_accessor :unreachably_warned
+  end
+
   # OpenAI's vector store embeds files on its own side, so the `embed` route names this stand-in
   # model on the OpenAI endpoint.
   VECTOR_STORE_MODEL = "vector_store".freeze
@@ -184,12 +188,24 @@ class Ai::LegacyEnvConfig
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
     # Jev, when RubyLLM can reach it (Jev.unreachable_reason). An endpoint it can't reach is left
-    # out with a warning, so `categorize` uses the LLM.
+    # out with a warning, so `categorize` uses the LLM. One DebugLogEntry per (endpoint, reason)
+    # per process — otherwise a persistently misconfigured JEV_ENDPOINT stamps the support log
+    # on every build (and every request resets Current and rebuilds it).
     def jev
       return unless Jev.configured?
 
       url = Jev.effective_endpoint
       if (reason = Jev.unreachable_reason(url))
+        key = "#{Jev.redacted_endpoint(url)}|#{reason}"
+        unless (self.class.unreachably_warned ||= Set.new).include?(key)
+          self.class.unreachably_warned << key
+          DebugLogEntry.capture(
+            category: "ai_configuration", level: "error",
+            message: "Jev endpoint is not supported and was ignored; categorize falls back to the LLM provider",
+            source: "Ai::LegacyEnvConfig", provider_key: "jev",
+            metadata: { endpoint: Jev.redacted_endpoint(url), reason:, detail: Jev::UNSUPPORTED.fetch(reason) }
+          )
+        end
         Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
         return
       end
