@@ -475,7 +475,21 @@ class TransactionsController < ApplicationController
 
     redirect_back_or_to transactions_path
   rescue ActiveRecord::RecordInvalid => e
-    Rails.logger.error("Failed to update reconciled_status for transaction #{params[:id]}: #{e.message}")
+    DebugLogEntry.capture(
+      category: "reconciliation",
+      level: "error",
+      message: "Failed to update reconciled_status for transaction #{params[:id]}: #{e.message}",
+      source: "TransactionsController#reconcile",
+      family: Current.family,
+      user: Current.user,
+      account: entry&.account,
+      metadata: {
+        transaction_id: params[:id],
+        entry_id: entry&.id,
+        error_class: e.class.name,
+        error_message: e.message
+      }
+    )
     flash[:alert] = t("transactions.reconcile.failure")
     redirect_back_or_to transactions_path
   end

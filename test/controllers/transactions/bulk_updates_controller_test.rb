@@ -320,6 +320,29 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
   end
 
+  test "bulk update records a debug log entry when the update fails" do
+    manual_entry = create_transaction(account: accounts(:depository))
+    Entry.stubs(:bulk_update!).raises(ActiveRecord::RecordInvalid.new(manual_entry))
+
+    assert_difference -> { DebugLogEntry.where(category: "reconciliation", level: "error").count }, 1 do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          notes: "Updated note"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
+
+    log_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "Transactions::BulkUpdatesController#create", log_entry.source
+    assert_equal @user.family, log_entry.family
+    assert_equal @user, log_entry.user
+    assert_equal [ manual_entry.id ], log_entry.metadata["entry_ids"]
+  end
+
   test "bulk update rejects reconciled_status when manual reconciliation is disabled" do
     manual_entry = create_transaction(account: accounts(:depository))
 

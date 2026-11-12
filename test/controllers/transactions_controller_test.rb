@@ -1885,6 +1885,29 @@ end
     assert_equal "unreconciled", entry.reload.reconciled_status
   end
 
+  test "reconcile records a debug log entry when the status update fails" do
+    @user.family.update!(manual_reconciliation: true)
+    manual_account = accounts(:depository)
+    entry = create_transaction(account: manual_account, amount: 50)
+    Entry.any_instance.stubs(:advance_reconciled_status!).raises(ActiveRecord::RecordInvalid.new(entry))
+
+    assert_difference -> { DebugLogEntry.where(category: "reconciliation", level: "error").count }, 1 do
+      patch reconcile_transaction_path(entry.transaction)
+    end
+
+    assert_redirected_to transactions_path
+    assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
+    assert_equal "unreconciled", entry.reload.reconciled_status
+
+    log_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "TransactionsController#reconcile", log_entry.source
+    assert_equal @user.family, log_entry.family
+    assert_equal @user, log_entry.user
+    assert_equal manual_account, log_entry.account
+    assert_equal entry.transaction.id.to_s, log_entry.metadata["transaction_id"]
+    assert_equal entry.id, log_entry.metadata["entry_id"]
+  end
+
   test "reconcile is rejected for accounts with a live bank sync connection" do
     @user.family.update!(manual_reconciliation: true)
     linked_account = accounts(:connected)

@@ -41,7 +41,19 @@ class Transactions::BulkUpdatesController < ApplicationController
 
     redirect_back_or_to transactions_path, notice: "#{updated} transactions updated"
   rescue ActiveRecord::RecordInvalid => e
-    Rails.logger.error("Bulk update failed: #{e.message}")
+    DebugLogEntry.capture(
+      category: "reconciliation",
+      level: "error",
+      message: "Bulk transaction update failed: #{e.message}",
+      source: "Transactions::BulkUpdatesController#create",
+      family: Current.family,
+      user: Current.user,
+      metadata: {
+        error_class: e.class.name,
+        error_message: e.message,
+        entry_ids: bulk_update_params[:entry_ids]
+      }
+    )
     redirect_back_or_to transactions_path, alert: t("transactions.reconcile.failure")
   end
 
