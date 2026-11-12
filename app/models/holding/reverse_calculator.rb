@@ -242,11 +242,13 @@ class Holding::ReverseCalculator
     # provider reports) are the opening lot. Its cost is unknown to the trades,
     # so it stays out of the average, and sales relieve it like any other lot.
     # A traded position whose provider quantity is below its trades' total has
-    # nothing to open and is recorded as clamped.
+    # nothing to open and is recorded as clamped. A shortfall within the drift a
+    # split's rounding leaves (OPENING_RESIDUAL_BOUND) is not one: there is
+    # nothing to open either, but the trades still explain the position.
     def open_lots(baselines, traded:)
       @clamped_security_ids = Set.new
       baselines.each do |security_id, qty|
-        if qty.negative? && traded.include?(security_id)
+        if qty <= -Holding::LotBook::OPENING_RESIDUAL_BOUND && traded.include?(security_id)
           @clamped_security_ids << security_id
         else
           @lot_books[security_id].add_unknown(qty)
