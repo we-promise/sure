@@ -115,7 +115,7 @@
         <div class="flex flex-wrap gap-4">
           <% investment_metrics[:gains_by_tax_treatment].each do |treatment, data| %>
             <div class="bg-container-inset rounded-lg p-4 space-y-3 flex-1 min-w-64">
-              <div class="flex items-center justify-between">
+              <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                 <%= render DS::Pill.new(
                   label: t("accounts.tax_treatments.#{treatment}"),
                   tone: tax_treatment_pill_tone(treatment),
