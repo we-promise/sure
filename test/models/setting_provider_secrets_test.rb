@@ -21,14 +21,15 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
   test "fresh process loads secret metadata without a controller" do
     # Regression: secret metadata lookup failed before another test loaded the adapters.
     script = <<~RUBY
-      keys = Provider::ConfigurationRegistry.secret_setting_keys
-      abort "missing metadata" unless keys.include?("plaid_secret") && keys.include?("plaid_eu_secret")
+      abort "eager loading enabled" if Rails.application.config.eager_load
       envelope = Setting::DynamicSecret.encrypt("plaid_secret", "synthetic-process-secret")
       abort "round trip failed" unless Setting::DynamicSecret.decrypt("plaid_secret", envelope) == "synthetic-process-secret"
+      keys = Provider::ConfigurationRegistry.secret_setting_keys
+      abort "missing metadata" unless keys.include?("plaid_secret") && keys.include?("plaid_eu_secret")
       puts "provider-secret-check-ok"
     RUBY
-    output, _error, status = Open3.capture3({ "RAILS_ENV" => "test" }, "bin/rails", "runner", script)
-    assert status.success?, "Fresh-process metadata/encryption check failed"
+    output, error, status = Open3.capture3({ "RAILS_ENV" => "test", "CI" => nil }, "bin/rails", "runner", script)
+    assert status.success?, "Fresh-process metadata/encryption check failed: #{error}"
     assert_includes output, "provider-secret-check-ok"
   end
 
