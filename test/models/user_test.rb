@@ -20,6 +20,76 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
+  test "find_by_email_with_legacy_fallback matches encrypted and legacy plaintext email rows" do
+    assert_equal @user, User.find_by_email_with_legacy_fallback(" #{@user.email.upcase} ")
+
+    email = store_legacy_plaintext_email(@user)
+
+    assert_equal @user, User.find_by_email_with_legacy_fallback(email.upcase)
+    assert_nil User.find_by_email_with_legacy_fallback("")
+    assert_nil User.find_by_email_with_legacy_fallback("missing@example.com")
+  end
+
+  test "authenticate_by_email checks the password for legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+
+    assert_equal @user, User.authenticate_by_email(email: email, password: user_password_test)
+    assert_nil User.authenticate_by_email(email: email, password: "wrong")
+    assert_nil User.authenticate_by_email(email: "missing@example.com", password: user_password_test)
+  end
+
+  test "authenticate_by_email uses authenticate_by for encrypted rows and unknown emails" do
+    User.expects(:authenticate_by).with(email: @user.email, password: "wrong").returns(nil)
+    assert_nil User.authenticate_by_email(email: @user.email, password: "wrong")
+
+    User.expects(:authenticate_by).with(email: "missing@example.com", password: "x").returns(nil)
+    assert_nil User.authenticate_by_email(email: "missing@example.com", password: "x")
+  end
+
+  test "find_by_email_with_legacy_fallback does not match a row by its stored ciphertext" do
+    ciphertext = User.connection.select_value(
+      User.sanitize_sql([ "SELECT email FROM users WHERE id = ?", @user.id ])
+    )
+
+    assert_nil User.find_by_email_with_legacy_fallback(ciphertext)
+    assert_nil User.authenticate_by_email(email: ciphertext, password: user_password_test)
+  end
+
+  test "email uniqueness covers legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+
+    duplicate = User.new(
+      family: @user.family,
+      email: " #{email.upcase} ",
+      password: user_password_test,
+      password_confirmation: user_password_test
+    )
+
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:email, :taken)
+  end
+
+  test "a legacy plaintext email row stays valid on its own" do
+    store_legacy_plaintext_email(@user)
+
+    assert User.find(@user.id).valid?
+  end
+
+  test "authenticate_by_email rejects a blank password for legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create(""))
+
+    assert_nil User.authenticate_by_email(email: email, password: "")
+    assert_nil User.authenticate_by_email(email: email, password: nil)
+  end
+
+  test "authenticate_by_email accepts a whitespace-only password like authenticate_by" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create("        "))
+
+    assert_equal @user, User.authenticate_by_email(email: email, password: "        ")
+  end
+
   # email
   test "email must be present" do
     potential_user = User.new(
@@ -1211,6 +1281,37 @@ class UserTest < ActiveSupport::TestCase
     assert_not users(:family_admin).manages_instance_settings?
   end
 
+  test "generated demo families do not revoke the only real family's instance settings access" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    real_family = families(:dylan_family)
+    Family.where.not(id: real_family.id).each do |demo_family|
+      demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+    end
+
+    assert users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+    assert_not users(:empty).manages_instance_settings?, "demo admins must not manage instance settings"
+
+    # Even a demo-only installation must not grant its public demo login access.
+    Family.stubs(:count).returns(1)
+    assert_not users(:empty).manages_instance_settings?
+    Family.unstub(:count)
+
+    # An unmarked household still counts, even if it calls itself Demo Family.
+    Family.create!(name: "Demo Family")
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "demo exclusion does not grant family admins instance access in managed mode" do
+    Family.where.not(id: families(:dylan_family).id).each do |demo_family|
+      demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+    end
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_not users(:family_admin).manages_instance_settings?
+    assert users(:sure_support_staff).manages_instance_settings?
+  end
+
   # First user role assignment tests
   test "role_for_new_family_creator returns super_admin when no users exist" do
     # Delete all users to simulate fresh instance
@@ -1516,6 +1617,31 @@ class UserTest < ActiveSupport::TestCase
     assert api_key.reload.revoked?
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
+  end
+  test "password_challenge must match the current password when given" do
+    @user.assign_attributes(password_challenge: "wrongpassword123", password: "newpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_challenge, :invalid)
+
+    @user.assign_attributes(password_challenge: "", password: "newpassword123")
+    assert_not @user.valid?
+
+    @user.assign_attributes(password_challenge: user_password_test, password: "newpassword123")
+    assert @user.valid?
+  end
+
+  test "password_challenge is not checked when not given" do
+    @user.password = "newpassword123"
+    assert @user.valid?
+  end
+
+  test "password_confirmation must match when given" do
+    @user.assign_attributes(password: "newpassword123", password_confirmation: "otherpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_confirmation, :confirmation)
+
+    @user.password_confirmation = "newpassword123"
+    assert @user.valid?
   end
 
   test "update_manual_account_order keeps other groups and only accessible accounts" do

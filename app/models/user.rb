@@ -54,6 +54,10 @@ class User < ApplicationRecord
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
   validates :password, presence: true, on: :create, unless: :skip_password_validation?
   validates :password, length: { minimum: 8 }, allow_nil: true
+  # `validations: false` above also drops Rails' confirmation and current-password
+  # (password_challenge) checks, so restore both here.
+  validates :password, confirmation: true, allow_blank: true
+  validate :password_challenge_matches, unless: -> { password_challenge.nil? }
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
   normalizes :locale, with: ->(locale) { locale.presence }
@@ -93,6 +97,43 @@ class User < ApplicationRecord
 
     User.exists? ? fallback_role : :super_admin
   end
+
+  # Deterministic lookups like `find_by(email:)` and `authenticate_by` miss
+  # rows whose email is still legacy plaintext (stored before encryption was
+  # active and not yet re-encrypted by `bin/rails security:backfill_encryption`):
+  # extend_queries does not cover attributes that also use `normalizes`. The
+  # fallback matches those rows by their literal column value.
+  def self.find_by_email_with_legacy_fallback(email)
+    normalized = email.to_s.strip.downcase
+    return nil if normalized.blank?
+
+    find_by(email: normalized) || find_by_legacy_plaintext_email(normalized)
+  end
+
+  # Takes the legacy path only for a plaintext row; every other case goes
+  # through authenticate_by, which stays timing-safe for wrong passwords and
+  # unknown emails. The legacy lookup runs first on every login (one indexed
+  # query) so that legacy and encrypted rows cost the same single password
+  # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  def self.authenticate_by_email(email:, password:)
+    return nil if password.nil? || password.empty?
+
+    normalized = email.to_s.strip.downcase
+    legacy_user = find_by_legacy_plaintext_email(normalized)
+    return authenticate_by(email: normalized, password: password) unless legacy_user
+
+    legacy_user if legacy_user.authenticate(password)
+  end
+
+  # Legacy rows were always stored normalized (`normalizes :email` predates
+  # encryption), so an exact match uses the unique index. Only well-formed
+  # emails are looked up, so a pasted ciphertext can never match its own row.
+  def self.find_by_legacy_plaintext_email(normalized_email)
+    return nil unless normalized_email.match?(URI::MailTo::EMAIL_REGEXP)
+
+    find_by([ "email = ?", normalized_email ])
+  end
+  private_class_method :find_by_legacy_plaintext_email
 
   class << self
     def human_attribute_name(attribute, options = {})
@@ -163,13 +204,18 @@ class User < ApplicationRecord
 
   # Setting values are shared by every family on the instance, so changing them
   # is a super admin's job: a family admin is anyone who signed up. A
-  # self-hosted instance with a single family has no other tenant to protect,
-  # and installs that predate the super_admin role may not have one, so that
-  # family's admins keep access there.
+  # self-hosted instance with a single real family has no other tenant to
+  # protect. Generated demo households must neither revoke that family's access
+  # nor grant instance access to demo users. Use the generator's synthetic
+  # subscription marker, never an editable family name or user email.
   def manages_instance_settings?
     return true if super_admin?
+    return false unless admin? && Rails.application.config.app_mode.self_hosted?
+    return false if family.subscription&.synthetic?
+    return true if Family.count == 1
 
-    admin? && Rails.application.config.app_mode.self_hosted? && Family.count == 1
+    demo_family_ids = Subscription.where(stripe_id: Subscription::DEMO_STRIPE_ID).select(:family_id)
+    Family.where.not(id: demo_family_ids).limit(2).pluck(:id) == [ family_id ]
   end
 
   def accessible_accounts
@@ -902,6 +948,13 @@ class User < ApplicationRecord
 
     def skip_password_validation?
       skip_password_validation == true
+    end
+
+    def password_challenge_matches
+      digest_was = password_digest_was
+      return if digest_was.present? && BCrypt::Password.new(digest_was).is_password?(password_challenge)
+
+      errors.add(:password_challenge)
     end
 
     # The dashboard only sends the order of the widgets it rendered, so put

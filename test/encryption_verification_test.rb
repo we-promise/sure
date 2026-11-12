@@ -200,6 +200,34 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   end
 
   # ============================================================================
+  # SECURITY AUDIT LOG MODEL TESTS
+  # ============================================================================
+
+  test "security audit log user_email, ip_address and user_agent are encrypted at rest" do
+    request = ActionDispatch::TestRequest.create
+    request.remote_addr = "203.0.113.5"
+    request.user_agent = "EncryptionVerification/1.0"
+
+    log = SecurityAuditLog.log_mfa_enabled!(user: users(:family_admin), request: request)
+
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+
+    raw_email = log.read_attribute_before_type_cast(:user_email).to_s
+    raw_ip = log.read_attribute_before_type_cast(:ip_address).to_s
+    raw_agent = log.read_attribute_before_type_cast(:user_agent).to_s
+    assert_not_includes raw_email, users(:family_admin).email
+    assert_not_includes raw_ip, "203.0.113.5"
+    assert_not_includes raw_agent, "EncryptionVerification/1.0"
+
+    log.reload
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+  end
+
+  # ============================================================================
   # MOBILE DEVICE MODEL TESTS
   # ============================================================================
 
@@ -435,9 +463,11 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     )
     EnableBankingItem.where(id: eb_item.id).update_all("last_psu_ip = '203.0.113.50'")
 
-    # No global support_unencrypted_data: the attribute's own option must cover it
-    assert_not ActiveRecord::Encryption.config.support_unencrypted_data
-    assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
+    # The global setting can be on during the backfill window, so turn it off
+    # here: the attribute's own option must cover the legacy value by itself.
+    with_unencrypted_data_supported(false) do
+      assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
+    end
   end
 
   # ============================================================================
@@ -467,9 +497,9 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
 
   private
 
-    def with_unencrypted_data_supported
+    def with_unencrypted_data_supported(enabled = true)
       previous = ActiveRecord::Encryption.config.support_unencrypted_data
-      ActiveRecord::Encryption.config.support_unencrypted_data = true
+      ActiveRecord::Encryption.config.support_unencrypted_data = enabled
       yield
     ensure
       ActiveRecord::Encryption.config.support_unencrypted_data = previous

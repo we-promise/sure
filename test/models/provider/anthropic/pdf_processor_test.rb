@@ -68,6 +68,39 @@ class Provider::Anthropic::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal 42, result.extracted_data["transaction_count"]
   end
 
+  test "stringifies symbol keys in extracted_data" do
+    # The Anthropic SDK returns tool input with symbol keys, so the JSON.parse
+    # branch is skipped; without stringifying, every string-keyed reader of
+    # the result (e.g. the AI health probe) sees nil.
+    fake_response = build_response(content: [
+      tool_use_block(
+        id: "toolu_1",
+        name: "report_document_analysis",
+        input: {
+          document_type: :bank_statement,
+          summary: "Bank of Example, Mar 2026 statement.",
+          extracted_data: {
+            institution_name: "Bank of Example",
+            transaction_count: 42,
+            account_holder: "Account Holder"
+          }
+        }
+      )
+    ])
+    client = stub_client(fake_response)
+
+    result = Provider::Anthropic::PdfProcessor.new(
+      client,
+      model: "claude-sonnet-4-6",
+      pdf_content: @pdf_content
+    ).process
+
+    assert_equal "bank_statement", result.document_type
+    assert_equal "Bank of Example", result.extracted_data["institution_name"]
+    assert_equal 42, result.extracted_data["transaction_count"]
+    assert_equal "Account Holder", result.extracted_data["account_holder"]
+  end
+
   test "normalizes unknown document_type to other" do
     fake_response = build_response(content: [
       tool_use_block(
