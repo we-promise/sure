@@ -3,7 +3,7 @@ pt-BR:
   chats:
     demo_banner_title: "Modo de Demonstração Ativo"
     demo_banner_message: "Tokens de LLM gratuitos por cortesia do Vercel AI Gateway. Os resultados podem variar, pois alteramos frequentemente os pesos dos modelos para fins de teste. Consulte a documentação da Vercel para saber para onde vão suas conversas! 🤖"
-    demo_banner_message_html: "Tokens de LLM gratuitos por cortesia do Vercel AI Gateway. Os resultados podem variar, pois alteramos frequentemente os pesos dos modelos para fins de teste. Consulte a documentação da Vercel para saber para onde vão suas conversas! 🤖 (veja %{link})"
+    demo_banner_message_addendum_html: "(veja %{link})"
     demo_banner_link: "aqui"
     thinking: "Pensando..."
     worker_unhealthy_warning: "As respostas de IA podem não ser entregues agora — o worker em segundo plano parece estar fora do ar ou sobrecarregado. Verifique se o seu worker Sidekiq está rodando."

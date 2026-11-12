@@ -18,8 +18,16 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
         get url
 
         assert_response :success
+        warning = I18n.t("chats.demo_banner_message", locale: locale, fallback: false, raise: true)
+        suffix = I18n.t("chats.demo_banner_message_addendum_html", locale: locale, fallback: false, raise: true,
+          link: I18n.t("chats.demo_banner_link", locale: locale, fallback: false, raise: true))
+        assert_select "[role='status'] p", count: 1 do |paragraphs|
+          paragraph = paragraphs.first.dup
+          paragraph.css("a").each { |link| link.content = link.text.squish }
+          assert_equal "#{warning} #{suffix}", paragraph.text.squish
+        end
         assert_select "[role='status'] a[href=?][data-turbo-frame='_top']", settings_llm_usage_path,
-          text: I18n.t("chats.demo_banner_link", locale: locale, fallback: false), count: 1
+          text: I18n.t("chats.demo_banner_link", locale: locale, fallback: false, raise: true), count: 1
       end
     end
   end
@@ -36,7 +44,7 @@ class ChatsControllerTest < ActionDispatch::IntegrationTest
           get url
 
           assert_response :success
-          assert_select "[role='status'] p", text: I18n.t("chats.demo_banner_message", locale: locale, fallback: false)
+          assert_select "[role='status'] p", text: I18n.t("chats.demo_banner_message", locale: locale, fallback: false, raise: true)
           assert_select "[role='status'] a[href=?]", settings_llm_usage_path, count: 0
         end
       end

@@ -3,5 +3,5 @@ ro:
   chats:
     demo_banner_title: "Mod demonstrativ activ"
     demo_banner_message: "Tokenuri LLM gratuite oferite de Vercel AI Gateway. Rezultatele pot varia deoarece schimbăm frecvent ponderile modelelor în scopuri de testare. Consultă documentația Vercel pentru a afla unde sunt trimise conversațiile tale! 🤖"
-    demo_banner_message_html: "Tokenuri LLM gratuite oferite de Vercel AI Gateway. Rezultatele pot varia deoarece schimbăm frecvent ponderile modelelor în scopuri de testare. Consultă documentația Vercel pentru a afla unde sunt trimise conversațiile tale! 🤖 (vezi %{link})"
+    demo_banner_message_addendum_html: "(vezi %{link})"
     demo_banner_link: "aici"

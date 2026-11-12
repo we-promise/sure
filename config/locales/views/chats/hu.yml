@@ -3,7 +3,7 @@ hu:
   chats:
     demo_banner_title: "Demo mód aktív"
     demo_banner_message: "Ingyenes LLM-tokenek a Vercel AI Gateway jóvoltából. Az eredmények eltérhetnek, mivel tesztelés céljából gyakran változtatjuk a modellek súlyait. A Vercel dokumentációjából megtudhatod, hová kerülnek a beszélgetéseid! 🤖"
-    demo_banner_message_html: "Ingyenes LLM-tokenek a Vercel AI Gateway jóvoltából. Az eredmények eltérhetnek, mivel tesztelés céljából gyakran változtatjuk a modellek súlyait. A Vercel dokumentációjából megtudhatod, hová kerülnek a beszélgetéseid! 🤖 (lásd %{link})"
+    demo_banner_message_addendum_html: "(lásd %{link})"
     demo_banner_link: "itt"
     thinking: "Gondolkodás..."
     ai_greeting:

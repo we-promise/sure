@@ -3,7 +3,7 @@ nl:
   chats:
     demo_banner_title: "Demo Modus Actief"
     demo_banner_message: "Gratis LLM-tokens dankzij Vercel AI Gateway. Resultaten kunnen variëren omdat we de modelgewichten vaak wijzigen voor testdoeleinden. Raadpleeg de documentatie van Vercel om te zien waar uw gesprekken naartoe gaan! 🤖"
-    demo_banner_message_html: "Gratis LLM-tokens dankzij Vercel AI Gateway. Resultaten kunnen variëren omdat we de modelgewichten vaak wijzigen voor testdoeleinden. Raadpleeg de documentatie van Vercel om te zien waar uw gesprekken naartoe gaan! 🤖 (zie %{link})"
+    demo_banner_message_addendum_html: "(zie %{link})"
     demo_banner_link: "hier"
     thinking: "Bezig ..."
     ai_busy: "Ik rond nog even een achtergrondtaak af, daarna ga ik direct met uw bericht aan de slag."

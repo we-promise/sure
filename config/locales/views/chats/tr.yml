@@ -39,7 +39,7 @@ tr:
       edit_chat_title: Sohbet başlığını düzenle
       start_new_chat: Yeni sohbet başlat
     demo_banner_message: "Vercel AI Gateway sayesinde ücretsiz LLM tokenları. Test amacıyla model ağırlıklarını sık sık değiştirdiğimiz için sonuçlar farklılık gösterebilir. Konuşmalarınızın nereye gittiğini öğrenmek için Vercel'in belgelerine bakın! 🤖"
-    demo_banner_message_html: "Vercel AI Gateway sayesinde ücretsiz LLM tokenları. Test amacıyla model ağırlıklarını sık sık değiştirdiğimiz için sonuçlar farklılık gösterebilir. Konuşmalarınızın nereye gittiğini öğrenmek için Vercel'in belgelerine bakın! 🤖 (%{link} bakın)"
+    demo_banner_message_addendum_html: "(%{link} bakın)"
     demo_banner_link: "buraya"
     demo_banner_title: Demo Modu Aktif
     destroy:
