@@ -390,11 +390,19 @@ class TradeRepublicItem::Importer
     # dropping the actual event payload. Force one full timeline fetch in
     # that state so historical data can be recovered instead of remaining
     # permanently invisible.
+    # Recovers a lost stored timeline. With a PEA, the primary portfolio can
+    # legitimately hold no events (e.g. when the pages read so far only had
+    # PEA trades), so the timeline only counts as lost when the PEA holds
+    # none either, and never while the PEA backfill is still reading history
+    # pages: a full fetch would discard those cursors and restart it.
     def force_full_timeline_fetch?
       return false if trade_republic_item.newest_event_id.blank?
+      return false if pea_backfill_running?
 
-      portfolio_accounts = trade_republic_item.trade_republic_accounts.select(&:portfolio?)
-      portfolio_accounts.any? { |account| Array(account.raw_timeline_payload).blank? }
+      accounts = trade_republic_item.trade_republic_accounts.to_a
+      return false if accounts.any? { |account| account.pea? && Array(account.raw_timeline_payload).present? }
+
+      accounts.select(&:portfolio?).any? { |account| Array(account.raw_timeline_payload).blank? }
     end
 
     # Incomplete trade-detail events, complete trades without a price read from
