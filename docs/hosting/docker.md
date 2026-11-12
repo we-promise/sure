@@ -664,10 +664,10 @@ Update Sure to a version that includes this guide first and let it start once, s
    docker compose stop web worker
    ```
 
-3. Preview the conversion. This changes nothing, and must list every table with `"failed_count":0` and include a `session_ip_digests` entry:
+3. Preview the conversion. The `1` makes it a dry run that changes nothing. Its report must show `"dry_run":true`, list every table with `"failed_count":0` and include a `session_ip_digests` entry:
 
    ```bash
-   docker compose run --rm web bin/rails security:backfill_encryption
+   docker compose run --rm web bin/rails "security:backfill_encryption[100,1]"
    ```
 
    If rows fail, they hold data encrypted with keys the instance no longer has, for example after `SECRET_KEY_BASE` was changed. Don't convert: run `docker compose up -d`, and put the keys or `SECRET_KEY_BASE` that data was encrypted with back in place first.
@@ -705,10 +705,10 @@ Update Sure to a version that includes this guide first and let it start once, s
 
 3. Add the three keys to `.env` (and the three lines to `compose.yml` if they are missing; see above).
 
-4. Preview the conversion with the new keys. This changes nothing:
+4. Preview the conversion with the new keys. The `1` makes it a dry run that changes nothing; its report must show `"dry_run":true`:
 
    ```bash
-   docker compose run --rm web bin/rails security:backfill_encryption
+   docker compose run --rm web bin/rails "security:backfill_encryption[100,1]"
    ```
 
    Continue only if it lists every table with `"failed_count":0` and includes a `session_ip_digests` entry. Failed rows hold data encrypted with the old keys. In that case, remove the three lines from `.env` again and run `docker compose up -d`. The instance keeps working with the derived keys, and its data stays encrypted with them. The manual rotation in [Encryption key rotation](encryption.md) needs a custom initializer and the old keys inside the containers, which the example compose files don't provide.
