@@ -25,19 +25,19 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
     assert_equal BigDecimal("13.2"), @holding.reload.cost_basis, "(720 + 600) / 100, without waiting for a sync"
   end
 
-  # A sync of the same account takes the account row lock to replace its lot
-  # records; restating under the same lock stops the two interleaving.
-  test "an edit and an unlock restate under the account's row lock" do
+  # A restatement and a sync of the same account both lock the account row
+  # before writing any holdings, so they serialise in one lock order.
+  test "an edit and an unlock restate under the account's row lock, taken first" do
     [ -> { patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "600" } } },
       -> { post unlock_holding_lot_path(@holding, @lot) } ].each do |request|
       order = sequence("restate")
       Account.any_instance.expects(:lock!).in_sequence(order).returns(true)
-      Balance::Materializer.any_instance.expects(:materialize_balances).in_sequence(order)
+      Holding::Materializer.any_instance.expects(:materialize_holdings).in_sequence(order).returns([])
 
       request.call
 
       Account.any_instance.unstub(:lock!)
-      Balance::Materializer.any_instance.unstub(:materialize_balances)
+      Holding::Materializer.any_instance.unstub(:materialize_holdings)
     end
   end
 
