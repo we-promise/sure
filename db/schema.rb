@@ -122,8 +122,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "status", default: "active"
     t.string "subtype"
     t.datetime "updated_at", null: false
+    t.string "plan_ownership", default: "shared", null: false
+    t.uuid "plan_owner_user_id"
+    t.integer "plan_order"
+    t.string "plan_role"
+    t.uuid "auto_transfer_to_account_id"
+    t.uuid "parent_account_id"
+    t.jsonb "auto_transfer_target_ids", default: []
+    t.string "bank_logo_slug"
     t.index ["accountable_id", "accountable_type"], name: "index_accounts_on_accountable_id_and_accountable_type"
     t.index ["accountable_type"], name: "index_accounts_on_accountable_type"
+    t.index ["auto_transfer_to_account_id"], name: "index_accounts_on_auto_transfer_to_account_id"
     t.index ["currency"], name: "index_accounts_on_currency"
     t.index ["family_id", "accountable_type"], name: "index_accounts_on_family_id_and_accountable_type"
     t.index ["family_id", "exclude_from_reports"], name: "index_accounts_on_family_id_and_exclude_from_reports"
@@ -133,9 +142,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["family_id"], name: "index_accounts_on_family_id"
     t.index ["import_id"], name: "index_accounts_on_import_id"
     t.index ["owner_id"], name: "index_accounts_on_owner_id"
+    t.index ["parent_account_id"], name: "index_accounts_on_parent_account_id"
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id"
+    t.index ["plan_owner_user_id"], name: "index_accounts_on_plan_owner_user_id"
     t.index ["simplefin_account_id"], name: "index_accounts_on_simplefin_account_id"
     t.index ["status"], name: "index_accounts_on_status"
+    t.check_constraint "plan_ownership::text = 'shared'::text AND plan_owner_user_id IS NULL OR plan_owner_user_id IS NOT NULL", name: "chk_accounts_plan_owner_consistency"
+    t.check_constraint "plan_ownership::text = ANY (ARRAY['shared'::text, 'user'::text])", name: "chk_accounts_plan_ownership"
+    t.check_constraint "plan_role IS NULL OR (plan_role::text = ANY (ARRAY['savings_bucket'::text, 'checking'::text, 'credit_card_payoff'::text, 'loan_payoff'::text, 'investment'::text]))", name: "chk_accounts_plan_role"
   end
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -735,6 +749,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "idempotency_key"], name: "index_entries_on_account_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
+    t.index ["account_id", "reconciled_status"], name: "index_entries_on_account_id_and_reconciled_status"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
@@ -743,11 +758,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
-    t.index ["account_id", "reconciled_status"], name: "index_entries_on_account_id_and_reconciled_status"
-    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying, 'cleared'::character varying, 'reconciled'::character varying]::text[])", name: "chk_entries_reconciled_status"
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
+    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying::text, 'cleared'::character varying::text, 'reconciled'::character varying::text])", name: "chk_entries_reconciled_status"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -923,6 +937,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["family_id", "merchant_id"], name: "idx_on_family_id_merchant_id_23e883e08f", unique: true
     t.index ["family_id"], name: "index_family_merchant_associations_on_family_id"
     t.index ["merchant_id"], name: "index_family_merchant_associations_on_merchant_id"
+  end
+
+  create_table "family_plan_settings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.string "leftover_distribution", default: "income_ratio", null: false
+    t.jsonb "custom_rules"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_family_plan_settings_on_family_id", unique: true
+    t.check_constraint "leftover_distribution::text = ANY (ARRAY['income_ratio'::text, 'equal_split'::text, 'custom'::text])", name: "chk_family_plan_settings_leftover_distribution"
   end
 
   create_table "financekit_account_lineages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1424,6 +1448,22 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.check_constraint "sequence IS NULL OR sequence > 0", name: "chk_imports_session_sequence_positive"
   end
 
+  create_table "income_account_allocations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "income_series_id", null: false
+    t.uuid "account_id", null: false
+    t.string "mode", null: false
+    t.decimal "value", precision: 12, scale: 2
+    t.integer "sort_index"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_income_account_allocations_on_account_id"
+    t.index ["family_id"], name: "index_income_account_allocations_on_family_id"
+    t.index ["income_series_id", "account_id"], name: "idx_on_income_series_id_account_id_233c1f13be", unique: true
+    t.check_constraint "mode::text = 'specific'::text AND value > 0::numeric OR mode::text = 'percent'::text AND value > 0::numeric AND value <= 1::numeric OR (mode::text = ANY (ARRAY['required'::character varying, 'leftover'::character varying]::text[])) AND value IS NULL", name: "chk_income_account_allocations_value_mode"
+    t.check_constraint "mode::text = ANY (ARRAY['required'::text, 'specific'::text, 'percent'::text, 'leftover'::text])", name: "chk_income_account_allocations_mode"
+  end
+
   create_table "indexa_capital_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "account_number"
     t.string "account_status"
@@ -1610,7 +1650,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
-    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying, 'actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
+    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying::text, 'actual_365'::character varying::text, 'actual_actual'::character varying::text])", name: "chk_loans_day_count_convention"
     t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
     t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
     t.check_constraint "insurance_rate_type IS NULL OR (insurance_rate_type::text = ANY (ARRAY['level_term'::character varying::text, 'decreasing_life'::character varying::text]))", name: "chk_loans_insurance_rate_type"
@@ -1967,6 +2007,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["plaid_id"], name: "index_plaid_items_on_plaid_id", unique: true
   end
 
+  create_table "plan_allocations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "family_id", null: false
+    t.uuid "account_id"
+    t.string "name", null: false
+    t.string "kind", null: false
+    t.string "mode", null: false
+    t.decimal "value_cents", precision: 12, scale: 2
+    t.decimal "value_percent"
+    t.string "cadence"
+    t.uuid "recurring_transaction_id"
+    t.boolean "auto_transfer", default: false, null: false
+    t.integer "sort_index"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "category_id"
+    t.index ["category_id"], name: "index_plan_allocations_on_category_id"
+    t.index ["family_id", "account_id"], name: "index_plan_allocations_on_family_id_and_account_id"
+    t.index ["recurring_transaction_id"], name: "index_plan_allocations_on_recurring_transaction_id"
+    t.check_constraint "cadence IS NULL OR (cadence::text = ANY (ARRAY['weekly'::text, 'biweekly'::text, 'monthly'::text, 'quarterly'::text, 'yearly'::text]))", name: "chk_plan_allocations_cadence"
+    t.check_constraint "kind::text = ANY (ARRAY['bill'::text, 'debt'::text, 'savings'::text, 'fun_money'::text])", name: "chk_plan_allocations_kind"
+    t.check_constraint "mode::text = 'required'::text AND value_percent IS NULL AND (value_cents IS NOT NULL OR recurring_transaction_id IS NOT NULL) AND (value_cents IS NULL OR value_cents > 0::numeric) OR mode::text = 'specific'::text AND value_cents > 0::numeric AND value_percent IS NULL OR mode::text = 'percent'::text AND value_percent > 0::numeric AND value_percent <= 1::numeric AND value_cents IS NULL OR mode::text = 'leftover'::text AND value_cents IS NULL AND value_percent IS NULL", name: "chk_plan_allocations_value_mode"
+    t.check_constraint "mode::text = ANY (ARRAY['required'::text, 'specific'::text, 'percent'::text, 'leftover'::text])", name: "chk_plan_allocations_mode"
+  end
+
   create_table "properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "area_unit"
     t.integer "area_value"
@@ -1979,7 +2043,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -2189,6 +2253,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.integer "upcoming_window_days"
     t.datetime "updated_at", null: false
     t.string "weekend_adjust", default: "none", null: false
+    t.uuid "plan_owner_user_id"
+    t.integer "plan_max_account_links"
     t.index ["account_id"], name: "index_recurring_transactions_on_account_id"
     t.index ["category_id"], name: "index_recurring_transactions_on_category_id"
     t.index ["destination_account_id"], name: "index_recurring_transactions_on_destination_account_id"
@@ -2200,8 +2266,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["family_id"], name: "index_recurring_transactions_on_family_id"
     t.index ["merchant_id"], name: "index_recurring_transactions_on_merchant_id"
     t.index ["next_expected_date"], name: "index_recurring_transactions_on_next_expected_date"
+    t.index ["plan_owner_user_id"], name: "index_recurring_transactions_on_plan_owner_user_id"
     t.check_constraint "destination_account_id IS NULL OR account_id IS NOT NULL", name: "chk_recurring_txns_transfer_requires_source"
     t.check_constraint "destination_account_id IS NULL OR destination_account_id <> account_id", name: "chk_recurring_txns_transfer_distinct_accounts"
+    t.check_constraint "plan_max_account_links IS NULL OR plan_max_account_links >= 1", name: "chk_recurring_transactions_plan_max_account_links"
   end
 
   create_table "redbark_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3229,6 +3297,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "plaid_accounts", "plaid_items"
   add_foreign_key "plaid_items", "families"
   add_foreign_key "plaid_items", "users", column: "owner_id", on_delete: :nullify
+  add_foreign_key "plan_allocations", "categories", on_delete: :nullify
   add_foreign_key "push_subscriptions", "users"
   add_foreign_key "questrade_accounts", "questrade_items"
   add_foreign_key "questrade_items", "families"

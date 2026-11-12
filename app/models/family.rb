@@ -51,6 +51,13 @@ class Family < ApplicationRecord
   has_many :accounts, dependent: :destroy
   has_many :invitations, dependent: :destroy
 
+  # Paycheck Flow Planner (M2): the income -> account money map and its
+  # leftover attribution setting.
+  has_many :income_account_allocations, dependent: :destroy
+  has_one :family_plan_settings, dependent: :destroy
+  # Paycheck Flow Planner (M2 PR#2b): the bank -> item allocations.
+  has_many :plan_allocations, dependent: :destroy
+
   has_many :imports, dependent: :destroy
   has_many :import_sessions, dependent: :destroy
   has_many :import_source_mappings, dependent: :destroy
