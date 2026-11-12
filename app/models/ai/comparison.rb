@@ -12,6 +12,8 @@ class Ai::Comparison < ApplicationRecord
   belongs_to :family
   belongs_to :subject, polymorphic: true, optional: true
 
+  UUID = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/i
+
   scope :for_feature, ->(feature) { where(feature: feature.to_s) }
   scope :disagreements, -> { where(agreed: false) }
   scope :chronological, -> { order(:created_at) }
@@ -28,9 +30,13 @@ class Ai::Comparison < ApplicationRecord
   def primary_endpoint = primary_route.to_h["endpoint"]
   def shadow_endpoint = shadow_route.to_h["endpoint"]
 
-  # The family's category names for these categorize comparisons' values, by id.
+  # The family's category names for these categorize comparisons' values, by id. Ids come
+  # from a string column, so they are matched loosely: anything that isn't a uuid can't
+  # name a category and is dropped rather than raise in the database.
   def self.category_names(comparisons, family)
-    ids = comparisons.flat_map { [ _1.primary_value, _1.shadow_value ] }.compact
+    ids = comparisons.flat_map { [ _1.primary_value, _1.shadow_value ] }.compact.select { UUID.match?(_1.to_s) }
+    return {} if ids.empty?
+
     family.categories.where(id: ids).pluck(:id, :name).to_h.transform_keys(&:to_s)
   end
 

@@ -49,6 +49,10 @@
       panel had to explain that a key alone changes nothing. Same shape as the
       external-assistant fields in _assistant_settings. %>
   <% if jev_active %>
+    <% if jev_unreachable_reason %>
+      <p class="text-sm text-warning"><%= t(".unsupported_env_endpoint") %></p>
+    <% end %>
+
     <div class="flex items-center gap-2 text-sm">
       <% if jev_configured? %>
         <span class="inline-block w-2 h-2 rounded-full bg-success"></span>

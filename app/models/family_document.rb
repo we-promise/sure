@@ -23,8 +23,9 @@ class FamilyDocument < ApplicationRecord
   scope :ready, -> { where(status: "ready") }
 
   # A document is readable when it names no account, or names one the user can
-  # reach. The store itself is family-wide, so this is the only thing standing
-  # between one member's statements and another member's search.
+  # reach, and its indexing succeeded: an error or unreadable document has nothing
+  # usable in it. The store itself is family-wide, so this is the only thing
+  # standing between one member's statements and another member's search.
   #
   # An account statement uploaded before anyone matched it has no account, and
   # "no account" must not mean "everyone": AccountStatement#viewable_by? gates
@@ -36,6 +37,7 @@ class FamilyDocument < ApplicationRecord
     unlinked = unlinked.where("metadata->>'account_statement_id' IS NULL") unless AccountStatement.statement_manager?(user)
 
     unlinked.or(where(account_id: Account.accessible_by(user).select(:id)))
+            .where(status: "ready")
   }
 
   # Watches an asynchronous index until it settles (VectorStore::IndexStatusJob).

@@ -3,9 +3,12 @@
 # shadow spend apart, and its answer goes only to the `compare.ai_shadow` event, which
 # Ai::Instrumentation::ComparisonSubscriber writes to Ai::Comparison. Nothing is applied.
 #
-# Never retried: a diagnostic that failed is skipped.
+# Never retried: a diagnostic that failed is skipped, and a deadlock is discarded rather
+# than retried five times — the family's real work is the primary call's job.
 class Ai::ShadowJob < ApplicationJob
   queue_as { Ai::Routes.queue_for(Ai::Shadow.feature_for(arguments.first.constantize.feature_key)) }
+
+  discard_on ActiveRecord::Deadlocked
 
   # generation_class: an Ai::Generation that declares `shadow`; arguments: its own, without the
   # family; primary: { route:, values: } from the call that was applied.
@@ -17,7 +20,7 @@ class Ai::ShadowJob < ApplicationJob
     return unless family
 
     feature = Ai::Shadow.feature_for(klass.feature_key)
-    Ai::CallContext.job("family:#{family.id}:#{feature}") do
+    Ai::CallContext.job("family:#{family.id}:#{feature}:#{SecureRandom.hex(8)}") do
       plan = Ai::Router.new(family:).resolve(feature)
       next unless plan.is_a?(Ai::Plan)
 

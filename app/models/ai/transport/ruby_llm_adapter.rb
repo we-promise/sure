@@ -22,7 +22,7 @@ module Ai::Transport::RubyLlmAdapter
       @ruby_llm_contexts[timeout] ||= RubyLLM.context do |config|
         config.request_timeout = timeout
         config.max_retries = 0
-        config.http_proxy = Ai::Transport::Http.proxy_for(ruby_llm_api_base)
+        config.http_proxy = Ai::Transport::Http.proxy_or_warn(ruby_llm_api_base)
         config.ssl = Ai::Transport::Http.faraday_ssl_options
         config.faraday_adapter = Ai::Transport::Http.ruby_llm_adapter
         config.auto_upload_large_files = false
@@ -154,7 +154,10 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::RateLimitError then Ai::Error.for_status(429, error.message, body:)
         when RubyLLM::ContextLengthExceededError then Ai::Error::ContextTooLong
         when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
-          Ai::Error.for_status(status || 500, error.message, body:)
+          # The middleware can raise these over a response whose HTTP status is 200 (OpenRouter
+          # answers 200 with an embedded error object). 200 is not an outage's status, so it
+          # would land in for_status's else; treat the class as what it is.
+          Ai::Error.for_status((500..599).cover?(status) ? status : 500, error.message, body:)
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end

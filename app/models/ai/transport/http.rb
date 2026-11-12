@@ -46,21 +46,35 @@ module Ai::Transport::Http
 
     # The proxy for Net::HTTP.new, which takes host, port, user and password.
     def net_http_proxy(url, env: ENV)
-      proxy = proxy_for(url, env:)
+      proxy = proxy_or_warn(url, env:)
       URI(proxy) if proxy
+    end
+
+    # The resolved proxy, or nil when it isn't a valid URL: an operator's typo is warned about
+    # and treated as direct, not crashed on mid-call.
+    def proxy_or_warn(url, env: ENV)
+      proxy = proxy_for(url, env:)
+      return if proxy.nil?
+
+      URI.parse(proxy)
+      proxy
     rescue URI::InvalidURIError
       Rails.logger.warn("[Ai::Transport::Http] Invalid proxy URL ignored")
       nil
     end
 
     # One base URL rule for every OpenAI-compatible server, the same as ruby-openai's, so an
-    # endpoint configured for ruby-openai keeps its URL: a URL that contains "v1" is used as given
-    # (`/v1`, Gemini's `/v1beta/openai`, Cloudflare's `/ai/v1`); any other gets `/v1`. Agent
-    # URLs are stored whole, so a trailing `/chat/completions` goes.
+    # endpoint configured for ruby-openai keeps its URL: a URL whose path carries a version
+    # segment (`/v1`, `/v1beta/openai`, Cloudflare's `/ai/v1`) is used as given; any other gets
+    # `/v1`. A "v1" in the host (`v1-proxy.lan`) is not a version. Agent URLs are stored whole,
+    # so a trailing `/chat/completions` goes.
     def compatible_base(base_url)
       url = base_url.to_s.strip.chomp("/").delete_suffix("/chat/completions")
       return OPENAI_BASE if url.blank?
 
+      path = URI.parse(url).path
+      path.match?(%r{/v\d}i) ? url : "#{url}/v1"
+    rescue URI::InvalidURIError
       url.include?("v1") ? url : "#{url}/v1"
     end
 
@@ -94,7 +108,7 @@ module Ai::Transport::Http
     # A Faraday block for a client built elsewhere (ruby-openai): the resolved proxy, which
     # also stops Faraday's own ENV lookup when the resolver says direct, and TLS options.
     def faraday_options(url)
-      proxy = proxy_for(url)
+      proxy = proxy_or_warn(url)
       ssl = faraday_ssl_options
 
       lambda do |faraday|
@@ -119,13 +133,13 @@ module Ai::Transport::Http
   end
 
   # Net::HTTP with Sure's proxy decision on every request, including a download's redirects.
-  # RubyLLM's config carries a proxy only when one is resolved, so a request
-  # Ai::Transport::Http.proxy_for sends direct would fall back to Faraday's own ENV lookup,
-  # which ignores the port in a NO_PROXY entry such as `10.0.0.5:8080`. TLS options travel with
-  # the context instead, through RubyLLM's config.ssl.
+  # Faraday resolves a string's invalidity at parse time, so a bad proxy is dropped here and
+  # the request goes direct, with a warn naming the issue. TLS options travel with the context
+  # instead, through RubyLLM's config.ssl. Note RubyLLM's own downloads build a Faraday of their
+  # own with config.http_proxy (set from our resolver) and skip this adapter.
   class ProxyNetHttp < Faraday::Adapter::NetHttp
     def build_connection(env)
-      proxy = Ai::Transport::Http.proxy_for(env[:url].to_s)
+      proxy = Ai::Transport::Http.proxy_or_warn(env[:url].to_s)
       env[:request][:proxy] = proxy && Faraday::ProxyOptions.from(proxy)
       super
     end

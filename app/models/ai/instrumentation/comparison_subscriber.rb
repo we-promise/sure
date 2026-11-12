@@ -24,8 +24,16 @@ class Ai::Instrumentation::ComparisonSubscriber
         metadata: {}, created_at: now, updated_at: now
       }
     end
-    Ai::Comparison.insert_all(rows) if rows.any?
+    # The subject_id column is uuid; an id that isn't one can't be read back by item
+    # later, so the row would be unreachable garbage. Say so and drop it, rather than
+    # store a comparison no one can join to anything.
+    uuid_rows, dropped = rows.partition { Ai::Comparison::UUID.match?(_1[:subject_id].to_s) }
+    if dropped.any?
+      Rails.logger.error("[Ai::Instrumentation::ComparisonSubscriber] dropped #{dropped.size} comparison(s) with non-uuid subject id (family_id=#{payload[:family_id]})")
+    end
+    Ai::Comparison.insert_all(uuid_rows) if uuid_rows.any?
   rescue StandardError => error
-    Rails.logger.error("[Ai::Instrumentation::ComparisonSubscriber] #{error.class}: #{error.message}")
+    family_id = defined?(payload) && payload.is_a?(Hash) ? payload[:family_id] : nil
+    Rails.logger.error("[Ai::Instrumentation::ComparisonSubscriber] #{error.class}: #{error.message} (family_id=#{family_id})")
   end
 end

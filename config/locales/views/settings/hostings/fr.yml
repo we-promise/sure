@@ -82,7 +82,7 @@ fr:
         confidence_threshold_label: Confiance minimale (0–1)
         data_retention_direct: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à TypeSafe pour être catégorisés. Consultez sa politique de conservation avant d'activer cette option sur des données réelles.
         data_retention_heading: Partage des données
-        data_retention_proxied: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à %{host}, qui les transmet à TypeSafe. Consultez les politiques de conservation des deux fournisseurs avant d'activer cette option sur des données réelles.
+        data_retention_proxied: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à %{host}. Que ces données soient transmises plus loin, et à qui, dépend de l'opérateur ; consultez sa politique de conservation avant d'activer cette option sur des données réelles.
         description: Choisissez le fournisseur qui catégorise les transactions pour toutes les familles de cette instance. Il est distinct du fournisseur d'IA ci-dessus, qui gère la discussion et le traitement des PDF.
         env_notice: Défini sur %{type} via les variables d'environnement.
         jev_configured: Clé API Jev configurée.
@@ -93,6 +93,7 @@ fr:
         provider_label: Fournisseur de catégorisation
         provider_llm: Fournisseur d'IA (OpenAI ou Anthropic)
         shadow_rate_env_notice: Verrouillé par la variable d'environnement CATEGORIZATION_SHADOW_RATE.
+        unsupported_env_endpoint: Cet endpoint Jev n'est pas pris en charge et est ignoré (il doit se terminer par /v1/systemone ou /alpha/decisions). La catégorisation continue d'utiliser le fournisseur d'IA jusqu'à ce que vous le corrigiez.
         shadow_rate_help: Exécute le fournisseur que vous n'avez PAS sélectionné en parallèle de celui que vous avez choisi, et enregistre leurs désaccords sans modifier aucune catégorie. Cela double les coûts d'API de chaque catégorisation échantillonnée. Indiquez 0 pour désactiver.
         shadow_rate_label: Taux de comparaison en arrière-plan (0–1)
         title: Catégorisation des transactions

@@ -54,7 +54,13 @@ module Pdf::PageImages
         raise Error.new("pdftoppm failed (#{status.signaled? ? "signal #{status.termsig}" : "exit #{status.exitstatus}"})", code: :failed)
       end
 
-      Dir[File.join(dir, "page-*.png")].sort_by { _1[/-(\d+)\.png\z/, 1].to_i }.map { File.binread(_1) }.each_with_index do |png, i|
+      images = Dir[File.join(dir, "page-*.png")].sort_by { _1[/-(\d+)\.png\z/, 1].to_i }
+      expected = last - first + 1
+      if images.size != expected
+        raise Error.new("pdftoppm rendered #{images.size} of #{expected} pages", code: :unreadable)
+      end
+
+      images.map { File.binread(_1) }.each_with_index do |png, i|
         width, height = png.byteslice(16, 8).to_s.unpack("NN")
         if width.to_i < MIN_SIDE || height.to_i < MIN_SIDE
           raise Error.new("pdftoppm rendered page #{first + i} as #{width.to_i}x#{height.to_i}", code: :blank_page)

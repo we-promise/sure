@@ -172,7 +172,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
     def matching_statements(query, max_results)
       scope = family.account_statements
                     .where(account_id: [ nil, *user.accessible_accounts.pluck(:id) ])
-                    .order(period_end_on: :desc, created_at: :desc)
+                    .order(Arel.sql("period_end_on DESC NULLS LAST"), created_at: :desc)
 
       terms = query.to_s.split(/\s+/).select { |term| term.length >= 3 }
 

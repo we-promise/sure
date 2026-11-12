@@ -59,9 +59,16 @@ class Ai::GenerationJob < ApplicationJob
       # The family the job names was deleted while it waited: nothing to run, and no one to tell.
       Rails.logger.info("[Ai::GenerationJob] #{arguments.first} dropped: #{error.message}")
       @requester = nil
+    rescue KeyError
+      # A stale job for a feature no longer registered: give up once, don't poison the queue.
+      Rails.logger.error("[Ai::GenerationJob] no requester registered for #{arguments.first.inspect}; dropping")
+      @requester = nil
     end
 
     def correlation_id
-      requester.ai_correlation_id || [ arguments.second[:family_id] && "family:#{arguments.second[:family_id]}", arguments.first ].compact.join(":")
+      fallback = [ arguments.second[:family_id] && "family:#{arguments.second[:family_id]}", arguments.first ].compact.join(":")
+      return fallback unless requester
+
+      requester.ai_correlation_id || fallback
     end
 end

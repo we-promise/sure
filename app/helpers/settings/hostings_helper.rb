@@ -14,6 +14,10 @@ module Settings::HostingsHelper
 
   def jev_effective_proxied? = Ai::LegacyEnvConfig::Jev.effective_proxied?
 
+  # Why the configured Jev endpoint can't be used, or nil — for the warning next
+  # to the settings when an ENV value is bad, which otherwise fails quietly.
+  def jev_unreachable_reason = Ai::LegacyEnvConfig::Jev.unreachable_reason(Ai::LegacyEnvConfig::Jev.effective_endpoint)
+
   # The shadow panel's raw materials: how many the routes disagree, the agreement
   # rate and the five most recent disagreements with their category names resolved.
   def categorization_shadow_summary(family)

@@ -162,13 +162,14 @@ en:
         jev_not_configured: Jev is selected but has no API key configured. Categorization keeps using the AI provider until you add one below.
         data_retention_heading: Data sharing
         data_retention_direct: Transaction descriptions, amounts and your category names are sent to TypeSafe to be categorized. Review their retention policy before enabling this on real data.
-        data_retention_proxied: Transaction descriptions, amounts and your category names are sent to %{host}, which forwards them to TypeSafe. Review both providers' retention policies before enabling this on real data.
+        data_retention_proxied: Transaction descriptions, amounts and your category names are sent to %{host}. Whether it forwards them onward, and to whom, depends on whoever runs it — review that operator's retention policy before enabling this on real data.
         confidence_threshold_label: Minimum confidence (0–1)
         confidence_threshold_help: Below this confidence the category is not applied and the transaction is left uncategorized, so a later run can try again. Nothing is discarded. Set to 0 to apply every answer.
         confidence_threshold_env_notice: Locked by the CATEGORIZATION_CONFIDENCE_THRESHOLD environment variable.
         shadow_rate_label: Shadow comparison rate (0–1)
         shadow_rate_help: Runs the provider you did NOT select alongside the one you did, recording where they disagree without changing any category. This doubles the API spend on every categorization run it samples. Set to 0 to turn it off.
         shadow_rate_env_notice: Locked by the CATEGORIZATION_SHADOW_RATE environment variable.
+        unsupported_env_endpoint: This Jev endpoint is not supported and is ignored (it must end in /v1/systemone or /alpha/decisions). Categorization keeps using the AI provider until you fix it.
       categorization_shadow_results:
         shadow_results_heading: Shadow comparison
         shadow_results_empty: No comparisons recorded yet. Set a shadow comparison rate above 0 and run categorization to collect some.

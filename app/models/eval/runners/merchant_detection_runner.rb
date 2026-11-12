@@ -27,7 +27,7 @@ class Eval::Runners::MerchantDetectionRunner < Eval::Runners::Base
       end
 
       # Get merchants from first sample's context (should be shared)
-      # Symbolize keys since Provider::Openai::AutoMerchantDetector expects symbol keys
+      # The generation builds its prompt and schema from symbol-keyed hashes.
       merchants = batch_samples.first.merchants_context.map(&:deep_symbolize_keys)
 
       start_time = Time.current
