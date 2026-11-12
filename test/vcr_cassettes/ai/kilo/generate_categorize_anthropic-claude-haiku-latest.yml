@@ -1,0 +1,146 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/responses
+    body:
+      encoding: UTF-8
+      string: '{"model":"~anthropic/claude-haiku-latest","input":[{"role":"user","content":"AVAILABLE
+        CATEGORIES: Coffee Shops\n\nTRANSACTIONS TO CATEGORIZE:\n- ID: txn_1, Amount:
+        4.5, Type: expense, Description: \"STARBUCKS 1234 SEATTLE\"\n\nCATEGORIZATION
+        GUIDELINES:\n- Prefer specific subcategories over general parent categories
+        when confident\n- Food delivery services should be categorized based on the
+        underlying merchant type\n- Square payments (SQ *) should be inferred from
+        the merchant name after the prefix\n- Warehouse/club stores should be categorized
+        based on their primary purpose\n- Return \"null\" for generic transactions
+        (e.g., POS terminals, wire transfers, checks, ATM withdrawals)\n\nIMPORTANT:\n-
+        Use EXACT category names from the list above\n- Return \"null\" (as a string)
+        if you cannot confidently match a category\n- Match expense transactions only
+        to expense categories\n- Match income transactions only to income categories\n-
+        Do NOT include any explanation or reasoning - only output JSON\n\nRespond
+        with ONLY this JSON (no markdown code blocks, no other text):\n{\"categorizations\":
+        [{\"transaction_id\": \"...\", \"category_name\": \"...\"}]}\n"}],"instructions":"Categorize
+        transactions into the given categories. Return JSON only. Do not explain your
+        reasoning.\n\nCRITICAL RULES:\n1. Match transaction_id exactly from input\n2.
+        Use EXACT category_name from the provided list, or \"null\" if unsure\n3.
+        Match expense transactions to expense categories only\n4. Match income transactions
+        to income categories only\n5. Return \"null\" if the description is generic/ambiguous
+        (e.g., \"POS DEBIT\", \"ACH WITHDRAWAL\", \"CHECK #1234\")\n6. Prefer MORE
+        SPECIFIC subcategories over general parent categories when available\n\nCATEGORY
+        HIERARCHY NOTES:\n- Use \"Restaurants\" for sit-down restaurants, \"Fast Food\"
+        for quick service chains\n- Use \"Coffee Shops\" for coffee places, \"Food
+        & Drink\" only when type is unclear\n- Use \"Shopping\" for general retail,
+        big-box stores, and online marketplaces\n- Use \"Groceries\" for dedicated
+        grocery stores ONLY\n- For income: use \"Salary\" for payroll/employer deposits,
+        \"Income\" for generic income sources\n\nOutput JSON format only (no markdown,
+        no explanation):\n{\"categorizations\": [{\"transaction_id\": \"...\", \"category_name\":
+        \"...\"}]}\n","stream":false,"store":false,"include":["reasoning.encrypted_content"],"max_output_tokens":1024,"text":{"format":{"type":"json_schema","name":"auto_categorize_personal_finance_transactions","schema":{"type":"object","properties":{"categorizations":{"type":"array","description":"An
+        array of auto-categorizations for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["txn_1"]},"category_name":{"type":["string","null"],"description":"The
+        matched category name of the transaction, or null if no match","enum":["Coffee
+        Shops","null",null]}},"required":["transaction_id","category_name"],"additionalProperties":false}}},"required":["categorizations"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<KILO_ORG_ID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <KILO_API_KEY>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://cdn.platform.openai.com/deployments/watchwood/watchwood.js
+        https://widget.usepylon.com https://assets.churnkey.co; connect-src ''self''
+        https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://api.openai.com/v1/watchwood/ https://r.stripe.com
+        https://m.stripe.com https://checkout.stripe.com https://utt.impactcdn.com
+        https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com https://assets.churnkey.co
+        https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Thu, 12 Nov 2026 11:09:53 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_E5WZ2EhqVY1ht53HvMmB4JXcEdBh|0.4797; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_7g9fgyVjZm2sDWzdv6Szf54uyXDw|0.984; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::5lbhv-1794481793055-f7e3e7a8f083
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: UTF-8
+      string: '{"id":"gen_01M77Q6ADVN3MKD9A3QXNE209K","object":"response","created_at":1794481795,"status":"completed","completed_at":1794481795,"incomplete_details":null,"error":null,"output":[{"type":"message","id":"msg_1794481795322_uklf378eiva","status":"completed","role":"assistant","content":[{"type":"output_text","text":"{\"categorizations\":[{\"transaction_id\":\"txn_1\",\"category_name\":\"Coffee
+        Shops\"}]}","annotations":[],"logprobs":[]}]}],"usage":{"input_tokens":1492,"output_tokens":66,"total_tokens":1558,"input_tokens_details":{"cached_tokens":0,"cache_write_tokens":0},"output_tokens_details":{"reasoning_tokens":0},"cost":0.000182,"is_byok":false,"cost_details":{"upstream_inference_cost":0.000182}},"model":"anthropic/claude-haiku-5.5","instructions":"Categorize
+        transactions into the given categories. Return JSON only. Do not explain your
+        reasoning.\n\nCRITICAL RULES:\n1. Match transaction_id exactly from input\n2.
+        Use EXACT category_name from the provided list, or \"null\" if unsure\n3.
+        Match expense transactions to expense categories only\n4. Match income transactions
+        to income categories only\n5. Return \"null\" if the description is generic/ambiguous
+        (e.g., \"POS DEBIT\", \"ACH WITHDRAWAL\", \"CHECK #1234\")\n6. Prefer MORE
+        SPECIFIC subcategories over general parent categories when available\n\nCATEGORY
+        HIERARCHY NOTES:\n- Use \"Restaurants\" for sit-down restaurants, \"Fast Food\"
+        for quick service chains\n- Use \"Coffee Shops\" for coffee places, \"Food
+        & Drink\" only when type is unclear\n- Use \"Shopping\" for general retail,
+        big-box stores, and online marketplaces\n- Use \"Groceries\" for dedicated
+        grocery stores ONLY\n- For income: use \"Salary\" for payroll/employer deposits,
+        \"Income\" for generic income sources\n\nOutput JSON format only (no markdown,
+        no explanation):\n{\"categorizations\": [{\"transaction_id\": \"...\", \"category_name\":
+        \"...\"}]}\n","previous_response_id":null,"temperature":1,"top_p":1,"max_output_tokens":1024,"presence_penalty":0,"frequency_penalty":0,"top_logprobs":0,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"max_tool_calls":null,"text":{"format":{"type":"json_schema","name":"auto_categorize_personal_finance_transactions","schema":{"type":"object","properties":{"categorizations":{"type":"array","description":"An
+        array of auto-categorizations for each transaction","items":{"type":"object","properties":{"transaction_id":{"type":"string","description":"The
+        internal ID of the original transaction","enum":["txn_1"]},"category_name":{"type":["string","null"],"description":"The
+        matched category name of the transaction, or null if no match","enum":["Coffee
+        Shops","null",null]}},"required":["transaction_id","category_name"],"additionalProperties":false}}},"required":["categorizations"],"additionalProperties":false},"strict":true}},"truncation":"disabled","reasoning":{"summary":"auto"},"store":false,"background":false,"service_tier":"auto","metadata":{},"safety_identifier":"43amqyVw3j6pyw01k5oGXRnje58bALy0nanLB/naNFI=","prompt_cache_key":null,"prompt_cache_retention":null}'
+  recorded_at: Thu, 12 Nov 2026 11:09:55 GMT
+recorded_with: VCR 6.3.1

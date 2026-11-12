@@ -91,13 +91,18 @@ http_interactions:
       Cross-Origin-Resource-Policy:
       - same-origin
       Date:
-      - Thu, 12 Nov 2026 10:07:54 GMT
+      - Thu, 12 Nov 2026 11:09:55 GMT
       Permissions-Policy:
       - geolocation=(self), camera=(), microphone=()
       Referrer-Policy:
       - strict-origin-when-cross-origin
       Server:
       - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_E5WZ2EhqVY1ht53HvMmB4JXcEdBh|0.4797; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_7g9fgyVjZm2sDWzdv6Szf54uyXDw|0.984; Path=/; Secure;
+        HttpOnly; SameSite=None
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains
       X-Content-Type-Options:
@@ -109,14 +114,14 @@ http_interactions:
       X-Vercel-Cache:
       - MISS
       X-Vercel-Id:
-      - syd1:syd1:syd1::sfo1::t7kjh-1794478074035-7d101830a9ab
+      - syd1:syd1:syd1::sfo1::f9l8s-1794481795555-4030358aaf6c
       X-Xss-Protection:
       - '0'
       Transfer-Encoding:
       - chunked
     body:
       encoding: UTF-8
-      string: '{"id":"gen_01M77KMTDB6WTY6TQ6DEJDGEWC","object":"response","created_at":1794478075,"status":"completed","completed_at":1794478075,"incomplete_details":null,"error":null,"output":[{"type":"message","id":"msg_1794478075939_pvpklbi74eg","status":"completed","role":"assistant","content":[{"type":"output_text","text":"{\"categorizations\":[{\"transaction_id\":\"txn_1\",\"category_name\":\"Coffee
+      string: '{"id":"gen_01M77Q6CRER617005X6KC92FND","object":"response","created_at":1794481797,"status":"completed","completed_at":1794481797,"incomplete_details":null,"error":null,"output":[{"type":"message","id":"msg_1794481797056_8lklczmmjrt","status":"completed","role":"assistant","content":[{"type":"output_text","text":"{\"categorizations\":[{\"transaction_id\":\"txn_1\",\"category_name\":\"Coffee
         Shops\"}]}","annotations":[],"logprobs":[]}],"phase":"final_answer"}],"usage":{"input_tokens":602,"output_tokens":36,"total_tokens":638,"input_tokens_details":{"cached_tokens":0,"cache_write_tokens":0},"output_tokens_details":{"reasoning_tokens":0},"cost":0.000078,"is_byok":false,"cost_details":{"upstream_inference_cost":0.000078}},"model":"openai/gpt-6-luna","instructions":"Categorize
         transactions into the given categories. Return JSON only. Do not explain your
         reasoning.\n\nCRITICAL RULES:\n1. Match transaction_id exactly from input\n2.
@@ -137,5 +142,5 @@ http_interactions:
         internal ID of the original transaction","enum":["txn_1"]},"category_name":{"type":["string","null"],"description":"The
         matched category name of the transaction, or null if no match","enum":["Coffee
         Shops","null",null]}},"required":["transaction_id","category_name"],"additionalProperties":false}}},"required":["categorizations"],"additionalProperties":false},"strict":true}},"truncation":"disabled","reasoning":{"summary":"auto"},"store":false,"background":false,"service_tier":"default","metadata":{},"safety_identifier":"43amqyVw3j6pyw01k5oGXRnje58bALy0nanLB/naNFI=","prompt_cache_key":null,"prompt_cache_retention":null}'
-  recorded_at: Thu, 12 Nov 2026 10:07:56 GMT
+  recorded_at: Thu, 12 Nov 2026 11:09:57 GMT
 recorded_with: VCR 6.3.1

@@ -15,12 +15,15 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
     "anthropic/claude-opus-5-5" => { key: "ANTHROPIC_API_KEY", protocol: :anthropic },
     "llama_cpp/qwen3.6-35b-a3b-mtp" => { key: "LLAMA_CPP_API_KEY", protocol: :compatible, json_mode: :auto,
                                          base_url: ENV.fetch("LLAMA_CPP_URL", "http://10.72.200.61:8180/v1"), location: :local },
-    # Kilo is an OpenAI-compatible gateway: the ~ prefix selects the latest Luna model, which
-    # is what "~openai/gpt-luna-latest" resolves to upstream. Kilo also proxies the Responses
-    # API, so it goes through the same strict path as the OpenAI preset.
+    # Kilo is an OpenAI-compatible gateway: the ~ prefix selects the latest model in the
+    # family, which is what these aliases resolve to upstream. Kilo proxies the Responses
+    # API too, so these go through the same strict path as the OpenAI preset.
     "kilo/~openai/gpt-luna-latest" => { key: "KILO_API_KEY", protocol: :compatible, preset: :openai, responses_api: true,
                                          base_url: ENV.fetch("KILO_BASE_URL", "https://api.kilo.ai/api/gateway"),
-                                         extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } }
+                                         extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } },
+    "kilo/~anthropic/claude-haiku-latest" => { key: "KILO_API_KEY", protocol: :compatible, preset: :openai, responses_api: true,
+                                                base_url: ENV.fetch("KILO_BASE_URL", "https://api.kilo.ai/api/gateway"),
+                                                extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } }
   }.freeze
 
   setup do
