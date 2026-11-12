@@ -5,6 +5,9 @@ class TradeRepublicAccount::ActivitiesProcessor
   STOCK_PERK_EVENT_TYPE = "ACQUISITION_TRADE_PERK"
   # Shares Trade Republic pays for: a trade only, without a cash leg.
   BROKER_FUNDED_TRADE_EVENT_TYPES = [ SAVEBACK_EVENT_TYPE, STOCK_PERK_EVENT_TYPE ].freeze
+  # Shares moved into or out of Trade Republic from/to another broker
+  # (Depotübertrag): a quantity change with no cash impact.
+  SECURITIES_TRANSFER_EVENT_TYPES = %w[SSP_SECURITIES_TRANSFER_INCOMING SSP_SECURITIES_TRANSFER_OUTGOING].freeze
   PRIVATE_MARKETS_TRADE_EVENT_TYPE = "PRIVATE_MARKET_FUND_TRADE_EXECUTED"
   # The bonus units Trade Republic adds to a Private Markets order ("1 %
   # Bonus"). The statement credits their value and buys them with it in one
@@ -199,6 +202,7 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       return process_broker_funded_trade(event, detail, external_id, date) if broker_funded_trade_event?(event)
       return process_round_up(event, detail, external_id, date) if round_up_event?(event_type)
+      return process_securities_transfer(event, detail, external_id, date) if securities_transfer_event?(event)
       # Trade Republic turns a stamp duty charge's timeline item into its
       # cancellation: the item keeps the charge's amount and lists both stamp
       # duty documents. The statement books the charge and the refund, which
@@ -240,6 +244,21 @@ class TradeRepublicAccount::ActivitiesProcessor
       return nil unless @trade_republic_account.holds_securities?
 
       import_order_execution(event, detail, external_id, date, moves_cash: false) ? :trade : nil
+    end
+
+    def securities_transfer_event?(event)
+      SECURITIES_TRANSFER_EVENT_TYPES.include?(event[:eventType].to_s)
+    end
+
+    # A transfer moves shares between brokers the user owns, so it is a
+    # quantity change only: no cash leg on either account, and the trade is
+    # labelled a transfer rather than a buy or sell so it is not treated as
+    # a realized gain. The quantity sign comes from the detail, which the
+    # client signs negative for outgoing transfers.
+    def process_securities_transfer(event, detail, external_id, date)
+      return nil unless @trade_republic_account.holds_securities?
+
+      import_order_execution(event, detail, external_id, date, moves_cash: false, activity_label: Trade::TRANSFER_LABEL) ? :trade : nil
     end
 
     def process_round_up(event, detail, external_id, date)
@@ -299,7 +318,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       event_type == ROUND_UP_EVENT_TYPE
     end
 
-    def import_order_execution(event, detail, external_id, date, moves_cash: true)
+    def import_order_execution(event, detail, external_id, date, moves_cash: true, activity_label: nil)
       isin = detail[:isin].to_s
       quantity = parse_decimal(detail[:quantity])
 
@@ -364,7 +383,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         # security carries the instrument name the holding shows.
         name:           build_trade_name(Provider::TradeRepublicClient.bond?(detail) ? nil : detail[:name], security, signed_quantity),
         source:         "trade_republic",
-        activity_label: is_buy ? "Buy" : "Sell"
+        activity_label: activity_label || (is_buy ? "Buy" : "Sell")
       )
 
       trade_metadata = {
