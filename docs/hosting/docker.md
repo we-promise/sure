@@ -4,7 +4,14 @@ This guide will help you setup, update, and maintain your self-hosted Sure appli
 
 ## Setup Guide
 
-Follow the guide below to get your app running.
+The setup steps below are for a new installation.
+
+**Already running Sure?** Keep your existing `.env`, `compose.yml`, `SECRET_KEY_BASE`,
+and encryption keys. Do not download the sample files over your existing
+configuration or replace existing keys. Skip the new-installation steps below. For
+encryption changes, follow
+[Existing instances: backfill plaintext fields](#existing-instances-backfill-plaintext-fields);
+for app upgrades, see [How to update your app](#how-to-update-your-app).
 
 ### Step 1: Install Docker
 
@@ -23,7 +30,7 @@ docker run hello-world
 
 #### Create a directory for your app to run
 
-Open your terminal and create a directory where your app will run. Below is an example command with a recommended directory:
+Open your terminal and choose a directory that does not already contain a Sure installation or its configuration. Below is an example; use a different directory if this one is already in use:
 
 ```bash
 # Create a directory on your computer for Docker files (name it whatever you like)
@@ -49,12 +56,15 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-### Step 3 (optional): Configure your environment
+### Step 3 (optional for a disposable local test): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
-
-If you're running the app locally and don't care much about security, you can skip this step.
+The sample `compose.example.yml` runs without extra configuration, but its fallback
+`SECRET_KEY_BASE` is public. For a new installation, generate your own secret below
+before storing financial or account data. Explicit Active Record Encryption keys do
+not make a public `SECRET_KEY_BASE` safe: sessions and `Setting`-stored values use
+that secret independently. Skip configuration only for a disposable local test, and
+review the other security settings before exposing your instance outside your
+local network.
 
 #### Create your environment file
 
@@ -94,6 +104,109 @@ Fill in this file with the following variables:
 SECRET_KEY_BASE="replacemewiththegeneratedstringfromthepriorstep"
 POSTGRES_PASSWORD="replacemewithyourdesireddatabasepassword"
 ```
+
+#### Encryption keys and existing data
+
+With the encryption gating fix in [#3189](https://github.com/we-promise/sure/pull/3189),
+self-hosted instances can encrypt declared attributes using keys derived from
+`SECRET_KEY_BASE` when neither explicit encryption environment variables nor Rails
+credentials supply them. You do not need to generate separate keys just to enable
+this path. Check that your deployed image includes the fix; older images could skip
+encryption despite having derived keys available.
+
+For a new installation using derived keys, keep the unique `SECRET_KEY_BASE` you
+generated above private, stable, and backed up. Encryption with keys derived from a
+public example secret does not protect the data. On an existing installation, do
+not replace that secret or switch key sources as a setup step; use the procedure
+below to distinguish plaintext backfill from key rotation.
+
+**Optional explicit keys for a new installation.** Generate a set with the app image:
+
+```bash
+docker compose run --rm --no-deps web ./bin/rails db:encryption:init
+```
+
+Put all three generated values in `.env` and add them to the shared `x-rails-env`
+mapping in `compose.yml`, so both `web` and `worker` receive them. A partial set
+prevents startup; setting them only in `.env` does not pass them to the containers.
+Explicit environment keys take precedence over derived keys and Rails credentials.
+
+```yaml
+x-rails-env: &rails_env
+  # ...existing keys...
+  ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY}
+  ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY}
+  ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT}
+```
+
+For a new instance, skip the existing-instance procedure below, finish the remaining
+configuration, and start the app in [Step 4](#step-4-run-the-app).
+
+##### Existing instances: backfill plaintext fields
+
+Upgrading to an image with #3189 enables encryption for subsequent writes but does
+not rewrite all existing plaintext rows. This procedure backfills covered fields
+**without changing keys**. It is not key rotation or lost-key recovery.
+
+Run these commands from your existing configuration directory, retaining the same
+Compose project, files, and environment. Keep any usual `-f`, `-p`, and `--env-file`
+options on every command so it targets the same services and volumes.
+
+1. **Identify the key source before changing anything.** Preserve the existing
+   `SECRET_KEY_BASE`, explicit encryption keys, or Rails credentials and their
+   decryption key. If the instance uses a public example secret or leaked keys,
+   follow [Encryption key rotation](encryption.md) instead. Adding fresh explicit
+   keys overrides the derived keys; simply doing so and running the backfill can
+   re-encrypt old ciphertext as if it were plaintext. Keep old data decryptable
+   during rotation, including the separate deterministic-attribute migration in
+   that guide. Missing keys must be recovered before proceeding. A successful dry
+   run does not prove the keys are correct.
+
+2. **Check coverage, stop writes, and back up.** The task covers only the fields
+   listed in [`lib/tasks/security_backfill.rake`](../../lib/tasks/security_backfill.rake).
+   For example, it does not cover `ApiKey#display_key`, `SsoProvider#client_secret`,
+   or credentials on `SnaptradeItem`. Plan separately for uncovered fields; a
+   successful task is not proof that every sensitive field has been encrypted.
+   Keep the database and Redis running, stop `web`, `worker`, and any other writers,
+   then back up the database, uploads, and original configuration. With the sample
+   Compose backup service:
+
+   ```bash
+   docker compose stop web worker
+   docker compose run --rm --no-deps backup create
+   ```
+
+   Keep writers stopped throughout the backfill. Confirm the backup succeeded and
+   preserve external keys/credentials separately; see
+   [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks). Keep the same
+   app image and key configuration for the following commands.
+
+3. **Preview, then write and inspect the results.** The task defaults to a dry run;
+   these arguments make each mode explicit:
+
+   ```bash
+   docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,true]'
+   ```
+
+   Review the preview before running the write pass:
+
+   ```bash
+   docker compose run --rm --no-deps web ./bin/rails 'security:backfill_encryption[100,false]'
+   ```
+
+   Inspect every model's `failed_count` and `failed_samples`. The top-level
+   `ok: true` does not mean every record succeeded. If the task aborts or reports
+   failures, keep writers stopped and investigate; restore only with the matching
+   backup, image, configuration, and keys. After verifying the results and handling
+   required fields outside the task's scope, run `docker compose up -d` and check
+   sign-in and connected providers.
+
+**Compatibility is not proof of encryption.** Images with #3189 enable
+`support_unencrypted_data` and `extend_queries` in the initializer to support legacy
+rows. Do not add a temporary `ACTIVE_RECORD_ENCRYPTION_SUPPORT_UNENCRYPTED_DATA`
+toggle for this procedure: removing it or setting it to `false` does not disable
+those initializer defaults. Successful reads or sign-in can still involve plaintext;
+verify migration results and coverage instead of treating them as an at-rest check.
 
 #### Using HTTPS
 
@@ -511,7 +624,7 @@ Each backup is a folder under `backups/<version>/<date>-<manual|scheduled>/` wit
 |---|---|
 | `db.dump` | The whole database: accounts, transactions, budgets, rules, users and settings |
 | `storage.tar.gz` | Uploaded files: transaction attachments, account statements and documents, imports and exports, profile pictures and account logos |
-| `config/.env`, `config/compose.yml` | Your configuration, including `SECRET_KEY_BASE` |
+| `config/.env`, `config/compose.yml` | Your configuration, including `SECRET_KEY_BASE` and encryption keys when stored there |
 | `manifest.json` | Sure version and image, database schema version, when it was taken |
 | `restore.sh` | Restores the backup into a new folder (see below) |
 | `SHA256SUMS` | Checksums, verified before every restore |
@@ -523,7 +636,13 @@ Uploaded files are backed up from the `app-storage` volume. If you store them in
 The version comes from the running app: every time `web` starts it records its version, and a backup is refused if the database schema no longer matches it.
 
 > [!WARNING]
-> `config/.env` contains `SECRET_KEY_BASE` and your API keys. Without `SECRET_KEY_BASE`, encrypted data in the database cannot be read. Keep the backup folder private, and encrypt off-site copies (for example with [rclone crypt](https://rclone.org/crypt/)).
+> Preserve `SECRET_KEY_BASE` and the exact Active Record Encryption keys used for
+> the backed-up data. `SECRET_KEY_BASE` alone does not replace explicitly configured
+> encryption keys. For derived keys, restoring the exact original `SECRET_KEY_BASE`
+> is essential. Keys or Rails credentials stored outside `.env`, including the
+> key needed to decrypt those credentials, need their own secure backup. Keep the
+> backup folder private, and encrypt off-site copies (for example with
+> [rclone crypt](https://rclone.org/crypt/)).
 
 ### Settings
 
