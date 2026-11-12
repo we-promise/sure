@@ -69,6 +69,16 @@
           <%= eb_form.toggle :treat_balance_as_available_credit, "aria-labelledby": "enable_banking_balance_toggle_label" %>
         <% end %>
       </div>
+
+      <div class="flex items-center justify-between gap-2">
+        <div class="space-y-1">
+          <p class="text-sm" id="enable_banking_invert_signs_toggle_label"><%= t("credit_cards.form.invert_transaction_signs_label") %></p>
+          <p class="text-secondary text-xs"><%= t("credit_cards.form.invert_transaction_signs_description") %></p>
+        </div>
+        <%= form.fields_for :enable_banking, enable_banking_account do |eb_form| %>
+          <%= eb_form.toggle :invert_transaction_signs, "aria-labelledby": "enable_banking_invert_signs_toggle_label" %>
+        <% end %>
+      </div>
     <% end %>
 
     <% lunchflow_account = account.provider_account_for("LunchflowAccount") if account.persisted? %>

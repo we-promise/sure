@@ -41,6 +41,17 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
       "PERIOD_BOUNDARY_TYPES must cover both spellings for OPBD/PRCD, mirroring FRESHNESS_BALANCE_TYPES, or the freshness guard silently skips ASPSPs that send the descriptive spelling"
   end
 
+  test "signed_transaction_amount inverts signs when invert_signs is true" do
+    purchase = { transaction_amount: { amount: "1.35", currency: "EUR" }, credit_debit_indicator: "CRDT" }
+    refund = { transaction_amount: { amount: "1.35", currency: "EUR" }, credit_debit_indicator: "DBIT" }
+
+    assert_equal BigDecimal("-1.35"), @importer.send(:signed_transaction_amount, purchase)
+    assert_equal BigDecimal("1.35"), @importer.send(:signed_transaction_amount, refund)
+
+    assert_equal BigDecimal("1.35"), @importer.send(:signed_transaction_amount, purchase, invert_signs: true)
+    assert_equal BigDecimal("-1.35"), @importer.send(:signed_transaction_amount, refund, invert_signs: true)
+  end
+
   test "fetch_and_update_balance prefers booked balance before available balance" do
     @mock_provider.stubs(:get_account_balances).returns(
       balances: [

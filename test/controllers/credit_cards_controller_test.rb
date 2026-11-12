@@ -178,6 +178,42 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_not enable_banking_account.reload.treat_balance_as_available_credit?
   end
 
+  test "updates enable banking invert transaction signs flag when linked" do
+    enable_banking_account = create_linked_enable_banking_account
+
+    get edit_credit_card_path(@account)
+    assert_response :success
+    assert_match "invert_transaction_signs", response.body
+    assert_match I18n.t("credit_cards.form.invert_transaction_signs_label"), response.body
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        enable_banking: { invert_transaction_signs: "1" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert enable_banking_account.reload.invert_transaction_signs?
+  end
+
+  test "clears enable banking invert transaction signs flag when toggled off" do
+    enable_banking_account = create_linked_enable_banking_account
+    enable_banking_account.update!(invert_transaction_signs: true)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        enable_banking: { invert_transaction_signs: "0" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert_not enable_banking_account.reload.invert_transaction_signs?
+  end
+
   test "does not persist enable banking flag when the account update fails" do
     enable_banking_account = create_linked_enable_banking_account
 
