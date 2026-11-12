@@ -874,7 +874,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   test "login rejects a user purged between authentication and the reload fast-path" do
     user = users(:family_admin)
-    User.stubs(:find_by).with(email: user.email).returns(user)
+    User.stubs(:authenticate_by_email).returns(user)
     user.stubs(:reload).raises(ActiveRecord::RecordNotFound)
 
     post "/api/v1/auth/login", params: {
