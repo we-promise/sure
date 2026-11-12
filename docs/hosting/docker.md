@@ -687,7 +687,7 @@ Update Sure to a version that includes this guide first and let it start once, s
 Data an instance has already encrypted with the derived keys can't be read with new keys. Moving it to new keys is a key rotation, which keeps the old keys readable while the data is re-encrypted; see [Encryption key rotation](encryption.md). The steps below first check whether the instance holds any such data. If it doesn't, for example because it was updated straight from a version that stored everything unencrypted, they convert it to your keys directly.
 
 > [!NOTE]
-> Already added the keys and now sign-in or provider syncs fail? Remove the three lines from `.env` and run `docker compose up -d`. Keep the three values and use the same ones when you switch: anything the app wrote while they were active is encrypted with them.
+> Already added the keys without these steps? Data encrypted with the old keys then reads back as unreadable text, and provider syncs fail. Remove the three lines from `.env` and run `docker compose up -d`. Keep the three values and use the same ones when you switch: anything the app wrote while they were active is encrypted with them.
 
 Update Sure to a version that includes this guide first and let it start once, so its database migrations have run. Don't combine the switch with a version update. Then:
 
