@@ -3,6 +3,14 @@
 require "test_helper"
 
 class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
+  # Both settings are gated on ActiveRecordEncryptionConfig.backfill_completed?
+  # (see #3214) instead of being unconditionally on. They're expected to be
+  # `true` here because the initializer runs once at boot, before this test
+  # (or any test) can flip Setting.encryption_backfill_completed_version -
+  # the test suite always boots in the "backfill not completed" state.
+  # Coverage for the gating logic itself (both the "complete" and
+  # "not complete" branches) lives in test/lib/active_record_encryption_config_test.rb,
+  # since re-running the initializer per-test isn't possible.
   test "supports reading legacy plaintext data written before encryption was correctly gated" do
     # Without this, any not-yet-backfilled row (see bin/rails
     # security:backfill_encryption) raises ActiveRecord::Encryption::Errors::Decryption
@@ -14,6 +22,21 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     # Without this, deterministic lookups (e.g. User.find_by(email:)) only
     # match already-encrypted rows and silently miss not-yet-backfilled ones.
     assert Rails.application.config.active_record.encryption.extend_queries
+  end
+
+  # jjmata flagged that ExtendedDeterministicQueries/
+  # ExtendedDeterministicUniquenessValidator (called directly in
+  # config/initializers/active_record_encryption.rb - see its comment for
+  # why the public extend_queries config flag alone isn't enough) are
+  # undocumented Rails internals, not part of the public config surface. A
+  # routine Rails patch/minor bump that renames or removes `install_support`
+  # would otherwise raise NameError/NoMethodError synchronously at boot for
+  # every self-hosted install still in the pre-backfill fallback window,
+  # discovered in production rather than here. This turns that into a named,
+  # obvious test failure instead.
+  test "the private Rails APIs extend_queries depends on still exist" do
+    assert_respond_to ActiveRecord::Encryption::ExtendedDeterministicQueries, :install_support
+    assert_respond_to ActiveRecord::Encryption::ExtendedDeterministicUniquenessValidator, :install_support
   end
 
   test "reads a legacy plaintext string value without raising" do

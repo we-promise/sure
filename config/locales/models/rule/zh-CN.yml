@@ -1,6 +1,10 @@
 ---
 zh-CN:
   activerecord:
+    attributes:
+      rule:
+        new_rule_group_name: 新分组
+        rule_group: 分组
     errors:
       models:
         rule:
@@ -33,5 +37,10 @@ zh-CN:
               regex_too_long: 过长（最多 %{count} 个字符）
               regex_backreference: 不能使用后向引用（\1 到 \9）
   rule:
+    actions:
+      set_transaction_merchant:
+        not_accessible: 位于您无法访问的账户上的商户
+        unassigned: "%{name}（不再分配）"
+        unavailable: 商户已不再可用
     conditions:
       unsupported_label: 不支持 (%{type})

@@ -57,6 +57,14 @@ jobs:
 
       - name: Validate Pipelock deployment contracts
         shell: bash
+        env:
+          # compose.example.ai.yml intentionally requires SECRET_KEY_BASE with
+          # no fallback default (see #3214/#3221) - the old fallback was
+          # itself the exact publicly-known value KNOWN_COMPROMISED_SECRET_KEY_BASES
+          # guards against. This validation step only renders/lints the
+          # compose file, it never boots a container from it, so a throwaway
+          # placeholder is fine here - it just needs to be present.
+          SECRET_KEY_BASE: ci-validation-placeholder-not-a-real-secret
         run: |
           set -euo pipefail
 

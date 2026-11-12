@@ -23,6 +23,10 @@ class SophtronItem < ApplicationRecord
   if encryption_ready?
     encrypts :user_id, deterministic: true
     encrypts :access_key, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
+    encrypts :raw_customer_payload
+    encrypts :raw_job_payload
   end
 
   validates :name, presence: true

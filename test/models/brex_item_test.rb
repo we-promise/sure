@@ -104,8 +104,10 @@ class BrexItemTest < ActiveSupport::TestCase
   test "declares Brex token and raw payload as encrypted" do
     skip "Encryption not configured" unless BrexItem.encryption_ready?
 
-    assert_includes BrexItem.encrypted_attributes.map(&:to_s), "token"
-    assert_includes BrexItem.encrypted_attributes.map(&:to_s), "raw_payload"
+    encrypted = BrexItem.encrypted_attributes.map(&:to_s)
+    assert_includes encrypted, "token"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
   end
 
   test "resolve for returns explicit credentialed item scoped to family" do
