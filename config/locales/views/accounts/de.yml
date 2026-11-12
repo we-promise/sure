@@ -78,6 +78,7 @@ de:
         amount: Betrag
         balance: Kontostand
         confirmed: Bestätigt
+        mark_all_read: Alle als gelesen markieren
         date: Datum
         entries: Buchungen
         entry: Buchung
@@ -126,6 +127,9 @@ de:
       success: "%{type}-Konto aktualisiert"
     sidebar:
       missing_data: Fehlende historische Daten
+      unread_count:
+        one: "%{count} ungelesene Transaktion"
+        other: "%{count} ungelesene Transaktionen"
       missing_data_description: "%{product} verwendet Drittanbieter, um historische Wechselkurse, Wertpapierpreise und weitere Daten abzurufen. Diese Daten sind erforderlich, um genaue historische Kontostände zu berechnen."
       configure_providers: Konfiguriere deine Anbieter hier
       tabs:
