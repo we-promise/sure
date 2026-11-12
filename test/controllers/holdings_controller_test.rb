@@ -244,10 +244,9 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_equal securities(:aapl), @holding.reload.security
   end
 
-  # A remap onto a position with its own opening lot merges the two, and the
-  # merged lot keeps the target's origin, so a reset alone leaves it with the
-  # target. The reset restates both securities, as a remap restates its
-  # target, so the lots match the holdings straight away.
+  # A remap onto a position with its own opening lot merges the two. The
+  # reset restates both securities, as a remap restates its target, so the
+  # lots match the holdings straight away rather than at the next sync.
   test "reset_security restates both securities' lots" do
     account = users(:family_admin).family.accounts.create!(name: "Reset lots", balance: 1000, cash_balance: 1000, currency: "USD", accountable: Investment.new)
     item = users(:family_admin).family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
