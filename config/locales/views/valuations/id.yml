@@ -13,6 +13,9 @@ id:
       opening_balance: Saldo awal
       original_principal: Pokok pinjaman awal
       original_purchase_price: Harga pembelian awal
+      synced_balance: Saldo tersinkronisasi
+      synced_principal: Pokok tersinkronisasi
+      synced_value: Nilai tersinkronisasi
     confirmation_contents:
       this_will: "Ini akan %{action_verb} nilai rekening pada"
       to_colon: "menjadi:"

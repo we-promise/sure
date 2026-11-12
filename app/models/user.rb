@@ -649,6 +649,17 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  # Whether the activity feed of a linked account lists the balance updates
+  # its syncs leave behind (see Account#hides_balance_updates_by_default?).
+  # Off until the user turns it on. Account-level, so every device agrees.
+  def show_balance_updates?
+    preferences&.dig("show_balance_updates") == true
+  end
+
+  def update_show_balance_updates(value)
+    with_locked_preferences { |prefs| prefs["show_balance_updates"] = value }
+  end
+
   MANUAL_ACCOUNT_ORDER_LIMIT = 500
 
   # Drag-and-drop order of accounts per account group, keyed by accountable

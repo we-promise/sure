@@ -119,6 +119,23 @@
           <% end %>
         <% end %>
       </ul>
+
+      <% if balance_updates_toggle? %>
+        <div id="balance-updates-toggle" class="flex items-center justify-between gap-2 mb-4 px-1 text-sm text-secondary">
+          <%= helpers.icon(showing_balance_updates? ? "eye" : "eye-off", size: "sm") %>
+          <p class="grow">
+            <%= t(showing_balance_updates? ? "accounts.show.activity.balance_updates.shown" : "accounts.show.activity.balance_updates.hidden") %>
+          </p>
+          <%# A form (button_to), so the choice is saved and the redirect stays in this frame. %>
+          <%= render DS::Button.new(
+                text: t(showing_balance_updates? ? "accounts.show.activity.balance_updates.hide" : "accounts.show.activity.balance_updates.show"),
+                variant: "ghost",
+                size: :sm,
+                href: balance_updates_toggle_path,
+                method: :patch
+              ) %>
+        </div>
+      <% end %>
     </div>
 
     <% if activity_dates.empty? %>
