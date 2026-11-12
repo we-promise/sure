@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "open3"
 
 class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
   test "detects complete encryption environment" do
@@ -57,6 +58,55 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     credentials = OpenStruct.new(active_record_encryption: encryption_config)
 
     refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+  end
+
+  test "does not treat absent encryption credentials as partial" do
+    credentials = OpenStruct.new(active_record_encryption: nil)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  # Regression test for a gap CodeRabbit flagged: a present credentials block
+  # with every individual key blank had present_count == 0, so the old
+  # `present_count.positive? && ...` shape treated it the same as an absent
+  # block (not partial) - silently skipping both the raise and self-hosted
+  # auto-generation, since config/application.rb's `.present?` check on the
+  # block itself already treats it as configured either way.
+  test "treats a present credentials block with every key blank as partial" do
+    encryption_config = OpenStruct.new(primary_key: "", deterministic_key: "", key_derivation_salt: "")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+  end
+
+  test "does not treat complete encryption credentials as partial" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  test "apply_keys! copies keys onto both the given config and the live ActiveRecord::Encryption engine" do
+    ActiveRecord::Encryption.config.expects(:primary_key=).with("pk")
+    ActiveRecord::Encryption.config.expects(:deterministic_key=).with("dk")
+    ActiveRecord::Encryption.config.expects(:key_derivation_salt=).with("salt")
+
+    rails_config = OpenStruct.new
+
+    ActiveRecordEncryptionConfig.apply_keys!(
+      primary_key: "pk", deterministic_key: "dk", key_derivation_salt: "salt", config: rails_config
+    )
+
+    assert_equal "pk", rails_config.primary_key
+    assert_equal "dk", rails_config.deterministic_key
+    assert_equal "salt", rails_config.key_derivation_salt
   end
 
   test "explicit configuration excludes runtime generated config" do
@@ -98,44 +148,69 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
   end
 
-  test "detects partially configured encryption credentials" do
-    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
-    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+  test "backfill_completed? is false before any backfill has run" do
+    Setting.encryption_backfill_completed_version = 0
 
-    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
-    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
-    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+    refute ActiveRecordEncryptionConfig.backfill_completed?
   end
 
-  test "does not treat absent encryption credentials as partial" do
-    credentials = OpenStruct.new(active_record_encryption: nil)
+  test "backfill_completed? is true once the stored version meets the required version" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
 
-    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert ActiveRecordEncryptionConfig.backfill_completed?
   end
 
-  test "does not treat complete encryption credentials as partial" do
-    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
-    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+  test "backfill_completed? is false when the stored version predates a coverage expansion" do
+    # Simulates an install that completed a backfill under an older, narrower
+    # CURRENT_BACKFILL_VERSION before upgrading to code that covers more
+    # models/fields - it must not be treated as complete until it re-runs
+    # the task, or the fallback gets disabled for newly-covered models that
+    # were never actually backfilled.
+    Setting.encryption_backfill_completed_version = 1
 
-    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    refute ActiveRecordEncryptionConfig.backfill_completed?(required_version: 2)
   end
 
-  # Regression test for a gap CodeRabbit flagged: a present credentials block
-  # with every individual key blank had present_count == 0, so the old
-  # `present_count.positive? && ...` shape treated it the same as an absent
-  # block (not partial) - silently skipping both the raise and self-hosted
-  # auto-generation, since config/application.rb's `.present?` check on the
-  # block itself already treats it as configured either way.
-  test "treats a present credentials block with every key blank as partial" do
-    encryption_config = OpenStruct.new(primary_key: "", deterministic_key: "", key_derivation_salt: "")
-    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+  test "backfill_completed? skips the database during asset builds" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    ActiveRecord::Base.connection.expects(:select_value).never
 
-    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
-    assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    refute ActiveRecordEncryptionConfig.backfill_completed?(env: { "SECRET_KEY_BASE_DUMMY" => "1" })
+  end
+
+  test "backfill_completed? defaults to false when the settings table can't be read" do
+    # backfill_completed? deliberately bypasses the Setting model (see its
+    # comment for why) and queries the settings table directly via
+    # ActiveRecord::Base.connection.select_value - stubbing Setting itself,
+    # as a previous version of this test did, never exercises the real
+    # rescue path at all since that method is never called.
+    ActiveRecord::Base.connection.stubs(:select_value).raises(ActiveRecord::StatementInvalid, "relation \"settings\" does not exist")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? defaults to false when the stored value isn't a YAML-serialized Integer" do
+    ActiveRecord::Base.connection.stubs(:select_value).returns("not_an_integer")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? defaults to false when the stored value is malformed YAML" do
+    ActiveRecord::Base.connection.stubs(:select_value).raises(Psych::Exception, "malformed yaml")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? does not deserialize disallowed Ruby objects from the stored value (CWE-502)" do
+    # Regression test for using YAML.unsafe_load/YAML.load on this raw,
+    # attacker-reachable DB value (compromised DB credentials, SQLi
+    # elsewhere, a bad manual edit): a crafted YAML payload naming an
+    # arbitrary Ruby class must be rejected by safe_load's default
+    # permitted-classes check, not instantiated.
+    malicious_yaml = "--- !ruby/object:OpenStruct {}\n"
+    ActiveRecord::Base.connection.stubs(:select_value).returns(malicious_yaml)
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
   end
 
   # Regression coverage for jjmata's review on #3189: the boot check used to
@@ -172,4 +247,100 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     )
     refute ActiveRecordEncryptionConfig.reject_partial_credentials?({}, OpenStruct.new(active_record_encryption: nil))
   end
+
+  test "derived_keys returns the keys derived from SECRET_KEY_BASE" do
+    keys = ActiveRecordEncryptionConfig.derived_keys("old-base")
+
+    assert_equal Digest::SHA256.hexdigest("old-base:primary_key")[0..63], keys[:primary_key]
+    assert_equal Digest::SHA256.hexdigest("old-base:deterministic_key")[0..63], keys[:deterministic_key]
+    assert_equal Digest::SHA256.hexdigest("old-base:key_derivation_salt")[0..63], keys[:key_derivation_salt]
+  end
+
+  test "previous_schemes is empty without a previous SECRET_KEY_BASE" do
+    assert_empty ActiveRecordEncryptionConfig.previous_schemes({})
+    assert_empty ActiveRecordEncryptionConfig.previous_schemes(ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV => "")
+  end
+
+  test "previous_schemes uses explicitly set old keys" do
+    env = {
+      "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY" => "old-primary",
+      "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_DETERMINISTIC_KEY" => "old-deterministic",
+      "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT" => "old-salt"
+    }
+
+    assert_equal({ primary_key: "old-primary", deterministic_key: "old-deterministic", key_derivation_salt: "old-salt" },
+      ActiveRecordEncryptionConfig.previous_keys(env))
+    assert_equal 2, ActiveRecordEncryptionConfig.previous_schemes(env).size
+    assert ActiveRecordEncryptionConfig.previous_keys_configured?(env)
+  end
+
+  test "previous_keys rejects a partial set of old keys" do
+    env = { "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY" => "old-primary" }
+
+    error = assert_raises(RuntimeError) { ActiveRecordEncryptionConfig.previous_keys(env) }
+    assert_includes error.message, "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT"
+    refute ActiveRecordEncryptionConfig.previous_keys_configured?({})
+  end
+
+  # The old salt differs from the configured one, which Rails' own key
+  # providers would use.
+  test "previous_schemes decrypt data encrypted with keys derived from an old SECRET_KEY_BASE" do
+    old_base = SecureRandom.hex(64)
+    texts = encrypt_as_derived_from(old_base, "nd-secret", "det-secret")
+
+    schemes = ActiveRecordEncryptionConfig.previous_schemes(ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV => old_base)
+    non_deterministic = schemes.find { |scheme| !scheme[:deterministic] }
+    deterministic = schemes.find { |scheme| scheme[:deterministic] }
+    encryptor = ActiveRecord::Encryption.encryptor
+
+    assert_equal "nd-secret", encryptor.decrypt(texts[:non_deterministic], key_provider: non_deterministic[:key_provider])
+    assert_equal "det-secret", encryptor.decrypt(texts[:deterministic], key_provider: deterministic[:key_provider])
+  end
+
+  # Boots the app the way an operator's one-off command does, so the
+  # initializer wiring and Rails' merge of global previous schemes into each
+  # encrypted attribute are covered.
+  test "an old SECRET_KEY_BASE in the environment makes old data readable through the models" do
+    old_base = SecureRandom.hex(64)
+    texts = encrypt_as_derived_from(old_base, "Ada", "old-key@example.com")
+    script = <<~RUBY
+      puts User.type_for_attribute(:first_name).deserialize(ENV.fetch("PROBE_ND"))
+      puts User.type_for_attribute(:email).deserialize(ENV.fetch("PROBE_DET"))
+    RUBY
+    env = {
+      ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV => old_base,
+      "PROBE_ND" => texts[:non_deterministic],
+      "PROBE_DET" => texts[:deterministic]
+    }
+
+    output, status = Open3.capture2e(env, Rails.root.join("bin/rails").to_s, "runner", script, chdir: Rails.root.to_s)
+
+    assert status.success?, output
+    assert_equal [ "Ada", "old-key@example.com" ], output.lines.last(2).map(&:strip)
+  end
+
+  private
+
+    # Encrypts like an install whose keys were derived from old_base: Rails'
+    # key providers with that install's salt as the configured one. A fresh
+    # KeyGenerator reads the salt on first use; the shared one has it cached.
+    def encrypt_as_derived_from(old_base, non_deterministic_text, deterministic_text)
+      keys = ActiveRecordEncryptionConfig.derived_keys(old_base)
+      config = ActiveRecord::Encryption.config
+      original_salt = config.key_derivation_salt
+      config.key_derivation_salt = keys[:key_derivation_salt]
+      non_deterministic = ActiveRecord::Encryption::DerivedSecretKeyProvider.new(
+        keys[:primary_key], key_generator: ActiveRecord::Encryption::KeyGenerator.new)
+      deterministic = ActiveRecord::Encryption::DerivedSecretKeyProvider.new(
+        keys[:deterministic_key], key_generator: ActiveRecord::Encryption::KeyGenerator.new)
+      config.key_derivation_salt = original_salt
+
+      encryptor = ActiveRecord::Encryption.encryptor
+      {
+        non_deterministic: encryptor.encrypt(non_deterministic_text, key_provider: non_deterministic),
+        deterministic: encryptor.encrypt(deterministic_text, key_provider: deterministic, cipher_options: { deterministic: true })
+      }
+    ensure
+      config.key_derivation_salt = original_salt
+    end
 end

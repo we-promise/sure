@@ -12,11 +12,8 @@ namespace :security do
   # manual recovery script in issue #2611 first, then re-run this task.
   #
   # During a key rotation (docs/hosting/encryption.md) the write pass also
-  # re-encrypts existing ciphertext under the current key - EXCEPT for
-  # deterministic attributes, which Rails re-serializes under the OLDEST
-  # configured scheme while any previous scheme exists. This task therefore
-  # cannot migrate deterministic columns off a compromised key; see step 3
-  # of the rotation procedure.
+  # re-encrypts existing ciphertext under the current key, deterministic
+  # attributes included (see current_key_ciphertexts).
   desc "Backfill encryption for sensitive fields (idempotent). Args: batch_size, dry_run"
   task :backfill_encryption, [ :batch_size, :dry_run ] => :environment do |_, args|
     raw_batch = args[:batch_size].presence || ENV["BATCH_SIZE"].presence || "100"
@@ -42,19 +39,38 @@ namespace :security do
       exit 1
     end
 
+    # Invalidate any previous completion flag before this run starts (not just
+    # on failure at the end): if a prior run already completed successfully
+    # and this run then fails or aborts partway through, leaving the old flag
+    # in place would let ActiveRecordEncryptionConfig.backfill_completed?
+    # report "complete" while this run's still-plaintext rows are unencrypted.
+    Setting.encryption_backfill_completed_version = nil unless dry_run
+
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # Every model that declares `encrypts`, found at runtime so a provider
-    # added later is covered without editing this task. A model left out would
-    # keep plaintext rows that raise on every read once the keys are live.
-    encrypted_models_for_backfill.each do |model_class|
-      results[model_class.table_name.to_sym] =
-        backfill_model(model_class, model_class.encrypted_attributes.to_a, batch_size, dry_run,
-          transforms: backfill_transforms_for(model_class))
+    # Field lists live in ActiveRecordEncryptionConfig::BACKFILL_MANIFEST
+    # (lib/active_record_encryption_config.rb), kept in sync with each model's
+    # `encrypts` declarations by test/lib/tasks/security_backfill_test.rb.
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      model_class = model_class_name.constantize
+      results[key] = backfill_model(model_class, fields, batch_size, dry_run,
+        transforms: backfill_transforms_for(model_class))
     end
 
+    results[:sessions] = backfill_model(Session, Session.encrypted_attributes.to_a, batch_size, dry_run)
     results[:session_ip_digests] = backfill_session_ip_digests(batch_size, dry_run)
+
+    all_succeeded = results.values.all? { |r| r[:failed_count].zero? }
+
+    # Only mark the backfill complete on a clean, non-dry-run pass: a partial
+    # failure leaves some rows still plaintext, and flipping the flag would
+    # disable the legacy-plaintext fallback (config/initializers/
+    # active_record_encryption.rb) for models that still need it, turning a
+    # readable row into a boot-time ActiveRecord::Encryption::Errors::Decryption.
+    if !dry_run && all_succeeded
+      Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    end
 
     # A row that fails here stays unreadable once the app runs with the keys,
     # so any failure makes the whole run fail.
@@ -67,20 +83,6 @@ namespace :security do
       results: results
     }.to_json)
     exit 1 unless failed_count.zero?
-  end
-
-  # Concrete base models with encrypted attributes. STI subclasses share their
-  # base class's table and attributes, so only the base class is listed.
-  # Classes that aren't reachable by their name (anonymous or ad hoc ones)
-  # are skipped.
-  def encrypted_models_for_backfill
-    Rails.autoloaders.main.eager_load_dir(Rails.root.join("app/models").to_s)
-
-    ApplicationRecord.descendants
-      .reject(&:abstract_class?)
-      .select { |model| model.name&.safe_constantize == model }
-      .select { |model| model.base_class == model && model.encrypted_attributes.present? }
-      .sort_by(&:name)
   end
 
   # Historic DebugLogEntry rows predate the write-time key redaction in
@@ -149,14 +151,19 @@ namespace :security do
               encryptor.send("#{field}=", value)
             end
 
+            # During a key rotation Rails would write deterministic fields
+            # under the oldest key, so those get current-key ciphertext.
+            rotated = current_key_ciphertexts(encryptor, plaintext_values.keys)
+
             # Extract the encrypted values from the temporary instance
             encrypted_attrs = {}
-            plaintext_values.keys.each do |field|
+            (plaintext_values.keys - rotated.keys).each do |field|
               encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
             end
 
             # Write directly to database, bypassing callbacks/validations
-            record.update_columns(encrypted_attrs)
+            record.update_columns(encrypted_attrs) if encrypted_attrs.any?
+            write_raw_columns(record, rotated) if rotated.any?
             true
           end
           updated += 1 if written
@@ -175,6 +182,44 @@ namespace :security do
       failed_count: failed.size,
       failed_samples: failed.take(3)
     }
+  end
+
+  # While `previous` schemes are configured (a key rotation), Rails encrypts
+  # deterministic attributes with the OLDEST scheme so equality lookups keep
+  # matching. Re-encrypting that way would leave the data under the key
+  # being rotated out, so build ciphertext with the current scheme instead,
+  # the same way EncryptedAttributeType does when no previous scheme exists.
+  def current_key_ciphertexts(instance, fields)
+    fields.each_with_object({}) do |field, ciphertexts|
+      type = backfill_encrypted_type(instance.class, field)
+      next unless type.fixed? && type.previous_schemes.any?
+
+      value = type.cast_type.serialize(instance.read_attribute(field))
+      next if value.nil?
+
+      value = value.downcase if type.downcase?
+      ciphertexts[field] = type.with_context do
+        ActiveRecord::Encryption.encryptor.encrypt(
+          value.to_s, **{ key_provider: type.key_provider, cipher_options: { deterministic: true } }.compact
+        )
+      end
+    end
+  end
+
+  # `normalizes` wraps the encrypted type, so unwrap to reach it.
+  def backfill_encrypted_type(model_class, field)
+    type = model_class.type_for_attribute(field)
+    type = type.cast_type while !type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType) && type.respond_to?(:cast_type)
+    return type if type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType)
+
+    raise ArgumentError, "#{model_class.name}##{field} is not an encrypted attribute"
+  end
+
+  # Raw SQL so the attribute type does not encrypt the ciphertext again.
+  def write_raw_columns(record, values)
+    connection = record.class.connection
+    assignments = values.keys.map { |field| "#{connection.quote_column_name(field)} = ?" }.join(", ")
+    record.class.where(id: record.id).update_all([ assignments, *values.values ])
   end
 
   # Rails' encryption envelope: {"p": payload, "h": {"iv": ..., "at": ..., ...}}.

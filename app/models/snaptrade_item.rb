@@ -13,6 +13,8 @@ class SnaptradeItem < ApplicationRecord
     encrypts :snaptrade_user_secret
     encrypts :oauth_access_token
     encrypts :oauth_refresh_token
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
