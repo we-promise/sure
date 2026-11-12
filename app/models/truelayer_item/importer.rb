@@ -228,18 +228,50 @@ class TruelayerItem::Importer
         begin
           collected.concat(fetch_range(truelayer_account, from, to))
         rescue Provider::Truelayer::TruelayerError => e
-          # The most recent year must work; only an older one may be declined.
-          raise if i.zero? || e.reauth_required?
-          return History.new(collected, false, e) unless e.history_refused?
+          if i.zero?
+            # Some banks (e.g. Santander via TrueLayer) refuse a single
+            # >90-day backfill request with a plain 403 instead of sca_exceeded.
+            # Retry the most recent year in 89-day chunks before treating it as
+            # a real consent failure; a 403 that also rejects the short range
+            # still flags the connection.
+            begin
+              collected.concat(fetch_in_short_chunks(truelayer_account, from, to))
+            rescue Provider::Truelayer::TruelayerError => chunk_error
+              if chunk_error.reauth_required?
+                raise
+              end
+              capture_failure("TrueLayer history ends before the requested range", chunk_error, truelayer_account, level: "info")
+              break
+            end
+          else
+            raise if e.reauth_required?
+            return History.new(collected, false, e) unless e.history_refused?
 
-          capture_failure("TrueLayer history ends before the requested range", e, truelayer_account, level: "info")
-          break
+            capture_failure("TrueLayer history ends before the requested range", e, truelayer_account, level: "info")
+            break
+          end
         end
         break if start && from <= start
         to = from
       end
 
       History.new(collected, true, nil)
+    end
+
+    # Fetches `from..to` in MAX_UNATTENDED_HISTORY_DAYS chunks so banks that
+    # refuse long single ranges still return the available history.
+    def fetch_in_short_chunks(truelayer_account, from, to)
+      return [] if from.nil? || to.nil? || from >= to
+
+      chunk = TruelayerItem::MAX_UNATTENDED_HISTORY_DAYS.days
+      collected = []
+      cursor = to
+      while cursor > from
+        range_from = [cursor - chunk, from].max
+        collected.concat(fetch_range(truelayer_account, range_from, cursor))
+        cursor = range_from
+      end
+      collected
     end
 
     def fetch_range(truelayer_account, from, to)

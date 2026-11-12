@@ -90,6 +90,49 @@ class TruelayerItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ "recent" ], @item.truelayer_accounts.find_by(account_id: "a1").raw_transactions_payload.map { |t| t["transaction_id"] }
   end
 
+  test "a 403 on the first backfill year is retried in 89-day chunks instead of flagging the connection" do
+    @item.update!(last_authorized_at: 1.minute.ago)
+    @item.truelayer_accounts.create!(account_id: "a1", name: "Unlinked", currency: "GBP")
+    @provider.stubs(:get_accounts).returns([ account_snapshot("a1", "Unlinked") ])
+    @provider.stubs(:get_cards).returns([])
+    @provider.stubs(:get_balance).returns(current: 1, currency: "GBP")
+
+    # Santander-style: the 365-day first year is refused with a plain 403, but
+    # the 89-day chunks succeed.
+    calls = 0
+    @provider.stubs(:get_transactions) do |*_args|
+      calls += 1
+      if calls == 1
+        raise Provider::Truelayer::TruelayerError.new("access denied", :consent_expired, status: 403, code: "access_denied")
+      end
+      [ txn("recent") ]
+    end
+
+    result = TruelayerItem::Importer.new(@item).import
+
+    assert_operator calls, :>, 1, "expected the first year to be split into short chunks"
+    assert result[:success]
+    @item.reload
+    assert @item.good?
+    assert_not_nil @item.history_backfilled_at
+    ids = @item.truelayer_accounts.find_by(account_id: "a1").raw_transactions_payload.map { |t| t["transaction_id"] }
+    assert_equal [ "recent" ], ids.uniq.sort
+  end
+
+  test "a 403 that also refuses the short range flags the connection" do
+    @item.update!(last_authorized_at: 1.minute.ago)
+    @item.truelayer_accounts.create!(account_id: "a1", name: "Unlinked", currency: "GBP")
+    @provider.stubs(:get_accounts).returns([ account_snapshot("a1", "Unlinked") ])
+    @provider.stubs(:get_cards).returns([])
+    @provider.stubs(:get_balance).returns(current: 1, currency: "GBP")
+
+    @provider.stubs(:get_transactions)
+      .raises(Provider::Truelayer::TruelayerError.new("access denied", :consent_expired, status: 403, code: "access_denied"))
+
+    assert_raises(Provider::Truelayer::TruelayerError) { TruelayerItem::Importer.new(@item).import }
+    assert @item.reload.requires_update?
+  end
+
   test "a rate limit on an older year keeps the rows fetched, reports the failure and leaves the backfill to retry" do
     @item.update!(last_authorized_at: 1.minute.ago)
     @item.truelayer_accounts.create!(account_id: "a1", name: "Unlinked", currency: "GBP")
