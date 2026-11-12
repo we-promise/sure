@@ -153,11 +153,13 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c
+    image: ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f
     user: "${PIPELOCK_UID:-1000}:${PIPELOCK_GID:-1000}"
     container_name: pipelock
     hostname: pipelock
     restart: unless-stopped
+    # Time to close the signed receipt chain on shutdown (Pipelock 3.7+).
+    stop_grace_period: 10m
     volumes:
       - ./pipelock.example.yaml:/etc/pipelock/pipelock.yaml:ro
       # Optional signed receipts (flight recorder). Off until you create the
@@ -169,12 +171,12 @@ services:
       #   mkdir -p ./pipelock-evidence ./pipelock-keys
       # Generate the receipt-signing key via the image (no host binary needed;
       # --out must be an absolute path inside the container):
-      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
+      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # The key is written 0600 owned by uid 1000 (Pipelock's default user). If
       # your host user is not uid 1000, use this variant instead:
       #   export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
-      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
+      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # That makes the key and evidence directory readable/writable by the same
       # uid/gid the compose service uses.
