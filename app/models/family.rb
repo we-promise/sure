@@ -160,6 +160,7 @@ class Family < ApplicationRecord
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
   validates :auto_generate_transaction_names, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
+  validates :manual_reconciliation, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
   # The searchable timezone select submits "" while no zone is saved yet;
   # store nil so provider date parsing keeps its default instead of raising.
