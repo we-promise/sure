@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2357,6 +2357,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
+  create_table "security_audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.text "ip_address"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.text "user_email"
+    t.uuid "user_id"
+    t.index ["created_at"], name: "index_security_audit_logs_on_created_at"
+    t.index ["event_type"], name: "index_security_audit_logs_on_event_type"
+    t.index ["user_id", "created_at"], name: "index_security_audit_logs_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_security_audit_logs_on_user_id"
+  end
+
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
@@ -2575,6 +2590,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.string "customer_id"
     t.jsonb "institution_metadata"
     t.datetime "last_updated"
+    t.boolean "lender_signed"
     t.boolean "manual_sync", default: false, null: false
     t.string "member_id"
     t.string "name", null: false
@@ -3239,6 +3255,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
+  add_foreign_key "security_audit_logs", "users", on_delete: :nullify
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify

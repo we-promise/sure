@@ -43,7 +43,7 @@ class Import::Preflight
     :raw_file_content
   ] + CONFIG_PARAM_KEYS).freeze
 
-  UNSUPPORTED_PREFLIGHT_IMPORT_TYPES = %w[PdfImport QifImport].freeze
+  UNSUPPORTED_PREFLIGHT_IMPORT_TYPES = %w[PdfImport QifImport MonarchImport].freeze
   IMPORT_TYPES = (Import::TYPES - UNSUPPORTED_PREFLIGHT_IMPORT_TYPES).freeze
 
   # user, when given, limits account_id to accounts that user can write to,
