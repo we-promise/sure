@@ -503,7 +503,30 @@ Rails.application.routes.draw do
   end
 
   # Hub page fronting budgets + goals under a single "Plan" nav entry.
-  resource :plan, only: :show
+  resource :plan, only: :show do
+    # Paycheck Flow (M2 PR#2): the 3-column money map, preview-gated.
+    get :flow, to: "plan_flows#show", on: :collection, as: :flow
+    get :flow_add_accounts_modal, to: "plan_flows#add_accounts_modal", on: :collection,
+                                  as: :flow_add_accounts_modal, path: "flow/add-accounts"
+    post :flow_preview, to: "plan_flows#preview", on: :collection, as: :flow_preview
+    post :flow_save, to: "plan_flows#save", on: :collection, as: :flow_save
+    post :flow_add_accounts, to: "plan_flows#add_accounts", on: :collection, as: :flow_add_accounts
+    post :flow_create_account, to: "plan_flows#create_account", on: :collection, as: :flow_create_account
+    patch :flow_account, to: "plan_flows#update_account", on: :collection, as: :flow_account,
+                         path: "flow/accounts/:account_id", params: [ :account_id ]
+    patch :flow_income, to: "plan_flows#update_income", on: :collection, as: :flow_income,
+                        path: "flow/incomes/:income_id", params: [ :income_id ]
+    # Planning diagram JSON (M2 PR#2b): saved state + draft preview.
+    get :flow_graph, to: "plan_flows#graph", on: :collection, as: :flow_graph, path: "flow/graph"
+    # Allocation dialog CRUD (M2 PR#2b).
+    post :flow_allocation_create, to: "plan_flows#create_allocation", on: :collection,
+                                  as: :flow_allocation_create, path: "flow/allocations"
+    patch :flow_allocation_update, to: "plan_flows#update_allocation", on: :collection,
+                                   as: :flow_allocation_update, path: "flow/allocations/:id", params: [ :id ]
+    delete :flow_allocation_destroy, to: "plan_flows#destroy_allocation", on: :collection,
+                                    as: :flow_allocation_destroy, path: "flow/allocations/:id", params: [ :id ]
+  end
+
 
   # Family-wide investment hub, built on the Reports section framework.
   resource :portfolio, only: :show do
@@ -867,6 +890,8 @@ Rails.application.routes.draw do
       end
       resource :usage, only: [ :show ], controller: :usage
       resource :cash_flow, only: [ :show ], controller: :cash_flows
+      # Paycheck Flow Planner (M2): resolved money map for one month.
+      get "families/:id/paycheck-plans", to: "paycheck_plans#show", as: :family_paycheck_plans
       resource :spending_vs_normal, only: [ :show ], controller: :spending_vs_normal
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
       resources :insights, only: [ :index ] do

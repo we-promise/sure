@@ -1,0 +1,105 @@
+---
+# NOTE: partials lazy-lookup under "plan_flows.<partial_name>" (no .show
+# segment — house pattern, cf. plans.budget_card). show.html.erb itself is
+# "plan_flows.show"; controller flashes are "plan_flows.<action>".
+en:
+  plan_flows:
+    show:
+      title: Paycheck Flow
+      subtitle: "Where each paycheck lands and what it pays — the family's money map for %{month}."
+      view_aria: Paycheck flow view
+      view_paycheck: Per Paycheck
+      view_monthly: Per Month
+    income_column:
+      heading: Income
+      empty: No income declared yet — add a paycheck income to start the map.
+      add_income: Add income
+      selected: Selected
+      net_per_paycheck: Net per paycheck
+      owner_label: Owner
+      owner_fallback: Account owner
+    account_column:
+      heading: Bank accounts
+      add: Add
+      empty: No accounts in this family yet.
+      in_flow: In flow
+      ownership_label: Account owner
+      ownership_shared: Home / Shared
+      order_label: Order
+    obligations_column:
+      heading: Obligations
+      empty: No accounts to show.
+      no_obligations: Nothing scheduled against this account.
+      debt_service: Debt
+      savings: Savings
+      fun_money: Fun Money (leftover)
+    edge_editor:
+      title: "Flows for %{income}"
+      hint: Check an account, pick a mode, save — the panel below updates live.
+      cancel: Cancel
+      save: Save flows
+      mode_aria: Mode for %{account}
+      value_aria: Amount for %{account}
+      percent_placeholder: "0-100%"
+      specific_placeholder: "0.00"
+      mode_required: Required
+      mode_specific: Specific amount
+      mode_percent: Percent
+      mode_leftover: Leftover
+    resolved_panel:
+      title: "Resolved · %{month} · %{paychecks} paychecks"
+      no_paychecks: No paychecks fall in this month.
+      no_edges: No flows set up yet — select an income on the left to start.
+      leftover_distribution: Leftover split
+      distribution_income_ratio: By income
+      distribution_equal_split: Equal split
+      distribution_custom: Custom
+      paycheck_date: Date
+      total_income: Total in
+      lands_in: Lands in
+      account_col: Account
+      obligations_month: Obligations (month)
+      resolved_inflow: Flow in (month)
+      net_month: Net (month)
+      income_month: "Paycheck income this month: %{total} across %{paychecks} paychecks"
+      fun_money_title: Fun money (leftover)
+      partner: Partner
+      fun_per_paycheck: Per paycheck (attributed)
+      fun_month: Per month (attributed)
+      actual: Actual (month)
+      delta_title: "Delta between partners · target %{target} · spread %{spread}"
+      suggested_fix_title: Suggested fix
+      suggested_fix: "Shift %{partner}'s %{income} edge on %{account} from %{current} to %{suggested} — their leftover lands at %{leftover} for the month."
+      shortfalls_title: Shortfalls
+    # Full template (not a partial) — scope is "plan_flows.account_modal".
+    account_modal:
+      title: Add bank account
+      subtitle: Attach an existing family account to the map, or add a manual bank.
+      existing_heading: Existing accounts
+      all_on_map: Every account is already on the map.
+      add_selected: Add to map
+      manual_heading: Add non-synced bank
+      name_label: Name
+      institution_label: Institution (optional)
+      create_submit: Add bank
+      cancel: Cancel
+    save:
+      saved: Flows saved.
+      save_failed: Some edges didn't pass the model's checks — check the amounts and try again.
+    add_accounts:
+      accounts_added: Account(s) added to the map.
+    create_account:
+      account_created: Bank account created and added to the map.
+      account_failed: Couldn't create that account.
+    update_account:
+      save_failed: The account update didn't pass the model's checks — check the values and try again.
+    update_income:
+      save_failed: The income update didn't pass the model's checks — check the values and try again.
+    create_allocation:
+      saved: Allocation saved.
+      save_failed: That allocation didn't pass the model's checks — check the amount and try again.
+    update_allocation:
+      saved: Allocation saved.
+      save_failed: That allocation didn't pass the model's checks — check the amount and try again.
+    destroy_allocation:
+      saved: Allocation removed.
