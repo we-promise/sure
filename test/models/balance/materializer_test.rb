@@ -478,6 +478,114 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal 1, account.reload.current_holdings.find_by!(security: security).qty
   end
 
+  # A cost basis the user set on a trade-built position is theirs, not the
+  # fallback's. The fallback standing aside for a while must not lose it.
+  test "a locked cost basis survives the trade fallback standing aside and coming back" do
+    account, security = linked_account_with_trade
+    Security::Price.create!(security: security, date: 6.days.ago.to_date, price: 200)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    account.reload.current_holdings.find_by!(security: security).set_manual_cost_basis!(150)
+
+    create_trade(security, account: account, qty: -5, date: 5.days.ago.to_date, price: 200)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    assert_nil account.reload.current_holdings.find_by(security: security), "the fallback stands aside"
+
+    create_trade(security, account: account, qty: 5, date: 6.days.ago.to_date, price: 200)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    holding = account.reload.current_holdings.find_by(security: security)
+    assert_equal 2, holding&.qty, "the fallback builds the position again"
+    assert holding.cost_basis_locked?, "the lock survives"
+    assert_equal 150, holding.cost_basis
+    assert_equal "manual", holding.cost_basis_source
+  end
+
+  # One security whose history starts with a sell says nothing about another
+  # whose history is complete.
+  test "a security with incomplete trade history does not stop another building from trades" do
+    account, security = linked_account_with_trade
+    sold = Security.create!(ticker: "SOLDX", name: "Sold")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: sold, date: date, price: 50) }
+    create_trade(sold, account: account, qty: -4, date: 3.days.ago.to_date, price: 50)
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_equal 2, account.current_holdings.find_by(security: security)&.qty, "the complete security keeps its position"
+    assert_nil account.current_holdings.find_by(security: sold)
+    assert_not account.holdings.where("qty < 0").exists?
+    assert_equal 10_000 - 2 * 200, account.cash_balance
+    assert_equal 10_000, account.balance
+  end
+
+  # A run scoped to one security clears only that security's derived rows when
+  # the fallback stands aside; the others wait for their own run.
+  test "a scoped run that stands the fallback aside clears only its own securities" do
+    account, security = linked_account_with_trade
+    other = Security.create!(ticker: "OTHS", name: "Other")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: other, date: date, price: 50) }
+    create_trade(other, account: account, qty: 4, date: 4.days.ago.to_date, price: 50)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    assert account.reload.holdings.where(security: other, account_provider_id: nil).exists?, "precondition: a derived row for the other"
+
+    create_trade(security, account: account, qty: -10, date: 5.days.ago.to_date, price: 200)
+    create_trade(other, account: account, qty: -10, date: 5.days.ago.to_date, price: 50)
+    Balance::Materializer.new(account, strategy: :reverse, security_ids: [ security.id ]).materialize_balances
+
+    assert account.reload.holdings.where(security: other, account_provider_id: nil).exists?, "the other security's rows were cleared by a run not scoped to it"
+  end
+
+  # A security that becomes incomplete drops its trade-built position while
+  # the complete one keeps its own, and cash no longer counts the dropped one.
+  test "a security that becomes incomplete clears only its own derived position" do
+    account, security = linked_account_with_trade
+    other = Security.create!(ticker: "OTHX", name: "Other")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: other, date: date, price: 50) }
+    create_trade(other, account: account, qty: 4, date: 4.days.ago.to_date, price: 50)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    assert_equal 4, account.reload.current_holdings.find_by!(security: other).qty
+    assert_equal 10_000 - 2 * 200 - 4 * 50, account.cash_balance
+
+    create_trade(other, account: account, qty: -10, date: 5.days.ago.to_date, price: 50)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    account.reload
+    assert_nil account.current_holdings.find_by(security: other)
+    assert_equal 2, account.current_holdings.find_by(security: security)&.qty
+    assert_equal 10_000 - 2 * 200, account.cash_balance
+  end
+
+  test "the trade fallback runs the forward holdings calculation once" do
+    account, security = linked_account_with_trade
+    calculator = Holding::ForwardCalculator.new(account)
+    Holding::ForwardCalculator.expects(:new).once.returns(calculator)
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    assert_equal 2, account.reload.current_holdings.find_by!(security: security).qty
+  end
+
+  test "a single-security rematerialization on the trade fallback runs the forward calculation once" do
+    account, security = linked_account_with_trade
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    calculator = Holding::ForwardCalculator.new(account)
+    Holding::ForwardCalculator.expects(:new).once.returns(calculator)
+
+    Balance::Materializer.new(account, strategy: :reverse, security_ids: [ security.id ]).materialize_balances
+
+    assert_equal 2, account.reload.current_holdings.find_by!(security: security).qty
+  end
+
+  test "update_cash_balance ignores future-dated balance rows" do
+    account, _security = linked_account_with_trade
+    create_balance(account: account, date: Date.current, balance: 10_000, cash_balance: 9_600)
+    create_balance(account: account, date: 3.days.from_now.to_date, balance: 99_000, cash_balance: 99_000)
+
+    Balance::Materializer.new(account, strategy: :reverse).send(:update_cash_balance)
+
+    assert_equal 9_600, account.reload.cash_balance
+  end
+
   private
 
     def assert_balance_fields_persisted(expected_balances)

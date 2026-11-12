@@ -17,7 +17,7 @@ class Balance::Materializer
     Balance.transaction do
       @had_derived_position = derived_position?
       @had_calculated_position = calculated_position?
-      clear_derived_holdings if @had_derived_position && !holdings_from_trades?
+      clear_derived_holdings
       materialize_holdings
       calculate_balances
 
@@ -37,36 +37,63 @@ class Balance::Materializer
   end
 
   private
-    def materialize_holdings
-      @holdings = Holding::Materializer.new(account, strategy: holdings_strategy, security_ids: security_ids).materialize_holdings
-    end
-
     # The reverse holdings calculator works back from a provider's holdings
     # snapshot. A linked account whose provider sends balances but no positions
     # has none, so its recorded trades would never become holdings. Those come
     # from the trades instead, as for a manual account, while the balance stays
-    # anchored on the provider's figure.
-    def holdings_strategy
-      holdings_from_trades? ? :forward : strategy
+    # anchored on the provider's figure. A security whose trade history is
+    # incomplete stays on the reverse path, as it would without the fallback.
+    def materialize_holdings
+      unless holdings_from_trades?
+        @holdings = Holding::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_holdings
+        return
+      end
+
+      built = trade_built_holdings.reject { |holding| incomplete_security_ids.include?(holding.security_id) }
+      built = built.select { |holding| security_ids.include?(holding.security_id) } if security_ids
+      @holdings = Holding::Materializer.new(
+        account, strategy: :forward, security_ids: security_ids, calculated_holdings: built
+      ).materialize_holdings
+
+      reverse_ids = incomplete_security_ids_in_scope
+      Holding::Materializer.new(account, strategy: :reverse, security_ids: reverse_ids).materialize_holdings if reverse_ids.any?
     end
 
+    # True when at least one traded security builds from its trades, or when
+    # there are no trades left, so the fallback's own rows are purged.
     def holdings_from_trades?
       return @holdings_from_trades if defined?(@holdings_from_trades)
 
-      @holdings_from_trades = strategy == :reverse &&
-        account.latest_provider_holdings_snapshot_date.nil? &&
-        !incomplete_trade_history?
+      @holdings_from_trades = trade_fallback_eligible? && (
+        !account.trades.exists? ||
+        (account.trades.distinct.pluck(:security_id) - incomplete_security_ids.to_a).any?
+      )
+    end
+
+    def trade_fallback_eligible?
+      strategy == :reverse && account.latest_provider_holdings_snapshot_date.nil?
+    end
+
+    # The forward calculation over the whole account, run once per
+    # materialization: it decides which securities are complete and supplies
+    # their holdings.
+    def trade_built_holdings
+      @trade_built_holdings ||= account.trades.exists? ? Holding::ForwardCalculator.new(account).calculate : []
     end
 
     # A provider's trade history can begin after a position was opened (Plaid
     # sends at most two years), so a sell can arrive without its buy. Built from
     # zero that goes negative, on the latest day or on any day before a later
     # buy. Read from the forward calculator itself, not a sum of trade
-    # quantities, so a split between trades is applied.
-    def incomplete_trade_history?
-      return false unless account.trades.exists?
+    # quantities, so a split between trades is applied. Judged per security:
+    # one security's gap says nothing about another's history.
+    def incomplete_security_ids
+      @incomplete_security_ids ||= trade_built_holdings.select { |holding| holding.qty.negative? }.map(&:security_id).to_set
+    end
 
-      Holding::ForwardCalculator.new(account).calculate.any? { |holding| holding.qty.negative? }
+    def incomplete_security_ids_in_scope
+      ids = incomplete_security_ids.to_a
+      security_ids ? ids & security_ids : ids
     end
 
     # Whether a linked account without a provider snapshot holds a position
@@ -87,12 +114,32 @@ class Balance::Materializer
         account.holdings.where(account_provider_id: nil).where.not(qty: 0).exists?
     end
 
-    # When the fallback stands aside for an account it had built, the reverse
+    # Where the fallback stands aside for a position it had built, the reverse
     # path would read that position back as the provider's snapshot and keep
     # it. Clearing the rows first leaves the account as it reads without the
-    # fallback; cash goes back to the provider's balance after.
+    # fallback: the whole account when no security builds from trades (cash
+    # then goes back to the provider's balance), otherwise only the securities
+    # with incomplete history.
+    #
+    # A row with a locked cost basis carries a figure the user entered, which
+    # nothing can rebuild. It stays, at a zero quantity so it reads as no
+    # position, and the rows later written onto its date keep that figure.
     def clear_derived_holdings
-      account.holdings.where(account_provider_id: nil).delete_all
+      scope = account.holdings.where(account_provider_id: nil)
+      if holdings_from_trades?
+        ids = incomplete_security_ids_in_scope
+        return if ids.empty?
+
+        scope = scope.where(security_id: ids)
+      else
+        return unless @had_derived_position
+
+        # A run scoped to some securities clears only theirs.
+        scope = scope.where(security_id: security_ids) if security_ids
+      end
+
+      scope.where(cost_basis_locked: true).update_all(qty: 0, amount: 0, updated_at: Time.current)
+      scope.where(cost_basis_locked: false).delete_all
       account.holdings.reset
     end
 
@@ -108,7 +155,11 @@ class Balance::Materializer
         return
       end
 
-      current_balance = account.balances.where(currency: account.currency).order(date: :desc).first
+      current_balance = account.balances
+        .where(currency: account.currency)
+        .where(date: ..Date.current)
+        .order(date: :desc)
+        .first
       return unless current_balance
 
       Rails.logger.info("Cash balance set from trade-derived holdings for account #{account.id}")

@@ -6,10 +6,13 @@ class Holding::Materializer
   # alongside the full @holdings collection. Reduces peak RSS during sync.
   PERSIST_BATCH_SIZE = 2_000
 
-  def initialize(account, strategy:, security_ids: nil)
+  # calculated_holdings: holdings a caller has already calculated for this
+  # strategy, persisted in place of running the calculator again.
+  def initialize(account, strategy:, security_ids: nil, calculated_holdings: nil)
     @account = account
     @strategy = strategy
     @security_ids = security_ids
+    @calculated_holdings = calculated_holdings
   end
 
   def materialize_holdings
@@ -46,7 +49,7 @@ class Holding::Materializer
     attr_reader :account, :strategy, :security_ids
 
     def calculate_holdings
-      @holdings = calculator.calculate
+      @holdings = @calculated_holdings || calculator.calculate
     end
 
     def persist_holdings
