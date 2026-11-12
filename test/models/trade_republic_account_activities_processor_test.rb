@@ -322,6 +322,127 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil entry.transaction.investment_activity_label
   end
 
+  test "a transfer's payment reference becomes the transaction note, not the status subtitle" do
+    import_event({
+      id: "evt_transfer_note",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "INCOMING_TRANSFER",
+      category: "PAYMENT_RECEIVED",
+      title: "Max Mustermann",
+      subtitle: "Completed",
+      detail: { amount: "50.00", currency: "EUR", note: "Invoice 2026-0001" }
+    })
+
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_transfer_note")
+    assert_equal "Invoice 2026-0001", entry.notes
+    assert_equal "Completed", entry.transaction.extra.dig("trade_republic", "subtitle")
+    assert_equal "Invoice 2026-0001", entry.transaction.extra.dig("trade_republic", "provider_detail", "note")
+  end
+
+  test "a transfer without a payment reference gets no note" do
+    import_event({
+      id: "evt_transfer_no_note",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "OUTGOING_TRANSFER",
+      category: "POC_CREATED",
+      title: "Erika Musterfrau",
+      subtitle: "Sent",
+      detail: { amount: "20.00", currency: "EUR", note_checked_at: "2026-08-02T10:00:00Z" }
+    })
+
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_transfer_no_note")
+    assert_nil entry.notes
+    assert_nil entry.transaction.extra.dig("trade_republic", "provider_detail", "note_checked_at")
+  end
+
+  test "a payment reference replaces the provider's earlier note but not one the user edited" do
+    event = {
+      id: "evt_transfer_edit",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "INCOMING_TRANSFER",
+      category: "PAYMENT_RECEIVED",
+      title: "Max Mustermann",
+      subtitle: "Completed",
+      detail: { amount: "50.00", currency: "EUR" }
+    }
+    import_event(event)
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_transfer_edit")
+    entry.update!(notes: "Completed")
+
+    import_event(event.merge(detail: event[:detail].merge(note: "Invoice 2026-0001")))
+    assert_equal "Invoice 2026-0001", entry.reload.notes
+
+    entry.update!(notes: "my own note")
+    entry.mark_user_modified!
+    import_event(event.merge(detail: event[:detail].merge(note: "Invoice 2026-0002")))
+    assert_equal "my own note", entry.reload.notes
+  end
+
+  test "a status note from an earlier sync is cleared when no payment reference exists" do
+    event = {
+      id: "evt_status_note",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "OUTGOING_TRANSFER",
+      category: "POC_CREATED",
+      title: "Erika Musterfrau",
+      subtitle: "Sent",
+      detail: { amount: "20.00", currency: "EUR" }
+    }
+    import_event(event)
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_status_note")
+    entry.update!(notes: "Sent")
+
+    import_event(event)
+    assert_nil entry.reload.notes
+
+    entry.update!(notes: "my own note")
+    import_event(event)
+    assert_equal "my own note", entry.reload.notes
+  end
+
+  test "a status note the user edited is kept when no payment reference exists" do
+    event = {
+      id: "evt_status_note_locked",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "OUTGOING_TRANSFER",
+      category: "POC_CREATED",
+      title: "Erika Musterfrau",
+      subtitle: "Sent",
+      detail: { amount: "20.00", currency: "EUR" }
+    }
+    import_event(event)
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_status_note_locked")
+    entry.update!(notes: "Sent")
+    entry.mark_user_modified!
+
+    import_event(event)
+
+    assert_equal "Sent", entry.reload.notes
+  end
+
+  test "a subtitle note on a non-transfer cash event is cleared, a user note on it is kept" do
+    event = {
+      id: "evt_card_status_note",
+      timestamp: "2026-08-01T10:00:00Z",
+      eventType: "CARD_TRANSACTION",
+      category: "PAYMENT_RECEIVED",
+      title: "Marktkauf",
+      subtitle: "Card purchase",
+      detail: { amount: "12.30", signed_amount: "-12.30", currency: "EUR" }
+    }
+    import_event(event)
+    entry = Entry.find_by(external_id: "trade_republic_event_evt_card_status_note")
+    entry.update!(notes: "Card purchase")
+
+    import_event(event)
+    assert_nil entry.reload.notes
+    assert_equal "Card purchase", entry.transaction.extra.dig("trade_republic", "subtitle")
+
+    entry.update!(notes: "bought for the party")
+    import_event(event)
+    assert_equal "bought for the party", entry.reload.notes
+  end
+
   test "card cash back events that are purchases are imported as expenses with merchant details" do
     import_event({
       id: "evt_card_cash_back",
