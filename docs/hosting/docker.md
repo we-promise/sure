@@ -469,7 +469,7 @@ If the value you have been running with is that old public default, the app logs
 ```bash
 docker compose stop web worker
 read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE   # paste the SECRET_KEY_BASE the data was encrypted with
-docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails security:backfill_encryption           # dry run
+docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,1]"  # dry run
 ```
 
 Continue only if the dry run lists every table with `"failed_count":0`. Then write the changes and start the app:
@@ -707,10 +707,10 @@ Update Sure to a version that includes this guide first and let it start once, s
    docker compose stop web worker
    ```
 
-3. Preview the conversion. This changes nothing, and must list every table with `"failed_count":0` and include a `session_ip_digests` entry:
+3. Preview the conversion. The `1` makes it a dry run that changes nothing. Its report must show `"dry_run":true`, list every table with `"failed_count":0` and include a `session_ip_digests` entry:
 
    ```bash
-   docker compose run --rm web bin/rails security:backfill_encryption
+   docker compose run --rm web bin/rails "security:backfill_encryption[100,1]"
    ```
 
    If rows fail, they hold data encrypted with keys the instance no longer has, for example after `SECRET_KEY_BASE` was changed. Don't convert: run `docker compose up -d`, and put the keys or `SECRET_KEY_BASE` that data was encrypted with back in place first.
@@ -748,17 +748,17 @@ Update Sure to a version that includes this guide first and let it start once, s
 
 3. Add the three keys to `.env` (and the three lines to `compose.yml` if they are missing; see above).
 
-4. Preview the conversion with the new keys. This changes nothing:
+4. Preview the conversion with the new keys. The `1` makes it a dry run that changes nothing; its report must show `"dry_run":true`:
 
    ```bash
-   docker compose run --rm web bin/rails security:backfill_encryption
+   docker compose run --rm web bin/rails "security:backfill_encryption[100,1]"
    ```
 
    Continue only if it lists every table with `"failed_count":0` and includes a `session_ip_digests` entry. Failed rows hold data encrypted with the derived keys. Then preview again with the keys derived from your `SECRET_KEY_BASE` as previous keys:
 
    ```bash
    read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE   # paste the SECRET_KEY_BASE from .env
-   docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails security:backfill_encryption
+   docker compose run --rm -e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE web bin/rails "security:backfill_encryption[100,1]"
    ```
 
    If every table now shows `"failed_count":0`, add the same `-e ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` to the command in step 5, and run `unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` after it. Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old keys. If rows still fail, remove the three lines from `.env` again and run `docker compose up -d`. The instance keeps working with the derived keys.

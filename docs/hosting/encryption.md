@@ -40,7 +40,7 @@ Pass the old keys in the environment of the backfill command only:
 
 ```sh
 read -rs ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE && export ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE   # keeps it out of your shell history
-bin/rails security:backfill_encryption               # dry run: reports what would change
+bin/rails "security:backfill_encryption[100,1]"      # dry run: reports what would change
 bin/rails "security:backfill_encryption[100,0]"      # writes
 unset ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE
 ```
