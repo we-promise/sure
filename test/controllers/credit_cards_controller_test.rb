@@ -214,6 +214,23 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert_not enable_banking_account.reload.invert_transaction_signs?
   end
 
+  test "keeps the other enable banking flag when only one flag is submitted" do
+    enable_banking_account = create_linked_enable_banking_account
+    enable_banking_account.update!(invert_transaction_signs: true)
+
+    patch credit_card_path(@account), params: {
+      account: {
+        name: @account.name,
+        accountable_type: "CreditCard",
+        enable_banking: { treat_balance_as_available_credit: "1" }
+      }
+    }
+
+    assert_redirected_to @account
+    assert enable_banking_account.reload.treat_balance_as_available_credit?
+    assert enable_banking_account.reload.invert_transaction_signs?, "a partial submission keeps the other flag"
+  end
+
   test "does not persist enable banking flag when the account update fails" do
     enable_banking_account = create_linked_enable_banking_account
 
