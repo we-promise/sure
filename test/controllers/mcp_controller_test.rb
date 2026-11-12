@@ -280,6 +280,84 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # -- Unsupported methods --
+
+  test "GET /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream")
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "DELETE /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      delete "/mcp", headers: mcp_headers(@token)
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "GET /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "DELETE /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "GET /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "DELETE /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "GET /mcp without a token still returns 401" do
+    get "/mcp", headers: { "Accept" => "text/event-stream" }
+
+    assert_response :unauthorized
+  end
+
   # -- initialize --
 
   test "initialize returns server info and capabilities" do
@@ -756,6 +834,12 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         "Content-Type" => "application/json",
         "Authorization" => "Bearer #{token}"
       }
+    end
+
+    def initialize_mcp_session
+      post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(@token)
+      assert_response :ok
+      response.headers["Mcp-Session-Id"]
     end
 
     def jsonrpc_request(method, params = {}, id: 1)
