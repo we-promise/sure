@@ -226,6 +226,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
 
     assert_equal "plaintext-secret", item.reload.api_secret
     assert_equal 0, output.dig("results", "kraken_items", "failed_count")
+    assert_equal true, output["ok"]
+    assert_equal 0, @backfill_exit_status, "a clean run must exit with status 0"
   end
 
   # Ciphertext under keys the app no longer has (keys changed, or data
@@ -244,15 +246,32 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     preview = run_backfill(dry_run: true)
     assert_equal 2, preview.dig("results", "kraken_items", "failed_count"),
       "the dry run must report the rows the real run refuses"
+    assert_equal 1, @backfill_exit_status, "a dry run with refused rows must exit with status 1"
 
     result = run_backfill(dry_run: false)
     assert_equal false, result["ok"]
+    assert_equal 1, @backfill_exit_status, "a run with failed rows must exit with status 1"
     assert_equal 2, result["failed_count"]
     assert_equal 2, result.dig("results", "kraken_items", "failed_count")
     connection = ActiveRecord::Base.connection
     assert_equal foreign_text, connection.select_value(KrakenItem.where(id: item.id).select(:api_secret).to_sql)
     assert_equal JSON.parse(foreign_json),
       JSON.parse(connection.select_value(KrakenItem.where(id: other.id).select("raw_payload::text").to_sql))
+  end
+
+  test "backfill counts every refused row but keeps only three samples" do
+    foreign_key = ActiveRecord::Encryption::DerivedSecretKeyProvider.new(SecureRandom.hex(32))
+    5.times do |i|
+      item = KrakenItem.new(family: families(:dylan_family), name: "Foreign key #{i}", api_key: "key-#{i}", api_secret: "secret-#{i}")
+      item.save!(validate: false)
+      KrakenItem.where(id: item.id).update_all([ "api_secret = ?",
+        ActiveRecord::Encryption.encryptor.encrypt("lost-#{i}", key_provider: foreign_key) ])
+    end
+
+    preview = run_backfill(dry_run: true)
+
+    assert_equal 5, preview.dig("results", "kraken_items", "failed_count")
+    assert_equal 3, preview.dig("results", "kraken_items", "failed_samples").size
   end
 
   test "backfill encrypts session user agents and hashes legacy IP addresses" do
@@ -524,10 +543,11 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     def run_backfill(dry_run:)
       task = Rake::Task["security:backfill_encryption"]
       task.reenable
+      @backfill_exit_status = 0
       output, = capture_io do
         task.invoke("500", dry_run.to_s)
-      rescue SystemExit
-        nil
+      rescue SystemExit => e
+        @backfill_exit_status = e.status
       end
       JSON.parse(output.lines.last)
     end

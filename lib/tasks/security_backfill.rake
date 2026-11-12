@@ -94,12 +94,19 @@ namespace :security do
     { metadata: ->(value) { DebugLogEntry.normalize_metadata(value) } }
   end
 
+  # Counts every failure but keeps only a few samples, so a large table with
+  # rows under other keys can't exhaust memory before the report prints.
+  def record_failure(failures, sample)
+    failures[:count] += 1
+    failures[:samples] << sample if failures[:samples].size < 3
+  end
+
   # transforms: optional { field => callable } applied to the plaintext value
   # before it is encrypted (e.g. redaction of historic rows).
   def backfill_model(model_class, fields, batch_size, dry_run, transforms: {}, &filter_block)
     processed = 0
     updated = 0
-    failed = []
+    failures = { count: 0, samples: [] }
 
     model_class.order(:id).in_batches(of: batch_size) do |batch|
       batch.each do |record|
@@ -117,7 +124,7 @@ namespace :security do
         if dry_run
           # Report the rows the real run would refuse, so the preview shows them.
           refused = fields.find { |f| undecryptable_ciphertext?(safe_read_field(record, f)) }
-          failed << { id: record.id, error: ActiveRecord::Encryption::Errors::Decryption.name, message: "#{refused} holds ciphertext that no configured key decrypts" } if refused
+          record_failure(failures, id: record.id, error: ActiveRecord::Encryption::Errors::Decryption.name, message: "#{refused} holds ciphertext that no configured key decrypts") if refused
           next
         end
 
@@ -171,7 +178,7 @@ namespace :security do
           # Deleted since the batch was loaded; nothing left to encrypt.
           next
         rescue => e
-          failed << { id: record.id, error: e.class.name, message: e.message }
+          record_failure(failures, id: record.id, error: e.class.name, message: e.message)
         end
       end
     end
@@ -179,8 +186,8 @@ namespace :security do
     {
       processed: processed,
       updated: updated,
-      failed_count: failed.size,
-      failed_samples: failed.take(3)
+      failed_count: failures[:count],
+      failed_samples: failures[:samples]
     }
   end
 
@@ -273,7 +280,7 @@ namespace :security do
   def backfill_session_ip_digests(batch_size, dry_run)
     processed = 0
     updated = 0
-    failed = []
+    failures = { count: 0, samples: [] }
 
     Session.where.not(ip_address: [ nil, "" ]).where(ip_address_digest: [ nil, "" ])
       .select(:id, :ip_address, :ip_address_digest).order(:id).in_batches(of: batch_size) do |batch|
@@ -285,7 +292,7 @@ namespace :security do
           session.update_columns(ip_address_digest: Digest::SHA256.hexdigest(session.ip_address.to_s))
           updated += 1
         rescue => e
-          failed << { id: session.id, error: e.class.name, message: e.message }
+          record_failure(failures, id: session.id, error: e.class.name, message: e.message)
         end
       end
     end
@@ -293,8 +300,8 @@ namespace :security do
     {
       processed: processed,
       updated: updated,
-      failed_count: failed.size,
-      failed_samples: failed.take(3)
+      failed_count: failures[:count],
+      failed_samples: failures[:samples]
     }
   end
 end
