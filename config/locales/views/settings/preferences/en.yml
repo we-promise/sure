@@ -8,6 +8,10 @@ en:
         date_format: Date format
         general_subtitle: Configure your preferences
         general_title: General
+        transactions_title: Transactions
+        transactions_subtitle: Configure how transactions behave
+        manual_reconciliation: Manual reconciliation
+        manual_reconciliation_hint: Show reconcile controls on manually-entered accounts. Accounts with a bank sync use statement reconciliation instead.
         default_period: Default Period
         default_account_order: Default Account Order
         default_account_order_hint: With Manual, drag accounts in the sidebar to set their order.
@@ -16,6 +20,8 @@ en:
         page_title: Preferences
         timezone: Timezone
         translations_notice: Please note, we are still working on translations for various languages.
+        rule_suggestions: "Rule suggestions"
+        rule_suggestions_hint: "Offer to create a rule after you change a transaction's category"
         budget_title: Budget
         budget_subtitle: Configure how your budgets behave
         month_start_day: Budget month starts on
