@@ -18,7 +18,8 @@ class HoldingLot < ApplicationRecord
   class << self
     # Replaces an account's lots with `rows`, within `security_ids` when given,
     # keeping each lot's row (and id) by its key: the source entry for a derived
-    # lot, the position for the opening lot. An opening lot keeps its origin.
+    # lot, the position for the opening lot. An opening lot's origin follows the
+    # snapshot it is restated over.
     # A caller that cannot see opening lots (`openings: false`) leaves them be.
     def store!(account, rows, security_ids: nil, openings: true)
       rows = rows.select { |row| security_ids.include?(row[:security_id]) } if security_ids
@@ -35,7 +36,7 @@ class HoldingLot < ApplicationRecord
         end
         if opening_rows.any?
           upsert_all(opening_rows, unique_by: :index_holding_lots_one_opening_lot_per_position,
-            update_only: %i[qty unit_cost currency clamped])
+            update_only: %i[origin_security_id qty unit_cost currency clamped])
         end
       end
     end

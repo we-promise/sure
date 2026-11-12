@@ -560,6 +560,38 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # The opening lot already exists, from an earlier provider security, when a
+  # later snapshot arrives from another one remapped onto the same security:
+  # the lot is restated over that snapshot, so its origin follows it, and
+  # resetting the later security takes the lot back.
+  test "an existing opening lot takes its origin from a later snapshot's provider security" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      earlier = priced_security("LOTA4", 30)
+      later = priced_security("LOTC4", 30)
+      target = priced_security("LOTB4", 30)
+      earlier_row = @account.holdings.create!(security: earlier, date: d(9), qty: 4, price: 30, amount: 120, currency: "USD",
+                                              account_provider: @account_provider)
+      earlier_row.remap_security!(target)
+      materialize(:reverse)
+      lot = HoldingLot.opening.find_by!(security: target)
+      assert_equal earlier.id, lot.origin_security_id
+
+      later_row = provider_holding(later, 6, nil)
+      later_row.remap_security!(target)
+      materialize(:reverse)
+
+      assert_equal [ lot.id, later.id ], HoldingLot.opening.where(security: target).pick(:id, :origin_security_id)
+
+      # The remap merged the later row into the target's row for that day.
+      @account.holdings.find_by!(security: target, provider_security: later).reset_security_to_provider!
+
+      assert_equal [ lot.id ], HoldingLot.opening.where(security: later).pluck(:id)
+      assert_not HoldingLot.exists?(security: target)
+    end
+  end
+
   test "remap onto a position with its own opening lot leaves one opening lot there" do
     setup_account
     old_security = priced_security("LOTQ", 30)
