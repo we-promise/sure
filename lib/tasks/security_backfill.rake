@@ -45,47 +45,41 @@ namespace :security do
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # User fields (MFA + PII)
-    # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
-    results[:users] = backfill_model(User, %i[otp_secret email unconfirmed_email first_name last_name], batch_size, dry_run)
+    # Every model that declares `encrypts`, found at runtime so a provider
+    # added later is covered without editing this task. A model left out would
+    # keep plaintext rows that raise on every read once the keys are live.
+    encrypted_models_for_backfill.each do |model_class|
+      results[model_class.table_name.to_sym] =
+        backfill_model(model_class, model_class.encrypted_attributes.to_a, batch_size, dry_run)
+    end
 
-    # Invitation tokens and email
-    results[:invitations] = backfill_model(Invitation, %i[token email], batch_size, dry_run)
+    results[:session_ip_digests] = backfill_session_ip_digests(batch_size, dry_run)
 
-    # InviteCode tokens
-    results[:invite_codes] = backfill_model(InviteCode, %i[token], batch_size, dry_run)
-
-    # Session user_agent (encryption) and ip_address_digest (hashing)
-    results[:sessions] = backfill_sessions(batch_size, dry_run)
-
-    # MobileDevice device_id
-    results[:mobile_devices] = backfill_model(MobileDevice, %i[device_id], batch_size, dry_run)
-
-    # Provider items
-    results[:plaid_items] = backfill_model(PlaidItem, %i[access_token raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:simplefin_items] = backfill_model(SimplefinItem, %i[access_url raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:lunchflow_items] = backfill_model(LunchflowItem, %i[api_key raw_payload raw_institution_payload], batch_size, dry_run)
-    results[:enable_banking_items] = backfill_model(EnableBankingItem, %i[client_certificate session_id raw_payload raw_institution_payload last_psu_ip], batch_size, dry_run)
-    results[:truelayer_items] = backfill_model(TruelayerItem, %i[client_secret access_token refresh_token raw_payload raw_institution_payload], batch_size, dry_run)
-
-    # Provider accounts
-    results[:plaid_accounts] = backfill_model(PlaidAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload], batch_size, dry_run)
-    results[:simplefin_accounts] = backfill_model(SimplefinAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:lunchflow_accounts] = backfill_model(LunchflowAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload], batch_size, dry_run)
-    results[:enable_banking_accounts] = backfill_model(EnableBankingAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:truelayer_accounts] = backfill_model(TruelayerAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:snaptrade_accounts] = backfill_model(SnaptradeAccount, %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload account_number], batch_size, dry_run)
-    results[:coinbase_accounts] = backfill_model(CoinbaseAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:coinstats_accounts] = backfill_model(CoinstatsAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:mercury_accounts] = backfill_model(MercuryAccount, %i[raw_payload raw_transactions_payload], batch_size, dry_run)
-    results[:akahu_accounts] = backfill_model(AkahuAccount, %i[raw_payload raw_transactions_payload formatted_account], batch_size, dry_run)
-
+    # A row that fails here stays unreadable once the app runs with the keys,
+    # so any failure makes the whole run fail.
+    failed_count = results.values.sum { |result| result[:failed_count] }
     puts({
-      ok: true,
+      ok: failed_count.zero?,
       dry_run: dry_run,
       batch_size: batch_size,
+      failed_count: failed_count,
       results: results
     }.to_json)
+    exit 1 unless failed_count.zero?
+  end
+
+  # Concrete base models with encrypted attributes. STI subclasses share their
+  # base class's table and attributes, so only the base class is listed.
+  # Classes that aren't reachable by their name (anonymous or ad hoc ones)
+  # are skipped.
+  def encrypted_models_for_backfill
+    Rails.autoloaders.main.eager_load_dir(Rails.root.join("app/models").to_s)
+
+    ApplicationRecord.descendants
+      .reject(&:abstract_class?)
+      .select { |model| model.name&.safe_constantize == model }
+      .select { |model| model.base_class == model && model.encrypted_attributes.present? }
+      .sort_by(&:name)
   end
 
   def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)
@@ -106,7 +100,12 @@ namespace :security do
         # the encrypted getters raise on once keys are live.
         next unless fields.any? { |f| !safe_read_field(record, f).nil? }
 
-        next if dry_run
+        if dry_run
+          # Report the rows the real run would refuse, so the preview shows them.
+          refused = fields.find { |f| undecryptable_ciphertext?(safe_read_field(record, f)) }
+          failed << { id: record.id, error: ActiveRecord::Encryption::Errors::Decryption.name, message: "#{refused} holds ciphertext that no configured key decrypts" } if refused
+          next
+        end
 
         begin
           # Read and write under a row lock: an app write between the read
@@ -117,6 +116,12 @@ namespace :security do
             plaintext_values = {}
             fields.each do |field|
               value = safe_read_field(record, field)
+              # Ciphertext that no configured key decrypts comes back as its
+              # raw envelope (a Hash on json/jsonb columns); encrypting it
+              # again would lose the original value for good.
+              if undecryptable_ciphertext?(value)
+                raise ActiveRecord::Encryption::Errors::Decryption, "#{field} holds ciphertext that no configured key decrypts"
+              end
               plaintext_values[field] = value unless value.nil?
             end
 
@@ -157,6 +162,25 @@ namespace :security do
     }
   end
 
+  # Rails' encryption envelope: {"p": payload, "h": {"iv": ..., "at": ..., ...}}.
+  # Matches the whole shape, since Encryptor#encrypted? accepts any object
+  # with a "p" key and would flag plaintext payloads such as {"p": null}.
+  def undecryptable_ciphertext?(value)
+    envelope = value
+    if value.is_a?(String)
+      return false unless value.start_with?("{")
+
+      envelope = begin
+        JSON.parse(value)
+      rescue JSON::ParserError
+        return false
+      end
+    end
+
+    envelope.is_a?(Hash) && envelope.keys.sort == %w[h p] && envelope["p"].is_a?(String) &&
+      envelope["h"].is_a?(Hash) && envelope["h"].key?("iv") && envelope["h"].key?("at")
+  end
+
   # Safely read a field value, handling both encrypted and plaintext data.
   # When encryption is configured but the value is plaintext, the getter
   # raises ActiveRecord::Encryption::Errors::Decryption. In this case,
@@ -167,7 +191,10 @@ namespace :security do
   # String, breaking every consumer of the payload.
   def safe_read_field(record, field)
     record.send(field)
-  rescue ActiveRecord::Encryption::Errors::Decryption
+  rescue ActiveRecord::Encryption::Errors::Base, NoMethodError, TypeError
+    # Rails reads any json/jsonb object with a "p" key as an encryption
+    # envelope, so plaintext like {"p": 1, "h": "x"} can fail with
+    # NoMethodError or TypeError instead of a Decryption error.
     raw = record.read_attribute_before_type_cast(field)
     column = record.class.columns_hash[field.to_s]
     if raw.is_a?(String) && [ :json, :jsonb ].include?(column&.type)
@@ -181,37 +208,22 @@ namespace :security do
     end
   end
 
-  def backfill_sessions(batch_size, dry_run)
+  # Hashes legacy session IP addresses into ip_address_digest. The encrypted
+  # Session columns go through backfill_model like every other model.
+  def backfill_session_ip_digests(batch_size, dry_run)
     processed = 0
     updated = 0
     failed = []
 
-    Session.order(:id).in_batches(of: batch_size) do |batch|
+    Session.where.not(ip_address: [ nil, "" ]).where(ip_address_digest: [ nil, "" ])
+      .select(:id, :ip_address, :ip_address_digest).order(:id).in_batches(of: batch_size) do |batch|
       batch.each do |session|
         processed += 1
         next if dry_run
 
         begin
-          changes = {}
-
-          # Re-save user_agent to trigger encryption (use safe read for plaintext)
-          user_agent_value = safe_read_field(session, :user_agent)
-          unless user_agent_value.nil?
-            # Use temporary instance to encrypt
-            encryptor = Session.new
-            encryptor.user_agent = user_agent_value
-            changes[:user_agent] = encryptor.read_attribute_before_type_cast(:user_agent)
-          end
-
-          # Hash IP address into ip_address_digest if not already done
-          if session.ip_address.present? && session.ip_address_digest.blank?
-            changes[:ip_address_digest] = Digest::SHA256.hexdigest(session.ip_address.to_s)
-          end
-
-          if changes.present?
-            session.update_columns(changes)
-            updated += 1
-          end
+          session.update_columns(ip_address_digest: Digest::SHA256.hexdigest(session.ip_address.to_s))
+          updated += 1
         rescue => e
           failed << { id: session.id, error: e.class.name, message: e.message }
         end
