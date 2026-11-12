@@ -40,6 +40,8 @@ class Provider::YahooFinance < Provider
 
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 0.5
+  REQUEST_SLOT_CACHE_KEY = "yahoo_finance_request_slot"
+  MAX_REQUEST_SLOT_PROBES = 20
 
   # Pool of modern browser user-agents to rotate through
   # Based on https://github.com/ranaroussi/yfinance/pull/2277
@@ -981,7 +983,27 @@ class Provider::YahooFinance < Provider
       ENV.fetch("YAHOO_FINANCE_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
     end
 
+    # Each request claims one min_request_interval-wide time slot in the shared
+    # cache (Redis in production), so provider instances, Sidekiq workers and
+    # web processes share one request budget instead of each pacing itself. A
+    # cache that refuses every claim (Redis down) leaves the request unpaced.
+    def wait_for_request_slot
+      interval = min_request_interval
+      return unless interval.positive?
+
+      now = Time.current.to_f
+      first = (now / interval).floor
+      slot = (first...first + MAX_REQUEST_SLOT_PROBES).find do |candidate|
+        Rails.cache.write("#{REQUEST_SLOT_CACHE_KEY}:#{candidate}", true, unless_exist: true, expires_in: (candidate * interval - now + interval + 1).seconds)
+      end
+      return unless slot
+
+      wait = slot * interval - now
+      sleep(wait) if wait.positive?
+    end
+
     def throttle_request
+      wait_for_request_slot
       @last_request_time ||= Time.at(0)
       elapsed = Time.current - @last_request_time
       sleep_time = min_request_interval - elapsed

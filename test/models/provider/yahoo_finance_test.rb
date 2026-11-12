@@ -853,6 +853,31 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert second_elapsed >= (min_interval - 0.05), "Second request should wait at least #{min_interval - 0.05}s"
   end
 
+  test "throttle_request shares the request budget across provider instances" do
+    other = Provider::YahooFinance.new
+    [ @provider, other ].each { |provider| provider.stubs(:min_request_interval).returns(0.5) }
+
+    travel_to Time.zone.at(1_800_000_000) do
+      @provider.expects(:sleep).never
+      @provider.send(:throttle_request)
+
+      other.expects(:sleep).with { |seconds| (seconds - 0.5).abs < 0.001 }
+      other.send(:throttle_request)
+    end
+  end
+
+  test "throttle_request does not wait when the shared cache refuses every claim" do
+    refusing_cache = ActiveSupport::Cache::MemoryStore.new
+    refusing_cache.stubs(:write).returns(false)
+    Rails.stubs(:cache).returns(refusing_cache)
+    @provider.stubs(:min_request_interval).returns(0.5)
+
+    travel_to Time.zone.at(1_800_000_000) do
+      @provider.expects(:sleep).never
+      @provider.send(:throttle_request)
+    end
+  end
+
   # ================================
   #    Configuration Tests
   # ================================
