@@ -33,7 +33,7 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
   end
 
   test "metadata loading failure prevents plaintext writes" do
-    Provider::Factory.expects(:ensure_adapters_loaded).with(strict: true).raises(NameError, "synthetic-error")
+    Provider::ConfigurationRegistry.expects(:field_for_setting).with("plaid_secret").raises(Setting::SecretError)
     assert_raises(Setting::SecretError) { Setting[:plaid_secret] = "synthetic-secret" }
     assert_not Setting.key?(:plaid_secret)
   end
@@ -43,6 +43,32 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
     before = raw_value
     assert_equal "synthetic-legacy-secret", Setting[:plaid_secret]
     assert_equal before, raw_value
+  end
+
+  test "dynamic writes do not load unrelated adapters" do
+    Provider::PlaidAdapter
+    pattern = Rails.root.join("app/models/provider/*_adapter.rb")
+    Dir.stubs(:[]).with(pattern).returns(%w[plaid missing].map { |name| Rails.root.join("app/models/provider/#{name}_adapter.rb").to_s })
+    Provider::Factory.expects(:ensure_adapters_loaded).never
+    Provider::ConfigurationRegistry.expects(:secret_setting_keys).never
+    Setting[:plaid_client_id] = "synthetic-client"
+    Setting[:plaid_secret] = "synthetic-secret"
+    Setting[:custom_value] = "ordinary"
+
+    assert_equal "synthetic-client", Setting[:plaid_client_id]
+    assert_equal "synthetic-secret", Setting[:plaid_secret]
+    refute_includes raw_value, "synthetic-secret"
+    assert_equal "ordinary", Setting[:custom_value]
+  end
+
+  test "owning adapter metadata failures log the adapter without sensitive messages" do
+    pattern = Rails.root.join("app/models/provider/*_adapter.rb")
+    Dir.expects(:[]).with(pattern).returns([ Rails.root.join("app/models/provider/missing_adapter.rb").to_s ])
+    Rails.logger.expects(:error).with("Provider secret metadata unavailable: adapter=Provider::MissingAdapter error=NameError")
+
+    error = assert_raises(Setting::SecretError) { Setting[:missing_secret] = "synthetic-secret" }
+    assert_nil error.cause
+    assert_not Setting.key?(:missing_secret)
   end
 
   test "envelopes fail closed on corruption unknown version and extra fields" do

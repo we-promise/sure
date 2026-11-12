@@ -4,6 +4,9 @@ Dynamic provider fields registered with `secret: true` are masked in the UI and
 encrypted before database persistence. Ordinary settings are unchanged. Declared
 encrypted settings continue to use their existing accessors. ENV-only values are
 not copied to the database. Legacy plaintext remains readable without writes.
+Writes load only the owning adapter's field metadata; an unrelated adapter's
+load failure does not block them. The backfill requires complete secret metadata
+and stops if an adapter cannot be loaded.
 
 The versioned YAML envelope uses the existing settings encryptor, derived from
 `SECRET_KEY_BASE` with the `setting_encryption` salt. This is separate from Item

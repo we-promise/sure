@@ -6,7 +6,7 @@ class Setting::DynamicSecret
   class << self
     def encrypt(key, value)
       return value if value.blank?
-      return value unless Provider::ConfigurationRegistry.secret_setting_keys.include?(key.to_s)
+      return value unless Provider::ConfigurationRegistry.field_for_setting(key)&.secret
 
       { MARKER => VERSION, "ciphertext" => encryptor.encrypt_and_sign(value, purpose: purpose(key)) }
     rescue StandardError

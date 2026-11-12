@@ -51,7 +51,10 @@ class Provider::Factory
         begin
           adapter_class_name.constantize
         rescue NameError => e
-          raise if strict
+          if strict
+            Rails.logger.error("Provider secret metadata unavailable: adapter=#{adapter_class_name} error=#{e.class}")
+            raise
+          end
 
           Rails.logger.warn("Failed to load adapter: #{adapter_class_name} - #{e.message}")
         end
