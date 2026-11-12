@@ -40,6 +40,12 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     end
   end
 
+  test "provider item associations cover every syncable family association" do
+    missing = Family::Syncer.syncable_item_associations - Family::FinancialDataReset.provider_item_associations
+
+    assert_empty missing, "reset leaves provider connections behind: #{missing.join(', ')}"
+  end
+
   test "sync counts use the family sync scope without double counting" do
     account = @family.accounts.first
     provider_item = @family.plaid_items.first
