@@ -1,0 +1,8 @@
+<%# locals: (holding:, lot:) %>
+
+<%= render DS::Button.new(text: t("holdings.lots.unlock"),
+      variant: :ghost,
+      size: :sm,
+      href: unlock_holding_lot_path(holding, lot),
+      method: :post,
+      form: { data: { turbo_frame: "_top" } }) %>

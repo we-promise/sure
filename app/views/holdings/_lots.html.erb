@@ -1,11 +1,17 @@
-<%# locals: (holding:, lots:, can_edit:) %>
+<%# locals: (holding:, lots:, can_edit:, provider_cost: false) %>
 
 <div class="space-y-2 pt-1">
   <p class="text-xs text-secondary"><%= t("holdings.lots.title") %></p>
+  <% if provider_cost %>
+    <p class="text-xs text-secondary">
+      <%= t("holdings.lots.provider_cost_hint") %>
+      <%= t("holdings.lots.provider_cost_clear_hint") if can_edit && lots.any?(&:manual_cost?) %>
+    </p>
+  <% end %>
   <ul class="space-y-2">
     <% lots.each do |lot| %>
       <li data-lot-id="<%= lot.id %>" class="rounded-lg border border-secondary px-3 py-2 text-sm">
-        <% if can_edit && !lot.opening? %>
+        <% if can_edit && !provider_cost && !lot.opening? %>
           <%= render DS::Disclosure.new(variant: :bare, summary_class: "list-none flex items-center justify-between gap-2 focus-ring cursor-pointer") do |disclosure| %>
             <% disclosure.with_summary_content do %>
               <%= render "holdings/lot_summary", lot: lot, editable: true %>
@@ -35,12 +41,7 @@
                 </div>
               <% end %>
               <% if lot.manual_cost? %>
-                <%= render DS::Button.new(text: t("holdings.lots.unlock"),
-                      variant: :ghost,
-                      size: :sm,
-                      href: unlock_holding_lot_path(holding, lot),
-                      method: :post,
-                      form: { data: { turbo_frame: "_top" } }) %>
+                <%= render "holdings/lot_unlock", holding: holding, lot: lot %>
               <% end %>
             </div>
           <% end %>
@@ -48,6 +49,11 @@
           <div class="flex items-center justify-between gap-2">
             <%= render "holdings/lot_summary", lot: lot, editable: false %>
           </div>
+          <% if can_edit && provider_cost && lot.manual_cost? %>
+            <div class="mt-2">
+              <%= render "holdings/lot_unlock", holding: holding, lot: lot %>
+            </div>
+          <% end %>
         <% end %>
       </li>
     <% end %>

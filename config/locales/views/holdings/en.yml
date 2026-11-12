@@ -62,6 +62,9 @@ en:
         its trade removes the lot and the cost you set.
       save: Save
       unlock: Clear the manual cost
+      provider_cost_hint: Your provider supplies this position's cost, so its
+        lot costs cannot be set.
+      provider_cost_clear_hint: A cost you set earlier can still be cleared.
     missing_price_tooltip:
       description: This investment has missing values and we could not calculate
         its returns or value.
