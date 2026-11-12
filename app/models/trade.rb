@@ -244,7 +244,10 @@ class Trade < ApplicationRecord
       # difference is booked as a gain the user never made.
       return nil if internal_movement?
 
-      cost_basis = disposed_lots_cost || snapshot_cost
+      # Under fifo the snapshot is the open lots' mean after the sale, not the
+      # cost of the lots it consumed, so without a record covering the sale the
+      # gain is unknown rather than priced off the snapshot.
+      cost_basis = disposed_lots_cost || (snapshot_cost unless entry.account.cost_basis_fifo?)
 
       return nil unless cost_basis.is_a?(Money)
 
