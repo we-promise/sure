@@ -15,6 +15,11 @@ Web, workers and tasks must retain the same stable settings key. Unauthenticated
 malformed or unsupported envelopes raise `Setting::SecretError`; they do not fall
 back to plaintext or ENV. Preserve the key with appropriately protected backups.
 
+Use a unique, private `SECRET_KEY_BASE`. A public example/default key provides no
+protection against an attacker who can read the database. This settings encryptor
+does not support key rotation or Active Record's previous encryption schemes;
+rotating only the Active Record keys does not rotate these settings.
+
 ## Explicit conversion (operator approval required)
 
 This task is not run automatically during deployment or database setup:
