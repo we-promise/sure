@@ -113,20 +113,30 @@ class CoinspotItem::ImporterTest < ActiveSupport::TestCase
     end
   end
 
-  test "fails rather than valuing a nonzero asset at zero when its AUD price is missing" do
+  test "skips a delisted nonzero asset without an AUD price instead of failing the sync" do
     @provider.stubs(:get_balances).returns(
-      "balances" => [ { "xyz" => { "balance" => "12.5" } } ]
+      "balances" => [
+        { "btc" => { "balance" => "0.5", "audbalance" => "50000.00", "rate" => "100000.00" } },
+        { "xyz" => { "balance" => "12.5" } }
+      ]
     )
 
-    error = nil
     assert_difference -> { DebugLogEntry.count }, 1 do
-      error = assert_raises(CoinspotItem::Importer::MissingAssetPriceError) do
-        CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
-      end
+      result = CoinspotItem::Importer.new(@item, coinspot_provider: @provider).import
     end
 
-    assert_equal "CoinSpot returned XYZ without an AUD balance or rate", error.message
-    assert_empty @item.coinspot_accounts
+    assert_equal 1, result[:assets_imported]
+    refute_empty @item.coinspot_accounts
+
+    symbols = @item.coinspot_accounts.first.raw_payload["assets"].map { |a| a["symbol"] }
+    assert_includes symbols, "BTC"
+    refute_includes symbols, "XYZ"
+
+    warning = DebugLogEntry.last
+    assert_equal "provider_sync_error", warning.category
+    assert_equal "warn", warning.level
+    assert_includes warning.message, "XYZ"
+    assert_includes warning.message, "delisted"
   end
 
   test "preserves sell orders alongside buy orders from the primary endpoint" do

@@ -222,14 +222,14 @@ class CoinspotItem::Importer
         if !aud_asset && balance.nonzero? && !amount_aud&.nonzero?
           DebugLogEntry.capture(
             category: "provider_sync_error",
-            level: "error",
-            message: "CoinSpot returned #{symbol.to_s.upcase} without an AUD valuation",
+            level: "warn",
+            message: "CoinSpot returned #{symbol.to_s.upcase} without an AUD valuation; skipping delisted asset",
             source: self.class.name,
             provider_key: "coinspot",
             family: coinspot_item.family,
             metadata: { coinspot_item_id: coinspot_item.id, symbol: symbol.to_s.upcase, balance: balance.to_s("F") }
           )
-          raise MissingAssetPriceError, "CoinSpot returned #{symbol.to_s.upcase} without an AUD balance or rate"
+          next
         end
 
         amount_aud ||= 0.to_d
