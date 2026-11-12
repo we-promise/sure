@@ -22,7 +22,9 @@ rotating only the Active Record keys does not rotate these settings.
 
 ## Explicit conversion (operator approval required)
 
-This task is not run automatically during deployment or database setup:
+This task is not run automatically during deployment or database setup.
+It is separate from `security:backfill_encryption`, which covers Active Record
+encrypted model columns rather than dynamic settings.
 
 ```sh
 bin/rails provider_secrets:backfill                 # counts only

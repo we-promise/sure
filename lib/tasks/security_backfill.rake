@@ -37,6 +37,7 @@ namespace :security do
 
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
+    puts "Dynamic provider settings use a separate task: bin/rails provider_secrets:backfill (counts only); see docs/provider-secret-encryption.md."
 
     # User fields (MFA + PII)
     # Note: otp_backup_codes excluded - it's a PostgreSQL array column incompatible with AR encryption
