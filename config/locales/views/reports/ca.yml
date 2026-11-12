@@ -61,7 +61,6 @@ ca:
       subtitle: Visió completa de la teva salut financera
       title: Informes
       today: Avui
-      toggle_section: Commuta la visibilitat de la secció
     invalid_date_range: La data final no pot ser anterior a la inicial. Les dates
       s'han intercanviat.
     investment_flows:

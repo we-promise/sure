@@ -40,7 +40,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   # Select the release channel and legacy alias through December; no date pin.
   COMPATIBILITY_CHANNEL: 'alpha'
-  COMPATIBILITY_VERSION: '0.7.7-alpha.4'
+  COMPATIBILITY_VERSION: '0.7.7-alpha.5'
 
 permissions:
   contents: write
@@ -675,6 +675,75 @@ jobs:
           echo "Release assets:"
           ls -la "${{ runner.temp }}/release-assets/"
 
+      - name: Prepare release notes
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          ALIAS_NOTE: ${{ needs.prepare.outputs.alias_note }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const tag = process.env.RELEASE_TAG;
+            let body;
+            try {
+              const release = await github.rest.repos.getReleaseByTag({ ...context.repo, tag });
+              body = release.data.body ?? '';
+            } catch (error) {
+              // Never replace existing notes after an authentication or server error.
+              if (error.status !== 404) throw error;
+              const notes = await github.rest.repos.generateReleaseNotes({
+                ...context.repo, tag_name: tag
+              });
+              body = notes.data.body;
+            }
+
+            const mobile = [
+              '## Mobile Debug Builds',
+              '',
+              'This release includes debug builds of the mobile applications.  Download from the `Assets` area below.',
+              '',
+              '- **Android APK**: Debug build for testing on Android devices',
+              '- **iOS Build**: Unsigned iOS build (requires code signing for installation)',
+              '',
+              '> **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.'
+            ].join('\n');
+
+            // Move only the exact workflow-owned notice, never an entire Markdown section.
+            // Removing its separator too makes reruns idempotent without trimming user text.
+            for (const notice of [mobile, mobile.replace('applications.  Download', 'applications. Download')]) {
+              for (const lineEnding of ['\n', '\r\n']) {
+                const matchingNotice = notice.replace(/\n/g, lineEnding);
+                body = body.split(matchingNotice + lineEnding + lineEnding).join('').split(matchingNotice).join('');
+              }
+            }
+            const alias = process.env.ALIAS_NOTE || '';
+            const additions = alias && !body.split(/\r?\n/).includes(alias)
+              ? alias + '\n\n' + mobile : mobile;
+            // Track fenced examples without rewriting any authored line endings.
+            let fence = null;
+            let index = body.length;
+            for (const line of body.matchAll(/[^\n]*(?:\n|$)/g)) {
+              const text = line[0].replace(/\r?\n$/, '');
+              const marker = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(text);
+              if (fence) {
+                if (marker && marker[1][0] === fence[0] && marker[1].length >= fence.length && /^[ \t]*$/.test(marker[2])) {
+                  fence = null;
+                }
+                continue;
+              }
+              if (marker && (marker[1][0] !== '`' || !marker[2].includes('`'))) {
+                fence = marker[1];
+              } else if (/^#{1,6}[ \t]+What['’]s Changed[ \t]*#*[ \t]*$/.test(text)) {
+                index = line.index;
+                break;
+              }
+            }
+            const before = body.slice(0, index);
+            const separator = !before || /(?:\r?\n){2}$/.test(before) ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+            body = before + separator + additions + '\n\n' + body.slice(index);
+            fs.writeFileSync(path.join(process.env.RUNNER_TEMP, 'release-notes.md'), body);
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
         with:
@@ -682,17 +751,7 @@ jobs:
           name: ${{ needs.prepare.outputs.release_name }}
           draft: false
           prerelease: ${{ needs.prepare.outputs.stable != 'true' }}
-          generate_release_notes: true
+          generate_release_notes: false
+          body_path: ${{ runner.temp }}/release-notes.md
           files: |
             ${{ runner.temp }}/release-assets/*
-          body: |
-            ${{ needs.prepare.outputs.alias_note }}
-
-            ## Mobile Debug Builds
-
-            This release includes debug builds of the mobile applications.  Download from the `Assets` area below.
-
-            - **Android APK**: Debug build for testing on Android devices
-            - **iOS Build**: Unsigned iOS build (requires code signing for installation)
-
-            > **Note**: These are debug builds intended for testing purposes. For production use, please build from source with proper signing credentials.

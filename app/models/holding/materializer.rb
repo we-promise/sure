@@ -23,7 +23,7 @@ class Holding::Materializer
     end
 
     # Clean up only calculated holdings that are directly shadowed by a provider snapshot
-    # on the same date/security/currency. Historical calculated rows for provider-linked
+    # on the same date and security (in any currency). Historical calculated rows for provider-linked
     # securities are still needed to derive sane balance charts between sync snapshots.
     cleanup_shadowed_calculated_holdings
 
@@ -185,20 +185,23 @@ class Holding::Materializer
     # for the same security and date. This preserves reverse-calculated history for linked accounts.
     # Currency is not part of the match: providers can report a position in its own currency while
     # calculated rows are always in the account currency, and keeping both counts the position twice.
+    #
+    # The provider rows are read first and the calculated rows deleted one security at a time.
+    # Matching each calculated row against the account's rows in one correlated query is planned
+    # from statistics that predate the rows this sync just inserted, so on a first sync of a long
+    # history the planner can choose a nested loop over the whole account for every row.
     def cleanup_shadowed_calculated_holdings
-      deleted_count = account.holdings
-        .where(account_provider_id: nil)
-        .where(<<~SQL)
-          EXISTS (
-            SELECT 1
-            FROM holdings provider_holdings
-            WHERE provider_holdings.account_id = holdings.account_id
-              AND provider_holdings.security_id = holdings.security_id
-              AND provider_holdings.date = holdings.date
-              AND provider_holdings.account_provider_id IS NOT NULL
-          )
-        SQL
-        .delete_all
+      provider_dates = account.holdings
+        .where.not(account_provider_id: nil)
+        .distinct
+        .pluck(:security_id, :date)
+        .group_by(&:first)
+
+      deleted_count = provider_dates.sum do |security_id, rows|
+        account.holdings
+          .where(account_provider_id: nil, security_id: security_id, date: rows.map(&:last))
+          .delete_all
+      end
 
       Rails.logger.info("Cleaned up #{deleted_count} calculated holdings shadowed by provider snapshots") if deleted_count > 0
     end

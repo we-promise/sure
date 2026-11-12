@@ -171,7 +171,7 @@ class Settings::ProvidersController < ApplicationController
 
     def set_encryption_warning_context
       @provider_setup_encryption_warning = Rails.configuration.app_mode.self_hosted? &&
-        !ActiveRecordEncryptionConfig.explicitly_configured?
+        !ActiveRecordEncryptionConfig.ready?
     end
 
     # Reload provider configurations after settings update
@@ -227,7 +227,8 @@ class Settings::ProvidersController < ApplicationController
       { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
-      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
+      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" },
+      { key: "sharesight",     title: "Sharesight",      turbo_id: "sharesight",     partial: "sharesight_panel" }
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
@@ -255,6 +256,7 @@ class Settings::ProvidersController < ApplicationController
       "onchain_wallet" => "OnchainWalletItem",
       "snaptrade"      => "SnaptradeItem",
       "questrade"      => "QuestradeItem",
+      "sharesight"     => "SharesightItem",
       "ibkr"           => "IbkrItem",
       "trading212"     => "Trading212Item",
       "trade_republic" => "TradeRepublicItem",
@@ -314,6 +316,8 @@ class Settings::ProvidersController < ApplicationController
         @sophtron_items = Current.family.sophtron_items.ordered
       when "questrade"
         @questrade_items = Current.family.questrade_items.active.ordered
+      when "sharesight"
+        @sharesight_items = Current.family.sharesight_items.active.ordered
       end
     end
 
@@ -353,6 +357,7 @@ class Settings::ProvidersController < ApplicationController
       @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
+      @sharesight_items = Current.family.sharesight_items.active.ordered
       @fio_items = Current.family.fio_items.active.ordered
 
       # Wallet uploads are managed on iOS. Only expose linked accounts the
@@ -401,6 +406,7 @@ class Settings::ProvidersController < ApplicationController
         "onchain_wallet" => @onchain_wallet_items,
         "snaptrade"      => @snaptrade_items,
         "questrade"      => @questrade_items,
+        "sharesight"     => @sharesight_items,
         "ibkr"           => @ibkr_items,
         "trading212"     => @trading212_items,
         "trade_republic" => @trade_republic_items,
