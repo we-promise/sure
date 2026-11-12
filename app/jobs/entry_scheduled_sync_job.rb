@@ -6,31 +6,44 @@ class EntryScheduledSyncJob < ApplicationJob
   # disabled, nothing would otherwise trigger a sync on that date. This job
   # is the fallback: it fires once, on the entry's date, and simply asks the
   # account to sync -- a cheap no-op if a sync already happened by then.
-  def perform(entry_id)
-    entry = Entry.find_by(id: entry_id)
-    return unless entry
+  def perform(account_id, date)
+    account = Account.find_by(id: account_id)
+    return unless account
 
-    entry.account.sync_later
+    account.sync_later
   end
 
   def self.schedule_for(entry)
-    return unless entry.scheduled?
+    family = entry.account.family
+    return unless Time.use_zone(family.resolved_time_zone) { entry.scheduled? }
 
-    # A few minutes past midnight on the entry's date, so Date.current has
-    # definitively rolled over (avoids clock-skew edge cases) by run time.
-    # Midnight in the family's zone, as Sync#perform judges the date there --
-    # imports and bulk updates call this from jobs running in the app's zone.
-    run_at = entry.date.in_time_zone(entry.account.family.resolved_time_zone) + 5.minutes
-    set(wait_until: run_at).perform_later(entry.id)
+    account = entry.account
+    run_at = entry.date.in_time_zone(family.resolved_time_zone) + 5.minutes
+    set(wait_until: run_at).perform_later(account.id, entry.date)
   end
 
   # Batch variant for paths that write many entries without going through
   # Entry#sync_account_later (imports, bulk updates). Enqueues one job per
-  # (account, date) -- they'd all sync the same account on the same day.
+  # (account, date): perform(account_id, date) syncs the whole account, so
+  # deleting one entry in the batch does not cancel the sync for the others.
+  # "Future" is judged in each entry's family time zone, so entries dated
+  # tomorrow for a west-of-UTC family are not skipped by a job running in the
+  # app's zone.
   def self.schedule_for_entries(entries)
-    entries.where("entries.date > ?", Date.current)
-           .select("DISTINCT ON (entries.account_id, entries.date) entries.*")
-           .order("entries.account_id, entries.date")
-           .each { |entry| schedule_for(entry) }
+    entries = entries.to_a
+    return if entries.empty?
+
+    entries.group_by { |entry| entry.account.family }.each do |family, family_entries|
+      Time.use_zone(family.resolved_time_zone) do
+        family_entries.select { |entry| entry.date > Date.current }
+          .group_by(&:account_id)
+          .each do |account_id, account_entries|
+            account_entries.map(&:date).uniq.each do |date|
+              run_at = date.in_time_zone(family.resolved_time_zone) + 5.minutes
+              set(wait_until: run_at).perform_later(account_id, date)
+            end
+          end
+      end
+    end
   end
 end
