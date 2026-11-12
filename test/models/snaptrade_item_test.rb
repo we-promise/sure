@@ -71,5 +71,7 @@ class SnaptradeItemTest < ActiveSupport::TestCase
     assert_includes encrypted, "snaptrade_user_secret"
     assert_includes encrypted, "oauth_access_token"
     assert_includes encrypted, "oauth_refresh_token"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
   end
 end

@@ -49,12 +49,19 @@ This command will do the following:
 
 At this point, you should have `compose.yml` in your directory. It includes an optional `backup` service; see [Backups, upgrades and rollbacks](#backups-upgrades-and-rollbacks).
 
-### Step 3 (optional): Configure your environment
+### Step 3 (required): Configure your environment
 
-By default, our `compose.example.yml` file runs without any configuration.  
-That said, if you would like extra security (important if you're running outside of a local network), you can follow the steps below to set things up.
+`compose.yml` requires a `SECRET_KEY_BASE` you provide yourself — there is no built-in default. This isn't just a Rails formality: `SECRET_KEY_BASE` also seeds the automatic generation of your Active Record encryption keys (used to encrypt provider API tokens/keys and other sensitive data at rest) when you don't set `ACTIVE_RECORD_ENCRYPTION_*` explicitly. A shared or guessable value would mean session cookies can be forged **and** your encryption keys can be computed by anyone. Follow the steps below before starting the app.
 
-If you're running the app locally and don't care much about security, you can skip this step.
+#### Upgrading from the old built-in SECRET_KEY_BASE
+
+Earlier versions of `compose.example.yml` shipped a working default for `SECRET_KEY_BASE`. If your existing install ran without setting its own value, do **not** generate a new one when you update `compose.yml`:
+
+1. Copy the `SECRET_KEY_BASE` default from your current `compose.yml` (the `${SECRET_KEY_BASE:-...}` value) into `.env` as `SECRET_KEY_BASE=...` before starting the new version. If you plan to set `ACTIVE_RECORD_ENCRYPTION_*` explicitly, leave them unset for now.
+2. Start the app. It keeps reading your data, and the boot log shows a `[SECURITY]` warning because this value is publicly known.
+3. Rotate afterwards following that warning: keep the keys derived from the old value as a `previous` [Active Record encryption scheme](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation), set new keys as the current scheme, then run `bin/rails security:backfill_encryption`. Values stored via Settings (AI and market-data provider API keys) and existing sessions are not migrated and have to be re-entered after `SECRET_KEY_BASE` changes.
+
+Setting a fresh `SECRET_KEY_BASE` (or new `ACTIVE_RECORD_ENCRYPTION_*` keys) directly on an install with existing data makes everything already encrypted unreadable: logins and provider syncs fail.
 
 #### Create your environment file
 
@@ -455,6 +462,12 @@ docker compose run --rm backup create # Back up the current version (optional, r
 docker compose pull web worker # Pull the newest image for your tag
 docker compose up -d # Restart on the new version; database migrations run automatically
 ```
+
+### Re-encrypting data after an encryption-related update
+
+If a release note mentions a fix to Active Record encryption configuration, data written before you updated may still be stored as plaintext. Convert it as described in [Encrypting data stored without encryption](#encrypting-data-stored-without-encryption).
+
+`web` and `worker` read whether the conversion has finished only when they start. The procedure stops both before converting and starts them again afterwards, so they pick up the result.
 
 ### Upgrade note: instance-wide settings need a super admin
 
