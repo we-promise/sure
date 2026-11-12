@@ -315,6 +315,24 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # One share through a 1-for-3 split is stored as 0.333...3 to 18 places, and
+  # undoing the split gives 0.999...9: a baseline of -1e-18 that is rounding,
+  # not a short position, the same drift settle_opening tolerates.
+  test "split rounding does not clamp a position the trades fully explain" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("ROUND", 30)
+      trade(security, 1, 30, 2)
+      security.splits.create!(ex_date: d(5), numerator: 1, denominator: 3, source: "manual")
+      provider_holding(security, BigDecimal("0.333333333333333333"), nil)
+
+      materialize(:reverse)
+
+      assert_not HoldingLot.where(security: security, clamped: true).exists?, "rounding read as a short position"
+    end
+  end
+
   test "a clamped position that the provider brings back above its trades is unclamped" do
     travel_to TODAY do
       build_reverse_fixture
