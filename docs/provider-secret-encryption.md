@@ -20,6 +20,13 @@ protection against an attacker who can read the database. This settings encrypto
 does not support key rotation or Active Record's previous encryption schemes;
 rotating only the Active Record keys does not rotate these settings.
 
+If a saved Plaid credential is unreadable, that region is unavailable for new
+connections; manual accounts and other providers remain available. Provider
+settings show the error and allow replacement. Saving other fields with the
+unreadable secret left blank preserves its envelope for recovery with the original
+key. To discard it deliberately, select the delete checkbox and save; this permits
+ENV fallback.
+
 ## Explicit conversion (operator approval required)
 
 This task is not run automatically during deployment or database setup.

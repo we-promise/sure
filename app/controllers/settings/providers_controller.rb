@@ -42,6 +42,12 @@ class Settings::ProvidersController < ApplicationController
         value = param_value.to_s.strip
         value = nil if value.empty?
 
+        if field.secret && Array(params.dig(:setting, :clear_secrets)).include?(param_key.to_s)
+          value = nil
+        elsif field.secret && value.nil? && unreadable_secret?(field.setting_key)
+          next
+        end
+
         # For secret fields only, skip placeholder values to prevent accidental overwrite
         if field.secret && value == "********"
           next
@@ -149,6 +155,13 @@ class Settings::ProvidersController < ApplicationController
   end
 
   private
+    def unreadable_secret?(key)
+      Setting[key]
+      false
+    rescue Setting::SecretError
+      true
+    end
+
     def provider_params
       # Dynamically permit all provider configuration fields
       Provider::Factory.ensure_adapters_loaded
