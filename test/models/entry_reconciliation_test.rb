@@ -12,8 +12,8 @@ class EntryReconciliationTest < ActiveSupport::TestCase
     entry = create_transaction(account: @account)
 
     assert_equal :uncleared, entry.reconciliation_state
-    assert_not entry.cleared?
-    assert_not entry.reconciled?
+    assert_not entry.statement_cleared?
+    assert_not entry.statement_reconciled?
   end
 
   test "an entry carrying provider provenance is cleared without storing a flag" do
@@ -46,7 +46,7 @@ class EntryReconciliationTest < ActiveSupport::TestCase
     entry = create_transaction(account: @account)
     entry.mark_reconciled!
 
-    assert entry.reload.reconciled?
+    assert entry.reload.statement_reconciled?
     assert_nil entry.reconciled_by_statement_id
   end
 
@@ -65,10 +65,10 @@ class EntryReconciliationTest < ActiveSupport::TestCase
     unreconciled = create_transaction(account: @account)
     reconciled.mark_reconciled!(statement: @statement)
 
-    assert_includes Entry.reconciled, reconciled
-    assert_not_includes Entry.reconciled, unreconciled
-    assert_includes Entry.unreconciled, unreconciled
-    assert_includes Entry.reconciled_by(@statement), reconciled
+    assert_includes Entry.statement_reconciled, reconciled
+    assert_not_includes Entry.statement_reconciled, unreconciled
+    assert_includes Entry.statement_unreconciled, unreconciled
+    assert_includes Entry.reconciled_by_statement(@statement), reconciled
   end
 
   test "deleting the statement leaves the entry reconciled but unevidenced" do
@@ -78,7 +78,7 @@ class EntryReconciliationTest < ActiveSupport::TestCase
     @statement.destroy!
 
     entry.reload
-    assert entry.reconciled?, "reconciliation should survive losing the evidence"
+    assert entry.statement_reconciled?, "reconciliation should survive losing the evidence"
     assert_nil entry.reconciled_by_statement_id
   end
 

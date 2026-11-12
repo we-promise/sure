@@ -335,13 +335,15 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   end
 
   test "PDF vision probe sends the synthetic PDF as an Anthropic document block" do
+    # Symbol keys, as the Anthropic SDK returns tool input (the JSON.parse
+    # branch is skipped); string keys here would not reproduce the probe.
     tool_use = Struct.new(:type, :input).new(
       :tool_use,
       {
-        "document_type" => "bank_statement",
-        "summary" => "A synthetic bank statement containing no customer data.",
-        "extracted_data" => {
-          "institution_name" => AiHealth::Probe::SyntheticPdf::INSTITUTION
+        document_type: :bank_statement,
+        summary: "A synthetic bank statement containing no customer data.",
+        extracted_data: {
+          institution_name: AiHealth::Probe::SyntheticPdf::INSTITUTION
         }
       }
     )
