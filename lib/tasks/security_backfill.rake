@@ -10,6 +10,10 @@ namespace :security do
   # the #2611 fix and provider payloads now decrypt to Strings (symptom:
   # zero balances on every provider-linked account after a sync), run the
   # manual recovery script in issue #2611 first, then re-run this task.
+  #
+  # During a key rotation (docs/hosting/encryption.md) the write pass also
+  # re-encrypts existing ciphertext under the current key, deterministic
+  # attributes included (see current_key_ciphertexts).
   desc "Backfill encryption for sensitive fields (idempotent). Args: batch_size, dry_run"
   task :backfill_encryption, [ :batch_size, :dry_run ] => :environment do |_, args|
     raw_batch = args[:batch_size].presence || ENV["BATCH_SIZE"].presence || "100"

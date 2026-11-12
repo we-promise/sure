@@ -11,6 +11,7 @@ class Settings::SecuritiesController < ApplicationController
     self_hosted = Rails.application.config.app_mode.self_hosted?
     @encryption_unconfigured = self_hosted && !ActiveRecordEncryptionConfig.ready?
     @encryption_using_compromised_secret = self_hosted && !@encryption_unconfigured &&
+      !ActiveRecordEncryptionConfig.explicitly_configured? &&
       ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
   end
 end

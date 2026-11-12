@@ -58,6 +58,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
   test "warns when encryption keys are auto-derived from a known compromised secret" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
     ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
     ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
 
     get settings_security_url
@@ -65,6 +66,20 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
     assert_includes response.body, "security:rotate_setting_secrets"
+  end
+
+  # Explicit keys are not derived from SECRET_KEY_BASE, so the banner's
+  # "encryption keys are not actually secret" does not apply to them.
+  test "hides compromised secret warning when encryption keys are set explicitly" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_security_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
   end
 
   test "hides compromised secret warning when encryption is not configured at all" do

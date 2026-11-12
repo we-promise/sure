@@ -19,31 +19,27 @@ Rails.application.config.active_record.encryption.extend_queries = true
 # `normalizes` declaration on the same attribute - which is exactly
 # User#email and User#unconfirmed_email (see app/models/user.rb's
 # `normalizes :email, with: ->(email) { email.strip.downcase }`).
-# Arel::Nodes::HomogeneousIn#casted_values calls #serialize on the
-# *outermost* ActiveModel::Attributes::Normalization::NormalizedValueType
-# wrapper, whose #cast runs the normalization proc directly on each query
-# value - including extend_queries' internal AdditionalValue wrapper for
-# the clean-text fallback, which doesn't respond to #strip. In production
-# this makes `User.find_by(email:)` (and Rails' own `User.authenticate_by`,
-# which calls it internally) silently fail to match not-yet-backfilled
-# legacy rows instead of raising (support_unencrypted_data still makes
-# plain *reads* of already-loaded records work). Fixing this generically
-# would mean patching the shared ActiveModel normalization type, which is
-# used for unrelated attributes across the app - too invasive for this fix.
-# Every production call site that looks a user up by email
-# (app/controllers/sessions_controller.rb, password_resets_controller.rb,
-# invitations_controller.rb, oidc_accounts_controller.rb, mcp_controller.rb,
-# api/v1/auth_controller.rb, demo_family_refresh_job.rb) goes through
-# User.find_by_email / User.authenticate_by_email instead of a bare
-# find_by(email:) / authenticate_by(email:) - those fall back to a literal
-# SQL match so login/invitation/password-reset flows keep working for
-# not-yet-backfilled accounts even before an operator runs the backfill
-# task. Still run `bin/rails security:backfill_encryption` immediately
-# after upgrading so this fallback becomes unnecessary going forward.
-# Other deterministic downcase+encrypted fields without a model-level
-# `normalizes` declaration (Invitation#email, InviteCode#token) and
-# non-downcase deterministic fields (tokens, API keys, ...) are unaffected
-# by this specific bug - confirmed in
+# Invitation#email and InviteCode#token normalize in a before_validation
+# callback instead and are not affected. Arel::Nodes::HomogeneousIn#casted_values calls
+# #serialize on the *outermost* ActiveModel::Attributes::Normalization::
+# NormalizedValueType wrapper, whose #cast runs the normalization proc
+# directly on each query value - including extend_queries' internal
+# AdditionalValue wrapper for the clean-text fallback, which doesn't
+# respond to #strip. In production this makes `User.find_by(email:)`
+# silently fail to match not-yet-backfilled legacy rows instead of raising
+# (support_unencrypted_data still makes plain *reads* of already-loaded
+# records work). Fixing this generically would mean patching the shared
+# ActiveModel normalization type, which is used for unrelated attributes
+# across the app - too invasive for this fix. Instead, the user-facing email
+# lookups (web and API login, SSO linking, password reset, MCP, demo
+# refresh) go through User.find_by_email_with_legacy_fallback and
+# User.authenticate_by_email, which fall back to a literal match for legacy
+# plaintext rows, so existing
+# users can still sign in after upgrading. Operators should still run
+# `bin/rails security:backfill_encryption`: other `User.find_by(email:)`
+# callers (dev rake tasks, demo generator) do not have the fallback.
+# Non-downcase deterministic fields (tokens, API keys,
+# ...) are unaffected - confirmed in
 # test/initializers/active_record_encryption_test.rb.
 
 if Rails.env.test?
@@ -92,6 +88,19 @@ key_derivation_salt = ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"]
 
 if ActiveRecordEncryptionConfig.partial_env?
   raise ActiveRecordEncryptionConfig.partial_env_message
+end
+
+# A present-but-incomplete credentials.active_record_encryption block does
+# NOT fall through to auto-generation below (see the elsif's `.present?`
+# guard) - without this check it would silently disable encryption entirely
+# instead of failing loudly, unlike the equivalent partial-ENV case above.
+# Skipped when the ENV configuration is complete: ENV keys take priority
+# over credentials, so a stale/incomplete credentials block must not stop
+# such an installation from booting - the complete-ENV branch below applies
+# and the credentials block is ignored (jjmata's review on #3189; covered in
+# test/lib/active_record_encryption_config_test.rb).
+if ActiveRecordEncryptionConfig.reject_partial_credentials?
+  raise ActiveRecordEncryptionConfig.partial_credentials_message
 end
 
 # If all environment variables are present, use them (works for both managed and self-hosted)

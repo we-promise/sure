@@ -98,47 +98,53 @@ class User < ApplicationRecord
     User.exists? ? fallback_role : :super_admin
   end
 
+  # Deterministic lookups like `find_by(email:)` and `authenticate_by` miss
+  # rows whose email is still legacy plaintext (stored before encryption was
+  # active and not yet re-encrypted by `bin/rails security:backfill_encryption`):
+  # extend_queries does not cover attributes that also use `normalizes`. The
+  # fallback matches those rows by their literal column value.
+  def self.find_by_email_with_legacy_fallback(email)
+    normalized = email.to_s.strip.downcase
+    return nil if normalized.blank?
+
+    find_by(email: normalized) || find_by_legacy_plaintext_email(normalized)
+  end
+
+  # Takes the legacy path only for a plaintext row; every other case goes
+  # through authenticate_by, which stays timing-safe for wrong passwords and
+  # unknown emails. The legacy lookup runs first on every login (one indexed
+  # query) so that legacy and encrypted rows cost the same single password
+  # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  # A user without a local password (SSO only) still costs one hash, so
+  # response time does not reveal such accounts. A non-String password (a
+  # JSON number) is checked as text instead of raising.
+  def self.authenticate_by_email(email:, password:)
+    return nil if password.nil? || password.to_s.empty?
+
+    password = password.to_s
+    normalized = email.to_s.strip.downcase
+    legacy_user = find_by_legacy_plaintext_email(normalized)
+    user = legacy_user || find_by(email: normalized)
+    if user && user.password_digest.blank?
+      new(password: password)
+      return nil
+    end
+    return authenticate_by(email: normalized, password: password) unless legacy_user
+
+    legacy_user if legacy_user.authenticate(password)
+  end
+
+  # Legacy rows were always stored normalized (`normalizes :email` predates
+  # encryption), so an exact match uses the unique index. Only well-formed
+  # emails are looked up, so a pasted ciphertext can never match its own row.
+  def self.find_by_legacy_plaintext_email(normalized_email)
+    return nil unless normalized_email.match?(URI::MailTo::EMAIL_REGEXP)
+
+    find_by([ "email = ?", normalized_email ])
+  end
+  private_class_method :find_by_legacy_plaintext_email
+
   class << self
-    # Deterministic encrypted lookups (User.find_by(email:)) silently miss
-    # not-yet-backfilled legacy plaintext rows for #email/#unconfirmed_email
-    # specifically, because they combine `encrypts ..., downcase: true` with
-    # a model-level `normalizes` declaration on the same attribute - see the
-    # extend_queries KNOWN LIMITATION in
-    # config/initializers/active_record_encryption.rb. The literal SQL
-    # fallback below matches legacy plaintext rows directly (their column
-    # value *is* the plaintext) without risking a false match on
-    # already-encrypted rows, whose ciphertext never equals the plaintext
-    # value. Run `bin/rails security:backfill_encryption` after upgrading so
-    # this fallback becomes unnecessary going forward.
-    def find_by_email(email)
-      return nil if email.blank?
-
-      normalized = email.to_s.strip.downcase
-      find_by(email: normalized) || find_by([ "LOWER(email) = ?", normalized ])
-    end
-
-    # `authenticate_by` (Rails' timing-safe login helper) has the same
-    # not-yet-backfilled-row blind spot internally, since it looks the
-    # record up via `find_by(email:)`. This does the same job on top of
-    # #find_by_email: every non-blank attempt costs exactly one bcrypt
-    # digest - a password check for a user with a local password, a dummy
-    # hash for an unknown email or an SSO-only user - so response time does
-    # not reveal whether, or how, an email is registered. Blank passwords
-    # return nil without hashing on every path, like `authenticate_by`.
-    def authenticate_by_email(email:, password:)
-      password = password.to_s
-      return nil if password.empty?
-
-      user = find_by_email(email)
-
-      if user&.password_digest.present?
-        user if user.authenticate(password)
-      else
-        new(password: password)
-        nil
-      end
-    end
-
     def human_attribute_name(attribute, options = {})
       locale = options[:locale] || I18n.locale
       moniker = I18n.with_locale(locale) do

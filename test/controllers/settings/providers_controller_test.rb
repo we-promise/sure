@@ -716,12 +716,27 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   test "GET show warns when encryption keys are auto-derived from a known compromised secret" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
     ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
     ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
 
     get settings_providers_url
 
     assert_response :success
     assert_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
+  end
+
+  # Explicit keys are not derived from SECRET_KEY_BASE, so the banner's
+  # "encryption keys are not actually secret" does not apply to them.
+  test "GET show hides compromised secret warning when encryption keys are set explicitly" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    get settings_providers_url
+
+    assert_response :success
+    refute_includes response.body, I18n.t("settings.securities.show.compromised_secret_warning.title")
   end
 
   test "GET show hides compromised secret warning when encryption keys are not explicitly configured" do

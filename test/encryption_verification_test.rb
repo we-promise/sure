@@ -450,14 +450,10 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     )
     EnableBankingItem.where(id: eb_item.id).update_all("last_psu_ip = '203.0.113.50'")
 
-    # Turn the global fallback off so only the attribute's own option can cover it
-    config = ActiveRecord::Encryption.config
-    previous = config.support_unencrypted_data
-    config.support_unencrypted_data = false
-    begin
+    # The global setting can be on during the backfill window, so turn it off
+    # here: the attribute's own option must cover the legacy value by itself.
+    with_unencrypted_data_supported(false) do
       assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
-    ensure
-      config.support_unencrypted_data = previous
     end
   end
 
@@ -488,9 +484,9 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
 
   private
 
-    def with_unencrypted_data_supported
+    def with_unencrypted_data_supported(enabled = true)
       previous = ActiveRecord::Encryption.config.support_unencrypted_data
-      ActiveRecord::Encryption.config.support_unencrypted_data = true
+      ActiveRecord::Encryption.config.support_unencrypted_data = enabled
       yield
     ensure
       ActiveRecord::Encryption.config.support_unencrypted_data = previous

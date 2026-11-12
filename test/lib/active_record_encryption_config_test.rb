@@ -46,6 +46,20 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.runtime_configured?(config)
   end
 
+  test "detects complete credentials configuration" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+  end
+
+  test "does not treat partial credentials as configured" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+  end
+
   test "explicit configuration excludes runtime generated config" do
     ActiveRecordEncryptionConfig.stubs(:complete_env?).returns(false)
     ActiveRecordEncryptionConfig.stubs(:credentials_configured?).returns(false)
@@ -70,16 +84,94 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
   end
 
-  test "using_known_compromised_secret_key_base? is false when explicit keys are configured" do
-    # explicitly_configured? (env vars or credentials) takes precedence over
-    # SECRET_KEY_BASE in config/initializers/active_record_encryption.rb, so
-    # an install with its own explicit keys is unaffected even if it still
-    # has this SECRET_KEY_BASE value lying around (e.g. never rotated it
-    # because it isn't actually the key source).
+  test "using_known_compromised_secret_key_base? is true regardless of explicit AR encryption keys" do
+    # SECRET_KEY_BASE also signs/encrypts Rails session cookies and is the
+    # sole key source for Setting's own encryptor (app/models/setting.rb),
+    # independently of ActiveRecord Encryption. An install with its own
+    # explicit AR keys is unaffected on the AR-encryption front, but its
+    # sessions and Setting-stored values (AI/market-data provider API keys)
+    # remain just as crackable, so this must not be suppressed by
+    # explicitly_configured? - see config/initializers/encryption_warning.rb
+    # for how the two concerns are reported separately.
     known_default = ActiveRecordEncryptionConfig::KNOWN_COMPROMISED_SECRET_KEY_BASES.first
     ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
 
-    refute ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
+    assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
+  end
+
+  test "detects partially configured encryption credentials" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+  end
+
+  test "does not treat absent encryption credentials as partial" do
+    credentials = OpenStruct.new(active_record_encryption: nil)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  test "does not treat complete encryption credentials as partial" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  # Regression test for a gap CodeRabbit flagged: a present credentials block
+  # with every individual key blank had present_count == 0, so the old
+  # `present_count.positive? && ...` shape treated it the same as an absent
+  # block (not partial) - silently skipping both the raise and self-hosted
+  # auto-generation, since config/application.rb's `.present?` check on the
+  # block itself already treats it as configured either way.
+  test "treats a present credentials block with every key blank as partial" do
+    encryption_config = OpenStruct.new(primary_key: "", deterministic_key: "", key_derivation_salt: "")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+  end
+
+  # Regression coverage for jjmata's review on #3189: the boot check used to
+  # run partial_credentials? unconditionally, before the complete-ENV branch
+  # of the initializer was ever considered - so an installation with a
+  # complete, valid ACTIVE_RECORD_ENCRYPTION_* set AND a stale/incomplete
+  # credentials block stopped booting on upgrade, despite the documented
+  # ENV-first priority.
+  test "complete ENV configuration is not rejected by a partial credentials block" do
+    env = {
+      "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "primary",
+      "ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY" => "deterministic",
+      "ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT" => "salt"
+    }
+    encryption_config = OpenStruct.new(primary_key: "stale", deterministic_key: nil, key_derivation_salt: "stale")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.complete_env?(env)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    refute ActiveRecordEncryptionConfig.reject_partial_credentials?(env, credentials)
+  end
+
+  test "partial credentials are still rejected when the ENV configuration is absent or incomplete" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    # Absent ENV entirely: the credentials block is the only candidate
+    # configuration, and an incomplete one must still fail loudly.
+    assert ActiveRecordEncryptionConfig.reject_partial_credentials?({}, credentials)
+    # (A *partial* ENV set never reaches this predicate in the initializer -
+    # partial_env? raises first - but the predicate stays honest standalone.)
+    assert ActiveRecordEncryptionConfig.reject_partial_credentials?(
+      { "ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY" => "primary" }, credentials
+    )
+    refute ActiveRecordEncryptionConfig.reject_partial_credentials?({}, OpenStruct.new(active_record_encryption: nil))
   end
 
   test "derived_keys returns the keys derived from SECRET_KEY_BASE" do
@@ -93,6 +185,27 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
   test "previous_schemes is empty without a previous SECRET_KEY_BASE" do
     assert_empty ActiveRecordEncryptionConfig.previous_schemes({})
     assert_empty ActiveRecordEncryptionConfig.previous_schemes(ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV => "")
+  end
+
+  test "previous_schemes uses explicitly set old keys" do
+    env = {
+      "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY" => "old-primary",
+      "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_DETERMINISTIC_KEY" => "old-deterministic",
+      "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT" => "old-salt"
+    }
+
+    assert_equal({ primary_key: "old-primary", deterministic_key: "old-deterministic", key_derivation_salt: "old-salt" },
+      ActiveRecordEncryptionConfig.previous_keys(env))
+    assert_equal 2, ActiveRecordEncryptionConfig.previous_schemes(env).size
+    assert ActiveRecordEncryptionConfig.previous_keys_configured?(env)
+  end
+
+  test "previous_keys rejects a partial set of old keys" do
+    env = { "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY" => "old-primary" }
+
+    error = assert_raises(RuntimeError) { ActiveRecordEncryptionConfig.previous_keys(env) }
+    assert_includes error.message, "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT"
+    refute ActiveRecordEncryptionConfig.previous_keys_configured?({})
   end
 
   # The old salt differs from the configured one, which Rails' own key

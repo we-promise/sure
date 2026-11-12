@@ -61,7 +61,7 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     assert_equal "legacy-plaintext@example.com", user.reload.email
   end
 
-  test "User.find_by_email works around the known limitation for legacy plaintext rows" do
+  test "User.find_by_email_with_legacy_fallback works around the known limitation for legacy plaintext rows" do
     skip "Encryption not configured" unless User.encryption_ready?
 
     user = users(:family_admin)
@@ -69,9 +69,9 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
       ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
     )
 
-    assert_equal user, User.find_by_email("legacy-plaintext@example.com")
+    assert_equal user, User.find_by_email_with_legacy_fallback("legacy-plaintext@example.com")
     # Also matches with surrounding whitespace/mixed case, like a raw form param.
-    assert_equal user, User.find_by_email("  Legacy-Plaintext@Example.com  ")
+    assert_equal user, User.find_by_email_with_legacy_fallback("  Legacy-Plaintext@Example.com  ")
   end
 
   test "User.authenticate_by_email works around the known limitation for legacy plaintext rows" do

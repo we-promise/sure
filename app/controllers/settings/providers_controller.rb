@@ -173,6 +173,7 @@ class Settings::ProvidersController < ApplicationController
       self_hosted = Rails.configuration.app_mode.self_hosted?
       @provider_setup_encryption_warning = self_hosted && !ActiveRecordEncryptionConfig.ready?
       @provider_setup_compromised_secret_warning = self_hosted && !@provider_setup_encryption_warning &&
+        !ActiveRecordEncryptionConfig.explicitly_configured? &&
         ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
     end
 

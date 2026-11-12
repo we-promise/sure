@@ -25,6 +25,13 @@ module ActiveRecordEncryptionConfig
   # current keys.
   PREVIOUS_SECRET_KEY_BASE_ENV = "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE"
 
+  # The same for old keys that were set explicitly rather than derived.
+  PREVIOUS_ENV_KEYS = {
+    primary_key: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_PRIMARY_KEY",
+    deterministic_key: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_DETERMINISTIC_KEY",
+    key_derivation_salt: "ACTIVE_RECORD_ENCRYPTION_PREVIOUS_KEY_DERIVATION_SALT"
+  }.freeze
+
   # Previous-scheme key provider for keys derived from an old
   # SECRET_KEY_BASE. Rails derives every scheme's keys with the globally
   # configured salt, so the old salt needs a provider of its own. Keys are
@@ -157,9 +164,65 @@ module ActiveRecordEncryptionConfig
   end
 
   def credentials_configured?(credentials = Rails.application.credentials)
-    credentials.active_record_encryption.present?
+    config = credentials.active_record_encryption
+    return false unless config.present?
+
+    CONFIG_KEYS.all? { |key| config.public_send(key).present? }
   rescue NoMethodError
     false
+  end
+
+  # Unlike partial_env? (ENV vars), a present-but-incomplete Rails credentials
+  # block does NOT fall through to auto-generation from SECRET_KEY_BASE - see
+  # config/initializers/active_record_encryption.rb's `elsif ... &&
+  # !Rails.application.credentials.active_record_encryption.present?` guard.
+  # Left unchecked this silently disables encryption entirely (ready? / thus
+  # every model's `encrypts` declaration goes false) instead of failing loudly
+  # like the equivalent partial-ENV case does.
+  #
+  # Deliberately NOT the same shape as partial_env? (which requires at least
+  # one key present): once the credentials block itself exists at all - even
+  # with every individual key blank, e.g. `primary_key: ""` - that's already
+  # a configuration mistake worth failing loudly on, unlike ENV vars being
+  # entirely absent (a normal, unconfigured state that falls through to
+  # other paths). CodeRabbit caught this: an all-blank block used to slip
+  # through as present_count == 0, silently skipping both the raise and
+  # self-hosted auto-generation (config.application.rb's `.present?` check
+  # on the block already treats it as configured either way).
+  def partial_credentials?(credentials = Rails.application.credentials)
+    config = credentials.active_record_encryption
+    return false unless config.present?
+
+    !CONFIG_KEYS.all? { |key| config.public_send(key).present? }
+  rescue NoMethodError
+    false
+  end
+
+  def missing_credential_keys(credentials = Rails.application.credentials)
+    config = credentials.active_record_encryption
+    return CONFIG_KEYS.dup unless config.present?
+
+    CONFIG_KEYS.reject { |key| config.public_send(key).present? }
+  rescue NoMethodError
+    CONFIG_KEYS.dup
+  end
+
+  def partial_credentials_message(credentials = Rails.application.credentials)
+    "Active Record encryption Rails credentials are partially configured. Missing: #{missing_credential_keys(credentials).join(', ')}"
+  end
+
+  # Whether the boot check in config/initializers/active_record_encryption.rb
+  # should reject a present-but-incomplete credentials block. Skipped when
+  # the ENV configuration is complete: ENV keys take priority over
+  # credentials (the documented priority order in that initializer), so a
+  # stale/incomplete credentials block must not stop such an installation
+  # from booting - the complete-ENV branch applies and the credentials block
+  # is ignored entirely. Previously the initializer checked
+  # partial_credentials? unconditionally and raised before the complete-ENV
+  # branch was ever considered, which broke boot on upgrade for exactly
+  # those installations (jjmata's review on #3189).
+  def reject_partial_credentials?(env = ENV, credentials = Rails.application.credentials)
+    !complete_env?(env) && partial_credentials?(credentials)
   end
 
   def runtime_configured?(config = Rails.application.config.active_record.encryption)
@@ -176,15 +239,20 @@ module ActiveRecordEncryptionConfig
     explicitly_configured? || runtime_configured?
   end
 
-  # Only meaningful for the auto-derived path: explicit env vars or Rails
-  # credentials (explicitly_configured?) take precedence over SECRET_KEY_BASE
-  # in config/initializers/active_record_encryption.rb, so an install that
-  # set its own encryption keys but happens to still have this SECRET_KEY_BASE
-  # value (e.g. never bothered rotating it because it isn't the key source)
-  # is not actually affected and should not be warned.
+  # Deliberately independent of explicitly_configured?/ready?: this is a fact
+  # about SECRET_KEY_BASE itself, not about whether Active Record Encryption's
+  # own keys happen to be derived from it. Explicit AR keys only mean AR
+  # encryption isn't affected - SECRET_KEY_BASE also signs/encrypts Rails
+  # session cookies and is the sole key source for Setting's own encryptor
+  # (app/models/setting.rb's setting_encryptor), independently of AR
+  # encryption config. A previous version of this method returned false
+  # whenever explicitly_configured? was true, which suppressed the warning
+  # in config/initializers/encryption_warning.rb entirely for installs with
+  # explicit AR keys - even though their sessions and Setting-encrypted
+  # provider/AI API keys remained trivially crackable by anyone who knows
+  # this public compromised value. See ActiveRecordEncryptionConfig#ready?
+  # for the (separate) question of whether AR encryption itself is affected.
   def using_known_compromised_secret_key_base?(secret_key_base = Rails.application.secret_key_base)
-    return false if explicitly_configured?
-
     KNOWN_COMPROMISED_SECRET_KEY_BASES.include?(secret_key_base)
   rescue NoMethodError
     false
@@ -199,18 +267,33 @@ module ActiveRecordEncryptionConfig
   end
 
   # Previous schemes for `config.active_record.encryption.previous`, built
-  # from the keys derived from PREVIOUS_SECRET_KEY_BASE_ENV. Rails applies a
-  # global previous scheme only to attributes with the same determinism, so
-  # there is one scheme for each kind.
+  # from the keys derived from PREVIOUS_SECRET_KEY_BASE_ENV or from the
+  # PREVIOUS_ENV_KEYS. Rails applies a global previous scheme only to
+  # attributes with the same determinism, so there is one scheme for each kind.
   def previous_schemes(env = ENV)
-    old_base = env[PREVIOUS_SECRET_KEY_BASE_ENV]
-    return [] if old_base.blank?
+    keys = previous_keys(env)
+    return [] unless keys
 
-    keys = derived_keys(old_base)
     [
       { key_provider: DerivedKeyProvider.new(keys[:primary_key], keys[:key_derivation_salt]) },
       { deterministic: true, key_provider: DerivedKeyProvider.new(keys[:deterministic_key], keys[:key_derivation_salt]) }
     ]
+  end
+
+  def previous_keys(env = ENV)
+    if env_value_present?(env, PREVIOUS_SECRET_KEY_BASE_ENV)
+      derived_keys(env[PREVIOUS_SECRET_KEY_BASE_ENV])
+    elsif PREVIOUS_ENV_KEYS.values.any? { |key| env_value_present?(env, key) }
+      missing = PREVIOUS_ENV_KEYS.values.reject { |key| env_value_present?(env, key) }
+      raise "Previous Active Record encryption keys are partially configured. Missing: #{missing.join(', ')}" if missing.any?
+
+      PREVIOUS_ENV_KEYS.transform_values { |key| env[key] }
+    end
+  end
+
+  def previous_keys_configured?(env = ENV)
+    env_value_present?(env, PREVIOUS_SECRET_KEY_BASE_ENV) ||
+      PREVIOUS_ENV_KEYS.values.any? { |key| env_value_present?(env, key) }
   end
 
   def env_value_present?(env, key)
