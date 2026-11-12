@@ -12,10 +12,13 @@ en:
         merchant_prompt: Select a merchant
         name_label: Name
         name_placeholder: Enter a name that will be applied to selected transactions
+        no_change: (no change)
         none: "(none)"
         notes_label: Notes
         notes_placeholder: Enter a note that will be applied to selected transactions
         overview: Overview
+        reconciled_status_hint: Only applies to manually-entered accounts (no bank sync).
+        reconciled_status_label: Reconciliation status
         save: Save
         tags_label: Tags
         transactions_section: Transactions
@@ -23,6 +26,7 @@ en:
     selection_bar:
       duplicate: Duplicate
       edit: Edit
+      reconcile: Reconcile
       selected: selected
     form:
       details: Details
@@ -170,6 +174,8 @@ en:
     transfer_match:
       auto_matched: Match?
       auto_matched_short: Match?
+      auto_matched_tooltip_html: "%{amount} in %{account} on %{date}. Click to review."
+      auto_matched_tooltip_hidden: A transaction in an account you cannot see.
       confirm_match: Confirm match
       payment_confirmed: Payment is confirmed
       reject_match: Reject match
@@ -183,6 +189,8 @@ en:
       potential_duplicate_tooltip: This may be a duplicate of another transaction
       review_recommended: Review
       review_recommended_tooltip: Large amount difference — review recommended to check if this is a duplicate
+      scheduled: Scheduled
+      scheduled_tooltip: Dated in the future — won't affect your balance until then
       split: Split
       split_tooltip: This transaction has been split into multiple entries
       split_child_tooltip: Part of a split transaction
@@ -196,6 +204,19 @@ en:
     dismiss_duplicate:
       success: Kept as separate transactions
       failure: Could not dismiss duplicate suggestion
+    reconcile:
+      success: Marked as %{status}
+      failure: Could not update reconciliation status
+      unavailable: Reconciliation is not enabled for this family
+      not_manual_account: Reconciliation status only applies to manually-entered accounts (no bank sync)
+      statuses:
+        unreconciled: Unreconciled
+        cleared: Cleared
+        reconciled: Reconciled
+      badge:
+        unreconciled_tooltip: "Not yet checked against a statement. Click to mark as cleared."
+        cleared_tooltip: "Confirmed on a statement, not yet fully reconciled. Click to mark as reconciled."
+        reconciled_tooltip: "Statement period fully reconciled. Click to reset to unreconciled."
     pending_duplicate_merge:
       possible_duplicate: Duplicate?
       possible_duplicate_short: Dup?
@@ -205,6 +226,9 @@ en:
       reject_title: Keep as separate transactions
     summary:
       total_transactions: Total transactions
+      scheduled_count:
+        one: "including %{count} scheduled"
+        other: "including %{count} scheduled"
       income: Income
       expenses: Expenses
       inflow: Inflow
@@ -275,6 +299,7 @@ en:
         date: Date
         type: Type
         status: Status
+        reconcile_status: Reconciliation
         amount: Amount
         category: Category
         tag: Tag
@@ -377,6 +402,7 @@ en:
         clear_filters: Clear filters
         date_filter: Date
         merchant_filter: Merchant
+        reconcile_status_filter: Reconciliation
         status_filter: Status
         tag_filter: Tag
         type_filter: Type

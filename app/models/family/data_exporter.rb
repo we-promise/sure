@@ -503,6 +503,8 @@ class Family::DataExporter
             cost_basis_source: holding.cost_basis_source,
             cost_basis_locked: holding.cost_basis_locked,
             cost_basis_carried: holding.cost_basis_carried,
+            cost_basis_locked_qty: holding.cost_basis_locked_qty,
+            cost_basis_locked_unit_cost: holding.cost_basis_locked_unit_cost,
             security_locked: holding.security_locked
           }
         }.to_json
@@ -805,7 +807,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
-        return rule_operand(condition.value, type: "Merchant", relation: :merchants)
+        return rule_operand(condition.value, type: "Merchant", relation: :available_merchants)
       end
 
       # Map tag UUIDs to names for portability
@@ -826,7 +828,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant"
-        return rule_operand(action.value, type: "Merchant", relation: :merchants, fallback_to_name: true)
+        return rule_operand(action.value, type: "Merchant", relation: :available_merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability. Stored as a comma-separated

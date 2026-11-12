@@ -107,6 +107,11 @@ export default class extends Controller {
     const reference = this.element.querySelector("[data-icon]");
     computePosition(reference || this.element, this.tooltipTarget, {
       placement: this.placementValue,
+      // Matches the panel's `fixed` class. An `absolute` panel is clipped by any
+      // ancestor with `overflow: hidden` — e.g. the account page header wraps
+      // the logo in exactly such a row — and its width is bounded by that
+      // ancestor rather than the text. DS::Menu uses the same strategy.
+      strategy: "fixed",
       middleware: [
         offset({
           mainAxis: this.offsetValue,

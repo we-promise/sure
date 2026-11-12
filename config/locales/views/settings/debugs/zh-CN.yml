@@ -1,0 +1,39 @@
+---
+zh-CN:
+  settings:
+    debugs:
+      show:
+        page_title: 调试
+        title: 调试事件日志
+        subtitle: 面向超级管理员的有意义操作事件，最新优先。
+        empty: 未找到调试事件。
+        missing_value: "—"
+        filters:
+          all: 全部
+          category: 分类
+          level: 级别
+          source: 来源
+          provider: 提供商
+          start_date: 起始日期
+          end_date: 结束日期
+          family_id: 家庭 ID
+          account_id: 账户 ID
+          user_id: 用户 ID
+          account_provider_id: 账户提供商 ID
+          submit: 筛选
+          reset: 重置
+        table:
+          time: 时间
+          level: 级别
+          category: 分类
+          source: 来源
+          message: 消息
+          context: 上下文
+          metadata: 元数据
+          view_metadata: 查看
+        context:
+          provider: provider=%{value}
+          family: family=%{value}
+          account: account=%{value}
+          user: user=%{value}
+          account_provider: account_provider=%{value}

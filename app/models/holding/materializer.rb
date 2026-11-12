@@ -23,7 +23,7 @@ class Holding::Materializer
     end
 
     # Clean up only calculated holdings that are directly shadowed by a provider snapshot
-    # on the same date/security/currency. Historical calculated rows for provider-linked
+    # on the same date and security (in any currency). Historical calculated rows for provider-linked
     # securities are still needed to derive sane balance charts between sync snapshots.
     cleanup_shadowed_calculated_holdings
 
@@ -100,8 +100,20 @@ class Holding::Materializer
           "updated_at" => current_time
         }
 
-        if existing&.cost_basis_locked? && !existing.cost_basis_carried?
-          # For holdings the user locked, preserve ALL cost_basis fields
+        if existing&.cost_basis_locked? && !existing.cost_basis_carried? && existing.cost_basis_locked_unit_cost
+          # A row the user locked shows their figure while it covers every unit
+          # held. Once a trade entered later adds units, it shows the blend the
+          # calculators roll forward, and stays locked to the user's figure.
+          holdings_buffer_to_upsert_lock_state << base_attrs.merge(
+            "cost_basis" => locked_row_cost_basis(existing, holding),
+            "cost_basis_source" => "manual",
+            "cost_basis_locked" => true,
+            "cost_basis_carried" => false
+          )
+          flush.call(holdings_buffer_to_upsert_lock_state) if holdings_buffer_to_upsert_lock_state.size >= PERSIST_BATCH_SIZE
+        elsif existing&.cost_basis_locked? && !existing.cost_basis_carried?
+          # A lock with no stated figure apart from cost_basis keeps every
+          # cost_basis field as it is.
           holdings_buffer_to_upsert_without_cost << base_attrs
           flush.call(holdings_buffer_to_upsert_without_cost) if holdings_buffer_to_upsert_without_cost.size >= PERSIST_BATCH_SIZE
         elsif (carried = carried_manual_cost_basis(holding))
@@ -181,6 +193,13 @@ class Holding::Materializer
       flush.call(holdings_buffer_to_upsert_lock_state) unless holdings_buffer_to_upsert_lock_state.empty?
     end
 
+    def locked_row_cost_basis(existing, holding)
+      locked_qty = existing.cost_basis_locked_qty
+      return existing.cost_basis_locked_unit_cost if locked_qty.nil? || holding.qty <= locked_qty
+
+      holding.cost_basis unless holding.cost_basis_unknown
+    end
+
     # The figure of the latest earlier row the user locked for this position,
     # while the row holds the same units with no trade since; nil otherwise.
     # Once a trade moves the position on, the calculators roll forward from
@@ -188,12 +207,14 @@ class Holding::Materializer
     def carried_manual_cost_basis(holding)
       anchor = manual_cost_basis_anchors[[ holding.security_id, holding.currency ]]&.reverse_each&.find { |row| row.date < holding.date }
       return unless anchor && anchor_qty(anchor) == holding.qty
+      # Units beyond those the figure was set for keep their own cost.
+      return if anchor.cost_basis_locked_qty && anchor_qty(anchor) > anchor.cost_basis_locked_qty
 
       dates = trade_dates_by_security[holding.security_id]
       next_trade = dates.bsearch { |date| date > anchor.date }
       return if next_trade && next_trade <= holding.date
 
-      anchor.cost_basis
+      anchor.cost_basis_locked_unit_cost || anchor.cost_basis
     end
 
     # The units held on the lock's date as this run works them out, since a
@@ -208,7 +229,8 @@ class Holding::Materializer
     # within that currency.
     def manual_cost_basis_anchors
       @manual_cost_basis_anchors ||= account.holdings
-        .where(cost_basis_locked: true, cost_basis_carried: false).where.not(cost_basis: nil)
+        .where(cost_basis_locked: true, cost_basis_carried: false)
+        .where("COALESCE(holdings.cost_basis_locked_unit_cost, holdings.cost_basis) IS NOT NULL")
         .order(:date).group_by { |row| [ row.security_id, row.currency ] }
     end
 
@@ -223,9 +245,9 @@ class Holding::Materializer
     end
 
     # Clearable unless there is nothing to clear or somebody still asserts the
-    # figure: a provider's, or a manual one the user keeps locked. Unlocking
-    # (`Holding#unlock_cost_basis!`) leaves the figure and its "manual" source
-    # on the released rows, so without the last clause they kept it.
+    # figure: a provider's, or a manual one the user keeps locked. A manual
+    # figure on a row the user has unlocked (`Holding#unlock_cost_basis!`
+    # leaves the figure and its source in place) is clearable.
     def clearable_calculated_basis?(existing)
       return false if existing.nil? || existing.cost_basis.blank?
 
@@ -254,20 +276,23 @@ class Holding::Materializer
     # for the same security and date. This preserves reverse-calculated history for linked accounts.
     # Currency is not part of the match: providers can report a position in its own currency while
     # calculated rows are always in the account currency, and keeping both counts the position twice.
+    #
+    # The provider rows are read first and the calculated rows deleted one security at a time.
+    # Matching each calculated row against the account's rows in one correlated query is planned
+    # from statistics that predate the rows this sync just inserted, so on a first sync of a long
+    # history the planner can choose a nested loop over the whole account for every row.
     def cleanup_shadowed_calculated_holdings
-      deleted_count = account.holdings
-        .where(account_provider_id: nil)
-        .where(<<~SQL)
-          EXISTS (
-            SELECT 1
-            FROM holdings provider_holdings
-            WHERE provider_holdings.account_id = holdings.account_id
-              AND provider_holdings.security_id = holdings.security_id
-              AND provider_holdings.date = holdings.date
-              AND provider_holdings.account_provider_id IS NOT NULL
-          )
-        SQL
-        .delete_all
+      provider_dates = account.holdings
+        .where.not(account_provider_id: nil)
+        .distinct
+        .pluck(:security_id, :date)
+        .group_by(&:first)
+
+      deleted_count = provider_dates.sum do |security_id, rows|
+        account.holdings
+          .where(account_provider_id: nil, security_id: security_id, date: rows.map(&:last))
+          .delete_all
+      end
 
       Rails.logger.info("Cleaned up #{deleted_count} calculated holdings shadowed by provider snapshots") if deleted_count > 0
     end

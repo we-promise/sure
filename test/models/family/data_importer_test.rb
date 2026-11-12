@@ -31,6 +31,33 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "imports into existing accounts given as account targets" do
+    account = @family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+    ndjson = build_ndjson([
+      { type: "Transaction", data: { id: "old-txn", account_id: "old-account", date: "2024-01-02", amount: "10.00", name: "Grocer" } }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
+
+    assert_empty result[:accounts]
+    assert_equal [ "Grocer" ], account.entries.pluck(:name)
+  end
+
+  test "keeps a transaction's own extra metadata and import lock" do
+    account = @family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+    ndjson = build_ndjson([
+      { type: "Transaction", data: { id: "old-txn", account_id: "old-account", date: "2024-01-02", amount: "10.00",
+        name: "Grocer", extra: { monarch: { transaction_id: "1" } }, import_locked: true } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
+
+    entry = account.entries.sole
+    assert_equal({ "monarch" => { "transaction_id" => "1" } }, entry.transaction.extra)
+    assert entry.import_locked?
+    assert_nil entry.external_id
+  end
+
   test "restores the Brandfetch logo choice so no fetched icon replaces it" do
     ndjson = build_ndjson([
       {
@@ -1332,6 +1359,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       cost_basis_source: "manual",
       cost_basis_locked: true,
       cost_basis_carried: true,
+      cost_basis_locked_qty: 80,
+      cost_basis_locked_unit_cost: 190,
       security_locked: true
     )
 
@@ -1355,6 +1384,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "manual", imported_holding.cost_basis_source
     assert imported_holding.cost_basis_locked
     assert imported_holding.cost_basis_carried, "a carried lock came back as the user's own"
+    assert_equal 80, imported_holding.cost_basis_locked_qty, "the lock came back covering every unit held"
+    assert_equal 190, imported_holding.cost_basis_locked_unit_cost, "the lock came back seeded from the shown figure"
     assert imported_holding.security_locked
   end
 
@@ -2341,6 +2372,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     second_rule = @family.rules.find_by!(name: "Second coffee rule")
     assert_equal category.id, first_rule.actions.first.value
     assert_equal category.id, second_rule.actions.first.value
+  end
+
+  test "points imported merchant rules at a reused provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer")
+    value_ref = { type: "Merchant", id: "old-provider-merchant", name: "Synced Grocer" }
+
+    ndjson = build_ndjson([
+      {
+        type: "ProviderMerchant",
+        data: { id: "old-provider-merchant", name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer" }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Grocer rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_merchant", operator: "=", value: "Synced Grocer", value_ref: value_ref }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Synced Grocer", value_ref: value_ref }
+          ]
+        }
+      }
+    ])
+
+    assert_no_difference -> { @family.merchants.count } do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    rule = @family.rules.find_by!(name: "Grocer rule")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
   end
 
   test "reuses a merchant created for an earlier rule within the same import" do

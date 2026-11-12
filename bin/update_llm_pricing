@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+# Refreshes config/llm_pricing.yml from LiteLLM's price list and prints a
+# Markdown summary of the changes (used as the pull request body).
+require_relative "../lib/llm_pricing_updater"
+
+path = File.expand_path("../config/llm_pricing.yml", __dir__)
+result = LlmPricingUpdater.new(File.read(path), LlmPricingUpdater.fetch_prices).call
+File.write(path, result.yaml)
+puts result.summary

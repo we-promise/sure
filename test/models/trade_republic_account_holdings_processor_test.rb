@@ -373,6 +373,8 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
       cost_basis_source: "manual",
       cost_basis_locked: true,
       cost_basis_carried: true,
+      cost_basis_locked_qty: 3,
+      cost_basis_locked_unit_cost: 36,
       currency: "EUR",
       external_id: "stale-isin-holding",
       provider_security_id: prior_provider_security.id,
@@ -406,6 +408,8 @@ class TradeRepublicAccountHoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "manual", exchange_holding.cost_basis_source
     assert exchange_holding.cost_basis_locked
     assert exchange_holding.cost_basis_carried, "a carried lock arrived as the user's own"
+    assert_equal 3, exchange_holding.cost_basis_locked_qty, "the lock arrived covering every unit held"
+    assert_equal 36, exchange_holding.cost_basis_locked_unit_cost, "the lock arrived seeded from the shown figure"
     assert_equal prior_provider_security.id, exchange_holding.provider_security_id
   end
 

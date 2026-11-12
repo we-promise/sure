@@ -300,6 +300,51 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_equal [ account_provider.id ], yesterday_holdings.pluck(:account_provider_id)
   end
 
+  test "cleans up calculated holdings for each provider security only on its own snapshot dates" do
+    [ Date.yesterday, Date.current ].each do |date|
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.2)
+    end
+
+    coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    coinstats_account = coinstats_item.coinstats_accounts.create!(
+      name: "Brokerage",
+      currency: "USD"
+    )
+    account_provider = AccountProvider.create!(account: @account, provider: coinstats_account)
+
+    provider_rows = { @aapl => [ Date.yesterday, Date.current ], @msft => [ Date.current ] }
+    provider_rows.each do |security, dates|
+      dates.each do |date|
+        Holding.create!(
+          account: @account,
+          security: security,
+          qty: 10,
+          price: 200,
+          amount: 2000,
+          currency: "EUR",
+          date: date,
+          account_provider: account_provider
+        )
+      end
+    end
+
+    # Calculated rows from an earlier sync: AAPL and MSFT on both days.
+    [ @aapl, @msft ].product([ Date.yesterday, Date.current ]).each do |security, date|
+      Holding.create!(account: @account, security: security, qty: 10, price: 240, amount: 2400, currency: "USD", date: date)
+    end
+
+    Holding::Materializer.new(@account, strategy: :reverse).materialize_holdings
+
+    provider_rows.each do |security, dates|
+      dates.each do |date|
+        assert_equal [ account_provider.id ], @account.holdings.where(security: security, date: date).pluck(:account_provider_id)
+      end
+    end
+
+    msft_yesterday = @account.holdings.where(security: @msft, date: Date.yesterday)
+    assert_equal [ [ "USD", nil ] ], msft_yesterday.pluck(:currency, :account_provider_id)
+  end
+
   test "carries forward provider cost_basis to calculated rows past the provider snapshot date" do
     coinstats_item = @family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
     coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Brokerage", currency: "USD")
@@ -857,10 +902,26 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     assert_nil latest_holding.avg_cost
   end
 
-  # The lock covers the units held at the end of its date, so a trade entered
-  # on an earlier date changes what it covers, not whether it carries.
-  test "a trade entered before the lock date keeps the carry in the same sync" do
+  # A lock covers the units it was set for. A trade entered afterwards is
+  # not covered by the user's figure even when dated on or before the lock:
+  # its units sit beside the figure at their own price.
+  test "a same-day buy entered after a lock sits beside it at its own price" do
+    create_trade(@aapl, account: @account, qty: 1, price: 100, date: 3.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
     create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+
+    assert_equal 2, latest_holding.qty
+    assert_equal 175, latest_holding.cost_basis&.to_d, "150 means the lock covered the later buy; 125 means it costed the wrong units"
+    assert_not latest_holding.cost_basis_carried?
+    assert_lock_row_shows 175, 3.days.ago.to_date
+  end
+
+  test "a back-dated buy entered after a lock blends in at its own price" do
+    create_trade(@aapl, account: @account, qty: 1, price: 100, date: 3.days.ago.to_date)
     materialize
     @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
     materialize
@@ -869,8 +930,78 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
     materialize
 
     assert_equal 2, latest_holding.qty
-    assert latest_holding.cost_basis_carried?, "the carry compared against the lock row's quantity before this sync"
-    assert_equal 150, latest_holding.cost_basis&.to_d
+    assert_equal 175, latest_holding.cost_basis&.to_d, "150 means the lock covered the later buy; 125 means it costed the wrong units"
+    assert_not latest_holding.cost_basis_carried?
+    assert_lock_row_shows 175, 3.days.ago.to_date
+  end
+
+  test "a back-dated buy entered after a lock on a transferred-in position keeps it known" do
+    transfer = create_trade(@aapl, account: @account, qty: 1, price: 100, date: 3.days.ago.to_date)
+    transfer.trade.update!(investment_activity_label: Trade::TRANSFER_LABEL)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    materialize
+
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: 4.days.ago.to_date)
+    materialize
+
+    assert_equal 175, latest_holding.avg_cost&.amount, "nil means the transferred lot was left uncosted beside the buy"
+  end
+
+  test "a lock with no later trades covers every unit it was set for" do
+    create_trade(@aapl, account: @account, qty: 2, price: 100, date: 3.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+
+    materialize
+
+    assert_equal [ 2, 150, true ], [ latest_holding.qty, latest_holding.cost_basis&.to_d, latest_holding.cost_basis_carried? ]
+    assert_lock_row_shows 150, 3.days.ago.to_date
+  end
+
+  # The owner's example on the row the drawer shows: the lock is on today's
+  # row, so that row itself must show the blend.
+  test "a same-day buy after locking today's row shows the blend on that row and keeps it locked" do
+    create_trade(@aapl, account: @account, qty: 1, price: 100, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+    assert_equal Date.current, latest_holding.date, "precondition: the lock is on today's row"
+
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    materialize
+
+    assert_equal 2, latest_holding.qty
+    assert_lock_row_shows 175, Date.current
+  end
+
+  # The figure the calculators seed from is the user's, not the blend the
+  # lock row shows, so a re-sync does not blend the later buy in twice.
+  test "re-syncing a blended lock row does not drift the user's figure" do
+    create_trade(@aapl, account: @account, qty: 1, price: 100, date: 2.days.ago.to_date)
+    materialize
+    latest_holding.set_manual_cost_basis!(150)
+    create_trade(@aapl, account: @account, qty: 1, price: 200, date: Date.current)
+    materialize
+
+    materialize
+
+    assert_lock_row_shows 175, Date.current, "187.5 means the blend was seeded as the user's figure"
+    assert_equal 150, latest_holding.cost_basis_locked_unit_cost&.to_d
+  end
+
+  test "removing the later buy puts the user's figure back on the lock row" do
+    create_trade(@aapl, account: @account, qty: 1, price: 100, date: 3.days.ago.to_date)
+    materialize
+    @account.holdings.find_by!(security: @aapl, date: 3.days.ago.to_date).set_manual_cost_basis!(150)
+    later = create_trade(@aapl, account: @account, qty: 1, price: 200, date: 3.days.ago.to_date)
+    materialize
+    assert_lock_row_shows 175, 3.days.ago.to_date
+
+    later.destroy!
+    materialize
+
+    assert_lock_row_shows 150, 3.days.ago.to_date
+    assert_equal 150, latest_holding.cost_basis&.to_d, "the carry took the blend the lock row showed before"
   end
 
   # Linked accounts rebuild their history backwards from the provider's
@@ -895,5 +1026,10 @@ class Holding::MaterializerTest < ActiveSupport::TestCase
 
     def materialize
       Holding::Materializer.new(@account.reload, strategy: :forward).materialize_holdings
+    end
+
+    def assert_lock_row_shows(expected, date, message = nil)
+      row = @account.holdings.find_by!(security: @aapl, date: date)
+      assert_equal [ expected, true, false ], [ row.cost_basis&.to_d, row.cost_basis_locked?, row.cost_basis_carried? ], message
     end
 end

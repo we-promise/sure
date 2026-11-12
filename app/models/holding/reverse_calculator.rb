@@ -127,12 +127,13 @@ class Holding::ReverseCalculator
       # Spans [start, end) during which a security still holds transferred-in units
       # of unknown cost. `end` is nil while a span is still open at the last trade.
       @unknown_spans = Hash.new { |h, k| h[k] = [] }
-      trackers = Hash.new { |h, k| h[k] = Holding::CostBasisTracker.new }
+      @lot_books = Hash.new { |h, k| h[k] = Holding::LotBook.new }
       open_unknown_start = {}
 
-      # get_trades is already chronological (date, then created_at, then id).
+      # get_trades is already in replay order (date, created_at, acquisitions
+      # before disposals, then id).
       # Re-sorting by date alone is unstable and could reorder same-day trades,
-      # which matters because the tracker is order-sensitive once sells relieve.
+      # which matters because the lot book is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
       events = replay_events(trades)
 
@@ -162,10 +163,11 @@ class Holding::ReverseCalculator
           security_id = event.security_id
           next unless positions[security_id].positive?
 
-          trackers[security_id].open_at(event.cost, positions[security_id])
-          @cost_basis_snapshots[security_id] << [ event.date, trackers[security_id].average_cost ]
-          # The user costed every unit held, transferred-in ones included.
-          if open_unknown_start[security_id]
+          book = @lot_books[security_id]
+          restate_at_manual_cost_basis(book, event, positions[security_id])
+          @cost_basis_snapshots[security_id] << [ event.date, book.average_cost ]
+          # The user costed the units held, transferred-in ones included.
+          if open_unknown_start[security_id] && book.lots.all?(&:unit_cost)
             @unknown_spans[security_id] << [ open_unknown_start[security_id], event.date ]
             open_unknown_start.delete(security_id)
           end
@@ -177,8 +179,8 @@ class Holding::ReverseCalculator
           next unless positions.key?(security_id)
 
           positions[security_id] = Security::Split.scale(positions[security_id], event.ratio)
-          trackers[security_id].split(event.ratio)
-          @cost_basis_snapshots[security_id] << [ event.ex_date, trackers[security_id].average_cost ]
+          @lot_books[security_id].split(event.ratio)
+          @cost_basis_snapshots[security_id] << [ event.ex_date, @lot_books[security_id].average_cost ]
           next
         end
 
@@ -193,20 +195,21 @@ class Holding::ReverseCalculator
           # transfers only remove units, so relieve them at the running average.
           if trade.qty.positive?
             open_unknown_start[security_id] ||= trade_entry.date
+            @lot_books[security_id].add_unknown(trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
           else
-            trackers[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
-            @cost_basis_snapshots[security_id] << [ trade_entry.date, trackers[security_id].average_cost ]
+            @lot_books[security_id].apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
+            @cost_basis_snapshots[security_id] << [ trade_entry.date, @lot_books[security_id].average_cost ]
           end
         else
-          tracker = trackers[security_id]
+          book = @lot_books[security_id]
           # Buys raise the basis; sells relieve quantity at the running average, and a
           # full liquidation resets it so a later repurchase starts from a clean basis.
-          tracker.apply(effective_trade_price(trade, date: trade_entry.date), trade.qty)
+          book.apply(effective_trade_price(trade, date: trade_entry.date), trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
 
           # Record the basis after each trade — including nil once a position is fully
           # closed — so cost_basis_for returns nil for the sold-out span instead of a
           # stale figure carried forward from the last buy.
-          @cost_basis_snapshots[security_id] << [ trade_entry.date, tracker.average_cost ]
+          @cost_basis_snapshots[security_id] << [ trade_entry.date, book.average_cost ]
         end
 
         # Close an open unknown span only on a genuine downward crossing through
@@ -232,14 +235,10 @@ class Holding::ReverseCalculator
       events.sort_by { |date, kind, index, _| [ date, kind, index ] }.map(&:last)
     end
 
-    ManualCostBasis = Data.define(:security_id, :date, :cost)
-
     # The replay's events with each locked figure placed after its date's
     # trades, as the basis of the units held at the end of that day.
     def with_manual_cost_bases(events)
-      locks = manual_cost_bases.flat_map do |security_id, by_date|
-        by_date.map { |date, cost| ManualCostBasis.new(security_id: security_id, date: date, cost: cost) }
-      end
+      locks = manual_cost_bases.values.flat_map(&:values)
       return events if locks.empty?
 
       keyed = events.each_with_index.map { |event, index| [ event.is_a?(Security::Split) ? event.ex_date : event.date, 0, index, event ] }
