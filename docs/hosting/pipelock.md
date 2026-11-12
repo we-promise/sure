@@ -278,7 +278,7 @@ pipelock:
 | `balanced` | Warn on low-severity, block on high-severity | Default; good for most deployments |
 | `audit` | Warn on ordinary findings when paired with `enforce: false` | Initial rollout, testing |
 
-For an observation trial, set `mode: audit` together with `enforce: false` (in `pipelock.example.yaml`, or `pipelock.extraConfig` in Helm). `mode: audit` alone keeps `enforce: true`, so ordinary findings still block. Even with `enforce: false`, core credential, SSRF and fail-closed transport checks can still block. Review the logs, then switch to `balanced` or `strict`.
+For an observation trial, set `mode: audit` together with `enforce: false` (in `pipelock.example.yaml`, or `pipelock.extraConfig` in Helm). `mode: audit` alone keeps `enforce: true`, so ordinary findings still block. Even with `enforce: false`, core credential, SSRF and fail-closed transport checks can still block. Review the logs, then switch to `balanced` or `strict` and set `enforce: true` again (or remove the `enforce: false` line). Changing only the mode leaves `enforce: false` in place, so ordinary findings still won't block.
 
 ## Limitations
 
