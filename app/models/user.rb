@@ -213,13 +213,18 @@ class User < ApplicationRecord
 
   # Setting values are shared by every family on the instance, so changing them
   # is a super admin's job: a family admin is anyone who signed up. A
-  # self-hosted instance with a single family has no other tenant to protect,
-  # and installs that predate the super_admin role may not have one, so that
-  # family's admins keep access there.
+  # self-hosted instance with a single real family has no other tenant to
+  # protect. Generated demo households must neither revoke that family's access
+  # nor grant instance access to demo users. Use the generator's synthetic
+  # subscription marker, never an editable family name or user email.
   def manages_instance_settings?
     return true if super_admin?
+    return false unless admin? && Rails.application.config.app_mode.self_hosted?
+    return false if family.subscription&.synthetic?
+    return true if Family.count == 1
 
-    admin? && Rails.application.config.app_mode.self_hosted? && Family.count == 1
+    demo_family_ids = Subscription.where(stripe_id: Subscription::DEMO_STRIPE_ID).select(:family_id)
+    Family.where.not(id: demo_family_ids).limit(2).pluck(:id) == [ family_id ]
   end
 
   def accessible_accounts
