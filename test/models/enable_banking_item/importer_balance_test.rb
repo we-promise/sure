@@ -443,7 +443,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
 
     entry = DebugLogEntry.where(category: "provider_sync").order(:created_at).last
     assert_equal "EUR", entry.metadata["currency"]
-    assert_equal [ { "currency" => "USD", "balance_type" => "CLBD", "amount" => "15.50" } ], entry.metadata["other_balances"]
+    assert_equal [ { "currency" => "USD", "balance_type" => "CLBD", "amount" => "[REDACTED]" } ], entry.metadata["other_balances"]
   end
 
   test "fetch_and_update_balance does not log other currencies when the chosen balance has no amount" do
@@ -687,7 +687,7 @@ class EnableBankingItem::ImporterBalanceTest < ActiveSupport::TestCase
     @enable_banking_account.reload
     assert_equal BigDecimal("1234.56"), @enable_banking_account.current_balance
     assert @enable_banking_account.balance_evidence_verified?
-    assert_empty DebugLogEntry.where("metadata ->> 'stage' IS NOT NULL")
+    assert_empty DebugLogEntry.all.select { |entry| entry.metadata.key?("stage") }
   end
 
   test "duplicate balances pointing to different bookings prefer the newer booking" do

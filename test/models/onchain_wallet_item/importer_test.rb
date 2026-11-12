@@ -130,7 +130,9 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     assert account.reload.history_truncated?
     entry = DebugLogEntry.order(:created_at).last
     assert_equal "onchain_wallet", entry.provider_key
-    assert_equal OnchainTestHelper::FAKE_ADDRESS, entry.metadata["address"]
+    assert entry.metadata["history_truncated"]
+    assert_not entry.metadata.key?("address"), "the wallet address is not worth surfacing in the diagnostic"
+    assert_equal [ account.id ], entry.metadata["onchain_wallet_account_ids"]
   end
 
   test "one report per address even when several assets are tracked there" do
@@ -221,6 +223,10 @@ class OnchainWalletItem::ImporterTest < ActiveSupport::TestCase
     # failed to look.
     assert_equal BigDecimal("1.5"), unreachable.reload.quantity
     assert_nil unreachable.content_hash
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal [ unreachable.id ], entry.metadata["onchain_wallet_account_ids"]
+    assert_not entry.metadata.key?("address")
   end
 
   test "a wallet whose every address failed is a failed sync, not a quiet success" do

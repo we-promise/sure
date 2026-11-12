@@ -1007,7 +1007,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal @enable_banking_account.account_provider, log_entry.account_provider
     assert_equal CardAuthorizationHold::HOLD_DIAGNOSTIC_MESSAGE, log_entry.message
     assert_equal true, log_entry.metadata["sign_inverted"]
-    assert_equal "14.97", log_entry.metadata["raw_amount"]
+    assert_equal "[REDACTED]", log_entry.metadata["raw_amount"]
     assert_equal "CRDT", log_entry.metadata["credit_debit_indicator"]
 
     # Re-processing the same hold on subsequent sync does not write duplicate DebugLogEntry
@@ -1035,7 +1035,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     log_entry = DebugLogEntry.last
     assert_equal false, log_entry.metadata["sign_inverted"]
     assert_equal "DBIT", log_entry.metadata["credit_debit_indicator"]
-    assert_equal "20.00", log_entry.metadata["raw_amount"]
+    assert_equal "[REDACTED]", log_entry.metadata["raw_amount"]
   end
 
   test "does not capture DebugLogEntry for regular transactions" do

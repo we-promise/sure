@@ -131,6 +131,34 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       "the stored value must be an encryption envelope, not plaintext {}")
   end
 
+  # DebugLogEntry rows written before the write-time key redaction existed can
+  # still hold sensitive values — the backfill must redact them, not just
+  # encrypt them, or support keeps reading the secrets after decryption.
+  test "backfill redacts historic sensitive DebugLogEntry metadata before encrypting" do
+    entry = DebugLogEntry.log!(
+      category: "provider_sync_error", level: "warn",
+      message: "Backfill redaction test", source: "BackfillTest")
+
+    # Simulate a pre-redaction, pre-encryption row: plaintext metadata with
+    # keys the current write path would have redacted.
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE debug_log_entries SET metadata = ?::jsonb WHERE id = ?",
+      { balance: "1234.56", api_key: "sk-live-9", details: { wallet_address: "0xabc" }, status: "ok" }.to_json,
+      entry.id ]))
+
+    run_backfill(dry_run: false)
+
+    entry.reload
+    assert_equal "[REDACTED]", entry.metadata["balance"]
+    assert_equal "[REDACTED]", entry.metadata["api_key"]
+    assert_equal "[REDACTED]", entry.metadata["details"]["wallet_address"]
+    assert_equal "ok", entry.metadata["status"]
+
+    at_rest = entry.read_attribute_before_type_cast(:metadata).to_s
+    refute_includes at_rest, "1234.56", "the sensitive value must not survive at rest"
+    refute_includes at_rest, "sk-live-9"
+  end
+
   # The task finds encrypted models at runtime. Compare that against the
   # `encrypts` lines in app/models, so a model the discovery misses fails here
   # instead of keeping plaintext that raises once the keys are live.
@@ -378,7 +406,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     7 => "362ec2acfad421eaf6299bdeae78d859e13f8d4a65b6a3e615a80b274219698a",
     8 => "a4d113aa214e8754361484267d377174b2aeda3fe01c5ca0c553f9ab76ef2ab0",
     9 => "9f814939a5125a6903d9ba4e96392056ffafe9f6110b10b5c1cae0d87a564ac7",
-    10 => "0bcaa72ed675acde5d5ae2ce72305bf73375c0faa5580fe80e3985e88aa4f9e4"
+    10 => "0bcaa72ed675acde5d5ae2ce72305bf73375c0faa5580fe80e3985e88aa4f9e4",
+    11 => "21aef99fa9bbb4000e02d4dc9e0cc8fa721ea9ae0b9320568f973afdc4423c05"
   }.freeze
 
   test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do

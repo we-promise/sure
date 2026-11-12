@@ -427,7 +427,7 @@ class WiseAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
           statement_row("CARD-555", -12.5).merge("date" => "2026-10-10T23:50:00Z"))
 
     result = nil
-    assert_difference -> { DebugLogEntry.where(provider_key: "wise").where("metadata ->> 'operation' = ?", "time_zone").count }, 1 do
+    assert_difference -> { debug_log_entries_with(DebugLogEntry.where(provider_key: "wise"), operation: "time_zone").count }, 1 do
       result = process
     end
 
@@ -526,11 +526,11 @@ class WiseAccount::Transactions::ProcessorTest < ActiveSupport::TestCase
     end
 
     def prune_notes
-      DebugLogEntry.where(provider_key: "wise").where("metadata ->> 'operation' = ?", "prune")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise"), operation: "prune")
     end
 
     def rekey_notes
-      DebugLogEntry.where(provider_key: "wise").where("metadata ->> 'operation' = ?", "statement_rekey")
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "wise"), operation: "statement_rekey")
     end
 
     # A same-currency transfer into the account recipient (a pay-in).

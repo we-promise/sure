@@ -53,7 +53,9 @@ namespace :security do
     # (lib/active_record_encryption_config.rb), kept in sync with each model's
     # `encrypts` declarations by test/lib/tasks/security_backfill_test.rb.
     ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
-      results[key] = backfill_model(model_class_name.constantize, fields, batch_size, dry_run)
+      model_class = model_class_name.constantize
+      results[key] = backfill_model(model_class, fields, batch_size, dry_run,
+        transforms: backfill_transforms_for(model_class))
     end
 
     results[:sessions] = backfill_model(Session, Session.encrypted_attributes.to_a, batch_size, dry_run)
@@ -83,7 +85,18 @@ namespace :security do
     exit 1 unless failed_count.zero?
   end
 
-  def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)
+  # Historic DebugLogEntry rows predate the write-time key redaction in
+  # DebugLogEntry.log!, so re-apply it before encrypting; otherwise sensitive
+  # values stay readable to support after decryption.
+  def backfill_transforms_for(model_class)
+    return {} unless model_class == DebugLogEntry
+
+    { metadata: ->(value) { DebugLogEntry.normalize_metadata(value) } }
+  end
+
+  # transforms: optional { field => callable } applied to the plaintext value
+  # before it is encrypted (e.g. redaction of historic rows).
+  def backfill_model(model_class, fields, batch_size, dry_run, transforms: {}, &filter_block)
     processed = 0
     updated = 0
     failed = []
@@ -123,7 +136,10 @@ namespace :security do
               if undecryptable_ciphertext?(value)
                 raise ActiveRecord::Encryption::Errors::Decryption, "#{field} holds ciphertext that no configured key decrypts"
               end
-              plaintext_values[field] = value unless value.nil?
+              next if value.nil?
+
+              value = transforms[field].call(value) if transforms[field]
+              plaintext_values[field] = value
             end
 
             next false if plaintext_values.empty?

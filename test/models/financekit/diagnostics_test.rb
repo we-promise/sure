@@ -88,7 +88,7 @@ class Financekit::DiagnosticsTest < ActiveSupport::TestCase
 
   private
     def log_for(event)
-      DebugLogEntry.where(provider_key: "financekit").where("metadata ->> 'event' = ?", event).order(created_at: :desc, id: :desc).first!
+      debug_log_entries_with(DebugLogEntry.where(provider_key: "financekit"), event: event).order(created_at: :desc, id: :desc).first!
     end
 
     def assert_private_fields_absent
