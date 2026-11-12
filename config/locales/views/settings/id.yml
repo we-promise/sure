@@ -3,7 +3,7 @@ id:
   settings:
     encryption_migration_guide: "Panduan penyiapan dan migrasi enkripsi"
     settings_nav:
-      accounts_label: "Akun"
+      accounts_label: "Rekening"
       advanced_section_title: "Lanjutan"
       ai_prompts_label: "Prompt AI"
       auto_matches_label: "Pencocokan Otomatis"
