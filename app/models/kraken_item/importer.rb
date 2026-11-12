@@ -187,16 +187,25 @@ class KrakenItem::Importer
     def fetch_earn_strategy_ids
       cursor = nil
       ids = Set.new
+      seen_cursors = Set.new
 
       MAX_EARN_PAGES.times do
         result = kraken_provider.get_earn_strategies(cursor: cursor)
         items = result.is_a?(Hash) ? result["items"] : nil
         raise EarnAllocationsUnavailable, "Earn strategy items must be an array" unless items.is_a?(Array)
 
-        items.each { |item| ids << item["id"] if item.is_a?(Hash) && item["id"].present? }
+        items.each do |item|
+          id = item["id"] if item.is_a?(Hash)
+          raise EarnAllocationsUnavailable, "Earn strategy missing id: #{item.inspect}" if id.blank?
+
+          ids << id
+        end
         cursor = result["next_cursor"].presence
         break if cursor.blank?
+        raise EarnAllocationsUnavailable, "Earn strategy cursor repeated" unless seen_cursors.add?(cursor)
       end
+
+      raise EarnAllocationsUnavailable, "Earn strategy pagination incomplete" if cursor.present?
 
       ids
     end

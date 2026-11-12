@@ -87,6 +87,29 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "2.0", earn_btc["balance"]
   end
 
+  test "carries forward last known Earn assets when Earn/Strategies is incomplete" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.stubs(:get_ticker).with("XBTUSD").returns("XXBTZUSD" => { "c" => [ "50000.00" ] })
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } } ]
+    )
+    KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+
+    [
+      { "items" => [ { "name" => "no id" } ] },
+      { "items" => [ { "id" => "bonded" } ], "next_cursor" => "same" }
+    ].each do |response|
+      @provider.stubs(:get_earn_strategies).returns(response)
+      assert KrakenItem::Importer.new(@item, kraken_provider: @provider).import[:success]
+
+      earn_btc = @item.kraken_accounts.first.raw_payload["assets"].find { |asset| asset["source"] == "earn" }
+      assert_equal "2.0", earn_btc["balance"]
+    end
+  end
+
   test "merges Earn allocated balances alongside spot assets" do
     @provider.stubs(:get_asset_info).returns(asset_metadata)
     # Includes a spot XXBT holding of the *same* asset Earn reports, so this
