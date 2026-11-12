@@ -70,7 +70,7 @@ old value in `OLD_SECRET_KEY_BASE`:
 
 ```sh
 read -rs OLD_SECRET_KEY_BASE && export OLD_SECRET_KEY_BASE
-bin/rails security:rotate_setting_secrets          # dry run
+bin/rails "security:rotate_setting_secrets[1]"     # dry run, check "dry_run":true
 bin/rails "security:rotate_setting_secrets[0]"     # writes
 unset OLD_SECRET_KEY_BASE
 ```

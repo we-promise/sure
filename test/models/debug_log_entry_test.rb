@@ -173,6 +173,44 @@ class DebugLogEntryTest < ActiveSupport::TestCase
     assert_equal "[REDACTED]", entry.metadata["address_balances"]
   end
 
+  test "capture redacts token and response body keys in any spelling" do
+    entry = DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Provider event",
+      source: "Provider::Test",
+      metadata: {
+        token: "tok-0",
+        authToken: "tok-1",
+        response_body: "account 123",
+        responseBody: "account 456",
+        total_tokens: 42
+      }
+    )
+
+    assert_equal "[REDACTED]", entry.metadata["token"]
+    assert_equal "[REDACTED]", entry.metadata["authToken"]
+    assert_equal "[REDACTED]", entry.metadata["response_body"]
+    assert_equal "[REDACTED]", entry.metadata["responseBody"]
+    assert_equal 42, entry.metadata["total_tokens"]
+  end
+
+  test "capture redacts metadata passed as a string or a list" do
+    from_string = DebugLogEntry.capture(
+      category: "provider_sync_error", level: "warn", message: "Provider event", source: "Provider::Test",
+      metadata: "Authorization: Bearer secret-value"
+    )
+    from_list = DebugLogEntry.capture(
+      category: "provider_sync_error", level: "warn", message: "Provider event", source: "Provider::Test",
+      metadata: [ { api_key: "sk-live-123", status: "ok" }, "Bearer secret-value" ]
+    )
+
+    refute_includes from_string.metadata["value"], "secret-value"
+    assert_equal "[REDACTED]", from_list.metadata["value"][0]["api_key"]
+    assert_equal "ok", from_list.metadata["value"][0]["status"]
+    refute_includes from_list.metadata["value"][1], "secret-value"
+  end
+
   test "capture does not redact unrelated keys that merely resemble sensitive ones" do
     entry = DebugLogEntry.capture(
       category: "provider_sync",
