@@ -48,8 +48,14 @@ class HoldingLotsController < ApplicationController
       params.require(:holding_lot).permit(:total_cost_basis)
     end
 
+    # Under the account's row lock, the one a sync takes to replace the
+    # account's lot records, so an edit and a sync cannot interleave and leave
+    # the slower write's stale lots behind.
     def restate
-      strategy = @holding.account.linked? ? :reverse : :forward
-      Balance::Materializer.new(@holding.account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
+      account = @holding.account
+      strategy = account.linked? ? :reverse : :forward
+      account.with_lock do
+        Balance::Materializer.new(account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
+      end
     end
 end
