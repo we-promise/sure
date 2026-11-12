@@ -656,7 +656,7 @@ Update Sure to a version that includes this guide first and let it start once, s
    docker compose exec web bin/rails security:backfill_encryption
    ```
 
-   Continue only if the output says `encryption_not_configured`. If it lists tables instead, the instance already encrypts its data with other keys (for example ones derived from `SECRET_KEY_BASE`), and adding new keys would make that data unreadable. Stop here and leave the keys unset.
+   Continue only if the output says `encryption_not_configured`. If it lists tables instead, the instance already encrypts its data with other keys (for example keys from Rails credentials), and adding new keys would make that data unreadable. Stop here and leave the keys unset.
 
 2. Take a backup and note the folder name it prints (for example `0.7.6/2026-10-27_111135-manual`):
 
