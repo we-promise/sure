@@ -6,50 +6,29 @@
       </h3>
 
       <% if trends_data.any? %>
-        <div class="bg-container-inset rounded-xl p-1 overflow-x-auto focus-ring" tabindex="0" role="region" aria-label="<%= t("reports.trends.monthly_breakdown") %>">
-          <div class="w-max min-w-full">
-          <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
-          <table class="w-full">
-            <thead class="bg-container-inset">
-              <tr class="uppercase text-xs font-medium text-secondary">
-                <th class="px-4 py-2 text-left font-medium"><%= t("reports.trends.month") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.income") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.expenses") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.net") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.savings_rate") %></th>
-              </tr>
-            </thead>
-            <tbody class="text-secondary text-sm">
-              <% trends_data.each_with_index do |trend, idx| %>
-                <tr class="<%= idx < trends_data.size - 1 ? "table-divider" : "" %>">
-                  <td class="py-3 px-4 lg:px-6">
-                    <span class="flex items-center gap-2 <%= trend[:is_current_month] ? "font-medium" : "" %>">
-                      <%= trend[:month] %>
-                      <% if trend[:is_current_month] %>
-                        <span class="text-xs text-subdued">(<%= t("reports.trends.current") %>)</span>
-                      <% end %>
-                    </span>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right whitespace-nowrap privacy-sensitive">
-                    <%= Money.new(trend[:income], Current.family.currency).format %>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right whitespace-nowrap privacy-sensitive">
-                    <%= Money.new(trend[:expenses], Current.family.currency).format %>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right whitespace-nowrap privacy-sensitive <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
-                    <%= Money.new(trend[:net], Current.family.currency).format %>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
-                    <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
-                    <%= savings_rate %>%
-                  </td>
-                </tr>
+        <%= render DS::Table.new(rows: trends_data, inset: true, label: t("reports.trends.monthly_breakdown"), row_class: ->(_trend) { "text-secondary" }) do |table| %>
+          <% table.with_column(t("reports.trends.month")) do |trend| %>
+            <span class="<%= class_names("flex items-center gap-2", "font-medium" => trend[:is_current_month]) %>">
+              <%= trend[:month] %>
+              <% if trend[:is_current_month] %>
+                <span class="text-xs text-subdued">(<%= t("reports.trends.current") %>)</span>
               <% end %>
-            </tbody>
-          </table>
-          </div>
-          </div>
-        </div>
+            </span>
+          <% end %>
+          <% table.with_column(t("reports.trends.income"), numeric: true, class: "privacy-sensitive") do |trend| %>
+            <%= Money.new(trend[:income], Current.family.currency).format %>
+          <% end %>
+          <% table.with_column(t("reports.trends.expenses"), numeric: true, class: "privacy-sensitive") do |trend| %>
+            <%= Money.new(trend[:expenses], Current.family.currency).format %>
+          <% end %>
+          <% table.with_column(t("reports.trends.net"), numeric: true, class: "privacy-sensitive") do |trend| %>
+            <%= tag.span Money.new(trend[:net], Current.family.currency).format, class: trend[:net] >= 0 ? "text-success" : "text-destructive" %>
+          <% end %>
+          <% table.with_column(t("reports.trends.savings_rate"), numeric: true) do |trend| %>
+            <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
+            <%= tag.span "#{savings_rate}%", class: trend[:net] >= 0 ? "text-success" : "text-destructive" %>
+          <% end %>
+        <% end %>
 
         <%# Trend Insights %>
         <div class="mt-6 grid grid-cols-1 @2xl:grid-cols-3 gap-4">
