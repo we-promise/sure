@@ -78,6 +78,7 @@ module AccountsHelper
 
     [
       family.build_cache_key("account_sidebar_tabs_v7", invalidate_on_data_updates: true),
+      family.manual_reconciliation?,
       Current.user&.id,
       shares_version,
       providers_version,

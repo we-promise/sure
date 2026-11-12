@@ -100,6 +100,9 @@
                       </span>
                     <% end %>
 
+                    <%# Manual reconciliation status (manual accounts only) %>
+                    <%= render "transactions/reconcile_badge", entry: entry, compact: true %>
+
                     <%# Scheduled (future-dated) indicator %>
                     <% if entry.scheduled? %>
                       <%= render DS::Pill.new(

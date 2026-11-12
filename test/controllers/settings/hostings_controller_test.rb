@@ -121,6 +121,37 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "demo households preserve the real admin's provider controls but cannot use them" do
+    with_self_hosting do
+      real_admin = users(:empty)
+      Family.where.not(id: real_admin.family_id).each do |demo_family|
+        demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+      end
+      users(:family_admin).update!(role: :admin)
+      sign_in real_admin
+
+      get settings_hosting_url
+      assert_response :success
+      assert_select "input[name='setting[securities_providers][]']"
+      refute_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "real-owner-key" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal "real-owner-key", Setting.twelve_data_api_key
+
+      sign_in users(:family_admin)
+      get settings_hosting_url
+      assert_response :success
+      assert_select "input[name='setting[securities_providers][]']", count: 0
+      assert_includes response.body, I18n.t("settings.hostings.show.instance_settings_restricted")
+
+      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "demo-key" } }
+      assert_redirected_to settings_hosting_url
+      assert_equal I18n.t("settings.hostings.not_authorized"), flash[:alert]
+      assert_equal "real-owner-key", Setting.twelve_data_api_key
+    end
+  end
+
   test "should get edit when self hosting is enabled" do
     @provider.expects(:usage).returns(@usage_response)
 
