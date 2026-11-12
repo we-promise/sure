@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -741,6 +741,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.string "name", null: false
     t.text "notes"
     t.uuid "parent_entry_id"
+    t.string "reconciled_status", default: "unreconciled", null: false
     t.string "plaid_id"
     t.datetime "reconciled_at"
     t.uuid "reconciled_by_statement_id"
@@ -760,6 +761,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
+    t.index ["account_id", "reconciled_status"], name: "index_entries_on_account_id_and_reconciled_status"
+    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying, 'cleared'::character varying, 'reconciled'::character varying]::text[])", name: "chk_entries_reconciled_status"
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
@@ -888,6 +891,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.datetime "latest_sync_activity_at", default: -> { "CURRENT_TIMESTAMP" }
     t.datetime "latest_sync_completed_at", default: -> { "CURRENT_TIMESTAMP" }
     t.string "locale", default: "en"
+    t.boolean "manual_reconciliation", default: false, null: false
     t.string "moniker", default: "Family", null: false
     t.integer "month_start_day", default: 1, null: false
     t.string "name"
@@ -2375,6 +2379,21 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.check_constraint "kind::text = ANY (ARRAY['standard'::character varying::text, 'cash'::character varying::text])", name: "chk_securities_kind"
   end
 
+  create_table "security_audit_logs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.text "ip_address"
+    t.jsonb "metadata", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.text "user_agent"
+    t.text "user_email"
+    t.uuid "user_id"
+    t.index ["created_at"], name: "index_security_audit_logs_on_created_at"
+    t.index ["event_type"], name: "index_security_audit_logs_on_event_type"
+    t.index ["user_id", "created_at"], name: "index_security_audit_logs_on_user_id_and_created_at"
+    t.index ["user_id"], name: "index_security_audit_logs_on_user_id"
+  end
+
   create_table "security_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "currency", default: "USD", null: false
@@ -2593,6 +2612,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
     t.string "customer_id"
     t.jsonb "institution_metadata"
     t.datetime "last_updated"
+    t.boolean "lender_signed"
     t.boolean "manual_sync", default: false, null: false
     t.string "member_id"
     t.string "name", null: false
@@ -3259,6 +3279,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_01_120000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
+  add_foreign_key "security_audit_logs", "users", on_delete: :nullify
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade
   add_foreign_key "sessions", "impersonation_sessions", column: "active_impersonator_session_id", on_delete: :nullify

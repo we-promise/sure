@@ -142,4 +142,33 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "email", user.account_release_channel
     assert_equal 7, user.account_release_lead_days
   end
+
+  test "admins with preview access see the manual reconciliation toggle" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']"
+    assert_match I18n.t("settings.preferences.show.manual_reconciliation"), response.body
+  end
+
+  test "hides the manual reconciliation toggle without preview access" do
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']", count: 0
+  end
+
+  test "members with preview access do not see the manual reconciliation toggle" do
+    user = users(:family_member)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in user
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']", count: 0
+  end
 end
