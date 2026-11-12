@@ -358,7 +358,7 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
     assert_selector "#{sankey} svg path[data-settled-resize-keep-width]"
     assert_selector "#{spending} svg circle"
     page.execute_script(<<~JS)
-      window.__gaps = []; window.__sampling = true;
+      window.__gaps = []; window.__sampling = true; window.__column = undefined;
       const afterPaint = (fn) => requestAnimationFrame(() => setTimeout(fn, 0));
       const sample = () => {
         // The chart's drawing, not an icon's svg beside it.
@@ -369,6 +369,11 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
         const sbox = spendingSvg.getBoundingClientRect();
         const label = spendingSvg.querySelector("text[data-settled-resize-edge='right']")?.getBoundingClientRect();
         const dot = spendingSvg.querySelector("circle")?.getBoundingClientRect();
+        // The axis column's width, read from a gridline (which spans the plot)
+        // on the settled drawing before the animation starts: it stays that
+        // many pixels wide while the drawing stretches.
+        const plot = spendingSvg.querySelector("line[stroke-dasharray]")?.getBoundingClientRect();
+        if (window.__column === undefined && plot) window.__column = sbox.right - plot.right;
         // The links leaving the leftmost bars start on their right edge, and
         // the label beside those bars keeps its distance from it. Picked as
         // drawn, then followed.
@@ -389,8 +394,9 @@ class ChartSidebarResizeTest < ApplicationSystemTestCase
           box.right - Math.max(...bars.map((b) => b.right)),
           label ? sbox.right - label.right : null,
           // A dot inside the plot moves with it: its place along the plot (the
-          // chart's 4px and 48px margins aside), in thousandths, holds instead.
-          dot ? (dot.left + dot.width / 2 - sbox.left - 4) / (sbox.width - 52) * 1000 : null,
+          // chart's 4px left margin and its axis column aside), in thousandths,
+          // holds instead.
+          dot && window.__column !== undefined ? (dot.left + dot.width / 2 - sbox.left - 4) / (sbox.width - 4 - window.__column) * 1000 : null,
           joined.length ? Math.max(...joined.map((l) => Math.abs(l.left - columnRight))) : null,
           beside ? beside.left - columnRight : null,
         ].map((v) => v === null ? null : Math.round(v)));

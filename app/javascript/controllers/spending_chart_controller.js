@@ -20,8 +20,18 @@ const COMPARISON_COLORS = [
   "var(--color-pink-500)",
 ];
 
-// The axis column on the right is part of the margin.
-const MARGIN = { top: 8, right: 48, bottom: 20, left: 4 };
+// The axis labels sit AXIS_PADDING right of the plot, in a column at least
+// AXIS_MIN_WIDTH wide (room for "$1.5K"), widened to fit longer labels
+// ("SGD 12.5K", "CHF 1.5K") with AXIS_GAP to spare at the card's edge.
+const AXIS_PADDING = 8;
+const AXIS_GAP = 4;
+const AXIS_MIN_WIDTH = 48;
+// The widest the column gets, as a share of the chart; a resize keeps the
+// column at its width up to the same share.
+const AXIS_MAX_SHARE = 1 / 3;
+// The plot's other margins: room for the day labels below, none needed above
+// or to the left beyond a little breathing space.
+const PLOT_MARGIN = { top: 8, bottom: 20, left: 4 };
 
 export default class extends Controller {
   static values = {
@@ -37,11 +47,19 @@ export default class extends Controller {
     document.addEventListener("turbo:load", this._reinstall);
     // The axis column on the right keeps its width while a resize stretches
     // the drawing.
+    const controller = this;
     this._settledResize = new SettledResize(this.element, this._reinstall, {
-      margins: { left: MARGIN.left, right: MARGIN.right },
+      // The axis column is as wide as the last drawing made it.
+      margins: {
+        left: PLOT_MARGIN.left,
+        get right() {
+          return controller._axisColumn ?? AXIS_MIN_WIDTH;
+        },
+      },
       // The day axis spans the whole month on wide screens and the days so
       // far on narrow ones: a resize across that width redraws at once.
       layoutChanges: () => this._wideAxis !== this._isWide(),
+      maxMarginShare: AXIS_MAX_SHARE,
     });
     this._settledResize.start();
   }
@@ -86,17 +104,26 @@ export default class extends Controller {
     const width = this.element.clientWidth;
     const height = this.element.clientHeight - this._legendHeight();
 
-    // Room on the right for the axis labels ($0, $1.5K, …), like the
-    // reference design; the curves run to the axis, not the card edge.
-    const margin = MARGIN;
-    const innerWidth = width - margin.left - margin.right;
+    const margin = { ...PLOT_MARGIN, right: AXIS_MIN_WIDTH };
     const innerHeight = height - margin.top - margin.bottom;
 
     // The legend must be in the DOM to be measured
-    if (width < 50 || height < 50 || innerWidth <= 0 || innerHeight <= 0) {
+    if (
+      width < 50 ||
+      height < 50 ||
+      width - margin.left - margin.right <= 0 ||
+      innerHeight <= 0
+    ) {
       this._teardown();
       return;
     }
+
+    const y = d3
+      .scaleLinear()
+      .domain([0, maxValue * 1.05])
+      .nice()
+      .range([innerHeight, 0]);
+    const ticks = y.ticks(4);
 
     const svg = d3
       .select(this.element)
@@ -109,14 +136,31 @@ export default class extends Controller {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const x = d3.scaleLinear().domain([1, days]).range([0, innerWidth]);
-    const y = d3
-      .scaleLinear()
-      .domain([0, maxValue * 1.05])
-      .nice()
-      .range([innerHeight, 0]);
+    // Room on the right for the axis labels ($0, $1.5K, …), like the
+    // reference design; the curves run to the axis, not the card edge. The
+    // column fits the widest label, measured as drawn (d3's axis sets its own
+    // font).
+    const axis = this._drawYAxis(group, y, ticks);
+    const labelWidth =
+      d3.max(axis.selectAll("text").nodes(), (node) => node.getBBox().width) ||
+      0;
+    // At most AXIS_MAX_SHARE of the chart, and never narrower than
+    // AXIS_MIN_WIDTH: on a chart under three times that width the floor wins
+    // over the cap.
+    margin.right = Math.max(
+      AXIS_MIN_WIDTH,
+      Math.min(
+        Math.ceil(labelWidth) + AXIS_PADDING + AXIS_GAP,
+        width * AXIS_MAX_SHARE,
+      ),
+    );
+    this._axisColumn = margin.right;
+    const innerWidth = width - margin.left - margin.right;
+    axis.attr("transform", `translate(${innerWidth},0)`);
 
-    this._drawGridlines(group, y, innerWidth, innerHeight);
+    const x = d3.scaleLinear().domain([1, days]).range([0, innerWidth]);
+
+    this._drawGridlines(group, y, ticks, innerWidth);
     this._drawXAxis(group, x, days, innerHeight, axisLabels, currentDays);
 
     const line = d3
@@ -200,11 +244,10 @@ export default class extends Controller {
     return this.element.querySelector(".legend")?.offsetHeight ?? 0;
   }
 
-  _drawGridlines(group, y, innerWidth, innerHeight) {
-    const ticks = y.ticks(4);
-
+  _drawGridlines(group, y, ticks, innerWidth) {
+    // Beneath the axis, drawn first to be measured.
     group
-      .append("g")
+      .insert("g", ":first-child")
       .selectAll("line")
       .data(ticks)
       .join("line")
@@ -215,24 +258,29 @@ export default class extends Controller {
       .attr("stroke", "var(--color-gray-300)")
       .attr("stroke-dasharray", "4, 4")
       .attr("stroke-opacity", 0.6);
+  }
 
-    group
+  // The labels' axis, at the plot's left edge until the column is known.
+  _drawYAxis(group, y, ticks) {
+    return group
       .append("g")
-      .attr("transform", `translate(${innerWidth},0)`)
       .call(
         d3
           .axisRight(y)
           .tickValues(ticks)
           .tickSize(0)
-          .tickPadding(8)
+          .tickPadding(AXIS_PADDING)
           .tickFormat((d) => this._formatCompact(d)),
       )
       .call((g) => g.select(".domain").remove())
-      .selectAll("text")
-      .attr("data-settled-resize-edge", "right")
-      .attr("class", "text-secondary fill-current")
-      .style("font-size", "12px")
-      .style("font-weight", "500");
+      .call((g) =>
+        g
+          .selectAll("text")
+          .attr("data-settled-resize-edge", "right")
+          .attr("class", "text-secondary fill-current")
+          .style("font-size", "12px")
+          .style("font-weight", "500"),
+      );
   }
 
   _isWide() {
