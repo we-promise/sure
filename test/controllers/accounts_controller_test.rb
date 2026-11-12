@@ -56,6 +56,20 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     Rails.application.config.plaid_eu = original_eu
   end
 
+  test "account reconciliation indicators only render when manual reconciliation is enabled" do
+    get accounts_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+
+    @user.family.update!(manual_reconciliation: true)
+
+    get accounts_url
+
+    assert_response :success
+    assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)

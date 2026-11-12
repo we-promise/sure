@@ -155,6 +155,42 @@ class SimplefinItem::ImporterTest < ActiveSupport::TestCase
     assert @item.reload.requires_update?
   end
 
+  test "a protocol v2 account takes its institution from the matching connection" do
+    provider = mock
+    provider.expects(:get_accounts).returns(
+      connections: [
+        { conn_id: "CON-other", name: "Other Bank", org_name: "Other Bank" },
+        { conn_id: "CON-schwab", name: "Charles Schwab US", org_id: "mx.69378", org_name: "Charles Schwab US",
+          org_url: "https://client.schwab.com/", sfin_url: "https://beta-bridge.simplefin.org/simplefin" }
+      ],
+      accounts: [ { id: "sf_brokerage_v2", name: "Brokerage ...123", conn_id: "CON-schwab", currency: "USD", balance: "1000" } ]
+    )
+
+    SimplefinItem::Importer.new(@item, simplefin_provider: provider).import_balances_only
+
+    simplefin_account = @item.simplefin_accounts.find_by!(account_id: "sf_brokerage_v2")
+    assert_equal(
+      { "id" => "mx.69378", "name" => "Charles Schwab US", "url" => "https://client.schwab.com/",
+        "sfin-url" => "https://beta-bridge.simplefin.org/simplefin" },
+      simplefin_account.org_data
+    )
+    assert SimplefinAccount::Investments::HoldingsProcessor.new(simplefin_account).send(:institution_reports_total_basis?)
+  end
+
+  test "an account that already has an org keeps it" do
+    provider = mock
+    provider.expects(:get_accounts).returns(
+      connections: [ { conn_id: "CON-1", name: "Connection Name", org_name: "Connection Org" } ],
+      accounts: [ { id: "sf_v1_org", name: "Checking", conn_id: "CON-1", org: { name: "Account Org", domain: "bank.example" },
+                    currency: "USD", balance: "10" } ]
+    )
+
+    SimplefinItem::Importer.new(@item, simplefin_provider: provider).import_balances_only
+
+    assert_equal({ "name" => "Account Org", "domain" => "bank.example" },
+                 @item.simplefin_accounts.find_by!(account_id: "sf_v1_org").org_data)
+  end
+
   test "a regular sync after a long gap splits the range into requests the Bridge accepts" do
     travel_to Time.zone.parse("2026-11-07 12:00") do
       @item.stubs(:last_synced_at).returns(100.days.ago)
