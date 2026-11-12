@@ -28,21 +28,50 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
   # A restatement and a sync of the same account both lock the account row
   # before writing any holdings, so they serialise in one lock order. The lot
   # change is made under that lock too.
-  test "an edit and an unlock change the lot and restate under the account's row lock, taken first" do
-    [ [ :update, -> { patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "600" } } } ],
-      [ :unlock_cost!, -> { post unlock_holding_lot_path(@holding, @lot) } ] ].each do |change, request|
-      order = sequence("restate")
-      Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
-      HoldingLot.any_instance.expects(change).in_sequence(order).returns(true)
-      Holding::Materializer.any_instance.expects(:materialize_holdings).in_sequence(order).returns([])
+  # A remap can commit while the request waits for the account lock; the
+  # request then acts on where the holding and its lot are now.
+  test "an edit made while a remap moves the lot restates the security it moved to" do
+    moved_to = securities(:msft)
+    Account.any_instance.stubs(:lock!).with do |*|
+      Holding.where(id: @holding.id).update_all(security_id: moved_to.id)
+      HoldingLot.where(id: @lot.id).update_all(security_id: moved_to.id)
+      true
+    end.returns(true)
+    materializer = stub(materialize_balances: true)
+    Balance::Materializer.expects(:new).with(anything, has_entry(security_ids: [ moved_to.id ])).returns(materializer)
 
-      request.call
-      assert_redirected_to account_path(@account, tab: "holdings")
+    patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "600" } }
 
-      Account.any_instance.unstub(:lock!)
-      HoldingLot.any_instance.unstub(change)
-      Holding::Materializer.any_instance.unstub(:materialize_holdings)
-    end
+    assert_equal 600, @lot.reload.manual_total_cost
+  end
+
+  # The provider-cost refusal is checked again under the lock, since a sync
+  # or remap may have handed the position a provider's cost while it waited.
+  test "an edit is refused if the provider's cost arrives while it waits for the lock" do
+    Account.any_instance.stubs(:lock!).with do |*|
+      Holding.where(id: @holding.id).update_all(cost_basis: 18, cost_basis_source: "provider")
+      true
+    end.returns(true)
+
+    patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "600" } }
+
+    assert_nil @lot.reload.manual_total_cost
+  end
+
+  test "an edit changes the lot and restates under the account's row lock, taken first" do
+    expect_locked_restate(:update)
+
+    patch holding_lot_path(@holding, @lot), params: { holding_lot: { total_cost_basis: "600" } }
+
+    assert_redirected_to account_path(@account, tab: "holdings")
+  end
+
+  test "an unlock changes the lot and restates under the account's row lock, taken first" do
+    expect_locked_restate(:unlock_cost!)
+
+    post unlock_holding_lot_path(@holding, @lot)
+
+    assert_redirected_to account_path(@account, tab: "holdings")
   end
 
   # The new cost and the holdings restated from it are one change: a
@@ -296,6 +325,15 @@ class HoldingLotsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    # Mocha verifies these at teardown, so a request that skips the lock, the
+    # change or the restatement fails.
+    def expect_locked_restate(change)
+      order = sequence("restate")
+      Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
+      HoldingLot.any_instance.expects(change).in_sequence(order).returns(true)
+      Holding::Materializer.any_instance.expects(:materialize_holdings).in_sequence(order).returns([])
+    end
+
     def materialize
       Holding::Materializer.new(@account.reload, strategy: :forward, security_ids: [ @security.id ]).materialize_holdings
     end
