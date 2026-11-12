@@ -84,6 +84,7 @@ class Entry < ApplicationRecord
   }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
+  before_destroy :record_provider_import_tombstone, prepend: true
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
   scope :visible, -> {
@@ -827,6 +828,15 @@ class Entry < ApplicationRecord
       return if date == parent_entry.date
 
       errors.add(:date, "must match the parent transaction date for split children")
+    end
+
+    def record_provider_import_tombstone
+      # Prepended, so this runs before the entryable is destroyed and its
+      # extra is still readable. Provider-sourced entries only: manual rows
+      # carry no external_id, and split children carry neither. The insert
+      # shares the destroy transaction, so an aborted destroy leaves no
+      # tombstone behind.
+      ProviderImportTombstone.record_for_entry!(self)
     end
 
     def prevent_individual_child_deletion
