@@ -57,9 +57,9 @@ spec:
         {{- if $mcpTokenSecret.name }}
         - name: mcp-listener-token
           secret:
-            secretName: {{ $mcpTokenSecret.name }}
+            secretName: {{ $mcpTokenSecret.name | quote }}
             items:
-              - key: {{ $mcpTokenSecret.key | default "token" }}
+              - key: {{ $mcpTokenSecret.key | default "token" | quote }}
                 path: mcp-listener.token
             defaultMode: 0400
         {{- end }}

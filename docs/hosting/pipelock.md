@@ -101,7 +101,7 @@ Pipelock 3.2 and later refuse to start a non-loopback MCP listener unless it has
 To require a listener token in Docker Compose:
 
 1. Generate it so that only its owner can read it (Pipelock rejects world-readable token files): `(umask 077; openssl rand -hex 32 > pipelock-mcp-listener.token)`
-2. Pipelock runs as uid/gid 1000 and must be able to read the file. On Linux, if your user isn't 1000, set `PIPELOCK_UID=$(id -u)` and `PIPELOCK_GID=$(id -g)` in `.env`.
+2. Pipelock runs as uid/gid 1000 and must be able to read the file. On Linux, if your user isn't 1000, set `PIPELOCK_UID` and `PIPELOCK_GID` in `.env` to the numbers `id -u` and `id -g` print.
 3. Mount it on the `pipelock` service: `- ./pipelock-mcp-listener.token:/run/pipelock/mcp-listener.token:ro`
 4. Replace `--mcp-allow-unauthenticated` with `--mcp-auth-token-file` and `/run/pipelock/mcp-listener.token`.
 
