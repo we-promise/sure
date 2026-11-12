@@ -56,14 +56,20 @@ namespace :security do
 
     # Session user_agent (encryption) and ip_address_digest (hashing) - not
     # part of BACKFILL_MANIFEST, see its comment for why.
-    results[:sessions] = backfill_sessions(batch_size, dry_run)
+    results[:sessions] = backfill_model(Session, Session.encrypted_attributes.to_a, batch_size, dry_run)
+    results[:session_ip_digests] = backfill_session_ip_digests(batch_size, dry_run)
 
+    # A row that fails here stays unreadable once the app runs with the keys,
+    # so any failure makes the whole run fail.
+    failed_count = results.values.sum { |result| result[:failed_count] }
     puts({
-      ok: true,
+      ok: failed_count.zero?,
       dry_run: dry_run,
       batch_size: batch_size,
+      failed_count: failed_count,
       results: results
     }.to_json)
+    exit 1 unless failed_count.zero?
   end
 
   def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)
@@ -84,7 +90,12 @@ namespace :security do
         # the encrypted getters raise on once keys are live.
         next unless fields.any? { |f| !safe_read_field(record, f).nil? }
 
-        next if dry_run
+        if dry_run
+          # Report the rows the real run would refuse, so the preview shows them.
+          refused = fields.find { |f| undecryptable_ciphertext?(safe_read_field(record, f)) }
+          failed << { id: record.id, error: ActiveRecord::Encryption::Errors::Decryption.name, message: "#{refused} holds ciphertext that no configured key decrypts" } if refused
+          next
+        end
 
         begin
           # Read and write under a row lock: an app write between the read
@@ -230,37 +241,22 @@ namespace :security do
     end
   end
 
-  def backfill_sessions(batch_size, dry_run)
+  # Hashes legacy session IP addresses into ip_address_digest. The encrypted
+  # Session columns go through backfill_model like every other model.
+  def backfill_session_ip_digests(batch_size, dry_run)
     processed = 0
     updated = 0
     failed = []
 
-    Session.order(:id).in_batches(of: batch_size) do |batch|
+    Session.where.not(ip_address: [ nil, "" ]).where(ip_address_digest: [ nil, "" ])
+      .select(:id, :ip_address, :ip_address_digest).order(:id).in_batches(of: batch_size) do |batch|
       batch.each do |session|
         processed += 1
         next if dry_run
 
         begin
-          changes = {}
-
-          # Re-save user_agent to trigger encryption (use safe read for plaintext)
-          user_agent_value = safe_read_field(session, :user_agent)
-          unless user_agent_value.nil?
-            # Use temporary instance to encrypt
-            encryptor = Session.new
-            encryptor.user_agent = user_agent_value
-            changes[:user_agent] = encryptor.read_attribute_before_type_cast(:user_agent)
-          end
-
-          # Hash IP address into ip_address_digest if not already done
-          if session.ip_address.present? && session.ip_address_digest.blank?
-            changes[:ip_address_digest] = Digest::SHA256.hexdigest(session.ip_address.to_s)
-          end
-
-          if changes.present?
-            session.update_columns(changes)
-            updated += 1
-          end
+          session.update_columns(ip_address_digest: Digest::SHA256.hexdigest(session.ip_address.to_s))
+          updated += 1
         rescue => e
           failed << { id: session.id, error: e.class.name, message: e.message }
         end
