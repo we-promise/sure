@@ -12,7 +12,8 @@ class Security < ApplicationRecord
   # Legacy non-ISO values previously persisted as exchange_operating_mic
   # (e.g. raw EODHD exchange codes) mapped to their ISO MIC.
   MIC_ALIASES = {
-    "WAR" => "XWAR"
+    "WAR" => "XWAR",
+    "GER" => "XETR" # Yahoo search code for Xetra, stored before it was mapped
   }.freeze
 
   KINDS = %w[standard cash].freeze

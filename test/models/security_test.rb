@@ -176,6 +176,16 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal "XWAR", found.reload.exchange_operating_mic
   end
 
+  test "find_by_ticker_and_exchange upgrades legacy GER to XETR and avoids duplicates" do
+    legacy = Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
+    legacy.update_columns(exchange_operating_mic: "GER")
+
+    found = Security.find_by_ticker_and_exchange(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
+
+    assert_equal legacy.id, found.id
+    assert_equal "XETR", found.reload.exchange_operating_mic
+  end
+
   test "cash_for lazily creates a per-account synthetic cash security" do
     account = accounts(:investment)
 
