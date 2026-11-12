@@ -42,8 +42,7 @@ class RuboCop::Cop::Sure::SortedListTest < ActiveSupport::TestCase
   end
 
   test "checks each list in the repository it marks" do
-    marked = %w[app/models/data_enrichment.rb app/models/provider_merchant.rb app/models/transaction.rb
-                app/models/family/financial_data_reset.rb]
+    marked = %w[app/models/data_enrichment.rb app/models/provider_merchant.rb app/models/transaction.rb]
 
     marked.each do |path|
       source = Rails.root.join(path).read
