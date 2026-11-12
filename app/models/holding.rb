@@ -115,6 +115,12 @@ class Holding < ApplicationRecord
         LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
           AND lots.source_entry_id = entries.id
           AND lots.manual_total_cost IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM security_splits lot_splits
+            WHERE lot_splits.security_id = trades.security_id
+              AND lot_splits.ex_date > entries.date
+              AND lot_splits.ex_date <= holdings.date
+          )
       SQL
       .group("holdings.id")
       .pluck(
@@ -461,10 +467,18 @@ class Holding < ApplicationRecord
 
       # A trade whose lot the user has costed counts at that cost, a
       # transfer-in included. The cost is already in the account's currency.
-      trades = trades.joins(<<~SQL.squish)
+      # This fallback divides by the trades' own quantities, which a later split
+      # does not restate, so a cost set on a lot split since is not used here.
+      trades = trades.joins(self.class.sanitize_sql_array([ <<~SQL.squish, date ]))
         LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
           AND lots.source_entry_id = entries.id
           AND lots.manual_total_cost IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM security_splits lot_splits
+            WHERE lot_splits.security_id = trades.security_id
+              AND lot_splits.ex_date > entries.date
+              AND lot_splits.ex_date <= ?
+          )
       SQL
 
       # An internal movement is not a purchase: securities moved in from elsewhere were
