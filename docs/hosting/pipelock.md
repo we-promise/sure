@@ -300,6 +300,8 @@ Common issues:
 - Missing `pipelock.example.yaml` file
 - YAML syntax errors in config
 - Port conflicts (8888 or 8889 already in use)
+- `non-loopback MCP listener ... requires an auth token file`: Pipelock 3.2+ needs `--mcp-allow-unauthenticated` or `--mcp-auth-token-file`. See [MCP listener authentication](#mcp-listener-authentication).
+- `has insecure permissions` or `permission denied` reading the listener token: see the file steps in [MCP listener authentication](#mcp-listener-authentication).
 
 ### LLM calls failing with proxy errors
 
