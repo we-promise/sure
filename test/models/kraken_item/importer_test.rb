@@ -78,6 +78,9 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
       "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } } ]
     )
     KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "3.0" } } } ]
+    )
 
     @provider.stubs(:get_earn_strategies).raises(Provider::Kraken::ApiError, "EGeneral:Internal error")
     result = KrakenItem::Importer.new(@item, kraken_provider: @provider).import
@@ -97,6 +100,9 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
       "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "2.0" } } } ]
     )
     KrakenItem::Importer.new(@item, kraken_provider: @provider).import
+    @provider.stubs(:get_earn_allocations).returns(
+      "items" => [ { "strategy_id" => "vault", "native_asset" => "XXBT", "amount_allocated" => { "total" => { "native" => "3.0" } } } ]
+    )
 
     [
       { "items" => [ { "name" => "no id" } ] },
@@ -108,6 +114,17 @@ class KrakenItem::ImporterTest < ActiveSupport::TestCase
       earn_btc = @item.kraken_accounts.first.raw_payload["assets"].find { |asset| asset["source"] == "earn" }
       assert_equal "2.0", earn_btc["balance"]
     end
+  end
+
+  test "does not fetch Earn/Strategies when there are no allocations" do
+    @provider.stubs(:get_asset_info).returns(asset_metadata)
+    @provider.stubs(:get_extended_balance).returns(
+      "ZUSD" => { "balance" => "50.0", "credit" => "0", "credit_used" => "0", "hold_trade" => "0" }
+    )
+    @provider.expects(:get_earn_strategies).never
+
+    assert KrakenItem::Importer.new(@item, kraken_provider: @provider).import[:success]
+    assert_in_delta 50.0, @item.kraken_accounts.first.current_balance, 0.01
   end
 
   test "merges Earn allocated balances alongside spot assets" do

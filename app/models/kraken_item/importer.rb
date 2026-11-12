@@ -107,6 +107,8 @@ class KrakenItem::Importer
     # gone. Same pattern as BinanceItem::Importer#carried_over_assets.
     def fetch_and_parse_earn_assets(asset_metadata)
       items = fetch_earn_allocations
+      return [] if items.empty?
+
       listed = fetch_earn_strategy_ids
       parse_earn_assets(items.reject { |item| listed.include?(item["strategy_id"]) }, asset_metadata)
     rescue Provider::Kraken::Error, EarnAllocationsUnavailable, Timeout::Error, SocketError,
