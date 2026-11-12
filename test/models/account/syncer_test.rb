@@ -77,6 +77,22 @@ class Account::SyncerTest < ActiveSupport::TestCase
     assert_equal 3, DebugLogEntry.order(:created_at).last.metadata["gap_days"]
   end
 
+  # DebugLogEntry encrypts its metadata, so SQL can't read gap_days from it.
+  test "reads the reported gap back from encrypted metadata" do
+    skip "Encryption not configured" unless DebugLogEntry.encryption_ready?
+
+    account, account_provider = linked_investment_account
+    account.set_current_balance(1000, date: Date.current, schedule_sync: false)
+    provider_holding(account, account_provider, date: Date.current - 1)
+    run_sync(account)
+
+    stored = DebugLogEntry.order(:created_at).last.read_attribute_before_type_cast(:metadata).to_s
+    refute_includes stored, "gap_days", "metadata must be stored encrypted"
+    assert_no_difference "DebugLogEntry.count" do
+      run_sync(Account.find(account.id))
+    end
+  end
+
   # A gap that closes and later returns is a new finding, not one already on
   # record; the closing itself is noted at info level.
   test "notes the dates lining up again, and warns when the same gap returns" do

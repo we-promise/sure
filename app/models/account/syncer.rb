@@ -74,12 +74,14 @@ class Account::Syncer
       Sentry.capture_exception(e)
     end
 
+    # Read through the model: metadata is encrypted, so SQL can't see its keys.
     def last_reported_anchor_gap
-      DebugLogEntry
+      metadata = DebugLogEntry
         .where(account: account, category: "provider_sync", source: self.class.name)
         .order(created_at: :desc)
-        .pick(Arel.sql("metadata->>'gap_days'"))
-        &.to_i
+        .first
+        &.metadata
+      metadata["gap_days"]&.to_i if metadata.is_a?(Hash)
     end
 
     def record_anchor_gap(newest_holding, anchor_date, holdings_date, gap_days, level:, message:)
