@@ -283,7 +283,7 @@ class Balance::ChartSeriesBuilder
             ON accounts.active_until_date IS NULL OR d.date <= accounts.active_until_date
           LEFT JOIN account_securities sec ON sec.account_id = accounts.id
           LEFT JOIN LATERAL (
-            SELECT h.amount, h.qty, h.currency
+            SELECT h.date, h.amount, h.qty, h.currency
             FROM holdings h
             WHERE h.account_id = accounts.id
               AND h.security_id = sec.security_id
@@ -295,6 +295,10 @@ class Balance::ChartSeriesBuilder
           -- gap-filled holding rows (weekends, price-history gaps) are persisted without
           -- cost_basis even though the position and basis are unchanged, so the basis is
           -- carried forward from the last real snapshot instead of zeroing those points.
+          -- A calculated zero carries the same way, except past a later row the
+          -- materializer cleared as unknown (a transfer in): no cost, no source and not
+          -- a provider's row. A provider's row is never written by the materializer,
+          -- so a missing cost there does not stop the carry.
           LEFT JOIN LATERAL (
             SELECT h2.cost_basis
             FROM holdings h2
@@ -302,7 +306,24 @@ class Balance::ChartSeriesBuilder
               AND h2.security_id = sec.security_id
               AND h2.date <= d.date
               AND h2.cost_basis IS NOT NULL
-              AND (h2.cost_basis_locked OR h2.cost_basis > 0 OR h2.cost_basis_source = 'calculated')
+              AND (
+                h2.cost_basis_locked
+                OR h2.cost_basis > 0
+                OR (
+                  h2.cost_basis_source = 'calculated'
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM holdings cleared
+                    WHERE cleared.account_id = h2.account_id
+                      AND cleared.security_id = h2.security_id
+                      AND cleared.date > h2.date
+                      AND cleared.date <= last_h.date
+                      AND cleared.cost_basis IS NULL
+                      AND cleared.cost_basis_source IS NULL
+                      AND cleared.account_provider_id IS NULL
+                  )
+                )
+              )
             ORDER BY h2.date DESC
             LIMIT 1
           ) last_basis ON TRUE

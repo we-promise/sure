@@ -13,9 +13,11 @@ class HoldingsController < ApplicationController
   def show
     @last_price_updated = @holding.security.prices.maximum(:updated_at)
     @lots = @holding.open_lots.to_a
-    # The lots partial gates its edit affordances on this; the controller has
-    # long enforced writes (require_holding_write_permission!), the pencil and
-    # form should not dangle for read-only shares.
+    # The lots partial gates its edit affordances on these, as
+    # HoldingLotsController refuses the writes: a read-only share edits
+    # nothing, and under a provider's cost a lot's manual cost can only be
+    # cleared.
+    @lots_provider_cost = @lots.any? && @holding.provider_cost_position?
     @can_write_lots = Account.writable_by(Current.user).exists?(id: @holding.account_id)
   end
 
@@ -92,15 +94,18 @@ class HoldingsController < ApplicationController
 
     new_security.save!
 
-    @holding.remap_security!(new_security)
-
-    # Re-materialize holdings with the new security's prices.
-    # Reload account to avoid stale associations from remap_security!.
+    # The remap and the re-materialization with the new security's prices
+    # commit together under the account row lock, taken first as a sync and a
+    # lot edit take it. The materializer's own lock! reloads the account, so
+    # it reads no associations cached before the remap.
     # The around_action :switch_timezone already sets the family timezone
     # for this request, so Date.current is correct here.
     account = Account.find(@holding.account_id)
-    strategy = account.linked? ? :reverse : :forward
-    Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+    account.with_lock do
+      @holding.remap_security!(new_security)
+      strategy = account.linked? ? :reverse : :forward
+      Balance::Materializer.new(account, strategy: strategy, security_ids: [ new_security.id ]).materialize_balances
+    end
 
     flash[:notice] = t(".success")
 
@@ -149,7 +154,21 @@ class HoldingsController < ApplicationController
   end
 
   def reset_security
-    @holding.reset_security_to_provider!
+    security_ids = [ @holding.security_id, @holding.provider_security_id ]
+    reset = @holding.provider_security_id.present?
+
+    # The reset and the re-materialization of both securities, as a remap
+    # re-materializes its target, commit together under the account row lock,
+    # so the lots and holdings each takes back match before the next sync.
+    account = Account.find(@holding.account_id)
+    account.with_lock do
+      @holding.reset_security_to_provider!
+      if reset
+        strategy = account.linked? ? :reverse : :forward
+        Balance::Materializer.new(account, strategy: strategy, security_ids: security_ids).materialize_balances
+      end
+    end
+
     flash[:notice] = t(".success")
 
     respond_to do |format|
