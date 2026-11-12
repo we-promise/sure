@@ -1,6 +1,4 @@
 class Setting::ProviderSecretBackfill
-  # TODO: Maintainer: prefer an explicit task (like SimpleFIN's encryption backfill),
-  # or upgrade/startup conversion? Confirm fail-closed behavior for marked ciphertext.
   def self.call(dry_run: true)
     counts = { candidates: 0, encrypted: 0, unchanged: 0, failed: 0 }
     keys = Provider::ConfigurationRegistry.secret_setting_keys

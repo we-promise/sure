@@ -12,7 +12,6 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
   end
 
   test "another registered dynamic secret is encrypted" do
-    # TODO: Discuss should this be a loop or are we good with individual tests for each secret?
     Setting[:plaid_eu_secret] = "synthetic-eu-secret"
     raw = Setting.connection.select_value("SELECT value FROM settings WHERE var = 'dynamic:plaid_eu_secret'")
     refute_includes raw, "synthetic-eu-secret"

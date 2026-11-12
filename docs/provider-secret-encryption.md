@@ -37,5 +37,4 @@ plaintext for a downgrade; restoring the previous release is not a transparent
 rollback.
 
 This protects current logical storage, not old backups, WAL or database pages.
-Credential rotation is a separate operator decision. Do not publish a security
-branch or PR before coordinating privately with the maintainer.
+Credential rotation is a separate operator decision.
