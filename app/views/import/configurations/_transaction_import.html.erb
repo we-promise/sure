@@ -46,7 +46,11 @@
 
   <%# Amount Type Strategy %>
   <%= form.select :amount_type_strategy,
-                  Import::AMOUNT_TYPE_STRATEGIES.map { |strategy| [strategy.humanize, strategy] },
+                  [
+                    [t(".signed_amount_strategy"), "signed_amount"],
+                    [t(".custom_column_strategy"), "custom_column"],
+                    [t(".debit_credit_columns_strategy"), "debit_credit_columns"]
+                  ],
                   { label: t(".amount_type_strategy_label"), prompt: t(".select_strategy") },
                   required: true,
                   data: {

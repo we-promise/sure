@@ -264,6 +264,40 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal [ 45, -12, -300 ], @import.rows.order(:source_row_number).map(&:signed_amount)
   end
 
+  test "leaves the amount blank when a debit or credit cell is not a number" do
+    import = <<~CSV
+      date,name,debit,credit
+      01/01/2024,Bad Debit,12.3.4,50
+      01/02/2024,Bad Credit,,abc
+      01/03/2024,Coffee Shop,4.20,
+    CSV
+
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: import,
+      date_col_label: "date",
+      date_format: "%m/%d/%Y",
+      name_col_label: "name",
+      amount_type_strategy: "debit_credit_columns",
+      debit_col_label: "debit",
+      credit_col_label: "credit"
+    )
+
+    @import.generate_rows_from_csv
+
+    rows = @import.rows.order(:source_row_number)
+    assert_equal [ "", "", "-4.2" ], rows.map(&:amount)
+    assert_not rows.first.valid?
+    assert_not rows.second.valid?
+  end
+
+  test "debit and credit column imports require two different columns" do
+    @import.assign_attributes(amount_type_strategy: "debit_credit_columns", debit_col_label: "amount", credit_col_label: "amount")
+
+    assert_not @import.valid?
+    assert_includes @import.errors.full_messages, I18n.t("imports.errors.debit_credit_columns_must_differ")
+  end
+
   test "debit and credit column imports require both columns" do
     @import.assign_attributes(amount_type_strategy: "debit_credit_columns", debit_col_label: "debit", credit_col_label: nil)
 

@@ -780,6 +780,8 @@ class Import < ApplicationRecord
 
       if debit_col_label.blank? || credit_col_label.blank?
         errors.add(:base, I18n.t("imports.errors.debit_credit_columns_require_both"))
+      elsif debit_col_label == credit_col_label
+        errors.add(:base, I18n.t("imports.errors.debit_credit_columns_must_differ"))
       end
     end
 
@@ -800,11 +802,17 @@ class Import < ApplicationRecord
     # Banks that export separate debit and credit columns fill one of them per
     # row. Each is read as a magnitude, whatever sign the bank prints, and the
     # row amount is credit minus debit: positive for money in. A row with
-    # neither stays blank so the clean step flags it.
+    # neither stays blank so the clean step flags it, and so does a row where
+    # a filled cell is not a number: counting that cell as zero would hide it.
     def debit_credit_amount(row)
-      debit = sanitize_number(csv_value(row, debit_col_label))
-      credit = sanitize_number(csv_value(row, credit_col_label))
+      raw_debit = csv_value(row, debit_col_label)
+      raw_credit = csv_value(row, credit_col_label)
+      debit = sanitize_number(raw_debit)
+      credit = sanitize_number(raw_credit)
+
       return "" if debit.blank? && credit.blank?
+      return "" if raw_debit.present? && debit.blank?
+      return "" if raw_credit.present? && credit.blank?
 
       (credit.to_d.abs - debit.to_d.abs).to_s("F")
     end

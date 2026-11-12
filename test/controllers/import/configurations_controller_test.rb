@@ -60,6 +60,18 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: "Importvorlage gefunden", count: 0
   end
 
+  test "amount type strategy options use translated labels" do
+    ensure_tailwind_build
+    @import.update!(raw_file_str: "Date,Name,Amount\n2026-01-02,Synthetic Sample,12.34\n", col_sep: ",")
+
+    get import_configuration_url(@import)
+
+    assert_response :success
+    assert_select "select#import_amount_type_strategy option[value=signed_amount]", text: "Signed amount"
+    assert_select "select#import_amount_type_strategy option[value=custom_column]", text: "Custom column"
+    assert_select "select#import_amount_type_strategy option[value=debit_credit_columns]", text: "Separate debit and credit columns"
+  end
+
   test "show renders the YNAB configuration partial" do
     ynab = @user.family.imports.create!(
       type: "YnabImport",
