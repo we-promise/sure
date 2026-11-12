@@ -159,7 +159,12 @@ end
 # NOT fall through to auto-generation below (see the elsif's `.present?`
 # guard) - without this check it would silently disable encryption entirely
 # instead of failing loudly, unlike the equivalent partial-ENV case above.
-if ActiveRecordEncryptionConfig.partial_credentials?
+# Skipped when the ENV configuration is complete: ENV keys take priority
+# over credentials, so a stale/incomplete credentials block must not stop
+# such an installation from booting - the complete-ENV branch below applies
+# and the credentials block is ignored (jjmata's review on #3189; covered in
+# test/lib/active_record_encryption_config_test.rb).
+if ActiveRecordEncryptionConfig.reject_partial_credentials?
   raise ActiveRecordEncryptionConfig.partial_credentials_message
 end
 

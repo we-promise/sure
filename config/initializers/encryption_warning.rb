@@ -84,16 +84,29 @@ Rails.application.config.after_initialize do
         the compromised key, the backfill task cannot tell that ciphertext
         apart from real plaintext, will re-encrypt it under the new key on
         top of the old encryption, and the original data becomes
-        unrecoverable. Rotate safely instead: keep
-        ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY (and friends) derived from this
-        SECRET_KEY_BASE configured as a `previous` encryption scheme
+        unrecoverable. Rotate safely instead - the full procedure, including
+        a runner script for step 3, is in docs/hosting/encryption.md:
+        (1) keep ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY (and friends) derived
+        from this SECRET_KEY_BASE configured as a `previous` encryption
+        scheme
         (https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)
-        so existing data still decrypts, generate new keys with
-        bin/rails db:encryption:init as the current scheme, then re-run
-        bin/rails security:backfill_encryption to re-encrypt under the new
-        keys. This only migrates ActiveRecord Encryption - Setting-stored
-        values and existing sessions are not covered and must be rotated /
-        re-entered separately.
+        so existing data still decrypts, and generate new keys with
+        bin/rails db:encryption:init as the current scheme; (2) re-encrypt
+        with DRY_RUN=false bin/rails security:backfill_encryption - the task
+        defaults to a dry run that changes nothing, so run it plain first to
+        preview; (3) migrate the deterministic attributes explicitly: while
+        the compromised scheme is still a `previous` scheme, Rails
+        deliberately re-serializes deterministic ("fixed") attributes -
+        user emails, otp_secret, provider tokens - under the OLDEST scheme
+        so equality lookups stay stable, which means the backfill leaves
+        exactly those columns under the compromised key
+        (https://github.com/rails/rails/blob/main/activerecord/lib/active_record/encryption/encrypted_attribute_type.rb,
+        serialize_with_oldest). Do NOT retire the compromised scheme until
+        those columns have been re-encrypted under the current key and
+        verified - removing it earlier makes every value still encrypted
+        under it permanently unreadable. This only migrates ActiveRecord
+        Encryption - Setting-stored values and existing sessions are not
+        covered and must be rotated / re-entered separately.
       WARN
     end
   end

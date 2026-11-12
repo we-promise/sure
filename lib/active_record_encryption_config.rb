@@ -186,6 +186,20 @@ module ActiveRecordEncryptionConfig
     "Active Record encryption Rails credentials are partially configured. Missing: #{missing_credential_keys(credentials).join(', ')}"
   end
 
+  # Whether the boot check in config/initializers/active_record_encryption.rb
+  # should reject a present-but-incomplete credentials block. Skipped when
+  # the ENV configuration is complete: ENV keys take priority over
+  # credentials (the documented priority order in that initializer), so a
+  # stale/incomplete credentials block must not stop such an installation
+  # from booting - the complete-ENV branch applies and the credentials block
+  # is ignored entirely. Previously the initializer checked
+  # partial_credentials? unconditionally and raised before the complete-ENV
+  # branch was ever considered, which broke boot on upgrade for exactly
+  # those installations (jjmata's review on #3189).
+  def reject_partial_credentials?(env = ENV, credentials = Rails.application.credentials)
+    !complete_env?(env) && partial_credentials?(credentials)
+  end
+
   def runtime_configured?(config = Rails.application.config.active_record.encryption)
     CONFIG_KEYS.all? { |key| config.public_send(key).present? }
   rescue NoMethodError

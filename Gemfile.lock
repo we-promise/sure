@@ -577,7 +577,10 @@ GEM
     platform_agent (1.0.1)
       activesupport (>= 5.2.0)
       useragent (~> 0.16.3)
-    posthog-ruby (3.3.3)
+    posthog-rails (3.26.0)
+      posthog-ruby (= 3.32.1)
+      railties (>= 5.2.0)
+    posthog-ruby (3.32.1)
       concurrent-ruby (~> 1)
     pp (0.6.3)
       prettyprint
@@ -979,7 +982,7 @@ DEPENDENCIES
   pdf-reader (~> 2.12)
   pg (~> 1.5)
   plaid
-  posthog-ruby
+  posthog-rails (~> 3.26.0)
   propshaft
   puma (>= 7.2.1)
   pundit
