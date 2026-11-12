@@ -16,7 +16,9 @@ class HoldingLotsController < ApplicationController
     # Strict, since String#to_d reads "abc" as 0 and "12abc" as 12.
     total = BigDecimal(lot_params[:total_cost_basis].to_s, exception: false)
 
-    updated = total && restating { @lot.update(manual_total_cost: total) }
+    # The provider-cost refusal is checked again under the lock, against the
+    # holding as it is now.
+    updated = total && restating { !@holding.provider_cost_position? && @lot.update(manual_total_cost: total) }
 
     if updated
       flash[:notice] = t(".success")
@@ -62,12 +64,15 @@ class HoldingLotsController < ApplicationController
     # Changes the lot and restates the position in one transaction under the
     # account row lock, taken first as a sync takes it, so a failed
     # restatement rolls the lot back and an edit and a sync of the same account
-    # do not interleave. Restates only when the change is saved; returns
-    # whether it was.
+    # do not interleave. The holding and the lot are read again once the lock
+    # is held, since a remap may have moved them while the request waited.
+    # Restates only when the change is saved; returns whether it was.
     def restating
       account = @holding.account
 
       account.with_lock do
+        @holding.reload
+        set_lot
         changed = yield
         if changed
           strategy = account.linked? ? :reverse : :forward
