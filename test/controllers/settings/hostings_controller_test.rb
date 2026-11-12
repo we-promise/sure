@@ -438,7 +438,9 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     with_self_hosting do
       MarketDataRefreshJob.stubs(:perform_later).raises(StandardError, "queue unavailable")
 
-      patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+      assert_difference -> { DebugLogEntry.where(source: "Settings::HostingsController", level: "error").count }, 1 do
+        patch settings_hosting_url, params: { setting: { twelve_data_api_key: "1234567890" } }
+      end
 
       assert_redirected_to settings_hosting_url
       assert_equal "1234567890", Setting.twelve_data_api_key

@@ -576,7 +576,15 @@ class Settings::HostingsController < ApplicationController
     def refresh_market_data_later
       MarketDataRefreshJob.perform_later
     rescue StandardError => error
-      Rails.logger.error("[Settings::Hostings] Failed to queue market data refresh: #{error.message}")
+      DebugLogEntry.capture(
+        category: "background_jobs",
+        level: "error",
+        message: "Failed to queue market data refresh after a provider setting changed",
+        source: self.class.name,
+        family: Current.family,
+        user: Current.user,
+        metadata: { error_class: error.class.name, error_message: error.message }
+      )
     end
 
     def update_encrypted_setting(param_key)
