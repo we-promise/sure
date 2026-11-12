@@ -7,7 +7,6 @@ zh-CN:
       export: 导出 CSV
       print_report: 打印报表
       sections_aria: 报表各部分
-      toggle_section: 切换模块可见性
       periods:
         monthly: 按月
         quarterly: 按季度

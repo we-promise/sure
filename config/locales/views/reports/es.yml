@@ -6,7 +6,6 @@ es:
       subtitle: Información completa sobre tu salud financiera
       export: Exportar CSV
       print_report: Imprimir informe
-      toggle_section: Mostrar / Ocultar sección
       periods:
         monthly: Mensual
         quarterly: Trimestral
