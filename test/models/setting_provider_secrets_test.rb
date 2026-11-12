@@ -71,6 +71,18 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
     assert_not Setting.key?(:missing_secret)
   end
 
+  test "writes and backfill work without an Active Record logger" do
+    store_legacy("synthetic-legacy-secret")
+    original_logger = ActiveRecord::Base.logger
+    ActiveRecord::Base.logger = nil
+
+    assert_equal 1, Setting::ProviderSecretBackfill.call(dry_run: false)[:encrypted]
+    assert_equal "synthetic-legacy-secret", Setting[:plaid_secret]
+    refute_includes raw_value, "synthetic-legacy-secret"
+  ensure
+    ActiveRecord::Base.logger = original_logger
+  end
+
   test "envelopes fail closed on corruption unknown version and extra fields" do
     Setting[:plaid_secret] = "synthetic-secret"
     envelope = Setting.find_by!(var: "dynamic:plaid_secret").value

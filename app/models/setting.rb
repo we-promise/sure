@@ -303,9 +303,8 @@ class Setting < RailsSettings::Base
           # Use upsert for atomic insert/update to avoid race conditions
           stored_value = DynamicSecret.encrypt(key_str, value)
           # Upsert SQL embeds serialized values rather than filtered bind names.
-          logger.silence do
-            upsert({ var: dynamic_key, value: stored_value.to_yaml }, unique_by: :var)
-          end
+          write = proc { upsert({ var: dynamic_key, value: stored_value.to_yaml }, unique_by: :var) }
+          logger ? logger.silence(&write) : write.call
           clear_cache
         end
       end
