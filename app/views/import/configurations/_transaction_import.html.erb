@@ -32,7 +32,9 @@
     <%= form.select :amount_col_label,
                     import.csv_headers,
                     { label: t(".amount_label"), container_class: "w-2/5", prompt: t(".select_column") },
-                    required: true %>
+                    required: @import.amount_type_strategy != "debit_credit_columns",
+                    disabled: @import.amount_type_strategy == "debit_credit_columns",
+                    data: { import_target: "amountColumnSelect" } %>
     <%= form.select :currency_col_label,
                     import.csv_headers,
                     { include_blank: t(".default"), label: t(".currency_label"), container_class: "w-1/5" } %>
@@ -98,6 +100,21 @@
                         { prompt: t(".select_type"), container_class: "w-48 px-3 py-1.5 border border-secondary rounded-md" },
                         required: @import.amount_type_strategy == "custom_column" %>
       </div>
+    </div>
+  <% end %>
+
+  <%# Debit and Credit Columns Configuration %>
+  <%= tag.fieldset data: { import_target: "debitCreditFieldset" },
+                   class: @import.amount_type_strategy == "debit_credit_columns" ? "block" : "hidden" do %>
+    <div class="flex items-center gap-4">
+      <%= form.select :debit_col_label,
+                      import.csv_headers,
+                      { label: t(".debit_label"), prompt: t(".select_column") },
+                      required: @import.amount_type_strategy == "debit_credit_columns" %>
+      <%= form.select :credit_col_label,
+                      import.csv_headers,
+                      { label: t(".credit_label"), prompt: t(".select_column") },
+                      required: @import.amount_type_strategy == "debit_credit_columns" %>
     </div>
   <% end %>
 

@@ -13,6 +13,8 @@ export default class extends Controller {
     "amountTypeValue",
     "amountTypeInflowValue",
     "amountTypeStrategySelect",
+    "debitCreditFieldset",
+    "amountColumnSelect",
   ];
 
   connect() {
@@ -44,6 +46,8 @@ export default class extends Controller {
     if (amountTypeStrategy === "signed_amount") {
       this.#enableSignedAmountFieldset();
     }
+
+    this.#toggleDebitCreditFieldset(amountTypeStrategy === "debit_credit_columns");
   }
 
   handleAmountTypeChange(event) {
@@ -130,6 +134,32 @@ export default class extends Controller {
     const colIdx = this.csvValue[0].indexOf(column);
     const values = this.csvValue.slice(1).map((row) => row[colIdx]);
     return [...new Set(values)];
+  }
+
+  // Separate debit and credit columns replace the single amount column, so the
+  // amount select is switched off while they are in use.
+  #toggleDebitCreditFieldset(active) {
+    if (this.hasDebitCreditFieldsetTarget) {
+      this.debitCreditFieldsetTarget.classList.toggle("hidden", !active);
+      this.debitCreditFieldsetTarget.querySelectorAll("select").forEach((field) => {
+        field.toggleAttribute("required", active);
+      });
+    }
+
+    if (this.hasAmountColumnSelectTarget) {
+      this.amountColumnSelectTarget.toggleAttribute("required", !active);
+      this.amountColumnSelectTarget.toggleAttribute("disabled", active);
+    }
+
+    if (active) {
+      this.customColumnFieldsetTarget.classList.add("hidden");
+      this.signedAmountFieldsetTarget.classList.add("hidden");
+      [this.customColumnFieldsetTarget, this.signedAmountFieldsetTarget].forEach((fieldset) => {
+        fieldset.querySelectorAll("select, input").forEach((field) => {
+          field.removeAttribute("required");
+        });
+      });
+    }
   }
 
   #enableCustomColumnFieldset() {

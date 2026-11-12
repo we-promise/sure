@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_12_090000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1380,9 +1380,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "col_sep", default: ","
     t.jsonb "column_mappings"
     t.datetime "created_at", null: false
+    t.string "credit_col_label"
     t.string "currency_col_label"
     t.string "date_col_label"
     t.string "date_format", default: "%m/%d/%Y"
+    t.string "debit_col_label"
     t.string "document_type"
     t.string "entity_type_col_label"
     t.string "error"

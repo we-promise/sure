@@ -208,6 +208,96 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_equal [ -100, 200, -300 ], @import.entries.order(:date).map(&:amount)
   end
 
+  test "imports transactions from separate debit and credit columns" do
+    import = <<~CSV
+      date,name,debit,credit
+      01/01/2024,Grocery Store,100.50,
+      01/02/2024,Salary,,2000
+      01/03/2024,Coffee Shop,4.20,
+    CSV
+
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: import,
+      date_col_label: "date",
+      date_format: "%m/%d/%Y",
+      name_col_label: "name",
+      amount_type_strategy: "debit_credit_columns",
+      debit_col_label: "debit",
+      credit_col_label: "credit",
+      signage_convention: nil # Not needed: the column says which way the money moved
+    )
+
+    @import.generate_rows_from_csv
+    @import.reload
+
+    assert_difference -> { Entry.count } => 3,
+                      -> { Transaction.count } => 3 do
+      @import.publish
+    end
+
+    # Sure stores outflows as positive amounts
+    assert_equal [ 100.5, -2000, 4.2 ], @import.entries.order(:date).map(&:amount)
+  end
+
+  test "reads the debit and credit columns as magnitudes whatever their sign" do
+    import = <<~CSV
+      date,name,money_out,money_in
+      01/01/2024,Grocery Store,-45.00,
+      01/02/2024,Refund,,12.00
+      01/03/2024,Transfer,0.00,300.00
+    CSV
+
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: import,
+      date_col_label: "date",
+      date_format: "%m/%d/%Y",
+      name_col_label: "name",
+      amount_type_strategy: "debit_credit_columns",
+      debit_col_label: "money_out",
+      credit_col_label: "money_in"
+    )
+
+    @import.generate_rows_from_csv
+
+    assert_equal [ 45, -12, -300 ], @import.rows.order(:source_row_number).map(&:signed_amount)
+  end
+
+  test "debit and credit column imports require both columns" do
+    @import.assign_attributes(amount_type_strategy: "debit_credit_columns", debit_col_label: "debit", credit_col_label: nil)
+
+    assert_not @import.valid?
+    assert_includes @import.errors.full_messages, I18n.t("imports.errors.debit_credit_columns_require_both")
+
+    @import.credit_col_label = "credit"
+
+    assert @import.valid?
+  end
+
+  test "a template carries the debit and credit columns to the next import" do
+    template = imports(:transaction).dup
+    template.update!(status: "complete", date_col_label: "date", date_format: "%m/%d/%Y", amount_type_strategy: "debit_credit_columns", debit_col_label: "debit", credit_col_label: "credit")
+    @import = families(:dylan_family).imports.create!(type: "TransactionImport", raw_file_str: "date,name,debit,credit\n01/01/2024,Grocery Store,100.50,\n")
+
+    @import.apply_template!(template)
+
+    assert_equal "debit_credit_columns", @import.reload.amount_type_strategy
+    assert_equal "debit", @import.debit_col_label
+    assert_equal "credit", @import.credit_col_label
+  end
+
+  test "a signed amount template leaves the amount strategy of the next import alone" do
+    template = imports(:transaction).dup
+    template.update!(status: "complete", date_col_label: "date", date_format: "%m/%d/%Y", amount_col_label: "amount")
+    @import = families(:dylan_family).imports.create!(type: "TransactionImport", raw_file_str: "date,amount\n01/01/2024,-100.50\n")
+
+    @import.apply_template!(template)
+
+    assert_equal "signed_amount", @import.reload.amount_type_strategy
+    assert_nil @import.debit_col_label
+  end
+
   test "csv_template uses ISO dates" do
     first_row = @import.csv_template.first
 

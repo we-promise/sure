@@ -72,6 +72,28 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "updating a configuration saves separate debit and credit columns" do
+    TransactionImport.any_instance.expects(:generate_rows_from_csv).once
+
+    patch import_configuration_url(@import), params: {
+      import: {
+        date_col_label: "Date",
+        date_format: "%Y-%m-%d",
+        amount_type_strategy: "debit_credit_columns",
+        debit_col_label: "Debit",
+        credit_col_label: "Credit",
+        number_format: "1,234.56"
+      }
+    }
+
+    assert_redirected_to import_clean_url(@import)
+
+    @import.reload
+    assert_equal "debit_credit_columns", @import.amount_type_strategy
+    assert_equal "Debit", @import.debit_col_label
+    assert_equal "Credit", @import.credit_col_label
+  end
+
   test "updating a valid configuration regenerates rows" do
     TransactionImport.any_instance.expects(:generate_rows_from_csv).once
 
