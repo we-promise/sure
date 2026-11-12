@@ -10,7 +10,7 @@ class DebugLogEntry < ApplicationRecord
   # importers that this class has no direct visibility into, on top of the individual
   # sites that were audited and fixed not to pass these in the first place.
   MONETARY_METADATA_KEY_PATTERN = /amount|balance|qty/i
-  IDENTIFYING_METADATA_KEY_PATTERN = /address|\bbody\b|\buid\b|api_account_id|api_key|access_token|refresh_token|password|authorization|secret|iban|account_number|email/i
+  IDENTIFYING_METADATA_KEY_PATTERN = /address|body|\buid\b|api_account_id|api_key|token(?!s)|password|authorization|secret|iban|account_number|email/i
   SENSITIVE_METADATA_KEY_PATTERN = /#{MONETARY_METADATA_KEY_PATTERN.source}|#{IDENTIFYING_METADATA_KEY_PATTERN.source}/i
 
   # Monetary keys whose value is a list or hash (e.g. other_balances: [{currency:,
@@ -83,7 +83,11 @@ class DebugLogEntry < ApplicationRecord
     # redaction over pre-existing plaintext rows before re-encrypting them.
     def normalize_metadata(metadata)
       return {} if metadata.blank?
-      return { value: metadata.to_s } unless metadata.respond_to?(:deep_stringify_keys)
+
+      # Strings and lists go through the same redaction as hashes.
+      unless metadata.respond_to?(:deep_stringify_keys)
+        metadata = { "value" => metadata.is_a?(Array) ? metadata : metadata.to_s }
+      end
 
       redact_sensitive(metadata.deep_stringify_keys)
     end

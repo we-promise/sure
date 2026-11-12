@@ -144,6 +144,12 @@ class OnchainWalletItem::Importer
       )
     end
 
+    # Identifies the wallet in support logs without storing its address: an
+    # item can track several addresses on the same chain.
+    def wallet_account_ids(chain, address)
+      onchain_wallet_item.accounts_for_wallet(chain, address).ids
+    end
+
     def report_unreachable(chain:, address:, error:)
       DebugLogEntry.capture(
         category: "provider_sync_error",
@@ -152,7 +158,7 @@ class OnchainWalletItem::Importer
         source: self.class.name,
         provider_key: "onchain_wallet",
         family: onchain_wallet_item.family,
-        metadata: { onchain_wallet_item_id: onchain_wallet_item.id, chain: chain }
+        metadata: { onchain_wallet_item_id: onchain_wallet_item.id, chain: chain, onchain_wallet_account_ids: wallet_account_ids(chain, address) }
       )
     end
 
@@ -176,6 +182,7 @@ class OnchainWalletItem::Importer
         metadata: {
           onchain_wallet_item_id: onchain_wallet_item.id,
           chain: chain,
+          onchain_wallet_account_ids: wallet_account_ids(chain, address),
           history_truncated: snapshot.history_truncated?,
           assets_truncated: snapshot.assets_truncated?,
           max_pages: Onchain::HistoryBudget.pages,
