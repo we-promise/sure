@@ -127,7 +127,9 @@ class TradeRepublicItem::Importer
                  trade_republic_item.currency.presence ||
                  trade_republic_item.family.currency
       portfolio_account = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
-      wrappers = Array(data["tax_wrapper_accounts"]).select { |wrapper| wrapper.is_a?(Hash) }
+      wrappers = pea_wrappers(Array(data["tax_wrapper_accounts"]).select { |wrapper| wrapper.is_a?(Hash) })
+      # Only the cash account of the PEA that gets an account here leaves the
+      # primary timeline; events of any other tax wrapper stay on it.
       pea_cash_ids = tax_wrapper_cash_account_ids(wrappers)
       primary_event = ->(event) { !tax_wrapper_event?(event, pea_cash_ids) || pea_transfer_event?(event) }
 
@@ -166,7 +168,7 @@ class TradeRepublicItem::Importer
         keep_event: primary_event
       )
       upsert_crypto_account(account_id, currency, domain_statuses)
-      pea_capped = pea_wrappers(wrappers).flat_map do |wrapper|
+      pea_capped = wrappers.flat_map do |wrapper|
         upsert_pea_account(wrapper, data, currency: currency, domain_statuses: domain_statuses)
       end
       portfolio_capped | cash_capped | pea_capped

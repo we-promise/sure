@@ -1560,6 +1560,25 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     TradeRepublicItem::Importer.new(@item, provider: provider).import
   end
 
+  test "events of a second tax wrapper stay on the primary account" do
+    second = pea_sync_data["tax_wrapper_accounts"].first.merge("securities_account_id" => "PEA2-SEC", "cash_account_id" => "PEA2-CASH")
+    events = pea_sync_data["events"] + [
+      { "id" => "evt_pea2_buy", "timestamp" => "2026-11-01T11:00:00Z", "category" => "orderExecution", "eventType" => "TRADING_TRADE_EXECUTED", "cashAccountNumber" => "PEA2-CASH" }
+    ]
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(pea_sync_data(
+      "tax_wrapper_accounts" => pea_sync_data["tax_wrapper_accounts"] + [ second ],
+      "events" => events
+    )))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    portfolio = @item.trade_republic_accounts.find_by(kind: "portfolio")
+    assert_includes portfolio.raw_timeline_payload.map { |event| event["id"] }, "evt_pea2_buy"
+    pea = @item.trade_republic_accounts.find_by(kind: "pea")
+    assert_not_includes pea.raw_timeline_payload.map { |event| event["id"] }, "evt_pea2_buy"
+  end
+
   test "first PEA balance uses the known positions when its cash fails" do
     wrapper = pea_sync_data["tax_wrapper_accounts"].first.except("cash").merge(
       "domain_statuses" => { "cash" => "failed", "portfolio" => "success" }
