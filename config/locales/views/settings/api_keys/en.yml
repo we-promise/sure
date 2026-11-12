@@ -8,6 +8,7 @@ en:
     api_keys:
       create:
         success: "Your API key has been created successfully"
+        creation_failed: "Couldn't create your API key. Please try again."
       destroy:
         revoked_successfully: "API key has been revoked successfully"
         revoke_failed: "Failed to revoke API key"
