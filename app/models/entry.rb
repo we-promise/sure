@@ -149,6 +149,24 @@ class Entry < ApplicationRecord
     SQL
   }
 
+  # Balance updates: reconciliation valuations. On linked accounts most of them
+  # are the provider's daily balance, kept as a waypoint by
+  # Account::CurrentBalanceManager#preserve_anchor_as_reconciliation_if_stale.
+  # Opening and current anchors are not included.
+  scope :balance_updates, -> {
+    where(entryable_type: "Valuation", entryable_id: Valuation.reconciliation.select(:id))
+  }
+
+  scope :excluding_balance_updates, -> {
+    where(<<~SQL.squish)
+      entries.entryable_type != 'Valuation'
+      OR NOT EXISTS (
+        SELECT 1 FROM valuations v
+        WHERE v.id = entries.entryable_id AND v.kind = 'reconciliation'
+      )
+    SQL
+  }
+
   # Future-dated entries haven't happened yet, so "actual" reporting (budgets,
   # income statement, insights) should not count them until their date
   # arrives -- see Entry#scheduled?.

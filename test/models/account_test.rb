@@ -10,6 +10,22 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "linked cash and investment accounts hide balance updates by default" do
+    assert accounts(:connected).hides_balance_updates_by_default?
+
+    investment = accounts(:investment)
+    investment.stubs(:linked?).returns(true)
+    assert investment.hides_balance_updates_by_default?
+  end
+
+  test "manual accounts and linked non-cash accounts show balance updates" do
+    assert_not accounts(:depository).hides_balance_updates_by_default?
+
+    property = accounts(:property)
+    property.stubs(:linked?).returns(true)
+    assert_not property.hides_balance_updates_by_default?
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy

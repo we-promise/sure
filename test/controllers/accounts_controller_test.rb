@@ -578,6 +578,64 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(valuation)}", count: 0
   end
 
+  test "show hides balance updates on a linked account by default" do
+    account = accounts(:connected)
+    transaction = create_transaction(account: account, name: "Linked Transaction")
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(transaction)}"
+    assert_select "##{dom_id(balance_update)}", count: 0
+    assert_select "#balance-updates-toggle form[action=?]", toggle_balance_updates_account_path(account)
+  end
+
+  test "show lists balance updates on a linked account once the user chose to see them" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date, name: "Manual balance update")
+    @user.update_show_balance_updates(true)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}", text: /Synced balance/
+    assert_select "#balance-updates-toggle", text: /Synced balances are shown/
+  end
+
+  test "toggle_balance_updates saves the choice and keeps the active filters" do
+    account = accounts(:connected)
+
+    patch toggle_balance_updates_account_url(account, q: { search: "grocery" })
+
+    assert_redirected_to account_url(account, q: { search: "grocery" }, tab: "activity")
+    assert @user.reload.show_balance_updates?
+
+    patch toggle_balance_updates_account_url(account)
+
+    assert_not @user.reload.show_balance_updates?
+  end
+
+  test "show lists balance updates on a manual account without a toggle" do
+    balance_update = create_valuation(account: @account, date: 2.days.ago.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#balance-updates-toggle", count: 0
+  end
+
+  test "show omits the balance updates toggle on a linked account without any" do
+    account = accounts(:connected)
+    account.entries.balance_updates.destroy_all
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "#balance-updates-toggle", count: 0
+  end
+
   test "show renders a badge for each active filter" do
     get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
 

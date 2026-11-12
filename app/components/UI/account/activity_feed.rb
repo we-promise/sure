@@ -28,6 +28,21 @@ class UI::Account::ActivityFeed < ApplicationComponent
     feed_data.entries_by_date
   end
 
+  # Offered on accounts that hide balance updates by default, once they have any.
+  def balance_updates_toggle?
+    account.hides_balance_updates_by_default? && account.entries.balance_updates.exists?
+  end
+
+  def showing_balance_updates?
+    helpers.show_balance_updates?
+  end
+
+  # Saves the flipped preference and comes back with the same filters.
+  # Pagination starts over, since the number of entries changes.
+  def balance_updates_toggle_path
+    helpers.toggle_balance_updates_account_path(account, q: q.to_h.presence)
+  end
+
   private
     def account
       feed_data.account
