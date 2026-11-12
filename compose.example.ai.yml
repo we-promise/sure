@@ -190,6 +190,9 @@ services:
       - "0.0.0.0:8889"
       - "--mcp-upstream"
       - "http://web:3000/mcp"
+      # Pipelock needs a listener token or this flag; Sure's /mcp still requires
+      # its own token. To use a listener token, see docs/hosting/pipelock.md.
+      - "--mcp-allow-unauthenticated"
     ports:
       # MCP reverse proxy — external AI assistants connect here
       - "${MCP_PROXY_PORT:-8889}:8889"
