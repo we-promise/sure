@@ -57,7 +57,7 @@ x-rails-env: &rails_env
   # that old value in .env first: a new value makes everything already
   # encrypted under it unreadable. Rotate it later only as described in
   # docs/hosting/docker.md ("Upgrading from the old built-in SECRET_KEY_BASE").
-  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file, e.g. openssl rand -hex 64}"
+  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file. Existing install: copy the value from your previous compose.yml, do not generate a new one. New install: openssl rand -hex 64}"
   # Optional but recommended: set these explicitly instead of relying on the
   # SECRET_KEY_BASE auto-derivation fallback. Generate with: bin/rails db:encryption:init
   # Set all three or none. Adding them to an instance that already has data
