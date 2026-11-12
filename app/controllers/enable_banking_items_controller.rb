@@ -207,6 +207,15 @@ class EnableBankingItemsController < ApplicationController
 
   # Re-authorize an expired session
   def reauthorize
+    # Reauthorization reuses the bank stored on the item. Items whose initial
+    # authorization never recorded a bank cannot be reauthorized in place.
+    if @enable_banking_item.aspsp_name.blank?
+      Rails.logger.warn "Enable Banking reauthorize: item #{@enable_banking_item.id} has no aspsp_name"
+      redirect_to settings_providers_path, alert: t(".bank_required",
+        default: "This connection has no bank selected. Please connect your bank again.")
+      return
+    end
+
     begin
       language = I18n.locale.to_s.split("-").first
 
@@ -228,6 +237,10 @@ class EnableBankingItemsController < ApplicationController
       Rails.logger.error "Enable Banking reauthorization error: #{e.message}"
       redirect_to settings_providers_path, alert: t(".reauthorization_failed",
         default: "Failed to re-authorize: %{message}", message: e.message)
+    rescue => e
+      Rails.logger.error "Unexpected error in reauthorize: #{e.class}: #{e.message}"
+      Sentry.capture_exception(e) { |scope| scope.set_tags(enable_banking_item_id: @enable_banking_item.id) } if defined?(Sentry)
+      redirect_to settings_providers_path, alert: t(".unexpected_error", default: "An unexpected error occurred. Please try again.")
     end
   end
 
