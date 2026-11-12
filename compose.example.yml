@@ -57,7 +57,7 @@ x-rails-env: &rails_env
   # it already runs with (the old default if you never set one), or data
   # already encrypted under keys derived from it becomes unreadable. See
   # "Upgrading an install that is already running" in docs/hosting/docker.md.
-  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file, e.g. openssl rand -hex 64}"
+  SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file. Existing install: copy the value from your previous compose.yml, do not generate a new one. New install: openssl rand -hex 64}"
   # Optional but recommended: set these explicitly instead of relying on the
   # SECRET_KEY_BASE auto-derivation fallback. Generate with: bin/rails db:encryption:init
   # Set all three or none. Adding them to an instance that already has data
