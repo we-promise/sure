@@ -38,11 +38,20 @@ namespace :security do
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    SecurityBackfillManifest.each_model do |model_class, fields|
-      results[model_class.table_name.to_sym] = backfill_model(model_class, fields, batch_size, dry_run)
+    # Note: otp_backup_codes excluded from User's fields below - it's a
+    # PostgreSQL array column incompatible with AR encryption.
+    #
+    # Field lists live in ActiveRecordEncryptionConfig::BACKFILL_MANIFEST
+    # (lib/active_record_encryption_config.rb), the single source of truth
+    # kept in sync with each model's `encrypts` declarations by
+    # test/lib/tasks/security_backfill_test.rb - update the manifest, not
+    # this loop, to add or change coverage.
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      results[key] = backfill_model(model_class_name.constantize, fields, batch_size, dry_run)
     end
 
-    # Session user_agent (encryption) and ip_address_digest (hashing)
+    # Session user_agent (encryption) and ip_address_digest (hashing) - not
+    # part of BACKFILL_MANIFEST, see its comment for why.
     results[:sessions] = backfill_sessions(batch_size, dry_run)
 
     puts({

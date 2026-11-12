@@ -154,6 +154,46 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     end
   end
 
+  # Regression test for a gap jjmata flagged: the previous test above only
+  # checks that each model is present in the results hash, so a field added
+  # to a model's `encrypts` list without a matching manifest update (the
+  # SnapTrade raw_balances_payload gap fixed elsewhere in this file) would stay
+  # green here forever. This asserts exact parity for every model in the manifest.
+  test "backfill manifest exactly matches each model's encrypted attributes" do
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      model_class = model_class_name.constantize
+
+      assert_equal fields.sort, model_class.encrypted_attributes.to_a.sort,
+        "#{model_class_name} (results[:#{key}]) has drifted from " \
+        "ActiveRecordEncryptionConfig::BACKFILL_MANIFEST - update the manifest " \
+        "together with whatever changed #{model_class_name}'s `encrypts` declarations"
+    end
+  end
+
+  # The parity test above only checks models already listed in the manifest,
+  # so a model that encrypts fields but was never added (Fio, Monobank and
+  # Coinspot, previously) passed silently and its old rows would stay plaintext.
+  # Session is excluded on purpose, see BACKFILL_MANIFEST's comment.
+  test "every model with encrypted attributes is in the backfill manifest" do
+    Rails.application.eager_load!
+
+    manifest = ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.values.to_h
+    # Named, loadable classes only: anonymous test-only subclasses aren't real models.
+    encrypted_models = ApplicationRecord.descendants.select do |model|
+      !model.abstract_class? && model.name&.safe_constantize == model && model.encrypted_attributes.present?
+    end
+
+    encrypted_models.each do |model|
+      next if model.base_class.name == "Session"
+
+      fields = manifest[model.base_class.name]
+      assert fields, "#{model.name} encrypts #{model.encrypted_attributes.to_a.sort.inspect} but is missing from " \
+        "ActiveRecordEncryptionConfig::BACKFILL_MANIFEST - add it"
+      assert_empty model.encrypted_attributes.to_a - fields,
+        "#{model.name} encrypts fields the backfill manifest does not cover"
+    end
+  end
+
   # Rails encrypts deterministic attributes with the oldest configured scheme
   # while `previous` schemes exist. A rotation away from a compromised key
   # must still move them to the current key.
