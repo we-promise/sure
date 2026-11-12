@@ -26,6 +26,11 @@ module Provider::TradeRepublicTimelineEvent
     "SAVINGS_PLAN_INVOICE_CREATED" => "orderExecution",
     "PRIVATE_MARKET_FUND_TRADE_EXECUTED" => "orderExecution",
     "IPO_TRADE_EXECUTED" => "orderExecution",
+    # Securities moved into or out of Trade Republic from/to another broker
+    # (Depotübertrag). No cash changes hands; the processor imports them as
+    # zero-amount trades so quantities and cost basis line up with holdings.
+    "SSP_SECURITIES_TRANSFER_INCOMING" => "orderExecution",
+    "SSP_SECURITIES_TRANSFER_OUTGOING" => "orderExecution",
     "BANK_TRANSACTION_INCOMING" => "PAYMENT_RECEIVED",
     "INCOMING_TRANSFER" => "PAYMENT_RECEIVED",
     "INCOMING_TRANSFER_DELEGATION" => "PAYMENT_RECEIVED",
