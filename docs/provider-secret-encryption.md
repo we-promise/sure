@@ -25,7 +25,9 @@ connections; manual accounts and other providers remain available. Provider
 settings show the error and allow replacement. Saving other fields with the
 unreadable secret left blank preserves its envelope for recovery with the original
 key. To discard it deliberately, select the delete checkbox and save; this permits
-ENV fallback.
+ENV fallback. Scripts can explicitly remove an unreadable dynamic secret with
+`Setting.delete(:plaid_secret)` (or `:plaid_eu_secret`), which returns nil when the
+old value cannot be decrypted.
 
 ## Explicit conversion (operator approval required)
 

@@ -62,6 +62,13 @@ class SettingProviderSecretsTest < ActiveSupport::TestCase
     assert_equal "ordinary", Setting[:custom_value]
   end
 
+  test "explicit deletion removes unreadable secrets without returning ciphertext" do
+    store_legacy({ Setting::DynamicSecret::MARKER => 1, "ciphertext" => "broken" })
+
+    assert_nil Setting.delete(:plaid_secret)
+    assert_not Setting.key?(:plaid_secret)
+  end
+
   test "owning adapter metadata failures log the adapter without sensitive messages" do
     pattern = Rails.root.join("app/models/provider/*_adapter.rb")
     Dir.expects(:[]).with(pattern).returns([ Rails.root.join("app/models/provider/missing_adapter.rb").to_s ])

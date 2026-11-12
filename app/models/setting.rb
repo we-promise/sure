@@ -325,7 +325,11 @@ class Setting < RailsSettings::Base
       return nil if respond_to?(key_str) # Can't delete declared fields
 
       dynamic_key = dynamic_key_name(key_str)
-      value = self[key_str]
+      value = begin
+        self[key_str]
+      rescue SecretError
+        nil # Explicit deletion must also work when the original key is unavailable.
+      end
       where(var: dynamic_key).destroy_all
       clear_cache
       value
