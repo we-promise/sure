@@ -839,14 +839,13 @@ Keep `podSecurityContext.fsGroup` (1000 by default) so Pipelock can read the mou
 
 ### Metrics (Prometheus)
 
-Pipelock exposes `/metrics` on the forward proxy port. Enable scraping with a ServiceMonitor:
+Pipelock 3.8 and later serve `/metrics` and `/stats` only on a dedicated listener, not the forward proxy port. Enabling the ServiceMonitor turns that listener on (port 9091, `pipelock.metrics.port`) and scrapes it; set `pipelock.metrics.enabled: true` to expose it without a ServiceMonitor. The listener has no authentication, so restrict access to it with a NetworkPolicy.
 
 ```yaml
 pipelock:
   serviceMonitor:
     enabled: true
     interval: 30s
-    portName: proxy   # matches Service port name for 8888
     additionalLabels:
       release: prometheus   # match your Prometheus Operator selector
 ```

@@ -223,7 +223,7 @@ pipelock:
       release: prometheus
 ```
 
-Metrics are available at `/metrics` on the forward proxy port (8888).
+Pipelock 3.8 and later serve `/metrics` and `/stats` only on a dedicated listener, never on the forward proxy port (8888). The ServiceMonitor turns that listener on at port 9091 (`pipelock.metrics.port`); set `pipelock.metrics.enabled: true` to expose it without one. The listener has no authentication, so restrict access with a NetworkPolicy. In Docker Compose, set `metrics_listen` in `pipelock.example.yaml` and publish that port.
 
 ### Eviction protection
 
@@ -276,9 +276,9 @@ pipelock:
 |------|----------|----------|
 | `strict` | Block all detected threats | Production with sensitive data |
 | `balanced` | Warn on low-severity, block on high-severity | Default; good for most deployments |
-| `audit` | Log everything, block nothing | Initial rollout, testing |
+| `audit` | Warn on ordinary findings when paired with `enforce: false` | Initial rollout, testing |
 
-Start with `audit` mode to see what Pipelock detects without blocking anything. Review the logs, then switch to `balanced` or `strict`.
+For an observation trial, set `mode: audit` together with `enforce: false` (in `pipelock.example.yaml`, or `pipelock.extraConfig` in Helm). `mode: audit` alone keeps `enforce: true`, so ordinary findings still block. Even with `enforce: false`, core credential, SSRF and fail-closed transport checks can still block. Review the logs, then switch to `balanced` or `strict`.
 
 ## Limitations
 

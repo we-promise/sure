@@ -198,8 +198,10 @@ services:
     ports:
       # MCP reverse proxy — external AI assistants connect here
       - "${MCP_PROXY_PORT:-8889}:8889"
-      # Uncomment to expose forward proxy endpoints (/health, /metrics, /stats):
+      # Uncomment to expose the forward proxy's /health endpoint:
       # - "8888:8888"
+      # /metrics and /stats need metrics_listen in pipelock.example.yaml, then:
+      # - "9091:9091"
     healthcheck:
       test: ["CMD", "/pipelock", "healthcheck", "--addr", "127.0.0.1:8888"]
       interval: 10s

@@ -628,13 +628,20 @@ pipelock:
   extraVolumes: []
   extraVolumeMounts: []
 
-  # Prometheus Operator ServiceMonitor for /metrics on the proxy port
+  # Dedicated listener for /metrics and /stats. Pipelock 3.8+ no longer serves
+  # them on the proxy port. It has no authentication, so it stays off unless
+  # enabled here or by serviceMonitor.enabled; restrict who can reach it.
+  metrics:
+    enabled: false
+    port: 9091
+
+  # Prometheus Operator ServiceMonitor for /metrics on the metrics port.
+  # Enabling it also enables the metrics listener above.
   serviceMonitor:
     enabled: false
     interval: 30s
     scrapeTimeout: 10s
     path: /metrics
-    portName: proxy      # matches Service port name "proxy" (8888)
     additionalLabels: {}
 
   # Ingress for MCP reverse proxy (port 8889) — external AI assistants need this in k8s

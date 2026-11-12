@@ -169,6 +169,15 @@ true
 {{- printf "%s:%s" $repo $tag -}}
 {{- end -}}
 
+{{/* Pipelock dedicated metrics listener: on when requested or when a ServiceMonitor scrapes it */}}
+{{- define "sure.pipelockMetricsEnabled" -}}
+{{- if or (.Values.pipelock.metrics).enabled (.Values.pipelock.serviceMonitor).enabled -}}true{{- end -}}
+{{- end -}}
+
+{{- define "sure.pipelockMetricsPort" -}}
+{{- int ((.Values.pipelock.metrics).port | default 9091) -}}
+{{- end -}}
+
 {{/* Pipelock MCP upstream URL (auto-compute or explicit override) */}}
 {{- define "sure.pipelockUpstream" -}}
 {{- $upstream := "" -}}

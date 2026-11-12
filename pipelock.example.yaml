@@ -10,6 +10,10 @@
 version: 1
 mode: balanced
 
+# /metrics and /stats are served only on a dedicated, unauthenticated listener.
+# Uncomment and publish the port in compose to scrape them; keep agents off it.
+# metrics_listen: "0.0.0.0:9091"
+
 # Trusted domains: allow services whose public DNS resolves to private IPs.
 # Prevents SSRF scanner from blocking legitimate internal traffic.
 # trusted_domains:
