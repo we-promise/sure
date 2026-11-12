@@ -50,7 +50,8 @@ class HoldingLot < ApplicationRecord
   class << self
     # Replaces an account's lots with `rows`, within `security_ids` when given,
     # keeping each lot's row (and id) by its key: the source entry for a derived
-    # lot, the position for the opening lot. An opening lot keeps its origin.
+    # lot, the position for the opening lot. An opening lot's origin follows the
+    # snapshot it is restated over.
     # A caller that cannot see opening lots (`openings: false`) leaves them be.
     def store!(account, rows, security_ids: nil, openings: true)
       rows = rows.select { |row| security_ids.include?(row[:security_id]) } if security_ids
@@ -67,7 +68,7 @@ class HoldingLot < ApplicationRecord
         end
         if opening_rows.any?
           upsert_all(opening_rows, unique_by: :index_holding_lots_one_opening_lot_per_position,
-            update_only: %i[qty unit_cost currency clamped])
+            update_only: %i[origin_security_id qty unit_cost currency clamped])
         end
       end
     end
@@ -91,12 +92,12 @@ class HoldingLot < ApplicationRecord
     # Moves lots to another security with their trades. Derived lots keep
     # their own rows. An opening lot moved onto a position with its own is
     # merged into it: the quantities add, and the cost stays only where both
-    # sides know it and agree, since one figure cannot stand for two
-    # different ones. An opening lot with no units (a clamp records one) has
-    # no cost to weigh, so it is dropped rather than merged; moved onto one,
-    # the units keep their own cost and the lot is no longer a clamp. The
-    # merged lot keeps the target's origin, so a reset does not split it
-    # apart again.
+    # sides know it and agree, in the same currency, since one figure cannot
+    # stand for two different ones. An opening lot with no units (a clamp
+    # records one) has no cost to weigh, so it is dropped rather than merged;
+    # moved onto one, the units keep their own cost and the lot is no longer a
+    # clamp. The merged lot keeps the target's origin until the next
+    # materialization, which restates it from the latest provider snapshot.
     def move!(derived:, opening:, to:)
       derived.update_all(security_id: to.id, updated_at: Time.current)
       opening.find_each do |lot|
@@ -107,7 +108,7 @@ class HoldingLot < ApplicationRecord
           target.update_columns(qty: lot.qty, unit_cost: lot.unit_cost, currency: lot.currency, clamped: false, updated_at: Time.current)
           lot.delete
         elsif target
-          unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost
+          unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost && lot.currency == target.currency
           target.update_columns(qty: target.qty + lot.qty, unit_cost: unit_cost, updated_at: Time.current)
           lot.delete
         else
