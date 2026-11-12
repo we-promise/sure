@@ -533,6 +533,33 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  # Two provider positions remapped onto one security on different days: the
+  # opening lot is built from the latest snapshot, so it comes from the
+  # provider security behind that snapshot, and resetting that one takes the
+  # lot back.
+  test "an opening lot comes from the provider security behind the latest snapshot" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      earlier = priced_security("LOTA3", 30)
+      latest = priced_security("LOTC3", 30)
+      target = priced_security("LOTB3", 30)
+      earlier_row = @account.holdings.create!(security: earlier, date: d(9), qty: 4, price: 30, amount: 120, currency: "USD",
+                                              account_provider: @account_provider)
+      latest_row = provider_holding(latest, 6, nil)
+
+      earlier_row.remap_security!(target)
+      latest_row.remap_security!(target)
+      materialize(:reverse)
+
+      assert_equal latest.id, HoldingLot.opening.find_by!(security: target).origin_security_id
+
+      latest_row.reload.reset_security_to_provider!
+
+      assert_equal 6, HoldingLot.opening.find_by!(security: latest).qty
+    end
+  end
+
   test "remap onto a position with its own opening lot merges the two" do
     setup_account
     old_security = priced_security("LOTQ", 30)
