@@ -49,6 +49,7 @@ en:
       to: To
       date: Date
       transfer_amount: Transfer amount
+      transaction: Transaction
       total: Total
       bank_charges: Bank Charges
       source_fee: Source fee
