@@ -7,10 +7,10 @@ uk:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Брокерський рахунок"
-      private_markets: "Приватні ринки"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Процентні продукти"
-      crypto_wallet: "Криптогаманець"
+      crypto_wallet: "Crypto Wallet"
     trade_republic_item:
       syncing: "Синхронізація"
       requires_update: "Потрібна повторна автентифікація"

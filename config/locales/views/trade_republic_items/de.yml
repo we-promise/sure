@@ -8,9 +8,9 @@ de:
   trade_republic_items:
     portfolio_categories:
       brokerage: "Brokerage"
-      private_markets: "Private Märkte"
+      private_markets: "Private Markets"
       interest_products: "Zinsprodukte"
-      crypto_wallet: "Krypto-Wallet"
+      crypto_wallet: "Crypto Wallet"
     duplicate_connection: "Dieses Trade-Republic-Konto ist bereits verbunden. Die neue Verbindung wurde entfernt."
     defaults:
       name: Trade Republic

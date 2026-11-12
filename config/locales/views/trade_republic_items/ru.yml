@@ -7,10 +7,10 @@ ru:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Брокерский счёт"
-      private_markets: "Частные рынки"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Процентные продукты"
-      crypto_wallet: "Криптокошелёк"
+      crypto_wallet: "Crypto Wallet"
     trade_republic_item:
       syncing: "Синхронизация"
       requires_update: "Требуется повторная аутентификация"

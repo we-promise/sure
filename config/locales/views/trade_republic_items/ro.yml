@@ -7,10 +7,10 @@ ro:
       institution_name: Trade Republic
   trade_republic_items:
     portfolio_categories:
-      brokerage: "Cont de brokeraj"
-      private_markets: "Piețe private"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Produse cu dobândă"
-      crypto_wallet: "Portofel crypto"
+      crypto_wallet: "Crypto Wallet"
     duplicate_connection: "Acest cont Trade Republic este deja conectat. Noua conexiune a fost eliminată."
     defaults:
       name: Trade Republic
