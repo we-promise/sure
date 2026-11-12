@@ -60,6 +60,7 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
       provider: identity.provider,
       uid: identity.uid,
       info: { email: identity.user.email, name: identity.user.display_name },
+      extra: { raw_info: { iss: identity.issuer } },
       credentials: {}
     )
     get "/auth/openid_connect/callback"
