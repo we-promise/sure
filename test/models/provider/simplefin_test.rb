@@ -91,16 +91,36 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
     assert_match(/rate limit exceeded/i, error.message)
   end
 
-  test "handles HTTP 500 server error response" do
+  test "retries on HTTP 503 and succeeds on retry" do
+    error_response = OpenStruct.new(code: 503, body: "Service Unavailable")
+    mock_response = OpenStruct.new(code: 200, body: '{"accounts": []}')
+
+    Provider::Simplefin.expects(:get)
+      .times(2)
+      .returns(error_response)
+      .then.returns(mock_response)
+
+    @provider.stubs(:sleep)
+
+    result = @provider.get_accounts(@access_url)
+    assert_equal({ accounts: [] }, result)
+  end
+
+  test "raises server_error after max retries exhausted on HTTP 500" do
     mock_response = OpenStruct.new(code: 500, body: "Internal Server Error")
 
-    Provider::Simplefin.expects(:get).returns(mock_response)
+    Provider::Simplefin.expects(:get)
+      .times(4) # Initial + 3 retries
+      .returns(mock_response)
+
+    @provider.stubs(:sleep)
 
     error = assert_raises(Provider::Simplefin::SimplefinError) do
       @provider.get_accounts(@access_url)
     end
 
     assert_equal :server_error, error.error_type
+    assert_match(/SimpleFin server error \(500\)/, error.message)
   end
 
   test "get_accounts sends pending=1 when pending is enabled" do

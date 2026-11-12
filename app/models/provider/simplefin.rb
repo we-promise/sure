@@ -123,29 +123,31 @@ class Provider::Simplefin
     # Use retry logic with exponential backoff for transient network failures
     # Use self.class.get to inherit class-level SSL and timeout defaults
     # The stored access URL came from the bridge; re-check it on every request.
-    response = with_retries("GET /accounts") do |attempt|
-      self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
-    end
+    # Response handling happens inside the retry block so transient 5xx
+    # responses are re-attempted, not just network-layer failures.
+    with_retries("GET /accounts") do |attempt|
+      response = self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
 
-    case response.code
-    when 200
-      JSON.parse(response.body, symbolize_names: true)
-    when 400
-      Rails.logger.error "SimpleFin API: Bad request - #{response.body}"
-      raise SimplefinError.new("Bad request to SimpleFin API", :bad_request)
-    when 403
-      raise SimplefinError.new("Access URL is no longer valid", :access_forbidden)
-    when 402
-      raise SimplefinError.new("Payment required to access this account", :payment_required)
-    when 429
-      Rails.logger.warn "SimpleFin API: Rate limited - #{response.body}"
-      raise SimplefinError.new("SimpleFin rate limit exceeded. Please try again later.", :rate_limited)
-    when 500..599
-      Rails.logger.error "SimpleFin API: Server error - Code: #{response.code}, Body: #{response.body}"
-      raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
-    else
-      Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-      raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}", :fetch_failed)
+      case response.code
+      when 200
+        JSON.parse(response.body, symbolize_names: true)
+      when 400
+        Rails.logger.error "SimpleFin API: Bad request - #{response.body}"
+        raise SimplefinError.new("Bad request to SimpleFin API", :bad_request)
+      when 403
+        raise SimplefinError.new("Access URL is no longer valid", :access_forbidden)
+      when 402
+        raise SimplefinError.new("Payment required to access this account", :payment_required)
+      when 429
+        Rails.logger.warn "SimpleFin API: Rate limited - #{response.body}"
+        raise SimplefinError.new("SimpleFin rate limit exceeded. Please try again later.", :rate_limited)
+      when 500..599
+        Rails.logger.error "SimpleFin API: Server error - Code: #{response.code}, Body: #{response.body}"
+        raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
+      else
+        Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
+        raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}", :fetch_failed)
+      end
     end
   end
 
@@ -282,6 +284,24 @@ class Provider::Simplefin
           )
         end
       rescue SimplefinError => e
+        # Retry transient server errors (HTTP 5xx): the bridge returns 503 while
+        # upstream bank connections are temporarily unavailable ("Please try
+        # again later"). Without a retry here, one flaky response fails the whole
+        # sync and loses that import window until the next scheduled run.
+        if e.error_type == :server_error
+          retries += 1
+          if retries <= max_retries
+            delay = [ 30 * (2 ** (retries - 1)), 180 ].min
+            Rails.logger.warn(
+              "SimpleFin API: #{operation_name} got '#{e.message}' (attempt #{retries}/#{max_retries}). Retrying in #{delay}s..."
+            )
+            sleep(delay) if backoff && delay.to_f.positive?
+            retry
+          end
+          Rails.logger.error(
+            "SimpleFin API: #{operation_name} still failing after #{max_retries} retries: #{e.message}"
+          )
+        end
         # Preserve original error type and message.
         raise
       rescue => e
