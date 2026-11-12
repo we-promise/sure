@@ -58,6 +58,55 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     credentials = OpenStruct.new(active_record_encryption: encryption_config)
 
     refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+  end
+
+  test "does not treat absent encryption credentials as partial" do
+    credentials = OpenStruct.new(active_record_encryption: nil)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  # Regression test for a gap CodeRabbit flagged: a present credentials block
+  # with every individual key blank had present_count == 0, so the old
+  # `present_count.positive? && ...` shape treated it the same as an absent
+  # block (not partial) - silently skipping both the raise and self-hosted
+  # auto-generation, since config/application.rb's `.present?` check on the
+  # block itself already treats it as configured either way.
+  test "treats a present credentials block with every key blank as partial" do
+    encryption_config = OpenStruct.new(primary_key: "", deterministic_key: "", key_derivation_salt: "")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+  end
+
+  test "does not treat complete encryption credentials as partial" do
+    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
+    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+
+    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
+    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+  end
+
+  test "apply_keys! copies keys onto both the given config and the live ActiveRecord::Encryption engine" do
+    ActiveRecord::Encryption.config.expects(:primary_key=).with("pk")
+    ActiveRecord::Encryption.config.expects(:deterministic_key=).with("dk")
+    ActiveRecord::Encryption.config.expects(:key_derivation_salt=).with("salt")
+
+    rails_config = OpenStruct.new
+
+    ActiveRecordEncryptionConfig.apply_keys!(
+      primary_key: "pk", deterministic_key: "dk", key_derivation_salt: "salt", config: rails_config
+    )
+
+    assert_equal "pk", rails_config.primary_key
+    assert_equal "dk", rails_config.deterministic_key
+    assert_equal "salt", rails_config.key_derivation_salt
   end
 
   test "explicit configuration excludes runtime generated config" do
@@ -99,44 +148,69 @@ class ActiveRecordEncryptionConfigTest < ActiveSupport::TestCase
     assert ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?(known_default)
   end
 
-  test "detects partially configured encryption credentials" do
-    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: nil, key_derivation_salt: "salt")
-    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+  test "backfill_completed? is false before any backfill has run" do
+    Setting.encryption_backfill_completed_version = 0
 
-    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
-    assert_equal [ :deterministic_key ], ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
-    assert_includes ActiveRecordEncryptionConfig.partial_credentials_message(credentials), "deterministic_key"
+    refute ActiveRecordEncryptionConfig.backfill_completed?
   end
 
-  test "does not treat absent encryption credentials as partial" do
-    credentials = OpenStruct.new(active_record_encryption: nil)
+  test "backfill_completed? is true once the stored version meets the required version" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
 
-    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    assert ActiveRecordEncryptionConfig.backfill_completed?
   end
 
-  test "does not treat complete encryption credentials as partial" do
-    encryption_config = OpenStruct.new(primary_key: "primary", deterministic_key: "deterministic", key_derivation_salt: "salt")
-    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+  test "backfill_completed? is false when the stored version predates a coverage expansion" do
+    # Simulates an install that completed a backfill under an older, narrower
+    # CURRENT_BACKFILL_VERSION before upgrading to code that covers more
+    # models/fields - it must not be treated as complete until it re-runs
+    # the task, or the fallback gets disabled for newly-covered models that
+    # were never actually backfilled.
+    Setting.encryption_backfill_completed_version = 1
 
-    assert ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    refute ActiveRecordEncryptionConfig.partial_credentials?(credentials)
+    refute ActiveRecordEncryptionConfig.backfill_completed?(required_version: 2)
   end
 
-  # Regression test for a gap CodeRabbit flagged: a present credentials block
-  # with every individual key blank had present_count == 0, so the old
-  # `present_count.positive? && ...` shape treated it the same as an absent
-  # block (not partial) - silently skipping both the raise and self-hosted
-  # auto-generation, since config/application.rb's `.present?` check on the
-  # block itself already treats it as configured either way.
-  test "treats a present credentials block with every key blank as partial" do
-    encryption_config = OpenStruct.new(primary_key: "", deterministic_key: "", key_derivation_salt: "")
-    credentials = OpenStruct.new(active_record_encryption: encryption_config)
+  test "backfill_completed? skips the database during asset builds" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    ActiveRecord::Base.connection.expects(:select_value).never
 
-    refute ActiveRecordEncryptionConfig.credentials_configured?(credentials)
-    assert ActiveRecordEncryptionConfig.partial_credentials?(credentials)
-    assert_equal ActiveRecordEncryptionConfig::CONFIG_KEYS, ActiveRecordEncryptionConfig.missing_credential_keys(credentials)
+    refute ActiveRecordEncryptionConfig.backfill_completed?(env: { "SECRET_KEY_BASE_DUMMY" => "1" })
+  end
+
+  test "backfill_completed? defaults to false when the settings table can't be read" do
+    # backfill_completed? deliberately bypasses the Setting model (see its
+    # comment for why) and queries the settings table directly via
+    # ActiveRecord::Base.connection.select_value - stubbing Setting itself,
+    # as a previous version of this test did, never exercises the real
+    # rescue path at all since that method is never called.
+    ActiveRecord::Base.connection.stubs(:select_value).raises(ActiveRecord::StatementInvalid, "relation \"settings\" does not exist")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? defaults to false when the stored value isn't a YAML-serialized Integer" do
+    ActiveRecord::Base.connection.stubs(:select_value).returns("not_an_integer")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? defaults to false when the stored value is malformed YAML" do
+    ActiveRecord::Base.connection.stubs(:select_value).raises(Psych::Exception, "malformed yaml")
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
+  end
+
+  test "backfill_completed? does not deserialize disallowed Ruby objects from the stored value (CWE-502)" do
+    # Regression test for using YAML.unsafe_load/YAML.load on this raw,
+    # attacker-reachable DB value (compromised DB credentials, SQLi
+    # elsewhere, a bad manual edit): a crafted YAML payload naming an
+    # arbitrary Ruby class must be rejected by safe_load's default
+    # permitted-classes check, not instantiated.
+    malicious_yaml = "--- !ruby/object:OpenStruct {}\n"
+    ActiveRecord::Base.connection.stubs(:select_value).returns(malicious_yaml)
+
+    refute ActiveRecordEncryptionConfig.backfill_completed?
   end
 
   # Regression coverage for jjmata's review on #3189: the boot check used to

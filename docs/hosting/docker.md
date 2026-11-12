@@ -499,6 +499,8 @@ The dry run marks fields it would move as `would_reencrypt`; after the second co
 
 If a release note mentions a fix to Active Record encryption configuration, data written before you updated may still be stored as plaintext. Convert it as described in [Encrypting data stored without encryption](#encrypting-data-stored-without-encryption).
 
+`web` and `worker` read whether the conversion has finished only when they start. The procedure stops both before converting and starts them again afterwards, so they pick up the result.
+
 ### Upgrade note: instance-wide settings need a super admin
 
 Provider credentials (such as Plaid), the shared AI connection settings (LLM provider, endpoints, API keys and models), sync settings, and the external assistant connection are stored once for the whole instance and apply to every family. On an instance with more than one family, only a `super_admin` can change them. When there is a single family, its admins keep access. Family-scoped choices, such as which assistant a family uses, stay with that family's admins.

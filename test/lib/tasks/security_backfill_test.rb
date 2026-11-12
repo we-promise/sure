@@ -258,6 +258,136 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_equal payload, item.reload.raw_payload
   end
 
+  test "a clean non-dry-run completion marks the backfill flag complete" do
+    Setting.encryption_backfill_completed_version = 0
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION, Setting.encryption_backfill_completed_version
+  end
+
+  test "a dry run does not mark the backfill flag complete" do
+    Setting.encryption_backfill_completed_version = 0
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "true") }
+
+    assert_equal 0, Setting.encryption_backfill_completed_version
+  end
+
+  test "a run with failures does not mark the backfill flag complete" do
+    Setting.encryption_backfill_completed_version = 0
+
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Failure Test", api_key: "seed")
+    item.save!(validate: false)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_items SET api_key = ? WHERE id = ?", "plaintext-key", item.id ]))
+
+    # Force the write phase of this record's backfill to fail so failed_count > 0.
+    LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
+
+    invoke_backfill("500", "false")
+
+    assert_equal 0, Setting.encryption_backfill_completed_version
+  end
+
+  # Regression test for a gap jjmata flagged: the task computed per-model
+  # success correctly (enough to gate the completion flag above) but printed
+  # a hardcoded ok: true and always exited zero regardless, so an operator or
+  # deployment script checking only the exit code - not hand-parsing the JSON
+  # - would believe a partially-failed backfill fully succeeded.
+  test "a run with failures reports ok: false and exits non-zero" do
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Exit Status Test", api_key: "seed")
+    item.save!(validate: false)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_items SET api_key = ? WHERE id = ?", "plaintext-key", item.id ]))
+
+    LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
+
+    out, _err, exit_status = invoke_backfill("500", "false")
+
+    assert_equal 1, exit_status, "a failed backfill must exit non-zero so automation can detect it"
+    assert_equal false, JSON.parse(out.lines.last)["ok"], "a failed backfill must report ok: false, not a blanket success"
+  end
+
+  test "a clean run reports ok: true and exits zero" do
+    out, _err, exit_status = invoke_backfill("500", "true")
+
+    assert_nil exit_status, "a successful (or dry) run must not exit the process"
+    assert_equal true, JSON.parse(out.lines.last)["ok"]
+  end
+
+  # Regression test for a gap CodeRabbit flagged: without invalidating the flag
+  # up front, a *previously completed* backfill's flag would survive a later
+  # failed run untouched, letting ActiveRecordEncryptionConfig.backfill_completed?
+  # keep reporting "complete" while this run's still-plaintext rows sit unencrypted.
+  test "a run with failures invalidates a previously-set completion flag" do
+    Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+
+    item = LunchflowItem.new(family: families(:dylan_family), name: "Backfill Reinvalidate Test", api_key: "seed")
+    item.save!(validate: false)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE lunchflow_items SET api_key = ? WHERE id = ?", "plaintext-key", item.id ]))
+
+    LunchflowItem.any_instance.stubs(:api_key=).raises(StandardError, "simulated failure")
+
+    invoke_backfill("500", "false")
+
+    assert_equal 0, Setting.encryption_backfill_completed_version
+  end
+
+  # Regression test for a gap Codex flagged: SnaptradeAccount#raw_balances_payload
+  # is an encrypted column (app/models/snaptrade_account.rb) but was missing from
+  # this task's field list, so upgraded installs with plaintext balance data would
+  # get marked "backfill complete" while that column was still readable-but-raw -
+  # and once support_unencrypted_data turns off, reads of it raise.
+  test "backfills SnaptradeAccount#raw_balances_payload" do
+    account = snaptrade_accounts(:fidelity_401k)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE snaptrade_accounts SET raw_balances_payload = ?::jsonb WHERE id = ?",
+      [ { "currency" => "USD", "cash" => 1500.0 } ].to_json, account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    account.reload
+    assert_kind_of Array, account.raw_balances_payload
+    assert_equal "USD", account.raw_balances_payload.first["currency"]
+    at_rest = account.read_attribute_before_type_cast(:raw_balances_payload).to_s
+    refute_includes at_rest, "1500.0"
+  end
+
+  test "backfills plaintext FioAccount IBAN" do
+    account = fio_accounts(:checking)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE fio_accounts SET iban = ? WHERE id = ?", "CZ-PLAINTEXT-IBAN", account.id ]))
+
+    capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "false") }
+
+    assert_equal "CZ-PLAINTEXT-IBAN", account.reload.iban
+    refute_includes account.read_attribute_before_type_cast(:iban).to_s, "CZ-PLAINTEXT-IBAN"
+  end
+
+  # Pins the manifest's content to CURRENT_BACKFILL_VERSION: a manifest change
+  # without a version bump would leave installs that completed the previous
+  # backfill marked "complete", turning off the plaintext fallback for fields
+  # their backfill never touched. On a deliberate change, bump the version and
+  # add its digest here.
+  BACKFILL_MANIFEST_DIGESTS = {
+    4 => "9630168637fae661a583b828adb447e990416c8eae8b5f12eeaf1dad428acfb2",
+    5 => "aef59eef15fde2bc5f8e12079235e86b586564755fa86f7459c7fd087c27ce71",
+    6 => "8a7848cc0f0f829ebf0c9a54d349640696bb4e24f7f1e1e4b8bd5827e6f1fdd1",
+    7 => "362ec2acfad421eaf6299bdeae78d859e13f8d4a65b6a3e615a80b274219698a",
+    8 => "a4d113aa214e8754361484267d377174b2aeda3fe01c5ca0c553f9ab76ef2ab0",
+    9 => "9f814939a5125a6903d9ba4e96392056ffafe9f6110b10b5c1cae0d87a564ac7",
+    10 => "0bcaa72ed675acde5d5ae2ce72305bf73375c0faa5580fe80e3985e88aa4f9e4"
+  }.freeze
+
+  test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do
+    digest = Digest::SHA256.hexdigest(ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.sort.to_h.to_json)
+
+    assert_equal BACKFILL_MANIFEST_DIGESTS[ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION], digest,
+      "BACKFILL_MANIFEST changed - bump CURRENT_BACKFILL_VERSION and record the new digest (#{digest})"
+  end
+
   test "covers every provider item and account model, not just the original subset" do
     out, _err = capture_io { Rake::Task["security:backfill_encryption"].invoke("500", "true") }
     results = JSON.parse(out.lines.last)["results"]
@@ -440,5 +570,22 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       when :enum then ActiveRecord::Base.connection.select_value("SELECT unnest(enum_range(NULL::#{column.sql_type})) LIMIT 1")
       else column.array? ? "{}" : "backfill-placeholder-#{SecureRandom.hex(4)}"
       end
+    end
+
+    # The task now calls `exit 1` on a failed (non-dry-run) invocation.
+    # capture_io's own `return` never runs if the block it wraps raises past
+    # it, so plain `capture_io { ... invoke ... }` would make out/err
+    # unreachable for a failing run - rescue inside the block instead, so
+    # stdout is still captured and the exit status is still observable.
+    def invoke_backfill(*args)
+      exit_status = nil
+      out, err = capture_io do
+        begin
+          Rake::Task["security:backfill_encryption"].invoke(*args)
+        rescue SystemExit => e
+          exit_status = e.status
+        end
+      end
+      [ out, err, exit_status ]
     end
 end
