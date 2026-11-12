@@ -678,13 +678,13 @@ Update Sure to a version that includes this guide first and let it start once, s
    docker compose run --rm web bin/rails "security:backfill_encryption[100,0]"
    ```
 
-   The output must start with `{"ok":true` and show `"failed_count":0`. If it doesn't, run the command again; it is safe to repeat. The per-table `failed_samples` name rows that keep failing.
+   The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it doesn't, run the command again; it is safe to repeat. The per-table `failed_samples` name rows that keep failing.
 
 5. Start the app with `docker compose up -d`, sign in, and open **Settings > Bank Sync** to check that your connections load.
 
 ### Switching an existing instance to your own keys
 
-Data an instance has already encrypted with the derived keys can't be read with new keys. Moving it to new keys is a key rotation, which keeps the old keys readable while the data is re-encrypted; see [Encryption key rotation](encryption.md). The steps below first check whether the instance holds any such data. If it doesn't, for example because it was updated straight from a version that stored everything unencrypted, they convert it to your keys directly.
+Data an instance has already encrypted with the derived keys can't be read with new keys. The steps below first check whether the instance holds any such data. If it doesn't, for example because it was updated straight from a version that stored everything unencrypted, they convert it to your keys directly. If it does, moving that data to new keys is a key rotation, which these steps don't cover.
 
 > [!NOTE]
 > Already added the keys without these steps? Data encrypted with the old keys then reads back as unreadable text, and provider syncs fail. Remove the three lines from `.env` and run `docker compose up -d`. Keep the three values and use the same ones when you switch: anything the app wrote while they were active is encrypted with them.
@@ -711,7 +711,7 @@ Update Sure to a version that includes this guide first and let it start once, s
    docker compose run --rm web bin/rails security:backfill_encryption
    ```
 
-   Continue only if it lists every table with `"failed_count":0` and includes a `session_ip_digests` entry. Failed rows hold data encrypted with the old keys. In that case, remove the three lines from `.env` again, run `docker compose up -d`, and follow [Encryption key rotation](encryption.md) with these keys as the new ones.
+   Continue only if it lists every table with `"failed_count":0` and includes a `session_ip_digests` entry. Failed rows hold data encrypted with the old keys. In that case, remove the three lines from `.env` again and run `docker compose up -d`. The instance keeps working with the derived keys, and its data stays encrypted with them. The manual rotation in [Encryption key rotation](encryption.md) needs a custom initializer and the old keys inside the containers, which the example compose files don't provide.
 
 5. Convert the data:
 
@@ -719,7 +719,7 @@ Update Sure to a version that includes this guide first and let it start once, s
    docker compose run --rm web bin/rails "security:backfill_encryption[100,0]"
    ```
 
-   The output must start with `{"ok":true` and show `"failed_count":0`. If it doesn't, run the command again; it is safe to repeat. If rows keep failing (the per-table `failed_samples` name them), don't start the app: undo the change as described below.
+   The command must finish without an error, and the JSON report on its last line must show `"ok":true` and `"failed_count":0`. If it doesn't, run the command again; it is safe to repeat. If rows keep failing (the per-table `failed_samples` name them), don't start the app: undo the change as described below.
 
 6. Start the app with `docker compose up -d`, sign in, and open **Settings > Bank Sync** to check that your connections load.
 
