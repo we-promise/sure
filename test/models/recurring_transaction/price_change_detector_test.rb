@@ -100,6 +100,22 @@ class RecurringTransaction::PriceChangeDetectorTest < ActiveSupport::TestCase
       "the entry on the change must be the confirmed settlement's"
   end
 
+  test "loads recent occurrences in a constant number of queries regardless of series count" do
+    3.times do
+      series = create_series(amount: 79.99, manual: false)
+      settle(series, 1.month.ago.to_date, 79.99)
+      settle(series, Date.current, 79.99)
+    end
+
+    occurrence_queries = 0
+    callback = lambda do |*, payload|
+      occurrence_queries += 1 if payload[:sql].to_s.start_with?("SELECT") && payload[:sql].include?("recurring_occurrences")
+    end
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { @detector.detect! }
+
+    assert_equal 1, occurrence_queries, "recent paid occurrences must be loaded in one batched query"
+  end
+
   private
     def create_series(amount:, manual:)
       due = Date.current + 20
