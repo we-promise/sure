@@ -20,6 +20,76 @@ class UserTest < ActiveSupport::TestCase
     assert @user.valid?, @user.errors.full_messages.to_sentence
   end
 
+  test "find_by_email_with_legacy_fallback matches encrypted and legacy plaintext email rows" do
+    assert_equal @user, User.find_by_email_with_legacy_fallback(" #{@user.email.upcase} ")
+
+    email = store_legacy_plaintext_email(@user)
+
+    assert_equal @user, User.find_by_email_with_legacy_fallback(email.upcase)
+    assert_nil User.find_by_email_with_legacy_fallback("")
+    assert_nil User.find_by_email_with_legacy_fallback("missing@example.com")
+  end
+
+  test "authenticate_by_email checks the password for legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+
+    assert_equal @user, User.authenticate_by_email(email: email, password: user_password_test)
+    assert_nil User.authenticate_by_email(email: email, password: "wrong")
+    assert_nil User.authenticate_by_email(email: "missing@example.com", password: user_password_test)
+  end
+
+  test "authenticate_by_email uses authenticate_by for encrypted rows and unknown emails" do
+    User.expects(:authenticate_by).with(email: @user.email, password: "wrong").returns(nil)
+    assert_nil User.authenticate_by_email(email: @user.email, password: "wrong")
+
+    User.expects(:authenticate_by).with(email: "missing@example.com", password: "x").returns(nil)
+    assert_nil User.authenticate_by_email(email: "missing@example.com", password: "x")
+  end
+
+  test "find_by_email_with_legacy_fallback does not match a row by its stored ciphertext" do
+    ciphertext = User.connection.select_value(
+      User.sanitize_sql([ "SELECT email FROM users WHERE id = ?", @user.id ])
+    )
+
+    assert_nil User.find_by_email_with_legacy_fallback(ciphertext)
+    assert_nil User.authenticate_by_email(email: ciphertext, password: user_password_test)
+  end
+
+  test "email uniqueness covers legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+
+    duplicate = User.new(
+      family: @user.family,
+      email: " #{email.upcase} ",
+      password: user_password_test,
+      password_confirmation: user_password_test
+    )
+
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:email, :taken)
+  end
+
+  test "a legacy plaintext email row stays valid on its own" do
+    store_legacy_plaintext_email(@user)
+
+    assert User.find(@user.id).valid?
+  end
+
+  test "authenticate_by_email rejects a blank password for legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create(""))
+
+    assert_nil User.authenticate_by_email(email: email, password: "")
+    assert_nil User.authenticate_by_email(email: email, password: nil)
+  end
+
+  test "authenticate_by_email accepts a whitespace-only password like authenticate_by" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create("        "))
+
+    assert_equal @user, User.authenticate_by_email(email: email, password: "        ")
+  end
+
   # email
   test "email must be present" do
     potential_user = User.new(
@@ -832,6 +902,132 @@ class UserTest < ActiveSupport::TestCase
     assert_equal %w[transactions_breakdown], @user.preferences["reports_section_order"]
   end
 
+  test "Reports reads the order and collapsed set already stored under its original keys" do
+    # Written straight to the column, as preferences saved before the
+    # namespaced readers existed were.
+    @user.update_columns(preferences: {
+      "reports_section_order" => %w[transactions_breakdown net_worth trends_insights],
+      "reports_collapsed_sections" => { "net_worth" => true, "trends_insights" => false }
+    })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown net_worth trends_insights], @user.reports_section_order
+    assert_equal @user.reports_section_order, @user.section_order("reports")
+    assert @user.reports_section_collapsed?("net_worth")
+    assert @user.section_collapsed?("reports", "net_worth")
+    assert_not @user.reports_section_collapsed?("trends_insights")
+    assert_not @user.reports_section_collapsed?("transactions_breakdown")
+  end
+
+  test "update_reports_preferences keeps writing the original keys and merges each toggle" do
+    @user.update!(preferences: { "reports_section_order" => %w[net_worth], "reports_collapsed_sections" => { "net_worth" => true } })
+
+    @user.update_reports_preferences({ "reports_collapsed_sections" => { "trends_insights" => true } })
+    @user.reload
+
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"], "a toggle must not write an order"
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+
+    @user.update_reports_preferences({ "reports_section_order" => %w[trends_insights net_worth] })
+    @user.reload
+
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+    assert_equal %w[reports_collapsed_sections reports_section_order], @user.preferences.keys.sort
+  end
+
+  test "section preferences are namespaced so two pages never touch each other's keys" do
+    @user.update!(preferences: {})
+
+    @user.update_section_preferences("reports", order: %w[transactions_breakdown], collapsed: { "trends_insights" => true })
+    @user.update_section_preferences("portfolio", order: %w[accounts], collapsed: { "accounts" => true })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown], @user.section_order("reports")
+    assert_equal %w[accounts], @user.section_order("portfolio")
+    assert @user.section_collapsed?("reports", "trends_insights")
+    assert_not @user.section_collapsed?("reports", "accounts")
+    assert @user.section_collapsed?("portfolio", "accounts")
+    assert_not @user.section_collapsed?("portfolio", "trends_insights")
+
+    assert_equal %w[transactions_breakdown], @user.reports_section_order
+    assert @user.reports_section_collapsed?("trends_insights")
+    assert_equal %w[reports_section_order reports_collapsed_sections portfolio_section_order portfolio_collapsed_sections].sort,
+      @user.preferences.keys.sort
+  end
+
+  test "the portfolio order defaults to the registry's keys and collapsing writes no order" do
+    @user.update!(preferences: {})
+
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+    assert_not @user.section_collapsed?("portfolio", "accounts")
+
+    @user.update_section_preferences("portfolio", collapsed: { "accounts" => true })
+    @user.reload
+
+    assert @user.section_collapsed?("portfolio", "accounts")
+    assert_nil @user.preferences["portfolio_section_order"], "collapsing must not write an order"
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+  end
+
+  test "section preferences reject an unknown namespace" do
+    assert_raises(ArgumentError) { @user.section_order("dashboard") }
+    assert_raises(ArgumentError) { @user.section_collapsed?("dashboard", "net_worth") }
+    assert_raises(ArgumentError) { @user.update_section_preferences("settings", order: []) }
+  end
+
+  # Safe navigation skips its arguments when the receiver is nil, so the
+  # namespace check has to run before preferences is read.
+  test "section preferences reject an unknown namespace when preferences is nil" do
+    @user.preferences = nil
+
+    assert_raises(ArgumentError) { @user.section_order("dashboard") }
+    assert_raises(ArgumentError) { @user.section_collapsed?("dashboard", "net_worth") }
+    assert_not @user.section_collapsed?("reports", "net_worth")
+  end
+
+  # Both pages' endpoints write through this method, so the shapes the readers
+  # rely on (an array of keys, a hash of key => flag) are enforced here.
+  test "section preferences store only an array of keys and a hash of flags" do
+    @user.update!(preferences: { "reports_section_order" => %w[net_worth], "reports_collapsed_sections" => { "net_worth" => true } })
+
+    @user.update_section_preferences("reports", order: "net_worth", collapsed: "net_worth")
+    @user.reload
+
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"], "a scalar order must not replace the stored one"
+    assert_equal({ "net_worth" => true }, @user.preferences["reports_collapsed_sections"], "a scalar collapsed set must not be stored")
+
+    @user.update_section_preferences("reports", order: [ "trends_insights", :net_worth, "trends_insights" ],
+                                                collapsed: { "trends_insights" => "true", net_worth: "0" })
+    @user.reload
+
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => false, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+  end
+
+  test "a stored section order that repeats a key reads each key once" do
+    @user.update_columns(preferences: { "reports_section_order" => %w[net_worth trends_insights net_worth] })
+
+    assert_equal %w[net_worth trends_insights], @user.section_order("reports")
+  end
+
+  test "a stored section order that is not an array reads as the default" do
+    @user.update_columns(preferences: { "reports_section_order" => "net_worth", "portfolio_section_order" => { "a" => 1 } })
+
+    assert_equal %w[trends_insights transactions_breakdown], @user.section_order("reports")
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+  end
+
+  test "a stored collapsed set that is not a hash reads as nothing collapsed and is replaced by a toggle" do
+    @user.update_columns(preferences: { "reports_collapsed_sections" => "net_worth" })
+
+    assert_not @user.section_collapsed?("reports", "net_worth")
+
+    @user.update_section_preferences("reports", collapsed: { "net_worth" => true })
+
+    assert_equal({ "net_worth" => true }, @user.reload.preferences["reports_collapsed_sections"])
+  end
+
   test "handles missing nested keys in preferences for collapsed sections" do
     @user.update!(preferences: { "section_order" => %w[cashflow] })
 
@@ -1390,6 +1586,31 @@ class UserTest < ActiveSupport::TestCase
     assert api_key.reload.revoked?
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
+  end
+  test "password_challenge must match the current password when given" do
+    @user.assign_attributes(password_challenge: "wrongpassword123", password: "newpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_challenge, :invalid)
+
+    @user.assign_attributes(password_challenge: "", password: "newpassword123")
+    assert_not @user.valid?
+
+    @user.assign_attributes(password_challenge: user_password_test, password: "newpassword123")
+    assert @user.valid?
+  end
+
+  test "password_challenge is not checked when not given" do
+    @user.password = "newpassword123"
+    assert @user.valid?
+  end
+
+  test "password_confirmation must match when given" do
+    @user.assign_attributes(password: "newpassword123", password_confirmation: "otherpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_confirmation, :confirmation)
+
+    @user.password_confirmation = "newpassword123"
+    assert @user.valid?
   end
 
   test "update_manual_account_order keeps other groups and only accessible accounts" do

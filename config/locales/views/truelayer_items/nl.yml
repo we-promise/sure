@@ -1,0 +1,113 @@
+---
+nl:
+  truelayer_items:
+    default_name: "TrueLayer-koppeling"
+    redirect_blocked: "Kan TrueLayer niet openen. Probeer het opnieuw."
+    create:
+      success: "TrueLayer-inloggegevens opgeslagen. U kunt nu een bank koppelen."
+    update:
+      success: "TrueLayer-inloggegevens bijgewerkt."
+    destroy:
+      success: "TrueLayer-koppeling ingepland voor verwijdering."
+    connect:
+      credentials_required: "Voeg eerst uw TrueLayer-client-ID en -secret toe."
+    sync:
+      not_connected: "Koppel een bank voordat u synchroniseert."
+    callback:
+      authorization_error: "TrueLayer-autorisatie mislukt: %{error}"
+      authorization_failed: "Kan de TrueLayer-koppeling niet voltooien: %{message}"
+      invalid_callback: "De TrueLayer-aanmelding is verlopen of hoort niet bij deze sessie. Begin opnieuw."
+      success: "Bank gekoppeld. Uw accounts worden geïmporteerd; stel ze in zodra de synchronisatie klaar is."
+    truelayer_item:
+      consent_expiring: "Banktoegang verloopt op %{date}"
+      delete: "Koppeling verwijderen"
+      deletion_in_progress: "wordt verwijderd..."
+      error: "Fout"
+      history_missed: "Oudere geschiedenis is niet geïmporteerd. Koppel opnieuw om deze op te halen."
+      no_accounts_description: "Deze koppeling heeft nog geen gekoppelde accounts."
+      no_accounts_title: "Geen accounts"
+      reconnect: "Opnieuw koppelen"
+      requires_update: "Koppel deze bank opnieuw om te blijven synchroniseren"
+      setup_action: "Nieuwe accounts instellen"
+      setup_description: "%{linked} van %{total} accounts gekoppeld. Kies accounttypen voor uw nieuw geïmporteerde TrueLayer-accounts."
+      setup_needed: "Nieuwe accounts klaar om in te stellen"
+      status: "%{timestamp} geleden gesynchroniseerd"
+      status_never: "Nooit gesynchroniseerd"
+      status_with_summary: "Laatst gesynchroniseerd %{timestamp} geleden • %{summary}"
+      syncing: "Synchroniseren..."
+      sync_status:
+        no_accounts: "Geen accounts gevonden"
+        synced:
+          one: "%{count} account gesynchroniseerd"
+          other: "%{count} accounts gesynchroniseerd"
+        partial_setup:
+          one: "%{linked} gesynchroniseerd, %{unlinked} moet worden ingesteld"
+          other: "%{linked} gesynchroniseerd, %{unlinked} moeten worden ingesteld"
+    subtype_select:
+      placeholder:
+        subtype: "Selecteer subtype"
+        type: "Selecteer type"
+    setup_accounts:
+      account_type_label: "Accounttype:"
+      all_accounts_linked: "Al uw TrueLayer-accounts zijn al ingesteld."
+      cancel: "Annuleren"
+      choose_account_type: "Kies het juiste accounttype voor elk TrueLayer-account:"
+      create_accounts: "Accounts aanmaken"
+      creating_accounts: "Accounts aanmaken..."
+      kind_account: "Bankrekening"
+      kind_card: "Kaart"
+      no_accounts_to_setup: "Geen accounts om in te stellen"
+      page_title: "TrueLayer-accounts instellen"
+      subtitle: "Kies de juiste accounttypen voor uw geïmporteerde accounts"
+      sync_start_date_help: "Transacties vóór deze datum worden weggelaten. Laat leeg om alles te behouden wat de bank heeft aangeleverd."
+      sync_start_date_label: "Transacties importeren vanaf"
+      title: "Uw TrueLayer-accounts instellen"
+      account_types:
+        skip: "Dit account overslaan"
+        depository: "Betaal- of spaarrekening"
+        credit_card: "Creditcard"
+        loan: "Lening of hypotheek"
+      subtype_labels:
+        depository: "Accountsubtype:"
+        loan: "Leningtype:"
+        credit_card: ""
+      subtype_messages:
+        credit_card: "Creditcards worden automatisch ingesteld als creditcardaccounts."
+    complete_account_setup:
+      all_skipped: "Alle accounts zijn overgeslagen. Er zijn geen accounts aangemaakt."
+      creation_failed: "Aanmaken van accounts mislukt: %{error}"
+      success:
+        one: "%{count} account aangemaakt."
+        other: "%{count} accounts aangemaakt."
+    select_existing_account:
+      cancel: "Annuleren"
+      description: "Kies het TrueLayer-account dat u wilt koppelen. De transacties ervan worden in dit account gesynchroniseerd."
+      link_account: "Account koppelen"
+      no_accounts: "Er zijn geen niet-gekoppelde TrueLayer-accounts. Koppel eerst een bank via Instellingen → Providers."
+      title: "%{account_name} koppelen aan TrueLayer"
+    link_existing_account:
+      already_linked: "Dat TrueLayer-account is al gekoppeld aan een ander account."
+      only_manual: "Alleen handmatige accounts kunnen aan TrueLayer worden gekoppeld."
+      success: "%{account_name} gekoppeld aan TrueLayer."
+  settings:
+    providers:
+      truelayer_panel:
+        client_id_label: "Client-ID"
+        client_id_placeholder: "bijv. sure-abc123 (sandbox-... voor de Mock Bank)"
+        client_secret_label: "Clientsecret"
+        client_secret_placeholder_new: "Plak uw clientsecret"
+        client_secret_placeholder_update: "Leeg laten om het huidige secret te behouden"
+        connect_bank: "Bank koppelen"
+        consent_expires: "Banktoegang verloopt %{date}"
+        reconnect: "Opnieuw koppelen"
+        reconnect_required: "Opnieuw koppelen vereist"
+        remove: "Verwijderen"
+        remove_confirm: "Deze bankkoppeling verwijderen? Gekoppelde accounts behouden hun geschiedenis, maar worden niet meer gesynchroniseerd."
+        save_credentials: "Inloggegevens opslaan"
+        step_1_html: "Maak een app aan op %{link} en kopieer de client-ID en het secret."
+        step_2_html: "Voeg %{callback_url} toe aan de Allowed redirect URIs van de app."
+        step_3: "Sla hieronder de inloggegevens op en koppel daarna een bank. Sure importeert de volledige geschiedenis binnen enkele minuten nadat u toegang heeft verleend."
+        step_4: "Britse banken vragen u elke 90 dagen opnieuw te koppelen; Sure toont een knop Opnieuw koppelen voordat de toegang verloopt."
+        sync: "Synchroniseren"
+        syncing: "Synchroniseren..."
+        update_credentials: "Inloggegevens bijwerken"
