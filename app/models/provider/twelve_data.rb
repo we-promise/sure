@@ -297,7 +297,9 @@ class Provider::TwelveData < Provider
       # charged to the minute the request actually fires in, not a stale minute
       # we slept through (which would undercount the new minute's usage).
       minute_key = "twelve_data:credits:#{Time.current.to_i / 60}"
-      current_count = Rails.cache.read(minute_key).to_i
+      # `increment` stores a raw integer (Redis INCRBY), so it must be read back
+      # with `raw: true`; a plain `read` returns nil on RedisCacheStore.
+      current_count = Rails.cache.read(minute_key, raw: true).to_i
 
       if current_count + credits > max_requests_per_minute
         wait_seconds = 60 - (Time.current.to_i % 60) + 1
@@ -339,7 +341,21 @@ class Provider::TwelveData < Provider
       when Faraday::TooManyRequestsError
         RateLimitError.new("TwelveData rate limit exceeded", details: error.response&.dig(:body))
       when Faraday::Error
-        self.class::Error.new(error.message, details: error.response&.dig(:body))
+        body = error.response&.dig(:body)
+        # Faraday's `raise_error` middleware raises before our own
+        # `JSON.parse(response.body); check_api_error!(parsed)` code runs, so
+        # for any 4xx/5xx we'd otherwise only ever see Faraday's generic
+        # "the server responded with status ..." message — never TwelveData's
+        # actual JSON error body (which is what plan_upgrade_required? needs
+        # to detect plan-tier restrictions). Parse it here instead.
+        parsed_body = begin
+          body.is_a?(String) ? JSON.parse(body) : body
+        rescue JSON::ParserError
+          nil
+        end
+        api_message = parsed_body.is_a?(Hash) ? parsed_body["message"] : nil
+
+        self.class::Error.new(api_message.presence || error.message, details: body)
       else
         self.class::Error.new(error.message)
       end

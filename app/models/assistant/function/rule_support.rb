@@ -18,6 +18,8 @@ module Assistant::Function::RuleSupport
   # AI-backed actions cost money per transaction; the web UI shows a cost
   # estimate before applying them, which this surface cannot do yet.
   BLOCKED_ACTION_TYPES = %w[auto_categorize auto_detect_merchants].freeze
+  # Actions whose value this surface can't describe yet (the split editor builds a JSON config).
+  SETTINGS_ONLY_ACTION_TYPES = %w[split_transaction].freeze
 
   # Ids are resolved to names by these lookups, keyed by condition or action type.
   ACCOUNT_KEYS = %w[transaction_account set_as_transfer_or_payment].freeze
@@ -135,10 +137,14 @@ module Assistant::Function::RuleSupport
       if params.key?("actions")
         actions = params["actions"]
         if actions.is_a?(Array)
+          # An email action replacing the rule's own keeps the baseline it recorded
+          # (see Rule::Action#keep_notification_baseline).
+          had_email_action = rule.stored_email_notification_action?
           rule.actions.each(&:mark_for_destruction)
           actions.each_with_index do |action, index|
             problems.concat(build_action(rule, action, "actions[#{index}]"))
           end
+          rule.actions.select(&:new_record?).each { |a| a.keep_notification_baseline = had_email_action }
         else
           problems << "actions must be an array."
         end
@@ -176,7 +182,9 @@ module Assistant::Function::RuleSupport
       if Rule::ConditionFilter::VALUELESS_OPERATORS.include?(operator)
         value = nil
       else
-        value = value.to_s.strip
+        # A pattern is kept as written, as the rule form keeps it: its spaces are
+        # part of what it matches.
+        value = Rule::ConditionFilter::REGEX_OPERATORS.include?(operator) ? value.to_s : value.to_s.strip
         return [ "#{path}: value is required for operator '#{operator}'." ] if value.blank?
         return [ "#{path}: value must be a number." ] if filter.type == "number" && !numeric?(value)
 
@@ -193,6 +201,7 @@ module Assistant::Function::RuleSupport
 
       type = attrs["action_type"].to_s
       return [ "#{path}: #{type} calls an AI model and is not available here; add it in Settings > Rules." ] if BLOCKED_ACTION_TYPES.include?(type)
+      return [ "#{path}: #{type} is not available here; add it in Settings > Rules." ] if SETTINGS_ONLY_ACTION_TYPES.include?(type)
 
       executor = rule.action_executors.find { |e| e.key == type }
       return [ "#{path}: unknown action_type '#{type}'. See get_rule_options." ] unless executor
@@ -216,6 +225,7 @@ module Assistant::Function::RuleSupport
         return [ "#{path}: value is required for #{type}." ] if value.blank?
 
         allowed = allowed_values(type)
+        allowed += saved_merchant_values(rule) if type == "set_transaction_merchant"
         return [ "#{path}: '#{value}' is not a valid value for #{type}. #{value_hint(type)}" ] if allowed && !allowed.include?(value)
       end
 
@@ -236,6 +246,14 @@ module Assistant::Function::RuleSupport
       [ e.message ]
     end
 
+    # A merchant another member saved on the rule may be on accounts this user
+    # can't see. Re-submitting the rule keeps it, as the rule form does (see
+    # Rule::Action#options), without letting the user pick it anew elsewhere.
+    def saved_merchant_values(rule)
+      rule.actions.select { |action| action.persisted? && action.action_type == "set_transaction_merchant" }
+        .map { |action| action.value_was.to_s }
+    end
+
     # nil means free text (no fixed list of values).
     def allowed_values(key)
       case key
@@ -243,7 +261,7 @@ module Assistant::Function::RuleSupport
       when *CATEGORY_KEYS then family.categories.pluck(:id).map(&:to_s)
       when *TAG_KEYS then family.tags.pluck(:id).map(&:to_s)
       when "transaction_merchant" then family.available_merchants_for(user).pluck(:id).map(&:to_s)
-      when "set_transaction_merchant" then family.merchants.pluck(:id).map(&:to_s)
+      when "set_transaction_merchant" then family.assignable_merchants_for(user).pluck(:id).map(&:to_s)
       when "transaction_type" then %w[income expense transfer]
       when "set_investment_activity_label" then Transaction::ACTIVITY_LABELS
       end
@@ -459,5 +477,18 @@ module Assistant::Function::RuleSupport
 
     def error(key, message, **extra)
       { success: false, error: key, message: message }.merge(extra)
+    end
+
+    # A pattern can outlive the statement timeout (Rule::SafeRegex), which
+    # raises out of the rule's scope. Reported as a rule error the assistant can
+    # explain; the tool wrapper would otherwise call it an unexpected failure.
+    # `outcome` says what did happen to the rule first.
+    def regex_timeout_error(rule, outcome)
+      error(
+        "regex_timeout",
+        "#{outcome} Checking which transactions it matches took too long, so there is no preview and it can't be applied. " \
+        "Simplify its pattern, or add a condition that narrows it, then preview it again.",
+        rule: serialize_rule(rule)
+      )
     end
 end

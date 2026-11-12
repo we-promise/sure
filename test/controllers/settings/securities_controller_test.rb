@@ -5,22 +5,42 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
   test "shows encryption warning when self-hosted and encryption is not configured" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
 
     get settings_security_url
 
     assert_response :success
     assert_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 1
   end
 
   test "hides encryption warning when encryption is configured" do
     Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
 
     get settings_security_url
 
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+  end
+
+  test "hides encryption warning when only runtime-generated keys are available" do
+    # Regression test for issue #3142: self-hosted installs relying on the
+    # SECRET_KEY_BASE auto-generation fallback (explicitly_configured? false,
+    # runtime_configured? true) must NOT see the "not configured" warning.
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:runtime_configured?).returns(true)
+
+    get settings_security_url
+
+    assert_response :success
+    assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 0
   end
 
   test "does not show encryption warning in managed mode" do
@@ -30,6 +50,9 @@ class Settings::SecuritiesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.securities.show.encryption_warning.title")
+    assert_select 'a[href=?][target="_blank"][rel="noopener noreferrer"]',
+                  "https://github.com/we-promise/docs/blob/main/self-hosting.mdx#turning-on-active-record-encryption-after-first-boot",
+                  count: 0
   end
 
   test "the disable-MFA control asks for the password" do

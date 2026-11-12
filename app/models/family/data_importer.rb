@@ -78,7 +78,9 @@ class Family::DataImporter
     "Rule" => "rules"
   }.freeze
 
-  def initialize(family, ndjson_content, import_session: nil, import: nil)
+  # account_targets maps source account IDs to existing accounts that the
+  # import's records go into instead of accounts it creates.
+  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {})
     @family = family
     @ndjson_content = ndjson_content
     @import_session = import_session
@@ -96,6 +98,7 @@ class Family::DataImporter
       securities: {},
       rules: {}
     }
+    account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
     @created_accounts = []
@@ -330,6 +333,8 @@ class Family::DataImporter
           notes: data["notes"],
           status: importable_account_status(data["status"])
         )
+        # Older exports predate the choice and keep the account's own.
+        account.logo_selection = data["logo_selection"] if Account.logo_selections.key?(data["logo_selection"])
 
         account.save!
 
@@ -932,6 +937,10 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
+        # Source-system metadata, such as the ID that lets a later import from
+        # that system recognise the transaction, kept out of external_id so
+        # provider sync can still claim the entry.
+        transaction.extra = transaction.extra.merge(data["extra"]) if data["extra"].is_a?(Hash)
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -947,6 +956,9 @@ class Family::DataImporter
           entry.external_id = session_entry_external_id("Transaction", old_id)
           entry.source = session_entry_source
         end
+        # Records from another system may lock the entry against provider sync
+        # overwrites, as the CSV importer does.
+        entry.import_locked = true if truthy?(data["import_locked"])
 
         entry.save!
 
@@ -1047,7 +1059,11 @@ class Family::DataImporter
           transfer.notes = data["notes"]
         end
         # Transfer kinds only apply once a transfer is confirmed (see Transfer#confirm!)
-        apply_transfer_transaction_kinds!(transfer) if transfer.confirmed?
+        if transfer.confirmed?
+          apply_transfer_transaction_kinds!(transfer)
+          # Restores a user's explicit choice over the destination's default kind.
+          transfer.update_investment_contribution!(truthy?(data["investment_contribution"])) unless data["investment_contribution"].nil?
+        end
         increment_summary("Transfer", transfer.previously_new_record? ? :created : :updated)
       end
     end
@@ -1312,13 +1328,17 @@ class Family::DataImporter
 
         require_source_id!("Budget", old_id)
 
+        start_date = Date.parse(data["start_date"].to_s)
+        end_date = Date.parse(data["end_date"].to_s)
+
         budget = mapped_record(:budgets, old_id, @family.budgets, record_type: "Budget")
+        budget ||= untouched_household_budget(start_date, end_date) if data["user_id"].blank?
         created = budget.blank?
         budget ||= @family.budgets.build
 
         budget.assign_attributes(
-          start_date: Date.parse(data["start_date"].to_s),
-          end_date: Date.parse(data["end_date"].to_s),
+          start_date: start_date,
+          end_date: end_date,
           budgeted_spending: data["budgeted_spending"]&.to_d,
           expected_income: data["expected_income"]&.to_d,
           currency: data["currency"] || @family.currency
@@ -1328,6 +1348,19 @@ class Family::DataImporter
         map_source!(:budgets, old_id, budget)
         increment_summary("Budget", created ? :created : :updated)
       end
+    end
+
+    # A new family already has the household budget for the current period, with zeroed category
+    # rows. Reuse it instead of colliding on the unique period; a budget that holds a plan (any
+    # non-nil top-level amount, an explicit 0 included) is left alone, so the import fails on the uniqueness validation rather than overwriting it. An exported
+    # personal budget (with a user) is never merged into the household budget.
+    def untouched_household_budget(start_date, end_date)
+      budget = @family.budgets.find_by(user_id: nil, start_date: start_date, end_date: end_date)
+      return if budget.blank?
+      return if budget.initialized? || budget.expected_income.present?
+      return if budget.budget_categories.any? { |budget_category| budget_category.budgeted_spending.to_d.nonzero? }
+
+      budget
     end
 
     def import_budget_categories(records)
@@ -1364,6 +1397,9 @@ class Family::DataImporter
         position = Integer(record.dig("data", "position"), exception: false)
         [ position || Float::INFINITY, index ]
       end.map(&:first)
+      with_stored_email_action = Rule.ids_with_stored_email_notification_action(@family.rules)
+      # The last rule each group lost in this import, keyed by group id.
+      left_group_last = {}
 
       records.each do |record|
         data = record["data"]
@@ -1382,8 +1418,18 @@ class Family::DataImporter
           effective_date: data["effective_date"].present? ? Date.parse(data["effective_date"].to_s) : nil,
           stop_processing: data["stop_processing"] || false
         )
+        # Exports from before rule groups have no group key; an existing rule
+        # then keeps its group.
+        rule.rule_group = find_or_create_rule_group(data["group"]) if data.key?("group")
 
-        rule.conditions.destroy_all unless created
+        # An email action replacing the rule's own keeps the baseline it recorded
+        # (see Rule::Action#keep_notification_baseline), as stored before this
+        # import: not one an earlier record of it wrote.
+        had_email_action = rule.persisted? && with_stored_email_action.include?(rule.id)
+
+        # Marked rather than destroyed now, so the rule's save removes them and
+        # sees its conditions change (Rule re-seeds an email rule's baseline then).
+        rule.conditions.each(&:mark_for_destruction) unless created
         rule.actions.destroy_all unless created
 
         # Build conditions
@@ -1393,13 +1439,47 @@ class Family::DataImporter
 
         # Build actions
         (data["actions"] || []).each do |action_data|
-          build_rule_action(rule, action_data)
+          build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
 
+        left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
+
         rule.save!
+        if left_group_id
+          # Each rule leaving a group lands right below it (Rule#place_in_rule_group),
+          # so one that left the same group earlier in this import would end up
+          # after it. Keep the exported run order instead.
+          previous = left_group_last[left_group_id] || session_rule_left_earlier(rule)
+          Rule::Layout.new(@family).place_after_rule!(rule, previous) if previous
+          left_group_last[left_group_id] = rule
+        end
         map_source!(:rules, old_id, rule)
         increment_summary("Rule", created ? :created : :updated)
       end
+    end
+
+    # Session imports arrive in chunks, each through a fresh importer, so a rule
+    # that left the same group in an earlier chunk is not in the importer's own
+    # map. Rules this session has already imported come earlier in the run
+    # order, and those that left the group now sit right below this one: the
+    # last of that run is where this rule belongs.
+    def session_rule_left_earlier(rule)
+      return unless @import_session
+
+      session_rule_ids = @import_session.source_mappings.where(source_type: "Rule").pluck(:target_id).to_set
+      items = Rule::Layout.new(@family).items
+      index = items.index { |item| !item.group? && item.rule.id == rule.id }
+      return unless index
+
+      items.drop(index + 1).take_while { |item| !item.group? && session_rule_ids.include?(item.rule.id) }.last&.rule
+    end
+
+    def find_or_create_rule_group(name)
+      validate_rule_text!(name, field: "group")
+      name = name.to_s.strip
+      return if name.empty?
+
+      @family.rule_groups.find_or_create_named!(name)
     end
 
     def build_rule_condition(rule, condition_data, parent: nil)
@@ -1449,7 +1529,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if condition_type == "transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(condition_data, value)
       end
 
       # Map tag names to IDs
@@ -1468,6 +1548,7 @@ class Family::DataImporter
       # resolution path rather than the generic scalar one below (which
       # assumes value_ref is nil or a single hash).
       return resolve_multi_tag_action_value(action_data) if action_type == "set_transaction_tags"
+      return resolve_split_action_value(action_data["value"]) if action_type == "split_transaction"
 
       value = rule_operand_value(action_data)
 
@@ -1480,7 +1561,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(action_data, value)
       end
 
       value
@@ -1507,6 +1588,32 @@ class Family::DataImporter
       tag_ids.join(",")
     end
 
+    # Names resolve like the other rule actions. A raw id (older exports, hand-built files) is
+    # remapped through this import's source mappings, kept if it already belongs to the family,
+    # and otherwise dropped.
+    def resolve_split_action_value(value)
+      # Checked like every other rule text, before find_or_create can hit the database with a name.
+      unless Rule::ActionExecutor::SplitTransaction.acceptable_text?(value)
+        raise InvalidRecordError.new(record_type: "Rule", field: "value", value: "(invalid text)")
+      end
+
+      Rule::ActionExecutor::SplitTransaction.localize_value(value) do |kind, name: nil, id: nil|
+        relation = kind.to_s.pluralize.to_sym
+        next mapped_id(relation, id, record_type: kind.to_s.classify, required: false) || (id if family_record_ids(relation).include?(id)) unless name
+
+        case kind
+        when :category then find_or_create_rule_category(name).id
+        when :merchant then find_or_create_rule_merchant(name).id
+        when :tag then find_or_create_rule_tag(name).id
+        end
+      end
+    end
+
+    def family_record_ids(relation)
+      @family_record_ids ||= {}
+      @family_record_ids[relation] ||= @family.public_send(relation).pluck(:id).to_set
+    end
+
     # Preloaded once per import and extended in place on cache-miss, so a
     # category/merchant/tag created for an earlier record is immediately
     # visible to a later record referencing the same name, instead of one
@@ -1530,6 +1637,18 @@ class Family::DataImporter
         classification_unused: "expense",
         lucide_icon: "shapes"
       )
+    end
+
+    # A merchant this import already mapped (a FamilyMerchant, or a reused
+    # ProviderMerchant, see import_provider_merchants) keeps the rule on the same
+    # record as the restored transactions. Anything else is found or created by
+    # name.
+    def resolve_rule_merchant_id(data, name)
+      value_ref = data["value_ref"]
+      ref_id = value_ref["id"] if value_ref.is_a?(Hash) && value_ref["type"] == "Merchant"
+      mapped = mapped_id(:merchants, ref_id.to_s, record_type: "Rule", required: false) if ref_id.present?
+
+      mapped || find_or_create_rule_merchant(name).id
     end
 
     def find_or_create_rule_merchant(name)

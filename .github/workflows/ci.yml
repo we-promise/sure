@@ -10,8 +10,9 @@ on:
         default: false
 
 jobs:
+  # The pinned ruby/setup-ruby action does not support Ubuntu 26.04.
   scan_ruby:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -29,7 +30,7 @@ jobs:
         run: bin/brakeman --no-pager
 
   scan_js:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -65,7 +66,7 @@ jobs:
           done
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -105,8 +106,8 @@ jobs:
         run: npm run lint
 
   test_unit:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     env:
       PLAID_CLIENT_ID: foo
@@ -155,9 +156,30 @@ jobs:
       - name: Unit and integration tests
         run: bin/rails test
 
+      # Encryption tests skip unless Active Record encryption is configured
+      # through ENV or credentials (Encryptable.encryption_ready?), so the run
+      # above never exercises them. Rerun every test file that checks
+      # encryption_ready? with throwaway keys, so new encryption tests are
+      # picked up without a hand-kept list. The whole suite is not run with
+      # keys because unrelated tests assume encryption is off.
+      - name: Encryption tests
+        if: ${{ !cancelled() }}
+        env:
+          ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: test
+          ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: test
+          ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: test
+        run: |
+          mapfile -t files < <(grep -rl --include='*_test.rb' 'encryption_ready?' test | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No encryption tests found" >&2
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}"
+          bin/rails test "${files[@]}"
+
   test_system:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
 
     env:
       PLAID_CLIENT_ID: foo

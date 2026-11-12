@@ -22,6 +22,9 @@
         <p class="text-xs text-secondary privacy-sensitive">
           <%= t(".amount_hint", saved: @goal.current_balance_money.format(precision: 0)) %>
         </p>
+        <% if @consumption_accounts.any? { |account| account.currency != @goal.currency } %>
+          <p class="text-xs text-secondary"><%= t(".goal_currency_hint", currency: @goal.currency) %></p>
+        <% end %>
       </div>
 
       <%# Only asked when there is a choice to make. With one link the model
@@ -36,7 +39,7 @@
         <%= render DS::Select.new(
               form: f,
               method: :account_id,
-              items: @consumption_accounts.map { |account| { label: account.name, value: account.id } },
+              items: @consumption_accounts.map { |account| { label: goal_account_label(account, @goal), value: account.id } },
               label: t(".account_label")
             ) %>
       <% end %>

@@ -1,0 +1,46 @@
+---
+de:
+  settings:
+    background_jobs:
+      cancel:
+        cancelled: "%{type} als verloren markiert."
+        cancelled_error: Von einem Admin als fehlgeschlagen markiert, der Hintergrundjob galt als verloren.
+        not_cancellable: Der Job läuft oder wartet noch. Versuch es erneut, sobald der Vorgang 30 Minuten stillsteht.
+      operation:
+        actions:
+          mark_failed: Fehlgeschlagen markieren
+          mark_stale: Veraltet markieren
+          release_claim: Sperre freigeben
+        ago: vor %{time}
+        confirm: Diesen Vorgang als verloren markieren? Der Eintrag bekommt einen Endstatus und lässt sich danach neu starten. Die zugrunde liegenden Daten bleiben unverändert.
+        missing_value: "-"
+        queued: Wartet
+        recent: Kürzlich
+        running: Läuft
+        stuck: Hängt – vermutlich verloren
+        sync_label: Sync · %{type}
+        unknown: Unbekannt
+      show:
+        empty: Keine laufenden Vorgänge.
+        missing_value: "-"
+        operations_subtitle: Syncs, Importe und Exporte aller Familien, die noch nicht abgeschlossen sind. Vorgänge, die länger als 30 Minuten ohne sichtbaren Job stillstehen, gelten als verloren und lassen sich entsprechend markieren.
+        operations_title: Laufende Vorgänge
+        page_title: Hintergrundjobs
+        redis_unreachable: Sidekiq-Status nicht verfügbar (Redis nicht erreichbar), deshalb sind alle Aktionen deaktiviert.
+        stats:
+          busy: Aktiv
+          dead: Gescheitert
+          enqueued: Wartend
+          queue_label: "%{name}: %{size} · %{latency}s Latenz"
+          retries: Wiederholungen
+          scheduled: Geplant
+          workers: Worker
+        subtitle: 'Live-Zustand von Sidekiq: Worker-Prozesse, Warteschlangen sowie Retry- und Dead-Sets.'
+        table:
+          action: Aktion
+          family: Familie
+          last_activity: Letzte Aktivität
+          liveness: Lebenszeichen
+          status: Status
+          type: Vorgang
+        title: Worker-Status

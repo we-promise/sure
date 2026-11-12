@@ -5,7 +5,7 @@
       <%= t(".no_categories_message") %>
     </p>
 
-    <% unless Current.user&.guest? %>
+    <% unless Current.family.categories_locked? || Current.user&.guest? %>
       <div class="flex items-center gap-2">
         <%= render DS::Button.new(
           text: t(".use_defaults"),

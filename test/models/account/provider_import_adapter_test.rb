@@ -130,6 +130,36 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     assert_equal "loan_payment", checking_entry.transaction.reload.kind
   end
 
+  test "re-importing a contribution the user turned into a plain transfer keeps that choice" do
+    checking_entry = @adapter.import_transaction(
+      external_id: "plaid_checking_to_broker",
+      amount: 300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "To broker",
+      source: "plaid"
+    )
+    broker_entry = accounts(:investment).entries.create!(
+      name: "From checking", date: Date.current, amount: -300, currency: "USD", entryable: Transaction.new
+    )
+    transfer = Transfer.create!(inflow_transaction: broker_entry.transaction, outflow_transaction: checking_entry.transaction)
+    transfer.confirm!
+    transfer.update_investment_contribution!(false)
+
+    # A provider kind hint makes the adapter re-derive the leg from its transfer.
+    @adapter.import_transaction(
+      external_id: "plaid_checking_to_broker",
+      amount: 300.00,
+      currency: "USD",
+      date: Date.current,
+      name: "To broker",
+      source: "plaid",
+      kind: "standard"
+    )
+
+    assert_equal "funds_movement", checking_entry.transaction.reload.kind
+  end
+
   test "re-importing an unconfirmed auto-matched leg does not give it a transfer kind" do
     loan_entry = Account::ProviderImportAdapter.new(accounts(:loan)).import_transaction(
       external_id: "plaid_loan_inflow_pending", amount: -200.00, currency: "USD",
@@ -521,6 +551,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       assert_equal "https://example.com", merchant.website_url
       assert_equal "https://example.com/logo.png", merchant.logo_url
     end
+  end
+
+  # Issue #2925: Akahu (and sometimes Plaid) supply a website but no logo.
+  test "creates a website-only merchant with a Brandfetch logo" do
+    Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
+    Setting.stubs(:brand_fetch_logo_size).returns(40)
+
+    merchant = @adapter.find_or_create_merchant(
+      provider_merchant_id: "akahu_merchant_123",
+      name: "Countdown",
+      source: "akahu",
+      website_url: "https://www.countdown.co.nz"
+    )
+
+    assert_equal "https://cdn.brandfetch.io/countdown.co.nz/icon/fallback/lettermark/w/40/h/40?c=test_client_id", merchant.logo_url
   end
 
   test "returns nil when merchant data is insufficient" do
@@ -1196,6 +1241,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "never claims a part of a split entry for a matching provider transaction" do
+    parent = @account.entries.create!(date: Date.today, amount: 37.50, currency: "USD", name: "Market", entryable: Transaction.new)
+    parent.split!([ { name: "Groceries", amount: 25, category_id: nil }, { name: "Household", amount: 12.50, category_id: nil } ])
+    household = parent.child_entries.find_by!(name: "Household")
+
+    entry = nil
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(external_id: "lunchflow_678", amount: 12.50, currency: "USD", date: Date.today,
+                                          name: "Hardware store", source: "lunchflow")
+    end
+
+    assert_not_equal household.id, entry.id
+    assert_equal [ nil, nil, "Household", parent.id ], household.reload.values_at(:external_id, :source, :name, :parent_entry_id)
+  end
+
   test "claims CSV imported transaction when provider syncs matching transaction" do
     # Create a CSV imported transaction (has import_id but no external_id)
     import = Import.create!(
@@ -1380,6 +1440,78 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       # Newer entry should remain unclaimed
       assert_nil newer_entry.reload.external_id
+    end
+  end
+
+  test "claims a transaction entered ahead of time when the provider books it a few days off" do
+    expected_date = 2.days.ago.to_date
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_equal scheduled_entry.id, entry.id
+      assert_equal "enable_banking_gas", entry.external_id
+      assert_equal Date.current, entry.date, "moves to the day the provider booked it"
+      assert_equal "Gas bill", entry.name, "keeps the user's own name"
+    end
+  end
+
+  test "does not claim a transaction entered ahead of time outside the matching window" do
+    expected_date = 10.days.ago.to_date
+    scheduled_entry = travel_to(20.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas_late",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_not_equal scheduled_entry.id, entry.id
+    end
+  end
+
+  test "a pending claim of a transaction entered ahead of time reconciles with its booked version" do
+    expected_date = Date.current
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_gas_pending",
+      amount: 200,
+      currency: "USD",
+      date: expected_date - 1.day,
+      name: "PRLV GAZ",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    assert_equal scheduled_entry.id, pending_entry.id
+    assert pending_entry.transaction.pending?
+
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_gas_posted",
+        amount: 200,
+        currency: "USD",
+        date: expected_date,
+        name: "PRLV GAZ",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_equal scheduled_entry.id, posted_entry.id
+      assert_not posted_entry.transaction.pending?
     end
   end
 
@@ -2455,5 +2587,14 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid",
         account_provider_id: account_provider.id
       )
+    end
+
+    # Locked and user-modified, the way TransactionsController#create leaves a
+    # transaction the user typed in.
+    def create_user_entered_transaction(date:, amount:, name:)
+      entry = @account.entries.create!(date: date, amount: amount, currency: "USD", name: name, entryable: Transaction.new)
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
+      entry
     end
 end

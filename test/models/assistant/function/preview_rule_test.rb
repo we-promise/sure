@@ -59,6 +59,40 @@ class Assistant::Function::PreviewRuleTest < ActiveSupport::TestCase
     assert_equal 1, @fn.call(params.merge("effective_date" => 5.days.ago.to_date.iso8601))[:preview][:match_count]
   end
 
+  test "previews the text operators: a regex, starts with and ends with" do
+    coffee = create_transaction(name: "ZXQ Coffee Shop")
+    tea = create_transaction(name: "ZXQ Tea House")
+    create_transaction(name: "Groceries ZXQ")
+
+    regex = @fn.call(definition(conditions: [ { "condition_type" => "transaction_name", "operator" => "matches_regex", "value" => "^zxq (coffee|tea)" } ]))
+    assert regex[:success], regex.inspect
+    assert_equal 2, regex[:preview][:match_count]
+    assert_equal [ coffee, tea ].map { |e| e.entryable.id }.sort, regex[:preview][:sample].map { |t| t[:id] }.sort
+
+    assert_equal 2, @fn.call(definition(conditions: [ { "condition_type" => "transaction_name", "operator" => "starts_with", "value" => "zxq" } ]))[:preview][:match_count]
+    assert_equal 1, @fn.call(definition(conditions: [ { "condition_type" => "transaction_name", "operator" => "ends_with", "value" => "zxq" } ]))[:preview][:match_count]
+  end
+
+  # Stripping " shop$" to "shop$" would also match "Workshop".
+  test "a regex value is previewed as written, spaces included" do
+    create_transaction(name: "ZXQ Coffee Shop")
+    create_transaction(name: "ZXQ Workshop")
+
+    result = @fn.call(definition(conditions: [ { "condition_type" => "transaction_name", "operator" => "matches_regex", "value" => " shop$" } ]))
+
+    assert result[:success], result.inspect
+    assert_equal 1, result[:preview][:match_count]
+    assert_equal " shop$", result[:rule][:conditions].first[:value]
+  end
+
+  test "a regex the database will not compile is a problem, not a preview" do
+    result = @fn.call(definition(conditions: [ { "condition_type" => "transaction_name", "operator" => "matches_regex", "value" => "(" } ]))
+
+    assert_not result[:success]
+    assert_equal "invalid_rule", result[:error]
+    assert_equal [ "Conditions value is not a valid regular expression" ], result[:problems]
+  end
+
   test "rejects invalid definitions with every problem listed" do
     result = @fn.call(definition(
       conditions: [
@@ -115,6 +149,21 @@ class Assistant::Function::PreviewRuleTest < ActiveSupport::TestCase
     assert_equal 2, result[:preview][:match_count]
     assert_equal 1, result[:preview][:visible_match_count]
     assert_equal [ visible.entryable.id ], result[:preview][:sample].map { |t| t[:id] }
+  end
+
+  # A pattern that outlives the statement timeout raises out of the rule's
+  # scope. The assistant gets a rule error it can explain, not "failed
+  # unexpectedly" from the tool wrapper.
+  test "a pattern that times out is reported as a regex_timeout error" do
+    rule = @family.rules.create!(resource_type: "transaction", **rule_attributes)
+    Rule.any_instance.stubs(:matching_scope).raises(Rule::SafeRegex::TimeoutError)
+
+    result = @fn.call("rule_id" => rule.id)
+
+    assert_not result[:success]
+    assert_equal "regex_timeout", result[:error]
+    assert_equal rule.id, result[:rule][:id]
+    assert_nil result[:preview]
   end
 
   private

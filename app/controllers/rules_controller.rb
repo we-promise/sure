@@ -5,7 +5,10 @@ class RulesController < ApplicationController
   before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
 
   def index
-    @rules = Current.family.rules.includes(conditions: :sub_conditions).ordered
+    @rules = Current.family.rules.includes(:actions, conditions: :sub_conditions).ordered.to_a
+    Rule.share_option_lists(@rules)
+    @layout = Rule::Layout.new(Current.family, rules: @rules)
+    @list_filter = Rule::ListFilter.new(@rules)
 
     # Fetch recent rule runs with pagination
     recent_runs_scope = RuleRun
@@ -44,7 +47,7 @@ class RulesController < ApplicationController
   def create
     @rule = Current.family.rules.build(rule_params)
 
-    if @rule.save
+    if save_rule
       redirect_to confirm_rule_path(@rule, reload_on_close: true)
     else
       render_invalid_rule :new
@@ -53,6 +56,13 @@ class RulesController < ApplicationController
 
   def apply
     @rule.update!(active: true)
+
+    # The rule stayed off, so running it now would only repeat the slow query.
+    if @rule.notification_baseline_timed_out?
+      redirect_back_or_to rules_path, alert: t("rules.notification_baseline_timed_out")
+      return
+    end
+
     @rule.apply_later(ignore_attribute_locks: true)
     redirect_back_or_to rules_path, notice: "#{@rule.resource_type.humanize} rule activated"
   end
@@ -69,10 +79,18 @@ class RulesController < ApplicationController
   end
 
   def update
-    if @rule.update(rule_params)
+    @rule.assign_attributes(rule_params)
+
+    if save_rule
+      flash_message = if @rule.notification_baseline_timed_out?
+        { alert: t("rules.notification_baseline_timed_out") }
+      else
+        { notice: t(".success") }
+      end
+
       respond_to do |format|
-        format.html { redirect_back_or_to rules_path, notice: t(".success") }
-        format.turbo_stream { stream_redirect_back_or_to rules_path, notice: t(".success") }
+        format.html { redirect_back_or_to rules_path, **flash_message }
+        format.turbo_stream { stream_redirect_back_or_to rules_path, **flash_message }
       end
     else
       render_invalid_rule :edit
@@ -84,15 +102,21 @@ class RulesController < ApplicationController
     redirect_to rules_path, notice: t(".success")
   end
 
+  # Orders the top-level items: groups and rules without a group. The rules
+  # inside a group are ordered by RuleGroupsController#reorder.
   def reorder
-    Rule.update_positions!(Current.family, params.require(:rule_ids))
+    Rule::Layout.new(Current.family).reorder!(params.require(:items))
     head :no_content
   rescue ArgumentError
     head :unprocessable_entity
   end
 
+  # Groups go too: without their rules they would be empty folders.
   def destroy_all
-    Current.family.rules.destroy_all
+    Rule.transaction do
+      Current.family.rules.destroy_all
+      Current.family.rule_groups.destroy_all
+    end
     redirect_to rules_path, notice: t(".success")
   end
 
@@ -120,6 +144,16 @@ class RulesController < ApplicationController
   end
 
   private
+    # A group typed into the form may be created by another request at the
+    # same moment; the save then rolls back, and saving again finds it.
+    def save_rule
+      @rule.save
+    rescue ActiveRecord::RecordNotUnique
+      raise unless @rule.rule_group&.new_record?
+
+      @rule.save
+    end
+
     def render_invalid_rule(template)
       # A native select cannot preserve an invalid option on resubmission. An
       # action marked for destruction is not validated, but is still rendered.
@@ -213,12 +247,14 @@ class RulesController < ApplicationController
     def rule_params
       params.require(:rule).permit(
         :resource_type, :effective_date, :active, :name, :stop_processing,
+        :rule_group_id, :new_rule_group_name,
         conditions_attributes: [
           :id, :condition_type, :operator, :value, :_destroy,
           sub_conditions_attributes: [ :id, :condition_type, :operator, :value, :_destroy ]
         ],
         actions_attributes: [
-          :id, :action_type, :value, :_destroy, { value: [] }
+          :id, :action_type, :value, :_destroy, { value: [] },
+          split_rows: [ :type, :name, :share, :category_id, :merchant_id, tag_ids: [] ]
         ]
       )
     end

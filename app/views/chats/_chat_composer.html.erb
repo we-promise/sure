@@ -1,6 +1,6 @@
-<%# locals: (chat: nil) %>
+<%# locals: (chat: nil, message_hint: nil) %>
 <% if Current.user.ai_enabled? %>
-  <%= render "messages/chat_form", chat: chat %>
+  <%= render "messages/chat_form", chat: chat, message_hint: message_hint %>
 <% else %>
   <%# Mirrors the sidebar's AI consent gate (layouts/application.html.erb) for
       entry points that render the full chat page instead — the mobile nav's
