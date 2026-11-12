@@ -322,23 +322,22 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
 
   # Both take the account row lock before any write, as a sync and a lot edit
   # do, so they serialise with them in one lock order.
-  test "a reset and a remap lock the account before changing anything" do
-    @holding.account.update!(plaid_account: plaid_accounts(:one))
-    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
-    [ [ :reset_security_to_provider!, -> { post reset_security_holding_path(@holding) } ],
-      [ :remap_security!, -> { patch remap_security_holding_path(@holding), params: { security_id: "NVDA|XNAS" } } ] ].each do |change, request|
-      order = sequence(change.to_s)
-      Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
-      Holding.any_instance.expects(change).in_sequence(order).returns(true)
-      Balance::Materializer.any_instance.expects(:materialize_balances).in_sequence(order)
+  test "a reset locks the account before changing anything" do
+    linked_remapped_holding
+    expect_locked_change(:reset_security_to_provider!)
 
-      request.call
-      assert_redirected_to account_path(@holding.account, tab: "holdings")
+    post reset_security_holding_path(@holding)
 
-      Account.any_instance.unstub(:lock!)
-      Holding.any_instance.unstub(change)
-      Balance::Materializer.any_instance.unstub(:materialize_balances)
-    end
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
+  end
+
+  test "a remap locks the account before changing anything" do
+    linked_remapped_holding
+    expect_locked_change(:remap_security!)
+
+    patch remap_security_holding_path(@holding), params: { security_id: "NVDA|XNAS" }
+
+    assert_redirected_to account_path(@holding.account, tab: "holdings")
   end
 
   test "remap_security brings offline security back online" do
@@ -397,4 +396,19 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@holding.account, tab: "holdings")
     assert_equal "Yahoo Finance rate limit exceeded", flash[:alert]
   end
+
+  private
+    def linked_remapped_holding
+      @holding.account.update!(plaid_account: plaid_accounts(:one))
+      @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    end
+
+    # Mocha verifies these at teardown, so a request that skips the lock, the
+    # change or the restatement fails.
+    def expect_locked_change(change)
+      order = sequence(change.to_s)
+      Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
+      Holding.any_instance.expects(change).in_sequence(order).returns(true)
+      Balance::Materializer.any_instance.expects(:materialize_balances).in_sequence(order)
+    end
 end
