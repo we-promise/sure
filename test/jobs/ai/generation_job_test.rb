@@ -125,6 +125,14 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal "ai_low_priority", Ai::Routes.queue_for(:categorize)
   end
 
+  test "a stale job for a feature no longer registered drops once, quietly" do
+    Ai::Requesters.stubs(:fetch).raises(KeyError)
+
+    assert_nothing_raised do
+      Ai::GenerationJob.perform_now(:retirement_planner, { ids: %w[a], family_id: @family.id })
+    end
+  end
+
   # Fairness: on one AI thread against a cloud endpoint, two families'
   # large runs take turns, so each gets its first result before either finishes.
   test "two families' runs on one thread each get a result before either finishes" do

@@ -46,6 +46,45 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
                                 "HTTP-Referer" => "https://sure.am" })
   end
 
+  test "an OpenRouter decisions 401, 402 and a retried 429 map the same as TypeSafe" do
+    decisions_url = "https://openrouter.ai/api/alpha/decisions"
+    { 401 => Ai::Error::Unauthorized, 402 => Ai::Error::NoCredit }.each do |status, expected|
+      stub_request(:post, decisions_url).to_return(status:, headers: JSON_HEADERS,
+                                                     body: { error: { code: status, message: "err" } }.to_json)
+
+      assert_raises(expected) { judge({ "txn_1" => { description: "x" } },
+                                       preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
+      WebMock.reset!
+    end
+
+    stub_request(:post, decisions_url).to_return(
+      { status: 429, headers: JSON_HEADERS, body: { error: { code: 429, message: "slow down" } }.to_json },
+      { status: 200, headers: JSON_HEADERS, body: answer("Salary", 0.6).to_json }
+    )
+
+    assert_equal "Salary", judge({ "txn_1" => { description: "x" } }, max_retries: 1,
+                                 preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1")
+                          .answers["txn_1"][:category].choice
+  end
+
+  test "an OpenRouter decisions 200 with an embedded error body is an outage, not a refusal" do
+    decisions_url = "https://openrouter.ai/api/alpha/decisions"
+    stub_request(:post, decisions_url).to_return(status: 200, headers: JSON_HEADERS,
+                                                   body: { error: { code: 500, message: "upstream is down" } }.to_json)
+
+    assert_raises(Ai::Error::Upstream) { judge({ "txn_1" => { description: "x" } },
+                                                preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
+  end
+
+  test "an OpenRouter decisions 503 after the retries fails the batch for failover" do
+    decisions_url = "https://openrouter.ai/api/alpha/decisions"
+    stub_request(:post, decisions_url).to_return(status: 503, headers: JSON_HEADERS,
+                                                   body: { error: { code: 503, message: "down" } }.to_json)
+
+    assert_raises(Ai::Error::Upstream) { judge({ "txn_1" => { description: "x" } }, max_retries: 1,
+                                                preset: :jev_openrouter, base_url: "https://openrouter.ai/api/v1") }
+  end
+
   test "fans a batch out on at most parallel_requests threads" do
     in_flight = Concurrent::AtomicFixnum.new
     peak = Concurrent::AtomicFixnum.new
@@ -110,6 +149,23 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
 
     assert_nil response.answers["txn_1"], "a choice with no confidence is malformed"
     assert_equal "Salary", response.answers["txn_2"][:category].choice
+  end
+
+  test "an all-malformed batch is attributed: both billed requests are failed rows under one call" do
+    malformed = { model: "jev-latest", answers: { category: { type: "choice", choice: "Not asked" } } }
+    stub_request(:post, URL).to_return(lambda do |request|
+      body = JSON.parse(request.body)
+      { status: 200, headers: JSON_HEADERS, body: malformed.to_json }
+    end)
+
+    assert_raises(Ai::Error::InvalidOutput) do
+      judge({ "txn_1" => { description: "bad one" }, "txn_2" => { description: "bad two" } }, family: @family)
+    end
+
+    rows = @family.llm_usages.where(operation: "categorize")
+    assert_equal 2, rows.size, "a billed request that can't be read is a failed row, not an invisible one"
+    assert rows.all? { _1.status == "failed" }
+    assert_equal 1, rows.map(&:call_id).uniq.size
   end
 
   test "an option that wasn't asked for is malformed, and all malformed is InvalidOutput" do

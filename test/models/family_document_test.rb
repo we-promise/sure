@@ -51,4 +51,19 @@ class FamilyDocumentTest < ActiveSupport::TestCase
     doc = FamilyDocument.new(filename: "video.mp4")
     assert_not doc.supported_extension?
   end
+
+  test "readable_by returns only ready documents, and nothing when indexing failed" do
+    user = users(:family_admin)
+    readable = @family.family_documents.readable_by(user)
+    assert_includes readable, family_documents(:tax_return)
+
+    pending_doc = family_documents(:pending_doc)
+    assert_not_includes readable, pending_doc
+
+    failed = @family.family_documents.create!(filename: "borked.pdf", status: "error")
+    assert_not_includes @family.family_documents.readable_by(user), failed
+
+    pending_doc.update!(status: "unreadable")
+    assert_not_includes @family.family_documents.readable_by(user), pending_doc
+  end
 end

@@ -144,6 +144,46 @@ class Ai::ShadowJobTest < ActiveJob::TestCase
     ActiveSupport::Notifications.unsubscribe(subscription)
   end
 
+  test "a deadlock is discarded, not retried" do
+    Family.stubs(:find_by).raises(ActiveRecord::Deadlocked)
+
+    assert_nothing_raised do
+      Ai::ShadowJob.perform_now("Ai::Generations::CategorizeTransactions", @family.id, {}, {})
+    end
+    assert_equal 0, Ai::Comparison.count
+  end
+
+  test "two shadow runs get different correlation ids" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txns = Array.new(2) { create_transaction(account: @account, name: "Coffee shop #{_1}").transaction }
+    category = @family.categories.create!(name: "Coffee")
+    answer_both(llm: txns.to_h { [ _1.id, category.name ] }, jev: txns.to_h { [ _1.id, [ category.name, 0.9 ] ] })
+    events = []
+    subscription = ActiveSupport::Notifications.subscribe(/.ai\z/) { events << _1.payload }
+
+    perform_enqueued_jobs { categorize([ txns.first.id ]) }
+    perform_enqueued_jobs { categorize([ txns.second.id ]) }
+
+    ids = events.select { _1[:feature] == "shadow_categorize" }.map { _1[:correlation_id] }.uniq
+    assert_equal 2, ids.size
+  ensure
+    ActiveSupport::Notifications.unsubscribe(subscription)
+  end
+
+  test "a shadow run never enqueues another shadow" do
+    @family.update!(categorization_shadow_rate: 1.0)
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    category = @family.categories.create!(name: "Coffee")
+    answer_both(llm: { txn.id => category.name }, jev: { txn.id => [ category.name, 0.9 ] })
+
+    enqueued = []
+    Ai::ShadowJob.stub(:perform_later, ->(*args) { enqueued << args }) do
+      perform_enqueued_jobs { categorize([ txn.id ]) }
+    end
+
+    assert_equal 1, enqueued.size, "the primary enqueues its shadow; the shadow enqueues nothing of its own"
+  end
+
   test "runs on the background lane's queue" do
     assert_equal Ai::Routes.queue_for(:shadow_categorize),
                  Ai::ShadowJob.new("Ai::Generations::CategorizeTransactions", @family.id, {}, {}).queue_name

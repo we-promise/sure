@@ -20,4 +20,10 @@ class Ai::Transport::RubyLlmAdapterTest < ActiveSupport::TestCase
   test "a wrong call into RubyLLM stays a bug" do
     assert_raises(ArgumentError) { @transport.send(:mapping_errors) { RubyLLM::Attachment.new } }
   end
+
+  test "the RubyLLM context for chat completions splits think tags, so answers are what's parsed" do
+    context = @transport.send(:ruby_llm_context)
+
+    assert_equal true, context.config.split_think_tags
+  end
 end

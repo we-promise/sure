@@ -22,4 +22,22 @@ class Ai::ShadowTest < ActiveSupport::TestCase
 
     assert_equal [ twins.first ], enqueued[2][:transactions]
   end
+
+  test "the sampling rate is rolled against a number between zero and one" do
+    @family.update!(categorization_shadow_rate: 0.5)
+    txns = [ { id: "t1", classification: "Primary", description: "SHOP", merchant: nil, amount: 1.0 } ]
+    generation = Ai::Generations::CategorizeTransactions.new(transactions: txns, categories: [], family: @family)
+    route = Ai::Router.new(family: @family).resolve(:categorize).route
+    result = Ai::Result.new(value: { categorizations: [] }, route:, remaining: [])
+
+    enqueued = :absent
+    Ai::Shadow.stubs(:rand).returns(0.4)
+    Ai::ShadowJob.stub(:perform_later, ->(*args) { enqueued = args }) { Ai::Shadow.enqueue(generation, result) }
+    assert_not_equal :absent, enqueued, "below the rate, the shadow runs"
+
+    enqueued = :absent
+    Ai::Shadow.stubs(:rand).returns(0.6)
+    Ai::ShadowJob.stub(:perform_later, ->(*args) { enqueued = args }) { Ai::Shadow.enqueue(generation, result) }
+    assert_equal :absent, enqueued
+  end
 end

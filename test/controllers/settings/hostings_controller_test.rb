@@ -653,6 +653,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the jev panel warns when JEV_ENDPOINT is set to an endpoint RubyLLM can't reach" do
+    with_self_hosting do
+      users(:family_admin).update!(preferences: (users(:family_admin).preferences || {}).merge("preview_features_enabled" => true))
+      with_env_overrides("CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "env-jev-key",
+                         "JEV_ENDPOINT" => "https://gw.example.com/v1/jev") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "p.text-warning", /not supported and is ignored/
+      end
+    end
+  end
+
   test "can update jev endpoint and model" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { jev_endpoint: "https://api.typesafe.ai/v1/systemone", jev_model: "jev-latest" } }

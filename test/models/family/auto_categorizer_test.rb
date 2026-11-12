@@ -286,6 +286,20 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_not_includes serialized, "frag"
   end
 
+  test "a Jev outage never falls back to the LLM: no LLM route is attempted" do
+    Ai::Config.override = nil
+    txn = create_transaction(account: @account, name: "Coffee shop").transaction
+    requests = stub_ai(:categorize) { raise Ai::Error::Upstream, "Jev unreachable" }
+
+    with_env_overrides("OPENAI_ACCESS_TOKEN" => "sk-test", "CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "test_api_key") do
+      categorize([ txn.id ])
+    end
+
+    assert requests.any?, "the Jev route was attempted"
+    assert requests.all? { _1.is_a?(Ai::Transport::Base::JudgeRequest) },
+         "no LLM request was attempted: #{requests.map { |r| r.class.name }.inspect}"
+  end
+
   # Confidence has to change behaviour, not just appear in logs. Below the threshold the answer
   # is withheld and the transaction is left unlocked, so a later run can still correct it. Only
   # a model with calibrated confidence is gated.

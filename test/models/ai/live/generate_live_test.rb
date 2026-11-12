@@ -14,7 +14,13 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
     "anthropic/claude-sonnet-5-5" => { key: "ANTHROPIC_API_KEY", protocol: :anthropic },
     "anthropic/claude-opus-5-5" => { key: "ANTHROPIC_API_KEY", protocol: :anthropic },
     "llama_cpp/qwen3.6-35b-a3b-mtp" => { key: "LLAMA_CPP_API_KEY", protocol: :compatible, json_mode: :auto,
-                                         base_url: ENV.fetch("LLAMA_CPP_URL", "http://10.72.200.61:8180/v1"), location: :local }
+                                         base_url: ENV.fetch("LLAMA_CPP_URL", "http://10.72.200.61:8180/v1"), location: :local },
+    # Kilo is an OpenAI-compatible gateway: the ~ prefix selects the latest Luna model, which
+    # is what "~openai/gpt-luna-latest" resolves to upstream. Kilo also proxies the Responses
+    # API, so it goes through the same strict path as the OpenAI preset.
+    "kilo/~openai/gpt-luna-latest" => { key: "KILO_API_KEY", protocol: :compatible, preset: :openai, responses_api: true,
+                                         base_url: ENV.fetch("KILO_BASE_URL", "https://api.kilo.ai/api/gateway"),
+                                         extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } }
   }.freeze
 
   setup do
@@ -64,7 +70,7 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
 
     def plan_for(feature, preset, model_name, spec)
       endpoint = Ai::Config::Endpoint.new(name: preset, api_key: ENV[spec[:key]].presence || "recorded",
-                                          **spec.slice(:protocol, :preset, :responses_api, :json_mode, :base_url, :location))
+                                          **spec.slice(:protocol, :preset, :responses_api, :json_mode, :base_url, :location, :extra_headers))
       model = Ai::Config::Model.new(endpoint:, name: model_name, capabilities: %i[structured_output], max_output_tokens: 1024)
       route = Ai::Route.new(feature:, model:, prompt: Ai::LegacyEnvConfig.prompt_for(feature, endpoint))
       Ai::Plan.new(feature:, lane: Ai::Routes.fetch(feature)[:lane], routes: [ route ])

@@ -65,6 +65,14 @@ class AiTransportContractTest < ActiveSupport::TestCase
       assert_raises(Ai::Error::Timeout) { probe(protocol, :chat) }
     end
 
+    # Deliberately fail-fast: Retry is for a server that answered, not for one that never did.
+    test "#{protocol}: an unreachable server is never retried, whatever the retry budget" do
+      stub_request(:post, spec[:url]).to_raise(Errno::ECONNREFUSED)
+
+      assert_raises(Ai::Error::Unreachable) { probe(protocol, :chat, max_retries: 3) }
+      assert_requested :post, spec[:url], times: 1
+    end
+
     test "#{protocol}: retries follow the endpoint, not RubyLLM's defaults" do
       Ai::Transport::Base.any_instance.stubs(:retry_delay).returns(0)
       stub_request(:post, spec[:url]).to_return(status: 503, headers: JSON_HEADERS, body: spec[:error].call("unavailable").to_json)

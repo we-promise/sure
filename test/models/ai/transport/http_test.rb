@@ -76,10 +76,18 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
       "http://ollama:11434/v1/" => "http://ollama:11434/v1",
       "https://generativelanguage.googleapis.com/v1beta/openai/" => "https://generativelanguage.googleapis.com/v1beta/openai",
       "https://api.cloudflare.com/client/v4/accounts/a/ai/v1" => "https://api.cloudflare.com/client/v4/accounts/a/ai/v1",
-      "http://agent:18789/v1/chat/completions" => "http://agent:18789/v1"
+      "http://agent:18789/v1/chat/completions" => "http://agent:18789/v1",
+      "http://v1-proxy.lan:8080" => "http://v1-proxy.lan:8080/v1",
+      "https://envoy.example.com/v13" => "https://envoy.example.com/v13"
     }.each do |given, expected|
       assert_equal expected, Http.compatible_base(given), given.inspect
     end
+  end
+
+  test "a malformed proxy is warned about and ignored, not crashed on" do
+    Rails.logger.expects(:warn).with(regexp_matches(/Invalid proxy URL/))
+
+    assert_nil Http.proxy_or_warn("https://api.openai.com", env: { "HTTPS_PROXY" => "://bogus" })
   end
 
   test "headers leave out per-chat {session_id} values" do
