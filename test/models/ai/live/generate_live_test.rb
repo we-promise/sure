@@ -23,7 +23,13 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
                                          extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } },
     "kilo/~anthropic/claude-haiku-latest" => { key: "KILO_API_KEY", protocol: :compatible, preset: :openai, responses_api: true,
                                                 base_url: ENV.fetch("KILO_BASE_URL", "https://api.kilo.ai/api/gateway"),
-                                                extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } }
+                                                extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } },
+    # OpenRouter free tiers, same Stripe-style gateway; auto JSON mode since free-model
+    # support for strict json_schema is unknown until the run.
+    "openrouter/cohere/north-mini-code:free" => { key: "OPENROUTER_LIVE_API_KEY", protocol: :compatible, preset: :openrouter, json_mode: :auto,
+                                                    base_url: "https://openrouter.ai/api/v1" },
+    "openrouter/google/gemma-4-31b-it:free" => { key: "OPENROUTER_LIVE_API_KEY", protocol: :compatible, preset: :openrouter, json_mode: :auto,
+                                                   base_url: "https://openrouter.ai/api/v1" }
   }.freeze
 
   setup do

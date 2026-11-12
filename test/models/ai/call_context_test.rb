@@ -44,8 +44,7 @@ class Ai::CallContextTest < ActiveSupport::TestCase
       call.call_id
     end
 
-    row = @family.llm_usages.sole
-    assert_equal call_id, row.call_id
+    row = @family.llm_usages.find_by!(call_id: call_id)
     assert_equal "chat", row.operation
   end
 

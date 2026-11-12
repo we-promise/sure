@@ -36,8 +36,9 @@ class Ai::Judgements::CategorizeTransaction < Ai::Judgement
   end
 
   private
-    # Categories carry no description, so the hint comes from the hierarchy; nil means the name
-    # speaks for itself.
+    # Every decision model takes criterion descriptions; null is rejected by
+    # Parallel's decisions gateway (OpenRouter), which powers :jev_openrouter.
+    # Subcategories point at their parent; top-level categories describe themselves.
     def options
       if @categories.size >= MAX_OPTIONS
         raise Ai::Error::Refused, "too many categories for one Choice question: at most #{MAX_OPTIONS - 1} plus the opt-out"
@@ -46,7 +47,7 @@ class Ai::Judgements::CategorizeTransaction < Ai::Judgement
       by_id = @categories.index_by { _1[:id].to_s }
       @categories.each_with_object({}) do |category, options|
         parent = by_id[category[:parent_id].to_s]
-        options[category[:name].to_s] = parent ? "Subcategory of #{parent[:name]}" : nil
+        options[category[:name].to_s] = parent ? "Subcategory of #{parent[:name]}" : category[:name].to_s
       end.merge(UNCATEGORIZED => "No listed category is a reasonable fit")
     end
 

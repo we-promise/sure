@@ -175,7 +175,7 @@ module AiTestHelper
   INLINE_FILE = %r{(data:[a-z]+/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=]+}
 
   AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY
-                        MISTRAL_LIVE_API_KEY COHERE_LIVE_API_KEY KILO_API_KEY KILO_ORG_ID].freeze
+                        MISTRAL_LIVE_API_KEY COHERE_LIVE_API_KEY KILO_API_KEY KILO_ORG_ID OPENROUTER_LIVE_API_KEY].freeze
 
   def ai_endpoint(name: "test", protocol: :compatible, base_url: "https://llm.example.test/v1", api_key: "test-key", **attributes)
     Ai::Config::Endpoint.new(name:, protocol:, base_url:, api_key:, **attributes)

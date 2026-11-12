@@ -32,7 +32,7 @@ class Ai::Judgements::CategorizeTransactionTest < ActiveSupport::TestCase
     question = request.questions.fetch(:category)
     assert_equal :choice, question[:type]
     assert_equal Ai::Judgements::CategorizeTransaction::INSTRUCTIONS, question[:instructions]
-    assert_equal({ "Food" => nil, "Coffee Shops" => "Subcategory of Food", "Salary" => nil,
+    assert_equal({ "Food" => "Food", "Coffee Shops" => "Subcategory of Food", "Salary" => "Salary",
                    "__uncategorized__" => "No listed category is a reasonable fit" }, question[:options])
   end
 

@@ -158,11 +158,12 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
       { status: 200, headers: JSON_HEADERS, body: malformed.to_json }
     end)
 
+    before = @family.llm_usages.where(operation: "categorize").count
     assert_raises(Ai::Error::InvalidOutput) do
       judge({ "txn_1" => { description: "bad one" }, "txn_2" => { description: "bad two" } }, family: @family)
     end
 
-    rows = @family.llm_usages.where(operation: "categorize")
+    rows = @family.llm_usages.where(operation: "categorize").order(:created_at).offset(before)
     assert_equal 2, rows.size, "a billed request that can't be read is a failed row, not an invisible one"
     assert rows.all? { _1.status == "failed" }
     assert_equal 1, rows.map(&:call_id).uniq.size
@@ -198,9 +199,10 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
   test "every request of the fan-out writes a usage row with the call's id" do
     stub_jev(answer("Salary", 0.9))
 
+    before = @family.llm_usages.where(operation: "categorize").count
     judge({ "txn_1" => { description: "a" }, "txn_2" => { description: "b" }, "txn_3" => { description: "c" } }, family: @family)
 
-    rows = @family.llm_usages.where(operation: "categorize").order(:created_at)
+    rows = @family.llm_usages.where(operation: "categorize").order(:created_at).offset(before)
     assert_equal 3, rows.size
     assert_equal 1, rows.map(&:call_id).uniq.size
     assert rows.first.call_id.present?
