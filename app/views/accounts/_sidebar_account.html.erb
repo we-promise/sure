@@ -1,4 +1,4 @@
-<%# locals: (account:, color:, link_class: nil) %>
+<%# locals: (account:, color:, link_class: nil, reconciliation_indicator: nil) %>
 
 <%= link_to account_path(account),
           class: class_names(
@@ -8,7 +8,7 @@
           ),
           data: page_active?(account_path(account)) ? { active_account: true } : {},
           title: account.name do %>
-  <%= render "accounts/logo", account: account, size: "sm", color: color %>
+  <%= render "accounts/logo", account: account, size: "sm", color: color, reconciliation_indicator: reconciliation_indicator %>
 
   <div class="min-w-0 grow">
     <div class="flex items-center gap-2 mb-0.5">

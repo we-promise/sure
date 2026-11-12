@@ -1,4 +1,4 @@
-<%# locals: (accounts:, account_group:, sortable: false, subgroup: nil) %>
+<%# locals: (accounts:, account_group:, sortable: false, subgroup: nil, reconciliation_indicators: {}) %>
 
 <% if sortable && account_group.type_group? %>
   <%# The order is saved per account type. A subgroup sends only its own
@@ -37,14 +37,14 @@
             action: "touchstart->sortable-list#touchStart touchmove->sortable-list#touchMove touchend->sortable-list#touchEnd touchcancel->sortable-list#touchCancel contextmenu->sortable-list#suppressContextMenu keydown->sortable-list#handleKeyDown"
           }
         ) %>
-        <%= render "accounts/sidebar_account", account: account, color: account_group.color_for(account), link_class: "min-w-0 grow" %>
+        <%= render "accounts/sidebar_account", account: account, color: account_group.color_for(account), link_class: "min-w-0 grow", reconciliation_indicator: reconciliation_indicators[account.id] %>
       <% end %>
     <% end %>
   <% end %>
 <% else %>
   <div class="space-y-1">
     <% accounts.each do |account| %>
-      <%= render "accounts/sidebar_account", account: account, color: account_group.color_for(account) %>
+      <%= render "accounts/sidebar_account", account: account, color: account_group.color_for(account), reconciliation_indicator: reconciliation_indicators[account.id] %>
     <% end %>
   </div>
 <% end %>

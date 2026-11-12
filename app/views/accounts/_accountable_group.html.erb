@@ -1,4 +1,4 @@
-<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, sortable: false, **args) %>
+<%# locals: (account_group:, mobile: false, all_tab: false, open: nil, sortable: false, reconciliation_indicators: {}, **args) %>
 
 <div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>" data-group-key="<%= account_group.key %>">
   <% is_open = open.nil? ? (account_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key)) : open %>
@@ -32,12 +32,12 @@
               <%= tag.p subgroup.name, class: class_names("text-xs font-medium text-secondary truncate", "animate-pulse" => subgroup.syncing?) %>
               <%= tag.p format_money(subgroup.total_money), class: "text-xs font-medium text-secondary whitespace-nowrap privacy-sensitive" %>
             </div>
-            <%= render "accounts/sidebar_account_list", accounts: subgroup.accounts, account_group: account_group, sortable: sortable, subgroup: subgroup %>
+            <%= render "accounts/sidebar_account_list", accounts: subgroup.accounts, account_group: account_group, sortable: sortable, subgroup: subgroup, reconciliation_indicators: reconciliation_indicators %>
           </div>
         <% end %>
       </div>
     <% else %>
-      <%= render "accounts/sidebar_account_list", accounts: account_group.accounts, account_group: account_group, sortable: sortable %>
+      <%= render "accounts/sidebar_account_list", accounts: account_group.accounts, account_group: account_group, sortable: sortable, reconciliation_indicators: reconciliation_indicators %>
     <% end %>
 
     <% if account_group.type_group? %>
