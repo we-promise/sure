@@ -1,6 +1,8 @@
 require "test_helper"
 
 class HoldingsControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
     @account = accounts(:investment)
@@ -240,6 +242,80 @@ class HoldingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_path(@holding.account, tab: "holdings")
     assert_equal I18n.t("holdings.reset_security.success"), flash[:notice]
     assert_equal securities(:aapl), @holding.reload.security
+  end
+
+  # A remap onto a position with its own opening lot merges the two, and the
+  # merged lot keeps the target's origin, so a reset alone leaves it with the
+  # target. The reset restates both securities, as a remap restates its
+  # target, so the lots match the holdings straight away.
+  test "reset_security restates both securities' lots" do
+    account = users(:family_admin).family.accounts.create!(name: "Reset lots", balance: 1000, cash_balance: 1000, currency: "USD", accountable: Investment.new)
+    item = users(:family_admin).family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+    original = Security.create!(ticker: "RSTA", name: "RSTA")
+    replacement = Security.create!(ticker: "RSTB", name: "RSTB")
+    [ original, replacement ].each do |security|
+      Security::Price.insert_all((5.days.ago.to_date..Date.current).map { |date| { security_id: security.id, date: date, price: 30, currency: "USD" } })
+    end
+    create_trade(original, account: account, qty: 10, price: 40, date: 3.days.ago.to_date)
+    provider_row = account.holdings.create!(security: original, date: Date.current, qty: 15, price: 30, amount: 450, currency: "USD", account_provider: provider)
+    account.holdings.create!(security: replacement, date: Date.current, qty: 6, price: 30, amount: 180, currency: "USD", account_provider: provider)
+    Holding::Materializer.new(account, strategy: :reverse).materialize_holdings
+    assert_equal [ 5, 6 ], [ original, replacement ].map { |security| HoldingLot.opening.find_by!(security: security).qty }
+
+    provider_row.remap_security!(replacement)
+    Holding::Materializer.new(account.reload, strategy: :reverse).materialize_holdings
+    merged = account.holdings.find_by!(security: replacement, date: Date.current)
+
+    post reset_security_holding_path(merged)
+
+    assert_redirected_to account_path(account, tab: "holdings")
+    assert_not HoldingLot.exists?(security: replacement), "the replacement holds nothing once its row is reset"
+    assert_equal [ [ account.id, original.id ] ].to_set, HoldingLot.in_partition([ account.id ], [ original.id ]),
+      "the original's lots add up to its position again"
+  end
+
+  # The reset and its restatement are one change: a restatement that fails
+  # leaves the holding, its trades and its lots where they were.
+  test "a reset whose restatement fails is not applied" do
+    @holding.account.update!(plaid_account: plaid_accounts(:one))
+    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
+
+    assert_raises(RuntimeError) { post reset_security_holding_path(@holding) }
+
+    @holding.reload
+    assert_equal [ securities(:msft), securities(:aapl) ], [ @holding.security, @holding.provider_security ]
+  end
+
+  test "a remap whose restatement fails is not applied" do
+    original = @holding.security
+    Balance::Materializer.any_instance.stubs(:materialize_balances).raises(RuntimeError, "restatement failed")
+
+    assert_raises(RuntimeError) { patch remap_security_holding_path(@holding), params: { security_id: "MSFT|XNAS" } }
+
+    assert_equal original, @holding.reload.security
+  end
+
+  # Both take the account row lock before any write, as a sync and a lot edit
+  # do, so they serialise with them in one lock order.
+  test "a reset and a remap lock the account before changing anything" do
+    @holding.account.update!(plaid_account: plaid_accounts(:one))
+    @holding.update!(security: securities(:msft), provider_security: securities(:aapl), security_locked: true)
+    [ [ :reset_security_to_provider!, -> { post reset_security_holding_path(@holding) } ],
+      [ :remap_security!, -> { patch remap_security_holding_path(@holding), params: { security_id: "NVDA|XNAS" } } ] ].each do |change, request|
+      order = sequence(change.to_s)
+      Account.any_instance.expects(:lock!).at_least_once.in_sequence(order).returns(true)
+      Holding.any_instance.expects(change).in_sequence(order).returns(true)
+      Balance::Materializer.any_instance.expects(:materialize_balances).in_sequence(order)
+
+      request.call
+      assert_redirected_to account_path(@holding.account, tab: "holdings")
+
+      Account.any_instance.unstub(:lock!)
+      Holding.any_instance.unstub(change)
+      Balance::Materializer.any_instance.unstub(:materialize_balances)
+    end
   end
 
   test "remap_security brings offline security back online" do

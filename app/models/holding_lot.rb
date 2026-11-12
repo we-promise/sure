@@ -91,12 +91,12 @@ class HoldingLot < ApplicationRecord
     # Moves lots to another security with their trades. Derived lots keep
     # their own rows. An opening lot moved onto a position with its own is
     # merged into it: the quantities add, and the cost stays only where both
-    # sides know it and agree, since one figure cannot stand for two
-    # different ones. An opening lot with no units (a clamp records one) has
-    # no cost to weigh, so it is dropped rather than merged; moved onto one,
-    # the units keep their own cost and the lot is no longer a clamp. The
-    # merged lot keeps the target's origin, so a reset does not split it
-    # apart again.
+    # sides know it and agree, in the same currency, since one figure cannot
+    # stand for two different ones. An opening lot with no units (a clamp
+    # records one) has no cost to weigh, so it is dropped rather than merged;
+    # moved onto one, the units keep their own cost and the lot is no longer a
+    # clamp. The merged lot keeps the target's origin, so a reset does not
+    # split it apart again.
     def move!(derived:, opening:, to:)
       derived.update_all(security_id: to.id, updated_at: Time.current)
       opening.find_each do |lot|
@@ -107,7 +107,7 @@ class HoldingLot < ApplicationRecord
           target.update_columns(qty: lot.qty, unit_cost: lot.unit_cost, currency: lot.currency, clamped: false, updated_at: Time.current)
           lot.delete
         elsif target
-          unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost
+          unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost && lot.currency == target.currency
           target.update_columns(qty: target.qty + lot.qty, unit_cost: unit_cost, updated_at: Time.current)
           lot.delete
         else

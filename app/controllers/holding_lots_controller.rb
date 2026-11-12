@@ -1,18 +1,24 @@
 # The cost of one lot of a holding's position. Only a lot a trade acquired is
 # editable: the opening lot stays out of the position's figure, so a cost set
-# on it would change nothing the user can see. A change is restated into the
-# holdings straight away, as a price sync is.
+# on it would change nothing the user can see. Nor can a cost be set on any
+# lot while the provider supplies the position's cost, since restatement
+# leaves the provider's rows alone; a cost set earlier can still be cleared,
+# as fifo disposals still read it. A change is restated into the holdings
+# straight away, as a price sync is, and the two commit together or not at
+# all.
 class HoldingLotsController < ApplicationController
   before_action :set_holding
   before_action :require_holding_write_permission!
+  before_action :refuse_provider_cost!, only: :update
   before_action :set_lot
 
   def update
     # Strict, since String#to_d reads "abc" as 0 and "12abc" as 12.
     total = BigDecimal(lot_params[:total_cost_basis].to_s, exception: false)
 
-    if total && @lot.update(manual_total_cost: total)
-      restate
+    updated = total && restating { @lot.update(manual_total_cost: total) }
+
+    if updated
       flash[:notice] = t(".success")
     else
       flash[:alert] = t(".error")
@@ -22,8 +28,7 @@ class HoldingLotsController < ApplicationController
   end
 
   def unlock
-    @lot.unlock_cost!
-    restate
+    restating { @lot.unlock_cost! }
 
     redirect_to account_path(@holding.account, tab: "holdings"), notice: t(".success")
   end
@@ -40,6 +45,12 @@ class HoldingLotsController < ApplicationController
       require_account_permission!(@holding.account)
     end
 
+    def refuse_provider_cost!
+      return unless @holding.provider_cost_position?
+
+      redirect_to account_path(@holding.account, tab: "holdings"), alert: t("holding_lots.provider_cost")
+    end
+
     def set_lot
       @lot = HoldingLot.derived.where(account_id: @holding.account_id, security_id: @holding.security_id).find(params[:id])
     end
@@ -48,11 +59,21 @@ class HoldingLotsController < ApplicationController
       params.require(:holding_lot).permit(:total_cost_basis)
     end
 
-    # Balance::Materializer takes the account row lock, as a sync does, so an
-    # edit and a sync of the same account do not interleave.
-    def restate
+    # Changes the lot and restates the position in one transaction under the
+    # account row lock, taken first as a sync takes it, so a failed
+    # restatement rolls the lot back and an edit and a sync of the same account
+    # do not interleave. Restates only when the change is saved; returns
+    # whether it was.
+    def restating
       account = @holding.account
-      strategy = account.linked? ? :reverse : :forward
-      Balance::Materializer.new(account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
+
+      account.with_lock do
+        changed = yield
+        if changed
+          strategy = account.linked? ? :reverse : :forward
+          Balance::Materializer.new(account, strategy: strategy, security_ids: [ @holding.security_id ]).materialize_balances
+        end
+        changed
+      end
     end
 end

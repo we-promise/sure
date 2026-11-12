@@ -530,6 +530,61 @@ class Balance::ChartSeriesBuilderTest < ActiveSupport::TestCase
     assert_equal expected, builder.gains_series.map { |v| v.value.amount }
   end
 
+  # A later row the materializer cleared as unknown (a transfer in: no cost,
+  # no source, not a provider's row) stops a calculated zero carrying, so the
+  # position's value is not all counted as gain.
+  test "gains series does not carry a calculated zero basis onto a later unknown one" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    security = securities(:aapl)
+
+    create_holding(account: account, security: security, date: 2.days.ago.to_date, qty: 10, price: 100, cost_basis: 0)
+      .update_columns(cost_basis_source: "calculated")
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 15, price: 100, cost_basis: nil)
+    create_holding(account: account, security: security, date: Date.current, qty: 15, price: 110, cost_basis: nil)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    expected = [
+      1000, # 1000 - 0: a free acquisition's whole value is gain
+      0, # unknown basis, counted as no gain rather than 1500
+      0 # unknown basis, not 1650
+    ]
+
+    assert_equal expected, builder.gains_series.map { |v| v.value.amount }
+  end
+
+  # The materializer leaves a provider's row alone, so a provider row with no
+  # cost after a free acquisition is not an unknown basis: the zero carries.
+  test "gains series carries a calculated zero basis onto a provider row without a cost" do
+    account = accounts(:investment)
+    account.holdings.destroy_all
+    security = securities(:aapl)
+    item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+    provider = AccountProvider.create!(account: account, provider: item.coinstats_accounts.create!(name: "Provider", currency: "USD"))
+
+    create_holding(account: account, security: security, date: 2.days.ago.to_date, qty: 10, price: 100, cost_basis: 0)
+      .update_columns(cost_basis_source: "calculated")
+    create_holding(account: account, security: security, date: 1.day.ago.to_date, qty: 10, price: 100, cost_basis: 0)
+      .update_columns(cost_basis_source: "calculated")
+    create_holding(account: account, security: security, date: Date.current, qty: 10, price: 110, cost_basis: nil)
+      .update_columns(account_provider_id: provider.id)
+
+    builder = Balance::ChartSeriesBuilder.new(
+      account_ids: [ account.id ],
+      currency: "USD",
+      period: Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current),
+      interval: "1 day"
+    )
+
+    assert_equal [ 1000, 1000, 1100 ], builder.gains_series.map { |v| v.value.amount }
+  end
+
   test "gains series values carry trend vs previous point" do
     account = accounts(:investment)
     account.holdings.destroy_all

@@ -1,6 +1,8 @@
 ---
 en:
   holding_lots:
+    provider_cost: Your provider supplies this position's cost, so its lot costs
+      cannot be set.
     update:
       success: Lot cost updated.
       error: Enter what the parcel cost in total, zero or more.

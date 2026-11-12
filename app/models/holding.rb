@@ -253,6 +253,15 @@ class Holding < ApplicationRecord
       .order(Arel.sql("acquired_on ASC NULLS FIRST"), :created_at)
   end
 
+  # Whether the provider supplies the position's cost: its latest row, the one
+  # its lots describe, holds a provider's figure. Restatement leaves a
+  # provider's rows alone, so a lot cost set under it would change nothing the
+  # position shows.
+  def provider_cost_position?
+    latest = account.holdings.where(security_id: security_id).order(date: :desc, id: :asc).first
+    latest.present? && latest.cost_basis_source == "provider" && latest.known_cost_basis.present?
+  end
+
   # Set cost_basis from user input (locks the value)
   def set_manual_cost_basis!(value)
     update!(

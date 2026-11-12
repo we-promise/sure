@@ -596,6 +596,21 @@ class HoldingLotTest < ActiveSupport::TestCase
     end
   end
 
+  test "merged opening lot drops its cost when the two costs are in different currencies" do
+    setup_account
+    old_security = priced_security("LOTMC", 30)
+    new_security = priced_security("LOTKC", 30)
+    holding = @account.holdings.create!(security: old_security, date: d(10), qty: 4, price: 30, amount: 120, currency: "USD")
+    opening_lot(old_security, 4).update!(unit_cost: 25, currency: "EUR")
+    kept = opening_lot(new_security, 6)
+    kept.update!(unit_cost: 25)
+
+    holding.remap_security!(new_security)
+
+    assert_equal 10, kept.reload.qty
+    assert_nil kept.unit_cost, "25 EUR and 25 USD are not one cost"
+  end
+
   # A lot with no units has no cost to disagree with, and a clamp row is
   # exactly that.
   test "merging an opening lot with no units leaves the target's cost" do
