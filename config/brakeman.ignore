@@ -72,13 +72,13 @@
     {
       "warning_type": "Mass Assignment",
       "warning_code": 105,
-      "fingerprint": "81c63f2c375da309440b9308df3ae9d1fcbada7043a26919898b08f3a38b29f6",
+      "fingerprint": "1cf4587eb3a07c5172e3de254747a1806cb4e454941da6c2fd3ba2f0f64a749f",
       "check_name": "PermitAttributes",
       "message": "Potentially dangerous key allowed for mass assignment",
       "file": "app/controllers/api/v1/trades_controller.rb",
       "line": 159,
       "link": "https://brakemanscanner.org/docs/warning_types/mass_assignment/",
-      "code": "params.require(:trade).permit(:account_id, :date, :qty, :price, :currency, :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id, :fee, :type, :amount, :transfer_account_id)",
+      "code": "params.require(:trade).permit(:account_id, :date, :qty, :price, :currency, :security_id, :ticker, :manual_ticker, :investment_activity_label, :fee, :type, :amount, :transfer_account_id)",
       "render_path": null,
       "location": {
         "type": "method",
