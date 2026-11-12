@@ -185,6 +185,19 @@ class Settings::HostingsController < ApplicationController
 
     market_data_sync_settings_changed = false
 
+    # Saving a market data provider or API key makes imported rates usable
+    # immediately, so kick off a family sync to convert foreign-currency
+    # balances instead of waiting for the nightly import or next account sync.
+    market_data_settings_changed = %i[
+      twelve_data_api_key exchange_rate_provider securities_provider securities_providers
+      tiingo_api_key eodhd_api_key alpha_vantage_api_key tinkoff_invest_api_key mansa_api_key
+    ].any? do |key|
+      next false unless hosting_params.key?(key)
+
+      value = hosting_params[key]
+      value.is_a?(Array) ? value.reject(&:blank?).any? : value.to_s.strip != "********"
+    end
+
     if hosting_params.key?(:market_data_sync_enabled)
       Setting.market_data_sync_enabled = hosting_params[:market_data_sync_enabled] == "1"
       market_data_sync_settings_changed = true
@@ -313,6 +326,10 @@ class Settings::HostingsController < ApplicationController
     update_assistant_type
     update_categorization_provider
     update_categorization_tuning
+
+    if market_data_settings_changed && Current.family
+      Current.family.sync_later
+    end
 
     if reselect_external_agent
       redirect_to settings_hosting_path, alert: t("settings.hostings.assistant_settings.external_agent_reselect")
