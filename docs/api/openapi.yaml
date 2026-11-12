@@ -150,6 +150,127 @@ components:
         total_pages:
           type: integer
           minimum: 0
+    AccountStatementAccount:
+      type: object
+      required:
+      - id
+      - name
+      - currency
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currency:
+          type: string
+    AccountStatement:
+      type: object
+      required:
+      - id
+      - filename
+      - content_type
+      - byte_size
+      - content_sha256
+      - review_status
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+          minimum: 1
+        content_sha256:
+          type: string
+          description: SHA-256 of the file (lowercase hex); the vault stores each
+            file once per family
+        review_status:
+          type: string
+          enum:
+          - unmatched
+          - linked
+          - rejected
+        period_start_on:
+          type: string
+          format: date
+          nullable: true
+        period_end_on:
+          type: string
+          format: date
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        opening_balance:
+          type: string
+          nullable: true
+        closing_balance:
+          type: string
+          nullable: true
+        institution_name_hint:
+          type: string
+          nullable: true
+        account_last4_hint:
+          type: string
+          nullable: true
+        account:
+          allOf:
+          - "$ref": "#/components/schemas/AccountStatementAccount"
+          nullable: true
+          description: Account the statement is linked to
+        suggested_account:
+          allOf:
+          - "$ref": "#/components/schemas/AccountStatementAccount"
+          nullable: true
+          description: Account the vault suggests for an unlinked statement; linking
+            it is confirmed in the app
+        match_confidence:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AccountStatementResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          "$ref": "#/components/schemas/AccountStatement"
+        meta:
+          type: object
+          required:
+          - duplicate
+          properties:
+            duplicate:
+              type: boolean
+              description: True when the uploaded file was already in the vault; the
+                existing statement is returned and nothing is created
+    AccountStatementCollection:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          maxItems: 100
+          items:
+            "$ref": "#/components/schemas/AccountStatement"
+        meta:
+          "$ref": "#/components/schemas/Pagination"
     FamilyExportFile:
       type: object
       required:
@@ -2303,8 +2424,6 @@ components:
           - CategoryImport
           - RuleImport
           - MerchantImport
-          - PdfImport
-          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -2392,6 +2511,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -2449,6 +2569,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -4827,6 +4948,195 @@ components:
         error:
           type: string
 paths:
+  "/api/v1/account_statements":
+    get:
+      summary: List statements in the Statement Vault
+      description: 'Lists statements the caller can see: unlinked statements and statements
+        linked to accounts shared with them. Requires an admin or member.'
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: account_id
+        in: query
+        format: uuid
+        required: false
+        description: Only statements linked to this account
+        schema:
+          type: string
+      - name: review_status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - unmatched
+          - linked
+          - rejected
+      - name: content_sha256
+        in: query
+        required: false
+        description: Find the statement for a file by its SHA-256 (hex)
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        format: date
+        required: false
+        description: Only statements whose period ends on or after this date
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        format: date
+        required: false
+        description: Only statements whose period starts on or before this date
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: statements listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Upload a statement to the Statement Vault
+      description: 'Stores a PDF, CSV or XLSX statement (max 25 MB). With account_id
+        the statement is linked to that account (needs write access to it); without
+        it the vault suggests a match to confirm in the app. The vault stores each
+        file once: uploading the same file again returns the existing statement with
+        meta.duplicate = true. Statements are archived only; no transactions are imported.'
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: statement stored
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '200':
+          description: file already in the vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest, or API key without write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account_id is not an account the caller can write to
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: file already in the vault, linked to an account the caller
+            cannot see
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing or invalid file
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account to link the statement to
+        required: true
+        description: Statement file (.pdf, .csv or .xlsx)
+  "/api/v1/account_statements/{id}":
+    parameters:
+    - name: id
+      in: path
+      format: uuid
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show a statement
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: statement found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: statement not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts":
     get:
       summary: List accounts
@@ -4962,6 +5272,13 @@ paths:
         '403':
           description: 'registration refused: the instance is closed to new registrations,
             or an invite code is required or invalid'
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: 'bad request: the user payload is missing, or device information
+            is missing or invalid'
           content:
             application/json:
               schema:
@@ -7801,6 +8118,7 @@ paths:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -7878,7 +8196,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -7989,7 +8309,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -8228,8 +8550,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -8343,8 +8663,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -10126,10 +10444,6 @@ paths:
                     investment_activity_label:
                       type: string
                       description: Activity label (e.g. Buy, Sell)
-                    category_id:
-                      type: string
-                      format: uuid
-                      description: Category ID
                     transfer_account_id:
                       type: string
                       format: uuid
@@ -10245,9 +10559,6 @@ paths:
                       type: string
                     investment_activity_label:
                       type: string
-                    category_id:
-                      type: string
-                      format: uuid
         required: true
     delete:
       summary: Delete trade
@@ -10421,7 +10732,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Transaction"
         '422':
-          description: validation error - missing required fields
+          description: validation error - missing required fields, malformed tag_ids,
+            or a tag, category or merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -10544,6 +10856,13 @@ paths:
                 "$ref": "#/components/schemas/Transaction"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - malformed tag_ids, or a tag, category or
+            merchant id the family cannot use
           content:
             application/json:
               schema:
