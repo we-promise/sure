@@ -177,9 +177,17 @@ jobs:
           printf '%s\n' "${files[@]}"
           bin/rails test "${files[@]}"
 
-  test_system:
+  # System tests run serially (they flake when parallel workers compete for
+  # the runner's CPUs), so they are split by file across several runners.
+  test_system_shard:
+    name: test_system (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3 ]
 
     env:
       PLAID_CLIENT_ID: foo
@@ -233,12 +241,39 @@ jobs:
           bin/rails db:seed
 
       - name: System tests
-        run: DISABLE_PARALLELIZATION=true bin/rails test:system
+        env:
+          SHARD: ${{ strategy.job-index }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          mapfile -t files < <(find test/system -name '*_test.rb' | LC_ALL=C sort | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No system tests in shard ${SHARD}/${SHARDS}" >&2
+            exit 1
+          fi
+          printf '%s\n' "${files[@]}"
+          # Unlike test:system, running test files directly skips test:prepare,
+          # which builds the Tailwind CSS the pages need.
+          bin/rails test:prepare
+          DISABLE_PARALLELIZATION=true bin/rails test "${files[@]}"
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
-          name: screenshots
+          name: screenshots-${{ matrix.shard }}
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
+
+  # Keeps a single "test_system" check for branch protection and reviewers.
+  test_system:
+    if: ${{ always() }}
+    needs: test_system_shard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check system test shards
+        env:
+          RESULT: ${{ needs.test_system_shard.result }}
+        run: |
+          echo "System test shards: ${RESULT}"
+          [ "$RESULT" = "success" ]
