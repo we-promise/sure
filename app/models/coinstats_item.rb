@@ -6,7 +6,11 @@ class CoinstatsItem < ApplicationRecord
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
-  encrypts :api_key, deterministic: true if encryption_ready?
+  if encryption_ready?
+    encrypts :api_key, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
+  end
 
   validates :name, presence: true
   validates :api_key, presence: true

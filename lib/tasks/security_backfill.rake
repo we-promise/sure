@@ -42,18 +42,36 @@ namespace :security do
       exit 1
     end
 
+    # Invalidate any previous completion flag before this run starts (not just
+    # on failure at the end): if a prior run already completed successfully
+    # and this run then fails or aborts partway through, leaving the old flag
+    # in place would let ActiveRecordEncryptionConfig.backfill_completed?
+    # report "complete" while this run's still-plaintext rows are unencrypted.
+    Setting.encryption_backfill_completed_version = nil unless dry_run
+
     results = {}
     puts "Starting security backfill (dry_run: #{dry_run}, batch_size: #{batch_size})..."
 
-    # Every model that declares `encrypts`, found at runtime so a provider
-    # added later is covered without editing this task. A model left out would
-    # keep plaintext rows that raise on every read once the keys are live.
-    encrypted_models_for_backfill.each do |model_class|
-      results[model_class.table_name.to_sym] =
-        backfill_model(model_class, model_class.encrypted_attributes.to_a, batch_size, dry_run)
+    # Field lists live in ActiveRecordEncryptionConfig::BACKFILL_MANIFEST
+    # (lib/active_record_encryption_config.rb), kept in sync with each model's
+    # `encrypts` declarations by test/lib/tasks/security_backfill_test.rb.
+    ActiveRecordEncryptionConfig::BACKFILL_MANIFEST.each do |key, (model_class_name, fields)|
+      results[key] = backfill_model(model_class_name.constantize, fields, batch_size, dry_run)
     end
 
+    results[:sessions] = backfill_model(Session, Session.encrypted_attributes.to_a, batch_size, dry_run)
     results[:session_ip_digests] = backfill_session_ip_digests(batch_size, dry_run)
+
+    all_succeeded = results.values.all? { |r| r[:failed_count].zero? }
+
+    # Only mark the backfill complete on a clean, non-dry-run pass: a partial
+    # failure leaves some rows still plaintext, and flipping the flag would
+    # disable the legacy-plaintext fallback (config/initializers/
+    # active_record_encryption.rb) for models that still need it, turning a
+    # readable row into a boot-time ActiveRecord::Encryption::Errors::Decryption.
+    if !dry_run && all_succeeded
+      Setting.encryption_backfill_completed_version = ActiveRecordEncryptionConfig::CURRENT_BACKFILL_VERSION
+    end
 
     # A row that fails here stays unreadable once the app runs with the keys,
     # so any failure makes the whole run fail.
@@ -66,20 +84,6 @@ namespace :security do
       results: results
     }.to_json)
     exit 1 unless failed_count.zero?
-  end
-
-  # Concrete base models with encrypted attributes. STI subclasses share their
-  # base class's table and attributes, so only the base class is listed.
-  # Classes that aren't reachable by their name (anonymous or ad hoc ones)
-  # are skipped.
-  def encrypted_models_for_backfill
-    Rails.autoloaders.main.eager_load_dir(Rails.root.join("app/models").to_s)
-
-    ApplicationRecord.descendants
-      .reject(&:abstract_class?)
-      .select { |model| model.name&.safe_constantize == model }
-      .select { |model| model.base_class == model && model.encrypted_attributes.present? }
-      .sort_by(&:name)
   end
 
   def backfill_model(model_class, fields, batch_size, dry_run, &filter_block)
