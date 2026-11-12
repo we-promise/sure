@@ -101,8 +101,10 @@ class RecurringTransaction::PriceChangeDetectorTest < ActiveSupport::TestCase
   end
 
   test "loads recent occurrences in a constant number of queries regardless of series count" do
-    3.times do
-      series = create_series(amount: 79.99, manual: false)
+    # Distinct names: idx_recurring_txns_acct_name makes (family, account,
+    # name, amount, currency) unique.
+    3.times do |i|
+      series = create_series(amount: 79.99, manual: false, name: "FIBER INTERNET #{i}")
       settle(series, 1.month.ago.to_date, 79.99)
       settle(series, Date.current, 79.99)
     end
@@ -117,11 +119,11 @@ class RecurringTransaction::PriceChangeDetectorTest < ActiveSupport::TestCase
   end
 
   private
-    def create_series(amount:, manual:)
+    def create_series(amount:, manual:, name: "FIBER INTERNET")
       due = Date.current + 20
 
       @family.recurring_transactions.create!(
-        name: "FIBER INTERNET",
+        name: name,
         account: @account,
         amount: amount,
         currency: "USD",
