@@ -1,0 +1,5 @@
+de:
+  web_push:
+    notification:
+      body: Eine neue Finanzmeldung ist verfügbar. Öffne Sure, um sie anzusehen.
+      test_body: Deine Testbenachrichtigung ist angekommen. Öffne Sure, um fortzufahren.

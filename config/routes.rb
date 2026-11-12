@@ -2,6 +2,10 @@ require "sidekiq/web"
 require "sidekiq/cron/web"
 
 Rails.application.routes.draw do
+  resources :web_push_subscriptions, only: [ :create, :show, :destroy ] do
+    post :test_notification, on: :member
+  end
+
   resources :questrade_items, only: [ :index, :new, :create, :show, :edit, :update, :destroy ] do
     collection do
       get :preload_accounts

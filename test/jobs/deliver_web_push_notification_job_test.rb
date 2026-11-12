@@ -1,0 +1,376 @@
+require "test_helper"
+require Rails.root.join("test/support/web_push_test_helper")
+
+class DeliverWebPushNotificationJobTest < ActiveJob::TestCase
+  include WebPushTestHelper
+
+  setup do
+    @user = users(:family_admin)
+    enable_web_push_preview(@user)
+    @insight = insights(:cash_flow_warning)
+    @subscription = register_web_push(user: @user)
+    WebPush::Client.stubs(:configured?).returns(true)
+    @client = mock
+    WebPush::Client.stubs(:new).returns(@client)
+  end
+
+  test "enqueues only once for a subscription and material insight version" do
+    assert_no_enqueued_jobs { WebPushDelivery.record_for_insight!(@insight) }
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      2.times { DeliverWebPushNotificationJob.enqueue_for(@insight) }
+    end
+    assert_equal 1, WebPushDelivery.where(web_push_subscription: @subscription, insight: @insight).count
+  end
+
+  test "an enqueue failure can be recovered by a later generation pass" do
+    DeliverWebPushNotificationJob.stubs(:perform_later).returns(false)
+    delivery = enqueue_delivery
+    assert_equal "enqueue_failed", delivery.reload.status
+    delivery.update_columns(created_at: 2.days.ago)
+    DeliverWebPushNotificationJob.unstub(:perform_later)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+    assert_equal "pending", delivery.reload.status
+    @client.expects(:deliver).returns(:accepted)
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    assert_equal "accepted", delivery.reload.status
+  end
+
+  test "delivers generic lock screen content and a same origin insight link" do
+    delivery = enqueue_delivery
+    @client.expects(:deliver).with do |subscription:, payload:|
+      subscription.id == @subscription.id &&
+        payload[:title] == "Sure" &&
+        payload[:body] == I18n.t("web_push.notification.body") &&
+        payload[:data][:path] == "/insights#insight_#{@insight.id}" &&
+        !payload.to_json.include?(@insight.title) && !payload.to_json.include?(@insight.body)
+    end.returns(:accepted)
+    2.times { DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id) }
+    assert_equal "accepted", delivery.reload.status
+  end
+
+  test "localizes the generic payload with the family locale" do
+    @insight.family.update!(locale: "de")
+    delivery = enqueue_delivery
+    @client.expects(:deliver).with do |subscription:, payload:|
+      payload[:body] == I18n.t("web_push.notification.body", locale: :de)
+    end.returns(:accepted)
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+  end
+
+  test "a material version can be delivered again without replaying the old version" do
+    first = enqueue_delivery
+    @insight.increment!(:notification_version)
+    WebPushDelivery.record_for_insight!(@insight.reload)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.enqueue_for(@insight.reload)
+    end
+    assert_equal 2, WebPushDelivery.where(insight: @insight).count
+    @client.expects(:deliver).never
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: first.id)
+  end
+
+  test "budget warnings require independent opt in even at high priority" do
+    @insight.update!(insight_type: "budget_at_risk")
+    %w[high medium].each do |priority|
+      @insight.update!(priority: priority)
+      assert_no_enqueued_jobs do
+        WebPushDelivery.record_for_insight!(@insight)
+        DeliverWebPushNotificationJob.enqueue_for(@insight)
+      end
+    end
+    @user.update!(preferences: @user.preferences.merge("web_push_budget_warnings_enabled" => true))
+    WebPushDelivery.record_for_insight!(@insight)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.enqueue_for(@insight)
+    end
+  end
+
+  test "never sends budget on track or ordinary medium priority insights" do
+    @user.update!(preferences: @user.preferences.merge("web_push_budget_warnings_enabled" => true))
+    [ { insight_type: "budget_on_track", priority: "high" },
+      { insight_type: "spending_anomaly", priority: "medium" },
+      { insight_type: "budget_at_risk", priority: "low" } ].each do |attributes|
+      @insight.update!(attributes)
+      assert_no_enqueued_jobs do
+        WebPushDelivery.record_for_insight!(@insight)
+        DeliverWebPushNotificationJob.enqueue_for(@insight)
+      end
+    end
+  end
+
+  test "budget opt out after enqueue prevents delivery" do
+    @insight.update!(insight_type: "budget_at_risk")
+    @user.update!(preferences: @user.preferences.merge("web_push_budget_warnings_enabled" => true))
+    delivery = enqueue_delivery
+    @user.update!(preferences: @user.preferences.merge("web_push_budget_warnings_enabled" => false))
+    @client.expects(:deliver).never
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+  end
+
+  [ { status: "read" }, { status: "dismissed" }, { status: "expired" },
+    { metadata: { account_id: "private_account" } }, { family_id: "other_family" } ].each do |attributes|
+    test "send rechecks insight eligibility after #{attributes.keys.first} changes to #{attributes.values.first}" do
+      delivery = enqueue_delivery
+      changed = attributes.deep_dup
+      changed[:metadata] = { account_id: accounts(:connected).id } if changed[:metadata]
+      changed[:family_id] = families(:empty).id if changed[:family_id]
+      @insight.update!(changed)
+      @client.expects(:deliver).never
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    end
+  end
+
+  test "preview opt out after enqueue prevents delivery" do
+    delivery = enqueue_delivery
+    @user.update!(preferences: {})
+    @client.expects(:deliver).never
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+  end
+
+  test "deactivating the user after enqueue prevents delivery" do
+    delivery = enqueue_delivery
+    @user.update_column(:active, false)
+    @client.expects(:deliver).never
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+  end
+
+  test "expired revoked or replaced sessions cannot receive a queued notification" do
+    delivery = enqueue_delivery
+    @client.expects(:deliver).never
+    @subscription.session.update_columns(updated_at: 31.days.ago)
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    @subscription.session.touch
+    attributes = @subscription.attributes.symbolize_keys.slice(:endpoint, :p256dh, :auth)
+    register_web_push(user: users(:family_member), **attributes)
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+  end
+
+  test "self hosted mode delivers browser push independently of APNs restrictions" do
+    Rails.application.config.stubs(:app_mode).returns("self_hosted".inquiry)
+    delivery = enqueue_delivery
+    @client.expects(:deliver).returns(:accepted)
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    assert_equal "accepted", delivery.reload.status
+  end
+
+  test "gone subscriptions are removed after provider rejection" do
+    delivery = enqueue_delivery
+    @client.expects(:deliver).returns(:gone)
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    assert_not WebPushSubscription.exists?(@subscription.id)
+  end
+
+  test "transient failures schedule a bounded retry without marking accepted" do
+    delivery = enqueue_delivery
+    @client.expects(:deliver).raises(WebPush::Client::TransientError)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    end
+    assert_not_equal "accepted", delivery.reload.status
+  end
+
+  test "five transient provider attempts fail terminally and cannot replay" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    @client.expects(:deliver).raises(WebPush::Client::TransientError).times(5)
+
+    assert_performed_jobs 5, only: DeliverWebPushNotificationJob do
+      perform_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.perform_later(web_push_delivery_id: delivery.id)
+      end
+    end
+
+    assert_equal "failed", delivery.reload.status
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      DeliverWebPushNotificationJob.enqueue_for(@insight)
+    end
+    assert_equal "failed", delivery.reload.status
+  end
+
+  test "recovered jobs share the provider attempt budget with the interrupted retry chain" do
+    delivery = enqueue_delivery
+    @client.expects(:deliver).raises(WebPush::Client::TransientError).times(5)
+    original_job = DeliverWebPushNotificationJob.new(web_push_delivery_id: delivery.id)
+    4.times { original_job.perform_now }
+    clear_enqueued_jobs
+
+    travel 16.minutes do
+      assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      end
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    end
+
+    assert_equal "failed", delivery.reload.status
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+  end
+
+  test "an interrupted provider call consumes its durable attempt before recovery" do
+    delivery = enqueue_delivery
+    sequence = sequence("provider calls")
+    @client.expects(:deliver).raises(RuntimeError, "Worker interrupted").once.in_sequence(sequence)
+    @client.expects(:deliver).raises(WebPush::Client::TransientError).times(4).in_sequence(sequence)
+
+    assert_raises(RuntimeError) do
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    end
+
+    travel 16.minutes do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      replacement_job = DeliverWebPushNotificationJob.new(web_push_delivery_id: delivery.id)
+      4.times { replacement_job.perform_now }
+    end
+
+    assert_equal "failed", delivery.reload.status
+  end
+
+  test "an in-flight attempt cannot be duplicated or reclaimed just because its queue claim is old" do
+    delivery = enqueue_delivery
+    delivery.update!(enqueued_at: 1.hour.ago)
+    @client.expects(:deliver).once.with do |**_arguments|
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+        DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      end
+      true
+    end.returns(:accepted)
+
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+
+    assert_equal "accepted", delivery.reload.status
+    assert_equal 1, delivery.provider_attempts
+  end
+
+  test "a gone response does not delete credentials refreshed during provider IO" do
+    delivery = enqueue_delivery
+    @client.expects(:deliver).with do |**_arguments|
+      travel 1.second do
+        register_web_push(user: @user, session: @subscription.session, endpoint: @subscription.endpoint)
+      end
+      true
+    end.returns(:gone)
+
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+
+    assert WebPushSubscription.exists?(@subscription.id)
+    assert_equal "rejected", delivery.reload.status
+  end
+
+  test "an abandoned pending claim is recovered after fifteen minutes" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    travel 16.minutes do
+      assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      end
+      assert_equal "pending", delivery.reload.status
+      assert_operator delivery.enqueued_at, :>, 1.minute.ago
+      @client.expects(:deliver).returns(:accepted)
+      DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      assert_equal "accepted", delivery.reload.status
+    end
+  end
+
+  test "recovery preserves a recent pending claim without queueing it twice" do
+    delivery = enqueue_delivery
+    assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+    assert_equal "pending", delivery.reload.status
+  end
+
+  test "an unclaimed pending delivery is recovered without waiting for the claim timeout" do
+    WebPushDelivery.record_for_insight!(@insight)
+    delivery = WebPushDelivery.find_by!(web_push_subscription: @subscription, insight: @insight,
+      insight_version: @insight.notification_version)
+    assert_nil delivery.enqueued_at
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+    assert_equal "pending", delivery.reload.status
+    assert_not_nil delivery.enqueued_at
+  end
+
+  test "recovery marks newly ineligible pending work skipped" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    @insight.mark_read!
+    @client.expects(:deliver).never
+    travel 16.minutes do
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+        DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      end
+    end
+    assert_equal "skipped", delivery.reload.status
+  end
+
+  %w[accepted rejected failed skipped].each do |terminal_status|
+    test "recovery and job replays preserve a terminal #{terminal_status} result" do
+      delivery = enqueue_delivery
+      clear_enqueued_jobs
+      delivery.update!(status: terminal_status, enqueued_at: 1.day.ago)
+      @client.expects(:deliver).never
+      assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+        DeliverWebPushNotificationJob.enqueue_for(@insight)
+        DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+      end
+      assert_equal terminal_status, delivery.reload.status
+    end
+  end
+
+  test "configuration removed after enqueue prevents delivery" do
+    delivery = enqueue_delivery
+    WebPush::Client.stubs(:configured?).returns(false)
+    @client.expects(:deliver).never
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+  end
+
+  test "configuration outages preserve pending attempts until recovery" do
+    delivery = enqueue_delivery
+    clear_enqueued_jobs
+    WebPush::Client.stubs(:configured?).returns(false)
+    @client.expects(:deliver).never
+    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    assert_equal "pending", delivery.reload.status
+    assert_equal 0, delivery.provider_attempts
+    travel 16.minutes do
+      assert_no_enqueued_jobs { DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family) }
+      assert_equal "pending", delivery.reload.status
+      WebPush::Client.stubs(:configured?).returns(true)
+      assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+        DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+      end
+    end
+  end
+
+  test "configuration outages preserve enqueue failures for later recovery" do
+    DeliverWebPushNotificationJob.stubs(:perform_later).returns(false)
+    delivery = enqueue_delivery
+    assert_equal "enqueue_failed", delivery.reload.status
+    WebPush::Client.stubs(:configured?).returns(false)
+    DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    assert_equal "enqueue_failed", delivery.reload.status
+    WebPush::Client.stubs(:configured?).returns(true)
+    DeliverWebPushNotificationJob.unstub(:perform_later)
+    assert_enqueued_jobs 1, only: DeliverWebPushNotificationJob do
+      DeliverWebPushNotificationJob.retry_enqueue_failures_for(@insight.family)
+    end
+  end
+
+  private
+    def enqueue_delivery
+      WebPushDelivery.record_for_insight!(@insight)
+      DeliverWebPushNotificationJob.enqueue_for(@insight)
+      WebPushDelivery.find_by!(web_push_subscription: @subscription, insight: @insight,
+        insight_version: @insight.notification_version)
+    end
+end

@@ -1,0 +1,35 @@
+<%= settings_section title: t("web_push.title"), subtitle: t("web_push.description") do %>
+  <div class="space-y-4"
+       data-controller="web-push"
+       data-web-push-public-key-value="<%= @web_push_public_key %>"
+       data-web-push-registrations-value="<%= @web_push_registrations.to_json %>"
+       data-web-push-url-value="<%= web_push_subscriptions_path %>"
+       data-web-push-messages-value="<%= t("web_push.status").merge(t("web_push.errors")).to_json %>">
+    <%= render DS::Pill.new(label: t("web_push.preview")) %>
+    <p class="text-sm text-secondary" role="status" aria-live="polite" data-web-push-target="status"><%= t("web_push.status.checking") %></p>
+    <div class="hidden" data-web-push-target="iosGuidance">
+      <%= render DS::Alert.new(message: t("web_push.ios_guidance"), variant: :info) %>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <%= render DS::Button.new(text: t("web_push.enable"), disabled: true,
+            data: { action: "web-push#enable", web_push_target: "enable" }) %>
+      <%= render DS::Button.new(text: t("web_push.disable"), variant: :secondary, disabled: true,
+            data: { action: "web-push#disable", web_push_target: "disable" }) %>
+      <%= render DS::Button.new(text: t("web_push.test"), variant: :secondary, disabled: true,
+            data: { action: "web-push#test", web_push_target: "test" }) %>
+    </div>
+    <p class="text-sm text-secondary"><%= t("web_push.session_notice") %></p>
+    <%= form_with url: settings_preferences_path, method: :patch,
+          data: { controller: "auto-submit-form" } do %>
+      <label for="user_web_push_budget_warnings_enabled" class="flex cursor-pointer items-center justify-between gap-4">
+        <div class="text-sm space-y-1">
+          <p class="font-medium text-primary"><%= t("web_push.budget_title") %></p>
+          <p class="text-secondary"><%= t("web_push.budget_description") %></p>
+        </div>
+        <%= render DS::Toggle.new(id: "user_web_push_budget_warnings_enabled",
+              name: "user[web_push_budget_warnings_enabled]", checked: @user.web_push_budget_warnings_enabled?,
+              data: { auto_submit_form_target: "auto" }) %>
+      </label>
+    <% end %>
+  </div>
+<% end %>

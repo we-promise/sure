@@ -33,6 +33,9 @@ gem "lookbook", "2.3.11"
 
 gem "hotwire_combobox"
 
+# Standards-based browser push encryption and VAPID signing
+gem "web-push", "~> 3.1", require: "web_push"
+
 # Background Jobs
 gem "connection_pool", "~> 2.5" # pin to 2.x; 3.0 breaks sidekiq 8.x
 gem "sidekiq"
