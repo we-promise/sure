@@ -249,6 +249,20 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     assert_equal "once", Preset.detect(@recurring).key
   end
 
+  test "changing a paid one-off to an installment does not unlock its date" do
+    due = Date.new(2026, 12, 1)
+    Preset.apply(@recurring, preset: "once", once_on: due)
+    @recurring.save!
+    RecurringTransaction::Allocator.new(@recurring.recurring_occurrences.find_by!(due_on: due)).mark_paid!
+
+    @recurring.bill_type = "installment"
+
+    assert_not Preset.apply(@recurring, preset: "once", once_on: due + 10)
+    assert_includes @recurring.errors.full_messages,
+                    I18n.t("recurring_transactions.update.once_date_locked")
+    assert_equal due, @recurring.reload.anchor_date
+  end
+
   test "an earlier paid occurrence does not lock a one-off's date" do
     travel_to Date.new(2026, 11, 13) do
       RecurringTransaction::OccurrenceGenerator.new(@recurring).generate!

@@ -74,6 +74,10 @@ class RecurringTransaction
         was_once = once_schedule?(recurring)
         once_date = nil
         if preset == ONCE
+          # The caller may already have changed bill type or the end cap in
+          # memory. The lock has to see the schedule that is saved, or marking
+          # a paid one-off as an installment would let its date move.
+          was_once = persisted_once_schedule?(recurring)
           once_date = resolve_once_date(recurring, once_on, was_once)
           if once_date.nil?
             recurring.errors.add(:base, I18n.t("recurring_transactions.create.due_date_required"))
@@ -82,8 +86,8 @@ class RecurringTransaction
 
           # A paid one-off is that payment. Moving the date would keep the
           # paid row and generate a second, open one, so the change is refused.
-          if was_once && once_date != current_once_date(recurring) &&
-             settled_occurrence?(recurring, current_once_date(recurring))
+          locked_on = was_once ? persisted_once_date(recurring) : current_once_date(recurring)
+          if was_once && once_date != locked_on && settled_occurrence?(recurring, locked_on)
             recurring.errors.add(:base, I18n.t("recurring_transactions.update.once_date_locked"))
             return false
           end
@@ -162,6 +166,28 @@ class RecurringTransaction
 
         def current_once_date(recurring)
           recurring.anchor_date || recurring.next_expected_date
+        end
+
+        # The once date as stored, ignoring an anchor the caller has already
+        # reassigned. next_expected_date is never null.
+        def persisted_once_date(recurring)
+          recurring.attribute_in_database("anchor_date") || recurring.attribute_in_database("next_expected_date")
+        end
+
+        # once_schedule? read against the saved row. Rules built in memory
+        # during this edit are not part of it; a rule marked for destruction
+        # still is, until the save.
+        def persisted_once_schedule?(recurring)
+          return false unless recurring.persisted?
+          return false if recurring.attribute_in_database("bill_type") == "installment"
+          return false unless recurring.attribute_in_database("end_mode") == "after_count" &&
+                              recurring.attribute_in_database("end_after_count") == 1
+
+          rules = recurring.recurrence_rules.reject(&:new_record?)
+          return false unless rules.size == 1
+
+          rule = rules.first
+          rule.frequency == "yearly" && rule.interval == 1 && rule.day_of_month.present? && rule.weekday.blank?
         end
 
         # Whether the occurrence on `date` is closed or carries an allocation,
