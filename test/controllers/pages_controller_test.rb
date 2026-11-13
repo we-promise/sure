@@ -245,7 +245,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard skips the data queries of hidden widgets" do
-    %w[cashflow_sankey outflows_donut money_flow spending_trend].each { |key| @user.update_dashboard_section_hidden(key, true) }
+    %w[cashflow_sankey outflows_donut cashflow_donut money_flow spending_trend].each { |key| @user.update_dashboard_section_hidden(key, true) }
     IncomeStatement.any_instance.expects(:income_totals).never
     IncomeStatement.any_instance.expects(:expense_totals).never
     IncomeStatement.any_instance.expects(:net_category_totals).never
@@ -337,6 +337,44 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :ok
     assert_select "[data-controller='sankey-chart']"
+  end
+
+  test "dashboard renders the cash flow rings with a surplus closing the outflows ring" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -100_000, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section"
+    assert_select "#segment_surplus"
+    assert_select "#segment_deficit", count: 0
+
+    inflows, outflows = cashflow_donut_rings
+    assert inflows.any? { |s| s["id"] == "income_#{categories(:income).id}" }
+    assert_equal "surplus", outflows.last["id"]
+    assert_nil outflows.last["filter_value"]
+    assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
+  end
+
+  test "dashboard renders the cash flow rings with a deficit closing the inflows ring" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -100, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Rent", amount: 100_000, category: categories(:food_and_drink))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#segment_deficit"
+    assert_select "#segment_surplus", count: 0
+
+    inflows, outflows = cashflow_donut_rings
+    assert_equal "deficit", inflows.last["id"]
+    assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
+  end
+
+  def cashflow_donut_rings
+    chart = css_select("#cashflow-donut-section [data-controller='donut-chart']").first
+    JSON.parse(chart["data-donut-chart-rings-value"])
   end
 
   test "dashboard renders sankey chart zoom controls and stable node ids" do
