@@ -96,6 +96,8 @@ class EntryUnsplitConcurrencyTest < ActiveSupport::TestCase
           rescue Entry::SplitPartTransferredError
             nil
           rescue => e
+            # Only the unsplit's errors count. The confirm or unlink may fail
+            # because the unsplit removed its transfer first.
             errors << e if collect
           end
         end

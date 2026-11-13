@@ -1104,6 +1104,18 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
   end
 
+  test "update leaves the amount of a transfer whose leg is a split part" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    transfer = link_split_part_to_loan(part)
+
+    patch transfer_url(transfer), params: { transfer: { amount: "75", notes: "Principal" } }
+
+    assert_equal 60, part.reload.amount
+    assert_equal(-60, transfer.inflow_transaction.entry.reload.amount)
+    assert_equal "Principal", transfer.reload.notes
+  end
+
   private
     def create_confirmed_transfer(to:)
       outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
@@ -1128,17 +1140,5 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       create_transaction(account: account, amount: 5, name: "Transfer fee").transaction.tap do |fee|
         fee.update!(transfer: transfer)
       end
-    end
-
-    test "update leaves the amount of a transfer whose leg is a split part" do
-      parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
-      part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
-      transfer = link_split_part_to_loan(part)
-
-      patch transfer_url(transfer), params: { transfer: { amount: "75", notes: "Principal" } }
-
-      assert_equal 60, part.reload.amount
-      assert_equal(-60, transfer.inflow_transaction.entry.reload.amount)
-      assert_equal "Principal", transfer.reload.notes
     end
 end
