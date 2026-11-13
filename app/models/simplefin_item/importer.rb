@@ -545,10 +545,22 @@ class SimplefinItem::Importer
       # connection keeps failing. Split it into ranges the Bridge accepts, and
       # stop at the same one-year lookback as the chunked history import.
       start_date = [ determine_sync_start_date, 1.year.ago.beginning_of_day ].max
+      # A previous attempt may have imported the oldest windows before failing.
+      # Resume from the end of the last fully imported one instead of
+      # re-requesting the whole gap.
+      resume_at = simplefin_item.regular_sync_resume_at
+      start_date = [ start_date, resume_at ].max if resume_at
       windows = request_windows(start_date, Time.current)
       log_sync_event("info", "SimpleFIN regular sync from #{start_date.to_date} in #{windows.size} request(s)",
-        last_synced_at: simplefin_item.last_synced_at, start_date: start_date.to_date, requests: windows.size)
+        last_synced_at: simplefin_item.last_synced_at, start_date: start_date.to_date, requests: windows.size,
+        resumed_from: resume_at&.to_date)
 
+      # The resume point only moves past windows that were fully imported:
+      # a complete provider response with every account imported. A window
+      # that skipped an account, or came back with provider errors, leaves
+      # data behind, so a failure in a later window must retry from before
+      # it instead of resuming past it.
+      complete = true
       windows.each do |window_start, window_end|
         accounts_data = fetch_accounts_data(start_date: window_start, end_date: window_end)
         return if accounts_data.nil? # Error already handled
@@ -562,6 +574,7 @@ class SimplefinItem::Importer
         stats["total_accounts"] = [ stats["total_accounts"].to_i, count ].max
 
         # Import accounts (merges transactions/holdings into existing rows), skipping failures per-account
+        skipped_before = stats.fetch("accounts_skipped", 0)
         accounts_data[:accounts]&.each do |account_data|
           begin
             import_account(account_data)
@@ -579,7 +592,17 @@ class SimplefinItem::Importer
             persist_stats!
           end
         end
+
+        complete &&= !partial_provider_response?(accounts_data) &&
+          stats.fetch("accounts_skipped", 0) == skipped_before
+        # Only a fully imported window moves the resume point; a partial one
+        # leaves the marker where it was, so a later failure retries it.
+        persist_regular_sync_resume_at(window_end) if complete
       end
+
+      # Every window is in. Nothing left to resume, and last_synced_at moves
+      # once the sync completes.
+      clear_regular_sync_resume_at
     end
 
     # Splits start_date..end_date into consecutive ranges of at most
@@ -847,6 +870,18 @@ class SimplefinItem::Importer
       # For subsequent syncs, fetch from last sync date with a buffer
       # Use buffer to ensure we don't miss any late-posting transactions
       simplefin_item.last_synced_at - sync_buffer_period.days
+    end
+
+    # Records the end of a fully imported regular-sync window on the item, so
+    # a later failure resumes from there. The marker survives the failed sync:
+    # last_synced_at is derived from the latest completed sync, so it does
+    # not move when a run fails partway through.
+    def persist_regular_sync_resume_at(window_end)
+      simplefin_item.update!(regular_sync_resume_at: window_end)
+    end
+
+    def clear_regular_sync_resume_at
+      simplefin_item.update!(regular_sync_resume_at: nil) if simplefin_item.regular_sync_resume_at
     end
 
     def normalize_balance_date(value)

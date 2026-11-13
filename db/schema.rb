@@ -2531,6 +2531,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.boolean "pending_account_setup", default: false, null: false
     t.jsonb "raw_institution_payload"
     t.jsonb "raw_payload"
+    t.datetime "regular_sync_resume_at"
     t.boolean "scheduled_for_deletion", default: false
     t.string "status", default: "good"
     t.date "sync_start_date"
