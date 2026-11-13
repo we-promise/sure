@@ -145,6 +145,8 @@ class Transaction::Search
   end
   # Automatic-categorization provenance filter values (used by the view)
   AI_STATUSES = %w[current history].freeze
+  # An automatic category enrichment that is still the transaction's category.
+  CURRENT_AUTO_CATEGORY_SQL = "de.value = to_jsonb(transactions.category_id::text) AND #{Transaction::UNSUPERSEDED_ENRICHMENT_SQL}".freeze
 
   ATTACHMENT_STATUSES = %w[with without].freeze
 
@@ -317,11 +319,11 @@ class Transaction::Search
 
       case wanted.sort
       when [ "current" ]
-        query.where(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+        query.where(auto_enrichment_exists_sql(CURRENT_AUTO_CATEGORY_SQL), sources: Transaction::AUTO_CATEGORY_SOURCES)
       when [ "history" ]
         query
           .where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
-          .where.not(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+          .where.not(auto_enrichment_exists_sql(CURRENT_AUTO_CATEGORY_SQL), sources: Transaction::AUTO_CATEGORY_SOURCES)
       else
         query.where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
       end

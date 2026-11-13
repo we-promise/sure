@@ -8,10 +8,10 @@ and chart releases follow Sure’s [calendar versioning](../../docs/releases/ver
 ## [Unreleased]
 
 ### Changed
-- Add here
+- Pipelock's MCP listener now starts with Pipelock 3.2+, which refuses a non-loopback listener without auth. It defaults to `pipelock.mcpProxy.allowUnauthenticated: true`; rendering fails with a clear message if neither option is set.
 
 ### Added
-- Add here
+- `pipelock.mcpProxy.authTokenSecret`: require a Pipelock listener token from an existing Secret.
 
 ## [0.7.4] - 2026-08-31
 

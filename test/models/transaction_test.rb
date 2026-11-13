@@ -571,6 +571,111 @@ class TransactionTest < ActiveSupport::TestCase
     assert_empty scope.category_from("ai", metadata: { confidence: 0.5 }).pluck(:id)
   end
 
+
+  test "a category changed away from the AI's and back again is no longer the AI's" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    assert Transaction.where(id: transaction.id).category_from("ai").exists?, "precondition: the AI's category"
+
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+
+    assert_not Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "an automatic categorizer's own change keeps its claim" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "bayes", metadata: { locked_by_bayes: true })
+
+    assert Transaction.where(id: transaction.id).category_from("bayes", metadata: { locked_by_bayes: true }).exists?
+  end
+
+  test "an automatic categorizer setting its category again reclaims it" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    assert Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "a category changed away from the AI's and back again stays in the AI history" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+    family = transaction.entry.account.family
+
+    assert_includes Transaction::Search.new(family, filters: { ai_status: [ "history" ] }).transactions_scope.ids, transaction.id
+    assert_not_includes Transaction::Search.new(family, filters: { ai_status: [ "current" ] }).transactions_scope.ids, transaction.id
+  end
+
+  test "clearing the AI cache keeps a lock on a category the user changed away from and back" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.lock_attr!(:category_id)
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+
+    transaction.reload.clear_ai_cache
+
+    assert transaction.reload.locked?(:category_id)
+  end
+
+  test "a category merge ends a claim the AI recorded on the category merged into" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    # A claim recorded before category changes ended claims: the category moved on without it.
+    transaction.update_column(:category_id, categories(:food_and_drink).id)
+
+    Transaction.reassign_category!(Transaction.where(id: transaction.id), categories(:income).id)
+
+    assert_equal categories(:income), transaction.reload.category
+    assert_not Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "clearing the AI cache locks the transaction before its enrichments" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    statements = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| statements << payload[:sql] }
+
+    begin
+      transaction.reload.clear_ai_cache
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+    lock_at = statements.index { |sql| sql.match?(/FROM "transactions".*FOR UPDATE/m) }
+    delete_at = statements.index { |sql| sql.match?(/DELETE FROM "data_enrichments"/) }
+    assert lock_at, "locks the transaction"
+    assert delete_at, "deletes the AI's enrichments"
+    assert_operator lock_at, :<, delete_at
+  end
+
+  test "clearing the AI cache of a transaction deleted since it was loaded clears nothing" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    stale = Transaction.find(transaction.id)
+    Transaction.where(id: transaction.id).delete_all
+
+    assert_equal 0, stale.clear_ai_cache
+  end
+
+  test "clearing Bayes' locks keeps a lock on a category the user changed away from and back" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "bayes", metadata: { locked_by_bayes: true })
+    transaction.lock_attr!(:category_id)
+
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+    transaction.lock_attr!(:category_id)
+    transaction.entry.account.family.clear_bayes_locks!
+
+    assert transaction.reload.locked?(:category_id)
+  end
+
   private
     # Whether each SQL form of "is this transaction pending?" says it is.
     def sql_pending_answers(transaction)
