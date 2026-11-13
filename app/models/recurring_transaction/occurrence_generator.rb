@@ -46,9 +46,11 @@ class RecurringTransaction
       scope = series.recurring_occurrences
                     .open_status
                     .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-      # A one-payment plan has nowhere else to land. Dropping only future rows
-      # would keep the old date beside the date it moved to.
-      scope = scope.where("due_on >= ?", Date.current) unless single_payment?
+      # Moving a plan that was already one payment has to drop its old date,
+      # even when that date is past, or the old row sits beside the new one.
+      # Converting a repeating schedule is the opposite: those past rows are
+      # unpaid obligations the new one-date schedule cannot recreate.
+      scope = scope.where("due_on >= ?", Date.current) unless replacing_existing_single_payment?
 
       scope.delete_all
 
@@ -66,6 +68,26 @@ class RecurringTransaction
     private
       def single_payment?
         series.ends_after_count? && series.end_after_count == 1
+      end
+
+      # The cap is already stored by the time regeneration runs, so the
+      # current row cannot say whether this edit introduced it. The values
+      # from before the save can. With no save on this instance, the current
+      # cap is the only state there is.
+      def replacing_existing_single_payment?
+        return false unless single_payment?
+
+        previously_single_payment?
+      end
+
+      def previously_single_payment?
+        mode, count = if series.saved_changes?
+          [ series.attribute_before_last_save("end_mode"), series.attribute_before_last_save("end_after_count") ]
+        else
+          [ series.end_mode, series.end_after_count ]
+        end
+
+        mode.to_s == "after_count" && count == 1
       end
 
       def default_horizon(schedule)
@@ -121,6 +143,11 @@ class RecurringTransaction
       # beyond the window, so a kept row's nearest occurrence just outside it
       # is not mistaken for a farther one inside.
       def stood_in_for(schedule, from, through)
+        # Past rows kept while collapsing a repeating bill onto one date are
+        # earlier obligations, not stand-ins for that date. A yearly half
+        # cycle would otherwise swallow the new date.
+        return Set.new if single_payment? && !previously_single_payment?
+
         reach = half_cycle(schedule)
         nearby = schedule.occurrence_pairs_between(from - reach, through + reach)
         current = nearby.map(&:original_due_on).to_set

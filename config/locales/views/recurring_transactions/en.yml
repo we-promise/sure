@@ -164,6 +164,7 @@ en:
       frequency_month_label: "In"
     update:
       success: Bill updated
+      once_date_locked: This payment is already recorded, so its date can't be moved.
       success_with_siblings:
         one: "Bill updated, and the payment link was copied to 1 other bill"
         other: "Bill updated, and the payment link was copied to %{count} other bills"

@@ -236,6 +236,19 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     assert_empty @recurring.recurrence_rules
   end
 
+  test "moving a paid one-off is refused and leaves the schedule untouched" do
+    due = Date.new(2026, 12, 1)
+    Preset.apply(@recurring, preset: "once", once_on: due)
+    @recurring.save!
+    RecurringTransaction::Allocator.new(@recurring.recurring_occurrences.find_by!(due_on: due)).mark_paid!
+
+    assert_not Preset.apply(@recurring, preset: "once", once_on: due + 10)
+    assert_includes @recurring.errors.full_messages,
+                    I18n.t("recurring_transactions.update.once_date_locked")
+    assert_equal due, @recurring.reload.anchor_date
+    assert_equal "once", Preset.detect(@recurring).key
+  end
+
   test "leaving once drops the one-payment cap" do
     due = Date.new(2026, 12, 1)
     Preset.apply(@recurring, preset: "once", once_on: due)

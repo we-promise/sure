@@ -79,6 +79,13 @@ class RecurringTransaction
             recurring.errors.add(:base, I18n.t("recurring_transactions.create.due_date_required"))
             return false
           end
+
+          # A paid one-off is that payment. Moving the date would keep the
+          # paid row and generate a second, open one, so the change is refused.
+          if was_once && once_date != current_once_date(recurring) && settled_occurrence?(recurring)
+            recurring.errors.add(:base, I18n.t("recurring_transactions.update.once_date_locked"))
+            return false
+          end
         end
 
         reference = recurring.anchor_date || recurring.last_occurrence_date || Date.current
@@ -150,6 +157,18 @@ class RecurringTransaction
 
           rule = rules.first
           rule.frequency == "yearly" && rule.interval == 1 && rule.day_of_month.present? && rule.weekday.blank?
+        end
+
+        def current_once_date(recurring)
+          recurring.anchor_date || recurring.next_expected_date
+        end
+
+        # Closed, or carrying an allocation. Either one is a payment the
+        # generator will not delete.
+        def settled_occurrence?(recurring)
+          occurrences = recurring.recurring_occurrences
+          occurrences.closed.exists? ||
+            RecurringAllocation.where(recurring_occurrence_id: occurrences.select(:id)).exists?
         end
 
         # A blank date keeps the series' current anchor. A date that was typed
