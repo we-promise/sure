@@ -259,9 +259,21 @@ class Provider::Simplefin
     # manual sync (with user retry) succeeds.
     def with_retries(operation_name, max_retries: MAX_RETRIES, backoff: true)
       retries = 0
+      server_error_count = 0
+      last_server_error = nil
 
       begin
-        yield retries
+        result = yield retries
+        # A success after server-error retries is a recovered incident — record
+        # it so support can inspect it in the debug log, not just process logs.
+        if server_error_count > 0
+          capture_server_error(
+            operation_name,
+            level: "warn",
+            message: "recovered after #{server_error_count} server-error retries (last: #{last_server_error})"
+          )
+        end
+        result
       rescue *RETRYABLE_ERRORS => e
         retries += 1
 
@@ -290,8 +302,13 @@ class Provider::Simplefin
         # sync and loses that import window until the next scheduled run.
         if e.error_type == :server_error
           retries += 1
+          server_error_count += 1
+          last_server_error = e.message
           if retries <= max_retries
-            delay = [ 30 * (2 ** (retries - 1)), 180 ].min
+            # Same 0-25% jitter as calculate_retry_delay so concurrent syncs
+            # don't hammer a recovering bridge in lockstep.
+            base_delay = 30 * (2 ** (retries - 1))
+            delay = [ base_delay + base_delay * rand * 0.25, 180 ].min
             Rails.logger.warn(
               "SimpleFin API: #{operation_name} got '#{e.message}' (attempt #{retries}/#{max_retries}). Retrying in #{delay}s..."
             )
@@ -301,6 +318,11 @@ class Provider::Simplefin
           Rails.logger.error(
             "SimpleFin API: #{operation_name} still failing after #{max_retries} retries: #{e.message}"
           )
+          capture_server_error(
+            operation_name,
+            level: "error",
+            message: "still failing after #{max_retries} server-error retries: #{e.message}"
+          )
         end
         # Preserve original error type and message.
         raise
@@ -309,6 +331,21 @@ class Provider::Simplefin
         Rails.logger.error "SimpleFin API: #{operation_name} failed with non-retryable error: #{e.class}: #{e.message}"
         raise SimplefinError.new("Exception during #{operation_name}: #{e.message}", :request_failed)
       end
+    end
+
+    # Record server-error incidents in the debug log so support can inspect
+    # them (AGENTS.md: DebugLogEntry.capture for support-relevant failures and
+    # partial responses). Family/account context is not available at the HTTP
+    # client layer; the importer records that on the failure path.
+    def capture_server_error(operation_name, level:, message:)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: level,
+        message: "SimpleFin #{operation_name}: #{message}",
+        source: self.class.name,
+        provider_key: "simplefin",
+        metadata: { operation: operation_name }
+      )
     end
 
     # Calculate delay with exponential backoff and jitter

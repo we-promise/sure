@@ -102,6 +102,9 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
 
     @provider.stubs(:sleep)
 
+    # Recovered incidents must land in the debug log, not just process logs.
+    DebugLogEntry.expects(:capture).with { |args| args[:message].include?("recovered") && args[:level] == "warn" }
+
     result = @provider.get_accounts(@access_url)
     assert_equal({ accounts: [] }, result)
   end
@@ -114,6 +117,8 @@ class Provider::SimplefinTest < ActiveSupport::TestCase
       .returns(mock_response)
 
     @provider.stubs(:sleep)
+
+    DebugLogEntry.expects(:capture).with { |args| args[:message].include?("still failing") && args[:level] == "error" }
 
     error = assert_raises(Provider::Simplefin::SimplefinError) do
       @provider.get_accounts(@access_url)
