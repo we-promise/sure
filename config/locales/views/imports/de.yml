@@ -281,6 +281,7 @@ de:
         upload_button: NDJSON hochladen
       update:
         qif_uploaded: QIF-Datei hochgeladen.
+        qif_account_required: Wähl ein Konto für den QIF-Import aus
         monarch_uploaded: Monarch-Exporte hochgeladen.
         monarch_balances_required: Wähl den Monarch-Export der Kontostände aus.
   imports:
