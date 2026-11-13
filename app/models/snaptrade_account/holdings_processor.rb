@@ -9,6 +9,7 @@ class SnaptradeAccount::HoldingsProcessor
     return unless account.present?
 
     holdings_data = @snaptrade_account.raw_holdings_payload
+    failed = false
 
     if holdings_data.present?
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing #{holdings_data.size} holdings"
@@ -25,12 +26,17 @@ class SnaptradeAccount::HoldingsProcessor
 
       holdings_data.each_with_index do |holding_data, idx|
         Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding #{idx + 1}/#{holdings_data.size}"
-        process_holding(holding_data.with_indifferent_access)
+        failed = true unless process_holding(holding_data.with_indifferent_access)
       rescue => e
+        failed = true
         Rails.logger.error "SnaptradeAccount::HoldingsProcessor - Failed to process holding #{idx + 1}: #{e.class} - #{e.message}"
         Rails.logger.error e.backtrace.first(5).join("\n") if e.backtrace
       end
     end
+
+    # A row that failed or was skipped must not read as a closed position, nor
+    # an empty list SnapTrade's own total contradicts.
+    zero_vanished_positions unless failed || (holdings_data.blank? && positions_in_total?)
 
     # Always run, even with no security holdings — secondary-currency cash
     # should still be surfaced (issue #1809).
@@ -38,6 +44,28 @@ class SnaptradeAccount::HoldingsProcessor
   end
 
   private
+
+    # The latest provider snapshot is the account's current holdings, so a
+    # position the broker no longer reports (closed, expired) would stay
+    # current forever. Write it a zero row today instead.
+    def zero_vanished_positions
+      provider_id = @snaptrade_account.account_provider&.id or return
+      scope = account.holdings.where(account_provider_id: provider_id, external_id: nil)
+      scope.where(date: scope.maximum(:date)).where.not(qty: 0).where.not(security_id: @imported.to_a).find_each do |h|
+        import_adapter.import_holding(security: h.provider_security || h.security, quantity: 0, amount: 0, currency: h.currency,
+          date: Date.current, price: h.price, account_provider_id: provider_id, source: "snaptrade", delete_future_holdings: false)
+      end
+    end
+
+    # Non-cash value in the account total (or no total) means positions exist --
+    # for a few days only: value SnapTrade can't list (filtered futures,
+    # unsupported assets, cash in other currencies) must not pin a sold position.
+    def positions_in_total?
+      last = account.holdings.where(account_provider_id: @snaptrade_account.account_provider&.id, external_id: nil).maximum(:date)
+      return false if last && last < 3.days.ago.to_date
+      total = @snaptrade_account.current_balance or return true
+      (total - @snaptrade_account.cash_balance.to_d).abs >= 0.01
+    end
 
     # Surface cash held in currencies other than the account's primary currency
     # as synthetic cash holdings (issue #1809). The primary currency stays in
@@ -92,7 +120,7 @@ class SnaptradeAccount::HoldingsProcessor
         ticker = symbol_data["raw_symbol"] || symbol_data[:raw_symbol]
       end
 
-      return if ticker.blank?
+      return true if ticker.blank? # cash rows carry no symbol
 
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding for ticker: #{ticker}"
 
@@ -106,6 +134,7 @@ class SnaptradeAccount::HoldingsProcessor
       quantity = parse_decimal(data["units"] || data[:units])
       price = parse_decimal(data["price"] || data[:price])
       return if quantity.nil? || price.nil?
+      return true if quantity.negative? # holdings can't be negative; a short only counts in the account total
 
       # Calculate amount
       amount = quantity * price
@@ -131,6 +160,7 @@ class SnaptradeAccount::HoldingsProcessor
         source: "snaptrade",
         delete_future_holdings: false
       )
+      (@imported ||= []) << holding.security_id
 
       # Store cost basis if available. Both fields are per-share, which is
       # what update_holding_cost_basis expects — unlike the identically named
@@ -140,6 +170,7 @@ class SnaptradeAccount::HoldingsProcessor
       if avg_price.present?
         update_holding_cost_basis(holding&.security || security, avg_price)
       end
+      true
     end
 
     def update_holding_cost_basis(security, avg_cost)
