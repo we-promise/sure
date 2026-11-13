@@ -52,7 +52,7 @@ class Balance::Materializer
       built = trade_built_holdings.reject { |holding| incomplete_security_ids.include?(holding.security_id) }
       built = built.select { |holding| security_ids.include?(holding.security_id) } if security_ids
       @holdings = Holding::Materializer.new(
-        account, strategy: :forward, security_ids: security_ids, calculated_holdings: built
+        account, strategy: :forward, security_ids: security_ids, calculated_holdings: built, calculated_by: trade_calculator
       ).materialize_holdings
 
       reverse_ids = incomplete_security_ids_in_scope
@@ -78,7 +78,11 @@ class Balance::Materializer
     # materialization: it decides which securities are complete and supplies
     # their holdings.
     def trade_built_holdings
-      @trade_built_holdings ||= account.trades.exists? ? Holding::ForwardCalculator.new(account).calculate : []
+      @trade_built_holdings ||= account.trades.exists? ? trade_calculator.calculate : []
+    end
+
+    def trade_calculator
+      @trade_calculator ||= Holding::ForwardCalculator.new(account)
     end
 
     # A provider's trade history can begin after a position was opened (Plaid

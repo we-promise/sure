@@ -331,8 +331,42 @@ class TransactionImportTest < ActiveSupport::TestCase
       end
     end
 
-    # The existing entry should now be linked to the import
-    assert_equal @import.id, existing_entry.reload.import_id
+    # The existing entry is updated but stays owned by whoever created it
+    assert_nil existing_entry.reload.import_id
+    assert existing_entry.import_locked?
+  end
+
+  test "revert keeps a pre-existing entry the import matched as a duplicate" do
+    account = accounts(:depository)
+    existing_entry = account.entries.create!(
+      date: Date.new(2024, 1, 1),
+      amount: 100,
+      currency: "USD",
+      name: "Coffee Shop",
+      entryable: Transaction.new
+    )
+
+    @import.update!(
+      account: account,
+      raw_file_str: "date,name,amount\n01/01/2024,Coffee Shop,100\n01/02/2024,Bakery,20\n",
+      date_col_label: "date",
+      amount_col_label: "amount",
+      name_col_label: "name",
+      date_format: "%m/%d/%Y",
+      amount_type_strategy: "signed_amount",
+      signage_convention: "inflows_negative"
+    )
+    @import.generate_rows_from_csv
+    @import.reload
+    @import.publish
+    assert @import.reload.complete?
+
+    assert_difference -> { Entry.count } => -1 do
+      @import.revert
+    end
+
+    assert Entry.exists?(existing_entry.id), "revert must not destroy an entry the import did not create"
+    assert_not account.entries.exists?(name: "Bakery")
   end
 
   test "creates new transaction when name differs even if date and amount match" do
@@ -425,8 +459,8 @@ class TransactionImportTest < ActiveSupport::TestCase
       name: "Vending Machine"
     ).count
 
-    # The existing entry should be linked to the import
-    assert_equal @import.id, existing_entry.reload.import_id
+    # The existing entry stays owned by whoever created it
+    assert_nil existing_entry.reload.import_id
   end
 
   test "imports all identical transactions from CSV when none exist in database" do

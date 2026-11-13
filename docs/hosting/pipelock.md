@@ -1,6 +1,6 @@
 # Pipelock: AI Agent Security Proxy
 
-[Pipelock](https://github.com/luckyPipewrench/pipelock) is an optional security proxy that scans AI agent traffic flowing through Sure. It protects against secret exfiltration, prompt injection, and tool poisoning.
+[Pipelock](https://github.com/pipelab-org/pipelock) is an optional security proxy that scans AI agent traffic flowing through Sure. It protects against secret exfiltration, prompt injection, and tool poisoning.
 
 ## What Pipelock does
 
@@ -55,7 +55,7 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
    mkdir -p pipelock-evidence pipelock-keys
    # --out must be an absolute path inside the container. The key is written
    # 0600 owned by uid 1000, which is the user the Pipelock proxy runs as.
-   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
+   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f \
      signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
    ```
 
@@ -63,7 +63,7 @@ The `compose.example.ai.yml` file includes Pipelock. To use it:
 
    ```bash
    export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
-   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
+   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f \
      signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
    ```
 
@@ -94,6 +94,22 @@ MCP_API_TOKEN=generate-a-random-token
 MCP_USER_EMAIL=your@email.com
 ```
 
+### MCP listener authentication
+
+Pipelock 3.2 and later refuse to start a non-loopback MCP listener unless it has a listener token or the `--mcp-allow-unauthenticated` acknowledgement. The example uses the acknowledgement: Sure's `/mcp` still requires its own token, `/mcp` is already reachable on port 3000, and OAuth-only MCP clients can't send the extra header a listener token needs.
+
+To require a listener token in Docker Compose:
+
+1. Generate it so that only its owner can read it (Pipelock rejects world-readable token files): `(umask 077; openssl rand -hex 32 > pipelock-mcp-listener.token)`
+2. Pipelock runs as uid/gid 1000 and must be able to read the file. On Linux, if your user isn't 1000, set `PIPELOCK_UID` and `PIPELOCK_GID` in `.env` to the numbers `id -u` and `id -g` print.
+3. Mount it on the `pipelock` service: `- ./pipelock-mcp-listener.token:/run/pipelock/mcp-listener.token:ro`
+4. Replace `--mcp-allow-unauthenticated` with `--mcp-auth-token-file` and `/run/pipelock/mcp-listener.token`.
+5. Recreate Pipelock so the new user, mount and flag take effect: `docker compose -f compose.ai.yml up -d pipelock`
+
+In Helm, set `pipelock.mcpProxy.authTokenSecret.name` to a Secret holding the token (key `token`, or set `authTokenSecret.key`). The pod's `fsGroup` (1000 by default) is what lets Pipelock read the mounted Secret; keep it if you override `podSecurityContext`.
+
+Clients then send `Proxy-Authorization: Bearer <listener token>` alongside their usual `Authorization: Bearer <MCP_API_TOKEN>` for Sure. Without the listener token Pipelock answers `407 Proxy Authentication Required`.
+
 ### Running without Pipelock
 
 To use `compose.example.ai.yml` without Pipelock, remove the `pipelock` service and its `depends_on` entries from `web` and `worker`, then unset the proxy env vars (`HTTPS_PROXY`, `HTTP_PROXY`).
@@ -108,13 +124,13 @@ Enable Pipelock in your Helm values:
 pipelock:
   enabled: true
   image:
-    tag: "3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c"
+    tag: "3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f"
   mode: balanced
 ```
 
 This creates a separate Deployment, Service, and ConfigMap. The chart auto-injects `HTTPS_PROXY`/`HTTP_PROXY`/`NO_PROXY` into web and worker pods.
 
-Sure pins Pipelock 3.4.0 by tag and multi-architecture image digest. Read the [Pipelock release notes](https://github.com/luckyPipewrench/pipelock/releases/tag/v3.4.0) before overriding that pin.
+Sure pins Pipelock 3.8.0 by tag and multi-architecture image digest. Read the [Pipelock release notes](https://github.com/pipelab-org/pipelock/releases/tag/v3.8.0) before overriding that pin.
 
 ### Signed action receipts
 
@@ -131,7 +147,7 @@ kubectl create secret generic sure-pipelock-receipts \
   --from-file=flight-recorder-signing.key=./flight-recorder-signing.key
 ```
 
-If you don't have the `pipelock` binary installed, generate the key with the pinned image instead: `docker run --rm -v "$PWD:/out" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
+If you don't have the `pipelock` binary installed, generate the key with the pinned image instead: `docker run --rm -v "$PWD:/out" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
 
 Example Helm values using an existing PVC named `sure-pipelock-evidence`:
 
@@ -207,7 +223,7 @@ pipelock:
       release: prometheus
 ```
 
-Metrics are available at `/metrics` on the forward proxy port (8888).
+Pipelock 3.8 and later serve `/metrics` and `/stats` only on a dedicated listener, never on the forward proxy port (8888). The ServiceMonitor turns that listener on at port 9091 (`pipelock.metrics.port`); set `pipelock.metrics.enabled: true` to expose it without one. The listener has no authentication, so restrict access with a NetworkPolicy. In Docker Compose, set `metrics_listen` in `pipelock.example.yaml` and publish that port.
 
 ### Eviction protection
 
@@ -260,16 +276,16 @@ pipelock:
 |------|----------|----------|
 | `strict` | Block all detected threats | Production with sensitive data |
 | `balanced` | Warn on low-severity, block on high-severity | Default; good for most deployments |
-| `audit` | Log everything, block nothing | Initial rollout, testing |
+| `audit` | Warn on ordinary findings when paired with `enforce: false` | Initial rollout, testing |
 
-Start with `audit` mode to see what Pipelock detects without blocking anything. Review the logs, then switch to `balanced` or `strict`.
+For an observation trial, set `mode: audit` together with `enforce: false` (in `pipelock.example.yaml`, or `pipelock.extraConfig` in Helm). `mode: audit` alone keeps `enforce: true`, so ordinary findings still block. Even with `enforce: false`, core credential, SSRF and fail-closed transport checks can still block. Review the logs, then switch to `balanced` or `strict` and set `enforce: true` again (or remove the `enforce: false` line). Changing only the mode leaves `enforce: false` in place, so ordinary findings still won't block.
 
 ## Limitations
 
 - Proxy variables are cooperative. Clients that don't honor them can connect directly unless the deployment enforces egress routing.
 - The default examples don't configure TLS interception, so Pipelock can't scan encrypted HTTPS request or response bodies.
 - Docker Compose has no egress network policies. The `/mcp` endpoint on port 3000 is still reachable directly (auth token required). For enforcement, use Kubernetes NetworkPolicies.
-- Pipelock 3.4 scans reverse-proxy bodies that declare media types, but it doesn't inspect secrets embedded inside a valid image.
+- Pipelock 3.8 scans reverse-proxy bodies that declare media types, but it doesn't inspect secrets embedded inside a valid image.
 - Signed receipts prove traffic that traversed Pipelock. They do not prove traffic could not bypass Pipelock; pair them with NetworkPolicies, containment, or firewall rules for non-bypass claims.
 
 ## Troubleshooting
@@ -285,6 +301,8 @@ Common issues:
 - Missing `pipelock.example.yaml` file
 - YAML syntax errors in config
 - Port conflicts (8888 or 8889 already in use)
+- `non-loopback MCP listener ... requires an auth token file`: Pipelock 3.2+ needs `--mcp-allow-unauthenticated` or `--mcp-auth-token-file`. See [MCP listener authentication](#mcp-listener-authentication).
+- `has insecure permissions` or `permission denied` reading the listener token: see the file steps in [MCP listener authentication](#mcp-listener-authentication).
 
 ### LLM calls failing with proxy errors
 

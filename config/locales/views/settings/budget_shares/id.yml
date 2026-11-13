@@ -1,0 +1,6 @@
+---
+id:
+  settings:
+    budget_shares:
+      update:
+        success: "Pengaturan berbagi anggaran diperbarui"

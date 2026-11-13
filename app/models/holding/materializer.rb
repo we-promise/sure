@@ -8,11 +8,18 @@ class Holding::Materializer
 
   # calculated_holdings: holdings a caller has already calculated for this
   # strategy, persisted in place of running the calculator again.
-  def initialize(account, strategy:, security_ids: nil, calculated_holdings: nil)
+  # calculated_by: the calculator that produced them. Its lots are persisted
+  # for the securities those holdings cover, and no others.
+  def initialize(account, strategy:, security_ids: nil, calculated_holdings: nil, calculated_by: nil)
+    if calculated_holdings && calculated_by.nil?
+      raise ArgumentError, "calculated_holdings needs the calculator that produced them (calculated_by:)"
+    end
+
     @account = account
     @strategy = strategy
     @security_ids = security_ids
     @calculated_holdings = calculated_holdings
+    @calculated_by = calculated_by
   end
 
   def materialize_holdings
@@ -20,6 +27,7 @@ class Holding::Materializer
 
     Rails.logger.info("Persisting #{@holdings.size} holdings")
     persist_holdings
+    persist_lots
 
     if strategy == :forward && security_ids.nil?
       purge_stale_holdings
@@ -49,7 +57,70 @@ class Holding::Materializer
     attr_reader :account, :strategy, :security_ids
 
     def calculate_holdings
-      @holdings = @calculated_holdings || calculator.calculate
+      @calculator = @calculated_by || calculator
+      @holdings = @calculated_holdings || @calculator.calculate
+    end
+
+    # Lot quantities and costs come from the calculator's lot books; a derived
+    # lot's cost is in the account's currency. An opening lot has no cost the
+    # trades know of, except on a position no trade explains, where it takes the
+    # provider's figure.
+    def persist_lots
+      rows = calculated_lots.flat_map do |security_id, lots|
+        explained = lots.any?(&:source_id)
+        lots.map do |lot|
+          unit_cost, currency = (lot.source_id || explained) ? [ lot.unit_cost, account.currency ] : provider_unit_cost(security_id)
+          lot_row(security_id, lot.source_id, qty: lot.qty, acquired_on: lot.acquired_on, unit_cost: unit_cost, currency: currency)
+        end
+      end
+      rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, clamped: true) }
+
+      # Only the reverse walk knows the units held before the trades.
+      HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse)
+    end
+
+    # A caller that persists only part of a calculation (the trade fallback
+    # leaves out securities whose trade history is incomplete) persists the
+    # lots of that part only.
+    def calculated_lots
+      @calculated_lots ||= begin
+        lots = @calculator.lots_by_security
+        if @calculated_holdings
+          kept = @calculated_holdings.map(&:security_id).to_set
+          lots = lots.select { |security_id, _| kept.include?(security_id) }
+        end
+        lots
+      end
+    end
+
+    def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
+      {
+        account_id: account.id, security_id: security_id, source_entry_id: source_entry_id,
+        origin_security_id: source_entry_id ? nil : opening_origin(security_id), acquired_on: acquired_on,
+        qty: qty, unit_cost: unit_cost, currency: currency, clamped: clamped
+      }
+    end
+
+    # An opening lot comes from the security the provider reports. A position
+    # remapped to another security still names that one on its holdings, so a
+    # reset can take the lot back there. With several provider securities
+    # remapped onto one, it is the one behind the latest snapshot, which the
+    # opening lot is built from.
+    def opening_origin(security_id)
+      @provider_security_ids ||= account.holdings
+        .where.not(account_provider_id: nil)
+        .order(:date, :id)
+        .pluck(:security_id, :provider_security_id)
+        .to_h
+      @provider_security_ids[security_id] || security_id
+    end
+
+    # The latest provider cost for the security, restated for today's share count.
+    def provider_unit_cost(security_id)
+      date, cost_basis, currency = provider_cost_basis_snapshots[security_id].last
+      return [ nil, account.currency ] unless cost_basis
+
+      [ split_adjusted_cost_basis(cost_basis, security_id, date, Date.current), currency ]
     end
 
     def persist_holdings
@@ -286,9 +357,16 @@ class Holding::Materializer
       end
     end
 
+    # Lots can exist for a security with no calculated holdings (an old
+    # snapshot and no market prices), and they read the same provider costs
+    # and splits as the holdings do.
+    def costed_security_ids
+      @costed_security_ids ||= (@holdings.map(&:security_id) | calculated_lots.keys)
+    end
+
     def splits_by_security
       @splits_by_security ||= Security::Split
-        .where(security_id: @holdings.map(&:security_id).uniq)
+        .where(security_id: costed_security_ids)
         .order(:ex_date)
         .group_by(&:security_id)
         .tap { |grouped| grouped.default = [] }
@@ -296,11 +374,10 @@ class Holding::Materializer
 
     def provider_cost_basis_snapshots
       @provider_cost_basis_snapshots ||= begin
-        ids = @holdings.map(&:security_id).uniq
         account.holdings
           .where.not(account_provider_id: nil)
           .where.not(cost_basis: nil)
-          .where(security_id: ids)
+          .where(security_id: costed_security_ids)
           .order(:date) # ascending required: carry_forward_provider_cost_basis scans and breaks on snap_date > holding.date
           .pluck(:security_id, :currency, :date, :cost_basis)
           .each_with_object(Hash.new { |h, k| h[k] = [] }) do |(security_id, currency, date, cost_basis), memo|

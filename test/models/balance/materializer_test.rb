@@ -576,6 +576,46 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_equal 2, account.reload.current_holdings.find_by!(security: security).qty
   end
 
+  # The holding lots read their quantities from the calculator that built the
+  # holdings, so the fallback hands that calculator over with its holdings.
+  test "the trade fallback stores the lots of the trades it builds from" do
+    account, security = linked_account_with_trade
+    assert_empty account.holding_lots.where(security: security), "precondition: no lots before the run"
+
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    lots = account.reload.holding_lots.where(security: security)
+    assert_equal [ 2 ], lots.map(&:qty)
+    assert_equal account.trades.find_by!(security: security).entry.id, lots.first.source_entry_id
+  end
+
+  # A caller that persists part of a calculation persists that part's lots
+  # only: lots of a security left out must not be written from it.
+  test "pre-built holdings persist the lots of their own securities only" do
+    account, security = linked_account_with_trade
+    other = Security.create!(ticker: "LEFTX", name: "Left out")
+    (5.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: other, date: date, price: 50) }
+    create_trade(other, account: account, qty: 4, date: 4.days.ago.to_date, price: 50)
+    calculator = Holding::ForwardCalculator.new(account)
+    holdings = calculator.calculate
+    assert calculator.lots_by_security.key?(other.id), "precondition: the calculation has lots for the left-out security"
+
+    Holding::Materializer.new(
+      account, strategy: :forward, calculated_holdings: holdings.reject { |h| h.security_id == other.id }, calculated_by: calculator
+    ).materialize_holdings
+
+    assert account.holding_lots.where(security: security).exists?
+    assert_not account.holding_lots.where(security: other).exists?
+  end
+
+  test "pre-built holdings without their calculator are refused" do
+    account, _security = linked_account_with_trade
+
+    assert_raises(ArgumentError) do
+      Holding::Materializer.new(account, strategy: :forward, calculated_holdings: [])
+    end
+  end
+
   test "update_cash_balance ignores future-dated balance rows" do
     account, _security = linked_account_with_trade
     create_balance(account: account, date: Date.current, balance: 10_000, cash_balance: 9_600)
