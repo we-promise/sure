@@ -8,12 +8,12 @@
   <p class="text-sm text-secondary">
     <% if comparison.comparable? %>
       <%= t(comparison.in_progress? ? "reports.spending_vs_normal.summary_so_far_html" : "reports.spending_vs_normal.summary_html",
-            total: tag.span(whole.call(comparison.total), class: "privacy-sensitive"),
-            normal: tag.span(whole.call(comparison.normal_total), class: "privacy-sensitive"),
+            total: tag.span(whole.call(comparison.total), class: "whitespace-nowrap privacy-sensitive"),
+            normal: tag.span(whole.call(comparison.normal_total), class: "whitespace-nowrap privacy-sensitive"),
             baseline_start: l(comparison.baseline_period.start_date, format: :long),
             baseline_end: l(comparison.baseline_period.end_date, format: :long)) %>
     <% else %>
-      <%= t("reports.spending_vs_normal.no_history_html", total: tag.span(whole.call(comparison.total), class: "privacy-sensitive")) %>
+      <%= t("reports.spending_vs_normal.no_history_html", total: tag.span(whole.call(comparison.total), class: "whitespace-nowrap privacy-sensitive")) %>
     <% end %>
   </p>
 
@@ -50,11 +50,13 @@
         <% if changes.empty? %>
           <p class="text-sm text-secondary"><%= comparison.comparable? ? t("reports.spending_vs_normal.no_changes") : t("reports.spending_vs_normal.no_history_short") %></p>
         <% else %>
-          <ul class="space-y-1" data-testid="spending-changes">
+          <%# One grid for the whole list, with each row on its subgrid, so the amount
+              column takes the widest amount and the bars stay aligned. %>
+          <ul class="grid grid-cols-[minmax(0,9rem)_1fr_auto] gap-x-2 gap-y-1" data-testid="spending-changes">
             <% changes.each do |change| %>
-              <li>
+              <li class="col-span-3 grid grid-cols-subgrid">
                 <%= link_to change[:href],
-                      class: "grid grid-cols-[minmax(0,9rem)_1fr_5rem] items-center gap-2 rounded-md px-1 py-1 hover:bg-container-inset text-sm" do %>
+                      class: "col-span-3 grid grid-cols-subgrid items-center rounded-md px-1 py-1 hover:bg-container-inset text-sm" do %>
                   <span class="truncate text-primary"><%= change[:row].category.name %></span>
                   <span class="grid grid-cols-2 h-3" aria-hidden="true">
                     <span class="flex justify-end">
@@ -64,7 +66,7 @@
                       <% if change[:row].change.positive? %><span class="h-3 rounded-r bg-destructive" style="width: <%= change[:width] %>%"></span><% end %>
                     </span>
                   </span>
-                  <span class="text-right text-secondary privacy-sensitive tabular-nums"><%= change[:amount_label] %></span>
+                  <span class="text-right text-secondary whitespace-nowrap privacy-sensitive tabular-nums"><%= change[:amount_label] %></span>
                 <% end %>
               </li>
             <% end %>

@@ -1,4 +1,4 @@
-<div class="space-y-8">
+<div class="@container space-y-8">
     <%# Month-over-Month Trends %>
     <div>
       <h3 class="text-lg font-medium mb-4">
@@ -6,74 +6,53 @@
       </h3>
 
       <% if trends_data.any? %>
-        <div class="bg-container-inset rounded-xl p-1 overflow-x-auto">
-          <div class="w-max sm:w-full">
-          <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
-          <table class="w-full">
-            <thead class="bg-container-inset">
-              <tr class="uppercase text-xs font-medium text-secondary">
-                <th class="px-4 py-2 text-left font-medium"><%= t("reports.trends.month") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.income") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.expenses") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.net") %></th>
-                <th class="px-4 py-2 text-right font-medium"><%= t("reports.trends.savings_rate") %></th>
-              </tr>
-            </thead>
-            <tbody class="text-secondary text-sm">
-              <% trends_data.each_with_index do |trend, idx| %>
-                <tr class="<%= idx < trends_data.size - 1 ? "table-divider" : "" %>">
-                  <td class="py-3 px-4 lg:px-6">
-                    <span class="flex items-center gap-2 <%= trend[:is_current_month] ? "font-medium" : "" %>">
-                      <%= trend[:month] %>
-                      <% if trend[:is_current_month] %>
-                        <span class="text-xs text-subdued">(<%= t("reports.trends.current") %>)</span>
-                      <% end %>
-                    </span>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right privacy-sensitive">
-                    <%= Money.new(trend[:income], Current.family.currency).format %>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right privacy-sensitive">
-                    <%= Money.new(trend[:expenses], Current.family.currency).format %>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right privacy-sensitive <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
-                    <%= Money.new(trend[:net], Current.family.currency).format %>
-                  </td>
-                  <td class="py-3 px-4 lg:px-6 text-right <%= trend[:net] >= 0 ? "text-success" : "text-destructive" %>">
-                    <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
-                    <%= savings_rate %>%
-                  </td>
-                </tr>
+        <%= render DS::Table.new(rows: trends_data, inset: true, label: t("reports.trends.monthly_breakdown"), row_class: ->(_trend) { "text-secondary" }) do |table| %>
+          <% table.with_column(t("reports.trends.month")) do |trend| %>
+            <span class="<%= class_names("flex items-center gap-2", "font-medium" => trend[:is_current_month]) %>">
+              <%= trend[:month] %>
+              <% if trend[:is_current_month] %>
+                <span class="text-xs text-subdued">(<%= t("reports.trends.current") %>)</span>
               <% end %>
-            </tbody>
-          </table>
-          </div>
-          </div>
-        </div>
+            </span>
+          <% end %>
+          <% table.with_column(t("reports.trends.income"), numeric: true, class: "privacy-sensitive") do |trend| %>
+            <%= Money.new(trend[:income], Current.family.currency).format %>
+          <% end %>
+          <% table.with_column(t("reports.trends.expenses"), numeric: true, class: "privacy-sensitive") do |trend| %>
+            <%= Money.new(trend[:expenses], Current.family.currency).format %>
+          <% end %>
+          <% table.with_column(t("reports.trends.net"), numeric: true, class: "privacy-sensitive") do |trend| %>
+            <%= tag.span Money.new(trend[:net], Current.family.currency).format, class: trend[:net] >= 0 ? "text-success" : "text-destructive" %>
+          <% end %>
+          <% table.with_column(t("reports.trends.savings_rate"), numeric: true) do |trend| %>
+            <% savings_rate = trend[:income] > 0 ? ((trend[:net].to_f / trend[:income].to_f) * 100).round(1) : 0 %>
+            <%= tag.span "#{savings_rate}%", class: trend[:net] >= 0 ? "text-success" : "text-destructive" %>
+          <% end %>
+        <% end %>
 
         <%# Trend Insights %>
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="mt-6 grid grid-cols-1 @2xl:grid-cols-3 gap-4">
           <% avg_income = trends_data.sum { |t| t[:income] } / trends_data.length %>
           <% avg_expenses = trends_data.sum { |t| t[:expenses] } / trends_data.length %>
           <% avg_net = trends_data.sum { |t| t[:net] } / trends_data.length %>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_income") %></p>
-            <p class="text-lg font-semibold text-success privacy-sensitive">
+            <p class="text-lg font-semibold text-success whitespace-nowrap privacy-sensitive">
               <%= Money.new(avg_income, Current.family.currency).format %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_expenses") %></p>
-            <p class="text-lg font-semibold text-primary privacy-sensitive">
+            <p class="text-lg font-semibold text-primary whitespace-nowrap privacy-sensitive">
               <%= Money.new(avg_expenses, Current.family.currency).format %>
             </p>
           </div>
 
           <div class="p-4 bg-surface-inset rounded-lg">
             <p class="text-sm text-secondary mb-1"><%= t("reports.trends.avg_monthly_savings") %></p>
-            <p class="text-lg font-semibold privacy-sensitive <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
+            <p class="text-lg font-semibold whitespace-nowrap privacy-sensitive <%= avg_net >= 0 ? "text-success" : "text-destructive" %>">
               <%= Money.new(avg_net, Current.family.currency).format %>
             </p>
           </div>

@@ -1,0 +1,12 @@
+<%# locals: (groups:, title:, empty:) %>
+<% if groups.empty? %>
+  <div class="min-w-0 rounded-xl bg-container-inset p-4">
+    <p class="text-xs uppercase font-medium text-secondary mb-2"><%= title %></p>
+    <p class="text-sm text-subdued"><%= empty %></p>
+  </div>
+<% else %>
+  <%= render DS::Table.new(rows: groups, inset: true, label: title, class: "min-w-0") do |table| %>
+    <% table.with_column(title, class: "font-medium text-secondary") { |group| group[:name] } %>
+    <% table.with_column(tag.span(t("reports.transactions_breakdown.table.amount"), class: "sr-only"), numeric: true, class: "font-medium privacy-sensitive") { |group| group[:total].format } %>
+  <% end %>
+<% end %>
