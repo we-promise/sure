@@ -132,6 +132,14 @@ en:
         categories: "Categories"
         value: "Value"
         weight: "Weight"
+      cashflow_donut:
+        title: "Cash Flow Rings"
+        net_cash_flow: "Net Cash Flow"
+        inflows: "Inflows"
+        outflows: "Outflows"
+        surplus: "Surplus"
+        deficit: "Deficit"
+        weight: "Weight"
       investment_summary:
         title: "Investments"
         total_return: "Total Return"

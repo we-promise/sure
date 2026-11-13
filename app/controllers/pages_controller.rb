@@ -17,6 +17,7 @@ class PagesController < ApplicationController
     "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
     "spending_trend"     => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
+    "cashflow_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
@@ -226,6 +227,18 @@ class PagesController < ApplicationController
             layout: section_layout("outflows_donut"),
             locals: { outflows_data: outflows_data, period: @period },
             visible: @accounts.any? && outflows_data[:categories].present?,
+            collapsible: true
+          }
+        },
+        "cashflow_donut" => -> {
+          cashflow_data = build_cashflow_donut_data(dashboard_net_totals)
+          {
+            key: "cashflow_donut",
+            title: "pages.dashboard.cashflow_donut.title",
+            partial: "pages/dashboard/cashflow_donut",
+            layout: section_layout("cashflow_donut"),
+            locals: { cashflow_data: cashflow_data, period: @period },
+            visible: @accounts.any? && cashflow_data[:has_categories],
             collapsible: true
           }
         },
@@ -575,6 +588,70 @@ class PagesController < ApplicationController
         end
 
       { categories: categories, total: total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
+    end
+
+    # Two rings on one scale: inflows by category and outflows by category.
+    # The difference is drawn on the smaller ring (surplus beside the outflows,
+    # deficit beside the inflows), so both rings close and the gap is readable.
+    def build_cashflow_donut_data(net_totals)
+      total_income = net_totals.total_net_income
+      total_expense = net_totals.total_net_expense
+      net = total_income - total_expense
+      ring_total = [ total_income, total_expense ].max
+
+      inflows = cashflow_donut_segments(net_totals.net_income_categories, "income")
+      outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense")
+      has_categories = inflows.any? || outflows.any?
+
+      if net.positive?
+        outflows << cashflow_donut_balance_segment("surplus", net, ring_total, "var(--color-success)", "piggy-bank", net_totals.currency)
+      elsif net.negative?
+        inflows << cashflow_donut_balance_segment("deficit", net.abs, ring_total, "var(--color-destructive)", "trending-down", net_totals.currency)
+      end
+
+      {
+        inflows: inflows,
+        outflows: outflows,
+        has_categories: has_categories,
+        total_income: total_income.to_f.round(2),
+        total_expense: total_expense.to_f.round(2),
+        net: net.to_f.round(2),
+        currency: net_totals.currency
+      }
+    end
+
+    def cashflow_donut_segments(category_totals, id_prefix)
+      category_totals
+        .reject { |ct| ct.total.zero? }
+        .sort_by { |ct| -ct.total }
+        .map do |ct|
+          clickable = !ct.category.other_investments?
+          {
+            id: "#{id_prefix}_#{ct.category.id || ct.category.name.parameterize}",
+            name: ct.category.name,
+            filter_value: clickable ? ct.category.filter_value : nil,
+            amount: ct.total.to_f.round(2),
+            currency: ct.currency,
+            percentage: ct.weight.round(1),
+            color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
+            icon: ct.category.lucide_icon,
+            clickable: clickable
+          }
+        end
+    end
+
+    def cashflow_donut_balance_segment(id, amount, ring_total, color, icon, currency)
+      {
+        id: id,
+        name: t("pages.dashboard.cashflow_donut.#{id}"),
+        filter_value: nil,
+        amount: amount.to_f.round(2),
+        currency: currency,
+        percentage: ring_total.zero? ? 0 : (amount.to_f / ring_total * 100).round(1),
+        color: color,
+        icon: icon,
+        clickable: false
+      }
     end
 
     def money_flow_month_param
