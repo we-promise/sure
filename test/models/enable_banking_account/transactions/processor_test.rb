@@ -371,4 +371,106 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal 0,    result[:imported]
     assert_equal 0,    result[:failed]
   end
+
+  # transaction_id is not guaranteed unique; entry_reference tells the rows apart.
+  def raw_shared_tid_transaction(entry_reference:, amount:)
+    {
+      transaction_id:         "tid-x",
+      entry_reference:        entry_reference,
+      booking_date:           2.days.ago.to_date.to_s,
+      transaction_amount:     { amount: amount, currency: "EUR" },
+      creditor:               { name: "Laundromat" },
+      credit_debit_indicator: "DBIT",
+      status:                 "BOOK"
+    }
+  end
+
+  test "rows sharing a transaction_id with different entry_references import as separate entries" do
+    first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
+    second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    entries = @account.entries.where(source: "enable_banking")
+    assert_equal 2, entries.count
+    assert_equal BigDecimal("9.00"), entries.find_by!(external_id: "enable_banking_tid-x").amount
+    assert_equal BigDecimal("7.00"), entries.find_by!(external_id: "enable_banking_tid-x_r-b").amount
+  end
+
+  test "an entry already stored under a shared transaction_id keeps its id when a sibling row arrives" do
+    first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
+    second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    legacy = @account.entries.find_by!(source: "enable_banking", external_id: "enable_banking_tid-x")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    2.times { EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process }
+
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+    assert_equal BigDecimal("9.00"), legacy.reload.amount
+    assert_equal "enable_banking_tid-x", legacy.external_id
+  end
+
+  test "a row repeating a stored transaction_id and entry_reference does not create a second entry" do
+    row = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ row, row.dup ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal [ "enable_banking_tid-x" ], @account.entries.where(source: "enable_banking").pluck(:external_id)
+  end
+
+  test "a settled pending row leaving the payload does not move the legacy id" do
+    pending = raw_shared_tid_transaction(entry_reference: "r-p", amount: "9.00").merge(status: "PDNG", _pending: true)
+    first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
+    second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ pending, first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    before = @account.entries.where(source: "enable_banking").pluck(:id, :external_id, :amount).sort
+
+    # The importer drops the pending row once its booked counterpart is fetched.
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal before, @account.entries.where(source: "enable_banking").pluck(:id, :external_id, :amount).sort
+    assert_equal [ "enable_banking_tid-x", "enable_banking_tid-x_r-b" ], before.map(&:second).sort
+    assert_not @account.entries.find_by!(external_id: "enable_banking_tid-x").transaction.pending?
+  end
+
+  test "rows sharing a transaction_id keep their ids when the stored order changes" do
+    first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
+    second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    before = @account.entries.where(source: "enable_banking").pluck(:id, :external_id, :amount).sort
+
+    @enable_banking_account.update!(raw_transactions_payload: [ second, first ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal before, @account.entries.where(source: "enable_banking").pluck(:id, :external_id, :amount).sort
+  end
+
+  test "an entry two rows used to overwrite keeps the movement it shows" do
+    first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
+    second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+
+    # Before the fix, both rows wrote enable_banking_tid-x and the last one won.
+    collapsed = create_transaction(
+      account: @account, name: "Laundromat", date: 2.days.ago.to_date, amount: 7, currency: "EUR",
+      external_id: "enable_banking_tid-x", source: "enable_banking"
+    )
+
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal BigDecimal("7.00"), collapsed.reload.amount
+    assert_equal "enable_banking_tid-x", collapsed.external_id
+    assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x_r-a").amount
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
 end

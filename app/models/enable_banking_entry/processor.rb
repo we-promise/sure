@@ -70,6 +70,78 @@ class EnableBankingEntry::Processor
     "#{CONTENT_ID_PREFIX}#{Digest::MD5.hexdigest(content)}"
   end
 
+  # External ids for an ordered list of raw transactions, one per row.
+  #
+  # Enable Banking does not guarantee transaction_id to be unique, so booked rows
+  # that share one but carry different entry_references are different movements,
+  # and compute_external_id alone would store them under one id. One of them
+  # keeps enable_banking_<transaction_id>, so entries imported before this keep
+  # their id; every other one gets enable_banking_<transaction_id>_<entry_reference>.
+  #
+  # Which one keeps the plain id is read from the account's entries when an
+  # account is given, so it does not depend on the order rows are stored or
+  # fetched in (see legacy_id_owner). Without an account, the first booked row
+  # does; that is enough where only telling rows apart matters.
+  #
+  # Pending rows keep compute_external_id, as do rows without a transaction_id
+  # or entry_reference: a pending row settles into the entry its booked
+  # counterpart updates, and is never the reason a booked row changes id.
+  #
+  # @return [Array<String, nil>]
+  def self.external_ids_for(raw_transactions, account: nil)
+    rows = raw_transactions.map(&:with_indifferent_access)
+    ids = rows.map { |data| compute_external_id(data) }
+
+    shared = rows.each_index.select { |i|
+      rows[i][:transaction_id].present? && rows[i][:entry_reference].present? && !pending_payload?(rows[i])
+    }.group_by { |i| rows[i][:transaction_id] }
+
+    shared.each_value do |indexes|
+      rows_by_reference = indexes.map { |i| rows[i] }.index_by { |data| data[:entry_reference] }
+      next if rows_by_reference.size < 2
+
+      legacy_id = ids[indexes.first]
+      owner = account ? legacy_id_owner(account, legacy_id, rows_by_reference) : rows_by_reference.keys.first
+
+      indexes.each do |i|
+        reference = rows[i][:entry_reference]
+        ids[i] = "#{legacy_id}_#{reference}" unless reference == owner
+      end
+    end
+
+    ids
+  end
+
+  # The entry_reference that keeps legacy_id among rows sharing a transaction_id.
+  #
+  # A reference already stored under its suffixed id keeps it. Of the others, the
+  # one matching the entry already stored under legacy_id (amount and date) keeps
+  # that entry, so an entry two rows used to overwrite keeps the movement it
+  # shows; failing a match, the first in payload order. nil when every reference
+  # already has its own entry, e.g. the legacy row is no longer in the payload.
+  #
+  # @return [String, nil]
+  def self.legacy_id_owner(account, legacy_id, rows_by_reference)
+    suffixed = rows_by_reference.keys.index_with { |reference| "#{legacy_id}_#{reference}" }
+    entries = account.entries.where(source: "enable_banking", external_id: [ legacy_id, *suffixed.values ]).index_by(&:external_id)
+
+    candidates = rows_by_reference.keys.reject { |reference| entries.key?(suffixed[reference]) }
+    legacy_entry = entries[legacy_id]
+    return candidates.first if legacy_entry.nil? || candidates.size < 2
+
+    candidates.find { |reference| same_movement?(legacy_entry, rows_by_reference[reference], account) } || candidates.first
+  end
+
+  def self.same_movement?(entry, data, account)
+    amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
+    return false if amount.blank?
+
+    entry.amount.abs == BigDecimal(amount.to_s).abs &&
+      entry.date == transaction_date(data, account.family&.timezone)
+  rescue ArgumentError, TypeError
+    false
+  end
+
   # True when the ASPSP supplied no identifier of its own, so compute_external_id
   # falls back to hashing the content.
   #
@@ -228,9 +300,13 @@ class EnableBankingEntry::Processor
   # same pattern again. Both are mutated as claims happen, so a row later in the
   # same batch sees what earlier rows did -- excluded_ids in the batch processor
   # is built once, before the loop, and would otherwise be stale.
+  #
+  # external_id: this row's id from external_ids_for over the whole payload,
+  # which can differ from compute_external_id when rows share a transaction_id.
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
-                 identifierless_external_ids: nil, excluded_external_ids: nil)
+                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil)
     @enable_banking_transaction = enable_banking_transaction
+    @external_id = external_id
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
     @known_merchant_names = known_merchant_names
@@ -241,7 +317,7 @@ class EnableBankingEntry::Processor
   def process
     # Cache a safe diagnostic id upfront — used in all logging paths so rescue
     # blocks never call the potentially-raising private external_id method.
-    safe_id = self.class.compute_external_id(@enable_banking_transaction) || "unknown"
+    safe_id = @external_id || self.class.compute_external_id(@enable_banking_transaction) || "unknown"
 
     unless account.present?
       Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{safe_id}"
@@ -304,7 +380,7 @@ class EnableBankingEntry::Processor
     end
 
     def external_id
-      id = self.class.compute_external_id(data)
+      id = @external_id || self.class.compute_external_id(data)
       raise ArgumentError, "Enable Banking transaction missing required identifier (transaction_id, entry_reference, or identifiable content)" unless id
       id
     end
@@ -565,7 +641,7 @@ class EnableBankingEntry::Processor
       # sides avoids the two mechanisms fighting over the same row.
       return if pending_payload?
 
-      incoming = self.class.compute_external_id(data)
+      incoming = @external_id || self.class.compute_external_id(data)
       return if incoming.blank?
 
       content_id = self.class.compute_external_id(data.except(:transaction_id, :entry_reference))
