@@ -31,6 +31,30 @@ class ExchangeRateTest < ActiveSupport::TestCase
     end
   end
 
+  test "keyless Frankfurter fallback fails fast without retries on a request-time fetch" do
+    ExchangeRate.unstub(:provider)
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+    stub_request(:get, %r{/rate/SEK/JPY}).to_timeout
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      assert_nil ExchangeRate.find_or_fetch_rate(from: "SEK", to: "JPY", date: Date.current)
+    end
+
+    assert_requested :get, %r{/rate/SEK/JPY}, times: 1
+  end
+
+  test "rates_for stops fetching once the fallback time budget is spent" do
+    ExchangeRate.unstub(:provider)
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+    Setting.stubs(:twelve_data_api_key).returns(nil)
+    ExchangeRate.expects(:find_or_fetch_rate).once.with { travel(ExchangeRate::FALLBACK_FETCH_BUDGET + 1.second); true }.returns(nil)
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      assert_equal({ "SEK" => 1, "NOK" => 1 }, ExchangeRate.rates_for(%w[SEK NOK], to: "JPY"))
+    end
+  end
+
   test "finds rate in DB" do
     existing_rate = exchange_rates(:one)
 

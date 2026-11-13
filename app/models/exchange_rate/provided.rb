@@ -2,8 +2,8 @@ module ExchangeRate::Provided
   extend ActiveSupport::Concern
 
   class_methods do
-    def provider
-      Provider::Registry.for_concept(:exchange_rates).get_provider(provider_name.to_sym)
+    def provider(name = provider_name)
+      Provider::Registry.for_concept(:exchange_rates).get_provider(name.to_sym)
     end
 
     # Name of the backend `provider` uses. The default, Twelve Data, needs an API key;
@@ -11,12 +11,24 @@ module ExchangeRate::Provided
     # foreign amounts at 1:1. Pair metadata and sync diagnostics key on this name, so
     # adding or removing the key is detected like any other provider change.
     def provider_name
-      configured = (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+      configured = configured_provider_name
       Provider::Registry.for_concept(:exchange_rates).get_provider(configured.to_sym) ? configured : "frankfurter"
+    end
+
+    def configured_provider_name
+      (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+    end
+
+    def fallback_provider?
+      provider_name != configured_provider_name
     end
 
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
+
+    # Keyless fallback lookups run on the request thread (e.g. reports), so they
+    # fail fast and stop fetching once this much time is spent in one rates_for call.
+    FALLBACK_FETCH_BUDGET = 5.seconds
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
       rate = find_by(from_currency: from, to_currency: to, date: date)
@@ -33,9 +45,13 @@ module ExchangeRate::Provided
                   .first
       return nearest if nearest.present?
 
-      return nil unless provider.present? # No provider configured (some self-hosted apps)
+      fx_provider = provider
+      return nil unless fx_provider.present? # No provider configured (some self-hosted apps)
 
-      response = provider.fetch_exchange_rate(from: from, to: to, date: date)
+      # The keyless fallback is fetched on the request thread (e.g. reports): fail fast, no retries.
+      fx_provider = Provider::Frankfurter.new(timeout: 3, max_retries: 0) if fx_provider.is_a?(Provider::Frankfurter) && fallback_provider?
+
+      response = fx_provider.fetch_exchange_rate(from: from, to: to, date: date)
 
       return nil unless response.success? # Provider error
 
@@ -90,7 +106,9 @@ module ExchangeRate::Provided
       still_missing = missing - nearest_rates.keys
 
       # Only hit the provider for currencies with no cached rate at all
+      deadline = FALLBACK_FETCH_BUDGET.from_now if still_missing.any? && fallback_provider?
       fetched_rates = still_missing.each_with_object({}) do |currency, map|
+        break map if deadline&.past?
         rate = find_or_fetch_rate(from: currency, to: to, date: date)
         map[currency] = rate if rate
       end
@@ -108,7 +126,9 @@ module ExchangeRate::Provided
 
     # @return [Integer] The number of exchange rates synced
     def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
-      unless provider.present?
+      name = provider_name
+      exchange_rate_provider = provider(name)
+      unless exchange_rate_provider.present?
         Rails.logger.warn("No provider configured for ExchangeRate.import_provider_rates")
         return 0
       end
@@ -132,7 +152,8 @@ module ExchangeRate::Provided
 
       begin
         ExchangeRate::Importer.new(
-          exchange_rate_provider: provider,
+          exchange_rate_provider: exchange_rate_provider,
+          provider_name: name,
           from: from,
           to: to,
           start_date: start_date,

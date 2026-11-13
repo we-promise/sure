@@ -423,6 +423,27 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 3.days.ago.to_date, pair.first_provider_rate_on
   end
 
+  test "pair metadata keeps the name of the provider that fetched, even if settings change mid-import" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+    Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "USD", to: "EUR", date: 3.days.ago.to_date, rate: 1.3),
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current,        rate: 1.5)
+    ])
+
+    with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil) do
+      # A Twelve Data key is saved while the keyless Frankfurter fallback is fetching.
+      Provider::Frankfurter.any_instance.expects(:fetch_exchange_rates)
+        .with { ENV["TWELVE_DATA_API_KEY"] = "new-key" }.returns(provider_response)
+
+      ExchangeRate.import_provider_rates(from: "USD", to: "EUR", start_date: 30.days.ago.to_date, end_date: Date.current, clear_cache: true)
+    end
+
+    assert_equal "frankfurter", ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR").provider_name
+  end
+
   test "first_provider_rate_on is NOT moved forward when provider shrinks coverage" do
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
