@@ -2762,6 +2762,10 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      clean-up task; and `OPENAI_SUPPORTS_PDF_PROCESSING=false` keeps turning PDF import off, as
      today, until PR 7 makes it an admin's per-model setting.
      Implementation plan: [`pr-2e-documents.md`](pr-2e-documents.md).
+   - **2f. Release e2e.** PR #4892 (with ruby_llm 2.2 and the review fixes) adds
+     `test/e2e/ai/`: the features through their jobs and pages on free live models (Kilo's
+     `kilo-auto/free`, OpenCode Zen's Jev), configured through the AI ENV, run by `ai-e2e.yml` on
+     every `v*` tag. Implementation plan: [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md).
 
    *Still on old code after 2e:* chat, through `Assistant`, `Provider::Openai` and
    `Provider::Anthropic`'s chat methods and `Chat.default_model`, reading the same ENV and
@@ -2963,6 +2967,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`pr-2c-generations.md`](pr-2c-generations.md) | PR 2c's implementation plan (#4775), with the JSON policy, prompt folders and batches |
 | [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (#4765): the Jev transport, judgements and shadow runs |
 | [`pr-2e-documents.md`](pr-2e-documents.md) | PR 2e's implementation plan (#4771, after 2d and #3422): attachments, `embed`, `ocr`, PDF reading with its checks, and the vector store fixes |
+| [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md) | PR 2f's release e2e plan (#4892): the AI features end to end on free live models on every `v*` tag |
 
 **Terms this plan defines**, for readers and coding agents:
 
