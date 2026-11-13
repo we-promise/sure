@@ -136,31 +136,42 @@ class RecurringOccurrencesController < ApplicationController
       series = @occurrence.recurring_transaction
       matcher = RecurringTransaction::Matcher.new(Current.family)
 
-      scope = candidate_scope
-        .where(date: candidate_window)
+      # preload, not includes: entryable is polymorphic so it can never be
+      # joined, and naming it keeps the raw transactions join above out of
+      # Rails' eager-load machinery.
+      eligible = candidate_scope
         .where(excluded: false)
         .where.not(id: RecurringMatchRejection.where(recurring_transaction: series).select(:entry_id))
-        # preload, not includes: entryable is polymorphic so it can never be
-        # joined, and naming it keeps the raw transactions join above out of
-        # Rails' eager-load machinery.
         .preload(:entryable)
-        .limit(RANKED_SCAN_LIMIT)
+      scope = eligible.where(date: candidate_window).limit(RANKED_SCAN_LIMIT)
 
-      scope = if series.merchant_id.present?
+      identity_scope = if series.merchant_id.present?
         scope.where(transactions: { merchant_id: series.merchant_id })
       else
         patterns = matcher_name_patterns(series)
-        return [] if patterns.empty?
-
-        scope.where("entries.name ILIKE ANY (ARRAY[?])", patterns)
+        patterns.empty? ? scope.none : scope.where("entries.name ILIKE ANY (ARRAY[?])", patterns)
       end
 
-      scored = scope.filter_map do |entry|
+      entries = (identity_scope.to_a + reference_candidates(series, eligible)).uniq(&:id)
+      scored = entries.filter_map do |entry|
         explanation = matcher.explain(@occurrence, entry)
         [ entry, explanation ] if explanation
       end
 
-      scored.sort_by { |_entry, explanation| -explanation.confidence }.first(RANKED_SHOWN)
+      # A reference match leads, as it does in the matcher, then confidence.
+      scored.sort_by { |_entry, explanation| [ explanation.signals.key?(:reference) ? 0 : 1, -explanation.confidence ] }.first(RANKED_SHOWN)
+    end
+
+    # Payments whose note carries the bill's bank reference match whatever their
+    # name or date, so the ranked list offers them too.
+    def reference_candidates(series, eligible)
+      needle = series.bank_reference && RecurringTransaction::Matcher.normalize_name(series.bank_reference)
+      return [] if needle.blank? || needle.length < RecurringTransaction::Matcher::MIN_REFERENCE_LENGTH
+
+      pattern = "%#{ActiveRecord::Base.sanitize_sql_like(needle).gsub(/\s+/, '%')}%"
+      nearest_first = Arel.sql(ActiveRecord::Base.sanitize_sql_array([ "ABS(entries.date - ?) ASC", @occurrence.due_on ]))
+      scope = eligible.where("entries.date <= ?", Date.current).order(nearest_first).limit(RANKED_SCAN_LIMIT)
+      RecurringTransaction::Matcher.with_note_patterns(scope, [ pattern ]).to_a
     end
 
     # The names the matcher itself would recognize: the series' own name plus
@@ -182,7 +193,7 @@ class RecurringOccurrencesController < ApplicationController
     # payment being hunted for is usually the one the window already excluded.
     def candidate_entries
       scope = if @candidate_query.present?
-        candidate_scope.where("entries.name ILIKE :q", q: "%#{ActiveRecord::Base.sanitize_sql_like(@candidate_query)}%")
+        candidate_scope.where("entries.name ILIKE :q OR entries.notes ILIKE :q", q: "%#{ActiveRecord::Base.sanitize_sql_like(@candidate_query)}%")
       else
         candidate_scope.where(date: candidate_window)
       end

@@ -11,6 +11,52 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "bank_reference lives in matcher_hints, squished, and blank removes it" do
+    series = @family.recurring_transactions.create!(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date,
+      status: "active", manual: true, matcher_hints: { "name_aliases" => [ "WATER CO" ] }
+    )
+
+    series.update!(bank_reference: "  VN   4711 ")
+    assert_equal "VN 4711", series.reload.bank_reference
+    assert_equal [ "WATER CO" ], series.matcher_hints["name_aliases"], "other learned hints survive"
+
+    series.update!(bank_reference: "  ")
+    assert_nil series.reload.bank_reference
+    assert_not series.matcher_hints.key?("bank_reference")
+  end
+
+  test "reference_only is stored in matcher_hints and only effective with a reference" do
+    series = @family.recurring_transactions.create!(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date,
+      status: "active", manual: true
+    )
+
+    series.update!(reference_only: "1")
+    assert_not series.reference_only?, "no reference, no effect"
+
+    series.update!(bank_reference: "VN 4711")
+    assert series.reference_only?
+
+    series.update!(reference_only: "0")
+    assert_not series.reference_only?
+    assert_not series.matcher_hints.key?("reference_only")
+  end
+
+  test "a bank_reference too short to be distinctive is invalid" do
+    series = @family.recurring_transactions.new(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date,
+      status: "active", manual: true, bank_reference: "ab"
+    )
+
+    assert_not series.valid?
+    assert series.errors.key?(:bank_reference)
+  end
+
+
   test "payable ignores a debt destination that belongs to another family" do
     foreign_card = families(:empty).accounts.create!(
       name: "Foreign Card", balance: 0, currency: "USD", accountable: CreditCard.new
@@ -1819,6 +1865,94 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     bill.update!(name: "Renamed Legacy")
 
     assert_equal "LEGACY CO", bill.reload.matcher_name
+  end
+
+  test "a bank reference needs an account and an expense bill" do
+    series = @family.recurring_transactions.new(
+      name: "Water", amount: 80, currency: "USD", expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true, bank_reference: "VN 4711"
+    )
+    assert_not series.valid?
+    assert series.errors.added?(:bank_reference, :needs_account_and_expense)
+
+    series.account = @account
+    assert series.valid?
+
+    series.bill_type = "income"
+    series.amount = -80
+    assert_not series.valid?
+  end
+
+  test "reference-only reads false where a reference cannot match" do
+    series = @family.recurring_transactions.create!(
+      name: "Water", account: @account, amount: 80, currency: "USD", expected_day_of_month: 5, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true, bank_reference: "VN 4711", reference_only: true
+    )
+    assert series.reference_only?
+
+    series.update_columns(account_id: nil)
+
+    assert_not series.reload.reference_only?
+  end
+
+  test "covering ignores a reference-only bill's name and finds it by the reference in the note" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 50)
+    declared.update!(bank_reference: "NFX 123", reference_only: true)
+    bare = create_transaction(account: @account, amount: 50, name: "Netflix")
+    referenced = create_transaction(account: @account, amount: 50, name: "something else")
+    referenced.update!(notes: "NFX 123 monthly")
+
+    assert_nil @family.recurring_transactions.covering(bare)
+    assert_equal declared, @family.recurring_transactions.covering(referenced)
+  end
+
+  test "Identifier leaves a reference-only manual bill's variance to the matcher" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 50)
+    declared.update!(bank_reference: "NFX 123", reference_only: true, occurrence_count: 9)
+    create_transaction(account: @account, amount: 50, name: "Netflix", date: Date.current)
+
+    RecurringTransaction.identify_patterns_for!(@family)
+
+    assert_equal 9, declared.reload.occurrence_count
+  end
+
+  test "covering finds a reference-only bill by its note whatever the payment's amount" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 80)
+    declared.update!(bank_reference: "NFX 123", reference_only: true)
+    entry = create_transaction(account: @account, amount: 240, name: "something else")
+    entry.update!(notes: "NFX 123 quarterly")
+
+    assert_equal declared, @family.recurring_transactions.covering(entry)
+  end
+
+  test "covering never matches a refund of the opposite sign to a reference-only bill" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 80)
+    declared.update!(bank_reference: "NFX 123", reference_only: true)
+    refund = create_transaction(account: @account, amount: -240, name: "refund")
+    refund.update!(notes: "NFX 123 refund")
+
+    assert_nil @family.recurring_transactions.covering(refund)
+  end
+
+  test "covering finds a referenced bill by the note whatever the amount, unless another merchant is bound" do
+    setup_covering_family
+    declared = covering_series(name: "Netflix", amount: 80)
+    declared.update!(bank_reference: "NFX 123")
+    entry = create_transaction(account: @account, amount: 240, name: "something else")
+    entry.update!(notes: "NFX 123 quarterly")
+
+    assert_equal declared, @family.recurring_transactions.covering(entry)
+
+    bound = covering_series(name: "Other", amount: 80, merchant: @merchant, dedup_scope: "bound")
+    bound.update!(bank_reference: "BND 555")
+    foreign = create_transaction(account: @account, amount: 240, name: "x", merchant: @family.merchants.create!(name: "Else"))
+    foreign.update!(notes: "BND 555")
+
+    assert_nil @family.recurring_transactions.covering(foreign)
   end
 
   private

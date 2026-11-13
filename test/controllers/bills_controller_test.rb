@@ -332,6 +332,29 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match "var(--color-destructive)", response.body
   end
 
+  test "the drawer says which payment note identifies the bill, only when one is set" do
+    bill = create_bill(name: "Strom", amount: 80)
+    get_bill_history(bill)
+    assert_select "p.text-xs.text-secondary", text: /#{Regexp.escape(I18n.t("bills.detail.rule_reference", reference: "VN 4711"))}/, count: 0
+
+    bill.update!(bank_reference: "VN 4711")
+    get_bill_history(bill)
+
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_reference", reference: "VN 4711"), count: 1
+  end
+
+  test "a reference-only bill's drawer shows the reference line and no name pill or name rules" do
+    bill = create_bill(name: "Strom", amount: 80)
+    bill.update!(matcher_hints: { "name_aliases" => [ "EXAMPLE" ] })
+    bill.update!(bank_reference: "VN 4711", reference_only: true)
+
+    get_bill_history(bill)
+
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_reference_only", reference: "VN 4711"), count: 1
+    assert_select "p.text-xs.text-secondary", text: I18n.t("bills.detail.rule_aliases", names: "EXAMPLE"), count: 0
+    assert_select "span", text: "Strom", count: 0
+  end
+
   test "the drawer names the detected bill only when it differs from the bill's name" do
     bill = create_bill(name: "Netflix", amount: 15)
     bill.update!(matcher_hints: { "detected_name" => "NETFLIX.COM" })

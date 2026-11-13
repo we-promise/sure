@@ -41,6 +41,8 @@ en:
       rules: How this bill is matched
       rule_named: "%{name}"
       rule_amount_range: "from %{min} to %{max}"
+      rule_reference: "Payments with \"%{reference}\" in the note match this bill, whatever the amount or date"
+      rule_reference_only: "Only payments with \"%{reference}\" in the note match this bill, whatever the amount or date"
       rule_aliases: "Also matches %{names}"
       rule_detected: "Matches transactions named %{name}"
       rule_learned_tolerance: "Amounts within %{percent} of the usual amount match this bill"
@@ -100,6 +102,7 @@ en:
       same_merchant: Same merchant
       name_matches: Name matches
       same_transfer: Transfer to the same account
+      reference: Payment note contains "%{reference}"
       exact_amount: Exact amount
       amount_off: "%{amount} off"
       due_date: Due-date match

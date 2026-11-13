@@ -393,7 +393,7 @@ class RecurringTransactionsController < ApplicationController
     # raw permit.
     def recurring_transaction_params
       params.require(:recurring_transaction).permit(
-        :payment_url, :autopay, :notes, :bill_type, :category_id,
+        :payment_url, :autopay, :notes, :bank_reference, :reference_only, :bill_type, :category_id,
         :renews_on, :trial_ends_on, :cancelled_on, :end_after_count,
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
         :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit
@@ -404,7 +404,7 @@ class RecurringTransactionsController < ApplicationController
       params.require(:recurring_transaction).permit(
         :name, :amount, :currency, :account_id, :first_due_on, :frequency_preset,
         :frequency_interval, :frequency_interval_unit,
-        :payment_url, :autopay, :notes, :is_income, :category_id
+        :payment_url, :autopay, :notes, :bank_reference, :reference_only, :is_income, :category_id
       )
     end
 

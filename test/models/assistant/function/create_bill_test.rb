@@ -26,6 +26,26 @@ class Assistant::Function::CreateBillTest < ActiveSupport::TestCase
     assert_operator series.recurring_occurrences.count, :>, 0
   end
 
+  test "a bank reference is stored on the new bill" do
+    result = call_tool(
+      "name" => "City Water", "amount" => 80, "first_due_on" => (Date.current + 3).iso8601,
+      "account_name" => accounts(:depository).name, "bank_reference" => "VN 4711"
+    )
+
+    assert result[:created]
+    assert_equal "VN 4711", @family.recurring_transactions.find_by!(name: "City Water").bank_reference
+  end
+
+  test "reference_only is stored with the reference" do
+    result = call_tool(
+      "name" => "City Water", "amount" => 80, "first_due_on" => (Date.current + 3).iso8601,
+      "account_name" => accounts(:depository).name, "bank_reference" => "VN 4711", "reference_only" => true
+    )
+
+    assert result[:created]
+    assert @family.recurring_transactions.find_by!(name: "City Water").reference_only?
+  end
+
   test "income flips the stored sign, never the caller's" do
     result = call_tool(
       "name" => "Paycheck", "amount" => 1200,

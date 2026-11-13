@@ -95,6 +95,8 @@ module BillsHelper
     {
       aliases: Array(series.matcher_hints["name_aliases"]).compact_blank,
       learned_pct: series.matcher_hints["learned_tolerance_pct"].to_f,
+      reference: series.matcher_hints["bank_reference"].presence,
+      reference_only: series.matcher_hints["bank_reference"].present? && series.matcher_hints["reference_only"] == true,
       detected_name: series.merchant_id.blank? ? series.matcher_hints["detected_name"].presence : nil
     }
   end
@@ -454,6 +456,7 @@ module BillsHelper
     reasons << t("bills.match.same_merchant") if signals[:merchant]
     reasons << t("bills.match.name_matches") if signals[:name]
     reasons << t("bills.match.same_transfer") if signals[:transfer]
+    reasons << t("bills.match.reference", reference: signals[:reference]) if signals[:reference].is_a?(String)
 
     # Guarded: the review queue can hold an allocation whose entry has been
     # nullified out from under it, so neither figure is guaranteed.

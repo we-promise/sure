@@ -55,6 +55,13 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal [ I18n.t("bills.match.same_transfer") ], reasons
   end
 
+  test "a reference match is explained by the reference alone" do
+    reasons = bills_match_reasons({ name: 0.35, reference: "VN 4711", account: 0.10 }, currency: "USD")
+
+    assert_equal [ I18n.t("bills.match.reference", reference: "VN 4711"), I18n.t("bills.match.name_matches") ].sort, reasons.sort
+  end
+
+
   # signals[:account] is a constant 0.10 on every candidate, because
   # identity_matches? has already rejected everything on another account. A
   # reason that never distinguishes anything is decoration.
@@ -484,6 +491,16 @@ class BillsHelperTest < ActionView::TestCase
     series = OpenStruct.new(matcher_hints: { "detected_name" => "NETFLIX.COM" })
 
     assert_equal "NETFLIX.COM", bills_matcher_hints(series)[:detected_name]
+  end
+
+  test "matcher hints expose the bank reference when one was stored" do
+    assert_equal "VN 4711", bills_matcher_hints(OpenStruct.new(matcher_hints: { "bank_reference" => "VN 4711" }))[:reference]
+    assert_nil bills_matcher_hints(OpenStruct.new(matcher_hints: {}))[:reference]
+  end
+
+  test "matcher hints report reference-only only when a reference is set" do
+    assert bills_matcher_hints(OpenStruct.new(matcher_hints: { "bank_reference" => "VN 4711", "reference_only" => true }))[:reference_only]
+    assert_not bills_matcher_hints(OpenStruct.new(matcher_hints: { "reference_only" => true }))[:reference_only]
   end
 
   test "matcher hints leave the detected name nil when none was stored" do
