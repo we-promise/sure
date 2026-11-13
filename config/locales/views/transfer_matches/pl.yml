@@ -3,7 +3,11 @@ pl:
   transfer_matches:
     create:
       success: Przelew utworzony
+    dismiss_suggestion:
+      success: "Sugestia odrzucona"
     matching_fields:
+      dismiss_suggestion: "Nie pasuje"
+      suggested_account_html: "IBAN tej płatności pasuje do Twojego konta <strong>%{name}</strong> — wybraliśmy je poniżej."
       create_new_transaction: Utwórz nową transakcję
       match_existing_recommended: Dopasuj istniejącą transakcję (zalecane)
       matching_method: Metoda dopasowania

@@ -3,6 +3,8 @@ zh-TW:
   transfer_matches:
     create:
       success: 轉帳已建立
+    dismiss_suggestion:
+      success: "已忽略建議"
     new:
       header:
         title: 配對轉帳或付款
@@ -15,6 +17,8 @@ zh-TW:
       inflow_transaction: 流入交易
       create_transfer_match: 建立轉帳配對
     matching_fields:
+      dismiss_suggestion: "不相符"
+      suggested_account_html: "此付款的 IBAN 與您的帳戶 <strong>%{name}</strong> 相符，我們已在下方預先選取。"
       select_method: 選擇交易的配對方式。
       match_existing_recommended: 配對現有交易（建議）
       create_new_transaction: 建立新交易

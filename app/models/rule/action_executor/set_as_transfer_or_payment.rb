@@ -22,7 +22,9 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
 
     count_modified_resources(scope) do |txn|
       entry = txn.entry
-      unless txn.transfer?
+      # A pending transfer leaves the kind untouched until it is confirmed, so
+      # the kind alone does not tell whether the transaction is already linked.
+      unless txn.transfer? || txn.transfer.present?
         transfer = build_transfer(target_account, entry)
         Transfer.transaction do
           transfer.save!

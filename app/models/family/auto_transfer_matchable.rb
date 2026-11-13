@@ -164,7 +164,192 @@ module Family::AutoTransferMatchable
     sync_principal_only_loan_accounts(created_transfers)
   end
 
+  # An outflow entry whose counterparty IBAN matches another of this
+  # family's accounts (synced or manual) is a transfer whose destination
+  # account is known, even though the matching inflow transaction doesn't
+  # exist yet -- e.g. the destination is a manually-tracked account the
+  # user hasn't recorded this deposit on. Returns that account, or nil when
+  # there's nothing to suggest (no counterparty IBAN, no matching account,
+  # already a transfer, or the user already dismissed this suggestion).
+  #
+  # Deliberately entry-scoped rather than family-wide: this only needs to
+  # answer "should the transfer-match dialog for THIS entry pre-fill a
+  # target account", not enumerate every missing counterpart across the
+  # family (no UI surfaces that broader list yet).
+  # user: required so the suggested account is restricted to the same
+  # writable+visible set TransferMatchesController#new offers in its
+  # target_account_id dropdown. Without it, a match on a disabled account or
+  # one the current user has no access to (family sharing permissions) would
+  # get preselected in the UI despite never appearing among the selectable
+  # options -- and would leak that account's name/existence to a user who
+  # can't otherwise see it.
+  def missing_transfer_suggestion_for(entry, user:)
+    return nil unless entry.amount.positive?
+
+    transaction = entry.entryable
+    return nil unless transaction.is_a?(Transaction)
+    # A pending auto-match leaves the kind untouched until it is confirmed, so
+    # the kind alone doesn't tell whether this outflow is already matched.
+    return nil if transaction.transfer? || transaction.transfer.present?
+    return nil if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
+
+    counterparty_iban = transaction.counterparty_iban
+    return nil if counterparty_iban.blank?
+
+    # One IBAN can back several currency sub-accounts (Revolut, Wise), so
+    # prefer the one in the outflow's own currency.
+    candidates = accounts.writable_by(user).visible.where.not(id: entry.account_id).where(iban: normalize_iban(counterparty_iban)).to_a
+    candidates.find { |candidate| candidate.currency == entry.currency } || candidates.first
+  end
+
+  # Family-wide counterpart to missing_transfer_suggestion_for: instead of
+  # only answering "what would the match dialog suggest for this one entry",
+  # this actually creates the missing counterpart transaction (on the
+  # destination account) plus a status: "pending" Transfer linking it to the
+  # outflow -- the same pending state auto_match_transfers! leaves behind
+  # for a genuine match, so it surfaces via the existing accept/reject pill
+  # (transactions/_transfer_match.html.erb) instead of requiring the user to
+  # find and open the manual match dialog themselves.
+  #
+  # Restricted to manual (unsynced) destination accounts only: a linked
+  # account's real transaction may simply not have posted yet, and
+  # fabricating a stand-in entry for it here would risk a duplicate once the
+  # provider's own import brings in the real one. A manual account gets no
+  # provider import; when the user later imports the real row from a CSV
+  # file, TransactionImport recognises the fabricated entry by account, date,
+  # amount and currency and lets the imported row take it over.
+  #
+  # Currency is intentionally not converted -- only a same-currency
+  # destination account is eligible, keeping the fabricated entry's amount
+  # exact rather than dependent on same-day exchange-rate availability.
+  def auto_create_missing_transfer_counterparts!(account: nil)
+    # Only same-currency manual accounts that carry an IBAN can ever receive a
+    # fabricated counterpart, so look them up once and skip every outflow whose
+    # counterparty IBAN isn't one of theirs (rent, utilities and other third
+    # parties) before running any per-entry candidate query.
+    target_accounts_by_iban = accounts.visible_manual.to_a
+      .select { |target| target.iban.present? }
+      .group_by { |target| normalize_iban(target.iban) }
+    return if target_accounts_by_iban.empty?
+
+    # Narrow in SQL to outflows that still could need a counterpart: they
+    # carry a counterparty IBAN, aren't already a transfer, and the user
+    # hasn't dismissed the suggestion.
+    outflow_entries = Entry.joins(:account)
+      .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+      .where(accounts: { family_id: id, status: [ "draft", "active" ] })
+      .where(entryable_type: "Transaction", excluded: false)
+      .where("entries.amount > 0")
+      .where.not(transactions: { counterparty_iban: nil })
+      .where.not(transactions: { kind: Transaction::TRANSFER_KINDS })
+      .where.not(transactions: { id: Transfer.select(:outflow_transaction_id) })
+      .where.not("transactions.extra @> ?", { "counterparty_transfer_suggestion_dismissed" => true }.to_json)
+    outflow_entries = outflow_entries.where(account_id: account.id) if account
+
+    writable_account_ids_by_owner = Hash.new do |ids, owner|
+      ids[owner] = accounts.writable_by(owner).pluck(:id).to_set
+    end
+
+    outflow_entries.preload(:entryable, account: :owner).find_each do |entry|
+      transaction = entry.entryable
+      next unless transaction.is_a?(Transaction)
+      next if transaction.transfer?
+      next if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
+
+      counterparty_iban = transaction.counterparty_iban
+      next if counterparty_iban.blank?
+
+      # The sync runs without a user, so act on behalf of the outflow
+      # account's owner: only fabricate into an account they could pick in
+      # the manual match dialog (TransferMatchesController#new), never into
+      # another member's private account. An account without an owner has
+      # nobody to act for, so it gets no automatic counterpart (the manual
+      # match dialog still works for it).
+      owner = entry.account.owner
+      next unless owner
+
+      target_account = target_accounts_by_iban[normalize_iban(counterparty_iban)]&.find do |candidate|
+        candidate.id != entry.account_id &&
+          candidate.currency == entry.currency &&
+          writable_account_ids_by_owner[owner].include?(candidate.id)
+      end
+      next unless target_account
+
+      # A real match candidate (an inflow transaction that already exists)
+      # is handled by auto_match_transfers! -- only fabricate a counterpart
+      # when there's genuinely nothing to match against yet.
+      next if transfer_match_candidates(outflow_transaction_id: transaction.id, account_id: account&.id).any?
+
+      create_missing_transfer_counterpart!(entry, transaction, target_account)
+    end
+  end
+
   private
+    # Builds the fabricated inflow entry + its pending Transfer in one
+    # savepoint, so a race (a concurrent sync claiming this outflow for a
+    # different pairing, or creating the same counterpart independently)
+    # rolls back the whole attempt instead of leaving an orphaned entry
+    # with no Transfer behind it.
+    def create_missing_transfer_counterpart!(entry, transaction, target_account)
+      created = Transfer.transaction(requires_new: true) do
+        # The batch was loaded before this point; the user may have rejected
+        # or matched this outflow in the meantime. Re-check under a row lock
+        # so a reject during a running sync isn't undone right away.
+        transaction.lock!
+        next false if transaction.transfer? || Transfer.exists?(outflow_transaction_id: transaction.id)
+        next false if transaction.extra&.dig("counterparty_transfer_suggestion_dismissed") == true
+
+        # The fabricated leg is only a stand-in for money that left the
+        # outflow account, never real income, so it is a funds movement from
+        # the start.
+        inflow_transaction = Transaction.new(
+          kind: "funds_movement",
+          extra: { "auto_generated_transfer_counterpart" => true },
+          entry: target_account.entries.build(
+            amount: -entry.amount,
+            currency: target_account.currency,
+            date: entry.date,
+            name: I18n.with_locale(locale) { missing_transfer_counterpart_name(entry.account, target_account) }
+          )
+        )
+        inflow_transaction.save!
+
+        Transfer.create!(
+          inflow_transaction_id: inflow_transaction.id,
+          outflow_transaction_id: transaction.id,
+          status: "pending"
+        )
+
+        # Like every automatic match, the suggestion leaves the real outflow
+        # as it is until the user confirms it (Transfer#confirm! applies the
+        # transfer kind), so an unconfirmed suggestion never moves budgets or
+        # reports.
+        true
+      end
+
+      target_account.sync_later if created
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      nil
+    end
+
+    # The fabricated entry lives on the target account, so everyone who can
+    # see that account reads its name. Name the source account only when all
+    # of them can see the source account too; otherwise a private account's
+    # name would leak to members it isn't shared with.
+    def missing_transfer_counterpart_name(source_account, target_account)
+      if account_viewer_ids(target_account).subset?(account_viewer_ids(source_account))
+        I18n.t("transfer.counterpart_name", from_account: source_account.name)
+      else
+        I18n.t("transfer.counterpart_name_generic")
+      end
+    end
+
+    # The members who can see an account (Account.accessible_by): its owner
+    # and everyone it is shared with.
+    def account_viewer_ids(account)
+      Set.new([ account.owner_id, *account.account_shares.pluck(:user_id) ].compact)
+    end
+
     # Orders the candidates so that IBAN-confirmed ones are tried first. A
     # confirmed IBAN (the destination account's own IBAN equals the outflow's
     # recorded counterparty IBAN) is a more precise signal than amount and date

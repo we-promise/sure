@@ -3,6 +3,8 @@ es:
   transfer_matches:
     create:
       success: Transferencia creada
+    dismiss_suggestion:
+      success: "Sugerencia descartada"
     new:
       header:
         title: Vincular transferencia o pago
@@ -15,6 +17,8 @@ es:
       inflow_transaction: Transacción de entrada
       create_transfer_match: Crear emparejamiento de transferencia
     matching_fields:
+      dismiss_suggestion: "No coincide"
+      suggested_account_html: "El IBAN de este pago coincide con tu cuenta <strong>%{name}</strong>; la hemos preseleccionado abajo."
       select_method: Selecciona un método para emparejar tus transacciones.
       match_existing_recommended: Emparejar con una transacción existente (recomendado)
       create_new_transaction: Crear una transacción nueva

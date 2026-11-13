@@ -143,7 +143,7 @@ class TransfersController < ApplicationController
 
     # A link the Wise sync makes again on its own is rejected instead, so it
     # stays removed.
-    WiseItem::InterbalanceLinker.relinks?(@transfer) ? @transfer.reject! : @transfer.destroy!
+    WiseItem::InterbalanceLinker.relinks?(@transfer) ? @transfer.reject! : @transfer.unlink!
     redirect_back_or_to transactions_url, notice: t(".success")
   end
 

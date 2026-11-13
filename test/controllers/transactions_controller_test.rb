@@ -2507,6 +2507,19 @@ end
     assert_not_includes response.body, "action_type=set_transaction_category"
   end
 
+  test "destroying a transaction also removes its fabricated transfer counterpart" do
+    accounts(:loan).update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+    outflow_entry.entryable.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @user.family.auto_create_missing_transfer_counterparts!
+    fabricated_entry_id = Transfer.find_by!(outflow_transaction_id: outflow_entry.entryable_id).inflow_transaction.entry.id
+
+    delete transaction_url(outflow_entry)
+
+    assert_redirected_to account_url(outflow_entry.account)
+    assert_not Entry.exists?(fabricated_entry_id)
+  end
+
   private
     # The Allocator's two-key advisory lock on this entry, held by this session.
     def entry_lock_held?(entry)

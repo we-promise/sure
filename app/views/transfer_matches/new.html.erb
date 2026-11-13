@@ -52,7 +52,8 @@
                 ) %>
           <% else %>
             <%= render "transfer_matches/matching_fields",
-                        form: f, entry: @entry, candidates: @candidate_entries, accounts: @accounts %>
+                        form: f, entry: @entry, candidates: @candidate_entries, accounts: @accounts,
+                        suggested_account: @suggested_target_account %>
           <% end %>
         </div>
       </section>

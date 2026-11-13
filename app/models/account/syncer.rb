@@ -15,6 +15,7 @@ class Account::Syncer
 
   def perform_post_sync
     account.family.auto_match_transfers!(account: account)
+    account.family.auto_create_missing_transfer_counterparts!(account: account)
   end
 
   private
