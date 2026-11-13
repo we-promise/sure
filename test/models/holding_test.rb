@@ -252,6 +252,31 @@ class HoldingTest < ActiveSupport::TestCase
     end
   end
 
+  # InvestmentStatement reads every position's fallback through the batch, so
+  # the batch must count a pre-split buy in post-split shares as #avg_cost does.
+  test "the batched average cost counts purchases in post-split shares" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+    create_trade(security, account: @account, qty: 10, price: 50, date: ex_date)
+    before = split_holding(security, ex_date - 1, 10)
+    on = split_holding(security, ex_date, 30)
+    unsplit = create_security("NOSPL", prices: [ { date: Date.current, price: 10 } ])
+    create_trade(unsplit, account: @account, qty: 4, price: 8, date: Date.current)
+    unsplit_holding = create_holding(unsplit, Date.current, 4)
+
+    expected = { before => Money.new(100), on => Money.new(50), unsplit_holding => Money.new(8) }
+    expected.each { |holding, value| assert_cost value, Holding.find(holding.id).avg_cost, "#{holding.date} per holding" }
+
+    batch = Holding.where(id: expected.keys.map(&:id)).includes(:security).to_a
+    Holding.preload_avg_costs(batch)
+
+    batch.each do |holding|
+      original = expected.keys.find { |h| h.id == holding.id }
+      queries = Holding.uncached { capture_sql_queries { assert_cost expected[original], holding.avg_cost, "#{holding.date} batched" } }
+      assert_empty queries, "#{holding.date} read its cost after the preload"
+    end
+  end
+
   test "the batched average cost reads every holding's trades in one query" do
     batch_sizes = [ 2, 4 ].map do |count|
       holdings = Array.new(count) do |i|
@@ -260,10 +285,12 @@ class HoldingTest < ActiveSupport::TestCase
         create_holding(security, Date.current, 1)
       end
 
-      capture_sql_queries { Holding.preload_avg_costs(holdings) }.size
+      queries = capture_sql_queries { Holding.preload_avg_costs(holdings) }
+      [ queries.count { |sql| sql.include?("JOIN trades") }, queries.size ]
     end
 
-    assert_equal [ 1, 1 ], batch_sizes
+    # One query for the trades, one for the splits, whatever the batch size.
+    assert_equal [ [ 1, 2 ], [ 1, 2 ] ], batch_sizes
   end
 
   test "the batch leaves a stored cost basis alone and does not query for it" do
