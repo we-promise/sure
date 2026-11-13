@@ -404,6 +404,7 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
+        .where(qty: 0) # buys/sells move value between cash and holdings; keep cash income and fees
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
       trades = exclude_tax_advantaged_accounts(trades)
