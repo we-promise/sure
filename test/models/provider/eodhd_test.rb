@@ -113,6 +113,9 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal "XLF.US", @provider.send(:eodhd_symbol, "XLF", "ARCX")
     assert_equal "SPY.US", @provider.send(:eodhd_symbol, "SPY", "BATS")
     assert_equal "NSRGY.US", @provider.send(:eodhd_symbol, "NSRGY", "OTCM")
+    assert_equal "NVDA.US", @provider.send(:eodhd_symbol, "NVDA", "XNGS")
+    assert_equal "XLF.US", @provider.send(:eodhd_symbol, "XLF", "XARC")
+    assert_equal "NSRGY.US", @provider.send(:eodhd_symbol, "NSRGY", "XOTC")
   end
 
   test "eodhd_symbol builds Warsaw ticker from XWAR MIC" do
