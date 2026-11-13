@@ -251,6 +251,7 @@ zh-CN:
     toggle_recurring_section: 切换待发生循环交易
     search:
       filters:
+        balance_updates: 余额
         account: 账户
         date: 日期
         type: 类型
@@ -305,6 +306,11 @@ zh-CN:
         unexpected_error: 转换过程中发生意外错误：%{error}
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: 已始终显示，设置位于
+          hint: 仅对当前视图生效。如需始终显示，请开启
+          preferences_link: 偏好设置
+          show: 显示同步余额更新
         date_filter:
           start_date: 开始日期
           end_date: 结束日期
@@ -314,6 +320,7 @@ zh-CN:
           less_than: 小于
           placeholder: '0'
         badge:
+          balance_updates: 同步余额
           expense: 支出
           income: 收入
           on_or_after: 于 %{date} 当日或之后

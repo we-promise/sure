@@ -10,6 +10,23 @@ class ValuationTest < ActiveSupport::TestCase
     end
   end
 
+  test "names a reconciliation on a linked account after the sync that left it" do
+    entry = Entry.new(name: "Manual balance update", account: accounts(:connected))
+    valuation = Valuation.new(kind: "reconciliation")
+
+    assert_equal "Synced balance", valuation.display_name(entry)
+    I18n.with_locale(:fr) do
+      assert_equal "Solde synchronisé", valuation.display_name(entry)
+    end
+  end
+
+  test "keeps the manual name on a manual account and the anchor names on a linked one" do
+    assert_equal "Manual balance update",
+      Valuation.new(kind: "reconciliation").display_name(Entry.new(name: "Manual balance update", account: accounts(:depository)))
+    assert_equal "Current balance",
+      Valuation.new(kind: "current_anchor").display_name(Entry.new(name: "Current balance", account: accounts(:connected)))
+  end
+
   test "preserves custom valuation names when rendering" do
     entry = Entry.new(name: "Réévaluation annuelle", account: accounts(:investment))
     valuation = Valuation.new(kind: "reconciliation")

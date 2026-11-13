@@ -419,4 +419,17 @@ class EntryTest < ActiveSupport::TestCase
     entry.update!(entryable_attributes: { id: entry.entryable_id, exchange_rate: 1.2 })
     assert entry.saved_changes_affect_balances?
   end
+
+  test "balance update scopes split reconciliations from every other entry" do
+    account = accounts(:connected)
+    account.entries.destroy_all
+    transaction = create_transaction(account: account)
+    reconciliation = create_valuation(account: account, date: 2.days.ago.to_date)
+    opening_anchor = create_valuation(account: account, date: 10.days.ago.to_date, kind: "opening_anchor")
+    current_anchor = create_valuation(account: account, date: Date.current, kind: "current_anchor")
+
+    assert_equal [ reconciliation ], account.entries.balance_updates.to_a
+    assert_equal [ transaction, opening_anchor, current_anchor ].map(&:id).sort,
+      account.entries.excluding_balance_updates.pluck(:id).sort
+  end
 end

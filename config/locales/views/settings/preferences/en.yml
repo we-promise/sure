@@ -3,6 +3,8 @@ en:
   settings:
     preferences:
       show:
+        show_balance_updates: Synced balance updates
+        show_balance_updates_hint: Always list the daily balances that bank syncing records in the activity of linked accounts
         country: Country
         currency: Currency
         date_format: Date format

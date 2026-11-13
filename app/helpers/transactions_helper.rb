@@ -2,9 +2,11 @@ module TransactionsHelper
   # @param exclude [Array<String>] filter keys to leave out (e.g. the account
   #   tab doesn't apply to the account activity feed, which is already scoped
   #   to one account)
+  # @param balance_updates [Boolean] offer the filter that shows a linked
+  #   account's synced balance updates (account activity feed only)
   # @return [Array<Hash>] the filters offered above the transaction list, each
   #   with the key its partial is named for, a translated label and an icon
-  def transaction_search_filters(exclude: [])
+  def transaction_search_filters(exclude: [], balance_updates: false)
     filters = [
       { key: "account_filter", label: t("transactions.search.filters.account"), icon: "layers" },
       { key: "date_filter", label: t("transactions.search.filters.date"), icon: "calendar" },
@@ -20,6 +22,10 @@ module TransactionsHelper
 
     if Current.family&.manual_reconciliation?
       filters.insert(4, { key: "reconcile_status_filter", label: t("transactions.search.filters.reconcile_status"), icon: "check-circle" })
+    end
+
+    if balance_updates
+      filters << { key: "balance_updates_filter", label: t("transactions.search.filters.balance_updates"), icon: "scale" }
     end
 
     filters.reject { |filter| exclude.include?(filter[:key]) }

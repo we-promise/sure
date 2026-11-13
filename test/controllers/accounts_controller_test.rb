@@ -578,6 +578,79 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(valuation)}", count: 0
   end
 
+  test "show hides balance updates on a linked account by default" do
+    account = accounts(:connected)
+    transaction = create_transaction(account: account, name: "Linked Transaction")
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(transaction)}"
+    assert_select "##{dom_id(balance_update)}", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 1
+    assert_select "input[type=checkbox][name=?]:not([checked])", "q[balance_updates]"
+  end
+
+  test "show lists balance updates on a linked account when the preference is on" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date, name: "Manual balance update")
+    @user.update_show_balance_updates(true)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}", text: /Synced balance/
+    # Nothing left to switch in the filter: it shows as on, and points to Preferences.
+    assert_select "input[type=checkbox][name=?][checked][disabled]", "q[balance_updates]"
+    assert_select "#account-activity-filters li", count: 0
+  end
+
+  test "the activity filter shows balance updates for one view without saving the preference" do
+    account = accounts(:connected)
+    balance_update = create_valuation(account: account, date: 2.days.ago.to_date)
+
+    get account_url(account), params: { q: { balance_updates: "show", search: "Valuation" } }
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#account-activity-filters li", count: 2
+    assert_select "#account-activity-filters li", text: /Synced balances/
+    assert_not @user.reload.show_balance_updates?
+  end
+
+  test "clearing the balance updates badge hides them again and keeps the other filters" do
+    account = accounts(:connected)
+
+    delete clear_filter_account_url(account), params: {
+      q: { balance_updates: "show", search: "Valuation" },
+      param_key: "balance_updates",
+      param_value: "show"
+    }
+
+    assert_redirected_to account_url(account, q: { search: "Valuation" }, tab: "activity", page: nil, per_page: nil)
+  end
+
+  test "show lists balance updates on a manual account without offering the filter" do
+    balance_update = create_valuation(account: @account, date: 2.days.ago.to_date)
+
+    get account_url(@account)
+
+    assert_response :success
+    assert_select "##{dom_id(balance_update)}"
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
+  test "show omits the balance updates filter on a linked account without any" do
+    account = accounts(:connected)
+    account.entries.balance_updates.destroy_all
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
   test "show renders a badge for each active filter" do
     get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
 

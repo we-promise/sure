@@ -916,6 +916,16 @@ class Account < ApplicationRecord
     end
   end
 
+  # Whether the activity feed hides balance updates unless asked to show them.
+  #
+  # A linked account gets one from almost every daily sync, and users can't add
+  # their own there, so they bury the transactions they sit between. Property,
+  # vehicle, loan and other non-cash accounts are valued by those entries, so
+  # they keep showing them.
+  def hides_balance_updates_by_default?
+    linked? && balance_type != :non_cash
+  end
+
   def owned_by?(user)
     user.present? && owner_id == user.id
   end

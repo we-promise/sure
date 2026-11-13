@@ -2399,6 +2399,13 @@ end
     assert_response :success
   end
 
+  test "index does not offer the balance updates filter, which only applies to an account's activity" do
+    get transactions_url
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "balance_updates_filter", count: 0
+  end
+
   test "index offers the attachment filter in the filter menu" do
     get transactions_url
 

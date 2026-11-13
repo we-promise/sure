@@ -1,5 +1,5 @@
-<%# locals: (form:, exclude: [], clear_filters_path: nil) %>
-<% filters = transaction_search_filters(exclude: exclude) %>
+<%# locals: (form:, exclude: [], clear_filters_path: nil, balance_updates: false) %>
+<% filters = transaction_search_filters(exclude: exclude, balance_updates: balance_updates) %>
 
 <%= render DS::Tabs.new(
   variant: :unstyled,

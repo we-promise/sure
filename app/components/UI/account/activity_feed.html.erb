@@ -81,7 +81,8 @@
               <%= render "transactions/searches/menu",
                     form: form,
                     exclude: [ "account_filter", "ai_filter" ],
-                    clear_filters_path: helpers.account_path(account, tab: "activity") %>
+                    clear_filters_path: helpers.account_path(account, tab: "activity"),
+                    balance_updates: balance_updates_filter? %>
             <% end %>
           <% end %>
       <% end %>
@@ -119,6 +120,7 @@
           <% end %>
         <% end %>
       </ul>
+
     </div>
 
     <% if activity_dates.empty? %>
