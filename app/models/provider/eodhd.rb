@@ -13,9 +13,10 @@ class Provider::Eodhd < Provider
   # Maximum API calls per day (EODHD free/basic plans are very restrictive)
   MAX_REQUESTS_PER_DAY = 20
 
-  # EODHD free tier provides ~1 year of EOD data
+  # The free tier provides ~1 year of EOD data; paid plans go back 30+ years.
+  # Raising EODHD_MAX_REQUESTS_PER_DAY above the free cap signals a paid key.
   def max_history_days
-    365
+    365 if max_requests_per_day <= MAX_REQUESTS_PER_DAY
   end
 
   # EODHD uses {SYMBOL}.{EXCHANGE} ticker format with its own exchange codes
