@@ -2796,6 +2796,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    change an MCP client sees (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, and the
    checks in the plumbing (section 12). Capsule-only enforcement, now that no AI call is left on a
    web thread. Adds the capsule-only and completion-hook tests.
+   Built in parallel with PR 4, both off 2f, merged in order in the same release. Development plan: [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md).
 4. **Sequencer.** The three lane queues replacing `ai_high_priority` and `ai_low_priority` (the
    `ai` capsule drains the old two for one release), the `ai_chat` capsule, one gate per local
    host in RubyLLM's instrumenter sized from the server, Rules 1 to 3 with streamed background and
@@ -2806,6 +2807,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    interactive lane around each provider request: a few temporary lines that PR 6 deletes. Chat's
    own requests can't be interrupted, and never need to be. Replaces #4444's fetch class. Adds the lane and
    gate tests and the sequencer cases of the escalation test.
+   Development plan: [`pr-4-sequencer.md`](pr-4-sequencer.md).
 5. **RubyLLM 2.2 — delivered.** 2.2.0 (`~> 2.2`) ships on the 2f stack (PR #4892, `28cd75e61`).
    The recorded tests replayed and the live ones recorded again; Jev on OpenRouter works again
    (#1264: `…/alpha/decisions`, verified live 2026-11-12 — STARBUCKS → Coffee Shops 0.67,
@@ -2990,6 +2992,8 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (#4765): the Jev transport, judgements and shadow runs |
 | [`pr-2e-documents.md`](pr-2e-documents.md) | PR 2e's implementation plan (#4771, after 2d and #3422): attachments, `embed`, `ocr`, PDF reading with its checks, and the vector store fixes |
 | [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md) | PR 2f's release e2e plan (#4892): the AI features end to end on free live models on every `v*` tag |
+| [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md) | PR 3's development plan: smart-fill, smart-configure, document indexing, probes and the MCP AI tools in jobs, cancellation, and capsule-only enforcement |
+| [`pr-4-sequencer.md`](pr-4-sequencer.md) | PR 4's development plan: three lane queues, the `ai_chat` capsule, one gate per local host with interrupts, and #4444's typing hold in the gate |
 
 **Terms this plan defines**, for readers and coding agents:
 
