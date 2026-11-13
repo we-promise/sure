@@ -134,7 +134,10 @@ Not in PR 3: lanes, queues, the gate, interrupts and the typing hold (PR 4); cha
    whether indexing succeeded or failed for good. Sure keeps only the vector store's copy, as
    today. The cost: PR 7 can't re-index these documents itself when the embedding model changes
    or Documents is turned on; the user uploads them again. Statements and PDF imports are
-   unaffected, since they keep their files already.
+   unaffected, since they keep their files already. PR 8 makes both configurable per family
+   ("Keep uploaded documents after indexing", "Keep statement and PDF import files"), with these
+   as the defaults, so `IndexFamilyDocumentJob` purges through one method PR 8 can put a setting
+   behind (call by @josh-sanders, 2026-11-13).
 8. **Smart-fill's suggestion has no bill yet.** §12's table gives `RecurringTransaction::Suggestion`
    a `recurring_transaction_id`; smart-fill starts from an entry, before any bill exists. The table
    gets `entry_id` too, and exactly one of them is set (a check constraint).

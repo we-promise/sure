@@ -2892,6 +2892,21 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    page with the "AI unavailable" banner, the categorization page, and the prompts (behind
    "Advanced") and usage pages moved under `/settings/ai` with redirects. Adds the diagnostics
    test.
+
+   **File retention**, on the AI features page's Documents row, set by a family admin
+   (call by @josh-sanders, 2026-11-13). Two switches, defaulting to PR 3's behaviour:
+   - **Keep uploaded documents after indexing** (default off). Off, the file of a non-PDF document
+     is purged once the vector store has it, as PR 3 does. On, it's kept, so PR 7's re-indexing
+     (a new embedding model, Documents turned on) covers these documents too, without a new upload.
+   - **Keep statement and PDF import files** (default on, as today). Off, a statement's or PDF
+     import's file is purged once it's processed and indexed. The vault keeps the record, its
+     extracted rows and checks, and the vector store's copy, but loses what reads the file: the
+     download, `get_document_text`, "Read again as…", and re-indexing. `AccountStatement`'s
+     `original_file_attached` validation allows a purged file, and the vault shows "file not
+     kept". The switch's help text lists these before it's turned off.
+
+   Neither switch deletes anything already stored when it's flipped. Turning one off applies to
+   files processed from then on.
 9. **Allowed endpoints, own keys and the member switch.** `families.ai_blocked_endpoint_ids`,
    `ai_endpoint_credentials` and `users.ai_allowed`; the AI features page gains its endpoints
    section, with the allow checkbox, the "use our own key" field with a probe on save and the
