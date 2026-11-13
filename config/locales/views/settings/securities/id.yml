@@ -29,7 +29,7 @@ id:
         page_title: "Keamanan"
         encryption_warning:
           title: "Kunci enkripsi tidak ditemukan"
-          intro: "Data sensitif (kunci API, token penyedia, rahasia MFA, dan PII) disimpan tanpa enkripsi saat istirahat. Untuk mengaktifkan enkripsi, atur kunci berikut di variabel lingkungan atau kredensial Rails Anda:"
+          intro: "Data sensitif (kunci API, token penyedia, rahasia MFA, dan PII) disimpan dalam kondisi tidak terenkripsi. Untuk mengaktifkan enkripsi, atur kunci berikut di variabel lingkungan atau kredensial Rails Anda:"
           keys:
           - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
           - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
