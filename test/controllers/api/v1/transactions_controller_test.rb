@@ -1473,7 +1473,9 @@ end
     def count_db_queries(&block)
       queries = 0
       callback = lambda do |_name, _started, _finished, _unique_id, payload|
-        return if payload[:cached]
+        # Query-cache hits count too: whether a repeated preload query is served
+        # from the cache depends on the order of the ids in its IN list, which
+        # follows the row order Postgres returns.
         return if payload[:name].in?(%w[SCHEMA TRANSACTION])
 
         queries += 1
@@ -1510,6 +1512,8 @@ end
     def capture_sql_queries
       queries = []
       callback = lambda do |_name, _started, _finished, _unique_id, payload|
+        # Unlike count_db_queries, cache hits are skipped on purpose: callers
+        # assert on the SQL sent to the database, not on a query count.
         next if payload[:cached]
         next if %w[SCHEMA TRANSACTION].include?(payload[:name])
 
