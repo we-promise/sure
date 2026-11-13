@@ -245,6 +245,15 @@ runs. The numbers go in the PR description.
 - `Ai::Error::Busy` and `Ai::Error::Preempted` join `Ai::Error` (neither maps from HTTP).
 - The cancel point §12 asks for: before a request passes the gate, the generation's `cancelled:`
   callable is checked (PR 3 passes it for PDF imports and bill suggestions).
+- **A short connect timeout on local endpoints.** RubyLLM 2.2's `config.connect_timeout` defaults
+  to `nil`, so opening a connection may take the whole `request_timeout` (300 s on a local
+  preset). The gate is held around the request, connecting included, so a powered-off or
+  firewalled local host would hold a slot for minutes and chat would wait behind it.
+  `ruby_llm_context` sets `config.connect_timeout = [endpoint.timeout_seconds, 10].min` for local
+  endpoints. 2a's `RubyLlmAdapter#connect_timeout?` already maps `Net::OpenTimeout` to
+  `Ai::Error::Unreachable`, so the down mark and failover need no change. `ai_gate_test` covers a
+  local host that never accepts the connection: the slot is free again within the connect
+  timeout. Cloud endpoints keep RubyLLM's default.
 - First commit of the step: the stub-server test that proves the close works while the server is
   silent and while it streams. Build the rest only once it passes.
 
