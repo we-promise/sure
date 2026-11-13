@@ -6,6 +6,7 @@ zh-CN:
       subtitle: 您财务健康状况的全面洞察
       export: 导出 CSV
       print_report: 打印报表
+      section_aria: "%{title} 分区。按 Enter 或空格键抓取以重新排序，然后使用方向键移动。"
       sections_aria: 报表各部分
       periods:
         monthly: 按月

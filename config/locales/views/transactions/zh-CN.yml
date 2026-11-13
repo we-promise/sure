@@ -11,6 +11,9 @@ zh-CN:
         merchant_label: 商户
         merchant_prompt: 选择商户
         name_label: 名称
+        no_change: （无更改）
+        reconciled_status_hint: 仅适用于手动录入的账户（无银行同步）。
+        reconciled_status_label: 核对状态
         name_placeholder: 输入一个名称，该名称将应用于所选交易
         none: （无）
         notes_label: 备注
@@ -23,6 +26,7 @@ zh-CN:
     selection_bar:
       duplicate: 重复
       edit: 编辑
+      reconcile: 核对
       selected: 已选中
     form:
       details: 详情
@@ -166,6 +170,8 @@ zh-CN:
     transfer_match:
       auto_matched: 自动匹配
       auto_matched_short: 自/配
+      auto_matched_tooltip_html: "%{date} 在 %{account} 中的 %{amount}。点击查看。"
+      auto_matched_tooltip_hidden: 您无权查看的账户中的一笔交易。
       confirm_match: 确认匹配
       payment_confirmed: 付款已确认
       reject_match: 拒绝匹配
@@ -185,6 +191,9 @@ zh-CN:
       reject_title: 保持为独立交易
     summary:
       total_transactions: 交易总数
+      scheduled_count:
+        one: 含 %{count} 笔已计划
+        other: 含 %{count} 笔已计划
       income: 收入
       expenses: 支出
       inflow: 流入
@@ -255,6 +264,7 @@ zh-CN:
         date: 日期
         type: 类型
         status: 状态
+        reconcile_status: 核对状态
         amount: 金额
         category: 分类
         tag: 标签
@@ -357,6 +367,7 @@ zh-CN:
         clear_filters: 清除筛选
         date_filter: 日期
         merchant_filter: 商户
+        reconcile_status_filter: 核对状态
         status_filter: 状态
         tag_filter: 标签
         type_filter: 类型
@@ -390,6 +401,9 @@ zh-CN:
     transaction:
       pending: 待处理
       pending_tooltip: 待处理交易，入账后可能变化
+      scheduled: 已计划
+      scheduled_tooltip: 日期在未来 — 在此之前不会影响您的余额
+      view_merchant: 查看商户
       linked_with_provider: 已关联 %{provider}
       activity_type_tooltip: 投资活动类型
       possible_duplicate: 重复？
@@ -402,3 +416,16 @@ zh-CN:
       transfer_hint: 转账？
       transfer_hint_dismiss: 不是转账
       transfer_hint_tooltip: 另一账户中的匹配交易疑似为此转账的对应记录 — 点击进行匹配
+    reconcile:
+      success: 已标记为%{status}
+      failure: 无法更新核对状态
+      unavailable: 此家庭未启用核对功能
+      not_manual_account: 核对状态仅适用于手动录入的账户（无银行同步）
+      statuses:
+        unreconciled: 未核对
+        cleared: 已结清
+        reconciled: 已核对
+      badge:
+        unreconciled_tooltip: 尚未与对账单核对。点击标记为已结清。
+        cleared_tooltip: 已在对账单上确认，但尚未完全核对。点击标记为已核对。
+        reconciled_tooltip: 对账单周期已完全核对。点击重置为未核对。
