@@ -162,6 +162,17 @@ class CreditCardsControllerTest < ActionDispatch::IntegrationTest
     assert enable_banking_account.reload.treat_balance_as_available_credit?
   end
 
+  test "an edit saved through Turbo still applies the provider settings" do
+    enable_banking_account = create_linked_enable_banking_account
+
+    patch credit_card_path(@account),
+      params: { account: { name: @account.name, accountable_type: "CreditCard", enable_banking: { treat_balance_as_available_credit: "1" } } },
+      headers: { "Accept" => "text/vnd.turbo-stream.html" }, as: :turbo_stream
+
+    assert_match %(action="redirect"), response.body
+    assert enable_banking_account.reload.treat_balance_as_available_credit?
+  end
+
   test "clears enable banking balance interpretation flag when toggled off" do
     enable_banking_account = create_linked_enable_banking_account
     enable_banking_account.update!(treat_balance_as_available_credit: true)
