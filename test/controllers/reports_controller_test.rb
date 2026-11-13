@@ -602,6 +602,53 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match /Export Retirement Income/, @response.body
   end
 
+  test "breakdown and export convert foreign transactions at the transaction date's rate" do
+    date = 10.days.ago.to_date
+    account = @family.accounts.create!(owner: @user, name: "EUR pocket", balance: 0, currency: "EUR",
+                                       accountable: Depository.new)
+    category = @family.categories.create!(name: "FX dinner", color: "#333333")
+    create_transaction(account: account, date: date, amount: 100, currency: "EUR", category: category)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.5)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 2)
+    period = { period_type: :custom, start_date: date, end_date: Date.current }
+
+    get reports_path(period)
+    assert_select "tr[data-category='category-#{category.id}']", text: /\$150\.00/
+
+    get export_transactions_reports_path(format: :csv, **period)
+    assert_match(/FX dinner,\$150\.00/, @response.body)
+  end
+
+  test "breakdown agrees with the income statement when the exact-date rate is missing" do
+    date = 10.days.ago.to_date
+    account = @family.accounts.create!(owner: @user, name: "EUR pocket", balance: 0, currency: "EUR", accountable: Depository.new)
+    category = @family.categories.create!(name: "FX", color: "#333333")
+    create_transaction(account: account, date: date, amount: 100, currency: "EUR", category: category)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date - 2, rate: 1.5) # nearest, not exact
+    ExchangeRate.stubs(:provider).returns(nil)
+    period = Period.custom(start_date: date, end_date: Date.current)
+    cards = @family.income_statement(user: @user).expense_totals(period: period).category_totals.find { |ct| ct.category.id == category.id }.total
+
+    get reports_path(period_type: :custom, start_date: date, end_date: Date.current)
+
+    assert_select "tr[data-category='category-#{category.id}']", text: /#{Regexp.escape(Money.new(cards, "USD").format)}/
+  end
+
+  test "breakdown does not request missing historical rates from the provider on page load" do
+    account = @family.accounts.create!(owner: @user, name: "EUR pocket", balance: 0, currency: "EUR", accountable: Depository.new)
+    category = @family.categories.create!(name: "FX", color: "#333333")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    provider = mock
+    provider.expects(:fetch_exchange_rate).never
+    ExchangeRate.stubs(:provider).returns(provider)
+    start = 300.days.ago.to_date
+    30.times { |i| create_transaction(account: account, date: start + i * 7, amount: 10, currency: "EUR", category: category) }
+
+    get reports_path(period_type: :custom, start_date: start, end_date: Date.current)
+
+    assert_response :ok
+  end
+
   test "export transactions swaps dates when end_date is before start_date" do
     start_date = Date.current
     end_date = 1.month.ago.to_date

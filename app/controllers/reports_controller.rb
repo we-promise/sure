@@ -245,6 +245,16 @@ class ReportsController < ApplicationController
       Money.new(value, Current.family.currency)
     end
 
+    # At the rate for the entry's exact date, else 1:1, the same lookup as IncomeStatement
+    # (LEFT JOIN exchange_rates ON er.date = ae.date ... COALESCE(er.rate, 1)), so the
+    # breakdown matches the cards. Read once per (currency, date) per request.
+    def converted_entry_amount(entry, family_currency)
+      return entry.amount.abs if entry.currency == family_currency
+
+      @entry_rates ||= Hash.new { |rates, (from, to, date)| rates[[ from, to, date ]] = ExchangeRate.find_by(from_currency: from, to_currency: to, date: date)&.rate }
+      entry.amount.abs * (@entry_rates[[ entry.currency, family_currency, entry.date ]] || 1)
+    end
+
     def parse_date_param(param_name)
       date_string = params[param_name]
       return nil if date_string.blank?
@@ -456,11 +466,7 @@ class ReportsController < ApplicationController
       # Helper to process an entry (transaction or trade)
       process_entry = ->(category, entry, is_trade) do
         type = entry.amount > 0 ? "expense" : "income"
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        converted_amount = converted_entry_amount(entry, family_currency)
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
@@ -841,11 +847,7 @@ class ReportsController < ApplicationController
         month_key = entry.date.beginning_of_month
 
         # Convert to family currency
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        converted_amount = converted_entry_amount(entry, family_currency)
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }
