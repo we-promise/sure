@@ -128,6 +128,11 @@ zh-CN:
       activity:
         amount: 金额
         balance: 余额
+        balance_updates:
+          hidden: 已隐藏同步余额
+          hide: 隐藏
+          show: 显示
+          shown: 正在显示同步余额
         confirmed: 已确认
         date: 日期
         entries: 条记录

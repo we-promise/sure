@@ -92,6 +92,11 @@ id:
       activity:
         amount: Jumlah
         balance: Saldo
+        balance_updates:
+          hidden: Saldo tersinkronisasi disembunyikan
+          hide: Sembunyikan
+          show: Tampilkan
+          shown: Saldo tersinkronisasi ditampilkan
         date: Tanggal
         entries: entri
         entry: entri

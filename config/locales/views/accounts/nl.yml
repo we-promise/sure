@@ -128,6 +128,11 @@ nl:
       activity:
         amount: "Bedrag"
         balance: "Saldo"
+        balance_updates:
+          hidden: "Gesynchroniseerde saldi zijn verborgen"
+          hide: "Verbergen"
+          show: "Tonen"
+          shown: "Gesynchroniseerde saldi worden getoond"
         date: "Datum"
         entries: "items"
         entry: "item"
