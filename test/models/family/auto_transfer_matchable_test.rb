@@ -633,6 +633,123 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  test "prefers the iban-confirmed candidate when two equally-plausible options exist" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    confirmed_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    confirmed_outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
+    assert_equal confirmed_outflow.entryable_id, transfer.outflow_transaction_id
+  end
+
+  test "prefers an iban-confirmed candidate whose counterparty iban has dots and dashes" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    confirmed_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    confirmed_outflow.transaction.update!(counterparty_iban: "de89.3704-0044/0532:0130'00")
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
+    assert_equal confirmed_outflow.entryable_id, transfer.outflow_transaction_id
+  end
+
+  test "prefers the iban-confirmed destination when one outflow fits two inflows" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    # Same-day inflow on another account: by date alone it would win.
+    closest_inflow = create_transaction(date: 1.day.ago.to_date, account: @loan, amount: -500)
+    iban_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(outflow_transaction_id: outflow.entryable_id)
+    assert_equal iban_inflow.entryable_id, transfer.inflow_transaction_id
+    assert_nil Transfer.find_by(inflow_transaction_id: closest_inflow.entryable_id)
+  end
+
+  test "a confirmed iban does not widen the date window" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    outflow = create_transaction(date: 10.days.ago.to_date, account: @depository, amount: 500)
+    outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "does not prefer a candidate whose counterparty iban does not match" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    closest_outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    mismatched_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    mismatched_outflow.transaction.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
+    assert_equal closest_outflow.entryable_id, transfer.outflow_transaction_id
+  end
+
+  test "does not prefer a candidate when the inflow side's own counterparty iban contradicts the outflow account" do
+    # The destination (credit_card) iban matches the outflow's recorded
+    # counterparty_iban, which alone would confirm the match. But the inflow
+    # transaction itself recorded a DIFFERENT counterparty_iban than the
+    # outflow account's own iban -- the destination bank says this money came
+    # from somewhere else, so the IBAN signal must not override the date order.
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @depository.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    closest_outflow = create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    iban_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    iban_outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow.transaction.update!(counterparty_iban: "FR1420041010050500013M02606") # pipelock:ignore IBAN
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
+    assert_equal closest_outflow.entryable_id, transfer.outflow_transaction_id
+  end
+
+  test "prefers a candidate when the inflow side's own counterparty iban agrees with the outflow account" do
+    @credit_card.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    @depository.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+
+    iban_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500)
+    iban_outflow.transaction.update!(counterparty_iban: "DE89370400440532013000") # pipelock:ignore IBAN
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    inflow.transaction.update!(counterparty_iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    @family.auto_match_transfers!
+
+    transfer = Transfer.find_by!(inflow_transaction_id: inflow.entryable_id)
+    assert_equal iban_outflow.entryable_id, transfer.outflow_transaction_id
+  end
+
   test "transfer candidate options require valid numeric input" do
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: "soon") }
     assert_raises(ArgumentError) { @family.transfer_match_candidates(date_window: nil) }
