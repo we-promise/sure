@@ -12,6 +12,7 @@ class IbkrAccount::Processor
     IbkrAccount::HoldingsProcessor.new(ibkr_account).process
     IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
     repair_default_opening_anchor!
+    account.ensure_opening_anchor_precedes_entries
 
     account.broadcast_sync_complete
   end
