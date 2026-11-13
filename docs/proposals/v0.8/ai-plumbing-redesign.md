@@ -2764,8 +2764,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      Implementation plan: [`pr-2e-documents.md`](pr-2e-documents.md).
    - **2f. Release e2e.** PR #4892 (with ruby_llm 2.2 and the review fixes) adds
      `test/e2e/ai/`: the features through their jobs and pages on free live models (Kilo's
-     `kilo-auto/free`, OpenCode Zen's Jev), configured through the AI ENV, run by `ai-e2e.yml` on
-     every `v*` tag. Implementation plan: [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md).
+     `kilo-auto/free`, OpenCode Zen's Jev, Cohere's embeddings into pgvector on a trial key),
+     configured through the AI ENV, run by `ai-e2e.yml` on every `v*` tag. Implementation plan: [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md).
 
    *Still on old code after 2e:* chat, through `Assistant`, `Provider::Openai` and
    `Provider::Anthropic`'s chat methods and `Chat.default_model`, reading the same ENV and
