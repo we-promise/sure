@@ -9,6 +9,14 @@ class Holding::ReverseCalculator
     @security_ids = security_ids
   end
 
+  # Every lot of each security, the opening lot included, once #calculate has run.
+  def lots_by_security
+    lots_from(@lot_books)
+  end
+
+  # Securities whose provider quantity is below what their trades add up to.
+  attr_reader :clamped_security_ids
+
   def calculate
     Rails.logger.tagged("Holding::ReverseCalculator") do
       precompute_cost_basis
@@ -135,6 +143,12 @@ class Holding::ReverseCalculator
       # Re-sorting by date alone is unstable and could reorder same-day trades,
       # which matters because the lot book is order-sensitive once sells relieve.
       trades = portfolio_cache.get_trades
+      # A scheduled trade has not happened yet, so it explains none of today's
+      # position.
+      trades = trades.reject { |te| te.date > Date.current }
+      # A scoped run (a remap, a price sync) replays only its own securities;
+      # the cache holds every trade in the account.
+      trades = trades.select { |te| @security_ids.include?(te.entryable.security_id) } if @security_ids
       events = replay_events(trades)
 
       # A reverse-synced account can hold shares before its first imported trade,
@@ -157,6 +171,10 @@ class Holding::ReverseCalculator
           positions[event.entryable.security_id] -= event.entryable.qty
         end
       end
+      # The snapshot covers the whole account; a scoped run books only its own.
+      baselines = snapshot.merge(positions)
+      baselines = baselines.slice(*@security_ids) if @security_ids
+      open_lots(baselines, traded: positions.keys)
 
       with_manual_cost_bases(events).each do |event|
         if event.is_a?(ManualCostBasis)
@@ -224,6 +242,33 @@ class Holding::ReverseCalculator
 
       # Spans still open at the last trade stay unknown through to the present.
       open_unknown_start.each { |security_id, start| @unknown_spans[security_id] << [ start, nil ] }
+
+      # Splitting the snapshot back and forward again rounds; the opening lot
+      # takes it (or the last open lot, once sold), so the lots add up to the
+      # provider's quantity.
+      snapshot.each do |security_id, qty|
+        next unless @lot_books.key?(security_id)
+
+        @lot_books[security_id].settle_opening(qty, bound: Holding::LotBook::OPENING_RESIDUAL_BOUND)
+      end
+    end
+
+    # Units held before the first imported trade (or, with no trades, all the
+    # provider reports) are the opening lot. Its cost is unknown to the trades,
+    # so it stays out of the average, and sales relieve it like any other lot.
+    # A traded position whose provider quantity is below its trades' total has
+    # nothing to open and is recorded as clamped. A shortfall within the drift a
+    # split's rounding leaves (OPENING_RESIDUAL_BOUND) is not one: there is
+    # nothing to open either, but the trades still explain the position.
+    def open_lots(baselines, traded:)
+      @clamped_security_ids = Set.new
+      baselines.each do |security_id, qty|
+        if qty <= -Holding::LotBook::OPENING_RESIDUAL_BOUND && traded.include?(security_id)
+          @clamped_security_ids << security_id
+        else
+          @lot_books[security_id].add_unknown(qty)
+        end
+      end
     end
 
     # Trades and splits in the order they took effect. A split goes first on its

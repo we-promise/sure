@@ -78,6 +78,8 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     def lots
       []
     end
+
+    def settle_opening(*, **); end
   end
 
   THIRD = BigDecimal("10") / 3
@@ -93,8 +95,8 @@ class Holding::LotBookTest < ActiveSupport::TestCase
       [ :buy, 10, 10 ], [ :buy, BigDecimal("13.37"), 20 ], [ :sell, THIRD ], [ :split, Rational(3, 1) ],
       [ :sell, THIRD ], [ :buy, BigDecimal("7.77"), 1 ], [ :split, Rational(1, 7) ], [ :sell, BigDecimal("0.123") ]
     ],
-    "an unknown price, an oversell and a transfer lot" => [
-      [ :buy, 10, 5 ], [ :unknown, 4 ], [ :buy, nil, 2 ], [ :sell, 3 ], [ :sell, 100 ], [ :buy, 9, 3 ],
+    "an unknown price and a transfer lot" => [
+      [ :buy, 10, 5 ], [ :unknown, 4 ], [ :buy, nil, 2 ], [ :sell, 3 ], [ :buy, 9, 3 ],
       [ :unknown, 2 ], [ :sell, 1 ]
     ]
   }.freeze
@@ -392,21 +394,35 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     end
   end
 
+  # A short position has no open lots; the shortfall it leaves is filled before
+  # a later acquisition opens one.
   test "sum of open lot qty equals the trade-driven position on every date" do
     travel_to Time.zone.local(2024, 6, 10, 12) do
       build_forward_fixture
-      probe = PartitionProbe.new(@account, security_ids: [ @parcels.id, @transferred.id, @split.id ])
+      probe = PartitionProbe.new(@account, security_ids: [ @parcels.id, @transferred.id, @split.id, @negative.id ])
 
       probe.calculate
 
-      assert_equal (d(1)..d(10)).count * 3, probe.checks.size, "every date for each of the three positions"
+      assert_equal (d(1)..d(10)).count * 4, probe.checks.size, "every date for each of the four positions"
       probe.checks.each do |date, security_id, position, open_qty|
-        assert_equal position.to_d, open_qty, "#{Security.find(security_id).ticker} on #{date}"
+        assert_equal [ position.to_d, 0 ].max, open_qty, "#{Security.find(security_id).ticker} on #{date}"
       end
+      assert(probe.checks.any? { |date, id, position, _| id == @negative.id && date == d(3) && position.zero? },
+        "the transfer brings the short position back to zero")
       # Every movement kind is crossed: buy, sell, transfer, split.
       assert(probe.checks.any? { |_, id, position, _| id == @split.id && position == 81 }, "after the 3-for-1 split and the sales")
       assert(probe.checks.any? { |_, id, position, _| id == @transferred.id && position == 15 }, "the transfer lot is counted")
     end
+  end
+
+  test "selling exactly to zero stays known — the reopen after a clean close is not unknown" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("10"), 5, source_id: "a", acquired_on: Date.new(2024, 1, 1))
+
+    book.apply(nil, -5)
+    book.apply(BigDecimal("20"), 1, source_id: "b", acquired_on: Date.new(2024, 2, 1))
+
+    assert_equal BigDecimal("20"), book.average_cost
   end
 
   test "relief that rounds a lot away keeps the open sum exact" do
@@ -448,6 +464,23 @@ class Holding::LotBookTest < ActiveSupport::TestCase
       assert_operator decimals, :<=, Security::Split::QTY_SCALE,
         "lot #{lot.source_id} has #{decimals} decimal places after five partial sells"
     end
+  end
+
+  test "an uncovered sale leaves a shortfall that the next acquisition fills before any lot opens" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("10"), 5, source_id: "a", acquired_on: Date.new(2024, 1, 1))
+
+    book.apply(nil, -100)
+    assert_empty book.lots, "the ledger closes what it can"
+
+    book.apply(BigDecimal("12"), 3, source_id: "tiny", acquired_on: Date.new(2024, 2, 1))
+    assert_empty book.lots, "3 of the 95 missing units are absorbed, not opened"
+
+    book.apply(BigDecimal("12"), 100, source_id: "fill", acquired_on: Date.new(2024, 3, 1))
+    assert_equal [ BigDecimal("8") ], book.lots.map(&:qty), "only the remainder opens a lot: 100 minus the 92 still missing"
+    assert_equal BigDecimal("8"), book.open_qty
+    assert_equal %w[fill], book.lots.map(&:source_id)
+    assert_equal BigDecimal("12"), book.average_cost, "the filled units carry the filling trade's cost"
   end
 
   class PartitionProbe < Holding::ForwardCalculator
