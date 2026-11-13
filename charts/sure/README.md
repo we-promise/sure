@@ -825,6 +825,18 @@ pipelock:
 
 Security: The Ingress routes to port `mcp` (8889). Ensure `MCP_API_TOKEN` is set so the MCP endpoint requires authentication. The Ingress itself does not add auth.
 
+By default the listener runs with `pipelock.mcpProxy.allowUnauthenticated: true`, relying on Sure's own token or OAuth. To make Pipelock require a token too, point `authTokenSecret` at a Secret holding it; clients then send it as `Proxy-Authorization: Bearer <token>`:
+
+```yaml
+pipelock:
+  mcpProxy:
+    authTokenSecret:
+      name: sure-pipelock-mcp-token
+      key: token
+```
+
+Keep `podSecurityContext.fsGroup` (1000 by default) so Pipelock can read the mounted Secret. See [docs/hosting/pipelock.md](../../docs/hosting/pipelock.md#mcp-listener-authentication).
+
 ### Metrics (Prometheus)
 
 Pipelock exposes `/metrics` on the forward proxy port. Enable scraping with a ServiceMonitor:

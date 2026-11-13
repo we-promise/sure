@@ -1,0 +1,14 @@
+<%# locals: (account:, href:, truncate: false, focus_ring: false) %>
+<%# An account's logo, name, type and balance as one link. `truncate` keeps a
+    long name or type on one line inside a narrow grid cell, with the balance
+    beside it unbroken. %>
+<%= link_to href, class: class_names("bg-container-inset rounded-lg p-4 flex items-center justify-between hover:bg-container-hover transition-colors", "focus-ring" => focus_ring) do %>
+  <div class="<%= class_names("flex items-center gap-3", "min-w-0" => truncate) %>">
+    <%= render "accounts/logo", account: account, size: "sm" %>
+    <%= tag.div class: ("min-w-0" if truncate) do %>
+      <p class="<%= class_names("font-medium text-primary text-sm", "truncate" => truncate) %>"><%= account.name %></p>
+      <p class="<%= class_names("text-xs text-secondary", "truncate" => truncate) %>"><%= account.short_subtype_label %></p>
+    <% end %>
+  </div>
+  <p class="<%= class_names("font-medium text-primary privacy-sensitive", "whitespace-nowrap" => truncate) %>"><%= format_money(account.balance_money) %></p>
+<% end %>

@@ -9,6 +9,10 @@ class EnableBankingItem < ApplicationRecord
     encrypts :session_id, deterministic: true
     encrypts :raw_payload
     encrypts :raw_institution_payload
+    # The user's IP address, kept only while the bank session needs it (see
+    # with_stale_psu_ip); never looked up by value. Values stored before this
+    # was encrypted stay readable until they are encrypted.
+    encrypts :last_psu_ip, support_unencrypted_data: true
   end
 
   validates :name, presence: true
