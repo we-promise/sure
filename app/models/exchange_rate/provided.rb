@@ -26,9 +26,7 @@ module ExchangeRate::Provided
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
-    # Keyless fallback lookups run on the request thread (e.g. reports), so they
-    # fail fast and stop fetching once this much time is spent in one rates_for call.
-    FALLBACK_FETCH_BUDGET = 5.seconds
+    FALLBACK_DOWN_KEY = "exchange_rate:fallback_frankfurter_down"
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
       rate = find_by(from_currency: from, to_currency: to, date: date)
@@ -48,11 +46,14 @@ module ExchangeRate::Provided
       fx_provider = provider
       return nil unless fx_provider.present? # No provider configured (some self-hosted apps)
 
-      # The keyless fallback is fetched on the request thread (e.g. reports): fail fast, no retries.
-      fx_provider = Provider::Frankfurter.new(timeout: 3, max_retries: 0) if fx_provider.is_a?(Provider::Frankfurter) && fallback_provider?
+      # Keyless fallback on a signed-in request (e.g. reports): one short try, then skip Frankfurter for a
+      # minute after a timeout or connection error (no error body), so loops can't each wait. Jobs keep retries.
+      fail_fast = Current.session.present? && fallback_provider?
+      return nil if fail_fast && Rails.cache.read(FALLBACK_DOWN_KEY)
+      fx_provider = Provider::Frankfurter.new(timeout: 3, max_retries: 0) if fail_fast
 
       response = fx_provider.fetch_exchange_rate(from: from, to: to, date: date)
-
+      Rails.cache.write(FALLBACK_DOWN_KEY, true, expires_in: 1.minute) if fail_fast && !response.success? && response.error.details.nil?
       return nil unless response.success? # Provider error
 
       rate = response.data
@@ -106,9 +107,7 @@ module ExchangeRate::Provided
       still_missing = missing - nearest_rates.keys
 
       # Only hit the provider for currencies with no cached rate at all
-      deadline = FALLBACK_FETCH_BUDGET.from_now if still_missing.any? && fallback_provider?
       fetched_rates = still_missing.each_with_object({}) do |currency, map|
-        break map if deadline&.past?
         rate = find_or_fetch_rate(from: currency, to: to, date: date)
         map[currency] = rate if rate
       end
