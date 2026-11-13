@@ -30,6 +30,15 @@ de:
       rate_change_remove: Entfernen
       start_date: Auszahlungsdatum
       start_date_hint: Wann der Kredit ausgezahlt wurde. Leer lassen, um das Eröffnungsdatum des Kontos zu verwenden.
+      down_payment: Anzahlung
+      insurance_rate: Versicherungssatz
+      insurance_rate_placeholder: "0,36"
+      insurance_rate_hint: Ein Jahressatz, der monatlich zusammen mit der Rate anfällt. Bei „Gleichbleibend“ wird er auf den ursprünglichen Kreditbetrag berechnet, bei „Fallend“ auf die Restschuld.
+      insurance_rate_type: Versicherungsart
+      insurance_rate_type_decreasing_life: Fallend
+      insurance_rate_type_level_term: Gleichbleibend
+      principal_only_transfers: Verknüpfte Überweisungen enthalten nur die Tilgung
+      principal_only_transfers_hint: Schalte das ein, wenn du nur die Tilgung überweist und die Zinsen separat erfasst. Lass es aus, wenn die verknüpfte Überweisung die volle Rate ist.
       none: Keine
       subtype_none: Keine
       subtype_prompt: Kreditart wählen
@@ -75,6 +84,14 @@ de:
         total_cost_not_cleared: Bis zum ursprünglichen Laufzeitende nicht getilgt
         total_cost_saved: "%{amount} weniger als ohne Zusatzbetrag"
         variable_rate_notice: Der Zinssatz dieses Kredits ändert sich. Diese Zahlen berücksichtigen die bereits erfassten Zinsänderungen; eine noch nicht erfasste Änderung verschiebt sie.
+      repayment_progress:
+        instalment: "Rate %{number} · %{date}"
+        insurance: Versicherung
+        interest: Zinsen
+        of_original: "von %{amount}"
+        principal: Tilgung
+        repaid: Getilgt
+        total: Gesamt
       schedule:
         date: Datum
         description: Hochgerechnet aus ursprünglicher Kreditsumme, Zinssatz und Laufzeit, beginnend am %{start_date}. Sondertilgungen sind nicht berücksichtigt.
@@ -93,12 +110,21 @@ de:
         total_interest: Zinsen gesamt
       overview:
         edit_loan_details: Kreditdaten bearbeiten
+        insurance_rate_only: "%{rate} pro Jahr"
         interest_rate: Zinssatz
+        leverage: Hebel
+        leverage_band_conservative: Konservativ
+        leverage_band_high: Hoch
+        leverage_band_moderate: Moderat
+        leverage_multiple: "%{ratio}x"
         monthly_payment: Monatsrate
         not_applicable: "–"
         original_payoff_date: Ursprüngliches Ablösedatum
         original_principal: Ursprüngliche Kreditsumme
         remaining_principal: Restschuld
+        total_cost: Gesamtkosten
+        total_cost_with_insurance: Gesamtkosten inkl. Versicherung
+        total_insurance: Versicherung
         term: Laufzeit
         type: Art
         unknown: Unbekannt

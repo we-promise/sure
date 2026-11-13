@@ -505,16 +505,20 @@ hpa:
 # Pipelock: AI agent security proxy (optional)
 # Provides forward proxy (outbound HTTPS tunnel controls) and MCP reverse proxy
 # (inbound MCP traffic scanning for prompt injection, DLP, tool poisoning).
-# More info: https://github.com/luckyPipewrench/pipelock
+# More info: https://github.com/pipelab-org/pipelock
 pipelock:
   enabled: false
   image:
-    repository: ghcr.io/luckypipewrench/pipelock
+    repository: ghcr.io/pipelab-org/pipelock
     # Stable release pinned to its multi-architecture manifest digest.
-    tag: "3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c"
+    tag: "3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f"
     pullPolicy: IfNotPresent
     imagePullSecrets: []
   replicas: 1
+  # Time Pipelock gets to close its signed receipt chain on shutdown. Closing
+  # takes longer as recorded history grows; a pod killed first keeps its
+  # receipts but leaves the run unsealed. Pipelock 3.7+ uses 10 minutes.
+  terminationGracePeriodSeconds: 600
   # Pipelock run mode: strict, balanced, audit
   mode: balanced
   # Trusted domains: allow internal services whose public DNS resolves to private IPs.
@@ -624,13 +628,20 @@ pipelock:
   extraVolumes: []
   extraVolumeMounts: []
 
-  # Prometheus Operator ServiceMonitor for /metrics on the proxy port
+  # Dedicated listener for /metrics and /stats. Pipelock 3.8+ no longer serves
+  # them on the proxy port. It has no authentication, so it stays off unless
+  # enabled here or by serviceMonitor.enabled; restrict who can reach it.
+  metrics:
+    enabled: false
+    port: 9091
+
+  # Prometheus Operator ServiceMonitor for /metrics on the metrics port.
+  # Enabling it also enables the metrics listener above.
   serviceMonitor:
     enabled: false
     interval: 30s
     scrapeTimeout: 10s
     path: /metrics
-    portName: proxy      # matches Service port name "proxy" (8888)
     additionalLabels: {}
 
   # Ingress for MCP reverse proxy (port 8889) — external AI assistants need this in k8s
