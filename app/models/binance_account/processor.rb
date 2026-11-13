@@ -320,7 +320,7 @@ class BinanceAccount::Processor
         account.entries.create!(
           date:        date,
           name:        "Buy #{qty.round(8)} #{base_symbol}",
-          amount:      -amount_usd,
+          amount:      amount_usd,
           currency:    "USD",
           external_id: external_id,
           source:      "binance",
@@ -337,7 +337,7 @@ class BinanceAccount::Processor
         account.entries.create!(
           date:        date,
           name:        "Sell #{qty.round(8)} #{base_symbol}",
-          amount:      amount_usd,
+          amount:      -amount_usd,
           currency:    "USD",
           external_id: external_id,
           source:      "binance",

@@ -119,6 +119,26 @@ class CoinbaseAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0.001"), entry.entryable.qty
   end
 
+  test "records a buy as cash out and a sell as cash in" do
+    CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
+    @coinbase_account.update!(raw_transactions_payload: {
+      "transactions" => [
+        coinbase_txn(id: "txn_buy_1", type: "buy", btc_amount: "0.01", native_amount: "500.00"),
+        coinbase_txn(id: "txn_sell_1", type: "sell", btc_amount: "-0.004", native_amount: "-220.00")
+      ]
+    })
+
+    CoinbaseAccount::Processor.new(@coinbase_account).process
+
+    buy = @account.entries.find_by!(external_id: "coinbase_txn_txn_buy_1")
+    assert_equal BigDecimal("500"), buy.amount
+    assert_equal BigDecimal("0.01"), buy.entryable.qty
+
+    sell = @account.entries.find_by!(external_id: "coinbase_txn_txn_sell_1")
+    assert_equal BigDecimal("-220"), sell.amount
+    assert_equal BigDecimal("-0.004"), sell.entryable.qty
+  end
+
   test "maps an ambiguous send to Transfer instead of a cost-basis-affecting Other" do
     CoinbaseAccount::HoldingsProcessor.any_instance.stubs(:process).returns(nil)
     @coinbase_account.update!(raw_transactions_payload: {
