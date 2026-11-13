@@ -61,11 +61,11 @@ class Provider::Snaptrade
   TOKEN_EXPIRY_LEEWAY = 60 # seconds; refresh this long before actual expiry
 
   # Filtered out of get_positions so they never reach raw_holdings_payload:
-  # units are per-contract and symbols OCC-style, which neither
-  # SnaptradeAccount::HoldingsProcessor nor the units * price sum in
-  # SnaptradeAccount::Processor#calculate_holdings_value models. A denylist, so
-  # equity-like kinds added later still import rather than being dropped.
-  UNSUPPORTED_INSTRUMENT_KINDS = %w[option future cfd].freeze
+  # units are per-contract, which neither SnaptradeAccount::HoldingsProcessor
+  # nor the units * price sum in SnaptradeAccount::Processor#calculate_holdings_value
+  # models (options are, via contract_multiplier). A denylist, so equity-like
+  # kinds added later still import rather than being dropped.
+  UNSUPPORTED_INSTRUMENT_KINDS = %w[future future_option cfd].freeze
 
   class << self
     # Some OAuth flow is available. The device flow needs nothing but the public

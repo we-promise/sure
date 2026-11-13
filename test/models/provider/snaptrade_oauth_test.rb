@@ -212,8 +212,10 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     body = {
       results: [
         { instrument: { kind: "stock", symbol: "AAPL" }, units: "10", price: "1.5" },
-        { instrument: { kind: "option", symbol: "AAPL 240119C00150000" }, units: "2", price: "5.1" },
+        # Kept past expiry (in any zone) until the broker's book settles it
+        { instrument: { kind: "option", symbol: "OPT", expiration_date: Date.yesterday.iso8601 }, units: "2", price: "5.1" },
         { instrument: { kind: "future", symbol: "ESZ4" }, units: "1", price: "10" },
+        { instrument: { kind: "future_option", symbol: "./ESZ4 EW4X4 241115C5800" }, units: "1", price: "10" },
         { instrument: { kind: "cfd", symbol: "CFD1" }, units: "1", price: "10" },
         { instrument: { kind: "somethingnew", symbol: "NEW" }, units: "3", price: "2" }
       ]
@@ -226,7 +228,7 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
 
     positions = provider.get_positions(account_id: "acct-1")
 
-    assert_equal %w[AAPL NEW], positions.map { |p| p.dig("instrument", "symbol") }
+    assert_equal %w[AAPL OPT NEW], positions.map { |p| p.dig("instrument", "symbol") }
   end
 
   test "expired token is refreshed before the data call and rotation persisted" do

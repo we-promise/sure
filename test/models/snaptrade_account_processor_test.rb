@@ -234,8 +234,82 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), @snaptrade_account.cash_equivalent_position_value("USD")
   end
 
+  test "option positions are valued per contract, short ones as a liability" do
+    security = securities(:aapl)
+
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("9999.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [
+        { "instrument" => { "kind" => "stock", "symbol" => security.ticker }, "units" => "10", "price" => "150.00", "currency" => "USD" },
+        option_position("AAPL  261218C00240000", "CALL", units: "2", price: "5.10", cost_basis: "4.00"),
+        option_position("AAPL  261218P00200000", "PUT", units: "-1", price: "2.00")
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    # 1500 stock + 2 x 510 long call - 1 x 200 short put + 1000 cash
+    assert_equal BigDecimal("3320"), @account.reload.balance
+
+    call = @account.holdings.joins(:security).find_by(securities: { ticker: "AAPL  261218C00240000" })
+    assert_equal [ BigDecimal("2"), BigDecimal("510"), BigDecimal("1020"), BigDecimal("400") ],
+                 [ call.qty, call.price, call.amount, call.cost_basis ]
+    # Holdings cannot be negative, so the short leg only counts in the total
+    assert_nil @account.holdings.joins(:security).find_by(securities: { ticker: "AAPL  261218P00200000" })
+    assert_nil Security.find_by(ticker: "AAPL  261218P00200000")
+  end
+
+  test "option positions use the contract multiplier and position currency" do
+    @snaptrade_account.update!(
+      raw_holdings_payload: [ option_position("XYZ   261218C00050000", "CALL", units: "3", price: "1.50", multiplier: "10", currency: "CAD") ]
+    )
+
+    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
+
+    holding = @account.holdings.joins(:security).find_by!(securities: { ticker: "XYZ   261218C00050000" })
+    assert_equal [ BigDecimal("15"), BigDecimal("45"), "CAD" ], [ holding.price, holding.amount, holding.currency ]
+  end
+
+  test "position-created option security gets the trade importer's name and exchange" do
+    occ = "AAPL  261218C00240000"
+    @snaptrade_account.update!(
+      currency: "USD",
+      raw_holdings_payload: [ option_position(occ, "CALL", units: "2", price: "5.10") ],
+      raw_activities_payload: [ {
+        "id" => "b1", "type" => "BUY", "units" => 2, "price" => 4, "amount" => -800,
+        "settlement_date" => 3.days.ago.to_date.to_s, "currency" => { "code" => "USD" },
+        "option_symbol" => {
+          "ticker" => occ, "option_type" => "CALL", "strike_price" => 240, "expiration_date" => "2026-12-18",
+          "underlying_symbol" => { "symbol" => "AAPL", "exchange" => { "mic_code" => "XNAS" } }
+        }
+      } ]
+    )
+
+    # Holdings run before activities, so the position creates the security
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    security = Security.find_by!(ticker: occ)
+    assert_equal 1, Security.where(ticker: occ).count
+    assert_equal [ "AAPL $240 CALL (2026-12-18)", "XNAS" ], [ security.name, security.exchange_mic ]
+  end
+
+  test "an expired contract is not carried through the reverse history walk" do
+    buy = option_trade("b1", "BUY", units: 2, price: 4, amount: -800, date: "2026-12-01")
+    expiry = option_trade("x1", "OPTIONEXPIRATION", units: -2, price: 0, amount: 0, date: "2026-12-21")
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ option_position(OCC, "CALL", units: "2", price: "5.10") ], [ buy ]) }
+
+    travel_to(Date.new(2026, 12, 28)) do
+      sync_positions!([], [ buy, expiry ])
+      Holding::Materializer.new(@account.reload, strategy: :reverse).materialize_holdings
+
+      assert_equal BigDecimal("2"), @account.holdings.find_by!(date: Date.new(2026, 12, 10)).qty
+    end
+  end
+
   test "an empty snapshot clears positions the broker stopped reporting" do
-    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ stock_position ]) }
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ stock_position, option_position(OCC, "CALL", units: "2", price: "5.10") ]) }
     travel_to(Date.new(2026, 12, 28)) { sync_positions!([]) }
 
     assert_empty current_tickers
@@ -957,6 +1031,8 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
 
   private
 
+    OCC = "AAPL  261218C00240000".freeze
+
     def sync_positions!(positions, activities = [], total: 1000, **attrs)
       @snaptrade_account.update!(currency: "USD", cash_balance: 1000, current_balance: total, last_holdings_sync: Time.current,
         raw_holdings_payload: positions, raw_activities_payload: activities, **attrs)
@@ -969,5 +1045,24 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
 
     def stock_position(ticker = securities(:aapl).ticker, units: "10")
       { "instrument" => { "kind" => "stock", "symbol" => ticker }, "units" => units, "price" => "150.00", "currency" => "USD" }
+    end
+
+    def option_trade(id, type, units:, price:, amount:, date:)
+      { "id" => id, "type" => type, "units" => units, "price" => price, "amount" => amount, "trade_date" => date,
+        "settlement_date" => date, "currency" => { "code" => "USD" },
+        "option_symbol" => { "ticker" => OCC, "option_type" => "CALL", "strike_price" => 240, "expiration_date" => "2026-12-18",
+          "underlying_symbol" => { "symbol" => "AAPL", "exchange" => { "mic_code" => "XNAS" } } } }
+    end
+
+    # Shaped like a SnapTrade /positions/all OptionInstrument position
+    def option_position(symbol, option_type, units:, price:, cost_basis: nil, multiplier: "100", currency: "USD")
+      {
+        "instrument" => {
+          "kind" => "option", "symbol" => symbol, "option_type" => option_type,
+          "strike_price" => "240", "expiration_date" => "2026-12-18", "multiplier" => multiplier,
+          "underlying" => { "kind" => "stock", "symbol" => symbol.split.first, "exchange" => "XNAS", "currency" => currency }
+        },
+        "units" => units, "price" => price, "cost_basis" => cost_basis, "currency" => currency
+      }
     end
 end

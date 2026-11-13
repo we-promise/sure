@@ -151,7 +151,7 @@ class SnaptradeAccount::Processor
         data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
         units = parse_decimal(data[:units]) || 0
         price = parse_decimal(data[:price]) || 0
-        units * price
+        units * price * contract_multiplier(extract_symbol_data(data))
       end
     end
 

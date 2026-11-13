@@ -164,6 +164,10 @@ class SnaptradeAccount::HoldingsProcessor
       price = parse_decimal(data["price"] || data[:price])
       return if price.nil?
 
+      # Per-contract, as for option trades (ActivitiesProcessor#process_trade).
+      multiplier = contract_multiplier(symbol_data)
+      price *= multiplier
+
       # Calculate amount
       amount = quantity * price
 
@@ -196,7 +200,7 @@ class SnaptradeAccount::HoldingsProcessor
       avg_price = data["average_purchase_price"] || data[:average_purchase_price] ||
                   data["cost_basis"] || data[:cost_basis]
       if avg_price.present?
-        update_holding_cost_basis(holding&.security || security, avg_price)
+        update_holding_cost_basis(holding&.security || security, parse_decimal(avg_price)&.*(multiplier))
       end
       true
     end
