@@ -64,10 +64,11 @@ Pipelock (AI agent security proxy)
 
 7) Metrics:
 {{- if .Values.pipelock.serviceMonitor.enabled }}
-   - ServiceMonitor enabled — Prometheus will scrape /metrics on port {{ .Values.pipelock.serviceMonitor.portName }}.
+   - ServiceMonitor enabled — Prometheus will scrape /metrics on the metrics port ({{ include "sure.pipelockMetricsPort" . }}).
+{{- else if include "sure.pipelockMetricsEnabled" . }}
+   - Metrics are available at http://<pipelock-pod>:{{ include "sure.pipelockMetricsPort" . }}/metrics
 {{- else }}
-   - ServiceMonitor not enabled. Metrics are available at http://<pipelock-pod>:{{ .Values.pipelock.forwardProxy.port | default 8888 }}/metrics
-     Enable with: pipelock.serviceMonitor.enabled=true
+   - Metrics listener off. Enable with: pipelock.metrics.enabled=true or pipelock.serviceMonitor.enabled=true
 {{- end }}
 {{- end }}
 

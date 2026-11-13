@@ -328,7 +328,7 @@ This ensures the AI assistant can only access data for the intended user.
 
 ### Pipelock Security Scanning
 
-For production deployments, we recommend using [Pipelock](https://github.com/luckyPipewrench/pipelock) to scan MCP traffic for security threats.
+For production deployments, we recommend using [Pipelock](https://github.com/pipelab-org/pipelock) to scan MCP traffic for security threats.
 
 Pipelock provides:
 - **DLP scanning**: Detects secrets being exfiltrated through tool calls

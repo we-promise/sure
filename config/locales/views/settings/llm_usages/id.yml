@@ -1,0 +1,29 @@
+---
+id:
+  settings:
+    llm_usages:
+      show:
+        page_title: "Penggunaan & Biaya LLM"
+        subtitle: "Pantau penggunaan AI dan estimasi biaya Anda"
+        start_date: "Tanggal Mulai"
+        end_date: "Tanggal Akhir"
+        filter: "Filter"
+        total_requests: "Total Permintaan"
+        total_tokens: "Total Token"
+        prompt: "prompt"
+        completion: "penyelesaian"
+        total_cost: "Total Biaya"
+        avg_cost_per_request: "Rata-rata Biaya/Permintaan"
+        based_on_requests: "Berdasarkan %{with_cost} dari %{total} permintaan yang memiliki data biaya"
+        cost_by_operation: "Biaya per Operasi"
+        cost_by_model: "Biaya per Model"
+        recent_usage: "Penggunaan Terbaru"
+        col_date: "Tanggal"
+        col_operation: "Operasi"
+        col_model: "Model"
+        col_tokens: "Token"
+        col_cost: "Biaya"
+        failed: "Gagal"
+        no_usage_data: "Tidak ada data penggunaan untuk periode yang dipilih"
+        cost_estimates_title: "Tentang Estimasi Biaya"
+        cost_estimates_description: "Biaya diperkirakan berdasarkan harga penyedia yang dipublikasikan dan terakhir diverifikasi pada %{date}. Biaya aktual dapat bervariasi. Harga dihitung per 1 juta token dan berbeda menurut model. Model kustom atau self-hosted akan menampilkan \"N/A\" dan tidak disertakan dalam total biaya."
