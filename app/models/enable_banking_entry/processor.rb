@@ -90,8 +90,9 @@ class EnableBankingEntry::Processor
       free = indexes.reject { |i| stored.key?(suffixed[i]) }
       score = ->(i) { movement_match(stored[legacy_id], rows[i], account&.family&.timezone) }
       owner = free.each_with_index.max_by { |i, pos| [ score[i], -pos ] }&.first
-      # A sibling already has its own entry: the plain one is another row's unless the amount matches.
-      owner = nil if owner && stored[legacy_id] && free.size < indexes.size && score[owner].zero?
+      # A sibling already has its own entry: the plain one is another row's unless its amount matches or was edited.
+      legacy = stored[legacy_id]
+      owner = nil if owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.user_modified? && !legacy.locked?(:amount)
       indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
     end
     ids

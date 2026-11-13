@@ -546,6 +546,36 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x").amount
   end
 
+  test "an unchanged payload does not duplicate a plain entry whose amount the user edited" do
+    rows = [ raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"), raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00") ]
+    @enable_banking_account.update!(raw_transactions_payload: rows)
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    plain = @account.entries.find_by!(external_id: "enable_banking_tid-x")
+    plain.update!(amount: 9.50)
+    plain.lock_saved_attributes!
+
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal %w[7.0 9.5], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_s).sort
+  end
+
+  test "an unchanged payload does not re-import a sibling onto a categorised pending hold" do
+    pending = raw_shared_tid_transaction(entry_reference: "r-p", amount: "50.00").merge(status: "PDNG", _pending: true)
+    @enable_banking_account.update!(raw_transactions_payload: [ pending ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    @account.entries.find_by!(external_id: "enable_banking_tid-x").mark_user_modified!
+    booked = raw_shared_tid_transaction(entry_reference: "r-b", amount: "20.00")
+    @enable_banking_account.update!(raw_transactions_payload: [ booked ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    @enable_banking_account.update!(raw_transactions_payload: [ booked, raw_shared_tid_transaction(entry_reference: "r-a", amount: "57.00") ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    before = @account.entries.where(source: "enable_banking").pluck(:external_id, :amount).sort
+
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal before, @account.entries.where(source: "enable_banking").pluck(:external_id, :amount).sort
+  end
+
   test "a sibling without entry_reference gets its own entry" do
     @enable_banking_account.update!(raw_transactions_payload: [
       raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"),
