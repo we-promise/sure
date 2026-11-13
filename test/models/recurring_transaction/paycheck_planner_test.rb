@@ -10,6 +10,28 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     @family.recurring_transactions.destroy_all
   end
 
+  test "a lone one-off income is credited in a window of its own" do
+    payday = Date.current + 6
+    create_series(name: "Bonus", amount: -3000, due: payday, preset: "once", income: true)
+    create_series(name: "Insurance", amount: 400, due: payday + 3, preset: "once")
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal [ Date.current, payday ], plan.map(&:starts_on)
+    assert_equal 3000, plan.last.income
+    assert_equal [ "Bonus" ], plan.last.income_sources
+    assert_equal 400, plan.last.due_total, "a bill after the one-off is funded from it"
+  end
+
+  test "a one-off income arriving today still makes a plan" do
+    create_series(name: "Bonus", amount: -3000, due: Date.current, preset: "once", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal 1, plan.size
+    assert_equal 3000, plan.first.income
+  end
+
   test "no declared income means no plan" do
     create_series(name: "Rent", amount: 2150, due: Date.current + 10)
 
