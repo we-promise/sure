@@ -1,4 +1,4 @@
-# PR 4: Sequencer (development plan)
+# PR 4: Sequencer (implementation plan)
 
 **Companion to:** [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) §19 (PR 4), §11 (the
 whole design), §12 (the gate's cancel point), §17 (`ai_gate_test`, `ai_lane_test`,

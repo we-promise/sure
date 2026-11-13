@@ -1,4 +1,4 @@
-# PR 3: Off the web thread (development plan)
+# PR 3: Off the web thread (implementation plan)
 
 **Companion to:** [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) §19 (PR 3), §7 (transports
 run only inside the AI capsules), §11 ("No LLM call on a web thread"), §12, §13, §14, §15 and §17,
