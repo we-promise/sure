@@ -958,9 +958,11 @@ end
   fallbacks switch models even after chunks have streamed. What it avoids is an answer half
   written by one model and finished by another.
 - **Provider state follows its producer.** Each assistant message stores the route, endpoint and
-  model that produced it, and its provider state (reasoning text, `reasoning_details`, thinking
-  signatures) in `messages.provider_state` (section 18). Today only Gemini's tool-call
-  signatures have a home, in `tool_calls.extra_content`. `Ai::Conversation::History` sends that
+  model that produced it. Its provider state (reasoning text, `reasoning_details`, thinking
+  signatures) rides RubyLLM 2.2's own columns: `messages.thinking_text` / `thinking_signature`
+  at the message level, and `thought_signature` on the tool call — Sure keeps no `provider_state`
+  column of its own. Today only Gemini's tool-call signatures have a home, in `tool_calls.extra_content`
+  (they move into `ruby_llm_tool_calls` with PR 6). `Ai::Conversation::History` sends that
   state only to the same endpoint and model, and drops it otherwise. RubyLLM can't do this for
   Sure: it strips another provider's content only when a message carries its own usage record of
   who produced it, and messages rebuilt from Sure's tables don't. Without the rule, a local
@@ -1743,7 +1745,7 @@ class Ai::Conversation
     #    last with tool_choice: none), Setting.ai_response_timeout for the whole turn, and
     #    `cancelled`, checked while streaming and before each tool (before_tool_call). A round
     #    interrupted at the gate is stepped again (section 11).
-    # 5. Instrument converse.ai per round and store the serving route and provider_state on the message.
+    # 5. Instrument converse.ai per round and store the serving route on the message.
   end
 end
 ```
@@ -1785,15 +1787,23 @@ What happens to today's chat classes in PR 6:
   on llama.cpp). The approve and deny UI is a feature of its own, not part of this plan.
 - **One turn per chat.** Nothing stops two jobs running one chat today: a second message mid-turn
   starts a second turn at once, and two Retry requests at the same moment ran
-  `create_transaction` twice (spike: "One turn per chat"). `respond` claims the chat first, with a
-  conditional update of `chats.claim_token` and `claimed_until` outside any transaction, renews
-  the claim before every tool run and every round, and releases it at the end; a job that finds
-  the chat claimed drops a duplicate bubble or re-enqueues itself. The renewal before each tool
-  run is what stops a turn whose claim lapsed (a hung worker) from writing again. A turn that
-  lost its claim stops without an error. This is RubyLLM 2.2's "One Process at a Time" (not
-  released yet), which needs RubyLLM's own chat storage (section 20), done in Sure's tables in
-  about 30 lines. What a message sent mid-turn should do (wait, be refused, or restart the turn
-  with both messages) is a product decision; the spike made it wait.
+  `create_transaction` twice (spike: "One turn per chat"). RubyLLM 2.2's persisted chat does the
+  claiming: it claims a run with a 60-second lease and renews it on a heartbeat, claims each
+  tool call before it runs, and a run that loses its claim stops at the next renewal. A process
+  that finds the chat claimed returns without calling the model; a lapsed claim lets the next run
+  take over (and the gem ships an `interrupted` scope for a reaper). So two Retry requests at
+  the same moment are one turn, a message queued mid-turn joins the running turn (`steer: true`)
+  or waits for the next (`steer: false`), and a double-clicked approval is one decision and one
+  tool run. **Call by @josh-sanders during development of PR #4440:** adopt the gem's
+  persistence — `acts_as_chat` / `acts_as_message` on Sure's own `chats`/`messages` — over
+  Sure's own 31-line claim ([`chat-storage-spike-report.md`](chat-storage-spike-report.md),
+  branch `spike/chat-storage`). Sure's `claim_token`/`claimed_until` bookkeeping, the renewal
+  discipline and the approval rendezvous are all the gem's now. A Retry on an answered chat is a
+  no-op — `settled?` returns the latest message without calling the model — so Sure never posts a
+  bubble the model won't answer; Sure lets RubyLLM own each streamed assistant row, and a Retry
+  can only repair a failed turn, never double it. What a message sent mid-turn should do (wait,
+  be refused, or restart the turn with both) is a chat product decision; the gem supports both
+  `steer` behaviours, and PR 6 decides which the Send box does.
 - **Tools carry the job's lane.** RubyLLM starts each parallel tool thread with fresh execution
   state, on purpose: the thread's connections return to the pool and the caller's `Current`
   isn't reset. So a chat tool's own AI call (`search_family_files` embedding its query) would run
@@ -2609,7 +2619,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | The `embed` route picks the vector adapter | `VECTOR_STORE_PROVIDER` defaulting from `LLM_PROVIDER` | The deprecated ENV path maps it | Check which adapter `embed` uses |
 | Smart-fill and smart-configure become asynchronous | Response shape of `smart_fills#create` and `smart_configurations#show` | System tests for both dialogs land first | The dialog shows progress |
 | `AssistantMessage` stores the route that served it | Adds a column the mobile API reads | Additive | — |
-| `messages.provider_state` (jsonb) holds each assistant message's producer and provider state | Nothing; Gemini's signatures move from `tool_calls.extra_content` | Additive; existing signatures copied | — |
+| Chat storage moves onto RubyLLM 2.2's persisted chat | `acts_as_chat` / `acts_as_message` on Sure's `chats`/`messages`; new tables `ruby_llm_models`, `ruby_llm_tool_calls`, `ruby_llm_queued_messages`; `chats` gains `claim_token`, `claimed_until`, `cancelled` and a `ruby_llm_model_id` FK; `messages` gains the persisted-reply columns | Additive backfill seeds `ruby_llm_models`; Gemini's signatures move from `tool_calls.extra_content` into `ruby_llm_tool_calls` | — |
 | The route chooses the chat model | The API's `model` parameter on chats and messages is accepted and ignored | None | API clients: `model` in the response says which model served the turn |
 | Cancel statuses | `cancelled` added to `Import` and `Message` statuses; `RecurringTransaction::Suggestion` added | Additive (string enums) | — |
 | The ENV override of the family confidence threshold goes | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | None | Set it on the categorization page |
@@ -2638,10 +2648,10 @@ right?"). A PR is as big as its replacement needs, and a replacement too big to 
 piece is split into parts that each replace something whole, as PR 2 is. The principle, and
 that it isn't a ban, is a call by @josh-sanders during development of PR #4440.
 
-**RubyLLM versions.** PR 2 builds on 2.1.1, and 2.2 comes in with PR 5 whenever it's released;
-nothing waits for it. During this work the Gemfile allows `~> 2.1`, while `Gemfile.lock` still
-fixes the exact version each PR is tested with, so a version changes only when a PR bumps it.
-When PR 9 lands, the Gemfile pins the version in use (call by @josh-sanders during development of PR #4440).
+**RubyLLM versions.** PR 2 built on 2.1.1; PR #4892 ships 2.2.0 (`~> 2.2`) on the 2f stack,
+released ahead of PR 5 running. `Gemfile.lock` fixes the exact version each PR is tested with, so
+a version changes only when a PR bumps it. When PR 9 lands, the Gemfile pins the version in use
+(call by @josh-sanders during development of PR #4440).
 
 **Why chat is PR 6.** Chat goes onto RubyLLM 2.2, so it follows PR 5. The gate doesn't wait for
 it: today's chat takes the gate itself (PR 4). Configuration in the database (PR 7) follows chat,
@@ -2790,21 +2800,28 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    interactive lane around each provider request: a few temporary lines that PR 6 deletes. Chat's
    own requests can't be interrupted, and never need to be. Replaces #4444's fetch class. Adds the lane and
    gate tests and the sequencer cases of the escalation test.
-5. **RubyLLM 2.2.** Whenever 2.2 is released; nothing waits for it. The version bump (the
-   `~> 2.1` constraint allows it), the recorded tests replayed and the live ones recorded again,
-   and Jev on OpenRouter working again (#1264). Then the chat-storage spike: 2.2's claims on
-   RubyLLM's persistence, with the cases of Sure's own claim spike (two Retry requests at once, a
-   lapsed claim, a message sent mid-turn, an approval clicked twice). Its result decides PR 6's
-   storage. The upgrade checklist is the table of RubyLLM commits since 2.1.1 in
+5. **RubyLLM 2.2 — delivered.** 2.2.0 (`~> 2.2`) ships on the 2f stack (PR #4892, `28cd75e61`).
+   The recorded tests replayed and the live ones recorded again; Jev on OpenRouter works again
+   (#1264: `…/alpha/decisions`, verified live 2026-11-12 — STARBUCKS → Coffee Shops 0.67,
+   PAYROLL → Salary 0.99). The chat-storage spike has run —
+   [`chat-storage-spike-report.md`](chat-storage-spike-report.md), branch `spike/chat-storage` —
+   against the four cases of Sure's own claim spike (two Retry requests at the same moment, a
+   lapsed claim, a message sent mid-turn, an approval clicked twice), plus cancel-from-another-
+   process and the per-attempt ledger. All pass on 2.2.0. **Its result decided PR 6's storage:
+   RubyLLM's persisted chat** — `acts_as_chat` / `acts_as_message` on Sure's own `chats`/
+   `messages`, with the gem's `ruby_llm_models`, `ruby_llm_tool_calls` and
+   `ruby_llm_queued_messages` tables (call by @josh-sanders during development of PR #4440).
+   Sure's own claim is not built. The upgrade checklist is the table of RubyLLM commits since
+   2.1.1 in
    [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md#rubyllm-from-211-to-main-what-lands-with-22).
-6. **Chat**, on RubyLLM 2.2, with the storage PR 5's spike picked: Sure's tables with Sure's
-   claim on `chats` (section 8.4), or RubyLLM's persistence (section 20). `Ai::Conversation`'s
+6. **Chat**, on RubyLLM 2.2, with the storage the spike picked: RubyLLM's persistence on
+   Sure's tables (section 8.4). `Ai::Conversation`'s
    driver around `ChatAgent` and `SureTool` (section 8.4), agent
    construction on the compatible and Anthropic transports, `converse` and the agent mode on the
    transports, chat mode (read from today's `assistant_type` until PR 7), today's `mcp_only` rule as one line
    in `Ai::Consent` (section 6), `previous_response_id` on the same
-   endpoint, failover at the start of a turn, bounded turns, the serving route and
-   `provider_state` on each message with the drop-on-switch rule and Gemini's placeholder
+   endpoint, failover at the start of a turn, bounded turns, the serving route and provider
+   state on each message with the drop-on-switch rule and Gemini's placeholder
    signature (section 5.5), `requires_approval` from #4628's read-only or mutating
    classification of each `Assistant::Function` (or a write flag, if #4628 hasn't landed; section
    8.4), OpenClaw's headers,
@@ -2934,17 +2951,15 @@ chat tables (for the chat storage line).
   transport options. Reasoning effort (#3605) is in scope for the `compatible` transport
   (section 4.2); mapping it onto Anthropic's thinking settings is a later transport option.
 - Replacing Langfuse, Sidekiq or rails-settings-cached.
-- A chat storage redesign, such as RubyLLM's `acts_as_chat`, isn't decided here: PR 5's spike on
-  RubyLLM 2.2 decides PR 6's storage (call by @josh-sanders during development of PR #4440). The evidence so far: the plumbing needs only
-  the additive `provider_state` column (section 18). RubyLLM's persistence pays off when RubyLLM runs the loop
-  (approvals and MCP input that survive restarts); it would also migrate data the mobile API
-  reads (#4421), touch how tool rounds are stored (#4133), and turn on RubyLLM's usage ledger,
-  which then records every call Sure makes. RubyLLM now runs the tools (section 8.4), but Sure
-  keeps the history and rebuilds it each turn; revisit when approvals have to survive restarts
-  without Sure storing the paused turn itself. RubyLLM 2.2 (unreleased) adds to the case for it:
-  one process per chat and per tool call, cancel from another process, and approvals safe
-  against a double click, all on its persistence. Sure's own claim covers the first (section
-  8.4).
+- Chat storage is decided: RubyLLM's persisted chat (`acts_as_chat` / `acts_as_message` on
+  Sure's own `chats`/`messages`), not Sure's claim. **Call by @josh-sanders during development
+  of PR #4440**, on the evidence of the part-5 spike
+  ([`chat-storage-spike-report.md`](chat-storage-spike-report.md)): all four claim cases pass on
+  2.2.0, double-clicked approvals are one decision and one tool run (Sure's claim cannot express
+  that), a mid-turn message joins the running turn rather than waiting, and cross-process cancel
+  works. It migrates the data the mobile API reads (#4421, additive) and moves tool rounds
+  (#4133) with it; the `provider_state` column no longer exists (section 5.5). Sure's own claim
+  (section 8.4, before the call) is not built.
 
 ## 21. References
 
@@ -2954,6 +2969,7 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 |---|---|
 | [`rubyllm-spike-report.md`](rubyllm-spike-report.md) | PR 1's result: every criterion in section 19 with its evidence, and the decisions register |
 | [`rubyllm-spike-prompt.md`](rubyllm-spike-prompt.md) | The brief the spike ran from |
+| [`chat-storage-spike-report.md`](chat-storage-spike-report.md) | Item 5's spike: RubyLLM 2.2's persisted chat answers the four claim cases; decides PR 6's storage |
 | [`00-ai-ml-block-diagram.md`](00-ai-ml-block-diagram.md) | One diagram of today's AI and ML blocks |
 | [`01-ai-ml-workflow-map.md`](01-ai-ml-workflow-map.md) | Every workflow that calls an LLM, Jev, embeddings or Ruby ML today (W1–W24) |
 | [`02-ai-architecture-review.md`](02-ai-architecture-review.md) | Today's pipeline reviewed from the Rails and agent-contribution angles |
