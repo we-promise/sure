@@ -532,6 +532,20 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal %w[7.0 9.0], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_s).sort
   end
 
+  test "a new sibling does not take over the plain id of an entry whose row left the payload" do
+    first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00").merge(booking_date: 40.days.ago.to_date.to_s)
+    second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+    @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    # e.g. a relinked account whose first window misses r-a
+    @enable_banking_account.update!(raw_transactions_payload: [ second, raw_shared_tid_transaction(entry_reference: "r-c", amount: "5.00") ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal %w[5.0 7.0 9.0], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_s).sort
+    assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x").amount
+  end
+
   test "a sibling without entry_reference gets its own entry" do
     @enable_banking_account.update!(raw_transactions_payload: [
       raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"),

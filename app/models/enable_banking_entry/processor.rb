@@ -70,75 +70,37 @@ class EnableBankingEntry::Processor
     "#{CONTENT_ID_PREFIX}#{Digest::MD5.hexdigest(content)}"
   end
 
-  # External ids for an ordered list of raw transactions, one per row.
-  #
-  # Enable Banking does not guarantee transaction_id to be unique, while
-  # entry_reference identifies a row, so booked rows that share a transaction_id
-  # but carry different entry_references are different movements, and
-  # compute_external_id alone would store them under one id. One of them keeps
-  # enable_banking_<transaction_id>, the id compute_external_id gives it, so no
-  # stored entry changes id; every other one gets
-  # enable_banking_<transaction_id>_<MD5(entry_reference)>. Rows without an
-  # entry_reference count as one reference.
-  #
-  # Which one keeps the plain id is read from the account's entries when an
-  # account is given, so it does not depend on the order rows are stored or
-  # fetched in (see legacy_id_owner). Without an account, the first booked row
-  # does; that is enough where only telling rows apart matters.
-  #
-  # Pending rows keep compute_external_id: a pending row settles into the entry
-  # its booked counterpart updates, and is never the reason a booked row changes id.
+  # One external id per raw row. transaction_id is not guaranteed unique, so booked
+  # rows sharing one are told apart by entry_reference: one keeps
+  # enable_banking_<transaction_id> (the row with its own suffixed entry never does;
+  # otherwise the best match for the entry stored under the plain id, else the first),
+  # the others get enable_banking_<transaction_id>_<MD5(entry_reference)>.
+  # Pending rows keep compute_external_id.
   #
   # @return [Array<String, nil>]
   def self.external_ids_for(raw_transactions, account: nil)
     rows = raw_transactions.map(&:with_indifferent_access)
     ids = rows.map { |data| compute_external_id(data) }
+    ref = ->(i) { rows[i][:entry_reference].to_s }
+    suffixed = ->(i) { "#{ids[i]}_#{Digest::MD5.hexdigest(ref[i])}" }
+    groups = rows.each_index.select { |i| rows[i][:transaction_id].present? && !pending_payload?(rows[i]) }.group_by { |i| ids[i] }
+    stored = account ? account.entries.where(source: "enable_banking", external_id: groups.flat_map { |id, is| [ id, *is.map(&suffixed) ] }).index_by(&:external_id) : {}
 
-    groups = rows.each_index.select { |i| rows[i][:transaction_id].present? && !pending_payload?(rows[i]) }
-                 .group_by { |i| ids[i] }.map do |legacy_id, indexes|
-      references = indexes.index_with { |i| rows[i][:entry_reference].to_s }
-      rows_by_reference = references.invert.transform_values { |i| rows[i] }
-      suffixed = rows_by_reference.keys.index_with { |reference| "#{legacy_id}_#{Digest::MD5.hexdigest(reference)}" }
-      [ legacy_id, references, rows_by_reference, suffixed ]
+    groups.each do |legacy_id, indexes|
+      free = indexes.reject { |i| stored.key?(suffixed[i]) }
+      score = ->(i) { movement_match(stored[legacy_id], rows[i], account&.family&.timezone) }
+      owner = free.each_with_index.max_by { |i, pos| [ score[i], -pos ] }&.first
+      # A sibling already has its own entry: the plain one is another row's unless the amount matches.
+      owner = nil if owner && stored[legacy_id] && free.size < indexes.size && score[owner].zero?
+      indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
     end
-
-    stored = if account && groups.any?
-      ids_to_load = groups.flat_map { |legacy_id, _, rows_by_reference, suffixed| [ (legacy_id if rows_by_reference.size > 1), *suffixed.values ] }
-      account.entries.where(source: "enable_banking", external_id: ids_to_load.compact).index_by(&:external_id)
-    end
-
-    groups.each do |legacy_id, references, rows_by_reference, suffixed|
-      owner = legacy_id_owner(stored.to_h, legacy_id, rows_by_reference, suffixed, account&.family&.timezone)
-      references.each { |i, reference| ids[i] = suffixed[reference] unless reference == owner }
-    end
-
     ids
-  end
-
-  # The entry_reference that keeps legacy_id among rows sharing a transaction_id.
-  #
-  # A reference already stored under its suffixed id keeps it. Of the others, the
-  # one matching the entry stored under legacy_id keeps that entry, so a pending
-  # entry, or one that showed only one of the rows, stays with the movement it
-  # shows: signed amount and date, else signed amount alone (a pending or
-  # user-edited date differs); failing a match, the first in payload order. nil
-  # when every reference already has its own entry, e.g. the legacy row is no
-  # longer in the payload.
-  #
-  # @return [String, nil]
-  def self.legacy_id_owner(stored, legacy_id, rows_by_reference, suffixed, timezone)
-    candidates = rows_by_reference.keys.reject { |reference| stored.key?(suffixed[reference]) }
-    legacy_entry = stored[legacy_id]
-    return candidates.first if legacy_entry.nil? || candidates.size < 2
-
-    # max_by keeps the first of equal scores.
-    candidates.max_by { |reference| movement_match(legacy_entry, rows_by_reference[reference], timezone) }
   end
 
   # 2: same signed amount and date as the entry; 1: same signed amount; 0: neither.
   def self.movement_match(entry, data, timezone)
     amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
-    return 0 if amount.blank?
+    return 0 if entry.nil? || amount.blank?
 
     signed = BigDecimal(amount.to_s).abs * (data[:credit_debit_indicator] == "CRDT" ? -1 : 1)
     return 0 unless entry.amount == signed
