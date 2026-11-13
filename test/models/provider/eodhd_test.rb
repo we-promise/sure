@@ -218,4 +218,17 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     end
     assert_equal 1, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
+
+  test "fetch_security_info retries after a transient failure" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    ok = mock
+    ok.stubs(:body).returns({ "General" => { "Name" => "Apple Inc" } }.to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).times(3).raises(Faraday::ServerError.new("502"))
+      .then.raises(Faraday::TimeoutError.new("timeout")).then.returns(ok)
+
+    2.times { assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success? }
+    assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+  end
 end

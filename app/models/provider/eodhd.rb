@@ -166,8 +166,8 @@ class Provider::Eodhd < Provider
     with_provider_response do
       ticker = eodhd_symbol(symbol, exchange_operating_mic)
       # Fundamentals cost 10 API calls and fail on plans without them, so don't
-      # retry a failed lookup on every sync.
-      failed_key = "eodhd:fundamentals_failed:#{ticker}"
+      # retry a permanently failed lookup (no plan access, unknown ticker) on every sync.
+      failed_key = "eodhd:fundamentals_failed:#{Digest::SHA256.hexdigest(api_key.to_s)[0, 8]}:#{ticker}"
       raise Error, "Fundamentals for #{ticker} failed recently; retrying later" if Rails.cache.read(failed_key)
 
       enforce_daily_limit!
@@ -181,7 +181,7 @@ class Provider::Eodhd < Provider
 
         parsed = JSON.parse(response.body)
         check_api_error!(parsed)
-      rescue
+      rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error
         Rails.cache.write(failed_key, true, expires_in: 7.days)
         raise
       end

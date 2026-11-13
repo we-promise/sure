@@ -284,7 +284,7 @@ en:
         step_1_html: 'Visit <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> and create a free account.'
         step_2_html: 'Go to your <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API token.'
         step_3: Copy your API token and paste it below.
-        rate_limit_warning: "EODHD free tier is limited to 20 API calls per day and 1 year of history. On a paid plan, set EODHD_MAX_REQUESTS_PER_DAY to your daily limit; this also lifts the history limit."
+        rate_limit_warning: "EODHD free tier is limited to 20 API calls per day and 1 year of history. Paid plan only: set EODHD_MAX_REQUESTS_PER_DAY to your plan's daily limit; this also lifts the history limit."
       mansa_settings:
         title: Mansa
         description: Enter the API key from Mansa API. Supports 20 African stock exchanges, including NGX (Nigerian Exchange), JSE, NSE (Kenya), GSE (Ghana) and BRVM -- several of which no other provider here covers.
