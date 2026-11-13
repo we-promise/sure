@@ -233,9 +233,9 @@ class BudgetCategory < ApplicationRecord
     display_rolled_over_amount.positive?
   end
 
-  # Returns true if this subcategory has no individual budget limit and should use parent's budget
+  # An explicit rollover envelope stays independent even without a new allocation.
   def inherits_parent_budget?
-    subcategory? && (self[:budgeted_spending].nil? || self[:budgeted_spending] == 0)
+    subcategory? && !rollover_enabled? && (self[:budgeted_spending].nil? || self[:budgeted_spending] == 0)
   end
 
   # Returns the budgeted spending to display in UI
