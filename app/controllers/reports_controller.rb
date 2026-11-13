@@ -878,7 +878,7 @@ class ReportsController < ApplicationController
     def generate_transactions_csv
       require "csv"
 
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         # Build header row: Category + Month columns + Total
         month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
         header_row = [ "Category" ] + month_headers + [ "Total" ]
@@ -889,7 +889,7 @@ class ReportsController < ApplicationController
           csv << [ "INCOME" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:income].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvFormulaGuard.escape(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -921,7 +921,7 @@ class ReportsController < ApplicationController
           csv << [ "EXPENSES" ] + Array.new(month_headers.length + 1, "")
 
           @export_data[:expenses].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvFormulaGuard.escape(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -965,7 +965,7 @@ class ReportsController < ApplicationController
           sheet.add_row [ "INCOME" ] + Array.new(month_headers.length + 1, ""), style: bold_style
 
           @export_data[:income].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvFormulaGuard.escape(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -997,7 +997,7 @@ class ReportsController < ApplicationController
           sheet.add_row [ "EXPENSES" ] + Array.new(month_headers.length + 1, ""), style: bold_style
 
           @export_data[:expenses].each do |category_data|
-            row = [ category_data[:category] ]
+            row = [ CsvFormulaGuard.escape(category_data[:category]) ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -1046,7 +1046,7 @@ class ReportsController < ApplicationController
             income_table_data = [ header_row ]
 
             @export_data[:income].each do |category_data|
-              row = [ category_data[:category] ]
+              row = [ CsvFormulaGuard.escape(category_data[:category]) ]
 
               @export_data[:months].each do |month|
                 amount = category_data[:months][month] || 0
@@ -1088,7 +1088,7 @@ class ReportsController < ApplicationController
             expenses_table_data = [ header_row ]
 
             @export_data[:expenses].each do |category_data|
-              row = [ category_data[:category] ]
+              row = [ CsvFormulaGuard.escape(category_data[:category]) ]
 
               @export_data[:months].each do |month|
                 amount = category_data[:months][month] || 0

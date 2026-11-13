@@ -192,15 +192,15 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
       # Check categories.csv
       categories_csv = zip.read("categories.csv")
-      assert categories_csv.include?("name,color,parent_category,lucide_icon")
+      assert categories_csv.include?(%q("name","color","parent_category","lucide_icon"))
 
       # Check merchants.csv
       merchants_csv = zip.read("merchants.csv")
-      assert merchants_csv.include?("name,color,website_url")
+      assert merchants_csv.include?(%q("name","color","website_url"))
 
       # Check rules.csv
       rules_csv = zip.read("rules.csv")
-      assert rules_csv.include?("name,resource_type,active,effective_date,conditions,actions,group")
+      assert rules_csv.include?(%q("name","resource_type","active","effective_date","conditions","actions","group"))
     end
   end
 
@@ -351,6 +351,224 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       assert_equal @account.name, trade_row.account
       assert_equal BigDecimal("10"), BigDecimal(trade_row.qty)
     end
+  end
+
+  test "neutralizes formula-leading text in every exported CSV but leaves numbers alone" do
+    formulas = [ "=HYPERLINK(\"http://example.invalid\",\"x\")", "@SUM(1)", "-1+1", "+1+1", "\t=1+1", "\r=1+1", "\n=1+1" ]
+    account = @family.accounts.create!(name: "=1+1", accountable: Depository.new, balance: -5, currency: "USD")
+    category = @family.categories.create!(name: "@SUM(1)", color: "#FF0000")
+    merchant = @family.merchants.create!(name: "+1+1", website_url: "https://example.invalid")
+    tag = @family.tags.create!(name: "-1+1", color: "#00FF00")
+    formulas.each_with_index do |formula, index|
+      account.entries.create!(
+        name: formula,
+        notes: formula,
+        amount: -12.50 - index,
+        currency: "USD",
+        date: Date.parse("2024-05-16"),
+        entryable: Transaction.new(category: category, tags: [ tag ])
+      )
+    end
+    security = Security.create!(ticker: "-FORMULA", name: "Formula Security", exchange_operating_mic: "XNAS")
+    account.entries.create!(
+      name: "Formula trade",
+      amount: -1500,
+      currency: "USD",
+      date: Date.parse("2024-05-17"),
+      entryable: Trade.new(security: security, qty: -10, price: 150, currency: "USD")
+    )
+    rule = @family.rules.build(name: "=1+1", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "=1+1")
+    rule.actions.build(action_type: "set_transaction_category", value: category.id)
+    rule.save!
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rows = ->(file) { CSV.parse(zip.read(file), headers: true) }
+      formula_chars = [ "=", "+", "-", "@", "\t", "\r", "\n" ]
+      guarded = lambda do |value|
+        assert value.start_with?("'"), "expected #{value.inspect} to be quote-prefixed"
+      end
+
+      transactions = rows.call("transactions.csv").select { |row| row["account_name"] == "'=1+1" }
+      assert_equal formulas.size, transactions.size
+      transactions.each do |row|
+        guarded.call(row["name"])
+        guarded.call(row["notes"])
+        assert_equal "'@SUM(1)", row["category"]
+        assert_equal "'-1+1", row["tags"]
+        assert_match(/\A-\d+\.\d+\z/, row["amount"])
+      end
+      assert_equal formulas.map { |formula| "'#{formula}" }.sort, transactions.map { |row| row["name"] }.sort
+
+      account_row = rows.call("accounts.csv").find { |row| row["id"] == account.id }
+      assert_equal "'=1+1", account_row["name"]
+      assert_match(/\A-5(\.0+)?\z/, account_row["balance"])
+
+      trade_row = rows.call("trades.csv").find { |row| row["account_name"] == "'=1+1" }
+      assert_equal "'-FORMULA", trade_row["ticker"]
+      assert_equal "-10.0", BigDecimal(trade_row["quantity"]).to_s("F")
+      assert_equal "-1500.0", BigDecimal(trade_row["amount"]).to_s("F")
+
+      assert_equal "'@SUM(1)", rows.call("categories.csv").find { |row| row["name"] == "'@SUM(1)" }["name"]
+      assert_equal "'+1+1", rows.call("merchants.csv").find { |row| row["name"] == "'+1+1" }["name"]
+      assert_equal "'=1+1", rows.call("rules.csv").find { |row| row["name"] == "'=1+1" }["name"]
+
+      # No cell in any exported text column may start with a formula character.
+      %w[accounts transactions trades categories merchants rules].each do |file|
+        rows.call("#{file}.csv").each do |row|
+          row.each do |header, cell|
+            next if cell.nil? || %w[amount balance quantity price].include?(header)
+
+            refute formula_chars.any? { |char| cell.start_with?(char) },
+                   "#{file}.csv #{header} cell #{cell.inspect} starts with a formula character"
+          end
+        end
+      end
+    end
+  end
+
+  test "quotes every field so a locale separator inside text cannot start an unguarded cell" do
+    @account.entries.create!(
+      name: "Rent;=1+1",
+      notes: "a\t=1+1|@SUM(1)",
+      amount: 5,
+      currency: "USD",
+      date: Date.parse("2024-05-16"),
+      entryable: Transaction.new
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      csv = zip.read("transactions.csv")
+      assert_includes csv, %q("Rent;=1+1")
+      assert_includes csv, %Q("a\t=1+1|@SUM(1)")
+      assert csv.lines.first.start_with?(%q("date","account_name")), "header cells are quoted too"
+      assert_equal "Rent;=1+1", CSV.parse(csv, headers: true).find { |row| row["name"].start_with?("Rent") }["name"]
+    end
+  end
+
+  test "guarded export still imports and the importers keep the guard quote" do
+    payload = "=HYPERLINK(\"http://example.invalid\",\"x\")"
+    account = @family.accounts.create!(name: "-1+1", accountable: Depository.new, balance: 10, currency: "USD")
+    category = @family.categories.create!(name: "@SUM(1)", color: "#FF0000")
+    merchant = @family.merchants.create!(name: "+1+1", website_url: "https://example.invalid")
+    account.entries.create!(
+      name: payload,
+      notes: "'=literal",
+      amount: -12.50,
+      currency: "USD",
+      date: Date.parse("2024-05-16"),
+      entryable: Transaction.new(category: category)
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      transaction_import = @other_family.imports.create!(
+        type: "TransactionImport",
+        raw_file_str: zip.read("transactions.csv"),
+        date_col_label: "date*",
+        amount_col_label: "amount*",
+        name_col_label: "name",
+        currency_col_label: "currency",
+        category_col_label: "category",
+        tags_col_label: "tags",
+        account_col_label: "account",
+        notes_col_label: "notes",
+        date_format: "%Y-%m-%d",
+        signage_convention: "inflows_negative"
+      )
+      transaction_import.generate_rows_from_csv
+      row = transaction_import.rows.reload.find_by!(name: "'#{payload}")
+      assert_equal "'-1+1", row.account
+      assert_equal "'@SUM(1)", row.category
+      assert_equal "''=literal", row.notes
+      assert_equal BigDecimal("-12.50"), row.signed_amount
+
+      merchant_import = @other_family.imports.create!(
+        type: "MerchantImport",
+        raw_file_str: zip.read("merchants.csv"),
+        col_sep: ","
+      )
+      merchant_import.generate_rows_from_csv
+      assert_equal "'#{merchant.name}", merchant_import.rows.reload.find_by!(name: "'+1+1").name
+    end
+  end
+
+  test "rule import never rewrites a leading apostrophe so similar rule names stay separate" do
+    exported = nil
+    Zip::File.open_buffer(@exporter.generate_export) { |zip| exported = CSV.parse(zip.read("rules.csv"), headers: true) }
+    template = exported.find { |row| row["name"] == "Test Rule" }
+    csv = CSV.generate do |out|
+      out << exported.headers
+      [ "=Rule", "'=Rule" ].each do |name|
+        out << exported.headers.map { |header| header == "name" ? name : template[header] }
+      end
+    end
+
+    import = @other_family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    assert_equal [ "'=Rule", "=Rule" ], import.rows.reload.map(&:name).sort
+  end
+
+  test "rules named with and without a leading apostrophe survive export and a committed import" do
+    category = @family.categories.create!(name: "Rule Target", color: "#FF0000")
+    other_category = @family.categories.create!(name: "Rule Other", color: "#00FF00")
+    [ [ "=Rule", "first", category ], [ "'=Rule", "second", other_category ] ].each do |name, value, target|
+      rule = @family.rules.build(name: name, resource_type: "transaction", active: true)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: value)
+      rule.actions.build(action_type: "set_transaction_category", value: target.id)
+      rule.save!
+    end
+
+    csv = nil
+    Zip::File.open_buffer(@exporter.generate_export) { |zip| csv = zip.read("rules.csv") }
+    target_category = @other_family.categories.create!(name: "Rule Target", color: "#FF0000")
+    @other_family.categories.create!(name: "Rule Other", color: "#00FF00")
+    import = @other_family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    rules = @other_family.rules.where(name: [ "'=Rule", "''=Rule" ]).index_by(&:name)
+    assert_equal [ "''=Rule", "'=Rule" ], rules.keys.sort
+    assert_equal [ "first" ], rules["'=Rule"].conditions.map(&:value)
+    assert_equal [ "second" ], rules["''=Rule"].conditions.map(&:value)
+    assert_equal target_category.id, rules["'=Rule"].actions.first.value
+  end
+
+  test "rule operands reference guarded category names exactly as the other CSVs spell them" do
+    budget = @family.categories.create!(name: "=Budget", color: "#FF0000")
+    rule = @family.rules.build(name: "Budget Rule", resource_type: "transaction", active: true)
+    rule.conditions.build(condition_type: "transaction_category", operator: "=", value: budget.id)
+    rule.actions.build(action_type: "set_transaction_category", value: budget.id)
+    rule.save!
+    @account.entries.create!(
+      name: "Budget purchase", amount: 9, currency: "USD", date: Date.parse("2024-05-16"),
+      entryable: Transaction.new(category: budget)
+    )
+
+    files = {}
+    ndjson = nil
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      %w[categories transactions rules].each { |name| files[name] = zip.read("#{name}.csv") }
+      ndjson = zip.read("all.ndjson")
+    end
+
+    rule_row = CSV.parse(files["rules"], headers: true).find { |row| row["name"] == "Budget Rule" }
+    assert_equal "'=Budget", JSON.parse(rule_row["conditions"]).first["value"]
+    assert_equal "'=Budget", JSON.parse(rule_row["actions"]).first["value"]
+    assert_includes ndjson, '"=Budget"', "all.ndjson keeps the raw name"
+
+    target = @other_family
+    target.imports.create!(type: "CategoryImport", raw_file_str: files["categories"], col_sep: ",").tap do |import|
+      import.generate_rows_from_csv
+      import.send(:import!)
+    end
+    target.imports.create!(type: "RuleImport", raw_file_str: files["rules"], col_sep: ",").tap do |import|
+      import.generate_rows_from_csv
+      import.send(:import!)
+    end
+
+    assert_equal 1, target.categories.where(name: "'=Budget").count
+    imported = target.rules.find_by!(name: "Budget Rule")
+    assert_equal "'=Budget", target.categories.find(imported.actions.first.value).name
   end
 
   test "generates valid NDJSON file" do

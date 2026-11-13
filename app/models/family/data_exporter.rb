@@ -62,18 +62,18 @@ class Family::DataExporter
     end
 
     def generate_accounts_csv
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         csv << [ "id", "name", "type", "subtype", "balance", "currency", "created_at" ]
 
         # Only export accounts belonging to this family
         @family.accounts.includes(:accountable).find_each do |account|
           csv << [
             account.id,
-            account.name,
-            account.accountable_type,
-            account.subtype,
+            csv_text(account.name),
+            csv_text(account.accountable_type),
+            csv_text(account.subtype),
             account.balance.to_s,
-            account.currency,
+            csv_text(account.currency),
             account.created_at.iso8601
           ]
         end
@@ -81,7 +81,7 @@ class Family::DataExporter
     end
 
     def generate_transactions_csv
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         csv << TRANSACTIONS_CSV_HEADERS
 
         # Only export transactions from accounts belonging to this family
@@ -91,16 +91,22 @@ class Family::DataExporter
           .find_each do |transaction|
             csv << [
               transaction.entry.date&.iso8601,
-              transaction.entry.account.name,
+              csv_text(transaction.entry.account.name),
               transaction.entry.amount.to_s,
-              transaction.entry.name,
-              transaction.category&.name,
-              transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(","),
-              transaction.entry.notes,
-              transaction.entry.currency
+              csv_text(transaction.entry.name),
+              csv_text(transaction.category&.name),
+              csv_text(transaction.tags.map { |tag| escape_legacy_tag_name(tag.name) }.join(",")),
+              csv_text(transaction.entry.notes),
+              csv_text(transaction.entry.currency)
             ]
           end
       end
+    end
+
+    # Free-text cells go through the formula guard; amounts, quantities, prices
+    # and dates are written as-is so negative numbers stay numbers.
+    def csv_text(value)
+      CsvFormulaGuard.escape(value)
     end
 
     def escape_legacy_tag_name(name)
@@ -108,7 +114,7 @@ class Family::DataExporter
     end
 
     def generate_trades_csv
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         csv << [ "date", "account_name", "ticker", "quantity", "price", "amount", "currency" ]
 
         # Only export trades from accounts belonging to this family
@@ -117,64 +123,64 @@ class Family::DataExporter
           .find_each do |trade|
             csv << [
               trade.entry.date&.iso8601,
-              trade.entry.account.name,
-              trade.security.ticker,
+              csv_text(trade.entry.account.name),
+              csv_text(trade.security.ticker),
               trade.qty.to_s,
               trade.price.to_s,
               trade.entry.amount.to_s,
-              trade.currency
+              csv_text(trade.currency)
             ]
           end
       end
     end
 
     def generate_categories_csv
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         csv << [ "name", "color", "parent_category", "lucide_icon" ]
 
         # Only export categories belonging to this family
         @family.categories.includes(:parent).find_each do |category|
           csv << [
-            category.name,
-            category.color,
-            category.parent&.name,
-            category.lucide_icon
+            csv_text(category.name),
+            csv_text(category.color),
+            csv_text(category.parent&.name),
+            csv_text(category.lucide_icon)
           ]
         end
       end
     end
 
     def generate_merchants_csv
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         # Headers match MerchantImport's expected columns so the export round-trips
         csv << [ "name", "color", "website_url" ]
 
         # Only export family merchants belonging to this family
         @family.merchants.find_each do |merchant|
           csv << [
-            merchant.name,
-            merchant.color,
-            merchant.website_url
+            csv_text(merchant.name),
+            csv_text(merchant.color),
+            csv_text(merchant.website_url)
           ]
         end
       end
     end
 
     def generate_rules_csv
-      CSV.generate do |csv|
+      CSV.generate(force_quotes: true) do |csv|
         csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions", "group" ]
 
         # Only export rules belonging to this family, in run order so an
         # import recreates them in the same order
         @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
           csv << [
-            rule.name,
-            rule.resource_type,
+            csv_text(rule.name),
+            csv_text(rule.resource_type),
             rule.active,
             rule.effective_date&.iso8601,
-            serialize_conditions_for_csv(rule.conditions),
-            serialize_actions_for_csv(rule.actions),
-            rule.rule_group&.name
+            csv_text(serialize_conditions_for_csv(rule.conditions)),
+            csv_text(serialize_actions_for_csv(rule.actions)),
+            csv_text(rule.rule_group&.name)
           ]
         end
       end
@@ -857,9 +863,9 @@ class Family::DataExporter
         merchant = split_operand_record(:merchants, split["merchant_id"])
         tags = Array(split["tag_ids"]).filter_map { |id| split_operand_record(:tags, id) }
 
-        row["category"] = category.name if category
-        row["merchant"] = merchant.name if merchant
-        row["tags"] = tags.map(&:name) if tags.any?
+        row["category"] = operand_name(category.name) if category
+        row["merchant"] = operand_name(merchant.name) if merchant
+        row["tags"] = tags.map { |tag| operand_name(tag.name) } if tags.any?
         row
       end
 
@@ -877,7 +883,7 @@ class Family::DataExporter
     def resolve_multi_tag_operand(value)
       ids = value.to_s.split(",")
       records = ids.map { |id| resolve_rule_operand_record(:tags, id, fallback_to_name: true) }
-      names = records.each_with_index.map { |record, i| record&.name || ids[i] }
+      names = records.each_with_index.map { |record, i| record ? operand_name(record.name) : ids[i] }
       refs = records.compact.map { |record| rule_value_ref("Tag", record) }
 
       {
@@ -896,7 +902,7 @@ class Family::DataExporter
       record = relation && resolve_rule_operand_record(relation, value, fallback_to_name: fallback_to_name)
 
       {
-        value: record&.name || value,
+        value: record ? operand_name(record.name) : value,
         value_ref: record ? rule_value_ref(type, record) : nil
       }
     end
@@ -938,10 +944,25 @@ class Family::DataExporter
     end
 
     def serialize_conditions_for_csv(conditions)
-      conditions.where(parent_id: nil).map { |c| serialize_condition(c) }.to_json
+      with_csv_operand_names { conditions.where(parent_id: nil).map { |c| serialize_condition(c) }.to_json }
     end
 
     def serialize_actions_for_csv(actions)
-      actions.map { |a| serialize_action(a) }.to_json
+      with_csv_operand_names { actions.map { |a| serialize_action(a) }.to_json }
+    end
+
+    # Category, merchant and tag names inside rule operands must read exactly like
+    # the same names in categories.csv, merchants.csv and transactions.csv (which
+    # are formula-guarded), or an import creates a second record for the same name.
+    # Only the CSV path does this; all.ndjson and value_ref keep the raw names.
+    def with_csv_operand_names
+      @csv_operand_names = true
+      yield
+    ensure
+      @csv_operand_names = false
+    end
+
+    def operand_name(name)
+      @csv_operand_names ? CsvFormulaGuard.escape(name) : name
     end
 end
