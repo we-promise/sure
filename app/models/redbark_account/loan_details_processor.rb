@@ -233,49 +233,25 @@ class RedbarkAccount::LoanDetailsProcessor
 
     # Every write goes through Enrichable: it skips locked attributes, records
     # provenance as a DataEnrichment, and calls `save` rather than `save!`, so a
-    # value the model refuses -- a rate outside 0..100, say -- returns false
-    # instead of raising and taking the sync with it.
+    # value the model refuses -- a rate outside 0..100, say -- is rolled back
+    # and logged instead of raising and taking the sync with it.
     #
-    # `false` alone is NOT a failure. Enrichable also returns it when every
-    # attribute was locked or already held the value, which are the ordinary
-    # quiet paths (rows 3 and 5). Only a populated `errors` distinguishes a
-    # refusal from a no-op, and logging on `false` alone would put a warning in
-    # the debug log every time a user's lock did exactly its job.
+    # Terms are applied before the rate, so the recovery matters here: a bank
+    # reporting an absurd `loanEndDate` must not leave an out-of-range
+    # `term_months` assigned and cost the loan a rate change it had every
+    # right to.
     def write(attrs)
       return if attrs.blank?
 
-      # Enrichable rolls back its own savepoint when the save is refused, so no
-      # DataEnrichment row says Redbark supplied a value the loan rejected.
-      # That savepoint is the guarantee. This block can join a caller's
-      # transaction, and a Rollback raised in a joined block undoes nothing.
-      ActiveRecord::Base.transaction do
-        loan.enrich_attributes(attrs, source: SOURCE)
-        raise ActiveRecord::Rollback if loan.errors.any?
-      end
-      return if loan.errors.empty?
+      refusal = loan.enrich_attributes_unless_refused(attrs, source: SOURCE)
+      return if refusal.nil?
 
       capture(
         "Redbark loan detail refused by the model",
         loan_id: loan.id,
         attributes: attrs.keys.map(&:to_s),
-        errors: loan.errors.full_messages
+        errors: refusal
       )
-
-      # A refusal is not tidied up by Enrichable: it assigns, calls `save`, and
-      # when `save` returns false the REJECTED VALUES ARE STILL ON THE LOAN and
-      # its errors are still populated. Terms are applied before the rate, so a
-      # bank reporting an absurd `loanEndDate` would leave an out-of-range
-      # `term_months` assigned, the rate write would then be refused for the
-      # term rather than for the rate, and the loan would lose a rate change it
-      # had every right to. The log would name the rate attributes and carry
-      # the term's errors, which is how it would be misread.
-      #
-      # Clearing the errors matters on its own: `enrich_attributes` returns
-      # early without saving when every attribute is locked or unchanged, so a
-      # later no-op write would find these errors still sitting there and
-      # report a refusal that did not happen.
-      loan.restore_attributes(attrs.keys.map(&:to_s))
-      loan.errors.clear
     end
 
     def capture(message, **metadata)
