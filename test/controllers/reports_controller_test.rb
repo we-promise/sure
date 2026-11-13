@@ -343,6 +343,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "trends start the first month at the custom start date" do
+    create_transaction(account: accounts(:depository), date: Date.new(2019, 3, 5), amount: 777.77)
+    create_transaction(account: accounts(:depository), date: Date.new(2019, 3, 20), amount: 33.33)
+
+    get reports_path(period_type: :custom, start_date: "2019-03-15", end_date: "2019-04-15")
+    assert_response :ok
+
+    row = css_select("tbody tr").find { |tr| tr.text.include?("Mar 2019") }
+    assert row, "Mar 2019 row"
+    assert_includes row.text, "$33.33"
+    assert_not_includes row.text, "$811.10"
+  end
+
   test "index handles invalid date parameters gracefully" do
     get reports_path(
       period_type: :custom,

@@ -357,7 +357,8 @@ class ReportsController < ApplicationController
       end_of_period = @end_date.end_of_month
 
       while current_month <= end_of_period
-        month_start = current_month
+        # A range that starts mid-month only counts from its start date
+        month_start = [ current_month, @start_date ].max
         month_end = current_month.end_of_month
 
         # Ensure we don't go beyond the end date
@@ -369,8 +370,8 @@ class ReportsController < ApplicationController
         expenses = income_statement.expense_totals(period: period).total
 
         trends << {
-          month: month_start.strftime("%b %Y"),
-          is_current_month: (month_start.month == Date.current.month && month_start.year == Date.current.year),
+          month: current_month.strftime("%b %Y"),
+          is_current_month: (current_month.month == Date.current.month && current_month.year == Date.current.year),
           income: income,
           expenses: expenses,
           net: income - expenses
