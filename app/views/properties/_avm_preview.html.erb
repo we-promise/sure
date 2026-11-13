@@ -38,8 +38,33 @@
         </div>
       </div>
 
-      <% if no_property_record %>
+      <% if preview.external_id.present? || preview.valuation_low.present? || preview.confidence.present? %>
+        <dl class="flex flex-col gap-2">
+          <% if preview.external_id.present? %>
+            <%= render DS::DetailRow.new(label: t("properties.new.avm_preview_uprn"), value: preview.external_id) %>
+          <% end %>
+          <% if preview.valuation_low.present? && preview.valuation_high.present? %>
+            <%= render DS::DetailRow.new(
+              label: t("properties.new.avm_preview_range"),
+              value: "#{format_money(Money.new(preview.valuation_low, preview.currency))} – #{format_money(Money.new(preview.valuation_high, preview.currency))}",
+              value_class: "privacy-sensitive"
+            ) %>
+          <% end %>
+          <% if preview.confidence.present? %>
+            <%= render DS::DetailRow.new(
+              label: t("properties.new.avm_preview_confidence"),
+              value: t("properties.new.avm_confidence.#{preview.confidence}", default: preview.confidence.to_s.humanize)
+            ) %>
+          <% end %>
+        </dl>
+      <% end %>
+
+      <% if no_property_record && preview.external_id.blank? %>
         <p class="text-sm text-secondary"><%= t("properties.new.avm_preview_no_record", provider: provider_name) %></p>
+      <% end %>
+
+      <% if provider_key.to_s == "chimnie" %>
+        <p class="text-xs text-secondary"><%= t("properties.new.avm_attribution_chimnie") %></p>
       <% end %>
     </div>
 

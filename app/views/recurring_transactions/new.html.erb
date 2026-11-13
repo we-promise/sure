@@ -6,14 +6,14 @@
         <p class="text-sm font-medium text-primary">
           <%= @recurring_transaction.is_income ? t(".start_from_income_title") : t(".start_from_title") %>
         </p>
-        <div class="max-h-44 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-divider">
+        <div class="max-h-44 overflow-y-auto rounded-lg shadow-border-xs divide-y divide-subdued">
           <% @candidates.each do |candidate| %>
             <%= link_to new_recurring_transaction_path(entry_id: candidate[:entry_id], income: params[:income].presence),
                   class: "flex items-center justify-between gap-3 px-3 py-2 hover:bg-surface-inset" do %>
               <div class="min-w-0">
                 <p class="text-sm text-primary truncate"><%= candidate[:name] %></p>
                 <p class="text-xs text-secondary">
-                  <%= t(".candidate_meta", count: candidate[:count], date: l(candidate[:last_date], format: :short)) %>
+                  <%= t(".candidate_meta", count: candidate[:count], date: l(candidate[:last_date], format: :short_with_year)) %>
                 </p>
               </div>
               <p class="text-sm text-primary privacy-sensitive shrink-0">
@@ -72,6 +72,52 @@
       </div>
     <% end %>
 
-    <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0 %>
+    <% if @covering_series %>
+      <%# The transaction this dialog was opened from is already paying a bill.
+          Saving would count it twice, so the bill comes first and the form
+          waits behind a deliberate choice: a second price tier is the one
+          legitimate reason to want another. %>
+      <%# A suggestion is that bill, found by detection and not yet confirmed.
+          Confirming it links this payment; a separate bill would become the
+          duplicate the moment the suggestion was confirmed. %>
+      <%# Income is stored negative, so an inflow's covering series is income
+          and the warning names it as such. %>
+      <% suggested = @covering_series.suggested? %>
+      <% covered = @covering_series.amount.negative? ? ".covered_income" : ".covered" %>
+      <div class="mb-5">
+        <%= render DS::Alert.new(title: t(suggested ? "#{covered}_suggested_title" : "#{covered}_title"), variant: :warning, live: :polite) do %>
+          <p><%= t(suggested ? "#{covered}_suggested_body" : "#{covered}_body", name: @covering_series.display_name) %></p>
+          <div class="flex flex-wrap items-center gap-3">
+            <% if suggested && series_writable?(@covering_series) %>
+              <%= render DS::Link.new(
+                    text: t("#{covered}_confirm"),
+                    variant: "primary",
+                    href: confirm_recurring_transaction_path(@covering_series),
+                    method: :post,
+                    frame: "_top"
+                  ) %>
+            <% end %>
+            <%= render DS::Link.new(
+                  text: t("#{covered}_open"),
+                  variant: :default,
+                  href: bill_path(@covering_series),
+                  frame: "_top"
+                ) %>
+          </div>
+        <% end %>
+      </div>
+
+      <%= render DS::Disclosure.new(title: t("#{covered}_create_anyway"), align: "left") do %>
+        <div class="pt-2">
+          <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0,
+                             source_entry_id: @source_entry&.id, allow_duplicate: true %>
+        </div>
+      <% end %>
+    <% else %>
+      <%# A failed save after "anyway" keeps that choice for the resubmit. %>
+      <%= render "form", recurring_transaction: @recurring_transaction, sibling_count: 0,
+                         source_entry_id: @source_entry&.id,
+                         allow_duplicate: separate_bill_chosen? %>
+    <% end %>
   <% end %>
 <% end %>

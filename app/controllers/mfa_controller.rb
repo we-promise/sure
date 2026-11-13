@@ -3,6 +3,7 @@ class MfaController < ApplicationController
 
   layout :determine_layout
   skip_authentication only: [ :verify, :verify_code, :webauthn_options, :verify_webauthn ]
+  before_action :require_local_password, only: [ :new, :create, :disable ]
 
   def new
     redirect_to root_path if Current.user.otp_required?
@@ -10,13 +11,38 @@ class MfaController < ApplicationController
   end
 
   def create
-    if Current.user.verify_otp?(params[:code])
-      @backup_codes = Current.user.enable_mfa!
+    # A duplicate submit of the enrollment form lands here again after the
+    # first one already enabled MFA; it (or any stray POST) must not fall
+    # through to disable_mfa! and tear a finished setup down with no audit
+    # trail.
+    return redirect_to root_path if Current.user.otp_required?
+
+    unless password_confirmed?
+      # Deliberately not disable_mfa! here: a wrong password must not throw away
+      # the otp_secret and backup codes the user is midway through setting up.
+      # Only a code mismatch below does that.
+      redirect_to new_mfa_path, alert: t(".invalid_password")
+      return
+    end
+
+    case Current.user.verify_otp(params[:code])
+    when :accepted
+      ActiveRecord::Base.transaction do
+        @backup_codes = Current.user.enable_mfa!
+        SecurityAuditLog.log_mfa_enabled!(user: Current.user, request: request, actor: Current.true_user)
+      end
       render :backup_codes
+    when :replayed
+      # Correct code, but its time step was already claimed by a concurrent
+      # submit. Keep the pending secret so the user can enter the next code
+      # instead of restarting setup.
+      redirect_to new_mfa_path, alert: t(".code_already_used")
     else
       Current.user.disable_mfa!
       redirect_to new_mfa_path, alert: t(".invalid_code")
     end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::ActiveRecordError
+    redirect_to new_mfa_path, alert: t(".setup_failed")
   end
 
   def verify
@@ -113,11 +139,46 @@ class MfaController < ApplicationController
   end
 
   def disable
+    unless password_confirmed?
+      redirect_to settings_security_path, alert: t(".invalid_password")
+      return
+    end
+
     Current.user.disable_mfa!
+
+    # Log-and-continue, not transactional: a security control the user is
+    # actively trying to turn off (e.g. because they believe it's
+    # compromised) shouldn't stay on just because the audit write failed.
+    # Mirrors Settings::ApiKeysController#destroy.
+    begin
+      SecurityAuditLog.log_mfa_disabled!(user: Current.user, request: request, actor: Current.true_user)
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error("[Mfa] Failed to write audit log for disabled MFA (user #{Current.user.id}): #{e.message}")
+    end
+
     redirect_to settings_security_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid
+    redirect_to settings_security_path, alert: t(".failure")
   end
 
   private
+
+    # Turning the second factor on or off changes how the account is protected,
+    # so it is confirmed with the password rather than with possession of an
+    # already-open session.
+    def password_confirmed?
+      Current.user.authenticate(params[:password]).present?
+    end
+
+    # A user who signs in through an identity provider has no local password to
+    # confirm with, so these pages are closed to them rather than left as a
+    # dead end. GET /mfa/new matters as much as the writes: it calls setup_mfa!
+    # and would strand an otp_secret they could never finish wiring up.
+    def require_local_password
+      return if Current.user.has_local_password?
+
+      redirect_to settings_security_path, alert: t("mfa.local_password_required")
+    end
 
     def determine_layout
       if action_name.in?(%w[webauthn_options verify_webauthn])
@@ -134,7 +195,6 @@ class MfaController < ApplicationController
       @session = create_session_for(user)
       return false unless @session
 
-      flash[:notice] = t("invitations.accept_choice.joined_household") if accept_pending_invitation_for(user)
       true
     end
 end

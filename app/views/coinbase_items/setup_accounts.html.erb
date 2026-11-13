@@ -20,6 +20,7 @@
                     turbo_frame: "_top"
                   },
                   class: "space-y-6" do |form| %>
+      <%= hidden_field_tag :return_to, @return_to if @return_to %>
 
       <div class="space-y-4">
         <div class="bg-surface border border-primary p-4 rounded-lg">
@@ -96,7 +97,7 @@
         <%= render DS::Link.new(
           text: t(".cancel"),
           variant: "secondary",
-          href: accounts_path
+          href: @return_to || accounts_path
         ) %>
       </div>
     <% end %>

@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div id="questrade-providers-panel" class="space-y-4">
   <% items = local_assigns[:questrade_items] || @questrade_items || Current.family.questrade_items.where.not(refresh_token: nil) %>
   <% connected = items.present? && items.any? %>
 
@@ -56,7 +56,7 @@
         size: :sm,
         href: questrade_item_path(items.first),
         method: :delete,
-        data: { turbo_frame: "_top", turbo_confirm: t("questrade_items.panel.disconnect_confirm") }
+        data: { turbo_confirm: t("questrade_items.panel.disconnect_confirm") }
       ) %>
     </div>
   <% else %>

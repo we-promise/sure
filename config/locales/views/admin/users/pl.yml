@@ -91,8 +91,6 @@ pl:
           member: Członek
           super_admin: Superadministrator
         section_title: Rodziny / Grupy
-        summary:
-          trials_expiring_7_days: Okresy próbne wygasające w ciągu 7 dni
         table:
           actions: Akcje
           create_new_family_option: "+ Utwórz nową rodzinę/grupę"
@@ -129,6 +127,7 @@ pl:
           w systemie.
         password_and_family_conflict: Nie można jednocześnie zaktualizować hasła i
           przynależności do rodziny/grupy.
+        password_disabled: Ustawianie hasła jest wyłączone, ponieważ użytkownicy mogą logować się tylko przez SSO.
         password_missing_case: Hasło musi zawierać zarówno wielkie, jak i małe litery.
         password_missing_number: Hasło musi zawierać co najmniej jedną cyfrę.
         password_missing_special: Hasło musi zawierać co najmniej jeden znak specjalny.

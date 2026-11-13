@@ -1,3 +1,11 @@
-<div class="prose prose--github-release-notes text-sm text-secondary">
-  <%= render "pages/release_notes", release_notes: @release_notes %>
-</div>
+<%# Fetched by the release-highlight controller and appended to the page, so
+    it lives outside the modal frame (`disable_frame`) and opens itself. %>
+<%= render DS::Dialog.new(disable_frame: true) do |dialog| %>
+  <% dialog.with_header(title: t("layouts.application.release_highlight.title")) %>
+  <% dialog.with_body do %>
+    <div class="prose prose--github-release-notes text-sm text-secondary">
+      <%= render "pages/release_notes", release_notes: @release_notes %>
+    </div>
+  <% end %>
+  <% dialog.with_action(text: t("layouts.application.release_highlight.done"), cancel_action: true) %>
+<% end %>

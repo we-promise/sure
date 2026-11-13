@@ -36,6 +36,7 @@ zh-CN:
       files_hint: PDF、CSV 或 XLSX。每个文件最大 %{max_size}MB。
       files_label: 对账单文件
       inbox_upload: 上传
+      period_hint: "如果 PDF 中写明了账单周期，Sure 会直接读取，否则从文件名中的日期（例如 2026-04）读取。你也可以在账单上手动设置。"
     index:
       account_label: 账户
       confidence: "%{confidence} 匹配"

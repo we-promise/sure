@@ -5,3 +5,28 @@ uk:
       models:
         recurring_transaction:
           merchant_or_name_required: "Повинен бути присутнім або продавець, або назва"
+          attributes:
+            payment_url:
+              invalid_scheme: має бути дійсною адресою http:// або https://
+            anchor_date:
+              required_for_intervals: обов'язкова, якщо платіж повторюється раз на 2 або більше періодів
+            bill_type:
+              transfer_shape_mismatch: може бути переказом, лише якщо вказано рахунок призначення
+            expected_amount_min:
+              greater_than_max: не може перевищувати очікувану максимальну суму
+            account:
+              required_for_transfer: обов'язковий для регулярного переказу
+              wrong_family: має належати до цієї сім'ї
+            destination_account:
+              same_as_source: не може збігатися з рахунком списання
+              family_mismatch: має належати до тієї ж сім'ї, що й рахунок списання
+              wrong_family: має належати до цієї сім'ї
+    attributes:
+      recurring_transaction:
+        payment_url: Посилання для оплати
+  recurring_transactions:
+    allocator:
+      missing_rate: немає обмінного курсу з %{from} на %{to}; вкажіть суму вручну
+      unmeasurable: ця транзакція містить розподіл, який не можна конвертувати в %{currency}, тому неможливо визначити її залишок. Додайте обмінний курс на %{date} або спершу видаліть наявну оплату
+      over_allocated: розподіл %{amount} перевищує залишок транзакції %{capacity} %{currency}
+      exceeds_remaining: '%{amount} перевищує залишок %{remaining} за цей період'

@@ -15,11 +15,3 @@ ro:
       minimum_payment_placeholder: '100'
     new:
       title: Introdu detaliile cardului de credit
-    overview:
-      amount_owed: Suma datorată
-      annual_fee: Taxă anuală
-      apr: APR
-      available_credit: Credit disponibil
-      expiration_date: Data expirării
-      minimum_payment: Plată minimă
-      unknown: Necunoscut

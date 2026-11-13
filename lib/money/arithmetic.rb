@@ -3,6 +3,7 @@ module Money::Arithmetic
 
   def +(other)
     if other.is_a?(Money)
+      ensure_same_currency!(other, :+)
       self.class.new(amount + other.amount, currency)
     else
       value = other.is_a?(CoercedNumeric) ? other.value : other
@@ -12,6 +13,7 @@ module Money::Arithmetic
 
   def -(other)
     if other.is_a?(Money)
+      ensure_same_currency!(other, :-)
       self.class.new(amount - other.amount, currency)
     else
       value = other.is_a?(CoercedNumeric) ? other.value : other
@@ -31,6 +33,7 @@ module Money::Arithmetic
 
   def /(other)
     if other.is_a?(self.class)
+      ensure_same_currency!(other, :/)
       amount / other.amount
     else
       raise TypeError, "can't divide Numeric by Money" if other.is_a?(CoercedNumeric)

@@ -51,6 +51,27 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_equal AiHealth::Probe.timeout, @probe.send(:timeout)
   end
 
+  test "timeout falls back to the self-hosting setting when AI_HEALTH_PROBE_TIMEOUT is unset" do
+    Setting.stubs(:ai_health_probe_timeout).returns(30)
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: nil) do
+      assert_equal 30, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "0") do
+      assert_equal 30, AiHealth::Probe.timeout
+    end
+
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: "42") do
+      assert_equal 42, AiHealth::Probe.timeout
+    end
+
+    Setting.stubs(:ai_health_probe_timeout).returns(0)
+    ClimateControl.modify(AI_HEALTH_PROBE_TIMEOUT: nil) do
+      assert_equal AiHealth::Probe::DEFAULT_TIMEOUT, AiHealth::Probe.timeout
+    end
+  end
+
   test "OpenAI-compatible LLM probe calls chat completions instead of the models endpoint" do
     endpoint = "https://api.cloudflare.com/client/v4/accounts/account-id/ai/v1"
     request = stub_request(:post, "#{endpoint}/chat/completions")
@@ -219,13 +240,15 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
   end
 
   test "PDF vision probe sends the synthetic PDF as an Anthropic document block" do
+    # Symbol keys, as the Anthropic SDK returns tool input (the JSON.parse
+    # branch is skipped); string keys here would not reproduce the probe.
     tool_use = Struct.new(:type, :input).new(
       :tool_use,
       {
-        "document_type" => "bank_statement",
-        "summary" => "A synthetic bank statement containing no customer data.",
-        "extracted_data" => {
-          "institution_name" => AiHealth::Probe::PDF_TEST_INSTITUTION
+        document_type: :bank_statement,
+        summary: "A synthetic bank statement containing no customer data.",
+        extracted_data: {
+          institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
         }
       }
     )

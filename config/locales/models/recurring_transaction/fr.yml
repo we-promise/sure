@@ -3,6 +3,7 @@ fr:
   activerecord:
     attributes:
       recurring_transaction:
+        frequency_interval: Intervalle de répétition
         payment_url: Lien de paiement
     errors:
       models:
@@ -26,6 +27,8 @@ fr:
           merchant_or_name_required: Le commerçant ou le nom doit être présent
   recurring_transactions:
     allocator:
+      already_allocated: cette transaction est déjà affectée à cette facture
+      entry_exhausted: le montant de cette transaction est déjà entièrement affecté à d'autres échéances
       exceeds_remaining: "%{amount} dépasse les %{remaining} restants sur ce cycle"
       missing_rate: aucun taux de change de %{from} vers %{to} ; saisissez un montant explicitement
       over_allocated: affecter %{amount} dépasse les %{capacity} %{currency} restants sur la transaction

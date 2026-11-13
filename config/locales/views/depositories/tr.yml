@@ -11,7 +11,7 @@ tr:
     subtypes:
       cd:
         long: Mevduat Sertifikası
-        short: CD
+        short: Vadeli Mevduat
       checking:
         long: Vadesiz Hesap
         short: Vadesiz Hesap

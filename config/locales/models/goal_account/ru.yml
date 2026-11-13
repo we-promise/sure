@@ -1,0 +1,9 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: Этот счёт уже полностью зарезервирован для цели «%{goal_name}». Укажите сумму, чтобы распределить его между целями.

@@ -1,8 +1,9 @@
 import { Controller } from "@hotwired/stimulus";
 import * as d3 from "d3";
-import { sankey } from "d3-sankey";
+import { sankey, sankeyCenter } from "d3-sankey";
 import { formatCashFlowCurrency } from "utils/cash_flow_chart_data";
 import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
+import { sankeyLabelOnRight } from "utils/sankey_align";
 import { hiddenSankeyLabels } from "utils/sankey_labels";
 import { sankeyNodeHasChildren, zoomSankeyData } from "utils/sankey_zoom";
 import {
@@ -14,7 +15,7 @@ let nextChartId = 0;
 
 // Preview-only renderer. Keep the legacy Sankey unchanged during comparison.
 export default class extends Controller {
-  static targets = ["chart", "zoomOutButton"];
+  static targets = ["chart", "zoomOutButton", "sortSegment"];
 
   static values = {
     data: Object,
@@ -42,6 +43,9 @@ export default class extends Controller {
     "var(--color-gray-500)": "#737373",
   };
   static MIN_LABEL_SPACING = 28; // Minimum vertical space needed for labels (2 lines)
+  static SORT_ORDERS = ["auto", "ascending", "descending"];
+  static SORT_STORAGE_KEY = "cashflowSankeySortOrder";
+  static SORT_EVENT = "cashflow-sankey:sort-changed";
 
   connect() {
     this.gradientPrefix ||= `preview-sankey-${++nextChartId}`;
@@ -50,9 +54,37 @@ export default class extends Controller {
     this.resizeObserver = new ResizeObserver(() => this.#draw());
     this.resizeObserver.observe(this.#chartElement());
     this.tooltip = null;
+    this.sortOrder = this.#storedSortOrder();
+    // The dashboard renders this chart twice (inline and in the expand dialog):
+    // keep every instance on the page in step when one changes the order.
+    this.onSortChanged = (event) => this.#applySortOrder(event.detail.order);
+    window.addEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
+    // A Turbo morph refresh (the sync toast's auto-refresh, or a broadcast
+    // refresh stream) keeps this element and its controller but puts the
+    // server markup back inside, so the sort controls show the default while
+    // the order is kept here, and the tooltip appended outside this element
+    // is dropped. The graph is fetched again by the cash-flow controller,
+    // and the data value callback resets the zoom.
+    this.onMorph = () => {
+      if (!this.connected) return;
+
+      this.tooltip?.remove();
+      this.#createTooltip();
+      this.#syncSortControls();
+    };
+    document.addEventListener("turbo:morph", this.onMorph);
     this.#createTooltip();
     this.#syncZoomControls();
+    this.#syncSortControls();
     this.#draw();
+
+    // Labels are measured to keep them off neighbouring bars; measure again
+    // once the page font has replaced the fallback.
+    if (document.fonts?.status === "loading") {
+      document.fonts.ready.then(() => {
+        if (this.connected) this.#draw();
+      });
+    }
   }
 
   dataValueChanged() {
@@ -65,6 +97,8 @@ export default class extends Controller {
 
   disconnect() {
     this.connected = false;
+    window.removeEventListener(this.constructor.SORT_EVENT, this.onSortChanged);
+    document.removeEventListener("turbo:morph", this.onMorph);
     this.resizeObserver?.disconnect();
     clearTimeout(this.drawTimeout);
     this.tooltip?.remove();
@@ -76,6 +110,32 @@ export default class extends Controller {
     this.tooltip?.remove();
     this.tooltip = null;
     d3.select(this.#chartElement()).selectAll("svg").interrupt().remove();
+  }
+
+  // Top-to-bottom order of the nodes in each column. "auto" is d3-sankey's
+  // default layout (minimises crossings); the others order by amount.
+  setSort(event) {
+    const order = event.currentTarget.dataset.sortOrder;
+    if (!this.constructor.SORT_ORDERS.includes(order)) return;
+    if (order === this.sortOrder) return;
+
+    try {
+      localStorage.setItem(this.constructor.SORT_STORAGE_KEY, order);
+    } catch {
+      // Ignore storage errors (e.g. private browsing); the choice still applies now.
+    }
+    window.dispatchEvent(
+      new CustomEvent(this.constructor.SORT_EVENT, { detail: { order } }),
+    );
+  }
+
+  #applySortOrder(order) {
+    if (!this.constructor.SORT_ORDERS.includes(order)) return;
+    if (order === this.sortOrder) return;
+
+    this.sortOrder = order;
+    this.#syncSortControls();
+    this.#draw({ animate: true });
   }
 
   zoomOut() {
@@ -135,6 +195,8 @@ export default class extends Controller {
       .append("svg")
       .attr("width", width)
       .attr("height", height)
+      // Marks which order this drawing uses (a redraw fades the old one out).
+      .attr("data-sort-order", this.sortOrder)
       .style("opacity", animate ? 0 : 1);
 
     const effectivePadding = this.#calculateNodePadding(nodes.length, height);
@@ -173,6 +235,23 @@ export default class extends Controller {
     if (!this.zoomRootId) return this.dataValue || {};
 
     return zoomSankeyData(this.dataValue, this.zoomRootId);
+  }
+
+  #storedSortOrder() {
+    try {
+      const stored = localStorage.getItem(this.constructor.SORT_STORAGE_KEY);
+      return this.constructor.SORT_ORDERS.includes(stored) ? stored : "auto";
+    } catch {
+      return "auto";
+    }
+  }
+
+  #syncSortControls() {
+    this.sortSegmentTargets.forEach((segment) => {
+      const active = segment.dataset.sortOrder === this.sortOrder;
+      segment.classList.toggle("segmented-control__segment--active", active);
+      segment.setAttribute("aria-pressed", active ? "true" : "false");
+    });
   }
 
   #syncZoomControls() {
@@ -230,12 +309,22 @@ export default class extends Controller {
   #generateSankeyData(nodes, links, width, height, nodePadding) {
     const margin = this.constructor.EXTENT_MARGIN;
     const sankeyGenerator = sankey()
+      // Centre alignment: a sink sits at its depth, a source one column
+      // before the nearest node it feeds. The default pushes every sink to
+      // the last column, which is the subcategories' once a family has any.
+      .nodeAlign(sankeyCenter)
       .nodeWidth(this.nodeWidthValue)
       .nodePadding(nodePadding)
       .extent([
         [margin, margin],
         [width - margin, height - margin],
       ]);
+
+    if (this.sortOrder === "ascending") {
+      sankeyGenerator.nodeSort((a, b) => a.value - b.value);
+    } else if (this.sortOrder === "descending") {
+      sankeyGenerator.nodeSort((a, b) => b.value - a.value);
+    }
 
     return sankeyGenerator({
       nodes: nodes.map((d) => ({
@@ -322,7 +411,12 @@ export default class extends Controller {
       .attr("fill", (d) => d.color || this.constructor.DEFAULT_COLOR)
       .attr("stroke", (d) => (d.color ? "none" : "var(--color-gray-500)"));
 
-    const hiddenLabels = this.#addNodeLabels(nodeGroups, width, nodes);
+    const hiddenLabels = this.#addNodeLabels(
+      svg,
+      nodeGroups,
+      sankeyLabelOnRight(nodes, width),
+      nodes,
+    );
 
     return { nodeGroups, hiddenLabels };
   }
@@ -379,47 +473,83 @@ export default class extends Controller {
             L ${x0},${y1} Z`;
   }
 
-  #addNodeLabels(nodeGroups, width, nodes) {
+  #addNodeLabels(svg, nodeGroups, labelOnRight, nodes) {
     const controller = this;
-    const hiddenLabels = this.#calculateHiddenLabels(nodes);
+    const hiddenLabels = this.#calculateHiddenLabels(
+      nodes,
+      this.#measureLabels(svg, nodes, labelOnRight),
+    );
 
     nodeGroups
       .append("text")
-      .attr("x", (d) => (d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6))
-      .attr("y", (d) => (d.y1 + d.y0) / 2)
-      .attr("dy", "-0.2em")
-      .attr("text-anchor", (d) => (d.x0 < width / 2 ? "start" : "end"))
       .attr(
         "class",
         "text-xs font-medium text-primary fill-current select-none",
       )
       .style("cursor", "default")
       .style("opacity", (d) => (hiddenLabels.has(d.index) ? 0 : 1))
+      // A hidden label can sit over another node's bar; it must not take
+      // that bar's hovers and clicks, even while hover reveals it.
+      .style("pointer-events", (d) =>
+        hiddenLabels.has(d.index) ? "none" : null,
+      )
       .style("transition", "opacity 0.2s ease")
       .each(function (d) {
-        const textEl = d3.select(this);
-        textEl.selectAll("tspan").remove();
-
-        textEl.append("tspan").text(d.name);
-
-        textEl
-          .append("tspan")
-          .attr("x", textEl.attr("x"))
-          .attr("dy", "1.2em")
-          .attr("class", "font-mono text-secondary")
-          .style("font-size", "0.65rem")
-          .text(controller.#formatCurrency(d.value));
+        controller.#writeLabel(d3.select(this), d, labelOnRight);
       });
 
     return hiddenLabels;
   }
 
+  // Name above amount, beside the bar on the side the label rule picks.
+  #writeLabel(textEl, d, labelOnRight) {
+    const right = labelOnRight(d);
+    const x = right ? d.x1 + 6 : d.x0 - 6;
+
+    textEl
+      .attr("x", x)
+      .attr("y", (d.y1 + d.y0) / 2)
+      .attr("dy", "-0.2em")
+      .attr("text-anchor", right ? "start" : "end");
+
+    textEl.selectAll("tspan").remove();
+    textEl.append("tspan").text(d.name);
+    textEl
+      .append("tspan")
+      .attr("x", x)
+      .attr("dy", "1.2em")
+      .attr("class", "font-mono text-secondary")
+      .style("font-size", "0.65rem")
+      .text(this.#formatCurrency(d.value));
+  }
+
+  // Where each label lands at this width, measured with an invisible probe
+  // before the real labels are drawn, so the overlap rule can see a label
+  // that reaches into the next column.
+  #measureLabels(svg, nodes, labelOnRight) {
+    const probe = svg
+      .append("text")
+      .attr("class", "text-xs font-medium select-none")
+      .style("visibility", "hidden");
+
+    const boxes = new Map();
+    nodes.forEach((d) => {
+      this.#writeLabel(probe, d, labelOnRight);
+      const { x, y, width: boxWidth, height } = probe.node().getBBox();
+      boxes.set(d.index, { x, y, width: boxWidth, height });
+    });
+
+    probe.remove();
+    return boxes;
+  }
+
   // Calculate which labels should be hidden to prevent overlap
-  #calculateHiddenLabels(nodes) {
+  #calculateHiddenLabels(nodes, labelBoxes) {
     const height = this.#chartElement().clientHeight || 400;
     return hiddenSankeyLabels(nodes, {
       height,
       minSpacing: this.constructor.MIN_LABEL_SPACING,
+      labelBoxes,
     });
   }
 

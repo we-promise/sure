@@ -19,6 +19,11 @@ en:
       semiannual: Every 6 months
       annual: Yearly
       custom: Custom schedule
+      interval: Custom interval
+    frequency_interval_units:
+      weekly: weeks
+      monthly: months
+      yearly: years
     frequency:
       monthly: "Monthly on the %{day}"
       weekly: "Weekly on %{weekday}"
@@ -27,6 +32,9 @@ en:
       quarterly: "Quarterly on the %{day}"
       semiannual: "Every 6 months on the %{day}"
       annual: "Yearly on %{month} %{day}"
+      every_n_weeks: "Every %{interval} weeks on %{weekday}"
+      every_n_months: "Every %{interval} months on the %{day}"
+      every_n_years: "Every %{interval} years on %{month} %{day}"
       custom: Custom schedule
       last_day: last day
     identify_patterns: Identify Patterns
@@ -43,10 +51,9 @@ en:
       add_link_aria: "Add a payment link for %{name}"
       autopay: Autopay
       autopay_aria: "%{name} pays automatically, open its portal in a new tab"
-      open_site: Open bill site
     new:
-      title: Add a bill
-      income_title: Add income
+      title: New bill
+      income_title: New income
       start_from_title: Start from a recurring charge we spotted
       start_from_income_title: Start from a recurring deposit we spotted
       start_from_hint: Optional. Picking one just fills in the form; you can still change anything.
@@ -56,6 +63,20 @@ en:
       pick_different: Start from a different transaction
       smart_fill: Smart-fill with AI
       smart_fill_applied: AI suggested these values from the charge history. Review before saving.
+      covered_title: This transaction already belongs to a bill
+      covered_body: "%{name} already tracks this payment, so a new bill would count it twice."
+      covered_open: Open bill
+      covered_suggested_title: Sure already suggested a bill for this payment
+      covered_suggested_body: "%{name} is waiting in your suggestions. Confirm it to start tracking it, so a new bill does not count this payment twice. Matching payments are linked automatically, and you can link this one from the bill."
+      covered_confirm: Confirm bill
+      covered_create_anyway: Create a separate bill anyway
+      covered_income_title: This deposit already belongs to an income
+      covered_income_body: "%{name} already tracks this deposit, so adding it again would count it twice."
+      covered_income_open: Open income
+      covered_income_suggested_title: Sure already suggested this income
+      covered_income_suggested_body: "%{name} is waiting in your suggestions. Add it to start tracking it, so this deposit is not counted twice. Matching deposits are linked automatically, and you can link this one from the income."
+      covered_income_confirm: Add income
+      covered_income_create_anyway: Add a separate income anyway
     smart_fills:
       create:
         failed: Could not analyze the charge history right now. The form kept the transaction's own values.
@@ -74,7 +95,9 @@ en:
       success_income: Income added
       due_date_required: "Enter the bill's next due date"
       amount_invalid: "Enter the amount as a plain number"
+      amount_too_precise: Use at most 4 decimal places
       account_invalid: "Pick an account you can add bills to, or leave it blank"
+      category_invalid: "Pick one of your categories, or leave it blank"
       already_exists: "This bill already exists"
     edit:
       trigger_label: Edit bill
@@ -120,12 +143,13 @@ en:
       income_amount_edit_hint: Applies to paydays from now on. Anything already due keeps the amount it was.
       cancelled_on_label: Cancelled
       cancelled_on_hint: Recording the date is for your own reference. Pause the bill to stop future ones appearing.
-      category_label: Category
       category_blank: No category
       frequency_new_hint: The day details come from the due date above. You can refine the schedule after saving.
       frequency_label: How often
       frequency_hint: How often this bill comes due. Pick the day details to match your statement.
       frequency_day_label: On day
+      frequency_interval_label: Repeats every
+      frequency_interval_unit_label: Unit
       frequency_second_day_label: And day
       frequency_weekday_label: "On"
       frequency_month_label: "In"
@@ -160,6 +184,7 @@ en:
     confirm_delete_income: "Remove %{name} as income? Your transactions stay exactly as they are. This only removes the income and its schedule."
     marked_as_recurring: Transaction marked as recurring
     already_exists: A manual recurring transaction already exists for this pattern
+    already_covered: This transaction already matches a recurring transaction
     creation_failed: Failed to create recurring transaction. Please check the transaction details and try again.
     unexpected_error: An unexpected error occurred while creating the recurring transaction
     amount_range: "Range: %{min} to %{max}"
@@ -188,7 +213,12 @@ en:
       collapsed_hint: Tap to review
       confirm: Add bill
       dismiss: Not a bill
+    suggested_income:
+      title: Possible new income
+      confirm: Add income
+      dismiss: Not income
     confirmed: Bill added to your recurring transactions
+    confirmed_income: Income added to your recurring transactions
     dismissed: "Dismissed. This pattern won't be suggested again."
     badges:
       manual: Manual

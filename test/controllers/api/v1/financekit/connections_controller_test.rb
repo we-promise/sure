@@ -197,8 +197,9 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
   end
 
   test "non-admin and foreign-family access is rejected" do
+    # Admin is the only thing standing between a family member and the publisher
+    # endpoints now, so this is the whole access check rather than one of three.
     member = users(:family_member)
-    member.update!(preferences: member.preferences.merge("preview_features_enabled" => true))
     key = ApiKey.create!(user: member, name: "FinanceKit member test", scopes: [ "read_write" ],
       display_key: "test_#{SecureRandom.hex(16)}", source: "web")
 
@@ -206,11 +207,88 @@ class Api::V1::Financekit::ConnectionsControllerTest < ActionDispatch::Integrati
     assert_response :forbidden
     assert_equal "publisher_forbidden", response.parsed_body.fetch("error")
 
+    # Another family's admin clears the access check, since admin is all it asks,
+    # and is stopped by tenancy instead: the connection scope is the caller's own
+    # family and own user, so the row is simply not there. That is 404 rather
+    # than the 403 the preview gate used to produce, which is the better answer —
+    # it does not confirm to an outsider that the id exists.
     other = users(:empty)
+    assert other.admin?
+    assert_not_equal @family.id, other.family_id
     other_key = ApiKey.create!(user: other, name: "FinanceKit other test", scopes: [ "read" ],
       display_key: "test_#{SecureRandom.hex(16)}", source: "web")
     get "/api/v1/financekit/connections/#{@item.id}", headers: { "X-Api-Key" => other_key.display_key }
-    assert_response :forbidden
+    assert_response :not_found
+  end
+
+  test "disconnecting retains imported history unless the client asks otherwise" do
+    accept_and_apply
+    account = @source.account
+
+    delete "/api/v1/financekit/connections/#{@item.id}", headers: @headers
+    assert_response :no_content
+
+    # The response a client already gets, and the behaviour the published spec
+    # promises: the connection goes, the money stays.
+    assert_equal "revoked", @item.reload.status
+    assert_nil @item.purge_requested_at
+    assert_equal 1, account.entries.where(source: "financekit").count
+    assert_empty enqueued_jobs.select { |job| job[:job] == FinancekitPurgeJob }
+  end
+
+  test "disconnecting with discard is accepted and hands the deletion to a job" do
+    accept_and_apply
+
+    # Query string, which is what the published spec documents: a DELETE body is
+    # not carried reliably by every HTTP client.
+    delete "/api/v1/financekit/connections/#{@item.id}?disposition=discard", headers: @headers
+
+    # Accepted rather than completed: a year of history is not deleted inside a
+    # request, so the client polls the connection for purge_completed_at.
+    assert_response :accepted
+    assert_equal "discard", response.parsed_body.fetch("disposition")
+    assert_equal "revoked", response.parsed_body.fetch("status")
+    assert_not_nil response.parsed_body.fetch("purge_requested_at")
+    assert_nil response.parsed_body.fetch("purge_completed_at")
+    assert_equal 1, enqueued_jobs.count { |job| job[:job] == FinancekitPurgeJob }
+  end
+
+  test "an unknown disposition is refused without revoking the connection" do
+    delete "/api/v1/financekit/connections/#{@item.id}?disposition=shred", headers: @headers
+
+    assert_response :unprocessable_entity
+    assert_equal "invalid_disposition", response.parsed_body.fetch("error")
+    assert_equal "active", @item.reload.status
+  end
+
+  test "an admin needs no server configuration or preview opt-in to publish" do
+    # There is no FINANCEKIT_ENABLED flag, no family allowlist and no preview
+    # toggle any more: whether a build offers Wallet sync is decided in the iOS
+    # client through StoreKit, which the server cannot see. The test helper grants
+    # neither, so the rest of this suite exercises the same thing implicitly.
+    assert_not @user.preview_features_enabled?
+    assert @user.admin?
+
+    get "/api/v1/financekit/capabilities", headers: @headers
+    assert_response :success
+    assert_equal true, response.parsed_body.fetch("available")
+
+    post "/api/v1/financekit/connections", params: @enrollment, headers: @headers, as: :json
+    assert_response :success
+
+    # And the publisher credential still works, so require_publisher! is not
+    # gating on anything either.
+    batch, = accept_batch
+    assert_equal "accepted", batch.status
+  end
+
+  test "capabilities advertise the dispositions this build supports" do
+    get "/api/v1/financekit/capabilities", headers: @headers
+
+    assert_response :success
+    # Feature-detected rather than hardcoded, so a client keeps working when a
+    # provider gains discard or a build withholds it.
+    assert_equal %w[retain discard], response.parsed_body.fetch("connection_dispositions")
   end
 
   private

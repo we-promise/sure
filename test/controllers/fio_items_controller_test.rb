@@ -40,6 +40,35 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("fio_items.create.token_required"), flash[:alert]
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post fio_items_url,
+         params: { fio_item: { name: "No token", token: "   " } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "fio-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape(I18n.t("fio_items.create.token_required"))
+  end
+
+  # The new connection belongs in Your connections, so the page reloads.
+  test "create from the page still reloads Bank sync" do
+    post fio_items_url,
+         params: { fio_item: { name: "Savings", token: "second-token" } },
+         as: :turbo_stream
+
+    assert_redirected_to settings_providers_path
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch fio_item_url(@fio_item),
+          params: { fio_item: { name: "Renamed Fio", token: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "fio-providers-panel"
+    assert_includes response.body, %(id="fio-providers-panel")
+    assert_equal "Renamed Fio", @fio_item.reload.name
+  end
+
   # The form sets the status, so only a sync can establish whether Fio accepts the new
   # token — without one the connection would claim to be healthy on the user's word.
   test "update rotates the token, clears requires_update and revalidates it" do
@@ -95,6 +124,15 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     post sync_fio_item_url(@fio_item)
 
     assert_redirected_to accounts_path
+  end
+
+  # Redirecting back to Bank sync would collapse the open connection row.
+  test "sync from the panel re-renders the panel in place" do
+    post sync_fio_item_url(@fio_item, source: "panel"), as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "fio-providers-panel"
+    assert_includes response.body, I18n.t("settings.providers.sync_provider_in_progress")
+    assert @fio_item.reload.syncing?
   end
 
   test "destroy unlinks the account and schedules the connection for deletion" do
@@ -211,5 +249,16 @@ class FioItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     selected_option = css_select("select[name='account_type'] option[selected='selected']").first
     assert_equal "Depository", selected_option["value"]
+  end
+
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    FioItem.any_instance.stubs(:credentials_configured?).returns(false)
+
+    get select_accounts_fio_items_url, params: { fio_item_id: @fio_item.id }, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("fio_items.select_accounts.no_credentials_configured"), flash[:alert]
   end
 end

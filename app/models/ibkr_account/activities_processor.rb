@@ -50,21 +50,44 @@ class IbkrAccount::ActivitiesProcessor
       date = trade_date_for(row)
       external_id = "ibkr_trade_#{row[:trade_id]}"
 
-      import_adapter.import_trade(
-        external_id: external_id,
-        security: security,
-        quantity: signed_quantity,
-        price: native_price,
-        amount: native_amount,
-        currency: currency,
-        date: date,
-        name: build_trade_name(security.ticker, signed_quantity),
-        source: "ibkr",
-        activity_label: buy_sell == "SELL" ? "Sell" : "Buy",
-        exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f
-      )
+      # The commission belongs to the trade: it goes into `trades.fee`, which
+      # the cost basis and the realized gain read, and into the entry's amount,
+      # which is what moves cash -- money out is positive, so it adds to a buy
+      # and takes from a sell's proceeds, as the manual trade form does.
+      #
+      # A trade the user edited keeps the fee it has, and its cash follows that
+      # fee. The import rewrites the rest of an edited trade, as it always has,
+      # but it never wrote a fee before, so it must not start overwriting one
+      # the user set.
+      edited_fee = edited_trade_fee(external_id)
+      commission = edited_fee.nil? ? folded_commission(row, currency) : nil
+      fee = edited_fee || commission || 0
 
-      fees = import_commission_transaction(row, security, date) ? 1 : 0
+      Entry.transaction do
+        import_adapter.import_trade(
+          external_id: external_id,
+          security: security,
+          quantity: signed_quantity,
+          price: native_price,
+          amount: native_amount + fee,
+          currency: currency,
+          date: date,
+          name: build_trade_name(security.ticker, signed_quantity),
+          source: "ibkr",
+          activity_label: buy_sell == "SELL" ? "Sell" : "Buy",
+          exchange_rate: parse_decimal(row[:fx_rate_to_base])&.to_f,
+          fee: fee
+        )
+
+        # Imported before the commission moved onto the trade, this would now
+        # count it twice.
+        legacy_commission_entry(row)&.destroy! if commission
+      end
+
+      # A commission not on the trade stays a transaction of its own, unless an
+      # edited trade already carries a fee, which would count it twice.
+      separate = commission.nil? && (edited_fee.nil? || edited_fee.zero?)
+      fees = separate && import_commission_transaction(row, security, date) ? 1 : 0
       { imported: true, fees: fees }
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process trade #{row[:trade_id]}: #{e.message}")
@@ -109,6 +132,47 @@ class IbkrAccount::ActivitiesProcessor
     rescue => e
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process cash transaction #{row[:transaction_id]}: #{e.message}")
       false
+    end
+
+    # The commission as a positive fee in the trade's currency, or nil when it
+    # stays a transaction of its own: when there is none, when IBKR charged it
+    # in another currency or did not say which -- `trades.fee` is in the
+    # trade's, and the separate entry falls back to the account's -- or when the
+    # separate commission entry from an earlier import is the user's: edited,
+    # locked, or carrying a receipt.
+    def folded_commission(row, trade_currency)
+      commission = parse_decimal(row[:ib_commission])
+      return nil if commission.nil? || commission.zero?
+
+      return nil unless row[:ib_commission_currency].to_s.upcase == trade_currency
+      legacy = legacy_commission_entry(row)
+      return nil if legacy && users_commission_entry?(legacy)
+
+      commission.abs
+    end
+
+    # Neither attaching a receipt nor an API edit made without the user-modified
+    # flag marks an entry modified, and destroying it would take what the user
+    # gave it with it. An API edit still locks what it changed, so a lock only a
+    # person sets counts: one on the entry itself, or on its tags. A lock on the
+    # category or merchant does not, since auto-categorization sets those too.
+    def users_commission_entry?(entry)
+      return true if entry.protected_from_sync? || entry.locked_attributes.present?
+
+      transaction = entry.entryable
+      transaction.is_a?(Transaction) && (transaction.attachments.attached? || transaction.locked?(:tag_ids))
+    end
+
+    # The fee of an existing trade the user edited, nil for any other.
+    def edited_trade_fee(external_id)
+      entry = account.entries.find_by(external_id: external_id, source: "ibkr")
+      return nil unless entry&.protected_from_sync? && entry.entryable.is_a?(Trade)
+
+      entry.entryable.fee || 0
+    end
+
+    def legacy_commission_entry(row)
+      account.entries.find_by(external_id: "ibkr_trade_fee_#{row[:trade_id]}", source: "ibkr")
     end
 
     def import_commission_transaction(row, security, date)

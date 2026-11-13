@@ -410,32 +410,9 @@ class MercuryItemsController < ApplicationController
       # Trigger initial sync to fetch accounts
       @mercury_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
-        render turbo_stream: [
-          turbo_stream.replace(
-            "mercury-providers-panel",
-            partial: "settings/providers/mercury_panel",
-            locals: { mercury_items: @mercury_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @mercury_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "mercury-providers-panel",
-          partial: "settings/providers/mercury_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        render :new, status: :unprocessable_entity
-      end
+      render_provider_panel("mercury", alert: @mercury_item.errors.full_messages.join(", "))
     end
   end
 
@@ -449,32 +426,10 @@ class MercuryItemsController < ApplicationController
     if @mercury_item.update(permitted_params)
       Rails.cache.delete(mercury_accounts_cache_key(@mercury_item)) if expire_accounts_cache
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @mercury_items = Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts)
-        render turbo_stream: [
-          turbo_stream.replace(
-            "mercury-providers-panel",
-            partial: "settings/providers/mercury_panel",
-            locals: { mercury_items: @mercury_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("mercury", notice: t(".success"), fallback_path: accounts_path,
+                            mercury_items: Current.family.mercury_items.active.ordered.includes(:syncs, :mercury_accounts))
     else
-      @error_message = @mercury_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "mercury-providers-panel",
-          partial: "settings/providers/mercury_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        render :edit, status: :unprocessable_entity
-      end
+      render_provider_panel("mercury", alert: @mercury_item.errors.full_messages.join(", "))
     end
   end
 
@@ -493,6 +448,7 @@ class MercuryItemsController < ApplicationController
     unless @mercury_item.syncing?
       @mercury_item.sync_later
     end
+    return render_provider_panel("mercury", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -661,7 +617,7 @@ class MercuryItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -679,10 +635,11 @@ class MercuryItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@mercury_item),
           partial: "mercury_items/mercury_item",
-          locals: { mercury_item: @mercury_item }
+          locals: { mercury_item: @mercury_item, visible_accounts: @mercury_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else

@@ -1,0 +1,56 @@
+---
+id:
+  period:
+    last_day:
+      label_short: "1H"
+      label: "Hari Terakhir"
+      comparison_label: "vs. kemarin"
+    current_week:
+      label_short: "WTD"
+      label: "Minggu Ini"
+      comparison_label: "vs. awal minggu"
+    last_7_days:
+      label_short: "7H"
+      label: "7 Hari Terakhir"
+      comparison_label: "vs. minggu lalu"
+    current_month:
+      label_short: "MTD"
+      label: "Bulan Ini"
+      comparison_label: "vs. awal bulan"
+    last_month:
+      label_short: "BL"
+      label: "Bulan Lalu"
+      comparison_label: "vs. bulan lalu"
+    last_30_days:
+      label_short: "30H"
+      label: "30 Hari Terakhir"
+      comparison_label: "vs. 30 hari sebelumnya"
+    last_90_days:
+      label_short: "90H"
+      label: "90 Hari Terakhir"
+      comparison_label: "vs. kuartal lalu"
+    current_year:
+      label_short: "YTD"
+      label: "Tahun Ini"
+      comparison_label: "vs. awal tahun"
+    last_365_days:
+      label_short: "365H"
+      label: "365 Hari Terakhir"
+      comparison_label: "vs. 1 tahun lalu"
+    last_5_years:
+      label_short: "5T"
+      label: "5 Tahun Terakhir"
+      comparison_label: "vs. 5 tahun lalu"
+    last_10_years:
+      label_short: "10T"
+      label: "10 Tahun Terakhir"
+      comparison_label: "vs. 10 tahun lalu"
+    all_time:
+      label_short: "Semua"
+      label: "Sepanjang Waktu"
+      comparison_label: "vs. awal"
+    custom:
+      label_short: "Kustom"
+      label: "Periode Kustom"
+      comparison_label: "%{start_date} hingga %{end_date}"
+    range: "%{start_date} – %{end_date}"

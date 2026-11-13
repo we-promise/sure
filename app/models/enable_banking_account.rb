@@ -5,12 +5,11 @@ class EnableBankingAccount < ApplicationRecord
   if encryption_ready?
     encrypts :raw_payload
     encrypts :raw_transactions_payload
-    # deterministic: true preserves equality lookups (e.g. find_by(iban:)) —
-    # the account's own IBAN was previously stored in plaintext here, unlike
-    # the other columns on this model.
-    # See Account#iban for the deliberate tradeoff this makes (accepted here
-    # for the same reason: DB-level uniqueness/lookup can't work otherwise).
-    encrypts :iban, deterministic: true
+    # This column stored plaintext before it was encrypted, so existing rows
+    # stay readable (support_unencrypted_data) until
+    # security:backfill_encryption encrypts them; new writes are always
+    # encrypted. Deterministic like Account#iban.
+    encrypts :iban, deterministic: true, support_unencrypted_data: true
   end
 
   belongs_to :enable_banking_item
@@ -161,7 +160,7 @@ class EnableBankingAccount < ApplicationRecord
     return if iban.blank?
 
     target = current_account
-    return if target.nil?
+    return if target.nil? || !target.supports_iban?
 
     # #with_lock reloads target under SELECT FOR UPDATE before the block
     # runs, so a concurrent manual edit that lands between our earlier
@@ -169,7 +168,7 @@ class EnableBankingAccount < ApplicationRecord
     # sync (a plain `target.iban.present?` check followed by `update` has
     # no such guarantee).
     target.with_lock do
-      next if target.iban.present?
+      next if target.iban.present? || target.locked?(:iban)
 
       # Another account in the family already holds this IBAN in the same
       # currency (e.g. a joint account linked through two consents). Every
@@ -180,42 +179,41 @@ class EnableBankingAccount < ApplicationRecord
         next
       end
 
-      # enrich_attribute no-ops if `iban` is locked (the user explicitly set
-      # or cleared it via the account form -- lock_saved_attributes! locks
-      # either way), and uses `save` rather than `save!`, so a Rails-level
-      # uniqueness validation failure just fails to enrich instead of
-      # raising. #with_lock only serializes writers to THIS row though: two
-      # different blank-iban accounts in the family can both pass that
-      # validation concurrently and then lose at the raw DB unique index on
-      # commit, which surfaces as RecordNotUnique -- save doesn't rescue
-      # that. Isolated in its own savepoint (same pattern as
-      # Account::ProviderImportAdapter#backfill_merchant_iban!): a failed
-      # statement would otherwise abort the whole surrounding transaction.
+      # A locked iban (the user set or cleared it via the account form --
+      # lock_saved_attributes! locks either way) is skipped above. A plain
+      # update, not enrich_attribute: that logs the value to
+      # data_enrichments, which is not encrypted. `update` rather than
+      # `update!`, so a Rails-level uniqueness validation failure just fails
+      # to write instead of raising. #with_lock only serializes writers to
+      # THIS row though: two different blank-iban accounts in the family can
+      # both pass that validation concurrently and then lose at the raw DB
+      # unique index on commit, which surfaces as RecordNotUnique. Isolated
+      # in its own savepoint: a failed statement would otherwise abort the
+      # whole surrounding transaction.
       begin
-        ActiveRecord::Base.transaction(requires_new: true) do
-          target.enrich_attribute(:iban, iban, source: "enable_banking")
-        end
+        saved = ActiveRecord::Base.transaction(requires_new: true) { target.update(iban: iban) }
 
-        # enrich_attribute's own "was it modified" return value can't be
-        # trusted to reflect a failed save (a Rails quirk in how it derives
-        # that from previous_changes), so check the record's errors
-        # directly instead. Empty errors covers both a successful write and
-        # a locked attribute (an intentional, silent skip -- see the method
-        # comment above); errors present means the internal `save` actually
-        # attempted and failed (e.g. another account in the family already
-        # has this IBAN), which is worth surfacing in the support debug log
-        # rather than only a Rails log line.
-        if target.errors.any?
-          capture_propagation_failure(target, target.errors.full_messages.join(", "))
-        end
+        # A failed save (e.g. another account in the family already has this
+        # IBAN) is worth surfacing in the support debug log rather than only
+        # a Rails log line. Once per message: every sync fails the same way.
+        capture_propagation_failure_once(target, target.errors.full_messages.join(", ")) unless saved
       rescue ActiveRecord::RecordNotUnique
         # Deliberately not e.message: PostgreSQL's unique-violation DETAIL
         # clause embeds the actual conflicting IBAN value in plaintext,
         # which would defeat the point of encrypting the column at rest by
         # persisting it into an unrelated log table instead.
-        capture_propagation_failure(target, "Concurrent iban conflict on the family_id+iban+currency unique index")
+        capture_propagation_failure_once(target, "Concurrent iban conflict on the family_id+iban+currency unique index")
       end
     end
+  end
+
+  # On relink the IBAN follows the provider to the chosen account. The
+  # previously linked account (deleted only after the relink commits, if at
+  # all) would otherwise keep holding it and block the chosen account.
+  def release_iban_from!(previous_account)
+    return if iban.blank? || previous_account.iban != iban
+
+    previous_account.update_column(:iban, nil)
   end
 
   private
@@ -265,7 +263,7 @@ class EnableBankingAccount < ApplicationRecord
       else
         "Enable Banking Account"
       end
-  end
+    end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for EnableBanking account #{id}, defaulting to EUR")

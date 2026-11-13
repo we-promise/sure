@@ -1,4 +1,4 @@
-<%# locals: (recurring_transaction:, sibling_count: 0) %>
+<%# locals: (recurring_transaction:, sibling_count: 0, source_entry_id: nil, allow_duplicate: false) %>
 
 <%# Income mode reshapes the dialog: a paycheck has a source and a payday,
     not a biller portal and an autopay toggle. %>
@@ -26,18 +26,20 @@
           required: true %>
 
     <% if recurring_transaction.new_record? %>
-      <div class="grid grid-cols-2 gap-3">
-        <%= f.number_field :amount,
-              label: income ? t(".income_amount_label") : t(".amount_label"),
-              value: recurring_transaction.amount&.abs,
-              min: 0,
-              step: 0.01,
-              required: true %>
-        <%= f.date_field :first_due_on,
-              label: income ? t(".income_due_on_label") : t(".first_due_on_label"),
-              value: recurring_transaction.first_due_on,
-              required: true %>
-      </div>
+      <%# The money field every other form uses, currency picker included: a
+          new bill takes the currency picked here, like a transaction does. %>
+      <%= f.money_field :amount,
+            label: income ? t(".income_amount_label") : t(".amount_label"),
+            input_class: "privacy-sensitive privacy-sensitive-interactive",
+            value: recurring_transaction.amount&.abs,
+            default_currency: Current.family.currency,
+            step: RecurringTransaction.amount_step(recurring_transaction.currency.presence || Current.family.currency),
+            min: 0,
+            required: true %>
+      <%= f.date_field :first_due_on,
+            label: income ? t(".income_due_on_label") : t(".first_due_on_label"),
+            value: recurring_transaction.first_due_on,
+            required: true %>
     <% else %>
       <%# first_due_on seeds the schedule and does nothing once the series
           exists, so editing when a bill falls due happens in the frequency
@@ -45,11 +47,15 @@
       <div class="space-y-2">
         <%# Income stores its amount negative; the field edits the magnitude
             and the update path re-applies the sign. %>
-        <%= f.number_field :amount,
+        <%# The currency shows but stays put: it shapes the schedule and the
+            payments already matched to it. %>
+        <%= f.money_field :amount,
               label: income ? t(".income_amount_label") : t(".amount_label"),
+              input_class: "privacy-sensitive privacy-sensitive-interactive",
               value: recurring_transaction.amount&.abs,
+              disable_currency: true,
+              step: RecurringTransaction.amount_step(recurring_transaction.currency),
               min: 0,
-              step: 0.01,
               required: true %>
         <p class="text-xs text-secondary"><%= income ? t(".income_amount_edit_hint") : t(".amount_edit_hint") %></p>
       </div>
@@ -58,7 +64,8 @@
     <%= f.collection_select :account_id,
           Current.user.accessible_accounts.visible.alphabetically,
           :id, :name,
-          { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank") } %>
+          { label: income ? t(".income_account_label") : t(".account_label"), include_blank: t(".account_blank"),
+            variant: :logo, searchable: true } %>
 
     <%# Which kind this is was decided by the entry point that opened the
         dialog, so the form only has to carry the answer. Offering it as a
@@ -67,6 +74,14 @@
         bill-shaped labels, pressed Save bill, and got income. %>
     <% if recurring_transaction.new_record? && income %>
       <%= hidden_field_tag "recurring_transaction[is_income]", "1" %>
+    <% end %>
+
+    <%# The transaction a prefilled dialog came from travels with the form, so
+        create can ask it whether a bill already covers it: the fields alone
+        carry a name, and a detected bill is keyed by merchant. %>
+    <% if recurring_transaction.new_record? && source_entry_id %>
+      <%= hidden_field_tag :entry_id, source_entry_id, id: nil %>
+      <%= hidden_field_tag :allow_duplicate, "1", id: nil if allow_duplicate %>
     <% end %>
 
     <%# Name, amount, due date and how often are the whole job for most
@@ -79,18 +94,39 @@
             { label: income ? t(".income_frequency_label") : t(".frequency_label") },
             { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
 
-      <% if recurring_transaction.persisted? %>
+      <%# Every N weeks, months or years, for the cadences no preset names.
+          Shown on create too: a new bill takes its day details from the
+          first due date, but the count and unit are only asked here. %>
+      <div data-frequency-fields-target="group" data-presets="interval" class="hidden">
         <div class="grid grid-cols-2 gap-3">
-          <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" class="hidden">
+          <%= f.number_field :frequency_interval,
+                label: t(".frequency_interval_label"),
+                value: recurring_transaction.frequency_interval.presence || 2,
+                min: 1,
+                max: RecurringTransaction::FrequencyPreset::MAX_INTERVAL,
+                step: 1 %>
+          <%= f.select :frequency_interval_unit,
+                frequency_interval_unit_options,
+                { label: t(".frequency_interval_unit_label"),
+                  selected: recurring_transaction.frequency_interval_unit.presence || "monthly" },
+                { data: { frequency_fields_target: "unit", action: "change->frequency-fields#update" } } %>
+        </div>
+      </div>
+
+      <% if recurring_transaction.persisted? %>
+        <%# data-units shows a group for the custom interval in that unit, so
+            "every 3 weeks" asks for a weekday and "every 2 months" a day. %>
+        <div class="grid grid-cols-2 gap-3">
+          <div data-frequency-fields-target="group" data-presets="monthly,semimonthly,quarterly,semiannual,annual" data-units="monthly,yearly" class="hidden">
             <%= f.select :frequency_day_of_month, frequency_day_options, { label: t(".frequency_day_label") } %>
           </div>
           <div data-frequency-fields-target="group" data-presets="semimonthly" class="hidden">
             <%= f.select :frequency_second_day_of_month, frequency_day_options, { label: t(".frequency_second_day_label") } %>
           </div>
-          <div data-frequency-fields-target="group" data-presets="weekly,biweekly" class="hidden">
+          <div data-frequency-fields-target="group" data-presets="weekly,biweekly" data-units="weekly" class="hidden">
             <%= f.select :frequency_weekday, frequency_weekday_options, { label: t(".frequency_weekday_label") } %>
           </div>
-          <div data-frequency-fields-target="group" data-presets="annual" class="hidden">
+          <div data-frequency-fields-target="group" data-presets="annual" data-units="yearly" class="hidden">
             <%= f.select :frequency_month_of_year, frequency_month_options, { label: t(".frequency_month_label") } %>
           </div>
         </div>
@@ -103,17 +139,23 @@
     </div>
 
     <% if recurring_transaction.persisted? && %w[bill subscription installment other].include?(recurring_transaction.bill_type) %>
-      <div class="grid grid-cols-2 gap-3" data-controller="frequency-fields">
+      <%# One field per row: the category picker opens a menu that holds a
+          search field and the whole category list, and half a dialog is too
+          narrow for either. %>
+      <div class="space-y-3" data-controller="frequency-fields">
         <%= f.select :bill_type,
               %w[bill subscription installment other].map { |type| [ t("bills.all.types.#{type}"), type ] },
               { label: t(".bill_type_label") },
               { data: { frequency_fields_target: "preset", action: "change->frequency-fields#update" } } %>
-        <%= f.collection_select :category_id,
-              Current.family.categories.alphabetically,
-              :id, :name,
-              { label: t(".category_label"), include_blank: t(".category_blank") } %>
+        <%= render DS::CategorySelect.new(
+              form: f,
+              categories: Current.family.categories.alphabetically_by_hierarchy.to_a,
+              selected_id: recurring_transaction.category_id,
+              blank_label: t(".category_blank"),
+              locked: Current.family.categories_locked?
+            ) %>
 
-        <div data-frequency-fields-target="group" data-presets="installment" class="hidden col-span-2">
+        <div data-frequency-fields-target="group" data-presets="installment" class="hidden">
           <%= f.number_field :end_after_count,
                 label: t(".installment_count_label"),
                 min: 2, step: 1 %>
@@ -133,7 +175,19 @@
       <% end %>
     <% end %>
 
-    <%= render DS::Disclosure.new(title: t(".more_options"), align: "left") do %>
+    <%# Edit shows category beside kind; a new bill has no kind to pick yet,
+        but a bill started from a transaction arrives with its category. %>
+    <% if recurring_transaction.new_record? && !income %>
+      <%= render DS::CategorySelect.new(
+            form: f,
+            categories: Current.family.categories.alphabetically_by_hierarchy.to_a,
+            selected_id: recurring_transaction.category_id,
+            blank_label: t(".category_blank"),
+            locked: Current.family.categories_locked?
+          ) %>
+    <% end %>
+
+    <%= render DS::Disclosure.new(title: t(".more_options")) do %>
       <div class="space-y-4 pt-2">
       <% unless income %>
         <div class="space-y-2">

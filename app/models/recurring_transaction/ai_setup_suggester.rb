@@ -77,7 +77,8 @@ class RecurringTransaction
         {
           name: series.display_name,
           amount: series.amount.abs.to_s,
-          frequency: detection.key,
+          # Only PRESETS are offered back; anything else reads as custom.
+          frequency: detection.key.presence_in(FrequencyPreset::PRESETS) || FrequencyPreset::CUSTOM,
           day_of_month: detection.day_of_month,
           weekday: detection.weekday,
           month_of_year: detection.month_of_year,

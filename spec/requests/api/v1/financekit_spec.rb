@@ -10,7 +10,7 @@ RSpec.describe "Api::V1::Financekit", type: :request do
   end
   let(:user) do
     family.users.create!(email: "financekit-api-#{SecureRandom.hex(8)}@example.com", password: "password123",
-      password_confirmation: "password123", role: "admin", preferences: { "preview_features_enabled" => true })
+      password_confirmation: "password123", role: "admin")
   end
   let(:api_key) do
     key = ApiKey.generate_secure_key
@@ -77,11 +77,6 @@ RSpec.describe "Api::V1::Financekit", type: :request do
       header "Retry-After", schema: { type: :integer }
       run_test! skip: "Documentation only; behavior covered by Minitest"
     end
-    response "503", "Feature unavailable" do
-      schema "$ref" => "#/components/schemas/FinancekitError"
-      header "Retry-After", schema: { type: :integer }
-      run_test! skip: "Documentation only; behavior covered by Minitest"
-    end
   end
 
   path "/api/v1/financekit/capabilities" do
@@ -127,12 +122,28 @@ RSpec.describe "Api::V1::Financekit", type: :request do
       end
       include_examples "financekit normal API errors"
     end
-    delete "Revoke a publisher and retain imported financial history" do
+    delete "Revoke a publisher, retaining or discarding imported financial history" do
       tags "FinanceKit"
       produces "application/json"
       security FINANCEKIT_WRITE_SECURITY
-      response "204", "Publisher revoked" do
+      parameter name: :disposition, in: :query, required: false,
+        schema: { type: :string, enum: %w[retain discard] },
+        description: "What happens to the data this connection imported. " \
+          "retain (the default) keeps every account, balance and transaction. " \
+          "discard removes them: accounts FinanceKit created are destroyed, accounts it was " \
+          "linked to are emptied of FinanceKit-sourced entries and rebalanced, and source " \
+          "identities, balance observations and conflicts are deleted. Irreversible, and it " \
+          "removes imported entries the family later reconciled, excluded or edited. " \
+          "Supported dispositions are advertised by GET /api/v1/financekit/capabilities."
+      response "204", "Publisher revoked, imported history retained" do
         run_test!
+      end
+      response "202", "Publisher revoked, discard of imported history accepted" do
+        let(:disposition) { "discard" }
+        schema "$ref" => "#/components/schemas/FinancekitConnection"
+        # Accepted, not completed: the deletion runs in the background. Poll the
+        # connection and wait for purge_completed_at.
+        run_test! skip: "Documentation only; behavior covered by Minitest"
       end
       include_examples "financekit normal API errors"
     end

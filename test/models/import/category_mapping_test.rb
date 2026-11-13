@@ -102,4 +102,18 @@ class Import::CategoryMappingTest < ActiveSupport::TestCase
       Import.where(id: ids).destroy_all
     end
   end
+
+  test "create_mappable! still creates categories when the family is locked" do
+    import = @mapping.import
+    import.family.update!(categories_locked: true)
+    name = "Locked Mapping #{SecureRandom.hex(4)}"
+
+    mapping = import.mappings.create!(key: name, create_when_empty: true, type: "Import::CategoryMapping")
+
+    assert_difference -> { import.family.categories.count }, 1 do
+      mapping.create_mappable!
+    end
+
+    assert import.family.categories.exists?(name: name)
+  end
 end

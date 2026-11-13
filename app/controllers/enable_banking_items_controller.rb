@@ -1,8 +1,19 @@
 class EnableBankingItemsController < ApplicationController
   include EnableBankingItems::MapsHelper
+  include SafeProviderRedirect
   before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
-  before_action :require_admin!, only: [ :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
+  before_action :require_admin!, only: [ :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :callback, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
+
+  OAUTH_STATE_SESSION_KEY = :enable_banking_oauth_states
+  MAX_PENDING_OAUTH_STATES = 5
+  # Authorization URLs from Enable Banking are followed only on these hosts
+  # (or their subdomains), over HTTPS. See SafeProviderRedirect.
+  TRUSTED_ENABLE_BANKING_HOSTS = %w[
+    enablebanking.com
+    api.enablebanking.com
+    auth.enablebanking.com
+  ].freeze
 
   def new
     @enable_banking_item = Current.family.enable_banking_items.build
@@ -13,63 +24,17 @@ class EnableBankingItemsController < ApplicationController
     @enable_banking_item.name ||= "Enable Banking Connection"
 
     if @enable_banking_item.save
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully configured Enable Banking.")
-        @enable_banking_items = Current.family.enable_banking_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "enable_banking-providers-panel",
-            partial: "settings/providers/enable_banking_panel",
-            locals: { enable_banking_items: @enable_banking_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @enable_banking_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "enable_banking-providers-panel",
-          partial: "settings/providers/enable_banking_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      render_provider_panel("enable_banking", alert: @enable_banking_item.errors.full_messages.join(", "))
     end
   end
 
   def update
     if @enable_banking_item.update(enable_banking_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success", default: "Successfully updated Enable Banking configuration.")
-        @enable_banking_items = Current.family.enable_banking_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "enable_banking-providers-panel",
-            partial: "settings/providers/enable_banking_panel",
-            locals: { enable_banking_items: @enable_banking_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("enable_banking", notice: t(".success"), enable_banking_items: Current.family.enable_banking_items.ordered)
     else
-      @error_message = @enable_banking_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "enable_banking-providers-panel",
-          partial: "settings/providers/enable_banking_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :unprocessable_entity
-      end
+      render_provider_panel("enable_banking", alert: @enable_banking_item.errors.full_messages.join(", "))
     end
   end
 
@@ -88,6 +53,10 @@ class EnableBankingItemsController < ApplicationController
   def sync
     unless @enable_banking_item.syncing?
       @enable_banking_item.sync_later
+    end
+    if provider_panel_form?
+      return render_provider_panel("enable_banking", notice: t("settings.providers.sync_provider_in_progress"),
+                                   enable_banking_items: Current.family.enable_banking_items.ordered)
     end
 
     respond_to do |format|
@@ -154,13 +123,14 @@ class EnableBankingItemsController < ApplicationController
       redirect_url = target_item.begin_authorization!(
         aspsp_name: aspsp_name,
         redirect_url: enable_banking_callback_url,
-        state: target_item.id,
+        state: issue_oauth_state_for(target_item),
         psu_type: psu_type,
         language: language
       )
 
-      safe_redirect_to_enable_banking(
+      safe_redirect_to_provider(
         redirect_url,
+        trusted_hosts: TRUSTED_ENABLE_BANKING_HOSTS,
         fallback_path: settings_providers_path,
         fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
@@ -199,8 +169,10 @@ class EnableBankingItemsController < ApplicationController
       return
     end
 
-    # Find the enable_banking_item by ID from state
-    enable_banking_item = Current.family.enable_banking_items.find_by(id: state)
+    # The state must match the one issued to this browser session, so a
+    # callback link crafted by someone else cannot attach their bank
+    # authorization code to this family's connection.
+    enable_banking_item = consume_oauth_state(state)
 
     unless enable_banking_item.present?
       redirect_to settings_providers_path, alert: t(".item_not_found", default: "Connection not found.")
@@ -242,12 +214,13 @@ class EnableBankingItemsController < ApplicationController
       # method (decoupled banks included) instead of falling back to a default.
       redirect_url = @enable_banking_item.begin_authorization!(
         redirect_url: enable_banking_callback_url,
-        state: @enable_banking_item.id,
+        state: issue_oauth_state_for(@enable_banking_item),
         language: language
       )
 
-      safe_redirect_to_enable_banking(
+      safe_redirect_to_provider(
         redirect_url,
+        trusted_hosts: TRUSTED_ENABLE_BANKING_HOSTS,
         fallback_path: settings_providers_path,
         fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
@@ -306,11 +279,10 @@ class EnableBankingItemsController < ApplicationController
           )
 
           # Link account to enable_banking_account via account_providers
-          # Uses create! so any failure will rollback the entire transaction
-          AccountProvider.create!(
-            account: account,
-            provider: enable_banking_account
-          )
+          # Uses create! so any failure will rollback the entire transaction.
+          # Built through the association: the already-linked check above
+          # cached a nil account_provider, which propagation's debug log reads.
+          enable_banking_account.create_account_provider!(account: account)
 
           # Account discovery (which stored enable_banking_account.iban) ran
           # before this link existed, so it couldn't propagate to the new
@@ -488,6 +460,7 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Relink behavior: detach any legacy link and point provider link at the chosen account
+    orphaned_account = nil
     Account.transaction do
       enable_banking_account.lock!
 
@@ -497,6 +470,23 @@ class EnableBankingItemsController < ApplicationController
       ap.account_id = @account.id
       ap.save!
 
+      # If the provider was previously linked to a different account in this family,
+      # and that account is now orphaned, quietly disable it so it disappears from the
+      # visible manual list. This mirrors the unified flow expectation that the provider
+      # follows the chosen account.
+      if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
+        enable_banking_account.release_iban_from!(previous_account)
+
+        begin
+          # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
+          # Use the app's standard deletion path (async) so the duplicate disappears and the
+          # "pending_deletion" state remains truthful in the UI.
+          orphaned_account = previous_account if previous_account.may_mark_for_deletion?
+        rescue => e
+          Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
+        end
+      end
+
       # Account discovery (which stored enable_banking_account.iban) ran
       # before this link existed, so it couldn't propagate to @account --
       # do it now that there's a target. Unlike the two creation flows,
@@ -504,21 +494,16 @@ class EnableBankingItemsController < ApplicationController
       # may already have its own iban; propagate_iban_to_account! only
       # fills a blank one, same as everywhere else.
       enable_banking_account.propagate_iban_to_account!
+    end
 
-      # If the provider was previously linked to a different account in this family,
-      # and that account is now orphaned, quietly disable it so it disappears from the
-      # visible manual list. This mirrors the unified flow expectation that the provider
-      # follows the chosen account.
-      if previous_account && previous_account.id != @account.id && previous_account.family_id == @account.family_id
-        begin
-          # Disabled accounts still appear (greyed-out) in the manual list after a full refresh.
-          # Use the app's standard deletion path (async) so the duplicate disappears and the
-          # "pending_deletion" state remains truthful in the UI.
-          previous_account.destroy_later if previous_account.may_mark_for_deletion?
-        rescue => e
-          Rails.logger.warn("Failed to cleanup orphaned account #{previous_account.id}: #{e.class} - #{e.message}")
-        end
-      end
+    # Queue the orphan for deletion only after the relink commits. destroy_later
+    # pushes DestroyJob only once every open transaction commits, so called in
+    # the block above, an enqueue error would leave it from the commit, past
+    # the rescue inside it.
+    begin
+      orphaned_account&.destroy_later
+    rescue => e
+      Rails.logger.warn("Failed to cleanup orphaned account #{orphaned_account.id}: #{e.class} - #{e.message}")
     end
 
     if turbo_frame_request?
@@ -530,7 +515,7 @@ class EnableBankingItemsController < ApplicationController
       # Recompute data needed by Accounts#index partials
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -553,10 +538,11 @@ class EnableBankingItemsController < ApplicationController
         # Optimistic removal of the specific account row if it exists in the DOM
         turbo_stream.remove(ActionView::RecordIdentifier.dom_id(@account)),
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "enable_banking_items/enable_banking_item",
-          locals: { enable_banking_item: item }
+          locals: { enable_banking_item: item, visible_accounts: item.accounts }
         ),
         turbo_stream.replace("modal", view_context.turbo_frame_tag("modal"))
       ] + Array(flash_notification_stream_items)
@@ -566,61 +552,55 @@ class EnableBankingItemsController < ApplicationController
   end
 
   private
+    # Pending states map state => item id, so parallel flows (two tabs) each
+    # keep their own entry. Only the newest few are kept.
+    def issue_oauth_state_for(item)
+      state = SecureRandom.urlsafe_base64(32)
+      pending = pending_oauth_states.merge(state => item.id)
+      session[OAUTH_STATE_SESSION_KEY] = pending.to_a.last(MAX_PENDING_OAUTH_STATES).to_h
+      state
+    end
+
+    # An entry is removed only when it matches, so a stray callback with a
+    # made-up state cannot cancel a real flow in progress.
+    def consume_oauth_state(state)
+      pending = pending_oauth_states
+      matched = pending.keys.find { |candidate| ActiveSupport::SecurityUtils.secure_compare(candidate, state.to_s) }
+      return unless matched
+
+      item_id = pending.delete(matched)
+      session[OAUTH_STATE_SESSION_KEY] = pending
+      Current.family.enable_banking_items.find_by(id: item_id)
+    end
+
+    def pending_oauth_states
+      pending = session[OAUTH_STATE_SESSION_KEY]
+      pending.is_a?(Hash) ? pending.to_h : {}
+    end
 
     def set_enable_banking_item
       @enable_banking_item = Current.family.enable_banking_items.find(params[:id])
     end
 
     def enable_banking_item_params
-      params.require(:enable_banking_item).permit(
+      permitted = params.require(:enable_banking_item).permit(
         :name,
         :sync_start_date,
         :country_code,
         :application_id,
         :client_certificate
       )
+      # The panel never pre-fills the stored credentials, so a blank one on
+      # update means "keep the current value".
+      if @enable_banking_item&.persisted?
+        %i[application_id client_certificate].each do |credential|
+          permitted.delete(credential) if permitted[credential].blank?
+        end
+      end
+      permitted
     end
 
     def enable_banking_callback_url
       helpers.enable_banking_callback_url
-    end
-
-    # Validate redirect URLs from Enable Banking API to prevent open redirect attacks
-    # Only allows HTTPS URLs from trusted Enable Banking domains
-    TRUSTED_ENABLE_BANKING_HOSTS = %w[
-      enablebanking.com
-      api.enablebanking.com
-      auth.enablebanking.com
-    ].freeze
-
-    def valid_enable_banking_redirect_url?(url)
-      return false if url.blank?
-
-      begin
-        uri = URI.parse(url)
-
-        # Must be HTTPS
-        return false unless uri.scheme == "https"
-
-        # Host must be present
-        return false if uri.host.blank?
-
-        # Check if host matches or is a subdomain of trusted domains
-        TRUSTED_ENABLE_BANKING_HOSTS.any? do |trusted_host|
-          uri.host == trusted_host || uri.host.end_with?(".#{trusted_host}")
-        end
-      rescue URI::InvalidURIError => e
-        Rails.logger.warn("Enable Banking invalid redirect URL: #{url.inspect} - #{e.message}")
-        false
-      end
-    end
-
-    def safe_redirect_to_enable_banking(redirect_url, fallback_path:, fallback_alert:)
-      if valid_enable_banking_redirect_url?(redirect_url)
-        redirect_to redirect_url, allow_other_host: true
-      else
-        Rails.logger.warn("Enable Banking redirect blocked - invalid URL: #{redirect_url.inspect}")
-        redirect_to fallback_path, alert: fallback_alert
-      end
     end
 end

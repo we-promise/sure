@@ -1,0 +1,23 @@
+<%# locals: (series:) %>
+<%= render DS::Menu.new do |menu| %>
+  <% menu.with_item(
+      variant: "link",
+      text: t("recurring_transactions.edit.trigger_label"),
+      icon: "pencil",
+      href: edit_recurring_transaction_path(series),
+      data: { turbo_frame: :modal }) %>
+  <% menu.with_item(
+      variant: "button",
+      text: series.active? ? t("recurring_transactions.actions.pause") : t("recurring_transactions.actions.resume"),
+      icon: series.active? ? "pause" : "play",
+      href: toggle_status_recurring_transaction_path(series),
+      method: :post) %>
+  <% menu.with_item(
+      variant: "button",
+      text: t("recurring_transactions.actions.delete"),
+      icon: "trash-2",
+      href: recurring_transaction_path(series),
+      method: :delete,
+      destructive: true,
+      confirm: t(series.typed_income? ? "recurring_transactions.confirm_delete_income" : "recurring_transactions.confirm_delete", name: series.display_name)) %>
+<% end %>

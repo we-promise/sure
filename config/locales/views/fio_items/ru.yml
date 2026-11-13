@@ -1,0 +1,145 @@
+---
+ru:
+  providers:
+    fio:
+      name: Fio banka
+      description: Синхронизация счёта Fio banka с помощью API-токена только для чтения
+  family:
+    fio:
+      create_fio_item:
+        default_name: Подключение Fio banka
+  fio_item:
+    errors:
+      account_processing_failed: Не удалось синхронизировать счёт Fio
+      account_mismatch: Этот токен относится к другому счёту Fio, а не к тому, который уже синхронизирует это подключение. Добавьте его как отдельное подключение.
+      account_sync_schedule_failed: Не удалось запланировать синхронизацию счёта Fio
+      statement_too_large: В выписке больше операций, чем Fio отдаёт за один запрос. Перенесите дату начала синхронизации на более позднюю и синхронизируйте снова.
+      statement_fetch_failed: Не удалось получить выписку из Fio
+      history_locked: Fio отказал в выписке за этот период. Откройте доступ к полной истории счёта в интернет-банке в разделе «Настройки → API», затем синхронизируйте снова в течение 10 минут.
+      sync_failed: Не удалось синхронизировать подключение Fio
+    sync:
+      status:
+        importing: Импорт выписки из Fio...
+        checking_setup: Проверка настроек счёта...
+        needs_setup:
+          one: '%{count} счёт требует настройки...'
+          few: '%{count} счёта требуют настройки...'
+          many: '%{count} счетов требуют настройки...'
+          other: '%{count} счёта требуют настройки...'
+        processing: Обработка операций...
+        calculating: Расчёт балансов...
+    sync_status:
+      no_accounts: Счёт пока не найден
+      all_synced:
+        one: Синхронизирован %{count} счёт
+        few: Синхронизированы %{count} счёта
+        many: Синхронизировано %{count} счетов
+        other: Синхронизированы %{count} счёта
+      partial: '%{linked} синхронизировано, %{unlinked} требуют настройки'
+  fio_items:
+    account_types:
+      depository: Текущий или сберегательный счёт
+      loan: Кредит, ипотека или овердрафт
+    provider_panel:
+      default_connection_name: Подключение Fio banka
+      add_connection: Добавить подключение Fio banka
+      update_connection: Обновить подключение
+      connection_name_label: Название подключения
+      connection_name_placeholder: Мой счёт Fio
+      token_label: API-токен (только чтение)
+      token_placeholder: Вставьте 64-символьный токен
+      keep_token_placeholder: Оставьте пустым, чтобы сохранить текущий токен
+      sync_start_date_label: Импортировать операции с
+      sync_start_date_hint: Fio отдаёт последние 90 дней без дополнительной авторизации. Для более ранних данных откройте доступ к полной истории счёта в интернет-банке в разделе «Настройки → API» (значок замка) — это открывает 10-минутное окно — и запустите синхронизацию в это время.
+      one_account_notice: Один токен даёт доступ к одному счёту Fio, поэтому добавьте подключение для каждого счёта, который хотите отслеживать. Токен можно использовать раз в 30 секунд; синхронизация, запущенная раньше, будет выполнена со следующей.
+      connected_account: Подключённый счёт
+      no_account_yet: Счёта пока нет — первая синхронизация найдёт счёт, к которому относится этот токен.
+      account_needs_setup: Ещё не связан со счётом Sure.
+      requires_update: Нужен новый токен
+      requires_update_notice: Fio отклонил этот токен. Токены действуют до 180 дней, если не продлеваются автоматически при каждом входе в интернет-банк, поэтому создайте новый токен только для чтения в разделе «Настройки → API» и вставьте его ниже.
+      last_synced: Синхронизировано %{timestamp} назад
+      never_synced: Ещё не синхронизировалось
+      syncing: Синхронизация...
+      sync: Синхронизировать
+      setup_accounts: Настроить счёт
+      disconnect: Отключить
+      disconnect_confirm: Вы уверены, что хотите отключить %{name}?
+    create:
+      success: Подключение Fio banka сохранено.
+      token_required: Вставьте API-токен из интернет-банка Fio.
+    update:
+      success: Подключение Fio banka обновлено.
+    destroy:
+      success: Подключение Fio banka запланировано на удаление.
+      unlink_failed: Не удалось отключить подключение Fio banka
+    select_accounts:
+      title: Связать ваш счёт Fio
+      description: Этот токен даёт доступ к одному счёту. Выберите, как отслеживать его в Sure.
+      account_type_label: Тип счёта
+      awaiting_first_sync: Fio ещё не передал счёт для этого токена. Запустите синхронизацию и вернитесь сюда.
+      already_linked: Счёт этого подключения уже связан со счётом Sure.
+      sync_now: Синхронизировать сейчас
+      no_credentials_configured: Сначала настройте Fio banka в настройках провайдеров.
+      cancel: Отмена
+      link_account: Связать счёт
+    link_accounts:
+      success: Ваш счёт Fio связан с %{account_name}.
+      no_account_found: Для этого подключения не найден несвязанный счёт Fio.
+      no_credentials_configured: Сначала настройте Fio banka в настройках провайдеров.
+      unsupported_account_type: Fio не поддерживает этот тип счёта.
+      link_failed: Не удалось связать счёт.
+    select_existing_account:
+      title: Связать счёт Fio с %{account_name}
+      description: Свяжите счёт, к которому относится этот токен, с выбранным счётом.
+      awaiting_first_sync: Fio ещё не передал счёт для этого токена. Запустите синхронизацию и вернитесь сюда.
+      already_linked: Счёт этого подключения уже связан со счётом Sure.
+      sync_now: Синхронизировать сейчас
+      no_credentials_configured: Сначала настройте Fio banka в настройках провайдеров.
+      account_already_linked: Этот счёт уже связан с провайдером.
+      cancel: Отмена
+      link_account: Связать счёт
+    link_existing_account:
+      success: Ваш счёт Fio связан с %{account_name}.
+      account_already_linked: Этот счёт уже связан с провайдером.
+      fio_account_already_linked: Этот счёт Fio уже связан.
+      no_account_selected: Нет доступного счёта Fio для связывания.
+      unsupported_account_type: Fio может синхронизировать только денежные и кредитные счета.
+    setup_accounts:
+      title: Связать ваш счёт Fio
+      subtitle: Выберите, как счёт, к которому относится этот токен, будет отображаться в Sure.
+      choose_account_type: Выберите тип счёта
+      choose_account_type_description: Пропустите его, если не хотите отслеживать этот счёт.
+      account_type_label: Тип счёта
+      account_types:
+        skip: Пропустить
+      create_account: Создать счёт
+      awaiting_first_sync: Счёт пока не найден
+      awaiting_first_sync_description: Fio передаёт счёт только в выписке, поэтому он появится после первой успешной синхронизации.
+      sync_now: Синхронизировать сейчас
+      nothing_to_setup: Нечего настраивать
+      account_already_handled: Счёт этого подключения уже связан или пропущен.
+      close: Закрыть
+      cancel: Отмена
+    complete_account_setup:
+      success: Счёт %{account_name} создан.
+      skipped: Счёт Fio пропущен.
+      no_account: Нет счёта Fio, требующего настройки.
+      unsupported_account_type: Fio не поддерживает этот тип счёта.
+      creation_failed: Не удалось создать счёт в Sure.
+    fio_item:
+      deletion_in_progress: Удаление...
+      syncing: Синхронизация
+      requires_update: Нужен новый токен
+      error: Ошибка
+      status_with_summary: Синхронизировано %{timestamp} назад · %{summary}
+      status_never: Ещё не синхронизировалось
+      delete: Удалить
+      requires_update_title: Нужен новый токен
+      requires_update_description: Fio отклонил токен этого подключения. Создайте новый токен только для чтения в интернет-банке в разделе «Настройки → API».
+      update_token: Обновить токен
+      setup_needed: Требуется настройка счёта
+      setup_description: Счёт, к которому относится этот токен, ещё не связан со счётом Sure.
+      setup_action: Настроить счёт
+      no_accounts_title: Счёт ещё не импортирован
+      no_accounts_description: Fio передаёт счёт только в выписке, поэтому он появится после первой успешной синхронизации.
+      sync_now: Синхронизировать сейчас

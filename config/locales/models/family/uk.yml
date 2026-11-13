@@ -1,0 +1,10 @@
+---
+uk:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: Системний промпт чату
+        ai_prompt_categorizer_openai: Промпт категоризації транзакцій (OpenAI)
+        ai_prompt_categorizer_anthropic: Промпт категоризації транзакцій (Anthropic)
+        ai_prompt_merchant_openai: Промпт визначення продавців (OpenAI)
+        ai_prompt_merchant_anthropic: Промпт визначення продавців (Anthropic)

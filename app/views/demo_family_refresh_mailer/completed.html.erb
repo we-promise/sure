@@ -1,0 +1,19 @@
+<div style="text-align: left;">
+  <h1><%= t(".subject") %></h1>
+
+  <h2 style="font-size: 1em;"><%= t(".activity_heading") %></h2>
+  <p><strong><%= number_with_delimiter(@old_family_session_count) %></strong><br>
+    <%= t(".sessions_label") %></p>
+  <p><strong><%= number_with_delimiter(@newly_created_families_count) %></strong><br>
+    <%= t(".families_label") %></p>
+
+  <h2 style="font-size: 1em;"><%= t(".period_heading") %></h2>
+  <p><strong><%= t(".from_label") %></strong> <%= l(@period_start, format: t(".time_format")) %><br>
+    <strong><%= t(".to_label") %></strong> <%= l(@period_end, format: t(".time_format")) %></p>
+
+  <h2 style="font-size: 1em;"><%= t(".family_heading") %></h2>
+  <p><%= @old_family_name.presence || t(".family_not_found") %></p>
+  <% if @old_family_id %>
+    <p style="overflow-wrap: anywhere; word-break: break-word;"><small><%= t(".id_label") %> <%= @old_family_id %></small></p>
+  <% end %>
+</div>

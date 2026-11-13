@@ -253,6 +253,27 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 0, ExchangeRate.where(from_currency: "USD", to_currency: "EUR").count
   end
 
+  test "skips inverse rates that would round to zero" do
+    ExchangeRate.delete_all
+
+    provider_response = provider_success_response([
+      OpenStruct.new(from: "BTC", to: "XYZ", date: Date.current, rate: 2e13)
+    ])
+
+    @provider.expects(:fetch_exchange_rates).returns(provider_response)
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "BTC",
+      to: "XYZ",
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert_equal 2e13, ExchangeRate.find_by!(from_currency: "BTC", to_currency: "XYZ", date: Date.current).rate
+    assert_not ExchangeRate.exists?(from_currency: "XYZ", to_currency: "BTC")
+  end
+
   test "handles rate limit error gracefully" do
     ExchangeRate.delete_all
 

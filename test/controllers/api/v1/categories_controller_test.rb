@@ -286,6 +286,21 @@ class Api::V1::CategoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "bad_request", body["error"]
   end
 
+  test "create returns 422 when categories are locked" do
+    @user.family.update!(categories_locked: true)
+
+    assert_no_difference "Category.count" do
+      post "/api/v1/categories",
+        params: { category: { name: "Locked Imported", color: "#22c55e", icon: "shapes" } },
+        headers: api_headers(read_write_api_key)
+    end
+
+    assert_response :unprocessable_entity
+    body = JSON.parse(response.body)
+    assert_equal "unprocessable_entity", body["error"]
+    assert body["message"].present?
+  end
+
   private
 
     def read_write_api_key

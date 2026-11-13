@@ -45,6 +45,10 @@ vi:
       institution_name_placeholder: "ví dụ: Ngân hàng Vietcombank"
       institution_domain_label: Tên miền tổ chức
       institution_domain_placeholder: "ví dụ: vietcombank.com.vn"
+      iban_label: "IBAN"
+      iban_placeholder: "ví dụ: DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — Đã lưu IBAN, nhập giá trị mới để thay thế"
+      iban_remove_label: "Xóa IBAN"
       notes_label: Ghi chú
       notes_placeholder: Lưu thêm thông tin như số tài khoản, mã định tuyến, IBAN, v.v.
     index:

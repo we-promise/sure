@@ -120,11 +120,9 @@ class QuestradeActivitiesFetchJob < ApplicationJob
 
     def broadcast_updates
       @questrade_account.current_account&.broadcast_sync_complete
-      @questrade_account.questrade_item&.broadcast_replace_to(
-        @questrade_account.questrade_item.family,
-        target: "questrade_item_#{@questrade_account.questrade_item.id}",
-        partial: "questrade_items/questrade_item"
-      )
+      # Not the rendered card, which lists every account on the connection and
+      # has no viewer to filter for here (#3630); the toast re-fetches per viewer.
+      @questrade_account.questrade_item&.family&.broadcast_sync_complete
     rescue => e
       Rails.logger.warn("QuestradeActivitiesFetchJob - Broadcast failed: #{e.message}")
     end

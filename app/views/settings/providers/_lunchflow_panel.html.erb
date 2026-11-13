@@ -1,6 +1,6 @@
-<div class="space-y-4">
+<div id="lunchflow-providers-panel" class="space-y-4">
   <%
-    lf_link = link_to("Lunch Flow", "https://www.lunchflow.app/?atp=BiDIYS", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")
+    lf_link = link_to("Lunch Flow", "https://www.lunchflow.app/?atp=BiDIYS", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")
   %>
   <%= render "settings/providers/setup_steps",
              steps: [
@@ -35,6 +35,12 @@
                         label: t("settings.providers.lunchflow_panel.base_url_label"),
                         placeholder: t("settings.providers.lunchflow_panel.base_url_placeholder"),
                         value: lunchflow_item.base_url %>
+
+    <%= form.date_field :sync_start_date,
+                        label: t("settings.providers.lunchflow_panel.sync_start_date_label"),
+                        value: lunchflow_item.sync_start_date&.to_date,
+                        max: Date.current,
+                        help_text: t("settings.providers.lunchflow_panel.sync_start_date_help") %>
 
     <div class="flex justify-end">
       <%= form.submit is_new_record ? t("settings.providers.lunchflow_panel.save_and_connect") : t("settings.providers.lunchflow_panel.update_connection") %>
