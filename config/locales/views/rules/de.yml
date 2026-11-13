@@ -3,7 +3,19 @@ de:
   rules:
     no_action: Keine Aktion
     no_condition: Keine Bedingung
+    notification_baseline_timed_out: Diese Regel ist weiterhin ausgeschaltet. Die Prüfung, welche Transaktionen sie bereits erfasst, hat zu lange gedauert – ohne diese Prüfung würde sie zu allen eine E-Mail senden. Vereinfache ihre Bedingungen und schalte sie dann erneut ein.
+    category_rule_cta:
+      close: Schließen
+      create_rule: Regel erstellen
+      description: Ähnliche Transaktionen immer so kategorisieren?
+      not_today: Heute nicht
+      turn_off_suggestions: Regelvorschläge ausschalten
+      message: "Auf %{category_name} geändert"
+    classifier_rules:
+      category_classifier: Kategorie-Klassifikator
+      merchant_matcher: Händlererkennung
     actions:
+      to_label: auf
       value_placeholder: Wert eingeben
       split:
         type_fixed: Fester Betrag
@@ -67,6 +79,21 @@ de:
         expense: Ausgabe
         transfer: Überweisung
         equal_to: Gleich
+      operators:
+        contains: Enthält
+        does_not_contain: Enthält nicht
+        starts_with: Beginnt mit
+        ends_with: Endet mit
+        matches_regex: Entspricht Regex
+        equal_to: Gleich
+        is_equal_to: Ist gleich
+        not_equal_to: Ungleich
+        is_empty: Ist leer
+        is_not_empty: Ist nicht leer
+        greater_than: Größer als
+        greater_or_equal_to: Größer oder gleich
+        less_than: Kleiner als
+        less_than_or_equal_to: Kleiner oder gleich
     confirm:
       ai_cost_no_estimate_html: Damit kategorisiert die KI %{count} Transaktion(en).
       ai_cost_title: Geschätzte KI-Kosten
