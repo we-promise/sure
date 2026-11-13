@@ -3,6 +3,8 @@ fr:
   settings:
     preferences:
       show:
+        show_balance_updates: Mises à jour de solde synchronisées
+        show_balance_updates_hint: "Toujours afficher dans l'activité des comptes connectés les soldes quotidiens enregistrés par la synchronisation"
         additional_currencies_label: Devises supplémentaires
         base_currency_badge: Devise de base
         base_currency_label: Devise de base

@@ -649,15 +649,18 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
-  # Whether the activity feed of a linked account lists the balance updates
-  # its syncs leave behind (see Account#hides_balance_updates_by_default?).
-  # Off until the user turns it on. Account-level, so every device agrees.
+  # Whether the activity feed of a linked account always lists the balance
+  # updates its syncs leave behind (see Account#hides_balance_updates_by_default?).
+  # Off until turned on in Settings > Preferences. The activity Filter menu can
+  # show them for one view without changing this.
   def show_balance_updates?
     preferences&.dig("show_balance_updates") == true
   end
 
+  # @param value [Boolean, String] a form value such as "true" or "false"
   def update_show_balance_updates(value)
-    with_locked_preferences { |prefs| prefs["show_balance_updates"] = value }
+    shown = ActiveModel::Type::Boolean.new.cast(value) == true
+    with_locked_preferences { |prefs| prefs["show_balance_updates"] = shown }
   end
 
   MANUAL_ACCOUNT_ORDER_LIMIT = 500

@@ -1,7 +1,7 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter toggle_balance_updates]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
@@ -109,7 +109,7 @@ class AccountsController < ApplicationController
     @q = activity_search_params
     # The account and its provider links are preloaded once for every row: a
     # balance update's label depends on whether the account is linked.
-    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological
+    entries = @account.entries.excluding_split_parents.search(@q.except(:balance_updates), family).reverse_chronological
       .includes(:entryable, account: [ :account_providers, :plaid_account, :simplefin_account ])
     entries = entries.excluding_balance_updates unless show_balance_updates?
     if statement_tab_active?
@@ -298,13 +298,6 @@ class AccountsController < ApplicationController
     redirect_to accounts_path
   end
 
-  # Flips the user's own preference, so any user who can see the account may
-  # use it. It applies to every linked account, and the active filters are kept.
-  def toggle_balance_updates
-    Current.user.update_show_balance_updates(!Current.user.show_balance_updates?)
-    redirect_to account_path(@account, q: activity_search_params.to_h.presence, tab: "activity")
-  end
-
   def set_default
     unless @account.eligible_for_transaction_default?
       redirect_to accounts_path, alert: t("accounts.set_default.depository_only")
@@ -475,7 +468,7 @@ class AccountsController < ApplicationController
 
     def activity_search_params
       q = params.fetch(:q, {}).permit(
-        :search, :start_date, :end_date, :amount, :amount_operator,
+        :search, :start_date, :end_date, :amount, :amount_operator, :balance_updates,
         categories: [], tags: [], merchants: [], types: [], status: [], reconcile_status: []
       )
       q.delete(:amount_operator) unless q[:amount].present?
@@ -483,12 +476,14 @@ class AccountsController < ApplicationController
     end
 
     # Balance updates appear in the feed unless the account hides them by
-    # default (see Account#hides_balance_updates_by_default?) and the user
-    # hasn't asked to see them.
+    # default (see Account#hides_balance_updates_by_default?). The user can
+    # keep them shown in Settings > Preferences, or show them for one view
+    # with the activity Filter menu (q[balance_updates]=show).
     def show_balance_updates?
-      !@account.hides_balance_updates_by_default? || Current.user.show_balance_updates?
+      !@account.hides_balance_updates_by_default? ||
+        Current.user.show_balance_updates? ||
+        @q[:balance_updates] == "show"
     end
-    helper_method :show_balance_updates?
 
     # Shares the "per page" preference with TransactionsController's
     # prev_transaction_page_params so the page size the user picks on either

@@ -295,6 +295,7 @@ en:
     toggle_recurring_section: Toggle upcoming recurring transactions
     search:
       filters:
+        balance_updates: Balances
         account: Account
         date: Date
         type: Type
@@ -350,6 +351,11 @@ en:
         unexpected_error: "Unexpected error during conversion: %{error}"
     searches:
       filters:
+        balance_updates_filter:
+          always_shown: Always shown, as set in
+          hint: For this view only. To always show them, turn them on in
+          preferences_link: Preferences
+          show: Show synced balance updates
         account_filter:
           filter_accounts: Filter accounts
         category_filter:
@@ -367,6 +373,7 @@ en:
           less_than: Less than
           placeholder: '0'
         badge:
+          balance_updates: Synced balances
           expense: Expense
           income: Income
           on_or_after: on or after %{date}
