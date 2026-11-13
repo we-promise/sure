@@ -76,37 +76,51 @@ class EnableBankingEntry::Processor
   # that share one but carry different entry_references are different movements,
   # and compute_external_id alone would store them under one id. One of them
   # keeps enable_banking_<transaction_id>, so entries imported before this keep
-  # their id; every other one gets enable_banking_<transaction_id>_<entry_reference>.
+  # their id; every other one gets enable_banking_<transaction_id>_<entry_reference>
+  # (hashed if that is another row's plain id). Rows without an entry_reference
+  # count as one reference.
+  #
+  # A row identical to an earlier one apart from entry_reference is the same
+  # movement, as the importer's dedup treats it, so it takes that row's
+  # reference: a reference re-issued between fetches does not add an entry.
   #
   # Which one keeps the plain id is read from the account's entries when an
   # account is given, so it does not depend on the order rows are stored or
   # fetched in (see legacy_id_owner). Without an account, the first booked row
   # does; that is enough where only telling rows apart matters.
   #
-  # Pending rows keep compute_external_id, as do rows without a transaction_id
-  # or entry_reference: a pending row settles into the entry its booked
-  # counterpart updates, and is never the reason a booked row changes id.
+  # Pending rows keep compute_external_id: a pending row settles into the entry
+  # its booked counterpart updates, and is never the reason a booked row changes id.
   #
   # @return [Array<String, nil>]
   def self.external_ids_for(raw_transactions, account: nil)
     rows = raw_transactions.map(&:with_indifferent_access)
     ids = rows.map { |data| compute_external_id(data) }
+    plain_ids = ids.to_set
 
-    shared = rows.each_index.select { |i|
-      rows[i][:transaction_id].present? && rows[i][:entry_reference].present? && !pending_payload?(rows[i])
-    }.group_by { |i| rows[i][:transaction_id] }
-
-    shared.each_value do |indexes|
-      rows_by_reference = indexes.map { |i| rows[i] }.index_by { |data| data[:entry_reference] }
+    groups = rows.each_index.select { |i| rows[i][:transaction_id].present? && !pending_payload?(rows[i]) }
+                 .group_by { |i| ids[i] }.filter_map do |legacy_id, indexes|
+      reference_by_content = {}
+      references = indexes.index_with do |i|
+        reference_by_content[compute_external_id(rows[i].except(:transaction_id, :entry_reference))] ||= rows[i][:entry_reference].to_s
+      end
+      rows_by_reference = references.invert.transform_values { |i| rows[i] }
       next if rows_by_reference.size < 2
 
-      legacy_id = ids[indexes.first]
-      owner = account ? legacy_id_owner(account, legacy_id, rows_by_reference) : rows_by_reference.keys.first
-
-      indexes.each do |i|
-        reference = rows[i][:entry_reference]
-        ids[i] = "#{legacy_id}_#{reference}" unless reference == owner
+      suffixed = rows_by_reference.keys.index_with do |reference|
+        id = "#{legacy_id}_#{reference}"
+        plain_ids.include?(id) ? "#{legacy_id}_#{Digest::MD5.hexdigest(reference)}" : id
       end
+      [ legacy_id, references, rows_by_reference, suffixed ]
+    end
+
+    stored = if account && groups.any?
+      account.entries.where(source: "enable_banking", external_id: groups.flat_map { |g| [ g.first, *g.last.values ] }).index_by(&:external_id)
+    end
+
+    groups.each do |legacy_id, references, rows_by_reference, suffixed|
+      owner = legacy_id_owner(stored.to_h, legacy_id, rows_by_reference, suffixed, account&.family&.timezone)
+      references.each { |i, reference| ids[i] = suffixed[reference] unless reference == owner }
     end
 
     ids
@@ -115,29 +129,30 @@ class EnableBankingEntry::Processor
   # The entry_reference that keeps legacy_id among rows sharing a transaction_id.
   #
   # A reference already stored under its suffixed id keeps it. Of the others, the
-  # one matching the entry already stored under legacy_id (amount and date) keeps
-  # that entry, so an entry two rows used to overwrite keeps the movement it
-  # shows; failing a match, the first in payload order. nil when every reference
-  # already has its own entry, e.g. the legacy row is no longer in the payload.
+  # one matching the entry already stored under legacy_id keeps that entry, so an
+  # entry two rows used to overwrite, or a pending entry, stays with the movement
+  # it shows: signed amount and date, else signed amount alone (a pending or
+  # user-edited date differs); failing a match, the first in payload order. nil
+  # when every reference already has its own entry, e.g. the legacy row is no
+  # longer in the payload.
   #
   # @return [String, nil]
-  def self.legacy_id_owner(account, legacy_id, rows_by_reference)
-    suffixed = rows_by_reference.keys.index_with { |reference| "#{legacy_id}_#{reference}" }
-    entries = account.entries.where(source: "enable_banking", external_id: [ legacy_id, *suffixed.values ]).index_by(&:external_id)
-
-    candidates = rows_by_reference.keys.reject { |reference| entries.key?(suffixed[reference]) }
-    legacy_entry = entries[legacy_id]
+  def self.legacy_id_owner(stored, legacy_id, rows_by_reference, suffixed, timezone)
+    candidates = rows_by_reference.keys.reject { |reference| stored.key?(suffixed[reference]) }
+    legacy_entry = stored[legacy_id]
     return candidates.first if legacy_entry.nil? || candidates.size < 2
 
-    candidates.find { |reference| same_movement?(legacy_entry, rows_by_reference[reference], account) } || candidates.first
+    candidates.find { |reference| same_movement?(legacy_entry, rows_by_reference[reference], timezone) } ||
+      candidates.find { |reference| same_movement?(legacy_entry, rows_by_reference[reference], nil, date: false) } ||
+      candidates.first
   end
 
-  def self.same_movement?(entry, data, account)
+  def self.same_movement?(entry, data, timezone, date: true)
     amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
     return false if amount.blank?
 
-    entry.amount.abs == BigDecimal(amount.to_s).abs &&
-      entry.date == transaction_date(data, account.family&.timezone)
+    signed = BigDecimal(amount.to_s).abs * (data[:credit_debit_indicator] == "CRDT" ? -1 : 1)
+    entry.amount == signed && (!date || entry.date == transaction_date(data, timezone))
   rescue ArgumentError, TypeError
     false
   end

@@ -1385,4 +1385,17 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_not_nil result
     assert_equal Date.new(2025, 7, 15), result.date
   end
+
+  test "external_ids_for leaves rows without a shared transaction_id on compute_external_id" do
+    rows = [
+      { entry_reference: "ref-1", booking_date: "2026-03-05", transaction_amount: { amount: "1.00", currency: "EUR" } },
+      { booking_date: "2026-03-05", transaction_amount: { amount: "2.00", currency: "EUR" }, remittance_information: [ "X" ] },
+      { transaction_id: "tid-y", entry_reference: "ref-2", booking_date: "2026-03-05", transaction_amount: { amount: "3.00", currency: "EUR" } },
+      { transaction_id: "tid-z", booking_date: "2026-03-05", transaction_amount: { amount: "4.00", currency: "EUR" } },
+      { transaction_id: "tid-z", booking_date: "2026-03-05", transaction_amount: { amount: "5.00", currency: "EUR" } }
+    ]
+
+    assert_equal rows.map { |r| EnableBankingEntry::Processor.compute_external_id(r) },
+                 EnableBankingEntry::Processor.external_ids_for(rows)
+  end
 end

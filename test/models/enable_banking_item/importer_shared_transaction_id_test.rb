@@ -68,27 +68,32 @@ class EnableBankingItem::ImporterSharedTransactionIdTest < ActiveSupport::TestCa
     assert_equal BigDecimal("7.00"), entry!("enable_banking_tid-x_r-b").amount
   end
 
-  test "external_ids_for leaves rows without a shared transaction_id on compute_external_id" do
-    rows = [
-      { entry_reference: "ref-1", booking_date: "2026-03-05", transaction_amount: { amount: "1.00", currency: "EUR" } },
-      { booking_date: "2026-03-05", transaction_amount: { amount: "2.00", currency: "EUR" }, remittance_information: [ "X" ] },
-      { transaction_id: "tid-y", entry_reference: "ref-2", booking_date: "2026-03-05", transaction_amount: { amount: "3.00", currency: "EUR" } },
-      { transaction_id: "tid-z", booking_date: "2026-03-05", transaction_amount: { amount: "4.00", currency: "EUR" } },
-      { transaction_id: "tid-z", booking_date: "2026-03-05", transaction_amount: { amount: "5.00", currency: "EUR" } }
-    ]
+  test "a reference re-issued for an unchanged movement does not add an entry" do
+    sync(booked: [ row("r-1", "9.00") ])
+    sync(booked: [ row("r-2", "9.00") ])
 
-    assert_equal rows.map { |r| EnableBankingEntry::Processor.compute_external_id(r) },
-                 EnableBankingEntry::Processor.external_ids_for(rows)
+    assert_equal({ "enable_banking_tid-x" => BigDecimal("9.00") }, amounts_by_id)
+  end
+
+  test "a pending entry settles onto the booked sibling with its amount when the dates differ" do
+    @importer.stubs(:include_pending?).returns(true)
+    sync(booked: [], pending: [ row("r-p", "7.00", status: "PDNG", date: 5.days.ago.to_date) ])
+    pending_entry = entry!("enable_banking_tid-x")
+
+    sync(booked: [ row("r-a", "9.00"), row("r-b", "7.00") ], pending: [])
+
+    assert_equal({ "enable_banking_tid-x" => BigDecimal("7.00"), "enable_banking_tid-x_r-a" => BigDecimal("9.00") }, amounts_by_id)
+    assert_equal pending_entry.id, entry!("enable_banking_tid-x").id
   end
 
   private
 
-    def row(entry_reference, amount, status: "BOOK")
+    # date: inside the 30-day incremental window determine_sync_start_date uses.
+    def row(entry_reference, amount, status: "BOOK", date: 3.days.ago.to_date)
       {
         transaction_id: "tid-x",
         entry_reference: entry_reference,
-        # Inside the 30-day incremental window determine_sync_start_date uses.
-        booking_date: 3.days.ago.to_date.to_s,
+        booking_date: date.to_s,
         transaction_amount: { amount: amount, currency: "EUR" },
         creditor: { name: "Laundromat" },
         credit_debit_indicator: "DBIT",
