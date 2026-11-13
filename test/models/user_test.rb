@@ -1678,4 +1678,18 @@ class UserTest < ActiveSupport::TestCase
     assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
     assert_equal({}, @user.reload.manual_account_order)
   end
+
+  test "show_counterparty_account? defaults to true" do
+    user = users(:family_admin)
+    user.update!(preferences: {})
+
+    assert user.show_counterparty_account?
+  end
+
+  test "show_counterparty_account? respects an explicit false preference" do
+    user = users(:family_admin)
+    user.update!(preferences: { "show_counterparty_account" => false })
+
+    assert_not user.show_counterparty_account?
+  end
 end

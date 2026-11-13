@@ -72,6 +72,8 @@ uk:
       potential_duplicate_title: Виявлено можливий дублікат
       transfer: Переказ
       account_label: Рахунок
+      counterparty_account_label: "Рахунок контрагента"
+      counterparty_iban_label: "IBAN контрагента"
       amount: Сума
       category_label: Категорія
       date_label: Дата

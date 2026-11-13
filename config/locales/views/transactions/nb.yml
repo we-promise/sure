@@ -25,6 +25,8 @@ nb:
       new_transaction: Ny transaksjon
     show:
       account_label: Konto
+      counterparty_account_label: "Motpartens konto"
+      counterparty_iban_label: "Motpartens IBAN"
       amount: Beløp
       category_label: Kategori
       date_label: Dato

@@ -82,6 +82,8 @@ nl:
       potential_duplicate_title: "Mogelijk duplicaat gevonden"
       transfer: "Overboeking"
       account_label: "Account"
+      counterparty_account_label: "Rekening tegenpartij"
+      counterparty_iban_label: "IBAN tegenpartij"
       amount: "Bedrag"
       category_label: "Categorie"
       date_label: "Datum"

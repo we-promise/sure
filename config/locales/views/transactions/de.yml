@@ -44,6 +44,8 @@ de:
       account_label: Konto
       amount: Betrag
       category_label: Kategorie
+      counterparty_account_label: Konto der Gegenseite
+      counterparty_iban_label: IBAN der Gegenseite
       date_label: Datum
       delete: Löschen
       delete_subtitle: Diese Aktion löscht die Transaktion dauerhaft, beeinflusst deine bisherigen Kontostände und kann nicht rückgängig gemacht werden.

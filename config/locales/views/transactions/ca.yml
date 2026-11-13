@@ -294,6 +294,8 @@ ca:
       selected: seleccionades
     show:
       account_label: Compte
+      counterparty_account_label: "Compte de la contrapart"
+      counterparty_iban_label: "IBAN de la contrapart"
       activity_type: Tipus d'activitat
       activity_type_description: Tipus d'activitat d'inversió (compra, venda, dividend,
         etc.). Detectat automàticament o establert manualment.

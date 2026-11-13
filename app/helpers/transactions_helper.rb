@@ -1,4 +1,17 @@
 module TransactionsHelper
+  # Returns [label, masked value] for the counterparty row, or nil when the
+  # transaction carries no counterparty data. Only an actual IBAN is labelled
+  # as one; the provider's generic account id gets a neutral label. The value
+  # is always masked to its last 4 characters: it is a third party's account
+  # number, so Privacy Mode's opt-in blur alone is not enough.
+  def counterparty_account_display(transaction)
+    if (iban = transaction.counterparty_iban.presence)
+      [ t("transactions.show.counterparty_iban_label"), mask_last4(iban) ]
+    elsif (account_id = transaction.counterparty_account_id.presence)
+      [ t("transactions.show.counterparty_account_label"), mask_last4(account_id) ]
+    end
+  end
+
   # @param exclude [Array<String>] filter keys to leave out (e.g. the account
   #   tab doesn't apply to the account activity feed, which is already scoped
   #   to one account)
@@ -293,7 +306,10 @@ module TransactionsHelper
         simplefin: {},
         plaid: {},
         provider_extras: [],
-        raw: pretty_json(extra)
+        # counterparty_iban/counterparty_account_id live in their own encrypted
+        # columns and are shown masked above; an already-synced row from before
+        # that change may still carry them here, so they never reach the raw dump.
+        raw: pretty_json(extra.is_a?(Hash) ? extra.except("counterparty_iban", "counterparty_account_id") : extra)
       }
     end
   end

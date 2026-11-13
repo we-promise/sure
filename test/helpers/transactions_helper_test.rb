@@ -2,6 +2,8 @@ require "test_helper"
 require "ostruct"
 
 class TransactionsHelperTest < ActionView::TestCase
+  include ApplicationHelper
+
   # build_transaction_extra_details reads `extra` off a Transaction (or anything
   # that responds to :transaction), so a struct is enough to drive it.
   def transaction_with(extra)
@@ -198,5 +200,19 @@ class TransactionsHelperTest < ActionView::TestCase
 
   test "investment_activity_label_name falls back to the stored label when it has no translation" do
     assert_equal "Legacy Label", investment_activity_label_name("Legacy Label")
+  end
+
+  test "counterparty_account_display labels an IBAN as an IBAN" do
+    transaction = Transaction.new(counterparty_iban: "DE89370400440532013000", counterparty_account_id: "ACC-998877") # pipelock:ignore IBAN
+    assert_equal [ I18n.t("transactions.show.counterparty_iban_label"), "•••3000" ], counterparty_account_display(transaction)
+  end
+
+  test "counterparty_account_display gives a non-IBAN account id a neutral label" do
+    transaction = Transaction.new(counterparty_account_id: "ACC-998877")
+    assert_equal [ I18n.t("transactions.show.counterparty_account_label"), "•••8877" ], counterparty_account_display(transaction)
+  end
+
+  test "counterparty_account_display returns nil without counterparty data" do
+    assert_nil counterparty_account_display(Transaction.new(counterparty_iban: ""))
   end
 end

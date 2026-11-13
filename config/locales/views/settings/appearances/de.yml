@@ -14,6 +14,8 @@ de:
         page_title: Darstellung
         split_grouped_description: Zeigt geteilte Transaktionen in der Liste gebündelt unter ihrer Ursprungsbuchung. Ist die Option aus, erscheint jede Teilbuchung als eigene Zeile.
         split_grouped_title: Geteilte Transaktionen gruppieren
+        show_counterparty_account_title: "Kontodaten der Gegenseite anzeigen"
+        show_counterparty_account_description: "Zeigt die letzten 4 Zeichen der IBAN oder Kontonummer der Gegenseite in den Details einer Transaktion, wenn deine Bankverbindung sie liefert. Erscheint nur, wenn diese Daten vorhanden sind."
         auto_generate_transaction_names_title: Transaktionsnamen automatisch erzeugen
         auto_generate_transaction_names_description: Bleibt der Name einer manuell erfassten Transaktion leer, wird er aus der gewählten Kategorie und dem Händler gebildet (z. B. „Unterhaltung - Netflix“). Ist beides nicht gewählt, bleibt der Name Pflicht. Gilt für den ganzen Haushalt und nur für neue Transaktionen.
         theme_dark: Dunkel
