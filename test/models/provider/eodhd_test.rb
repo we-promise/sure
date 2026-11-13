@@ -109,6 +109,12 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal "PLN", security.currency
   end
 
+  test "eodhd_symbol maps other US venues to the composite US code" do
+    assert_equal "XLF.US", @provider.send(:eodhd_symbol, "XLF", "ARCX")
+    assert_equal "SPY.US", @provider.send(:eodhd_symbol, "SPY", "BATS")
+    assert_equal "NSRGY.US", @provider.send(:eodhd_symbol, "NSRGY", "OTCM")
+  end
+
   test "eodhd_symbol builds Warsaw ticker from XWAR MIC" do
     assert_equal "KTY.WAR", @provider.send(:eodhd_symbol, "KTY", "XWAR")
   end
