@@ -19,6 +19,7 @@ module Authentication
       if session_record = find_session_by_cookie
         Current.session = session_record
         end_impersonation_if_target_inactive!
+        end_orphaned_session!
       else
         if self_hosted_first_login?
           redirect_to new_registration_url
@@ -61,6 +62,26 @@ module Authentication
         "impersonated user_id=#{impersonation.impersonated_id} is deactivated"
       )
       Current.session.update!(active_impersonator_session: nil)
+    end
+
+    # A session can outlive its user/family when they are destroyed while this
+    # request is in flight (e.g. the session touch in Session.find_active_by_cookie
+    # waits on a row lock held by a family/user purge, which then commits). The
+    # in-memory user is stale and its family is gone, so treat the session as
+    # dead instead of letting downstream code call methods on a nil family.
+    def end_orphaned_session!
+      return if Current.user && Current.family
+
+      session_record = Current.session
+      Rails.logger.warn(
+        "[AUTH] Ending orphaned session_id=#{session_record&.id}: " \
+        "user_id=#{session_record&.user_id} family_id=#{Current.user&.family_id.inspect} no longer exists"
+      )
+
+      Session.where(id: session_record.id).delete_all if session_record
+      cookies.delete(:session_token)
+      Current.session = nil
+      redirect_to new_session_url
     end
 
     def self_hosted_first_login?
