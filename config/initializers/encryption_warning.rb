@@ -6,12 +6,22 @@
 require Rails.root.join("lib/active_record_encryption_config").to_s
 
 Rails.application.config.after_initialize do
+  if ActiveRecordEncryptionConfig.previous_keys_configured?
+    Rails.logger.warn(<<~WARN)
+      [SECURITY] Previous Active Record encryption keys are set
+      (ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*), so they are a previous encryption
+      scheme. Set them only for the commands of a key rotation, not for the
+      running app: while they are set, Rails writes deterministically
+      encrypted values (emails, tokens, API keys) with the old key.
+    WARN
+  end
+
   app_mode = Rails.application.config.app_mode
 
-  # Scoped to self-hosted only: this warning is about AR encryption not
-  # being configured, which is only ever this app's own responsibility to
-  # set up on a self-hosted install (managed instances are operated by the
-  # Sure team with their own credential provisioning).
+  # Scoped to self-hosted only: these two warnings are about AR encryption
+  # not being configured/backfilled, which is only ever this app's own
+  # responsibility to set up on a self-hosted install (managed instances are
+  # operated by the Sure team with their own credential provisioning).
   if app_mode.self_hosted?
     if !ActiveRecordEncryptionConfig.ready?
       Rails.logger.warn(<<~WARN)
@@ -23,23 +33,34 @@ Rails.application.config.after_initialize do
           ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
         Generate a set with: bin/rails db:encryption:init
       WARN
+    elsif !ActiveRecordEncryptionConfig.backfill_completed?
+      Rails.logger.warn(<<~WARN)
+        [SECURITY] ActiveRecord Encryption is configured, but
+        bin/rails security:backfill_encryption has not completed successfully
+        yet. Until it does, legacy plaintext data in encrypted columns is
+        still readable via a fallback (support_unencrypted_data/extend_queries
+        in config/initializers/active_record_encryption.rb) instead of raising
+        - which also means a stray plaintext write (bug, bad migration, manual
+        DB edit) would be silently accepted instead of caught. Run
+        bin/rails security:backfill_encryption now to close this gap.
+      WARN
     end
   end
 
   # Deliberately NOT nested inside the `if app_mode.self_hosted?` block
   # above (a prior version of this file gated the whole `after_initialize`
   # body on a single `next unless app_mode.self_hosted?`, which silently
-  # suppressed this check in managed mode too - jjmata caught this on
-  # #3221's version of this same file): using_known_compromised_secret_key_base?
-  # is a fact about SECRET_KEY_BASE itself (session cookies, Setting's own
-  # encryptor - see app/models/setting.rb), independent of whether
-  # ActiveRecord Encryption is configured at all, where its keys come from,
-  # or which app_mode this install runs in - a managed instance spun up
-  # from compose.example.yml (e.g. for staging/POC) and never rotated is
-  # just as exposed as a self-hosted one. Suppressing it whenever AR
-  # encryption has explicit keys, or whenever the app isn't self-hosted,
-  # would hide a real compromise of sessions/Settings just because AR
-  # encryption itself isn't affected.
+  # suppressed this check in managed mode too - jjmata caught this):
+  # using_known_compromised_secret_key_base? is a fact about SECRET_KEY_BASE
+  # itself (session cookies, Setting's own encryptor - see
+  # app/models/setting.rb), independent of whether ActiveRecord Encryption
+  # is configured/backfilled at all, where its keys come from, or which
+  # app_mode this install runs in - a managed instance spun up from
+  # compose.example.yml (e.g. for staging/POC) and never rotated is just as
+  # exposed as a self-hosted one. Suppressing it whenever AR encryption has
+  # explicit keys, or whenever the app isn't self-hosted, would hide a real
+  # compromise of sessions/Settings just because AR encryption itself isn't
+  # affected.
   if ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
     if ActiveRecordEncryptionConfig.explicitly_configured?
       Rails.logger.warn(<<~WARN)
@@ -53,10 +74,10 @@ Rails.application.config.after_initialize do
         explicitly configured and are NOT derived from SECRET_KEY_BASE, so
         they are unaffected by this. Rotate SECRET_KEY_BASE to a unique
         value regardless. Note this invalidates existing sessions and any
-        Setting-stored values encrypted under the old one, which will need
-        to be re-entered - there is currently no automated migration path
-        for those two, only for ActiveRecord Encryption's own keys (see
-        bin/rails db:encryption:init).
+        Setting-stored values encrypted under the old one. Re-encrypt those
+        with bin/rails "security:rotate_setting_secrets[0]", with the old
+        value in the OLD_SECRET_KEY_BASE environment variable (see
+        docs/hosting/encryption.md; keep it out of your shell history).
       WARN
     else
       Rails.logger.warn(<<~WARN)
@@ -73,29 +94,22 @@ Rails.application.config.after_initialize do
         the compromised key, the backfill task cannot tell that ciphertext
         apart from real plaintext, will re-encrypt it under the new key on
         top of the old encryption, and the original data becomes
-        unrecoverable. Rotate safely instead - the full procedure, including
-        a runner script for step 3, is in docs/hosting/encryption.md:
-        (1) keep ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY (and friends) derived
-        from this SECRET_KEY_BASE configured as a `previous` encryption
-        scheme
-        (https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)
-        so existing data still decrypts, and generate new keys with
-        bin/rails db:encryption:init as the current scheme; (2) re-encrypt
-        with DRY_RUN=false bin/rails security:backfill_encryption - the task
-        defaults to a dry run that changes nothing, so run it plain first to
-        preview; (3) migrate the deterministic attributes explicitly: while
-        the compromised scheme is still a `previous` scheme, Rails
-        deliberately re-serializes deterministic ("fixed") attributes -
-        user emails, otp_secret, provider tokens - under the OLDEST scheme
-        so equality lookups stay stable, which means the backfill leaves
-        exactly those columns under the compromised key
-        (https://github.com/rails/rails/blob/main/activerecord/lib/active_record/encryption/encrypted_attribute_type.rb,
-        serialize_with_oldest). Do NOT retire the compromised scheme until
-        those columns have been re-encrypted under the current key and
-        verified - removing it earlier makes every value still encrypted
-        under it permanently unreadable. This only migrates ActiveRecord
-        Encryption - Setting-stored values and existing sessions are not
-        covered and must be rotated / re-entered separately.
+        unrecoverable. Rotate safely instead, with the app stopped (full
+        procedure in docs/hosting/encryption.md): generate new keys with
+        bin/rails db:encryption:init and set them as
+        ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY, ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+        and ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT, then run
+        bin/rails "security:backfill_encryption[100,0]" with this
+        SECRET_KEY_BASE in #{ActiveRecordEncryptionConfig::PREVIOUS_SECRET_KEY_BASE_ENV}
+        for that command only, so existing data still decrypts and is
+        re-encrypted under the new keys, deterministic columns included.
+        When every model reports failed_count 0, start the app without that
+        variable: while it is set, Rails writes deterministically encrypted
+        values (emails, tokens, API keys) with the old key.
+        Changing SECRET_KEY_BASE afterwards also changes the key for API keys
+        and tokens saved in the settings (not covered by the previous scheme):
+        re-encrypt them with bin/rails "security:rotate_setting_secrets[0]",
+        with the old value in the OLD_SECRET_KEY_BASE environment variable.
       WARN
     end
   end

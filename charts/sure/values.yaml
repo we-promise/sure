@@ -530,6 +530,12 @@ pipelock:
     port: 8889
     # Auto-computed when empty: http://<fullname>:<service.port>/mcp
     upstream: ""
+    # Listener auth Pipelock requires; the Secret wins if both are set.
+    # See docs/hosting/pipelock.md.
+    authTokenSecret:
+      name: ""
+      key: token
+    allowUnauthenticated: true
   # WebSocket proxy: bidirectional frame scanning for ws/wss connections.
   # Runs on the same listener as the forward proxy at /ws?url=<ws-url>.
   websocketProxy:

@@ -14,14 +14,18 @@ class Settings::PreferencesController < ApplicationController
   def update
     @user = Current.user
     user_params = params.permit(user: [ :preview_features_enabled, :account_release_channel, :account_release_lead_days ]).fetch(:user, {})
+    preview_changed = false
 
     @user.with_locked_preferences do |updated_prefs|
       if user_params.key?(:preview_features_enabled)
-        updated_prefs["preview_features_enabled"] =
-          ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
+        enabled = ActiveModel::Type::Boolean.new.cast(user_params[:preview_features_enabled])
+        preview_changed = updated_prefs["preview_features_enabled"] != enabled
+        updated_prefs["preview_features_enabled"] = enabled
       end
       assign_account_release_preferences(updated_prefs, user_params)
     end
+
+    sync_manual_loans if preview_changed
     redirect_to settings_preferences_path
   end
 
@@ -36,5 +40,12 @@ class Settings::PreferencesController < ApplicationController
 
       days = Integer(user_params[:account_release_lead_days].to_s, exception: false)
       prefs["account_release_lead_days"] = days if days && Account::ReleaseReminder::LEAD_DAYS_RANGE.cover?(days)
+    end
+
+    # The loan replay is gated on the family flag, and its result is stored in
+    # the shared balance rows. Re-sync the manual loans so the toggle takes
+    # effect now rather than at the next scheduled sync.
+    def sync_manual_loans
+      Current.family.accounts.manual.where(accountable_type: "Loan").find_each(&:sync_later)
     end
 end

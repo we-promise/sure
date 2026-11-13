@@ -267,12 +267,7 @@ class Family::AutoCategorizer
     end
 
     def cached_transaction_ids
-      protected_transactions
-            .joins(:data_enrichments)
-            .where(data_enrichments: { attribute_name: "category_id", source: "ai" })
-            .where(Arel.sql("data_enrichments.value = to_jsonb(transactions.category_id::text)"))
-            .distinct
-            .pluck(:id)
+      protected_transactions.where(Transaction.category_from_sql("ai")).pluck(:id)
     end
 
     def protected_transaction_ids
