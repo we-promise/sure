@@ -1,0 +1,48 @@
+<%# locals: (liquidity_metrics:) %>
+
+<% overview = liquidity_metrics[:overview] %>
+<% trend = liquidity_metrics[:trend] %>
+
+<div class="space-y-6" id="liquidity">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="p-4 bg-surface-inset rounded-lg">
+      <p class="text-sm text-secondary mb-2"><%= t("reports.liquidity.available_net_worth") %></p>
+      <p class="text-2xl font-semibold text-primary privacy-sensitive"><%= format_money(overview.available_net_worth) %></p>
+      <% if trend %>
+        <p class="text-xs mt-1 privacy-sensitive" style="color: <%= trend.color %>">
+          <%= t("reports.liquidity.period_change", change: trend.value.format(signify_positive: true)) %>
+        </p>
+      <% end %>
+    </div>
+
+    <div class="p-4 bg-surface-inset rounded-lg">
+      <p class="text-sm text-secondary mb-2"><%= t("reports.liquidity.bound_assets") %></p>
+      <p class="text-2xl font-semibold text-primary privacy-sensitive"><%= format_money(overview.bound_assets) %></p>
+      <p class="text-xs text-secondary mt-1 privacy-sensitive"><%= t("reports.liquidity.share_of_assets", share: number_to_percentage(overview.bound_share, precision: 0)) %></p>
+    </div>
+
+    <div class="p-4 bg-surface-inset rounded-lg">
+      <p class="text-sm text-secondary mb-2"><%= t("reports.liquidity.next_release") %></p>
+      <% if (release = overview.next_release) %>
+        <p class="text-2xl font-semibold text-primary privacy-sensitive"><%= format_money(release.amount) %></p>
+        <p class="text-xs text-secondary mt-1"><%= release.account.name %> · <%= l(release.date, format: :long) %></p>
+      <% else %>
+        <p class="text-2xl font-semibold text-subdued">--</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="space-y-3">
+      <h3 class="text-sm font-medium text-primary"><%= t("reports.liquidity.by_level") %></h3>
+      <%= render "liquidity/levels", overview: overview %>
+    </div>
+
+    <%= render "liquidity/release_timeline", overview: overview %>
+  </div>
+
+  <div class="space-y-3">
+    <h3 class="text-sm font-medium text-primary"><%= t("reports.liquidity.maturities") %></h3>
+    <%= render "liquidity/releases_table", overview: overview %>
+  </div>
+</div>

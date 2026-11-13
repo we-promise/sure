@@ -122,6 +122,7 @@ de:
         overview: Übersicht
         schedule: Tilgungsplan
         statements: Auszüge
+        details: Details
     update:
       success: "%{type}-Konto aktualisiert"
     sidebar:
@@ -160,6 +161,49 @@ de:
       eu: Europa
       generic: Generisch
       in: Indien
+    liquidity:
+      preview: Vorschau
+      levels:
+        immediate: Sofort verfügbar
+        short_term: Kurzfristig verfügbar
+        locked: Gebunden bis Datum
+        long_term: Langfristig gebunden
+      badge:
+        short_term: Kurzfristig verfügbar
+        locked: Gebunden
+        locked_until: "Gebunden bis %{date}"
+        long_term: Langfristig gebunden
+      form:
+        heading: Verfügbarkeit
+        level_label: Wie schnell kommst du an dieses Geld?
+        level_hint: Automatisch aus der Kontoart. Ändere es, wenn dieses Konto anders funktioniert.
+        automatic: "Automatisch (%{level})"
+        available_on_label: Gebunden bis
+        auto_renew_label: Verlängert sich automatisch
+        renewal_term_months_label: Laufzeit in Monaten
+      details:
+        title: Details
+        intro_subtype: "Regeln für dieses Konto. Die Standardwerte kommen vom Subtyp %{subtype}."
+        intro_type: "Regeln für dieses Konto. Die Standardwerte kommen von der Kontoart %{type}."
+        edit: Verfügbarkeit ändern
+        "yes": "Ja"
+        "no": "Nein"
+        no_release_date: Kein Datum gesetzt
+        renews:
+          one: verlängert sich jeden Monat
+          other: "verlängert sich alle %{count} Monate"
+        rows:
+          liquidity: Verfügbarkeit
+          release: Frei ab
+          tax_treatment: Steuerart
+          counts_in_budget: Buchungen zählen in Budget und Cashflow
+          counts_as_budget_cash: Saldo zählt im Budget als frei verfügbar
+        sources:
+          subtype: "Aus Subtyp %{subtype}"
+          account_type: "Aus Kontoart %{type}"
+          user: Von dir gesetzt
+          tax_treatment: Folgt der Steuerart
+          liquidity: Folgt der Verfügbarkeit
     tax_treatments:
       taxable: Versteuerbar
       tax_deferred: Steuerlich aufgeschoben

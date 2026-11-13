@@ -1,5 +1,5 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Logoable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Liquidity, Logoable
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
 
@@ -962,6 +962,13 @@ class Account < ApplicationRecord
   end
 
   private
+    # Account::Liquidity locks `liquidity` itself, only when the user picks a
+    # level. Locking it whenever it changed would freeze the subtype default
+    # written on create as if the user had chosen it.
+    def ignored_enrichable_attributes
+      super + %w[liquidity locked_attributes]
+    end
+
     # [date, signed amount in account currency] for each scheduled entry that
     # contributes to the projection.
     def scheduled_entry_flows

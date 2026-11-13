@@ -1,0 +1,28 @@
+<h1><%= t(".heading", count: @reminders.size) %></h1>
+
+<p><%= t(".intro") %></p>
+
+<table class="email-table">
+  <thead>
+    <tr>
+      <th><%= t(".account") %></th>
+      <th><%= t(".what") %></th>
+      <th class="text-right"><%= t(".balance") %></th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @reminders.each do |reminder| %>
+      <tr>
+        <td><%= reminder.account.name %></td>
+        <td><%= account_release_line(reminder) %></td>
+        <td class="text-right"><%= Money.new(reminder.account.balance, reminder.account.currency).format %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p style="margin-top: 16px;">
+  <%= link_to t(".cta"), @accounts_url, class: "button" %>
+</p>
+
+<p><%= t(".settings_hint") %></p>

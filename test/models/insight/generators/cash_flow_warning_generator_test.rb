@@ -41,4 +41,24 @@ class Insight::Generators::CashFlowWarningGeneratorTest < ActiveSupport::TestCas
     assert_equal [ 60, 100, 100 ], entries.sort_by(&:date).map(&:amount).map(&:to_i),
       "the partially paid occurrence contributes only its remainder"
   end
+
+  test "the projection starts from money reachable today, not from every deposit account" do
+    cd = @family.accounts.create!(
+      name: "Term deposit", balance: 10_000, currency: "USD", accountable: Depository.new(subtype: "cd"),
+      available_on: Date.current + 90
+    )
+    brokerage = @family.accounts.create!(
+      name: "Brokerage", balance: 10_000, currency: "USD", accountable: Investment.new(subtype: "brokerage")
+    )
+
+    cash_accounts = Insight::Generators::CashFlowWarningGenerator.new(@family).send(:cash_accounts)
+
+    assert_includes cash_accounts, accounts(:depository)
+    assert_not_includes cash_accounts, cd
+    assert_not_includes cash_accounts, brokerage
+
+    cd.update!(available_on: Date.current)
+
+    assert_includes Insight::Generators::CashFlowWarningGenerator.new(@family).send(:cash_accounts), cd
+  end
 end
