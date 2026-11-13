@@ -441,7 +441,7 @@ Scheduled jobs such as the daily account sync and the market data import only ru
 SIDEKIQ_CRON_GRACE_PERIOD_SECONDS=86400   # default 600 (10 minutes)
 ```
 
-When the worker wakes, each job then runs once for its most recent missed time (older missed runs are not replayed). Restart the worker after changing it.
+When the worker wakes, each job then runs once for its most recent missed time (older missed runs are not replayed). After changing it, run `docker compose up -d worker` (`docker compose -f compose.ai.yml up -d worker` for the AI compose file) to recreate the worker; `docker compose restart` keeps the old value.
 
 ## How to update your app
 
