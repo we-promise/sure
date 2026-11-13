@@ -134,10 +134,12 @@ class RecurringTransaction
       # beyond the window, so a kept row's nearest occurrence just outside it
       # is not mistaken for a farther one inside.
       def stood_in_for(schedule, from, through)
-        # A one-payment plan is a date the user chose. Rows kept from an
-        # earlier schedule are other obligations, not stand-ins for it, and a
-        # yearly half cycle would let one swallow the new date.
-        return Set.new if single_payment?
+        # A Once bill is a date the user chose. Rows kept from an earlier
+        # schedule are other obligations, not stand-ins for it, and a yearly
+        # half cycle would let one swallow the new date. A one-payment
+        # installment has no such date to protect, so its kept row still
+        # stands in for the occurrence it was.
+        return Set.new if single_payment? && !series.typed_installment?
 
         reach = half_cycle(schedule)
         nearby = schedule.occurrence_pairs_between(from - reach, through + reach)

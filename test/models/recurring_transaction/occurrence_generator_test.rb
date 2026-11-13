@@ -107,6 +107,30 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a one-payment installment moved by a day keeps its paid row standing in for the payment" do
+    travel_to Date.new(2026, 8, 13) do
+      installment = @family.recurring_transactions.create!(
+        name: "Sofa plan", amount: 120, currency: "USD", bill_type: "installment",
+        account: accounts(:depository), anchor_date: Date.new(2026, 8, 20), expected_day_of_month: 20,
+        last_occurrence_date: Date.new(2026, 8, 20), next_expected_date: Date.new(2026, 8, 20),
+        status: "active", manual: true, end_mode: "after_count", end_after_count: 1,
+        dedup_scope: "sofa-plan"
+      )
+      installment.recurrence_rules.create!(frequency: "monthly", interval: 1, day_of_month: 20)
+      Generator.new(installment).generate!
+      paid = installment.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 8, 20))
+      RecurringTransaction::Allocator.new(paid).mark_paid!
+
+      RecurringTransaction::FrequencyPreset.apply(installment, preset: "monthly", day_of_month: "21")
+      installment.save!
+
+      # Generate from a fresh read of the series, as the nightly sweep does.
+      Generator.new(RecurringTransaction.find(installment.id)).generate!
+      open_dues = installment.recurring_occurrences.reload.open_status.pluck(:due_on)
+      assert_empty open_dues, "the paid payment stands in for the moved one; no second obligation appears"
+    end
+  end
+
   test "pausing an overdue one-off keeps its row" do
     travel_to Date.new(2026, 11, 13) do
       due = Date.new(2026, 11, 1)
