@@ -1323,7 +1323,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     import_adapter.expects(:find_or_create_merchant).with(
       provider_merchant_id: "enable_banking_merchant_c0b09f27a4375bb8d8d477ed552a9aa1",
       name: "ACME SHOP",
-      source: "enable_banking"
+      source: "enable_banking",
+      iban: nil
     ).returns(merchant)
 
     processor.stubs(:import_adapter).returns(import_adapter)
@@ -1344,7 +1345,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     import_adapter.expects(:find_or_create_merchant).with(
       provider_merchant_id: "enable_banking_merchant_c0b09f27a4375bb8d8d477ed552a9aa1",
       name: "ACME SHOP",
-      source: "enable_banking"
+      source: "enable_banking",
+      iban: nil
     ).returns(merchant)
 
     processor.stubs(:import_adapter).returns(import_adapter)
@@ -1367,7 +1369,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     import_adapter.expects(:find_or_create_merchant).with(
       provider_merchant_id: "enable_banking_merchant_c0b09f27a4375bb8d8d477ed552a9aa1",
       name: "ACME SHOP",
-      source: "enable_banking"
+      source: "enable_banking",
+      iban: nil
     ).returns(merchant)
 
     processor.stubs(:import_adapter).returns(import_adapter)
@@ -1389,7 +1392,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     import_adapter.expects(:find_or_create_merchant).with(
       provider_merchant_id: "enable_banking_merchant_#{Digest::MD5.hexdigest(truncated_name.downcase)}",
       name: truncated_name,
-      source: "enable_banking"
+      source: "enable_banking",
+      iban: nil
     ).returns(merchant)
 
     processor.stubs(:import_adapter).returns(import_adapter)
@@ -1411,7 +1415,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     import_adapter.expects(:find_or_create_merchant).with(
       provider_merchant_id: "enable_banking_merchant_c0b09f27a4375bb8d8d477ed552a9aa1",
       name: "ACME SHOP",
-      source: "enable_banking"
+      source: "enable_banking",
+      iban: nil
     ).returns(merchant)
 
     processor.stubs(:import_adapter).returns(import_adapter)
@@ -1427,6 +1432,106 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     assert_nil processor.send(:merchant)
+  end
+
+  test "passes the counterparty iban to find_or_create_merchant when present" do
+    processor = build_processor(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Landlord GmbH" },
+      creditor_account: { iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    )
+
+    merchant = stub(id: 999)
+    import_adapter = mock("import_adapter")
+    import_adapter.expects(:find_or_create_merchant).with(
+      provider_merchant_id: "enable_banking_merchant_#{Digest::MD5.hexdigest('landlord gmbh')}",
+      name: "Landlord GmbH",
+      source: "enable_banking",
+      iban: "DE89370400440532013000" # pipelock:ignore IBAN
+    ).returns(merchant)
+
+    processor.stubs(:import_adapter).returns(import_adapter)
+
+    assert_equal merchant, processor.send(:merchant)
+  end
+
+  test "groups transactions with the family merchant's iban under it even with different names" do
+    family_merchant = @family.merchants.create!(name: "My Insurance", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    tx1 = {
+      entry_reference: "ref_merchant_iban_1",
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "80.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Insurance Co" },
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+      remittance_information: [ "Policy 12345" ],
+      status: "BOOK"
+    }
+    tx2 = {
+      entry_reference: "ref_merchant_iban_2",
+      transaction_id: nil,
+      booking_date: (Date.current + 1.month).to_s,
+      transaction_amount: { amount: "80.00", currency: "EUR" },
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Insurance Co Renamed" },
+      creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+      remittance_information: [ "Policy 12345 - renewal" ],
+      status: "BOOK"
+    }
+
+    EnableBankingEntry::Processor.new(tx1, enable_banking_account: @enable_banking_account).process
+    EnableBankingEntry::Processor.new(tx2, enable_banking_account: @enable_banking_account).process
+
+    entry1 = @account.entries.find_by!(external_id: "enable_banking_ref_merchant_iban_1")
+    entry2 = @account.entries.find_by!(external_id: "enable_banking_ref_merchant_iban_2")
+
+    assert_equal family_merchant.id, entry1.transaction.merchant_id
+    assert_equal family_merchant.id, entry2.transaction.merchant_id
+  end
+
+  test "keeps payers sharing one account apart when the family has no merchant with that iban" do
+    base = {
+      transaction_id: nil,
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "50.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
+      status: "BOOK"
+    }
+    tx1 = base.merge(entry_reference: "ref_joint_1", debtor: { name: "Alice Example" })
+    tx2 = base.merge(entry_reference: "ref_joint_2", debtor: { name: "Bob Example" })
+
+    EnableBankingEntry::Processor.new(tx1, enable_banking_account: @enable_banking_account).process
+    EnableBankingEntry::Processor.new(tx2, enable_banking_account: @enable_banking_account).process
+
+    merchant1 = @account.entries.find_by!(external_id: "enable_banking_ref_joint_1").transaction.merchant
+    merchant2 = @account.entries.find_by!(external_id: "enable_banking_ref_joint_2").transaction.merchant
+
+    assert_equal "Alice Example", merchant1.name
+    assert_equal "Bob Example", merchant2.name
+    assert_nil merchant1.iban
+    assert_nil merchant2.iban
+  end
+
+  test "falls back to name-based merchant matching when no iban is present" do
+    processor = build_processor(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "Cafe Corner" }
+    )
+
+    merchant = stub(id: 111)
+    import_adapter = mock("import_adapter")
+    import_adapter.expects(:find_or_create_merchant).with(
+      provider_merchant_id: "enable_banking_merchant_#{Digest::MD5.hexdigest('cafe corner')}",
+      name: "Cafe Corner",
+      source: "enable_banking",
+      iban: nil
+    ).returns(merchant)
+
+    processor.stubs(:import_adapter).returns(import_adapter)
+
+    assert_equal merchant, processor.send(:merchant)
   end
 
   # --- technical remittance line skip (issue #2935) ---

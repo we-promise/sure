@@ -22,7 +22,7 @@ pl:
         jego logo
       iban_placeholder: "IBAN (opcjonalnie)"
       iban_set_placeholder: "•••• •••• •••• •••• — IBAN zapisany, wprowadź nową wartość, aby go zastąpić"
-      iban_hint: "Numer rachunku bankowego kontrahenta, jeśli jest znany"
+      iban_hint: "Zaimportowane transakcje z tego numeru konta są przypisywane do tego kontrahenta, gdy ich nazwa nie pasuje do żadnego innego kontrahenta"
       iban_remove_label: "Usuń IBAN"
       website_placeholder: Strona internetowa (np. starbucks.com)
     index:

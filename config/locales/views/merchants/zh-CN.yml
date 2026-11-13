@@ -15,7 +15,7 @@ zh-CN:
       website_hint: 输入商户网站以自动显示其徽标
       iban_placeholder: "IBAN（可选）"
       iban_set_placeholder: "•••• •••• •••• •••• — 已保存 IBAN，输入新值以替换"
-      iban_hint: "商户自己的银行账号（如已知）"
+      iban_hint: "当导入的交易名称与其他商户都不匹配时，来自此账号的交易将归入此商户"
       iban_remove_label: "移除 IBAN"
       logo_label: 徽标
       logo_hint: "覆盖网站徽标。支持 JPEG、PNG 或 WebP，最大 %{max_megabytes}MB。"

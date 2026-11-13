@@ -18,7 +18,7 @@ nl:
       remove_logo_label: "Geüpload logo verwijderen"
       iban_placeholder: "IBAN (optioneel)"
       iban_set_placeholder: "•••• •••• •••• •••• — IBAN opgeslagen, voer een nieuwe waarde in om deze te vervangen"
-      iban_hint: "Het eigen bankrekeningnummer van de handelaar, indien bekend"
+      iban_hint: "Geïmporteerde transacties van dit rekeningnummer worden aan deze handelaar toegewezen als hun naam bij geen andere handelaar past"
       iban_remove_label: "IBAN verwijderen"
     index:
       empty: "Nog geen handelaren"

@@ -20,7 +20,7 @@ fr:
       website_hint: Saisissez le site web du marchand pour afficher automatiquement son logo
       iban_placeholder: "IBAN (facultatif)"
       iban_set_placeholder: "•••• •••• •••• •••• — IBAN enregistré, saisissez une nouvelle valeur pour le remplacer"
-      iban_hint: "Le numéro de compte bancaire du marchand, s'il est connu"
+      iban_hint: "Les transactions importées depuis ce numéro de compte sont attribuées à ce marchand lorsque leur nom ne correspond à aucun autre marchand"
       iban_remove_label: "Supprimer l'IBAN"
       website_placeholder: 'Site web (ex. : starbucks.com)'
     index:

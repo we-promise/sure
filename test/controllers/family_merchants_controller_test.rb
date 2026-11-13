@@ -148,7 +148,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_instance_of ProviderMerchant, Merchant.find(provider_merchant.id)
   end
 
-  test "changing only the website of a provider merchant keeps its iban on the converted merchant" do
+  test "changing only the website of a provider merchant converts it without its shared iban" do
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
     transactions(:one).update!(merchant: provider_merchant)
 
@@ -159,7 +159,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_nil provider_merchant.reload.website_url, "the shared ProviderMerchant must be untouched"
     converted = @user.family.merchants.find_by(name: "Provider Payee")
     assert_equal "https://example.com", converted.website_url
-    assert_equal "AT611904300234573201", converted.iban # pipelock:ignore IBAN
+    assert_nil converted.iban, "an iban on the shared ProviderMerchant may stem from another family"
   end
 
   test "a website-only edit does not inherit an iban another family merchant already holds" do
@@ -178,9 +178,9 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "updating iban on a provider merchant converts it to a family merchant instead of mutating the shared record" do
-    # A ProviderMerchant is shared across every family it's assigned to; iban
-    # drives cross-family merchant-identity matching (unlike website_url),
-    # so an edit must not leak into other families' future transactions.
+    # A ProviderMerchant is shared across every family it's assigned to; an
+    # iban written onto it would be visible to all of them, so the edit must
+    # stay with this family.
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
     transactions(:one).update!(merchant: provider_merchant)
 

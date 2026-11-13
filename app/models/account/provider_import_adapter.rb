@@ -442,6 +442,19 @@ class Account::ProviderImportAdapter
     # If not found by provider_merchant_id, try by exact name match (backwards compatibility)
     merchant ||= ProviderMerchant.find_by(source: source, name: name)
 
+    # Only when no provider merchant matches the id or name: a FamilyMerchant whose IBAN the family
+    # entered itself (see FamilyMerchantsController) catches a counterparty
+    # whose provider name varies. The exact name match runs first so that two
+    # payers sharing one account (e.g. a joint account) keep their own
+    # merchants. The IBAN is never written onto the ProviderMerchant: that
+    # record is shared by every family, so a counterparty IBAN seen in one
+    # family's sync must not become visible to another.
+    unless merchant
+      normalized_iban = IbanNormalizable.normalize(iban)
+      family_merchant = account.family.merchants.find_by(iban: normalized_iban) if normalized_iban.present?
+      return family_merchant if family_merchant
+    end
+
     if merchant
       # Update logo if provided and merchant doesn't have one (or has a different one)
       # Best-effort: don't fail transaction import if logo update fails

@@ -22,12 +22,14 @@ class ProviderMerchantTest < ActiveSupport::TestCase
     assert entry.user_modified?, "converted transaction's entry must be flagged so provider sync won't revert it"
   end
 
-  test "convert_to_family_merchant_for carries over the existing iban when not overridden" do
+  test "convert_to_family_merchant_for does not inherit the shared merchant's iban" do
+    # A ProviderMerchant is shared across families, so an iban on it may come
+    # from another family's data and must not be copied into this family.
     @provider_merchant.update!(iban: "DE89370400440532013000") # pipelock:ignore IBAN
 
     family_merchant = @provider_merchant.convert_to_family_merchant_for(@family)
 
-    assert_equal "DE89370400440532013000", family_merchant.iban # pipelock:ignore IBAN
+    assert_nil family_merchant.iban
   end
 
   test "convert_to_family_merchant_for uses the submitted iban override" do

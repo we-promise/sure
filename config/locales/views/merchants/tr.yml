@@ -22,7 +22,7 @@ tr:
         girin
       iban_placeholder: "IBAN (isteğe bağlı)"
       iban_set_placeholder: "•••• •••• •••• •••• — IBAN kayıtlı, değiştirmek için yeni bir değer girin"
-      iban_hint: "Biliniyorsa satıcının banka hesap numarası"
+      iban_hint: "Bu hesap numarasından içe aktarılan işlemler, adları başka hiçbir satıcıyla eşleşmediğinde bu satıcıya atanır"
       iban_remove_label: "IBAN'ı kaldır"
       website_placeholder: Web sitesi (örn. starbucks.com)
     index:
