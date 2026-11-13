@@ -2312,15 +2312,22 @@ AI call, in PR 3, with the other web-thread calls (section 19).
   is `Ai.available?`. A search spends the operator's AI tokens like any other call. A call that AI can't serve
   answers with the router's reason, never with `403 insufficient_scope`, so a client can tell
   "AI isn't set up" from "this token can't write".
-- **Only the model call moves; nothing an MCP client sees changes** (call by @josh-sanders during development of PR #4440). Both tools run
+- **Only the model call moves** (call by @josh-sanders during development of PR #4440). Both tools run
   their AI work as an `Ai::ToolJob` and the MCP request waits for the result: `search_family_files`
   on `ai_interactive` for up to 30 seconds, then "busy, try again"; `import_bank_statement` on
-  `ai_prompt` for up to the route's time budget, then an error saying the extraction didn't
-  finish. The web thread waits, as it does today, but never calls a model, so the work takes the
-  gate and the capsule-only check can land. The handoff is `Rails.cache`: the job writes its
+  `ai_prompt` for up to 120 seconds, then "still extracting; call again" (calls by @josh-sanders,
+  2026-11-13). The web thread waits, as it does today, but never calls a model, so the work takes the
+  gate and the capsule-only check can land. The handoff is Sidekiq's Redis (`Ai::SharedState`),
+  not `Rails.cache`, which isn't shared between processes on every install: the job writes its
   result to `ai/tool_results/<job id>` (expiring after 2 minutes), and the request polls that key
   every 250 ms. `ActiveSupport::Notifications` can't be used, because it doesn't cross processes.
   Chat keeps calling `import_bank_statement` inside the chat job, as today.
+- **One change an MCP client sees: `import_bank_statement` becomes idempotent per `PdfImport`**
+  (call by @josh-sanders, 2026-11-13). Otherwise a job that finishes after its request gave up
+  still creates a `TransactionImport`, and a retry creates a second. A repeated call returns the
+  existing import with `already_imported: true` (`imports.source_import_id`, unique), and a
+  retry while the job runs waits for that job. Details in
+  [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md), step 6.
 - **To the MCP work-pack:** an asynchronous `import_bank_statement` that returns a pending import,
   a read-only `get_import_status`, and streaming for long tool calls (Streamable HTTP or SSE, the
   future work #1051 listed and #2631 didn't build). They change the MCP interface, beside #4283's
@@ -2806,8 +2813,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    upgrade guide says to give the web and the workers the same AI variables.
 3. **Off the web thread.** Smart-fill and smart-configure through `RecurringTransaction::Suggestion`
    and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob` keeping #3155's cache,
-   and the two MCP AI tools' model calls through `Ai::ToolJob` and its result handoff, with no
-   change an MCP client sees (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, and the
+   and the two MCP AI tools' model calls through `Ai::ToolJob` and its result handoff; the one
+   change an MCP client sees is that `import_bank_statement` becomes idempotent (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, and the
    checks in the plumbing (section 12). Capsule-only enforcement, now that no AI call is left on a
    web thread. Adds the capsule-only and completion-hook tests.
    Built in parallel with PR 4, both off 2f, merged in order in the same release. Development plan: [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md).

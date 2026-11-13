@@ -5,12 +5,13 @@ whole design), §12 (the gate's cancel point), §17 (`ai_gate_test`, `ai_lane_te
 `ai_nested_call_test`, the escalation cases), the spike's "Job runners and chat priority" and
 "Prompt cache and prompt reads on one slot" in [`rubyllm-spike-report.md`](rubyllm-spike-report.md),
 and [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md), which is built at the same time.
-**Base:** `feat/ai-2f-review` @ `d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0).
-**Branch:** `feat/ai-4-sequencer`, worktree `~/src/sure-ai-4`, built in parallel with PR 3 on
-`feat/ai-3-off-web-thread` (call by @josh-sanders, 2026-11-13). Rebased onto PR 3 once that merges.
+**Base:** PR 3's step 1 commit on `feat/ai-3-off-web-thread`, which sits on `feat/ai-2f-review` @
+`d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0). Step 1 gives PR 4 the `ApplicationJob` hook,
+`Ai::Capsule`'s queue list and `Ai::SharedState` without a copy of its own.
+**Branch:** `feat/ai-4-sequencer`, worktree `~/src/sure-ai-4`, started from that commit, then built in
+parallel with the rest of PR 3 (calls by @josh-sanders, 2026-11-13). Rebased onto PR 3 once that merges.
 **Merge order:** after PR 3, in the same release.
-**Status:** plan. Calls already made by @josh-sanders are marked; proposed calls are listed under
-[Decisions](#decisions) and need a call before their step is built.
+**Status:** plan; every decision below was made by @josh-sanders on 2026-11-13.
 
 ## Context
 
@@ -82,9 +83,9 @@ across processes (future work, §11); chat on RubyLLM (PR 6).
 - #4237's health signals carry over, adjusted to the new queues.
 - Small batches with re-enqueue for fairness (already in 2c's `Ai::GenerationJob`).
 - Chat has its own capsule (spike evidence), not 05 BC7's "one lane, optional chat capsule".
-- Develop PR 3 and PR 4 on separate branches off 2f (2026-11-13).
+- Develop PR 3 and PR 4 on separate branches, PR 4 starting from PR 3's step 1 (2026-11-13).
 
-**Proposed, each needing a call before its step is built:**
+**Decided by @josh-sanders, 2026-11-13** (each changes or settles the proposal):
 
 1. **The lane comes from the job's queue, set in `ApplicationJob`'s `around_perform`.** That's
    the callback where PR 3 marks AI jobs as inside the capsule. A Sidekiq middleware would be
@@ -280,7 +281,10 @@ runs. The numbers go in the PR description.
   **local host that chat's route uses** (`ai/hold/<host>` in `Ai::SharedState`), not a global
   key. Chat's host is the first route's endpoint from
   `Ai::Router.new(family: Current.family, user: Current.user).resolve(:chat)`.
-  `Ai::LegacyEnvConfig` already builds a `chat` route. A cloud chat route holds nothing.
+  `Ai::LegacyEnvConfig` already builds a `chat` route. A cloud chat route holds nothing. Step 6's
+  gate lines read the same route, and `ai_agreement_test` gains a case: the route's host is the
+  host of the provider today's chat calls, for each of its configurations, so the hold and the
+  gate can't land on different hosts.
 - The gate reads the hold before admitting a new background call (`Busy`) or prompt call (waits,
   decision 3). Running calls aren't interrupted by the hold; only a chat request interrupts.
 - The `one_ai_thread?` guard goes: with the gate, the hold matters whenever chat's host is local,
@@ -296,7 +300,8 @@ runs. The numbers go in the PR description.
 ### 6. Today's chat takes the gate
 
 - `Assistant::Responder#request_response` wraps `llm.chat_response` in
-  `Ai::Sequencer.hold_for_chat(host) { }`: interactive lane, the chat provider's host, no interrupt
+  `Ai::Sequencer.hold_for_chat(host) { }`: interactive lane, the host of chat's route from the
+  router, the same one step 5's typing hold uses (call by @josh-sanders, 2026-11-13), no interrupt
   callable (chat's own requests are never interrupted, §11). Marked as temporary and named in the
   PR: PR 6 deletes it, because chat's requests then pass the instrumenter like everything else.
 - Tools run between rounds, outside the hold (checked above), so a tool's `search_documents`
@@ -378,9 +383,9 @@ PR 3 merges first; PR 4 rebases onto it. What PR 4 relies on and avoids:
   - PR 3's `ApplicationJob` `around_perform` and `Ai::SharedState`;
   - `Ai::ProbeJob` and `Ai::ToolJob` existing, for the `Busy` re-enqueue and the lane table.
 
-  Until PR 3 is on the branch, PR 4 adds its own `around_perform` line and a minimal Redis
-  read/write, and merges them into PR 3's on rebase. The probe re-enqueue and `ToolJob`'s lanes
-  are finished after the rebase.
+  The first three come with PR 3's step 1, which this branch starts from. `Ai::ProbeJob` and
+  `Ai::ToolJob` arrive in PR 3's later steps, so the probe re-enqueue and `ToolJob`'s lanes are
+  finished after the rebase.
 - **Avoids:** any capsule or escape-hatch method on `Ai::Sequencer` (PR 3's decision 1); changing
   job classes to set lanes (decision 1 here).
 - **Expected rebase conflicts:** `app/jobs/application_job.rb`, `test/support/ai_test_helper.rb`,

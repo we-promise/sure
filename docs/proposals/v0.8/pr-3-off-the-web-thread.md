@@ -4,13 +4,13 @@
 run only inside the AI capsules), §11 ("No LLM call on a web thread"), §12, §13, §14, §15 and §17,
 and [`pr-4-sequencer.md`](pr-4-sequencer.md), which is built at the same time.
 **Base:** `feat/ai-2f-review` @ `d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0).
-**Branch:** `feat/ai-3-off-web-thread`, worktree `~/src/sure-ai-3`. PR 4 is built in parallel on
-`feat/ai-4-sequencer`, also off 2f (call by @josh-sanders, 2026-11-13).
+**Branch:** `feat/ai-3-off-web-thread`, worktree `~/src/sure-ai-3`. Step 1 is built first; PR 4's
+branch `feat/ai-4-sequencer` starts from that commit, and the rest of both PRs proceeds in parallel
+(calls by @josh-sanders, 2026-11-13).
 **Merge order:** PR 3 first, then PR 4 rebased onto it, **both in the same release**: until PR 4
 lands, the jobs PR 3 creates for interactive work share the single `ai` thread with background
 work (see [Coordination with PR 4](#coordination-with-pr-4)).
-**Status:** plan. Calls already made by @josh-sanders are marked; proposed calls that change
-the proposal are listed under [Decisions](#decisions) and need a call before their step is built.
+**Status:** plan; every decision below was made by @josh-sanders on 2026-11-13.
 
 ## Context
 
@@ -51,8 +51,8 @@ What 2c–2e already built and PR 3 reuses:
 1. Smart-fill and smart-configure through `RecurringTransaction::Suggestion` and a Turbo Stream.
 2. Non-PDF document embedding as a job.
 3. `Ai::ProbeJob`, keeping #3155's cache, "Run checks again" and "opening a tab triggers no AI request".
-4. The two MCP AI tools' model calls through `Ai::ToolJob` and its result handoff, with no change an
-   MCP client sees (§14).
+4. The two MCP AI tools' model calls through `Ai::ToolJob` and its result handoff, with one
+   change an MCP client sees: `import_bank_statement` becomes idempotent (§14).
 5. Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, the checks in the
    plumbing (§12) and `DELETE` on the resource that started the work (§15).
 6. Capsule-only enforcement, now that no AI call is left on a web thread.
@@ -69,16 +69,17 @@ Not in PR 3: lanes, queues, the gate, interrupts and the typing hold (PR 4); cha
   receive the result as a Turbo Stream broadcast, the same pattern as
   `Chat#broadcast_pending_status`. Same dialog, same bounded charge history, nothing applied until
   the user checks it (§11).
-- Only the MCP tools' model call moves; nothing an MCP client sees changes (§14).
+- Only the MCP tools' model call moves (§14). The one change an MCP client sees is that
+  `import_bank_statement` becomes idempotent per `PdfImport` (2026-11-13, step 6).
   `search_family_files` waits up to 30 s, then answers "busy, try again"; `import_bank_statement`
   waits up to the route's time budget. The asynchronous `import_bank_statement` with a pending
   import (05 BC6) stays with the MCP work-pack.
 - `AiHealth::Probe` keeps its caching, redaction, debug logging and `confirming_tools_refusal`; only
   the probe itself moves into a job, whose result arrives by Turbo Stream (§13).
 - Cancellation is cooperative, as #2685's is: nothing is killed mid-write (§12).
-- Develop PR 3 and PR 4 on separate branches off 2f (2026-11-13).
+- Develop PR 3 and PR 4 on separate branches, PR 4 starting from PR 3's step 1 (2026-11-13).
 
-**Proposed, each needing a call before its step is built:**
+**Decided by @josh-sanders, 2026-11-13** (each changes or settles the proposal):
 
 1. **The escape hatch is `Ai::Capsule.outside { }`, not `Ai::Sequencer.outside_capsule { }`.**
    §7 and §17 name a method on `Ai::Sequencer`, which PR 4 creates. Building both PRs in parallel,
@@ -127,13 +128,13 @@ Not in PR 3: lanes, queues, the gate, interrupts and the typing hold (PR 4); cha
    PR 7" asks; §13's switch to the endpoint's timeout lands with PR 7's per-endpoint settings.
 6. **The cop allows `Ai::Capsule.outside` in `app/models/eval/**` and `lib/tasks/evals.rake`.** §17 lists
    `lib/eval/**`, but the eval client lives in `app/models/eval/` and is started by the rake task.
-7. **A non-PDF document keeps its file.** To index in a job, the bytes have to be stored, since a
-   job argument can't carry a 10 MB file. `FamilyDocument#file` (already declared) holds the upload. Keeping it after
-   indexing, rather than purging it, lets PR 7 re-index when the embedding model changes (its
-   dimension mismatch case) and when Documents is turned on. That's a data-retention change: today
-   Sure keeps only the vector store's copy. The release note says so. Deleting the document
-   already purges the file: `Family#remove_document` calls `destroy`, and `has_one_attached`
-   purges by default.
+7. **A non-PDF document's file is deleted once it's indexed.** To index in a job, the bytes have
+   to be stored, since a job argument can't carry a 10 MB file. `FamilyDocument#file` (already
+   declared) holds the upload until the job has sent it to the store, then the job purges it,
+   whether indexing succeeded or failed for good. Sure keeps only the vector store's copy, as
+   today. The cost: PR 7 can't re-index these documents itself when the embedding model changes
+   or Documents is turned on; the user uploads them again. Statements and PDF imports are
+   unaffected, since they keep their files already.
 8. **Smart-fill's suggestion has no bill yet.** §12's table gives `RecurringTransaction::Suggestion`
    a `recurring_transaction_id`; smart-fill starts from an entry, before any bill exists. The table
    gets `entry_id` too, and exactly one of them is set (a check constraint).
@@ -265,7 +266,9 @@ end
   bytes to the store against the existing row. `upload_document` is split so the two indexing
   jobs and `ProcessPdfJob` share one `index_document(document, file_content:)`; the other two keep
   creating their row as they do now. A failure calls `mark_error!` and writes a `DebugLogEntry`
-  (category `documents`), as `IndexAccountStatementJob` does.
+  (category `documents`), as `IndexAccountStatementJob` does. Once the store has the file, or
+  indexing has failed for good, the job purges `document.file` (decision 7). A retried job runs
+  before the purge, so it still has the bytes.
 - `ImportsController#create_document_import` keeps its checks and their messages (availability,
   store, size, extension, the PDF hand-off), and replaces the `upload_document` call with
   `upload_document_later`. It redirects with "Uploaded; it will be searchable once indexed". The
@@ -326,8 +329,9 @@ end
 - `Ai::ToolJob.run(fn_class, user, arguments, timeout:)` enqueues and reads the key every 250 ms.
   It polls rather than blocking on a Redis list: a blocking pop would hold one of the web's Sidekiq
   connections for the whole wait, up to minutes for an import.
-  On timeout it returns the §14 message (`search_family_files`: "busy, try again";
-  `import_bank_statement`: "the extraction didn't finish"), as an `isError` tool result.
+  On timeout it returns the §14 message, as an `isError` tool result: `search_family_files`
+  answers "busy, try again"; `import_bank_statement` answers "still extracting; call again with the
+  same `pdf_import_id` for the result", which is safe because the tool is idempotent (below).
 - `McpController#handle_tools_call`: `Usage.capture("mcp_call_served_daily")` stays before the
   tool runs (#4295). A function with an `ai_feature` that `Ai.available?` for the token's user runs
   through `Ai::ToolJob.run`; otherwise inline as today, which covers `search_family_files`'s
@@ -343,15 +347,24 @@ end
   this branch sets it, and whether a `read` token may see documents is a scope check, as §14 has
   it (raised on #3580 and #4628). If #3580 lands with `read_only? = false` on `SearchFamilyFiles`,
   step 6 works unchanged; only chat's approvals (#4440's PR 6) depend on the flag being accurate.
-- Timeouts: `search_family_files` 30 s; `import_bank_statement` the `extract_pdf` route's budget
-  (the first servable entry's `timeout_seconds` times its page batches, or a flat cap if that's
-  not knowable before reading: **settle in review**, with the Puma and proxy timeouts in mind).
-- A job that finishes after its request gave up writes a key nobody reads, and it expires. For
-  `import_bank_statement` that's not harmless: the tool creates a new `TransactionImport` from the
-  extraction, so a late job still creates one, and a client that retries after the timeout gets a
-  second. The timeout answer says so ("still extracting; the import will appear in your imports;
-  don't call again"). Making the tool idempotent per `PdfImport` would need a link between the two
-  imports, which is a change an MCP client could see: **needs a call**.
+- Timeouts: `search_family_files` 30 s; `import_bank_statement` a flat 120 s, below common reverse
+  proxy timeouts. The page count isn't known before reading, so a route budget can't be computed
+  up front, and a client that times out can call again.
+- **`import_bank_statement` is idempotent per `PdfImport`.** The tool creates a `TransactionImport`
+  from the extraction, so without this a job that finishes after its request gave up still
+  creates one, and a client that retries gets a second.
+  - Migration: `imports.source_import_id` (nullable, references `imports`), with a unique index
+    where it's set. `PdfImport has_one :derived_import`; the tool sets `source_import:` on the
+    `TransactionImport` it creates.
+  - The tool returns the existing derived import, with `already_imported: true`, before extracting
+    anything. Two jobs racing past that check hit the unique index; the loser rescues
+    `ActiveRecord::RecordNotUnique` and returns the winner's import.
+  - While a job for a `PdfImport` is running, `Ai::SharedState` holds
+    `ai/tool_inflight/import_bank_statement:<pdf_import_id>` with its job id, so a retry waits for
+    that job's result instead of extracting again. The job clears it when it writes its result.
+  - Chat's calls to the tool get the same behaviour.
+  - What an MCP client sees: a repeated call returns the same import, with
+    `already_imported: true`, where it used to create another. The release note says so.
 - Chat keeps calling both tools inside its own job, which is already in the capsule.
 - Tests run the job with `perform_enqueued_jobs` and give `Ai::SharedState` a memory store
   (test has no shared Redis to rely on).
@@ -420,8 +433,8 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 
 | PR | Interaction | Handling |
 |---|---|---|
-| #4425 Fill splits from a receipt | A **new model call on the web thread** (`SplitsController#itemize`, `Api::V1::SplitsController#itemize`), on the providers 2c–2e delete. The capsule check covers `Ai::Transport` only, so it wouldn't catch this call. | **Needs a call:** ask for it to be rebuilt on the stack: an `extract_receipt` generation and a suggestion, a job and a broadcast, as in step 3. The API either becomes async or waits as `Ai::ToolJob` does. |
-| #4776 Tools/AI onboarding | "Save and test" runs `AiHealth::Probe` (with a new `family:` argument) in the request, which raises once step 8 is on. It edits files steps 2, 4, 5 and 6 change or delete. Per-family keys are PR 9's scope. | **Needs a call:** its family provider settings move to PR 7 and PR 9; its test button enqueues `Ai::ProbeJob`. |
+| #4425 Fill splits from a receipt | A **new model call on the web thread** (`SplitsController#itemize`, `Api::V1::SplitsController#itemize`), on the providers 2c–2e delete. The capsule check covers `Ai::Transport` only, so it wouldn't catch this call. | Asked on the PR (2026-11-13) to rebuild it on #4892: an `extract_receipt` generation, a requester record, `Ai::GenerationJob` and a frame reload, as in step 3. The API returns a pending result. |
+| #4776 Tools/AI onboarding | "Save and test" runs `AiHealth::Probe` (with a new `family:` argument) in the request, which raises once step 8 is on. It edits files steps 2, 4, 5 and 6 change or delete. Per-family keys are PR 9's scope. | Asked on the PR (2026-11-13): merge the onboarding on its own, enqueue a job for "Save and test", and move family provider settings to a follow-up (PR 7 and PR 9). |
 | #3717 PDF import management, #3735 upload flow | Multi-file upload looping `upload_document` on the web thread; "directly deletable" imports. | Step 4 (each file goes through `upload_document_later`), step 7 (cancelled imports are deletable). |
 | #4516 typed family documents | `content_sha256` with a unique index per family, and duplicate adoption in `upload_document`. | Step 4 (hash and adoption when the pending row is created). |
 | #3580, #4182, #4283 MCP | Rewrite `McpController`; #3580 adds `read_only?` and keeps `SearchFamilyFiles` from `read` tokens by setting it to `false`. §14 separates "writes" from "exposes documents" (suggested on #3580 and #4628). | Step 6 rebases on their envelope. It runs only what `tools/call` authorized, so it doesn't depend on how the document question is settled. |
@@ -455,7 +468,8 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 
 ## Coordination with PR 4
 
-Both branches start at `d55dc808a`. PR 3 merges first; PR 4 rebases onto it.
+PR 4's branch starts from this PR's step 1 commit, so the hook, the queue list and
+`Ai::SharedState` exist once. PR 3 merges first; PR 4 rebases onto it.
 
 | Shared point | PR 3 | PR 4 | Agreement |
 |---|---|---|---|
@@ -489,12 +503,13 @@ button. Configuration from the deprecated ENV, built per process. The probe time
   the dialogs and the health tab say so.
 - **Release notes:**
   - smart-fill and smart-configure answer in the dialog when ready, and can be stopped;
-  - documents index in the background, and their status shows until searchable; Sure keeps the
-    uploaded file (decision 7);
+  - documents index in the background, and their status shows until searchable;
+  - MCP `import_bank_statement` returns the existing import, with `already_imported: true`, when
+    the statement was already imported, instead of creating another;
   - a PDF import can be stopped while it's being read;
   - AI health checks run in the worker; "Run checks again" queues them, and each result shows its
     age; "Verify from worker" is gone, since every check now runs there;
-  - MCP clients see no change;
+  - MCP clients see one change: `import_bank_statement` is idempotent (above);
   - the PDF vision health check no longer fails on reasoning models (#4866), and the AI tab shows
     how long a result is kept (#3279).
 
