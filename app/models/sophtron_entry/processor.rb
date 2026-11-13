@@ -155,9 +155,11 @@ class SophtronEntry::Processor
 
     # Parses and converts the transaction amount.
     #
-    # Sophtron uses standard banking convention (negative = expense, positive = income)
-    # while Maybe uses inverted signs (positive = expense, negative = income).
-    # This method negates the amount to convert between conventions.
+    # Sure stores outflows as positive and inflows as negative. Most Sophtron
+    # feeds sign amounts from the account holder's side (negative = money out),
+    # so the amount is negated. A credit card feed signed from the lender's side
+    # already reports charges as positive and payments as negative, which is
+    # Sure's convention, so its amounts are kept as reported.
     #
     # @return [BigDecimal] The converted amount
     # @raise [ArgumentError] if the amount cannot be parsed
@@ -171,10 +173,7 @@ class SophtronEntry::Processor
         BigDecimal("0")
       end
 
-      # Sophtron likely uses standard convention where negative is expense, positive is income
-      # Maybe expects opposite convention (expenses positive, income negative)
-      # So we negate the amount to convert from Sophtron to Maybe format
-      -parsed_amount
+      sophtron_account.lender_signed? ? parsed_amount : -parsed_amount
     rescue ArgumentError => e
       Rails.logger.error "Failed to parse Sophtron transaction amount: #{data[:amount].inspect} - #{e.message}"
       raise

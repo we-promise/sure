@@ -1135,12 +1135,23 @@ Good test queries that exercise different capabilities:
 ### Cloud Costs
 
 **Full pricing table last verified: October 17, 2026.** Every model
-listed in [`LlmUsage::PRICING`](../../app/models/llm_usage.rb) was checked against
-official sources on that date, except the Claude and OpenAI rows: those were
-last reviewed on November 1, 2026, without re-checking the Gemini rows.
-`PRICING_VERIFIED_ON` supplies the full-table verification date shown on
+listed in [`config/llm_pricing.yml`](../../config/llm_pricing.yml) was checked
+against official sources on that date, except the Claude and OpenAI rows: those
+were last reviewed on November 1, 2026, without re-checking the Gemini rows.
+The file's `verified_on` supplies the full-table verification date shown on
 the LLM usage screen. This is a manual review date, not a claim that providers
 changed every price that day.
+
+The **Refresh LLM pricing** workflow runs on every release tag and on demand.
+It runs `bin/update_llm_pricing`, which reads
+[LiteLLM's price list](https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json)
+and then opens a pull request. While that pull request is open, later runs
+skip, so nothing overwrites a review in progress. The pull request rewrites listed
+rows whose prices changed and adds new Claude and GPT tier releases (for
+example `claude-opus-6` or `gpt-6.2-sol`). Its description lists the changes
+and any rows LiteLLM does not have. Check each change against the provider's
+pricing page before merging. After adding a newer release, point the family or
+tier fallback alias at it. Bump `verified_on` only after reviewing every row.
 
 Rates are USD per million tokens at the Standard tier. The source coverage is:
 

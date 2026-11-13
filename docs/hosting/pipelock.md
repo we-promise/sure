@@ -94,6 +94,22 @@ MCP_API_TOKEN=generate-a-random-token
 MCP_USER_EMAIL=your@email.com
 ```
 
+### MCP listener authentication
+
+Pipelock 3.2 and later refuse to start a non-loopback MCP listener unless it has a listener token or the `--mcp-allow-unauthenticated` acknowledgement. The example uses the acknowledgement: Sure's `/mcp` still requires its own token, `/mcp` is already reachable on port 3000, and OAuth-only MCP clients can't send the extra header a listener token needs.
+
+To require a listener token in Docker Compose:
+
+1. Generate it so that only its owner can read it (Pipelock rejects world-readable token files): `(umask 077; openssl rand -hex 32 > pipelock-mcp-listener.token)`
+2. Pipelock runs as uid/gid 1000 and must be able to read the file. On Linux, if your user isn't 1000, set `PIPELOCK_UID` and `PIPELOCK_GID` in `.env` to the numbers `id -u` and `id -g` print.
+3. Mount it on the `pipelock` service: `- ./pipelock-mcp-listener.token:/run/pipelock/mcp-listener.token:ro`
+4. Replace `--mcp-allow-unauthenticated` with `--mcp-auth-token-file` and `/run/pipelock/mcp-listener.token`.
+5. Recreate Pipelock so the new user, mount and flag take effect: `docker compose -f compose.ai.yml up -d pipelock`
+
+In Helm, set `pipelock.mcpProxy.authTokenSecret.name` to a Secret holding the token (key `token`, or set `authTokenSecret.key`). The pod's `fsGroup` (1000 by default) is what lets Pipelock read the mounted Secret; keep it if you override `podSecurityContext`.
+
+Clients then send `Proxy-Authorization: Bearer <listener token>` alongside their usual `Authorization: Bearer <MCP_API_TOKEN>` for Sure. Without the listener token Pipelock answers `407 Proxy Authentication Required`.
+
 ### Running without Pipelock
 
 To use `compose.example.ai.yml` without Pipelock, remove the `pipelock` service and its `depends_on` entries from `web` and `worker`, then unset the proxy env vars (`HTTPS_PROXY`, `HTTP_PROXY`).
@@ -285,6 +301,8 @@ Common issues:
 - Missing `pipelock.example.yaml` file
 - YAML syntax errors in config
 - Port conflicts (8888 or 8889 already in use)
+- `non-loopback MCP listener ... requires an auth token file`: Pipelock 3.2+ needs `--mcp-allow-unauthenticated` or `--mcp-auth-token-file`. See [MCP listener authentication](#mcp-listener-authentication).
+- `has insecure permissions` or `permission denied` reading the listener token: see the file steps in [MCP listener authentication](#mcp-listener-authentication).
 
 ### LLM calls failing with proxy errors
 
