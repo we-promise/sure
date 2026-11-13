@@ -135,7 +135,7 @@ class Api::V1::PaycheckPlansControllerTest < ActionDispatch::IntegrationTest
     assert_equal "1000.00", paycheck["total_income"]
     assert_equal "500.00", paycheck["by_account"][bob_checking.id] # 450 leftover + 50 specific
     assert_equal "450.00", paycheck["by_account"][jakob_checking.id] # 50% of 900
-    leftover_row = paycheck["allocations"].find { |a| a["mode"] == "leftover" }
+    leftover_row = paycheck["allocations"].find { |a| a["mode"] == "leftover" && a["account_id"] == bob_checking.id }
     assert_equal "450.00", leftover_row["amount"]
     assert_not leftover_row["shortfall"]
 

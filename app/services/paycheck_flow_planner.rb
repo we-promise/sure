@@ -44,7 +44,15 @@ class PaycheckFlowPlanner
                         .joins(:recurring_transaction)
                         .where(recurring_transactions: { status: :active, bill_type: :income, manual: true })
                         .includes(recurring_transaction: { account: :owner })
-                        .order(:due_on)
+                        # ( fix): deterministic tie-break. Two
+                        # income series sharing a due_on date previously
+                        # ordered by physical (heap) position, leaking into
+                        # the incomes array order. :created_at keeps the
+                        # meaningful insertion order (the order the streams
+                        # were added), which the per-income report ordering
+                        # (first leftover row) depends on; :id is only a
+                        # final safety net for an identical timestamp.
+                        .order(:due_on, :created_at, :id)
                         .to_a
 
     incomes = occurrences.each_with_object({}) do |occurrence, map|
