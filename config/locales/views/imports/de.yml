@@ -41,6 +41,40 @@ de:
     configurations:
       update:
         success: Import wurde erfolgreich konfiguriert.
+        monarch_success: Kontoauswahl gespeichert.
+      monarch:
+        title: Jedes Monarch-Konto prüfen
+        description: Wähle für jedes Konto, wohin es kommt, welchen Typ es hat und was übernommen werden soll.
+        help_title: So wirken die einzelnen Optionen
+        help_account: Importiere in ein neues Konto mit einem Namen deiner Wahl oder in eines deiner manuellen Konten. Ein vorhandenes Konto behält Namen, Typ und eigene Einträge; sein Anfangssaldo rückt an den Beginn des Monarch-Verlaufs, falls er in diesen Zeitraum fällt. Sein Status richtet sich nach dem gewählten Status. In Konten mit Positionen oder Trades lässt sich nicht importieren.
+        help_closed: "Setz den Status auf Geschlossen für Konten, die du aufgelöst hast. Ihr Saldo fällt am Tag nach dem letzten Monarch-Kontostand auf null, und sie werden bei den aktuellen Kontoständen ausgeblendet, bleiben aber im Verlauf deines Nettovermögens. Als inaktiv markierte Konten hatten in den letzten %{days} Tagen keine Bewegungen – das heißt nicht immer, dass sie geschlossen sind."
+        help_transactions: Schalte Transaktionen aus, um nur den Saldoverlauf eines Kontos zu importieren.
+        help_balance: Der heutige Kontostand ist mit dem letzten Monarch-Kontostand vorbelegt. Ändere ihn, wenn er veraltet ist; er wird dann als heutiger Kontostand erfasst. Gib offene Beträge bei Karten und Krediten als positive Zahlen ein.
+        table_label: Monarch-Konten
+        import_column: Importieren
+        account_column: Kontoname
+        destination_column: Importieren in
+        type_column: Typ
+        status_column: Status
+        status_open: Offen
+        status_closed: Geschlossen
+        toggle_all_label: "%{column} für alle Konten"
+        transactions_column: Transaktionen
+        balance_column: Kontostand heute
+        import_label: "%{name} importieren"
+        destination_label: "Wohin %{name} importiert wird"
+        name_label: "Name in Sure für %{name}"
+        monarch_name: "In Monarch: %{name}"
+        type_label: "Typ von %{name}"
+        status_label: "%{name} ist offen"
+        transactions_label: "Transaktionen von %{name} importieren"
+        balance_label: "Heutiger Kontostand von %{name}"
+        new_account: Neues Konto
+        inactive: Inaktiv
+        last_activity: "Letzte Bewegung am %{date}"
+        no_activity: Keine Bewegungen
+        no_transactions: Keine
+        submit: Import prüfen
       category_import:
         button_label: Weiter
         description: Lade eine einfache CSV-Datei hoch (z. B. wie bei einem Export). Die Spalten werden automatisch zugeordnet.
@@ -210,6 +244,19 @@ de:
         title: Daten importieren
         account_optional_label: Konto (optional)
         copy_paste_tab: Einfügen
+        monarch_title: Lade deine Monarch-Exporte hoch
+        monarch_description: Übernimm deine Konten, Transaktionen und den Saldoverlauf aus Monarch.
+        monarch_export_title: Lade deine Daten aus Monarch herunter
+        monarch_export_step_settings_html: "Melde dich im Web bei Monarch an und öffne %{link}."
+        monarch_export_settings_link: Settings → Data
+        monarch_export_step_download: Lade deine Transaktionen und den Saldoverlauf deiner Konten jeweils als CSV-Datei herunter.
+        monarch_export_step_upload: Wähle die Dateien unten aus.
+        monarch_export_help_html: "Monarch erklärt jeden Download in %{link}."
+        monarch_export_help_link: seinem Hilfeartikel
+        monarch_balances_label: Export der Kontostände
+        monarch_transactions_label: Export der Transaktionen
+        monarch_transactions_hint: Lass den Transaktionsexport weg, um nur den Saldoverlauf zu importieren.
+        monarch_upload_button: Exporte hochladen
         csv_invalid: Die Datei muss eine gültige CSV mit Kopfzeile und mindestens einer Datenzeile sein
         download_sample_csv: Beispiel-CSV herunterladen
         drop_csv_subtitle: Deine Datei wird automatisch hochgeladen
@@ -221,6 +268,7 @@ de:
         upload_csv_tab: CSV hochladen
       handle_qif_upload:
         qif_uploaded: QIF-Datei hochgeladen.
+        qif_account_required: Wähl ein Konto für den QIF-Import aus
       sure_import:
         browse: Durchsuchen
         browse_hint: um deine Datei all.ndjson hinzuzufügen
@@ -233,6 +281,8 @@ de:
         upload_button: NDJSON hochladen
       update:
         qif_uploaded: QIF-Datei hochgeladen.
+        monarch_uploaded: Monarch-Exporte hochgeladen.
+        monarch_balances_required: Wähl den Monarch-Export der Kontostände aus.
   imports:
     date_format:
       heading: Datumsformat
@@ -242,6 +292,7 @@ de:
       error_description: "Keines der unterstützten Datumsformate konnte die Datumsangaben in dieser Datei lesen. Bitte überprüfe, ob die Datei gültige Datumseinträge enthält."
     steps:
       upload: Hochladen
+      accounts: Konten
       configure: Konfigurieren
       clean: Bereinigen
       map: Zuordnen
@@ -309,6 +360,7 @@ de:
       import_sure: Aus Sure importieren
       import_sure_description: Vollexport als .ndjson-Datei
       import_ynab: Aus YNAB importieren
+      import_monarch: Aus Monarch importieren
       tab_financial_tools: Finanz-Tools & Dateien
       tab_raw_data: Rohdaten
     create:
@@ -318,6 +370,7 @@ de:
       pdf_too_large: PDF ist zu groß. Maximale Größe %{max_size} MB.
       pdf_processing: Deine PDF wird verarbeitet. Du bekommst eine E-Mail, sobald die Analyse fertig ist.
       invalid_pdf: Die hochgeladene Datei ist keine gültige PDF.
+      missing_upload: Deine Datei ist nicht bei uns angekommen. Lade sie bitte noch einmal hoch.
       document_too_large: Dokument ist zu groß. Maximale Größe %{max_size} MB.
       invalid_document_file_type: Ungültiger Dokumenttyp für den aktiven Vektorspeicher.
       document_uploaded: Dokument wurde erfolgreich hochgeladen.
@@ -360,14 +413,26 @@ de:
       unknown_state_description: Dieser Import ist in einem unerwarteten Zustand. Kehr zu den Importen zurück.
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Verarbeitung fehlgeschlagen: %{error}"
+      errors:
+        provider_not_configured: KI-Anbieter nicht eingerichtet
+        provider_no_pdf_support: Der KI-Anbieter unterstützt keine PDF-Verarbeitung
       create_account: Konto anlegen
       no_accounts: Keine Konten vorhanden. Leg zuerst ein Konto an.
       publish_transactions:
         one: "%{count} Transaktion übernehmen"
         other: "%{count} Transaktionen übernehmen"
-      ready_for_review_description: Wir haben %{count} Transaktionen aus deinem Auszug gelesen. Prüf sie und übernimm sie in dein Konto.
       ready_for_review_title: Bereit zur Prüfung
+      ready_for_review_description:
+        one: "%{count} Transaktion aus deinem Auszug ist noch nicht in diesem Konto. Prüf sie und übernimm sie, um sie hinzuzufügen."
+        other: "%{count} Transaktionen aus deinem Auszug sind noch nicht in diesem Konto. Prüf und übernimm sie, um sie hinzuzufügen."
       review_transactions: Transaktionen prüfen
+      view_summary: Importübersicht anzeigen
+      already_recorded_note:
+        one: "%{count} Transaktion war bereits in diesem Konto und wurde dem Auszug zugeordnet."
+        other: "%{count} Transaktionen waren bereits in diesem Konto und wurden dem Auszug zugeordnet."
+      complete_fully_reconciled:
+        one: "Jede Transaktion dieses Auszugs war bereits in deinem Konto. %{count} wurde zugeordnet und als abgeglichen markiert – es musste nichts importiert werden."
+        other: "Jede Transaktion dieses Auszugs war bereits in deinem Konto. Alle %{count} wurden zugeordnet und als abgeglichen markiert – es musste nichts importiert werden."
       save_account: Speichern
       select_account: Import in Konto
       select_account_hint: Wähl, in welches Konto diese Transaktionen sollen.
@@ -381,12 +446,54 @@ de:
       unknown_document_type: Unbekannt
     ready:
       description: Hier ist eine Zusammenfassung der neuen Elemente, die deinem Konto hinzugefügt werden, sobald du diesen Import veröffentlichst.
+      monarch_existing_names_title: Konten mit diesen Namen gibt es schon
+      monarch_existing_names_description: "Du hast bereits Konten namens %{names}. Beim Übernehmen entstehen neue Konten daneben. Wenn du stattdessen in eines davon importieren willst, wähl es im Schritt „Konten“ aus."
+      monarch_conflicts_title: Einige vorhandene Kontostände weichen von Monarch ab
+      monarch_conflicts_description:
+        one: An 1 Tag hat ein Konto, in das du importierst, bereits einen Kontostand, der von Monarch abweicht. Dein vorhandener Wert bleibt erhalten.
+        other: "An %{count} Tagen haben Konten, in die du importierst, bereits Kontostände, die von Monarch abweichen. Deine vorhandenen Werte bleiben erhalten."
+      monarch_overlap_title: Vorhandene Transaktionen im selben Zeitraum
+      monarch_overlap_description:
+        one: 1 vorhandene Transaktion liegt im Monarch-Zeitraum eines Kontos, in das du importierst, und passt zu keiner Monarch-Transaktion. Sie bleibt erhalten und zählt zum Kontostand.
+        other: "%{count} vorhandene Transaktionen liegen im Monarch-Zeitraum von Konten, in die du importierst, und passen zu keiner Monarch-Transaktion. Sie bleiben erhalten und zählen zum Kontostand."
+      monarch_duplicates_title: Transaktionen, die schon in Sure sind, werden übersprungen
+      monarch_duplicates_description:
+        one: 1 Monarch-Transaktion ist bereits im Zielkonto – aus einem früheren Import oder mit gleichem Datum und Betrag – und wird daher übersprungen.
+        other: "%{count} Monarch-Transaktionen sind bereits in ihren Zielkonten – aus einem früheren Import oder mit gleichem Datum und Betrag – und werden daher übersprungen."
+      monarch_kept_title: Einige Anfangssalden sind so geblieben, wie du sie geändert hast
+      monarch_kept_description: "Beim Rückgängigmachen des Imports wurde der Anfangssaldo von %{names} nicht wiederhergestellt, weil er nach dem Import geändert wurde. Prüf ihn, bevor du erneut importierst."
+      monarch_opening_title: Anfangssalden werden verschoben
+      monarch_opening_description:
+        one: Der Anfangssaldo von 1 vorhandenen Konto rückt an den Beginn seines Monarch-Verlaufs. Wenn du den Import rückgängig machst, wird er zurückgesetzt.
+        other: "Die Anfangssalden von %{count} vorhandenen Konten rücken an den Beginn ihres Monarch-Verlaufs. Wenn du den Import rückgängig machst, werden sie zurückgesetzt."
       title: Importdaten bestätigen
       summary_item_label: Eintrag
       summary_count_label: Anzahl
       empty_summary: In dieser Datei wurden keine importierbaren Datensätze gefunden. Sie ist möglicherweise leer, oder die Zeilen entsprechen nicht dem erwarteten Exportformat (jede Zeile sollte ein JSON-Objekt mit den Schlüsseln „type“ und „data“ und unterstützten Typen sein).
       publish_import: Import veröffentlichen
       back_to_imports: Zurück zu Importen
+      missing_merchant_warning_title: In diesem Export fehlen einige Händler
+      missing_merchant_warning_description:
+        one: 1 Händlerverweis in dieser Datei zeigt auf einen Händler, der nicht enthalten ist. Das kann bei Exporten passieren, die erstellt wurden, bevor vom Anbieter zugewiesene Händler in Sure-Exporte aufgenommen wurden. Du kannst diesen Import trotzdem übernehmen – der betroffene Eintrag wird dann ohne Händler importiert, und du kannst ihn nachträglich zuordnen.
+        other: "%{count} Händlerverweise in dieser Datei zeigen auf Händler, die nicht enthalten sind. Das kann bei Exporten passieren, die erstellt wurden, bevor vom Anbieter zugewiesene Händler in Sure-Exporte aufgenommen wurden. Du kannst diesen Import trotzdem übernehmen – die betroffenen Einträge werden dann ohne Händler importiert, und du kannst sie nachträglich zuordnen."
+      skipped_recurring_description:
+        one: 1 wiederkehrende Transaktion hat keinen Namen und ihr Händler fehlt, daher wird sie übersprungen. Automatisch erkannte wiederkehrende Transaktionen werden nach dem Import neu aufgebaut.
+        other: "%{count} wiederkehrende Transaktionen haben keinen Namen und ihre Händler fehlen, daher werden sie übersprungen. Automatisch erkannte wiederkehrende Transaktionen werden nach dem Import neu aufgebaut."
+      reused_taxonomy_notice_title: Einige Kategorien, Tags oder Händler gibt es schon
+      reused_taxonomy_notice_description:
+        one: 1 Kategorie, Tag oder Händler aus dieser Datei gibt es in deinem Konto bereits (zum Beispiel aus den Standardkategorien der Einrichtung). Der Eintrag wird wiederverwendet und mit den Daten aus dieser Datei aktualisiert, statt ein Duplikat anzulegen.
+        other: "%{count} Kategorien, Tags oder Händler aus dieser Datei gibt es in deinem Konto bereits (zum Beispiel aus den Standardkategorien der Einrichtung). Sie werden wiederverwendet und mit den Daten aus dieser Datei aktualisiert, statt Duplikate anzulegen."
+      provider_merchant_diff_title: Einige Händler gibt es schon mit anderen Angaben
+      provider_merchant_diff_description:
+        one: 1 Händler aus dieser Datei gibt es bereits mit anderen Angaben. Der vorhandene Händler bleibt erhalten, die Werte aus dieser Datei werden nicht übernommen.
+        other: "%{count} Händler aus dieser Datei gibt es bereits mit anderen Angaben. Die vorhandenen Händler bleiben erhalten, die Werte aus dieser Datei werden nicht übernommen."
+      provider_merchant_diff_summary: Unterschiede anzeigen
+      provider_merchant_diff_none: keine
+      provider_merchant_diff_fields:
+        website_url: Website
+        name: Name
+        provider_merchant_id: Anbieter-ID
+      provider_merchant_diff_row: "%{field}: %{kept} bleibt, Datei enthält %{imported}"
     apply_template:
       no_template_found: Keine Vorlage gefunden, richte deinen Import selbst ein.
       template_applied: Vorlage übernommen.
@@ -412,6 +519,20 @@ de:
       qty: Stückzahl
       tags: Tags
       ticker: Ticker
+    summary:
+      title: Importübersicht
+      subtitle: "Was aus jeder Transaktion dieses Auszugs in %{account} geworden ist."
+      subtitle_no_account: Was aus jeder Transaktion dieses Auszugs geworden ist.
+      extracted: Im Auszug gefunden
+      already_recorded: Bereits erfasst
+      already_recorded_hint: Einer bereits vorhandenen Transaktion dieses Kontos zugeordnet und als abgeglichen markiert.
+      imported: Neu importiert
+      awaiting_review: Noch nicht importiert
+      fully_reconciled:
+        one: Es musste nichts importiert werden – die einzige Transaktion des Auszugs war bereits erfasst.
+        other: "Es musste nichts importiert werden – alle %{count} Transaktionen waren bereits erfasst."
+      statement_evidence_html: "Abgeglichen mit %{statement}."
+      close: Schließen
     destroy:
       deleted: Dein Import wurde gelöscht.
     dry_run_resources:
@@ -441,6 +562,7 @@ de:
       check_status: Status prüfen
       description: Dein Import läuft. Den Stand siehst du im Import-Menü, oder du klickst auf „Status prüfen“, um die Seite zu aktualisieren. Du kannst die App währenddessen normal weiternutzen.
       title: Import läuft
+    configuration_locked: Die Daten dieses Imports sind bereits in Sure, daher lassen sich seine Dateien und Einstellungen nicht mehr ändern. Versuch es erneut, um ihn abzuschließen, oder lösche ihn, um neu zu beginnen.
     mapping_labels:
       account: Konto
       account_type: Kontoart
@@ -484,6 +606,8 @@ de:
       trade_import: Trade-Import
       transaction_import: Transaktionsimport
       ynab_import: YNAB-Import
+      monarch_import: Monarch-Import
     update:
       account_saved: Konto gespeichert.
+      account_locked: Dieser Import wurde bereits übernommen, daher lässt sich sein Konto nicht mehr ändern. Mach ihn zuerst rückgängig, wenn du ihn in ein anderes Konto importieren willst.
       invalid_account: Konto nicht gefunden.
