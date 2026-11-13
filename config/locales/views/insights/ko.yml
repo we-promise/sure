@@ -1,0 +1,117 @@
+---
+ko:
+  insights:
+    notification:
+      title: 새로운 재무 분석
+      body: Sure를 열어 최신 AI 분석을 확인하세요.
+    index:
+      title: 분석
+      subtitle: 재무 현황을 매일 밤 새롭게 분석합니다.
+      refresh: 새로운 분석 확인
+      empty:
+        title: 아직 분석이 없습니다
+        description: 계좌에 충분한 거래 내역이 쌓이면 여기에 분석이 표시됩니다. 분석은 매일 밤 자동으로 업데이트됩니다.
+    refresh:
+      queued: 새로운 분석을 생성하고 있습니다. 잠시 후 다시 확인해 주세요.
+      checking: 확인 중…
+    card:
+      acknowledged: 분석을 숨겼습니다
+      acknowledge: 확인했습니다
+      acknowledge_title: 수치가 바뀔 때까지 숨기기
+      new: 새 소식
+      dig_in: AI로 자세히 분석
+    dig_in:
+      prompt: '이 분석을 자세히 살펴볼 수 있도록 도와주세요.\n\n분석: %{title}\nSure의 발견 내용: %{body}\n기간:
+        %{period}\n수치:\n%{facts}\n\n원인은 무엇이며, 제가 취할 조치가 있나요?'
+    feed:
+      view_all: 모든 분석 보기
+      header: 최신
+      header_new: 새 소식
+      acknowledge_aria: '알겠습니다: %{title}'
+    types:
+      spending_anomaly: 지출
+      cash_flow_warning: 현금 흐름
+      net_worth_milestone: 순자산
+      subscription_audit: 구독
+      savings_rate_change: 저축률
+      idle_cash: 유휴 현금
+      budget_at_risk: 예산
+      budget_on_track: 예산
+      maintained_goal_depleted: 예비비
+    meta:
+      next_n_days:
+        one: 다음날
+        other: 다음 %{count}일
+      last_n_days:
+        one: 지난 하루
+        other: 지난 %{count}일
+      date_range: "%{from} ~ %{to}"
+    figures:
+      vs_previous: 지난달 대비
+      today: 오늘
+      on_pace: 현재 추세 기준
+      of_budget: 예산
+      need_attention: 주의 필요
+      days_overdue:
+        one: "%{count}일 연체"
+        other: "%{count}일 연체"
+      idle_days:
+        one: 유휴 %{count}일
+        other: 유휴 %{count}일
+    actions:
+      spending_anomaly: "%{category} 거래 보기"
+      cash_flow_warning: 반복 거래 검토
+      net_worth_milestone: 순자산 보고서 보기
+      subscription_audit: 반복 거래 검토
+      savings_rate_change: 해당 달의 거래 보기
+      idle_cash: 계좌로 이동
+      budget: 예산 보기
+      maintained_goal_depleted: 예비비 보기
+    titles:
+      spending_anomaly:
+        above: "%{category} 지출이 증가하는 추세입니다"
+        below: "%{category} 지출이 감소하는 추세입니다"
+      cash_flow_warning:
+        low: 현금 잔고가 부족해질 수 있습니다
+        negative: 현금 잔고가 마이너스가 될 수 있습니다
+      net_worth_milestone: '순자산 이정표: %{milestone}'
+      maintained_goal_depleted: "%{goal} 예비비이 유지 목표액 아래로 줄었습니다"
+      subscription_audit: "%{name}가 아직 활성 상태인가요?"
+      savings_rate_change:
+        up: "%{month} 저축률이 상승했습니다"
+        down: "%{month} 저축률이 하락했습니다"
+      idle_cash: "%{account}의 유휴 현금"
+      budget_at_risk:
+        one: 예산에서 한 카테고리에 주의가 필요합니다.
+        other: 예산에서 %{count}개 카테고리에 주의가 필요합니다
+      budget_on_track: 예산은 순조롭게 진행되고 있습니다
+    templates:
+      spending_anomaly:
+        above: 현재 추세라면 이번 달 %{category} 지출은 %{projected_spend}로 예상되며, 최근 월평균 %{baseline_spend}보다
+          약 %{deviation_pct}% 많습니다.
+        below: 현재 추세라면 이번 달 %{category} 지출은 %{projected_spend}로 예상되며, 최근 월평균 %{baseline_spend}보다
+          약 %{deviation_pct}% 적습니다.
+      cash_flow_warning:
+        low: 향후 반복 거래 및 일반적인 지출을 기준으로 현금 잔액은 %{projected_low_date} 무렵에 %{projected_low}로
+          떨어질 수 있습니다.
+        negative: 예정된 반복 거래와 평소 지출을 기준으로 보면, %{projected_low_date} 무렵 현금 잔액이 %{projected_low}까지
+          줄어들 수 있습니다.
+      net_worth_milestone: 순자산이 %{milestone}를 넘어 현재 %{net_worth}입니다.
+      maintained_goal_depleted: "%{goal} 예비비은 유지 목표액 %{target} 중 %{saved}가 적립되어 있어
+        %{missing}가 부족합니다."
+      subscription_audit: "%{expected_on}에 예정되어 있던 %{name}(%{amount}) 거래가 아직 나타나지
+        않았습니다. 구독이 취소되었거나 청구 일정이 변경되었을 수 있습니다."
+      savings_rate_change:
+        up: "%{month}에는 수입의 %{current_rate}%를 저축하여 전월의 %{previous_rate}%보다 %{change_pp}%포인트
+          상승했습니다."
+        down: "%{month}에는 수입의 %{current_rate}%를 저축하여 전월의 %{previous_rate}%보다 %{change_pp}%포인트
+          하락했습니다."
+        down_negative: "%{month}에 벌어들인 것보다 더 많이 지출했습니다. 저축률이 전월 %{previous_rate}%에서
+          %{current_rate}%로 떨어졌습니다."
+      idle_cash: "%{account} 계좌에 %{balance}가 있으며, 지난 %{idle_days}일 동안 거래가 없었습니다."
+      budget_at_risk:
+        over: "%{categories}는 이번 달 예산을 초과했습니다. 지금까지 총 예산의 %{budget_spent_pct}%를 사용하셨습니다."
+        near: "%{categories}의 이번 달 지출이 예산 한도에 가까워졌습니다. 지금까지 총 예산의 %{budget_spent_pct}%를
+          사용했습니다."
+      budget_on_track: "%{budgeted} 예산 중 %{spent}(%{budget_spent_pct}%)을 지출했으며 모든
+        것이 한도 내에 있습니다."

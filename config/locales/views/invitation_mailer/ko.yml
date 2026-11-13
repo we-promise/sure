@@ -1,0 +1,8 @@
+---
+ko:
+  invitation_mailer:
+    invite_email:
+      accept_button: 초대 수락
+      body: "%{inviter}가 %{product_name}의 %{family} %{moniker}에 가입하도록 귀하를 초대했습니다!"
+      expiry_notice: 이 초대는 %{days}일 후에 만료됩니다.
+      greeting: "%{product_name}에 오신 것을 환영합니다!"

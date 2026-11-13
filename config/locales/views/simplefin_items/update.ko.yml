@@ -1,0 +1,8 @@
+---
+ko:
+  simplefin_items:
+    update:
+      success: SimpleFIN 연결이 업데이트되었습니다.
+      errors:
+        blank_token: SimpleFIN 액세스 토큰이 누락되었습니다. 계속 진행하려면 토큰을 제공하거나 기존 계좌 연결을 사용하세요.
+        update_failed: 'SimpleFIN 연결 업데이트 실패: %{message}'

@@ -1,0 +1,16 @@
+---
+ko:
+  recurring_allocations:
+    over_allocation: 거래 금액보다 많은 금액을 할당할 수 없습니다
+    missing_rate: 환율 정보가 없습니다. 금액을 직접 입력하세요.
+    already_allocated: 해당 거래는 이미 이 청구서에 적용되었습니다.
+    entry_exhausted: 해당 거래의 전체 금액이 이미 다른 납부 예정 항목에 적용되었습니다.
+    invalid: 결제를 기록할 수 없습니다.
+    create:
+      success: 결제가 적용되었습니다.
+    destroy:
+      success: 결제 연결이 해제됨
+    confirm:
+      success: 청구서에 결제가 적용됨
+    reject:
+      success: 제외했습니다. 해당 거래는 이 청구서에 다시 추천하지 않습니다.

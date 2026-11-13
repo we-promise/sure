@@ -1,0 +1,56 @@
+---
+ko:
+  period:
+    last_day:
+      label_short: 1D
+      label: 최근 1일
+      comparison_label: 어제와 비교
+    current_week:
+      label_short: 이번 주 누계
+      label: 이번 주
+      comparison_label: 주초 대비
+    last_7_days:
+      label_short: 7D
+      label: 지난 7일
+      comparison_label: 지난주 대비
+    current_month:
+      label_short: 이번 달 누계
+      label: 이번 달
+      comparison_label: 월초 대비
+    last_month:
+      label_short: LM
+      label: 지난달
+      comparison_label: 지난달 대비
+    last_30_days:
+      label_short: 30일
+      label: 지난 30일
+      comparison_label: 지난 30일 대비
+    last_90_days:
+      label_short: 90D
+      label: 지난 90일
+      comparison_label: 지난 분기 대비
+    current_year:
+      label_short: 올해 누계
+      label: 올해
+      comparison_label: 연초 대비
+    last_365_days:
+      label_short: 365D
+      label: 지난 365일
+      comparison_label: 1년 전과 비교
+    last_5_years:
+      label_short: 5년
+      label: 최근 5년
+      comparison_label: 5년 전과 비교
+    last_10_years:
+      label_short: 10년
+      label: 지난 10년
+      comparison_label: 10년 전과 비교
+    all_time:
+      label_short: 전체
+      label: 전체 기간
+      comparison_label: 시작 시점 대비
+    custom:
+      label_short: 사용자 지정
+      label: 맞춤 기간
+      comparison_label: "%{start_date} ~ %{end_date}"
+    range: "%{start_date} – %{end_date}"

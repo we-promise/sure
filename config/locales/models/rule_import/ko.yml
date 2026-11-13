@@ -1,0 +1,9 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        rule_import:
+          unsupported_resource_type: '지원되지 않는 리소스 유형: %{resource_type}'
+          invalid_json: '조건 또는 작업에 잘못된 JSON: %{message}'
+          min_actions: 규칙에는 작업이 하나 이상 있어야 합니다.

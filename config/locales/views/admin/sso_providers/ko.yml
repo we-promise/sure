@@ -1,0 +1,148 @@
+---
+ko:
+  admin:
+    unauthorized: 이 영역에 접근할 수 있는 권한이 없습니다.
+    sso_providers:
+      index:
+        page_title: SSO 제공업체
+        title: SSO 제공업체
+        description: 인스턴스에 대한 Single Sign-On 인증 제공업체를 관리합니다.
+        restart_required: 변경 사항을 적용하려면 서버를 다시 시작해야 합니다.
+        configured_providers: 구성된 제공업체
+        add_provider: 제공업체 추가
+        no_providers_title: SSO 제공업체 없음
+        no_providers_message: 아직 구성된 SSO 제공업체가 없습니다.
+        note: SSO 제공업체에 대한 변경 사항을 적용하려면 서버를 다시 시작해야 합니다. 또는 AUTH_PROVIDERS_SOURCE=db
+          기능 플래그를 활성화하여 데이터베이스에서 제공업체를 동적으로 로드합니다.
+        enabled: 사용
+        disabled: 사용 안 함
+        edit: 수정
+        enable: 사용
+        disable: 사용 안 함
+        delete: 삭제
+        configuration_mode: 구성 모드
+        db_backed_providers: 데이터베이스 지원 제공업체
+        db_backed_providers_description: YAML 구성 대신 데이터베이스에서 제공업체 로드
+        db_backed_providers_help_html: 데이터베이스 지원 제공업체를 활성화하려면 <code class="bg-surface
+          px-1 py-0.5 rounded text-xs">AUTH_PROVIDERS_SOURCE=db</code>를 설정합니다. 이를
+          통해 서버를 다시 시작하지 않고도 변경할 수 있습니다.
+        table:
+          name: 이름
+          strategy: 전략
+          status: 상태
+          issuer: 발급자
+          actions: 작업
+          enabled: 사용
+          disabled: 사용 안 함
+        legacy_providers_title: 환경 구성 제공업체
+        legacy_providers_notice: 이러한 제공업체는 환경 변수 또는 YAML을 통해 구성되며 이 인터페이스를 통해 관리할
+          수 없습니다. 여기에서 관리하려면 AUTH_PROVIDERS_SOURCE=db를 활성화하고 UI에서 다시 생성하여 데이터베이스 지원
+          제공업체로 마이그레이션하세요.
+        env_configured: 환경/YAML
+      new:
+        title: SSO 제공업체 추가
+        description: 새 Single Sign-On 인증 제공업체 구성
+        provider_configuration: 제공업체 구성
+      edit:
+        title: SSO 제공업체 편집
+        description: "%{label} 구성 업데이트"
+        provider_configuration: 제공업체 구성
+      create:
+        success: SSO 제공업체가 생성되었습니다.
+      update:
+        success: SSO 제공업체가 업데이트되었습니다.
+      destroy:
+        success: SSO 제공업체가 삭제되었습니다.
+        confirm: 이 제공업체를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.
+      toggle:
+        success_enabled: SSO 제공업체가 성공적으로 활성화되었습니다.
+        success_disabled: SSO 제공업체가 비활성화되었습니다.
+        confirm_enable: 이 제공업체를 활성화하시겠습니까?
+        confirm_disable: 이 제공업체를 비활성화하시겠습니까?
+      form:
+        basic_information: 기본정보
+        oauth_configuration: OAuth/OIDC 구성
+        strategy_label: 전략
+        strategy_help: 사용할 인증 전략
+        strategy_openid_connect: OpenID Connect
+        strategy_saml: SAML 2.0
+        strategy_google_oauth2: Google OAuth2
+        strategy_github: GitHub
+        name_label: 이름
+        name_placeholder: '예: keycloak, authentik'
+        name_help: 고유 식별자(소문자, 숫자, 밑줄만)
+        label_label: 버튼 라벨
+        label_placeholder: '예: Keycloak으로 로그인'
+        label_help: 사용자에게 표시되는 버튼 텍스트
+        icon_label: 아이콘(선택사항)
+        icon_placeholder: '예: key, shield'
+        icon_help: 로그인 버튼의 Lucide 아이콘 이름
+        enabled_label: 이 제공업체를 활성화합니다
+        enabled_help: 활성화되면 사용자는 이 제공업체로 로그인할 수 있습니다.
+        issuer_label: 발급자 URL
+        issuer_placeholder: https://your-idp.example.com/realms/your-realm
+        issuer_help: OIDC 발급자 URL(.well-known/openid-configuration 유효성 검사)
+        client_id_label: 클라이언트 ID
+        client_id_placeholder: your-client-id
+        client_id_help: ID 제공업체의 OAuth 클라이언트 ID
+        client_secret_label: 클라이언트 시크릿
+        client_secret_placeholder_new: your-client-secret
+        client_secret_placeholder_existing: "••••••••"
+        client_secret_help: OAuth 클라이언트 시크릿(데이터베이스에서 암호화됨)
+        client_secret_help_existing: 기존 시크릿을 유지하려면 비워 두세요.
+        redirect_uri_label: 콜백 URL
+        redirect_uri_placeholder: https://yourdomain.com/auth/openid_connect/callback
+        redirect_uri_help: ID 제공업체에서 이 URL을 구성하세요.
+        saml_sp_callback_url_label: SP 콜백 URL(ACS URL)
+        saml_sp_callback_url_help: 이 URL을 IdP에서 어설션 소비자 서비스 URL로 구성합니다.
+        copy_button: 복사
+        cancel: 취소
+        submit: 제공업체 저장
+        create_provider: 제공업체 생성
+        update_provider: 제공업체 업데이트
+        errors_title:
+          one: 오류로 인해 이 제공업체를 저장할 수 없습니다.
+          other: 오류 %{count}개로 인해 이 제공업체를 저장할 수 없습니다.
+        provisioning_title: 사용자 프로비저닝
+        default_role_label: 신규 사용자의 기본 역할
+        default_role_help: JIT(Just-In-Time) SSO 계정 프로비저닝을 통해 생성된 사용자에게 할당된 역할입니다.
+          기본값은 회원입니다.
+        role_guest: 손님
+        role_member: 회원
+        role_admin: 관리자
+        role_super_admin: 최고 관리자
+        role_mapping_title: 그룹-역할 매핑(선택 사항)
+        role_mapping_help: IdP 그룹/클레임을 애플리케이션 역할에 매핑합니다. 사용자에게는 일치하는 역할 중 가장 높은 권한의
+          역할이 부여됩니다. 위의 기본 역할을 사용하려면 비워 두세요.
+        super_admin_groups: 최고 관리자 그룹
+        admin_groups: 관리자 그룹
+        guest_groups: 게스트 그룹
+        member_groups: 회원 그룹
+        groups_help: 쉼표로 구분된 IdP 그룹 이름 목록입니다. 모든 그룹을 일치시키려면 *를 사용하세요.
+        advanced_title: 고급 OIDC 설정
+        scopes_label: 맞춤 범위
+        scopes_help: 공백으로 구분된 OIDC 범위 목록입니다. 기본값(openid email profile)을 사용하려면 비워 두세요.
+          그룹 클레임을 가져오려면 'groups'를 추가하세요.
+        prompt_label: 인증 프롬프트
+        prompt_default: 기본값(IdP가 결정)
+        prompt_login: 강제 로그인(재인증)
+        prompt_consent: 강제 동의(재승인)
+        prompt_select_account: 계정 선택(계정 선택)
+        prompt_none: 프롬프트 없음(자동 인증)
+        prompt_help: 인증 중에 IdP가 사용자에게 메시지를 표시하는 방법을 제어합니다.
+        test_connection: 연결 테스트
+        saml_configuration: SAML 구성
+        idp_metadata_url: IdP 메타데이터 URL
+        idp_metadata_url_help: IdP의 SAML 메타데이터에 대한 URL입니다. 제공되면 다른 SAML 설정이 자동으로 구성됩니다.
+        manual_saml_config: 수동 구성(메타데이터 URL을 사용하지 않는 경우)
+        manual_saml_help: IdP가 메타데이터 URL을 제공하지 않는 경우에만 이 설정을 사용하세요.
+        idp_sso_url: IdP SSO URL
+        idp_slo_url: IdP SLO URL(선택사항)
+        idp_certificate: IdP 인증서
+        idp_certificate_help: PEM 형식의 X.509 인증서입니다. 메타데이터 URL을 사용하지 않는 경우 필수입니다.
+        idp_cert_fingerprint: 인증서 지문(대체)
+        name_id_format: NameID 형식
+        name_id_email: 이메일 주소(기본값)
+        name_id_persistent: 지속적
+        name_id_transient: 일시적
+        name_id_unspecified: 지정되지 않음

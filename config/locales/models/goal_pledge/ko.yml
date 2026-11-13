@@ -1,0 +1,21 @@
+---
+ko:
+  activerecord:
+    attributes:
+      goal_pledge:
+        amount: 금액
+        currency: 통화
+        account: 계좌
+        kind: 종류
+        status: 상태
+        expires_at: '만료 시간:'
+    errors:
+      models:
+        goal_pledge:
+          attributes:
+            account:
+              must_be_linked_to_goal: 목표에 연결된 계좌 중 하나를 선택하세요.
+            currency:
+              must_match_goal: 적립 약정의 통화는 목표 통화와 일치해야 합니다.
+          duplicate_open_pledge: 이 계좌에 같은 금액의 미완료 적립 약정이 이미 있습니다. 새로 기록하기 전에 기존 약정을
+            취소하거나 연장하세요.

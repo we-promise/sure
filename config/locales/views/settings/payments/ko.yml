@@ -1,0 +1,24 @@
+---
+ko:
+  settings:
+    payments:
+      show:
+        page_title: 결제 내역
+        subscription_subtitle: 신용카드 정보 업데이트
+        subscription_title: 후원 관리
+        currently_on_plan: 현재
+        trialing: 현재 %{product_name}의 공개 데모를 사용하고 있습니다.
+        trial_days_left:
+          one: "%{count}일 후 데이터가 삭제됩니다."
+          other: "%{count}일 후에 데이터가 삭제됩니다."
+        not_contributing_prefix: 당신은 현재
+        not_contributing_emphasis: 후원하지 않음
+        contributions_note: "%{product_name} 후원 내역이 여기에 표시됩니다."
+        manage: 관리
+        choose_level: 레벨 선택
+        payment_via_stripe: Stripe를 통한 결제
+  views:
+    settings:
+      payments:
+        renewal: 후원이 %{date}에 갱신됩니다.
+        cancellation: 후원이 %{date}에 종료됩니다.

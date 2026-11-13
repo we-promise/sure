@@ -1,0 +1,135 @@
+---
+ko:
+  providers:
+    monobank:
+      name: Monobank
+      description: 개인 API 토큰으로 우크라이나 Monobank 카드와 저축함을 연결하세요
+  family:
+    monobank:
+      create_monobank_item:
+        default_name: Monobank 연결
+  monobank_account:
+    jar_fallback: Monobank 저축함
+    card_types:
+      black: 블랙카드
+      white: 화이트 카드
+      platinum: 플래티넘 카드
+      iron: Iron 카드
+      yellow: 옐로 카드
+      eaid: eAid 카드
+      fop: 사업용 계좌
+      jar: 저축함
+      unknown: Monobank 카드
+  monobank_item:
+    errors:
+      account_processing_failed: Monobank 계좌를 동기화할 수 없습니다
+      account_sync_schedule_failed: Monobank 계좌 동기화를 예약할 수 없습니다.
+      transactions_failed: Monobank 명세서를 가져올 수 없습니다.
+      sync_failed: Monobank 연결을 동기화할 수 없습니다.
+    sync:
+      status:
+        importing: Monobank에서 계좌를 가져오는 중...
+        checking_setup: 계좌 설정 확인 중...
+        needs_setup:
+          one: 계좌 1개 설정 필요...
+          other: 계좌 %{count}개 설정 필요...
+        processing: 거래 처리 중...
+        calculating: 잔액 계산 중...
+    sync_status:
+      no_accounts: 계좌를 찾을 수 없습니다
+      all_synced:
+        one: 계좌 1개 동기화됨
+        other: 계좌 %{count}개가 동기화되었습니다.
+      partial: "%{linked}개 동기화됨, %{unlinked}개 설정 필요"
+    institution_summary:
+      none: 연결된 기관 없음
+      one: 1개 기관
+      count:
+        one: 1개 기관
+        other: 기관 %{count}곳
+  monobank_items:
+    provider_panel:
+      default_connection_name: Monobank 연결
+      add_connection: Monobank 연결 추가
+      update_connection: 연결 업데이트
+      connection_name_label: 연결 이름
+      connection_name_placeholder: 내 Monobank
+      access_token_label: 개인용 API 토큰
+      access_token_placeholder: Monobank 개인 토큰을 붙여넣으세요.
+      keep_access_token_placeholder: 기존 토큰을 유지하려면 비워 두세요.
+      setup_accounts: 계좌 설정
+      syncing: 동기화 중...
+      sync: 동기화
+      disconnect: 연결 해제
+      disconnect_confirm: "%{name}의 연결을 해제하시겠습니까?"
+      rate_limit_notice: Monobank는 분당 요청 1건만 허용하므로 한 번 동기화할 때 계좌를 몇 개씩 가져옵니다. 오래된
+        내역은 여러 차례 동기화에 걸쳐 가져옵니다.
+    create:
+      success: Monobank 연결이 저장되었습니다.
+    update:
+      success: Monobank 연결이 업데이트되었습니다.
+    destroy:
+      success: Monobank 연결 삭제가 예약되었습니다.
+      unlink_failed: Monobank 연결을 끊을 수 없습니다.
+    select_accounts:
+      title: Monobank 계좌 연결
+      description: 추가할 Monobank 카드나 저축함을 선택하세요.
+      no_accounts_found: 아직 연결하지 않은 Monobank 계좌를 찾을 수 없습니다.
+      no_credentials_configured: 먼저 제공업체 설정에서 Monobank를 구성하세요.
+      cancel: 취소
+      link_accounts: 계좌 연결
+    link_accounts:
+      success:
+        one: 1개의 Monobank 계좌를 연결했습니다.
+        other: Monobank 계좌 %{count}개를 연결했습니다.
+      no_accounts_selected: 계좌를 하나 이상 선택하세요.
+      no_credentials_configured: 먼저 제공업체 설정에서 Monobank를 구성하세요.
+      unsupported_account_type: Monobank는 해당 계좌 유형을 지원하지 않습니다.
+      link_failed: 연결된 계좌가 없습니다.
+    select_existing_account:
+      title: Monobank 계좌를 %{account_name}에 연결
+      description: 이 계좌에 연결할, 아직 연결하지 않은 Monobank 계좌를 선택하세요.
+      no_accounts_found: 아직 연결하지 않은 Monobank 계좌를 찾을 수 없습니다.
+      no_credentials_configured: 먼저 제공업체 설정에서 Monobank를 구성하세요.
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      cancel: 취소
+      link_account: 계좌 연결
+    link_existing_account:
+      success: Monobank 계좌를 %{account_name}에 연결했습니다.
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      monobank_account_already_linked: 이 Monobank 계좌는 이미 연결되어 있습니다.
+      no_account_selected: 연결할 Monobank 계좌를 선택하세요.
+    setup_accounts:
+      title: Monobank 계좌 연결
+      subtitle: 각 Monobank 카드 또는 저축함을 Sure에 어떻게 표시할지 선택하세요.
+      no_credentials: 먼저 Monobank 자격 증명을 구성하세요.
+      api_error: Monobank에서 계좌를 새로 고칠 수 없어 마지막 동기화로 저장된 계좌가 대신 표시됩니다.
+      no_accounts_to_setup: 설정할 계좌가 없습니다.
+      all_accounts_linked: 모든 Monobank 계좌는 이미 연결되어 있습니다.
+      choose_account_type: 계좌 유형을 선택하세요
+      choose_account_type_description: 추적하고 싶지 않은 계좌는 건너뛰세요.
+      account_type_label: 계좌 유형
+      account_types:
+        skip: 건너뛰기
+        depository: 현금
+      create_accounts: 계좌 만들기
+      cancel: 취소
+    complete_account_setup:
+      success:
+        one: 1개의 Monobank 계좌를 만들었습니다.
+        other: Monobank 계좌 %{count}개를 만들었습니다.
+      all_skipped: Monobank 계좌가 생성되지 않았습니다.
+      no_accounts: Monobank 계좌가 선택되지 않았습니다.
+      creation_failed: Monobank 계좌를 생성할 수 없습니다.
+    monobank_item:
+      deletion_in_progress: 삭제 진행 중
+      syncing: 동기화 중
+      error: 오류
+      status_with_summary: "%{timestamp} 전에 동기화됨 · %{summary}"
+      status_never: 동기화되지 않음
+      delete: 삭제
+      setup_needed: 계좌 설정 필요
+      setup_description: 전체 %{total}개 계좌 중 %{linked}개가 연결되었습니다.
+      setup_action: 계좌 설정
+      no_accounts_title: 아직 가져온 계좌가 없습니다.
+      no_accounts_description: Monobank 계좌를 가져와 연결할 계좌를 선택하세요.

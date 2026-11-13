@@ -1,0 +1,29 @@
+---
+ko:
+  models:
+    category:
+      uncategorized: 미분류
+      other_investments: 기타 투자
+      investment_contributions: 투자 납입
+      defaults:
+        income: 수입
+        food_and_drink: 음식 및 음료
+        groceries: 식료품
+        shopping: 쇼핑
+        transportation: 교통
+        travel: 여행
+        entertainment: 여가·오락
+        healthcare: 의료·건강
+        personal_care: 개인 관리
+        home_improvement: 주택 개선
+        mortgage_rent: 주택담보대출·임대료
+        utilities: 공과금
+        subscriptions: 구독
+        insurance: 보험
+        sports_and_fitness: 스포츠 및 피트니스
+        gifts_and_donations: 선물 및 기부
+        taxes: 세금
+        loan_payments: 대출 상환
+        services: 서비스
+        fees: 수수료
+        savings_and_investments: 저축 및 투자

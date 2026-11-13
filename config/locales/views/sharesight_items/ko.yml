@@ -1,0 +1,5 @@
+---
+ko:
+  sharesight_accounts:
+    settings_fields:
+      cash_anchor_on: true

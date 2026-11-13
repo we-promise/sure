@@ -1,0 +1,8 @@
+---
+ko:
+  password_mailer:
+    password_reset:
+      cta: 비밀번호 재설정
+      ignore_if_not_requested: 이 요청을 하지 않으셨다면 이 이메일을 무시하셔도 됩니다.
+      request_made: "%{product_name} 비밀번호 재설정이 요청되었습니다. 재설정하려면 링크를 클릭하세요."
+      subject: "%{product_name}: 비밀번호 재설정"

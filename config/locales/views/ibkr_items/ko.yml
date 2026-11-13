@@ -1,0 +1,92 @@
+---
+ko:
+  providers:
+    ibkr:
+      name: Interactive Brokers
+      connection_description: Interactive Brokers Flex Web Service 보고서 연결
+      institution_name: Interactive Brokers
+  ibkr_items:
+    defaults:
+      name: Interactive Brokers
+    ibkr_item:
+      deletion_in_progress: 삭제 진행 중
+      flex_web_service: Flex Web Service
+      syncing: 동기화 중
+      requires_update: 자격증명에 주의가 필요합니다
+      error: 오류
+      synced: "%{time} 전에 동기화되었습니다. %{summary}."
+      never_synced: 동기화되지 않았습니다.
+      setup_accounts: 계좌 설정
+      delete: 삭제
+      accounts_need_setup: 계좌를 설정해야 합니다.
+      accounts_need_setup_description: IBKR의 일부 계좌는 Sure 계좌에 연결되어야 합니다.
+      no_accounts_discovered: 아직 발견된 IBKR 계좌가 없습니다.
+      no_accounts_discovered_description: 계좌를 검색하려면 Flex 쿼리를 구성한 후 동기화를 실행하세요.
+    setup_accounts:
+      page_title: Interactive Brokers 계좌 설정
+      dialog_title: Interactive Brokers 계좌 설정
+      subtitle: 연결할 IBKR 증권 계좌를 선택하세요.
+      info_box:
+        title: IBKR Flex 쿼리 가져오기
+        items:
+          item_1: 현재 가격과 수량이 포함된 보유 종목
+          item_2: 보유 종목별 취득 원가
+          item_3: 매매, 배당금, 수수료 및 현금 입출금
+        warning: 과거 활동은 Flex Query 보고서의 조회 기간으로 제한됩니다.
+      status:
+        fetching_accounts: Interactive Brokers에서 계좌를 가져오는 중...
+        no_accounts_found_title: 계좌를 찾을 수 없습니다.
+        no_accounts_found_description: Sure는 최신 Flex 보고서에서 IBKR 계좌를 찾을 수 없습니다.
+      available_accounts:
+        title: 사용 가능한 계좌
+        account_type_investment: 투자
+        account_summary: "%{account_type} • 잔액: %{balance}"
+        account_id: '계좌 ID: %{account_id}'
+      link_existing:
+        description: 또는 검색된 IBKR 계좌를 기존 수동 투자 계좌에 연결하세요.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: 계좌를 선택하세요...
+      linked_accounts:
+        title: 이미 연결됨
+        linked_to_html: '링크됨: %{account}'
+      buttons:
+        refresh: 새로고침
+        cancel: 취소
+        back_to_settings: 설정으로 돌아가기
+        create_selected_accounts: 선택한 계좌 만들기
+        link: 연결
+        done: 완료
+    sync_status:
+      no_accounts: 아직 발견된 IBKR 계좌가 없습니다.
+      all_linked:
+        one: 계좌 1개 연결됨
+        other: "%{count} 계좌가 연결되었습니다"
+      partial: "%{linked} 연결됨, %{unlinked} 설정 필요"
+    select_existing_account:
+      title: Interactive Brokers 계좌 연결
+      no_accounts_available: 아직 연결되지 않은 Interactive Brokers 계좌가 없습니다.
+      run_sync_hint: Flex 쿼리를 업데이트한 후 설정 > 제공업체에서 동기화를 실행하세요.
+      wait_for_sync: 계좌 검색 동기화가 완료될 때까지 기다립니다.
+      balance: 잔액
+      link: 연결
+      cancel: 취소
+    create:
+      success: Interactive Brokers 설정을 완료했습니다.
+    update:
+      success: Interactive Brokers 구성을 성공적으로 업데이트했습니다.
+    destroy:
+      success: Interactive Brokers 연결 삭제가 예약되었습니다.
+    select_accounts:
+      not_configured: Interactive Brokers가 설정되지 않았습니다.
+    link_existing_account:
+      not_found: 계좌 또는 Interactive Brokers 설정을 찾을 수 없습니다.
+      only_manual_investment: 수동 투자 계좌만 Interactive Brokers에 연결할 수 있습니다.
+      already_linked: 이 Interactive Brokers 계좌는 이미 연결되어 있습니다.
+      success: Interactive Brokers 계좌에 성공적으로 연결되었습니다.
+      failed: Interactive Brokers 계좌를 연결하지 못했습니다.
+    complete_account_setup:
+      success:
+        one: "%{count} Interactive Brokers 계좌가 성공적으로 생성되었습니다."
+        other: "%{count} Interactive Brokers 계좌를 성공적으로 생성했습니다."
+      none_selected: 선택한 계좌가 없습니다.
+      none_created: 생성된 계좌가 없습니다.

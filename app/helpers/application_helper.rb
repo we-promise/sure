@@ -1,6 +1,12 @@
 module ApplicationHelper
   include Pagy::Frontend
 
+  def localized_outflow_categories(categories)
+    categories.map do |category|
+      category.merge(name: Category.localized_default_name_for(category[:name]))
+    end
+  end
+
   def product_name
     Rails.configuration.x.product_name
   end

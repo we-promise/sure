@@ -1,0 +1,11 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        transaction:
+          attributes:
+            attachments:
+              too_many: 거래당 파일 %{max}개를 초과할 수 없습니다.
+              too_large: 파일 %{index}가 너무 큽니다(최대 %{max_mb}MB).
+              invalid_format: 파일 %{index}의 형식(%{file_format})은 지원되지 않습니다.

@@ -1,0 +1,13 @@
+---
+ko:
+  activemodel:
+    errors:
+      models:
+        trend:
+          attributes:
+            current:
+              must_be_of_the_same_type_as_previous: 이전과 동일한 유형이어야 합니다.
+              must_be_of_type_money_numeric_or_nil: Money, Numeric 또는 nil 유형이어야 합니다.
+            previous:
+              must_be_of_the_same_type_as_current: 현재와 동일한 유형이어야 합니다.
+              must_be_of_type_money_numeric_or_nil: Money, Numeric 또는 nil 유형이어야 합니다.

@@ -1,0 +1,176 @@
+---
+ko:
+  pages:
+    feedback:
+      title: 의견 보내기
+      heading: 의견 남기기
+      description: 구체적인 의견이 있으면 알려주시기 바랍니다. 동영상이나 스크린샷에 대한 링크를 자유롭게 포함하세요.
+      feature_request: 기능 요청 작성
+      bug_report: 버그 보고서 제출
+      discuss: 다른 사람들과 %{product} 토론
+    intro:
+      not_authorized: 소개는 게스트 사용자만 사용할 수 있습니다.
+      welcome: 환영합니다!
+      coming_soon: 소개 환경이 곧 제공될 예정입니다.
+      description: 목표와 주요 계획, 일상적인 필요를 더 잘 파악할 수 있도록 시작 안내를 준비하고 있습니다. 지금은 채팅 사이드바에서
+        Sure와 대화를 시작하고 현재 재무 상황을 알려주세요.
+      start_chatting: 채팅 시작
+    redis_configuration_error:
+      page_title: Redis 구성 필요 - Sure
+      heading: Redis 구성 필요
+      subheading: 직접 호스팅하는 Sure를 사용하려면 Redis를 올바르게 설정해야 합니다.
+      why_required_title: Redis가 필요한 이유는 무엇입니까?
+      why_required_body: Sure는 Redis를 통해 Sidekiq 백그라운드 작업을 실행합니다. 계좌 데이터 동기화, 가져오기
+        처리 등 재무 데이터를 최신 상태로 유지하는 작업에 사용됩니다.
+      view_setup_guide: 설정 가이드 보기
+      setup_guide_hint: Redis를 구성하려면 전체 Docker 설정 가이드를 따르세요.
+      refresh_hint: Redis를 구성한 후 계속하려면 이 페이지를 새로 고치세요.
+      refresh_page: 페이지 새로 고침
+    changelog:
+      title: 새로운 소식
+    release_notes_unavailable:
+      name: 출시 노트를 사용할 수 없습니다.
+      body_html: "<p>지금은 최신 릴리스 노트를 가져올 수 없습니다. 나중에 다시 확인하거나 <a href='https://github.com/we-promise/sure/releases'
+        target='_blank' rel='noopener noreferrer'>GitHub 릴리스 페이지</a>를 직접 방문하세요.</p>"
+    privacy:
+      title: 개인정보 처리방침
+      heading: 개인정보 처리방침
+      placeholder: 개인정보 처리방침 내용이 여기에 표시됩니다.
+    terms:
+      title: 이용약관
+      heading: 이용약관
+      placeholder: 이용약관 내용이 여기에 표시됩니다.
+    dashboard:
+      welcome: "%{name}님, 환영합니다"
+      subtitle: 재무 현황을 한눈에 확인하세요
+      new: 새로 만들기
+      sections_aria_label: 대시보드 섹션
+      toggle_section: 섹션 가시성 전환
+      customize:
+        start: 사용자 정의
+        done: 완료
+        hide: "%{title} 숨기기"
+        hidden_title: 숨겨진 위젯
+        hidden_description: 대시보드에 위젯을 다시 추가합니다.
+        none_hidden: 모든 위젯이 표시됩니다. 눈 버튼으로 하나를 숨기세요.
+        all_hidden_title: 모든 위젯이 숨겨져 있습니다
+        all_hidden_description: 위젯을 다시 추가하려면 대시보드를 맞춤설정하세요.
+      widget_size:
+        label: 크기 조정
+        width_label: 폭
+        half: 절반
+        full: 전체
+        height_label: 높이
+        compact: 콤팩트
+        auto: 자동
+        tall: 높게
+      net_worth_chart:
+        data_not_available: 선택한 기간의 데이터가 없습니다
+        title: 순자산
+      no_account_empty_state:
+        new_account: 새 계좌
+        no_account_subtitle: 아직 계좌를 추가하지 않아 표시할 데이터가 없습니다. 첫 계좌를 추가하여 대시보드 데이터를 확인하세요.
+        no_account_title: 아직 계좌가 없습니다
+      balance_sheet:
+        title: 자산·부채 현황
+        no_items: 아직 %{name}가 없습니다
+        add_accounts: 전체 내역을 확인하려면 %{name} 계좌를 추가하세요.
+        no_asset: 아직 자산이 없습니다.
+        no_liability: 아직 부채 없음
+        add_asset_accounts: 전체 내역을 확인하려면 자산 계좌를 추가하세요.
+        add_liability_accounts: 상세 내역을 확인하려면 부채 계좌를 추가하세요.
+        name: 이름
+        weight: 비중
+        value: 평가액
+        expand_all: 모두 펼치기
+        collapse_all: 모두 접기
+        classifications:
+          asset: 자산
+          liability: 부채
+      insights_feed:
+        title: 분석
+      cashflow_preview:
+        opt_in_title: 새 차트 표시
+        opt_in_description: 실험용 Sankey를 위 차트와 비교해보세요. 언제든지 이 기능을 끌 수 있습니다.
+        node_labels:
+          cash_flow: 현금 흐름
+          surplus: 잉여금
+          deficit: 부족액
+          invested: 투자액
+        title: 새로운 Sankey 차트
+        preview: 미리보기
+        preview_tooltip: 이는 모바일 Swift 클라이언트와 함께 새로운 공유 API를 사용하므로 위의 시각화를 대체합니다.
+        group_by_label: 흐름 표시 기준
+        group_by_category: 카테고리
+        group_by_account: 계좌
+        feedback_prompt: 이 차트를 위의 원본과 비교하고 정렬 외에 다르게 보이는지 알려주세요.
+        positive: 올바르게 표시됩니다
+        negative: 뭔가 잘못된 것 같습니다
+        feedback_title: 현금 흐름 차트 피드백
+        feedback_loading: 의견 양식 로드 중…
+        feedback_unavailable: 지금은 의견을 보낼 수 없습니다. 나중에 다시 시도해 주세요.
+        feedback_thanks: 차트 개선에 도움을 주셔서 감사합니다!
+        feedback_privacy: 응답은 PostHog로 전송됩니다. 계좌번호, 잔액 등 개인 금융 정보를 포함하지 않고 문제를 설명하세요.
+        feedback_submit: 피드백 보내기
+        sort_label: 흐름 정렬
+        sort_auto: 자동
+        sort_ascending: 작은 것부터
+        sort_descending: 가장 큰 것부터
+      cashflow_sankey:
+        loading: 현금 흐름 로드 중…
+        load_error: 현금 흐름을 로드할 수 없습니다. 다시 시도해 주세요.
+        retry: 다시 시도
+        title: 현금 흐름
+        zoom_out: 전체 현금흐름으로 돌아가기
+        no_data_title: 이 기간 동안의 현금 흐름 데이터가 없습니다.
+        no_data_description: 거래를 추가하거나 조회 기간을 늘려 현금 흐름 데이터를 확인하세요.
+        add_transaction: 거래 추가
+      no_accounts:
+        title: 아직 계좌가 없습니다
+        description: 순자산 데이터를 표시하려면 계좌를 추가하세요.
+        add_account: 계좌 추가
+      outflows_donut:
+        title: 지출
+        total_outflows: 총지출
+        categories: 카테고리
+        value: 금액
+        weight: 비중
+      investment_summary:
+        title: 투자
+        total_return: 총수익
+        holding: 보유 종목
+        weight: 비중
+        value: 평가액
+        return: 수익률
+        period_activity: "%{period} 거래 내역"
+        contributions: 납입액
+        withdrawals: 인출액
+        trades: 매매 내역
+        no_investments: 투자 계좌 없음
+        add_investment: 포트폴리오를 추적하려면 투자 계좌를 추가하세요.
+      money_flow:
+        title: 수입·지출
+        date_range: "%{start_date} ~ %{end_date}"
+        month_picker_aria_label: 월 선택
+        filter_accounts: 계좌 필터(%{count})
+        filter_accounts_all: 모든 계좌
+        period_scope_hint: 상단의 대시보드 기간과 관계없이 여기에서 선택한 달을 표시합니다.
+        search_accounts: 계좌 검색
+        apply: 적용
+        balance: 거래 잔액
+        chart_span: 지난 %{count}개월
+        income: 수입
+        expenses: 지출
+      spending_trend:
+        title: 지출
+        date_range: "%{start_date} ~ %{end_date}"
+        date_range_short: "%{start_date} - %{end_day}, %{year}"
+        date_range_short_single: "%{date}, %{year}"
+        month_picker_aria_label: 월 선택
+        filter_categories: 카테고리 필터(%{count})
+        filter_categories_all: 모든 카테고리
+        search_categories: 카테고리 검색
+        apply: 적용
+        period_scope_hint: 상단의 대시보드 기간과 관계없이 여기에서 선택한 달을 표시합니다.
+        no_data: 이번 달 지출 데이터가 없습니다.
+        previous_comparison_days: "(1-%{end_day})"

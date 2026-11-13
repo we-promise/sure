@@ -1,0 +1,120 @@
+---
+ko:
+  admin:
+    users:
+      index:
+        title: 사용자 관리
+        description: 인스턴스에 대한 사용자 역할, 가족/그룹 멤버십, 계정 제거를 관리합니다. 최고 관리자는 SSO 제공업체 설정
+          및 사용자 관리에 액세스할 수 있습니다.
+        section_title: 가족/단체
+        you: "(당신)"
+        trial_ends_at: 체험판 종료
+        not_available: 해당사항 없음
+        no_users: 사용자를 찾을 수 없습니다.
+        unnamed_family: 이름이 없는 가족/그룹
+        no_subscription: 구독하지 않음
+        family_summary: 구성원 %{members}명 · 계좌 %{accounts}개 · 거래 %{transactions}건
+        filters:
+          role: 역할
+          role_all: 모든 역할
+          trial_status: 체험판 상태
+          trial_all: 전체
+          trial_expiring_soon: 7일 이내 만료
+          trial_trialing: 체험 중
+          submit: 필터
+        table:
+          user: 사용자
+          trial_ends_at: 체험판 종료
+          family_accounts: 가족 계좌
+          family_transactions: 가족 거래
+          last_login: 마지막 로그인
+          session_count: 세션 수
+          never: 없음
+          role: 역할
+          family: 가족/그룹
+          keep_current_family: 현재 가족/그룹 유지
+          create_new_family_option: "+ 새 가족/그룹 만들기"
+          new_family_name: 새 가족/그룹 이름
+          new_family_name_placeholder: 새 가족/그룹을 만들려면 이름을 입력하세요.
+          new_family_moniker: 새로운 가족/그룹 유형
+          set_password: 새 비밀번호 설정
+          password_placeholder: 현재 비밀번호를 유지하려면 비워 두세요.
+          actions: 작업
+        family_monikers:
+          family: 가족
+          group: 그룹
+        actions:
+          manage_user: 사용자 관리
+          update: 사용자 업데이트
+          delete_user: 사용자 삭제
+          self_edit_warning: 자신의 역할을 변경하면 관리 권한이 수정됩니다.
+          self_update_confirm: 자신의 계정 역할이나 가족을 업데이트하시겠습니까?
+          last_super_admin_role_locked: 시스템의 마지막 최고 관리자이므로 역할을 변경할 수 없습니다.
+        delete_confirm: 이 사용자를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.
+        delete_confirm_last_user: 이 사용자를 삭제하시겠습니까? 이는 가족/그룹의 마지막 사용자이므로 삭제하면 전체 가족/그룹
+          및 모든 관련 데이터도 삭제됩니다. 이 작업은 취소할 수 없습니다.
+        remove: 사용자 삭제
+        role_descriptions_title: 역할 설명
+        removed_sso_identities:
+          title: 제거된 SSO ID
+          description: 이러한 ID로는 계정을 생성하거나 다시 연결할 수 없습니다. 실수로 제거된 경우에만 ID를 다시 허용하세요.
+          allow_again: 다시 허용
+          confirm: "%{email}가 SSO를 통해 다시 로그인하거나 계정을 생성하도록 허용하시겠습니까?"
+        roles:
+          guest: 손님
+          member: 회원
+          admin: 관리자
+          super_admin: 최고 관리자
+        auth_types:
+          sso: SSO
+          local: 로컬
+          local_and_sso: 로컬 + SSO
+          sso_provider_tooltip: 'SSO 제공업체: %{providers}'
+        role_descriptions:
+          guest: 소개 워크플로에 대해 의도적으로 권한이 제한된 보조자 우선 환경입니다.
+          member: 기본 사용자 권한입니다. 자신의 계좌, 거래 및 설정을 관리할 수 있습니다.
+          admin: 가족 관리자. API 키, 가져오기 및 AI 프롬프트와 같은 고급 설정에 액세스할 수 있습니다.
+          super_admin: 인스턴스 관리자입니다. SSO 제공업체와 사용자 역할을 관리하고 지원을 위해 다른 사용자로 로그인할 수 있습니다.
+        invitations:
+          pending_label: 초대됨(보류 중)
+          expires: "%{date} 만료"
+          delete: 삭제
+          delete_all: 모두 삭제
+        unused_families:
+          title: 미사용 가족/그룹
+          family_id: '가족 ID: %{id}'
+          delete: 사용하지 않는 가족 삭제
+          delete_confirm: 사용하지 않는 가족/그룹을 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.
+          empty: 사용하지 않는 가족/그룹이 없습니다.
+      update:
+        success_role: 사용자 역할이 업데이트되었습니다.
+        success_password: 사용자 비밀번호가 성공적으로 업데이트되었습니다.
+        success_role_and_password: 사용자 역할 및 비밀번호가 성공적으로 업데이트되었습니다.
+        success_family: 사용자 가족/그룹 멤버십이 성공적으로 업데이트되었습니다.
+        failure: 사용자 세부 정보(역할 또는 가족/그룹 멤버십)를 업데이트하지 못했습니다.
+        family_required: 기존 가족/그룹을 선택하거나 새 가족/그룹의 이름을 입력하세요.
+        password_and_family_conflict: 비밀번호와 가족/그룹 회원정보는 동시에 업데이트할 수 없습니다.
+        password_disabled: 사용자는 SSO로만 로그인할 수 있으므로 비밀번호 설정이 비활성화되어 있습니다.
+        password_too_short: 비밀번호는 8자 이상이어야 합니다.
+        password_missing_case: 비밀번호는 대문자와 소문자를 모두 포함해야 합니다.
+        password_missing_number: 비밀번호에는 숫자가 하나 이상 포함되어야 합니다.
+        password_missing_special: 비밀번호에는 특수 문자가 하나 이상 포함되어야 합니다.
+        last_super_admin_error: 시스템의 마지막 최고 관리자의 수준을 내릴 수 없습니다.
+      destroy:
+        success: 사용자 액세스가 취소되었으며 영구 삭제가 예약되었습니다.
+        failure: 사용자를 제거하지 못했습니다.
+        cannot_remove_self: 여기에서는 자신의 계정을 삭제할 수 없습니다.
+        cannot_remove_last_super_admin: 마지막 활성 최고 관리자는 제거할 수 없습니다.
+        confirmation_mismatch: 이메일 주소가 일치하지 않습니다. 사용자가 제거되지 않았습니다.
+      deletion:
+        title: 사용자를 영구적으로 제거
+        warning: 그러면 액세스가 즉시 취소되고 사용자와 해당 데이터가 영구적으로 삭제되도록 예약됩니다. 이 작업은 취소할 수 없습니다.
+        instruction: 확인하려면 %{email}를 입력하세요.
+        email_label: 사용자 이메일
+        cancel: 취소
+        submit: 사용자를 영구적으로 제거
+    families:
+      destroy:
+        family_has_active_subscription: 가족/그룹에는 활성 구독이 있으며 구독이 취소될 때까지 삭제할 수 없습니다.
+        family_has_users: 가족/그룹에는 아직 사용자가 있으므로 삭제할 수 없습니다.
+        success: 가족/그룹이 삭제되었습니다.

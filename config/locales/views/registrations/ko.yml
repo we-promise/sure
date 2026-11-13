@@ -1,0 +1,31 @@
+---
+ko:
+  helpers:
+    label:
+      user:
+        invite_code: 초대 코드
+    submit:
+      user:
+        create: 계속
+  registrations:
+    closed: 현재 가입이 마감되었습니다.
+    create:
+      failure: 가입하는 중에 문제가 발생했습니다.
+      invalid_invite_code: 초대 코드가 잘못되었습니다. 다시 시도해 주세요.
+      success: 성공적으로 가입하셨습니다.
+    new:
+      invitation_message: "%{inviter}가 귀하를 %{role}로 초대했습니다."
+      join_family_title: "%{family} %{moniker} 가입"
+      role_admin: 관리자
+      role_guest: 손님
+      role_member: 회원
+      submit: 회원가입
+      title: 계정 만들기
+      welcome_body: 시작하려면 새 계정에 가입해야 합니다.  그러면 앱 내에서 추가 설정을 구성할 수 있습니다.
+      welcome_title: 자체 호스팅 %{product_name}에 오신 것을 환영합니다!
+      password_placeholder: 비밀번호를 입력하세요
+      password_requirements:
+        length: 최소 8자
+        case: 대문자와 소문자
+        number: 숫자(0-9)
+        special: '특수 문자(!, @, #, $, % 등)'

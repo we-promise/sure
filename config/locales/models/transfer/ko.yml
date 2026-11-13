@@ -1,0 +1,22 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: 입금 거래는 여러 이체에 포함될 수 없습니다.
+              must_be_from_different_accounts: 이체의 출금 계좌와 입금 계좌는 서로 달라야 합니다.
+              must_be_from_same_family: 이체는 같은 가족의 계좌 간에 이루어져야 합니다.
+              must_be_within_date_range: 이체 거래 날짜는 서로 4일 이내여야 합니다.
+              must_have_opposite_amounts: 이체 거래의 금액은 크기가 같고 부호가 반대여야 합니다.
+              must_have_single_currency: 이체에는 단일 통화가 있어야 합니다.
+              outflow_cannot_be_in_multiple_transfers: 출금 거래는 여러 이체에 포함될 수 없습니다.
+          different_accounts: 서로 다른 계좌여야 합니다.
+          same_family: 같은 가족에 속해야 합니다.
+          opposite_amounts: 금액의 크기가 같고 부호가 반대여야 합니다.
+          within_days: "%{count}일 이내에 있어야 합니다."
+  transfer:
+    name: "%{to_account} 계좌로 이체"
+    payment_name: "%{to_account}로 결제"

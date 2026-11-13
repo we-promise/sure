@@ -1,0 +1,50 @@
+---
+ko:
+  settings:
+    encryption_migration_guide: 암호화 설정 및 마이그레이션 안내
+    settings_nav:
+      accounts_label: 계좌
+      advanced_section_title: 고급
+      ai_prompts_label: AI 프롬프트
+      auto_matches_label: 자동 연결
+      classifier_label: 분류기
+      background_jobs_label: 백그라운드 작업
+      api_key_label: API 키
+      payment_label: 결제
+      categories_label: 카테고리
+      feedback_label: 의견 보내기
+      general_section_title: 일반
+      imports_label: 가져오기
+      exports_label: 내보내기
+      llm_usage_label: LLM 사용량
+      logout: 로그아웃
+      merchants_label: 가맹점
+      providers_label: 제공업체
+      guides_label: 가이드
+      other_section_title: 더보기
+      preferences_label: 환경설정
+      profile_label: 프로필 정보
+      recurring_transactions_label: 반복
+      rules_label: 규칙
+      mcp_label: MCP
+      security_label: 보안
+      self_hosting_label: 셀프 호스팅
+      sso_providers_label: SSO 제공업체
+      statement_vault_label: 명세서 보관함
+      system_health_label: 시스템 상태
+      tags_label: 태그
+      transactions_section_title: 거래 내역
+      users_label: 사용자
+      whats_new_label: 새로운 소식
+      api_keys_label: API 키
+      appearance_label: 화면 설정
+      bank_sync_label: 은행 동기화
+      debug_label: 디버그
+    settings_nav_link_large:
+      next: 다음
+      previous: 뒤로
+    user_avatar_field:
+      accepted_formats: JPG 또는 PNG. 최대 5MB
+      choose: 사진 업로드
+      choose_label: "(선택사항)"
+      change: 사진 변경

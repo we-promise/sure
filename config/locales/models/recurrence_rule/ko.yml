@@ -1,0 +1,35 @@
+---
+ko:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: 빈도
+        interval: 간격
+        day_of_month: 매월 날짜
+        weekday: 요일
+        weekday_ordinal: 매월 몇 번째 주
+        month_of_year: 월
+      recurring_transaction/recurrence_rules:
+        base: '반복 규칙:'
+        frequency: 빈도
+        interval: 간격
+        day_of_month: 매월 날짜
+        weekday: 요일
+        weekday_ordinal: 매월 몇 번째 주
+        month_of_year: 월
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: 매월 날짜 또는 요일 중 하나만 선택하세요.
+          attributes:
+            weekday:
+              required_for_weekly: 주간 규칙에 필요합니다.
+            weekday_ordinal:
+              not_allowed_for_weekly: 주간 규칙에는 적용되지 않습니다.
+              required_with_weekday: 요일을 설정한 경우 필요합니다.
+              not_allowed_without_weekday: 요일을 설정한 경우에만 적용됩니다.
+            day_of_month:
+              not_allowed_for_weekly: 주간 규칙에는 적용되지 않습니다.
+            month_of_year:
+              required_for_yearly: 연간 규칙에 필요합니다.
+              not_allowed: 연간 규칙에만 적용됩니다.

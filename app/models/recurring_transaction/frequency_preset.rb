@@ -252,6 +252,8 @@ class RecurringTransaction
         def day_phrase(day)
           return I18n.t("recurring_transactions.frequency.last_day") if day == RecurrenceRule::LAST
 
+          return "#{day}일" if I18n.locale.to_s == "ko"
+
           day.ordinalize
         end
 

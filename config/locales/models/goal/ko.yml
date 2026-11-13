@@ -1,0 +1,37 @@
+---
+ko:
+  activerecord:
+    attributes:
+      goal:
+        name: 이름
+        target_amount: 목표금액
+        currency: 통화
+        target_date: 목표일
+        color: 색상
+        notes: 메모
+        state: 상태
+        linked_accounts: 연결된 계좌
+    errors:
+      models:
+        goal:
+          attributes:
+            base:
+              missing_exchange_rate: 이 목표의 계좌 중 하나에 아직 사용할 수 있는 환율이 없어 목표를 완료할 수 없습니다.
+              at_least_one_linked_account_required: 이 목표에 자금을 마련할 계좌를 하나 이상 선택하세요.
+              whole_account_conflict_on_restore: 이 목표를 복원할 수 없습니다. "%{account_name}"는
+                이제 "%{goal_name}"에 완전히 할당되었습니다. 먼저 그 중 하나에 금액을 입력하세요.
+            target_mode:
+              months_requires_maintained: 직접 유지 관리하는 예비비에만 지출 개월 단위로 목표를 설정할 수 있습니다.
+            target_months:
+              blank: 이 예비비로 충당할 지출 개월 수를 입력하세요.
+              only_with_months_mode: 지출 개월 수는 목표를 해당 방식으로 설정한 경우에만 적용됩니다.
+            linked_accounts:
+              must_be_fundable: 연결한 계좌는 모두 현금·투자·암호화폐 계좌여야 합니다.
+              must_belong_to_family: 연결된 계좌는 목표와 같은 가족에 속해야 합니다.
+            kind:
+              locked_while_released: 예비비로 전환하기 전에 이 목표를 다시 열어 주세요.
+              locked_once_consumed: 이 목표는 이미 돈을 지출한 것으로 기록되었으므로 예비금이 될 수 없습니다.
+            target_amount:
+              below_consumed: 이 목표가 이미 지출한 것으로 기록된 것보다 낮은 목표를 설정할 수 없습니다.
+            currency:
+              locked_after_linked: 목표를 계좌에 연결한 후에는 통화를 변경할 수 없습니다.

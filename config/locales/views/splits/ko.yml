@@ -1,0 +1,50 @@
+---
+ko:
+  splits:
+    new:
+      title: 거래 분할
+      description: 이 거래를 카테고리와 금액이 다른 여러 항목으로 분할합니다.
+      submit: 거래 분할
+      cancel: 취소
+      add_row: 분할 추가
+      remove_row: 제거
+      remaining: 남은
+      amounts_must_match: 분할 금액의 합계는 원래 거래 금액과 같아야 합니다.
+      name_label: 이름
+      name_placeholder: 분할 이름
+      amount_label: 금액
+      category_label: 카테고리
+      uncategorized: "(분류되지 않음)"
+      merchant_label: 가맹점
+      no_merchant: "(거래의 가맹점)"
+      tags_label: 태그
+      original_name: '이름:'
+      original_date: '날짜:'
+      original_amount: 금액
+      split_number: '분할 #%{number}'
+    create:
+      success: 거래 분할이 성공적으로 완료되었습니다.
+      not_splittable: 이 거래는 분할할 수 없습니다.
+    destroy:
+      success: 거래 분할이 성공적으로 해제되었습니다.
+    show:
+      title: 분할 항목
+      description: 이 거래는 다음 항목으로 분할되었습니다.
+      button_title: 거래 분할
+      button_description: 이 거래를 카테고리와 금액이 다른 여러 항목으로 분할합니다.
+      button: 분할
+      unsplit_title: 거래 분할 해제
+      unsplit_button: 분할 해제
+      unsplit_confirm: 이렇게 하면 분할된 모든 항목이 제거되고 원래 거래가 복원됩니다.
+    edit:
+      title: 분할 편집
+      description: 이 거래에 대한 분할 항목을 수정합니다.
+      submit: 분할 업데이트
+      not_split: 이 거래는 분할되어 있지 않습니다.
+    update:
+      success: 분할이 성공적으로 업데이트되었습니다.
+    child:
+      title: 분할 거래의 일부
+      description: 이 항목은 분할 거래의 일부입니다.
+      edit_split: 분할 편집
+      unsplit: 분할 해제
