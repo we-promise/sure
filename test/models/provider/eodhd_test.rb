@@ -206,4 +206,16 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     end
   end
 
+  test "fetch_security_info does not retry a failed fundamentals lookup" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).once.raises(Faraday::ForbiddenError.new("403"))
+
+    2.times do
+      result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+      assert_not result.success?
+    end
+    assert_equal 1, Rails.cache.read("eodhd:daily:#{Date.current}")
+  end
 end

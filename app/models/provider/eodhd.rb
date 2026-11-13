@@ -164,18 +164,27 @@ class Provider::Eodhd < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
+      ticker = eodhd_symbol(symbol, exchange_operating_mic)
+      # Fundamentals cost 10 API calls and fail on plans without them, so don't
+      # retry a failed lookup on every sync.
+      failed_key = "eodhd:fundamentals_failed:#{ticker}"
+      raise Error, "Fundamentals for #{ticker} failed recently; retrying later" if Rails.cache.read(failed_key)
+
       enforce_daily_limit!
       throttle_request
 
-      ticker = eodhd_symbol(symbol, exchange_operating_mic)
+      begin
+        response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
+          req.params["api_token"] = api_key
+          req.params["fmt"] = "json"
+        end
 
-      response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
-        req.params["api_token"] = api_key
-        req.params["fmt"] = "json"
+        parsed = JSON.parse(response.body)
+        check_api_error!(parsed)
+      rescue
+        Rails.cache.write(failed_key, true, expires_in: 7.days)
+        raise
       end
-
-      parsed = JSON.parse(response.body)
-      check_api_error!(parsed)
 
       general = parsed.dig("General") || {}
 
