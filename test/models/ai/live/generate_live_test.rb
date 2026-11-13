@@ -24,6 +24,12 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
     "kilo/~anthropic/claude-haiku-latest" => { key: "KILO_API_KEY", protocol: :compatible, preset: :openai, responses_api: true,
                                                 base_url: ENV.fetch("KILO_BASE_URL", "https://api.kilo.ai/api/gateway"),
                                                 extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } },
+    # Kilo's free router, which answers without a key; the release run (ai-e2e.yml) runs only
+    # this and Jev. Chat completions with auto JSON mode, as a self-hoster's custom URL gets. It
+    # routes to reasoning models, which spend 1024 tokens thinking.
+    "kilo/kilo-auto/free" => { key: "KILO_API_KEY", protocol: :compatible, json_mode: :auto, max_output_tokens: 8192,
+                               base_url: ENV.fetch("KILO_BASE_URL", "https://api.kilo.ai/api/gateway"),
+                               extra_headers: { "X-KiloCode-OrganizationId" => ENV.fetch("KILO_ORG_ID", "") } },
     # OpenRouter free tiers, same Stripe-style gateway; auto JSON mode since free-model
     # support for strict json_schema is unknown until the run.
     "openrouter/cohere/north-mini-code:free" => { key: "OPENROUTER_LIVE_API_KEY", protocol: :compatible, preset: :openrouter, json_mode: :auto,
@@ -80,7 +86,7 @@ class AiGenerateLiveTest < ActiveSupport::TestCase
     def plan_for(feature, preset, model_name, spec)
       endpoint = Ai::Config::Endpoint.new(name: preset, api_key: ENV[spec[:key]].presence || "recorded",
                                           **spec.slice(:protocol, :preset, :responses_api, :json_mode, :base_url, :location, :extra_headers))
-      model = Ai::Config::Model.new(endpoint:, name: model_name, capabilities: %i[structured_output], max_output_tokens: 1024)
+      model = Ai::Config::Model.new(endpoint:, name: model_name, capabilities: %i[structured_output], max_output_tokens: spec.fetch(:max_output_tokens, 1024))
       route = Ai::Route.new(feature:, model:, prompt: Ai::LegacyEnvConfig.prompt_for(feature, endpoint))
       Ai::Plan.new(feature:, lane: Ai::Routes.fetch(feature)[:lane], routes: [ route ])
     end

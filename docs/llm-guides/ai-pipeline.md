@@ -214,6 +214,12 @@ flowchart LR
   with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.
 - CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
   `ai-live` label runs the live tests and evals with repository secrets.
+- End to end: `test/e2e/ai/` drives categorize (Kilo, Jev and a Jev shadow run), merchant
+  detection, bill setup, PDF import and a browser chat round-trip through their jobs and pages,
+  on free live models configured through the AI ENV (`AiE2eHelper#with_live_ai`: Kilo's
+  `kilo-auto/free`, OpenCode Zen's free Jev). The assertions check shape, not accuracy. They skip
+  unless `AI_E2E=1`; `ai-e2e.yml` runs them, and the free legs of `test/models/ai/live/`, on every
+  `v*` tag. Embeddings have no free model, so documents search isn't covered.
 
 ## Judgements and shadow runs
 
