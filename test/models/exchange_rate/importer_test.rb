@@ -427,6 +427,7 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
     Setting.stubs(:exchange_rate_provider).returns("twelve_data")
+    Setting.stubs(:twelve_data_api_key).returns(nil)
 
     provider_response = provider_success_response([
       OpenStruct.new(from: "USD", to: "EUR", date: 3.days.ago.to_date, rate: 1.3),
