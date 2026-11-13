@@ -441,7 +441,9 @@ Scheduled jobs such as the daily account sync and the market data import only ru
 SIDEKIQ_CRON_GRACE_PERIOD_SECONDS=86400   # default 600 (10 minutes)
 ```
 
-When the worker wakes, each job then runs once for its most recent missed time (older missed runs are not replayed). After changing it, run `docker compose up -d worker` (`docker compose -f compose.ai.yml up -d worker` for the AI compose file) to recreate the worker; `docker compose restart` keeps the old value.
+When the worker wakes, each job then runs once for its most recent missed time, but only if that time is within the grace period; otherwise it waits for its next scheduled time (older missed runs are not replayed). For example, a Friday 22:00 import missed until Monday morning needs `259200` (3 days) to catch up; with `86400` it waits until Monday 22:00.
+
+The value only reaches the worker if your compose file passes it: the current `compose.example.yml` and `compose.example.ai.yml` forward it in the `x-rails-env` block. If your `compose.yml` was copied from an older example, add `SIDEKIQ_CRON_GRACE_PERIOD_SECONDS: ${SIDEKIQ_CRON_GRACE_PERIOD_SECONDS:-}` under `x-rails-env`. After changing it, run `docker compose up -d worker` (`docker compose -f compose.ai.yml up -d worker` for the AI compose file) to recreate the worker; `docker compose restart` keeps the old value.
 
 ## How to update your app
 
