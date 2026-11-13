@@ -397,10 +397,7 @@ class Category < ApplicationRecord
     i18n_key = self.class.send(:default_category_translation_key_for, name)
     return false unless i18n_key
 
-    LanguagesHelper::SUPPORTED_LOCALES.any? do |locale|
-      translated = I18n.t(i18n_key, locale: locale, default: nil)
-      translated.present? && normalized.casecmp?(translated)
-    end
+    LanguagesHelper.folded_translations(i18n_key).include?(normalized.downcase(:fold))
   end
 
   def display_name_with_parent

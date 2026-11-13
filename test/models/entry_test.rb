@@ -295,6 +295,12 @@ class EntryTest < ActiveSupport::TestCase
     assert entry.generic_name?
   end
 
+  test "generic_name? ignores case and surrounding spaces" do
+    entry = create_transaction(account: accounts(:depository), name: "  #{I18n.t("transactions.unknown_name").upcase} ")
+
+    assert entry.generic_name?
+  end
+
   test "generic_name? is false for a distinguishing name" do
     entry = create_transaction(account: accounts(:depository), name: "Starbucks #4521")
 

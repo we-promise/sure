@@ -12,6 +12,7 @@ class HoldingsController < ApplicationController
 
   def show
     @last_price_updated = @holding.security.prices.maximum(:updated_at)
+    @trade_entries = @holding.trades.includes(:entryable).to_a
   end
 
   def update
