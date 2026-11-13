@@ -69,24 +69,34 @@
     <% if @nav %>
       <div class="flex items-center gap-1 mb-4">
         <div class="flex items-center gap-2">
-          <%= render DS::Link.new(
-            variant: "icon",
-            icon: "chevron-left",
-            href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
-            aria: { label: t("reports.index.previous_period") },
-          ) %>
+          <%= render DS::Tooltip.new(text: t("reports.index.shortcut_hint", action: t("reports.index.previous_period"), key: "←")) do |tooltip| %>
+            <% tooltip.with_trigger do %>
+              <%= render DS::Link.new(
+                variant: "icon",
+                icon: "chevron-left",
+                href: reports_path(period_type: @period_type, start_date: @nav[:prev_start], end_date: @nav[:prev_end]),
+                aria: { label: t("reports.index.previous_period"), keyshortcuts: "ArrowLeft" },
+                data: { controller: "hotkey", hotkey: "ArrowLeft" },
+              ) %>
+            <% end %>
+          <% end %>
 
           <% if @nav[:at_latest] %>
             <button disabled aria-label="<%= t("reports.index.next_period") %>" class="text-subdued inline-flex items-center justify-center w-9 h-9 rounded-lg cursor-not-allowed">
               <%= icon("chevron-right", color: "current") %>
             </button>
           <% else %>
-            <%= render DS::Link.new(
-              variant: "icon",
-              icon: "chevron-right",
-              href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
-              aria: { label: t("reports.index.next_period") },
-            ) %>
+            <%= render DS::Tooltip.new(text: t("reports.index.shortcut_hint", action: t("reports.index.next_period"), key: "→")) do |tooltip| %>
+              <% tooltip.with_trigger do %>
+                <%= render DS::Link.new(
+                  variant: "icon",
+                  icon: "chevron-right",
+                  href: reports_path(period_type: @period_type, start_date: @nav[:next_start], end_date: @nav[:next_end]),
+                  aria: { label: t("reports.index.next_period"), keyshortcuts: "ArrowRight" },
+                  data: { controller: "hotkey", hotkey: "ArrowRight" },
+                ) %>
+              <% end %>
+            <% end %>
           <% end %>
         </div>
 
@@ -128,56 +138,11 @@
     </section>
 
     <%# Collapsible & Reorderable Sections %>
-    <div data-controller="reports-sortable" data-action="dragover->reports-sortable#dragOver drop->reports-sortable#drop" role="list" aria-label="Reports sections">
-      <% @reports_sections.each do |section| %>
-        <% next unless section[:visible] %>
-        <section
-          class="bg-container rounded-xl shadow-border-xs transition-all mb-6 group focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 focus-visible:ring-offset-2"
-          data-reports-sortable-target="section"
-          data-section-key="<%= section[:key] %>"
-          data-controller="reports-section"
-          data-reports-section-section-key-value="<%= section[:key] %>"
-          data-reports-section-collapsed-value="<%= Current.user.reports_section_collapsed?(section[:key]) %>"
-          draggable="true"
-          tabindex="0"
-          role="listitem"
-          aria-grabbed="false"
-          aria-label="<%= t(section[:title]) %> section. Press Enter or Space to grab for reordering, then use arrow keys to move."
-          data-action="
-            dragstart->reports-sortable#dragStart
-            dragend->reports-sortable#dragEnd
-            touchstart->reports-sortable#touchStart
-            touchmove->reports-sortable#touchMove
-            touchend->reports-sortable#touchEnd
-            keydown->reports-sortable#handleKeyDown">
-          <div class="px-4 py-2 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                class="text-secondary hover:text-primary transition-colors p-0.5"
-                data-action="click->reports-section#toggle keydown->reports-section#handleToggleKeydown"
-                data-reports-section-target="button"
-                aria-label="<%= t("reports.index.toggle_section") %>"
-                aria-expanded="<%= !Current.user.reports_section_collapsed?(section[:key]) %>">
-                <%= icon("chevron-down", size: "sm", class: "transition-transform", data: { reports_section_target: "chevron" }) %>
-              </button>
-              <h2 class="text-base font-medium">
-                <%= t(section[:title]) %>
-              </h2>
-            </div>
-            <button
-              type="button"
-              class="cursor-grab active:cursor-grabbing text-secondary hover:text-primary transition-colors p-0.5 opacity-0 group-hover:opacity-100"
-              aria-label="<%= t("reports.index.drag_to_reorder") %>">
-              <%= icon("grip-vertical", size: "sm") %>
-            </button>
-          </div>
-          <div class="p-4" data-reports-section-target="content">
-            <%= render partial: section[:partial], locals: section[:locals] %>
-          </div>
-        </section>
-      <% end %>
-    </div>
+    <%= render "shared/reorderable_sections",
+          sections: @reports_sections,
+          namespace: "reports",
+          url: update_preferences_reports_path,
+          i18n_scope: "reports.index" %>
   <% else %>
     <%# Empty State %>
     <section>

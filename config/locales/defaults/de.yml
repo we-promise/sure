@@ -7,6 +7,11 @@ de:
       close: Schließen
   global:
     expand: "Aufklappen"
+  oauth:
+    registration:
+      invalid_redirect_uris: "redirect_uris müssen https, loopback-http oder ein URI-Schema einer nativen App verwenden"
+      invalid_client_name: "client_name darf keine bidirektionalen Steuerzeichen enthalten"
+      reserved_client_name: "client_name ist für eigene Apps reserviert"
   activerecord:
     errors:
       messages:
@@ -52,6 +57,7 @@ de:
       short: "%e. %b"
       month_year: "%B %Y"
       short_month_year: "%b %Y"
+      short_with_year: '%-d. %b %Y'
     month_names:
     -
     - Januar

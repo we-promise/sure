@@ -36,6 +36,7 @@ hu:
       files_hint: PDF, CSV vagy XLSX. Maximum %{max_size} MB fájlonként.
       files_label: Kimutatásfájlok
       inbox_upload: Feltöltés
+      period_hint: "A Sure az időszakot a PDF-ből olvassa ki, ha szerepel benne, vagy a fájlnévben lévő dátumból (pl. 2026-04). A kivonaton kézzel is megadhatod."
     index:
       account_label: Számla
       confidence: "%{confidence} egyezés"

@@ -75,6 +75,7 @@ vi:
       connection_name_label: Tên kết nối
       connection_name_placeholder: Tài khoản kinh doanh
       default_connection_name: Kết nối Mercury
+      disconnect: Ngắt kết nối
       disconnect_confirm: "Ngắt kết nối %{name}?"
       instructions:
         copy_token_html: "Sao chép <strong>toàn bộ mã thông báo</strong> (bao gồm tiền tố <code>secret-token:</code>) và thêm làm kết nối có tên bên dưới"

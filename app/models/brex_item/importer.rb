@@ -43,6 +43,8 @@ class BrexItem::Importer
     rescue Provider::Brex::BrexError => e
       mark_requires_update_if_credentials_error(e)
       Rails.logger.error "BrexItem::Importer - Brex API error: #{e.message} trace_id=#{e.trace_id}"
+      # A rejected token fails the sync instead of completing it with nothing imported
+      raise if credentials_error?(e)
       nil
     rescue JSON::ParserError => e
       Rails.logger.error "BrexItem::Importer - Failed to parse Brex API response: #{e.message}"
@@ -123,6 +125,8 @@ class BrexItem::Importer
           transactions_failed += 1
         end
       rescue => e
+        raise if credentials_error?(e)
+
         transactions_failed += 1
         Rails.logger.error "BrexItem::Importer - Failed to fetch/store transactions for account #{brex_account.account_id}: #{e.message}"
       end
@@ -155,6 +159,8 @@ class BrexItem::Importer
     rescue Provider::Brex::BrexError => e
       mark_requires_update_if_credentials_error(e)
       Rails.logger.error "BrexItem::Importer - Brex API error for account #{brex_account.account_id}: #{e.message} trace_id=#{e.trace_id}"
+      # Also when the token can list accounts but not read their transactions
+      raise if credentials_error?(e)
       { success: false, transactions_count: 0, error: e.message }
     rescue JSON::ParserError => e
       Rails.logger.error "BrexItem::Importer - Failed to parse transaction response for account #{brex_account.account_id}: #{e.message}"
@@ -223,8 +229,12 @@ class BrexItem::Importer
       end
     end
 
+    def credentials_error?(error)
+      error.is_a?(Provider::Brex::BrexError) && error.error_type.in?([ :unauthorized, :access_forbidden ])
+    end
+
     def mark_requires_update_if_credentials_error(error)
-      return unless error.error_type.in?([ :unauthorized, :access_forbidden ])
+      return unless credentials_error?(error)
 
       brex_item.update!(status: :requires_update)
     rescue => update_error

@@ -1,0 +1,25 @@
+<div class="space-y-4">
+  <p class="text-sm text-secondary"><%= t(".description") %></p>
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       class: "space-y-4" do |form| %>
+    <%= form.select :demo_family_refresh_family_id,
+                    options_for_select([[t(".none"), ""]] +
+                      Family.joins(:users).where(users: { email: Rails.application.config_for(:demo).with_indifferent_access.fetch(:email), role: :admin }).where.not(id: User.super_admin.select(:family_id)).distinct.map { |family| ["#{family.name} (##{family.id})", family.id] },
+                      Setting.demo_family_refresh_family_id),
+                    { label: t(".family_label") } %>
+    <%= form.submit t(".save_family") %>
+  <% end %>
+  <%= styled_form_with model: Setting.new,
+                       url: settings_hosting_path,
+                       method: :patch,
+                       data: { controller: "auto-submit-form", auto_submit_form_trigger_event_value: "change" } do |form| %>
+    <div class="flex items-center justify-between gap-4">
+      <span class="text-sm"><%= t(".enabled_label") %></span>
+      <%= form.toggle :demo_family_refresh_enabled,
+                      checked: Setting.demo_family_refresh_enabled,
+                      data: { auto_submit_form_target: "auto" } %>
+    </div>
+  <% end %>
+</div>

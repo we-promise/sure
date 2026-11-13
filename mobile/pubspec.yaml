@@ -1,7 +1,8 @@
 name: sure_mobile
 description: A mobile app for Sure personal finance management
 publish_to: 'none'
-version: 0.6.9+20260402
+# Development placeholder only. CI supplies platform-specific versions/build numbers.
+version: 0.0.0-dev+0
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -69,7 +70,8 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/icon/app_icon.png"
-  image_path_ios_dark_transparent: "assets/icon/app_icon.png"
+  image_path_ios_dark_transparent: "assets/icon/app_icon_dark.png"
+  image_path_ios_tinted_grayscale: "assets/icon/app_icon_tinted.png"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/icon/app_icon.png"
   remove_alpha_ios: true

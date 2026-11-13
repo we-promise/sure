@@ -133,10 +133,13 @@ class Assistant::Function::GetPaycheckPlan < Assistant::Function
       }.compact
     end
 
+    # Both dates, as get_bills reports them: the plan files a snoozed bill by
+    # the date it was snoozed to, and record_bill_payment finds it by due_on.
     def serialize_item(item)
       {
         name: item.occurrence.recurring_transaction.display_name,
         due_on: item.occurrence.due_on.iso8601,
+        effective_due_on: item.occurrence.effective_due_on.iso8601,
         this_period_share: fmt(item.share),
         whole_obligation_remaining: fmt(item.remaining_total)
       }

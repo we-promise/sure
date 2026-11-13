@@ -1,48 +1,75 @@
 class SnaptradeAccount::ActivitiesProcessor
   include SnaptradeAccount::DataHelpers
 
-  # Map SnapTrade activity types to Sure activity labels
-  # SnapTrade types: https://docs.snaptrade.com/reference/get_activities
-  SNAPTRADE_TYPE_TO_LABEL = {
-    "BUY" => "Buy",
-    "SELL" => "Sell",
-    "DIVIDEND" => "Dividend",
-    "DIV" => "Dividend",
-    "CONTRIBUTION" => "Contribution",
-    "WITHDRAWAL" => "Withdrawal",
-    "TRANSFER_IN" => "Transfer",
-    "TRANSFER_OUT" => "Transfer",
-    "TRANSFER" => "Transfer",
-    "INTEREST" => "Interest",
-    "FEE" => "Fee",
-    "TAX" => "Fee",
-    "REI" => "Reinvestment",      # Reinvestment
-    "REINVEST" => "Reinvestment",
-    "SPLIT" => "Other",
-    "SPLIT_REVERSE" => "Other",   # Reverse stock split
-    "MERGER" => "Other",
-    "SPIN_OFF" => "Other",
-    "STOCK_DIVIDEND" => "Dividend",
-    "JOURNAL" => "Other",
-    "CASH" => "Contribution",     # Cash deposit (non-retirement)
-    "CORP_ACTION" => "Other",     # Corporate action
-    "OTHER" => "Other",
-    # Option activity types
-    "OPTION_BUY" => "Buy",        # Buy to open/close option
-    "OPTION_SELL" => "Sell",      # Sell to open/close option
-    "EXERCISED" => "Other",       # Option exercised
-    "EXPIRED" => "Other",         # Option expired worthless
-    "ASSIGNED" => "Other"         # Option assignment
+  # Declarative configuration for SnapTrade activity types.
+  # Defines category (:trade, :unit_dependent, or :cash), investment activity label,
+  # quantity signing convention (:buy, :sell, or :preserve), and amount handling (:unconditional, :if_absent, or nil).
+  ACTIVITY_RULES = {
+    # Buys
+    "BUY" => { category: :trade, label: "Buy", sign: :buy },
+
+    # Sells
+    "SELL" => { category: :trade, label: "Sell", sign: :sell },
+
+    # Reinvestments
+    "REI" => { category: :trade, label: "Reinvestment", sign: :buy },
+    "REINVEST" => { category: :trade, label: "Reinvestment", sign: :buy },
+
+    # Options
+    "OPTION_BUY" => { category: :trade, label: "Buy", sign: :buy },
+    "OPTION_SELL" => { category: :trade, label: "Sell", sign: :sell },
+    "OPTIONASSIGNMENT" => { category: :trade, label: "Other", sign: :sell },
+    "ASSIGNED" => { category: :trade, label: "Other", sign: :sell },
+    "OPTIONEXERCISE" => { category: :trade, label: "Other", sign: :preserve },
+    "EXERCISED" => { category: :trade, label: "Other", sign: :preserve },
+    "OPTIONEXPIRATION" => { category: :trade, label: "Other", sign: :preserve, zero_amount: :unconditional },
+    "EXPIRED" => { category: :trade, label: "Other", sign: :preserve, zero_amount: :unconditional },
+
+    # Stock dividends and splits
+    "STOCK_DIVIDEND" => { category: :trade, label: "Dividend", sign: :buy, zero_amount: :unconditional },
+    "SPLIT" => { category: :trade, label: "Other", sign: :buy, zero_amount: :unconditional },
+    "REVERSE_SPLIT" => { category: :trade, label: "Other", sign: :sell, zero_amount: :unconditional },
+    "SPLIT_REVERSE" => { category: :trade, label: "Other", sign: :sell, zero_amount: :unconditional },
+    "SPINOFF" => { category: :trade, label: "Other", sign: :buy, zero_amount: :unconditional },
+    "SPIN_OFF" => { category: :trade, label: "Other", sign: :buy, zero_amount: :unconditional },
+
+    # Asset transfers
+    "EXTERNAL_ASSET_TRANSFER_IN" => { category: :trade, label: "Transfer", sign: :buy, zero_amount: :unconditional },
+    "EXTERNAL_ASSET_TRANSFER_OUT" => { category: :trade, label: "Transfer", sign: :sell, zero_amount: :unconditional },
+    "INTERNAL_ASSET_TRANSFER_IN" => { category: :trade, label: "Transfer", sign: :buy, zero_amount: :unconditional },
+    "INTERNAL_ASSET_TRANSFER_OUT" => { category: :trade, label: "Transfer", sign: :sell, zero_amount: :unconditional },
+
+    # Unit-dependent types:
+    # When units are present and non-zero, treated as a trade preserving signed units.
+    # When units are nil/zero, treated as a cash activity.
+    "ADJUSTMENT" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :unconditional, cash_flow: :invert },
+    "STOCK_MERGER" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
+    "MERGER" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
+    "CORP_ACTION" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
+
+    # Cash activities
+    "DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "DIV" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "CONTRIBUTION" => { category: :cash, label: "Contribution", cash_flow: :inflow },
+    "WITHDRAWAL" => { category: :cash, label: "Withdrawal", cash_flow: :outflow },
+    "TRANSFER" => { category: :cash, label: "Transfer", cash_flow: :invert },
+    "TRANSFER_IN" => { category: :cash, label: "Transfer", cash_flow: :inflow },
+    "TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
+    "INTERNAL_CASH_TRANSFER_IN" => { category: :cash, label: "Transfer", cash_flow: :inflow },
+    "INTERNAL_CASH_TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
+    "INTEREST" => { category: :cash, label: "Interest", cash_flow: :inflow },
+    "FEE" => { category: :cash, label: "Fee", cash_flow: :outflow },
+    "TAX" => { category: :cash, label: "Fee", cash_flow: :outflow },
+    "CASH" => { category: :cash, label: "Contribution", cash_flow: :inflow },
+    "REBATE" => { category: :cash, label: "Other", cash_flow: :inflow },
+    "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
+    "JOURNAL" => { category: :cash, label: "Other" },
+    "OTHER" => { category: :cash, label: "Other" }
   }.freeze
 
-  # Activity types that result in Trade records (involves securities)
-  TRADE_TYPES = %w[BUY SELL REI REINVEST OPTION_BUY OPTION_SELL EXERCISED ASSIGNED].freeze
-
-  # Sell-side activity types (quantity should be negative)
-  SELL_SIDE_TYPES = %w[SELL OPTION_SELL ASSIGNED].freeze
-
-  # Activity types that result in Transaction records (cash movements)
-  CASH_TYPES = %w[DIVIDEND DIV CONTRIBUTION WITHDRAWAL TRANSFER_IN TRANSFER_OUT TRANSFER INTEREST FEE TAX CASH].freeze
+  SNAPTRADE_TYPE_TO_LABEL = ACTIVITY_RULES.transform_values { |r| r[:label] }.freeze
 
   def initialize(snaptrade_account)
     @snaptrade_account = snaptrade_account
@@ -122,18 +149,35 @@ class SnaptradeAccount::ActivitiesProcessor
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Processing activity: type=#{activity_type}, id=#{external_id}"
 
       # Determine if this is a trade or cash activity
-      if trade_activity?(activity_type)
+      if trade_activity?(activity_type, data)
         process_trade(data, activity_type, external_id)
       else
         process_cash_activity(data, activity_type, external_id)
       end
     end
 
-    def trade_activity?(activity_type)
-      TRADE_TYPES.include?(activity_type)
+    def trade_activity?(activity_type, data = {})
+      rule = ACTIVITY_RULES[activity_type]
+      return false unless rule
+
+      case rule[:category]
+      when :trade
+        true
+      when :unit_dependent
+        units = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
+                parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
+        units&.nonzero? ? true : false
+      else
+        false
+      end
     end
 
     def process_trade(data, activity_type, external_id)
+      # Check `option_symbol` first: if present, this is an option contract trade.
+      # Prioritizing `option_symbol` prevents brokerages like Robinhood (which populate
+      # plain `symbol` with the underlying equity) from importing options as common stock.
+      ticker, option_data = option_ticker_and_data(data)
+
       # Extract and normalize symbol data
       # SnapTrade activities have DIFFERENT structure than holdings:
       #   activity.symbol.symbol = "MSTR" (ticker string directly)
@@ -148,16 +192,25 @@ class SnaptradeAccount::ActivitiesProcessor
       # Determine ticker based on data type
       if raw_symbol_data.is_a?(String)
         # Activities: symbol.symbol is the ticker string directly
-        ticker = raw_symbol_data
-        symbol_data = symbol_wrapper # Use the wrapper for description, etc.
+        fallback_ticker = raw_symbol_data
+        underlying_symbol_data = symbol_wrapper # Use the wrapper for description, etc.
       elsif raw_symbol_data.is_a?(Hash)
         # Holdings structure: symbol.symbol is an object with symbol inside
-        symbol_data = raw_symbol_data.with_indifferent_access
-        ticker = symbol_data["symbol"] || symbol_data[:symbol]
-        ticker = symbol_data["raw_symbol"] if ticker.is_a?(Hash)
+        underlying_symbol_data = raw_symbol_data.with_indifferent_access
+        fallback_ticker = underlying_symbol_data["symbol"] || underlying_symbol_data[:symbol]
+        fallback_ticker = underlying_symbol_data["raw_symbol"] if fallback_ticker.is_a?(Hash)
       else
-        ticker = nil
-        symbol_data = {}
+        fallback_ticker = nil
+        underlying_symbol_data = {}
+      end
+
+      if ticker.present?
+        # When option_symbol is present, use option_data but merge in underlying symbol
+        # metadata as fallback (e.g. exchange, currency, ticker) when option_symbol lacks them.
+        symbol_data = underlying_symbol_data.merge(option_data).with_indifferent_access
+      else
+        ticker = fallback_ticker
+        symbol_data = underlying_symbol_data
       end
 
       # Must have a symbol for trades
@@ -167,7 +220,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       # Resolve security
-      security = resolve_security(ticker, symbol_data)
+      security = resolve_security(ticker, symbol_data, account: account, account_provider_id: @snaptrade_account.account_provider&.id)
       unless security
         capture_skipped_trade("unresolved_security", "security could not be resolved",
                               external_id: external_id, activity_type: activity_type, ticker: ticker)
@@ -188,19 +241,43 @@ class SnaptradeAccount::ActivitiesProcessor
         return
       end
 
+      rule = ACTIVITY_RULES[activity_type] || {}
+
       # Determine sign based on activity type (sell-side should be negative)
-      quantity = if SELL_SIDE_TYPES.include?(activity_type)
+      quantity = case rule[:sign]
+      when :preserve
+        quantity
+      when :sell
         -quantity.abs
       else
         quantity.abs
       end
 
-      amount = if amount&.nonzero?
-        quantity.negative? ? -amount.abs : amount.abs
-      elsif price
-        # Same convention as a manually entered trade: the fee adds to a buy's
-        # cost and comes out of a sell's proceeds.
-        quantity * price + (fee || 0)
+      # SnapTrade reports option `units` in contracts while quoting `price` per
+      # underlying share. Normalize `price` to per-contract so `qty * price`
+      # represents total contract value across all downstream consumers.
+      multiplier = contract_multiplier(symbol_data, option_data)
+      price *= multiplier if price
+
+      case rule[:zero_amount]
+      when :unconditional
+        amount = BigDecimal("0.0")
+        price = price.presence || BigDecimal("0.0")
+      when :if_absent
+        if amount&.nonzero?
+          amount = quantity.negative? ? -amount.abs : amount.abs
+        else
+          amount = BigDecimal("0.0")
+          price = price.presence || BigDecimal("0.0")
+        end
+      else
+        amount = if amount&.nonzero?
+          quantity.negative? ? -amount.abs : amount.abs
+        elsif price
+          # Same convention as a manually entered trade: the fee adds to a buy's
+          # cost and comes out of a sell's proceeds.
+          quantity * price + (fee || 0)
+        end
       end
 
       if amount.nil?
@@ -245,6 +322,8 @@ class SnaptradeAccount::ActivitiesProcessor
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing trade: #{ticker} qty=#{quantity} price=#{price} amount=#{amount} fee=#{fee} date=#{activity_date}"
 
+      return unless reclassify_entry_if_needed(external_id, "Trade")
+
       result = import_adapter.import_trade(
         external_id: external_id,
         security: security,
@@ -274,6 +353,8 @@ class SnaptradeAccount::ActivitiesProcessor
       raw_symbol_data = data[:symbol] || data["symbol"] || {}
       symbol_data = raw_symbol_data.is_a?(Hash) ? raw_symbol_data.with_indifferent_access : {}
       symbol = symbol_data[:symbol] || symbol_data["symbol"] || symbol_data[:ticker]
+      option_ticker, = option_ticker_and_data(data)
+      symbol = option_ticker if option_ticker.present?
       description = data[:description] || data["description"] || build_description(activity_type, symbol)
 
       # Normalize amount sign for certain activity types
@@ -291,6 +372,8 @@ class SnaptradeAccount::ActivitiesProcessor
 
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Importing cash activity: type=#{activity_type} amount=#{amount} date=#{activity_date}"
 
+      return unless reclassify_entry_if_needed(external_id, "Transaction")
+
       result = import_adapter.import_transaction(
         external_id: external_id,
         amount: amount,
@@ -303,13 +386,34 @@ class SnaptradeAccount::ActivitiesProcessor
       @transactions_count += 1 if result
     end
 
+    def reclassify_entry_if_needed(external_id, expected_type)
+      return true if external_id.blank?
+
+      existing = account.entries.find_by(external_id: external_id, source: "snaptrade")
+      return true unless existing && existing.entryable_type != expected_type
+
+      if existing.protected_from_sync?
+        capture_debug_log(
+          message: "Skipping reclassification of protected entry #{existing.id} (#{external_id})",
+          metadata: { activity_id: external_id, reason: "protected" }
+        )
+        return false
+      end
+
+      Rails.logger.info("SnaptradeAccount::ActivitiesProcessor - Reclassifying activity #{external_id} from #{existing.entryable_type} to #{expected_type}")
+      existing.destroy!
+      true
+    end
+
     def normalize_cash_amount(amount, activity_type)
-      case activity_type
-      when "WITHDRAWAL", "TRANSFER_OUT", "FEE", "TAX"
+      rule = ACTIVITY_RULES[activity_type] || {}
+
+      case rule[:cash_flow]
+      when :outflow
         amount.abs   # Money out should be positive in Sure
-      when "CONTRIBUTION", "TRANSFER_IN", "DIVIDEND", "DIV", "INTEREST", "CASH"
+      when :inflow
         -amount.abs  # Money in should be negative in Sure
-      when "TRANSFER"
+      when :invert
         # Direction is not encoded in the type (unlike TRANSFER_IN/TRANSFER_OUT), so the
         # provider's sign is the only directional signal available. SnapTrade signs these
         # from the account's perspective (positive = money in), which is the inverse of
@@ -345,5 +449,16 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       label || "Other"
+    end
+
+    def option_ticker_and_data(data)
+      raw_option_symbol = data["option_symbol"] || data[:option_symbol]
+      return [ nil, nil ] unless raw_option_symbol.is_a?(Hash)
+
+      option_symbol_data = raw_option_symbol.with_indifferent_access
+      ticker = option_symbol_data[:ticker]
+      return [ nil, nil ] if ticker.blank?
+
+      [ ticker, option_symbol_data ]
     end
 end

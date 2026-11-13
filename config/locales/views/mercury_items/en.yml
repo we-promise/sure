@@ -75,6 +75,7 @@ en:
       connection_name_label: Connection name
       connection_name_placeholder: Business checking
       default_connection_name: Mercury Connection
+      disconnect: Disconnect
       disconnect_confirm: "Disconnect %{name}?"
       instructions:
         copy_token_html: "Copy the <strong>full token</strong> (including the <code>secret-token:</code> prefix) and add it as a named connection below"

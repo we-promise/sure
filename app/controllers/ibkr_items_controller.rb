@@ -4,35 +4,14 @@ class IbkrItemsController < ApplicationController
 
   def create
     @ibkr_item = Current.family.ibkr_items.build(ibkr_item_params)
-    @ibkr_item.name ||= t("ibkr_items.defaults.name")
+    @ibkr_item.name = @ibkr_item.name.presence || default_item_name
 
     if @ibkr_item.save
       @ibkr_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "ibkr-providers-panel",
-            partial: "settings/providers/ibkr_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @ibkr_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "ibkr-providers-panel",
-          partial: "settings/providers/ibkr_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("ibkr", alert: @ibkr_item.errors.full_messages.join(", "), new_item_name: ibkr_item_params[:name])
     end
   end
 
@@ -40,34 +19,14 @@ class IbkrItemsController < ApplicationController
     attrs = ibkr_item_params.to_h
     attrs["query_id"] = @ibkr_item.query_id if attrs["query_id"].blank?
     attrs["token"] = @ibkr_item.token if attrs["token"].blank?
+    attrs["name"] = @ibkr_item.name if attrs.key?("name") && attrs["name"].blank?
 
     if @ibkr_item.update(attrs.merge(status: :good))
       @ibkr_item.sync_later unless @ibkr_item.syncing?
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: [
-          turbo_stream.replace(
-            "ibkr-providers-panel",
-            partial: "settings/providers/ibkr_panel"
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      render_provider_panel("ibkr", notice: t(".success"), fallback_path: accounts_path)
     else
-      @error_message = @ibkr_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "ibkr-providers-panel",
-          partial: "settings/providers/ibkr_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("ibkr", alert: @ibkr_item.errors.full_messages.join(", "))
     end
   end
 
@@ -84,6 +43,7 @@ class IbkrItemsController < ApplicationController
 
   def sync
     @ibkr_item.sync_later unless @ibkr_item.syncing?
+    return render_provider_panel("ibkr", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -94,7 +54,7 @@ class IbkrItemsController < ApplicationController
   def select_accounts
     ibkr_item = current_ibkr_item
     unless ibkr_item
-      redirect_to settings_providers_path, alert: t(".not_configured")
+      frame_redirect_to settings_providers_path, alert: t(".not_configured")
       return
     end
 
@@ -103,7 +63,9 @@ class IbkrItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
-    @available_ibkr_accounts = Current.family.ibkr_items
+    ibkr_items = Current.family.ibkr_items.active
+    ibkr_items = ibkr_items.where(id: params[:ibkr_item_id]) if params[:ibkr_item_id].present?
+    @available_ibkr_accounts = ibkr_items
       .includes(ibkr_accounts: { account_provider: :account })
       .flat_map(&:ibkr_accounts)
       .select { |ibkr_account| ibkr_account.account_provider.nil? }
@@ -226,8 +188,18 @@ class IbkrItemsController < ApplicationController
 
     def current_ibkr_item
       active_items = Current.family.ibkr_items.active
+      return active_items.find_by(id: params[:ibkr_item_id]) if params[:ibkr_item_id].present?
 
       active_items.syncable.ordered.first || active_items.ordered.first
+    end
+
+    # "Interactive Brokers", then "Interactive Brokers 2", "Interactive Brokers 3"...
+    def default_item_name
+      base = t("ibkr_items.defaults.name")
+      existing = Current.family.ibkr_items.active.pluck(:name)
+      return base unless existing.include?(base)
+
+      (2..).lazy.map { |n| "#{base} #{n}" }.find { |name| !existing.include?(name) }
     end
 
     def ibkr_item_params

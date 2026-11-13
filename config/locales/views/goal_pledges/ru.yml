@@ -2,21 +2,19 @@
 ru:
   goal_pledges:
     create:
-      success: Pledge recorded. Sure will confirm it on the next sync.
+      success: Пополнение записано. Sure подтвердит его при следующей синхронизации.
     destroy:
-      not_open: Only open pledges can be cancelled.
-      success: Pledge cancelled.
+      not_open: Отменить можно только ожидаемые пополнения.
+      success: Пополнение отменено.
     new:
-      account_label: Into account
-      amount_label: Amount
-      helper_manual: Sure will record this on your next manual balance edit and confirm
-        the contribution.
-      helper_transfer: Sure will look for a matching deposit in your linked account.
-        The pledge stays pending for 7 days, then auto-confirms once Sure spots it.
-      preview_nonzero: Reaches {percent}%, {newTotal} of {target}.
-      preview_reached: Hits your {target} target. Goal reached.
-      preview_zero: Currently {current} of {target} saved.
-      submit: Record pledge
+      account_label: На счёт
+      amount_label: Сумма
+      helper_manual: Sure запишет это при следующем ручном изменении баланса и подтвердит пополнение.
+      helper_transfer: Sure будет искать соответствующее зачисление на связанном счёте. Пополнение остаётся ожидаемым 7 дней и подтверждается автоматически, как только Sure его обнаружит.
+      preview_nonzero: Будет {percent}%, {newTotal} из {target}.
+      preview_reached: Цель {target} будет достигнута.
+      preview_zero: Сейчас накоплено {current} из {target}.
+      submit: Добавить пополнение
     renew:
-      not_open: Only open pledges can be extended.
-      success: Pledge window extended 7 days.
+      not_open: Продлить можно только ожидаемые пополнения.
+      success: Срок ожидания пополнения продлён на 7 дней.

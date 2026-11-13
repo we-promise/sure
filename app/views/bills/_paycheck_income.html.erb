@@ -2,11 +2,14 @@
     controls behind Manage. Dates come from occurrences, never from the stored
     next_expected_date column, so this and the plan always agree. %>
 
-<%= render DS::Disclosure.new(variant: :bare) do |disclosure| %>
+<%# A card, like the pulse and the review banner on the overview: this was a
+    bare disclosure, so the eyebrow, the headline and Manage sat straight on the
+    page background. %>
+<%= render DS::Disclosure.new(variant: :card, body_class: "mt-3 border-t border-subdued divide-y divide-subdued") do |disclosure| %>
   <% disclosure.with_summary_content do %>
     <div class="flex items-baseline justify-between gap-3">
       <div class="min-w-0">
-        <p class="text-xs font-medium uppercase tracking-wide text-secondary">
+        <p class="text-xs font-medium uppercase text-secondary">
           <%= t("bills.paycheck.income_section_title") %>
         </p>
         <% if @next_income %>
@@ -24,34 +27,32 @@
     </div>
   <% end %>
 
-  <div class="bg-container rounded-xl shadow-border-xs mt-3 px-4 py-2">
-    <% @income_series.each do |series| %>
-      <% occurrence = @next_income_by_series[series.id] %>
-      <div class="flex items-center justify-between gap-3 py-2">
-        <div class="min-w-0">
-          <p class="text-sm text-primary truncate">
-            <%= link_to series.display_name, bill_path(series), class: "hover:underline" %>
-          </p>
-          <p class="text-xs text-secondary truncate">
-            <%= frequency_label(series) %>
-            <% if occurrence %>
-              &middot; <%= t("bills.paycheck.income_next_payday", date: l(occurrence.due_on, format: :short)) %>
-            <% end %>
-            <% unless paycheck_income_plans?(series) %>
-              &middot; <%= paycheck_income_excluded_reason(series) %>
-            <% end %>
-          </p>
-        </div>
-        <div class="flex items-center gap-1 shrink-0">
-          <p class="text-sm text-primary tabular-nums privacy-sensitive"><%= format_money(occurrence&.resolved_expected_amount_money || Money.new(series.amount.abs, series.currency)) %></p>
-          <%= render DS::Link.new(
-                icon: "pencil",
-                variant: "icon",
-                href: edit_recurring_transaction_path(series),
-                frame: :modal
-              ) %>
-        </div>
+  <% @income_series.each do |series| %>
+    <% occurrence = @next_income_by_series[series.id] %>
+    <div class="flex items-center justify-between gap-3 py-2">
+      <div class="min-w-0">
+        <p class="text-sm text-primary truncate">
+          <%= link_to series.display_name, bill_path(series), data: { turbo_frame: "drawer", turbo_prefetch: false }, class: "hover:underline" %>
+        </p>
+        <p class="text-xs text-secondary truncate">
+          <%= frequency_label(series) %>
+          <% if occurrence %>
+            &middot; <%= t("bills.paycheck.income_next_payday", date: l(occurrence.due_on, format: :short)) %>
+          <% end %>
+          <% unless paycheck_income_plans?(series) %>
+            &middot; <%= paycheck_income_excluded_reason(series) %>
+          <% end %>
+        </p>
       </div>
-    <% end %>
-  </div>
+      <div class="flex items-center gap-1 shrink-0">
+        <p class="text-sm text-primary tabular-nums privacy-sensitive"><%= format_money(occurrence&.resolved_expected_amount_money || Money.new(series.amount.abs, series.currency)) %></p>
+        <%= render DS::Link.new(
+              icon: "pencil",
+              variant: "icon",
+              href: edit_recurring_transaction_path(series),
+              frame: :modal
+            ) %>
+      </div>
+    </div>
+  <% end %>
 <% end %>

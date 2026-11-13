@@ -49,6 +49,29 @@ class Provider::Anthropic::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal "Subscriptions", result.find { |r| r.transaction_id == "txn_2" }.category_name
   end
 
+  test "sends tool_choice auto to a model that rejects a forced tool" do
+    fake_response = build_response(content: [
+      tool_use_block(
+        id: "toolu_3",
+        name: "report_categorizations",
+        input: { "categorizations" => [ { "transaction_id" => "txn_1", "category_name" => "Fast Food" } ] }
+      )
+    ])
+    client = stub_client(fake_response, expect_request: ->(params) {
+      assert_equal({ type: "auto", disable_parallel_tool_use: true }, params[:tool_choice])
+      assert_includes params[:system_], "calling the report_categorizations tool"
+    })
+
+    result = Provider::Anthropic::AutoCategorizer.new(
+      client,
+      model: "claude-sonnet-5-5",
+      transactions: @transactions,
+      user_categories: @user_categories
+    ).auto_categorize
+
+    assert_equal "Fast Food", result.find { |r| r.transaction_id == "txn_1" }.category_name
+  end
+
   test "normalizes null category names to nil" do
     fake_response = build_response(content: [
       tool_use_block(

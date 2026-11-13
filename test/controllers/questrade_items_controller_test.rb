@@ -37,6 +37,15 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("questrade_items.default_name"), @family.questrade_items.order(:created_at).last.name
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post questrade_items_url,
+         params: { questrade_item: { name: "Business Questrade", refresh_token: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "questrade-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Refresh token can't be blank")
+  end
+
   # ---------------------------------------------------------------------------
   # update
   # ---------------------------------------------------------------------------
@@ -66,6 +75,17 @@ class QuestradeItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to settings_providers_path
     assert_equal "Renamed Questrade", @questrade_item.name
     assert_equal original_token, @questrade_item.refresh_token
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch questrade_item_url(@questrade_item),
+          params: { questrade_item: { name: "Renamed Questrade", refresh_token: "" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "questrade-providers-panel"
+    assert_includes response.body, %(id="questrade-providers-panel")
+    assert_equal "Renamed Questrade", @questrade_item.reload.name
   end
 
   # ---------------------------------------------------------------------------

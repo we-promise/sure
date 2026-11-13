@@ -13,14 +13,17 @@ class AddFamilyScopedIbanUniquenessToMerchantsMigrationTest < ActiveSupport::Tes
     ActiveRecord::Base.connection.execute("DROP INDEX IF EXISTS index_merchants_on_family_id_and_iban")
 
     family = families(:dylan_family)
-    FamilyMerchant.create!(name: "Landlord A", family: family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+    first = FamilyMerchant.create!(name: "Landlord A", family: family, iban: "AT611904300234573201") # pipelock:ignore IBAN
     # Bypasses the model uniqueness this migration is meant to add at the DB
     # level too -- simulates data that predates either.
-    FamilyMerchant.create!(name: "Landlord B", family: family).update_column(:iban, "AT611904300234573201") # pipelock:ignore IBAN
+    second = FamilyMerchant.create!(name: "Landlord B", family: family)
+    second.update_column(:iban, "AT611904300234573201") # pipelock:ignore IBAN
 
     error = assert_raises(RuntimeError) { AddFamilyScopedIbanUniquenessToMerchants.new.up }
 
     assert_match "already share an iban within the same family", error.message
+    assert_includes error.message, first.id
+    assert_includes error.message, second.id
     # Standard transactional test rollback undoes both the DROP INDEX above
     # and the duplicate rows once this test finishes, restoring the schema
     # for subsequent tests without any manual cleanup here.

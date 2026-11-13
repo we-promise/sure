@@ -106,7 +106,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
 
     response = provider.extract_bank_statement(
       pdf_content: pdf_import.pdf_file_content,
-      model: openai_model,
+      model: model_for(provider),
       family: family
     )
 
@@ -184,7 +184,9 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
       end
     end
 
-    def openai_model
-      ENV["OPENAI_MODEL"].presence || Provider::Openai::DEFAULT_MODEL
+    # Only OpenAI takes the OpenAI model setting; other providers (Anthropic)
+    # resolve their own default when given nil.
+    def model_for(provider)
+      Provider::Openai.effective_model if provider.is_a?(Provider::Openai)
     end
 end

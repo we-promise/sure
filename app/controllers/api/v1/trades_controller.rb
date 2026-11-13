@@ -99,14 +99,25 @@ class Api::V1::TradesController < Api::V1::BaseController
 
     updatable = build_entry_params_for_update
 
-    if @entry.update(updatable.except(:nature))
-      @entry.lock_saved_attributes!
-      @entry.mark_user_modified!
-      @entry.sync_account_later
-      @trade = @entry.trade
-      render :show
-    else
-      render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+    # The edit and its follow-up writes commit together, as in
+    # TransactionsController#update: if one fails, a retry still finds the
+    # change to make.
+    Entry.transaction do
+      if @entry.update(updatable.except(:nature))
+        # Read before the follow-up writes below reset saved_changes. A request
+        # that changes nothing must not mark the entry user-modified, which would
+        # stop provider imports from updating it.
+        if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
+          @entry.lock_saved_attributes!
+          @entry.mark_user_modified!
+          @entry.sync_account_later
+        end
+        @trade = @entry.trade
+        render :show
+      else
+        render_validation_error("Trade could not be updated", @entry.errors.full_messages)
+        raise ActiveRecord::Rollback
+      end
     end
   rescue => e
     log_and_render_error("update", e)
@@ -163,7 +174,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_params
       params.require(:trade).permit(
         :account_id, :date, :qty, :price, :currency,
-        :security_id, :ticker, :manual_ticker, :investment_activity_label, :category_id,
+        :security_id, :ticker, :manual_ticker, :investment_activity_label,
         :fee, :type, :amount, :transfer_account_id
       )
     end
@@ -171,7 +182,7 @@ class Api::V1::TradesController < Api::V1::BaseController
     def trade_update_params
       params.require(:trade).permit(
         :name, :date, :amount, :currency, :notes, :nature, :type,
-        :qty, :price, :investment_activity_label, :category_id
+        :qty, :price, :investment_activity_label
       )
     end
 
@@ -186,8 +197,7 @@ class Api::V1::TradesController < Api::V1::BaseController
         entryable_type: "Trade",
         entryable_attributes: {
           id: @trade.id,
-          investment_activity_label: flat[:investment_activity_label],
-          category_id: flat[:category_id]
+          investment_activity_label: flat[:investment_activity_label]
         }.compact_blank
       }.compact
 
@@ -248,7 +258,7 @@ class Api::V1::TradesController < Api::V1::BaseController
           amount: parse_positive_amount!(trade_params[:amount], context: "deposit/withdrawal"),
           currency: trade_params[:currency].presence || account.currency,
           type: type,
-          transfer_account_id: trade_params[:transfer_account_id]
+          transfer_account_id: writable_transfer_account_id
         }.compact
 
       when "interest", "fee"
@@ -391,14 +401,6 @@ class Api::V1::TradesController < Api::V1::BaseController
         end
         attrs[:investment_activity_label] = label
       end
-      if trade_params[:category_id].present?
-        category = current_resource_owner.family.categories.find_by(id: trade_params[:category_id])
-        unless category
-          render_validation_error("Category not found or does not belong to your family", [ "category_id is invalid" ])
-          return {}
-        end
-        attrs[:category_id] = category.id
-      end
       attrs
     end
 
@@ -438,6 +440,16 @@ class Api::V1::TradesController < Api::V1::BaseController
       return security.ticker if security.exchange_operating_mic.blank?
 
       "#{security.ticker}|#{security.exchange_operating_mic}"
+    end
+
+    # A deposit or withdrawal also books an entry on the other account, so it
+    # has to be one the key's user may write to. Raises RecordNotFound, which
+    # #create answers with "Account not found".
+    def writable_transfer_account_id
+      return if trade_params[:transfer_account_id].blank?
+
+      current_resource_owner.family.accounts.writable_by(current_resource_owner)
+        .find(trade_params[:transfer_account_id]).id
     end
 
     def render_validation_error(message, errors)

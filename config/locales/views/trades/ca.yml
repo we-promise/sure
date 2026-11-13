@@ -20,6 +20,7 @@ ca:
       type_interest: Interès
       type_sell: Venda
       type_withdrawal: Retirada
+      trade_requires_security: Cal un valor (símbol) per a les operacions de compra i venda
     header:
       buy: Compra
       current_market_price_label: Preu de mercat actual
@@ -31,6 +32,15 @@ ca:
       sell: Venda
       symbol_label: Símbol
       total_return_label: Guany/pèrdua no realitzada
+      contribution: Aportació
+      exchange: Bescanvi
+      fee: Comissió
+      other: Altres
+      reinvestment: Reinversió
+      sweep_in: Traspàs automàtic d'entrada
+      sweep_out: Traspàs automàtic de sortida
+      transfer: Transferència
+      withdrawal: Retirada
     new:
       title: Nova transacció
     show:
@@ -57,3 +67,8 @@ ca:
       sell: Venda
       settings: Configuració
       type_label: Tipus
+    api_errors:
+      activity_label_must_match_type: investment_activity_label ha de ser %{label} quan type és %{type}
+      invalid_activity_label: Etiqueta d'activitat d'inversió no vàlida
+      invalid_type: Tipus no vàlid
+      supported_types: 'type ha de ser un d''aquests valors: %{types}'

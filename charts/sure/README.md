@@ -555,6 +555,23 @@ rails:
 
 Note: In self-hosted mode, if these env vars are not provided, they will be automatically generated from `SECRET_KEY_BASE`. In managed mode, these env vars must be explicitly provided via environment variables or Rails credentials.
 
+## Email delivery
+
+Configure SMTP delivery with the top-level `email` values. Non-secret values are rendered into the Rails workloads as the `EMAIL_SENDER`, `APP_DOMAIN`, and `SMTP_*` environment variables that Action Mailer reads.
+
+```yaml
+email:
+  sender: do-not-reply@example.com
+  appDomain: app.example.com
+  smtpAddress: smtp.example.com
+  smtpPort: 465
+  smtpUsername: smtp-user
+  smtpTlsEnabled: true
+  smtpTlsSkipVerify: false
+```
+
+If the chart creates the app Secret, a non-empty `rails.secret.values.SMTP_PASSWORD` is injected automatically. When you manage the Secret yourself, provide `SMTP_PASSWORD` through `rails.extraEnvVars` with a `secretKeyRef`. Values set in `rails.settings` or `rails.extraEnv` take precedence over the generated email env vars.
+
 ## Advanced environment variable injection
 
 For simple string key/value envs, continue to use `rails.extraEnv` and the per-workload `web.extraEnv` / `worker.extraEnv` maps.
@@ -808,6 +825,18 @@ pipelock:
 
 Security: The Ingress routes to port `mcp` (8889). Ensure `MCP_API_TOKEN` is set so the MCP endpoint requires authentication. The Ingress itself does not add auth.
 
+By default the listener runs with `pipelock.mcpProxy.allowUnauthenticated: true`, relying on Sure's own token or OAuth. To make Pipelock require a token too, point `authTokenSecret` at a Secret holding it; clients then send it as `Proxy-Authorization: Bearer <token>`:
+
+```yaml
+pipelock:
+  mcpProxy:
+    authTokenSecret:
+      name: sure-pipelock-mcp-token
+      key: token
+```
+
+Keep `podSecurityContext.fsGroup` (1000 by default) so Pipelock can read the mounted Secret. See [docs/hosting/pipelock.md](../../docs/hosting/pipelock.md#mcp-listener-authentication).
+
 ### Metrics (Prometheus)
 
 Pipelock exposes `/metrics` on the forward proxy port. Enable scraping with a ServiceMonitor:
@@ -892,6 +921,7 @@ See `values.yaml` for the complete configuration surface, including:
 - `image.*`: repository, tag, pullPolicy, imagePullSecrets
 - `rails.*`: environment, extraEnv, existingSecret or secret.values, settings
   - Also: `rails.extraEnvVars[]` (full EnvVar), `rails.extraEnvFrom[]` (EnvFromSource), and `rails.encryptionEnv.enabled` toggle
+- `email.*`: Action Mailer sender, app domain, and SMTP host/port/user/TLS env values
 - `cnpg.*`: enable operator subchart and a Cluster resource, set instances, storage
 - `redis-ha.*`: enable dandydev/redis-ha subchart and configure replicas/auth (Sentinel/HA); supports `existingSecret` and `existingSecretPasswordKey`
 - `redisOperator.*`: optionally install OT redis-operator (`redisOperator.enabled`) and/or render a `RedisSentinel` CR (`redisOperator.managed.enabled`); configure `name`, `replicas`, `auth.existingSecret/passwordKey`, `persistence.className/size`, scheduling knobs, and `operator.resources` (controller) / `workloadResources` (Redis pods)

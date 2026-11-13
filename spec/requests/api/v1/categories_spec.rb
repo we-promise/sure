@@ -139,7 +139,7 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
 
-      response '422', 'validation error - duplicate name' do
+      response '422', 'validation error - duplicate name or categories locked' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:body) { { category: { name: parent_category.name } } }
@@ -147,7 +147,7 @@ RSpec.describe 'API V1 Categories', type: :request do
         run_test!
       end
 
-      response '403', 'forbidden - api key missing read_write scope' do
+      response '403', 'forbidden - api key missing read_write scope, or guest user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:read_only_api_key) do

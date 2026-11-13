@@ -117,11 +117,9 @@ class <%= class_name %>ActivitiesFetchJob < ApplicationJob
 
     def broadcast_updates
       @<%= file_name %>_account.current_account&.broadcast_sync_complete
-      @<%= file_name %>_account.<%= file_name %>_item&.broadcast_replace_to(
-        @<%= file_name %>_account.<%= file_name %>_item.family,
-        target: "<%= file_name %>_item_#{@<%= file_name %>_account.<%= file_name %>_item.id}",
-        partial: "<%= file_name %>_items/<%= file_name %>_item"
-      )
+      # Not the rendered card, which lists every account on the connection and
+      # has no viewer to filter for here (#3630); the toast re-fetches per viewer.
+      @<%= file_name %>_account.<%= file_name %>_item&.family&.broadcast_sync_complete
     rescue => e
       Rails.logger.warn("<%= class_name %>ActivitiesFetchJob - Broadcast failed: #{e.message}")
     end

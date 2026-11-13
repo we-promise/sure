@@ -9,6 +9,9 @@ en:
     new:
       title: Enter account balance
     subtypes:
+      cash:
+        long: Cash
+        short: Cash
       cd:
         long: Certificate of Deposit
         short: CD

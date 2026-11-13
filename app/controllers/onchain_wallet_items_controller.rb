@@ -12,9 +12,9 @@ class OnchainWalletItemsController < ApplicationController
 
   def update
     if @onchain_wallet_item.update(onchain_wallet_item_params)
-      render_panel_success(t(".success"))
+      render_provider_panel("onchain_wallet", notice: t(".success"))
     else
-      render_panel_error(@onchain_wallet_item.errors.full_messages.join(", "))
+      render_provider_panel("onchain_wallet", alert: @onchain_wallet_item.errors.full_messages.join(", "))
     end
   end
 
@@ -261,34 +261,5 @@ class OnchainWalletItemsController < ApplicationController
     def render_new_wallet(error_message, status: :unprocessable_entity)
       @error_message = error_message
       render :new_wallet, status: status
-    end
-
-    def render_panel_success(message)
-      if turbo_frame_request?
-        flash.now[:notice] = message
-        @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
-        render turbo_stream: [
-          turbo_stream.update(
-            "onchain_wallet-providers-panel",
-            partial: "settings/providers/onchain_wallet_panel",
-            locals: { onchain_wallet_items: @onchain_wallet_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: message, status: :see_other
-      end
-    end
-
-    def render_panel_error(message)
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.update(
-          "onchain_wallet-providers-panel",
-          partial: "settings/providers/onchain_wallet_panel",
-          locals: { error_message: message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: message, status: :see_other
-      end
     end
 end

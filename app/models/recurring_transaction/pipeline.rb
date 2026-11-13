@@ -20,7 +20,9 @@ class RecurringTransaction
     def run!(backfill: false)
       patterns_count = Identifier.new(family).identify_recurring_patterns
 
-      family.recurring_transactions.active.find_each do |series|
+      # Schedule.for reads recurrence_rules for every series; preload them so
+      # occurrence generation doesn't issue one query per series (N+1).
+      family.recurring_transactions.active.includes(:recurrence_rules).find_each do |series|
         OccurrenceGenerator.new(series).generate!
       end
 

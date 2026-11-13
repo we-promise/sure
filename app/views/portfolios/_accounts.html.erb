@@ -1,0 +1,8 @@
+<%# locals: (accounts:, statement:, period:, as_of:) %>
+
+<%# One card per investment account the user may count, straight to its holdings tab. %>
+<div id="portfolio-accounts" class="grid grid-cols-1 @2xl:grid-cols-2 @4xl:grid-cols-3 gap-3">
+  <% accounts.each do |account| %>
+    <%= render "accounts/balance_card", account: account, href: account_path(account, tab: "holdings"), truncate: true, focus_ring: true %>
+  <% end %>
+</div>

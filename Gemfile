@@ -9,6 +9,9 @@ gem "rails", "~> 8.1.0"
 gem "pg", "~> 1.5"
 gem "redis", "~> 5.4"
 
+# Bech32/Bech32m encoding for watch-only Bitcoin addresses.
+gem "bech32", "1.5.1"
+
 # Deployment
 gem "puma", ">= 7.2.1"
 gem "bootsnap", require: false
@@ -42,7 +45,7 @@ gem "rack-mini-profiler"
 gem "sentry-ruby"
 gem "sentry-rails"
 gem "sentry-sidekiq"
-gem "posthog-ruby"
+gem "posthog-rails", "~> 3.26.0", require: false
 gem "logtail-rails"
 if ENV["SKYLIGHT_ENABLED"] == "true"
   gem "skylight", group: :development, require: false
@@ -88,11 +91,11 @@ gem "rqrcode", "~> 3.0"
 gem "webauthn", "~> 3.4"
 gem "websocket-driver", "~> 0.8"
 gem "activerecord-import"
-gem "rubyzip", "~> 2.3"
+gem "rubyzip", "~> 3.4"
 gem "pdf-reader", "~> 2.12"
 
 # OpenID Connect, OAuth & SAML authentication
-gem "omniauth", "~> 2.1"
+gem "omniauth", "~> 2.2"
 gem "omniauth-rails_csrf_protection", ">= 2.0"
 gem "omniauth_openid_connect"
 gem "omniauth-google-oauth2"
@@ -106,7 +109,8 @@ gem "after_commit_everywhere", "~> 1.0"
 # AI
 gem "ruby-openai"
 gem "anthropic", "~> 1.0"
-gem "langfuse-ruby", "~> 0.1.4", require: "langfuse"
+gem "opentelemetry-sdk", "~> 1.13"
+gem "opentelemetry-exporter-otlp", "~> 0.36"
 
 group :development, :test do
   gem "debug", platforms: %i[mri mswin mswin64 mingw x64_mingw]
@@ -143,6 +147,8 @@ end
 group :test do
   gem "capybara"
   gem "selenium-webdriver"
+  gem "minitest", "~> 6.1"
+  gem "minitest-mock"
   gem "mocha"
   gem "vcr"
   gem "webmock"
