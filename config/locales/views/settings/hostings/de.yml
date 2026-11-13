@@ -16,7 +16,14 @@ de:
         default_family_description: Neue Nutzer landen nur dann in dieser Familie oder Gruppe, wenn sie keine Einladung haben.
         default_family_none: Keine (neue Familie anlegen)
         default_family_title: Standardfamilie für neue Nutzer
+      demo_refresh_settings:
+        description: Setzt nur die ausgewählte Demo-Familie automatisch zurück. Alle ihre Daten und Logins werden entfernt, andere Familien bleiben unberührt. Erfordert einen laufenden Worker mit mindestens 2 GiB RAM. Leg zuerst mit dem Demo-Generator eine Wegwerf-Demo-Familie an und wähl sie dann hier aus. Wähl nicht die Familie eines echten Nutzers.
+        none: Keine Demo-Familie ausgewählt
+        family_label: Wegwerf-Demo-Familie
+        save_family: Demo-Familie speichern
+        enabled_label: Demo-Familie täglich zurücksetzen
       show:
+        demo_refresh: Demodaten zurücksetzen
         general: Allgemeine Einstellungen
         financial_data_providers: Finanzdatenanbieter
         sync_settings: Synchronisierungseinstellungen
@@ -49,6 +56,7 @@ de:
           binance_public: Binance
           eodhd: EODHD
           frankfurter: Frankfurter
+          mansa: Mansa
           mfapi: MFAPI.in
           moex_public: MOEX
           tiingo: Tiingo
@@ -64,6 +72,7 @@ de:
         securities_description: Aktivier einen oder mehrere Anbieter für Kurse von Aktien, ETFs und Fonds. Bei einer Suche werden alle aktiven Anbieter abgefragt und die Ergebnisse zusammengeführt.
         securities_title: Anbieter für Wertpapierkurse
         tinkoff_invest_hint: braucht Token mit Lesezugriff – Kurse russischer Aktien, Fonds und Anleihen samt Logos
+        requires_api_key_mansa: braucht API-Key, kostenlos 100 Abrufe/Tag – afrikanische Börsen (NGX, JSE, NSE, GSE, BRVM und weitere)
         twelve_data_hint: braucht API-Key, 800 Credits/Tag
         yahoo_finance_hint: kostenlos, ohne API-Key
       brand_fetch_settings:
@@ -144,12 +153,16 @@ de:
         step_2_html: Geh auf die Seite <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener noreferrer" class="underline">API Keys</a>.
         step_3: Lass deinen Secret Key anzeigen und füg ihn unten ein.
       update:
+        invalid_demo_family: Die ausgewählte Familie muss die eingerichtete Demo-E-Mail-Adresse besitzen.
+        select_demo_family: Wähl zuerst eine Wegwerf-Demo-Familie aus.
         failure: Ungültiger Einstellungswert
         success: Einstellungen aktualisiert
         invalid_onboarding_state: Ungültiger Onboarding-Status
         invalid_sync_time: Ungültiges Synchronisierungszeitformat. Bitte verwende das Format HH:MM (z. B. 02:30).
         scheduler_sync_failed: Gespeichert, aber der Sync-Zeitplan ließ sich nicht aktualisieren. Versuch es erneut oder sieh in den Server-Logs nach.
         anthropic_model_required_for_base_url: Wenn du eine eigene Basis-URL setzt, musst du auch ein Anthropic-Modell angeben.
+        invalid_jev_endpoint: Der Jev-Endpunkt muss eine https-URL sein. Einfaches http ist nur für localhost erlaubt.
+        invalid_categorization_rate: "%{field} muss eine Zahl zwischen 0 und 1 sein."
         invalid_anthropic_base_url: Die Anthropic-Basis-URL muss eine http(s)-Adresse sein.
         invalid_llm_budget: "%{field} muss eine ganze Zahl ≥ %{minimum} sein."
       clear_cache:
@@ -193,8 +206,58 @@ de:
         model_label: Standardmodell (optional)
         model_placeholder: claude-sonnet-4-6 (Standard)
         title: Anthropic (Claude)
+      categorization_provider_selector:
+        title: Kategorisierung von Transaktionen
+        preview_pill: Vorschau
+        description: Wähle, welcher Anbieter Transaktionen kategorisiert. Das ist unabhängig vom KI-Anbieter oben, der Chat und PDF-Verarbeitung übernimmt.
+        env_notice: "Über Umgebungsvariablen auf %{type} festgelegt."
+        provider_label: Anbieter für die Kategorisierung
+        provider_llm: KI-Anbieter (OpenAI oder Anthropic)
+        provider_jev: Jev (TypeSafe)
+        provider_help: Der KI-Anbieter liest einen Stapel Transaktionen und schreibt Kategorienamen zurück. Jev wählt aus deiner Kategorienliste und liefert für jede Transaktion eine kalibrierte Verlässlichkeit.
+        jev_configured: Jev-API-Key eingerichtet.
+        jev_not_configured: Jev ist ausgewählt, hat aber keinen API-Key. Bis du unten einen einträgst, kategorisiert weiter der KI-Anbieter.
+        data_retention_heading: Datenweitergabe
+        data_retention_direct: Beschreibungen und Beträge der Transaktionen sowie deine Kategorienamen werden zur Kategorisierung an TypeSafe gesendet. Prüf deren Richtlinie zur Datenaufbewahrung, bevor du das für echte Daten einschaltest.
+        data_retention_proxied: "Beschreibungen und Beträge der Transaktionen sowie deine Kategorienamen werden an %{host} gesendet, das sie an TypeSafe weiterleitet. Prüf die Richtlinien beider Anbieter zur Datenaufbewahrung, bevor du das für echte Daten einschaltest."
+        confidence_threshold_label: Mindestverlässlichkeit (0–1)
+        confidence_threshold_help: Liegt die Verlässlichkeit darunter, wird die Kategorie nicht gesetzt und die Transaktion bleibt unkategorisiert, sodass ein späterer Lauf es erneut versuchen kann. Es geht nichts verloren. Mit 0 wird jede Antwort übernommen.
+        confidence_threshold_env_notice: Durch die Umgebungsvariable CATEGORIZATION_CONFIDENCE_THRESHOLD festgelegt.
+        shadow_rate_label: Anteil für Schattenvergleich (0–1)
+        shadow_rate_help: Lässt den NICHT ausgewählten Anbieter parallel zum ausgewählten laufen und hält fest, wo sie sich unterscheiden, ohne eine Kategorie zu ändern. Das verdoppelt die API-Kosten jedes Kategorisierungslaufs, der in die Stichprobe fällt. Mit 0 schaltest du es aus.
+        shadow_rate_env_notice: Durch die Umgebungsvariable CATEGORIZATION_SHADOW_RATE festgelegt.
+      categorization_shadow_results:
+        shadow_results_heading: Schattenvergleich
+        shadow_results_empty: Noch keine Vergleiche erfasst. Setz den Anteil für den Schattenvergleich über 0 und starte eine Kategorisierung, um welche zu sammeln.
+        shadow_results_summary: "%{agreement} %% Übereinstimmung bei %{count} Transaktionen in der Stichprobe."
+        shadow_disagreements_heading: Letzte Abweichungen
+        shadow_disagreement_row: "%{applied_provider} wählte %{applied_category}; %{shadow_provider} wählte %{shadow_category}."
+        shadow_disagreement_confidence: "(Verlässlichkeit %{confidence})"
+        shadow_no_disagreements: Die beiden Anbieter waren sich bei jeder Transaktion der Stichprobe einig.
+        shadow_no_category: keine Kategorie
+      jev_settings:
+        env_configured_message: Erfolgreich über Umgebungsvariablen konfiguriert.
+        api_key_label: API-Key
+        api_key_placeholder: Gib deinen TypeSafe-API-Key ein
+        endpoint_label: Endpunkt (optional)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (Standard)
+        model_label: Modell (optional)
+        model_placeholder: jev-latest (Standard)
+        model_help: Standardmäßig geht es direkt an TypeSafe. Um Jev stattdessen über OpenRouter zu erreichen, setz den Endpunkt auf https://openrouter.ai/api/alpha/decisions und das Modell auf ~typesafe/jev-latest.
       assistant_settings:
         agent_id_help: Leitet an einen bestimmten Agenten weiter, wenn der Anbieter mehrere betreibt. Leer lassen für den Standard.
+        agent_discovery_configure_first: Speichere eine gültige Endpunkt-URL und einen API-Token, um die verfügbaren Agenten zu laden.
+        external_agent_required: Wähl vor dem Speichern einen externen Agenten aus.
+        external_agent_invalid: Wähl einen Agenten aus, den der eingerichtete Endpunkt liefert.
+        external_agent_reselect: Der Endpunkt hat sich geändert, und der bisher gewählte Agent ist dort nicht verfügbar. Wähl einen Agenten des neuen Endpunkts aus.
+        agent_discovery_error: "Agenten konnten nicht geladen werden: %{error}"
+        external_info:
+          title: Konfiguration der externen KI
+          items:
+            - Gib die vollständige OpenAI-kompatible Endpunkt-URL ein, die auf /v1/chat/completions endet.
+            - Sure ermittelt die verfügbaren Agenten über /v1/models, sobald Endpunkt und Token gespeichert sind.
+            - Welches Modell hinter einem Agenten steht, entscheidet der externe Dienst; Sure wählt nur die Agenten-Route.
+            - Fehler bei Authentifizierung, Endpunkt oder Agent meldet der externe Dienst. Schau in dessen Logs, wenn eine Anfrage fehlschlägt.
         agent_id_label: Agenten-ID (optional)
         agent_id_placeholder: main (Standard)
         confirm_disconnect:
@@ -215,6 +278,8 @@ de:
         token_placeholder: Token deines Agenten-Anbieters eintragen
         type_builtin: Integriert (direktes LLM)
         type_external: Extern (entfernter Agent)
+        type_mcp_only: Keiner in der App (eigenen Agenten über MCP verbinden)
+        mcp_only_help: Der Assistent in der App ist für alle in diesem Haushalt ausgeschaltet. Auch die KI-Kurzbefehle bei Rechnungen und die von der KI geschriebenen Insight-Texte entfallen. MCP und die Kategorisierung im Hintergrund bleiben verfügbar; externe Agenten verbindest du unter Einstellungen > MCP.
         type_label: Art des Assistenten
         url_help: Die vollständige URL zum API-Endpunkt deines Agenten. Die bekommst du von deinem Anbieter.
         url_label: Endpunkt-URL
@@ -236,6 +301,16 @@ de:
         step_2_html: Deinen API-Token findest du im <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a>.
         step_3: Kopier deinen API-Token und füg ihn unten ein.
         title: EODHD
+      mansa_settings:
+        title: Mansa
+        description: Trag den API-Key der Mansa API ein. Unterstützt 20 afrikanische Börsen, darunter NGX (Nigerian Exchange), JSE, NSE (Kenia), GSE (Ghana) und BRVM – einige davon deckt kein anderer Anbieter hier ab.
+        env_configured_message: Erfolgreich über die Umgebungsvariable MANSA_API_KEY konfiguriert.
+        label: API-Key
+        placeholder: Mansa-API-Key hier eintragen
+        show_details: (Details anzeigen)
+        step_1_html: Öffne <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> und hol dir deinen kostenlosen API-Key – ohne Kreditkarte.
+        step_2: Kopier deinen API-Key und füg ihn unten ein.
+        rate_limit_warning: Der kostenlose Tarif von Mansa ist auf 100 API-Abrufe pro Tag begrenzt und liefert nur aktuelle Kurse – historische Kurse erfordern einen kostenpflichtigen Tarif.
       llm_provider_selector:
         data_retention: Eingaben über die API werden standardmäßig nicht zum Training genutzt; die gehosteten APIs der Anbieter speichern sie rund 30 Tage aus Sicherheitsgründen. Für eigene oder selbst gehostete Endpunkte gilt deine eigene Regelung.
         data_retention_heading: Umgang mit Daten
@@ -256,6 +331,13 @@ de:
         placeholder: Realie-API-Key hier eintragen
         title: Realie
         usage: "%{used} von %{limit} Anfragen diesen Monat genutzt"
+      chimnie_settings:
+        title: Chimnie
+        description: Gib deinen Chimnie-API-Key ein, um Wohnimmobilien im Vereinigten Königreich anhand ihrer UPRN zu bewerten. Einen kostenlosen Key bekommst du auf dashboard.chimnie.com (für die Registrierung ist eine geschäftliche E-Mail-Adresse oder eine mit eigener Domain nötig; Gmail, Outlook und ähnliche Adressen werden nicht akzeptiert). UPRN-Bewertungen sind kostenlos und werden monatlich aktualisiert; Sure begrenzt sie auf 1.000 Anfragen pro Monat, was du mit der Umgebungsvariable CHIMNIE_MAX_REQUESTS_PER_MONTH ändern kannst.
+        env_configured_message: Erfolgreich über die Umgebungsvariable CHIMNIE_API_KEY konfiguriert.
+        label: API-Key
+        placeholder: Chimnie-API-Key hier eintragen
+        usage: "%{used} von %{limit} monatlichen Anfragen genutzt"
       rentcast_settings:
         description: Trag deinen RentCast-API-Key ein, um beim Anlegen einer Immobilie US-Objektdaten und Wertschätzungen abzurufen. Der kostenlose Tarif erlaubt 50 Anfragen pro Monat, geteilt zwischen Objektsuchen und täglichen Wertaktualisierungen. In einem Bezahltarif hebst du die Grenze über die Umgebungsvariable RENTCAST_MAX_REQUESTS_PER_MONTH an.
         env_configured_message: Über die Umgebungsvariable RENTCAST_API_KEY eingerichtet.
