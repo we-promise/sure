@@ -251,6 +251,9 @@ end
 - A "Stop" button (`DS::Button`, `button_to … method: :delete`) while pending. Closing the dialog
   doesn't cancel: the answer is stored and harmless.
 - Strings through `t()`, in `config/locales/views/recurring_transactions/` and `…/bills/`.
+- If #4975 ("Once" frequency) merges first, its branch in `apply_suggestion` (a one-off keeps the
+  source entry's date) moves into `Suggestion#apply_to` with the rest. The suggestion's `entry`
+  gives the date.
 
 ### 4. Document upload as a job
 
@@ -269,6 +272,12 @@ end
   documents list already shows `pending`, `processing`, `ready` and `error`.
 - 06 F-R5 (vector documents out of `ImportsController`) isn't done here. That's a separate
   pure-move PR.
+- Whichever of #3717 and #3735 merges first adds a multi-file upload that calls `upload_document`
+  once per file on the web thread; each of those calls becomes `upload_document_later`.
+- If #4516 merges first, `family_documents` has a unique `(family_id, content_sha256)` index, and
+  `upload_document` adopts a duplicate. `upload_document_later` computes the hash and adopts the
+  duplicate when it creates the pending row, before indexing. Otherwise a second upload of the
+  same file fails on the index.
 
 ### 5. `Ai::ProbeJob`
 
@@ -286,6 +295,21 @@ end
   `Admin::SystemHealthController#ai_status` uses it, and each result shows its age. "Run checks
   again" enqueues the job and returns at once. Opening the tab still makes no AI request.
 - With no worker polling the AI queues, the tab renders `shared/_ai_worker_health_warning`.
+- **Closes #4866** (supersedes #4879). The PDF vision probe caps its answer at
+  `PDF_MAX_RESPONSE_TOKENS = 512` (`ai_health/probe.rb:24` and `:200` on 2f). A reasoning model
+  spends that on thinking, and the probe fails while real imports work. The probe's route model
+  takes the output limit `Ai::LegacyEnvConfig` gives production's model:
+  - on an OpenAI-compatible endpoint, `LLM_MAX_RESPONSE_TOKENS` or its setting, and none when
+    unset (as #4879 does on the old code);
+  - on Anthropic, `ANTHROPIC_MAX_TOKENS` or its default, since Anthropic requires one.
+
+  The constant goes. Test: no cap by default on a compatible endpoint, and the configured cap
+  when one is set. Probes are meant to exercise the production
+  path, which this cap didn't.
+- **Closes #3279.** The tab shows, next to each result's age, how long a result is kept
+  (`AI_HEALTH_PROBE_CACHE_TTL`, default 60 s), from `AiHealth::Probe`'s own `cache_ttl`, the
+  same way the probe timeout row works. With "Run checks again" always running fresh probes, the
+  age and the time kept answer #3279's question: why does it still show the old result?
 - **Deletes:** `WorkerAiHealthCheckJob`, `verify_worker_ai` and its route and button, and the
   `force_probes` request parameter.
 
@@ -308,6 +332,12 @@ end
   tool runs (#4295). A function with an `ai_feature` that `Ai.available?` for the token's user runs
   through `Ai::ToolJob.run`; otherwise inline as today, which covers `search_family_files`'s
   metadata fallback with no AI.
+- `Ai::ToolJob` finds the function in the same list `tools/call` authorized it against
+  (`Assistant.function_classes(user)` on 2f; `Assistant.mcp_function_classes` if #3025 lands
+  first), and refuses a name that isn't there. A tool hidden from MCP can't run through the job.
+- #3580, #4182 and #4283 each rewrite `McpController`. Whichever lands first, step 6 rebases onto
+  its `tools/call` result envelope (`resultType`, `_meta`), and the timeout answers use that
+  envelope. `ai_feature` sits next to #3580's `read_only?` on `Assistant::Function`.
 - Timeouts: `search_family_files` 30 s; `import_bank_statement` the `extract_pdf` route's budget
   (the first servable entry's `timeout_seconds` times its page batches, or a flat cap if that's
   not knowable before reading: **settle in review**, with the Puma and proxy timeouts in mind).
@@ -325,7 +355,8 @@ end
 
 - `Import`'s `status` enum gains `cancelled` (a string column, no migration). Every place that
   lists import statuses handles it: the reaper (`Import.clean` and `presumed_lost?`), status badges,
-  filters, and the next-steps email (none for a cancelled import).
+  filters, and the next-steps email (none for a cancelled import). A cancelled import has no
+  committed data, so #3717's and #3735's `directly_deletable?` allows deleting it.
 - `PdfImport#ai_cancelled?` → `reload.cancelled?`. `ProcessPdfJob` passes
   `cancelled: -> { pdf_import.ai_cancelled? }` to `pdf_reading.read` and `#extract` (they already
   take it) and checks between its steps (read → embed → extract → rows).
@@ -369,6 +400,53 @@ end
   `Assistant::Function.ai_feature` for a tool), `with_ai_capsule`, `Ai::SharedState` for handing
   results to the web, `Ai::Capsule.outside` for evals only.
 
+## Open issues and PRs (checked 2026-11-13)
+
+All 51 issues and PRs from the search, all open. PRs were compared by changed files and diff,
+issues by body.
+
+**What PR 3 stands on.** It stacks on #4892 (2f), which stacks on #4771 (2e), #4765 (2d),
+#4775 (2c), #4774 (2b) and #4773 (2a): a change made in review on any of them rebases this
+branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
+`IndexAccountStatementJob`, `search_family_files` and `upload_document`. #3402 is the draft
+#3422 and #4516 were split out of. #4440 holds this plan.
+
+**PRs that conflict with this plan:**
+
+| PR | Interaction | Handling |
+|---|---|---|
+| #4425 Fill splits from a receipt | A **new model call on the web thread** (`SplitsController#itemize`, `Api::V1::SplitsController#itemize`), on the providers 2c–2e delete. The capsule check covers `Ai::Transport` only, so it wouldn't catch this call. | **Needs a call:** ask for it to be rebuilt on the stack: an `extract_receipt` generation and a suggestion, a job and a broadcast, as in step 3. The API either becomes async or waits as `Ai::ToolJob` does. |
+| #4776 Tools/AI onboarding | "Save and test" runs `AiHealth::Probe` (with a new `family:` argument) in the request, which raises once step 8 is on. It edits files steps 2, 4, 5 and 6 change or delete. Per-family keys are PR 9's scope. | **Needs a call:** its family provider settings move to PR 7 and PR 9; its test button enqueues `Ai::ProbeJob`. |
+| #3717 PDF import management, #3735 upload flow | Multi-file upload looping `upload_document` on the web thread; "directly deletable" imports. | Step 4 (each file goes through `upload_document_later`), step 7 (cancelled imports are deletable). |
+| #4516 typed family documents | `content_sha256` with a unique index per family, and duplicate adoption in `upload_document`. | Step 4 (hash and adoption when the pending row is created). |
+| #3580, #4182, #4283 MCP | Rewrite `McpController`; #3580 adds `read_only?` and keeps `SearchFamilyFiles` from `read` tokens, while §14 and #4628 allow `mcp:read` to search. | Step 6 rebases on their envelope. **Needs a call** on `search_family_files` for read tokens before step 6. |
+| #3025 MCP CRUD tools | `Assistant.mcp_function_classes` becomes the MCP list. | Step 6 (`Ai::ToolJob` uses the authorized list). |
+| #4975 "Once" frequency | Edits `apply_suggestion`. | Step 3 carries it into `Suggestion#apply_to`. |
+| #4879 PDF vision probe fix | Fixes the old probe code; 2f still caps at 512. | Step 5 includes the fix and closes #4866. |
+
+**Smaller interactions:**
+- #4512 (relink a statement) edits `AccountStatement`, whose `index_in_vector_store!` calls the
+  `upload_document` that step 4 splits.
+- #4403 adds an import type next to step 7's status value.
+- #3694 lists `/models` on the settings page with its own HTTP client. It's not a model call, so
+  this plan allows it, but it skips `Ai::Transport::Http`'s proxy handling.
+- #4844 runs the Claude Code CLI inside `Provider::Anthropic`, which the stack deletes.
+- No interaction: #3605 (already in 2c), #4122, #4747, #4602, #4904, #4689, #4400, #4413 (no
+  model call, no job).
+
+**Issues:**
+- **Closed by this PR:** #4866 and #3279 (step 5).
+- **Helped:** #4779 (follow the No AI choice): every job this PR adds checks availability for its
+  user when it runs, not only when it's queued. The web-thread calls in #4425 and #4776 would
+  still be gaps.
+- **Shared decision:** #4628 (read-only MCP), on `search_family_files`, as with #3580.
+- **Use this PR's pattern once built:** #4641 (receipt upload; see #4425).
+- **Run in `ProcessPdfJob`, with the new stop button:** #1279 (brokerage PDFs), #1378 and #1379
+  (the same issue, filed twice).
+- **Configuration, PR 7:** #4245, #4560, #4791.
+- **Chat, PR 6 and PR 8:** #4864.
+- **None:** #3003, #3140, #3682, #4472, #4725, #4926, #4398.
+
 ## Coordination with PR 4
 
 Both branches start at `d55dc808a`. PR 3 merges first; PR 4 rebases onto it.
@@ -410,7 +488,9 @@ button. Configuration from the deprecated ENV, built per process. The probe time
   - a PDF import can be stopped while it's being read;
   - AI health checks run in the worker; "Run checks again" queues them, and each result shows its
     age; "Verify from worker" is gone, since every check now runs there;
-  - MCP clients see no change.
+  - MCP clients see no change;
+  - the PDF vision health check no longer fails on reasoning models (#4866), and the AI tab shows
+    how long a result is kept (#3279).
 
 ## Verification
 

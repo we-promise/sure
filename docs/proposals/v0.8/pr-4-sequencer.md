@@ -337,6 +337,37 @@ runs. The numbers go in the PR description.
 The step 0 runs again on the PR's head. Target (§11): chat's extra wait about 2 s, never more than
 5 s, on top of reading its own context. The numbers go next to step 0's in the PR description.
 
+## Open issues and PRs (checked 2026-11-13)
+
+The same 51 issues and PRs as PR 3's plan, compared by changed files and diff.
+
+**What PR 4 stands on.** The stack #4773 → #4774 → #4775 → #4765 → #4771 → #4892, then PR 3.
+Review changes there rebase this branch. It edits the files PR 4 changes most
+(`Ai::Transport::Instrumenter`, `ruby_llm_adapter`, `http.rb`, `jev.rb`, `Ai::Generation`,
+`Ai::GenerationJob`, `Ai::Routes`).
+
+**The queue rename breaks no other open PR.** No open PR outside the stack adds
+`ai_high_priority`, `ai_low_priority` or a `queue_as :ai…` line. #3422 does, but 2e has already
+moved its job to `embed`'s lane.
+
+**PRs that interact with this plan:**
+
+| PR | Interaction | Handling |
+|---|---|---|
+| #4776 Tools/AI onboarding | Edits `Chat.default_model` and `Assistant::Responder`, which steps 6 and 7 change. Its family OpenRouter chat answers whole, without streaming. Families with their own provider are PR 9's scope. | Rebase step 6's temporary gate lines onto whichever lands first. A family's cloud endpoint has no gate, so its chat isn't affected. Its scope is PR 3's call. |
+| #4879 PDF vision probe fix | PR 3 step 5 brings this fix to 2f's `AiHealth::Probe`. Step 4 here edits the same file to re-raise `Busy`. | Rebase onto PR 3; separate methods. |
+| #4425 receipt splits | Today a web-thread call. Rebuilt on PR 3's pattern, it's an interactive feature: `ai_interactive`, the `ai_chat` thread, interrupting background calls on a local host. | Nothing here. Its routing-table row would set `lane: :interactive`. |
+| #4844 Claude subscription | Runs the Claude Code CLI as a subprocess. The gate only sees HTTP requests through RubyLLM, so it never sees these calls. It's a cloud provider, so it needs no gate anyway. | None. |
+
+**Issues:**
+- **#4245** (separate chat and background settings) is the configuration side of the same
+  problem. Chat and background work on different hosts never share a gate, and on one local
+  host the gate puts chat first. PR 4 doesn't close it: the settings are PR 7's.
+- **#4864** (chat fails on a 4,096-token context) is about chat's prompt size (PR 6, and PR 8's
+  context check). Unaffected.
+- **No issue in the set is closed by a small change aligned with this PR.** None asks for
+  queues, the capsule, the typing hold or chat priority.
+
 ## Coordination with PR 3
 
 PR 3 merges first; PR 4 rebases onto it. What PR 4 relies on and avoids:
