@@ -1539,7 +1539,16 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       .with { |args| args[:known_newest_event_id] == "evt_pea_old" && args[:timeline_cursors] == pending_history }
       .returns(client_result(pea_sync_data("events" => [], "timeline_cursors" => pending_history)))
 
+    pea = @item.trade_republic_accounts.find_by(kind: "pea")
+    started_at = pea.timeline_backfill_started_at
+
     TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal pending_history, @item.reload.timeline_cursors
+    pea.reload
+    assert_equal started_at.to_i, pea.timeline_backfill_started_at.to_i
+    assert_nil pea.timeline_backfilled_at
+    assert_includes pea.raw_timeline_payload.map { |event| event["id"] }, "evt_pea_old"
   end
 
   test "an empty primary timeline next to PEA events does not force a full fetch" do
