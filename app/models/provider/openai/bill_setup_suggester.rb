@@ -65,7 +65,8 @@ class Provider::Openai::BillSetupSuggester
 
         Rules:
         - Infer the cadence from the gaps between the dates, never from the row count.
-          frequency is one of: monthly, weekly, biweekly, semimonthly, quarterly, semiannual, annual.
+          frequency is one of: once, monthly, weekly, biweekly, semimonthly, quarterly, semiannual, annual.
+          Use "once" only for a single charge with no repeating gap.
         - amount is the typical recent charge as a positive number; when amounts drift,
           prefer the most recent ones.
         - day_of_month is the modal charge day (monthly-style cadences only); weekday
