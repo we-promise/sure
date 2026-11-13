@@ -989,6 +989,14 @@ class AccountTest < ActiveSupport::TestCase
     assert transfers.all? { |transfer| !Transfer.exists?(transfer.id) }
   end
 
+  test "physical cash accounts share the same balance_type as depository accounts" do
+    physical_cash = accounts(:physical_cash)
+
+    assert_equal :cash, physical_cash.balance_type
+    assert_equal accounts(:depository).balance_type, physical_cash.balance_type
+    assert_not_equal :non_cash, physical_cash.balance_type
+  end
+
   test "projected_balance_money nets scheduled entries against an asset account's balance" do
     create_transaction(account: @account, amount: 200, date: 3.days.from_now.to_date) # expense, decreases balance
     create_transaction(account: @account, amount: -50, date: 5.days.from_now.to_date) # income, increases balance
