@@ -84,15 +84,18 @@ class EnableBankingEntry::Processor
     ref = ->(i) { rows[i][:entry_reference].to_s }
     suffixed = ->(i) { "#{ids[i]}_#{Digest::MD5.hexdigest(ref[i])}" }
     groups = rows.each_index.select { |i| rows[i][:transaction_id].present? && !pending_payload?(rows[i]) }.group_by { |i| ids[i] }
-    stored = account ? account.entries.where(source: "enable_banking", external_id: groups.flat_map { |id, is| [ id, *is.map(&suffixed) ] }).index_by(&:external_id) : {}
+    stored = account ? account.entries.where(source: "enable_banking", external_id: groups.flat_map { |id, is| [ id, *is.map(&suffixed) ] }).includes(:entryable).index_by(&:external_id) : {}
 
     groups.each do |legacy_id, indexes|
       free = indexes.reject { |i| stored.key?(suffixed[i]) }
       score = ->(i) { movement_match(stored[legacy_id], rows[i], account&.family&.timezone) }
       owner = free.each_with_index.max_by { |i, pos| [ score[i], -pos ] }&.first
-      # A sibling already has its own entry: the plain one is another row's unless its amount matches or was edited.
+      # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
+      # own entry, so the plain one is another row's unless its amount matches or was edited.
       legacy = stored[legacy_id]
-      owner = nil if owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.user_modified? && !legacy.locked?(:amount)
+      kept = legacy&.entryable.try(:extra)&.dig("enable_banking", "entry_reference") if indexes.size > 1
+      owner = free.find { |i| ref[i] == kept } if kept
+      owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.user_modified? && !legacy.locked?(:amount)
       indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
     end
     ids
@@ -430,6 +433,7 @@ class EnableBankingEntry::Processor
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
       eb[:pending] = true if pending_payload?
+      eb[:entry_reference] = data[:entry_reference] if data[:transaction_id].present? && !pending_payload?
 
       eb.compact!
       eb.empty? ? nil : { enable_banking: eb }

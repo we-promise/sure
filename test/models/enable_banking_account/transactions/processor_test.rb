@@ -537,6 +537,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
     @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    @account.entries.find_by!(external_id: "enable_banking_tid-x").transaction.update!(extra: {}) # stored without its entry_reference
 
     # e.g. a relinked account whose first window misses r-a
     @enable_banking_account.update!(raw_transactions_payload: [ second, raw_shared_tid_transaction(entry_reference: "r-c", amount: "5.00") ])
@@ -546,7 +547,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x").amount
   end
 
-  test "an unchanged payload does not duplicate a plain entry whose amount the user edited" do
+  test "an unchanged payload does not duplicate a plain entry whose amount the user edited, before or after unlocking it" do
     rows = [ raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"), raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00") ]
     @enable_banking_account.update!(raw_transactions_payload: rows)
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
@@ -555,8 +556,29 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     plain.lock_saved_attributes!
 
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
-
     assert_equal %w[7.0 9.5], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_s).sort
+
+    plain.reload.unlock_for_sync!
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
+
+  test "a new sibling neither overwrites nor is swallowed by an edited plain entry whose row left the payload" do
+    [ ->(e) { e.update!(amount: 9.50) && e.lock_saved_attributes! }, ->(e) { e.mark_user_modified! } ].each do |edit|
+      @account.entries.where(source: "enable_banking").destroy_all
+      first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00").merge(booking_date: 40.days.ago.to_date.to_s)
+      second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+      @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+      edit.call(@account.entries.find_by!(external_id: "enable_banking_tid-x"))
+
+      @enable_banking_account.update!(raw_transactions_payload: [ second, raw_shared_tid_transaction(entry_reference: "r-c", amount: "5.00") ])
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+      assert_equal 40.days.ago.to_date, @account.entries.find_by!(external_id: "enable_banking_tid-x").date
+      assert_equal 3, @account.entries.where(source: "enable_banking").count
+    end
   end
 
   test "an unchanged payload does not re-import a sibling onto a categorised pending hold" do
