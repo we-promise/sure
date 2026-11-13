@@ -64,8 +64,7 @@ class SophtronAccount::Processor
     end
 
     # Update account balance from latest Sophtron data
-    observed = sophtron_account.balance || sophtron_account.available_balance || 0
-    balance = signed_balance(account, observed)
+    balance = signed_balance(account, sophtron_account.observed_balance)
 
     # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
     currency = parse_currency(sophtron_account.currency) || account.currency || "USD"

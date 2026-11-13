@@ -17,6 +17,14 @@ class PasswordResetsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "create sends a reset email to a user whose email row is still legacy plaintext" do
+    email = store_legacy_plaintext_email(@user)
+
+    assert_enqueued_emails 1 do
+      post password_reset_path, params: { email: email }
+    end
+  end
+
   test "edit" do
     get edit_password_reset_path(token: @user.generate_token_for(:password_reset))
     assert_response :ok
