@@ -7,6 +7,19 @@ class Provider::Coinbase
   class RateLimitError < Error; end
   class ApiError < Error; end
 
+  # Raised instead of RateLimitError when a rate limit hits a later page of a
+  # paginated fetch after earlier pages already succeeded -- see
+  # #paginated_get. Carries those earlier pages so a caller can keep them
+  # instead of the fetch as a whole discarding real, already-fetched data.
+  class PartialResultError < Error
+    attr_reader :partial_results
+
+    def initialize(message, partial_results)
+      super(message)
+      @partial_results = partial_results
+    end
+  end
+
   # CDP API base URL
   API_BASE_URL = "https://api.coinbase.com".freeze
 
@@ -129,6 +142,14 @@ class Provider::Coinbase
       end
 
       results.first(limit)
+    rescue RateLimitError => e
+      # Earlier pages already fetched are real data -- raising RateLimitError
+      # here as before would discard them along with the pages never reached,
+      # forcing every later sync to restart this backfill from page one.
+      # Nothing to preserve on a first-page limit, so that case still raises
+      # RateLimitError exactly as before.
+      raise PartialResultError.new(e.message, results.first(limit)) if results.any?
+      raise
     end
 
     # Parses a PEM EC private key, normalizing literal \n sequences to real

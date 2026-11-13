@@ -1,0 +1,31 @@
+---
+id:
+  tags:
+    create:
+      created: Tag dibuat
+      error: 'Terjadi kesalahan saat membuat tag: %{error}'
+    destroy:
+      deleted: Tag dihapus
+    destroy_all:
+      all_deleted: Semua tag dihapus
+    edit:
+      edit: Edit tag
+    form:
+      placeholder: Nama tag
+    index:
+      empty: Belum ada tag
+      new: Tag baru
+      tags: Tag
+      delete_all: Hapus semua
+    menu:
+      label: Edit tag
+    new:
+      new: Tag baru
+    summary:
+      add: Tambah tag
+      title: 'Tag: %{names}'
+    tag:
+      delete: Hapus
+      edit: Edit
+    update:
+      updated: Tag diperbarui

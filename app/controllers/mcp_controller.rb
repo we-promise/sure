@@ -27,15 +27,30 @@ class McpController < ApplicationController
 
     request_id = body["id"]
 
-    # JSON-RPC notifications omit the id field — server must not respond
+    # JSON-RPC notifications omit the id field, so there's nothing to answer. MCP's Streamable
+    # HTTP transport says a server that accepts one returns 202 Accepted with no body; proxies
+    # such as Pipelock's MCP reverse proxy reject any other status, which ends the handshake.
     unless body.key?("id")
-      return head(:no_content)
+      return head(:accepted)
     end
 
     result = dispatch_jsonrpc(request_id, body["method"], body["params"])
     return if performed?
 
     render json: { jsonrpc: "2.0", id: request_id, result: result }
+  end
+
+  # MCP's Streamable HTTP transport also uses GET (SSE stream) and DELETE
+  # (session termination) on this endpoint. Sure serves neither, so answer
+  # 405 Method Not Allowed: an unrouted 404 makes clients treat the session
+  # as dropped. A supplied session id that is no longer in the cache is
+  # answered 404 instead, so the client knows to initialize a new session.
+  def method_not_allowed
+    session_id = mcp_request_header("Mcp-Session-Id").presence
+    return head :not_found if session_id && !valid_mcp_session?(session_id)
+
+    response.set_header("Allow", "POST")
+    head :method_not_allowed
   end
 
   private
@@ -152,7 +167,7 @@ class McpController < ApplicationController
         OpenSSL::Digest::SHA256.hexdigest(expected)
       )
 
-      user = User.find_by(email: ENV["MCP_USER_EMAIL"])
+      user = User.find_by_email_with_legacy_fallback(ENV["MCP_USER_EMAIL"])
 
       unless user
         Rails.logger.warn "[MCP] MCP_USER_EMAIL does not match any user — check environment configuration"
@@ -196,7 +211,7 @@ class McpController < ApplicationController
       session_id = mcp_request_header("Mcp-Session-Id").presence
       return true unless session_id
 
-      unless Rails.cache.read(mcp_session_cache_key(session_id)) == mcp_user.id
+      unless valid_mcp_session?(session_id)
         render_jsonrpc_error(request_id, -32600, t("mcp.errors.invalid_session_id"), status: :not_found)
         return false
       end
@@ -210,6 +225,10 @@ class McpController < ApplicationController
       return requested_version if SUPPORTED_PROTOCOL_VERSIONS.include?(requested_version)
 
       PROTOCOL_VERSION
+    end
+
+    def valid_mcp_session?(session_id)
+      Rails.cache.read(mcp_session_cache_key(session_id)) == mcp_user.id
     end
 
     def mcp_session_cache_key(session_id)

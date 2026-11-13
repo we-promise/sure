@@ -170,8 +170,11 @@ class Settings::ProvidersController < ApplicationController
     end
 
     def set_encryption_warning_context
-      @provider_setup_encryption_warning = Rails.configuration.app_mode.self_hosted? &&
-        !ActiveRecordEncryptionConfig.explicitly_configured?
+      self_hosted = Rails.configuration.app_mode.self_hosted?
+      @provider_setup_encryption_warning = self_hosted && !ActiveRecordEncryptionConfig.ready?
+      @provider_setup_compromised_secret_warning = self_hosted && !@provider_setup_encryption_warning &&
+        !ActiveRecordEncryptionConfig.explicitly_configured? &&
+        ActiveRecordEncryptionConfig.using_known_compromised_secret_key_base?
     end
 
     # Reload provider configurations after settings update
@@ -211,6 +214,7 @@ class Settings::ProvidersController < ApplicationController
       { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
       { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
       { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
+      { key: "truelayer",      title: "TrueLayer",       turbo_id: "truelayer",      partial: "truelayer_panel" },
       { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
       { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel" },
       { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
@@ -226,7 +230,8 @@ class Settings::ProvidersController < ApplicationController
       { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
       { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
       { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
-      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" }
+      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" },
+      { key: "sharesight",     title: "Sharesight",      turbo_id: "sharesight",     partial: "sharesight_panel" }
     ].freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
@@ -242,6 +247,7 @@ class Settings::ProvidersController < ApplicationController
       "lunchflow"      => "LunchflowItem",
       "redbark"        => "RedbarkItem",
       "enable_banking" => "EnableBankingItem",
+      "truelayer"      => "TruelayerItem",
       "coinstats"      => "CoinstatsItem",
       "wise"           => "WiseItem",
       "mercury"        => "MercuryItem",
@@ -253,6 +259,7 @@ class Settings::ProvidersController < ApplicationController
       "onchain_wallet" => "OnchainWalletItem",
       "snaptrade"      => "SnaptradeItem",
       "questrade"      => "QuestradeItem",
+      "sharesight"     => "SharesightItem",
       "ibkr"           => "IbkrItem",
       "trading212"     => "Trading212Item",
       "trade_republic" => "TradeRepublicItem",
@@ -278,6 +285,8 @@ class Settings::ProvidersController < ApplicationController
         @redbark_items = Current.family.redbark_items.ordered
       when "enable_banking"
         @enable_banking_items = Current.family.enable_banking_items.ordered
+      when "truelayer"
+        @truelayer_items = Current.family.truelayer_items.active.ordered
       when "coinstats"
         @coinstats_items = Current.family.coinstats_items.ordered
       when "wise"
@@ -310,6 +319,8 @@ class Settings::ProvidersController < ApplicationController
         @sophtron_items = Current.family.sophtron_items.ordered
       when "questrade"
         @questrade_items = Current.family.questrade_items.active.ordered
+      when "sharesight"
+        @sharesight_items = Current.family.sharesight_items.active.ordered
       end
     end
 
@@ -331,6 +342,7 @@ class Settings::ProvidersController < ApplicationController
       @lunchflow_items = Current.family.lunchflow_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @redbark_items = Current.family.redbark_items.where.not(api_key: [ nil, "" ]).ordered.select(:id)
       @enable_banking_items = Current.family.enable_banking_items.ordered # Enable Banking panel needs session info for status display
+      @truelayer_items = Current.family.truelayer_items.active.ordered
       # Providers page only needs to know whether any Sophtron connections exist with valid credentials
       @sophtron_items = Current.family.sophtron_items.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id)
       @coinstats_items = Current.family.coinstats_items.ordered # CoinStats panel needs account info for status display
@@ -348,6 +360,7 @@ class Settings::ProvidersController < ApplicationController
       @coinspot_items = Current.family.coinspot_items.active.ordered
       @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
       @questrade_items = Current.family.questrade_items.active.ordered.select(:id)
+      @sharesight_items = Current.family.sharesight_items.active.ordered
       @fio_items = Current.family.fio_items.active.ordered
 
       # Wallet uploads are managed on iOS. Only expose linked accounts the
@@ -384,6 +397,7 @@ class Settings::ProvidersController < ApplicationController
         "lunchflow"      => @lunchflow_items,
         "redbark"        => @redbark_items,
         "enable_banking" => @enable_banking_items,
+        "truelayer"      => @truelayer_items,
         "coinstats"      => @coinstats_items,
         "wise"           => @wise_items,
         "mercury"        => @mercury_items,
@@ -395,6 +409,7 @@ class Settings::ProvidersController < ApplicationController
         "onchain_wallet" => @onchain_wallet_items,
         "snaptrade"      => @snaptrade_items,
         "questrade"      => @questrade_items,
+        "sharesight"     => @sharesight_items,
         "ibkr"           => @ibkr_items,
         "trading212"     => @trading212_items,
         "trade_republic" => @trade_republic_items,

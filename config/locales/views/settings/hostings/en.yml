@@ -39,6 +39,11 @@ en:
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+        reset_market_data: Reset market data for all families
+        reset_market_data_warning: Deletes the exchange rates and security prices your providers can load again, re-imports them, and then syncs every account. Foreign-currency totals may show unconverted until the import finishes.
+        confirm_reset_market_data:
+          title: Reset market data for all families?
+          body: This deletes the exchange rates and security prices your providers can load again, for every family on this instance, and re-imports them. Until the import finishes, foreign-currency amounts may be shown unconverted. This action cannot be undone.
       provider_selection:
         exchange_rate_title: Exchange Rate Provider
         exchange_rate_description: Select a single provider for fetching currency exchange rates.
@@ -55,7 +60,7 @@ en:
         binance_public_hint: free, no API key -- crypto only (BTC, ETH, etc.)
         moex_public_hint: free, no API key -- Russian stocks, funds & bonds (MOEX), incl. RUB FX
         tinkoff_invest_hint: requires read-only token -- Russian stocks/funds/bonds prices + brand logos
-        requires_api_key_mansa: requires API key, 100 calls/day free tier -- NGX (Nigerian Exchange) only
+        requires_api_key_mansa: requires API key, 100 calls/day free tier -- African exchanges (NGX, JSE, NSE, GSE, BRVM and more)
         providers:
           twelve_data: Twelve Data
           yahoo_finance: Yahoo Finance
@@ -282,14 +287,14 @@ en:
         rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
       mansa_settings:
         title: Mansa
-        description: Enter the API key from Mansa API. Supports NGX (Nigerian Exchange), not covered by any other provider here. Mansa covers other African exchanges too, but only NGX is verified against this integration.
+        description: Enter the API key from Mansa API. Supports 20 African stock exchanges, including NGX (Nigerian Exchange), JSE, NSE (Kenya), GSE (Ghana) and BRVM -- several of which no other provider here covers.
         env_configured_message: Successfully configured through the MANSA_API_KEY environment variable.
         label: API Key
         placeholder: Enter your Mansa API key here
         show_details: "(show details)"
         step_1_html: 'Visit <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> and claim your free API key -- no card required.'
         step_2: Copy your API key and paste it below.
-        rate_limit_warning: "Mansa's free tier is limited to 100 API calls per day, and only exposes current quotes -- historical prices require a paid plan. Only NGX (Nigerian Exchange) is verified against this integration; other African exchanges Mansa covers are not yet supported here."
+        rate_limit_warning: "Mansa's free tier is limited to 100 API calls per day, and only exposes current quotes -- historical prices require a paid plan."
       alpha_vantage_settings:
         title: Alpha Vantage
         description: Enter the API key from Alpha Vantage. Supports EU ETFs on London Stock Exchange, XETRA, and other exchanges.
@@ -334,6 +339,10 @@ en:
         external_assistant_disconnected: External assistant disconnected
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
+      reset_market_data:
+        market_data_reset: Market data reset queued. Rates and prices will be re-imported, then all accounts will sync.
+        market_data_reset_already_queued: A market data reset is already queued or running.
+        market_data_reset_failed: The market data reset could not be queued. Nothing was deleted; please try again.
       not_authorized: You are not authorized to perform this action
       ensure_admin:
         not_authorized: You are not authorized to perform this action

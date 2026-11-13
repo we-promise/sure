@@ -21,6 +21,7 @@ class TradeRepublicItem::Importer
       known_newest_event_id: known_newest_event_id,
       timeline_cursors: force_full_timeline_fetch? ? {} : trade_republic_item.timeline_cursors,
       enrich_events: events_needing_detail_enrichment,
+      note_read_event_ids: note_read_event_ids,
       symbol_lookup_isins: isins_needing_symbol_lookup,
       known_instrument_symbols: stored_instrument_symbols
     )
@@ -238,19 +239,39 @@ class TradeRepublicItem::Importer
 
     # Incomplete trade-detail events, complete trades without a price read from
     # the detail (missing, or derived from the rounded total) and dividends
-    # without their detail, in the client's backlog order.
+    # without their detail, and transfers never read for their note, in the
+    # client's backlog order.
     def events_needing_detail_enrichment
-      portfolio = trade_republic_item.trade_republic_accounts.find_by(kind: "portfolio")
-      return [] unless portfolio
-
-      Array(portfolio.raw_timeline_payload)
+      stored_timeline_events
         .select do |event|
           Provider::TradeRepublicClient.incomplete_trade_detail_event?(event) ||
             Provider::TradeRepublicClient.trade_detail_needs_price_backfill?(event) ||
-            Provider::TradeRepublicClient.dividend_detail_missing?(event)
+            Provider::TradeRepublicClient.dividend_detail_missing?(event) ||
+            Provider::TradeRepublicClient.cash_note_pending?(event)
         end
         .sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
         .first(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS)
+    end
+
+    # Transfers whose note was already read. A sync that catches up re-reads
+    # the page holding the newest known event, so the client needs these to
+    # not fetch them again.
+    def note_read_event_ids
+      stored_timeline_events
+        .select { |event| Provider::TradeRepublicClient.cash_note_read?(event) }
+        .filter_map { |event| event["id"].presence }
+    end
+
+    # The portfolio and the cash account cap their stored timelines
+    # separately, so an old transfer can be left in only one of them.
+    def stored_timeline_events
+      accounts = trade_republic_item.trade_republic_accounts
+      return [] unless accounts.find_by(kind: "portfolio")
+
+      TradeRepublicAccount::DataHelpers.unique_timeline_events(
+        accounts.find_by(kind: "portfolio").raw_timeline_payload,
+        accounts.find_by(kind: "cash")&.raw_timeline_payload
+      )
     end
 
     # Sold / historical trade ISINs that already have complete details but still

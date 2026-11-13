@@ -1,13 +1,20 @@
 # frozen_string_literal: true
 
 class IndexaCapitalAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
   include IndexaCapitalAccount::DataHelpers
 
   # Duplicate of indexa_capital_account_id, no longer read or written. The
   # column stays for now because workers still on the previous release write
   # it during a rolling deploy; a later release can drop it.
   self.ignored_columns += [ "account_number" ]
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_holdings_payload
+    encrypts :raw_activities_payload
+  end
 
   belongs_to :indexa_capital_item
 

@@ -18,6 +18,23 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
     )
   end
 
+  test "keeps a saved merchant the user can't see when replacing actions" do
+    hidden = ProviderMerchant.create!(name: "ZXQ Hidden Merchant", source: "plaid")
+    private_account = @family.accounts.create!(name: "Private", balance: 0, currency: "USD", accountable: Depository.new, owner: @user)
+    create_transaction(account: private_account, name: "ZXQ hidden", merchant: hidden)
+    @rule.actions.create!(action_type: "set_transaction_merchant", value: hidden.id)
+    fn = Assistant::Function::UpdateRule.new(users(:family_member))
+    assert_not_includes @family.assignable_merchants_for(users(:family_member)).ids, hidden.id
+
+    result = fn.call("rule_id" => @rule.id, "actions" => [
+      { "action_type" => "set_transaction_category", "value" => @category.id },
+      { "action_type" => "set_transaction_merchant", "value" => hidden.id }
+    ])
+
+    assert result[:success], result.inspect
+    assert_equal hidden.id, @rule.reload.actions.find_by!(action_type: "set_transaction_merchant").value
+  end
+
   test "renaming keeps an active rule active" do
     result = @fn.call("rule_id" => @rule.id, "name" => "Morning coffee")
 

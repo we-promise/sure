@@ -432,6 +432,10 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     travel_to Date.current.end_of_month - 2.days
     occurrence = snoozed_late_bill
     travel_to occurrence.reload.effective_due_on - 2.days
+    # Run in the first days of a month, this lands more than
+    # Session::INACTIVITY_TIMEOUT after setup signed in, with no request in
+    # between to keep the session alive; the user would sign in again.
+    sign_in @user
     pay(occurrence)
 
     get bills_url
@@ -2227,7 +2231,7 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#{routine} .px-4.py-2\\.5", text: /#{I18n.t("bills.index.notices_routine", count: 2)}/
     assert_select "#{routine}[class^='bg-'], #{routine}[class*=' bg-']", count: 0
     # One chevron for both folds, not copies that drift apart.
-    chevron = "svg[class*='group-open:rotate-90']"
+    chevron = "svg[class*=':rotate-90']"
     chevrons = css_select("[data-persisted-disclosure-key-value='bills-suggested'] > summary #{chevron}, #{routine} #{chevron}")
     assert_equal 2, chevrons.size
     assert_equal 1, chevrons.map(&:to_html).uniq.size, "the folds' chevrons differ: #{chevrons.map { |svg| svg["class"] }.inspect}"
