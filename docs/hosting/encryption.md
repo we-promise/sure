@@ -76,3 +76,25 @@ unset OLD_SECRET_KEY_BASE
 ```
 
 Re-enter any key the task lists under `not_decryptable`.
+
+## Upgrading Plaid instance credentials
+
+Plaid and Plaid EU instance secrets now use the same declared encrypted settings
+as AI and market-data keys. Their provider forms and environment variables are
+unchanged. The required database migration moves existing `dynamic:plaid_secret`
+and `dynamic:plaid_eu_secret` rows to the declared setting names and encrypts their
+values with the existing settings key derived from `SECRET_KEY_BASE`.
+
+Stop old web and worker processes before upgrading, keep `SECRET_KEY_BASE`
+unchanged, and take a protected database backup. Run normal database migrations
+before starting the new web and worker processes. The default Docker web
+entrypoint runs `db:prepare`; custom deployments must include that step too.
+This conversion is mandatory, not an optional backfill task.
+
+A conflict between legacy and declared rows, an unexpected legacy format, or an
+encryption failure stops the migration and preserves the original rows. Resolve
+the reported issue before retrying; do not skip the migration. Missing/empty
+credentials remain empty and ENV-only credentials are not copied to the database.
+After conversion, the existing `security:rotate_setting_secrets` task covers both
+Plaid secrets. The migration is irreversible: it does not recreate plaintext
+credentials for a downgrade.
