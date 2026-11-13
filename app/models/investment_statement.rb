@@ -200,10 +200,7 @@ class InvestmentStatement
     when "asset_sub_class" then allocation_by_classification(:asset_sub_class, cash_bucket: CASH_SUB_CLASS)
     when "sector" then allocation_by_classification(:sector)
     when "region" then allocation_by_classification(:region)
-    else
-      allocation.map do |row|
-        AllocationSegment.new(id: row.cash? ? "cash" : row.security.id, name: row.name, amount: row.amount, weight: row.weight)
-      end
+    else allocation_by_security
     end
   end
 
@@ -484,6 +481,18 @@ class InvestmentStatement
     # files cash by. Not Account#balance: an account below its holdings (margin,
     # or a stale zero balance) would otherwise show less than it holds, or drop
     # out of the grouping altogether.
+    # The #allocation rows as segments, without the per-security trend a
+    # segment does not carry. build_segments' total is the holdings plus
+    # account_cash_total, which is weight_denominator, so each weight matches
+    # #allocation's.
+    def allocation_by_security
+      segments = holdings_rolled_up_by_security.map do |security, value, _holdings|
+        [ security.id, security.name.presence || security.ticker, value ]
+      end
+      segments << [ "cash", I18n.t("models.investment_statement.cash"), account_cash_total ]
+      build_segments(segments)
+    end
+
     def allocation_by_account
       cash = positive_account_cash.to_h { |account, value| [ account.id, value ] }
       segments = investment_accounts.map do |account|

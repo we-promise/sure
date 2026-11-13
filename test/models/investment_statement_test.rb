@@ -1309,8 +1309,8 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     figures = ->(by) { @statement.allocation_by(by).map { |s| [ s.id, s.amount.amount.to_i, s.weight.to_f ] } }
 
-    # The security grouping lists the securities by value, then its Cash row.
-    assert_equal [ [ stock.id, 1200, 34.29 ], [ bond.id, 800, 22.86 ], [ "cash", 1500, 42.86 ] ], figures.("security")
+    # The security grouping ranks its Cash row by value with the securities.
+    assert_equal [ [ "cash", 1500, 42.86 ], [ stock.id, 1200, 34.29 ], [ bond.id, 800, 22.86 ] ], figures.("security")
     assert_equal [ [ "liquidity", 1500, 42.86 ], [ "equity", 1200, 34.29 ], [ "fixed_income", 800, 22.86 ] ], figures.("asset_class")
     assert_equal [ [ "unclassified", 2300, 65.71 ], [ "Technology", 1200, 34.29 ] ], figures.("sector")
     assert_equal [ [ first.id, 3000, 85.71 ], [ second.id, 500, 14.29 ] ], figures.("account")
@@ -1487,6 +1487,31 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     assert_equal [ [ security.id, "Held", 1000, BigDecimal("66.67") ], [ "cash", I18n.t("models.investment_statement.cash"), 500, BigDecimal("33.33") ] ],
                  segments.map { |s| [ s.id, s.name, s.amount.amount.to_i, s.weight ] }
+  end
+
+  # Segments are sorted largest first in every grouping, so cash larger than a
+  # holding ranks above it here as it does under kind or account. #allocation
+  # itself still lists cash last.
+  test "the security grouping ranks the cash row by size" do
+    account = create_investment_account(balance: 4000, cash_balance: 3000)
+    security = create_classified_security(name: "Held", asset_class: "equity")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    assert_equal [ security.id, "cash" ], @statement.allocation.map { |row| row.cash? ? "cash" : row.security.id }, "precondition: allocation lists cash last"
+    assert_equal [ [ "cash", 3000 ], [ security.id, 1000 ] ],
+                 @statement.allocation_by("security").map { |s| [ s.id, s.amount.amount.to_i ] }
+  end
+
+  # A segment carries no trend, so building one must not pay for the cost-basis
+  # lookups behind it.
+  test "the security grouping computes no trends" do
+    account = create_investment_account(balance: 1500, cash_balance: 500)
+    security = create_classified_security(asset_class: "equity")
+    Holding.create!(account: account, security: security, date: Date.current, qty: 1, price: 1000, amount: 1000, currency: "USD")
+
+    Holding.any_instance.expects(:trend).never
+
+    assert_equal [ security.id, "cash" ], @statement.allocation_by("security").map(&:id)
   end
 
   # A grouping name comes from a query string, and a request without one shows
