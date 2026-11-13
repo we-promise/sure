@@ -314,7 +314,7 @@ de:
       llm_provider_selector:
         data_retention: Eingaben über die API werden standardmäßig nicht zum Training genutzt; die gehosteten APIs der Anbieter speichern sie rund 30 Tage aus Sicherheitsgründen. Für eigene oder selbst gehostete Endpunkte gilt deine eigene Regelung.
         data_retention_heading: Umgang mit Daten
-        description: Wähl, welches LLM den KI-Chat antreibt. Stapelverarbeitungen – Kategorisierung, Händlererkennung und PDF-Verarbeitung – laufen derzeit immer über OpenAI.
+        description: Wähle, welches LLM den KI-Chat, die Händlererkennung und die PDF-Verarbeitung antreibt. Die Kategorisierung von Transaktionen richtest du unten separat ein.
         env_configured_message: Über die Umgebungsvariable LLM_PROVIDER eingerichtet.
         not_configured_hint: Trag unten einen API-Key für %{provider} ein, um ihn zu aktivieren.
         provider_anthropic: Anthropic (Claude)
