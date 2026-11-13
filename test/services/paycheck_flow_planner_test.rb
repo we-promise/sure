@@ -321,4 +321,26 @@ class PaycheckFlowPlannerTest < ActiveSupport::TestCase
     assert_equal plain.to_json, with_links.to_json,
       "the PR#1 plan() output must be byte-identical with fan-out inputs present"
   end
+
+  # Failure-path observability (house style: DebugLogEntry.capture over
+  # Rails.logger for support-relevant failures). to_family_cents is only
+  # reached through the AR seam, so this test is the one AR-backed test in
+  # an otherwise pure-Ruby file.
+  test "to_family_cents captures a DebugLogEntry when the amount is unconvertible" do
+    money = Money.new(12_345, "EUR")
+    money.expects(:exchange_to).raises(
+      Money::ConversionError.new(from_currency: "EUR", to_currency: "USD", date: Date.new(2026, 11, 1))
+    )
+
+    assert_difference -> { DebugLogEntry.where(category: "paycheck_planner").count }, 1 do
+      assert_equal BigDecimal(0), PaycheckFlowPlanner.to_family_cents(money, "USD")
+    end
+
+    entry = DebugLogEntry.where(category: "paycheck_planner").recent.first
+    assert_equal "warn", entry.level
+    assert_equal "PaycheckFlowPlanner", entry.source
+    assert_includes entry.message, "Unconvertible amount zeroed"
+    assert_equal "EUR", entry.metadata["source_currency"]
+    assert_equal "USD", entry.metadata["target_currency"]
+  end
 end

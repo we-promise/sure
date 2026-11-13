@@ -13,7 +13,19 @@ class Api::V1::PaycheckPlansController < Api::V1::BaseController
     return unless family
 
     month = params[:month].nil? ? Date.current.beginning_of_month : parse_month(params[:month])
-    return invalid_query("invalid_month", "month must be a YYYY-MM month") if month.nil?
+    if month.nil?
+      # An unparseable month is a client 422, but the requested string is
+      # support-relevant context for the rejection — capture it with family.
+      DebugLogEntry.capture(
+        category: "paycheck_planner",
+        level: "warn",
+        message: "Rejected paycheck-plans request with an unparseable month",
+        source: "Api::V1::PaycheckPlansController",
+        family: family,
+        metadata: { requested_month: params[:month].to_s }
+      )
+      return invalid_query("invalid_month", "month must be a YYYY-MM month")
+    end
 
     render json: PaycheckFlowPlanner.for_family(family: family, month: month)
   end

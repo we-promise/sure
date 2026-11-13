@@ -93,6 +93,20 @@ class Api::V1::PaycheckPlansControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "captures a DebugLogEntry when the month is rejected" do
+    assert_difference -> { DebugLogEntry.where(category: "paycheck_planner", family: @family).count }, 1 do
+      get "/api/v1/families/#{@family.id}/paycheck-plans", params: { month: "not-a-month" },
+        headers: api_headers(@auth)
+    end
+    assert_response :unprocessable_entity
+    assert_equal "invalid_month", response.parsed_body["error"]
+
+    entry = DebugLogEntry.where(category: "paycheck_planner", family: @family).recent.first
+    assert_equal "warn", entry.level
+    assert_equal "Api::V1::PaycheckPlansController", entry.source
+    assert_equal "not-a-month", entry.metadata["requested_month"]
+  end
+
   test "defaults to the current month" do
     travel_to Date.new(2026, 11, 15) do
       get "/api/v1/families/#{@family.id}/paycheck-plans", headers: api_headers(@auth)

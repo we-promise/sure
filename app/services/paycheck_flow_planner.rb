@@ -103,10 +103,19 @@ class PaycheckFlowPlanner
 
   # Money in the family currency, in integer cents. An unconvertible amount
   # is unknown, and unknown must not be dressed up as zero fun money — but
-  # same-currency families (the common case) never hit this.
+  # same-currency families (the common case) never hit this. The conversion
+  # failure is support-relevant (the amount is unknown downstream), so it
+  # lands in the debug log; only the AR seam calls this, never `plan`.
   def self.to_family_cents(money, currency)
     (money.exchange_to(currency).amount * CENTS).round(0, half: :up)
   rescue Money::ConversionError
+    DebugLogEntry.capture(
+      category: "paycheck_planner",
+      level: "warn",
+      message: "Unconvertible amount zeroed in PaycheckFlowPlanner#to_family_cents",
+      source: "PaycheckFlowPlanner",
+      metadata: { source_currency: money.currency.iso_code, target_currency: currency }
+    )
     BigDecimal(0)
   end
 
