@@ -1453,7 +1453,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.uuid "income_series_id", null: false
     t.uuid "account_id", null: false
     t.string "mode", null: false
-    t.decimal "value", precision: 12, scale: 2
+    t.decimal "value", precision: 12, scale: 6
     t.integer "sort_index"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

@@ -31,7 +31,13 @@ class RecurringTransaction < ApplicationRecord
            dependent: :destroy
   # Paycheck Flow Planner (M2 PR#2b): allocations representing this
   # detected bill/debt. Destroying the series detaches the allocations
-  # (nullify) rather than deleting the owner's planning data.
+  # (nullify) rather than deleting the owner's planning data. The before_destroy
+  # hook is registered before this association so it persists the explicit
+  # monthly amount on required allocations first — the nullify detaches them
+  # afterwards, and a required allocation whose only amount source is the
+  # series would violate chk_plan_allocations_value_mode if detached with a
+  # NULL amount.
+  before_destroy :persist_detached_allocation_amounts
   has_many :plan_allocations, foreign_key: :recurring_transaction_id, dependent: :nullify
 
   monetize :amount
@@ -941,6 +947,24 @@ class RecurringTransaction < ApplicationRecord
   end
 
   private
+    # The series' plan_allocations are detached (dependent: :nullify) on
+    # destroy. A required-mode allocation whose only amount source is this
+    # series would violate chk_plan_allocations_value_mode once the link is
+    # nullified (value_cents NULL and recurring_transaction_id NULL), so the
+    # explicit monthly amount is persisted on those rows first — inside this
+    # destroy's transaction, so the detached state is always valid.
+    def persist_detached_allocation_amounts
+      monthly = monthly_equivalent_amount
+      return if monthly.nil?
+
+      cents = (monthly.amount * 100).round
+      return if cents <= 0
+
+      plan_allocations.where(mode: "required", value_cents: nil).find_each do |allocation|
+        allocation.update_columns(value_cents: cents)
+      end
+    end
+
     # Issue #1590: a recurring transfer's future occurrences rarely share the
     # seed's name (user free-text, importer wording, the auto-matcher's
     # "Transfer to ..."), so name-based matching returns [] and the Cleaner

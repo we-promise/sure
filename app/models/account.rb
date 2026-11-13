@@ -11,6 +11,7 @@ class Account < ApplicationRecord
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
   validate :plan_owner_consistent, if: -> { family_id.present? }
+  validate :plan_owner_belongs_to_family, if: -> { family_id.present? && plan_owner_user_id.present? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
@@ -819,7 +820,7 @@ class Account < ApplicationRecord
     return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true) if logo.attached?
 
     if bank_logo_slug.present? && BankLogoSlugs.available.key?(bank_logo_slug)
-      Rails.application.routes.url_helpers.asset_path("bank-logos/#{bank_logo_slug}.svg")
+      ActionController::Base.helpers.asset_path("bank-logos/#{bank_logo_slug}.svg")
     end
   end
   # Marks the account pending_deletion and enqueues DestroyJob. If the enqueue
@@ -1133,6 +1134,14 @@ class Account < ApplicationRecord
       end
     end
 
+    # The plan owner label must name a member of the account's own family
+    # (same pattern as RecurringTransaction#plan_owner_belongs_to_family).
+    def plan_owner_belongs_to_family
+      return if family_id.blank? || plan_owner.blank?
+
+      errors.add(:plan_owner, :invalid, message: "must belong to the same family as the account") if plan_owner.family_id != family_id
+    end
+
     # M2 PR#2b: the auto-transfer target must be a real account of the same
     # family and not the account itself (a bank cannot auto-transfer to
     # itself).
@@ -1153,6 +1162,14 @@ class Account < ApplicationRecord
     def sub_account_consistent
       if parent_account_id == id
         errors.add(:parent_account, "cannot be the account itself")
+        return
+      end
+
+      # An account that already has sub-accounts cannot also become a
+      # sub-account — linking a parent would chain it into a depth-2 column
+      # the sankey does not render.
+      if sub_accounts.exists?
+        errors.add(:parent_account, "depth-1 only: the account already has sub-accounts")
         return
       end
 

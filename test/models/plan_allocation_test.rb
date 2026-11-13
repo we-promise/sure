@@ -103,6 +103,28 @@ class PlanAllocationTest < ActiveSupport::TestCase
     assert_equal 2000, explicit.resolved_monthly_amount
   end
 
+  # dependent: :nullify detaches the allocation when the linked series is
+  # destroyed. A required-mode allocation whose only amount source is the
+  # series would violate chk_plan_allocations_value_mode once detached
+  # (value_cents NULL and recurring_transaction_id NULL), so the series
+  # persists the explicit monthly amount on those rows before detaching.
+  test "destroying the linked series persists the monthly amount on a required allocation" do
+    allocation = PlanAllocation.create!(
+      family: @family, account: @account, name: "Netflix", kind: "bill",
+      mode: "required", recurring_transaction: @bill
+    )
+    assert_nil allocation.value_cents
+
+    expected = (@bill.monthly_equivalent_amount.amount * 100).round
+
+    assert @bill.destroy
+
+    allocation.reload
+    assert_equal expected, allocation.value_cents
+    assert_nil allocation.recurring_transaction_id
+    assert allocation.valid?
+  end
+
   test "kind and mode enums are the frozen spec sets" do
     assert_equal %w[bill debt savings fun_money], PlanAllocation.kinds.keys
     assert_equal %w[required specific percent leftover], PlanAllocation.modes.keys

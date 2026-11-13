@@ -30,7 +30,7 @@ class AddPaycheckFlow < ActiveRecord::Migration[8.1]
       t.uuid :income_series_id, null: false
       t.uuid :account_id, null: false
       t.string :mode, null: false
-      t.decimal :value, precision: 12, scale: 2
+      t.decimal :value, precision: 12, scale: 6
       t.integer :sort_index
       t.timestamps null: false
     end
@@ -247,11 +247,10 @@ class AddPaycheckFlow < ActiveRecord::Migration[8.1]
 
   def down
     # rollback order: reverse of the original timestamps
-    # 20261102100000_extend_plan_role_check_constraint
-    remove_check_constraint :accounts, name: "chk_accounts_plan_role"
-    add_check_constraint :accounts,
-      "plan_role IS NULL OR plan_role::text = ANY (ARRAY['savings_bucket'::text, 'credit_card_payoff'::text, 'loan_payoff'::text])",
-      name: "chk_accounts_plan_role"
+    # The plan_role constraint added by the up step stays in place through
+    # the rest of the rollback and is dropped with the plan_role column
+    # below — restoring the old 3-value set here would reject rows that
+    # already carry the new values.
 
     # 20261101130000_add_bank_logo_slug_to_accounts
     remove_column :accounts, :bank_logo_slug
@@ -265,9 +264,6 @@ class AddPaycheckFlow < ActiveRecord::Migration[8.1]
     remove_column :accounts, :auto_transfer_target_ids
     remove_index :accounts, :parent_account_id
     remove_column :accounts, :parent_account_id
-
-    # 20261030220000_make_plan_allocation_account_nullable
-    change_column_null :plan_allocations, :account_id, false
 
     # 20261029100002_add_plan_max_account_links_to_recurring_transactions
     remove_check_constraint :recurring_transactions, name: "chk_recurring_transactions_plan_max_account_links"

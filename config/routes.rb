@@ -504,12 +504,9 @@ Rails.application.routes.draw do
 
   # Hub page fronting budgets + goals under a single "Plan" nav entry.
   resource :plan, only: :show do
-    # Paycheck Flow (M2 PR#2): the 3-column money map, preview-gated.
+    # Paycheck Flow (preview-gated): the flow-page route plus the graph,
+    # allocation, account, and income actions the Plan UI drives.
     get :flow, to: "plan_flows#show", on: :collection, as: :flow
-    get :flow_add_accounts_modal, to: "plan_flows#add_accounts_modal", on: :collection,
-                                  as: :flow_add_accounts_modal, path: "flow/add-accounts"
-    post :flow_preview, to: "plan_flows#preview", on: :collection, as: :flow_preview
-    post :flow_save, to: "plan_flows#save", on: :collection, as: :flow_save
     post :flow_add_accounts, to: "plan_flows#add_accounts", on: :collection, as: :flow_add_accounts
     post :flow_create_account, to: "plan_flows#create_account", on: :collection, as: :flow_create_account
     patch :flow_account, to: "plan_flows#update_account", on: :collection, as: :flow_account,

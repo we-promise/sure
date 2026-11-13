@@ -1,120 +1,15 @@
-# Paycheck Flow Planner (M2 PR#2): the 3-column money map — income streams
-# (left) -> bank accounts (center) -> obligations (right) — plus the edge
-# editor and the live resolved panel. The solver is PaycheckFlowPlanner
-# (PR#1); this controller only fetches, edits, and renders.
+# Paycheck Flow Planner backend: the graph, allocation, account, and
+# income actions that the Plan flow UI drives (Turbo + JSON). The solver
+# is PaycheckFlowPlanner (pure functions, no DB); this controller only
+# fetches and edits.
 class PlanFlowsController < ApplicationController
   include PreviewGateable
   before_action :require_preview_features!
 
-  def show
-    @month = Date.current
-    @view = flow_view
-    @family_users = family_users
-    @income_series = income_series
-    @allocations = Current.family.income_account_allocations.includes(:income_series, :account)
-    @allocations_by_income = @allocations.group_by(&:income_series_id)
-    @flow_accounts = flow_accounts
-    @selected_income = load_selected_income
-    @leftover_account_ids = Current.family.income_account_allocations.where(mode: "leftover").pluck(:account_id).to_set
-    load_obligations
-    @plan = PaycheckFlowPlanner.for_family(family: Current.family, month: @month)
-    @breadcrumbs = [
-      [ t("breadcrumbs.home"), root_path ],
-      [ t("breadcrumbs.plan"), plan_path ],
-      [ t(".title"), nil ]
-    ]
-  end
-
-  # Draft edge preview (Turbo-frame response): re-solves the month with the
-  # form's draft edges merged over the saved allocations — the selected
-  # income's saved edges are replaced by the draft set, everything else is
-  # untouched — and renders only the resolved panel. No write.
-  def preview
-    @month = Date.current
-    @view = flow_view
-    @family_users = family_users
-    @flow_accounts = flow_accounts
-    @leftover_account_ids = Current.family.income_account_allocations.where(mode: "leftover").pluck(:account_id).to_set
-
-    income = load_selected_income
-    draft = income ? draft_edges(income) : {}
-
-    if draft.empty?
-      # Nothing to preview — show the saved state.
-      @plan = PaycheckFlowPlanner.for_family(family: Current.family, month: @month)
-    else
-      inputs = PaycheckFlowPlanner.inputs_for(family: Current.family, month: @month)
-      draft_allocations = draft.map do |account_id, attrs|
-        # The draft carries major units (specific) or 0.0-1.0 (percent); the
-        # planner wants cents / fraction in its own key shape.
-        {
-          income_id: income.id,
-          account_id: account_id,
-          mode: attrs[:mode],
-          value_cents: attrs[:mode] == "specific" ? (attrs[:value].to_f * 100).round : nil,
-          value_percent: attrs[:mode] == "percent" ? attrs[:value] : nil
-        }
-      end
-      inputs[:allocations] =
-        inputs[:allocations].reject { |edge| edge[:income_id] == income.id } + draft_allocations
-      @plan = PaycheckFlowPlanner.new(**inputs).plan
-    end
-    # A partial by name from a controller needs the explicit partial flag —
-    # plain string render resolves as a full template (no underscore fallback).
-    render partial: "plan_flows/resolved_panel"
-  end
-
-  # Edge editor save: upsert/destroy the selected income's allocations from
-  # the form's edge rows (checked rows win; unchecked existing rows are
-  # removed). sort_index follows the center-column row order.
-  def save
-    income = load_selected_income
-    return redirect_to flow_plan_path unless income
-
-    draft = draft_edges(income)
-    existing = Current.family.income_account_allocations
-                            .where(income_series_id: income.id)
-                            .index_by(&:account_id)
-
-    # A draft row can fail the model's value validations (e.g. a specific
-    # amount left blank); roll back the whole batch and surface the flash
-    # instead of a 500.
-    result = begin
-      ActiveRecord::Base.transaction do
-        draft.each do |account_id, attrs|
-          account = Current.family.accounts.find_by(id: account_id)
-          next unless account
-
-          allocation = existing.delete(account_id)
-          if allocation
-            allocation.assign_attributes(mode: attrs[:mode], value: attrs[:value])
-            allocation.save!
-          else
-            IncomeAccountAllocation.create!(
-              family: Current.family, income_series: income, account: account,
-              mode: attrs[:mode], value: attrs[:value], sort_index: attrs[:sort_index]
-            )
-          end
-        end
-        existing.each_value(&:destroy!)
-        true
-      end
-    rescue ActiveRecord::RecordInvalid
-      false
-    end
-
-    if result
-      redirect_to flow_plan_path(income: income.id, view: flow_view), notice: t(".saved")
-    else
-      redirect_to flow_plan_path(income: income.id, view: flow_view), alert: t(".save_failed")
-    end
-  end
-
-  # Planning diagram JSON (M2 PR#2b): the whole page state in one payload —
-  # the saved state with draft rows merged over it (same draft pattern as
-  # the preview action): the selected income's saved edges are replaced by
-  # the form's edge rows, and the allocation rows merge per-id over the
-  # saved set. No write.
+  # Planning diagram JSON: the whole page state in one payload — the saved
+  # state with draft rows merged over it: the selected income's saved edges
+  # are replaced by the form's edge rows, and the allocation rows merge
+  # per-id over the saved set. No write.
   def graph
     @month = Date.current
     @graph = PaycheckFlowPlanner.plan_graph(family: Current.family, month: @month, draft: graph_draft.presence)
@@ -167,22 +62,6 @@ class PlanFlowsController < ApplicationController
     allocation = Current.family.plan_allocations.find(params[:id])
     allocation.destroy!
     redirect_to flow_plan_path(view: flow_view), notice: t(".saved")
-  end
-
-  # "Add Bank Account" modal (Turbo frame): lists the family accounts not
-  # yet on the map (no plan_order, no allocation) for the attach form, plus
-  # the manual bank-creation form.
-  def add_accounts_modal
-    in_flow = Current.family.income_account_allocations.pluck(:account_id).to_set
-    @unassigned_accounts = flow_accounts.reject do |account|
-      account.plan_order.present? || in_flow.include?(account.id)
-    end
-    # Full template (not a partial): a controller `render "prefix/name"`
-    # resolves with partial: false and no underscore fallback, so the modal
-    # content must be a real template — same shape as the house modal
-    # (recurring_transactions/new.html.erb), frame requests drop the layout
-    # so the shared #modal frame stays unique in the response.
-    render "plan_flows/account_modal", layout: turbo_frame_request? ? false : nil
   end
 
   # "Add Bank Account" modal, part 1: attach existing family accounts to the
@@ -254,22 +133,27 @@ class PlanFlowsController < ApplicationController
   end
 
   # Income card edit: label the income to a family member (or clear the
-  # label back to the account-owner fallback). M2 PR#2b adds
-  # plan_max_account_links — the income's hard bank-link limit; blank clears.
+  # label back to the account-owner fallback). plan_max_account_links is
+  # the income's hard bank-link limit: an explicit blank clears it, an
+  # omitted param keeps the existing value.
   def update_income
     income = income_series.find { |series| series.id == params[:income_id] }
     return redirect_to flow_plan_path unless income
 
     result = begin
-      user_id = params.dig(:series, :plan_owner_user_id).presence
-      if user_id.present? && family_user_ids.include?(user_id)
-        income.update!(plan_owner_user_id: user_id)
-      else
-        income.update!(plan_owner_user_id: nil)
-      end
+      ActiveRecord::Base.transaction do
+        user_id = params.dig(:series, :plan_owner_user_id).presence
+        if user_id.present? && family_user_ids.include?(user_id)
+          income.update!(plan_owner_user_id: user_id)
+        else
+          income.update!(plan_owner_user_id: nil)
+        end
 
-      max_links = params.dig(:series, :plan_max_account_links)
-      income.update!(plan_max_account_links: max_links.presence&.to_i)
+        series_params = params.dig(:series)
+        if series_params.respond_to?(:key?) && series_params.key?("plan_max_account_links")
+          income.update!(plan_max_account_links: series_params["plan_max_account_links"].presence&.to_i)
+        end
+      end
       true
     rescue ActiveRecord::RecordInvalid
       false
@@ -286,10 +170,6 @@ class PlanFlowsController < ApplicationController
 
     def flow_view
       %w[paycheck monthly].include?(params[:view].to_s) ? params[:view] : "paycheck"
-    end
-
-    def family_users
-      @family_users ||= Current.family.users.order(:created_at, :id)
     end
 
     def family_user_ids
@@ -347,68 +227,10 @@ class PlanFlowsController < ApplicationController
       end
     end
 
-    # Right column inputs: bills paid FROM each account (the solver's
-    # obligation shape), debt service paid INTO debt accounts, and savings
-    # goals linked to the account. Display-only in v1.
-    def load_obligations
-      ids = @flow_accounts.map(&:id)
-      @bills_by_account = {}
-      @debt_service_by_account = {}
-      @goals_by_account = {}
-      return if ids.empty?
-
-      # Mirror the solver's obligation scope (paycheck_flow_planner.rb#inputs_for):
-      # active bill/subscription/installment with an account, destination nil
-      # or a debt account — restricted to the accounts on the map.
-      debt_account_ids = Current.family.accounts
-                                  .where(accountable_type: %w[CreditCard Loan])
-                                  .pluck(:id)
-      payable = Current.family.recurring_transactions
-                              .where(status: :active, bill_type: %w[bill subscription installment])
-                              .where.not(account_id: nil)
-                              .merge(
-                                RecurringTransaction.where(destination_account_id: nil).or(
-                                  RecurringTransaction.where(destination_account_id: debt_account_ids)
-                                )
-                              )
-                              .where(account_id: ids)
-      payable.each do |series|
-        @bills_by_account[series.account_id] ||= []
-        @bills_by_account[series.account_id] << series
-      end
-
-      # What flows INTO a debt account (its card): payments destined for it.
-      debt_dest_ids = (Set[ids] & debt_account_ids).to_a
-      debt_service = Current.family.recurring_transactions
-                                 .where(status: :active, bill_type: %w[bill subscription installment])
-                                 .where(destination_account_id: debt_dest_ids)
-                                 .where.not(account_id: nil)
-      debt_service.each do |series|
-        @debt_service_by_account[series.destination_account_id] ||= []
-        @debt_service_by_account[series.destination_account_id] << series
-      end
-
-      goals = Current.family.goals.where.not(state: Goal::RELEASED_STATES).joins(:goal_accounts)
-                                .where(goal_accounts: { account_id: ids })
-                                .distinct
-      @goals_by_account = goals.each_with_object({}) do |goal, map|
-        goal.linked_accounts.where(id: ids).each do |account|
-          map[account.id] ||= []
-          map[account.id] << goal
-        end
-      end
-      open_pledges = GoalPledge.where(goal_id: goals.map(&:id), account_id: ids, status: "open")
-                               .where("expires_at >= ?", Time.current)
-      @goal_pledge_by_account = open_pledges.group(:account_id)
-                                            .sum(:amount)
-                                            .transform_keys { |id| id.to_s }
-    end
-
-    # The plan-graph draft (M2 PR#2b), same shape as the preview action's:
-    # the selected income's saved edges replaced by the form's edge rows,
-    # and the allocation rows merged per-id over the saved set. Only the
-    # sets the form actually carries are present — the planner applies each
-    # draft key wholesale over the saved inputs.
+    # The plan-graph draft: the selected income's saved edges replaced by
+    # the form's edge rows, and the allocation rows merged per-id over the
+    # saved set. Only the sets the form actually carries are present — the
+    # planner applies each draft key wholesale over the saved inputs.
     def graph_draft
       draft = {}
 
@@ -517,10 +339,11 @@ class PlanFlowsController < ApplicationController
       save_bank_links(account) if params[:links].respond_to?(:to_unsafe_h) && params[:links].to_unsafe_h.any?
     end
 
-    # Linked-income edges from the bank config dialog: the dialog lists
-    # every income of the family, so the links param is complete — checked
-    # rows upsert the edge (per-edge mode/value), unchecked existing rows
-    # are removed. Same semantics as the edge editor save.
+    # Linked-income edges from the bank config dialog: the dialog lists the
+    # family's editable incomes, so the links param is complete over them —
+    # checked rows upsert the edge (per-edge mode/value), unchecked existing
+    # rows for those incomes are removed. Incomes the user cannot edit keep
+    # their edges.
     def save_bank_links(account)
       links = params[:links].to_unsafe_h
       existing = Current.family.income_account_allocations
@@ -559,7 +382,10 @@ class PlanFlowsController < ApplicationController
           existing.delete(series.id)&.destroy!
         end
       end
-      existing.each_value(&:destroy!)
+      # Remove only the edges of incomes the user can edit; edges on
+      # non-editable incomes survive the dialog.
+      editable_ids = income_series.map(&:id).to_set
+      existing.each_value { |allocation| allocation.destroy! if editable_ids.include?(allocation.income_series_id) }
     end
 
     def redirect_back_to_flow

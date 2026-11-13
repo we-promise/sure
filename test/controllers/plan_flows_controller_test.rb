@@ -39,174 +39,6 @@ class PlanFlowsControllerTest < ActionDispatch::IntegrationTest
     series
   end
 
-  test "redirects users without preview access" do
-    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
-
-    get "/plan/flow"
-
-    assert_redirected_to root_path
-    assert_match(/preview/i, flash[:alert])
-  end
-
-  test "renders the three-column map with incomes, accounts, and the resolved panel" do
-    travel_to Date.new(2026, 11, 15) do
-      create_income_series(account: @account, name: "Bob Payroll", amount: 900)
-
-      get "/plan/flow"
-
-      assert_response :success
-      assert_includes response.body, "Bob Payroll"
-      assert_includes response.body, @account.name
-      assert_select "turbo-frame#flow_resolved"
-      # netflix_subscription (15.99/mo from @account) is the month's obligation.
-      assert_includes response.body, "$15.99"
-      # November has two 900 paychecks.
-      assert_includes response.body, "$900.00"
-      assert_select "form[action='/plan/flow_save']", count: 0
-    end
-  end
-
-  test "per-month view renders the monthly panel" do
-    travel_to Date.new(2026, 11, 15) do
-      create_income_series(account: @account, name: "Bob Payroll", amount: 900)
-
-      get "/plan/flow", params: { view: "monthly" }
-
-      assert_response :success
-      assert_select "turbo-frame#flow_resolved"
-      # 2 x 900 paychecks of November income.
-      assert_includes response.body, "$1,800.00"
-    end
-  end
-
-  test "an unknown income id renders without the edge editor" do
-    travel_to Date.new(2026, 11, 15) do
-      get "/plan/flow", params: { income: "not-a-uuid" }
-
-      assert_response :success
-      assert_select "form[action='/plan/flow_save']", count: 0
-    end
-  end
-
-  test "the selected income shows an edge row per account with all four modes" do
-    travel_to Date.new(2026, 11, 15) do
-      series = create_income_series(account: @account, name: "Bob Payroll", amount: 900)
-
-      get "/plan/flow", params: { income: series.id }
-
-      assert_response :success
-      assert_select "form[action='/plan/flow_save']"
-      assert_select "input[type=hidden][name='income'][value='#{series.id}']"
-      assert_select "select[name='edges[#{@account.id}][mode]']", 1 do
-        assert_select "option[value=required]"
-        assert_select "option[value=specific]"
-        assert_select "option[value=percent]"
-        assert_select "option[value=leftover]"
-      end
-    end
-  end
-
-  test "save upserts the selected income's allocations" do
-    travel_to Date.new(2026, 11, 15) do
-      series = create_income_series(account: @account, name: "Bob Payroll", amount: 900)
-      savings = @family.accounts.create!(name: "Savings", owner: @user, currency: "USD",
-        balance: 0, accountable: Depository.new)
-
-      post "/plan/flow_save", params: {
-        income: series.id,
-        edges: {
-          @account.id.to_s => { "enabled" => "1", "mode" => "percent", "value" => "20" },
-          savings.id.to_s => { "enabled" => "1", "mode" => "specific", "value" => "120" }
-        }
-      }
-
-      assert_redirected_to "/plan/flow?income=#{series.id}&view=paycheck"
-      assert_equal I18n.t("plan_flows.save.saved"), flash[:notice]
-      rows = IncomeAccountAllocation.where(income_series: series).includes(:account)
-      assert_equal 2, rows.count
-      percent_row = rows.find { |row| row.account_id == @account.id }
-      assert_equal "percent", percent_row.mode
-      assert_in_delta 0.2, percent_row.value.to_f, 0.0001
-      specific_row = rows.find { |row| row.account_id == savings.id }
-      assert_equal "specific", specific_row.mode
-      assert_in_delta 120.0, specific_row.value.to_f, 0.0001
-    end
-  end
-
-  test "save removes unchecked rows and replaces stale values" do
-    travel_to Date.new(2026, 11, 15) do
-      series = create_income_series(account: @account, name: "Bob Payroll", amount: 900)
-      IncomeAccountAllocation.create!(family: @family, income_series: series,
-        account: @account, mode: "percent", value: 0.5)
-
-      # Only @account checked, now leftover: the old percent row is replaced.
-      post "/plan/flow_save", params: {
-        income: series.id,
-        edges: { @account.id.to_s => { "enabled" => "1", "mode" => "leftover" } }
-      }
-
-      assert_redirected_to "/plan/flow?income=#{series.id}&view=paycheck"
-      rows = IncomeAccountAllocation.where(income_series: series)
-      assert_equal 1, rows.count
-      assert_equal "leftover", rows.first.mode
-      assert_nil rows.first.value
-    end
-  end
-
-  test "save rejects an invalid percent value and keeps the saved rows" do
-    travel_to Date.new(2026, 11, 15) do
-      series = create_income_series(account: @account, name: "Bob Payroll", amount: 900)
-      IncomeAccountAllocation.create!(family: @family, income_series: series,
-        account: @account, mode: "percent", value: 0.5)
-
-      # 150% -> stored 0 -> fails the percent validation; whole batch rolls back.
-      post "/plan/flow_save", params: {
-        income: series.id,
-        edges: { @account.id.to_s => { "enabled" => "1", "mode" => "percent", "value" => "150" } }
-      }
-
-      assert_redirected_to "/plan/flow?income=#{series.id}&view=paycheck"
-      assert_equal I18n.t("plan_flows.save.save_failed"), flash[:alert]
-      row = IncomeAccountAllocation.where(income_series: series).first
-      assert_equal 0.5, row.value.to_f
-      assert_equal "percent", row.mode
-    end
-  end
-
-  test "preview renders the resolved panel with the draft edges merged over saved" do
-    travel_to Date.new(2026, 11, 15) do
-      series = create_income_series(account: @account, name: "Bob Payroll", amount: 900)
-      IncomeAccountAllocation.create!(family: @family, income_series: series,
-        account: @account, mode: "percent", value: 0.5)
-
-      # Draft: 100 specific to @account replaces the saved 50% for this income.
-      post "/plan/flow_preview", params: {
-        view: "paycheck",
-        income: series.id,
-        edges: { @account.id.to_s => { "enabled" => "1", "mode" => "specific", "value" => "100" } }
-      }
-
-      assert_response :success
-      assert_select "turbo-frame#flow_resolved"
-      assert_includes response.body, "$100.00"
-      # 50% of 900 = 450 per paycheck must NOT appear for this income anymore.
-      assert_not_includes response.body, "$450.00"
-    end
-  end
-
-  test "the add-accounts modal lists unassigned accounts and the manual bank form" do
-    unassigned = @family.accounts.create!(name: "Unassigned Checking", owner: @user,
-      currency: "USD", balance: 0, accountable: Depository.new)
-
-    get "/plan/flow/add-accounts"
-
-    assert_response :success
-    assert_select "dialog"
-    assert_select "form[action='/plan/flow_add_accounts'] input[type=checkbox][name='account_ids[]'][value='#{unassigned.id}']"
-    assert_select "form[action='/plan/flow_create_account'] input[name='account[name]']"
-    assert_select "form[action='/plan/flow_create_account'] input[name='account[institution_name]']"
-  end
-
   test "add accounts assigns plan_order to the selected accounts" do
     a = @family.accounts.create!(name: "New A", owner: @user, currency: "USD",
       balance: 0, accountable: Depository.new)
@@ -274,19 +106,22 @@ class PlanFlowsControllerTest < ActionDispatch::IntegrationTest
 
   test "update income labels the series to a family member" do
     series = create_income_series(account: @account, name: "Bob Payroll", amount: 900)
+    series.update!(plan_max_account_links: 5)
 
     patch "/plan/flow/incomes/#{series.id}", params: {
       series: { plan_owner_user_id: @other.id }
     }
     assert_redirected_to "/plan/flow?view=paycheck"
     assert_equal @other.id, series.reload.plan_owner_user_id
+    # Omitting the limit param keeps the existing value (no silent wipe).
+    assert_equal 5, series.plan_max_account_links
 
     # Blank clears the label back to the account-owner fallback.
     patch "/plan/flow/incomes/#{series.id}", params: { series: { plan_owner_user_id: "" } }
     assert_nil series.reload.plan_owner_user_id
   end
 
-  # --- M2 PR#2b: planning diagram JSON + allocation CRUD + bank/income config ---
+  # --- planning diagram JSON + allocation CRUD + bank/income config ---
 
   test "graph returns the saved state as JSON" do
     travel_to Date.new(2026, 11, 15) do

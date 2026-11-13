@@ -70,6 +70,9 @@ class PlanAllocation < ApplicationRecord
         elsif value_cents.nil? && recurring_transaction_id.blank?
           errors.add(:value_cents, "is required unless a recurring transaction is linked")
         end
+        # An explicit required amount must be positive; the linked-transaction
+        # fallback is only used when the amount is absent.
+        errors.add(:value_cents, :numericality, greater_than: 0) if value_cents.present? && value_cents <= 0
         errors.add(:value_percent, "is not allowed for this mode") if value_percent.present?
       when "specific"
         if value_cents.blank? || value_cents <= 0
