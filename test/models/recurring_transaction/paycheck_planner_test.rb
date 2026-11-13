@@ -23,6 +23,17 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
     assert_equal 400, plan.last.due_total, "a bill after the one-off is funded from it"
   end
 
+  test "a one-off income far ahead keeps its payday in a window that ends at its own date" do
+    payday = Date.current + 200
+    create_series(name: "Bonus", amount: -3000, due: payday, preset: "once", income: true)
+
+    plan = Planner.new(@family, user: @user).plan(periods_limit: 3)
+
+    assert_equal payday, plan.last.starts_on
+    assert_equal payday, plan.last.ends_on, "nothing past the payday is materialized for this window"
+    assert_equal 3000, plan.last.income
+  end
+
   test "a one-off income arriving today still makes a plan" do
     create_series(name: "Bonus", amount: -3000, due: Date.current, preset: "once", income: true)
 
@@ -507,7 +518,8 @@ class RecurringTransaction::PaycheckPlannerTest < ActiveSupport::TestCase
       )
 
       if preset != "monthly"
-        RecurringTransaction::FrequencyPreset.apply(series, preset: preset, weekday: due.wday)
+        RecurringTransaction::FrequencyPreset.apply(series, preset: preset, weekday: due.wday,
+                                                  once_on: (due if preset == "once"))
         series.save!
       end
 

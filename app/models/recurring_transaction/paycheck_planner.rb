@@ -145,10 +145,13 @@ class RecurringTransaction
 
         # A period runs from one boundary to the next, so the last payday only
         # ends the window before it. A one-off with no payday after it would
-        # never be credited, so it opens a window of its own, as far ahead as
-        # occurrences are materialized.
+        # never be credited, so it opens a window of its own. That window stops
+        # at the horizon obligations are materialized through, so it never
+        # counts bills nothing has stored yet. The payday itself always stays
+        # inside it.
         if dates.size <= periods_limit && one_off_payday?(incomes, dates.last)
-          boundaries << dates.last + RecurringTransaction::OccurrenceGenerator::HORIZON_DAYS
+          materialized_through = Date.current + RecurringTransaction::OccurrenceGenerator::HORIZON_DAYS
+          boundaries << [ materialized_through, dates.last + 1 ].max
         end
 
         boundaries.first(periods_limit + 2)
