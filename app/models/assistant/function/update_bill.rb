@@ -257,13 +257,24 @@ class Assistant::Function::UpdateBill < Assistant::Function
         }
       end
 
+      # "once" with no date of its own is the bill's current due date. The
+      # anchor is the first due date and stays put as occurrences advance, so
+      # falling through to it would revive a date the bill has already left.
       applied = RecurringTransaction::FrequencyPreset.apply(
         series,
         preset: params["frequency"],
         day_of_month: params["due_day_of_month"],
         weekday: params["weekday"],
-        month_of_year: params["month_of_year"]
+        month_of_year: params["month_of_year"],
+        once_on: (series.next_due_date if params["frequency"] == RecurringTransaction::FrequencyPreset::ONCE)
       )
+
+      if series.errors.any?
+        return {
+          error: series.errors.full_messages.to_sentence,
+          hint: "Fix the named fields and retry once."
+        }
+      end
 
       if applied
         series.pin_schedule
