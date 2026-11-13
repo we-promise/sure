@@ -88,6 +88,10 @@ zh-CN:
       exclude_from_reports: 从所有报表中排除
       enable_category_matcher_label: 启用分类匹配器
       enable_category_matcher_hint: 启用后，提供商建议的分类将应用于导入的交易。禁用则新交易保持未分类。
+      iban_label: "IBAN"
+      iban_placeholder: "例如：DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — 已保存 IBAN，输入新值以替换"
+      iban_remove_label: "移除 IBAN"
     index:
       accounts: 账户
       financekit_accounts:

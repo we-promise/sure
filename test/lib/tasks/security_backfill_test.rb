@@ -179,6 +179,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       record = model.find(id)
       plaintext.each do |field, value|
         expected = json_column?(model, field) ? JSON.parse(value) : value
+        # The backfill normalizes IBANs of models that normalize them on write.
+        expected = IbanNormalizable.normalize(expected) if field.to_s == "iban" && model.include?(IbanNormalizable)
         assert_equal expected, record.public_send(field), "#{model.name}##{field} must decrypt to its original value"
         raw = connection.select_value(model.unscoped.where(id: id).select(field).to_sql).to_s
         refute_includes raw, "backfill-probe", "#{model.name}##{field} must be stored as ciphertext"
@@ -378,7 +380,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     7 => "362ec2acfad421eaf6299bdeae78d859e13f8d4a65b6a3e615a80b274219698a",
     8 => "a4d113aa214e8754361484267d377174b2aeda3fe01c5ca0c553f9ab76ef2ab0",
     9 => "9f814939a5125a6903d9ba4e96392056ffafe9f6110b10b5c1cae0d87a564ac7",
-    10 => "0bcaa72ed675acde5d5ae2ce72305bf73375c0faa5580fe80e3985e88aa4f9e4"
+    10 => "0bcaa72ed675acde5d5ae2ce72305bf73375c0faa5580fe80e3985e88aa4f9e4",
+    11 => "a699ef0bad8187a616711dc392b7ac29bc5abe16bfe3e4134ef4de0c1d47eeb4"
   }.freeze
 
   test "backfill manifest changes come with a CURRENT_BACKFILL_VERSION bump" do
@@ -482,6 +485,20 @@ class SecurityBackfillTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::Encryption::Errors::Decryption) do
       encryptor.decrypt(new_ciphertext, key_provider: old_key_provider)
     end
+  end
+
+  test "backfill encrypts a legacy plaintext enable banking iban" do
+    item = EnableBankingItem.create!(family: families(:dylan_family), name: "Backfill EB",
+      country_code: "FR", application_id: "app_id", client_certificate: "cert")
+    account = item.enable_banking_accounts.create!(name: "Backfill EB Account", uid: "backfill-eb-1", currency: "EUR")
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_accounts SET iban = ? WHERE id = ?", "nl91 abna 0417 1643 00", account.id ])) # pipelock:ignore IBAN
+
+    invoke_backfill("500", "false")
+
+    account.reload
+    assert_equal "NL91ABNA0417164300", account.iban # pipelock:ignore IBAN
+    assert_match(/"p":/, account.read_attribute_before_type_cast(:iban).to_s)
   end
 
   private

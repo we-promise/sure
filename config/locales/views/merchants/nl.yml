@@ -16,6 +16,10 @@ nl:
       logo_label: "Logo"
       logo_hint: "Vervangt het logo van de website. JPEG, PNG of WebP, maximaal %{max_megabytes}MB."
       remove_logo_label: "Geüpload logo verwijderen"
+      iban_placeholder: "IBAN (optioneel)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN opgeslagen, voer een nieuwe waarde in om deze te vervangen"
+      iban_hint: "Het eigen bankrekeningnummer van de handelaar, indien bekend"
+      iban_remove_label: "IBAN verwijderen"
     index:
       empty: "Nog geen handelaren"
       new: "Nieuwe handelaar"

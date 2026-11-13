@@ -30,4 +30,15 @@ class FilterParameterLoggingTest < ActiveSupport::TestCase
     assert_equal "DE", filtered[:country_code]
     assert_equal "10115", filtered[:postal_code]
   end
+
+  test "filters account and merchant ibans but not the remove flag" do
+    filtered = @filter.filter(
+      account: { iban: "DE89370400440532013000", remove_iban: "1" }, # pipelock:ignore IBAN
+      family_merchant: { iban: "DE89370400440532013000" } # pipelock:ignore IBAN
+    )
+
+    assert_equal "[FILTERED]", filtered.dig(:account, :iban)
+    assert_equal "[FILTERED]", filtered.dig(:family_merchant, :iban)
+    assert_equal "1", filtered.dig(:account, :remove_iban)
+  end
 end

@@ -20,6 +20,10 @@ ca:
       name_placeholder: Nom del comerç
       website_hint: Introdueix el lloc web del comerç per mostrar-ne automàticament
         el logotip
+      iban_placeholder: "IBAN (opcional)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN desat, introdueix un valor nou per substituir-lo"
+      iban_hint: "El número de compte bancari del comerç, si el coneixes"
+      iban_remove_label: "Elimina l'IBAN"
       website_placeholder: Lloc web (p. ex., starbucks.com)
     index:
       empty: Encara no hi ha comerços

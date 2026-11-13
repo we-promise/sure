@@ -13,6 +13,10 @@ id:
       name_placeholder: Nama merchant
       website_placeholder: Situs web (mis., starbucks.com)
       website_hint: Masukkan situs web merchant untuk menampilkan logo mereka secara otomatis
+      iban_placeholder: IBAN (opsional)
+      iban_set_placeholder: •••• •••• •••• •••• — IBAN tersimpan, masukkan nilai baru untuk menggantinya
+      iban_hint: Nomor rekening bank milik merchant, jika diketahui
+      iban_remove_label: Hapus IBAN
       logo_label: Logo
       logo_hint: Menggantikan logo situs web. JPEG, PNG, atau WebP, hingga %{max_megabytes}MB.
       remove_logo_label: Hapus logo yang diunggah

@@ -70,7 +70,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 10
+  CURRENT_BACKFILL_VERSION = 11
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -98,6 +98,8 @@ module ActiveRecordEncryptionConfig
     users: [ "User", %i[otp_secret email unconfirmed_email first_name last_name] ],
     invitations: [ "Invitation", %i[token email] ],
     invite_codes: [ "InviteCode", %i[token] ],
+    accounts: [ "Account", %i[iban] ],
+    merchants: [ "Merchant", %i[iban] ],
     mobile_devices: [ "MobileDevice", %i[device_id] ],
     plaid_items: [ "PlaidItem", %i[access_token raw_payload raw_institution_payload] ],
     simplefin_items: [ "SimplefinItem", %i[access_url raw_payload raw_institution_payload] ],
@@ -129,7 +131,7 @@ module ActiveRecordEncryptionConfig
     plaid_accounts: [ "PlaidAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_liabilities_payload] ],
     simplefin_accounts: [ "SimplefinAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
     lunchflow_accounts: [ "LunchflowAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload] ],
-    enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload] ],
+    enable_banking_accounts: [ "EnableBankingAccount", %i[raw_payload raw_transactions_payload iban] ],
     truelayer_accounts: [ "TruelayerAccount", %i[raw_payload raw_transactions_payload] ],
     fio_accounts: [ "FioAccount", %i[raw_payload raw_transactions_payload iban] ],
     snaptrade_accounts: [ "SnaptradeAccount", %i[raw_payload raw_transactions_payload raw_holdings_payload raw_activities_payload raw_balances_payload account_number] ],

@@ -13,6 +13,10 @@ zh-TW:
       name_placeholder: 商家名稱
       website_placeholder: 網站（例如 starbucks.com）
       website_hint: 輸入商家的網站，就會自動顯示標誌
+      iban_placeholder: "IBAN（選填）"
+      iban_set_placeholder: "•••• •••• •••• •••• — 已儲存 IBAN，輸入新值以取代"
+      iban_hint: "商家自己的銀行帳號（如已知）"
+      iban_remove_label: "移除 IBAN"
     index:
       empty: 尚無商家
       new: 新增商家
