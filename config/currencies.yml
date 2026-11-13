@@ -894,6 +894,20 @@ doge:
   delimiter: ","
   default_format: "%u%n"
   default_precision: 8
+eth:
+  name: Ethereum
+  priority: 100
+  iso_code: ETH
+  iso_numeric: ""
+  html_code: "&#926;"
+  symbol: "Ξ"
+  minor_unit: Wei
+  minor_unit_conversion: 1000000000000000000
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 8
 jep:
   name: Jersey Pound
   priority: 100
@@ -985,6 +999,20 @@ usdc:
   iso_numeric: ""
   html_code: "$"
   symbol: USDC
+  minor_unit: Cent
+  minor_unit_conversion: 100
+  smallest_denomination: 1
+  separator: "."
+  delimiter: ","
+  default_format: "%u%n"
+  default_precision: 2
+usdt:
+  name: Tether USD
+  priority: 100
+  iso_code: USDT
+  iso_numeric: ""
+  html_code: "$"
+  symbol: USDT
   minor_unit: Cent
   minor_unit_conversion: 100
   smallest_denomination: 1

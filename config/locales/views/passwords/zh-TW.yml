@@ -1,6 +1,7 @@
 ---
 zh-TW:
   passwords:
+    disabled: "透過 Sure 變更密碼的功能已停用。請透過您的身分驗證供應商（Identity Provider）管理密碼。"
     edit:
       password: 新密碼
       password_challenge: 目前密碼

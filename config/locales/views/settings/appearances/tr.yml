@@ -1,0 +1,34 @@
+---
+tr:
+  settings:
+    appearances:
+      show:
+        dashboard_subtitle: Panelin nasıl görüntüleneceğini özelleştirin
+        dashboard_title: Panel
+        dashboard_two_column_description: Panel bileşenlerini büyük ekranlarda iki
+          sütun halinde görüntüleyin; her bileşenin başlığında genişlik ve yükseklik
+          kontrolleri bulunur. Kapalıyken bileşenler tek bir sütunda üst üste sıralanır.
+        dashboard_two_column_title: İki sütunlu düzen
+        disable_modal_click_outside_description: Modalların dışına tıklandığında kapanmasını
+          engeller. Kaydedilmemiş değişiklikleri yanlışlıkla kaybetmemek için kullanışlıdır.
+        disable_modal_click_outside_title: Dışarı tıklandığında modalleri açık tut
+        modals_subtitle: Modal davranışını özelleştir
+        modals_title: Modaller
+        page_title: Görünüm
+        split_grouped_description: Bölünmüş işlemleri işlem listesinde üst işlemin
+          altında gruplandırılmış olarak gösterin. Kapalıyken bölünen alt işlemler
+          ayrı satırlar olarak görünür.
+        split_grouped_title: Bölünmüş işlemleri grupla
+        show_counterparty_account_title: "Karşı tarafın hesap bilgilerini göster"
+        show_counterparty_account_description: "Banka bağlantınız sağlıyorsa, karşı tarafın IBAN'ının veya hesap numarasının son 4 karakterini işlem ayrıntılarında gösterir. Yalnızca bu veriler mevcut olduğunda görünür."
+        auto_generate_transaction_names_title: "İşlem adlarını otomatik oluştur"
+        auto_generate_transaction_names_description: "Elle girilen bir işlemin adı boş bırakılırsa, seçilen kategori ve satıcıdan doldurulur (ör. \"Eğlence - Netflix\"). İkisi de seçilmezse ad yine zorunludur. Tüm hane için geçerlidir ve yalnızca yeni işlemleri etkiler."
+        theme_dark: Koyu
+        theme_light: Açık
+        theme_subtitle: Uygulama için tercih edilen temayı seçin
+        theme_system: Sistem
+        theme_title: Tema
+        transactions_subtitle: İşlemlerin nasıl görüntüleneceğini özelleştirin
+        transactions_title: İşlemler
+        dashboard_account_groups_title: Varsayılan olarak genişletilmiş başlat
+        dashboard_account_groups_description: Bu hesap bölümleri panelde ve hesap kenar çubuğunda genişletilmiş olarak açılır. İstediğiniz zaman bunları elle daraltabilirsiniz.

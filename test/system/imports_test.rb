@@ -263,4 +263,42 @@ class ImportsTest < ApplicationSystemTestCase
 
     click_on "Back to dashboard"
   end
+
+  test "monarch import" do
+    visit new_import_path
+
+    click_on "Financial Tools"
+    click_on "Import from Monarch"
+
+    attach_file "import[balances_file]", file_fixture("imports/monarch_balances.csv")
+    attach_file "import[transactions_file]", file_fixture("imports/monarch_transactions.csv")
+    click_on "Upload exports"
+
+    assert_selector "h1", text: "Check each Monarch account"
+    find("select[aria-label='Type of Card']").select("Loan")
+    click_toggle "Old Savings is open"
+    assert_selector "td", text: "Closed"
+    click_toggle "Transactions for every account"
+    assert_no_selector "input[type=checkbox][data-checkbox-group=transactions]:checked", visible: :all
+    click_on "Review import"
+
+    assert_selector "h1", text: "Confirm your import data"
+    click_on "Publish import"
+
+    assert_text "Import in progress"
+    perform_enqueued_jobs
+    click_on "Check status"
+    assert_text "Import successful"
+
+    accounts = @user.family.accounts
+    assert_equal "Loan", accounts.find_by!(name: "Card").accountable_type
+    assert accounts.find_by!(name: "Old Savings").disabled?
+    assert_equal 0, accounts.where(name: %w[Checking Card]).joins(:entries).where(entries: { entryable_type: "Transaction" }).count
+  end
+
+  private
+    # DS::Toggle hides its checkbox; people click the switch, its label.
+    def click_toggle(aria_label)
+      find("input[aria-label='#{aria_label}']", visible: :all).find(:xpath, "following-sibling::label").click
+    end
 end

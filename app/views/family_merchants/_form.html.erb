@@ -1,19 +1,26 @@
-<%# locals: (family_merchant:) %>
+<%# locals: (family_merchant:, selected_color: family_merchant.color) %>
 
 <div data-controller="color-avatar">
   <%= styled_form_with model: family_merchant, url: family_merchant.persisted? ? family_merchant_path(family_merchant) : family_merchants_path, class: "space-y-4" do |f| %>
+    <%= hidden_field_tag :return_to, params[:return_to] if params[:return_to].present? %>
     <section class="space-y-4">
       <% if family_merchant.errors.any? %>
         <%= render "shared/form_errors", model: family_merchant %>
       <% end %>
 
       <div class="w-fit m-auto mb-4">
-        <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
+        <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: selected_color } %>
       </div>
       <div class="flex gap-2 items-center justify-center">
         <% FamilyMerchant::COLORS.each do |color| %>
           <label class="relative">
-            <%= f.radio_button :color, color, class: "sr-only peer", data: { action: "change->color-avatar#handleColorChange" } %>
+            <%# checked: explicit rather than relying on family_merchant.color --
+                a failed ProviderMerchant-to-FamilyMerchant conversion re-renders
+                this form against the still-ProviderMerchant @merchant, whose
+                #color is hardcoded to nil (ProviderMerchant does not support
+                color), so the model attribute alone can't reflect what was
+                submitted. %>
+            <%= f.radio_button :color, color, checked: selected_color == color, class: "sr-only peer", data: { action: "change->color-avatar#handleColorChange" } %>
             <div class="w-6 h-6 rounded-full cursor-pointer peer-checked:ring-2 peer-checked:ring-offset-2 peer-checked:ring-blue-500" style="background-color: <%= color %>"></div>
           </label>
         <% end %>
@@ -34,12 +41,12 @@
       <div class="relative flex items-center border border-secondary rounded-lg text-subdued">
         <%= f.password_field :iban,
               value: nil,
-              placeholder: family_merchant.iban.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
+              placeholder: family_merchant.iban_in_database.present? ? t(".iban_set_placeholder") : t(".iban_placeholder") %>
       </div>
       <p class="text-xs text-subdued"><%= t(".iban_hint") %></p>
-      <% if family_merchant.iban.present? %>
+      <% if family_merchant.iban_in_database.present? %>
         <div class="flex items-center justify-between gap-2">
-          <span class="text-sm"><%= t(".iban_remove_label") %></span>
+          <span id="<%= f.object_name %>_remove_iban_label" class="text-sm"><%= t(".iban_remove_label") %></span>
           <%# Not a real model attribute (the field is write-only, so there's
               no stored value to reflect back) -- rendered directly rather
               than via form.toggle, which would call family_merchant.remove_iban.
@@ -47,8 +54,26 @@
               same form also edits ProviderMerchant records, which submit
               under a "provider_merchant" param scope instead -- see
               FamilyMerchantsController#merchant_params. %>
-          <%= render DS::Toggle.new(id: "#{f.object_name}_remove_iban", name: "#{f.object_name}[remove_iban]", checked: false) %>
+          <%= render DS::Toggle.new(id: "#{f.object_name}_remove_iban", name: "#{f.object_name}[remove_iban]", checked: false, "aria-labelledby": "#{f.object_name}_remove_iban_label") %>
         </div>
+      <% end %>
+
+      <% if family_merchant.is_a?(FamilyMerchant) %>
+        <% saved_logo = family_merchant.logo.attached? && family_merchant.logo.persisted? %>
+        <div class="flex items-center gap-3">
+          <% if saved_logo %>
+            <%= image_tag family_merchant.logo_url, class: "w-10 h-10 rounded-full shrink-0", alt: "" %>
+          <% end %>
+          <%= f.file_field :logo, label: t(".logo_label"), accept: FamilyMerchant::LOGO_CONTENT_TYPES.join(","), container_class: "flex-1" %>
+        </div>
+        <p class="text-xs text-subdued"><%= t(".logo_hint", max_megabytes: FamilyMerchant::LOGO_MAX_SIZE / 1.megabyte) %></p>
+
+        <% if saved_logo %>
+          <div class="flex items-center justify-between gap-4">
+            <span id="remove_logo_label" class="text-sm text-primary"><%= t(".remove_logo_label") %></span>
+            <%= f.toggle :remove_logo, "aria-labelledby": "remove_logo_label" %>
+          </div>
+        <% end %>
       <% end %>
     </section>
 

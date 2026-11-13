@@ -5,6 +5,30 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     @pdf_content = "%PDF-1.4 fake bytes".b
   end
 
+  [ :text, :vision ].each do |mode|
+    test "exports response usage in #{mode} mode without changing the parsed result" do
+      usage = { "prompt_tokens" => 100, "completion_tokens" => 20, "total_tokens" => 120,
+        "prompt_tokens_details" => { "cached_tokens" => 60 } }
+      client = mock
+      client.expects(:chat).returns({ "usage" => usage, "choices" => [ { "message" => {
+        "content" => { summary: "Statement", document_type: "bank_statement", extracted_data: {} }.to_json
+      } } ] })
+      span = mock
+      span.expects(:end).with(output: { summary: "Statement", document_type: "bank_statement", extracted_data: {} }, usage: usage)
+      trace = stub(generation: span)
+      processor = Provider::Openai::PdfProcessor.new(client, model: "gpt-4.1", pdf_content: @pdf_content,
+        max_response_tokens: 512, processing_mode: mode, langfuse_trace: trace)
+      processor.stubs(:extract_text_from_pdf).returns("Statement text")
+      processor.stubs(:convert_pdf_to_images).returns([ "base64-image" ])
+
+      result = processor.process
+
+      assert_instance_of Provider::LlmConcept::PdfProcessingResult, result
+      assert_equal "Statement", result.summary
+      assert_equal "bank_statement", result.document_type
+    end
+  end
+
   test "extracts only allowlisted error fields into span output when the API call fails" do
     error = StandardError.new("boom")
     def error.response_body
@@ -72,7 +96,7 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       max_response_tokens: 512,
       processing_mode: :text
     )
-    processor.expects(:process_with_text_extraction).returns(expected)
+    processor.expects(:process_with_text_extraction).returns([ expected, nil ])
     processor.expects(:process_with_vision).never
 
     assert_equal expected, processor.process
@@ -92,9 +116,120 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       processing_mode: :vision
     )
     processor.expects(:process_with_text_extraction).never
-    processor.expects(:process_with_vision).returns(expected)
+    processor.expects(:process_with_vision).returns([ expected, nil ])
 
     assert_equal expected, processor.process
+  end
+
+  %w[gpt-6-sol gpt-6.1-sol].each do |model|
+    test "#{model} PDF vision uses the completion token budget" do
+      client = mock
+      client.expects(:chat).with do |request|
+        params = request[:parameters]
+        params[:model] == model &&
+          params[:max_completion_tokens] == 8192 &&
+          !params.key?(:max_tokens)
+      end.returns(
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic PDF", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      )
+      processor = Provider::Openai::PdfProcessor.new(
+        client,
+        model: model,
+        pdf_content: @pdf_content,
+        max_response_tokens: 8192,
+        processing_mode: :vision
+      )
+      processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
+
+    test "#{model} PDF text extraction preserves the existing uncapped request" do
+      client = mock
+      client.expects(:chat).with do |request|
+        params = request[:parameters]
+        params[:model] == model &&
+          !params.key?(:max_completion_tokens) && !params.key?(:max_tokens)
+      end.returns(
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic text", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      )
+      processor = Provider::Openai::PdfProcessor.new(
+        client,
+        model: model,
+        pdf_content: @pdf_content,
+        max_response_tokens: 8192,
+        processing_mode: :text
+      )
+      processor.stubs(:extract_text_from_pdf).returns("Synthetic statement")
+
+      assert_equal "Synthetic text", processor.process.summary
+    end
+
+    test "#{model} PDF vision omits an unconfigured completion limit" do
+      processor = vision_processor(model: model, max_response_tokens: nil)
+      expect_vision_request(processor, model: model) do |params|
+        !params.key?(:max_tokens) && !params.key?(:max_completion_tokens)
+      end
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
+  end
+
+  test "native o-series PDF vision uses completion limits when configured" do
+    %w[o1 o3].each do |model|
+      processor = vision_processor(model: model, max_response_tokens: 8192)
+      expect_vision_request(processor, model: model) do |params|
+        params[:max_completion_tokens] == 8192 && !params.key?(:max_tokens)
+      end
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
+  end
+
+  test "native o-series PDF vision omits unconfigured completion limits" do
+    %w[o1 o3].each do |model|
+      processor = vision_processor(model: model, max_response_tokens: nil)
+      expect_vision_request(processor, model: model) do |params|
+        !params.key?(:max_tokens) && !params.key?(:max_completion_tokens)
+      end
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
+  end
+
+  test "legacy OpenAI PDF vision retains max_tokens" do
+    processor = vision_processor(model: "gpt-4.1", max_response_tokens: 512)
+    expect_vision_request(processor, model: "gpt-4.1") do |params|
+      params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
+    end
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  %w[gpt-6-sol gpt-6.1-sol].each do |model|
+    test "custom provider PDF vision retains max_tokens even with a #{model} model name" do
+      processor = vision_processor(model: model, max_response_tokens: 512, custom_provider: true)
+      expect_vision_request(processor, model: model) do |params|
+        params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
+      end
+
+      assert_equal "Synthetic PDF", processor.process.summary
+    end
+  end
+
+  test "custom provider PDF vision retains max_tokens with an o-series model name" do
+    processor = vision_processor(model: "o3", max_response_tokens: 512, custom_provider: true)
+    expect_vision_request(processor, model: "o3") do |params|
+      params[:max_tokens] == 512 && !params.key?(:max_completion_tokens)
+    end
+
+    assert_equal "Synthetic PDF", processor.process.summary
   end
 
   test "convert_pdf_to_images raises a coded error when the pdftoppm binary is missing" do
@@ -136,7 +271,87 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal [], processor.send(:convert_pdf_to_images)
   end
 
+  test "text extraction omits response_format when json_mode is none" do
+    client = mock
+    client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.returns(pdf_chat_response)
+
+    processor = build_processor_for(client, json_mode: "none")
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "text extraction asks for json_object by default" do
+    client = mock
+    client.expects(:chat).with do |request|
+      request[:parameters][:response_format] == { type: "json_object" }
+    end.returns(pdf_chat_response)
+
+    processor = build_processor_for(client)
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
+  test "text extraction resolves json_mode from LLM_JSON_MODE" do
+    client = mock
+    client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.returns(pdf_chat_response)
+
+    with_env_overrides("LLM_JSON_MODE" => "none") do
+      processor = build_processor_for(client)
+      processor.stubs(:extract_text_from_pdf).returns("Statement text")
+      processor.process
+    end
+  end
+
+  test "auto mode falls back to vision when the provider rejects the text request" do
+    client = mock
+    client.expects(:chat).returns(pdf_chat_response)
+    client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.raises(Provider::Openai::Error, "unsupported response_format")
+
+    processor = build_processor_for(client, json_mode: "none", processing_mode: :auto)
+    processor.stubs(:extract_text_from_pdf).returns("Statement text")
+    processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+
+    assert_equal "Synthetic PDF", processor.process.summary
+  end
+
   private
+    # Build a vision processor with synthetic images and a mocked API client.
+    # @return [Provider::Openai::PdfProcessor] processor under test
+    def vision_processor(model:, max_response_tokens:, custom_provider: false)
+      processor = Provider::Openai::PdfProcessor.new(
+        mock,
+        model: model,
+        pdf_content: @pdf_content,
+        max_response_tokens: max_response_tokens,
+        custom_provider: custom_provider,
+        processing_mode: :vision
+      )
+      processor.stubs(:convert_pdf_to_images).returns([ "synthetic-image" ])
+      processor
+    end
+
+    # Check the emitted API payload and return a synthetic document response.
+    # @yieldparam params [Hash] outbound Chat Completions parameters
+    def expect_vision_request(processor, model:)
+      processor.client.expects(:chat).with do |request|
+        params = request[:parameters]
+        params[:model] == model && yield(params)
+      end.returns(
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic PDF", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      )
+    end
+
     def build_processor(error, trace)
       client = mock
       client.expects(:chat).raises(error)
@@ -156,7 +371,29 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
       span = mock
       span.expects(:end).with { |args| yield(args[:output]); true }
       trace = mock
-      trace.stubs(:span).returns(span)
+      trace.stubs(:generation).returns(span)
       trace
+    end
+    # Builds a processor around a mocked client for the json_mode tests.
+    # @return [Provider::Openai::PdfProcessor] processor under test
+    def build_processor_for(client, json_mode: nil, processing_mode: :text)
+      Provider::Openai::PdfProcessor.new(
+        client,
+        model: "gpt-4.1",
+        pdf_content: @pdf_content,
+        max_response_tokens: 512,
+        processing_mode: processing_mode,
+        json_mode: json_mode
+      )
+    end
+
+    # @return [Hash] a chat completion carrying a minimal PDF analysis result
+    def pdf_chat_response
+      {
+        "choices" => [ { "message" => { "content" => {
+          document_type: "other", summary: "Synthetic PDF", extracted_data: {}
+        }.to_json } } ],
+        "usage" => { "prompt_tokens" => 10, "completion_tokens" => 20, "total_tokens" => 30 }
+      }
     end
 end

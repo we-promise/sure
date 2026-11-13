@@ -394,13 +394,13 @@ class SophtronItemsController < ApplicationController
 
     if @sophtron_item.save
       unless verify_and_provision_customer(@sophtron_item)
-        render_sophtron_panel_error(:new, @sophtron_item.last_connection_error)
+        render_provider_panel("sophtron", alert: @sophtron_item.last_connection_error)
         return
       end
 
-      render_sophtron_panel_success(:create)
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      render_sophtron_panel_error(:new, @sophtron_item.errors.full_messages.join(", "))
+      render_provider_panel("sophtron", alert: @sophtron_item.errors.full_messages.join(", "))
     end
   end
 
@@ -410,13 +410,13 @@ class SophtronItemsController < ApplicationController
   def update
     if @sophtron_item.update(sophtron_params)
       unless verify_and_provision_customer(@sophtron_item)
-        render_sophtron_panel_error(:edit, @sophtron_item.last_connection_error)
+        render_provider_panel("sophtron", alert: @sophtron_item.last_connection_error)
         return
       end
 
-      render_sophtron_panel_success(:update)
+      render_provider_panel("sophtron", notice: t(".success"), fallback_path: accounts_path)
     else
-      render_sophtron_panel_error(:edit, @sophtron_item.errors.full_messages.join(", "))
+      render_provider_panel("sophtron", alert: @sophtron_item.errors.full_messages.join(", "))
     end
   end
 
@@ -470,10 +470,11 @@ class SophtronItemsController < ApplicationController
       format.turbo_stream do
         flash.now[:notice] = t(".success_#{enabled ? 'enabled' : 'disabled'}")
         render turbo_stream: [
+          # Admin-only action (require_admin!), so the card lists every account.
           turbo_stream.replace(
             ActionView::RecordIdentifier.dom_id(@sophtron_item),
             partial: "sophtron_items/sophtron_item",
-            locals: { sophtron_item: @sophtron_item.reload }
+            locals: { sophtron_item: @sophtron_item.reload, visible_accounts: @sophtron_item.accounts }
           ),
           *flash_notification_stream_items
         ]
@@ -610,7 +611,7 @@ class SophtronItemsController < ApplicationController
 
     if turbo_frame_request?
       @manual_accounts = Account.uncached {
-        Current.family.accounts.visible_manual.order(:name).to_a
+        Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a
       }
       @sophtron_items = Current.family.sophtron_items.ordered
       manual_accounts_stream = if @manual_accounts.any?
@@ -625,10 +626,11 @@ class SophtronItemsController < ApplicationController
 
       render turbo_stream: [
         manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@sophtron_item),
           partial: "sophtron_items/sophtron_item",
-          locals: { sophtron_item: @sophtron_item }
+          locals: { sophtron_item: @sophtron_item, visible_accounts: @sophtron_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
@@ -942,36 +944,6 @@ class SophtronItemsController < ApplicationController
       item.update(status: :requires_update, last_connection_error: e.message)
       Rails.logger.error("Sophtron customer provisioning failed: #{e.message}")
       false
-    end
-
-    def render_sophtron_panel_success(action_name)
-      if turbo_frame_request?
-        flash.now[:notice] = t("sophtron_items.#{action_name}.success")
-        @sophtron_items = Current.family.sophtron_items.ordered
-        render turbo_stream: [
-          turbo_stream.replace(
-            "sophtron-providers-panel",
-            partial: "settings/providers/sophtron_panel",
-            locals: { sophtron_items: @sophtron_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to accounts_path, notice: t("sophtron_items.#{action_name}.success"), status: :see_other
-      end
-    end
-
-    def render_sophtron_panel_error(view_name, message)
-      @error_message = message
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "sophtron-providers-panel",
-          partial: "settings/providers/sophtron_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        render view_name, status: :unprocessable_entity
-      end
     end
 
     def render_or_redirect_setup_required

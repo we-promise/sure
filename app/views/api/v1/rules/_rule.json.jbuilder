@@ -5,6 +5,8 @@ json.name rule.name
 json.resource_type rule.resource_type
 json.active rule.active
 json.effective_date rule.effective_date&.iso8601
+json.position rule.position
+json.stop_processing rule.stop_processing
 json.conditions rule.conditions.select { |condition| condition.parent_id.nil? } do |condition|
   json.partial! "api/v1/rules/condition", condition: condition
 end

@@ -1,0 +1,27 @@
+---
+pt-BR:
+  settings:
+    appearances:
+      show:
+        page_title: Aparência
+        theme_title: Tema
+        theme_subtitle: Escolha um tema preferido para o aplicativo
+        theme_dark: Escuro
+        theme_light: Claro
+        theme_system: Sistema
+        modals_title: Modais
+        modals_subtitle: Personalizar o comportamento dos modais
+        disable_modal_click_outside_title: Manter modais abertos ao clicar fora
+        disable_modal_click_outside_description: Impede que os modais fechem ao clicar fora deles. Útil para evitar perder alterações não salvas acidentalmente.
+        transactions_title: Transações
+        transactions_subtitle: Personalize como as transações são exibidas
+        dashboard_title: Painel
+        dashboard_subtitle: Personalize como o painel é exibido
+        dashboard_two_column_title: Layout de duas colunas
+        dashboard_two_column_description: Exibe os widgets do painel em duas colunas em telas grandes. Quando desativado, os widgets ficam empilhados em uma única coluna.
+        split_grouped_title: Agrupar transações divididas
+        show_counterparty_account_title: "Mostrar dados da conta da contraparte"
+        show_counterparty_account_description: "Mostra os últimos 4 caracteres do IBAN ou do número da conta da contraparte nos detalhes de uma transação, quando sua conexão bancária os fornece. Só aparece quando esses dados estão disponíveis."
+        auto_generate_transaction_names_title: "Gerar nomes de transações automaticamente"
+        auto_generate_transaction_names_description: "Quando o nome de uma transação inserida manualmente fica em branco, ele é preenchido a partir da categoria e do comerciante selecionados (ex.: \"Entretenimento - Netflix\"). O nome continua obrigatório se nenhum dos dois for selecionado. Vale para toda a família e apenas para novas transações."
+        split_grouped_description: Mostra as transações divididas agrupadas sob o registro principal na lista de transações. Quando desativado, as subdivisões aparecem como linhas individuais.

@@ -5,3 +5,28 @@ ca:
       models:
         recurring_transaction:
           merchant_or_name_required: Cal indicar un comerç o un nom
+          attributes:
+            payment_url:
+              invalid_scheme: ha de ser una adreça http:// o https:// vàlida
+            anchor_date:
+              required_for_intervals: és obligatòria quan una regla es repeteix cada 2 o més períodes
+            bill_type:
+              transfer_shape_mismatch: només pot ser una transferència si s'indica un compte de destinació
+            expected_amount_min:
+              greater_than_max: no pot ser superior a l'import màxim previst
+            account:
+              required_for_transfer: és obligatori en una transferència recurrent
+              wrong_family: ha de pertànyer a aquesta família
+            destination_account:
+              same_as_source: no pot ser el mateix que el compte d'origen
+              family_mismatch: ha de pertànyer a la mateixa família que el compte d'origen
+              wrong_family: ha de pertànyer a aquesta família
+    attributes:
+      recurring_transaction:
+        payment_url: Enllaç de pagament
+  recurring_transactions:
+    allocator:
+      missing_rate: no hi ha tipus de canvi de %{from} a %{to}; introdueix un import explícitament
+      unmeasurable: aquesta transacció té una assignació que no es pot convertir a %{currency}, així que no se'n pot calcular el romanent. Afegeix un tipus de canvi per al %{date} o elimina primer el pagament existent
+      over_allocated: assignar %{amount} supera el romanent de la transacció, %{capacity} %{currency}
+      exceeds_remaining: '%{amount} supera els %{remaining} pendents d''aquest cicle'

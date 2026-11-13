@@ -77,6 +77,21 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_equal @device_info[:device_type], device.device_type
   end
 
+  # RegistrationsController refuses to register when the instance is closed.
+  # The API creates the same account and did not check.
+  test "signup is refused when the instance is closed to registration" do
+    Setting.stubs(:onboarding_state).returns("closed")
+
+    assert_no_difference("User.count") do
+      post "/api/v1/auth/signup", params: {
+        user: { email: "closed@example.com", password: "Password1!", password_confirmation: "Password1!" },
+        device: @device_info
+      }
+    end
+
+    assert_response :forbidden
+  end
+
   test "should not signup without device info" do
     assert_no_difference("User.count") do
       post "/api/v1/auth/signup", params: {
@@ -111,6 +126,19 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :bad_request
+  end
+
+  test "should return bad request when signup payload has no user key" do
+    assert_no_difference([ "User.count", "MobileDevice.count", "Doorkeeper::AccessToken.count" ]) do
+      post "/api/v1/auth/signup", params: {
+        email: "newuser@example.com",
+        password: "SecurePass123!",
+        device: @device_info
+      }, as: :json
+    end
+
+    assert_response :bad_request
+    assert_equal "bad_request", JSON.parse(response.body)["error"]
   end
 
   test "should not signup with invalid password" do
@@ -271,6 +299,78 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     device = user.mobile_devices.where(device_id: @device_info[:device_id]).first
     assert device.present?
     assert device.active?
+  end
+
+  test "should login a user whose email row is still legacy plaintext" do
+    user = users(:family_admin)
+    email = store_legacy_plaintext_email(user)
+
+    post "/api/v1/auth/login", params: {
+      email: email,
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :success
+    assert_equal user.id.to_s, JSON.parse(response.body)["user"]["id"]
+  end
+
+  # SessionsController refuses local sign-in when SSO-only mode is on, with a
+  # single exception for a super-admin when the emergency override is enabled.
+  # The API mints the same credentials and enforced neither.
+  test "login is refused when local login is disabled" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(false)
+    user = users(:family_admin)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email, password: user_password_test, device: @device_info
+      }
+    end
+
+    assert_response :forbidden
+  end
+
+  test "login allows a super admin through the emergency override" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    user = users(:family_admin)
+    user.update!(role: :super_admin)
+    user.mobile_devices.destroy_all
+
+    post "/api/v1/auth/login", params: {
+      email: user.email, password: user_password_test, device: @device_info
+    }
+
+    assert_response :success
+  end
+
+  test "login refuses a non super admin even with the emergency override on" do
+    AuthConfig.stubs(:local_login_enabled?).returns(false)
+    AuthConfig.stubs(:local_admin_override_enabled?).returns(true)
+    user = users(:family_member)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email, password: user_password_test, device: @device_info
+      }
+    end
+
+    assert_response :forbidden
+  end
+
+  test "login refuses a deactivated user" do
+    user = users(:family_admin)
+    user.update_column(:active, false)
+
+    assert_no_difference("Doorkeeper::AccessToken.count") do
+      post "/api/v1/auth/login", params: {
+        email: user.email, password: user_password_test, device: @device_info
+      }
+    end
+
+    assert_response :unauthorized
   end
 
   test "should require MFA when enabled" do
@@ -439,6 +539,21 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
     response_data = JSON.parse(response.body)
     assert_equal "Invalid email or password", response_data["error"]
+  end
+
+  test "login with a non-existent email still hashes the password" do
+    # Same cost as a wrong password, so response time does not reveal
+    # whether the email is registered.
+    digest = BCrypt::Password.create(user_password_test, cost: BCrypt::Engine::MIN_COST)
+    BCrypt::Password.expects(:create).once.returns(digest)
+
+    post "/api/v1/auth/login", params: {
+      email: "nonexistent@example.com",
+      password: user_password_test,
+      device: @device_info
+    }
+
+    assert_response :unauthorized
   end
 
   test "should login even when OAuth application is missing" do
@@ -643,6 +758,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_nil Rails.cache.read("mobile_sso_link:#{linking_code}")
   end
 
+  test "should link SSO for a user whose email row is still legacy plaintext" do
+    user = users(:family_admin)
+    email = store_legacy_plaintext_email(user)
+
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "google_oauth2",
+      uid: "google-uid-legacy",
+      email: "google@example.com",
+      first_name: "Google",
+      last_name: "User",
+      name: "Google User",
+      device_info: @device_info.stringify_keys,
+      allow_account_creation: true
+    }, expires_in: 10.minutes)
+
+    assert_difference("OidcIdentity.count", 1) do
+      post "/api/v1/auth/sso_link", params: {
+        linking_code: linking_code,
+        email: email,
+        password: user_password_test
+      }
+    end
+
+    assert_response :success
+    assert_equal user.id.to_s, JSON.parse(response.body)["user"]["id"]
+  end
+
   test "should reject SSO link for a deactivated user even with correct password" do
     user = users(:family_admin)
     user.update_column(:active, false)
@@ -744,7 +887,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
   test "login rejects a user purged between authentication and the reload fast-path" do
     user = users(:family_admin)
-    User.stubs(:find_by).with(email: user.email).returns(user)
+    User.stubs(:authenticate_by_email).returns(user)
     user.stubs(:reload).raises(ActiveRecord::RecordNotFound)
 
     post "/api/v1/auth/login", params: {
@@ -1069,7 +1212,11 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       device_info: @device_info.stringify_keys,
       allow_account_creation: true
     }, expires_in: 10.minutes)
-    OidcIdentity.stubs(:create_from_omniauth).raises(ActiveRecord::RecordNotUnique, "duplicate identity")
+    OidcIdentity.stubs(:create_from_omniauth).raises(
+      ActiveRecord::RecordNotUnique,
+      'PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "index_oidc_identities_on_provider_and_uid" ' \
+      "DETAIL:  Key (provider, uid)=(google_oauth2, google-uid-rollback) already exists."
+    )
 
     assert_no_difference([ "User.count", "OidcIdentity.count", "Family.count" ]) do
       post "/api/v1/auth/sso_create_account", params: {
@@ -1081,6 +1228,12 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_nil User.find_by(email: email)
+
+    # The database's own message names the index and echoes the values.
+    errors = JSON.parse(response.body)["errors"]
+    assert_equal [ "An account or sign-in identity with these details already exists" ], errors
+    assert_not_includes response.body, "index_oidc_identities"
+    assert_not_includes response.body, "google-uid-rollback"
   end
 
   test "sso_create_account linking_code single-use under race" do
@@ -1226,5 +1379,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
     assert_not_nil invitee
     assert_equal family.id, invitee.family_id
     assert_equal 0, AccountShare.where(user: invitee).count
+  end
+
+  test "sso_providers lists configured providers without secrets" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([
+      { id: "authentik", name: "authentik", strategy: "openid_connect", label: "Authentik", client_secret: "shh", issuer: "https://idp.example.com" },
+      { id: "oidc", name: "openid_connect", strategy: "openid_connect", label: "", client_secret: "shh" },
+      { id: "google", name: "google_oauth2", strategy: "google_oauth2", client_secret: "shh" },
+      { name: "my_keycloak", strategy: "openid_connect" }
+    ])
+
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_equal [
+      { "name" => "authentik", "strategy" => "openid_connect", "label" => "Authentik" },
+      { "name" => "openid_connect", "strategy" => "openid_connect", "label" => "Sign in with OpenID Connect" },
+      { "name" => "google_oauth2", "strategy" => "google_oauth2", "label" => "Sign in with Google" },
+      { "name" => "my_keycloak", "strategy" => "openid_connect", "label" => "My Keycloak" }
+    ], JSON.parse(response.body)["providers"]
+    assert_not_includes response.body, "shh"
+  end
+
+  test "sso_providers returns an empty list when no providers are configured" do
+    Rails.configuration.x.auth.stubs(:sso_providers).returns([])
+
+    get "/api/v1/auth/sso_providers"
+
+    assert_response :success
+    assert_equal [], JSON.parse(response.body)["providers"]
   end
 end

@@ -381,7 +381,7 @@ module LanguagesHelper
       english = COUNTRY_MAPPING[key]
       emoji, name = english.split(" ", 2)
       label = I18n.t("countries.#{key}", default: name)
-      [ "#{emoji} #{label}", key ]
+      [ "#{emoji} #{label}", key.to_s ]
     end
   end
 
@@ -395,12 +395,43 @@ module LanguagesHelper
       .sort_by { |label, locale| label }
   end
 
-  def timezone_options
-    ActiveSupport::TimeZone.all
-      .sort_by { |tz| [ tz.utc_offset, tz.name ] }
-      .map do |tz|
-        name = tz.name.split(" - ").first.gsub(" (US & Canada)", "")
-        [ "(#{tz.formatted_offset}) #{name}", tz.tzinfo.identifier ]
-      end
+  # tzdata renamed these zones but Rails still maps to the old spelling.
+  # Hosts that ship the legacy names as plain zone files would otherwise list
+  # both, and TZInfo cannot tell they are the same zone.
+  RENAMED_TIMEZONES = { "Europe/Kiev" => "Europe/Kyiv", "Asia/Rangoon" => "Asia/Yangon" }.freeze
+
+  # One option per IANA zone, since Family#timezone stores the identifier and
+  # several of Rails' friendly names share one (e.g. Moscow and St. Petersburg).
+  # A saved identifier outside the list (e.g. an old spelling) is added, in
+  # place of its renamed zone, so it stays selected.
+  def timezone_options(current = nil)
+    rows = LanguagesHelper.timezone_option_rows
+    zone = ActiveSupport::TimeZone[current] if current.present?
+
+    if zone && rows.none? { |row| row[:identifier] == current }
+      rows = (rows.reject { |row| row[:identifier] == RENAMED_TIMEZONES[current] } << LanguagesHelper.timezone_option_row(current, zone))
+        .sort_by { |row| [ row[:offset], row[:identifier] ] }
+    end
+
+    rows.map { |row| [ row[:label], row[:identifier] ] }
+  end
+
+  # Labels use each zone's standard (base) offset, which daylight saving time
+  # does not change, so the list only changes with tzdata and is built once per process.
+  def self.timezone_option_rows
+    @timezone_option_rows ||= begin
+      identifiers = TZInfo::Timezone.all_country_zone_identifiers | ActiveSupport::TimeZone.all.map { |tz| tz.tzinfo.identifier }
+      identifiers -= RENAMED_TIMEZONES.select { |_, renamed| identifiers.include?(renamed) }.keys
+
+      identifiers
+        .filter_map { |identifier| (zone = ActiveSupport::TimeZone[identifier]) && timezone_option_row(identifier, zone) }
+        .sort_by { |row| [ row[:offset], row[:identifier] ] }
+        .freeze
+    end
+  end
+
+  def self.timezone_option_row(identifier, zone)
+    offset = zone.utc_offset
+    { identifier: identifier, offset: offset, label: "(#{ActiveSupport::TimeZone.seconds_to_utc_offset(offset)}) #{identifier.tr("_", " ")}" }
   end
 end

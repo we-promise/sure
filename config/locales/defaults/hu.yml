@@ -39,6 +39,7 @@ hu:
       default: "%Y.%m.%d."
       long: "%Y. %B %e."
       short: "%b %e."
+      short_with_year: '%Y. %b %d.'
     month_names:
     -
     - január

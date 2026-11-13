@@ -1,0 +1,36 @@
+---
+ca:
+  plans:
+    show:
+      title: Pla
+      subtitle: 'Decideix on van els teus diners: què gastes i què estalvies.'
+    budget_card:
+      title: Aquest mes
+      edit_budget: Edita el pressupost
+      of_total: de %{total}
+      days_left:
+        one: Queda %{count} dia
+        other: Queden %{count} dies
+      percent_used: '%{percent}% utilitzat'
+      top_categories: Categories principals
+      view_budget: Mostra el pressupost complet
+      empty_body: Defineix un objectiu de despesa mensual i límits per categoria per veure com va aquest mes.
+      set_up: Configura el pressupost d'aquest mes
+    goals_card:
+      title: Els teus objectius
+      new_goal: Nou objectiu
+      active_count:
+        one: '%{count} actiu'
+        other: '%{count} actius'
+      of_targets: de %{total} entre tots els objectius
+      behind_count:
+        one: '%{count} per sota del ritme'
+        other: '%{count} per sota del ritme'
+      pending_count:
+        one: '%{count} aportació pendent'
+        other: '%{count} aportacions pendents'
+      all_on_pace: Tot va al ritme previst
+      active_goals: Objectius actius
+      pending_marker: pendent
+      runway: '%{months} mesos de marge · %{pace}/mes'
+      all_goals: Tots els objectius

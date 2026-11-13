@@ -58,19 +58,32 @@ class LunchflowAccount::Processor
       #
       # Exception: CreditCard and Loan accounts return inverted signs
       # Provider returns negative for positive balance, so we negate it
-      if account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
+      #
+      # Some banks (e.g. Halifax via the Lloyds connection) report a credit
+      # card's remaining available credit instead. When the user flags the card
+      # as such, derive the debt from the card limit they entered.
+      skip_balance_update = false
+      if account.accountable_type == "CreditCard" && lunchflow_account.treat_balance_as_available_credit?
+        balance = debt_from_available_credit(account, balance)
+        skip_balance_update = balance.nil?
+      elsif account.accountable_type == "CreditCard" || account.accountable_type == "Loan"
         balance = -balance
       end
 
       # Normalize currency with fallback chain: parsed lunchflow currency -> existing account currency -> USD
       currency = parse_currency(lunchflow_account.currency) || account.currency || "USD"
 
-      # Update account balance
-      account.update!(
-        balance: balance,
-        cash_balance: balance,
-        currency: currency
-      )
+      # Without a credit limit the debt is unknown: keep the balance, but still
+      # sync the currency, as Enable Banking does.
+      if skip_balance_update
+        account.update!(currency: currency)
+      else
+        account.update!(
+          balance: balance,
+          cash_balance: balance,
+          currency: currency
+        )
+      end
     end
 
     def process_transactions
@@ -87,6 +100,35 @@ class LunchflowAccount::Processor
       LunchflowAccount::Investments::HoldingsProcessor.new(lunchflow_account).process
     rescue => e
       report_exception(e, "holdings")
+    end
+
+    # Lunch Flow does not report a credit limit, so in available-credit mode
+    # the card's Available credit field holds the user-entered limit. A
+    # reported amount above the limit is an overpayment, which stays a
+    # negative (credit) balance like the default path. Returns nil when no
+    # limit is set: the debt is then unknown, so the existing balance is kept
+    # rather than recording available credit as debt.
+    def debt_from_available_credit(account, reported_available_credit)
+      debt = CreditCard.debt_from_available_credit(
+        credit_limit: account.accountable&.available_credit,
+        available_credit: reported_available_credit,
+        clamp_overpayment: false
+      )
+      return debt if debt
+
+      message = "Cannot compute debt from available credit because no credit limit is set; keeping previous Sure account balance"
+      Rails.logger.warn("LunchflowAccount::Processor - #{message} (lunchflow_account #{lunchflow_account.id})")
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: message,
+        source: self.class.name,
+        provider_key: "lunchflow",
+        account: account,
+        account_provider: lunchflow_account.account_provider,
+        metadata: { lunchflow_account_id: lunchflow_account.id }
+      )
+      nil
     end
 
     def report_exception(error, context)

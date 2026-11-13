@@ -150,6 +150,30 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_equal [], @account.reload.identification_hashes
   end
 
+  # Runs only with explicit encryption keys (see test/encryption_verification_test.rb).
+  test "reads and syncs a legacy plaintext iban once encryption is on" do
+    skip "Encryption not configured" unless EnableBankingAccount.encryption_ready?
+
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+    # A row written before the column was encrypted
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "UPDATE enable_banking_accounts SET iban = ? WHERE id = ?", "NL91ABNA0417164300", @account.id ])) # pipelock:ignore IBAN
+
+    @account.reload
+    assert_equal "NL91ABNA0417164300", @account.iban # pipelock:ignore IBAN
+
+    @account.upsert_enable_banking_snapshot!({
+      uid: "uid_uuid_123",
+      identification_hash: "hash_abc123",
+      currency: "EUR",
+      cash_account_type: "CACC",
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    })
+
+    assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
   test "propagates iban to a blank linked account on sync" do
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
@@ -169,6 +193,45 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     @account.update!(iban: "nl91.abna-0417/1643:00'")
 
     assert_equal "NL91ABNA0417164300", @account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "propagates the iban without logging it in plaintext to data_enrichments" do
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    assert_no_difference -> { DataEnrichment.where(enrichable: linked_account).count } do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "EUR",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
+
+    assert_equal "NL91ABNA0417164300", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "does not propagate an iban to a linked account type without one" do
+    # Account#clear_unsupported_iban would drop the value on save anyway, so
+    # the IBAN alone can't tell whether the sync skipped the vehicle. A family
+    # account holding the same IBAN can: without the type check the sync runs
+    # its conflict check for the vehicle and logs a bogus support warning.
+    @family.accounts.create!(name: "Other account", balance: 0, currency: "USD", accountable: Depository.new, iban: "NL91ABNA0417164300") # pipelock:ignore IBAN
+    linked_account = accounts(:vehicle)
+    AccountProvider.create!(provider: @account, account: linked_account)
+
+    assert_no_difference [ "DebugLogEntry.count", -> { DataEnrichment.where(enrichable: linked_account).count } ] do
+      @account.upsert_enable_banking_snapshot!({
+        uid: "uid_uuid_123",
+        identification_hash: "hash_abc123",
+        currency: "USD",
+        cash_account_type: "CACC",
+        iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+      })
+    end
+
+    assert_nil linked_account.reload.iban
   end
 
   test "does not overwrite an already-present account iban on sync" do
@@ -267,15 +330,32 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     assert_nil linked_account.reload.iban
   end
 
+  test "logs a failed iban save only once across repeated syncs" do
+    linked_account = accounts(:depository)
+    AccountProvider.create!(provider: @account, account: linked_account)
+    Account.any_instance.stubs(:update).returns(false)
+    snapshot = {
+      uid: "uid_uuid_123",
+      identification_hash: "hash_abc123",
+      currency: "EUR",
+      cash_account_type: "CACC",
+      iban: "NL91ABNA0417164300" # pipelock:ignore IBAN
+    }
+
+    assert_difference "DebugLogEntry.count", 1 do
+      3.times { @account.upsert_enable_banking_snapshot!(snapshot) }
+    end
+  end
+
   test "does not raise or fail the sync on a raw unique-index race during propagation" do
     # #with_lock only serializes writers to the target row; it can't stop a
     # DIFFERENT blank-iban account in the family from concurrently passing
     # the same Rails-level uniqueness check and then losing at the raw DB
-    # index on commit -- surfacing as RecordNotUnique, which enrich_attribute's
-    # plain `save` does not rescue on its own.
+    # index on commit -- surfacing as RecordNotUnique, which a plain
+    # `update` does not rescue on its own.
     linked_account = accounts(:depository)
     AccountProvider.create!(provider: @account, account: linked_account)
-    Account.any_instance.stubs(:enrich_attribute).raises(
+    Account.any_instance.stubs(:update).raises(
       ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
     )
 

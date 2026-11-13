@@ -1,6 +1,7 @@
 ---
 pt-BR:
   passwords:
+    disabled: "A alteração de senha pelo Sure está desativada. Gerencie sua senha pelo seu provedor de identidade."
     edit:
       password: Nova Senha
       password_challenge: Senha Atual

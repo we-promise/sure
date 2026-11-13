@@ -1,0 +1,5 @@
+---
+ru:
+  models:
+    merchant:
+      no_merchant: Без продавца

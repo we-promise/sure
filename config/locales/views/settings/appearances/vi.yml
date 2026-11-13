@@ -1,0 +1,27 @@
+---
+vi:
+  settings:
+    appearances:
+      show:
+        page_title: Giao diện
+        theme_title: Giao diện
+        theme_subtitle: Chọn giao diện ưa thích cho ứng dụng
+        theme_dark: Tối
+        theme_light: Sáng
+        theme_system: Hệ thống
+        modals_title: Hộp thoại
+        modals_subtitle: Tùy chỉnh hành vi hộp thoại
+        disable_modal_click_outside_title: Giữ hộp thoại mở khi nhấp bên ngoài
+        disable_modal_click_outside_description: Ngăn hộp thoại đóng khi nhấp bên ngoài. Hữu ích để tránh vô tình mất các thay đổi chưa lưu.
+        transactions_title: Giao dịch
+        transactions_subtitle: Tùy chỉnh cách hiển thị giao dịch
+        dashboard_title: Bảng điều khiển
+        dashboard_subtitle: Tùy chỉnh cách hiển thị bảng điều khiển
+        dashboard_two_column_title: Bố cục hai cột
+        dashboard_two_column_description: Hiển thị các widget bảng điều khiển thành hai cột trên màn hình lớn. Khi tắt, các widget xếp chồng thành một cột.
+        split_grouped_title: Nhóm giao dịch phân chia
+        show_counterparty_account_title: "Hiển thị thông tin tài khoản đối tác"
+        show_counterparty_account_description: "Hiển thị 4 ký tự cuối của IBAN hoặc số tài khoản của đối tác trong chi tiết giao dịch, khi kết nối ngân hàng của bạn cung cấp. Chỉ xuất hiện khi có dữ liệu này."
+        auto_generate_transaction_names_title: "Tự động tạo tên giao dịch"
+        auto_generate_transaction_names_description: "Khi tên của giao dịch nhập thủ công để trống, tên sẽ được điền từ danh mục và nhà cung cấp đã chọn (ví dụ: \"Giải trí - Netflix\"). Nếu không chọn cái nào, tên vẫn là bắt buộc. Áp dụng cho cả hộ gia đình và chỉ cho giao dịch mới."
+        split_grouped_description: Hiển thị giao dịch phân chia được nhóm dưới giao dịch cha trong danh sách. Khi tắt, các mục con phân chia xuất hiện như các hàng riêng biệt.

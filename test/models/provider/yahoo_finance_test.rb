@@ -383,6 +383,47 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #      Exchange Rate Tests
   # ================================
 
+  test "fetch_exchange_rates rejects a quote Yahoo gives no currency for" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("GELRUB=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+    # Live on that date: GEL per 100 RUB, with no currency.
+    @provider.stubs(:fetch_authenticated_chart).with("RUBGEL=X", anything).returns(fx_chart(date, nil, 3.1481))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:category] == "exchange_rates" &&
+        attributes[:metadata] == { symbol: "RUBGEL=X", expected_currency: "GEL", quote_currency: nil }
+    end
+
+    response = @provider.fetch_exchange_rates(from: "GEL", to: "RUB", start_date: date, end_date: date)
+
+    assert_not response.success?
+  end
+
+  test "fetch_exchange_rates takes a quote in the pair's currency as is and inverts the reverse quote" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("EURUSD=X", anything).returns(fx_chart(date, "USD", 1.12))
+    @provider.stubs(:fetch_authenticated_chart).with("USDEUR=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+
+    eur_usd = @provider.fetch_exchange_rates(from: "EUR", to: "USD", start_date: date, end_date: date)
+    usd_eur = @provider.fetch_exchange_rates(from: "USD", to: "EUR", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, eur_usd.data.first.rate.to_f
+    assert_in_delta 1 / 1.12, usd_eur.data.first.rate.to_f, 1e-9
+  end
+
+  test "fetch_exchange_rates matches the quote currency regardless of case" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("eurusd=X", anything).returns(fx_chart(date, "USD", 1.12))
+
+    response = @provider.fetch_exchange_rates(from: "eur", to: "usd", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, response.data.first.rate.to_f
+  end
+
   test "fetch_exchange_rate returns 1.0 for same currency" do
     date = Date.parse("2024-01-15")
     response = @provider.fetch_exchange_rate(from: "USD", to: "USD", date: date)
@@ -516,8 +557,6 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "search_securities falls back to a direct chart lookup when the search index has no results" do
     empty_search_response = mock
     empty_search_response.stubs(:body).returns('{"quotes":[]}')
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.stubs(:get).returns(empty_search_response)
 
     chart_response = mock
     chart_response.stubs(:body).returns({
@@ -532,10 +571,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
         } ]
       }
     }.to_json)
-    chart_client = mock
-    chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/VAN0111AU\.AX$})).returns(chart_response)
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
-    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+
+    mock_client = mock
+    mock_client.stubs(:get).with(regexp_matches(%r{/v1/finance/search})).returns(empty_search_response)
+    mock_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/VAN0111AU\.AX$})).returns(chart_response)
+    @provider.stubs(:client).returns(mock_client)
     @provider.stubs(:throttle_request)
 
     response = @provider.search_securities("VAN0111AU.AX")
@@ -555,15 +595,14 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "search_securities direct chart fallback returns no results when the symbol doesn't exist" do
     empty_search_response = mock
     empty_search_response.stubs(:body).returns('{"quotes":[]}')
-    @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.stubs(:get).returns(empty_search_response)
 
     not_found_response = mock
     not_found_response.stubs(:body).returns({ chart: { result: nil, error: { code: "Not Found" } } }.to_json)
-    chart_client = mock
-    chart_client.stubs(:get).returns(not_found_response)
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
-    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+
+    mock_client = mock
+    mock_client.stubs(:get).with(regexp_matches(%r{/v1/finance/search})).returns(empty_search_response)
+    mock_client.stubs(:get).with(regexp_matches(%r{/v8/finance/chart/})).returns(not_found_response)
+    @provider.stubs(:client).returns(mock_client)
     @provider.stubs(:throttle_request)
 
     response = @provider.search_securities("NOTAREAL.XX")
@@ -650,8 +689,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     }.to_json)
     chart_client = mock
     chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/CIBEST\.CL$})).twice.returns(chart_response)
-    @provider.stubs(:fetch_cookie_and_crumb).returns([ "cookie", "crumb" ])
-    @provider.stubs(:authenticated_client).with("cookie").returns(chart_client)
+    @provider.stubs(:client).returns(chart_client)
     @provider.stubs(:throttle_request)
 
     responses = [ "CIBEST", "CIBEST.CL" ].map do |symbol|
@@ -675,6 +713,50 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   # ================================
   #         Caching Tests
   # ================================
+
+  test "fetch_authenticated_chart refreshes credentials after an Unauthorized body" do
+    anonymous_response = mock
+    anonymous_response.stubs(:body).returns('{"chart":{"error":{"code":"Unauthorized"}}}')
+    retry_response = mock
+    retry_response.stubs(:body).returns('{"chart":{"result":[{}]}}')
+    anonymous_client = mock
+    anonymous_client.expects(:get).once.returns(anonymous_response)
+    retry_request = OpenStruct.new(params: {})
+    authenticated_client = mock
+    authenticated_client.expects(:get).once.yields(retry_request).returns(retry_response)
+
+    @provider.stubs(:client).returns(anonymous_client)
+    @provider.expects(:clear_crumb_cache).once
+    @provider.expects(:fetch_cookie_and_crumb).once.returns([ "fresh-cookie", "fresh-crumb" ])
+    @provider.expects(:authenticated_client).with("fresh-cookie").returns(authenticated_client)
+
+    result = @provider.send(:fetch_authenticated_chart, "AAPL", {})
+
+    assert_equal [ {} ], result.dig("chart", "result")
+    assert_equal "fresh-crumb", retry_request.params["crumb"]
+  end
+
+  test "fetch_authenticated_chart refreshes credentials after an HTTP 401" do
+    anonymous_client = mock
+    anonymous_client.expects(:get).once.raises(
+      Faraday::UnauthorizedError.new("Unauthorized", { body: "Invalid Crumb" })
+    )
+    retry_response = mock
+    retry_response.stubs(:body).returns('{"chart":{"result":[{}]}}')
+    retry_request = OpenStruct.new(params: {})
+    authenticated_client = mock
+    authenticated_client.expects(:get).once.yields(retry_request).returns(retry_response)
+
+    @provider.stubs(:client).returns(anonymous_client)
+    @provider.expects(:clear_crumb_cache).once
+    @provider.expects(:fetch_cookie_and_crumb).once.returns([ "fresh-cookie", "fresh-crumb" ])
+    @provider.expects(:authenticated_client).with("fresh-cookie").returns(authenticated_client)
+
+    result = @provider.send(:fetch_authenticated_chart, "AAPL", {})
+
+    assert_equal [ {} ], result.dig("chart", "result")
+    assert_equal "fresh-crumb", retry_request.params["crumb"]
+  end
 
   # Note: Caching tests are skipped as Rails.cache may not be properly configured in test environment
   # and caching functionality is not the focus of the validation fixes
@@ -785,6 +867,32 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
   test "min_request_interval returns default value" do
     assert_equal 0.5, @provider.send(:min_request_interval)
+  end
+
+  test "client retries on 5xx statuses in addition to 429" do
+    retry_statuses = retry_middleware_options(@provider.send(:client)).retry_statuses
+    assert_equal [ 429, 500, 502, 503, 504 ], retry_statuses
+  end
+
+  test "authenticated_client retries on 5xx statuses in addition to 429" do
+    retry_statuses = retry_middleware_options(@provider.send(:authenticated_client, "cookie")).retry_statuses
+    assert_equal [ 429, 500, 502, 503, 504 ], retry_statuses
+  end
+
+  test "fetch_chart_data logs (rather than silently swallows) a Faraday error" do
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:fetch_authenticated_chart).raises(Faraday::ConnectionFailed, "connection failed")
+
+    Rails.logger.expects(:warn).with(regexp_matches(/fetch_chart_data failed for EURUSD=X/))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:provider_key] == "yahoo_finance" &&
+        attributes[:metadata][:symbol] == "EURUSD=X" &&
+        attributes[:metadata][:exception_class] == "Faraday::ConnectionFailed"
+    end
+
+    result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current, currency: "USD") { |ts, close| close }
+
+    assert_nil result
   end
 
   # ================================
@@ -962,8 +1070,33 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
   test "normalize_symbol leaves unconfigured MIC symbols unchanged" do
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", "XNAS")
-    assert_equal "BARC", @provider.send(:normalize_symbol, "BARC", "XLON")
+    assert_equal "SHOP", @provider.send(:normalize_symbol, "SHOP", "XTSE")
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", nil)
+  end
+
+  # A European listing sent bare is a 404 at Yahoo; the security then fails
+  # every fetch and silently never gets a price.
+  test "normalize_symbol appends the Yahoo suffix for European exchanges" do
+    assert_equal "IUSQ.DE",   @provider.send(:normalize_symbol, "IUSQ", "XETR")
+    assert_equal "SAP.F",     @provider.send(:normalize_symbol, "SAP", "XFRA")
+    assert_equal "BARC.L",    @provider.send(:normalize_symbol, "BARC", "XLON")
+    assert_equal "MC.PA",     @provider.send(:normalize_symbol, "MC", "XPAR")
+    assert_equal "ASML.AS",   @provider.send(:normalize_symbol, "ASML", "XAMS")
+    assert_equal "NESN.SW",   @provider.send(:normalize_symbol, "NESN", "XSWX")
+    assert_equal "VOLV-B.ST", @provider.send(:normalize_symbol, "VOLV-B", "XSTO")
+    assert_equal "OMV.VI",    @provider.send(:normalize_symbol, "OMV", "XWBO")
+  end
+
+  test "normalize_symbol does not double-suffix a European symbol stored with its suffix" do
+    assert_equal "IUSQ.DE", @provider.send(:normalize_symbol, "IUSQ.DE", "XETR")
+    assert_equal "BARC.L",  @provider.send(:normalize_symbol, "BARC.L", "XLON")
+  end
+
+  test "default_currency_for_exchange knows the European venues Yahoo names" do
+    assert_equal "GBP", @provider.send(:default_currency_for_exchange, "LSE")
+    assert_equal "EUR", @provider.send(:default_currency_for_exchange, "FRA")
+    assert_equal "EUR", @provider.send(:default_currency_for_exchange, "PAR")
+    assert_equal "CHF", @provider.send(:default_currency_for_exchange, "SWX")
   end
 
   test "normalize_symbol appends suffix to dotted symbols that do not already end with the configured suffix" do
@@ -1030,6 +1163,11 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
   private
 
+    def retry_middleware_options(faraday_connection)
+      handler = faraday_connection.builder.handlers.find { |h| h.klass.to_s.include?("Retry") }
+      handler.build.instance_variable_get(:@options)
+    end
+
     def stub_successful_health_authentication(provider: @provider, count: 1)
       responses = count.times.flat_map do |index|
         [
@@ -1040,6 +1178,14 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       auth_client = mock
       auth_client.expects(:get).times(responses.length).returns(*responses)
       provider.stubs(:health_auth_client).returns(auth_client)
+    end
+
+    def fx_chart(date, currency, close)
+      { "chart" => { "result" => [ {
+        "meta" => { "currency" => currency },
+        "timestamp" => [ date.to_time.utc.to_i ],
+        "indicators" => { "quote" => [ { "close" => [ close ] } ] }
+      } ] } }
     end
 
     def stub_health_chart_responses(*responses, provider: @provider)

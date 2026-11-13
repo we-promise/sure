@@ -17,8 +17,20 @@ de:
       acknowledge: Verstanden
       acknowledge_title: Ausblenden, bis sich die Zahlen ändern
       acknowledged: Verstanden – ausgeblendet, bis sich das ändert
+      dig_in: Mit KI nachhaken
       new: Neu
       undo: Rückgängig
+    dig_in:
+      prompt: |-
+        Hilf mir, dieser Analyse auf den Grund zu gehen.
+
+        Analyse: %{title}
+        Was Sure gefunden hat: %{body}
+        Zeitraum: %{period}
+        Zahlen:
+        %{facts}
+
+        Was steckt dahinter, und sollte ich etwas tun?
     feed:
       acknowledge_aria: "Verstanden: %{title}"
       header: Neueste

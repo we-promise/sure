@@ -21,8 +21,6 @@ es:
           trial_expiring_soon: Caduca en 7 días
           trial_trialing: En periodo de prueba
           submit: Filtrar
-        summary:
-          trials_expiring_7_days: Pruebas que caducan en los próximos 7 días
         table:
           user: Usuario
           trial_ends_at: La prueba finaliza

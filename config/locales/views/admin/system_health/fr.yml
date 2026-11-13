@@ -2,12 +2,72 @@
 fr:
   admin:
     system_health:
+      hosted_usage:
+        loading: "Chargement de l’usage hébergé…"
+        title: "Usage hébergé"
+        snapshot: "État de la base en lecture seule au %{time}"
+        summary:
+          trial_households_count: "Foyers en essai (30 derniers jours)"
+          trial_members_count: "Comptes membres actuels des essais"
+          trials_expiring_soon_count: "Essais expirant sous 7 jours"
+          cleanup_eligible_count: "Foyers éligibles au nettoyage"
+          active_supporter_households_count: "Foyers contributeurs actifs (local)"
+          supporter_subscription_count: "Lignes d’abonnement liées à Stripe"
+        summary_help: "Les totaux d’essais concernent les abonnements enregistrés sur les 30 derniers jours. Les totaux d’expiration, de nettoyage et de contribution couvrent toutes les lignes actuelles correspondantes, sans la limite des tableaux."
+        limitations_title: "Ce que ces chiffres permettent de savoir"
+        limitations: "Les tables actuelles ne conservent pas l’historique complet des essais, paiements ou activités des sessions. La création d’un abonnement peut provenir d’un import. Les comptes membres ne sont pas des personnes uniques vérifiées. Cette vue ne modifie aucune donnée de foyer ou d’abonnement. Les réinitialisations de la démo partagée suppriment les anciens foyers et sessions ; l’historique des visiteurs ne peut donc pas être reconstitué."
+        trials:
+          title: "Foyers d’essai récents"
+          description: "Abonnements enregistrés depuis le %{date} conservant une date de fin d’essai, y compris les essais convertis. Affichage limité à %{limit} foyers."
+          sessions_help: "Les sessions sont des connexions conservées pour les utilisateurs activés, pas des utilisateurs actuellement en ligne ni des visites. Se déconnecter supprime une session. La dernière création n’indique pas la dernière activité."
+          empty: "Aucun foyer d’essai enregistré sur cette période"
+        cleanup:
+          title: "Éligibilité au nettoyage"
+          description: "Périmètre existant du nettoyage : abonnement en pause ou en essai terminé depuis plus de 14 jours, ou aucun abonnement et foyer âgé de plus de 45 + 14 jours. Affichage limité à %{limit} foyers."
+          eligibility_help: "Les connexions récentes n’empêchent pas l’éligibilité. Celle-ci ne confirme pas une suppression ; les 90 jours correspondent à la conservation des archives, pas au seuil de nettoyage des essais."
+          disabled: "Le nettoyage planifié des essais est désactivé hors du mode géré. Seules les correspondances au périmètre sont affichées."
+          empty: "Aucun foyer ne correspond au périmètre de nettoyage"
+          reasons:
+            expired_trial_grace_elapsed: "Essai terminé ; délai de grâce de 14 jours écoulé"
+            no_subscription_grace_elapsed: "Aucun abonnement ; 45 + 14 jours écoulés"
+        supporters:
+          title: "État local des contributeurs"
+          description: "Lignes d’abonnement locales actuelles avec des identifiants client et abonnement au format Stripe ; l’abonnement de démonstration synthétique est exclu. Les statuts ne vérifient ni les paiements reçus ni les dates de premier paiement. Aucune requête Stripe n’est effectuée."
+          empty: "Aucune ligne d’abonnement liée à Stripe"
+        columns:
+          household: "Identifiant du foyer"
+          recorded_at: "Abonnement enregistré"
+          trial_ends_at: "Fin de l’essai"
+          status: "État actuel"
+          members: "Comptes membres"
+          retained_sessions: "Sessions de connexion conservées"
+          recent_sessions: "Sessions conservées créées sur 30 jours"
+          latest_session: "Dernière connexion conservée"
+          cleanup_eligible: "Éligible au nettoyage"
+          cleanup_reason: "Motif"
+          subscription_rows: "Lignes d’abonnement"
+        statuses:
+          unknown: "Inconnu"
+          incomplete: "Incomplet"
+          incomplete_expired: "Incomplet, expiré"
+          trialing: "En essai"
+          active: "Actif"
+          past_due: "En retard"
+          canceled: "Annulé"
+          unpaid: "Impayé"
+          paused: "En pause"
+          no_subscription: "Aucun abonnement"
+        not_recorded: "Non enregistré"
+        eligible: "Éligible"
+        not_eligible: "Non éligible"
+        synthetic_demo: "Démo synthétique"
       push_notifications:
         send_test: "Envoyer une notification de test"
         queueing: "Mise en file…"
         title: "Notifications push"
         requested_at: "Dernier test demandé le %{time}"
         result_help: "L’acceptation par APNs ne confirme pas la réception sur votre appareil. Actualisez pour voir les résultats du worker. Les résultats sont conservés pendant 24 heures."
+        results_label: "Résultats du test"
         device: "Appareil %{number}"
         pending: "En attente"
         refresh: "Actualiser les résultats"
@@ -150,6 +210,7 @@ fr:
           llm:
             description: Les vérifications en direct contrôlent le modèle configuré, lui demandent un appel de fonction trivial comme le fait l'assistant, puis testent séparément l'extraction de texte et le traitement vision / natif à l'aide d'un PDF synthétique d'une page ne contenant aucune donnée client. Les valeurs des identifiants ne sont jamais affichées.
             title: LLM et traitement des PDF
+          loading: "Vérifications en direct en cours…"
           local_setup:
             description: Faites tourner le LLM via votre point de terminaison local compatible OpenAI, stockez les vecteurs de documents dans pgvector et faites pointer les paramètres d'embeddings vers un point de terminaison d'embeddings compatible OpenAI. L'image PostgreSQL doit inclure l'extension vector, et les dimensions d'embedding doivent correspondre au modèle sélectionné.
             title: Installation locale recommandée
@@ -242,8 +303,10 @@ fr:
         status_section_description: État actuel du worker en arrière-plan qui assure les synchronisations, les soldes et les calculs de patrimoine net.
         status_section_title: Statut de Sidekiq
         tabs:
+          hosted_usage: "Usage hébergé"
           ai: Statut de l'IA
           background_jobs: Tâches en arrière-plan
+          configuration: Config
         title: Santé du système
         values:
           healthy: Sain
@@ -254,3 +317,116 @@ fr:
           unhealthy: Dégradé
       verify_worker_ai:
         queued: Vérification du worker mise en file d'attente. Elle apparaîtra ci-dessous dès qu'un processus worker la prendra en charge, généralement en quelques secondes.
+      optional_services:
+        description: 'Intégrations optionnelles côté opérateur. Les services non configurés sont donnés à titre informatif. Ces vérifications n''inspectent que les paramètres : elles ne testent pas la connectivité, n''envoient pas d''événements de test et ne modifient pas le consentement aux statistiques. Dépliez un service pour voir les détails de configuration.'
+        missing_settings: 'Paramètres manquants : %{settings}'
+        notes:
+          browser_analytics_disabled: Les statistiques côté navigateur sont désactivées pour cet environnement. Cela ne désactive pas le client serveur, configuré séparément.
+          environment_disabled: L'intégration chargée est désactivée pour cet environnement Rails.
+          explicitly_disabled: SKYLIGHT_ENABLED désactive explicitement l'instrumentation.
+          production_only: Avec la configuration actuelle de l'application, cette intégration n'est utilisée qu'en production.
+          self_hosted_checkout_disabled: Le paiement des abonnements et le portail de facturation sont désactivés en mode auto-hébergé. Les webhooks Stripe peuvent toujours être configurés ; les identifiants de prix de paiement ne sont pas requis ici.
+          shared_feedback_configured: Les retours en auto-hébergement passent par un projet intégré distinct, activé par sa propre configuration. Ils ne nécessitent pas de POSTHOG_KEY côté opérateur. Le refus côté navigateur et la disponibilité du SDK ne sont pas vérifiés.
+          shared_feedback_disabled: Le projet distinct de retours en auto-hébergement est désactivé par son paramètre de retours ou d'environnement. Cela ne désactive pas les statistiques propres à l'opérateur.
+        services:
+          langfuse:
+            description: Traçage IA et rapports d'évaluation optionnels. Cette vérification n'envoie aucune trace ni requête d'évaluation.
+            guidance: Définissez LANGFUSE_PUBLIC_KEY et LANGFUSE_SECRET_KEY ensemble. LANGFUSE_HOST est optionnel. Redémarrez les services concernés après avoir modifié ces paramètres.
+            title: Langfuse
+          logtail:
+            description: Transfert optionnel des journaux de production. Lorsqu'il n'est pas configuré, l'application continue d'écrire ses journaux sur la sortie standard.
+            guidance: Définissez LOGTAIL_API_KEY et LOGTAIL_INGESTING_HOST ensemble, puis redémarrez les services concernés. Cette vérification n'émet aucun journal de test.
+            title: Logtail
+          posthog:
+            description: Statistiques optionnelles propres à l'opérateur, selon la configuration chargée au démarrage. Configuré ne signifie pas qu'un utilisateur a consenti aux statistiques.
+            guidance: Définissez POSTHOG_KEY et un POSTHOG_HOST non vide, ou laissez l'hôte non défini pour utiliser la valeur par défaut. Les statistiques côté navigateur nécessitent la production, ou POSTHOG_DEVELOPMENT_ENABLED en développement. POSTHOG_FEEDBACK_ENABLED contrôle les retours distincts en auto-hébergement, pas les statistiques de l'opérateur.
+            title: PostHog
+          sentry:
+            description: Remontée optionnelle des erreurs et des performances. L'initialiseur actuel n'active la remontée qu'en production.
+            guidance: Définissez SENTRY_DSN et redémarrez les services concernés. Cette vérification contrôle la configuration du SDK chargé sans capturer d'erreur ni envoyer d'événement.
+            title: Sentry
+          skylight:
+            description: Instrumentation optionnelle des performances de l'application. La présence d'une configuration ne confirme pas que l'agent fonctionne ou envoie des données.
+            guidance: Définissez SKYLIGHT_AUTHENTICATION et assurez-vous que Skylight est chargé dans l'environnement Rails prévu. SKYLIGHT_ENABLED=false désactive l'instrumentation ; ce drapeau seul ne charge pas la gem. Redémarrez après toute modification.
+            title: Skylight
+          stripe:
+            description: Facturation des abonnements et webhooks de paiement optionnels. Cette vérification ne crée pas de client Stripe, ne valide pas les identifiants et n'effectue aucune requête de paiement.
+            guidance: Définissez STRIPE_SECRET_KEY et STRIPE_WEBHOOK_SECRET ensemble. Le paiement des abonnements gérés nécessite aussi STRIPE_MONTHLY_PRICE_ID et STRIPE_ANNUAL_PRICE_ID.
+            title: Stripe
+        statuses:
+          configured: Configuré
+          disabled: Désactivé dans ce processus
+          incomplete: Configuration incomplète
+          not_checked: Non vérifié
+          not_configured: Non configuré
+        title: Services optionnels
+      configuration:
+        checks:
+          exchange_rates:
+            guidance: Choisissez un fournisseur de taux de change et ajoutez sa clé d'API si nécessaire dans les paramètres d'auto-hébergement, ou configurez-le dans l'environnement de déploiement. EXCHANGE_RATE_PROVIDER et les clés d'API des fournisseurs définies dans l'environnement sont prioritaires.
+            issues:
+              invalid_provider: Le fournisseur de taux de change sélectionné n'est pas reconnu. La récupération automatique des taux échoue tant qu'un fournisseur pris en charge n'est pas sélectionné.
+            statuses:
+              configured: Le fournisseur de taux de change sélectionné est configuré.
+              not_configured: Aucun fournisseur de taux de change utilisable n'est configuré. La conversion automatique des devises peut être indisponible lorsqu'un taux enregistré manque.
+            title: Taux de change
+          securities:
+            guidance: Choisissez les fournisseurs et ajoutez les clés d'API requises dans les paramètres d'auto-hébergement, ou configurez-les dans l'environnement de déploiement. Les valeurs de l'environnement sont prioritaires. Les fournisseurs publics ne nécessitent pas de clé d'API.
+            statuses:
+              configured: Tous les fournisseurs de cours de marché activés sont configurés.
+              disabled: Aucun fournisseur de cours de marché n'est activé. La recherche automatique de titres et la récupération des cours ne sont pas disponibles.
+              incomplete: Au moins un fournisseur de cours de marché activé a une configuration manquante ou une sélection invalide. Les titres attribués à ce fournisseur risquent de ne pas recevoir de mises à jour de cours.
+              not_configured: Les fournisseurs de cours de marché activés n'ont pas de clé d'API. La recherche automatique de titres et la récupération des cours ne sont pas disponibles via ces fournisseurs.
+            title: Cours de marché
+          smtp:
+            guidance: SMTP ne peut pas être configuré dans l'interface d'administration. Définissez les variables d'environnement d'e-mail pour les services web et worker, puis redémarrez-les tous les deux. SMTP_USERNAME et SMTP_PASSWORD peuvent tous deux être omis pour un relais sans authentification.
+            issues:
+              address: SMTP_ADDRESS
+              app_domain: APP_DOMAIN (utilisé dans les liens des e-mails)
+              authentication: SMTP_USERNAME et SMTP_PASSWORD (renseignez les deux ou aucun)
+              port: SMTP_PORT (un nombre de 1 à 65535)
+              sender: EMAIL_SENDER (remplacez l'expéditeur par défaut sender@sure.local)
+            statuses:
+              configured: Les paramètres SMTP sont présents.
+              disabled: L'envoi d'e-mails est désactivé dans la configuration active du mailer.
+              incomplete: Certains paramètres d'e-mail sont manquants ou incomplets. Les e-mails système ou les liens qu'ils contiennent risquent de ne pas fonctionner.
+              not_checked: Ce processus utilise une autre méthode d'envoi que SMTP, comme un aperçu de développement. L'envoi SMTP n'est pas évalué.
+              not_configured: SMTP n'est pas configuré. Les réinitialisations de mot de passe, les invitations et les autres e-mails système ne peuvent pas être envoyés via SMTP.
+            title: E-mail (SMTP)
+          storage:
+            guidance: Vérifiez ACTIVE_STORAGE_SERVICE et les paramètres de déploiement du stockage sélectionné. Le disque local nécessite un stockage persistant partagé par les services web et worker. Changer de stockage ne migre pas les fichiers existants ; prévoyez toute migration séparément.
+            issues:
+              bucket: Bucket de stockage
+              credentials: Clé d'accès et clé secrète du stockage (renseignez les deux ou utilisez une découverte externe des identifiants)
+              endpoint: Point de terminaison du stockage (et CLOUDFLARE_ACCOUNT_ID pour R2)
+              region: Région de stockage
+              root: Racine du stockage local
+            statuses:
+              configured: Les paramètres de stockage sont présents ; le disque local ne nécessite pas d'identifiants cloud.
+              incomplete: Des paramètres de stockage requis sont manquants ou incomplets. Le téléversement ou la récupération des fichiers risque de ne pas fonctionner.
+              not_checked: Ce stockage utilise une découverte externe des identifiants ou une configuration personnalisée. Son accès ne peut pas être déterminé à partir de ces seuls paramètres.
+              not_configured: Le stockage sélectionné n'a pas de configuration correspondante. Les téléversements de fichiers peuvent être indisponibles.
+            title: Téléversements et stockage de fichiers
+        configure_providers: Ouvrir les paramètres d'auto-hébergement
+        description: Configuration visible par ce processus web. Ces vérifications n'envoient pas d'e-mails, ne contactent pas les fournisseurs et ne téléversent ni ne téléchargent de fichiers. Configuré signifie que les paramètres sont présents, pas que l'envoi, l'accès aux fournisseurs ou l'accès au stockage a été vérifié.
+        provider_statuses:
+          configured: Configuré
+          invalid: Sélection invalide
+          not_configured: Clé d'API manquante
+        settings_needed: Paramètres à vérifier
+        statuses:
+          configured: Configuré
+          disabled: Désactivé
+          incomplete: Configuration incomplète
+          not_checked: Non vérifié
+          not_configured: Non configuré
+        storage_backend: 'Stockage sélectionné : %{backend}'
+        storage_backends:
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: Stockage compatible S3
+          google: Google Cloud Storage
+          local: Disque local
+          other: Stockage personnalisé ou non reconnu
+          test: Disque de test
+        unknown_provider: Fournisseur sélectionné non reconnu

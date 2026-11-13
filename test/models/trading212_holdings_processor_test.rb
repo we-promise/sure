@@ -74,6 +74,31 @@ class Trading212HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "provider", holding.cost_basis_source
   end
 
+  test "processor stores a pence-quoted position in pounds" do
+    @trading212_account.update!(
+      raw_positions_payload: [
+        {
+          "instrument" => {
+            "ticker" => "SGLNl_EQ",
+            "name" => "iShares Physical Gold",
+            "currency" => "GBX"
+          },
+          "quantity" => "4",
+          "currentPrice" => "6141.0",
+          "averagePricePaid" => "5000.0"
+        }
+      ]
+    )
+
+    Trading212Account::HoldingsProcessor.new(@trading212_account).process
+
+    holding = @account.holdings.find_by(security: Security.find_by(ticker: "SGLNL"))
+    assert_equal "GBP", holding.currency
+    assert_equal BigDecimal("61.41"), holding.price
+    assert_equal BigDecimal("245.64"), holding.amount
+    assert_equal BigDecimal("50"), holding.cost_basis
+  end
+
   test "processor skips position with blank ticker" do
     @trading212_account.update!(
       raw_positions_payload: [

@@ -5,8 +5,8 @@ tr:
       asset_fee: Wise Assets ücreti
       default_name: Wise etkinliği
       interest: Wise faizi
-      jar_deposit: Jar'a transfer
-      jar_withdrawal: Jar'dan transfer
+      jar_deposit: Kumbaraya transfer
+      jar_withdrawal: Kumbaradan transfer
       transfer_from_jar: "%{jar} kaynağından transfer"
       transfer_to_jar: "%{jar} hedefine transfer"
     complete_account_setup:
@@ -22,14 +22,18 @@ tr:
     entries:
       default_name: Wise işlemi
       fee_name: Wise ücreti
+      refund_name: Wise iadesi
     link_accounts:
       failed: Wise bakiyesi bağlanamadı. Lütfen tekrar deneyin.
       not_found: Wise bakiyesi bulunamadı.
       success: Wise bakiyesi hesaba başarıyla bağlandı.
     link_existing_account:
+      account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı.
+      currency_mismatch: "Bu Wise bakiyesi %{balance_currency}, hesap ise %{account_currency} cinsinden. Hesabın para biriminde bir bakiye seçin."
       failed: Hesap bağlanamadı. Lütfen tekrar deneyin.
       not_found: Hesap veya Wise bakiyesi bulunamadı.
       success: "%{account_name} Wise ile başarıyla bağlandı"
+      unsupported_account_type: Wise bakiyeleri yalnızca nakit hesaplarına bağlanabilir.
     link_profiles:
       already_connected: Seçilen tüm profiller zaten bağlı.
       no_profiles_selected: Lütfen en az bir profil seçin.
@@ -46,17 +50,14 @@ tr:
       description: "%{name} kullanarak bağlan"
       name: Wise — %{name}
     provider_panel:
-      accounts_link: Hesaplar
       add_connection: Wise bağlantısı ekle
-      configured_html: Bağlandı ve eşitleniyor. Hesaplarınızı yönetmek için %{accounts_link}
-        sekmesini ziyaret edin.
       connect: Wise'ı Bağla
       connection_name_label: Bağlantı adı
       connection_name_placeholder: Wise Bireysel
       sync_start_date_label: İşlemleri şu tarihten itibaren içe aktar
       sync_start_date_help: Wise hesap özetleri bu tarihten itibaren içe aktarılır. Varsayılanı bırakırsanız bir yıla kadar geçmiş yüklenir.
       import_all_history_label: Tüm işlem geçmişini içe aktar
-      import_all_history_help: Yalnızca son bir yıl yerine tüm geçmiş Wise hesap özetlerini getirir.
+      import_all_history_help: Yalnızca son bir yıl yerine tüm Wise geçmişini (transferler, işlemler ve hesap özetleri) içe aktarır. Her bakiye bu durumda Wise'ın onu açtığı gün 0'dan başlar.
       disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısını kesmek istediğinizden emin misiniz?
         Bu, tüm eşitlenmiş hesap verilerini kaldıracaktır."
@@ -72,15 +73,23 @@ tr:
         open_tokens: Settings → Connect and manage apps → Developer tools → API tokens bölümüne gidin
         sign_in_html: "%{link} adresini ziyaret edin ve hesabınıza giriş yapın"
       keep_token_placeholder: Mevcut token'ı korumak için boş bırakın
-      not_configured: Yapılandırılmamış
-      sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.sandbox.transferwise.tech</code>)
+      sandbox_note_html: Test için <strong>sandbox</strong> temel URL'sini (<code>https://api.wise-sandbox.com</code>)
         kullanın. Ortamınızda <code>WISE_BASE_URL</code> değerini ayarlayın.
       setup_accounts: Hesapları kur
-      setup_title: 'Kurulum talimatları:'
       sync: Eşitle
       token_label: API token'ı
       token_placeholder: Wise kişisel API token'ınızı yapıştırın
       update_connection: Bağlantıyı güncelle
+      sca:
+        title: Güçlü Müşteri Kimlik Doğrulaması (SCA)
+        description: Wise, gelen ödemeler dahil tüm hesap özetlerini okumak için imzalı bir tek kullanımlık token doğrulaması ister. Bunu etkinleştirmek için burada bir anahtar çifti oluşturun ve açık anahtarı Wise'a kaydedin.
+        public_key_label: Açık anahtar (PEM)
+        registered_help_html: 'Bu anahtarı Wise''a kaydedin: Settings → Connect and manage apps → Developer tools → Public keys → Add public key.'
+        copy: Kopyala
+        copied: Kopyalandı!
+        generate: Anahtar çifti oluştur
+        regenerate: Anahtar çiftini yeniden oluştur
+        regenerate_confirm: Bu işlem yeni bir anahtar çifti oluşturur. Wise, önceki açık anahtarı siz Wise hesabınızdan kaldırana kadar kabul etmeye devam eder — Sure bu anahtarı uzaktan iptal edemez. Hesap özetlerinin yeniden eşitlenebilmesi için yeni açık anahtarı Wise'a kaydetmeniz gerekir. Devam edilsin mi?
     select_accounts:
       cancel: İptal
       description: "%{product_name} hesabınıza bağlamak istediğiniz Wise para birimi
@@ -142,6 +151,9 @@ tr:
       credentials_invalid: Geçersiz Wise API token'ı veya yetersiz izinler
       failed: Eşitleme başarısız oldu. Lütfen tekrar deneyin veya destek ile iletişime
         geçin.
+      fetch_failed:
+        one: "%{count} Wise isteği başarısız oldu. Sonraki eşitleme yeniden deneyecek."
+        other: "%{count} Wise isteği başarısız oldu. Sonraki eşitleme yeniden deneyecek."
       import_failed: Wise içe aktarma başarısız oldu.
       importing_accounts: Wise'dan hesaplar içe aktarılıyor...
       processing_transactions: İşlemler işleniyor...
@@ -165,3 +177,6 @@ tr:
       status_never: Hiç eşitlenmedi
       status_with_summary: Son eşitleme %{timestamp} önce — %{summary}
       syncing: Eşitleniyor...
+    generate_sca_keypair:
+      success: Yeni SCA anahtar çifti oluşturuldu. Etkinleştirmeyi tamamlamak için açık anahtarı Wise'a kaydedin.
+      failed: Yeni SCA anahtar çifti oluşturulamadı. Lütfen tekrar deneyin.

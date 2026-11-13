@@ -1,6 +1,7 @@
 class FamilyMerchantsController < ApplicationController
   include WriteOnlyIbanParams
 
+  before_action :require_non_guest!, except: %i[index]
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -32,7 +33,7 @@ class FamilyMerchantsController < ApplicationController
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
     @llm_available = Provider::Registry.get_provider(:openai).present?
 
-    @pagy_family_merchants, @family_merchants = pagy(family_scope, page_param: :family_page, limit: safe_per_page)
+    @pagy_family_merchants, @family_merchants = pagy(family_scope.with_attached_logo, page_param: :family_page, limit: safe_per_page)
     @pagy_provider_merchants, @provider_merchants = pagy(provider_scope, page_param: :provider_page, limit: safe_per_page)
 
     render layout: "settings"
@@ -54,13 +55,13 @@ class FamilyMerchantsController < ApplicationController
     else
       render_create_error
     end
-  rescue ActiveRecord::RecordNotUnique
-    # A raw DB-level race on the partial (family_id, iban) unique index: two
-    # concurrent creates both passed the Rails uniqueness validation before
-    # either committed, so it surfaces here instead of the `save` branch
-    # above. #save doesn't rescue this on its own since it's a raw
-    # PG::UniqueViolation, not a validation failure.
-    @family_merchant.errors.add(:iban, :taken)
+  rescue ActiveRecord::RecordNotUnique => e
+    # A raw DB-level race on a partial unique index: two concurrent creates
+    # both passed the Rails uniqueness validation before either committed,
+    # so it surfaces here instead of the `save` branch above. #save doesn't
+    # rescue this on its own since it's a raw PG::UniqueViolation, not a
+    # validation failure.
+    @family_merchant.errors.add(taken_attribute_for(e), :taken)
     render_create_error
   end
 
@@ -69,20 +70,10 @@ class FamilyMerchantsController < ApplicationController
 
   def update
     if @merchant.is_a?(ProviderMerchant)
-      name_changed = effective_merchant_params[:name].present? && effective_merchant_params[:name] != @merchant.name
       # A ProviderMerchant is shared by every family whose transactions use it,
-      # so changing its name or website converts it to a FamilyMerchant for
-      # this family only; editing the shared row would change it for all of
-      # them. An IBAN edit takes the same path: iban drives cross-family
-      # merchant-identity matching (Account::ProviderImportAdapter looks
-      # merchants up globally by source+iban), so one family setting it would
-      # silently redirect another family's future transactions to this merchant.
-      website_changed = effective_merchant_params.key?(:website_url) &&
-        effective_merchant_params[:website_url].to_s.strip != @merchant.website_url.to_s
-      iban_changed = effective_merchant_params.key?(:iban) && normalize_iban(effective_merchant_params[:iban]) != @merchant.iban
-
-      if name_changed || website_changed || iban_changed
-        # Convert ProviderMerchant to FamilyMerchant for this family only
+      # so changing its name, website or IBAN converts it to a FamilyMerchant for this
+      # family only; editing the shared row would change it for all of them.
+      if provider_merchant_customized?
         @family_merchant = @merchant.convert_to_family_merchant_for(Current.family, effective_merchant_params)
         respond_to do |format|
           format.html { redirect_to family_merchants_path, notice: t(".converted_success") }
@@ -90,14 +81,14 @@ class FamilyMerchantsController < ApplicationController
         end
       else
         respond_to do |format|
-          format.html { redirect_to family_merchants_path, notice: t(".success") }
-          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+          format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
         end
       end
     elsif @merchant.update(effective_merchant_params)
       respond_to do |format|
-        format.html { redirect_to family_merchants_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
       end
     else
       render :edit, status: :unprocessable_entity
@@ -117,12 +108,13 @@ class FamilyMerchantsController < ApplicationController
     restore_merchant_after_failed_conversion!
     e.record.errors.each { |error| @merchant.errors.add(error.attribute, error.type, **error.options) }
     render :edit, status: :unprocessable_entity
-  rescue ActiveRecord::RecordNotUnique
+  rescue ActiveRecord::RecordNotUnique => e
     # Same race as above, surfaced through the raw DB constraint instead of
     # the Rails-level validation: two concurrent conversions in the same
     # family both passed uniqueness before either committed.
+    attribute = taken_attribute_for(e)
     restore_merchant_after_failed_conversion!
-    @merchant.errors.add(:iban, :taken)
+    @merchant.errors.add(attribute, :taken)
     render :edit, status: :unprocessable_entity
   end
 
@@ -138,9 +130,9 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def enhance
-    cache_key = "enhance_provider_merchants:#{Current.family.id}"
+    cache_key = EnhanceProviderMerchantsJob.lock_key(Current.family)
 
-    already_running = !Rails.cache.write(cache_key, true, expires_in: 10.minutes, unless_exist: true)
+    already_running = !Rails.cache.write(cache_key, true, expires_in: EnhanceProviderMerchantsJob::LOCK_TTL, unless_exist: true)
 
     if already_running
       return redirect_to family_merchants_path, alert: t(".already_running")
@@ -151,7 +143,7 @@ class FamilyMerchantsController < ApplicationController
   end
 
   def merge
-    @merchants = all_family_merchants
+    @merchants = all_family_merchants.with_attached_logo
   end
 
   def perform_merge
@@ -191,10 +183,24 @@ class FamilyMerchantsController < ApplicationController
       @family_merchant = @merchant # For backwards compatibility with views
     end
 
+    def provider_merchant_customized?
+      attrs = effective_merchant_params
+      name_changed = attrs[:name].present? && attrs[:name] != @merchant.name
+      website_changed = attrs.key?(:website_url) &&
+        attrs[:website_url].to_s.strip != @merchant.website_url.to_s
+      iban_changed = attrs.key?(:iban) && normalize_iban(attrs[:iban]) != @merchant.iban
+
+      name_changed || website_changed || iban_changed
+    end
+
+    def updated_merchant_return_path
+      safe_return_to(params[:return_to]) || family_merchants_path
+    end
+
     def merchant_params
       # Handle both family_merchant and provider_merchant param keys
       key = params.key?(:family_merchant) ? :family_merchant : :provider_merchant
-      params.require(key).permit(:name, :color, :website_url, :iban, :remove_iban)
+      params.require(key).permit(:name, :color, :website_url, :iban, :remove_iban, :logo, :remove_logo)
     end
 
     # iban is write-only (see family_merchants/_form.html.erb) -- a blank
@@ -229,11 +235,35 @@ class FamilyMerchantsController < ApplicationController
     # ProviderMerchant after a failed conversion attempt (see the #update
     # rescues), instead of an unpersisted FamilyMerchant that would break
     # the re-rendered form's submit target. Restores every attribute the
-    # form could have submitted, including :color -- merchant_params
-    # permits it and convert_to_family_merchant_for receives it, so omitting
-    # it here would silently revert a color change on the failed attempt.
+    # form could have submitted, including :name/:website_url/:iban --
+    # merchant_params permits them and convert_to_family_merchant_for
+    # receives them, so omitting them here would silently revert the failed
+    # attempt's edits.
+    #
+    # :color is handled separately via @selected_color: @merchant is still a
+    # ProviderMerchant here, and ProviderMerchant#color is hardcoded to nil
+    # (ProviderMerchant does not support color), so assigning it to @merchant
+    # would silently no-op. The edit view falls back to @selected_color when
+    # the model attribute can't hold the submitted value.
     def restore_merchant_after_failed_conversion!
-      @merchant.assign_attributes(effective_merchant_params.slice(:name, :color, :website_url, :iban))
+      @merchant.assign_attributes(effective_merchant_params.slice(:name, :website_url, :iban))
+      @selected_color = effective_merchant_params[:color]
+    end
+
+    # FamilyMerchant rows are unique per family by name and by IBAN; only the
+    # violated index's name tells the two races apart. It is read from the
+    # error line itself: the DETAIL line after it repeats the submitted
+    # values. Any other index violation is not a form error, so it is
+    # raised again.
+    # The constraint name comes from the PG error itself; the message is
+    # translated when the server's lc_messages is not English.
+    def taken_attribute_for(error)
+      constraint = error.cause.try(:result)&.error_field(PG::Result::PG_DIAG_CONSTRAINT_NAME)
+      case constraint || error.message[/unique constraint "([^"]+)"/, 1]
+      when "index_merchants_on_family_id_and_iban" then :iban
+      when "index_merchants_on_family_id_and_name" then :name
+      else raise error
+      end
     end
 
     def merchant_json(merchant)

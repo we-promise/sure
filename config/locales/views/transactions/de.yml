@@ -11,9 +11,13 @@ de:
       category_prompt: Kategorie auswählen
       create_category: '„%{name}“ erstellen'
       create_category_error: Kategorie konnte nicht erstellt werden
+      create_as_subcategory: Als Unterkategorie hinzufügen…
+      choose_parent: '„%{name}“ erstellen unter:'
+      back_to_categories: Zurück
       date: Datum
       description: Beschreibung
       description_placeholder: Transaktion beschreiben
+      description_placeholder_optional: Leer lassen, um den Namen aus Kategorie/Händler zu übernehmen, oder zuerst eines davon wählen
       expense: Ausgabe
       income: Einnahme
       none: (keine)
@@ -32,7 +36,11 @@ de:
       merchant_label: Händler
     new:
       new_transaction: Neue Transaktion
+    transaction_category:
+      set_on_outflow: "Die Kategorie gehört zur Abbuchung dieses Transfers und lässt sich nur dort ändern"
     show:
+      category_set_on_hidden_outflow: "Dies ist die Gutschrift eines Transfers. Die Kategorie gehört zur Abbuchung auf einem Konto, auf das du keinen Zugriff hast, und lässt sich nur dort ändern."
+      category_set_on_outflow: "Dies ist die Gutschrift eines Transfers. Die Kategorie gehört zur Abbuchung und lässt sich nur dort ändern, damit Budgets sie nur einmal zählen."
       account_label: Konto
       amount: Betrag
       category_label: Kategorie
@@ -128,6 +136,18 @@ de:
     dismiss_duplicate:
       success: Als getrennte Transaktionen beibehalten
       failure: Duplikatshinweis konnte nicht verworfen werden
+    reconcile:
+      success: Als %{status} markiert
+      failure: Abgleichsstatus konnte nicht aktualisiert werden
+      not_manual_account: Der Abgleichsstatus gilt nur für manuell erfasste Konten (kein Bank-Sync)
+      statuses:
+        unreconciled: Nicht abgeglichen
+        cleared: Bestätigt
+        reconciled: Abgeglichen
+      badge:
+        unreconciled_tooltip: "Noch nicht mit einem Kontoauszug abgeglichen. Klicken, um als bestätigt zu markieren."
+        cleared_tooltip: "Auf einem Kontoauszug bestätigt, aber noch nicht vollständig abgeglichen. Klicken, um als abgeglichen zu markieren."
+        reconciled_tooltip: "Abrechnungszeitraum vollständig abgeglichen. Klicken, um auf nicht abgeglichen zurückzusetzen."
     header:
       edit_categories: Kategorien bearbeiten
       edit_imports: Importe bearbeiten
@@ -161,6 +181,7 @@ de:
         date: Datum
         type: Typ
         status: Status
+        reconcile_status: Abgleich
         amount: Betrag
         category: Kategorie
         tag: Tag
@@ -249,6 +270,7 @@ de:
         clear_filters: Filter löschen
         date_filter: Datum
         merchant_filter: Händler
+        reconcile_status_filter: Abgleich
         status_filter: Status
         tag_filter: Tag
         type_filter: Typ
@@ -289,10 +311,13 @@ de:
         merchant_prompt: Händler wählen
         name_label: Name
         name_placeholder: Name, der für die gewählten Transaktionen gilt
+        no_change: (keine Änderung)
         none: "(keine)"
         notes_label: Notizen
         notes_placeholder: Notiz, die für die gewählten Transaktionen gilt
         overview: Übersicht
+        reconciled_status_hint: Gilt nur für manuell erfasste Konten (kein Bank-Sync).
+        reconciled_status_label: Abgleichsstatus
         save: Speichern
         tags_label: Tags
         transactions_section: Transaktionen
@@ -341,6 +366,7 @@ de:
     selection_bar:
       duplicate: Duplizieren
       edit: Bearbeiten
+      reconcile: Abgleichen
       selected: ausgewählt
     split_parent_row:
       split_label: Teilen

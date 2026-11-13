@@ -13,6 +13,10 @@ es:
       name_placeholder: Nombre del comercio
       website_placeholder: Sitio web (ej. starbucks.com)
       website_hint: Introduce el sitio web del comercio para mostrar automáticamente su logotipo
+      iban_placeholder: "IBAN (opcional)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN guardado, introduce un nuevo valor para reemplazarlo"
+      iban_hint: "El número de cuenta bancaria del comercio, si lo conoces"
+      iban_remove_label: "Eliminar IBAN"
     index:
       empty: Aún no hay comercios
       new: Nuevo comercio

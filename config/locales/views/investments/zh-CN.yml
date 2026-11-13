@@ -14,6 +14,9 @@ zh-CN:
       brokerage:
         short: 券商
         long: 券商账户
+      cash_management:
+        short: CMA
+        long: 现金管理账户
       401k:
         short: 401(k)
         long: 401(k)
@@ -113,6 +116,9 @@ zh-CN:
       life_insurance:
         short: 人寿保险
         long: 人寿保险
+      epf:
+        short: EPF
+        long: 雇员公积金
       ppf:
         short: PPF
         long: 公共公积金

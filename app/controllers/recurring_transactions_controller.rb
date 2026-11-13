@@ -19,6 +19,8 @@ class RecurringTransactionsController < ApplicationController
   before_action :set_recurring_transaction, only: %i[edit update toggle_status destroy confirm dismiss]
   before_action :ensure_series_writable, only: %i[update toggle_status destroy confirm dismiss]
 
+  helper_method :series_writable?, :separate_bill_chosen?
+
   def index
     scope = Current.family.recurring_transactions
                   .accessible_by(Current.user)
@@ -26,7 +28,7 @@ class RecurringTransactionsController < ApplicationController
 
     # Fresh detections wait in their own review strip until confirmed; they
     # are not real bills yet and would only be noise inside the main table.
-    @suggested = scope.suggested.order(next_expected_date: :asc)
+    @suggested_income, @suggested_bills = scope.suggested.order(next_expected_date: :asc).partition(&:typed_income?)
     @recurring_transactions = scope.where.not(status: :suggested)
                                    .order(status: :asc, next_expected_date: :asc)
     @family = Current.family
@@ -36,26 +38,14 @@ class RecurringTransactionsController < ApplicationController
   # real, active bill; dismissing tombstones it as `ended`, which the
   # Identifier treats as "never suggest this again".
   def confirm
-    first_confirmation = @recurring_transaction.suggested?
+    # A just-confirmed bill shows its lived history rather than starting
+    # blank: the status change reconstructs it (RecurringTransaction#
+    # reconstruct_history_on_activation), queued when a pipeline holds the
+    # family lock. Only the change from suggested does, so a replayed POST
+    # reconstructs nothing twice.
     @recurring_transaction.update!(status: "active")
 
-    # A just-confirmed bill shows its lived history rather than starting
-    # blank. Guarded so a replayed POST does not re-run the backfill; the
-    # matcher pass inside is family-wide on purpose (exact-tier, idempotent,
-    # and scoping it would need a parallel Matcher entry point). Taken under
-    # the family lock so it cannot interleave with a running pipeline; when
-    # the lock is held the backfill is skipped and the confirm still succeeds.
-    if first_confirmation
-      RecurringTransaction::Pipeline.with_family_lock(Current.family.id) do
-        RecurringTransaction::HistoryBackfiller.new(
-          Current.family,
-          months: RecurringTransaction::Pipeline::FIRST_RUN_BACKFILL_MONTHS,
-          series_scope: Current.family.recurring_transactions.where(id: @recurring_transaction.id)
-        ).run!
-      end
-    end
-
-    flash[:notice] = t("recurring_transactions.confirmed")
+    flash[:notice] = t(@recurring_transaction.typed_income? ? "recurring_transactions.confirmed_income" : "recurring_transactions.confirmed")
     redirect_back_or_to recurring_transactions_path
   end
 
@@ -129,7 +119,8 @@ class RecurringTransactionsController < ApplicationController
     @recurring_transaction = Current.family.recurring_transactions.new(
       # Paychecks default to the most common pay cadence; bills to monthly.
       frequency_preset: income ? "biweekly" : "monthly",
-      first_due_on: Date.current
+      first_due_on: Date.current,
+      currency: Current.family.currency
     )
     @recurring_transaction.is_income = income
 
@@ -153,7 +144,27 @@ class RecurringTransactionsController < ApplicationController
   def create
     @recurring_transaction = build_declared_bill
 
-    if @recurring_transaction.errors.none? && save_declared_bill
+    # The posted fields carry only a name, and a detected bill is keyed by
+    # merchant with no name, so whether this duplicates a bill is asked of the
+    # transaction the dialog was opened from. The dialog already said so; this
+    # catches a stale dialog or a direct POST. The check and the save hold the
+    # entry lock the Allocator takes, so neither a second submission, an
+    # allocation of this transaction nor a "Mark as recurring" on it can slip
+    # in between them. The lock is transaction-scoped, so it is taken inside
+    # the class-level transaction (Entry#transaction is the delegated-type
+    # reader, not ActiveRecord's).
+    @source_entry = Current.accessible_entries.find_by(id: params[:entry_id])
+    saved = if @source_entry && !separate_bill_chosen?
+      Entry.transaction do
+        RecurringTransaction::Allocator.lock_entry!(@source_entry)
+        @covering_series = covering_series_for(@source_entry)
+        @covering_series.nil? && @recurring_transaction.errors.none? && save_declared_bill
+      end
+    else
+      @recurring_transaction.errors.none? && save_declared_bill
+    end
+
+    if saved
       flash[:notice] = @recurring_transaction.typed_income? ? t(".success_income") : t(".success")
 
       respond_to do |format|
@@ -221,7 +232,7 @@ class RecurringTransactionsController < ApplicationController
     respond_to do |format|
       format.html do
         flash[:notice] = message
-        redirect_to recurring_transactions_path
+        redirect_back_or_to recurring_transactions_path
       end
     end
   end
@@ -243,7 +254,12 @@ class RecurringTransactionsController < ApplicationController
     end
 
     flash[:notice] = t(income ? "recurring_transactions.deleted_income" : "recurring_transactions.deleted")
-    redirect_back_or_to bills_path
+    # Back to a visited /bills/:id would reopen, or 404 on, what was just removed.
+    if came_from?(bill_path(@recurring_transaction))
+      redirect_to bills_path
+    else
+      redirect_back_or_to bills_path
+    end
   end
 
   protected
@@ -252,16 +268,33 @@ class RecurringTransactionsController < ApplicationController
     # smart-fill path, so a failed suggestion still leaves the user exactly
     # where the plain prefill would have.
     def prefill_recurring_from_entry(entry)
+      @source_entry = entry
+      @covering_series = covering_series_for(entry)
       @recurring_transaction.name = entry.entryable.try(:merchant)&.name.presence || entry.name
       @recurring_transaction.amount = entry.amount.abs
+      @recurring_transaction.currency = entry.currency
       @recurring_transaction.account_id = entry.account_id
       # A negative entry is an inflow: pre-fill as income, not as a bill.
       @recurring_transaction.is_income = true if entry.amount.negative?
+      @recurring_transaction.category_id = entry.entryable.try(:category_id) unless entry.amount.negative?
       @recurring_transaction.first_due_on =
         RecurringTransaction::Schedule.new(expected_day_of_month: entry.date.day).next_occurrence_from_today
     end
 
   private
+
+    # "Create a separate bill anyway" posts allow_duplicate=1, and only that
+    # counts as the choice: a "0" or "false" from a direct POST does not.
+    def separate_bill_chosen?
+      params[:allow_duplicate] == "1"
+    end
+
+    # Only a bill this user can open is worth naming in the dialog.
+    def covering_series_for(entry)
+      return unless entry.transaction?
+
+      Current.family.recurring_transactions.accessible_by(Current.user).covering(entry)
+    end
 
     # Sign-filtered detected patterns not yet covered by any series, mapped
     # to what the picker renders. Each candidate carries its latest entry's
@@ -347,10 +380,11 @@ class RecurringTransactionsController < ApplicationController
     # Accountless series carry no account gate. Same contract as
     # RecurringOccurrencesController#ensure_series_writable.
     def ensure_series_writable
-      return if @recurring_transaction.account_id.nil?
-      return if Account.writable_by(Current.user).where(id: @recurring_transaction.account_id).exists?
+      raise ActiveRecord::RecordNotFound unless series_writable?(@recurring_transaction)
+    end
 
-      raise ActiveRecord::RecordNotFound
+    def series_writable?(series)
+      series.account_id.nil? || Account.writable_by(Current.user).where(id: series.account_id).exists?
     end
 
     # name, amount and account are handled by apply_editable_identity rather
@@ -362,14 +396,15 @@ class RecurringTransactionsController < ApplicationController
         :payment_url, :autopay, :notes, :bill_type, :category_id,
         :renews_on, :trial_ends_on, :cancelled_on, :end_after_count,
         :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
-        :frequency_weekday, :frequency_month_of_year
+        :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit
       )
     end
 
     def new_recurring_transaction_params
       params.require(:recurring_transaction).permit(
-        :name, :amount, :account_id, :first_due_on, :frequency_preset,
-        :payment_url, :autopay, :notes, :is_income
+        :name, :amount, :currency, :account_id, :first_due_on, :frequency_preset,
+        :frequency_interval, :frequency_interval_unit,
+        :payment_url, :autopay, :notes, :is_income, :category_id
       )
     end
 
@@ -395,6 +430,8 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.frequency_second_day_of_month = detection.second_day_of_month
       @recurring_transaction.frequency_weekday = detection.weekday
       @recurring_transaction.frequency_month_of_year = detection.month_of_year
+      @recurring_transaction.frequency_interval = detection.interval
+      @recurring_transaction.frequency_interval_unit = detection.interval_unit
     end
 
     # A bill outliving its own price is the normal case, and the only way to
@@ -421,8 +458,13 @@ class RecurringTransactionsController < ApplicationController
 
       if attrs[:amount].present?
         magnitude = attrs[:amount].to_d.abs
-        @recurring_transaction.amount =
-          @recurring_transaction.typed_income? ? -magnitude : magnitude
+        # Checked on the input: assigning it already rounded to the column.
+        if RecurringTransaction.storable_amount?(magnitude)
+          @recurring_transaction.amount =
+            @recurring_transaction.typed_income? ? -magnitude : magnitude
+        else
+          @recurring_transaction.errors.add(:base, t("recurring_transactions.create.amount_too_precise"))
+        end
       end
 
       if attrs.key?(:account_id)
@@ -447,7 +489,9 @@ class RecurringTransactionsController < ApplicationController
         day_of_month: @recurring_transaction.frequency_day_of_month,
         second_day_of_month: @recurring_transaction.frequency_second_day_of_month,
         weekday: @recurring_transaction.frequency_weekday,
-        month_of_year: @recurring_transaction.frequency_month_of_year
+        month_of_year: @recurring_transaction.frequency_month_of_year,
+        interval: @recurring_transaction.frequency_interval,
+        interval_unit: @recurring_transaction.frequency_interval_unit
       )
 
       # A hand-set cadence is intent, not a guess for detection to correct.

@@ -70,9 +70,9 @@ class Account::ReconciliationManager
     #      first reconciliation's full balance is its contribution.
     #
     # The delta is only ever consumed by manual_save pledges, which never
-    # attach to investment accounts: Account#default_pledge_kind forces
+    # attach to investment or crypto accounts: Account#default_pledge_kind forces
     # `transfer` there and GoalPledge#matches? rejects valuation deltas on
-    # investment accounts (a market move isn't a deposit). So a positive delta
+    # them (a market move isn't a deposit). So a positive delta
     # only feeds depository saves, where balances are positive and a positive
     # delta really is a deposit — the reconciler's positive-delta guard holds.
     def valuation_contribution(valuation, prior_valuation_amount, old_balance_components)
@@ -93,6 +93,13 @@ class Account::ReconciliationManager
         amount: balance,
         currency: account.currency
       )
+
+      # A provider may have labelled this day's reconciliation (see
+      # Property#name_avm_valuation!); a later write — e.g. a manual edit —
+      # goes back to the default name, and providers relabel after their own.
+      if valuation_record.entryable.is_a?(Valuation) && valuation_record.entryable.reconciliation?
+        valuation_record.name = Valuation.build_reconciliation_name(account.accountable_type)
+      end
 
       valuation_record
     end

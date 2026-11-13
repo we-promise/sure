@@ -27,6 +27,41 @@ class EnableBankingAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 1500.0, @account.reload.cash_balance
   end
 
+  test "promotes the importer's evidence to balance_verified once the anchor is written" do
+    @enable_banking_account.update!(balance_evidence_verified: true, balance_verified: false)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert @enable_banking_account.reload.balance_verified?
+  end
+
+  test "an unverified balance clears balance_verified when it becomes the anchor" do
+    @enable_banking_account.update!(balance_evidence_verified: false, balance_verified: true)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert_not @enable_banking_account.reload.balance_verified?
+  end
+
+  test "keeps balance_verified when no balance was fetched and the anchor stays as it is" do
+    @enable_banking_account.update_columns(current_balance: nil, balance_evidence_verified: false, balance_verified: true)
+
+    EnableBankingAccount::Processor.new(@enable_banking_account).process
+
+    assert @enable_banking_account.reload.balance_verified?
+  end
+
+  test "clears balance_verified when the balance never becomes the anchor" do
+    @enable_banking_account.update!(balance_evidence_verified: true, balance_verified: true)
+    Account.any_instance.stubs(:set_current_balance).raises(StandardError, "boom")
+
+    assert_raises(StandardError) do
+      EnableBankingAccount::Processor.new(@enable_banking_account).process
+    end
+
+    assert_not @enable_banking_account.reload.balance_verified?
+  end
+
   test "updates account currency" do
     @enable_banking_account.update!(currency: "USD")
 
