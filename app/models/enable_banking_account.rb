@@ -18,6 +18,11 @@ class EnableBankingAccount < ApplicationRecord
   validates :uid, presence: true, uniqueness: { scope: :enable_banking_item_id }
   # account_id is not uniquely scoped: uid already enforces one-account-per-identifier per item
 
+  # Removing the provider clears its tombstones, so re-linking the same bank
+  # account imports its history from scratch. Prepended so the link still
+  # exists and current_account is readable when this runs.
+  before_destroy :clear_provider_import_tombstones, prepend: true
+
   # Helper to get account using account_providers system
   def current_account
     account
@@ -140,6 +145,12 @@ class EnableBankingAccount < ApplicationRecord
   end
 
   private
+
+    def clear_provider_import_tombstones
+      return if current_account.blank?
+
+      ProviderImportTombstone.clear_for_account!(account: current_account, source: "enable_banking")
+    end
 
     def build_account_name(snapshot)
       # Try to build a meaningful name from the account data

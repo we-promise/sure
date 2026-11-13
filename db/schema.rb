@@ -2003,6 +2003,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
   end
 
+  create_table "provider_import_tombstones", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.string "external_id", null: false
+    t.string "source", null: false
+    t.datetime "updated_at", null: false
+    t.index [ "account_id", "source", "external_id" ], name: "index_provider_import_tombstones_on_account_source_external_id", unique: true
+  end
+
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.integer "count", default: 0, null: false
     t.datetime "created_at", null: false

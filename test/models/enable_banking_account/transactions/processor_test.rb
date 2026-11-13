@@ -78,6 +78,63 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
   end
 
+  test "a deleted entry is not re-imported on the next sync" do
+    identifierless = raw_identifierless_transaction
+    other = raw_identifierless_transaction(amount: "41.00")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ identifierless, other ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+
+    # Delete one entry, as the UI does; the other movement must keep importing.
+    @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(identifierless)).destroy!
+
+    result = nil
+    assert_no_difference "@account.entries.where(source: 'enable_banking').count" do
+      result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    assert_equal 1, result[:skipped]
+    assert_equal 1, result[:imported]
+  end
+
+  test "deleting a survivor does not bring back its retired identities" do
+    identifierless = raw_identifierless_transaction
+    settled = identifierless.merge(entry_reference: "2026-02-02.9")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ identifierless, settled ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    survivor = @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(settled))
+    assert_includes survivor.transaction.extra["superseded_external_ids"],
+                    EnableBankingEntry::Processor.compute_external_id(identifierless)
+
+    survivor.destroy!
+
+    # The stored payload still holds the identifierless row it retired.
+    result = nil
+    assert_no_difference "@account.entries.where(source: 'enable_banking').count" do
+      result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+    assert_equal 2, result[:skipped]
+    assert_equal 0, result[:imported]
+  end
+
+  test "unlinking clears the account's tombstones" do
+    ProviderImportTombstone.create!(account: @account, source: "enable_banking", external_id: "enable_banking_gone")
+
+    @enable_banking_item.unlink_all!
+
+    assert_empty ProviderImportTombstone.where(account: @account, source: "enable_banking")
+  end
+
+  test "removing the provider clears the account's tombstones" do
+    ProviderImportTombstone.create!(account: @account, source: "enable_banking", external_id: "enable_banking_gone")
+
+    @enable_banking_account.destroy!
+
+    assert_empty ProviderImportTombstone.where(account: @account, source: "enable_banking")
+  end
+
   test "a pending identifierless row earlier in the same batch is left to pending->booked reconciliation" do
     pending_raw = raw_identifierless_transaction(amount: "33.00").merge(status: "PDNG", _pending: true)
     settled = raw_identifierless_transaction(amount: "33.00").merge(entry_reference: "2026-02-02.3")
