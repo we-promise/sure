@@ -85,6 +85,31 @@ class MonarchImportTest < ActiveSupport::TestCase
     assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
   end
 
+  test "retrying an import whose data committed before publishing failed keeps what undo restores" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "EUR", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    ExchangeRate.create!(date: Date.new(2024, 1, 3), from_currency: "EUR", to_currency: "USD", rate: 1)
+    account.disable!
+    disabled_at = account.reload.disabled_at
+    mapping("Checking").update!(mappable: account, choices: { "closed" => false })
+    Family.any_instance.stubs(:sync_later).raises(StandardError, "queue down").then.returns(nil)
+
+    @import.reload.publish
+    assert @import.reload.failed?
+    assert @import.data_committed?
+    entry_ids = @import.entries.pluck(:id).sort
+
+    publish!
+    assert_equal entry_ids, @import.entries.pluck(:id).sort
+    assert account.reload.active?
+
+    @import.revert
+    assert_equal [ Date.new(2024, 1, 3), 500, "EUR" ], [ opening.reload.date, opening.amount, opening.currency ]
+    assert account.reload.disabled?
+    assert_in_delta disabled_at, account.disabled_at, 1.second
+  end
+
   test "an opening balance in another currency moves in the account's and comes back in its own" do
     account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
     opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "EUR", name: "Opening balance",
@@ -110,6 +135,39 @@ class MonarchImportTest < ActiveSupport::TestCase
     assert @import.reload.failed?
     assert_match "My Checking", @import.error
     assert_equal 1, opening.reload.amount
+  end
+
+  test "a destination that gained a trade after the choices were saved stops the import" do
+    account = @family.accounts.create!(name: "My Brokerage", balance: 500, currency: "USD", accountable: Investment.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Old Savings").update!(mappable: account, choices: { "closed" => true })
+    security = Security.create!(ticker: "MONA", name: "Monarch Test")
+    account.entries.create!(date: Date.new(2024, 1, 4), amount: 10, currency: "USD", name: "Buy",
+      entryable: Trade.new(security: security, qty: 1, price: 10, currency: "USD"))
+
+    @import.reload.publish
+    assert @import.reload.failed?
+    assert_match "My Brokerage", @import.error
+    assert_empty @import.entries
+    assert_empty @import.accounts
+    assert_not @import.data_committed?
+    assert account.reload.active?
+    assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
+  end
+
+  test "a destination moved to another family stops the import" do
+    account = @family.accounts.create!(name: "My Checking", balance: 500, currency: "USD", accountable: Depository.new)
+    opening = account.entries.create!(date: Date.new(2024, 1, 3), amount: 500, currency: "USD", name: "Opening balance",
+      entryable: Valuation.new(kind: "opening_anchor"))
+    mapping("Checking").update!(mappable: account)
+    account.update_column(:family_id, families(:dylan_family).id)
+
+    @import.reload.publish
+    assert @import.reload.failed?
+    assert_match "My Checking", @import.error
+    assert_empty @import.entries
+    assert_equal [ Date.new(2024, 1, 3), 500 ], [ opening.reload.date, opening.amount ]
   end
 
   test "a lost job that committed is completed, not failed" do

@@ -505,6 +505,11 @@ Rails.application.routes.draw do
   # Hub page fronting budgets + goals under a single "Plan" nav entry.
   resource :plan, only: :show
 
+  # Family-wide investment hub, built on the Reports section framework.
+  resource :portfolio, only: :show do
+    patch :update_preferences
+  end
+
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
     get :picker, on: :collection
@@ -622,6 +627,7 @@ Rails.application.routes.draw do
       post :merge_duplicate
       post :dismiss_duplicate
       post :unlock
+      patch :reconcile
       patch :tags, action: :update_tags
     end
   end
@@ -1060,6 +1066,7 @@ Rails.application.routes.draw do
 
   # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
   post "mcp", to: "mcp#handle"
+  match "mcp", to: "mcp#method_not_allowed", via: %i[get delete]
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
