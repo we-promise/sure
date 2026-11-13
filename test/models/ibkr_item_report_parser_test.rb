@@ -24,6 +24,46 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
     assert_equal 1, second_account[:equity_summary_in_base].size
   end
 
+  # ChangeInPositionValues covers the listed positions only, so a statement
+  # that also holds crypto or spot metals totals short of IBKR's own NAV.
+  test "reads the current balance from the latest NAV row" do
+    parsed = IbkrItem::ReportParser.new(nav_statement_xml).parse
+    account = parsed[:accounts].first
+
+    assert_equal BigDecimal("1500.00"), account[:current_balance]
+    assert_equal BigDecimal("200.00"), account[:cash_balance]
+  end
+
+  # The balance is anchored on the statement's report date, so the figure has
+  # to be the NAV of that date rather than of whichever row is newest.
+  test "prefers the NAV row dated with the statement's report date" do
+    xml = nav_statement_xml(open_positions: open_positions_on("2026-05-07"))
+
+    account = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+
+    assert_equal Date.new(2026, 5, 7), account[:report_date]
+    assert_equal BigDecimal("1400.00"), account[:current_balance]
+  end
+
+  # A NAV dated after report_date is a value the account did not hold on that
+  # date, and the balance is written to report_date.
+  test "ignores a NAV row dated after the statement's report date" do
+    xml = nav_statement_xml(open_positions: open_positions_on("2026-05-06"))
+
+    account = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+
+    assert_equal Date.new(2026, 5, 6), account[:report_date]
+    assert_equal BigDecimal("1000.00"), account[:current_balance]
+  end
+
+  test "falls back to position values plus cash when the statement carries no NAV" do
+    xml = nav_statement_xml.sub(%r{<EquitySummaryInBase>.*</EquitySummaryInBase>}m, "")
+
+    account = IbkrItem::ReportParser.new(xml).parse[:accounts].first
+
+    assert_equal BigDecimal("1000.00"), account[:current_balance]
+  end
+
   test "raises parse error for malformed xml" do
     error = assert_raises(IbkrItem::ReportParser::ParseError) do
       IbkrItem::ReportParser.new("<FlexQueryResponse><FlexStatement>").parse
@@ -55,4 +95,42 @@ class IbkrItemReportParserTest < ActiveSupport::TestCase
 
     assert_equal "Invalid IBKR Flex XML: missing account identifier in FlexStatement.", error.message
   end
+
+  private
+
+    # Positions (800) plus cash (200) come to 1000; the NAV says 1500, the
+    # difference being whatever the statement holds outside ChangeInPositionValues.
+    # The BASE_SUMMARY row shares the latest date, so it would be picked if it
+    # were not skipped.
+    def nav_statement_xml(open_positions: "")
+      <<~XML
+        <FlexQueryResponse queryName="Sure Test">
+          <FlexStatement accountId="U1234567" fromDate="2026-05-07" toDate="2026-05-08">
+            <AccountInformation accountId="U1234567" currency="USD" />
+            <ChangeInPositionValues>
+              <ChangeInPositionValue accountId="U1234567" currency="BASE_SUMMARY" endOfPeriodValue="800.00" />
+            </ChangeInPositionValues>
+            <CashReport>
+              <CashReportCurrency currency="BASE_SUMMARY" endingCash="200.00" />
+            </CashReport>
+            #{open_positions}
+            <EquitySummaryInBase>
+              <EquitySummaryByReportDateInBase currency="USD" reportDate="2026-05-07" total="1400.00" />
+              <EquitySummaryByReportDateInBase currency="USD" reportDate="2026-05-08" total="1500.00" />
+              <EquitySummaryByReportDateInBase currency="BASE_SUMMARY" reportDate="2026-05-08" total="9999.00" />
+            </EquitySummaryInBase>
+          </FlexStatement>
+        </FlexQueryResponse>
+      XML
+    end
+
+    # report_date follows the open positions when the statement has any, so a
+    # date of their own is what puts it out of step with the latest NAV row.
+    def open_positions_on(date)
+      <<~XML
+        <OpenPositions>
+          <OpenPosition assetCategory="STK" conid="265598" securityID="US0378331005" securityIDType="ISIN" symbol="AAPL" position="10" markPrice="150.00" currency="USD" fxRateToBase="1" costBasisPrice="125.50" reportDate="#{date}" side="Long" />
+        </OpenPositions>
+      XML
+    end
 end
