@@ -248,7 +248,7 @@ id:
         usage: "%{used} dari %{limit} permintaan bulanan digunakan"
       chimnie_settings:
         title: Chimnie
-        description: Masukkan kunci API Chimnie Anda untuk menilai properti residensial Inggris berdasarkan UPRN-nya. Buat kunci gratis di dashboard.chimnie.com (pendaftaran memerlukan alamat email bisnis atau domain kustom; alamat Gmail, Outlook, dan sejenisnya tidak diterima). Valuasi UPRN gratis dan diperbarui setiap bulan; Sure membatasinya hingga 1.000 permintaan per bulan, yang dapat Anda ubah dengan variabel lingkungan CHIMNIE_MAX_REQUESTS_PER_MONTH.
+        description: Masukkan kunci API Chimnie Anda untuk menilai properti residensial Inggris Raya berdasarkan UPRN-nya. Buat kunci gratis di dashboard.chimnie.com (pendaftaran memerlukan alamat email bisnis atau domain kustom; alamat Gmail, Outlook, dan sejenisnya tidak diterima). Valuasi UPRN gratis dan diperbarui setiap bulan; Sure membatasinya hingga 1.000 permintaan per bulan, yang dapat Anda ubah dengan variabel lingkungan CHIMNIE_MAX_REQUESTS_PER_MONTH.
         env_configured_message: Berhasil dikonfigurasi melalui variabel lingkungan CHIMNIE_API_KEY.
         label: Kunci API
         placeholder: Masukkan kunci API Chimnie Anda di sini
