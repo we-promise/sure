@@ -1,0 +1,71 @@
+name: Refresh LLM pricing
+
+# Opens a pull request that refreshes config/llm_pricing.yml from LiteLLM's
+# price list, unless one is still open. A maintainer checks the changes against
+# the providers' pricing pages before merging.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: llm-pricing
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    if: github.repository == 'we-promise/sure'
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      BRANCH: automation/refresh-llm-pricing
+    steps:
+      - name: Check out main
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          ref: main
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@97ecb7b512899eb71ab1bf2310a624c6f1589ac6 # v1.308.0
+        with:
+          ruby-version: .ruby-version
+
+      - name: Refresh prices
+        run: bin/update_llm_pricing > "$RUNNER_TEMP/llm-pricing.md"
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- config/llm_pricing.yml; then
+            echo "LLM pricing already matches LiteLLM."
+            exit 0
+          fi
+
+          # One refresh PR at a time: never rewrite a branch that may be under review.
+          # An API error fails the step here rather than looking like "no pull request".
+          open_pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" --state open \
+            --json url,headRepositoryOwner \
+            --jq "[.[] | select(.headRepositoryOwner.login == \"$GITHUB_REPOSITORY_OWNER\") | .url][0] // empty")
+          if [[ -n "$open_pr" ]]; then
+            echo "::warning::A pricing refresh pull request is still open ($open_pr). Merge or close it, then rerun this workflow."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git commit -m "Refresh LLM pricing from LiteLLM" -- config/llm_pricing.yml
+          git push --force origin "$BRANCH"
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$BRANCH" \
+            --title "Refresh LLM pricing from LiteLLM" --body-file "$RUNNER_TEMP/llm-pricing.md"
+
+          # Pull requests opened with GITHUB_TOKEN do not trigger pull_request workflows.
+          if ! gh workflow run pr.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"; then
+            echo "::warning::Could not dispatch pr.yml for $BRANCH"
+          fi

@@ -33,6 +33,16 @@ class Money::FormattingTest < ActiveSupport::TestCase
     end
   end
 
+  test "EUR in en-IE uses English grouping, not the currency's European punctuation" do
+    money = Money.new(BigDecimal("1234.5"), "EUR")
+
+    I18n.with_locale(:"en-IE") do
+      assert_equal ",", money.format_options(:"en-IE")[:delimiter]
+      assert_equal ".", money.format_options(:"en-IE")[:separator]
+      assert_equal "€1,234.50", money.format
+    end
+  end
+
   test "plain formatting does not go through number_to_currency" do
     money = Money.new(BigDecimal("1234.5"), "USD")
     money.expects(:number_to_currency).never
