@@ -605,7 +605,7 @@ class PaycheckFlowPlanner
               amount = (occurrence[:amount_cents] * edge[:value_percent]).round(0, half: :up)
               amounts[edge[:account_id]] = amount
               spent += amount
-            # leftover is computed below
+              # leftover is computed below
             end
           end
           leftover = occurrence[:amount_cents] - spent
@@ -656,9 +656,9 @@ class PaycheckFlowPlanner
         else # income_ratio
           share = partner_income_month[partner]
           weights[partner] = if n.positive? && total_attributed_income.positive?
-                                share / total_attributed_income
-                              else BigDecimal(1) / n
-                              end if n.positive?
+            share / total_attributed_income
+          else BigDecimal(1) / n
+          end if n.positive?
         end
       end
 
@@ -763,13 +763,13 @@ class PaycheckFlowPlanner
 
           funding = bank_funding_dates.fetch(bank_id, [])
           scale = if funding.empty?
-                    # Unfunded bank: the legacy global proration keeps the
-                    # gap visible on every paycheck date.
-                    divisor
-                  else
-                    next unless funding.include?(date)
-                    funding.size
-                  end
+            # Unfunded bank: the legacy global proration keeps the
+            # gap visible on every paycheck date.
+            divisor
+          else
+            next unless funding.include?(date)
+            funding.size
+          end
 
           bills = allocs.select { |a| a[:mode] == "required" }.sum { |a| allocation_monthly(a) }
           fixed = allocs.select { |a| a[:mode] == "specific" }.sum { |a| a[:value_cents] || BigDecimal(0) }
@@ -915,12 +915,12 @@ class PaycheckFlowPlanner
             band += entry[:leftover] if leftover_edge && leftover_edge[:account_id] == bank_id
             inflow = (bank_inflow[date] || {})[bank_id] || BigDecimal(0)
             share = if inflow.positive? && band.positive?
-                      band / inflow
-                    elsif band.positive?
-                      BigDecimal(1)
-                    else
-                      BigDecimal(0)
-                    end
+              band / inflow
+            elsif band.positive?
+              BigDecimal(1)
+            else
+              BigDecimal(0)
+            end
             next if share.zero?
 
             demand += share * ((demand_by_bank[date] || {})[bank_id] || BigDecimal(0))
@@ -987,10 +987,10 @@ class PaycheckFlowPlanner
             end
 
             share = if total_base.positive?
-                      bases[index] / total_base
-                    else
-                      BigDecimal(1) / targets.size
-                    end
+              bases[index] / total_base
+            else
+              BigDecimal(1) / targets.size
+            end
             pool_share = pool.positive? ? (pool * share).round(0, half: :up) : BigDecimal(0)
             next if pool_share.zero?
 
