@@ -537,14 +537,14 @@ class PlanFlowsController < ApplicationController
           next unless IncomeAccountAllocation.modes.include?(mode)
 
           value = case mode
-                  when "specific"
-                    row["value"].to_s.strip.presence
-                  when "percent"
-                    percent = row["value"].to_s.strip.to_d / 100
-                    (percent.positive? && percent <= 1) ? percent : 0
-                  else
-                    nil
-                  end
+          when "specific"
+            row["value"].to_s.strip.presence
+          when "percent"
+            percent = row["value"].to_s.strip.to_d / 100
+            (percent.positive? && percent <= 1) ? percent : 0
+          else
+            nil
+          end
 
           edge = existing.delete(series.id)
           if edge

@@ -66,33 +66,33 @@ class BankLogoSlugs
 
     private
 
-    def logo_dir
-      Rails.root.join("app", "assets", "images", LOGO_DIR)
-    end
-
-    def raw_config
-      @raw_config ||= begin
-        config = Rails.application.config_for("bank_logo_slugs")
-        config = {} unless config.is_a?(Hash)
-        # config_for deep_symbolizes keys; the DB + payload use STRING slugs,
-        # so normalize both maps to string keys (values stay strings).
-        {
-          labels: stringify_map(config[:labels]),
-          keywords: stringify_map(config[:keywords])
-        }
-      rescue StandardError
-        { labels: {}, keywords: {} }
+      def logo_dir
+        Rails.root.join("app", "assets", "images", LOGO_DIR)
       end
-    end
 
-    def labels
-      raw_config[:labels]
-    end
+      def raw_config
+        @raw_config ||= begin
+          config = Rails.application.config_for("bank_logo_slugs")
+          config = {} unless config.is_a?(Hash)
+          # config_for deep_symbolizes keys; the DB + payload use STRING slugs,
+          # so normalize both maps to string keys (values stay strings).
+          {
+            labels: stringify_map(config[:labels]),
+            keywords: stringify_map(config[:keywords])
+          }
+        rescue StandardError
+          { labels: {}, keywords: {} }
+        end
+      end
 
-    def stringify_map(map)
-      return {} unless map.is_a?(Hash)
+      def labels
+        raw_config[:labels]
+      end
 
-      map.to_h { |key, value| [ key.to_s, value ] }
-    end
+      def stringify_map(map)
+        return {} unless map.is_a?(Hash)
+
+        map.to_h { |key, value| [ key.to_s, value ] }
+      end
   end
 end
