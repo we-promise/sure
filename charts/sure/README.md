@@ -657,12 +657,12 @@ hpa:
 
 ## Pipelock (AI agent security proxy)
 
-[Pipelock](https://github.com/luckyPipewrench/pipelock) is an optional security proxy that scans AI agent traffic for secret exfiltration, prompt injection, tool poisoning, and SSRF. It runs as a separate Deployment with two listeners:
+[Pipelock](https://github.com/pipelab-org/pipelock) is an optional security proxy that scans AI agent traffic for secret exfiltration, prompt injection, tool poisoning, and SSRF. It runs as a separate Deployment with two listeners:
 
 - **Forward proxy** (port 8888): Applies destination, SSRF, rate, budget, CONNECT-header DLP, and receipt controls to HTTPS tunnels from clients that honor the proxy variables. The chart doesn't configure TLS interception, so encrypted bodies stay opaque.
 - **MCP reverse proxy** (port 8889): Scans inbound MCP traffic from external AI assistants.
 
-The chart pins Pipelock 3.4.0 by tag and multi-architecture image digest. Read the [Pipelock release notes](https://github.com/luckyPipewrench/pipelock/releases/tag/v3.4.0) before overriding that pin.
+The chart pins Pipelock 3.8.0 by tag and multi-architecture image digest. Read the [Pipelock release notes](https://github.com/pipelab-org/pipelock/releases/tag/v3.8.0) before overriding that pin.
 
 ### Enabling Pipelock
 
@@ -670,7 +670,7 @@ The chart pins Pipelock 3.4.0 by tag and multi-architecture image digest. Read t
 pipelock:
   enabled: true
   image:
-    tag: "3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c"
+    tag: "3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f"
   mode: balanced   # strict, balanced, or audit
 ```
 
@@ -747,7 +747,7 @@ kubectl create secret generic sure-pipelock-receipts \
   --from-file=flight-recorder-signing.key=./flight-recorder-signing.key
 ```
 
-If you don't have the `pipelock` binary installed, generate the key with the pinned image instead: `docker run --rm -v "$PWD:/out" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
+If you don't have the `pipelock` binary installed, generate the key with the pinned image instead: `docker run --rm -v "$PWD:/out" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f signing key generate --purpose receipt-signing --out /out/flight-recorder-signing.key --id sure-k8s`.
 
 Then mount persistent evidence storage and the key:
 
@@ -839,14 +839,13 @@ Keep `podSecurityContext.fsGroup` (1000 by default) so Pipelock can read the mou
 
 ### Metrics (Prometheus)
 
-Pipelock exposes `/metrics` on the forward proxy port. Enable scraping with a ServiceMonitor:
+Pipelock 3.8 and later serve `/metrics` and `/stats` only on a dedicated listener, not the forward proxy port. Enabling the ServiceMonitor turns that listener on (port 9091, `pipelock.metrics.port`) and scrapes it; set `pipelock.metrics.enabled: true` to expose it without a ServiceMonitor. The listener has no authentication, so restrict access to it with a NetworkPolicy.
 
 ```yaml
 pipelock:
   serviceMonitor:
     enabled: true
     interval: 30s
-    portName: proxy   # matches Service port name for 8888
     additionalLabels:
       release: prometheus   # match your Prometheus Operator selector
 ```

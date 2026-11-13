@@ -611,7 +611,7 @@ it implements.
 
 ### Security with Pipelock
 
-When [Pipelock](https://github.com/luckyPipewrench/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), Sure configures two mediated routes:
+When [Pipelock](https://github.com/pipelab-org/pipelock) is enabled (`pipelock.enabled=true` in Helm, or the `pipelock` service in Docker Compose), Sure configures two mediated routes:
 
 - **Outbound** (Sure -> agent): routed through Pipelock's forward proxy via `HTTPS_PROXY`
 - **Inbound** (agent -> Sure /mcp): routed through Pipelock's MCP reverse proxy (port 8889)
@@ -636,7 +636,7 @@ pipelock:
         action: block
 ```
 
-See the [Pipelock documentation](https://github.com/luckyPipewrench/pipelock) for tool policy configuration details.
+See the [Pipelock documentation](https://github.com/pipelab-org/pipelock) for tool policy configuration details.
 
 ### Network Policies (Kubernetes)
 
