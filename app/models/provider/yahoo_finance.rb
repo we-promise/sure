@@ -1007,7 +1007,10 @@ class Provider::YahooFinance < Provider
     # time slot in the shared cache (Redis in production), so provider
     # instances, Sidekiq workers and web processes share one request budget
     # instead of each pacing itself. A request queues for at most
-    # max_request_wait seconds. A cache that refuses the claim (Redis down)
+    # max_request_wait seconds. When every slot in that window is taken, the
+    # request does not claim one: it waits out the window and then goes, so
+    # callers beyond the window can burst together. That bounds latency at the
+    # cost of a strict budget. A cache that refuses the claim (Redis down)
     # leaves the request unpaced after that single attempt.
     def wait_for_request_slot
       interval = min_request_interval
