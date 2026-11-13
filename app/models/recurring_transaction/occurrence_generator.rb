@@ -3,8 +3,9 @@ class RecurringTransaction
   # upsert keyed on (series, original_due_on), so re-running only adds missing
   # rows and never duplicates or touches existing ones.
   #
-  # Only scheduled, allocation-free, not-yet-due rows are ever deleted. Anything
-  # closed or carrying a payment is immutable history.
+  # Only scheduled, allocation-free rows are ever deleted, and only ones that
+  # are not yet due — except a one-payment plan, whose single date moves as a
+  # whole. Anything closed or carrying a payment is immutable history.
   class OccurrenceGenerator
     HORIZON_DAYS = 90
 
@@ -28,6 +29,12 @@ class RecurringTransaction
       # cycle start, since their history predates the row.
       from = [ from, series.anchor_date ].compact.max if series.manual?
 
+      # A one-payment plan's only date can already be past. The clamp above
+      # refuses to look behind today, which would drop that only occurrence.
+      if single_payment? && series.anchor_date
+        from = [ from, series.anchor_date ].min
+      end
+
       through ||= default_horizon(schedule)
 
       upsert_window(from, through)
@@ -36,11 +43,14 @@ class RecurringTransaction
     # After a schedule edit: drop the re-generatable future and rebuild it under
     # the new rules. Rows with payments or closed state are kept as they were.
     def regenerate_future!(through: nil)
-      series.recurring_occurrences
-            .open_status
-            .where("due_on >= ?", Date.current)
-            .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-            .delete_all
+      scope = series.recurring_occurrences
+                    .open_status
+                    .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
+      # A one-payment plan has nowhere else to land. Dropping only future rows
+      # would keep the old date beside the date it moved to.
+      scope = scope.where("due_on >= ?", Date.current) unless single_payment?
+
+      scope.delete_all
 
       generate!(through: through)
     end
@@ -54,6 +64,10 @@ class RecurringTransaction
     end
 
     private
+      def single_payment?
+        series.ends_after_count? && series.end_after_count == 1
+      end
+
       def default_horizon(schedule)
         horizon = Date.current + HORIZON_DAYS
         next_due = schedule.first_occurrence_after(Date.current)

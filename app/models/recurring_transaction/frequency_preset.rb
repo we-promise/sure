@@ -4,7 +4,12 @@ class RecurringTransaction
   # interval 2); anything the picker cannot express reads back as CUSTOM and
   # is left untouched.
   class FrequencyPreset
-    PRESETS = %w[monthly weekly biweekly semimonthly quarterly semiannual annual].freeze
+    # "once" is one occurrence on a date. It is stored as a yearly rule capped
+    # at a single payment, so the schedule engine can place it without a new
+    # frequency value. Listed with the named presets so the picker and the
+    # assistant offer the same set.
+    ONCE = "once"
+    PRESETS = %w[once monthly weekly biweekly semimonthly quarterly semiannual annual].freeze
     CUSTOM = "custom"
 
     # "Every N weeks, months or years": one rule of any interval, for the
@@ -15,13 +20,19 @@ class RecurringTransaction
     MAX_INTERVAL = 99
 
     Detection = Data.define(:key, :day_of_month, :second_day_of_month, :weekday, :month_of_year,
-                            :interval, :interval_unit)
+                            :interval, :interval_unit, :once_on)
 
     class << self
       # Reads the series' rules back into picker values. Zero rules is the
       # legacy implicit monthly.
       def detect(recurring)
         rules = live_rules(recurring)
+
+        if once_schedule?(recurring, rules)
+          rule = rules.first
+          return detection(key: ONCE, once_on: recurring.anchor_date || recurring.next_expected_date,
+                           day_of_month: rule.day_of_month, month_of_year: rule.month_of_year)
+        end
 
         case
         when rules.empty?
@@ -50,7 +61,7 @@ class RecurringTransaction
       # An out-of-range interval or unknown unit is reported on the record and
       # rewrites nothing; callers check errors before saving.
       def apply(recurring, preset:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil,
-                interval: nil, interval_unit: nil)
+                interval: nil, interval_unit: nil, once_on: nil)
         return false if preset.blank? || preset == CUSTOM
         return false unless PRESETS.include?(preset) || preset == INTERVAL
 
@@ -60,6 +71,16 @@ class RecurringTransaction
           return false
         end
 
+        was_once = once_schedule?(recurring)
+        once_date = nil
+        if preset == ONCE
+          once_date = resolve_once_date(recurring, once_on)
+          if once_date.nil?
+            recurring.errors.add(:base, I18n.t("recurring_transactions.create.due_date_required"))
+            return false
+          end
+        end
+
         reference = recurring.anchor_date || recurring.last_occurrence_date || Date.current
         target = target_detection(recurring, reference, preset,
                                   day_of_month: presence_int(day_of_month),
@@ -67,10 +88,15 @@ class RecurringTransaction
                                   weekday: presence_int(weekday),
                                   month_of_year: presence_int(month_of_year),
                                   interval: interval,
-                                  interval_unit: interval_unit)
+                                  interval_unit: interval_unit,
+                                  once_on: once_date)
         return false if target == detect(recurring)
 
         write(recurring, target, reference)
+        # Leaving "once" must drop the one-payment cap, or the next cadence
+        # would also end after a single occurrence. An installment owns that
+        # cap itself, so its count stays.
+        release_once_end(recurring) if was_once && preset != ONCE && !recurring.typed_installment?
         true
       end
 
@@ -95,6 +121,12 @@ class RecurringTransaction
         when "annual"
           I18n.t("recurring_transactions.frequency.annual",
                  month: I18n.t("date.month_names")[found.month_of_year], day: day_phrase(found.day_of_month))
+        when ONCE
+          if found.once_on
+            I18n.t("recurring_transactions.frequency.once_on", date: I18n.l(found.once_on, format: :long))
+          else
+            I18n.t("recurring_transactions.frequency.once")
+          end
         when INTERVAL
           interval_label(found)
         else
@@ -104,8 +136,43 @@ class RecurringTransaction
 
       private
         def detection(key:, day_of_month: nil, second_day_of_month: nil, weekday: nil, month_of_year: nil,
-                      interval: nil, interval_unit: nil)
-          Detection.new(key:, day_of_month:, second_day_of_month:, weekday:, month_of_year:, interval:, interval_unit:)
+                      interval: nil, interval_unit: nil, once_on: nil)
+          Detection.new(key:, day_of_month:, second_day_of_month:, weekday:, month_of_year:, interval:, interval_unit:,
+                        once_on:)
+        end
+
+        # A one-payment yearly rule that is not an installment. Installments
+        # carry their own count, so a one-payment plan stays an installment.
+        def once_schedule?(recurring, rules = live_rules(recurring))
+          return false if recurring.typed_installment?
+          return false unless recurring.end_mode == "after_count" && recurring.end_after_count == 1
+          return false unless rules.size == 1
+
+          rule = rules.first
+          rule.frequency == "yearly" && rule.interval == 1 && rule.day_of_month.present? && rule.weekday.blank?
+        end
+
+        # A blank date keeps the series' current anchor. A date that was typed
+        # but cannot be parsed is refused, rather than quietly kept.
+        def resolve_once_date(recurring, once_on)
+          return nil if once_on.present? && strict_date(once_on).nil?
+
+          strict_date(once_on) || recurring.anchor_date || recurring.next_expected_date
+        end
+
+        def strict_date(value)
+          return value if value.is_a?(Date)
+          return nil if value.blank?
+
+          Date.iso8601(value.to_s)
+        rescue Date::Error
+          nil
+        end
+
+        def release_once_end(recurring)
+          recurring.end_mode = "never"
+          recurring.end_after_count = nil
+          recurring.end_on = nil
         end
 
         # Monthly and yearly rules anchored on an nth weekday ("3rd Friday")
@@ -147,8 +214,10 @@ class RecurringTransaction
         # The Detection the submitted form values resolve to, with the same
         # defaulting write() will use, so equality against detect() is exact.
         def target_detection(recurring, reference, preset, day_of_month:, second_day_of_month:, weekday:, month_of_year:,
-                             interval:, interval_unit:)
+                             interval:, interval_unit:, once_on:)
           case preset
+          when ONCE
+            detection(key: ONCE, once_on: once_on, day_of_month: once_on.day, month_of_year: once_on.month)
           when "monthly", "quarterly", "semiannual"
             detection(key: preset, day_of_month: day_of_month || recurring.expected_day_of_month)
           when "weekly", "biweekly"
@@ -195,6 +264,16 @@ class RecurringTransaction
           when "annual"
             build_rule(recurring, frequency: "yearly", day_of_month: target.day_of_month,
                                   month_of_year: target.month_of_year)
+          when ONCE
+            # The anchor is the only due date. next_expected_date is the hint
+            # the bills list reads, so it has to move with that date.
+            recurring.anchor_date = target.once_on
+            recurring.next_expected_date = target.once_on
+            recurring.end_mode = "after_count"
+            recurring.end_after_count = 1
+            recurring.end_on = nil
+            build_rule(recurring, frequency: "yearly", day_of_month: target.day_of_month,
+                                  month_of_year: target.month_of_year)
           when INTERVAL
             recurring.anchor_date ||= reference
             build_rule(recurring, frequency: target.interval_unit, interval: target.interval,
@@ -225,7 +304,7 @@ class RecurringTransaction
         # cadences; other cadences populate it but do not schedule from it.
         def authoritative_day(target, reference)
           day_anchored = case target.key
-          when "monthly", "semimonthly", "quarterly", "semiannual", "annual" then true
+          when "monthly", "semimonthly", "quarterly", "semiannual", "annual", ONCE then true
           when INTERVAL then target.interval_unit != "weekly"
           else false
           end
