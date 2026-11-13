@@ -1,24 +1,14 @@
 module TransactionsHelper
-  # A counterparty's own bank account identifier is arguably more sensitive
-  # than the user's own account IBAN (it's a third party's number, not
-  # something the viewing family controls), so it's masked to the last 4
-  # characters by default -- matching the existing convention for the
-  # user's own linked-account IBAN in
-  # enable_banking_items/setup_accounts.html.erb -- rather than relying
-  # solely on the opt-in Privacy Mode blur.
-  def mask_counterparty_account_value(value)
-    return value if value.blank? || value.length <= 4
-    "•#{value.last(4)}"
-  end
-
   # Returns [label, masked value] for the counterparty row, or nil when the
   # transaction carries no counterparty data. Only an actual IBAN is labelled
-  # as one; the provider's generic account id gets a neutral label.
+  # as one; the provider's generic account id gets a neutral label. The value
+  # is always masked to its last 4 characters: it is a third party's account
+  # number, so Privacy Mode's opt-in blur alone is not enough.
   def counterparty_account_display(transaction)
     if (iban = transaction.counterparty_iban.presence)
-      [ t("transactions.show.counterparty_iban_label"), mask_counterparty_account_value(iban) ]
+      [ t("transactions.show.counterparty_iban_label"), mask_last4(iban) ]
     elsif (account_id = transaction.counterparty_account_id.presence)
-      [ t("transactions.show.counterparty_account_label"), mask_counterparty_account_value(account_id) ]
+      [ t("transactions.show.counterparty_account_label"), mask_last4(account_id) ]
     end
   end
 
