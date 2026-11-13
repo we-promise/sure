@@ -72,17 +72,14 @@ class EnableBankingEntry::Processor
 
   # External ids for an ordered list of raw transactions, one per row.
   #
-  # Enable Banking does not guarantee transaction_id to be unique, so booked rows
-  # that share one but carry different entry_references are different movements,
-  # and compute_external_id alone would store them under one id. One of them
-  # keeps enable_banking_<transaction_id>, so entries imported before this keep
-  # their id; every other one gets enable_banking_<transaction_id>_<entry_reference>
-  # (hashed if that is another row's plain id). Rows without an entry_reference
-  # count as one reference.
-  #
-  # A row identical to an earlier one apart from entry_reference is the same
-  # movement, as the importer's dedup treats it, so it takes that row's
-  # reference: a reference re-issued between fetches does not add an entry.
+  # Enable Banking does not guarantee transaction_id to be unique, while
+  # entry_reference identifies a row, so booked rows that share a transaction_id
+  # but carry different entry_references are different movements, and
+  # compute_external_id alone would store them under one id. One of them keeps
+  # enable_banking_<transaction_id>, the id compute_external_id gives it, so no
+  # stored entry changes id; every other one gets
+  # enable_banking_<transaction_id>_<MD5(entry_reference)>. Rows without an
+  # entry_reference count as one reference.
   #
   # Which one keeps the plain id is read from the account's entries when an
   # account is given, so it does not depend on the order rows are stored or
@@ -96,26 +93,18 @@ class EnableBankingEntry::Processor
   def self.external_ids_for(raw_transactions, account: nil)
     rows = raw_transactions.map(&:with_indifferent_access)
     ids = rows.map { |data| compute_external_id(data) }
-    plain_ids = ids.to_set
 
     groups = rows.each_index.select { |i| rows[i][:transaction_id].present? && !pending_payload?(rows[i]) }
-                 .group_by { |i| ids[i] }.filter_map do |legacy_id, indexes|
-      reference_by_content = {}
-      references = indexes.index_with do |i|
-        reference_by_content[compute_external_id(rows[i].except(:transaction_id, :entry_reference))] ||= rows[i][:entry_reference].to_s
-      end
+                 .group_by { |i| ids[i] }.map do |legacy_id, indexes|
+      references = indexes.index_with { |i| rows[i][:entry_reference].to_s }
       rows_by_reference = references.invert.transform_values { |i| rows[i] }
-      next if rows_by_reference.size < 2
-
-      suffixed = rows_by_reference.keys.index_with do |reference|
-        id = "#{legacy_id}_#{reference}"
-        plain_ids.include?(id) ? "#{legacy_id}_#{Digest::MD5.hexdigest(reference)}" : id
-      end
+      suffixed = rows_by_reference.keys.index_with { |reference| "#{legacy_id}_#{Digest::MD5.hexdigest(reference)}" }
       [ legacy_id, references, rows_by_reference, suffixed ]
     end
 
     stored = if account && groups.any?
-      account.entries.where(source: "enable_banking", external_id: groups.flat_map { |g| [ g.first, *g.last.values ] }).index_by(&:external_id)
+      ids_to_load = groups.flat_map { |legacy_id, _, rows_by_reference, suffixed| [ (legacy_id if rows_by_reference.size > 1), *suffixed.values ] }
+      account.entries.where(source: "enable_banking", external_id: ids_to_load.compact).index_by(&:external_id)
     end
 
     groups.each do |legacy_id, references, rows_by_reference, suffixed|
@@ -129,9 +118,9 @@ class EnableBankingEntry::Processor
   # The entry_reference that keeps legacy_id among rows sharing a transaction_id.
   #
   # A reference already stored under its suffixed id keeps it. Of the others, the
-  # one matching the entry already stored under legacy_id keeps that entry, so an
-  # entry two rows used to overwrite, or a pending entry, stays with the movement
-  # it shows: signed amount and date, else signed amount alone (a pending or
+  # one matching the entry stored under legacy_id keeps that entry, so a pending
+  # entry, or one that showed only one of the rows, stays with the movement it
+  # shows: signed amount and date, else signed amount alone (a pending or
   # user-edited date differs); failing a match, the first in payload order. nil
   # when every reference already has its own entry, e.g. the legacy row is no
   # longer in the payload.
@@ -142,19 +131,21 @@ class EnableBankingEntry::Processor
     legacy_entry = stored[legacy_id]
     return candidates.first if legacy_entry.nil? || candidates.size < 2
 
-    candidates.find { |reference| same_movement?(legacy_entry, rows_by_reference[reference], timezone) } ||
-      candidates.find { |reference| same_movement?(legacy_entry, rows_by_reference[reference], nil, date: false) } ||
-      candidates.first
+    # max_by keeps the first of equal scores.
+    candidates.max_by { |reference| movement_match(legacy_entry, rows_by_reference[reference], timezone) }
   end
 
-  def self.same_movement?(entry, data, timezone, date: true)
+  # 2: same signed amount and date as the entry; 1: same signed amount; 0: neither.
+  def self.movement_match(entry, data, timezone)
     amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
-    return false if amount.blank?
+    return 0 if amount.blank?
 
     signed = BigDecimal(amount.to_s).abs * (data[:credit_debit_indicator] == "CRDT" ? -1 : 1)
-    entry.amount == signed && (!date || entry.date == transaction_date(data, timezone))
+    return 0 unless entry.amount == signed
+
+    entry.date == transaction_date(data, timezone) ? 2 : 1
   rescue ArgumentError, TypeError
-    false
+    0
   end
 
   # True when the ASPSP supplied no identifier of its own, so compute_external_id

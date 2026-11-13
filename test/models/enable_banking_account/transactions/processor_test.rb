@@ -385,6 +385,10 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     }
   end
 
+  def sibling_id(entry_reference)
+    "enable_banking_tid-x_#{Digest::MD5.hexdigest(entry_reference)}"
+  end
+
   test "rows sharing a transaction_id with different entry_references import as separate entries" do
     first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
     second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
@@ -395,7 +399,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     entries = @account.entries.where(source: "enable_banking")
     assert_equal 2, entries.count
     assert_equal BigDecimal("9.00"), entries.find_by!(external_id: "enable_banking_tid-x").amount
-    assert_equal BigDecimal("7.00"), entries.find_by!(external_id: "enable_banking_tid-x_r-b").amount
+    assert_equal BigDecimal("7.00"), entries.find_by!(external_id: sibling_id("r-b")).amount
   end
 
   test "an entry already stored under a shared transaction_id keeps its id when a sibling row arrives" do
@@ -437,7 +441,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
 
     assert_equal before, @account.entries.where(source: "enable_banking").pluck(:id, :external_id, :amount).sort
-    assert_equal [ "enable_banking_tid-x", "enable_banking_tid-x_r-b" ], before.map(&:second).sort
+    assert_equal [ "enable_banking_tid-x", sibling_id("r-b") ], before.map(&:second).sort
     assert_not @account.entries.find_by!(external_id: "enable_banking_tid-x").transaction.pending?
   end
 
@@ -455,7 +459,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal before, @account.entries.where(source: "enable_banking").pluck(:id, :external_id, :amount).sort
   end
 
-  test "an entry two rows used to overwrite keeps the movement it shows" do
+  test "an entry showing one of two rows sharing a transaction_id keeps that movement" do
     first = raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00")
     second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
 
@@ -470,11 +474,11 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
 
     assert_equal BigDecimal("7.00"), collapsed.reload.amount
     assert_equal "enable_banking_tid-x", collapsed.external_id
-    assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x_r-a").amount
+    assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: sibling_id("r-a")).amount
     assert_equal 2, @account.entries.where(source: "enable_banking").count
   end
 
-  test "a user-edited entry two rows used to overwrite keeps the movement with its amount" do
+  test "a user-edited entry showing one of the rows keeps the movement with its amount" do
     collapsed = create_transaction(
       account: @account, name: "Laundromat", date: 1.day.ago.to_date, amount: 7, currency: "EUR",
       external_id: "enable_banking_tid-x", source: "enable_banking"
@@ -487,19 +491,45 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     ])
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
 
-    assert_equal [ [ "enable_banking_tid-x", BigDecimal("7.00") ], [ "enable_banking_tid-x_r-a", BigDecimal("9.00") ] ],
+    assert_equal [ [ "enable_banking_tid-x", BigDecimal("7.00") ], [ sibling_id("r-a"), BigDecimal("9.00") ] ],
                  @account.entries.where(source: "enable_banking").order(:external_id).pluck(:external_id, :amount)
   end
 
-  test "a suffixed id does not take another row's plain id" do
-    @enable_banking_account.update!(raw_transactions_payload: [
-      raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"),
-      raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00"),
+  test "a sibling's id does not change when a later row's transaction_id equals it" do
+    rows = [ raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"), raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00") ]
+    @enable_banking_account.update!(raw_transactions_payload: rows)
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    @account.entries.find_by!(external_id: sibling_id("r-b")).mark_user_modified!
+
+    @enable_banking_account.update!(raw_transactions_payload: rows + [
       raw_shared_tid_transaction(entry_reference: "r-z", amount: "3.00").merge(transaction_id: "tid-x_r-b")
     ])
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
 
     assert_equal %w[3.0 7.0 9.0], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_s).sort
+  end
+
+  test "rows with identical content and different entry_references stay separate entries" do
+    @enable_banking_account.update!(raw_transactions_payload: [
+      raw_shared_tid_transaction(entry_reference: "r-1", amount: "2.50"),
+      raw_shared_tid_transaction(entry_reference: "r-2", amount: "2.50")
+    ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal [ "enable_banking_tid-x", sibling_id("r-2") ], @account.entries.where(source: "enable_banking").pluck(:external_id).sort
+  end
+
+  test "a lone sibling with its own entry does not take over the plain id" do
+    @enable_banking_account.update!(raw_transactions_payload: [
+      raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"),
+      raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+    ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    @enable_banking_account.update!(raw_transactions_payload: [ raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00") ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal %w[7.0 9.0], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_s).sort
   end
 
   test "a sibling without entry_reference gets its own entry" do
@@ -513,7 +543,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal %w[3.0 7.0 9.0], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_s).sort
   end
 
-  test "an entry two rows used to overwrite stays with the row of its direction" do
+  test "an entry showing one of the rows stays with the row of its direction" do
     refund = create_transaction(
       account: @account, name: "Laundromat", date: 2.days.ago.to_date, amount: -9, currency: "EUR",
       external_id: "enable_banking_tid-x", source: "enable_banking"
@@ -526,6 +556,6 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
 
     assert_equal BigDecimal("-9.00"), refund.reload.amount
-    assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x_r-a").amount
+    assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: sibling_id("r-a")).amount
   end
 end

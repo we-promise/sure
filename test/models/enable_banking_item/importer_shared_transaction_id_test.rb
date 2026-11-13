@@ -38,7 +38,7 @@ class EnableBankingItem::ImporterSharedTransactionIdTest < ActiveSupport::TestCa
     sync(booked: [ row("r-b", "7.00"), row("r-a", "9.00") ])
 
     assert_equal [ "r-a", "r-b" ], stored_refs
-    assert_equal({ "enable_banking_tid-x" => BigDecimal("9.00"), "enable_banking_tid-x_r-b" => BigDecimal("7.00") }, amounts_by_id)
+    assert_equal({ "enable_banking_tid-x" => BigDecimal("9.00"), sibling_id("r-b") => BigDecimal("7.00") }, amounts_by_id)
     assert_equal legacy.id, entry!("enable_banking_tid-x").id
   end
 
@@ -65,14 +65,20 @@ class EnableBankingItem::ImporterSharedTransactionIdTest < ActiveSupport::TestCa
     assert_equal 2, @account.entries.where(source: "enable_banking").count
     assert_equal pending_entry.id, entry!("enable_banking_tid-x").id
     assert_not pending_entry.reload.transaction.pending?
-    assert_equal BigDecimal("7.00"), entry!("enable_banking_tid-x_r-b").amount
+    assert_equal BigDecimal("7.00"), entry!(sibling_id("r-b")).amount
   end
 
-  test "a reference re-issued for an unchanged movement does not add an entry" do
-    sync(booked: [ row("r-1", "9.00") ])
-    sync(booked: [ row("r-2", "9.00") ])
+  test "a pending entry stays with its booked row when a same-amount sibling comes first" do
+    @importer.stubs(:include_pending?).returns(true)
+    sync(booked: [], pending: [ row("r-p", "7.00", status: "PDNG", date: 3.days.ago.to_date) ])
+    pending_entry = entry!("enable_banking_tid-x")
+    pending_entry.update!(notes: "dinner")
 
-    assert_equal({ "enable_banking_tid-x" => BigDecimal("9.00") }, amounts_by_id)
+    sync(booked: [ row("r-a", "7.00", date: 2.days.ago.to_date), row("r-b", "7.00", date: 3.days.ago.to_date) ], pending: [])
+
+    assert_equal [ [ "enable_banking_tid-x", 3.days.ago.to_date, "dinner" ], [ sibling_id("r-a"), 2.days.ago.to_date, nil ] ],
+                 @account.entries.where(source: "enable_banking").order(:external_id).pluck(:external_id, :date, :notes)
+    assert_not pending_entry.reload.transaction.pending?
   end
 
   test "a pending entry settles onto the booked sibling with its amount when the dates differ" do
@@ -82,7 +88,7 @@ class EnableBankingItem::ImporterSharedTransactionIdTest < ActiveSupport::TestCa
 
     sync(booked: [ row("r-a", "9.00"), row("r-b", "7.00") ], pending: [])
 
-    assert_equal({ "enable_banking_tid-x" => BigDecimal("7.00"), "enable_banking_tid-x_r-a" => BigDecimal("9.00") }, amounts_by_id)
+    assert_equal({ "enable_banking_tid-x" => BigDecimal("7.00"), sibling_id("r-a") => BigDecimal("9.00") }, amounts_by_id)
     assert_equal pending_entry.id, entry!("enable_banking_tid-x").id
   end
 
@@ -111,6 +117,10 @@ class EnableBankingItem::ImporterSharedTransactionIdTest < ActiveSupport::TestCa
 
       assert @importer.send(:fetch_and_store_transactions, @enable_banking_account)[:success]
       EnableBankingAccount::Transactions::Processor.new(@enable_banking_account.reload).process
+    end
+
+    def sibling_id(entry_reference)
+      "enable_banking_tid-x_#{Digest::MD5.hexdigest(entry_reference)}"
     end
 
     def stored_refs
