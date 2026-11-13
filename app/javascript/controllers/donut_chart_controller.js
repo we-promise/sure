@@ -96,16 +96,31 @@ export default class extends Controller {
       (acc, s) => acc + Number(s.amount),
       0,
     );
+    const minAmount = totalPieValue * (this.#minSegmentAngle / (2 * Math.PI));
+    const visible = segments.filter((s) => s.amount > 0);
+
+    // Tiny segments are widened so they stay visible. With several rings on
+    // one scale the other segments shrink to absorb that widening, so every
+    // ring still closes at its real total and the rings stay comparable.
+    const widenedCount = visible.filter(
+      (s) => Number(s.amount) < minAmount,
+    ).length;
+    const keptTotal = visible.reduce(
+      (acc, s) => acc + (Number(s.amount) < minAmount ? 0 : Number(s.amount)),
+      0,
+    );
+    const absorbedTotal = totalPieValue - widenedCount * minAmount;
+    const shrink =
+      this.ringsValue.length && keptTotal > 0 && absorbedTotal > 0
+        ? absorbedTotal / keptTotal
+        : 1;
 
     // Overage is always first segment, unused is always last segment
-    return segments
-      .filter((s) => s.amount > 0)
+    return visible
       .map((s) => ({
         ...s,
-        amount: Math.max(
-          Number(s.amount),
-          totalPieValue * (this.#minSegmentAngle / (2 * Math.PI)),
-        ),
+        amount:
+          Number(s.amount) < minAmount ? minAmount : Number(s.amount) * shrink,
       }))
       .sort((a, b) => {
         if (a.id === this.overageSegmentIdValue) return -1;

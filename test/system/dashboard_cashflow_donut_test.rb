@@ -22,6 +22,12 @@ class DashboardCashflowDonutTest < ApplicationSystemTestCase
       assert rings.last.has_css?("path.visible-path[data-segment-id='unused']", visible: :all)
       assert_text "Spent"
       assert_text "left"
+
+      # Hovering a list row highlights its segment and dims the rest.
+      food_id = "expense_#{categories(:food_and_drink).id}"
+      find("[data-category-id='#{food_id}']").hover
+      assert_selector "path.visible-path[data-segment-id='#{food_id}'][style*='opacity: 1']", visible: :all
+      assert_selector "path.visible-path[data-segment-id='unused'][style*='opacity: 0.3']", visible: :all
     end
   end
 end

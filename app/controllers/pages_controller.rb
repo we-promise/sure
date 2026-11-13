@@ -614,8 +614,8 @@ class PagesController < ApplicationController
       net = total_income - total_expense
       ring_total = [ total_income, total_expense ].max
 
-      inflows = cashflow_donut_segments(net_totals.net_income_categories, "income")
-      outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense")
+      inflows = cashflow_donut_segments(net_totals.net_income_categories, "income", ring_total)
+      outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense", ring_total)
       has_categories = inflows.any? || outflows.any?
 
       # "unused"/"overage" are the donut controller's special segment ids:
@@ -658,19 +658,22 @@ class PagesController < ApplicationController
       ids.presence
     end
 
-    def cashflow_donut_segments(category_totals, id_prefix)
+    # Percentages are shares of the ring (the larger of income and spending),
+    # so they match the arc each segment draws and sum to 100 with the
+    # unused/overage segment.
+    def cashflow_donut_segments(category_totals, id_prefix, ring_total)
       category_totals
         .reject { |ct| ct.total.zero? }
         .sort_by { |ct| -ct.total }
         .map do |ct|
           clickable = !ct.category.other_investments?
           {
-            id: "#{id_prefix}_#{ct.category.id || ct.category.name.parameterize}",
+            id: "#{id_prefix}_#{IncomeStatement::CategoryNetting.key(ct.category)}",
             name: ct.category.name,
             filter_value: clickable ? ct.category.filter_value : nil,
             amount: ct.total.to_f.round(2),
             currency: ct.currency,
-            percentage: ct.weight.round(1),
+            percentage: ring_total.zero? ? 0 : (ct.total.to_f / ring_total.to_f * 100).round(1),
             color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
             icon: ct.category.lucide_icon,
             clickable: clickable
@@ -685,7 +688,7 @@ class PagesController < ApplicationController
         filter_value: nil,
         amount: amount.to_f.round(2),
         currency: currency,
-        percentage: ring_total.zero? ? 0 : (amount.to_f / ring_total * 100).round(1),
+        percentage: ring_total.zero? ? 0 : (amount.to_f / ring_total.to_f * 100).round(1),
         color: color,
         icon: icon,
         clickable: false

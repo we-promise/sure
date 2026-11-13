@@ -346,6 +346,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   test "dashboard renders the cash flow rings with unspent income as a muted track on the outflows ring" do
     create_transaction(account: @family.accounts.first, name: "Salary", amount: -100_000, category: categories(:income))
     create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
+    create_transaction(account: @family.accounts.first, name: "Cash withdrawal", amount: 50)
 
     get root_path
 
@@ -357,9 +358,13 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     inflows, outflows = cashflow_donut_rings
     assert inflows.any? { |s| s["id"] == "income_#{categories(:income).id}" }
+    assert outflows.any? { |s| s["id"] == "expense_uncategorized" }, "synthetic categories use their invariant key, not a localized name"
     assert_equal "unused", outflows.last["id"]
     assert_nil outflows.last["filter_value"]
     assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
+    # Percentages are shares of the common ring, so each ring's sum to 100.
+    assert_in_delta 100, inflows.sum { |s| s["percentage"] }, 1
+    assert_in_delta 100, outflows.sum { |s| s["percentage"] }, 1
   end
 
   test "dashboard renders the cash flow rings with overspend as an overage slice on the inflows ring" do
