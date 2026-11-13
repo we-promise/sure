@@ -1,4 +1,4 @@
-<%# locals: (account:, url:, logo: true) %>
+<%# locals: (account:, url:, opening_balance_date: Time.zone.today - 2.years, opening_balance_date_label: nil, logo: true) %>
 <%# `logo: false` hides the icon block for forms whose controller does not
     save it (properties). %>
 
@@ -19,8 +19,8 @@
 
     <% if account.new_record? && !account.linked? %>
       <%= form.date_field :opening_balance_date,
-          label: t(".opening_balance_date_label"),
-          value: Time.zone.today - 2.years,
+          label: opening_balance_date_label || t(".opening_balance_date_label"),
+          value: @opening_balance_date.presence || opening_balance_date,
           required: true %>
     <% end %>
 
