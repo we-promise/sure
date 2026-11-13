@@ -214,6 +214,20 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :sharesight_items, only: [ :create, :update, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
   resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do
@@ -348,6 +362,9 @@ Rails.application.routes.draw do
     end
   end
 
+  # Per-connection sync cadence; the connection is given as ?syncable_type=&syncable_id=
+  resource :sync_schedule, only: %i[edit update]
+
   get "exports/archive/:token", to: "archived_exports#show", as: :archived_export
 
   get "changelog", to: "pages#changelog"
@@ -411,6 +428,7 @@ Rails.application.routes.draw do
     end
     resource :hosting, only: %i[show update] do
       delete :clear_cache, on: :collection
+      delete :reset_market_data, on: :collection
       delete :disconnect_external_assistant, on: :collection
     end
     resource :payment, only: :show
@@ -486,6 +504,11 @@ Rails.application.routes.draw do
 
   # Hub page fronting budgets + goals under a single "Plan" nav entry.
   resource :plan, only: :show
+
+  # Family-wide investment hub, built on the Reports section framework.
+  resource :portfolio, only: :show do
+    patch :update_preferences
+  end
 
   resources :budgets, only: %i[index show edit update], param: :month_year do
     post :copy_previous, on: :member
@@ -577,6 +600,7 @@ Rails.application.routes.draw do
 
   namespace :transactions do
     resource :bulk_deletion, only: :create
+    resource :merchant_filter, only: :show
     resource :bulk_update, only: %i[new create]
     resource :categorize, only: %i[show create] do
       patch :assign_entry, on: :collection
@@ -603,6 +627,7 @@ Rails.application.routes.draw do
       post :merge_duplicate
       post :dismiss_duplicate
       post :unlock
+      patch :reconcile
       patch :tags, action: :update_tags
     end
   end
@@ -702,9 +727,17 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :rule_groups, only: %i[new create edit update destroy] do
+    member do
+      patch :reorder
+      patch :activation
+    end
+  end
+
   resources :accounts, only: %i[index new show destroy], shallow: true do
     member do
       post :sync
+      get :logo_options
       get :sparkline
       patch :toggle_active
       patch :toggle_exclude_from_reports
@@ -718,6 +751,7 @@ Rails.application.routes.draw do
 
     collection do
       post :sync_all
+      get :logo_options, action: :new_logo_options
       patch :reorder
     end
 
@@ -765,11 +799,16 @@ Rails.application.routes.draw do
 
   resources :invitations, only: [ :new, :create, :destroy ] do
     get :accept, on: :member
+    collection do
+      get  :bulk_new,    path: "bulk"
+      post :bulk_create, path: "bulk"
+    end
   end
 
   # API routes
   namespace :api do
     namespace :v1 do
+      resource :version, only: :show
       namespace :financekit do
         get "capabilities", to: "connections#capabilities"
         resources :connections, only: [ :create, :show, :destroy ] do
@@ -794,6 +833,7 @@ Rails.application.routes.draw do
 
       # Production API endpoints
       resources :accounts, only: [ :index, :show ]
+      resources :account_statements, only: [ :index, :show, :create ]
       resources :balances, only: [ :index, :show ]
       resources :budgets, only: [ :index, :show ]
       resources :budget_categories, only: [ :index, :show ]
@@ -802,7 +842,7 @@ Rails.application.routes.draw do
       resources :rules, only: [ :index, :show ]
       resources :rule_runs, only: [ :index, :show ]
       resources :securities, only: [ :index, :show ]
-      resources :security_prices, only: [ :index, :show ]
+      resources :security_prices, only: [ :index, :show, :create ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]
 
       resources :transactions, only: [ :index, :show, :create, :update, :destroy ] do
@@ -829,7 +869,9 @@ Rails.application.routes.draw do
       resource :cash_flow, only: [ :show ], controller: :cash_flows
       resource :spending_vs_normal, only: [ :show ], controller: :spending_vs_normal
       resource :balance_sheet, only: [ :show ], controller: :balance_sheet
-      resources :insights, only: [ :index ]
+      resources :insights, only: [ :index ] do
+        patch :acknowledge, on: :member
+      end
       resources :push_subscriptions, only: [ :create, :destroy ]
       resource :family_settings, only: [ :show ], controller: :family_settings
       post :sync, to: "sync#create", as: :sync_job
@@ -1024,6 +1066,7 @@ Rails.application.routes.draw do
 
   # MCP server endpoint for external AI assistants (JSON-RPC 2.0)
   post "mcp", to: "mcp#handle"
+  match "mcp", to: "mcp#method_not_allowed", via: %i[get delete]
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.

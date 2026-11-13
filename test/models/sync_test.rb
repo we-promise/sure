@@ -28,6 +28,52 @@ class SyncTest < ActiveSupport::TestCase
     assert_equal "completed", sync.status
   end
 
+  test "runs the sync in the family's timezone instead of the app default" do
+    account = accounts(:depository)
+    account.family.update_column(:timezone, "Pacific/Auckland")
+    sync = Sync.create!(syncable: account)
+
+    observed_zone_name = nil
+    account.define_singleton_method(:perform_sync) { |_sync| observed_zone_name = Time.zone.name }
+
+    sync.perform
+
+    assert_equal "Pacific/Auckland", observed_zone_name
+  end
+
+  test "Date.current inside perform reflects the family's local date, not UTC" do
+    account = accounts(:depository)
+    account.family.update_column(:timezone, "Pacific/Auckland")
+    sync = Sync.create!(syncable: account)
+
+    # 2026-01-14 23:00 UTC is already 2026-01-15 in Auckland (UTC+13 in
+    # January, southern-hemisphere DST) -- the exact mismatch from the
+    # review: a background job defaults to the app's zone (UTC), so a
+    # scheduled entry dated the 15th would still read as "not arrived" there
+    # even though it already has for the family.
+    observed_date = nil
+    account.define_singleton_method(:perform_sync) { |_sync| observed_date = Date.current }
+
+    travel_to Time.utc(2026, 1, 14, 23, 0, 0) do
+      sync.perform
+    end
+
+    assert_equal Date.new(2026, 1, 15), observed_date
+  end
+
+  test "falls back to the app's default timezone when the family's is missing" do
+    account = accounts(:depository)
+    account.family.update_column(:timezone, nil)
+    sync = Sync.create!(syncable: account)
+
+    observed_zone_name = nil
+    account.define_singleton_method(:perform_sync) { |_sync| observed_zone_name = Time.zone.name }
+
+    sync.perform
+
+    assert_equal Time.zone.name, observed_zone_name
+  end
+
   test "handles sync errors" do
     syncable = accounts(:depository)
     sync = Sync.create!(syncable: syncable)
@@ -435,5 +481,100 @@ class SyncTest < ActiveSupport::TestCase
 
     assert_equal new_start, sync.window_start_date
     assert_equal new_end,   sync.window_end_date
+  end
+
+  test "a completed sync queues a full follow-up when requested" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, full_resync_requested: true)
+
+    account.expects(:perform_sync).with(sync).once
+    # The sync reloads its syncable, so these run on a different instance.
+    Account.any_instance.expects(:perform_post_sync).once
+    Account.any_instance.expects(:broadcast_sync_complete).once
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
+    assert_not sync.full_resync_requested?
+
+    follow_up = Sync.where(syncable: account).order(:created_at).last
+    assert_nil follow_up.window_start_date
+    assert_nil follow_up.window_end_date
+    assert_equal "pending", follow_up.status
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a post-sync failure still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, full_resync_requested: true)
+
+    account.expects(:perform_sync).with(sync).once
+    Account.any_instance.expects(:perform_post_sync).raises(StandardError.new("post-sync failed"))
+    Account.any_instance.expects(:broadcast_sync_complete).never
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a follow-up marks a running partial sync instead of reusing it" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, full_resync_requested: true)
+    running = Sync.create!(syncable: account, status: :syncing)
+
+    account.expects(:perform_sync).with(sync).once
+    Account.any_instance.expects(:perform_post_sync).once
+    Account.any_instance.expects(:broadcast_sync_complete).once
+
+    assert_no_difference -> { Sync.where(syncable: account).count } do
+      sync.perform
+    end
+
+    assert sync.reload.completed?
+    assert_not sync.full_resync_requested?
+    assert running.reload.full_resync_requested?
+    assert_equal "syncing", running.status
+  end
+
+  test "a stale sync still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing, full_resync_requested: true)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.mark_stale!
+    end
+
+    assert sync.reload.stale?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a cancelled sync still queues the full follow-up" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing, full_resync_requested: true)
+    sync.update!(cancel_requested_at: Time.current)
+
+    assert_difference -> { Sync.where(syncable: account).count }, 1 do
+      sync.finalize_if_all_children_finalized
+    end
+
+    assert sync.reload.stale?
+    assert_not sync.full_resync_requested?
+    assert_enqueued_with(job: SyncJob)
+  end
+
+  test "a stale sync without a request queues nothing" do
+    account = accounts(:loan)
+    sync = Sync.create!(syncable: account, status: :syncing)
+
+    assert_no_difference -> { Sync.where(syncable: account).count } do
+      sync.mark_stale!
+    end
   end
 end

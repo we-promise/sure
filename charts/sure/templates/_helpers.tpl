@@ -160,13 +160,22 @@ true
 
 {{/* Pipelock image string */}}
 {{- define "sure.pipelockImage" -}}
-{{- $repo := "ghcr.io/luckypipewrench/pipelock" -}}
-{{- $tag := "2.8.0" -}}
+{{- $repo := "ghcr.io/pipelab-org/pipelock" -}}
+{{- $tag := "3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f" -}}
 {{- if .Values.pipelock.image -}}
 {{- $repo = .Values.pipelock.image.repository | default $repo -}}
 {{- $tag = .Values.pipelock.image.tag | default $tag -}}
 {{- end -}}
 {{- printf "%s:%s" $repo $tag -}}
+{{- end -}}
+
+{{/* Pipelock dedicated metrics listener: on when requested or when a ServiceMonitor scrapes it */}}
+{{- define "sure.pipelockMetricsEnabled" -}}
+{{- if or (.Values.pipelock.metrics).enabled (.Values.pipelock.serviceMonitor).enabled -}}true{{- end -}}
+{{- end -}}
+
+{{- define "sure.pipelockMetricsPort" -}}
+{{- int ((.Values.pipelock.metrics).port | default 9091) -}}
 {{- end -}}
 
 {{/* Pipelock MCP upstream URL (auto-compute or explicit override) */}}

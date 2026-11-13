@@ -145,6 +145,8 @@ class Transaction::Search
   end
   # Automatic-categorization provenance filter values (used by the view)
   AI_STATUSES = %w[current history].freeze
+  # An automatic category enrichment that is still the transaction's category.
+  CURRENT_AUTO_CATEGORY_SQL = "de.value = to_jsonb(transactions.category_id::text) AND #{Transaction::UNSUPERSEDED_ENRICHMENT_SQL}".freeze
 
   ATTACHMENT_STATUSES = %w[with without].freeze
 
@@ -153,6 +155,7 @@ class Transaction::Search
   attribute :amount_operator, :string
   attribute :types, array: true
   attribute :status, array: true
+  attribute :reconcile_status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -186,6 +189,7 @@ class Transaction::Search
       query = self.class.apply_category_filter(query, categories, family)
       query = self.class.apply_type_filter(query, types)
       query = apply_status_filter(query, status)
+      query = apply_reconcile_status_filter(query, reconcile_status)
       query = self.class.apply_merchant_filter(query, merchants)
       query = self.class.apply_tag_filter(query, tags)
       query = apply_ai_status_filter(query, ai_status)
@@ -207,8 +211,26 @@ class Transaction::Search
       # the old logic would keep being served (same cache_key_base) after
       # deploy, disagreeing with the (uncached) transactions_scope list
       # until entries_cache_version next changes for that family.
-      Rails.cache.fetch("transaction_search_totals/v3/#{cache_key_base}") do
+      # v4: Totals gained excluded_scheduled_count.
+      Rails.cache.fetch("transaction_search_totals/v4/#{cache_key_base}") do
         scope = transactions_scope
+        excluded_scheduled_count = 0
+
+        # Exclude scheduled (future-dated) entries from totals by default -- they
+        # haven't happened yet, so they shouldn't count toward this period's
+        # income/expenses (see Entry#scheduled?). An explicit end_date filter, or
+        # a start_date after today, is a deliberate request to look ahead (e.g.
+        # "next 30 days", "everything from next month"), so it's left untouched
+        # in that case.
+        #
+        # The list still shows them, so count how many were left out -- the
+        # summary uses it to say how many of the listed rows are scheduled.
+        # (Tax-advantaged accounts, filtered below, also stay out of the
+        # money figures; this count deliberately ignores that.)
+        unless look_ahead?
+          excluded_scheduled_count = scope.where("entries.date > ?", Date.current).count
+          scope = scope.where("entries.date <= ?", Date.current)
+        end
 
         # Exclude tax-advantaged accounts from totals calculation
         tax_advantaged_ids = family.tax_advantaged_account_ids
@@ -244,6 +266,7 @@ class Transaction::Search
 
         Totals.new(
           count: result&.transactions_count.to_i,
+          excluded_scheduled_count: excluded_scheduled_count,
           income_money: Money.new((result&.income_total || 0), family.currency),
           expense_money: Money.new((result&.expense_total || 0), family.currency),
           transfer_inflow_money: Money.new((result&.transfer_inflow_total || 0), family.currency),
@@ -261,12 +284,21 @@ class Transaction::Search
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
       family.entries_cache_version,
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
-      accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all"
+      accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all",
+      Date.current # totals exclude scheduled entries as of "today" -- must roll over daily
     ].join("/")
   end
 
   private
-    Totals = Data.define(:count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+    Totals = Data.define(:count, :excluded_scheduled_count, :income_money, :expense_money, :transfer_inflow_money, :transfer_outflow_money)
+
+    def look_ahead?
+      return true if end_date.present?
+
+      start_date.present? && Date.parse(start_date.to_s) > Date.current
+    rescue Date::Error
+      false
+    end
 
     # Filter query to include only active accounts if requested
     def apply_active_accounts_filter(query, active_accounts_only_filter)
@@ -287,11 +319,11 @@ class Transaction::Search
 
       case wanted.sort
       when [ "current" ]
-        query.where(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+        query.where(auto_enrichment_exists_sql(CURRENT_AUTO_CATEGORY_SQL), sources: Transaction::AUTO_CATEGORY_SOURCES)
       when [ "history" ]
         query
           .where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
-          .where.not(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+          .where.not(auto_enrichment_exists_sql(CURRENT_AUTO_CATEGORY_SQL), sources: Transaction::AUTO_CATEGORY_SOURCES)
       else
         query.where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
       end
@@ -345,5 +377,27 @@ class Transaction::Search
       else
         query
       end
+    end
+
+    # Filters by the manual reconciled_status enum (see Entry#reconciled_status).
+    # Scoped to manual accounts — every entry defaults to "unreconciled"
+    # regardless of account type, but the UI/update paths only ever
+    # show/change this for accounts with no live bank sync. Without this
+    # scope, selecting "Unreconciled" would also match every synced
+    # transaction in the family.
+    #
+    # Unlike apply_status_filter (bank-sync pending/confirmed), this is a
+    # user-controlled flag, so any subset of the three values is meaningful —
+    # there's no "all selected = no filter" shortcut.
+    def apply_reconcile_status_filter(query, reconcile_statuses)
+      return query unless reconcile_statuses.present?
+
+      valid_statuses = reconcile_statuses & Entry.reconciled_statuses.keys
+      return query if valid_statuses.empty?
+
+      # Subquery rather than pluck(:id) — avoids loading every manual
+      # account id into Ruby, consistent with the writable-accounts scoping
+      # in Transactions::BulkUpdatesController#create.
+      query.where(entries: { account_id: family.accounts.manual.select(:id), reconciled_status: valid_statuses })
     end
 end

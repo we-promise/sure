@@ -25,7 +25,7 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
 
     within "#cta" do
       assert_text "Updated to #{@categories.first.name}"
-      assert_text "Hide for today pauses these suggestions for 24 hours."
+      assert_text "Always categorize similar transactions?"
     end
 
     # The X sits in the toast's top-right corner (not pushed down by the content stack).
@@ -49,11 +49,11 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     assert_selector "#cta", text: "Updated to #{@categories.second.name}"
   end
 
-  test "hide for today snoozes rule prompts" do
+  test "not today snoozes rule prompts" do
     visit transactions_url
     assign_category @categories.first
 
-    within("#cta") { click_button "Hide for today" }
+    within("#cta") { click_button "Not today" }
 
     assert_no_text "Updated to #{@categories.first.name}"
     assert_not_nil @user.reload.rule_prompt_dismissed_at
@@ -62,6 +62,61 @@ class CategoryRulePromptTest < ApplicationSystemTestCase
     # While snoozed, the next eligible category change doesn't prompt either.
     assign_category @categories.second
     assert_no_text "Updated to #{@categories.second.name}"
+
+    # Once the snooze is over a day old, prompts come back.
+    @user.update!(rule_prompt_dismissed_at: 25.hours.ago)
+    assign_category @categories.first
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
+  end
+
+  test "the prompt's buttons stay inside the toast when their labels are long" do
+    # French has the longest labels of the shipped locales, and the desktop tray
+    # is only 20rem wide, so the button row has to wrap rather than overflow.
+    # A user-named category: system names such as "Income" are shown
+    # translated, so assign_category could not search for them in French.
+    category = @user.family.categories.create!(name: "Layout check", color: "#123456")
+    @user.update!(locale: "fr")
+    visit transactions_url
+    assign_category category
+    assert_selector "#cta form button", text: "Pas aujourd'hui"
+    assert_selector "#cta form a", text: "Créer une règle"
+
+    overflow = page.evaluate_script(<<~JS)
+      (() => {
+        const toast = document.querySelector("#cta > div").getBoundingClientRect();
+        return [...document.querySelectorAll("#cta form a, #cta form button")]
+          .map((el) => el.getBoundingClientRect())
+          .filter((r) => r.left < toast.left - 0.5 || r.right > toast.right + 0.5).length;
+      })()
+    JS
+    assert_equal 0, overflow, "every button must stay inside the toast"
+  end
+
+  test "turning rule suggestions off from the prompt can be undone in preferences" do
+    visit transactions_url
+    assign_category @categories.first
+
+    within("#cta") { click_button "Turn off rule suggestions" }
+
+    assert_no_text "Updated to #{@categories.first.name}"
+    assert @user.reload.rule_prompts_disabled
+
+    assign_category @categories.second
+    assert_no_text "Updated to #{@categories.second.name}"
+
+    visit settings_preferences_url
+    assert_not find("#user_rule_suggestions", visible: :all).checked?
+    find("label[for='user_rule_suggestions']").click
+    assert_selector "#user_rule_suggestions:checked", visible: :all
+    # The preferences form saves itself after the change, so give it a moment.
+    Timeout.timeout(5) { sleep 0.1 while @user.reload.rule_prompts_disabled }
+    assert_not @user.rule_prompts_disabled
+    assert_nil @user.rule_prompt_dismissed_at, "turning suggestions off must not start the 24-hour snooze"
+
+    # Back on, suggestions show again right away.
+    visit transactions_url
+    assign_category @categories.first
+    assert_selector "#cta", text: "Updated to #{@categories.first.name}"
   end
 
   test "a prompt from the transaction drawer waits until the drawer closes" do
