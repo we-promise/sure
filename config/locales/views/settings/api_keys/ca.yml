@@ -4,6 +4,7 @@ ca:
     api_keys:
       create:
         success: La teva clau API s'ha creat correctament
+        creation_failed: "No s'ha pogut crear la teva clau API. Torna-ho a provar."
       created:
         continue: Continua a la configuració de claus API
         copy_key: Copia la clau API

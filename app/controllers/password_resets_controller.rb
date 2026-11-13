@@ -10,7 +10,7 @@ class PasswordResetsController < ApplicationController
   end
 
   def create
-    if (user = User.find_by(email: params[:email]))
+    if (user = User.find_by_email_with_legacy_fallback(params[:email]))
       # Security: Block password reset for SSO-only users.
       # These users have no local password and must authenticate via SSO.
       unless user.sso_only?
@@ -37,14 +37,32 @@ class PasswordResetsController < ApplicationController
       return
     end
 
-    if @user.update(password_params)
+    if update_password_and_log_change
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
     end
+  rescue ActiveRecord::ActiveRecordError
+    render :edit, status: :unprocessable_entity
   end
 
   private
+
+    def update_password_and_log_change
+      # has_secure_password ignores a blank password, so update would succeed without a change.
+      if password_params[:password].blank?
+        @user.errors.add(:password, :blank)
+        return false
+      end
+
+      ActiveRecord::Base.transaction do
+        next false unless @user.update(password_params)
+
+        SecurityAuditLog.log_password_changed!(user: @user, request: request)
+
+        true
+      end
+    end
 
     def ensure_password_resets_enabled
       return if AuthConfig.password_features_enabled?
