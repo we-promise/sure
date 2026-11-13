@@ -215,11 +215,13 @@ flowchart LR
 - CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
   `ai-live` label runs the live tests and evals with repository secrets.
 - End to end: `test/e2e/ai/` drives categorize (Kilo, Jev and a Jev shadow run), merchant
-  detection, bill setup, PDF import and a browser chat round-trip through their jobs and pages,
-  on free live models configured through the AI ENV (`AiE2eHelper#with_live_ai`: Kilo's
-  `kilo-auto/free`, OpenCode Zen's free Jev). The assertions check shape, not accuracy. They skip
-  unless `AI_E2E=1`; `ai-e2e.yml` runs them, and the free legs of `test/models/ai/live/`, on every
-  `v*` tag. Embeddings have no free model, so documents search isn't covered.
+  detection, bill setup, PDF import, documents and a browser chat round-trip through their jobs
+  and pages, on free live models configured through the AI ENV (`AiE2eHelper#with_live_ai`:
+  Kilo's `kilo-auto/free`, OpenCode Zen's free Jev, and for documents Cohere's `embed-v5.0-fast`
+  into pgvector on a free trial key, `COHERE_LIVE_API_KEY`). The assertions check shape, not
+  accuracy. They skip unless `AI_E2E=1`, and the documents leg without the Cohere key;
+  `ai-e2e.yml` runs them, and the free legs of `test/models/ai/live/` (Cohere's OCR included), on
+  every `v*` tag.
 
 ## Judgements and shadow runs
 

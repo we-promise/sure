@@ -16,6 +16,11 @@ module AiE2eHelper
   CONTEXT_WINDOW = "32000".freeze
   # A free reasoning model reading a whole statement takes longer than the 60-second default.
   REQUEST_TIMEOUT = "300".freeze
+  # Cohere's OpenAI-compatible embeddings, on a free trial key: the one leg that needs a key.
+  COHERE_KEY = "COHERE_LIVE_API_KEY".freeze
+  COHERE_EMBEDDING_URL = "https://api.cohere.ai/compatibility/v1".freeze
+  COHERE_EMBEDDING_MODEL = "embed-v5.0-fast".freeze
+  COHERE_EMBEDDING_DIMENSIONS = "2048".freeze
 
   def self.included(base)
     base.setup do
@@ -31,6 +36,15 @@ module AiE2eHelper
   # its rate limits.
   def with_live_ai(jev: false, **extra, &block)
     with_env_overrides(kilo_env.merge(jev ? jev_env : {}).merge(extra)) { with_ai_live(&block) }
+  end
+
+  # Documents on pgvector, embedded by Cohere: what a self-hoster sets for a hosted embedding
+  # model. Skips, naming the variable, without a key.
+  def cohere_embeddings
+    skip "set #{COHERE_KEY} to run the embeddings leg" if ENV[COHERE_KEY].blank?
+
+    { VECTOR_STORE_PROVIDER: "pgvector", EMBEDDING_URI_BASE: COHERE_EMBEDDING_URL, EMBEDDING_MODEL: COHERE_EMBEDDING_MODEL,
+      EMBEDDING_DIMENSIONS: COHERE_EMBEDDING_DIMENSIONS, EMBEDDING_ACCESS_TOKEN: ENV[COHERE_KEY] }
   end
 
   def assert_ai_usage(family, feature)

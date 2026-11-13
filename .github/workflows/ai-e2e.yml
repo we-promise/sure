@@ -4,10 +4,11 @@ name: AI e2e
 # configured through the AI ENV a self-hoster sets — Kilo's free router (`kilo-auto/free`) as the
 # LLM and OpenCode Zen's free Jev as the judge:
 # - test/e2e/ai: categorize (Kilo, Jev, and a Jev shadow run), merchant detection, bill setup,
-#   PDF import and a chat round-trip in the browser, through the jobs and pages users hit;
+#   PDF import, documents and a chat round-trip in the browser, through the jobs and pages users hit;
 # - the free legs of the transport tests' live mode (test/models/ai/live).
 # Kilo's free router and Zen's Jev answer without a key; KILO_API_KEY and KILO_ORG_ID, when set as
-# repository secrets, are sent for higher rate limits.
+# repository secrets, are sent for higher rate limits. Documents (embedding into pgvector and
+# search) and Cohere's OCR run on a free Cohere trial key, COHERE_LIVE_API_KEY, and skip without it.
 on:
   push:
     tags:
@@ -25,6 +26,7 @@ env:
   PLAID_SECRET: bar
   KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
   KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+  COHERE_LIVE_API_KEY: ${{ secrets.COHERE_LIVE_API_KEY }}
   JEV_LIVE_API_KEY: public   # OpenCode Zen's anonymous key for its free Jev, not a secret
 
 jobs:
@@ -35,7 +37,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16   # documents need the vector extension
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -111,6 +113,11 @@ jobs:
         options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
 
     steps:
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y poppler-utils   # OCR renders pages
+
       - name: Checkout code
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
@@ -127,12 +134,12 @@ jobs:
           bin/rails db:create
           bin/rails db:schema:load
 
-      # Only the free legs: Kilo's `kilo-auto/free` route and Jev on Zen. The paid routes in the
-      # same files stay with the `ai-live` label.
+      # Only the free legs: Kilo's `kilo-auto/free` route, Jev on Zen and Cohere's OCR (skipped
+      # without its trial key). The paid routes in the same files stay with the `ai-live` label.
       - name: Transport tests, live
         env:
           AI_LIVE: "1"
           DISABLE_PARALLELIZATION: "true"
         run: |
           export KILO_API_KEY="${KILO_API_KEY:-anonymous}"
-          bin/rails test test/models/ai/live -v -n "/kilo-auto\/free|test_jev: /"
+          bin/rails test test/models/ai/live -v -n "/kilo-auto\/free|test_jev: |test_cohere: /"
