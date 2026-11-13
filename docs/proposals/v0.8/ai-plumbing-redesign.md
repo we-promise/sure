@@ -1936,14 +1936,20 @@ ActiveSupport::Notifications.subscribe("compare.ai_shadow", Ai::Instrumentation:
 - **Cached tokens.** RubyLLM's `input_tokens` excludes cached tokens, unlike the raw APIs: the
   spike's 34-tool list showed as 512 input tokens where the prompt was 12,457. `Ai::Tokens` keeps
   both, and the prompt size is `input_tokens + cache_read_tokens`.
-- **Why not RubyLLM's usage ledger.** RubyLLM 2.1 writes a `ruby_llm_usages` row for every
-  provider attempt once the table exists. The spike compared it with this section's design
-  (spike: "RubyLLM's usage ledger"). Against the ledger: no feature, route, correlation id or
-  metadata column; `operation` limited to RubyLLM's eleven; `provider` is RubyLLM's slug
-  (`openai` for llama.cpp); local models have no price; and the table is RubyLLM's private
-  model. Jev reaches it only once it goes through `judge` (PR 2d). For it: a row per attempt, with no Sure code, and RubyLLM's usage owner
-  follows its tool threads. So Sure keeps `llm_usages` and doesn't create the table, which
-  costs no SQL per call (call by @josh-sanders during development of PR #4440).
+- **RubyLLM's usage ledger: kept, and created in PR 6** (call by @josh-sanders during
+  development of PR #4440, option (a) — the "double-write and move on" option from the
+  ledger discussion). A persisted chat writes one `ruby_llm_usages` row per provider
+  attempt — an unguarded `ruby_llm_usages.create!` inside a savepoint, with only a
+  rescue → `RubyLLM.logger.warn` — in both 2.1.1 and 2.2.0. With the table absent, every
+  chat attempt logs a warn line, on the busiest AI path an install has; with it present,
+  attempts persist with no Sure code. So PR 6 creates the table alongside the claim columns.
+  Sure never reads it: `llm_usages` remains the usage store — per-request rows grouped per
+  call by `call_id`, feature keys, routes, error classes, correlation ids. The 2.2 ledger is
+  no substitute: it still carries no feature, route, correlation id or error class,
+  `operation` is limited to the gem's twelve, `provider` is RubyLLM's slug (`openai` for
+  llama.cpp), and local models have no price. No backfill, no display, and Sure pays one
+  INSERT in a savepoint per attempt — the price of not fighting framework internals on the
+  very path PR 6 rebuilds (spike: "the usage ledger writes rows for each attempt").
 - **A row per request, shown per call** (call by @josh-sanders during development of PR #4440). An `.ai` event wraps a whole call, so
   RubyLLM's retries and the `auto` chain's resends inside it would go uncounted: in the spike,
   four requests were one event with the last one's tokens, and an answer the chain rejects as
@@ -2619,7 +2625,7 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 | The `embed` route picks the vector adapter | `VECTOR_STORE_PROVIDER` defaulting from `LLM_PROVIDER` | The deprecated ENV path maps it | Check which adapter `embed` uses |
 | Smart-fill and smart-configure become asynchronous | Response shape of `smart_fills#create` and `smart_configurations#show` | System tests for both dialogs land first | The dialog shows progress |
 | `AssistantMessage` stores the route that served it | Adds a column the mobile API reads | Additive | — |
-| Chat storage moves onto RubyLLM 2.2's persisted chat | `acts_as_chat` / `acts_as_message` on Sure's `chats`/`messages`; new tables `ruby_llm_models`, `ruby_llm_tool_calls`, `ruby_llm_queued_messages`; `chats` gains `claim_token`, `claimed_until`, `cancelled` and a `ruby_llm_model_id` FK; `messages` gains the persisted-reply columns | Additive backfill seeds `ruby_llm_models`; Gemini's signatures move from `tool_calls.extra_content` into `ruby_llm_tool_calls` | — |
+| Chat storage moves onto RubyLLM 2.2's persisted chat | `acts_as_chat` / `acts_as_message` on Sure's `chats`/`messages`; new tables `ruby_llm_models`, `ruby_llm_tool_calls`, `ruby_llm_queued_messages`, `ruby_llm_usages`; `chats` gains `claim_token`, `claimed_until`, `cancelled` and a `ruby_llm_model_id` FK; `messages` gains the persisted-reply columns | Additive backfill seeds `ruby_llm_models`; Gemini's signatures move from `tool_calls.extra_content` into `ruby_llm_tool_calls` | — |
 | The route chooses the chat model | The API's `model` parameter on chats and messages is accepted and ignored | None | API clients: `model` in the response says which model served the turn |
 | Cancel statuses | `cancelled` added to `Import` and `Message` statuses; `RecurringTransaction::Suggestion` added | Additive (string enums) | — |
 | The ENV override of the family confidence threshold goes | `CATEGORIZATION_CONFIDENCE_THRESHOLD` | None | Set it on the categorization page |
@@ -2809,10 +2815,10 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    lapsed claim, a message sent mid-turn, an approval clicked twice), plus cancel-from-another-
    process and the per-attempt ledger. All pass on 2.2.0. **Its result decided PR 6's storage:
    RubyLLM's persisted chat** — `acts_as_chat` / `acts_as_message` on Sure's own `chats`/
-   `messages`, with the gem's `ruby_llm_models`, `ruby_llm_tool_calls` and
-   `ruby_llm_queued_messages` tables (call by @josh-sanders during development of PR #4440).
-   Sure's own claim is not built. The upgrade checklist is the table of RubyLLM commits since
-   2.1.1 in
+   `messages`, with the gem's `ruby_llm_models`, `ruby_llm_tool_calls`,
+   `ruby_llm_queued_messages` and `ruby_llm_usages` tables (call by @josh-sanders during
+   development of PR #4440). Sure's own claim is not built. The upgrade checklist is the
+   table of RubyLLM commits since 2.1.1 in
    [`pr-2a-transports-and-instrumentation.md`](pr-2a-transports-and-instrumentation.md#rubyllm-from-211-to-main-what-lands-with-22).
 6. **Chat**, on RubyLLM 2.2, with the storage the spike picked: RubyLLM's persistence on
    Sure's tables (section 8.4). `Ai::Conversation`'s
