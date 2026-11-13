@@ -40,6 +40,22 @@ class Provider::YahooFinance < Provider
 
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 0.5
+  REQUEST_SLOT_CACHE_KEY = "yahoo_finance_request_slot"
+  # Longest a request queues for a shared request slot (in seconds)
+  MAX_REQUEST_WAIT = 30
+
+  # Runs a hook immediately before every HTTP attempt, including retries, so
+  # each one claims a shared request slot.
+  class BeforeEachAttempt < Faraday::Middleware
+    def initialize(app, hook)
+      super(app)
+      @hook = hook
+    end
+
+    def on_request(_env)
+      @hook.call
+    end
+  end
 
   # Pool of modern browser user-agents to rotate through
   # Based on https://github.com/ranaroussi/yfinance/pull/2277
@@ -948,6 +964,8 @@ class Provider::YahooFinance < Provider
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
+        # After the retry middleware, so it runs for each attempt.
+        faraday.use BeforeEachAttempt, -> { wait_for_request_slot }
         faraday.request :json
         faraday.response :raise_error
 
@@ -979,6 +997,49 @@ class Provider::YahooFinance < Provider
 
     def min_request_interval
       ENV.fetch("YAHOO_FINANCE_MIN_REQUEST_INTERVAL", MIN_REQUEST_INTERVAL).to_f
+    end
+
+    def max_request_wait
+      ENV.fetch("YAHOO_FINANCE_MAX_REQUEST_WAIT", MAX_REQUEST_WAIT).to_f
+    end
+
+    # Every HTTP attempt, retries included, claims one min_request_interval-wide
+    # time slot in the shared cache (Redis in production), so provider
+    # instances, Sidekiq workers and web processes share one request budget
+    # instead of each pacing itself. A request queues for at most
+    # max_request_wait seconds. When every slot in that window is taken, the
+    # request does not claim one: it waits out the window and then goes, so
+    # callers beyond the window can burst together. That bounds latency at the
+    # cost of a strict budget. A cache that refuses the claim (Redis down)
+    # leaves the request unpaced after that single attempt.
+    def wait_for_request_slot
+      interval = min_request_interval
+      return unless interval.positive?
+
+      now = Time.current.to_f
+      current = (now / interval).floor
+      horizon = current + [ (max_request_wait / interval).ceil, 1 ].max
+      next_slot_key = "#{REQUEST_SLOT_CACHE_KEY}:next"
+      first = [ current, Rails.cache.read(next_slot_key).to_i ].max
+      slot = nil
+
+      (first...horizon).each do |candidate|
+        key = "#{REQUEST_SLOT_CACHE_KEY}:#{candidate}"
+        if Rails.cache.write(key, true, unless_exist: true, expires_in: (candidate * interval - now + interval + 1).seconds)
+          slot = candidate
+          break
+        end
+        return unless Rails.cache.exist?(key)
+      end
+
+      if slot
+        Rails.cache.write(next_slot_key, slot + 1, expires_in: (max_request_wait + interval + 1).seconds)
+      else
+        slot = horizon
+      end
+
+      wait = slot * interval - now
+      sleep(wait) if wait.positive?
     end
 
     def throttle_request
@@ -1092,6 +1153,7 @@ class Provider::YahooFinance < Provider
     # Client for authentication requests (no error raising - fc.yahoo.com returns 404 but sets cookie)
     def auth_client
       @auth_client ||= Faraday.new(ssl: self.class.faraday_ssl_options) do |faraday|
+        faraday.use BeforeEachAttempt, -> { wait_for_request_slot }
         faraday.headers["User-Agent"] = random_user_agent
         faraday.headers["Accept"] = "*/*"
         faraday.headers["Accept-Language"] = "en-US,en;q=0.9"
@@ -1112,6 +1174,7 @@ class Provider::YahooFinance < Provider
           exceptions: [ Faraday::ConnectionFailed, Faraday::TimeoutError ]
         })
 
+        faraday.use BeforeEachAttempt, -> { wait_for_request_slot }
         faraday.request :json
         faraday.response :raise_error
 
