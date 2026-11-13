@@ -4,8 +4,8 @@ class RecurringTransaction
   # rows and never duplicates or touches existing ones.
   #
   # Only scheduled, allocation-free rows are ever deleted, and only ones that
-  # are not yet due — except a one-payment plan, whose single date moves as a
-  # whole. Anything closed or carrying a payment is immutable history.
+  # are not yet due — except the date a one-payment plan was moved off.
+  # Anything closed or carrying a payment is immutable history.
   class OccurrenceGenerator
     HORIZON_DAYS = 90
 
@@ -43,16 +43,13 @@ class RecurringTransaction
     # After a schedule edit: drop the re-generatable future and rebuild it under
     # the new rules. Rows with payments or closed state are kept as they were.
     def regenerate_future!(through: nil)
-      scope = series.recurring_occurrences
-                    .open_status
-                    .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-      # Moving a plan that was already one payment has to drop its old date,
-      # even when that date is past, or the old row sits beside the new one.
-      # Converting a repeating schedule is the opposite: those past rows are
-      # unpaid obligations the new one-date schedule cannot recreate.
-      scope = scope.where("due_on >= ?", Date.current) unless replacing_existing_single_payment?
+      removable = series.recurring_occurrences
+                        .open_status
+                        .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
+      doomed = removable.where("due_on >= ?", Date.current)
+      doomed = doomed.or(removable.where(original_due_on: single_payment_moved_from)) if single_payment_moved_from
 
-      scope.delete_all
+      doomed.delete_all
 
       generate!(through: through)
     end
@@ -70,24 +67,18 @@ class RecurringTransaction
         series.ends_after_count? && series.end_after_count == 1
       end
 
-      # The cap is already stored by the time regeneration runs, so the
-      # current row cannot say whether this edit introduced it. The values
-      # from before the save can. With no save on this instance, the current
-      # cap is the only state there is.
-      def replacing_existing_single_payment?
-        return false unless single_payment?
+      # The date a one-payment plan was just moved off, whose row the new date
+      # replaces even when it is past. Every other past row is an obligation
+      # from an earlier schedule, which a one-date schedule cannot recreate, so
+      # it stays. Converting a repeating bill to Once is not a move: the cap is
+      # already stored by the time regeneration runs, so the values from before
+      # the save say whether it was a single payment already.
+      def single_payment_moved_from
+        return unless single_payment? && series.saved_change_to_anchor_date?
+        return unless series.attribute_before_last_save("end_mode") == "after_count" &&
+                      series.attribute_before_last_save("end_after_count") == 1
 
-        previously_single_payment?
-      end
-
-      def previously_single_payment?
-        mode, count = if series.saved_changes?
-          [ series.attribute_before_last_save("end_mode"), series.attribute_before_last_save("end_after_count") ]
-        else
-          [ series.end_mode, series.end_after_count ]
-        end
-
-        mode.to_s == "after_count" && count == 1
+        series.attribute_before_last_save("anchor_date")
       end
 
       def default_horizon(schedule)
@@ -143,10 +134,10 @@ class RecurringTransaction
       # beyond the window, so a kept row's nearest occurrence just outside it
       # is not mistaken for a farther one inside.
       def stood_in_for(schedule, from, through)
-        # Past rows kept while collapsing a repeating bill onto one date are
-        # earlier obligations, not stand-ins for that date. A yearly half
-        # cycle would otherwise swallow the new date.
-        return Set.new if single_payment? && !previously_single_payment?
+        # A one-payment plan is a date the user chose. Rows kept from an
+        # earlier schedule are other obligations, not stand-ins for it, and a
+        # yearly half cycle would let one swallow the new date.
+        return Set.new if single_payment?
 
         reach = half_cycle(schedule)
         nearby = schedule.occurrence_pairs_between(from - reach, through + reach)

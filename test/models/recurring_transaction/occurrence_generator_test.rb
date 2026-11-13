@@ -90,6 +90,35 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "moving a one-off drops only its own date and keeps overdue rows from the repeating schedule" do
+    travel_to Date.new(2026, 11, 13) do
+      Generator.new(@series).generate!
+      overdue = @series.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 11, 5))
+
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: Date.new(2026, 12, 1))
+      @series.save!
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: Date.new(2026, 12, 20))
+      @series.save!
+
+      dues = @series.recurring_occurrences.reload.pluck(:due_on)
+      assert_includes dues, overdue.due_on, "the earlier unpaid bill is still owed"
+      assert_includes dues, Date.new(2026, 12, 20), "an old row nearby must not stand in for the new date"
+      assert_not_includes dues, Date.new(2026, 12, 1), "the date it moved off is replaced"
+    end
+  end
+
+  test "pausing an overdue one-off keeps its row" do
+    travel_to Date.new(2026, 11, 13) do
+      due = Date.new(2026, 11, 1)
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: due)
+      @series.save!
+
+      @series.update!(status: "paused")
+
+      assert_equal [ due ], @series.recurring_occurrences.reload.pluck(:due_on)
+    end
+  end
+
   test "pausing prunes the re-generatable future and resuming rebuilds it" do
     travel_to Date.new(2026, 8, 13) do
       Generator.new(@series).generate!
