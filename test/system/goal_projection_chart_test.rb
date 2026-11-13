@@ -1,0 +1,176 @@
+require "application_system_test_case"
+
+# What only a browser can say about the goal projection chart: where its text
+# lands once laid out. Goal#projection_payload is covered by the model tests;
+# these read the SVG the controller draws.
+#
+# The goal is the one the defects were reported against: $10,000 by
+# 22 Oct 2028, created 22 Oct 2026, with $3,000 saved in one cash account.
+class GoalProjectionChartTest < ApplicationSystemTestCase
+  TODAY = Date.new(2026, 10, 22)
+  TARGET_DATE = Date.new(2028, 10, 22)
+  COLLISION_PX = 18
+
+  setup do
+    @user = users(:family_admin)
+    # Goals sit behind the preview gate.
+    @user.update!(
+      preferences: (@user.preferences || {}).merge("preview_features_enabled" => true),
+      show_ai_sidebar: false
+    )
+    travel_to(TODAY) { sign_in @user }
+  end
+
+  test "a target on a gridline keeps its full label inside the chart" do
+    travel_to TODAY do
+      visit_goal(target: 10_000)
+
+      assert target_collides_with_gridline?, "premise: the $10,000 target must sit on a y-axis gridline"
+
+      label = target_label
+      assert_operator label["x"], :>=, 0, "the target label starts left of the chart: #{label.inspect}"
+      assert_operator label["x"] + label["width"], :<=, svg_width, "the target label runs past the chart's right edge"
+      assert_equal "Target · $10,000", label["text"], "the target label must use the full-format amount"
+      # The gridline's own tick label is suppressed, so the row is labelled once.
+      assert_not_includes chart_texts.map { |t| t["text"] }, "$10K"
+    end
+  end
+
+  test "a target between gridlines keeps its right-hand label and every tick label" do
+    travel_to TODAY do
+      visit_goal(target: 7_300, saved: 3_000, pace: 0)
+
+      assert_not target_collides_with_gridline?, "premise: the $7,300 target must sit clear of every gridline"
+
+      label = target_label
+      assert_equal "Target · $7,300", label["text"]
+      assert_operator label["x"] + label["width"], :>, svg_width / 2, "the target label belongs on the right"
+      assert_equal gridline_ys.size, y_tick_labels.size, "every gridline keeps its tick label"
+    end
+  end
+
+  test "at phone width the target label stays on the right and in full" do
+    travel_to TODAY do
+      visit_goal(target: 10_000)
+      on_phone
+
+      assert_empty gridline_ys, "premise: the y-axis is hidden at phone width"
+      label = target_label
+      assert_equal "Target · $10,000", label["text"]
+      assert_operator label["x"], :>=, 0
+      assert_operator label["x"] + label["width"], :<=, svg_width
+    end
+  end
+
+  test "an on-track projection ending at the target still drops its own end label" do
+    travel_to TODAY do
+      # $7,000 to go over ~24 months: the projection ends within a few dollars
+      # of the target, so its end dot sits on the target line.
+      goal = visit_goal(target: 10_000, saved: 3_000, pace: 291.67)
+      end_label = Money.new(goal.projection_end_amount(as_of: TODAY), "USD").format(precision: 0)
+
+      end_dot_y = page.evaluate_script(<<~JS)
+        Number(Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg circle"))
+          .find((c) => c.getAttribute("fill") === "var(--color-green-600)").getAttribute("cy"))
+      JS
+      assert_operator (end_dot_y - target_line_y).abs, :<, COLLISION_PX, "premise: the projection ends on the target line"
+
+      assert_equal "Target · $10,000", target_label["text"]
+      assert_not_includes chart_texts.map { |t| t["text"] }, end_label, "the projection-end label must stay suppressed"
+    end
+  end
+
+  teardown do
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride") if @phone
+  end
+
+  private
+
+    # Chrome will not size a window below 500 px, so a phone is emulated.
+    # The chart redraws from its ResizeObserver at the new width.
+    def on_phone
+      @phone = true
+      page.driver.browser.execute_cdp("Emulation.setDeviceMetricsOverride", width: 390, height: 844, deviceScaleFactor: 1, mobile: true)
+      wait_for_settled_chart
+    end
+
+    def visit_goal(target:, saved: 3_000, pace: 0, target_date: TARGET_DATE)
+      Goal.any_instance.stubs(:pace).returns(pace)
+      # The saved history is pinned empty so the x-domain starts on the day the
+      # goal was created, as in the report.
+      Goal.any_instance.stubs(:balance_series_values).returns([])
+
+      account = @user.family.accounts.create!(name: "Holiday savings", accountable: Depository.new, currency: "USD", balance: saved)
+      goal = @user.family.goals.create!(
+        name: "Japan holiday", target_amount: target, currency: "USD", target_date: target_date,
+        goal_accounts: [ GoalAccount.new(account: account) ]
+      )
+
+      visit goal_path(goal)
+      assert_selector "[data-controller='goal-projection-chart'] svg text", minimum: 1
+      wait_for_settled_chart
+      goal
+    end
+
+    # The first paint can land before the layout settles; the ResizeObserver
+    # then redraws at the real width. Wait for the drawn width to match.
+    def wait_for_settled_chart
+      page.document.synchronize do
+        settled = page.evaluate_script(<<~JS)
+          (() => {
+            const root = document.querySelector("[data-controller='goal-projection-chart']");
+            const svg = root.querySelector("svg");
+            return !!svg && svg.viewBox.baseVal.width === root.clientWidth;
+          })()
+        JS
+        raise Capybara::ExpectationNotMet, "the chart has not redrawn at its settled width" unless settled
+      end
+    end
+
+    def svg_width
+      page.evaluate_script("document.querySelector(\"[data-controller='goal-projection-chart'] svg\").viewBox.baseVal.width")
+    end
+
+    # Every <text> in the chart with its laid-out box, in SVG user units.
+    def chart_texts
+      page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg text")).map((t) => {
+          const b = t.getBBox();
+          return { text: t.textContent, x: b.x, y: b.y, width: b.width, height: b.height };
+        })
+      JS
+    end
+
+    def target_label
+      labels = chart_texts.select { |t| t["text"].start_with?("Target") }
+      assert_equal 1, labels.size, "expected one target label, got #{labels.inspect}"
+      labels.first
+    end
+
+    # Solid horizontal lines across the plot: the y-axis gridlines.
+    def gridline_ys
+      page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg line"))
+          .filter((l) => l.getAttribute("y1") === l.getAttribute("y2") && !l.getAttribute("stroke-dasharray"))
+          .map((l) => Number(l.getAttribute("y1")))
+      JS
+    end
+
+    def target_line_y
+      page.evaluate_script(<<~JS)
+        Number(Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg line"))
+          .find((l) => l.getAttribute("y1") === l.getAttribute("y2") && l.getAttribute("stroke-dasharray") === "3 3")
+          .getAttribute("y1"))
+      JS
+    end
+
+    def target_collides_with_gridline?
+      ty = target_line_y
+      gridline_ys.any? { |gy| (gy - ty).abs < COLLISION_PX }
+    end
+
+    # Short-money tick labels sit in the left gutter.
+    def y_tick_labels
+      chart_texts.select { |t| t["text"].match?(/\A\$[\d.,]+[KM]?\z/) && t["x"] < 44 }
+    end
+end
