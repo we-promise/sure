@@ -1,0 +1,33 @@
+---
+ko:
+  auto_matches:
+    title: 자동 연결
+    settings:
+      enable_label: 자동 연결 활성화
+      enable_description: 동기화할 때마다 계좌 간 이체 연결을 자동으로 감지하여 제안합니다. 아래에서 확인하기 전까지 제안은
+        적용되지 않습니다.
+      admin_only: 관리자만 이 설정을 변경할 수 있습니다.
+    update_settings:
+      settings_updated: 자동 연결 설정이 업데이트되었습니다.
+    bulk_update:
+      invalid_selection: 확인하거나 거부할 제안을 하나 이상 선택하세요.
+      bulk_confirmed:
+        one: 이체 1건 확인됨
+        other: 이체 %{count}건 확인됨
+      bulk_rejected:
+        one: 이체 1건이 거부됨
+        other: 이체 %{count}건 거부됨
+    empty:
+      title: 대기 중인 자동 연결 제안이 없습니다.
+      description: 동기화 중 두 계좌 간 이체로 추정되는 거래가 발견되면 여기에 검토 대상으로 표시됩니다.
+    table:
+      from: 출금 계좌
+      to: 입금 계좌
+      date: 날짜
+      actions: 작업
+      separator: "·"
+    bulk_actions:
+      selected_label: 선택됨
+      confirm_selected: 선택 확인
+      reject_selected: 선택 항목 거부
+      select_all: 모두 선택

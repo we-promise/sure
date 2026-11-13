@@ -1,0 +1,25 @@
+---
+ko:
+  transfer_matches:
+    create:
+      success: 이체가 생성되었습니다.
+    new:
+      header:
+        title: 이체 또는 결제 연결
+        subtitle: 다른 계좌에서 대응하는 거래를 연결하거나, 거래가 없으면 새로 만드세요.
+      from_account: 출금 계좌
+      from_account_named: '출금 계좌: %{name}'
+      to_account: 입금 계좌
+      to_account_named: '입금 계좌: %{name}'
+      outflow_transaction: 출금 거래
+      inflow_transaction: 입금 거래
+      create_transfer_match: 이체 연결 만들기
+    matching_fields:
+      select_method: 거래 연결 방법을 선택하세요.
+      match_existing_recommended: 기존 거래 연결(권장)
+      create_new_transaction: 새 거래 만들기
+      matching_method: 연결 방법
+      matching_transaction: 연결할 거래
+      target_account: 대상 계좌
+      no_matching_transactions: 다른 계좌에서 연결할 거래를 찾지 못했습니다. 계좌를 선택하면 해당 계좌에 새 입금 거래를
+        만듭니다.

@@ -1,0 +1,56 @@
+---
+ko:
+  transfers:
+    create:
+      success: 이체가 생성되었습니다.
+      exchange_rate_unavailable: 선택한 통화 및 날짜에는 환율을 사용할 수 없습니다.
+      date_invalid: 유효하지 않습니다
+      stale_form: 이 양식은 이미 다른 세부정보와 함께 제출되었습니다. 페이지를 새로고침한 후 다시 시도하세요.
+    destroy:
+      success: 이체가 삭제되었습니다.
+    form:
+      amount: 금액
+      bank_charges: 은행 수수료
+      outgoing_fee: 송금 수수료
+      incoming_fee: 입금 수수료
+      date: 날짜
+      destination_amount: 입금액
+      destination_amount_display: '입금액: %{amount}'
+      exchange_rate_display: '환율: %{rate}'
+      expense: 지출
+      from: 출금 계좌
+      income: 수입
+      select_account: 계좌 선택
+      source_amount: 출금액
+      submit: 이체 생성
+      to: 입금 계좌
+      transfer: 이체
+    new:
+      title: 새 이체
+    show:
+      delete: 이체 삭제
+      delete_subtitle: 이체 연결을 해제합니다. 연결된 원래 거래 내역은 삭제되지 않습니다.
+      delete_title: 이체를 삭제하시겠습니까?
+      details: 세부정보
+      investment_contribution_subtitle: 이 이체를 예산 및 보고서의 지출로 계산합니다. 증권 계좌나 암호화폐 계좌에서
+        단순히 다른 통화로 환전하는 경우에는 이 기능을 끄세요.
+      investment_contribution_title: 투자 납입
+      mark_recurring: 반복으로 표시
+      mark_recurring_subtitle: 이 이체를 반복 패턴으로 등록해 예정 내역과 정기 거래 화면에서 추적합니다.
+      mark_recurring_title: 이체를 반복으로 표시
+      note_label: 메모
+      note_placeholder: 이 이체에 메모 추가
+      overview: 개요
+      settings: 설정
+      from: 출금 계좌
+      to: 입금 계좌
+      date: 날짜
+      transfer_amount: 이체금액
+      total: 합계
+      bank_charges: 은행 수수료
+      source_fee: 출금 측 수수료
+      destination_fee: 입금 측 수수료
+      category: 카테고리
+      uncategorized: 미분류
+    update:
+      success: 이체가 업데이트되었습니다.

@@ -1,0 +1,18 @@
+---
+ko:
+  category:
+    dropdowns:
+      row:
+        delete: 카테고리 삭제
+        edit: 카테고리 수정
+      show:
+        assign_error: 카테고리를 생성했지만 할당할 수 없습니다. 다시 시도하려면 생성을 선택하세요.
+        back: 뒤로
+        choose_parent: '아래에 "%{name}"를 생성합니다:'
+        clear: 카테고리 지우기
+        create: '"%{name}" 생성'
+        create_as_subcategory: 하위 카테고리로 추가…
+        create_error: 해당 카테고리를 만들 수 없습니다. 다시 시도해 주세요.
+        no_categories: 카테고리를 찾을 수 없습니다
+        recent: 최근
+        search_placeholder: 검색

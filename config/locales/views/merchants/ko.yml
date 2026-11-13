@@ -1,0 +1,86 @@
+---
+ko:
+  family_merchants:
+    create:
+      error: '가맹점 생성 오류: %{error}'
+      success: 새 가맹점이 생성되었습니다.
+    destroy:
+      success: 가맹점이 삭제되었습니다.
+      unlinked_success: 거래에서 가맹점이 삭제되었습니다.
+    edit:
+      title: 가맹점 수정
+    form:
+      name_placeholder: 가맹점 이름
+      website_placeholder: '웹사이트(예: starbucks.com)'
+      website_hint: 로고를 자동으로 표시하려면 가맹점의 웹사이트를 입력하세요.
+    index:
+      empty: 아직 가맹점이 없습니다.
+      new: 새 가맹점
+      import: 가맹점 가져오기
+      merge: 가맹점 병합
+      title: 가맹점
+      family_title: "%{moniker} 가맹점"
+      family_empty: 아직 %{moniker} 가맹점이 없습니다
+      provider_title: 제공업체 가맹점
+      provider_empty: 아직 이 %{moniker}에 연결된 제공업체 가맹점이 없습니다.
+      provider_read_only: 제공업체 가맹점은 연결된 기관에서 동기화됩니다. 여기서는 편집할 수 없습니다.
+      provider_info: 이러한 가맹점은 은행 연결이나 AI에 의해 자동으로 감지되었습니다. 이를 편집하여 자신만의 사본을 만들거나 제거하여
+        거래에서 연결을 해제할 수 있습니다.
+      enhance_info:
+        one: 제공업체 가맹점 %{count}곳에 웹사이트 정보가 없습니다. AI로 정보를 보완하여 웹사이트와 로고를 찾고 중복 가맹점을
+          병합하세요.
+        other: 제공업체 가맹점 %{count}곳에 웹사이트 정보가 없습니다. AI로 정보를 보완하여 웹사이트와 로고를 찾고 중복 가맹점을
+          병합하세요.
+      enhance_button: AI로 정보 보완
+      search_family_merchants: 가족 가맹점 검색...
+      search_provider_merchants: 제공업체 가맹점 검색...
+      no_family_merchants_found: 일치하는 가족 가맹점이 없습니다.
+      no_provider_merchants_found: 일치하는 제공업체 가맹점이 없습니다.
+      per_page: 페이지당
+      unlinked_title: 최근 연결이 해제됨
+      unlinked_info: 이 가맹점은 최근 거래에서 삭제되었습니다. 거래에 다시 할당되지 않으면 30일 후에 이 목록에서 사라집니다.
+      table:
+        merchant: 가맹점
+        actions: 작업
+        source: 소스
+    family_merchant:
+      edit: 수정
+      delete: 삭제
+    merchant:
+      confirm_accept: 가맹점 삭제
+      confirm_body: 이 가맹점을 삭제하시겠습니까? 이 가맹점을 삭제하면 관련된 모든 거래의 연결이 해제되고 보고에 영향을 미칠 수
+        있습니다.
+      confirm_title: 가맹점을 삭제하시겠습니까?
+      delete: 가맹점 삭제
+      edit: 가맹점 수정
+    merge:
+      title: 가맹점 병합
+      description: 대상 가맹점과 병합할 가맹점을 선택하세요. 병합된 가맹점의 모든 거래가 대상에 다시 할당됩니다.
+      target_label: 병합 대상
+      select_target: 대상 가맹점 선택...
+      sources_label: 병합할 가맹점
+      sources_search_placeholder: 가맹점 검색...
+      no_merchants_found: 일치하는 가맹점이 없습니다.
+      sources_hint: 선택한 가맹점은 대상에 병합됩니다. 가족 가맹점이 삭제되고 제공업체 가맹점의 연결이 해제됩니다.
+      submit: 선택 항목 병합
+    new:
+      title: 새 가맹점
+    perform_merge:
+      success:
+        one: 가맹점 %{count}곳을 병합했습니다.
+        other: 가맹점 %{count}곳을 병합했습니다.
+      no_merchants_selected: 병합하도록 선택한 가맹점이 없습니다.
+      target_not_found: 대상 가맹점을 찾을 수 없습니다
+      invalid_merchants: 잘못된 가맹점이 선택되었습니다.
+    provider_merchant:
+      edit: 수정
+      remove: 제거
+      remove_confirm_title: 가맹점을 제거하시겠습니까?
+      remove_confirm_body: "%{name}를 제거하시겠습니까? 이렇게 하면 이 가맹점과 관련된 모든 거래의 연결이 해제되지만
+        가맹점 자체는 삭제되지 않습니다."
+    enhance:
+      success: 제공업체 가맹점 정보 보완을 시작했습니다. 잠시 후 정보가 보완되고 중복 가맹점이 병합됩니다.
+      already_running: 이미 개선이 진행 중입니다. 완료될 때까지 기다려 주세요.
+    update:
+      success: 가맹점이 업데이트되었습니다.
+      converted_success: 가맹점이 성공적으로 전환 및 업데이트되었습니다.

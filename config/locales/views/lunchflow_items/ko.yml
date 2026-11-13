@@ -1,0 +1,184 @@
+---
+ko:
+  lunchflow_items:
+    api_error:
+      title: Lunch Flow 연결 오류
+      unable_to_connect: Lunch Flow에 연결할 수 없습니다
+      common_issues: '일반적인 문제:'
+      invalid_api_key_label: 잘못된 API 키
+      invalid_api_key_desc: 제공업체 설정에서 API 키를 확인하세요.
+      expired_credentials_label: 만료된 자격 증명
+      expired_credentials_desc: Lunch Flow에서 새 API 키 생성
+      network_issue_label: 네트워크 문제
+      network_issue_desc: 인터넷 연결을 확인하세요
+      service_down_label: 서비스 중단
+      service_down_desc: Lunch Flow API를 일시적으로 사용할 수 없습니다.
+      check_provider_settings: 제공업체 설정 확인
+      unexpected_error: 예상치 못한 오류가 발생했습니다. 나중에 다시 시도해 주세요.
+    setup_required:
+      title: Lunch Flow 설정 필요
+      api_key_not_configured: API 키가 구성되지 않음
+      api_key_description: Lunch Flow 계좌를 연결하려면 먼저 Lunch Flow API 키를 구성해야 합니다.
+      setup_steps_title: '설정 단계:'
+      setup_step_1_html: "<strong>설정 → 제공업체</strong>로 이동"
+      setup_step_2_html: "<strong>Lunch Flow</strong> 섹션 찾기"
+      setup_step_3: Lunch Flow API 키를 입력하세요.
+      setup_step_4: 계좌를 연결하려면 여기로 돌아오세요.
+      go_to_provider_settings: 제공업체 설정으로 이동
+    create:
+      success: Lunch Flow 연결이 성공적으로 생성되었습니다.
+    destroy:
+      success: Lunch Flow 연결이 제거되었습니다.
+    index:
+      title: Lunch Flow 연결
+    loading:
+      loading_message: Lunch Flow 계좌 로드 중...
+      loading_title: 로드 중
+    link_accounts:
+      all_already_linked:
+        one: 선택한 계좌(%{names})는 이미 연결되어 있습니다.
+        other: '선택한 계좌 %{count}개가 모두 이미 연결되어 있습니다: %{names}'
+      api_error: 'API 오류: %{message}'
+      invalid_account_names:
+        one: 이름이 비어 있는 계좌는 연결할 수 없습니다.
+        other: 이름이 비어 있는 계좌 %{count}개는 연결할 수 없습니다.
+      link_failed: 계좌를 연결하지 못했습니다.
+      no_accounts_selected: 계좌를 하나 이상 선택하세요.
+      partial_invalid: 계좌 %{created_count}개를 연결했습니다. %{already_linked_count}개는 이미
+        연결되어 있으며, %{invalid_count}개는 이름이 올바르지 않습니다.
+      partial_success: '계좌 %{created_count}개를 연결했습니다. %{already_linked_count}개는 이미
+        연결되어 있습니다: %{already_linked_names}'
+      success:
+        one: 계좌 %{count}개를 연결했습니다
+        other: 계좌 %{count}개를 연결했습니다
+    lunchflow_item:
+      accounts_need_setup: 계좌를 설정해야 합니다.
+      delete: 연결 삭제
+      deletion_in_progress: 삭제 중...
+      error: 오류
+      no_accounts_description: 이 연결에는 아직 연결된 계좌가 없습니다.
+      no_accounts_title: 계좌 없음
+      setup_action: 새 계좌 설정
+      setup_description: 전체 %{total}개 계좌 중 %{linked}개가 연결되었습니다. 새로 가져온 Lunch Flow
+        계좌의 계좌 유형을 선택하세요.
+      setup_needed: 새 계좌 설정 준비 완료
+      status: "%{timestamp} 전에 동기화됨"
+      status_never: 동기화되지 않음
+      status_with_summary: 마지막 동기화 %{timestamp} 전 • %{summary}
+      syncing: 동기화 중...
+      sync_status:
+        no_accounts: 계좌를 찾을 수 없습니다
+        synced:
+          one: 계좌 %{count}개가 동기화되었습니다
+          other: 계좌 %{count}개가 동기화되었습니다
+        partial_setup:
+          one: "%{linked}개 동기화됨, %{unlinked}개 설정 필요"
+          other: "%{linked}개 동기화됨, %{unlinked}개 설정 필요"
+      total: 합계
+      unlinked: 연결 안 됨
+    subtype_select:
+      placeholder:
+        subtype: 하위 유형 선택
+        type: 유형 선택
+    select_accounts:
+      accounts_selected: 선택한 계좌
+      api_error: 'API 오류: %{message}'
+      cancel: 취소
+      configure_name_in_lunchflow: 가져올 수 없습니다. Lunchflow에서 계좌 이름을 구성하세요.
+      description: "%{product_name} 계정에 연결할 계좌를 선택하세요."
+      link_accounts: 선택한 계좌 연결
+      no_accounts_found: 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_api_key: Lunch Flow API 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_name_placeholder: "(이름 없음)"
+      title: Lunch Flow 계좌 선택
+    select_existing_account:
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      all_accounts_already_linked: 모든 Lunch Flow 계좌가 이미 연결되어 있습니다.
+      api_error: 'API 오류: %{message}'
+      cancel: 취소
+      configure_name_in_lunchflow: 가져올 수 없습니다. Lunchflow에서 계좌 이름을 구성하세요.
+      description: 이 계좌와 연결할 Lunch Flow 계좌를 선택하세요. 거래는 자동으로 동기화되고 중복 제거됩니다.
+      link_account: 계좌 연결
+      no_account_specified: 지정된 계좌가 없습니다.
+      no_accounts_found: Lunch Flow 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_api_key: Lunch Flow API 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_name_placeholder: "(이름 없음)"
+      title: "%{account_name}를 Lunch Flow와 연결"
+    link_existing_account:
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      api_error: 'API 오류: %{message}'
+      invalid_account_name: 이름이 비어 있는 계좌는 연결할 수 없습니다.
+      lunchflow_account_already_linked: 이 Lunch Flow 계좌는 이미 다른 계좌에 연결되어 있습니다.
+      lunchflow_account_not_found: Lunch Flow 계좌를 찾을 수 없습니다
+      missing_parameters: 필수 매개변수가 누락되었습니다.
+      success: "%{account_name}를 Lunch Flow와 성공적으로 연결했습니다."
+    setup_accounts:
+      account_type_label: '계좌 유형:'
+      all_accounts_linked: 모든 Lunch Flow 계좌가 이미 설정되었습니다.
+      api_error: 'API 오류: %{message}'
+      fetch_failed: 계좌를 가져오지 못했습니다.
+      no_accounts_to_setup: 설정할 계좌가 없습니다
+      no_api_key: Lunch Flow API 키가 구성되지 않았습니다. 연결 설정을 확인하세요.
+      page_title: Lunch Flow 계좌 설정
+      account_types:
+        skip: 이 계좌 건너뛰기
+        depository: 입출금 계좌 또는 저축 계좌
+        credit_card: 신용카드
+        investment: 투자 계좌
+        loan: 대출 또는 모기지
+        other_asset: 기타 자산
+      subtype_labels:
+        depository: '계좌 하위 유형:'
+        credit_card: ''
+        investment: '투자 유형:'
+        loan: '대출 유형:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: 신용카드는 자동으로 신용카드 계좌로 설정됩니다.
+        other_asset: 기타 자산에는 추가 옵션이 필요하지 않습니다.
+      subtypes:
+        depository:
+          checking: 입출금
+          savings: 저축
+          hsa: 건강 저축 계좌
+          cd: 정기예금(CD)
+          money_market: 머니마켓
+        investment:
+          brokerage: 증권 계좌
+          pension: 연금
+          retirement: 은퇴 자금
+          401k: 401(k)
+          roth_401k: Roth 401(k)
+          403b: 403(b)
+          tsp: Thrift Savings Plan
+          529_plan: 529 교육 저축 플랜
+          hsa: 건강 저축 계좌
+          mutual_fund: 뮤추얼 펀드
+          ira: 전통 IRA
+          roth_ira: Roth IRA
+          angel: 엔젤 투자
+        loan:
+          mortgage: 모기지
+          student: 학자금대출
+          auto: 자동차대출
+          other: 기타대출
+      balance: 잔액
+      cancel: 취소
+      choose_account_type: 각 Lunch Flow 계좌에 대해 올바른 계좌 유형을 선택하세요.
+      create_accounts: 계좌 만들기
+      creating_accounts: 계좌 생성 중...
+      historical_data_range: '과거 데이터 범위:'
+      subtitle: 가져온 계좌에 대한 올바른 계좌 유형을 선택하세요.
+      sync_start_date_help: 거래 내역을 동기화하려는 기간을 선택하세요. 최대 3년의 이력을 사용할 수 있습니다.
+      sync_start_date_label: '거래 동기화 시작일:'
+      title: Lunch Flow 계좌 설정
+    complete_account_setup:
+      all_skipped: 모든 계좌를 건너뛰었습니다. 생성된 계좌가 없습니다.
+      creation_failed: '계좌 생성 실패: %{error}'
+      no_accounts: 설정할 계좌가 없습니다.
+      success: 계좌 %{count}개를 생성했습니다.
+      unexpected_error: 예상치 못한 오류가 발생했습니다.
+    sync:
+      success: 동기화가 시작되었습니다
+    update:
+      success: Lunch Flow 연결이 업데이트되었습니다.

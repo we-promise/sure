@@ -1,0 +1,106 @@
+---
+ko:
+  holdings:
+    cash:
+      brokerage_cash: 증권 계좌 현금
+    destroy:
+      success: 보유 종목이 삭제되었습니다.
+      cannot_delete: 이 보유 종목을 삭제할 수 없습니다.
+    update:
+      success: 취득 원가가 저장되었습니다.
+      error: 취득 원가 값이 올바르지 않습니다.
+    unlock_cost_basis:
+      success: 취득 원가 잠금을 해제했습니다. 다음 동기화 시 업데이트될 수 있습니다.
+    remap_security:
+      success: 종목을 변경했습니다.
+      security_not_found: 선택한 종목을 찾을 수 없습니다.
+    reset_security:
+      success: 종목을 제공업체의 원래 값으로 되돌렸습니다.
+    sync_prices:
+      success: 시장 데이터가 성공적으로 동기화되었습니다.
+      unavailable: 오프라인 증권에는 시장 데이터 동기화를 사용할 수 없습니다.
+      provider_error: 최신 가격을 가져올 수 없습니다. 몇 분 후에 다시 시도해 주세요.
+    errors:
+      security_collision: 재매핑할 수 없습니다. 귀하는 이미 %{date}에 %{ticker}를 보유하고 있습니다.
+    cost_basis_sources:
+      manual: 사용자 지정
+      calculated: 매매 내역 기준
+      provider: 제공업체로부터
+    cost_basis_cell:
+      unknown: "--"
+      set: 설정
+      set_cost_basis_header: "%{ticker}의 취득 원가 설정"
+      total_cost_basis_label: 총 취득 원가
+      per_share_label: 주당
+      cancel: 취소
+      save: 저장
+      overwrite_confirm_title: 취득 원가를 덮어쓰시겠습니까?
+      overwrite_confirm_body: 현재 취득 원가 %{current}를 대체합니다.
+    holding:
+      per_share: 주당
+      shares: "%{qty}주"
+      unknown: "--"
+      no_cost_basis: 취득 원가 없음
+    index:
+      average_cost: 평균 취득가
+      holdings: 보유 종목
+      name: 이름
+      new_holding: 새로운 활동
+      no_holdings: 표시할 보유 자산이 없습니다.
+      positions:
+        one: 보유 종목 %{count}개
+        other: 보유 종목 %{count}개
+      return: 총 수익
+      weight: 비중
+    missing_price_tooltip:
+      description: 이 투자에는 누락된 값이 있어 수익이나 가치를 계산할 수 없습니다.
+      missing_data: 누락된 데이터
+    show:
+      avg_cost_label: 평균 취득가
+      current_market_price_label: 현재 시장 가격
+      delete: 삭제
+      delete_subtitle: 이 계좌의 해당 보유 종목과 관련 매매 내역이 모두 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+      delete_title: 보유 종목 삭제
+      edit_security: 종목 수정
+      history: 내역
+      no_trade_history: 이 보유 종목의 매매 내역이 없습니다.
+      overview: 개요
+      portfolio_weight_label: 포트폴리오 비중
+      settings: 설정
+      security_label: 종목
+      originally: "%{ticker}였습니다"
+      search_security: 종목 검색
+      search_security_placeholder: 종목이나 이름으로 검색
+      cancel: 취소
+      remap_security: 저장
+      provider_disabled_warning: 가격 업데이트가 일시 중지되었습니다. %{provider} 제공업체가 비활성화되었습니다.
+        아래에서 다른 제공업체로 전환하거나 설정에서 다시 활성화하세요.
+      truncated_history_warning: 시세 내역은 %{date}부터만 제공됩니다. 그 이전 날짜의 데이터는 선택한 제공업체에
+        없습니다. 자산이 매매일 이후에 상장되었거나 제공업체의 현재 요금제가 제한된 기간의 과거 데이터만 제공하는 경우 발생할 수 있습니다.
+      switch_provider_label: 제공업체 전환
+      switch_provider_description: "%{provider}에서 제공하는 시세가 비활성화되어 있습니다. 활성화된 다른 제공업체에서
+        이 종목을 검색하세요."
+      switch_provider_button: 전환
+      no_security_provider: 종목 시세 제공업체가 설정되지 않아 종목을 검색할 수 없습니다.
+      security_remapped_label: 종목 연결 변경됨
+      provider_sent: '제공업체에서 받은 종목 코드: %{ticker}'
+      reset_to_provider: 제공업체로 재설정
+      reset_confirm_title: 종목을 제공업체의 원래 값으로 되돌리시겠습니까?
+      reset_confirm_body: 종목을 %{current}에서 %{original}로 되돌리고 연결된 모든 매매 내역을 옮깁니다.
+      ticker_label: 티커
+      trade_history_entry: "%{security} %{qty}주, 주당 %{price}"
+      total_return_label: 총수익률
+      unknown: 알 수 없음
+      cost_basis_locked_label: 취득 원가가 잠겨 있습니다.
+      cost_basis_locked_description: 수동으로 설정한 취득 원가는 동기화로 변경되지 않습니다.
+      unlock_cost_basis: 잠금 해제
+      unlock_confirm_title: 취득 원가 잠금을 해제하시겠습니까?
+      unlock_confirm_body: 취득 원가를 제공업체 동기화 또는 매매 내역 계산으로 업데이트할 수 있게 됩니다.
+      shares_label: 주식 수
+      book_value_label: 장부가치
+      market_value_label: 시장 가치
+      market_data_label: 시장 데이터
+      market_data_sync_button: 새로고침
+      last_price_update: 마지막 가격 업데이트
+      syncing: 동기화 중...
+      never: 없음

@@ -1,0 +1,14 @@
+---
+ko:
+  sure_import:
+    preflight:
+      missing_reference: "%{line}행의 %{type}에서 참조하는 %{field} %{value}이(가) 없습니다."
+      skipped_missing_reference: "%{line}행의 %{type}에서 참조하는 %{field} %{value}이(가) 없습니다.
+        가져올 때 건너뜁니다."
+      skipped_missing_merchant_reference: 라인 %{line} %{type}는 이 내보내기에 포함되지 않은 가맹점(%{value})를
+        참조합니다. 이는 제공업체 할당 가맹점이 Sure 내보내기에 추가되기 전에 수행된 내보내기에서 발생할 수 있습니다. 해당 가맹점 없이
+        가져오기됩니다.
+      skipped_unnamed_recurring: 라인 %{line} %{type}에는 이름이 없으며 이 내보내기에 포함되지 않은 가맹점(%{value})를
+        참조합니다. 가져오는 동안 건너뜁니다.
+      provider_merchant_diff: 라인 %{line} ProviderMerchant %{name}가 이미 다른 %{fields}와
+        함께 존재합니다. 기존 가맹점이 유지됩니다.

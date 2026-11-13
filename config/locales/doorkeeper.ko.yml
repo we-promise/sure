@@ -1,0 +1,150 @@
+---
+ko:
+  activerecord:
+    attributes:
+      doorkeeper/application:
+        name: 이름
+        redirect_uri: 리디렉션 URI
+    errors:
+      models:
+        doorkeeper/application:
+          attributes:
+            redirect_uri:
+              fragment_present: 조각을 포함할 수 없습니다.
+              invalid_uri: 유효한 URI여야 합니다.
+              unspecified_scheme: URI 스킴을 지정해야 합니다.
+              relative_uri: 절대 URI여야 합니다.
+              secured_uri: HTTPS/SSL URI여야 합니다.
+              forbidden_uri: 서버에서 금지되어 있습니다.
+            scopes:
+              not_match_configured: 서버에 구성된 것과 일치하지 않습니다.
+  doorkeeper:
+    applications:
+      confirmations:
+        destroy: 계속하시겠습니까?
+      buttons:
+        edit: 수정
+        destroy: 삭제
+        submit: 제출
+        cancel: 취소
+        authorize: 승인
+      form:
+        error: 앗! 양식에 오류가 있는지 확인하세요.
+      help:
+        confidential: 클라이언트 시크릿을 안전하게 보관할 수 있는 환경에서 사용할 애플리케이션입니다. 네이티브 모바일 앱과 단일
+          페이지 앱은 시크릿을 안전하게 보관할 수 없는 것으로 간주됩니다.
+        redirect_uri: URI당 한 줄을 사용하세요.
+        blank_redirect_uri: 클라이언트 자격 증명, 리소스 소유자 암호 자격 증명 또는 리디렉션 URI가 필요하지 않은 기타
+          부여 유형을 사용하도록 제공업체를 구성한 경우 공백으로 두세요.
+        scopes: 범위를 공백으로 구분하세요. 기본 범위를 사용하려면 비워 두세요.
+      edit:
+        title: 애플리케이션 수정
+      index:
+        title: 애플리케이션
+        new: 새로운 애플리케이션
+        name: 이름
+        callback_url: 콜백 URL
+        confidential: 기밀?
+        actions: 작업
+        confidentiality:
+          'yes': 예
+          'no': 아니요
+      new:
+        title: 새로운 애플리케이션
+      show:
+        title: '응용 프로그램: %{name}'
+        application_id: UID
+        secret: 시크릿
+        secret_hashed: 해시 처리된 시크릿
+        scopes: 범위
+        confidential: 기밀
+        callback_urls: 콜백 URL
+        actions: 작업
+        not_defined: 정의되지 않음
+    authorizations:
+      buttons:
+        authorize: 승인
+        deny: 거부
+      error:
+        title: 오류가 발생했습니다.
+        go_back: 돌아가기
+      new:
+        title: 승인이 필요합니다
+        prompt: 계정을 사용하도록 %{client_name}를 승인하시겠습니까?
+        able_to: 이 응용 프로그램은 다음을 수행할 수 있습니다.
+      show:
+        title: 인증 코드
+        authorization_code_label: '인증 코드:'
+        copy_instructions: 이 코드를 복사하여 애플리케이션에 붙여넣으세요.
+      form_post:
+        title: 이 양식을 제출하세요
+    authorized_applications:
+      confirmations:
+        revoke: 계속하시겠습니까?
+      buttons:
+        revoke: 취소
+      index:
+        title: 승인된 애플리케이션
+        application: 애플리케이션
+        created_at: 생성 날짜
+        date_format: "%Y-%m-%d %H:%M:%S"
+    pre_authorization:
+      status: 사전 승인
+    errors:
+      messages:
+        invalid_request:
+          unknown: 요청에 필수 매개변수가 누락되었거나, 지원되지 않는 매개변수 값이 포함되어 있거나, 형식이 잘못되었습니다.
+          missing_param: '필수 매개변수 누락: %{value}.'
+          request_not_authorized: 요청을 승인해야 합니다. 요청 승인을 위한 필수 매개변수가 누락되었거나 잘못되었습니다.
+          invalid_code_challenge: 코드 챌린지가 필요합니다.
+        invalid_redirect_uri: 요청한 리디렉션 URI의 형식이 잘못되었거나 클라이언트 리디렉션 URI와 일치하지 않습니다.
+        unauthorized_client: 클라이언트는 이 방법을 사용하여 이 요청을 수행할 권한이 없습니다.
+        access_denied: 리소스 소유자 또는 권한 부여 서버가 요청을 거부했습니다.
+        invalid_scope: 요청한 범위가 잘못되었거나 알 수 없거나 형식이 잘못되었습니다.
+        invalid_code_challenge_method:
+          zero: 허용되는 code_challenge_method 값이 없으므로 인증 서버는 PKCE를 지원하지 않습니다.
+          one: code_challenge_method는 %{challenge_methods}여야 합니다.
+          other: code_challenge_method는 %{challenge_methods} 중 하나여야 합니다.
+        server_error: 인증 서버에서 요청을 이행하지 못하게 하는 예상치 못한 상황이 발생했습니다.
+        temporarily_unavailable: 현재 일시적인 과부하 또는 서버 유지 관리로 인해 인증 서버에서 요청을 처리할 수 없습니다.
+        credential_flow_not_configured: Doorkeeper.configure.resource_owner_from_credentials가
+          설정되지 않아 리소스 소유자 비밀번호 인증 정보 흐름이 실패했습니다.
+        resource_owner_authenticator_not_configured: Doorkeeper.configure.resource_owner_authenticator가
+          설정되지 않아 리소스 소유자를 찾지 못했습니다.
+        admin_authenticator_not_configured: Doorkeeper.configure.admin_authenticator가
+          설정되지 않아 관리자 패널에 접근할 수 없습니다.
+        unsupported_response_type: 인증 서버는 이 응답 유형을 지원하지 않습니다.
+        unsupported_response_mode: 인증 서버는 이 응답 모드를 지원하지 않습니다.
+        invalid_client: 알 수 없는 클라이언트, 클라이언트 인증이 포함되지 않았거나 지원되지 않는 인증 방법으로 인해 클라이언트
+          인증에 실패했습니다.
+        invalid_grant: 제공된 권한 부여가 유효하지 않거나, 만료 또는 취소되었거나, 승인 요청에 사용된 리디렉션 URI와 일치하지
+          않거나, 다른 클라이언트에 발급되었습니다.
+        unsupported_grant_type: 권한 부여 유형은 권한 부여 서버에서 지원되지 않습니다.
+        invalid_token:
+          revoked: 액세스 토큰이 취소되었습니다.
+          expired: 액세스 토큰이 만료되었습니다.
+          unknown: 액세스 토큰이 잘못되었습니다.
+        revoke:
+          unauthorized: 이 토큰을 취소할 권한이 없습니다.
+        forbidden_token:
+          missing_scope: 이 리소스에 액세스하려면 "%{oauth_scopes}" 범위가 필요합니다.
+    flash:
+      applications:
+        create:
+          notice: 애플리케이션이 생성되었습니다.
+        destroy:
+          notice: 애플리케이션이 삭제되었습니다.
+        update:
+          notice: 애플리케이션이 업데이트되었습니다.
+      authorized_applications:
+        destroy:
+          notice: 애플리케이션 승인이 취소되었습니다.
+    layouts:
+      admin:
+        title: Doorkeeper
+        nav:
+          oauth2_provider: OAuth2 제공업체
+          applications: 애플리케이션
+          home: 홈
+      application:
+        title: OAuth 인증 필요

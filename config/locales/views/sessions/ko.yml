@@ -1,0 +1,39 @@
+---
+ko:
+  sessions:
+    create:
+      invalid_credentials: 이메일이나 비밀번호가 잘못되었습니다.
+      local_login_disabled: 로컬 비밀번호 로그인이 비활성화되었습니다. 싱글 사인온(SSO)을 사용해 주세요.
+      account_deactivated: 이 계정은 비활성화되었습니다. 관리자에게 문의하세요.
+    destroy:
+      logout_successful: 성공적으로 로그아웃되었습니다.
+    post_logout:
+      logout_successful: 성공적으로 로그아웃되었습니다.
+    openid_connect:
+      account_linked: 계정이 %{provider}에 성공적으로 연결되었습니다.
+      failed: OpenID Connect를 통해 인증할 수 없습니다.
+    failure:
+      failed: 인증할 수 없습니다.
+      sso_provider_unavailable: 현재 SSO 제공업체를 사용할 수 없습니다. 나중에 다시 시도하거나 관리자에게 문의하세요.
+      sso_invalid_response: SSO 제공업체로부터 잘못된 응답을 받았습니다. 다시 시도해 주세요.
+      sso_failed: Single Sign-On 인증에 실패했습니다. 다시 시도해 주세요.
+    mobile_sso_start:
+      redirecting_html: 로그인 페이지로 이동 중입니다... 자동으로 이동하지 않으면 <a href="%{url}">여기를 클릭하세요</a>.
+    new:
+      email: 이메일 주소
+      email_placeholder: you@example.com
+      forgot_password: 비밀번호를 잊으셨나요?
+      password: 비밀번호
+      submit: 로그인
+      title: Sure
+      password_placeholder: 비밀번호를 입력하세요
+      openid_connect: OpenID Connect로 로그인
+      oidc: OpenID Connect로 로그인
+      google_auth_connect: Google로 로그인
+      local_login_admin_only: 로컬 로그인은 관리자로 제한됩니다.
+      passkey_button: 패스키로 로그인
+      passkey_unsupported: 이 브라우저는 패스키를 지원하지 않습니다.
+      no_auth_methods_enabled: 현재 활성화된 인증 방법이 없습니다. 관리자에게 문의하세요.
+      demo_banner_title: 데모 모드 활성화
+      demo_banner_message: 이것은 데모 환경입니다. 편의를 위해 로그인 자격 증명이 미리 입력되어 있습니다. 실제 정보나 민감한
+        정보는 입력하지 마세요.

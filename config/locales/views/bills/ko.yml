@@ -1,0 +1,321 @@
+---
+ko:
+  bills:
+    row_overdue: 연체
+    row_today: 오늘
+    detect:
+      found:
+        one: 청구서로 추정되는 항목 1개를 찾았습니다. 아래에서 검토하세요.
+        other: 청구서로 추정되는 항목 %{count}개를 찾았습니다. 아래에서 검토하세요.
+      none_found: 새로운 반복 패턴이 없습니다. 청구서를 직접 추가할 수 있습니다.
+      already_running: 감지가 이미 실행 중입니다. 잠시 후에 다시 확인하세요.
+    feed:
+      calendar_name: Sure 청구서
+    ai_prompts:
+      due_before_paycheck: 다음 월급 전에 납부해야 할 금액은 무엇입니까?
+      subscriptions_up: 올해 구독료가 오른 서비스는 무엇인가요?
+      monthly_subscriptions: 구독료를 매달 지불하는 금액은 얼마입니까?
+      safe_to_spend: 이번 기간에 안심하고 지출할 수 있는 금액은 얼마인가요?
+    smart_configurations:
+      show:
+        trigger: AI가 구성하도록 하세요
+        title: "%{name}에 대한 AI 제안"
+        intro: 적용할 변경 사항을 선택하세요. 선택하지 않은 항목은 그대로 유지됩니다.
+        no_changes: 이 청구서는 이미 결제 내역과 일치합니다. 변경할 사항이 없습니다.
+        failed: 지금은 이 청구서를 분석할 수 없습니다. 구성은 그대로 유지됩니다.
+        field_name: 이름
+        field_amount: 금액
+        field_schedule: 일정
+        field_category: 카테고리
+        field_kind: 종류
+        field_autopay: 자동결제
+        uncategorized: 미분류
+        autopay_off: 끄기
+        autopay_on: 켜기
+        apply: 선택 항목 적용
+    detail:
+      current: 현재
+      next_payment: 다음 결제
+      around: "%{date}경"
+      overview: 개요
+      rules: 이 청구서의 거래 연결 기준
+      rule_named: "%{name}"
+      rule_amount_range: "%{min}에서 %{max}까지"
+      rule_aliases: "%{names}와도 일치합니다."
+      rule_detected: 이름이 %{name}인 거래와 연결합니다.
+      rule_learned_tolerance: 평소 금액과의 차이가 %{percent} 이내인 거래를 이 청구서에 연결합니다.
+      history_title: 지난 12개월
+      history_aria: 지난 12개월 동안의 결제
+      key_metrics: 연간
+      year: 연도
+      spent_per_year: 사용 금액
+      avg_payment: 평균 결제
+      average: 평균 지급
+      range: "%{min} ~ %{max}"
+      annualized: 1년
+      ytd: 올해 지급
+      last_account: 마지막으로 사용한 계좌
+      upcoming: 곧
+      manual_payment: 수동결제
+      history: 내역
+      payment_count:
+        one: 1회 결제
+        other: 결제 %{count}건
+      notes: 메모
+      trial_chip: 체험판 종료 %{date}
+      renews_chip: "%{date} 갱신"
+      cancelled_chip: "%{date}에 취소됨"
+      price_changes: 가격 변동
+      price_change_line: "%{from} → %{to}"
+    month_pulse:
+      bill_count:
+        one: 1개 청구서
+        other: 청구서 %{count}개
+      left_to_pay: 남은 납부액
+      pulse_paid: 납부 완료
+      pulse_overdue: 기한이 지난
+      pulse_next_seven: 다음 7일
+      pulse_until: "%{date}까지"
+      pulse_bar_aria: 이번 달 청구서의 %{percent}%가 지불됨
+      next_up: 다음은
+      view_calendar: 달력 보기
+      date_today: 오늘
+      date_tomorrow: 내일
+      unconvertible:
+        one: 환율 정보가 없어 청구서 1개가 제외되었습니다.
+        other: 환율 정보가 없어 청구서 %{count}개가 제외되었습니다.
+    summary:
+      remaining: "%{amount} 남음"
+      paid_headline: "%{amount} 납부 완료"
+    add_bill: 청구서 추가
+    manage: 보기
+    find_payment: 결제 찾기
+    add_payment: 결제 추가
+    review_match: 연결 검토
+    resolve: 해결
+    manage_payments: 결제 관리
+    match:
+      same_merchant: 같은 가맹점
+      name_matches: 이름 일치
+      same_transfer: 동일계좌로 이체
+      exact_amount: 정확한 금액
+      amount_off: "%{amount} 차이"
+      due_date: 납부일 일치
+      days_before:
+        one: 납부일 1일 전
+        other: 납부일 %{count}일 전
+      days_after:
+        one: 납부일 1일 후
+        other: 납부일 %{count}일 후
+    attention:
+      paused: 일시중지됨
+      needs_review: 연결 검토 필요
+      partial: 부분
+      amount_changed: 변경된 금액
+      overdue:
+        one: 1일 연체
+        other: "%{count}일 연체"
+    paid_label: 납부 완료
+    paid_over_short: 초과 납부
+    installment_progress: "%{total}회 중 %{done_plus_one}번째 결제"
+    partial_progress: "%{expected} 중 %{paid} 납부 완료"
+    cancelled_still_scheduled: "%{date}에 이 취소를 표시했지만 아직 예약되어 있으므로 향후 청구서가 계속 표시됩니다."
+    paid_over: 예상보다 많은 %{paid} 납부
+    remaining_label: 남은
+    debt_payment: 부채 상환
+    paid_from: "%{account}에서"
+    amount_range: 범위 %{min} ~ %{max}
+    possible_duplicate: 중복 가능성
+    due_label:
+      overdue:
+        one: 1일 연체, 기한 %{date}
+        other: "%{count}일 연체, 기한 %{date}"
+      today: 오늘 납부
+      settled: 기존 납부일 %{date}
+      due_since: 납부일 %{date}
+      snoozed: "%{date}까지 일시 중지되었습니다."
+      upcoming:
+        one: 내일 납부 예정, %{date}
+        other: "%{count}일 후 납부 예정, %{date}"
+    views:
+      aria_label: 청구서 보기
+      overview: 개요
+      calendar: 달력
+      paycheck: 수입 계획
+      all: 모든 청구서
+    pay_period:
+      paycheck_on: 급여 %{date}
+      before_next_paycheck: 다음 월급 받기 전에
+      due_before_date: "%{date} 이전에 %{amount} 납부 예정"
+    paycheck:
+      unconvertible:
+        one: 환율 정보가 없어 납부 예정 항목 1개가 제외되었습니다.
+        other: 환율 정보가 없어 납부 예정 항목 %{count}개가 제외되었습니다.
+      income_section_title: 수입 일정
+      manage: 관리
+      add_income: 수입 추가
+      income_paused: 일시중지됨, 계획되지 않음
+      income_detected: 자동으로 감지되며 급여일을 설정하지 않습니다.
+      income_next_payday: 다음 %{date}
+      income_source_count:
+        one: 수입원 %{count}개
+        other: 수입원 %{count}개
+      next_on: 다음 %{date}
+      no_upcoming_income: 이제부터 수입예정은 없습니다.
+      empty:
+        title: 수입 일정 설정
+        description: 수입을 추가하면 급여일마다 어떤 지출을 충당해야 하는지 확인할 수 있습니다. 감지된 입금만으로 급여일이 정해지지는
+          않습니다. 급여일은 직접 설정하세요.
+        action: 수입 추가
+      all_clear:
+        title: 충당할 청구서 없음
+        description: 지금부터 %{date}까지 납부할 청구서가 없어 해당 기간에 납부용으로 확보할 금액이 없습니다.
+      safe_after_bills: 청구서 납부 후 지출 가능액
+      short_after_bills: 청구서 납부 후 부족액
+      period_source: "· %{source}"
+      period_source_multiple: "· %{count} 수입원"
+      before_next_paycheck: "%{date} 이전"
+      no_income_arriving: 예정된 수입 없음
+      income_amount: 수입 %{amount}
+      due_this_period: 이번 기간 납부 예정액
+      reserved_ahead: 향후 납부용 확보액
+      safe_short: 지출 가능액
+      short_short: 부족액
+      reserved_footer:
+        one: 향후 청구서 1개를 위해 미리 확보한 금액
+        other: 향후 청구서 %{count}개를 위해 미리 확보한 금액
+      bills_this_period:
+        one: 이번 기간 청구서 · 1
+        other: 이번 기간 청구서 · %{count}
+      bills_before_payday:
+        one: 다음 급여일 이전에 청구서 · 1
+        other: 다음 급여일 이전에 청구서 · %{count}
+      of_total: "%{amount}의"
+      bridge_label: 다음 월급 받기 전에
+      bridge_amount: "· 납부 예정 %{amount}"
+      bridge_split: "%{date} 이전 납부할 금액이며, 계좌 잔액 %{cash}로 충당할 수 있습니다."
+      bridge_left: 청구서 납부 후 %{amount} 남음
+      bridge_show_more:
+        one: 1개 더 표시
+        other: "%{count} 더 보기"
+      bridge_allocation_aria: 계좌 잔액 %{cash} 중 다음 급여일 전에 %{due}를 납부해야 하며 %{left}가 남습니다.
+      item_overdue: 연체
+      shortfall_label: 다음 급여일 전 자금 부족
+      shortfall_amount: "· %{amount}"
+      shortfall_split: "%{date} 이전 납부할 금액은 %{obligations}이며 계좌 잔액은 %{cash}입니다."
+      shortfall_largest: '예정된 납부 항목 중 가장 큰 금액:'
+      review_plan: 계획 검토
+      allocation_aria: 수입 %{income} 중 %{due}는 이번 납부에, %{reserved}는 향후 납부를 위해 확보하며,
+        %{safe}는 안심하고 지출할 수 있습니다.
+      allocation_aria_short: 수입 %{income} 전액이 이곳의 납부 예정 항목에 사용되며, %{short}가 더 필요합니다.
+    reset_feed_token:
+      done: 피드 링크가 재설정되었습니다. 이전 링크를 사용하는 캘린더 앱은 업데이트가 중단됩니다. 새로운 것으로 다시 구독하세요.
+      confirm: 캘린더 피드 링크를 재설정하시겠습니까? 이전에 공유한 모든 링크가 작동을 멈춥니다.
+    calendar:
+      subscribe_ical: 구독(iCal)
+      reset_feed: 링크 재설정
+      previous_month: 지난달
+      next_month: 다음 달
+      today: 오늘
+      month_totals: 예상 %{expected} · 납부 완료 %{paid}
+      empty_month: 이번 달에는 청구서가 없습니다.
+    all:
+      search_placeholder: 청구서 검색
+      current_bills: 현재 청구서
+      dismissed_hidden_description: 제외한 청구서는 숨겨집니다.
+      status_filters:
+        overdue: 연체
+        due: 곧 납부 예정
+        partial: 일부 납부
+        paid: 납부 완료
+        paused: 일시중지됨
+        ended: 제외됨
+      subscription_monthly: 한 달
+      subscription_annual: 1년
+      subscription_active: 활성
+      subscription_price_changes: 올해 가격 변동
+      subscription_price_change_line: "%{from} → %{to} (%{percent}%)"
+      any_type: 모든 유형
+      sort_due: 다음 납부일순
+      sort_name: 이름으로
+      sort_amount: 금액별
+      no_matches_title: 일치하는 항목이 없습니다.
+      no_matches_description: 필터나 검색을 지워보세요.
+      col_name: 이름
+      col_amount: 금액
+      col_next: 다음 납부일
+      col_actions: 작업
+      monthly_equivalent: "%{amount}/월"
+      types:
+        bill: 청구서
+        subscription: 구독
+        installment: 할부 계획
+        income: 수입
+        transfer: 이체
+        other: 기타
+    show:
+      edit: 청구서 편집
+    index:
+      left_to_pay: 남은 납부액
+      paid_so_far: 현재까지 결제됨
+      hero_past_due: "%{amount} 연체"
+      hero_next_seven: 향후 7일간 %{amount} 납부 예정
+      add_bill: 새 청구서
+      add_income: 새로운 수입
+      review_with_ai: AI로 검토
+      detected_review:
+        one: 거래에서 반복 결제가 1건 발견되었습니다. 여기에 있는 총액이 실제로 지불하는 금액과 일치하는지 확인하세요.
+        other: 거래에서 %{count} 반복 결제가 발견되었습니다. 여기에 있는 총액이 실제로 지불하는 금액과 일치하는지 확인하세요.
+      detected_review_action: 검토해 보세요
+      notices_heading: 변경 사항
+      needs_review: 검토 필요
+      notice_trial: "%{name}의 체험판이 종료됩니다. %{date}"
+      notice_renewal: "%{name}의 다음 갱신일은 %{date}입니다."
+      notice_price: "%{name} 가격 변경 : %{from} → %{to} (%{percent})"
+      notices_routine:
+        one: 작은 변화 1개
+        other: "%{count} 작은 변화"
+      suggestion_line: "%{entry}는 %{bill}의 결제처럼 보입니다."
+      suggestion_unknown_entry: 거래
+      confidence: "%{percent}% 일치"
+      accept: 적용
+      reject: 이 청구서는 아님
+      title: 청구서
+      summary_label: 이번 달 납부 예정
+      summary_count:
+        one: 납부할 청구서 1개
+        other: 납부할 청구서 %{count}개
+      summary_needs_action:
+        one: 직접 처리할 항목 1개
+        other: 직접 처리할 항목 %{count}개
+      all_automatic: 모두 자동결제로
+      recurring_label: 정기 납부 약정
+      recurring_monthly: 월 %{amount}
+      recurring_annual: 연 %{amount}
+      unconvertible:
+        one: 환율 정보가 없어 청구서 1개가 제외되었습니다.
+        other: 환율 정보가 없어 청구서 %{count}개가 제외되었습니다.
+      overdue: 연체
+      needs_attention: 주의가 필요함
+      attention_overdue_total: "%{amount} 연체"
+      this_month: 이번 달
+      later: 이번 달 이후
+      paid_this_month: 이번 달 납부액
+      dormant: 일시중지됨
+      kpi_remaining: 이번 달 남은 납부액
+      kpi_paid: 이번 달 납부액
+      kpi_next_seven: 향후 7일 납부 예정
+      kpi_past_due: 연체
+      paid_count:
+        one: 청구서 1개 납부 완료
+        other: 청구서 %{count}개 납부 완료
+      needs_action_count:
+        one: 직접 처리할 항목 1개
+        other: 직접 처리할 항목 %{count}개
+      empty:
+        title: 아직 청구서 없음
+        description: 청구서는 반복되는 지출입니다. Sure가 거래 내역에서 자동으로 찾아줍니다. 각 청구서에 결제 링크를 추가하면
+          여기서 바로 결제할 수 있습니다.
+        action: 반복 거래 찾기
+        no_history_description: 아직 거래가 없습니다. 계좌를 연결하거나 거래 내역을 가져오면 Sure가 청구서를 자동으로
+          찾습니다. 직접 추가할 수도 있습니다.

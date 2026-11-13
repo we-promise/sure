@@ -1,0 +1,39 @@
+---
+ko:
+  plans:
+    show:
+      title: 계획
+      subtitle: 지출과 저축에 돈을 어떻게 배분할지 결정하세요.
+    budget_card:
+      title: 이번 달
+      edit_budget: 예산 수정
+      of_total: 총 %{total} 중
+      days_left:
+        one: 1일 남음
+        other: "%{count}일 남음"
+      percent_used: "%{percent}% 사용됨"
+      top_categories: 상위 카테고리
+      view_budget: 전체 예산 보기
+      empty_body: 월별 지출 목표와 카테고리별 한도를 설정하여 이번 달의 실적을 확인하세요.
+      set_up: 이번 달 예산을 설정하세요
+    goals_card:
+      title: 당신의 목표
+      currency_warning:
+        one: 목표 1개에서 %{currencies} 잔액이 제외됩니다(환율 정보 없음).
+        other: 목표 %{count}개에서 %{currencies} 잔액이 제외됩니다(환율 정보 없음).
+      new_goal: 새로운 목표
+      active_count:
+        one: 진행 중 1개
+        other: 진행 중 %{count}개
+      of_targets: 전체 목표액 %{total} 중
+      behind_count:
+        one: 진도 지연 1개
+        other: 진도 지연 %{count}개
+      pending_count:
+        one: 대기 중인 적립 약정 1건
+        other: 대기 중인 적립 약정 %{count}건
+      all_on_pace: 모두 계획대로 진행 중
+      active_goals: 활성 목표
+      pending_marker: 보류 중
+      runway: "%{months}개월 유지 가능 · 월 %{pace}"
+      all_goals: 모든 목표

@@ -1,0 +1,21 @@
+---
+ko:
+  goal_pledges:
+    new:
+      helper_transfer: Sure가 연결된 계좌에서 일치하는 입금을 찾습니다. 적립 약정은 7일 동안 대기 상태로 유지되며, Sure가
+        입금을 확인하면 자동으로 확정됩니다.
+      helper_manual: 다음에 잔액을 수동으로 수정하면 Sure가 이를 기록하고 적립을 확인합니다.
+      amount_label: 금액
+      account_label: 입금 계좌
+      submit: 적립 약정 기록
+      preview_zero: 현재 목표 {target} 중 {current}를 저축했습니다.
+      preview_nonzero: 목표 {target} 중 {newTotal}로 {percent}%에 도달합니다.
+      preview_reached: 목표 금액 {target}에 도달합니다. 목표 달성!
+    create:
+      success: 적립 약정이 기록되었습니다. Sure가 다음 동기화 시 확인합니다.
+    renew:
+      success: 적립 약정 대기 기간이 7일 연장되었습니다.
+      not_open: 미완료 적립 약정만 연장할 수 있습니다.
+    destroy:
+      success: 적립 약정이 취소되었습니다.
+      not_open: 미완료 적립 약정만 취소할 수 있습니다.

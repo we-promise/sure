@@ -1,0 +1,31 @@
+---
+ko:
+  tags:
+    create:
+      created: 태그가 생성되었습니다.
+      error: '태그 생성 오류: %{error}'
+    destroy:
+      deleted: 태그가 삭제되었습니다.
+    destroy_all:
+      all_deleted: 모든 태그가 삭제되었습니다.
+    edit:
+      edit: 태그 수정
+    form:
+      placeholder: 태그 이름
+    index:
+      empty: 아직 태그가 없습니다.
+      new: 새 태그
+      tags: 태그
+      delete_all: 모두 삭제
+    menu:
+      label: 태그 편집
+    new:
+      new: 새 태그
+    summary:
+      add: 태그 추가
+      title: '태그: %{names}'
+    tag:
+      delete: 삭제
+      edit: 수정
+    update:
+      updated: 태그가 업데이트되었습니다.

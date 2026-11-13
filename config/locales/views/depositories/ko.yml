@@ -1,0 +1,29 @@
+---
+ko:
+  depositories:
+    edit:
+      edit: "%{account} 편집"
+    form:
+      none: 없음
+      subtype_prompt: 계좌 유형 선택
+    new:
+      title: 계좌 잔액 입력
+    subtypes:
+      cash:
+        long: 현금
+        short: 현금
+      cd:
+        long: 정기예금(CD)
+        short: CD
+      checking:
+        long: 입출금
+        short: 입출금
+      hsa:
+        long: 건강 저축 계좌
+        short: HSA
+      money_market:
+        long: 머니마켓
+        short: MM
+      savings:
+        long: 저축
+        short: 저축

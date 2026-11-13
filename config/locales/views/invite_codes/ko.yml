@@ -1,0 +1,10 @@
+---
+ko:
+  invite_codes:
+    create:
+      success: 코드가 생성되었습니다
+    destroy:
+      success: 코드가 삭제되었습니다.
+    index:
+      invite_code_description: 새 코드를 생성하면 여기에 표시됩니다. 이미 사용된 코드는 더 이상 표시되지 않습니다.
+      no_invite_codes: 표시할 코드가 없습니다.

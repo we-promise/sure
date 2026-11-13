@@ -1,0 +1,21 @@
+---
+ko:
+  cryptos:
+    edit:
+      edit: "%{account} 편집"
+    form:
+      subtype_label: 계좌 유형
+      subtype_prompt: 계좌 유형 선택
+      subtype_none: 없음
+      tax_treatment_label: 세금 처리
+      tax_treatment_hint: 대부분의 암호화폐는 과세 대상 계좌에 보관됩니다. 세금 우대 계좌에 보유되어 있는 경우 다른 옵션을
+        선택하세요.
+    new:
+      title: 계좌 잔액 입력
+    subtypes:
+      wallet:
+        short: 지갑
+        long: 암호화폐 지갑
+      exchange:
+        short: 거래소
+        long: 암호화폐 거래소

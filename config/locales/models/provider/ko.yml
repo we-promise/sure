@@ -1,0 +1,27 @@
+---
+ko:
+  providers:
+    property_valuation:
+      not_configured: 이 부동산 데이터 제공업체가 설정되지 않았습니다.
+      missing_fields: 이름과 전체 미국 주소(거리, 시, 주, 우편번호)를 입력하세요.
+      missing_fields_gb: 이름, 도로명 주소, 우편번호 및 부동산의 UPRN을 입력하세요.
+      preview_expired: 이 부동산 미리보기가 만료되었습니다. 주소를 다시 찾아보세요.
+      entry_name: "%{provider} 평가"
+    rentcast:
+      errors:
+        no_valuation: RentCast가 이 주소에 대한 추정 가치를 반환하지 않았습니다.
+        not_found: RentCast는 이 주소와 일치하는 부동산을 찾을 수 없습니다.
+    realie:
+      errors:
+        no_property: Realie가 이 주소에 대한 부동산 정보를 반환하지 않았습니다.
+        no_valuation: Realie는 이 부동산에 대한 평가를 반환하지 않았습니다.
+        not_found: Realie는 이 주소와 일치하는 부동산을 찾을 수 없습니다.
+        location_mismatch: Realie가 다른 도시 또는 우편번호의 부동산을 찾았습니다. 주소를 다시 확인해 주세요.
+    chimnie:
+      errors:
+        invalid_uprn: UPRN은 최대 12자리 숫자입니다. UPRN을 확인하고 다시 시도하세요.
+        no_estimate: Chimnie에는 이 부동산에 대한 추정 가치가 없습니다.
+        not_found: Chimnie는 이 UPRN을 사용하여 부동산을 찾을 수 없습니다.
+        unsupported_property: Chimnie는 주거용 부동산만 평가합니다. 이 UPRN은 상업용 또는 복합 용도 부동산에 해당합니다.
+        unauthorized: Chimnie가 API 키를 거부했습니다. 설정 → 셀프호스팅에서 키를 확인하세요.
+        insufficient_balance: 이 요청을 하기에는 Chimnie 계정 잔액이 너무 낮습니다.

@@ -1,0 +1,9 @@
+---
+ko:
+  activemodel:
+    errors:
+      models:
+        time_series/value:
+          attributes:
+            value:
+              must_be_a_money_or_numeric: Money 또는 Numeric 유형이어야 합니다.

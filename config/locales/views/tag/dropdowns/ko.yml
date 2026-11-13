@@ -1,0 +1,9 @@
+---
+ko:
+  tag:
+    dropdowns:
+      show:
+        empty: 아직 태그가 없습니다.
+        manage: 태그 관리
+        no_tags: 태그를 찾을 수 없습니다.
+        search_placeholder: 검색

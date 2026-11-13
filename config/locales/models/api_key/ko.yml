@@ -1,0 +1,7 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: 데모 모니터링 API 키를 파기할 수 없습니다.

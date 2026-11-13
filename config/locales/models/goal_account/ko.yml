@@ -1,0 +1,10 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: 이 계좌는 이미 “%{goal_name}”에 전액 배정되었습니다.
+                나누어 배정하려면 금액을 입력하세요.

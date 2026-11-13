@@ -1,6 +1,16 @@
 require "test_helper"
 
 class PagesControllerTest < ActionDispatch::IntegrationTest
+  test "Korean preference controls the document language" do
+    @user.update!(locale: "ko")
+
+    get root_path
+
+    assert_response :ok
+    assert_select "html[lang=ko]"
+    assert_select "a", text: "거래 내역"
+  end
+
   include EntriesTestHelper
 
   setup do

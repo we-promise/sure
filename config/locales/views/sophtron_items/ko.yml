@@ -1,0 +1,319 @@
+---
+ko:
+  sophtron_items:
+    defaults:
+      name: Sophtron 연결
+    new:
+      title: Sophtron 연결
+      user_id: 사용자 ID
+      user_id_placeholder: Sophtron 사용자 ID를 붙여넣으세요.
+      access_key: 액세스 키
+      access_key_placeholder: Sophtron 액세스 키를 붙여넣으세요
+      connect: 연결
+      cancel: 취소
+    create:
+      success: Sophtron 연결이 성공적으로 생성되었습니다.
+    destroy:
+      success: Sophtron 연결이 제거되었습니다.
+    update:
+      success: Sophtron 연결이 성공적으로 업데이트되었습니다! 계좌가 다시 연결되고 있습니다.
+      errors:
+        blank_user_id: Sophtron 사용자 ID를 입력하세요.
+        invalid_user_id: 잘못된 사용자 ID입니다. Sophtron에서 전체 사용자 ID를 복사했는지 확인하세요.
+        user_id_compromised: 사용자 ID가 유출되었거나 만료되었거나 이미 사용되었을 수 있습니다. 새로 생성하세요.
+        blank_access_key: Sophtron 액세스 키를 입력하세요.
+        invalid_access_key: 잘못된 액세스 키입니다. Sophtron에서 전체 액세스 키를 복사했는지 확인하세요.
+        access_key_compromised: 액세스 키가 유출되었거나 만료되었거나 이미 사용되었을 수 있습니다. 새로 생성하세요.
+        update_failed: '연결 업데이트 실패: %{message}'
+        unexpected: 예상치 못한 오류가 발생했습니다. 다시 시도하거나 지원팀에 문의하세요.
+    edit:
+      user_id:
+        label: 'Sophtron 사용자 ID:'
+        placeholder: Sophtron 사용자 ID를 여기에 붙여넣으세요...
+        help_text: 사용자 ID는 문자와 숫자로 시작하는 긴 문자열이어야 합니다.
+      access_key:
+        label: 'Sophtron 액세스 키:'
+        placeholder: 여기에 Sophtron 액세스 키를 붙여넣으세요...
+        help_text: 액세스 키는 문자와 숫자로 시작하는 긴 문자열이어야 합니다.
+    index:
+      title: Sophtron 연결
+    loading:
+      loading_message: Sophtron 계좌 로드 중...
+      loading_title: 로드 중
+    link_accounts:
+      all_already_linked:
+        one: 선택한 계좌(%{names})는 이미 연결되어 있습니다.
+        other: '선택한 계좌 %{count}개가 모두 이미 연결되어 있습니다: %{names}'
+      api_error: API 연결 오류
+      invalid_account_names:
+        one: 이름이 비어 있는 계좌는 연결할 수 없습니다.
+        other: 이름이 비어 있는 계좌 %{count}개는 연결할 수 없습니다.
+      link_failed: 계좌를 연결하지 못했습니다.
+      no_accounts_selected: 계좌를 하나 이상 선택하세요.
+      partial_invalid: 계좌 %{created_count}개를 연결했습니다. %{already_linked_count}개는 이미
+        연결되어 있으며, %{invalid_count}개는 이름이 올바르지 않습니다.
+      partial_success: '계좌 %{created_count}개를 연결했습니다. %{already_linked_count}개는 이미
+        연결되어 있습니다: %{already_linked_names}'
+      success:
+        one: 계좌 %{count}개를 연결했습니다
+        other: 계좌 %{count}개를 연결했습니다
+      no_credentials_configured: 제공업체 설정에서 먼저 Sophtron API 사용자 ID와 액세스 키를 구성하세요.
+      no_accounts_found: 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_access_key: Sophtron 액세스 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_user_id: Sophtron 사용자 ID가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_institution_connected: 먼저 Sophtron과 은행기관을 연결해주세요.
+    connect:
+      cancel: 취소
+      captcha: 보안 문자
+      connect: 연결
+      institution_search_label: 기관
+      institution_search_placeholder: 은행명으로 검색
+      no_institutions: 일치하는 기관을 찾을 수 없습니다.
+      password: 비밀번호
+      search: 검색
+      search_too_short: 검색하려면 2자 이상 입력하세요.
+      title: Sophtron 기관 연결
+      username: 사용자 이름
+    connect_institution:
+      api_error: 'Sophtron 연결 실패: %{message}'
+      missing_parameters: 기관을 선택하고 은행 로그인 정보를 입력하세요.
+    connection_status:
+      api_error: 'API 연결 오류: %{message}'
+      attempt: 최대 %{max}회 중 %{attempt}회차 시도
+      check_again: 다시 확인하세요
+      failed: Sophtron이 이 기관 연결을 완료할 수 없습니다.
+      failed_timeout: 기관이 로그인을 완료하는 동안 Sophtron이 시간 초과되었습니다.
+      timeout: Sophtron이 예상 시간 내에 연결을 완료하지 못했습니다. 다시 확인하거나 나중에 다시 연결해 보세요.
+      title: Sophtron 연결하기
+      waiting: Sophtron이 아직 기관에 연결되어 있는 중입니다.
+    mfa:
+      captcha: 보안 문자 텍스트
+      captcha_alt: Sophtron 보안 문자
+      phone_confirmed: 전화로 확인했습니다
+      submit: 제출
+      title: Sophtron 인증
+      token: 인증코드
+    submit_mfa:
+      api_error: '확인 실패: %{message}'
+      invalid_security_answers: 보안 답변이 누락되었거나 너무 깁니다.
+      unknown_challenge: 알 수 없는 Sophtron 인증 단계입니다.
+    sophtron_item:
+      accounts_need_setup: 계좌를 설정해야 합니다.
+      automatic_sync: 자동 동기화 사용
+      delete: 연결 삭제
+      deletion_in_progress: 삭제 중...
+      error: 오류
+      no_accounts_description: 이 연결에는 아직 연결된 계좌가 없습니다.
+      no_accounts_title: 계좌 없음
+      manual_sync: 수동 동기화
+      manual_sync_action: 수동 동기화 필요
+      manual_sync_action_for: "%{institution}에 대한 수동 동기화 필요"
+      automatic_sync_for: "%{institution}에 자동 동기화 사용"
+      setup_action: 새 계좌 설정
+      setup_description: 전체 %{total}개 계좌 중 %{linked}개가 연결되었습니다. 새로 가져온 Sophtron 계좌의
+        계좌 유형을 선택하세요.
+      setup_needed: 새 계좌 설정 준비 완료
+      status: "%{timestamp} 전에 동기화됨"
+      status_never: 동기화되지 않음
+      status_with_summary: 마지막 동기화 %{timestamp} 전 • %{summary}
+      sync_now: 지금 동기화
+      syncing: 동기화 중...
+      total: 합계
+      unlinked: 연결 안 됨
+    preload_accounts:
+      preload_accounts: 계좌를 미리 로드
+      api_error: API 연결 오류
+      unexpected_error: 예상치 못한 오류가 발생했습니다.
+      no_credentials_configured: 제공업체 설정에서 먼저 Sophtron API 사용자 ID와 액세스 키를 구성하세요.
+      no_accounts_found: 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_access_key: Sophtron 액세스 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_user_id: Sophtron 사용자 ID가 구성되지 않았습니다. 설정에서 구성해 주세요.
+    select_accounts:
+      accounts_selected: 선택한 계좌
+      api_error: API 연결 오류
+      unexpected_error: 예상치 못한 오류가 발생했습니다.
+      cancel: 취소
+      configure_name_in_sophtron: 가져올 수 없습니다. Sophtron에서 계좌 이름을 구성하세요.
+      description: "%{product_name} 계정에 연결할 계좌를 선택하세요."
+      link_accounts: 선택한 계좌 연결
+      no_accounts_found: 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_access_key: Sophtron 액세스 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_user_id: Sophtron 사용자 ID가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_credentials_configured: 제공업체 설정에서 먼저 Sophtron API 사용자 ID와 액세스 키를 구성하세요.
+      no_institution_connected: 먼저 Sophtron과 은행기관을 연결해주세요.
+      no_name_placeholder: "(이름 없음)"
+      title: Sophtron 계좌 선택
+    select_existing_account:
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      all_accounts_already_linked: 모든 Sophtron 계좌가 이미 연결되어 있습니다.
+      api_error: API 연결 오류
+      cancel: 취소
+      configure_name_in_sophtron: 가져올 수 없습니다. Sophtron에서 계좌 이름을 구성하세요.
+      description: 이 계좌와 연결할 Sophtron 계좌를 선택하세요. 거래는 자동으로 동기화되고 중복 제거됩니다.
+      link_account: 계좌 연결
+      no_account_specified: 지정된 계좌가 없습니다.
+      no_accounts_found: Sophtron 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_access_key: Sophtron 액세스 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_user_id: Sophtron 사용자 ID가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_institution_connected: 먼저 Sophtron과 은행기관을 연결해주세요.
+      no_name_placeholder: "(이름 없음)"
+      title: Sophtron과 %{account_name} 연결
+      unexpected_error: 예상치 못한 오류가 발생했습니다.
+    link_existing_account:
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      api_error: API 연결 오류
+      unexpected_error: 예상치 못한 오류가 발생했습니다.
+      invalid_account_name: 이름이 비어 있는 계좌는 연결할 수 없습니다.
+      sophtron_account_already_linked: 이 Sophtron 계좌는 이미 다른 계좌에 연결되어 있습니다.
+      sophtron_account_not_found: Sophtron 계좌를 찾을 수 없습니다
+      missing_parameters: 필수 매개변수가 누락되었습니다.
+      no_institution_connected: 먼저 Sophtron과 은행기관을 연결해주세요.
+      success: "%{account_name}를 Sophtron과 성공적으로 연결했습니다."
+    setup_accounts:
+      account_type_label: '계좌 유형:'
+      all_accounts_linked: 모든 Sophtron 계좌는 이미 설정되었습니다.
+      api_error: API 연결 오류
+      unexpected_error: 예상치 못한 오류가 발생했습니다.
+      fetch_failed: 계좌를 가져오지 못했습니다.
+      no_accounts_to_setup: 설정할 계좌가 없습니다
+      no_access_key: Sophtron 액세스 키가 구성되지 않았습니다. 연결 설정을 확인하세요.
+      no_user_id: Sophtron 사용자 ID가 구성되지 않았습니다. 연결 설정을 확인하세요.
+      no_institution_connected: Sophtron 기관이 아직 연결되지 않았습니다.
+      account_types:
+        skip: 이 계좌 건너뛰기
+        depository: 입출금 계좌 또는 저축 계좌
+        credit_card: 신용카드
+        investment: 투자 계좌
+        loan: 대출 또는 모기지
+        other_asset: 기타 자산
+      subtype_labels:
+        depository: '계좌 하위 유형:'
+        credit_card: ''
+        investment: '투자 유형:'
+        loan: '대출 유형:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: 신용카드는 자동으로 신용카드 계좌로 설정됩니다.
+        other_asset: 기타 자산에는 추가 옵션이 필요하지 않습니다.
+      balance: 잔액
+      cancel: 취소
+      choose_account_type: 각 Sophtron 계좌에 대해 올바른 계좌 유형을 선택하세요.
+      create_accounts: 계좌 만들기
+      creating_accounts: 계좌 생성 중...
+      historical_data_range: '과거 데이터 범위:'
+      subtitle: 가져온 계좌에 대한 올바른 계좌 유형을 선택하세요.
+      sync_start_date_help: 거래 내역을 동기화하려는 기간을 선택하세요. 최대 3년의 이력을 사용할 수 있습니다.
+      sync_start_date_label: '거래 동기화 시작일:'
+      title: Sophtron 계좌 설정
+    complete_account_setup:
+      all_skipped: 모든 계좌를 건너뛰었습니다. 생성된 계좌가 없습니다.
+      creation_failed: 계좌를 생성하지 못했습니다.
+      api_error: API 연결 오류
+      unexpected_error: 예상치 못한 오류가 발생했습니다.
+      no_accounts: 설정할 계좌가 없습니다.
+      success: 계좌 %{count}개를 생성했습니다.
+    sync:
+      already_running: Sophtron 수동 동기화가 이미 진행 중입니다.
+      api_error: 'Sophtron 수동 동기화 실패: %{message}'
+      failed: Sophtron 수동 동기화 실패
+      no_linked_accounts: 이 Sophtron 기관에는 동기화할 연결된 계좌가 없습니다.
+      processing_failed: Sophtron 수동 동기화에서 새로 가져온 거래를 처리하지 못했습니다.
+      success: 동기화가 시작되었습니다
+    toggle_manual_sync:
+      success_disabled: Sophtron 기관은 자동으로 동기화됩니다.
+      success_enabled: Sophtron 기관은 이제 수동 동기화가 필요합니다.
+    manual_sync_complete:
+      close: 닫기
+      description: 계좌 잔액 업데이트가 백그라운드에서 완료됩니다.
+      message: Sophtron 검증 후 거래가 다운로드되었습니다.
+      title: Sophtron 동기화가 시작되었습니다
+    sophtron_setup_required:
+      title: Sophtron 설정 필요
+      message: Sophtron 연결 설정을 완료하려면 제공업체 설정 페이지로 이동하여 지침에 따라 Sophtron 연결을 승인하고 구성하세요.
+      go_to_provider_settings: 제공업체 설정으로 이동
+      heading: 사용자 ID 및 액세스 키가 구성되지 않았습니다.
+      description: Sophtron 계좌를 연결하려면 먼저 Sophtron 사용자 ID와 액세스 키를 구성해야 합니다.
+      setup_steps_title: '설정 단계:'
+      step_1_html: "<strong>설정 → 은행 동기화 제공업체</strong>로 이동합니다."
+      step_2_html: "<strong>Sophtron</strong> 섹션 찾기"
+      step_3_html: Sophtron 사용자 ID와 액세스 키를 입력하세요.
+      step_4: 계좌를 연결하려면 여기로 돌아오세요.
+    api_error:
+      title: Sophtron 연결 오류
+      unable_to_connect: Sophtron에 연결할 수 없습니다
+      institution_unable_to_connect: 기관에 연결할 수 없습니다
+      common_issues_title: '일반적인 문제:'
+      incorrect_user_id: '잘못된 사용자 ID: 제공업체 설정에서 사용자 ID를 확인하세요.'
+      invalid_access_key: '잘못된 액세스 키: 제공업체 설정에서 액세스 키를 확인하세요.'
+      expired_credentials: '만료된 자격 증명: Sophtron에서 새 사용자 ID 및 액세스 키를 생성합니다.'
+      network_issue: '네트워크 문제: 인터넷 연결을 확인하세요.'
+      service_down: '서비스 중단: Sophtron API를 일시적으로 사용하지 못할 수 있습니다.'
+      bad_credentials: '은행 자격 증명: 사용자 이름과 비밀번호가 올바른지 확인하세요.'
+      verification_code: '인증 코드: 만료되기 전에 최신 코드를 입력했는지 확인하세요.'
+      institution_timeout: '기관 시간 초과: 은행 로그인 페이지가 시간 내에 완료되지 않았습니다.'
+      unsupported_mfa: 'MFA 지원: Sophtron은 이 기관의 현재 검증 흐름을 지원하지 않을 수 있습니다.'
+      check_provider_settings: 제공업체 설정 확인
+      try_again: 다시 연결해 보세요
+    select_option: "%{type}를 선택하세요."
+    subtype: 하위 유형
+    type: 유형
+    sophtron_panel:
+      setup_instructions_title: '설정 지침:'
+      setup_instructions:
+        step_1_html: API 자격 증명을 얻으려면 <a href="%{url}" target="_blank" rel="noopener
+          noreferrer" class="link">Sophtron</a>를 방문하세요.
+        step_2: Sophtron 계정 설정에서 사용자 ID와 액세스 키를 복사하세요.
+        step_3: 아래에 자격 증명을 붙여넣고 저장을 클릭하세요. Sure는 Sophtron 고객 ID를 자동으로 생성하거나 재사용합니다.
+      field_descriptions_title: '필드 설명:'
+      field_descriptions:
+        user_id_html: "<strong>사용자 ID:</strong> Sophtron 사용자 ID 자격 증명"
+        access_key_html: "<strong>액세스 키:</strong> Sophtron 액세스 키 자격 증명"
+        base_url_html: "<strong>기본 URL:</strong> Sophtron API 엔드포인트 URL이며, 일반적으로 https://api.sophtron.com/api
+          입니다."
+      fields:
+        user_id:
+          label: 사용자 ID
+          placeholder_new: Sophtron 사용자 ID를 붙여넣으세요.
+          placeholder_edit: "••••••••"
+        access_key:
+          label: 액세스 키
+          placeholder_new: Sophtron 액세스 키를 붙여넣으세요.
+          placeholder_edit: "••••••••"
+        base_url:
+          label: 기본 URL
+          placeholder: https://api.sophtron.com/api
+      save: 구성 저장
+      update: 구성 업데이트
+    syncer:
+      manual_sync_required: 이 기관에는 수동 Sophtron 동기화가 필요합니다. 자동 동기화 중에 해당 계좌를 건너뜁니다.
+      importing_accounts: Sophtron에서 계좌를 가져오는 중...
+      checking_account_configuration: 계좌 구성을 확인하는 중...
+      accounts_need_setup: 계좌 %{count}개 설정 필요
+      processing_transactions: 연결된 계좌의 거래를 처리하는 중...
+      calculating_balances: 연결된 계좌의 잔액을 계산하는 중...
+    sophtron_entry:
+      processor:
+        unknown_transaction: 알 수 없는 거래
+    render_connection_timeout:
+      timeout: 연결 시간이 초과되었습니다. 다시 시도해 주세요.
+    redirect_after_account_link:
+      invalid_account_names:
+        one: 이름이 비어 있는 계좌 %{count}개는 연결할 수 없습니다.
+        other: 이름이 비어 있는 계좌 %{count}개는 연결할 수 없습니다.
+      partial_invalid: 계좌 %{created_count}개를 연결했습니다. %{already_linked_count}개는 이미
+        연결되어 있으며, %{invalid_count}개는 이름이 올바르지 않습니다.
+      partial_success: 계좌 %{created_count}개를 연결했습니다. %{already_linked_count}개는 이미
+        연결되어 있습니다.
+      success:
+        one: 계좌 %{count}개를 연결했습니다.
+        other: 계좌 %{count}개를 연결했습니다.
+      all_already_linked:
+        one: 선택한 계좌는 이미 연결되어 있습니다
+        other: 선택한 계좌 %{count}개가 모두 이미 연결되어 있습니다.
+      link_failed: 계좌를 연결하지 못했습니다.
+    start_manual_sync:
+      already_running: 동기화가 이미 진행 중입니다.
+      no_linked_accounts: 동기화할 수 있는 연결된 계좌가 없습니다.
+      api_error: 'API 오류: %{message}'
+    start_manual_sync_for_account:
+      failed: 계좌를 동기화하지 못했습니다.

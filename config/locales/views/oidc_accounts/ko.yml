@@ -1,0 +1,45 @@
+---
+ko:
+  oidc_accounts:
+    link:
+      no_pending_oidc: 대기 중인 OIDC 인증을 찾을 수 없습니다.
+      title_link: OIDC 계정 연결
+      title_create: 계정 만들기
+      verify_heading: 신원 확인
+      verify_description_html: "%{provider} 계정%{email_suffix}를 연결하려면 비밀번호를 입력하여 본인임을
+        확인하세요."
+      email_suffix_html: "(<strong>%{email}</strong>)"
+      email_label: 이메일
+      email_placeholder: 이메일을 입력하세요
+      password_label: 비밀번호
+      password_placeholder: 비밀번호를 입력하세요
+      verify_hint: 이렇게 하면 귀하만 외부 계정을 프로필에 연결할 수 있습니다.
+      submit_link: 계정 연결
+      create_heading: 새 계정 만들기
+      create_description_html: 이메일 <strong>%{email}</strong>를 사용하는 계정을 찾을 수 없습니다.
+        %{provider} ID를 사용하여 새 계정을 만들려면 아래를 클릭하세요.
+      info_email: '이메일:'
+      info_name: '이름:'
+      submit_create: 계정 만들기
+      submit_accept_invitation: 초대 수락
+      account_creation_disabled: Single Sign-On을 통한 새 계정 생성이 비활성화되었습니다. 계정을 만들려면 관리자에게
+        문의하세요.
+      cancel: 취소
+    create_link:
+      no_pending_oidc: 대기 중인 OIDC 인증을 찾을 수 없습니다.
+    new_user:
+      no_pending_oidc: 대기 중인 OIDC 인증을 찾을 수 없습니다.
+      title: 계정을 완성하세요
+      heading: 계정 만들기
+      description: "%{provider} ID로 계정 생성을 완료하려면 세부 정보를 확인하세요."
+      email_label: 이메일(SSO 제공업체로부터)
+      first_name_label: 이름
+      first_name_placeholder: 이름을 입력하세요
+      last_name_label: 성
+      last_name_placeholder: 성을 입력하세요
+      submit: 계정 만들기
+      cancel: 취소
+    create_user:
+      no_pending_oidc: 대기 중인 OIDC 인증을 찾을 수 없습니다.
+      account_creation_disabled: SSO 계정 생성이 비활성화되었습니다. 관리자에게 문의하세요.
+      account_created: 환영합니다! 계정이 생성되었습니다.

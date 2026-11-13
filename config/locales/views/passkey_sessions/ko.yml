@@ -1,0 +1,4 @@
+---
+ko:
+  passkey_sessions:
+    invalid_credential: 해당 패스키로 로그인할 수 없습니다. 다시 시도하거나 비밀번호를 사용하세요.
