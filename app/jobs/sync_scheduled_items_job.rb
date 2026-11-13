@@ -19,13 +19,14 @@ class SyncScheduledItemsJob < ApplicationJob
       # Advanced first, so a connection whose sync keeps failing is retried
       # at its own cadence rather than on every tick. A schedule changed or
       # removed since it was loaded is no longer due.
+      due_at = schedule.next_run_at
       next unless schedule.advance!
       item = schedule.syncable
 
       if item.nil?
         schedule.destroy!
       elsif item.class.syncable.exists?(item.id)
-        sync(item)
+        dispatch(schedule, item, due_at)
       end
     rescue => e
       capture_failure(schedule, item, e)
@@ -33,6 +34,17 @@ class SyncScheduledItemsJob < ApplicationJob
   end
 
   private
+    # A sync that fails once started waits for the next run, but one that
+    # could not be started at all (e.g. the queue was unreachable) puts the
+    # schedule back, so the next tick tries this run again instead of a
+    # long schedule skipping a whole interval.
+    def dispatch(schedule, item, due_at)
+      sync(item)
+    rescue
+      schedule.update_columns(next_run_at: due_at)
+      raise
+    end
+
     # Plaid only hands over transactions it has pulled from the bank on its
     # own cadence unless asked to refresh, as every other sync entry point
     # does (its cooldown keeps the requests apart).
