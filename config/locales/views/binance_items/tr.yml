@@ -44,6 +44,7 @@ tr:
       success:
         one: "%{count} hesap içe aktarıldı"
         other: "%{count} hesap içe aktarıldı"
+      invalid_sync_start_date: Senkronizasyon başlangıç tarihi geçmişte geçerli bir tarih olmalıdır.
     create:
       default_name: Binance
       success: Binance'a başarıyla bağlandı! Hesabınız senkronize ediliyor.

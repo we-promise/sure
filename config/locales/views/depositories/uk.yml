@@ -10,17 +10,17 @@ uk:
       title: "Введіть баланс рахунку"
     subtypes:
       cd:
-        long: "Депозитний сертифікат"
-        short: "ДС"
+        long: "Строковий депозит"
+        short: "Депозит"
       checking:
-        long: "Розрахунковий"
-        short: "Розрахунковий"
+        long: "Поточний"
+        short: "Поточний"
       hsa:
         long: "Рахунок для заощаджень на здоров'я"
-        short: "РЗЗ"
+        short: "HSA"
       money_market:
-        long: "Грошовий ринок"
-        short: "ГР"
+        long: "Рахунок грошового ринку"
+        short: "Грош. ринок"
       savings:
         long: "Ощадний"
         short: "Ощадний"

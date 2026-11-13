@@ -21,7 +21,7 @@
                      text: translation("sync"),
                      icon: "refresh-cw",
                      variant: :outline,
-                     href: helpers.sync_trading212_item_path(item),
+                     href: helpers.sync_trading212_item_path(item, source: "panel"),
                      method: :post,
                      disabled: item.syncing?
                    ) %>

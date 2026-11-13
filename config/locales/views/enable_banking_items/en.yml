@@ -74,6 +74,7 @@ en:
       create_accounts: Create Accounts
       creating_accounts: Creating Accounts...
       cancel: Cancel
+      psd2_savings_notice: "Note: Some regulated French savings accounts (Livret A, PEL, LEP, LDDS) may have limited or no access over Open Banking (PSD2). If a savings account is missing, you can add it manually."
     new:
       link_enable_banking_title: Link Enable Banking
       session_expired: Session expired - re-authorization required

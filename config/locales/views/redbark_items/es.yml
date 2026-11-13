@@ -25,22 +25,16 @@ es:
         needs_setup: "%{count} cuentas necesitan configuración..."
       success: "Sincronización iniciada"
     panel:
-      setup_instructions: "Instrucciones de configuración:"
       step_1: "Crea una clave API en app.redbark.com, en Ajustes"
       step_2: "Introduce tu clave API abajo y pulsa el botón Guardar"
       step_3: "Después de una conexión correcta, ve a la pestaña Cuentas para configurar nuevas cuentas"
-      field_descriptions: "Descripciones de campos:"
       optional: "(Opcional)"
-      required: "(obligatorio)"
       optional_with_default: "(opcional, valor predeterminado %{default_value})"
       save_button: "Guardar configuración"
       update_button: "Actualizar configuración"
-      status_configured_html: "Configurado y listo para usar. Visita la pestaña <a href=\"%{accounts_path}\" class=\"link\">Cuentas</a> para gestionar y configurar cuentas."
-      status_not_configured: "No configurado"
       fields:
         api_key:
           label: "Clave API"
-          description: "Tu clave API de Redbark (empieza por rbk_live_)"
           placeholder_new: "rbk_live_..."
           placeholder_update: "Introduce una nueva clave API para actualizar"
     create:

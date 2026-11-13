@@ -37,9 +37,11 @@ zh-CN:
       new:
         title: 添加 SSO 提供商
         description: 配置一个新的单点登录认证提供商
+        provider_configuration: 提供商配置
       edit:
         title: 编辑 SSO 提供商
         description: 更新 %{label} 的配置
+        provider_configuration: 提供商配置
       create:
         success: SSO 提供商创建成功。
       update:

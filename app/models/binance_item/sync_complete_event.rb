@@ -17,14 +17,6 @@ class BinanceItem::SyncCompleteEvent
       account.broadcast_sync_complete
     end
 
-    # Update the Binance item view
-    binance_item.broadcast_replace_to(
-      binance_item.family,
-      target: "binance_item_#{binance_item.id}",
-      partial: "binance_items/binance_item",
-      locals: { binance_item: binance_item }
-    )
-
     # Let family handle sync notifications
     binance_item.family.broadcast_sync_complete
   end

@@ -12,7 +12,7 @@ module AccountAuthorizable
 
       allowed = case level
       when :write    then permission.in?([ :owner, :full_control ])
-      when :annotate then permission.in?([ :owner, :full_control, :read_write ])
+      when :annotate then permission == :owner || permission.to_s.in?(AccountShare::ANNOTATE_PERMISSIONS)
       when :owner    then permission == :owner
       else false
       end

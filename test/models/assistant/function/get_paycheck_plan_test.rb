@@ -139,6 +139,20 @@ class Assistant::Function::GetPaycheckPlanTest < ActiveSupport::TestCase
     assert_not bridge.key?(:cash_on_hand)
   end
 
+  # The plan files a snoozed bill at the date it was snoozed to, so the
+  # assistant needs that date to explain where the bill sits. due_on stays the
+  # scheduled date, as in get_bills, because that is what pays it.
+  test "a snoozed bill reports the date it was snoozed to beside its due date" do
+    declare_future_income
+    haircut = declare_bridge_bill(amount: 150)
+    haircut.recurring_occurrences.first.snooze!(Date.current + 3)
+
+    bill = call_tool[:periods].flat_map { |period| period[:bills_due] }.sole
+
+    assert_equal (Date.current + 1).iso8601, bill[:due_on]
+    assert_equal (Date.current + 3).iso8601, bill[:effective_due_on]
+  end
+
   private
 
     # The shared declare_income pays today, so there is no gap before the next

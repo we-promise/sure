@@ -115,6 +115,14 @@
       <% end %>
     </div>
 
+    <%# Every goal, not only the five listed: the saved total above covers them all. %>
+    <% affected = goals.select(&:currency_conversion_incomplete?) %>
+    <% if affected.any? %>
+      <div class="mt-4">
+        <%= render DS::Alert.new(variant: "warning", message: t(".currency_warning", count: affected.size,
+              currencies: affected.flat_map { |goal| goal.missing_exchange_rate_currencies.to_a }.uniq.to_sentence)) %>
+      </div>
+    <% end %>
   <% end %>
 
   <% if family_has_goals %>

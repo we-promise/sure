@@ -5,7 +5,7 @@ ru:
       account: Счёт для перевода (необязательно)
       account_prompt: Поиск счёта
       amount: Сумма
-      dividend_requires_security: Для дивидендов требуется актив
+      dividend_requires_security: Для дивидендов требуется ценная бумага
       fee: Комиссия за операцию
       holding: Символ тикера
       holding_optional: Символ тикера (необязательно)
@@ -17,7 +17,7 @@ ru:
         (тикер)
       type: Тип
       type_buy: Покупка
-      type_deposit: Депозит
+      type_deposit: Пополнение
       type_dividend: Дивиденды
       type_interest: Проценты
       type_sell: Продажа
@@ -33,6 +33,15 @@ ru:
       sell: Продажа
       symbol_label: Символ
       total_return_label: Нереализованная прибыль/убыток
+      contribution: Пополнение
+      exchange: Обмен
+      fee: Комиссия
+      other: Прочее
+      reinvestment: Реинвестирование
+      sweep_in: Автоперевод (зачисление)
+      sweep_out: Автоперевод (списание)
+      transfer: Перевод
+      withdrawal: Вывод средств
     new:
       title: Новая операция
     show:
@@ -44,7 +53,7 @@ ru:
       date_label: Дата
       delete: Удалить
       delete_subtitle: Это действие нельзя отменить
-      delete_title: Удалить операцию
+      delete_title: Удалить сделку
       details: Детали
       exclude_subtitle: Эта операция не будет включена в отчёты и расчёты
       exclude_title: Исключить из аналитики
@@ -58,3 +67,8 @@ ru:
       sell: Продажа
       settings: Настройки
       type_label: Тип
+    api_errors:
+      activity_label_must_match_type: investment_activity_label должен быть %{label}, если type равен %{type}
+      invalid_activity_label: Недопустимая метка инвестиционной операции
+      invalid_type: Недопустимый тип
+      supported_types: 'type должен быть одним из: %{types}'

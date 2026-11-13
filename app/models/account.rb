@@ -1,34 +1,23 @@
 class Account < ApplicationRecord
-  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable
+  include AASM, Syncable, Monetizable, Chartable, Linkable, Enrichable, Anchorable, Reconcileable, TaxTreatable, Encryptable, IbanNormalizable, Logoable
 
-  # deterministic: true preserves equality lookups (e.g. find_by(iban:)) and
-  # the family_id+iban+currency uniqueness index, since the same plaintext always
-  # produces the same ciphertext.
-  #
-  # Deliberate tradeoff, not an oversight: unlike MonobankAccount#iban
-  # (encrypted non-deterministically, since it's never looked up by value),
-  # this column's whole purpose requires DB-level equality -- the uniqueness
-  # index and find_by(iban:) lookups can't work without a value-preserving
-  # transform. Splitting into a deterministic lookup column plus a separate
-  # non-deterministic display column (the pattern this codebase uses
-  # elsewhere, e.g. SnaptradeItem's client_id/consumer_key vs
-  # snaptrade_user_secret) wouldn't remove the ciphertext-correlation
-  # property being traded off here either, since IT'S the SAME value in both
-  # roles -- the deterministic column would still leak equality. Accepted
-  # for the user's own account/merchant IBAN; deliberately NOT applied to a
-  # transaction's counterparty_iban (see EnableBankingEntry::Processor),
-  # which has no uniqueness requirement and stays in the existing
-  # unencrypted `extra` jsonb column rather than inheriting this tradeoff.
+  # Deterministic so the family_id+iban+currency unique index and the
+  # uniqueness validation below still compare equal values once the column
+  # is encrypted (the same plaintext always produces the same ciphertext).
+  # The accepted tradeoff: equal IBANs are recognisable at rest.
   if encryption_ready?
     encrypts :iban, deterministic: true
   end
 
   before_validation :assign_default_owner, if: -> { owner_id.blank? }
+  # Covers every writer (form, Enable Banking, data import), so a type
+  # without an IBAN never keeps one.
+  before_validation :clear_unsupported_iban
   # IbanNormalizable strips everything but letters/digits and upcases, so
-  # provider-supplied IBANs ("DE893704...") and manually-entered ones in any
+  # IBANs from Enable Banking ("DE893704...") and manually-entered ones in any
   # formatting style ("DE89 3704...", "DE89.3704...", "DE89-3704...")
   # normalize to the same value — required for both the uniqueness index and
-  # deterministic-encryption equality lookups to actually match.
+  # the deterministic-encryption equality checks to match.
 
   before_destroy :capture_account_statement_ids_to_move
   before_destroy :cleanup_transfers
@@ -53,6 +42,7 @@ class Account < ApplicationRecord
   has_many :valuations, through: :entries, source: :entryable, source_type: "Valuation"
   has_many :trades, through: :entries, source: :entryable, source_type: "Trade"
   has_many :holdings, dependent: :destroy
+  has_many :holding_lots
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
@@ -68,6 +58,43 @@ class Account < ApplicationRecord
            dependent: :destroy
 
   monetize :balance, :cash_balance
+
+  # Sum of scheduled (future-dated) entries, signed and converted the same way
+  # Balance::BaseCalculator#signed_entry_flows treats real flows -- so the
+  # projection stays consistent with what the balance will actually become
+  # once these entries land. Non-cash valuation-only accounts (Property,
+  # Vehicle, etc.) ignore transactions entirely for balance purposes, same as
+  # Balance::BaseCalculator#flows_for_date -- see Entry#scheduled?.
+  #
+  # Trades are included only when qty is 0 (Dividend/Interest): those are pure
+  # cash flows with no offsetting holdings change, same shape as a Transaction.
+  # A Buy/Sell/Transfer/etc. moves value between cash and holdings rather than
+  # into or out of the account, so summing its raw amount here would
+  # double-count against Balance::BaseCalculator#market_value_change_on_date
+  # once the trade lands.
+  # `through_date` bounds the scheduled window to entries dated on or before
+  # it (inclusive) -- used to project the balance as of a specific future
+  # date (see Account::ActivityFeedData) instead of the account's fully
+  # projected total.
+  #
+  # The flows are loaded and converted once per instance (see
+  # #scheduled_entry_flows), so the chart tooltip and every projected date
+  # group in the activity feed share one query and one FX pass.
+  def scheduled_entries_total_money(through_date: nil)
+    flows = scheduled_entry_flows
+    flows = flows.select { |date, _| date <= through_date } if through_date
+
+    Money.new(flows.sum { |_, amount| amount }, currency)
+  end
+
+  def reload(*)
+    @scheduled_entry_flows = nil
+    super
+  end
+
+  def projected_balance_money
+    balance_money + scheduled_entries_total_money
+  end
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
 
@@ -92,6 +119,12 @@ class Account < ApplicationRecord
     visible.manual
   }
 
+  # The manual accounts +user+ may see, as /accounts lists them. Admins are
+  # not exempt: an admin sees what they own or were shared, as on /accounts.
+  scope :visible_manual_for, ->(user) {
+    visible_manual.where(id: user.accessible_accounts.select(:id))
+  }
+
   scope :listable_manual, -> {
     manual.where.not(status: :pending_deletion)
   }
@@ -103,10 +136,47 @@ class Account < ApplicationRecord
       .distinct
   }
 
+  # Accounts every active member of the account's family can access (owned or
+  # shared with them), the same test as accessible_by applied to all of them.
+  # Family-wide surfaces such as the insights feed name accounts and amounts
+  # to everyone, so they draw only from this set.
+  scope :accessible_by_all_active_members, -> {
+    where(<<~SQL.squish)
+      NOT EXISTS (
+        SELECT 1 FROM users
+        WHERE users.family_id = accounts.family_id
+          AND users.active = TRUE
+          AND users.id IS DISTINCT FROM accounts.owner_id
+          AND NOT EXISTS (
+            SELECT 1 FROM account_shares
+            WHERE account_shares.account_id = accounts.id
+              AND account_shares.user_id = users.id
+          )
+      )
+    SQL
+  }
+
   # Accounts a user can write to (owned or shared with full_control)
+  WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
+
   scope :writable_by, ->(user) {
     left_joins(:account_shares)
-      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')", uid: user.id)
+      .where(WRITABLE_BY_CONDITION, uid: user.id)
+      .distinct
+  }
+
+  # SQL boolean for "user may write to this account", for selecting next to
+  # rows already joined with account_shares (e.g. through annotatable_by).
+  def self.writable_by_sql(user)
+    Arel.sql("(#{sanitize_sql([ WRITABLE_BY_CONDITION, uid: user.id ])})")
+  end
+
+  # Accounts a user can annotate (category, tags, notes, merchant): owned,
+  # or shared with full_control or read_write
+  scope :annotatable_by, ->(user) {
+    left_joins(:account_shares)
+      .where("accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission IN (:permissions))",
+             uid: user.id, permissions: AccountShare::ANNOTATE_PERMISSIONS)
       .distinct
   }
 
@@ -121,7 +191,9 @@ class Account < ApplicationRecord
       .distinct
   }
 
-  has_one_attached :logo, dependent: :purge_later
+  # People paste whole URLs ("https://www.tbank.ru/") into the domain field,
+  # but the Brandfetch logo URL needs the bare host ("tbank.ru").
+  normalizes :institution_domain, with: ->(value) { normalize_institution_domain(value) }
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
 
@@ -176,8 +248,11 @@ class Account < ApplicationRecord
     state :disabled
     state :pending_deletion
 
+    # `timestamps: true` stamps disabled_at on entering disabled but never
+    # clears it, so leaving disabled clears it here. A present disabled_at then
+    # means the account was disabled, which the failed-deletion restore relies on.
     event :activate do
-      transitions from: [ :draft, :disabled ], to: :active
+      transitions from: [ :draft, :disabled ], to: :active, after: :clear_disabled_at
     end
 
     event :disable do
@@ -185,15 +260,42 @@ class Account < ApplicationRecord
     end
 
     event :enable do
-      transitions from: :disabled, to: :active
+      transitions from: :disabled, to: :active, after: :clear_disabled_at
     end
 
+    # An active or draft account can still carry a disabled_at from before enable
+    # cleared it. Drop it here, so a failed deletion (below) stamps the failure
+    # rather than reviving that stale date as the cutoff. A disabled account
+    # keeps its date.
     event :mark_for_deletion do
-      transitions from: [ :draft, :active, :disabled ], to: :pending_deletion
+      transitions from: [ :draft, :active ], to: :pending_deletion, after: :clear_disabled_at
+      transitions from: :disabled, to: :pending_deletion
+    end
+
+    # The AASM way out of pending_deletion (destroy_later's enqueue failure
+    # restores by update_column instead): Account#destroy fires it when the
+    # destroy raises, so the account is visible again and can be re-deleted.
+    # A separate event rather than widening `disable`, which would let every
+    # `disable!`/`may_disable?` caller act on an account being deleted.
+    #
+    # disabled_at is the net-worth cutoff, so an account that was already
+    # disabled keeps the date it was disabled; only one deleted from active or
+    # draft is stamped at the failure.
+    event :restore_after_failed_deletion do
+      transitions from: :pending_deletion, to: :disabled, after: :keep_original_disabled_at
     end
   end
 
   class << self
+    def normalize_institution_domain(value)
+      host = value.to_s.strip.downcase
+        .sub(%r{\A[a-z][a-z0-9+.-]*://}, "")
+        .split(%r{[/?#]}, 2).first.to_s
+        .sub(/:\d+\z/, "")
+        .delete_prefix("www.")
+      host.presence
+    end
+
     def human_attribute_name(attribute, options = {})
       options = { moniker: Current.family&.moniker_label || "Family" }.merge(options)
       super(attribute, options)
@@ -212,6 +314,17 @@ class Account < ApplicationRecord
 
       transaction do
         account.save!
+
+        # A loan's original principal was its balance on the day it was drawn
+        # down, so that is where its opening anchor belongs. The form always
+        # sends an opening balance date (defaulting to two years ago), so the
+        # server cannot tell a deliberate one from the default: the loan's
+        # start date wins. Loan validates start_date as on or before today, so
+        # the anchor never lands after the reconciliation below. Entry rejects
+        # a date on or before Entry.min_supported_date, so a loan started that
+        # long ago keeps the form's date; its schedule still uses start_date.
+        loan_start_date = account.accountable.start_date if initial_balance && account.loan?
+        opening_balance_date = loan_start_date if loan_start_date && loan_start_date > Entry.min_supported_date
 
         manager = Account::OpeningBalanceManager.new(account)
         result = manager.set_opening_balance(
@@ -339,7 +452,7 @@ class Account < ApplicationRecord
     def create_from_wise_account(wise_account)
       family = wise_account.wise_item.family
 
-      create_and_sync(
+      account = create_and_sync(
         {
           family: family,
           name: wise_account.name || "Wise #{wise_account.currency}",
@@ -351,6 +464,21 @@ class Account < ApplicationRecord
         },
         skip_initial_sync: true
       )
+
+      # When Sure imports a balance's whole history, it opens at 0 the day
+      # before Wise opened it, not at today's balance two years back.
+      if (opening_date = wise_account.opening_date)
+        manager = Account::OpeningBalanceManager.new(account)
+        date = [ opening_date, manager.oldest_entry_date&.prev_day ].compact.min
+        result = manager.set_opening_balance(balance: 0, date: date)
+        Rails.logger.warn "Account.create_from_wise_account - Opening balance kept for account #{account.id}: #{result.error}" if result.error
+        # So later syncs may move it again (WiseAccount::Processor).
+        if result.changes_made?
+          wise_account.remember_opening_anchor!(account.valuations.opening_anchor.includes(:entry).first.entry)
+        end
+      end
+
+      account
     end
 
     def create_from_coinbase_account(coinbase_account)
@@ -379,9 +507,7 @@ class Account < ApplicationRecord
     end
 
     def create_from_binance_account(binance_account)
-      account = create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
-      account.set_opening_anchor_balance(balance: 0)
-      account
+      create_from_crypto_exchange_account(binance_account, family: binance_account.binance_item.family)
     end
 
     def create_from_ibkr_account(ibkr_account)
@@ -426,19 +552,44 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
-    def create_from_trade_republic_account(trade_republic_account)
-      family = trade_republic_account.trade_republic_item.family
-      is_cash = trade_republic_account.cash?
+    def create_from_sharesight_account(sharesight_account)
+      family = sharesight_account.sharesight_item.family
 
       attributes = {
         family: family,
-        name: trade_republic_account.name.presence || (is_cash ? "Trade Republic Cash" : "Trade Republic Portfolio"),
+        name: sharesight_account.name.presence || I18n.t("sharesight_items.defaults.name"),
+        balance: 0,
+        cash_balance: 0,
+        currency: sharesight_account.currency.presence || family.currency,
+        accountable_type: "Investment",
+        accountable_attributes: {
+          subtype: "brokerage"
+        }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
+    TRADE_REPUBLIC_ACCOUNT_TYPES = {
+      "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
+      "cash" => [ "Depository", "checking", "Trade Republic Cash" ],
+      # The exchange subtype is the Crypto subtype that supports trades.
+      "crypto" => [ "Crypto", "exchange", "Trade Republic Crypto" ]
+    }.freeze
+
+    def create_from_trade_republic_account(trade_republic_account)
+      family = trade_republic_account.trade_republic_item.family
+      accountable_type, subtype, default_name = TRADE_REPUBLIC_ACCOUNT_TYPES.fetch(trade_republic_account.kind)
+
+      attributes = {
+        family: family,
+        name: trade_republic_account.name.presence || default_name,
         balance: 0,
         cash_balance: 0,
         currency: trade_republic_account.currency.presence || family.currency,
-        accountable_type: is_cash ? "Depository" : "Investment",
+        accountable_type: accountable_type,
         accountable_attributes: {
-          subtype: is_cash ? "checking" : "brokerage"
+          subtype: subtype
         }
       }
 
@@ -481,12 +632,26 @@ class Account < ApplicationRecord
     private
 
       def create_from_crypto_exchange_account(provider_account, family:)
+        # The provider record carries the exchange's *reporting* currency -- Kraken
+        # quotes everything in USD -- which says nothing about what the user
+        # values the account in. The account's own currency is the one its
+        # balance and holdings are shown in, so it is the family's; entries keep
+        # whatever currency they were made in and convert at display, as on
+        # every other account.
+        provider_currency = provider_account.currency.presence || family.currency
+        balance = (provider_account.current_balance || 0).to_d
+        # With no rate the figure cannot be stated in the family currency, and
+        # relabelling it would be wrong by the whole rate. Zero is honest: the
+        # first sync writes the converted balance minutes later, and the
+        # opening anchor is zeroed below regardless.
+        balance = convert_provider_balance(balance, from: provider_currency, to: family.currency) || 0
+
         attributes = {
           family: family,
           name: provider_account.name,
-          balance: (provider_account.current_balance || 0).to_d,
+          balance: balance,
           cash_balance: 0,
-          currency: provider_account.currency.presence || family.currency,
+          currency: family.currency,
           accountable_type: "Crypto",
           accountable_attributes: {
             subtype: "exchange",
@@ -494,7 +659,38 @@ class Account < ApplicationRecord
           }
         }
 
-        create_and_sync(attributes, skip_initial_sync: true)
+        # An exchange account's ledger is imported from inception, so it opens at
+        # zero. Without this it inherits create_and_sync's default: an opening
+        # balance equal to what the account is worth *today*, dated two years ago
+        # -- so an exchange older than that imports its whole history on top of
+        # its present value, and every entry before the anchor sits ahead of its
+        # own opening balance.
+        #
+        # Through the manager, not set_opening_anchor_balance: that queues a
+        # sync, which is what skip_initial_sync below just declined. Running
+        # before the provider link exists, it would see one zero anchor and no
+        # entries and write that zero over the balance set here.
+        #
+        # Both in one transaction: creation commits on its own, so a failure
+        # while zeroing the anchor would otherwise leave an account behind
+        # carrying today's balance as its opening one, and the retry would
+        # create a second.
+        account = nil
+        transaction do
+          account = create_and_sync(attributes, skip_initial_sync: true)
+          result = Account::OpeningBalanceManager.new(account).set_opening_balance(balance: 0)
+          raise result.error if result.error
+        end
+
+        account
+      end
+
+      def convert_provider_balance(amount, from:, to:)
+        return amount if from == to || amount.zero?
+
+        Money.new(amount, from).exchange_to(to).amount
+      rescue Money::ConversionError
+        nil
       end
 
       def build_simplefin_accountable_attributes(simplefin_account, account_type, subtype)
@@ -523,7 +719,12 @@ class Account < ApplicationRecord
   end
 
   def institution_domain
-    read_attribute(:institution_domain).presence || provider&.institution_domain
+    # Normalized on read too, so domains saved before normalization existed still resolve a logo.
+    self.class.normalize_institution_domain(read_attribute(:institution_domain)) || provider&.institution_domain
+  end
+
+  def supports_iban?
+    Accountable.from_type(accountable_type)&.supports_iban? || false
   end
 
   def manual_crypto_exchange?
@@ -546,10 +747,10 @@ class Account < ApplicationRecord
   # decision in one place so the new-pledge controller / preview helper
   # can't disagree on what they're going to save.
   def default_pledge_kind
-    # Investment accounts never use manual_save: a positive valuation delta on a
-    # brokerage is usually a market move, not a deposit, and would false-match a
-    # pledge. They resolve on transfer (cash-inflow) entries only.
-    manual? && !investment? ? "manual_save" : "transfer"
+    # Investment and crypto accounts never use manual_save: a positive valuation
+    # delta there is usually a market move, not a deposit, and would false-match
+    # a pledge. They resolve on transfer (cash-inflow) entries only.
+    manual? && balance_type != :investment ? "manual_save" : "transfer"
   end
 
   # Total fixed earmark this account currently has reserved across every goal
@@ -574,33 +775,74 @@ class Account < ApplicationRecord
     balance.to_d - goal_earmarked_total
   end
 
-  def logo_url
-    if institution_domain.present? && Setting.brand_fetch_client_id.present?
-      logo_size = Setting.brand_fetch_logo_size
-
-      "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
-    elsif provider&.logo_url.present?
-      provider.logo_url
-    elsif logo.attached?
-      Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true)
-    end
-  end
-
+  # Marks the account pending_deletion and enqueues DestroyJob. If the enqueue
+  # fails, the account goes back to the status it had, so it is not left hidden
+  # from every list with no job coming to delete it. Mirrors DestroyableLater,
+  # except that the claim is made under a row lock (see below).
+  #
+  # ApplicationJob defers enqueues until commit, so perform_later inside a
+  # transaction returns before the push is tried. The enqueue therefore runs
+  # once every open transaction has committed: immediately when there is none,
+  # so the caller sees the outcome, and after the outer commit for a caller that
+  # holds one (the relink cleanup), when the push really happens. A rolled-back
+  # outer transaction undoes the mark and never enqueues.
+  #
+  # The prior status is read and the mark made under a row lock, which reloads
+  # the account first. A second request for the same account (a double submit)
+  # waits for the first to commit, sees pending_deletion and raises
+  # AASM::InvalidTransition before it captures a status or schedules an
+  # enqueue, so a restore only ever undoes the mark its own call made. Callers
+  # pass a freshly loaded record: lock! refuses one with unsaved changes.
+  #
+  # Returns the job, or false when the enqueue was rejected. Inside an outer
+  # transaction the enqueue has not run yet, so it returns nil.
   def destroy_later
-    transaction do
-      mark_for_deletion!
-      DestroyJob.perform_later(self)
+    previous_status = with_lock do
+      status.tap { mark_for_deletion! }
     end
+
+    enqueued = nil
+    ActiveRecord.after_all_transactions_commit do
+      enqueued = enqueue_destroy_job(restoring: previous_status)
+    end
+    enqueued
   end
 
   # Override destroy to handle error recovery for accounts
   def destroy
     super
+  rescue ActiveRecord::Deadlocked
+    # DestroyJob retries a deadlock, so the account stays pending_deletion (and
+    # out of the user's reach) until it gives up and restores it.
+    raise
   rescue => e
-    # If destruction fails, transition back to disabled state
-    # This provides a cleaner recovery path than the generic scheduled_for_deletion flag
-    disable! if may_disable?
+    # An error after the delete committed leaves a frozen record to restore.
+    restore_after_failed_destroy unless destroyed?
     raise e
+  end
+
+  # Leaves the account disabled so it stays visible and can be deleted again.
+  # DestroyJob's scheduled_for_deletion reset is for provider items; accounts
+  # track deletion in `status`.
+  #
+  # Mirrors the restore_after_failed_deletion and disable events, but written
+  # directly: an unrelated validation (an owner who has since left the family,
+  # say) must not leave the account hidden in pending_deletion or replace the
+  # destroy error with its own. Only while the row still holds the status this
+  # record saw, so a newer write (another worker's restore the user has since
+  # re-enabled, say) is not overwritten.
+  def restore_after_failed_destroy
+    return unless may_restore_after_failed_deletion? || may_disable?
+
+    restored = {
+      status: "disabled",
+      disabled_at: (disabled_at_in_database if pending_deletion?) || Time.current,
+      updated_at: Time.current
+    }
+    return unless Account.where(id: id, status: status_in_database).update_all(restored) == 1
+
+    assign_attributes(restored)
+    clear_attribute_changes(restored.keys)
   end
 
   def current_holdings
@@ -743,6 +985,72 @@ class Account < ApplicationRecord
   end
 
   private
+    def clear_unsupported_iban
+      self.iban = nil if iban.present? && !supports_iban?
+    end
+
+    # [date, signed amount in account currency] for each scheduled entry that
+    # contributes to the projection.
+    def scheduled_entry_flows
+      @scheduled_entry_flows ||= if balance_type == :non_cash && accountable_type != "Loan"
+        []
+      else
+        entries.excluding_pending.excluding_split_parents
+          .where(entryable_type: [ "Transaction", "Trade" ])
+          .where("entries.date > ?", Date.current)
+          .includes(:entryable)
+          .filter_map { |entry| (amount = convert_scheduled_entry_amount(entry)) && [ entry.date, amount ] }
+      end
+    end
+
+    # Converts a scheduled entry's amount into this account's currency, signed
+    # the same way flows_for_date treats it (see Balance::BaseCalculator).
+    # Returns nil when the entry should not contribute -- a Buy/Sell trade
+    # (moves value between cash and holdings, not into/out of the account) or
+    # an unconvertible currency pair. Dropping the latter instead of using the
+    # raw, unconverted amount matches Balance::SyncCache#converted_entries,
+    # which drops the same entry outright once it materializes (see #1143) --
+    # a projection that doesn't drop it would disagree with the balance it's
+    # supposed to preview.
+    def convert_scheduled_entry_amount(entry)
+      return nil if entry.entryable_type == "Trade" && entry.entryable.qty.nonzero?
+
+      custom_rate = entry.entryable.exchange_rate if entry.entryable.respond_to?(:exchange_rate)
+      converted = begin
+        entry.amount_money.exchange_to(currency, date: entry.date, custom_rate: custom_rate).amount
+      rescue Money::ConversionError
+        return nil
+      end
+
+      asset? ? -converted : converted
+    end
+
+    # perform_later raises (the Sidekiq adapter re-raises RedisClient errors) or
+    # returns false (ActiveJob::EnqueueError). Either way the status goes back.
+    def enqueue_destroy_job(restoring:)
+      enqueued = begin
+        DestroyJob.perform_later(self)
+      rescue StandardError
+        restore_status_after_failed_enqueue(restoring)
+        raise
+      end
+
+      # Match false exactly, as DestroyableLater does: a bare mock of
+      # perform_later returns nil, which is not a rejected enqueue.
+      restore_status_after_failed_enqueue(restoring) if enqueued == false
+      enqueued
+    end
+
+    # The row lock covers only the mark, and the push runs after commit, so
+    # another request may have written a newer status by now (toggle_active
+    # waiting on the lock, say). Undo the mark only while the row still holds
+    # it. A direct write, because AASM has no event back to the prior status and
+    # the restore must not fail on an unrelated validation and mask the error.
+    def restore_status_after_failed_enqueue(restoring)
+      restored = Account.where(id: id, status: "pending_deletion").update_all(status: restoring)
+      self.status = restoring if restored == 1
+      clear_attribute_changes([ :status ])
+    end
 
     def assign_default_owner
       return if owner.present?
@@ -767,6 +1075,16 @@ class Account < ApplicationRecord
       return if owner_user&.family_id == family_id
 
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    # AASM transition callbacks run after the timestamp is set and before the
+    # state is saved, so both land in the event's own save.
+    def clear_disabled_at
+      self.disabled_at = nil
+    end
+
+    def keep_original_disabled_at
+      self.disabled_at = disabled_at_in_database if disabled_at_in_database.present?
     end
 
     def capture_account_statement_ids_to_move

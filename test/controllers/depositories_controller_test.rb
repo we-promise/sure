@@ -2,10 +2,43 @@ require "test_helper"
 
 class DepositoriesControllerTest < ActionDispatch::IntegrationTest
   include AccountableResourceInterfaceTest
+  include ActionView::RecordIdentifier
 
   setup do
     sign_in @user = users(:family_admin)
     @account = accounts(:depository)
+  end
+
+  # The provider link's visibility and the controller's gate are two
+  # expressions of one rule, and they disagreed. ConnectorAuthorizable requires
+  # `member_connectable? && Current.user&.member?`; the selector asked only
+  # `admin? || member_connectable`, so a GUEST was shown the link and refused
+  # on submit -- a control that looks broken rather than one that is absent.
+  #
+  # One user, one family, one variable: the role changes between the two
+  # requests and nothing else does, so a difference can only be the role.
+  test "a member-connectable provider is offered to a member and withheld from a guest" do
+    config = {
+      key: "test_provider",
+      name: "Test Provider",
+      member_connectable: true,
+      new_account_path: ->(_accountable_type, _return_to) { "/test-provider/new" }
+    }
+    Provider::Factory.stubs(:connection_configs_for_account_type).returns([ config ])
+
+    sign_in user = users(:family_member)
+
+    get new_depository_url(step: "method_select")
+    assert_response :success
+    assert_select "a[href='/test-provider/new']", { minimum: 1 },
+                  "a member may connect this provider and must be offered it"
+
+    user.update!(role: :guest)
+
+    get new_depository_url(step: "method_select")
+    assert_response :success
+    assert_select "a[href='/test-provider/new']", { count: 0 },
+                  "a guest was offered a link require_connector_create! refuses"
   end
 
   test "create falls back to the stored return_to when no form param is present" do
@@ -77,7 +110,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     # constraint instead, surfacing as RecordNotUnique rather than the
     # RecordInvalid the previous test covers.
     Account.any_instance.stubs(:save!).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_accounts_on_family_id_and_iban_and_currency"')
     )
 
     assert_no_difference -> { Account.count } do
@@ -92,7 +125,7 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
   test "update re-renders the form instead of a 500 on a raw unique-index race" do
     linked_account = accounts(:connected)
     Account.any_instance.stubs(:update).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_accounts_on_family_id_and_iban_and_currency"')
     )
 
     patch depository_path(linked_account), params: {
@@ -139,6 +172,41 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed", linked_account.reload.name
   end
 
+  test "update with an iban that normalizes to nothing leaves the stored iban unchanged" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { iban: " - " }
+    }
+
+    assert_equal "AT611904300234573201", linked_account.reload.iban # pipelock:ignore IBAN
+  end
+
+  test "a failed update still offers to remove the stored iban" do
+    linked_account = accounts(:connected)
+    linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch depository_path(linked_account), params: {
+      account: { name: "", remove_iban: "1" }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='account[remove_iban]']", 1
+  end
+
+  test "create re-renders the form with a stray remove_iban when the account must be rebuilt" do
+    # A failure whose record is neither the account nor tied to one makes
+    # #create rebuild the account from the submitted params.
+    Account.any_instance.stubs(:lock_saved_attributes!).raises(ActiveRecord::RecordInvalid.new(Depository.new))
+
+    post depositories_path, params: {
+      account: { name: "Rebuilt Checking", currency: "USD", balance: 100, accountable_type: "Depository", remove_iban: "1" }
+    }
+
+    assert_response :unprocessable_entity
+  end
+
   test "update with remove_iban checked clears the stored iban even with a blank field" do
     linked_account = accounts(:connected)
     linked_account.update!(iban: "AT611904300234573201") # pipelock:ignore IBAN
@@ -175,7 +243,8 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
-    assert_select "input[type=checkbox][name='account[remove_iban]']", 1
+    assert_select "input[type=checkbox][name='account[remove_iban]'][aria-labelledby='account_remove_iban_label']", 1
+    assert_select "#account_remove_iban_label", text: I18n.t("accounts.form.iban_remove_label")
   end
 
   test "iban field masks keystrokes like a password field and signals a stored value" do
@@ -251,5 +320,182 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "a[href=?]", new_depository_path, count: 1
+  end
+
+  test "edit form explains the institution domain and links to Brandfetch settings when the key is missing" do
+    Setting.stubs(:brand_fetch_client_id).returns(nil)
+
+    with_self_hosting do
+      get edit_account_url(@account)
+    end
+
+    assert_response :success
+    assert_select "[data-testid=institution-domain-hint]", text: /Brandfetch/
+    assert_select "[data-testid=institution-domain-hint] a[href=?]", settings_hosting_path
+  end
+
+  test "edit form only explains the institution domain when Brandfetch is configured" do
+    Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
+
+    get edit_account_url(@account)
+
+    assert_response :success
+    assert_select "[data-testid=institution-domain-hint]", text: I18n.t("accounts.form.institution_domain_hint")
+    assert_select "[data-testid=institution-domain-hint] a", 0
+  end
+
+  test "update uploads a logo that replaces Brandfetch" do
+    @account.update!(logo_selection: "brandfetch")
+
+    patch depository_path(@account), params: {
+      account: { logo: fixture_file_upload("square-placeholder.png", "image/png") }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert @account.reload.logo.attached?
+    assert @account.logo_automatic?, "an upload is shown instead of Brandfetch"
+  end
+
+  test "update rejects a logo that is not an image" do
+    patch depository_path(@account), params: {
+      account: { logo: fixture_file_upload("test.txt", "text/plain") }
+    }
+
+    assert_response :unprocessable_entity
+    assert_not @account.reload.logo.attached?
+  end
+
+  test "update applies the icon chosen in the form" do
+    Account::LogoFetcher.any_instance.expects(:fetch).with(source: "appstore:123").returns(true)
+
+    patch depository_path(@account), params: { account: { name: "Renamed", logo_choice: "appstore:123" } }
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Renamed", @account.reload.name
+    assert_nil flash[:alert]
+  end
+
+  test "create with an institution domain fetches an icon for the new account" do
+    assert_enqueued_with(job: AccountLogoFetchJob) do
+      post depositories_path, params: {
+        account: { name: "Krungsri savings", balance: 100, currency: "USD", accountable_type: "Depository",
+                   institution_domain: "https://www.krungsri.com/", accountable_attributes: { subtype: "savings" } }
+      }
+    end
+
+    assert_equal "krungsri.com", Account.order(:created_at).last.read_attribute(:institution_domain)
+  end
+
+  test "create applies the icon picked in the new account form instead of fetching one" do
+    Account::LogoFetcher.any_instance.expects(:fetch).with(source: "appstore:1").returns(true)
+
+    assert_no_enqueued_jobs only: AccountLogoFetchJob do
+      post depositories_path, params: { account: { name: "Krungsri savings", balance: 100, currency: "USD", accountable_type: "Depository",
+                   institution_domain: "krungsri.com", accountable_attributes: { subtype: "savings" } }.merge(logo_choice: "appstore:1") }
+    end
+
+    assert_redirected_to account_path(Account.order(:created_at).last)
+    assert_nil flash[:alert]
+  end
+
+  test "create attaches an icon uploaded in the new account form" do
+    post depositories_path, params: { account: { name: "Krungsri savings", balance: 100, currency: "USD", accountable_type: "Depository",
+                   institution_domain: "krungsri.com", accountable_attributes: { subtype: "savings" } }.merge(logo: fixture_file_upload("square-placeholder.png", "image/png")) }
+
+    assert Account.order(:created_at).last.logo.attached?
+  end
+
+  test "new account form offers the picker without an account id" do
+    get new_depository_path
+
+    assert_response :success
+    assert_select "[data-controller=account-logo-picker] button[form=?]", "logo_options_account"
+    assert_select "form#logo_options_account[action=?][data-turbo-frame=?]", logo_options_accounts_path, "logo_field_account"
+  end
+
+  test "update with a chosen icon skips the automatic fetch for a new domain" do
+    Account::LogoFetcher.any_instance.expects(:fetch).with(source: "yandex").returns(true)
+
+    assert_no_enqueued_jobs only: AccountLogoFetchJob do
+      patch depository_path(@account), params: { account: { institution_domain: "krungsri.com", logo_choice: "yandex" } }
+    end
+
+    assert_redirected_to account_path(@account)
+  end
+
+  test "update without a chosen icon fetches one for a new domain" do
+    assert_enqueued_with(job: AccountLogoFetchJob) do
+      patch depository_path(@account), params: { account: { institution_domain: "krungsri.com" } }
+    end
+  end
+
+  test "update saves the account when the chosen icon cannot be downloaded" do
+    Account::LogoFetcher.any_instance.expects(:fetch).returns(false)
+
+    patch depository_path(@account), params: { account: { name: "Renamed", logo_choice: "yandex" } }
+
+    assert_redirected_to account_path(@account)
+    assert_equal "Renamed", @account.reload.name
+    assert_equal I18n.t("accounts.update.logo_not_applied"), flash[:alert]
+  end
+
+  test "update falls back to the paced automatic fetch when the chosen icon fails for a new domain" do
+    Account::LogoFetcher.any_instance.expects(:fetch).returns(false)
+    AccountLogoFetchJob.expects(:perform_paced).once
+
+    patch depository_path(@account), params: { account: { institution_domain: "krungsri.com", logo_choice: "yandex" } }
+
+    assert_redirected_to account_path(@account)
+  end
+
+  test "update lets an upload win over an icon chosen in the same form" do
+    Account::LogoFetcher.any_instance.expects(:fetch).never
+
+    patch depository_path(@account), params: {
+      account: { logo: fixture_file_upload("square-placeholder.png", "image/png"), logo_choice: "yandex" }
+    }
+
+    assert_redirected_to account_path(@account)
+    assert @account.reload.logo.attached?
+  end
+
+  test "update leaves the icon alone when the form fails" do
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+
+    patch depository_path(@account), params: { account: { name: "", logo_choice: "remove" } }
+
+    assert_response :unprocessable_entity
+    assert @account.reload.logo.attached?
+  end
+
+  test "edit form previews the icon and keeps the choice for saving" do
+    @account.update!(institution_domain: "tbank.ru")
+    @account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "mine.png")
+
+    get edit_account_url(@account)
+
+    assert_response :success
+    frame = dom_id(@account, :logo_field)
+    assert_select "[data-controller=account-logo-picker]" do
+      assert_select "turbo-frame##{frame}" do
+        assert_select "button[form=?][data-action='account-logo-picker#search'][data-turbo=true]", dom_id(@account, :logo_options)
+        assert_select "button[type=button][data-action='account-logo-picker#remove']"
+        assert_select "template[data-account-logo-picker-target=fallback]"
+      end
+      assert_select "input[type=hidden][name='account[logo_choice]'][data-account-logo-picker-target=choice]"
+      assert_select "input[type=file][name='account[logo]'][data-account-logo-picker-target=file]"
+    end
+    assert_select "form[id=?][action=?][method=get][data-turbo-frame=?]", dom_id(@account, :logo_options), logo_options_account_path(@account), frame do
+      assert_select "input[type=hidden][name=institution_domain][value=?]", "tbank.ru"
+      assert_select "input[type=hidden][name=institution_name]"
+    end
+  end
+
+  test "edit form offers the picker before a domain is saved" do
+    @account.update!(institution_domain: nil)
+
+    get edit_account_url(@account)
+
+    assert_select "button[form=?]", dom_id(@account, :logo_options)
   end
 end

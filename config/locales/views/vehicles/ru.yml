@@ -13,6 +13,8 @@ ru:
       model_placeholder: Camry
       year: Год
       year_placeholder: '2023'
+      mileage_unit_kilometers: Километры
+      mileage_unit_miles: Мили
     new:
       title: Введите данные транспортного средства
     overview:

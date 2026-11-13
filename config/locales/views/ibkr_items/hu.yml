@@ -2,6 +2,8 @@
 hu:
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Számlák összekapcsolása a(z) %{name} Flex-lekérdezésből"
       name: Interactive Brokers
       connection_description: Csatlakozás egy Interactive Brokers Flex Web Service jelentéshez
       institution_name: Interactive Brokers

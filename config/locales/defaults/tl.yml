@@ -39,6 +39,7 @@ tl:
       default: "%d/%m/%Y"
       long: ika-%d ng %B, %Y
       short: ika-%d ng %b
+      short_with_year: ika-%d ng %b, %Y
     month_names:
     -
     - Enero

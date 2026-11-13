@@ -15,12 +15,3 @@ es:
       minimum_payment_placeholder: '100'
     new:
       title: Introducir detalles de la tarjeta de crédito
-    overview:
-      amount_owed: Cantidad adeudada
-      annual_fee: Cuota anual
-      apr: TAE
-      available_credit: Crédito disponible
-      edit_account_details: Editar detalles de la cuenta
-      expiration_date: Fecha de vencimiento
-      minimum_payment: Pago mínimo
-      unknown: Desconocido

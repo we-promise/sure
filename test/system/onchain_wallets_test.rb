@@ -41,47 +41,21 @@ class OnchainWalletsTest < ApplicationSystemTestCase
   end
 
   test "linking a wallet from the settings panel creates an account per ticked asset" do
-    visit settings_providers_path
-    open_onchain_panel
+    link_wallet_from_settings_panel
+  end
 
-    # The provider panel opens in the drawer frame.
-    assert_text I18n.t("onchain_wallet_items.price_provider_warning.title")
+  # Self-hosted admins get a one-click "enable crypto prices" button on the
+  # token screen. It is a form of its own, and while it sat inside the token
+  # form the browser closed that form early: the checkboxes and "Track selected
+  # assets" ended up outside it, and clicking the button did nothing at all.
+  test "linking works on a self-hosted instance that offers the one-click price fix" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
 
-    # The read-only reassurance is no longer a permanent banner here...
-    assert_no_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
-
-    click_on I18n.t("settings.providers.onchain_wallet_panel.add_wallet")
-
-    # ...it lives where the address is pasted. Scoped to the modal, because a
-    # page-wide assertion would pass from any frame and prove nothing about
-    # where the banner actually went.
-    within "turbo-frame#modal" do
-      assert_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
+    link_wallet_from_settings_panel do
+      within "turbo-frame#modal" do
+        assert_button I18n.t("onchain_wallet_items.price_provider_warning.enable")
+      end
     end
-
-    # The linking modal opens on top of the drawer.
-    assert_text I18n.t("onchain_wallet_items.new_wallet.title")
-    assert_text I18n.t("onchain_wallet_items.new_wallet.bitcoin_single_address_note")
-
-    fill_in I18n.t("onchain_wallet_items.new_wallet.address_label"), with: OnchainTestHelper::FAKE_ADDRESS
-    click_on I18n.t("onchain_wallet_items.new_wallet.continue")
-
-    # Token review, in the same modal frame.
-    assert_text I18n.t("onchain_wallet_items.token_review.title")
-    assert_text "USDC"
-    assert_text I18n.t("onchain_wallet_items.token_review_form.no_price")
-
-    # Priceable assets arrive ticked, the unpriceable one does not.
-    assert find("input[value='native']").checked?
-    assert find("input[value='erc20:0xusdc']").checked?
-    assert_not find("input[value='erc20:0xspam']").checked?
-
-    assert_difference -> { Account.count }, 2 do
-      click_on I18n.t("onchain_wallet_items.token_review.import_selected")
-      assert_text I18n.t("onchain_wallet_items.link_wallet.success", count: 2)
-    end
-
-    assert_equal %w[FAKE USDC], OnchainWalletAccount.order(:symbol).pluck(:symbol)
   end
 
   test "managing a wallet reviews its tokens and disconnects one asset" do
@@ -116,4 +90,53 @@ class OnchainWalletsTest < ApplicationSystemTestCase
     assert Account.exists?(native_account.id)
     assert_not AccountProvider.exists?(provider_type: "OnchainWalletAccount", provider_id: token_asset.id)
   end
+
+  private
+    # The whole linking flow, from the providers page to the accounts it creates.
+    # Yields on the token review screen, before anything is submitted.
+    def link_wallet_from_settings_panel
+      visit settings_providers_path
+      open_onchain_panel
+
+      # The provider panel opens in the drawer frame.
+      assert_text I18n.t("onchain_wallet_items.price_provider_warning.title")
+
+      # The read-only reassurance is no longer a permanent banner here...
+      assert_no_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
+
+      click_on I18n.t("settings.providers.onchain_wallet_panel.add_wallet")
+
+      # ...it lives where the address is pasted. Scoped to the modal, because a
+      # page-wide assertion would pass from any frame and prove nothing about
+      # where the banner actually went.
+      within "turbo-frame#modal" do
+        assert_text I18n.t("settings.providers.onchain_wallet_panel.keyless_title")
+      end
+
+      # The linking modal opens on top of the drawer.
+      assert_text I18n.t("onchain_wallet_items.new_wallet.title")
+      assert_text I18n.t("onchain_wallet_items.new_wallet.bitcoin_single_address_note")
+
+      fill_in I18n.t("onchain_wallet_items.new_wallet.address_label"), with: OnchainTestHelper::FAKE_ADDRESS
+      click_on I18n.t("onchain_wallet_items.new_wallet.continue")
+
+      # Token review, in the same modal frame.
+      assert_text I18n.t("onchain_wallet_items.token_review.title")
+      assert_text "USDC"
+      assert_text I18n.t("onchain_wallet_items.token_review_form.no_price")
+
+      # Priceable assets arrive ticked, the unpriceable one does not.
+      assert find("input[value='native']").checked?
+      assert find("input[value='erc20:0xusdc']").checked?
+      assert_not find("input[value='erc20:0xspam']").checked?
+
+      yield if block_given?
+
+      assert_difference -> { Account.count }, 2 do
+        click_on I18n.t("onchain_wallet_items.token_review.import_selected")
+        assert_text I18n.t("onchain_wallet_items.link_wallet.success", count: 2)
+      end
+
+      assert_equal %w[FAKE USDC], OnchainWalletAccount.order(:symbol).pluck(:symbol)
+    end
 end

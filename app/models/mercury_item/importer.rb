@@ -122,6 +122,8 @@ class MercuryItem::Importer
           rescue => update_error
             Rails.logger.error "MercuryItem::Importer - Failed to update item status: #{update_error.message}"
           end
+          # Fail the sync instead of completing it with nothing imported
+          raise
         end
         Rails.logger.error "MercuryItem::Importer - Mercury API error: #{e.message}"
         return nil

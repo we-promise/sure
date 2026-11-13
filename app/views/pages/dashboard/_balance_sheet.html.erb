@@ -79,7 +79,7 @@
                   <% account_group.accounts.each_with_index do |account, idx| %>
                     <div class="pl-7 pr-4 py-3 flex items-center justify-between text-sm font-medium">
                       <div class="flex items-center gap-2">
-                        <%= render "accounts/logo", account: account, size: "sm", color: account_group.color %>
+                        <%= render "accounts/logo", account: account, size: "sm", color: account_group.color, reconciliation_indicator: @reconciliation_indicators[account.id] %>
 
                         <%= link_to account.name, account_path(account) %>
                       </div>
@@ -148,10 +148,10 @@
   in that manifest, so the browser would 404 it and the button would be dead on
   the running image. An inline script is served with the HTML and re-runs
   automatically when the surrounding Turbo frame re-renders (e.g. on a period
-  change). Wrapped in javascript_tag for CSP nonce compliance.
+  change). Includes a nonce for CSP compliance.
 %>
 <% if balance_sheet.classification_groups.any? { |cg| cg.account_groups.any? } %>
-<%= javascript_tag nonce: true do %>
+<script nonce="<%= content_security_policy_nonce %>">
   (function () {
     var section = document.querySelector('section[data-section-key="balance_sheet"]');
     var root = document.getElementById("balance-sheet");
@@ -207,5 +207,5 @@
 
     syncButton();
   })();
-<% end %>
+</script>
 <% end %>

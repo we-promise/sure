@@ -10,6 +10,15 @@
 {{- end -}}
 {{- if .Values.pipelock.image -}}
 {{- $pullPolicy = .Values.pipelock.image.pullPolicy | default "IfNotPresent" -}}
+{{- end -}}
+{{- $mcpTokenSecret := dict -}}
+{{- $mcpAllowUnauthenticated := false -}}
+{{- with .Values.pipelock.mcpProxy -}}
+{{- $mcpTokenSecret = .authTokenSecret | default dict -}}
+{{- $mcpAllowUnauthenticated = .allowUnauthenticated | default false -}}
+{{- end -}}
+{{- if and (not $mcpTokenSecret.name) (not $mcpAllowUnauthenticated) -}}
+{{- fail "pipelock.mcpProxy needs authTokenSecret.name or allowUnauthenticated=true: Pipelock refuses a non-loopback MCP listener without one" -}}
 {{- end }}
 apiVersion: apps/v1
 kind: Deployment
@@ -45,6 +54,15 @@ spec:
         - name: config
           configMap:
             name: {{ include "sure.fullname" . }}-pipelock
+        {{- if $mcpTokenSecret.name }}
+        - name: mcp-listener-token
+          secret:
+            secretName: {{ $mcpTokenSecret.name | quote }}
+            items:
+              - key: {{ $mcpTokenSecret.key | default "token" | quote }}
+                path: mcp-listener.token
+            defaultMode: 0400
+        {{- end }}
         {{- with .Values.pipelock.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -62,10 +80,21 @@ spec:
             - "0.0.0.0:{{ $mcpPort }}"
             - "--mcp-upstream"
             - {{ include "sure.pipelockUpstream" . | quote }}
+            {{- if $mcpTokenSecret.name }}
+            - "--mcp-auth-token-file"
+            - "/run/pipelock/mcp-listener.token"
+            {{- else }}
+            - "--mcp-allow-unauthenticated"
+            {{- end }}
           volumeMounts:
             - name: config
               mountPath: /etc/pipelock
               readOnly: true
+            {{- if $mcpTokenSecret.name }}
+            - name: mcp-listener-token
+              mountPath: /run/pipelock
+              readOnly: true
+            {{- end }}
             {{- with .Values.pipelock.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

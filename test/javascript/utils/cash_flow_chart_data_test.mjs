@@ -35,14 +35,67 @@ test("maps graph geometry without rounding or changing API payload", () => {
   assert.equal(body.sankey.nodes[0].value, "12.345");
   assert.equal(graph.nodes[0].color, "#123456");
 });
+test("accepts an invested node", () => {
+  const body = payload();
+  body.sankey.nodes.push({
+    id: "invested_node",
+    name: "Invested",
+    kind: "invested",
+    value: "5",
+    percentage: "40.5",
+    color: "#0d9488",
+  });
+  body.sankey.links.push({
+    source: 1,
+    target: 2,
+    value: "5",
+    percentage: "40.5",
+  });
+  const graph = cashFlowChartData(body);
+  assert.equal(graph.nodes[2].kind, "invested");
+  assert.equal(graph.nodes[2].color, "#0d9488");
+});
+test("an invested node without a colour falls back to its own colour", () => {
+  const body = payload();
+  body.sankey.nodes.push({
+    id: "invested_node",
+    name: "Invested",
+    kind: "invested",
+    value: "5",
+    percentage: "40.5",
+  });
+  body.sankey.links.push({ source: 1, target: 2, value: "5", percentage: "40.5" });
+  const graph = cashFlowChartData(body);
+  assert.equal(graph.nodes[2].color, "#0d9488");
+});
 test("accepts empty graphs", () => {
   assert.deepEqual(
     cashFlowChartData({
       currency: "USD",
       sankey: { basis: "net_by_category", nodes: [], links: [] },
     }),
-    { nodes: [], links: [] },
+    { basis: "net_by_category", nodes: [], links: [] },
   );
+});
+test("accepts a graph grouped by account", () => {
+  const body = payload();
+  body.sankey.basis = "net_by_account";
+  body.sankey.nodes[1] = {
+    id: "account_one",
+    name: "Checking",
+    kind: "account",
+    value: "12.345",
+    percentage: "100.0",
+    color: "#737373",
+  };
+  const graph = cashFlowChartData(body);
+  assert.equal(graph.basis, "net_by_account");
+  assert.equal(graph.nodes[1].kind, "account");
+});
+test("rejects an unknown basis", () => {
+  const body = payload();
+  body.sankey.basis = "net_by_merchant";
+  assert.throws(() => cashFlowChartData(body), /Invalid cash flow graph/);
 });
 test("rejects malformed, unsafe, and cyclic graphs", () => {
   for (const mutate of [

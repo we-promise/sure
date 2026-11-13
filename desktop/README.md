@@ -31,18 +31,23 @@ npm run tauri build -- --target universal-apple-darwin
 
 ## Publishing a release
 The desktop build runs automatically as part of the normal Sure `v*` release.
-The version comes from `.sure-version` and must match the release tag; it is
+The version comes from the release tag and is written to generated `.sure-version`; it is
 stamped into `desktop/package.json` and `desktop/src-tauri/tauri.conf.json`
 only while building. The universal `.dmg` is attached to that same GitHub
 Release—there is no separate desktop action, tag, or version.
 
 ## Installing an unsigned build (end users)
-The published `.dmg` is **not code-signed**, so macOS Gatekeeper blocks the first
-launch. To open it:
-1. Drag Sure to Applications and try to open it; dismiss the warning.
+The published `.dmg` is only ad-hoc signed (no Developer ID, not notarized), so
+macOS Gatekeeper blocks the first launch. To open it:
+1. Drag Sure to Applications and open it from there, not from the mounted disk
+   image; dismiss the warning.
 2. **System Settings → Privacy & Security**, scroll down, click **Open Anyway**,
    and confirm. (On macOS 15 Sequoia the old right-click→Open shortcut is gone;
    this Settings path is the way.)
+3. If your server is on your local network (for example `http://192.168.x.x:3000`),
+   click **Allow** when macOS asks whether Sure may find devices on your local
+   network. If you declined, turn Sure on under **System Settings → Privacy &
+   Security → Local Network**.
 
 If macOS instead says the app is "damaged", the download was quarantined — strip
 it once in Terminal:
@@ -101,6 +106,7 @@ No Apple Developer credentials are needed to build/run locally. To ship a
 distributable, signed, notarized `.dmg`, add:
 1. An **Apple Developer ID Application** certificate in your login keychain.
 2. Tauri signing config in `src-tauri/tauri.conf.json` under `bundle.macOS`:
+   replace the ad-hoc `"signingIdentity": "-"` with
    `"signingIdentity": "Developer ID Application: <NAME> (<TEAMID>)"`,
    `"hardenedRuntime": true`, and an `entitlements` plist if needed.
 3. Notarization after build:

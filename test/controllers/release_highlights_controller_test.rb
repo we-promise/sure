@@ -2,6 +2,7 @@ require "test_helper"
 
 class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
   setup do
+    Sure.stubs(:version).returns(Calver.new("2026.11.30"))
     sign_in @user = users(:family_admin)
     @user.update!(preferences: {})
   end
@@ -48,10 +49,26 @@ class ReleaseHighlightsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dismiss marks the given tag as seen" do
-    patch release_highlight_dismiss_path, params: { tag: "v1.2.3" }, as: :json
+    patch release_highlight_dismiss_path, params: { tag: "v2026.11.30" }, as: :json
 
     assert_response :ok
-    assert_equal "v1.2.3", @user.reload.last_seen_release_tag
+    assert_equal "v2026.11.30", @user.reload.last_seen_release_tag
+  end
+
+  test "dismissing a newer CalVer release survives the next request and rollback" do
+    @user.update!(preferences: { "last_seen_release_tag" => "v2026.11.30" })
+    Sure.stubs(:version).returns(Calver.new("2026.12.1"))
+
+    patch release_highlight_dismiss_path, params: { tag: "v2026.12.1" }, as: :json
+    assert_response :ok
+
+    Provider::Registry.expects(:get_provider).never
+    get release_highlight_path
+    assert_response :no_content
+
+    Sure.stubs(:version).returns(Calver.new("2026.11.30"))
+    get release_highlight_path
+    assert_response :no_content
   end
 
   test "dismiss rejects malformed tags" do

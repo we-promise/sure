@@ -30,9 +30,9 @@ jobs:
           helm dependency build charts/sure
 
       - name: Pipelock Scan
-        uses: luckyPipewrench/pipelock@4c748ab986d611138ce202ab800b16eca6fb589f # v3.4.0
+        uses: luckyPipewrench/pipelock@3e868ac5d5b62d3a2790958542171143af8a0e38 # v3.6.0
         with:
-          version: '3.4.0'
+          version: '3.6.0'
           scan-diff: 'true'
           fail-on-findings: 'true'
           test-vectors: 'false'
@@ -54,23 +54,17 @@ jobs:
             config/locales/views/reports/vi.yml
             config/locales/views/reports/zh-CN.yml
             config/locales/views/reports/zh-TW.yml
-            test/controllers/depositories_controller_test.rb
-            test/controllers/family_merchants_controller_test.rb
-            test/controllers/transactions_controller_test.rb
-            test/controllers/transfer_matches_controller_test.rb
-            test/models/account/provider_import_adapter_test.rb
-            test/models/account_test.rb
-            test/models/enable_banking_account_test.rb
-            test/models/enable_banking_entry/processor_test.rb
-            test/models/enable_banking_item/importer_dedup_test.rb
-            test/models/family/auto_transfer_matchable_test.rb
-            test/models/family/data_exporter_test.rb
-            test/models/merchant_test.rb
-            test/models/rule/condition_filter/transaction_counterparty_iban_test.rb
-            test/models/transaction/search_test.rb
 
       - name: Validate Pipelock deployment contracts
         shell: bash
+        env:
+          # compose.example.ai.yml intentionally requires SECRET_KEY_BASE with
+          # no fallback default (see #3214/#3221) - the old fallback was
+          # itself the exact publicly-known value KNOWN_COMPROMISED_SECRET_KEY_BASES
+          # guards against. This validation step only renders/lints the
+          # compose file, it never boots a container from it, so a throwaway
+          # placeholder is fine here - it just needs to be present.
+          SECRET_KEY_BASE: ci-validation-placeholder-not-a-real-secret
         run: |
           set -euo pipefail
 
@@ -133,3 +127,53 @@ jobs:
             --set pipelock.enabled=false \
             --set pipelock.requireForExternalAssistant=false \
             >/dev/null
+
+      # The checks above validate config files; this one starts the pinned image
+      # with the exact arguments Compose and Helm deploy, so flag changes in a
+      # Pipelock upgrade fail here instead of at a user's first boot.
+      - name: Start Pipelock with the deployed arguments
+        shell: bash
+        env:
+          # Only needed to render compose.example.ai.yml; nothing here uses it.
+          SECRET_KEY_BASE: ci-validation-placeholder-not-a-real-secret
+        run: |
+          set -euo pipefail
+
+          start_and_check() {
+            local label="$1" config="$2" image="$3"; shift 3
+            local name="pipelock-contract-${label}"
+            docker run -d --name "${name}" \
+              -v "${config}:/etc/pipelock/pipelock.yaml:ro" \
+              "${image}" "$@" >/dev/null
+            for _ in $(seq 1 30); do
+              if docker exec "${name}" /pipelock healthcheck --addr 127.0.0.1:8888 >/dev/null 2>&1; then
+                echo "${label}: Pipelock is healthy"
+                docker rm -f "${name}" >/dev/null
+                return 0
+              fi
+              if [ "$(docker inspect -f '{{.State.Running}}' "${name}")" != "true" ]; then
+                break
+              fi
+              sleep 1
+            done
+            echo "::error::${label}: Pipelock did not start with the deployed arguments"
+            docker logs "${name}" || true
+            docker rm -f "${name}" >/dev/null || true
+            return 1
+          }
+
+          compose_json="$(docker compose -f compose.example.ai.yml config --format json)"
+          compose_image="$(jq -r '.services.pipelock.image' <<<"${compose_json}")"
+          mapfile -t compose_args < <(jq -r '.services.pipelock.command[]' <<<"${compose_json}")
+          start_and_check compose "${PWD}/pipelock.example.yaml" "${compose_image}" "${compose_args[@]}"
+
+          chart_config="${RUNNER_TEMP}/sure-chart-pipelock.yaml"
+          chart_deployment="${RUNNER_TEMP}/sure-chart-pipelock-deployment.yaml"
+          helm template sure charts/sure --kube-version 1.25.0 --set pipelock.enabled=true \
+            --show-only templates/pipelock-configmap.yaml \
+            | awk '/pipelock.yaml: \|/{copy=1; next} copy{sub(/^    /, ""); print}' > "${chart_config}"
+          helm template sure charts/sure --kube-version 1.25.0 --set pipelock.enabled=true \
+            --show-only templates/pipelock-deployment.yaml > "${chart_deployment}"
+          chart_image="$(ruby -ryaml -e 'puts YAML.safe_load_file(ARGV[0]).dig("spec", "template", "spec", "containers", 0, "image")' "${chart_deployment}")"
+          mapfile -t chart_args < <(ruby -ryaml -e 'puts YAML.safe_load_file(ARGV[0]).dig("spec", "template", "spec", "containers", 0, "args")' "${chart_deployment}")
+          start_and_check helm "${chart_config}" "${chart_image}" "${chart_args[@]}"

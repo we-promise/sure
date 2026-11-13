@@ -38,9 +38,7 @@ ca:
       delete_chat: Elimina el xat
       edit_chat_title: Edita el títol del xat
       start_new_chat: Inicia un xat nou
-    demo_banner_message: "Estàs utilitzant LLM amb crèdits proporcionats per Cloudflare
-      Workers AI. Els resultats poden variar, ja que el codi s'ha provat amb `gpt-4.1`,
-      però els teus tokens no s'envien enlloc més per entrenar-los! 🤖"
+    demo_banner_message: "Tokens gratuïts per a LLM cortesia de Vercel AI Gateway. Els resultats poden variar perquè canviem sovint els pesos dels models per fer proves. Consulta la documentació de Vercel per saber on van les teves converses! 🤖"
     demo_banner_title: Mode demostració actiu
     destroy:
       notice: Xat eliminat correctament
@@ -52,3 +50,6 @@ ca:
     thinking: Pensant...
     update:
       success: Xat actualitzat
+    worker_unhealthy_warning: 'Ara mateix pot ser que les respostes de la IA no arribin: el procés en segon pla sembla aturat o saturat. Comprova que el teu worker de Sidekiq s''estigui executant.'
+    new:
+      default_title: Xat nou %{timestamp}

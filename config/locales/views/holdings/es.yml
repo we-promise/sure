@@ -29,10 +29,9 @@ es:
     cost_basis_cell:
       unknown: --
       set: Establecer
-      set_cost_basis_header: Establecer base de costes para %{ticker} (%{qty} acciones)
+      set_cost_basis_header: Establecer base de costes para %{ticker}
       total_cost_basis_label: Base de costes total
-      or_per_share_label: 'O introduce por acción:'
-      per_share: por acción
+      per_share_label: "Por acción"
       cancel: Cancelar
       save: Guardar
       overwrite_confirm_title: ¿Sobrescribir base de costes?

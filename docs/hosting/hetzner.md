@@ -188,48 +188,27 @@ For single-admin or tightly controlled deployments, set the onboarding mode to *
 
 ## Step 7: Set Up Automated Backups
 
-Create a backup script to protect your data:
+The `compose.yml` you downloaded includes a backup service that saves the database, uploaded files and your configuration together, organized by app version. It uses the same image as the app, so there is nothing to install. Start it to take a backup every day:
 
 ```bash
-# Create backup script
-nano /opt/sure/backup.sh
+cd /opt/sure
+
+# Optional: change the defaults in .env
+#   BACKUP_DIR=/opt/sure/backups   (default: ./backups)
+#   BACKUP_SCHEDULE="0 2 * * *"     (daily at 02:00 UTC)
+#   BACKUP_KEEP_DAYS=7
+
+docker compose --profile backup up -d backup
 ```
 
-Add this backup script:
+Take a backup by hand at any time, for example before updating:
 
 ```bash
-#!/bin/bash
-BACKUP_DIR="/opt/sure/backups"
-DATE=$(date +%Y%m%d_%H%M%S)
-
-# Create backup directory
-mkdir -p $BACKUP_DIR
-
-# Backup database
-docker compose exec -T db pg_dump -U sure_user sure_production > $BACKUP_DIR/db_backup_$DATE.sql
-
-# Backup application data
-docker compose exec -T web tar -czf - /rails/storage > $BACKUP_DIR/storage_backup_$DATE.tar.gz
-
-# Keep only last 7 days of backups
-find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
-find $BACKUP_DIR -name "*.tar.gz" -mtime +7 -delete
-
-echo "Backup completed: $DATE"
+docker compose run --rm backup create
+docker compose run --rm backup list
 ```
 
-```bash
-# Make backup script executable
-chmod +x /opt/sure/backup.sh
-
-# Add to crontab for daily backups at 2 AM
-crontab -e
-```
-
-Add this line to crontab:
-```bash
-0 2 * * * /opt/sure/backup.sh >> /var/log/sure-backup.log 2>&1
-```
+See [Backups, upgrades and rollbacks](docker.md#backups-upgrades-and-rollbacks) for off-site copies, restoring and rolling back.
 
 ## Step 8: Set Up Basic Monitoring
 
@@ -277,8 +256,9 @@ Here are the essential commands for maintaining your deployment:
 ### Update the application:
 ```bash
 cd /opt/sure
-docker compose pull
-docker compose up --no-deps -d web worker
+docker compose run --rm backup create
+docker compose pull web worker
+docker compose up -d
 ```
 
 ### View logs:
@@ -312,12 +292,19 @@ df -h
 ```
 
 ### Restore from backup:
+On the same server (for example to undo an upgrade):
 ```bash
-# Restore database
-docker compose exec -T db psql -U sure_user sure_production < /opt/sure/backups/db_backup_YYYYMMDD_HHMMSS.sql
+cd /opt/sure
+docker compose run --rm backup list
+docker compose stop web worker
+docker compose run --rm backup restore <version>/<backup>   # or "latest"
+# Set SURE_IMAGE_TAG in .env to the version printed by restore, then:
+docker compose up -d
+```
 
-# Restore application data
-docker compose exec -T web tar -xzf /opt/sure/backups/storage_backup_YYYYMMDD_HHMMSS.tar.gz -C /
+On a new server, copy the backup folder over and run its `restore.sh` instead. It brings back the backup's `.env`, including `SECRET_KEY_BASE`, without which encrypted data can't be read:
+```bash
+sh /path/to/<backup>/restore.sh
 ```
 
 ## Security Features
@@ -370,8 +357,8 @@ df -h
 # Clean up Docker images
 docker system prune -a
 
-# Clean up old backups
-find /opt/sure/backups -name "*.sql" -mtime +7 -delete
+# Clean up old scheduled backups (backups you took by hand are kept)
+cd /opt/sure && docker compose run --rm backup prune
 ```
 
 **Application is slow:**
@@ -405,13 +392,13 @@ For better performance on Hetzner Cloud:
 
 Your backup strategy includes:
 
-1. **Daily automated backups** of database and application data
-2. **7-day retention** of backup files
-3. **Separate backup directory** at `/opt/sure/backups`
-4. **Logging** of backup operations
+1. **Daily automated backups** of the database, uploaded files and configuration, organized by app version
+2. **7-day retention** of scheduled backups; backups you take by hand are kept
+3. **Backup directory** at `./backups` (or `BACKUP_DIR`)
+4. **Logging** of backup operations (`docker compose logs backup`)
 
 Consider additional backup options:
-- **Off-site backups**: Copy backups to external storage (AWS S3, Google Cloud, etc.)
+- **Off-site backups**: Set `BACKUP_DESTINATION` to copy each backup to S3, Google Cloud, etc. via rclone (see `.env.example`)
 - **Database replication**: Set up PostgreSQL streaming replication
 - **Snapshot backups**: Use Hetzner Cloud snapshots for full system backups
 
@@ -437,7 +424,7 @@ If you encounter issues:
 ## Security Reminders
 
 - Keep your server updated: `apt update && apt upgrade`
-- Monitor your logs regularly: `/var/log/sure-backup.log` and `/var/log/sure-health.log`
+- Monitor your logs regularly: `docker compose logs backup` and `/var/log/sure-health.log`
 - Use strong passwords for all accounts
 - Consider setting up SSH key authentication instead of password authentication
 - Regularly review your firewall rules: `ufw status`

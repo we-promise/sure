@@ -107,6 +107,8 @@ uk:
         invalid_code_challenge_method:
           zero: 'Сервер авторизації не підтримує PKCE, оскільки немає прийнятних значень code_challenge_method.'
           one: 'code_challenge_method має бути %{challenge_methods}.'
+          few: 'code_challenge_method має бути одним з %{challenge_methods}.'
+          many: 'code_challenge_method має бути одним з %{challenge_methods}.'
           other: 'code_challenge_method має бути одним з %{challenge_methods}.'
         server_error: 'Сервер авторизації зіткнувся з неочікуваною умовою, яка завадила йому виконати запит.'
         temporarily_unavailable: 'Сервер авторизації наразі не може обробити запит через тимчасове перевантаження або технічне обслуговування сервера.'

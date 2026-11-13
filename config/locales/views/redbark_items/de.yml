@@ -38,20 +38,14 @@ de:
       loading_message: Redbark-Konten werden geladen …
       loading_title: Wird geladen
     panel:
-      field_descriptions: 'Erläuterung der Felder:'
       fields:
         api_key:
-          description: Dein Redbark-API-Key (beginnt mit rbk_live_)
           label: API-Key
           placeholder_new: rbk_live_…
           placeholder_update: Neuen API-Key eintragen, um ihn zu ändern
       optional: "(optional)"
       optional_with_default: "(optional, Standard ist %{default_value})"
-      required: "(erforderlich)"
       save_button: Konfiguration speichern
-      setup_instructions: 'So richtest du es ein:'
-      status_configured_html: Eingerichtet und einsatzbereit. Im Reiter <a href="%{accounts_path}" class="link">Konten</a> verwaltest und richtest du Konten ein.
-      status_not_configured: Nicht eingerichtet
       step_1: Leg auf app.redbark.com unter „Settings“ einen API-Key an
       step_2: Trag deinen API-Key unten ein und klick auf Speichern
       step_3: Nach erfolgreicher Verbindung richtest du im Reiter „Konten“ die neuen Konten ein

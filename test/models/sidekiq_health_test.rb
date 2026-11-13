@@ -12,7 +12,7 @@ class SidekiqHealthTest < ActiveSupport::TestCase
   end
 
   def fresh_process(beat_seconds_ago: 5)
-    { "beat" => (Time.current - beat_seconds_ago.seconds).to_f }
+    { "beat" => (Time.current - beat_seconds_ago.seconds).to_f, "queues" => SidekiqHealth::AI_QUEUES }
   end
 
   def fake_queue(name: "default", size: 0, latency: 0.0)
@@ -84,6 +84,34 @@ class SidekiqHealthTest < ActiveSupport::TestCase
 
     assert_not health.healthy?
     assert_equal :queue_backed_up, health.reason
+  end
+
+  test "an AI queue backlog is not backed up, but still shows in the oldest job age" do
+    stub_sidekiq(
+      processes: [ fresh_process ],
+      queues: [
+        fake_queue(name: "ai_low_priority", size: 40, latency: 3.hours.to_f),
+        fake_queue(name: "ai_high_priority", size: 1, latency: 20.minutes.to_f),
+        fake_queue(name: "high_priority", latency: 2.0)
+      ]
+    )
+
+    health = SidekiqHealth.new
+
+    assert health.healthy?
+    assert_equal 3.hours.to_f, health.max_queue_latency
+  end
+
+  test "reports ai_queues_not_polled when no worker polls the AI queues" do
+    stub_sidekiq(
+      processes: [ fresh_process.merge("queues" => %w[default high_priority ai_high_priority]) ],
+      queues: [ fake_queue ]
+    )
+
+    health = SidekiqHealth.new
+
+    assert_not health.healthy?
+    assert_equal :ai_queues_not_polled, health.reason
   end
 
   test "reports redis_unreachable when Sidekiq raises a Redis connection error" do

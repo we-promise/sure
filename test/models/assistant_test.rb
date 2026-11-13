@@ -19,6 +19,16 @@ class AssistantTest < ActiveSupport::TestCase
     assert_includes preview_classes, Assistant::Function::GetValuations
   end
 
+  test "guest registry leaves out the tools that change categories and tags" do
+    guest_classes = Assistant.function_classes(family_guest)
+
+    Assistant::FAMILY_CONFIG_FUNCTION_CLASSES.each do |fn_class|
+      assert_not_includes guest_classes, fn_class
+      assert_includes Assistant.function_classes(users(:family_admin)), fn_class
+    end
+    assert_includes guest_classes, Assistant::Function::GetCategories
+  end
+
   setup do
     @chat = chats(:two)
     @message = @chat.messages.create!(
@@ -213,7 +223,8 @@ class AssistantTest < ActiveSupport::TestCase
       [ first_tools ],
       [ second_tools ],
       [ final_text, final_response ],
-      expected_function_result_ids: [ [], [ "1" ], [ "1", "2", "3" ] ]
+      expected_function_result_ids: [ [], [ "1" ], [ "1", "2", "3" ] ],
+      expected_function_result_rounds: [ [], [ 1 ], [ 1, 2, 2 ] ]
     )
 
     assert_difference "AssistantMessage.count", 1 do
@@ -352,7 +363,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant_message = pending_assistant_message
 
@@ -372,7 +384,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => nil,
-      "EXTERNAL_ASSISTANT_TOKEN" => nil
+      "EXTERNAL_ASSISTANT_TOKEN" => nil,
+      "EXTERNAL_ASSISTANT_MODEL" => nil
     ) do
       # Ensure Settings are also cleared to avoid test pollution from
       # other tests that may have set these values in the same process.
@@ -398,10 +411,13 @@ class AssistantTest < ActiveSupport::TestCase
     assistant = Assistant.for_chat(@chat)
 
     Net::HTTP.any_instance.stubs(:request).raises(Errno::ECONNREFUSED, "Connection refused")
+    # Skip the real 1s/2s retry backoff sleeps
+    Assistant::External::Client.any_instance.stubs(:sleep)
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assert_no_difference "AssistantMessage.count" do
         assistant.respond_to(@message)
@@ -429,7 +445,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assert_no_difference "AssistantMessage.count" do
         assistant.respond_to(@message)
@@ -452,7 +469,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant.respond_to(@message)
 
@@ -468,7 +486,7 @@ class AssistantTest < ActiveSupport::TestCase
     @chat.user.family.update!(assistant_type: "external")
 
     # Phase 1: Without config, errors gracefully
-    with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil) do
+    with_env_overrides("EXTERNAL_ASSISTANT_URL" => nil, "EXTERNAL_ASSISTANT_TOKEN" => nil, "EXTERNAL_ASSISTANT_MODEL" => nil) do
       Setting.external_assistant_url = nil
       Setting.external_assistant_token = nil
       Setting.clear_cache
@@ -495,7 +513,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant = Assistant::External.new(@chat)
       assistant_message = pending_assistant_message
@@ -525,7 +544,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant.respond_to(@message)
 
@@ -543,7 +563,8 @@ class AssistantTest < ActiveSupport::TestCase
 
     with_env_overrides(
       "EXTERNAL_ASSISTANT_URL" => "http://localhost:18789/v1/chat",
-      "EXTERNAL_ASSISTANT_TOKEN" => "test-token"
+      "EXTERNAL_ASSISTANT_TOKEN" => "test-token",
+      "EXTERNAL_ASSISTANT_MODEL" => "openclaw/main"
     ) do
       assistant_message = pending_assistant_message
       assistant.respond_to(@message, assistant_message: assistant_message)
@@ -643,7 +664,7 @@ class AssistantTest < ActiveSupport::TestCase
     assert_not_nil tool_result_entry, "tool_result message missing from history"
     assert_equal "call_abc", tool_call_entry[:tool_calls].first[:id]
     assert_equal "call_abc", tool_result_entry[:tool_call_id]
-    assert_equal "get_net_worth", tool_result_entry[:name]
+    assert_not tool_result_entry.key?(:name), "tool messages must not carry the deprecated `name` field"
   end
 
   private
@@ -702,9 +723,10 @@ class AssistantTest < ActiveSupport::TestCase
       )
     end
 
-    def expect_provider_rounds(*rounds, expected_function_result_ids: nil)
+    def expect_provider_rounds(*rounds, expected_function_result_ids: nil, expected_function_result_rounds: nil)
       queued_rounds = rounds.dup
       queued_result_ids = expected_function_result_ids&.dup
+      queued_result_rounds = expected_function_result_rounds&.dup
       responses = rounds.map do |chunks|
         response_chunk = chunks.find { |chunk| chunk.type == "response" }
         provider_success_response(response_chunk.data)
@@ -716,6 +738,9 @@ class AssistantTest < ActiveSupport::TestCase
         assert_equal @expected_conversation_history, options[:messages]
         if queued_result_ids
           assert_equal queued_result_ids.shift, options[:function_results].map { |result| result[:call_id] }
+        end
+        if queued_result_rounds
+          assert_equal queued_result_rounds.shift, options[:function_results].map { |result| result[:round] }
         end
         chunks = queued_rounds.shift
         chunks.each { |chunk| options[:streamer].call(chunk) }

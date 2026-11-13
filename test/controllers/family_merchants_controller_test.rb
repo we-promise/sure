@@ -11,6 +11,53 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  # A ProviderMerchant is shared by every family whose transactions use it, so
+  # one family's edit must not change what the others see.
+  test "changing a provider merchant's website gives only this family its own merchant" do
+    shared = ProviderMerchant.create!(name: "Coffee Co", source: "plaid", website_url: "https://coffee.example")
+    transaction = Transaction.joins(entry: :account).merge(@user.accessible_accounts).first
+    transaction.update!(merchant: shared)
+
+    assert_difference -> { @user.family.merchants.count }, 1 do
+      patch family_merchant_url(shared), params: { provider_merchant: { name: "Coffee Co", website_url: "https://attacker.example" } }
+    end
+
+    assert_redirected_to family_merchants_path
+    assert_equal "https://coffee.example", shared.reload.website_url
+
+    own = transaction.reload.merchant
+    assert_instance_of FamilyMerchant, own
+    assert_equal "https://attacker.example", own.website_url
+  end
+
+  test "changing a provider merchant's website reuses an existing same-name family merchant" do
+    shared = ProviderMerchant.create!(name: "Coffee Co", source: "plaid", website_url: "https://coffee.example")
+    existing = @user.family.merchants.create!(name: "Coffee Co", website_url: "https://old.example")
+    transaction = Transaction.joins(entry: :account).merge(@user.accessible_accounts).first
+    transaction.update!(merchant: shared)
+
+    assert_no_difference -> { @user.family.merchants.count } do
+      patch family_merchant_url(shared), params: { provider_merchant: { name: "Coffee Co", website_url: "https://attacker.example" } }
+    end
+
+    assert_redirected_to family_merchants_path
+    assert_equal existing, transaction.reload.merchant
+    assert_equal "https://attacker.example", existing.reload.website_url
+  end
+
+  test "saving a provider merchant unchanged keeps using the shared merchant" do
+    shared = ProviderMerchant.create!(name: "Coffee Co", source: "plaid", website_url: "https://coffee.example")
+    transaction = Transaction.joins(entry: :account).merge(@user.accessible_accounts).first
+    transaction.update!(merchant: shared)
+
+    assert_no_difference -> { @user.family.merchants.count } do
+      patch family_merchant_url(shared), params: { provider_merchant: { name: "Coffee Co", website_url: "https://coffee.example" } }
+    end
+
+    assert_redirected_to family_merchants_path
+    assert_equal shared, transaction.reload.merchant
+  end
+
   test "new" do
     get new_family_merchant_path
     assert_response :success
@@ -51,7 +98,8 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     refute_includes response.body, "AT611904300234573201" # pipelock:ignore IBAN
-    assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]'][aria-labelledby='family_merchant_remove_iban_label']", 1
+    assert_select "#family_merchant_remove_iban_label", text: I18n.t("family_merchants.form.iban_remove_label")
   end
 
   test "iban field masks keystrokes like a password field and signals a stored value" do
@@ -100,7 +148,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_instance_of ProviderMerchant, Merchant.find(provider_merchant.id)
   end
 
-  test "changing only the website of a provider merchant converts it and keeps its iban" do
+  test "changing only the website of a provider merchant keeps its iban on the converted merchant" do
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", iban: "AT611904300234573201") # pipelock:ignore IBAN
     transactions(:one).update!(merchant: provider_merchant)
 
@@ -176,7 +224,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     # raw DB constraint instead, surfacing as RecordNotUnique rather than
     # the RecordInvalid a normal duplicate submission would raise.
     FamilyMerchant.any_instance.stubs(:save).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_iban"')
     )
 
     assert_no_difference "FamilyMerchant.count" do
@@ -185,6 +233,66 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_match "has already been taken", response.body
+  end
+
+  test "a raw unique-index race on the merchant name is reported on the name, not the iban" do
+    FamilyMerchant.any_instance.stubs(:save).raises(
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_name"')
+    )
+
+    post family_merchants_url, params: { family_merchant: { name: "Race Landlord", iban: "AT611904300234573201" } } # pipelock:ignore IBAN
+
+    assert_response :unprocessable_entity
+    assert_match "Name has already been taken", response.body
+    assert_no_match "Iban has already been taken", response.body
+  end
+
+  test "a raw unique-index race on a rename is reported on the name" do
+    FamilyMerchant.any_instance.stubs(:update).raises(
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_name"')
+    )
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "Renamed" } }
+
+    assert_response :unprocessable_entity
+    assert_match "Name has already been taken", response.body
+  end
+
+  test "a raw unique-index race is reported when PostgreSQL words its errors in another language" do
+    pg_error = begin
+      FamilyMerchant.transaction(requires_new: true) do
+        FamilyMerchant.insert_all!([ { family_id: @merchant.family_id, name: @merchant.name } ])
+      end
+    rescue ActiveRecord::RecordNotUnique => e
+      e.cause
+    end
+    localized = ActiveRecord::RecordNotUnique.new("FEHLER: doppelter Schlüsselwert verletzt Unique-Constraint »index_merchants_on_family_id_and_name«")
+    localized.define_singleton_method(:cause) { pg_error }
+    FamilyMerchant.any_instance.stubs(:update).raises(localized)
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { name: "Renamed" } }
+
+    assert_response :unprocessable_entity
+    assert_match "Name has already been taken", response.body
+  end
+
+  test "a unique violation on another index is not turned into a form error" do
+    FamilyMerchant.any_instance.stubs(:save).raises(
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "some_other_index"')
+    )
+
+    assert_raises(ActiveRecord::RecordNotUnique) do
+      post family_merchants_url, params: { family_merchant: { name: "Race Landlord" } }
+    end
+  end
+
+  test "a failed update still offers to remove the stored iban" do
+    merchant = FamilyMerchant.create!(name: "Stored Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+
+    patch family_merchant_url(merchant), params: { family_merchant: { name: "", remove_iban: "1" } }
+
+    assert_response :unprocessable_entity
+    assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
   end
 
   test "a failed iban conversion preserves the submitted color" do
@@ -207,7 +315,7 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
     transactions(:one).update!(merchant: provider_merchant)
     ProviderMerchant.any_instance.stubs(:convert_to_family_merchant_for).raises(
-      ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint")
+      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_iban"')
     )
 
     patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN
@@ -218,9 +326,77 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must still be untouched"
   end
 
+  test "edit keeps return_to in the form" do
+    get edit_family_merchant_url(@merchant, return_to: merchant_path(@merchant))
+
+    assert_select "input[type=hidden][name=return_to][value=?]", merchant_path(@merchant)
+  end
+
+  test "update returns to the given path" do
+    patch family_merchant_url(@merchant), params: { return_to: merchant_path(@merchant), family_merchant: { name: "new name" } }
+
+    assert_redirected_to merchant_path(@merchant)
+  end
+
+  test "update ignores an external return_to" do
+    [ "//evil.example", "/\t/evil.example" ].each do |return_to|
+      patch family_merchant_url(@merchant), params: { return_to: return_to, family_merchant: { name: "new name" } }
+
+      assert_redirected_to family_merchants_path
+    end
+  end
+
+  test "should upload merchant logo" do
+    patch family_merchant_url(@merchant), params: {
+      family_merchant: { logo: file_fixture_upload("profile_image.png", "image/png", :binary) }
+    }
+
+    assert_redirected_to family_merchants_path
+    assert @merchant.reload.logo.attached?
+  end
+
+  test "should remove merchant logo" do
+    @merchant.logo.attach(io: file_fixture("profile_image.png").open, filename: "logo.png", content_type: "image/png")
+
+    patch family_merchant_url(@merchant), params: { family_merchant: { remove_logo: "1" } }
+
+    assert_redirected_to family_merchants_path
+    assert_not @merchant.reload.logo.attached?
+  end
+
   test "should destroy merchant" do
     assert_difference("FamilyMerchant.count", -1) do
       delete family_merchant_url(@merchant)
+    end
+
+    assert_redirected_to family_merchants_path
+  end
+
+  test "guest cannot create merchant" do
+    sign_in family_guest
+
+    assert_no_difference("FamilyMerchant.count") do
+      post family_merchants_url, params: { family_merchant: { name: "Guest Merchant" } }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "guest cannot destroy merchant" do
+    sign_in family_guest
+
+    assert_no_difference("FamilyMerchant.count") do
+      delete family_merchant_url(@merchant)
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "member can create merchant" do
+    sign_in users(:family_member)
+
+    assert_difference("FamilyMerchant.count") do
+      post family_merchants_url, params: { family_merchant: { name: "Member Merchant" } }
     end
 
     assert_redirected_to family_merchants_path

@@ -3,7 +3,7 @@
 
   <%= render "settings/providers/setup_steps",
              steps: [
-               t("settings.providers.up_panel.step_1_html", link: link_to(t("providers.up.name"), "https://api.up.com.au", target: "_blank", rel: "noopener noreferrer", class: "text-primary font-medium underline")),
+               t("settings.providers.up_panel.step_1_html", link: link_to(t("providers.up.name"), "https://api.up.com.au", target: "_blank", rel: "noopener noreferrer", class: "text-link underline")),
                t("settings.providers.up_panel.step_2"),
                t("settings.providers.up_panel.step_3")
              ] %>
@@ -36,7 +36,7 @@
                 icon: "refresh-cw",
                 variant: :outline,
                 size: :sm,
-                href: sync_up_item_path(item),
+                href: sync_up_item_path(item, source: "panel"),
                 method: :post,
                 disabled: item.syncing?
               ) %>
@@ -89,10 +89,7 @@
 
   <% up_item = Current.family.up_items.build(name: t("up_items.provider_panel.default_connection_name")) %>
   <% if active_items.any? %>
-    <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
-      <%= icon "plus", size: "sm" %>
-      <%= t("up_items.provider_panel.add_connection") %>
-    </h3>
+    <%= render "settings/providers/add_connection_heading", label: t("up_items.provider_panel.add_connection") %>
   <% end %>
 
   <%= styled_form_with model: up_item,

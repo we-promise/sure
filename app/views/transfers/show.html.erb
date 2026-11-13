@@ -81,24 +81,41 @@
       </div>
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>
-      <%= styled_form_with model: @transfer,
-              data: { controller: "auto-submit-form" }, class: "space-y-2" do |f| %>
+      <div class="space-y-2">
+        <%# Separate forms: the investment contribution switch reloads the page, so
+            it must not be submitted along with every category or notes edit. %>
         <% if @transfer.categorizable? %>
-          <%= f.collection_select :category_id, @categories, :id, :name, { label: t(".category"), include_blank: t(".uncategorized"), selected: @transfer.outflow_transaction.category&.id, variant: :badge, searchable: true }, "data-auto-submit-form-target": "auto" %>
+          <%= styled_form_with model: @transfer, data: { controller: "auto-submit-form" } do |f| %>
+            <%= f.collection_select :category_id, @categories, :id, :name, { label: t(".category"), include_blank: t(".uncategorized"), selected: @transfer.outflow_transaction.category&.id, variant: :badge, searchable: true }, "data-auto-submit-form-target": "auto" %>
+          <% end %>
         <% end %>
-        <%= render DS::TagSelect.new(
-              form: f,
-              tags: @tags,
-              selected_ids: @transfer.outflow_transaction.tag_ids,
-              auto_submit: true,
-              update_url: tags_transfer_path(@transfer)
-            ) %>
-        <%= f.text_area :notes,
-                  label: t(".note_label"),
-                  placeholder: t(".note_placeholder"),
-                  rows: 5,
-                  "data-auto-submit-form-target": "auto" %>
-      <% end %>
+        <% if @can_switch_investment_contribution %>
+          <%= styled_form_with model: @transfer,
+                data: { controller: "auto-submit-form" },
+                class: "flex items-center justify-between gap-4 py-1" do |f| %>
+            <div class="space-y-1">
+              <p class="text-sm text-primary"><%= t(".investment_contribution_title") %></p>
+              <p class="text-xs text-secondary"><%= t(".investment_contribution_subtitle") %></p>
+            </div>
+            <%= f.toggle :investment_contribution, data: { auto_submit_form_target: "auto" } %>
+          <% end %>
+        <% end %>
+        <%= styled_form_with model: @transfer,
+                data: { controller: "auto-submit-form" }, class: "space-y-2" do |f| %>
+          <%= render DS::TagSelect.new(
+                form: f,
+                tags: @tags,
+                selected_ids: @transfer.outflow_transaction.tag_ids,
+                auto_submit: true,
+                update_url: tags_transfer_path(@transfer)
+              ) %>
+          <%= f.text_area :notes,
+                    label: t(".note_label"),
+                    placeholder: t(".note_placeholder"),
+                    rows: 5,
+                    "data-auto-submit-form-target": "auto" %>
+        <% end %>
+      </div>
     <% end %>
     <% dialog.with_section(title: t(".settings")) do %>
       <div class="pb-4">

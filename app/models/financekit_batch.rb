@@ -56,10 +56,25 @@ class FinancekitBatch < ApplicationRecord
         accepted_at: accepted_at, payload: raw_payload)
       item.update!(last_device_contact_at: accepted_at, last_accepted_at: accepted_at)
     end
-    FinancekitInboxJob.perform_later(item.id) if batch.previously_new_record?
+    if batch.previously_new_record?
+      Financekit::Diagnostics.capture(item: item, batch: batch, source: name,
+        message: "FinanceKit upload accepted", event: "upload_accepted",
+        event_count: data["events"].size, payload_bytes: raw_payload.bytesize)
+      FinancekitInboxJob.perform_later(item.id)
+    end
     batch
   rescue JSON::ParserError
+    Financekit::Diagnostics.capture(item: item, source: name, level: "warn",
+      message: "FinanceKit upload rejected", event: "upload_rejected", error_code: "invalid_json")
     raise Financekit::Error.new("invalid_json", 400)
+  rescue Financekit::Error => error
+    Financekit::Diagnostics.capture(item: item, source: name, level: "warn",
+      message: "FinanceKit upload rejected", event: "upload_rejected", error_code: error.code, http_status: error.status)
+    raise
+  rescue StandardError => error
+    Financekit::Diagnostics.capture(item: item, batch: batch, source: name, level: "error",
+      message: "FinanceKit upload failed", event: "upload_failed", error_class: error.class.name)
+    raise
   end
 
   def receipt

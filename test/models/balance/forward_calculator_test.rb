@@ -86,6 +86,37 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_not_includes calculated.map(&:date), 1.day.ago.to_date
   end
 
+  test "scheduled (future-dated) transactions do not affect materialized balances" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 1000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -200 },
+        { type: "transaction", date: 1.day.from_now.to_date, amount: -5000 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_equal 1200, calculated.last.balance
+    assert_equal 2.days.ago.to_date, calculated.map(&:date).max
+    assert_not_includes calculated.map(&:date), 1.day.from_now.to_date
+  end
+
+  test "account whose only entry is scheduled more than a day out still gets a Date.current balance" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "transaction", date: 3.days.from_now.to_date, amount: -1000 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+
+    assert_equal [ Date.current ], calculated.map(&:date)
+    assert_equal 0, calculated.first.balance
+  end
+
   test "calculation start date ignores a pending entry before the opening anchor" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
@@ -713,6 +744,45 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
     )
   end
 
+  test "incremental sync reads entries from the window start" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 5.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 4.days.ago.to_date, amount: -500 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: 100 }
+      ]
+    )
+    Balance::Materializer.new(account, strategy: :forward).materialize_balances
+
+    window_start = 3.days.ago.to_date
+    sync_cache = Balance::SyncCache.new(account, start_date: window_start)
+    Balance::SyncCache.expects(:new).with(account, start_date: window_start).returns(sync_cache)
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: window_start)
+    calculator.calculate
+
+    assert calculator.incremental?
+  end
+
+  test "falling back to full recalculation reads every entry" do
+    account = create_account_with_ledger(
+      account: { type: Depository, currency: "USD" },
+      entries: [
+        { type: "opening_anchor", date: 3.days.ago.to_date, balance: 20000 },
+        { type: "transaction", date: 2.days.ago.to_date, amount: -500 }
+      ]
+    )
+
+    sync_cache = Balance::SyncCache.new(account)
+    Balance::SyncCache.expects(:new).with(account, start_date: nil).returns(sync_cache)
+
+    calculator = Balance::ForwardCalculator.new(account, window_start_date: 2.days.ago.to_date)
+    calculator.calculate
+
+    assert_not calculator.incremental?
+  end
+
   test "falls back to full recalculation when prior balance has a non-cash component" do
     account = create_account_with_ledger(
       account: { type: Depository, currency: "USD" },
@@ -931,6 +1001,42 @@ class Balance::ForwardCalculatorTest < ActiveSupport::TestCase
         }
       ]
     )
+  end
+
+  test "a preview loan payment reduces principal by only the post-interest part" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -1_066.19 }
+      ]
+    )
+    enable_preview_features_for_family!(account.family)
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+    row = calculated.find { |balance| balance.date == Date.new(2026, 2, 1) }
+
+    assert_equal BigDecimal("11053.81"), row.balance
+    assert_equal BigDecimal("946.19"), row.non_cash_inflows
+    assert_equal BigDecimal("0"), row.non_cash_outflows
+  end
+
+  test "a loan payment is all principal when preview is off" do
+    account = create_loan_account(
+      initial_balance: 12_000,
+      term_months: 12,
+      entries: [
+        { type: "opening_anchor", date: Date.new(2026, 1, 1), balance: 12_000 },
+        { type: "transaction", date: Date.new(2026, 2, 1), amount: -1_066.19 }
+      ]
+    )
+
+    calculated = Balance::ForwardCalculator.new(account).calculate
+    row = calculated.find { |balance| balance.date == Date.new(2026, 2, 1) }
+
+    assert_equal BigDecimal("10933.81"), row.balance
+    assert_equal BigDecimal("1066.19"), row.non_cash_inflows
   end
 
   private

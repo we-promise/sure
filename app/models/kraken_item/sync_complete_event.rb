@@ -8,12 +8,10 @@ class KrakenItem::SyncCompleteEvent
   end
 
   def broadcast
-    Turbo::StreamsChannel.broadcast_replace_to(
-      @kraken_item.family,
-      target: ActionView::RecordIdentifier.dom_id(@kraken_item),
-      partial: "kraken_items/kraken_item",
-      locals: { kraken_item: @kraken_item }
-    )
+    # Not the rendered card: it lists every account on the connection and a
+    # broadcast has no viewer to filter for (#3630). The toast re-fetches the
+    # page per viewer.
+    @kraken_item.family.broadcast_sync_complete
   rescue StandardError => e
     Rails.logger.warn("KrakenItem::SyncCompleteEvent failed for #{@kraken_item.id}: #{e.class}")
   end
