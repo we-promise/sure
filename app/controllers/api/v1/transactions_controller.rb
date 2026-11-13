@@ -198,7 +198,7 @@ class Api::V1::TransactionsController < Api::V1::BaseController
       return
     end
 
-    @entry.destroy!
+    @entry.destroy_by_user!
     @entry.sync_account_later
 
     render json: {

@@ -84,7 +84,6 @@ class Entry < ApplicationRecord
   }
 
   before_destroy :prevent_individual_child_deletion, if: :split_child?
-  before_destroy :record_provider_import_tombstone, prepend: true
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
   # Split rows in the order they were entered. Without an ORDER BY PostgreSQL
@@ -372,6 +371,20 @@ class Entry < ApplicationRecord
   def lock_saved_attributes!
     super
     entryable.lock_saved_attributes!
+  end
+
+  # Destroys an entry the user chose to delete and tombstones its provider
+  # identities, so a later sync doesn't import it again. Sync code that
+  # replaces or prunes provider entries (reclassification, settings changes)
+  # calls destroy! instead, because the provider may send those rows again.
+  #
+  # @return [Entry] the destroyed entry
+  def destroy_by_user!
+    # Entry#transaction is the Transaction entryable, so open the DB transaction on the class.
+    self.class.transaction do
+      ProviderImportTombstone.record_for_entry!(self)
+      destroy!
+    end
   end
 
   # Enqueues an account sync whose window starts at the earliest date this
@@ -836,15 +849,6 @@ class Entry < ApplicationRecord
       return if date == parent_entry.date
 
       errors.add(:date, "must match the parent transaction date for split children")
-    end
-
-    def record_provider_import_tombstone
-      # Prepended, so this runs before the entryable is destroyed and its
-      # extra is still readable. Provider-sourced entries only: manual rows
-      # carry no external_id, and split children carry neither. The insert
-      # shares the destroy transaction, so an aborted destroy leaves no
-      # tombstone behind.
-      ProviderImportTombstone.record_for_entry!(self)
     end
 
     def prevent_individual_child_deletion

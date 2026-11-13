@@ -23,7 +23,7 @@ class ProviderImportTombstoneTest < ActiveSupport::TestCase
       }
     )
 
-    entry.destroy!
+    entry.destroy_by_user!
 
     assert ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_booked_1")
     assert ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_content_old")
@@ -50,7 +50,7 @@ class ProviderImportTombstoneTest < ActiveSupport::TestCase
       }
     )
 
-    entry.destroy!
+    entry.destroy_by_user!
 
     assert ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_merged_a")
     assert ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_merged_b")
@@ -65,7 +65,7 @@ class ProviderImportTombstoneTest < ActiveSupport::TestCase
       currency: "USD"
     )
 
-    entry.destroy!
+    entry.destroy_by_user!
 
     assert_equal 0, ProviderImportTombstone.where(account: @account).count
   end

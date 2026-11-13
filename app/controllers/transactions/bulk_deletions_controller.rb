@@ -6,7 +6,7 @@ class Transactions::BulkDeletionsController < ApplicationController
     entries_scope = Current.family.entries
                       .where(account_id: writable_account_ids)
                       .where(parent_entry_id: nil)
-    destroyed = entries_scope.destroy_by(id: bulk_delete_params[:entry_ids])
+    destroyed = entries_scope.where(id: bulk_delete_params[:entry_ids]).each(&:destroy_by_user!)
     destroyed.map(&:account).uniq.each(&:sync_later)
     redirect_back_or_to transactions_url, notice: "#{destroyed.count} transaction#{destroyed.count == 1 ? "" : "s"} deleted"
   end

@@ -125,7 +125,7 @@ class Api::V1::TradesController < Api::V1::BaseController
 
   def destroy
     @entry = @trade.entry
-    @entry.destroy!
+    @entry.destroy_by_user!
     @entry.sync_account_later
 
     render json: { message: "Trade deleted successfully" }, status: :ok

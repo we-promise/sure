@@ -72,7 +72,30 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
-  test "destroying a provider entry tombstones it so the next import skips it" do
+  test "a destroy by sync code does not tombstone, so the provider can send the row again" do
+    entry = @adapter.import_transaction(
+      external_id: "plaid_reclassified_1",
+      amount: 10.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Reclassified Transaction",
+      source: "plaid"
+    )
+
+    entry.destroy!
+
+    assert_not ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_reclassified_1")
+    assert_not_nil @adapter.import_transaction(
+      external_id: "plaid_reclassified_1",
+      amount: 10.00,
+      currency: "USD",
+      date: Date.today,
+      name: "Reclassified Transaction",
+      source: "plaid"
+    )
+  end
+
+  test "deleting a provider entry as the user tombstones it so the next import skips it" do
     entry = @adapter.import_transaction(
       external_id: "plaid_deleted_2",
       amount: 10.00,
@@ -82,7 +105,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       source: "plaid"
     )
 
-    entry.destroy!
+    entry.destroy_by_user!
 
     assert ProviderImportTombstone.tombstoned?(account: @account, source: "plaid", external_id: "plaid_deleted_2")
 

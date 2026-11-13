@@ -87,7 +87,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal 2, @account.entries.where(source: "enable_banking").count
 
     # Delete one entry, as the UI does; the other movement must keep importing.
-    @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(identifierless)).destroy!
+    @account.entries.find_by!(external_id: EnableBankingEntry::Processor.compute_external_id(identifierless)).destroy_by_user!
 
     result = nil
     assert_no_difference "@account.entries.where(source: 'enable_banking').count" do
@@ -108,7 +108,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_includes survivor.transaction.extra["superseded_external_ids"],
                     EnableBankingEntry::Processor.compute_external_id(identifierless)
 
-    survivor.destroy!
+    survivor.destroy_by_user!
 
     # The stored payload still holds the identifierless row it retired.
     result = nil
