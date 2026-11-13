@@ -193,7 +193,7 @@ class Provider::Openai::PdfProcessor
       if Provider::Openai.native_pdf_completion_limit?(model: effective_model, custom_provider: custom_provider)
         params[:max_completion_tokens] = max_response_tokens if max_response_tokens
       else
-        params[:max_tokens] = max_response_tokens
+        params[:max_tokens] = max_response_tokens if max_response_tokens
       end
 
       response = client.chat(parameters: params)

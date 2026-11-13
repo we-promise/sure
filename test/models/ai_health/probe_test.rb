@@ -207,6 +207,130 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_not_includes instructions, AiHealth::Probe::PDF_TEST_INSTITUTION
   end
 
+  test "PDF vision probe sends no response cap unless the operator configured one" do
+    response = {
+      "choices" => [
+        {
+          "message" => {
+            "content" => {
+              document_type: "bank_statement",
+              summary: "A synthetic bank statement containing no customer data.",
+              extracted_data: {
+                institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
+              }
+            }.to_json
+          }
+        }
+      ]
+    }
+    client = mock("openai_client")
+    captured = nil
+    client.expects(:chat).with do |params|
+      captured = params
+      true
+    end.returns(response)
+    @probe.stubs(:openai_client).returns(client)
+    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
+    Setting.stubs(:llm_max_response_tokens).returns(nil)
+
+    ClimateControl.modify(LLM_MAX_RESPONSE_TOKENS: nil) do
+      result = @probe.pdf_vision_processing(
+        provider: :openai,
+        endpoint: "https://api.cloudflare.example.test/v1",
+        access_token: "token",
+        model: "vision-model",
+        openai_compatible: true
+      )
+
+      assert result.passing?
+    end
+
+    parameters = captured[:parameters]
+    assert_not parameters.key?(:max_tokens)
+    assert_not parameters.key?(:max_completion_tokens)
+  end
+
+  test "PDF vision probe sends the operator-configured response cap from LLM_MAX_RESPONSE_TOKENS" do
+    response = {
+      "choices" => [
+        {
+          "message" => {
+            "content" => {
+              document_type: "bank_statement",
+              summary: "A synthetic bank statement containing no customer data.",
+              extracted_data: {
+                institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
+              }
+            }.to_json
+          }
+        }
+      ]
+    }
+    client = mock("openai_client")
+    captured = nil
+    client.expects(:chat).with do |params|
+      captured = params
+      true
+    end.returns(response)
+    @probe.stubs(:openai_client).returns(client)
+    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
+
+    ClimateControl.modify(LLM_MAX_RESPONSE_TOKENS: "2048") do
+      result = @probe.pdf_vision_processing(
+        provider: :openai,
+        endpoint: "https://api.cloudflare.example.test/v1",
+        access_token: "token",
+        model: "vision-model",
+        openai_compatible: true
+      )
+
+      assert result.passing?
+    end
+
+    assert_equal 2048, captured.dig(:parameters, :max_tokens)
+  end
+
+  test "PDF vision probe sends the configured response cap from the Self-Hosting setting" do
+    response = {
+      "choices" => [
+        {
+          "message" => {
+            "content" => {
+              document_type: "bank_statement",
+              summary: "A synthetic bank statement containing no customer data.",
+              extracted_data: {
+                institution_name: AiHealth::Probe::PDF_TEST_INSTITUTION
+              }
+            }.to_json
+          }
+        }
+      ]
+    }
+    client = mock("openai_client")
+    captured = nil
+    client.expects(:chat).with do |params|
+      captured = params
+      true
+    end.returns(response)
+    @probe.stubs(:openai_client).returns(client)
+    Provider::Openai::PdfProcessor.any_instance.expects(:convert_pdf_to_images).once.returns([ "encoded-page" ])
+    Setting.stubs(:llm_max_response_tokens).returns(1024)
+
+    ClimateControl.modify(LLM_MAX_RESPONSE_TOKENS: nil) do
+      result = @probe.pdf_vision_processing(
+        provider: :openai,
+        endpoint: "https://api.cloudflare.example.test/v1",
+        access_token: "token",
+        model: "vision-model",
+        openai_compatible: true
+      )
+
+      assert result.passing?
+    end
+
+    assert_equal 1024, captured.dig(:parameters, :max_tokens)
+  end
+
   test "PDF processing probes require the expected institution in the standard result fields" do
     response = {
       "choices" => [

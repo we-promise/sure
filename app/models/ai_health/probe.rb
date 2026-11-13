@@ -43,7 +43,6 @@ class AiHealth
       "Transactions: 2",
       "Synthetic data only. No customer data."
     ].freeze
-    PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
       def passing?
@@ -239,7 +238,7 @@ class AiHealth
                 model: model,
                 pdf_content: synthetic_pdf,
                 custom_provider: openai_compatible,
-                max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
+                max_response_tokens: pdf_response_tokens,
                 processing_mode: processing_mode
               ).process
             when :anthropic
@@ -439,6 +438,23 @@ class AiHealth
           result.document_type == "bank_statement" &&
           result.extracted_data.is_a?(Hash) &&
           result.extracted_data["institution_name"] == PDF_TEST_INSTITUTION
+      end
+
+      # Reasoning models spend the completion budget on reasoning before
+      # answering, so a fixed cap truncates the reply (finish_reason "length",
+      # empty content) and the probe reports a generic unexpected response.
+      # Only send a cap the operator explicitly configured (ENV or the
+      # Self-Hosting setting), the same rule production PDF processing uses;
+      # otherwise leave the request uncapped so the probe measures what the
+      # endpoint can actually do.
+      def pdf_response_tokens
+        explicit = ENV["LLM_MAX_RESPONSE_TOKENS"].to_s.strip.to_i
+        return explicit if explicit.positive?
+
+        from_setting = Setting.llm_max_response_tokens.to_i
+        return from_setting if from_setting.positive?
+
+        nil
       end
 
       def synthetic_pdf
