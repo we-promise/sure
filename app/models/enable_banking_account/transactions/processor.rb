@@ -101,7 +101,9 @@ class EnableBankingAccount::Transactions::Processor
       Set.new
     end
 
-    enable_banking_account.raw_transactions_payload.each_with_index do |transaction_data, index|
+    pending_external_ids = open_pending_external_ids
+
+    rows_in_settlement_order(pending_external_ids).each do |transaction_data, index|
       begin
         ext_id = EnableBankingEntry::Processor.compute_external_id(transaction_data)
 
@@ -117,7 +119,8 @@ class EnableBankingAccount::Transactions::Processor
           import_adapter: shared_adapter,
           known_merchant_names: shared_known_merchant_names,
           identifierless_external_ids: shared_identifierless_external_ids,
-          excluded_external_ids: excluded_ids
+          excluded_external_ids: excluded_ids,
+          pending_external_ids: pending_external_ids
         ).process
 
         if result.nil?
@@ -169,4 +172,39 @@ class EnableBankingAccount::Transactions::Processor
 
     result
   end
+
+  private
+
+    # External ids of the account's stored pending entries.
+    #
+    # @return [Set<String>]
+    def open_pending_external_ids
+      account = enable_banking_account.current_account
+      return Set.new if account.blank?
+
+      Transaction.pending
+                 .joins(:entry)
+                 .where(entries: { account_id: account.id, source: "enable_banking" })
+                 .pluck("entries.external_id")
+                 .compact
+                 .to_set
+    end
+
+    # A booked row that identifies a stored pending entry, by its external_id or
+    # by its entry_reference, settles that entry. Importing those rows first
+    # keeps another booked row of the same amount from claiming the entry
+    # through ProviderImportAdapter's amount-based pending match, which would
+    # move the pending entry's notes and edits onto the wrong operation.
+    # Indexes remain those of the stored payload, for error reporting.
+    #
+    # @return [Array<Array(Hash, Integer)>]
+    def rows_in_settlement_order(pending_external_ids)
+      rows = enable_banking_account.raw_transactions_payload.each_with_index.to_a
+      return rows if pending_external_ids.empty?
+
+      settling, others = rows.partition do |transaction_data, _index|
+        EnableBankingEntry::Processor.settled_pending_external_id(transaction_data, pending_external_ids).present?
+      end
+      settling + others
+    end
 end

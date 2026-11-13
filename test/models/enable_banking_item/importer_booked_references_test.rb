@@ -169,6 +169,92 @@ class EnableBankingItem::ImporterBookedReferencesTest < ActiveSupport::TestCase
     end
   end
 
+  test "settles a stored pending entry by its own reference when a booked twin comes first" do
+    @importer.stubs(:include_pending?).returns(true)
+    provide_booked_rows([])
+    @provider.stubs(:get_account_transactions).with(has_entries(transaction_status: "PDNG"))
+             .returns(transactions: [ booked("reference-b").merge(status: "PDNG") ])
+    import_and_process
+    original = imported_entries.sole
+    assert original.transaction.pending?
+    original.update!(notes: "Reviewed while pending")
+    original.mark_user_modified!
+
+    provide_booked_rows([ booked("reference-a"), booked("reference-b") ])
+    @provider.stubs(:get_account_transactions).with(has_entries(transaction_status: "PDNG")).returns(transactions: [])
+
+    assert_difference -> { imported_entries.count }, 1 do
+      import_and_process
+    end
+
+    original.reload
+    assert_equal "enable_banking_reference-b", original.external_id
+    assert_equal "Reviewed while pending", original.notes
+    assert_not original.transaction.pending?
+    assert_not_equal "Reviewed while pending", imported_entries.find_by!(external_id: "enable_banking_reference-a").notes
+
+    assert_no_difference -> { imported_entries.count } do
+      import_and_process
+    end
+    assert_equal "enable_banking_reference-b", original.reload.external_id
+  end
+
+  test "settles a stored pending entry by its reference when its booked row gains a transaction_id" do
+    @importer.stubs(:include_pending?).returns(true)
+    provide_booked_rows([ booked("reference-a") ])
+    @provider.stubs(:get_account_transactions).with(has_entries(transaction_status: "PDNG"))
+             .returns(transactions: [ authorisation("reference-b", "Synthetic card authorisation") ])
+    import_and_process
+    original = imported_entries.find_by!(external_id: "enable_banking_reference-b")
+    assert original.transaction.pending?
+    original.update!(notes: "Reviewed while pending")
+    original.lock_saved_attributes!
+    original.mark_user_modified!
+
+    provide_booked_rows([
+      booked("reference-a"),
+      booked("reference-c"),
+      booked("reference-b").merge(transaction_id: "transaction-b")
+    ])
+    @provider.stubs(:get_account_transactions).with(has_entries(transaction_status: "PDNG")).returns(transactions: [])
+
+    assert_difference -> { imported_entries.count }, 1 do
+      import_and_process
+    end
+
+    original.reload
+    assert_equal "enable_banking_transaction-b", original.external_id
+    assert_equal "Reviewed while pending", original.notes
+    assert_not original.transaction.pending?
+    assert_not_equal "Reviewed while pending", imported_entries.find_by!(external_id: "enable_banking_reference-c").notes
+
+    assert_no_difference -> { imported_entries.count } do
+      import_and_process
+    end
+    assert_equal "enable_banking_transaction-b", original.reload.external_id
+  end
+
+  test "settles the pending entry with its own reference when several share the amount" do
+    @importer.stubs(:include_pending?).returns(true)
+    provide_booked_rows([])
+    older = authorisation("reference-b", "Synthetic authorisation one", date: 1.day.ago.to_date)
+    newer = authorisation("reference-d", "Synthetic authorisation two")
+    @provider.stubs(:get_account_transactions).with(has_entries(transaction_status: "PDNG")).returns(transactions: [ older, newer ])
+    import_and_process
+    original = imported_entries.find_by!(external_id: "enable_banking_reference-b")
+
+    provide_booked_rows([ booked("reference-b").merge(transaction_id: "transaction-b") ])
+    @provider.stubs(:get_account_transactions).with(has_entries(transaction_status: "PDNG")).returns(transactions: [ newer ])
+
+    assert_no_difference -> { imported_entries.count } do
+      import_and_process
+    end
+
+    assert_equal "enable_banking_transaction-b", original.reload.external_id
+    assert_not original.transaction.pending?
+    assert imported_entries.find_by!(external_id: "enable_banking_reference-d").transaction.pending?
+  end
+
   test "retains fallback matching when the bank supplies no references" do
     row = booked(nil).merge(creditor: { name: "Synthetic merchant" })
     provide_booked_rows([ row, row.deep_dup ])
@@ -212,6 +298,15 @@ class EnableBankingItem::ImporterBookedReferencesTest < ActiveSupport::TestCase
         remittance_information: [ "Synthetic card top-up" ],
         status: "BOOK"
       }
+    end
+
+    def authorisation(reference, description, date: Date.current)
+      booked(reference).merge(
+        status: "PDNG",
+        booking_date: date.to_s,
+        value_date: date.to_s,
+        remittance_information: [ description ]
+      )
     end
 
     def provide_booked_rows(rows)
