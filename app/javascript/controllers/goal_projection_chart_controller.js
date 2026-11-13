@@ -434,7 +434,7 @@ export default class extends Controller {
     const tickFmt = d3.timeFormat("%b %Y");
     const tickCount = Math.min(5, Math.max(2, Math.round(innerWidth / 80)));
     const ticks = x.ticks(tickCount);
-    const tickGroup = svg.append("g");
+    const tickGroup = svg.append("g").attr("data-axis", "x").attr("data-raw-ticks", ticks.length);
     tickGroup
       .selectAll("text")
       .data(ticks)
@@ -446,6 +446,23 @@ export default class extends Controller {
       .attr("font-size", 12)
       .attr("fill", textSecondary)
       .text((d) => tickFmt(d));
+    // d3 treats the tick count as a hint and can return nearly twice as many
+    // (nine quarterly ticks for a two-year goal when asked for five). When the
+    // widest label plus a gap is wider than the closest pair of ticks, keep
+    // every k-th tick, so the labels thin to a regular interval. The first
+    // tick is always kept, so the axis never goes blank.
+    const LABEL_GAP_PX = 12;
+    const labelNodes = tickGroup.selectAll("text").nodes();
+    const widest = d3.max(labelNodes, (n) => n.getComputedTextLength());
+    if (ticks.length >= 2 && Number.isFinite(widest) && widest > 0) {
+      const minSpacing = d3.min(d3.pairs(ticks), ([a, b]) => x(b) - x(a));
+      const stride = minSpacing > 0 ? Math.ceil((widest + LABEL_GAP_PX) / minSpacing) : ticks.length;
+      if (stride > 1) {
+        labelNodes.forEach((n, i) => {
+          if (i % stride !== 0) n.remove();
+        });
+      }
+    }
     // De-dupe adjacent equal tick labels (e.g. multiple "May '26" on a
     // short window where d3.ticks oversamples).
     const tickNodes = tickGroup.selectAll("text").nodes();

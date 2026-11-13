@@ -118,6 +118,58 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
+  # The reported axis opens on Oct 2026, before the goal was created, so its
+  # domain starts with the saved history: the 90 days the balance series
+  # covers. Asked for "about 5" ticks, d3 then returns nine quarterly ones,
+  # Oct 2026 to Oct 2028, about 52 px apart at this width.
+  test "x-axis labels on a two-year goal do not overlap at desktop width" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, history_from: TODAY - 90.days)
+
+      assert_equal 9, raw_x_ticks, "premise: d3 returns nine quarterly ticks for the reported goal"
+      labels = x_labels
+      assert_x_labels_clear(labels)
+      assert_operator labels.size, :<, raw_x_ticks, "some labels must be dropped to fit"
+      assert_operator labels.size, :>=, 2, "thinning must not empty the axis"
+    end
+  end
+
+  test "a short goal keeps every x-axis tick" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, history_from: TODAY - 90.days, target_date: TODAY + 3.months)
+
+      assert_equal raw_x_ticks, x_labels.size, "labels that already fit must all be kept"
+      assert_x_labels_clear(x_labels)
+    end
+  end
+
+  test "at phone width the x-axis keeps its yearly ticks" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, history_from: TODAY - 90.days)
+      on_phone
+
+      assert_equal [ "Jan 2027", "Jan 2028" ], x_labels.map { |l| l["text"] }
+      assert_equal raw_x_ticks, x_labels.size
+    end
+  end
+
+  test "a chart narrower than one label still draws a label, without error" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, history_from: TODAY - 90.days)
+
+      page.execute_script(<<~JS)
+        window.__chartErrors = [];
+        window.addEventListener("error", (e) => window.__chartErrors.push(String(e.message)));
+        document.querySelector("[data-controller='goal-projection-chart']").style.width = "120px";
+      JS
+      wait_for_settled_chart
+
+      assert_equal 120, svg_width, "premise: the chart redrew at 120 px"
+      assert_operator x_labels.size, :>=, 1
+      assert_empty page.evaluate_script("window.__chartErrors")
+    end
+  end
+
   teardown do
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride") if @phone
   end
@@ -132,11 +184,13 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       wait_for_settled_chart
     end
 
-    def visit_goal(target:, saved: 3_000, pace: 0, target_date: TARGET_DATE)
+    # The saved history is pinned: empty by default, so the x-domain starts on
+    # the day the goal was created; or one point at `history_from`, which is
+    # where the domain then starts.
+    def visit_goal(target:, saved: 3_000, pace: 0, target_date: TARGET_DATE, history_from: nil)
       Goal.any_instance.stubs(:pace).returns(pace)
-      # The saved history is pinned empty so the x-domain starts on the day the
-      # goal was created, as in the report.
-      Goal.any_instance.stubs(:balance_series_values).returns([])
+      history = history_from ? [ OpenStruct.new(date: history_from, value: Money.new(saved, "USD")) ] : []
+      Goal.any_instance.stubs(:balance_series_values).returns(history)
 
       account = @user.family.accounts.create!(name: "Holiday savings", accountable: Depository.new, currency: "USD", balance: saved)
       goal = @user.family.goals.create!(
@@ -201,6 +255,25 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       backdrop = paint["backdrop"]
       (paint["halos"] + paint["milestones"] + paint["rings"]).each do |item|
         assert_equal backdrop, item["colour"], "does not match the card behind the chart: #{item.inspect}"
+      end
+    end
+
+    def raw_x_ticks
+      page.evaluate_script("Number(document.querySelector(\"[data-controller='goal-projection-chart'] g[data-axis='x']\").dataset.rawTicks)")
+    end
+
+    def x_labels
+      page.evaluate_script(<<~JS)
+        Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] g[data-axis='x'] text")).map((t) => {
+          const b = t.getBBox();
+          return { text: t.textContent, left: b.x, right: b.x + b.width };
+        })
+      JS
+    end
+
+    def assert_x_labels_clear(labels)
+      labels.each_cons(2) do |a, b|
+        assert_operator a["right"] + 4, :<=, b["left"], "#{a["text"]} runs into #{b["text"]}: #{labels.inspect}"
       end
     end
 
