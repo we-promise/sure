@@ -189,12 +189,19 @@ class Import < ApplicationRecord
 
     def parse_csv_str(csv_str, col_sep: ",")
       CSV.parse(
-        (csv_str || "").strip,
+        normalize_line_endings(csv_str).strip,
         headers: true,
         col_sep: col_sep,
         converters: [ ->(str) { str&.strip } ],
         liberal_parsing: true
       )
+    end
+
+    # Ruby's CSV auto-detects the row separator from the first newline it sees
+    # (ignoring quotes), so files mixing LF and CRLF (e.g. a quoted multi-line
+    # header followed by CRLF rows) fail to parse. Normalize to LF first.
+    def normalize_line_endings(csv_str)
+      (csv_str || "").gsub(/\r\n?/, "\n")
     end
 
     # Attempts to identify the best-matching date format from a list of candidates
