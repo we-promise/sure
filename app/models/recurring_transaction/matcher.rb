@@ -34,12 +34,14 @@ class RecurringTransaction
 
     # Live mode: exact tier auto-links, high tier lands in the review queue.
     def run!
+      release_allocations_claimed_by_active_series!(include_closed_window: false)
       apply(collect_candidates, suggest: true)
     end
 
     # Backfill mode: only unambiguous exact-tier matches are written, as
     # confirmed history. Historical suggestions would bury the review queue.
     def run_backfill!
+      release_allocations_claimed_by_active_series!(include_closed_window: true)
       apply(collect_candidates(include_closed_window: true), suggest: false)
     end
 
@@ -225,9 +227,59 @@ class RecurringTransaction
                   .map { |group| group.min_by { |candidate| (candidate.entry.date - candidate.occurrence.effective_due_on).to_i.abs } }
       end
 
+      # A confirmed allocation the matcher wrote itself is never reconsidered as
+      # a candidate. When it sits on an ended series (typically an auto-detected
+      # duplicate of a bill made by hand) while an open cycle of an active series
+      # would take the payment, release it so that series can link it, and let
+      # the cycle recompute whether it is settled. Without such a cycle (the live
+      # run only generates current ones) the link stays. Allocations a person
+      # created or confirmed are never released.
+      def release_allocations_claimed_by_active_series!(include_closed_window:)
+        active_cycles = open_occurrences.select { |occurrence| occurrence.recurring_transaction.active? }
+        return if active_cycles.empty?
+
+        rejected = rejected_pairs
+        # Live candidate collection stops at today, so it could not re-link a
+        # future-dated payment.
+        latest = include_closed_window ? nil : Date.current
+        RecurringAllocation.confirmed
+                           .where(source: "auto_matched")
+                           .where.not(entry_id: nil)
+                           .joins(:entry)
+                           .where(entries: { excluded: false })
+                           .then { |scope| latest ? scope.where(entries: { date: ..latest }) : scope }
+                           .joins(recurring_occurrence: :recurring_transaction)
+                           .where(recurring_occurrences: { family_id: family.id })
+                           .where(recurring_transactions: { status: "ended" })
+                           .includes(:entry, recurring_occurrence: :recurring_transaction)
+                           .find_each do |allocation|
+          next unless claimed_by_any?(active_cycles, allocation.entry, rejected)
+
+          Allocator.new(allocation.recurring_occurrence).unallocate!(allocation)
+        end
+      end
+
+      # The same checks candidate collection applies: identity, window and score,
+      # and not a pair the person rejected.
+      def claimed_by_any?(cycles, entry, rejected)
+        cycles.any? do |occurrence|
+          series = occurrence.recurring_transaction
+          !rejected.include?([ series.id, entry.id ]) &&
+            identity_matches?(series, entry) &&
+            within_window?(occurrence, entry) &&
+            score(occurrence, series, entry).first >= HIGH_TIER
+        end
+      end
+
+      # Cycles of an ended series take no payments: such a series is usually the
+      # superseded twin of an active one and would only make every payment look
+      # ambiguous. Paused and inactive series keep theirs, so a late payment
+      # still reaches a paused bill's overdue leftover.
       def open_occurrences
         family.recurring_occurrences
               .open_status
+              .joins(:recurring_transaction)
+              .where.not(recurring_transactions: { status: "ended" })
               .includes(recurring_transaction: :recurrence_rules)
               .to_a
       end

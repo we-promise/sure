@@ -635,9 +635,9 @@ class BillsController < ApplicationController
     end
 
     # Only occurrences the overview lists: open rows and this month's paid ones.
-    # Ending a bill leaves its scheduled occurrences behind and the matcher
-    # still scores them, and skipping closes an occurrence but keeps its
-    # suggestion, so neither may ask about a row the page doesn't show.
+    # Ending a bill leaves its scheduled occurrences and any earlier suggestion on
+    # them, and skipping closes an occurrence but keeps its suggestion, so neither
+    # may ask about a row the page doesn't show.
     def suggested_allocations(listed)
       RecurringAllocation
         .suggested

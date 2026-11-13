@@ -415,6 +415,141 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert_nil Matcher.new(@family).explain(occurrence, other)
   end
 
+  # An ended duplicate (typically auto-detected before the manual bill) keeps its
+  # confirmed auto links, so the entries never reach the active bill.
+  test "a run releases auto allocations held by an ended transfer series so the active series links them" do
+    ended = create_series(name: "Allowance", amount: 250, day_offset: -10, destination: accounts(:loan), bill_type: "transfer", dedup_scope: "detected")
+    active = create_series(name: "Allowance", amount: 250, day_offset: -10, destination: accounts(:loan), bill_type: "transfer", dedup_scope: "manual")
+    [ ended, active ].each { |series| RecurringTransaction::OccurrenceGenerator.new(series).backfill!(from: Date.current - 130) }
+    cycles = ended.recurring_occurrences.order(:due_on).first(3)
+    entries = cycles.map { |cycle| create_transfer(amount: 250, date: cycle.due_on, to: accounts(:loan)) }
+    entries.zip(cycles).each do |entry, cycle|
+      RecurringTransaction::Allocator.new(cycle).allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: { transfer: true })
+    end
+    ended.update_columns(status: "ended")
+
+    @matcher.run_backfill!
+
+    assert_empty RecurringAllocation.joins(:recurring_occurrence).where(recurring_occurrences: { recurring_transaction_id: ended.id })
+    assert_equal entries.map(&:id).sort, RecurringAllocation.joins(:recurring_occurrence)
+                                                            .where(recurring_occurrences: { recurring_transaction_id: active.id }).pluck(:entry_id).sort
+    assert ended.recurring_occurrences.reload.none?(&:paid?), "the ended series' cycles are no longer settled by them"
+  end
+
+  test "releasing from an ended series is idempotent" do
+    ended = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "old")
+    active = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "new")
+    [ ended, active ].each { |series| RecurringTransaction::OccurrenceGenerator.new(series).backfill!(from: Date.current - 100) }
+    cycle = ended.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: cycle.due_on, name: "CITY WATER")
+    RecurringTransaction::Allocator.new(cycle).allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: { name: true })
+    ended.update_columns(status: "ended")
+
+    @matcher.run_backfill!
+    state = RecurringAllocation.order(:id).pluck(:entry_id, :recurring_occurrence_id, :state)
+    Matcher.new(@family).run_backfill!
+
+    assert_equal state, RecurringAllocation.order(:id).pluck(:entry_id, :recurring_occurrence_id, :state)
+    assert_equal active.id, RecurringAllocation.find_by!(entry_id: entry.id).recurring_occurrence.recurring_transaction_id
+  end
+
+  test "an ended series keeps its allocation when no active series matches the payment" do
+    ended = create_series(name: "CITY WATER", amount: 80, day_offset: -10)
+    RecurringTransaction::OccurrenceGenerator.new(ended).backfill!(from: Date.current - 100)
+    cycle = ended.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: cycle.due_on, name: "CITY WATER")
+    allocation = RecurringTransaction::Allocator.new(cycle).allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: { name: true })
+    ended.update_columns(status: "ended")
+
+    @matcher.run_backfill!
+
+    assert RecurringAllocation.exists?(allocation.id)
+  end
+
+  test "a person's own link on an ended series is never released" do
+    ended = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "old")
+    create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "new")
+    RecurringTransaction::OccurrenceGenerator.new(ended).backfill!(from: Date.current - 100)
+    cycle = ended.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: cycle.due_on, name: "CITY WATER")
+    chosen = cycle.allocations.create!(entry: entry, allocated_amount: 80, currency: "USD", state: "confirmed", source: "user_confirmed", paid_on: entry.date)
+    ended.update_columns(status: "ended")
+
+    @matcher.run_backfill!
+
+    assert RecurringAllocation.exists?(chosen.id)
+  end
+
+  test "an allocation is not released from an ended series when the active one was rejected for that payment" do
+    ended = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "old")
+    active = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "new")
+    RecurringTransaction::OccurrenceGenerator.new(ended).backfill!(from: Date.current - 100)
+    cycle = ended.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: cycle.due_on, name: "CITY WATER")
+    allocation = RecurringTransaction::Allocator.new(cycle).allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: { name: true })
+    RecurringMatchRejection.create!(recurring_transaction: active, entry: entry)
+    ended.update_columns(status: "ended")
+
+    @matcher.run_backfill!
+
+    assert RecurringAllocation.exists?(allocation.id)
+  end
+
+  test "a paused series still takes a late payment into its open cycle" do
+    paused = create_series(name: "CITY WATER", amount: 80, day_offset: -10)
+    RecurringTransaction::OccurrenceGenerator.new(paused).backfill!(from: Date.current - 40)
+    cycle = paused.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: cycle.due_on, name: "CITY WATER")
+    paused.update_columns(status: "paused")
+
+    @matcher.run_backfill!
+
+    assert_equal cycle.id, RecurringAllocation.find_by!(entry_id: entry.id).recurring_occurrence_id
+  end
+
+  test "a live run keeps an ended series' link when the active series has no cycle covering the payment" do
+    ended = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "old")
+    create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "new")
+    RecurringTransaction::OccurrenceGenerator.new(ended).backfill!(from: Date.current - 100)
+    cycle = ended.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: cycle.due_on, name: "CITY WATER")
+    allocation = RecurringTransaction::Allocator.new(cycle).allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: { name: true })
+    ended.update_columns(status: "ended")
+
+    @matcher.run!
+
+    assert RecurringAllocation.exists?(allocation.id)
+  end
+
+  test "an allocation on an excluded entry is not released from an ended series" do
+    ended = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "old")
+    active = create_series(name: "CITY WATER", amount: 80, day_offset: -10, dedup_scope: "new")
+    [ ended, active ].each { |series| RecurringTransaction::OccurrenceGenerator.new(series).backfill!(from: Date.current - 100) }
+    cycle = ended.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 80, date: cycle.due_on, name: "CITY WATER")
+    allocation = RecurringTransaction::Allocator.new(cycle).allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: { name: true })
+    entry.update_columns(excluded: true)
+    ended.update_columns(status: "ended")
+
+    @matcher.run_backfill!
+
+    assert RecurringAllocation.exists?(allocation.id)
+  end
+
+  test "a live run keeps a future-dated link on an ended series" do
+    ended = create_series(name: "CITY WATER", amount: 80, day_offset: 5, dedup_scope: "old")
+    active = create_series(name: "CITY WATER", amount: 80, day_offset: 5, dedup_scope: "new")
+    [ ended, active ].each { |series| RecurringTransaction::OccurrenceGenerator.new(series).backfill!(from: Date.current - 10) }
+    cycle = ended.recurring_occurrences.order(:due_on).last
+    entry = create_entry(amount: 80, date: Date.current + 5, name: "CITY WATER")
+    allocation = RecurringTransaction::Allocator.new(cycle).allocate_matched!(entry: entry, state: "confirmed", confidence: 1, signals: { name: true })
+    ended.update_columns(status: "ended")
+
+    @matcher.run!
+
+    assert RecurringAllocation.exists?(allocation.id)
+  end
+
   private
     def create_series(amount:, day_offset:, name: nil, merchant: nil, dedup_scope: "", preset: "monthly", bill_type: "bill", destination: nil)
       due = Date.current + day_offset
