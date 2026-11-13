@@ -181,6 +181,17 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty extra, "nl placeholders missing from en:\n#{extra.join("\n")}"
   end
 
+  # These forms label their subtype select with `label: true`, which reads the
+  # accountable's attribute name. A missing entry humanizes to "Subtype".
+  def test_accountable_subtype_labels_are_translated
+    [ Depository, Investment, Loan, Property ].each do |model|
+      %i[en de].each do |locale|
+        key = "activerecord.attributes.#{model.model_name.i18n_key}.subtype"
+        assert I18n.t(key, locale: locale, fallback: false, default: nil).present?, "#{key} is missing in #{locale}"
+      end
+    end
+  end
+
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal

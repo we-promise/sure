@@ -26,6 +26,14 @@ en:
         logo: Logo
         name: Name
         subtype: Subtype
+      depository:
+        subtype: Account type
+      investment:
+        subtype: Investment type
+      loan:
+        subtype: Loan type
+      property:
+        subtype: Property type
     errors:
       models:
         account:
