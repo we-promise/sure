@@ -26,6 +26,9 @@ class TransfersController < ApplicationController
     # CTA that the controller would reject via `require_account_permission!`
     # for read-only sharers.
     endpoint_ids = [ @transfer.from_account&.id, @transfer.to_account&.id ].compact
+    # The drawer opens with access to the inflow side only; each side's own
+    # transaction name is shown only to a user who can see that side's account.
+    @readable_account_ids = Account.accessible_by(Current.user).where(id: endpoint_ids).distinct.pluck(:id)
     writable_endpoint_count = Account.writable_by(Current.user).where(id: endpoint_ids).distinct.count
     both_endpoints_writable = endpoint_ids.size == 2 && writable_endpoint_count == 2
     @can_mark_as_recurring_transfer = !Current.family.recurring_transactions_disabled? && both_endpoints_writable
