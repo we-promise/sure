@@ -17,6 +17,9 @@ class TradeRepublicAccount::ActivitiesProcessor
   SAVINGS_PLAN_INVOICE_EVENT_TYPE = "SAVINGS_PLAN_INVOICE_CREATED"
   SAVINGS_PLAN_EXECUTION_EVENT_TYPES = %w[TRADING_SAVINGSPLAN_EXECUTED SAVINGS_PLAN_EXECUTED].freeze
   SETTLEMENT_AMOUNT_TOLERANCE = BigDecimal("0.01")
+  # A parsed quantity is only trusted as a thousands-separator misread when a
+  # 1,000x (or 1,000,000x) rescale lands within 1% of the cash-implied quantity.
+  THOUSANDS_QUANTITY_TOLERANCE = BigDecimal("0.01")
   ACTIVITY_LABELS_BY_KEY = {
     "contribution" => "Contribution",
     "withdrawal" => "Withdrawal",
@@ -358,6 +361,18 @@ class TradeRepublicAccount::ActivitiesProcessor
       end
       return false unless amount && !amount.zero?
 
+      # A thousands separator without decimals is ambiguous in display text:
+      # "1,500" (English) and "1.500" (German) both parse as 1.5, so an order
+      # of 1,500 shares imports 1,000x too small. The booked amount and share
+      # price imply the real quantity; if a 1,000x (or 1,000,000x) rescale of
+      # the parsed quantity matches it, the separator was a thousands
+      # separator. Only a rescale that fits is trusted, never the implied
+      # quantity itself, because the displayed price is often rounded.
+      if price
+        rescaled = thousands_rescaled_quantity(quantity, price, amount, costs, is_buy)
+        signed_quantity = quantity = rescaled if rescaled
+      end
+
       # Sure trade amounts are cash impact: buys spend cash, sells return it.
       signed_amount = is_buy ? amount.abs : -amount.abs
       if price.nil?
@@ -404,6 +419,29 @@ class TradeRepublicAccount::ActivitiesProcessor
       end
 
       true
+    end
+
+    # Display text like "1,500" or "1.500" parses as 1.5 when the thousands
+    # separator carries no decimals, so a 1,500-share order imports 1,000x too
+    # small. The booked amount and share price imply the real quantity: buy
+    # total = gross + costs, sell total = gross - costs. Returns the rescaled
+    # quantity when a 1,000x (or 1,000,000x) rescale lands within tolerance of
+    # the implied quantity, nil otherwise. The implied quantity itself is
+    # never returned: the displayed price is often rounded, so only a rescale
+    # that fits is trusted.
+    def thousands_rescaled_quantity(quantity, price, amount, costs, is_buy)
+      return nil if quantity.nil? || quantity.zero? || price.nil? || price.zero?
+      return nil if amount.nil? || amount.zero?
+
+      gross = is_buy ? amount.abs - costs : amount.abs + costs
+      return nil unless gross.positive?
+
+      implied = gross / price.abs
+      [ 1000, 1_000_000 ].each do |factor|
+        scaled = quantity * factor
+        return scaled if ((scaled.abs - implied).abs / implied) <= THOUSANDS_QUANTITY_TOLERANCE
+      end
+      nil
     end
 
     # The cash leg of an order. The detail total ("Total" / "Summe") is what

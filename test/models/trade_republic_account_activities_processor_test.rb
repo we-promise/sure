@@ -643,6 +643,56 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("1.00"), trade.entryable.fee
   end
 
+  test "buy rescales a thousands-separator quantity parsed 1000x too small" do
+    import_event(order_execution_detail(
+      quantity: "1.5",
+      isin: "IE00B5BMR087",
+      amount: "15000.00"
+    ).deep_merge(detail: { fees: "1.00", price: "10.00", name: "Core S&P 500" }))
+
+    trade = find_trade("trade_republic_event_evt_buy")
+    assert_equal BigDecimal("1500"), trade.entryable.qty
+    assert_equal BigDecimal("10.00"), trade.entryable.price
+    assert_equal BigDecimal("15000.00"), trade.amount
+  end
+
+  test "sell rescales a thousands-separator quantity parsed 1000x too small" do
+    import_event(order_execution_detail(
+      event_id: "evt_sell_thousands",
+      quantity: "-1.5",
+      isin: "IE00B5BMR087",
+      amount: "14998.00"
+    ).deep_merge(detail: { fees: "1.00", taxes: "1.00", price: "10.00", name: "Core S&P 500" }))
+
+    trade = find_trade("trade_republic_event_evt_sell_thousands")
+    assert_equal BigDecimal("-1500"), trade.entryable.qty
+    assert_equal BigDecimal("10.00"), trade.entryable.price
+    assert_equal BigDecimal("-14998.00"), trade.amount
+  end
+
+  test "genuine fractional quantity is not rescaled" do
+    import_event(order_execution_detail(
+      quantity: "1.5",
+      isin: "IE00B5BMR087",
+      amount: "15.00"
+    ).deep_merge(detail: { price: "10.00", name: "Core S&P 500" }))
+
+    trade = find_trade("trade_republic_event_evt_buy")
+    assert_equal BigDecimal("1.5"), trade.entryable.qty
+    assert_equal BigDecimal("10.00"), trade.entryable.price
+  end
+
+  test "quantity stays parsed when no thousands rescale fits the booked amount" do
+    import_event(order_execution_detail(
+      quantity: "1.5",
+      isin: "IE00B5BMR087",
+      amount: "100.00"
+    ).deep_merge(detail: { price: "10.00", name: "Core S&P 500" }))
+
+    trade = find_trade("trade_republic_event_evt_buy")
+    assert_equal BigDecimal("1.5"), trade.entryable.qty
+  end
+
   test "sell fallback amount subtracts fee from proceeds" do
     Security.stubs(:search_provider).returns([])
 
