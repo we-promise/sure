@@ -412,12 +412,15 @@ class EnableBankingEntry::Processor
         # erroneously returns credit_debit_indicator: "CRDT" for an authorization hold on an outflow.
         # Force these holds to positive (outflow/expense in Sure) so they appear as pending expenses
         # and match the settled expense when it arrives.
+        # Some ASPSPs report the direction inverted for card transactions
+        # (purchases as CRDT, refunds as DBIT). The per-account
+        # invert_transaction_signs flag flips the sign back. It never
+        # applies to unidentified holds, which already normalize above.
         if unidentified_hold?
           absolute_amount
-        elsif credit_debit_indicator == "CRDT"
-          -absolute_amount
         else
-          absolute_amount
+          signed_amount = credit_debit_indicator == "CRDT" ? -absolute_amount : absolute_amount
+          invert_transaction_signs? ? -signed_amount : signed_amount
         end
       rescue ArgumentError => e
         Rails.logger.error "Failed to parse Enable Banking transaction amount: #{raw_amount.inspect} - #{e.message}"
@@ -427,6 +430,10 @@ class EnableBankingEntry::Processor
 
     def credit_debit_indicator
       data[:credit_debit_indicator]
+    end
+
+    def invert_transaction_signs?
+      enable_banking_account.invert_transaction_signs?
     end
 
     def counterparty_name

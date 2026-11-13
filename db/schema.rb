@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_12_105619) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -655,6 +655,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "iban"
     t.jsonb "identification_hashes", default: []
     t.jsonb "institution_metadata"
+    t.boolean "invert_transaction_signs", default: false, null: false
     t.string "name"
     t.string "product"
     t.string "provider"
