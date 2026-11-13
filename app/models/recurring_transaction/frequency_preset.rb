@@ -74,7 +74,7 @@ class RecurringTransaction
         was_once = once_schedule?(recurring)
         once_date = nil
         if preset == ONCE
-          once_date = resolve_once_date(recurring, once_on)
+          once_date = resolve_once_date(recurring, once_on, was_once)
           if once_date.nil?
             recurring.errors.add(:base, I18n.t("recurring_transactions.create.due_date_required"))
             return false
@@ -82,7 +82,8 @@ class RecurringTransaction
 
           # A paid one-off is that payment. Moving the date would keep the
           # paid row and generate a second, open one, so the change is refused.
-          if was_once && once_date != current_once_date(recurring) && settled_occurrence?(recurring)
+          if was_once && once_date != current_once_date(recurring) &&
+             settled_occurrence?(recurring, current_once_date(recurring))
             recurring.errors.add(:base, I18n.t("recurring_transactions.update.once_date_locked"))
             return false
           end
@@ -163,20 +164,26 @@ class RecurringTransaction
           recurring.anchor_date || recurring.next_expected_date
         end
 
-        # Closed, or carrying an allocation. Either one is a payment the
-        # generator will not delete.
-        def settled_occurrence?(recurring)
-          occurrences = recurring.recurring_occurrences
+        # Whether the occurrence on `date` is closed or carries an allocation,
+        # a payment the generator will not delete. Only that date: rows left by
+        # an earlier repeating schedule say nothing about the one-off.
+        def settled_occurrence?(recurring, date)
+          occurrences = recurring.recurring_occurrences.where(original_due_on: date)
           occurrences.closed.exists? ||
             RecurringAllocation.where(recurring_occurrence_id: occurrences.select(:id)).exists?
         end
 
-        # A blank date keeps the series' current anchor. A date that was typed
-        # but cannot be parsed is refused, rather than quietly kept.
-        def resolve_once_date(recurring, once_on)
+        # A blank date keeps an existing one-off where it is. Anything else
+        # becomes due on what the bill currently shows as its due date: the
+        # anchor is its first due date and stays put as occurrences advance, so
+        # it can be months behind. A date that was typed but cannot be parsed
+        # is refused, rather than quietly kept.
+        def resolve_once_date(recurring, once_on, was_once)
           return nil if once_on.present? && strict_date(once_on).nil?
 
-          strict_date(once_on) || recurring.anchor_date || recurring.next_expected_date
+          strict_date(once_on) ||
+            (current_once_date(recurring) if was_once || !recurring.persisted?) ||
+            recurring.next_due_date
         end
 
         def strict_date(value)

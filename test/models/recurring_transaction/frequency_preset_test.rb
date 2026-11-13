@@ -249,6 +249,31 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     assert_equal "once", Preset.detect(@recurring).key
   end
 
+  test "an earlier paid occurrence does not lock a one-off's date" do
+    travel_to Date.new(2026, 11, 13) do
+      RecurringTransaction::OccurrenceGenerator.new(@recurring).generate!
+      earlier = @recurring.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 11, 5))
+      RecurringTransaction::Allocator.new(earlier).mark_paid!
+
+      Preset.apply(@recurring, preset: "once", once_on: Date.new(2026, 12, 1))
+      @recurring.save!
+
+      assert Preset.apply(@recurring, preset: "once", once_on: Date.new(2026, 12, 20))
+      assert_empty @recurring.errors
+    end
+  end
+
+  test "once without a date is due on the bill's current due date, not its first" do
+    stale = Date.new(2026, 1, 5)
+    @recurring.update_columns(anchor_date: stale)
+    due = @recurring.next_due_date
+
+    assert Preset.apply(@recurring, preset: "once")
+
+    assert_equal due, @recurring.anchor_date
+    assert_equal due, @recurring.next_expected_date
+  end
+
   test "leaving once drops the one-payment cap" do
     due = Date.new(2026, 12, 1)
     Preset.apply(@recurring, preset: "once", once_on: due)

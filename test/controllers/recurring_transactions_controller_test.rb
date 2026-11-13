@@ -780,6 +780,25 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal moved, bill.reload.next_expected_date
   end
 
+  test "switching a repeating bill to once without a date uses its current due date" do
+    due = Date.current + 5
+    post recurring_transactions_url, params: {
+      recurring_transaction: { name: "Tuition", amount: "900", first_due_on: due.iso8601, frequency_preset: "monthly" }
+    }
+    bill = @family.recurring_transactions.find_by!(name: "Tuition")
+    stale = Date.current - 200
+    bill.update_columns(anchor_date: stale)
+
+    get edit_recurring_transaction_url(bill), headers: { "Turbo-Frame" => "modal" }
+    assert_select "input[name=?][value=?]", "recurring_transaction[frequency_once_on]", due.iso8601
+
+    # What Smart Configure submits: the preset alone, with no date.
+    patch recurring_transaction_url(bill), params: { recurring_transaction: { frequency_preset: "once" } }
+
+    assert_equal due, bill.reload.anchor_date
+    assert_equal [ due ], bill.recurring_occurrences.reload.pluck(:due_on)
+  end
+
   test "moving a paid one-off is refused and does not add a second occurrence" do
     due = Date.current + 4
 

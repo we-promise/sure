@@ -433,7 +433,9 @@ class RecurringTransactionsController < ApplicationController
       @recurring_transaction.frequency_month_of_year = detection.month_of_year
       @recurring_transaction.frequency_interval = detection.interval
       @recurring_transaction.frequency_interval_unit = detection.interval_unit
-      @recurring_transaction.frequency_once_on = detection.once_on
+      # Switching to Once starts from the date the bill is next due, not its
+      # first due date, which is long past for an older bill.
+      @recurring_transaction.frequency_once_on = detection.once_on || @recurring_transaction.next_due_date
     end
 
     # A bill outliving its own price is the normal case, and the only way to
