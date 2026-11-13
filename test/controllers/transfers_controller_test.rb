@@ -669,13 +669,13 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
     sign_in users(:family_member)
     transfer = transfers(:one)
-    original_inflow_kind = transfer.inflow_transaction.kind
 
-    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+    assert_no_changes -> { transfer.inflow_transaction.reload.kind } do
+      patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+    end
 
     assert_redirected_to transactions_url
     assert transfer.reload.pending?
-    assert_equal original_inflow_kind, transfer.inflow_transaction.reload.kind
   end
 
   test "can add notes to transfer" do

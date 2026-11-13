@@ -7,6 +7,7 @@ uk:
     api_keys:
       create:
         success: "Ваш ключ API успішно створено"
+        creation_failed: "Не вдалося створити ключ API. Спробуйте ще раз."
       destroy:
         revoked_successfully: "Ключ API успішно відкликано"
         revoke_failed: "Не вдалося відкликати ключ API"

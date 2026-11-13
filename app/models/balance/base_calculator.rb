@@ -47,6 +47,26 @@ class Balance::BaseCalculator
       @sync_cache ||= Balance::SyncCache.new(account)
     end
 
+    def loan_principal_change(date)
+      loan_principal_payments&.change_for(date)
+    end
+
+    # The balance change a loan's payment actually makes when interest is
+    # taken out first. A sync is background work with no `Current.user`, so the
+    # family rollup is the right preview check: one opted-in member enables the
+    # recalculated balance for the shared account. The guide reserves the
+    # per-user check for UI.
+    def loan_principal_payments
+      return @loan_principal_payments if defined?(@loan_principal_payments)
+
+      @loan_principal_payments = if account.loan? &&
+          account.loan.amortizable? &&
+          account.has_opening_anchor? &&
+          account.family.preview_features_enabled?
+        sync_cache.loan_principal_payments(account.loan)
+      end
+    end
+
     def holdings_value_for_date(date)
       sync_cache.get_holdings_value(date)
     end
@@ -117,9 +137,14 @@ class Balance::BaseCalculator
       income_outflow_sum = income_trades.select { |e| e.amount >= 0 }.sum(&:amount)
 
       if account.balance_type == :non_cash
-        non_cash_txns = non_cash_balance_transactions(entries)
-        non_cash_inflows = non_cash_txns.select { |e| e.amount < 0 }.sum(&:amount).abs
-        non_cash_outflows = non_cash_txns.select { |e| e.amount >= 0 }.sum(&:amount)
+        if account.accountable_type == "Loan" && (change = loan_principal_change(date))
+          non_cash_inflows = change.principal_paid
+          non_cash_outflows = change.principal_added
+        else
+          non_cash_txns = non_cash_balance_transactions(entries)
+          non_cash_inflows = non_cash_txns.select { |e| e.amount < 0 }.sum(&:amount).abs
+          non_cash_outflows = non_cash_txns.select { |e| e.amount >= 0 }.sum(&:amount)
+        end
       else
         cash_inflows = txn_inflow_sum.abs + trade_cash_inflow_sum.abs + income_inflow_sum.abs
         cash_outflows = txn_outflow_sum + trade_cash_outflow_sum + income_outflow_sum

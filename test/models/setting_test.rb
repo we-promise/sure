@@ -38,6 +38,12 @@ class SettingTest < ActiveSupport::TestCase
     assert_match(/OpenAI model is required/, error.message)
   end
 
+  test "validate_openai_config! passes for a regional OpenAI host without a model" do
+    assert_nothing_raised do
+      Setting.validate_openai_config!(uri_base: "https://us.api.openai.com", model: "")
+    end
+  end
+
   test "validate_openai_config! uses current settings when parameters are nil" do
     Setting.openai_uri_base = "https://api.example.com"
     Setting.openai_model = "gpt-4"
@@ -199,4 +205,66 @@ class SettingTest < ActiveSupport::TestCase
     Setting.securities_providers = original_providers.presence || ""
     Setting.securities_provider = original_provider.presence || "twelve_data"
   end
+
+  test "reencrypt_secrets_from moves values from the old key to the current key" do
+    old_secret_key_base = "old-secret-key-base-" + "a" * 64
+    store_raw_setting("openai_access_token", old_setting_encryptor(old_secret_key_base).encrypt_and_sign("sk-old-key"))
+
+    assert_not_equal "sk-old-key", Setting.openai_access_token
+
+    results = Setting.reencrypt_secrets_from(old_secret_key_base, dry_run: false)
+
+    assert_equal :reencrypted, results[:openai_access_token]
+    assert_equal "sk-old-key", Setting.openai_access_token
+    assert_not_equal "sk-old-key", Setting.find_by(var: "openai_access_token").value
+  ensure
+    Setting.openai_access_token = nil
+  end
+
+  test "reencrypt_secrets_from dry run reports without writing" do
+    old_secret_key_base = "old-secret-key-base-" + "b" * 64
+    ciphertext = old_setting_encryptor(old_secret_key_base).encrypt_and_sign("sk-old-key")
+    store_raw_setting("openai_access_token", ciphertext)
+
+    results = Setting.reencrypt_secrets_from(old_secret_key_base)
+
+    assert_equal :would_reencrypt, results[:openai_access_token]
+    assert_equal ciphertext, Setting.find_by(var: "openai_access_token").value
+  ensure
+    Setting.openai_access_token = nil
+  end
+
+  test "reencrypt_secrets_from leaves current and undecryptable values alone" do
+    Setting.where(var: "twelve_data_api_key").delete_all
+    Setting.openai_access_token = "sk-current"
+    other_ciphertext = old_setting_encryptor("unrelated-" + "c" * 64).encrypt_and_sign("sk-lost")
+    store_raw_setting("anthropic_access_token", other_ciphertext)
+
+    results = Setting.reencrypt_secrets_from("old-secret-key-base-" + "d" * 64, dry_run: false)
+
+    assert_equal :current, results[:openai_access_token]
+    assert_equal :not_decryptable, results[:anthropic_access_token]
+    assert_equal "sk-current", Setting.openai_access_token
+    assert_equal other_ciphertext, Setting.find_by(var: "anthropic_access_token").value
+    assert_equal :not_stored, results[:twelve_data_api_key]
+  ensure
+    Setting.openai_access_token = nil
+    Setting.anthropic_access_token = nil
+  end
+
+  test "reencrypt_secrets_from rejects a blank old key" do
+    assert_raises(ArgumentError) { Setting.reencrypt_secrets_from("") }
+  end
+
+  private
+
+    def old_setting_encryptor(secret_key_base)
+      key = ActiveSupport::KeyGenerator.new(secret_key_base).generate_key("setting_encryption", 32)
+      ActiveSupport::MessageEncryptor.new(key)
+    end
+
+    def store_raw_setting(var, value)
+      Setting.find_or_initialize_by(var: var).update!(value: value)
+      Setting.clear_cache
+    end
 end

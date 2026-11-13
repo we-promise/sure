@@ -8,6 +8,7 @@ class BrexItem < ApplicationRecord
   if encryption_ready?
     encrypts :token, deterministic: true
     encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
