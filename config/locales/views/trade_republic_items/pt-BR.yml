@@ -6,18 +6,22 @@ pt-BR:
       connection_description: "Conecte uma conta de investimentos da Trade Republic por meio de login web seguro"
       institution_name: Trade Republic
   trade_republic_items:
-    duplicate_connection: "Esta conta da Trade Republic já está conectada. A nova conexão foi removida."
     portfolio_categories:
-      brokerage: "Conta de corretora"
-      private_markets: "Mercados privados"
+      brokerage: "Brokerage"
+      private_markets: "Private Markets"
       interest_products: "Produtos de juros"
-      crypto_wallet: "Carteira de criptomoedas"
+      crypto_wallet: "Crypto Wallet"
+    duplicate_connection: "Esta conta da Trade Republic já está conectada. A nova conexão foi removida."
+    defaults:
+      name: Trade Republic
     trade_republic_item:
+      deletion_in_progress: "Exclusão em andamento"
       syncing: "Sincronizando"
       requires_update: "É necessário reautenticar"
       session_expires_in: "O login expira em %{time} (%{at})."
       error: "Erro"
       synced: "Sincronizado há %{time}. %{summary}."
+      never_synced: "Nunca sincronizado."
       setup_accounts: "Configurar contas"
       delete: "Excluir"
       accounts_need_setup: "A conta precisa ser configurada"
@@ -27,15 +31,65 @@ pt-BR:
       data_quality:
         title: "Qualidade dos dados e detalhes da sincronização"
         repair: "Reparar dados importados"
+        positions:
+          one: "%{count} posição"
+          other: "%{count} posições"
+        unpriced:
+          one: "%{count} sem preço atual"
+          other: "%{count} sem preço atual"
+        events:
+          one: "%{count} atividade"
+          other: "%{count} atividades"
+        unknown:
+          one: "%{count} atividade desconhecida"
+          other: "%{count} atividades desconhecidas"
         pending_trade_details:
           one: "%{count} atividade de investimento aguardando detalhes"
           other: "%{count} atividades de investimento aguardando detalhes"
+        expenses:
+          one: "%{count} despesa nos últimos 30 dias (%{amount})"
+          other: "%{count} despesas nos últimos 30 dias (%{amount})"
+        reconciliation: "%{matched}/%{total} saldos de contas conciliados"
+        sync_history: "Sincronizações recentes"
+        sync_status:
+          completed: "Concluída"
+          failed: "Falhou"
+          pending: "Pendente"
+          syncing: "Sincronizando"
+          stale: "Desatualizada"
     setup_accounts:
       page_title: "Configurar conta da Trade Republic"
+      dialog_title: "Configure sua conta da Trade Republic"
       subtitle: "Vincule sua conta de investimentos da Trade Republic."
+      info_box:
+        title: "Importação da Trade Republic"
+        items:
+          item_1: "Posições atuais com preços e quantidades"
+          item_2: "Operações executadas (compras e vendas)"
+          item_3: "Depósitos, retiradas e pagamentos de juros"
+      status:
+        fetching_accounts: "Buscando a conta na Trade Republic..."
+        no_accounts_found_title: "Nenhuma conta encontrada."
+        no_accounts_found_description: "O Sure não encontrou nenhuma conta da Trade Republic. Verifique se sua sessão ainda é válida."
+      available_accounts:
+        title: "Conta disponível"
+        account_type_investment: "Carteira de investimentos"
+        account_type_cash: "Conta em dinheiro"
+        account_type_crypto: "Conta de criptomoedas"
+        account_summary: "%{account_type} • Saldo: %{balance}"
+        account_id: "ID da conta: %{account_id}"
+      link_existing:
+        description: "Ou vincule a conta da Trade Republic descoberta a uma conta de investimentos manual existente."
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: "Selecione uma conta..."
+      linked_accounts:
+        title: "Já vinculada"
+        linked_to_html: "Vinculada a: %{account}"
       buttons:
         refresh: "Atualizar"
         cancel: "Cancelar"
+        back_to_settings: "Voltar às configurações"
+        create_selected_accounts: "Criar contas selecionadas"
         link: "Vincular"
         done: "Concluído"
     sync:
@@ -45,27 +99,64 @@ pt-BR:
       status:
         checking_credentials: "Verificando as credenciais da Trade Republic..."
         importing_account: "Importando a conta da Trade Republic..."
+        checking_configuration: "Verificando a configuração da conta..."
+        accounts_need_setup:
+          one: "1 conta da Trade Republic precisa ser configurada..."
+          other: "%{count} contas da Trade Republic precisam ser configuradas..."
         processing_activity: "Processando posições e atividades..."
         calculating_balances: "Calculando saldos..."
     repair:
       scheduled: "Reparo dos dados da Trade Republic agendado."
+    sync_status:
+      no_accounts: "Nenhuma conta da Trade Republic foi descoberta ainda"
+      all_linked:
+        one: "1 conta vinculada"
+        other: "%{count} contas vinculadas"
+      partial: "%{linked} vinculadas, %{unlinked} precisam ser configuradas"
     select_existing_account:
       title: "Vincular conta da Trade Republic"
+      no_accounts_available: "Ainda não há contas da Trade Republic não vinculadas disponíveis."
+      run_sync_hint: "Conclua o login e execute uma sincronização em Configurações > Provedores."
+      wait_for_sync: "Aguarde a conclusão da sincronização de descoberta da conta."
+      balance: "Saldo"
       link: "Vincular"
       cancel: "Cancelar"
+    update:
+      success: "Configuração da Trade Republic atualizada com sucesso."
+      pin_required: "Insira seu PIN ou senha da Trade Republic para reautenticar."
+    destroy:
+      success: "Exclusão da conexão com a Trade Republic agendada."
+      unlink_failed: "Não foi possível desconectar completamente a Trade Republic. A conexão foi mantida para que seja possível tentar novamente com segurança."
+    select_accounts:
+      not_configured: "A Trade Republic não está configurada."
     initiate_login:
-      verification_required: "Login iniciado. Confirme por %{method} e pressione Confirmar login."
+      pin_required: "Insira seu PIN ou senha da Trade Republic para iniciar um novo login."
+    initiate_qr_login:
+      not_configured: "A Trade Republic não está configurada."
+    poll_login:
+      no_pending_login: "Nenhum login pendente no momento. Inicie um novo login primeiro."
+      login_expired: "A solicitação de login expirou. Inicie novamente."
+    poll_qr_login:
+      no_pending_login: "Nenhum login por QR pendente."
+      success: "Trade Republic conectada com sucesso."
     complete_login:
+      no_pending_login: "Nenhum login pendente no momento. Inicie um novo login primeiro."
       approval_pending: "Ainda não confirmado. Aprove o login no aplicativo da Trade Republic e tente novamente."
+      still_pending: "Ainda não confirmado. Aprove o login no aplicativo da Trade Republic e tente novamente."
       success: "Trade Republic conectada com sucesso."
       login_expired: "A solicitação de login expirou. Inicie novamente."
     link_existing_account:
       not_found: "Conta ou configuração da Trade Republic não encontrada."
+      only_manual_investment: "Apenas contas de investimentos manuais podem ser vinculadas à Trade Republic."
+      already_linked: "Esta conta da Trade Republic já está vinculada."
       success: "Conta vinculada com sucesso à Trade Republic."
+      processing_failed: "A conta foi vinculada, mas o processamento inicial dos dados falhou. Uma sincronização foi agendada; verifique o log de depuração se continuar incompleta."
+      failed: "Falha ao vincular a conta da Trade Republic."
     complete_account_setup:
       success:
         one: "Foi criada com sucesso %{count} conta da Trade Republic."
         other: "Foram criadas com sucesso %{count} contas da Trade Republic."
+      none_selected: "Nenhuma conta foi selecionada."
       none_created: "Nenhuma conta foi criada."
       partial_failure:
         one: "Não foi possível concluir uma conta selecionada da Trade Republic. Verifique o log de depuração e tente novamente."
@@ -81,4 +172,4 @@ pt-BR:
         card_fee: Tarifa do cartão
         card_refund: Reembolso no cartão
         tax_refund: Restituição de imposto
-        round_up: Round up
+        round_up: "Round up"

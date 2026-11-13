@@ -170,6 +170,12 @@ class Family::FinancialDataReset
       scope(:categories).destroy_all
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
+      # A login still pending holds the phone number and login session, and
+      # its approval would create a Trade Republic item after the reset.
+      # Deleted before the items: an approval that commits first creates an
+      # item the next statement removes, and one that commits later finds no
+      # pending login.
+      family.trade_republic_pending_connections.delete_all
       delete_provider_items!
       family.financekit_account_lineages.destroy_all
       scope(:accounts).destroy_all

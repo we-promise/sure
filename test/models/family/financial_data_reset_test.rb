@@ -156,6 +156,16 @@ class Family::FinancialDataResetTest < ActiveSupport::TestCase
     assert_not ActiveStorage::Attachment.exists?(attachment.id)
   end
 
+  test "destructive reset removes pending Trade Republic logins" do
+    pending_connection = @family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+    other_pending_connection = @other_family.trade_republic_pending_connections.create!(qr_login: true, pending_login_state: "qr-pending")
+
+    Family::FinancialDataReset.new(user: @user, dry_run: false, confirmed: true).call
+
+    assert_not TradeRepublicPendingConnection.exists?(pending_connection.id)
+    assert TradeRepublicPendingConnection.exists?(other_pending_connection.id)
+  end
+
   test "destructive reset is idempotent" do
     first = Family::FinancialDataReset.new(user: @user, dry_run: false, confirmed: true).call
     second = Family::FinancialDataReset.new(user: @user, dry_run: false, confirmed: true).call
