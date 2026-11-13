@@ -41,6 +41,40 @@ zh-CN:
     configurations:
       update:
         success: 导入配置成功。
+        monarch_success: 已保存账户选择。
+      monarch:
+        title: 核对每个 Monarch 账户
+        description: 选择每个账户的去向、类型以及需要导入的内容。
+        help_title: 各项选择如何生效
+        help_account: 导入到新账户（按您喜欢的名称命名），或导入到您的某个手动账户中。现有账户会保留其名称、类型和自有条目；若其期初余额落在 Monarch 历史记录范围内，其期初余额将移至 Monarch 历史记录的起点。账户状态将遵循您选择的“状态”。不能导入到已有持仓或交易记录的账户中。
+        help_closed: 对您已关闭的账户，请将“状态”切换为“已关闭”。它们会在最后一条 Monarch 余额记录的后一天归零并从当前余额中隐藏，但会保留在您的净资产历史记录中。标记为“不活跃”的账户在过去 %{days} 天内无任何活动，这并不一定表示账户已关闭。
+        help_transactions: 关闭“交易”开关可仅导入账户的余额历史记录。
+        help_balance: “今日余额”默认使用 Monarch 的最新余额。如果该余额已过期，请修改它，系统会将其记录为今天的余额。对于信用卡和贷款，请输入应还欠款的正数金额。
+        table_label: Monarch 账户
+        import_column: 导入
+        account_column: 账户名称
+        destination_column: 导入到
+        type_column: 类型
+        status_column: 状态
+        status_open: 正常
+        status_closed: 已关闭
+        toggle_all_label: 所有账户的 %{column}
+        transactions_column: 交易
+        balance_column: 今日余额
+        import_label: 导入 %{name}
+        destination_label: 将 %{name} 导入到何处
+        name_label: "%{name} 在 Sure 中的名称"
+        monarch_name: 在 Monarch 中：%{name}
+        type_label: "%{name} 的类型"
+        status_label: "%{name} 处于正常状态"
+        transactions_label: 导入 %{name} 的交易
+        balance_label: "%{name} 的今日余额"
+        new_account: 新账户
+        inactive: 不活跃
+        last_activity: 最近活动 %{date}
+        no_activity: 无活动
+        no_transactions: 无
+        submit: 核对导入内容
       account_import:
         leave_empty: 留空
         default: 默认
@@ -196,7 +230,22 @@ zh-CN:
         qif_account_required: 请为 QIF 导入选择一个账户
       update:
         qif_uploaded: QIF 文件上传成功。
+        monarch_uploaded: Monarch 导出文件已上传。
+        monarch_balances_required: 请选择 Monarch 余额导出文件。
       show:
+        monarch_title: 上传您的 Monarch 导出文件
+        monarch_description: 将您的账户、交易和余额历史记录从 Monarch 导入。
+        monarch_export_title: 从 Monarch 下载您的数据
+        monarch_export_step_settings_html: "在网页端登录 Monarch 并打开%{link}。"
+        monarch_export_settings_link: 设置 → 数据
+        monarch_export_step_download: 分别下载您的交易记录和账户余额历史记录（均为 CSV 文件）。
+        monarch_export_step_upload: 在下方选择这些文件。
+        monarch_export_help_html: "Monarch 在%{link}中说明了每项下载内容。"
+        monarch_export_help_link: 其帮助文章
+        monarch_balances_label: 余额导出文件
+        monarch_transactions_label: 交易导出文件
+        monarch_transactions_hint: 若只导入余额历史记录，请留空交易导出文件。
+        monarch_upload_button: 上传导出文件
         csv_invalid: 必须是有效的 CSV，且至少包含标题和一行数据
         drop_csv_title: 拖放 CSV 以上传
         drop_csv_subtitle: 您的文件将自动上传
@@ -235,6 +284,7 @@ zh-CN:
         hint_html: 上传您数据导出 ZIP 中的 <strong>all.ndjson</strong> 文件
         ndjson_invalid: 必须是有效的 NDJSON，且至少包含一条记录
   imports:
+    configuration_locked: "此导入的数据已在 Sure 中，因此无法更改其文件和选择。请重试以完成导入，或将其删除以重新开始。"
     mapping_labels:
       account_type: 账户类型
       account: 账户
@@ -356,6 +406,7 @@ zh-CN:
       tab_financial_tools: 财务工具和文件
       tab_raw_data: 原始数据
       import_ynab: 从 YNAB 导入
+      import_monarch: 从 Monarch 导入
       import_merchants: 导入商户
       import_actual: 从 Actual Budget 导入
       import_qif: 从 Quicken（QIF）导入
@@ -366,6 +417,26 @@ zh-CN:
       requires_account: 导入前需要先创建账户。
     ready:
       description: 以下是发布导入后将添加到您账户的新项目摘要。
+      monarch_existing_names_title: 已存在同名账户
+      monarch_existing_names_description: "您已有命名为 %{names} 的账户。发布导入会在它们旁边创建新账户。若要改而导入到其中一个现有账户，请在“账户”步骤中选择它。"
+      monarch_conflicts_title: 部分现有余额与 Monarch 不同
+      monarch_conflicts_description:
+        one: "在 1 天中，您要导入的目标账户已存在与 Monarch 不同的余额更新记录。系统保留了您现有的余额数值。"
+        other: "在 %{count} 天中，您要导入的目标账户已存在与 Monarch 不同的余额更新记录。系统保留了您现有的余额数值。"
+      monarch_overlap_title: 同一时间段内的现有交易
+      monarch_overlap_description:
+        one: "1 笔现有交易位于您要导入的目标账户的 Monarch 历史记录时间段内，且不匹配任何 Monarch 交易。它将被保留并计入余额。"
+        other: "%{count} 笔现有交易位于您要导入的目标账户的 Monarch 历史记录时间段内，且不匹配任何 Monarch 交易。它们将被保留并计入余额。"
+      monarch_duplicates_title: 已在 Sure 中的交易将被跳过
+      monarch_duplicates_description:
+        one: "1 笔 Monarch 交易已存在于目标账户中（来自先前的导入，或具有相同的日期和金额），因此将被跳过。"
+        other: "%{count} 笔 Monarch 交易已存在于目标账户中（来自先前的导入，或具有相同的日期和金额），因此将被跳过。"
+      monarch_kept_title: 部分期初余额保持为您编辑后的值
+      monarch_kept_description: "撤销导入未恢复 %{names} 的期初余额，因为它在导入后曾被修改。请在重新导入前检查确认。"
+      monarch_opening_title: 期初余额将会移动
+      monarch_opening_description:
+        one: "1 个现有账户的期初余额将移至其 Monarch 历史记录的起点。撤销导入可将其恢复。"
+        other: "%{count} 个现有账户的期初余额将移至各自 Monarch 历史记录的起点。撤销导入可将其恢复。"
       title: 确认导入数据
       summary_item_label: 项目
       summary_count_label: 数量
@@ -439,6 +510,7 @@ zh-CN:
       mint_import: Mint 导入
       actual_import: Actual 导入
       ynab_import: YNAB 导入
+      monarch_import: Monarch 导入
       qif_import: QIF 导入
       category_import: 分类导入
       rule_import: 规则导入
@@ -448,6 +520,7 @@ zh-CN:
       sure_import: Sure 导入
     steps:
       upload: 上传
+      accounts: 账户
       configure: 配置
       clean: 清理
       map: 映射

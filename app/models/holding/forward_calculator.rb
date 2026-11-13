@@ -19,6 +19,15 @@ class Holding::ForwardCalculator
     @transferred_security_ids = Set.new
   end
 
+  # Every lot of each security, once #calculate has run.
+  def lots_by_security
+    lots_from(@lot_books)
+  end
+
+  def clamped_security_ids
+    Set.new
+  end
+
   # Seed earlier trades, then emit positions only inside the materialization window.
   def calculate
     Rails.logger.tagged("Holding::ForwardCalculator") do
