@@ -3,6 +3,7 @@ require "turbo/broadcastable/test_helper"
 
 class PlaidItem::SyncCompleteEventTest < ActiveSupport::TestCase
   include Turbo::Broadcastable::TestHelper
+  include ActiveJob::TestHelper
 
   # #3630. The card partial renders every account on the connection, and a sync
   # broadcast has no viewer to filter for. Replacing the card on the family
@@ -12,7 +13,7 @@ class PlaidItem::SyncCompleteEventTest < ActiveSupport::TestCase
     item = plaid_items(:one)
 
     streams = capture_turbo_stream_broadcasts(item.family) do
-      PlaidItem::SyncCompleteEvent.new(item).broadcast
+      perform_enqueued_jobs(only: FamilySyncToastJob) { PlaidItem::SyncCompleteEvent.new(item).broadcast }
     end
 
     targets = streams.map { |stream| stream["target"] }
