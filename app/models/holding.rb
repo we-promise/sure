@@ -30,6 +30,10 @@ class Holding < ApplicationRecord
 
   delegate :ticker, to: :security
 
+  # Answers derived from the attributes go when a change to them is saved,
+  # as on #reload: `changed?` is false again by then and cannot tell.
+  after_save :forget_derived_answers
+
   def name
     security.name || ticker
   end
@@ -60,8 +64,10 @@ class Holding < ApplicationRecord
     # A caller that has many holdings can compute the fallback for all of
     # them in one query and hand each its answer (.preload_avg_costs), so a
     # page that lists every position does not run calculate_avg_cost's two
-    # queries per holding. nil is a valid preloaded answer: "unknown".
-    return @preloaded_avg_cost if defined?(@preloaded_avg_cost)
+    # queries per holding. nil is a valid preloaded answer: "unknown". It
+    # answers for the attributes it was computed from, so a holding changed
+    # since then computes its own.
+    return @preloaded_avg_cost if defined?(@preloaded_avg_cost) && !changed?
 
     # Fallback to calculation for holdings without pre-computed cost_basis
     calculate_avg_cost
@@ -173,9 +179,7 @@ class Holding < ApplicationRecord
   # must go with them -- including #trend, which is derived from avg_cost,
   # and #day_change, which is derived from amount and date.
   def reload(*)
-    remove_instance_variable(:@preloaded_avg_cost) if defined?(@preloaded_avg_cost)
-    remove_instance_variable(:@trend) if defined?(@trend)
-    remove_instance_variable(:@day_change) if defined?(@day_change)
+    forget_derived_answers
     super
   end
 
@@ -317,8 +321,10 @@ class Holding < ApplicationRecord
         end
       end
 
-      # Move all trades for old security to new security
+      # Move all trades for old security to new security, and their lots
       account.trades.where(security: old_security).update_all(security_id: new_security.id)
+      lots = account.holding_lots.where(security: old_security)
+      HoldingLot.move!(derived: lots.derived, opening: lots.opening, to: new_security)
     end
 
     # Reload self to reflect changes (may raise RecordNotFound if self was destroyed)
@@ -347,6 +353,8 @@ class Holding < ApplicationRecord
     transaction do
       # Move trades back (see note above about limitation)
       account.trades.where(security: current_security).update_all(security_id: original_security.id)
+      lots = account.holding_lots.where(security: current_security)
+      HoldingLot.move!(derived: lots.derived, opening: lots.opening.where(origin_security: original_security), to: original_security)
 
       # Reset ALL holdings that were remapped from this provider_security
       account.holdings.where(security: current_security, provider_security: original_security).find_each do |holding|
@@ -375,6 +383,12 @@ class Holding < ApplicationRecord
   end
 
   private
+    def forget_derived_answers
+      remove_instance_variable(:@preloaded_avg_cost) if defined?(@preloaded_avg_cost)
+      remove_instance_variable(:@trend) if defined?(@trend)
+      remove_instance_variable(:@day_change) if defined?(@day_change)
+    end
+
     def amount_in_account_currency
       return amount if currency == account.currency
 

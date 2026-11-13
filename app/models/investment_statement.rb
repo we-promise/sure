@@ -75,6 +75,15 @@ class InvestmentStatement
       .includes(:security, :account)
   end
 
+  # current_holdings as an Array, with the average-cost fallback for every
+  # holding that has no stored cost basis computed in one query and handed
+  # to the holding (Holding.preload_avg_costs), so the roll-up's trends, the
+  # unrealized gains and the holdings table do not run
+  # Holding#calculate_avg_cost's two queries per holding. Memoized.
+  def holdings_with_avg_costs
+    @holdings_with_avg_costs ||= current_holdings.to_a.tap { |holdings| Holding.preload_avg_costs(holdings) }
+  end
+
   # Top investments rolled up by security across accounts, ranked by
   # family-currency value. Weight is % of total portfolio (including cash).
   # Presence is gated on holdings totals — not Account#balance — so a stale
@@ -89,7 +98,8 @@ class InvestmentStatement
     total = weight_denominator(holdings_total)
 
     # Rank/limit on value first; only then compute cost-basis trends for the
-    # rows that will be rendered (avoids avg_cost/trade lookups for the rest).
+    # rows that will be rendered. The cost basis behind them is preloaded for
+    # every holding in one query (holdings_with_avg_costs).
     rolled_up
       .first(limit)
       .map do |security, value, holdings|
@@ -197,9 +207,38 @@ class InvestmentStatement
     end
   end
 
+  # Every security the family holds as one row, with its positions across
+  # accounts, sorted for a holdings table. Built from the preloaded
+  # current_holdings (holdings_with_avg_costs) and previous_holdings, so the
+  # query count does not grow with the number of holdings.
+  #
+  # Cost basis and unrealised P&L cover the positions whose Holding#avg_cost
+  # is known -- a stored cost basis, or the average of the purchases -- and a
+  # row with any position outside them is flagged missing_cost_basis. Weights
+  # share top_holdings' denominator.
+  #
+  # sort: one of HOLDINGS_SORT_KEYS; dir: "asc" or "desc". Each falls back on
+  # its own -- an unknown sort to "value", an unknown dir to "desc" -- so the
+  # query string cannot raise and a valid half of it is kept.
+  HOLDINGS_SORT_KEYS = %w[value weight return day_change name].freeze
+  HOLDINGS_SORT_DIRECTIONS = %w[asc desc].freeze
+
+  def holdings_table_rows(sort: "value", dir: "desc")
+    rolled_up = holdings_rolled_up_by_security
+    return [] if rolled_up.empty?
+
+    total = weight_denominator(rolled_up.sum { |_, value, _| value })
+
+    rows = rolled_up.map do |security, value, positions|
+      build_holdings_table_row(security, value, positions, total)
+    end
+
+    sort_holdings_table_rows(rows, sort: sort, dir: dir)
+  end
+
   # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
-    current_holdings.sum do |holding|
+    holdings_with_avg_costs.sum do |holding|
       trend = holding.trend
       trend ? convert_to_family_currency(trend.value, holding.currency) : 0
     end
@@ -221,7 +260,7 @@ class InvestmentStatement
   end
 
   def unrealized_gains_trend
-    holdings = current_holdings.to_a
+    holdings = holdings_with_avg_costs
     return nil if holdings.empty?
 
     # Only include holdings with known cost basis in the calculation
@@ -312,16 +351,61 @@ class InvestmentStatement
     )
   end
 
+  # The snapshot before each current holding, keyed by the current holding's
+  # id: the latest row for the same account, security and currency dated
+  # before the current row, which is what Holding#day_change compares
+  # against. One query for every holding rather than one per holding, so a
+  # page that lists every position does not issue a query per row. Memoized
+  # like current_holdings.
+  def previous_holdings
+    @previous_holdings ||= begin
+      current_ids = current_holdings.map(&:id)
+
+      if current_ids.any?
+        # Keyed by the current holding, not by account and security: a provider
+        # can report one security in two currencies, and each current row has
+        # its own previous snapshot in its own currency.
+        Holding.find_by_sql([ <<~SQL.squish, { current_ids: current_ids } ]).index_by(&:current_holding_id)
+          SELECT prior.*, current_holdings.id AS current_holding_id
+          FROM holdings current_holdings
+          JOIN LATERAL (
+            SELECT holdings.*
+            FROM holdings
+            WHERE holdings.account_id = current_holdings.account_id
+              AND holdings.security_id = current_holdings.security_id
+              AND holdings.currency = current_holdings.currency
+              AND holdings.date < current_holdings.date
+            ORDER BY holdings.date DESC
+            LIMIT 1
+          ) prior ON TRUE
+          WHERE current_holdings.id IN (:current_ids)
+        SQL
+      else
+        {}
+      end
+    end
+  end
+
+  # Day change for one current holding against its previous snapshot, in the
+  # holding's currency, or nil without a prior snapshot. Same result as
+  # Holding#day_change, without its per-holding query.
+  def holding_day_change(holding)
+    return nil unless holding.amount_money
+
+    previous = previous_holdings[holding.id]
+    return nil unless previous&.amount_money
+
+    Trend.new(current: holding.amount_money, previous: previous.amount_money)
+  end
+
   # Day change across portfolio, summed in family currency
   def day_change
     changes = current_holdings.to_a.filter_map do |h|
-      t = h.day_change
+      t = holding_day_change(h)
       next nil unless t
-      curr = t.current.is_a?(Money) ? t.current.amount : t.current
-      prev = t.previous.is_a?(Money) ? t.previous.amount : t.previous
       [
-        convert_to_family_currency(curr, h.currency),
-        convert_to_family_currency(prev, h.currency)
+        convert_to_family_currency(t.current.amount, h.currency),
+        convert_to_family_currency(t.previous.amount, h.currency)
       ]
     end
 
@@ -588,6 +672,106 @@ class InvestmentStatement
         end
     end
 
+    # One row of #holdings_table_rows: a security rolled up across the
+    # accounts that hold it, in family currency.
+    HoldingsTableRow = Data.define(
+      :security, :positions, :accounts_count, :qty, :avg_cost, :amount, :weight,
+      :unrealized, :day_change, :missing_cost_basis
+    ) do
+      def ticker = security.ticker
+      def name = security.name.presence || ticker
+      def amount_money = amount
+    end
+
+    # Builds one rolled-up row of the holdings table for `security`: the summed
+    # quantity across `positions`, its average cost and unrealised return over
+    # the positions whose basis is known, and its weight against the caller's
+    # `total` -- which is chosen by #weight_denominator, not here.
+    def build_holdings_table_row(security, value, positions, total)
+      qty = positions.sum(&:qty)
+
+      # Same rule as combined_holding_trend: the return covers the positions
+      # whose cost basis is known, and a position is known when
+      # Holding#avg_cost answers -- which includes the trade-history fallback,
+      # preloaded for every holding by holdings_with_avg_costs. Reading
+      # `cost_basis` directly instead would hide a return on this table that
+      # top_holdings counts for the same security.
+      known = positions.select(&:avg_cost)
+      missing_cost_basis = known.size < positions.size
+
+      cost = nil
+      unrealized = nil
+      known_qty = known.sum(&:qty)
+      if known.any?
+        cost = known.sum { |holding| convert_to_family_currency(holding.qty * holding.avg_cost.amount, holding.currency) }
+        known_value = known.sum { |holding| convert_to_family_currency(holding.amount, holding.currency) }
+        unrealized = Trend.new(current: Money.new(known_value, family.currency), previous: Money.new(cost, family.currency))
+      end
+
+      day_changes = positions.filter_map do |holding|
+        trend = holding_day_change(holding)
+        next unless trend
+        [ convert_to_family_currency(trend.current.amount, holding.currency), convert_to_family_currency(trend.previous.amount, holding.currency) ]
+      end
+      day_change = if day_changes.any?
+        Trend.new(
+          current: Money.new(day_changes.sum(&:first), family.currency),
+          previous: Money.new(day_changes.sum(&:last), family.currency)
+        )
+      end
+
+      HoldingsTableRow.new(
+        security: security,
+        positions: positions,
+        accounts_count: positions.map(&:account_id).uniq.size,
+        qty: qty,
+        avg_cost: (cost && known_qty.positive?) ? Money.new(cost / known_qty, family.currency) : nil,
+        amount: Money.new(value, family.currency),
+        weight: total.zero? ? 0 : (value / total * 100).round(2),
+        unrealized: unrealized,
+        day_change: day_change,
+        missing_cost_basis: missing_cost_basis
+      )
+    end
+
+    def sort_holdings_table_rows(rows, sort:, dir:)
+      sort = HOLDINGS_SORT_KEYS.include?(sort.to_s) ? sort.to_s : "value"
+      dir = HOLDINGS_SORT_DIRECTIONS.include?(dir.to_s) ? dir.to_s : "desc"
+
+      # Rows without the sorted figure go last whichever direction is asked.
+      # Ties break by name, then security id, in both directions, so rows with
+      # the same figure keep their order between requests.
+      present, absent = rows.partition { |row| sort_key_present?(row, sort) }
+      present = present.sort do |a, b|
+        order = sort_value(a, sort) <=> sort_value(b, sort)
+        order = -order if dir == "desc"
+        order.nonzero? || (tiebreak(a) <=> tiebreak(b))
+      end
+      present + absent.sort_by { |row| tiebreak(row) }
+    end
+
+    def tiebreak(row)
+      [ row.name.downcase, row.security.id.to_s ]
+    end
+
+    def sort_value(row, sort)
+      case sort
+      when "value" then row.amount.amount
+      when "weight" then row.weight
+      when "return" then row.unrealized.value.amount
+      when "day_change" then row.day_change.value.amount
+      when "name" then row.name.downcase
+      end
+    end
+
+    def sort_key_present?(row, sort)
+      case sort
+      when "return" then row.unrealized.present?
+      when "day_change" then row.day_change.present?
+      else true
+      end
+    end
+
     # Groups current holdings by security and sums family-currency value.
     # Returns [[security, value, holdings], ...] sorted by value descending.
     # Callers that need return trends should call combined_holding_trend only
@@ -606,9 +790,10 @@ class InvestmentStatement
       holdings_total + account_cash_total
     end
 
+    # Memoized: top_holdings, allocation and holdings_table_rows all start
+    # here, and the grouping and FX conversion need only run once per instance.
     def holdings_rolled_up_by_security
-      current_holdings
-        .to_a
+      @holdings_rolled_up_by_security ||= holdings_with_avg_costs
         .group_by(&:security_id)
         .filter_map do |_security_id, holdings|
           # Filter row by row rather than on the netted total. current_holdings
