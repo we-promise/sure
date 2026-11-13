@@ -70,7 +70,9 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
     # in here and is dropped. The suggested category is dropped too: the form
     # keeps the transaction's own category from the prefill.
     # The due date follows the cadence's own anchor: weekday for weekly-style
-    # presets, month for annual, day-of-month for the monthly-style rest.
+    # presets, month for annual, day-of-month for the monthly-style rest. A
+    # one-off keeps the charge it was read from: the prefill's next monthly
+    # date is a guess that only a repeating bill needs.
     def apply_suggestion(suggestion)
       @recurring_transaction.name = suggestion.name if suggestion.name.present?
       @recurring_transaction.amount = suggestion.amount if suggestion.amount.present?
@@ -78,7 +80,9 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
       @recurring_transaction.autopay = suggestion.autopay unless suggestion.autopay.nil?
 
       today = Date.current
-      if %w[weekly biweekly].include?(suggestion.frequency) && suggestion.weekday.present?
+      if suggestion.frequency == RecurringTransaction::FrequencyPreset::ONCE
+        @recurring_transaction.first_due_on = @source_entry.date
+      elsif %w[weekly biweekly].include?(suggestion.frequency) && suggestion.weekday.present?
         @recurring_transaction.first_due_on = today + ((suggestion.weekday - today.wday) % 7)
       elsif suggestion.frequency == "annual" && suggestion.month_of_year.present?
         @recurring_transaction.first_due_on = next_annual_occurrence(
