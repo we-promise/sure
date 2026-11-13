@@ -125,6 +125,19 @@ class Security::SplitTest < ActiveSupport::TestCase
     assert_equal [ 2, 1, "manual" ], manual.reload.values_at(:numerator, :denominator, :source)
   end
 
+  # Same gap for the terms: a provider's zero numerator reported success, and a
+  # zero denominator raised ZeroDivisionError from the log's ratio.
+  test "invalid provider terms are refused even when a manual row stands" do
+    manual = record(2, 1, "manual")
+
+    [ [ 0, 1 ], [ 3, 0 ], [ -3, 1 ], [ 3, 3 ] ].each do |numerator, denominator|
+      assert_no_difference -> { DebugLogEntry.count } do
+        assert_raises(ActiveRecord::RecordInvalid, "#{numerator}:#{denominator}") { record(numerator, denominator, "snaptrade") }
+      end
+    end
+    assert_equal [ 2, 1, "manual" ], manual.reload.values_at(:numerator, :denominator, :source)
+  end
+
   test "a provider write replaces another provider row" do
     record(2, 1, "snaptrade")
 

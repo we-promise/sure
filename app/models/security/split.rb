@@ -42,6 +42,7 @@ class Security::Split < ApplicationRecord
         # Only a known provider is turned away here. Anything else falls
         # through to save!, whose validations refuse it.
         if split.persisted? && split.manual? && source.to_s != "manual" && SOURCES.include?(source.to_s)
+          refuse_invalid_terms!(security, ex_date, numerator, denominator, source)
           report_overruled(split, Rational(numerator, denominator), source)
           next split
         end
@@ -113,6 +114,16 @@ class Security::Split < ApplicationRecord
     end
 
     private
+      # A provider write kept out by a manual row is never saved, so its
+      # terms are checked here by the same validations save! would run. The
+      # only error ignored is the ex-date being taken, which is the manual row.
+      def refuse_invalid_terms!(security, ex_date, numerator, denominator, source)
+        incoming = new(security: security, ex_date: ex_date, numerator: numerator, denominator: denominator, source: source)
+        incoming.validate
+        incoming.errors.delete(:ex_date, :taken)
+        raise ActiveRecord::RecordInvalid, incoming if incoming.errors.any?
+      end
+
       def report_dropped(kept:, dropped:, into:)
         return if kept.ratio == dropped.ratio
 
