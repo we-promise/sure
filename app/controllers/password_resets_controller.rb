@@ -56,7 +56,7 @@ class PasswordResetsController < ApplicationController
       end
 
       ActiveRecord::Base.transaction do
-        next false unless @user.update(password_params)
+        next false unless @user.update(password_params.merge(require_password_complexity: true))
 
         SecurityAuditLog.log_password_changed!(user: @user, request: request)
 

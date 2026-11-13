@@ -10,6 +10,7 @@ pt-BR:
         last_name: Sobrenome
         password: Senha
         password_confirmation: Confirmação da Senha
+        password_challenge: Senha Atual
     errors:
       models:
         user:
@@ -17,5 +18,10 @@ pt-BR:
             base:
               cannot_deactivate_admin_with_other_users: Administrador não pode excluir a conta
                 enquanto outros usuários estiverem presentes. Por favor, exclua todos os membros primeiro.
+            password:
+              missing_case: deve conter letras maiúsculas e minúsculas
+              missing_number: deve conter pelo menos um número
+              missing_special: deve conter pelo menos um caractere especial
+              too_long: "é muito longa (máximo de %{count} bytes; letras acentuadas e emojis ocupam mais de um byte)"
             profile_image:
               invalid_file_size: tamanho do arquivo deve ser menor que %{max_megabytes}MB

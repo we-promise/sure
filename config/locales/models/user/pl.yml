@@ -10,6 +10,7 @@ pl:
         last_name: Nazwisko
         password: Hasło
         password_confirmation: Potwierdzenie hasła
+        password_challenge: Obecne hasło
     errors:
       models:
         user:
@@ -24,5 +25,10 @@ pl:
                 z integracją dostawcy, która obsługuje też konta innego użytkownika.
                 Przenieś albo odłącz te konta przed zmianą przynależności do gospodarstwa
                 domowego lub grupy.
+            password:
+              missing_case: musi zawierać zarówno wielkie, jak i małe litery
+              missing_number: musi zawierać co najmniej jedną cyfrę
+              missing_special: musi zawierać co najmniej jeden znak specjalny
+              too_long: "jest za długie (maksymalnie %{count} bajty; litery ze znakami diakrytycznymi i emoji zajmują więcej niż jeden bajt)"
             profile_image:
               invalid_file_size: rozmiar pliku nie może przekraczać %{max_megabytes}MB
