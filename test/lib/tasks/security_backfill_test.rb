@@ -179,6 +179,8 @@ class SecurityBackfillTest < ActiveSupport::TestCase
       record = model.find(id)
       plaintext.each do |field, value|
         expected = json_column?(model, field) ? JSON.parse(value) : value
+        # The backfill normalizes IBANs of models that normalize them on write.
+        expected = IbanNormalizable.normalize(expected) if field.to_s == "iban" && model.include?(IbanNormalizable)
         assert_equal expected, record.public_send(field), "#{model.name}##{field} must decrypt to its original value"
         raw = connection.select_value(model.unscoped.where(id: id).select(field).to_sql).to_s
         refute_includes raw, "backfill-probe", "#{model.name}##{field} must be stored as ciphertext"

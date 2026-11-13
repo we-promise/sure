@@ -137,7 +137,7 @@ namespace :security do
               # Writing bypasses validations/callbacks as above, so normalize
               # here the way the normalize_iban callback would; a formatted or
               # lowercase legacy value then compares equal to new rows.
-              value = IbanNormalizable.normalize(value) if field == :iban
+              value = IbanNormalizable.normalize(value) if field == :iban && model_class.include?(IbanNormalizable)
               encryptor.send("#{field}=", value)
             end
 
