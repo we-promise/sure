@@ -2,4 +2,4 @@
 ko:
   sharesight_accounts:
     settings_fields:
-      cash_anchor_on: true
+      cash_anchor_on: "기준일"

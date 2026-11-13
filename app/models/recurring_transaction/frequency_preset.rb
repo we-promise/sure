@@ -252,9 +252,9 @@ class RecurringTransaction
         def day_phrase(day)
           return I18n.t("recurring_transactions.frequency.last_day") if day == RecurrenceRule::LAST
 
-          return "#{day}일" if I18n.locale.to_s == "ko"
-
-          day.ordinalize
+          # Locales that number days without an ordinal suffix (ko: "5일") define
+          # numbered_day; the rest keep Rails' English ordinals.
+          I18n.t("recurring_transactions.frequency.numbered_day", day: day, default: day.ordinalize)
         end
 
         def weekday_name(weekday)

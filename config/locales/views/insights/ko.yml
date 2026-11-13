@@ -21,8 +21,16 @@ ko:
       new: 새 소식
       dig_in: AI로 자세히 분석
     dig_in:
-      prompt: '이 분석을 자세히 살펴볼 수 있도록 도와주세요.\n\n분석: %{title}\nSure의 발견 내용: %{body}\n기간:
-        %{period}\n수치:\n%{facts}\n\n원인은 무엇이며, 제가 취할 조치가 있나요?'
+      prompt: |-
+        이 분석을 자세히 살펴볼 수 있도록 도와주세요.
+
+        분석: %{title}
+        Sure의 발견 내용: %{body}
+        기간: %{period}
+        수치:
+        %{facts}
+
+        원인은 무엇이며, 제가 취할 조치가 있나요?
     feed:
       view_all: 모든 분석 보기
       header: 최신

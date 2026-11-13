@@ -286,4 +286,22 @@ class CategoryTest < ActiveSupport::TestCase
 
     assert_equal [ c ], result.to_a
   end
+
+  test "find_or_create_fees! reuses a Fees category named in another locale" do
+    english_fees = @family.categories.create!(name: I18n.t(Category::FEES_NAME_KEY, locale: :en), color: "#6b7280", lucide_icon: "receipt")
+
+    assert_no_difference -> { @family.categories.count } do
+      I18n.with_locale(:ko) do
+        assert_equal english_fees, @family.categories.find_or_create_fees!
+      end
+    end
+  end
+
+  test "find_or_create_fees! creates the category in the active locale when none exists" do
+    @family.categories.where(name: LanguagesHelper::SUPPORTED_LOCALES.map { |l| I18n.t(Category::FEES_NAME_KEY, locale: l) }).destroy_all
+
+    I18n.with_locale(:ko) do
+      assert_equal "수수료", @family.categories.find_or_create_fees!.name
+    end
+  end
 end

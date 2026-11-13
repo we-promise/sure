@@ -37,6 +37,7 @@ ko:
       every_n_years: "%{interval}년마다 %{month} %{day}"
       custom: 맞춤 일정
       last_day: 말일
+      numbered_day: "%{day}일"
     identify_patterns: 패턴 식별
     cleanup_stale: 오래된 항목 정리
     actions:

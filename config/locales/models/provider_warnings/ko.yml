@@ -7,6 +7,6 @@ ko:
       one: 'Lunchflow 가져오기: 계좌 %{count}개를 업데이트하지 못했습니다.'
       other: 'Lunchflow 가져오기: 계좌 %{count}개를 업데이트하지 못했습니다.'
     lunchflow_transactions_failed:
-      one: 'Lunchflow 가져오기: 계좌 %{count}개의 거래를 가져오지 못했습니다.'
-      other: 'Lunchflow 가져오기: 계좌 %{count}개의 거래를 가져오지 못했습니다.'
+      one: 'Lunchflow 가져오기: 계좌 %{count}개에서 거래 가져오기에 실패했습니다.'
+      other: 'Lunchflow 가져오기: 계좌 %{count}개에서 거래 가져오기에 실패했습니다.'
     lunchflow_import_error: 'Lunchflow 가져오기: %{error}'
