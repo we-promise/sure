@@ -346,4 +346,30 @@ class SplitsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("splits.destroy.success"), flash[:notice]
     refute @entry.reload.excluded?
   end
+
+  test "destroy refuses while a part is linked as a transfer" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    assert_no_difference "Entry.count" do
+      delete transaction_split_path(@entry)
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("splits.edit.part_transferred"), flash[:alert]
+    assert @entry.reload.split_parent?
+  end
+
+  test "update refuses while a part is linked as a transfer" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    patch transaction_split_path(@entry), params: {
+      split: { splits: [ { name: "A", amount: "-50" }, { name: "B", amount: "-50" } ] }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("splits.edit.part_transferred"), flash[:alert]
+    assert_equal %w[Interest Principal], @entry.reload.child_entries.order(:name).pluck(:name)
+  end
 end

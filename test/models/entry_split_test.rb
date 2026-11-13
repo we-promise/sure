@@ -340,4 +340,41 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert_not stale.unsplit_once!
     assert_not @entry.reload.split_parent?
   end
+
+  test "unsplit_once! refuses while a part is a confirmed transfer leg" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    assert_raises(Entry::SplitPartTransferredError) { @entry.unsplit_once! }
+    assert @entry.reload.split_parent?
+    assert part.reload.transaction.transfer.present?
+  end
+
+  test "resplit! refuses while a part is a confirmed transfer leg" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+
+    assert_raises(Entry::SplitPartTransferredError) do
+      @entry.resplit!([ { name: "C", amount: 30 }, { name: "D", amount: 70 } ])
+    end
+    assert_equal %w[Interest Principal], @entry.reload.child_entries.order(:name).pluck(:name)
+  end
+
+  test "unsplit_once! refuses while a part is the receiving leg of a confirmed transfer" do
+    income = create_transaction(amount: -100, name: "Refund", account: accounts(:depository))
+    part = income.split!([ { name: "A", amount: -60 }, { name: "B", amount: -40 } ]).first
+    savings_entry = create_transaction(account: accounts(:investment), amount: 60, name: "Transfer out")
+    Transfer.create!(inflow_transaction: part.transaction, outflow_transaction: savings_entry.transaction, status: "confirmed", amount: 60)
+
+    assert_raises(Entry::SplitPartTransferredError) { income.unsplit_once! }
+    assert income.reload.split_parent?
+  end
+
+  test "a pending transfer suggestion on a part does not block unsplitting" do
+    part = @entry.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part, status: "pending")
+
+    assert @entry.unsplit_once!
+    assert_not @entry.reload.split_parent?
+  end
 end

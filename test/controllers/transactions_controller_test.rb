@@ -2437,6 +2437,30 @@ end
     assert_select "##{dom_id(outflow, "category_menu_desktop")} [data-ds--popover-frame-id-value='category_dropdown']"
   end
 
+  test "update keeps a split part's amount, currency and kind" do
+    parent = create_transaction(account: accounts(:depository), amount: 100, name: "Mortgage")
+    part = parent.split!([ { name: "Principal", amount: 60 }, { name: "Interest", amount: 40 } ]).first
+    link_split_part_to_loan(part)
+    part.transaction.update!(kind: "loan_payment")
+
+    patch transaction_url(part), params: {
+      entry: {
+        amount: "75",
+        currency: "EUR",
+        nature: "outflow",
+        notes: "Principal part",
+        entryable_type: "Transaction",
+        entryable_attributes: { id: part.entryable_id, kind: "standard" }
+      }
+    }
+
+    part.reload
+    assert_equal 60, part.amount
+    assert_equal "USD", part.currency
+    assert_equal "loan_payment", part.transaction.kind
+    assert_equal "Principal part", part.notes
+  end
+
   test "update drops a category sent for a matched transfer's inflow leg" do
     outflow = Transaction.create!(kind: "investment_contribution")
     Entry.create!(account: accounts(:depository), entryable: outflow, name: "Contribution", amount: 500, currency: "USD", date: Date.current)
