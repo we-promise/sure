@@ -80,6 +80,44 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
+  # $3,000 saved at $200 a month: the projection falls short (a halo'd
+  # shortfall label), and the 50% and 75% milestones are drawn before the
+  # target date (hollow dots and halo'd labels).
+  test "in the dark theme every halo and ring matches the card" do
+    @user.update!(theme: "dark")
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, pace: 200)
+      assert_selector "html[data-theme='dark']"
+
+      assert_backdrop_paint
+    end
+  end
+
+  test "in the light theme every halo and ring matches the card" do
+    @user.update!(theme: "light")
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, pace: 200)
+      assert_selector "html[data-theme='light']"
+
+      assert_backdrop_paint
+    end
+  end
+
+  test "switching to the dark theme repaints the halos to the dark card" do
+    @user.update!(theme: "light")
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, pace: 200)
+      light_card = backdrop_paint["backdrop"]
+
+      page.execute_script("document.documentElement.setAttribute('data-theme', 'dark')")
+      page.document.synchronize do
+        raise Capybara::ExpectationNotMet, "the card has not changed theme" if backdrop_paint["backdrop"] == light_card
+      end
+
+      assert_backdrop_paint
+    end
+  end
+
   teardown do
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride") if @phone
   end
@@ -124,6 +162,45 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
           })()
         JS
         raise Capybara::ExpectationNotMet, "the chart has not redrawn at its settled width" unless settled
+      end
+    end
+
+    # The colour each halo, ring and hollow dot resolves to, beside the colour
+    # actually behind the chart: the nearest ancestor that paints a background.
+    def backdrop_paint
+      page.evaluate_script(<<~JS)
+        (() => {
+          const root = document.querySelector("[data-controller='goal-projection-chart']");
+          let el = root;
+          let backdrop = null;
+          while (el && !backdrop) {
+            const bg = getComputedStyle(el).backgroundColor;
+            if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") backdrop = bg;
+            el = el.parentElement;
+          }
+          const svg = root.querySelector("svg");
+          const halos = Array.from(svg.querySelectorAll("text[paint-order='stroke']"))
+            .map((t) => ({ text: t.textContent, colour: getComputedStyle(t).stroke }));
+          const milestones = Array.from(svg.querySelectorAll("circle[data-milestone]"))
+            .map((c) => ({ percent: c.dataset.milestone, colour: getComputedStyle(c).fill }));
+          const rings = Array.from(svg.querySelectorAll("circle:not([data-milestone])"))
+            .map((c) => ({ fill: c.getAttribute("fill"), colour: getComputedStyle(c).stroke }));
+          return { backdrop, halos, milestones, rings };
+        })()
+      JS
+    end
+
+    def assert_backdrop_paint
+      paint = backdrop_paint
+      # Target, shortfall and both milestone labels; both milestone dots; the
+      # projection end, Today and the two hover dots.
+      assert_operator paint["halos"].size, :>=, 4, "premise: halo'd labels drawn: #{paint["halos"].inspect}"
+      assert_operator paint["milestones"].size, :>=, 2, "premise: milestone dots drawn: #{paint["milestones"].inspect}"
+      assert_operator paint["rings"].size, :>=, 4, "premise: ringed dots drawn: #{paint["rings"].inspect}"
+
+      backdrop = paint["backdrop"]
+      (paint["halos"] + paint["milestones"] + paint["rings"]).each do |item|
+        assert_equal backdrop, item["colour"], "does not match the card behind the chart: #{item.inspect}"
       end
     end
 

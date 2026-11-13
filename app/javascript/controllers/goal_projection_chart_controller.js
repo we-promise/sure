@@ -97,7 +97,9 @@ export default class extends Controller {
     const textPrimary = isDark ? "#ffffff" : "#171717";
     const textSecondary = isDark ? "#cfcfcf" : "#737373";
     const borderSubdued = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.10)";
-    const containerBg = isDark ? "#0a0a0a" : "#ffffff";
+    // Halos, dot rings and hollow dots blend into the card the chart sits in
+    // (DS::Card, bg-container), so they take that token in either theme.
+    const containerBg = "var(--color-container)";
 
     // Reserve gutter for y-axis labels when there's room. Mobile (< 320)
     // keeps the tighter left margin and skips the y-axis entirely.
