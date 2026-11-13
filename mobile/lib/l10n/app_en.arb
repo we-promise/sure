@@ -679,6 +679,8 @@
   "chatListDeleteFailed": "Failed to delete chats",
   "@chatListDeleteFailed": { "description": "Snackbar shown when deleting multiple chats fails." },
 
+  "chatListIncomplete": "Some chats may be missing. The list didn't finish loading.",
+  "@chatListIncomplete": { "description": "Banner on the chat list screen when some pages of chats failed to load." },
   "chatListError": "Failed to load chats",
   "@chatListError": { "description": "Error-state heading on the chat list screen." },
 

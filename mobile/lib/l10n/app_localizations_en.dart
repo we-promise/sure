@@ -725,6 +725,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatListDeleteFailed => 'Failed to delete chats';
 
   @override
+  String get chatListIncomplete =>
+      'Some chats may be missing. The list didn\'t finish loading.';
+
+  @override
   String get chatListError => 'Failed to load chats';
 
   @override

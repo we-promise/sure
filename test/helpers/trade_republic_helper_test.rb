@@ -11,6 +11,9 @@ class TradeRepublicHelperTest < ActionView::TestCase
   end
 
   test "the expiry is written in the language of the sentence" do
+    # Load the locale files first, or their nl translation of KEY would
+    # replace the stubbed sentence when the backend initializes lazily.
+    I18n.backend.send(:init_translations) unless I18n.backend.initialized?
     I18n.backend.store_translations(:nl, settings: { providers: { trade_republic_panel: { session_expires_in: "Login verloopt over %{time} (%{at})." } } })
     expires_at = 5.hours.from_now
 

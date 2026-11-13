@@ -127,6 +127,10 @@ Sure implements the following JSON-RPC 2.0 methods:
 | `tools/list` | Lists available financial tools with schemas |
 | `tools/call` | Executes a tool with provided arguments |
 
+A JSON-RPC notification (a message without an `id`, such as `notifications/initialized`) gets
+`202 Accepted` with an empty body, as MCP's Streamable HTTP transport requires. A `tools/call`
+sent as a notification doesn't run.
+
 ### Available Tools
 
 The MCP endpoint exposes the same tool registry used by Sure's built-in assistant. Clients should treat `tools/list` as the source of truth.
@@ -324,7 +328,7 @@ This ensures the AI assistant can only access data for the intended user.
 
 ### Pipelock Security Scanning
 
-For production deployments, we recommend using [Pipelock](https://github.com/luckyPipewrench/pipelock) to scan MCP traffic for security threats.
+For production deployments, we recommend using [Pipelock](https://github.com/pipelab-org/pipelock) to scan MCP traffic for security threats.
 
 Pipelock provides:
 - **DLP scanning**: Detects secrets being exfiltrated through tool calls

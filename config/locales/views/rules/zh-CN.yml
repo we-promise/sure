@@ -8,13 +8,52 @@ zh-CN:
       close: 关闭
       create_rule: 创建规则
       description: 您可以创建规则来自动分类类似于此交易的交易
-      dont_show_again: 不再显示
-      hide_for_today: 今日隐藏
-      hide_for_today_hint: 今日隐藏将在 24 小时内暂停这些建议。
+      not_today: "今天不要"
+      turn_off_suggestions: "关闭规则建议"
       message: 已更新为 %{category_name}
     classifier_rules:
       category_classifier: 交易分类器
       merchant_matcher: 商户匹配器
+    filters:
+      search_label: 搜索规则
+      search_placeholder: 搜索名称、条件和操作
+      reset: 重置
+      button: 筛选
+      done: 完成
+      active_label: 已启用的筛选
+      remove: "移除筛选 %{filter}"
+      status:
+        label: 状态
+        all: 所有状态
+        active: 已启用
+        inactive: 已停用
+      action_type:
+        label: 操作
+        all: 所有操作
+      condition_type:
+        label: 条件
+        all: 所有条件
+      account:
+        label: 账户
+        all: 所有账户
+      group:
+        label: 分组
+        all: 所有分组
+        none: 无分组
+    group:
+      rules_count:
+        one: 1 条规则
+        other: "%{count} 条规则"
+      inactive_count:
+        one: 1 条已停用
+        other: "%{count} 条已停用"
+      empty: 此分组中暂无规则。请在规则表单中选择该分组。
+      activate_all: 开启所有规则
+      deactivate_all: 关闭所有规则
+      rename: 重命名
+      delete: 删除分组
+      delete_confirm_title: "删除分组“%{name}”？"
+      delete_confirm_body: 规则保留在原位置且不再属于任何分组。不会删除任何规则。
     rule:
       edit: 编辑
       re_apply_rule: 重新应用规则
@@ -42,6 +81,12 @@ zh-CN:
       then: 然后
       stop_processing_label: 停止处理后续规则
       stop_processing_description: 列表中靠后的规则不会更改此规则匹配的交易。
+      group_label: 分组（可选）
+      group_select_label: 分组
+      no_group: 无分组
+      new_group_label: 或新分组
+      new_group_placeholder: 新分组的名称
+      group_hint: 分组仅用于整理列表。分组中的规则在其分组所在位置依次运行。
     index:
       page_title: 规则
       delete_all_rules: 删除所有规则
@@ -49,6 +94,12 @@ zh-CN:
       ai_cost_warning: 启用 AI 的规则操作会产生费用。请务必尽可能精确地筛选，以避免不必要的成本。
       rules_heading: 规则
       order_hint: 规则按从上到下的顺序运行。一旦某条规则设置了交易上的某个字段，靠后的规则就不会再更改该字段。每个匹配的规则都会添加标签。拖动规则可更改顺序。
+      new_group: 新建分组
+      reorder_group: "移动分组 %{name}。按 Enter 或空格键抓取，然后使用方向键移动。"
+      filters:
+        no_matches: 没有符合搜索或筛选条件的规则。
+        drag_disabled: 在搜索或筛选处于激活状态时已禁用排序。重置它们以更改顺序。
+      fold_rule: "折叠或展开规则 %{name}"
       reorder_rule: "移动规则 %{name}。按 Enter 或空格键抓取，然后使用方向键移动。"
       no_rules_title: 还没有规则
       no_rules_description: 设置规则后，您每次账户同步时都可以对交易和其他数据执行操作。
