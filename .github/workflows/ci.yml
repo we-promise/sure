@@ -168,10 +168,17 @@ jobs:
         run: |
           # Same files as a plain `bin/rails test`, which leaves out system,
           # dummy and fixtures tests.
-          mapfile -t files < <(find test -name '*_test.rb' -not -path 'test/system/*' -not -path 'test/dummy/*' -not -path 'test/fixtures/*' | LC_ALL=C sort | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No unit tests in shard ${SHARD}/${SHARDS}" >&2
+          mapfile -t all < <(find test -name '*_test.rb' -not -path 'test/system/*' -not -path 'test/dummy/*' -not -path 'test/fixtures/*' | LC_ALL=C sort)
+          # Fail when nothing is found at all: without file arguments,
+          # `bin/rails test` would quietly run the whole suite instead.
+          if [ "${#all[@]}" -eq 0 ]; then
+            echo "No unit test files found" >&2
             exit 1
+          fi
+          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::warning::Unit test shard $((SHARD + 1))/${SHARDS} has no files (${#all[@]} in total)"
+            exit 0
           fi
           echo "${#files[@]} test files in shard $((SHARD + 1))/${SHARDS}"
           # Running test files directly skips test:prepare (Tailwind build).
@@ -282,10 +289,17 @@ jobs:
           SHARD: ${{ strategy.job-index }}
           SHARDS: ${{ strategy.job-total }}
         run: |
-          mapfile -t files < <(find test/system -name '*_test.rb' | LC_ALL=C sort | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No system tests in shard ${SHARD}/${SHARDS}" >&2
+          mapfile -t all < <(find test/system -name '*_test.rb' | LC_ALL=C sort)
+          # Fail when nothing is found at all, so a moved folder can't pass
+          # with zero system tests.
+          if [ "${#all[@]}" -eq 0 ]; then
+            echo "No system test files found" >&2
             exit 1
+          fi
+          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::warning::System test shard $((SHARD + 1))/${SHARDS} has no files (${#all[@]} in total)"
+            exit 0
           fi
           printf '%s\n' "${files[@]}"
           # Unlike test:system, running test files directly skips test:prepare,
