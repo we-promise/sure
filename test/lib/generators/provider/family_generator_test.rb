@@ -9,8 +9,8 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   module GeneratedControllers
   end
 
-  def append(content)
-    Provider::FamilyGenerator.append_source_enum_entry(content, "gocardless")
+  def append(content, name = "gocardless")
+    Provider::FamilyGenerator.append_source_enum_entry(content, name)
   end
 
   def assert_parses(source)
@@ -81,19 +81,57 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes job, "@gocardless_account.gocardless_item&.family&.broadcast_sync_complete"
   end
 
-  test "appends to a single-line enum" do
+  test "inserts into a single-line enum before the first source that sorts after it" do
     result = append(<<~RUBY)
       class ProviderMerchant < Merchant
-        enum :source, { plaid: "plaid", redbark: "redbark" }
+        enum :source, { akahu: "akahu", plaid: "plaid", redbark: "redbark" }
       end
     RUBY
 
     assert_parses result
-    assert_includes result, 'redbark: "redbark", gocardless: "gocardless" }'
+    assert_includes result, '{ akahu: "akahu", gocardless: "gocardless", plaid: "plaid", redbark: "redbark" }'
   end
 
-  test "appends to a multiline enum without putting the entry after the expression ends" do
+  test "inserts into a multiline enum on a line of its own, keeping the list sorted" do
     result = append(<<~RUBY)
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          akahu: "akahu",
+          plaid: "plaid",
+          redbark: "redbark"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    akahu: "akahu",\n    gocardless: "gocardless",\n    plaid: "plaid",\n)
+  end
+
+  test "ignores commented-out keys and keeps a comment with the entry it describes" do
+    result = append(<<~RUBY)
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          akahu: "akahu", # zopa: "zopa"
+          # plaid: imported from the Plaid API
+          plaid: "plaid",
+          redbark: "redbark"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    akahu: "akahu", # zopa: "zopa"\n    gocardless: "gocardless",\n    # plaid: imported from the Plaid API\n    plaid: "plaid",\n)
+  end
+
+  test "appends to a single-line enum a source that sorts last" do
+    result = append('enum :source, { plaid: "plaid", redbark: "redbark" }', "zopa")
+
+    assert_parses "x = #{result}"
+    assert_includes result, 'redbark: "redbark", zopa: "zopa" }'
+  end
+
+  test "appends to a multiline enum a source that sorts last without putting it after the expression ends" do
+    result = append(<<~RUBY, "zopa")
       class DataEnrichment < ApplicationRecord
         enum :source, {
           plaid: "plaid",
@@ -104,18 +142,33 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_parses result
     # The comma must attach to the previous entry, and the new entry take its indentation.
-    assert_includes result, %(    redbark: "redbark",\n    gocardless: "gocardless"\n)
+    assert_includes result, %(    redbark: "redbark",\n    zopa: "zopa"\n)
+  end
+
+  test "appends after a last entry with a trailing comment without putting the comma in the comment" do
+    result = append(<<~RUBY, "zopa")
+      class DataEnrichment < ApplicationRecord
+        enum :source, {
+          plaid: "plaid",
+          redbark: "redbark" # last one
+          # zebra: "zebra"
+        }
+      end
+    RUBY
+
+    assert_parses result
+    assert_includes result, %(    redbark: "redbark", # last one\n    # zebra: "zebra"\n    zopa: "zopa"\n)
   end
 
   test "does not double the comma on a single-line enum with a trailing comma" do
-    result = append('enum :source, { plaid: "plaid", redbark: "redbark", }')
+    result = append('enum :source, { plaid: "plaid", redbark: "redbark", }', "zopa")
 
     assert_parses "x = #{result}"
     assert_not_includes result, ",,"
   end
 
   test "does not double the comma on a multiline enum with a trailing comma" do
-    result = append(<<~RUBY)
+    result = append(<<~RUBY, "zopa")
       class DataEnrichment < ApplicationRecord
         enum :source, {
           plaid: "plaid",
@@ -126,7 +179,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
     assert_parses result
     assert_not_includes result, ",,"
-    assert_includes result, 'gocardless: "gocardless"'
+    assert_includes result, 'zopa: "zopa"'
   end
 
   test "does not emit a leading comma into an empty single-line enum" do
@@ -293,6 +346,36 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes Provider::FamilyGenerator::RESERVED_ITEM_COLUMNS, "institution_id"
   end
 
+  # Every hand-written *_item.rb / *_account.rb model in app/models encrypts its raw
+  # provider payload columns (they hold full API responses, which can contain secrets).
+  # These templates generate the starting point for every *new* provider, so a gap here
+  # means every future provider ships with unencrypted payloads until someone notices.
+  def template_path(name)
+    File.expand_path("../../../../../lib/generators/provider/family/templates/#{name}", __FILE__)
+  end
+
+  test "item model template encrypts raw_payload and raw_institution_payload" do
+    template = File.read(template_path("item_model.rb.tt"))
+    encryption_block = template[/if encryption_ready\?.*?\n  end/m]
+
+    assert encryption_block, "expected an `if encryption_ready?` block in item_model.rb.tt"
+    assert_includes encryption_block, "encrypts :raw_payload"
+    assert_includes encryption_block, "encrypts :raw_institution_payload"
+  end
+
+  test "account model template includes Encryptable and encrypts raw payload columns" do
+    template = File.read(template_path("account_model.rb.tt"))
+
+    assert_includes template, "Encryptable"
+    encryption_block = template[/if encryption_ready\?.*?\n  end/m]
+
+    assert encryption_block, "expected an `if encryption_ready?` block in account_model.rb.tt"
+    assert_includes encryption_block, "encrypts :raw_payload"
+    assert_includes encryption_block, "encrypts :raw_transactions_payload"
+    assert_includes encryption_block, "encrypts :raw_holdings_payload"
+    assert_includes encryption_block, "encrypts :raw_activities_payload"
+  end
+
   # The old templates built opening tags with "<" + and closing ones with "%" + ">".
   # A string-built closer that ends a multi-line tag breaks the compiled Ruby, so
   # the parse check catches it, but one standing alone still parses and renders a
@@ -319,7 +402,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes generated, "<%= tag.div id: dom_id(gocardless_item) do %>"
   end
 
-  test "the generated item card renders the visible accounts it is given" do
+  test "the generated item card renders sync frequency and the visible accounts it is given" do
     Current.session = Session.create!(user: users(:family_admin))
     item = redbark_items(:one)
     linked = accounts(:depository)
@@ -335,6 +418,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     other = render_card.call(-> { [ accounts(:investment) ] })
 
     assert_includes after, item.name
+    assert_includes after, I18n.t("sync_schedules.menu_item")
     assert_not_includes before, linked.name
     assert_includes after, linked.name
     assert_not_includes after, accounts(:investment).name

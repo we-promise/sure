@@ -5,6 +5,11 @@ on:
     tags:
       - 'chart-v*'
   workflow_dispatch:
+    inputs:
+      app_version:
+        description: Existing immutable app image version to package (without v)
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -25,23 +30,27 @@ jobs:
       - name: Resolve chart release tag
         id: tag
         shell: bash
+        env:
+          APP_VERSION_INPUT: ${{ inputs.app_version }}
         run: |
           set -euo pipefail
 
-          # Read the canonical version from .sure-version (single source of truth)
-          APP_SEMVER=$(cat .sure-version | tr -d '[:space:]')
-          if [ -z "$APP_SEMVER" ]; then
-            echo "::error::Could not read version from .sure-version"
+          # Chart-only releases select an existing image, never the dev defaults.
+          APP_VERSION=$(sed -n 's/^appVersion: "\{0,1\}\([^" ]*\)"\{0,1\}/\1/p' charts/sure/Chart.yaml)
+          APP_VERSION="${APP_VERSION_INPUT:-$APP_VERSION}"
+          APP_VERSION="${APP_VERSION#v}"
+          if [[ ! "$APP_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+(\.[0-9]+)?)?$ || "$APP_VERSION" == 0.0.0-* ]]; then
+            echo "::error::Select an existing immutable app_version input, or pin Chart.yaml appVersion for a chart tag release."
             exit 1
           fi
-          echo "App version from .sure-version: $APP_SEMVER"
+          echo "Selected app version: $APP_VERSION"
 
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             # Use the app version as the chart version (monorepo: versions stay in sync)
-            TAG_NAME="chart-v${APP_SEMVER}"
+            TAG_NAME="chart-v${APP_VERSION}"
 
             if git rev-parse "refs/tags/${TAG_NAME}" >/dev/null 2>&1; then
-              echo "::error::Tag ${TAG_NAME} already exists. Bump the version in .sure-version and charts/sure/Chart.yaml first."
+              echo "::error::Tag ${TAG_NAME} already exists. Use a new chart-v tag for another chart release of this app version."
               exit 1
             fi
 
@@ -63,7 +72,7 @@ jobs:
 
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
           echo "chart_version=$CHART_VERSION" >> "$GITHUB_OUTPUT"
-          echo "app_version=$APP_SEMVER" >> "$GITHUB_OUTPUT"
+          echo "app_version=$APP_VERSION" >> "$GITHUB_OUTPUT"
 
   publish_chart:
     needs: prepare_release

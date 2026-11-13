@@ -47,6 +47,21 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "USD", "SGD" ], @user.family.reload.enabled_currency_codes
   end
 
+  test "rejects an unknown family currency" do
+    patch user_url(@user), params: {
+      user: {
+        family_attributes: {
+          id: @user.family.id,
+          currency: "XYZ"
+        }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_match "Family currency is invalid", flash[:alert]
+    assert_equal "USD", @user.family.reload.currency
+  end
+
   test "non-admin cannot update enabled family currencies" do
     sign_in @member = users(:family_member)
     original_codes = @member.family.enabled_currency_codes
@@ -90,6 +105,32 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to settings_profile_url
     assert @member.family.reload.investment_contributions_as_spending?
+  end
+
+  test "admin can enable manual reconciliation" do
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @user.family.id, manual_reconciliation: "1" }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    assert @user.family.reload.manual_reconciliation?
+  end
+
+  test "non-admin cannot enable manual reconciliation" do
+    sign_in @member = users(:family_member)
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @member.family.id, manual_reconciliation: "1" }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_not @member.family.reload.manual_reconciliation?
   end
 
   test "admin can reset family data" do

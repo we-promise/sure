@@ -1,4 +1,6 @@
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
+  include LangfuseTraceable
+
   class << self
     def name
       "search_family_files"
@@ -83,7 +85,8 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     trace = create_langfuse_trace(
       name: "search_family_files",
-      input: { query: query, max_results: max_results, store_id: store_id }
+      input: { query: query, max_results: max_results, store_id: store_id },
+      user_identifier: user.id&.to_s
     )
 
     response = adapter.search(
@@ -96,7 +99,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       error_msg = response.error&.message
       Rails.logger.debug("[SearchFamilyFiles] search failed: #{error_msg}")
       begin
-        langfuse_client&.trace(id: trace.id, output: { error: error_msg }, level: "ERROR") if trace
+        finish_langfuse_trace(trace: trace, output: { error: error_msg }, level: "ERROR")
       rescue => e
         Rails.logger.debug("[SearchFamilyFiles] Langfuse trace update failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
       end
@@ -130,7 +133,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     begin
       if trace
-        langfuse_client&.trace(id: trace.id, output: {
+        finish_langfuse_trace(trace: trace, output: {
           result_count: mapped.size,
           chunks: mapped.map { |r| { filename: r[:filename], score: r[:score], content_length: r[:content]&.length } }
         })
@@ -141,6 +144,7 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
 
     output
   rescue => e
+    finish_langfuse_trace(trace: trace, output: { error: e.message }, level: "ERROR")
     Rails.logger.error("[SearchFamilyFiles] error: #{e.class.name} - #{e.message}")
     {
       success: false,
@@ -148,25 +152,4 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       message: "An error occurred while searching documents: #{e.message.truncate(200)}"
     }
   end
-
-  private
-    def langfuse_client
-      return unless ENV["LANGFUSE_PUBLIC_KEY"].present? && ENV["LANGFUSE_SECRET_KEY"].present?
-
-      @langfuse_client ||= Langfuse.new
-    end
-
-    def create_langfuse_trace(name:, input:)
-      return unless langfuse_client
-
-      langfuse_client.trace(
-        name: name,
-        input: input,
-        user_id: user.id&.to_s,
-        environment: Rails.env
-      )
-    rescue => e
-      Rails.logger.debug("[SearchFamilyFiles] Langfuse trace creation failed: #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
-      nil
-    end
 end

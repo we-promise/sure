@@ -53,11 +53,16 @@ class Loan
     #                instead of being re-sized back onto the original maturity
     PAYMENT_STRATEGIES = %i[reamortize hold scheduled].freeze
 
-    # Built once: `monthly_rate` runs twice per period, up to MAX_PERIODS times
-    # per simulation. The two-step division is kept as it was so results stay
-    # bit-identical to the schedules already asserted in the tests.
-    PERCENT = BigDecimal("100")
-    MONTHS_PER_YEAR = BigDecimal("12")
+    # How a period's interest is measured against a year.
+    #
+    # `thirty_360` is the default because it IS the flat 1/12 this engine has
+    # always charged -- 30/360 reduces to 1/12 exactly -- so a loan that does
+    # not choose a convention produces the schedule it produced before, row for
+    # row. `actual_actual` is NOT a substitute for that: it charges 31/365 in
+    # January and 28/365 in February, and only reaches 1/12 when a whole
+    # calendar year is summed.
+    DAY_COUNT_CONVENTIONS = %i[thirty_360 actual_365 actual_actual].freeze
+    DEFAULT_DAY_COUNT_CONVENTION = :thirty_360
 
     def initialize(
       starting_balance:,
@@ -68,7 +73,8 @@ class Loan
       re_amortisation_events: nil,
       payment_strategy: :reamortize,
       payment_amount: nil,
-      settle_at_schedule_end: true
+      settle_at_schedule_end: true,
+      day_count_convention: DEFAULT_DAY_COUNT_CONVENTION
     )
       @starting_balance = BigDecimal(starting_balance.to_s)
       @accrual_start_date = accrual_start_date
@@ -88,6 +94,7 @@ class Loan
         else BigDecimal(payment_amount.to_s)
         end
       @settle_at_schedule_end = settle_at_schedule_end
+      @day_count_convention = (day_count_convention || DEFAULT_DAY_COUNT_CONVENTION).to_sym
 
       raise ArgumentError, "payment schedule must not be empty" if @payment_schedule.empty?
       if @payment_schedule.length > MAX_PERIODS
@@ -100,6 +107,11 @@ class Loan
       end
       if (@payment_strategy == :scheduled) != @payment_amount.respond_to?(:call)
         raise ArgumentError, ":scheduled takes a callable payment_amount; the other strategies take a number"
+      end
+      unless DAY_COUNT_CONVENTIONS.include?(@day_count_convention)
+        raise ArgumentError,
+              "unsupported day-count convention: #{@day_count_convention.inspect} " \
+              "(expected one of #{DAY_COUNT_CONVENTIONS.join(', ')})"
       end
     end
 
@@ -116,7 +128,15 @@ class Loan
 
         # See the class comment: opening rate charges the period, closing rate
         # sizes the payment.
-        accrual_rate = monthly_rate(@accrual_rate_for.call(period_start))
+        #
+        # The day count applies to the charge, not to the sizing. `level_payment`
+        # is an annuity formula and assumes ONE constant periodic rate; a factor
+        # that moves with the length of the month would differ every period, so
+        # under :reamortize the payment would be recomputed every month and stop
+        # being level. Sizing therefore stays on the nominal monthly rate, which
+        # is also what the borrower's contracted payment is set from.
+        accrual_annual = @accrual_rate_for.call(period_start)
+        accrual_rate = accrual_factor(period_start, payment_date, accrual_annual)
         sizing_rate = monthly_rate(rate_on(payment_date))
 
         # Interest first, on the balance the period OPENED with: one charge per
@@ -163,7 +183,11 @@ class Loan
               monthly_rate: sizing_rate,
               remaining_payments: @payment_schedule.length - index,
               currency_precision: @currency_precision,
-              first_period_interest: (interest if sizing_rate != accrual_rate)
+              # "Did the rate move mid-period?", asked of the rates themselves.
+              # Comparing the derived factors would answer "yes" every month once
+              # a day count is in play, because January and February differ by
+              # length rather than by rate.
+              first_period_interest: (interest if sizing_rate != monthly_rate(accrual_annual))
             )
           end
         end
@@ -183,7 +207,9 @@ class Loan
 
         # Two rates on the row, named for what each did: `interest_rate` is
         # the one the interest column was computed with, so a reader who
-        # recomputes beginning_balance * rate / 12 gets this row's figure;
+        # recomputes the charge from beginning_balance, this rate and the
+        # period's day count (a flat twelfth under thirty_360) gets this row's
+        # figure;
         # `sizing_rate` is the one the payment was sized at. They differ only
         # on a row whose period straddles a rate change.
         payments << {
@@ -220,11 +246,19 @@ class Loan
           .sort_by(&:first)
       end
 
-      # `annual_percentage` is whatever the caller's rate callable returned --
-      # an Integer in the tests, a BigDecimal from RateResolver -- so the
-      # coercion at this boundary stays.
+      # The day-count definition lives in AmortizationMath so the schedule and
+      # the ledger replay cannot charge a period differently.
+      def accrual_factor(period_start, period_end, annual_percentage)
+        AmortizationMath.accrual_factor(
+          annual_percentage: annual_percentage,
+          period_start: period_start,
+          period_end: period_end,
+          day_count_convention: @day_count_convention
+        )
+      end
+
       def monthly_rate(annual_percentage)
-        (BigDecimal(annual_percentage.to_s) / PERCENT) / MONTHS_PER_YEAR
+        AmortizationMath.monthly_rate(annual_percentage)
       end
 
       def callable!(value, name)

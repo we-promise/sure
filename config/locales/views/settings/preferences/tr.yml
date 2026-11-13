@@ -1,0 +1,71 @@
+---
+tr:
+  settings:
+    preferences:
+      show:
+        additional_currencies_label: Ek para birimleri
+        base_currency_badge: Ana para birimi
+        base_currency_label: Ana para birimi
+        country: Ülke
+        currencies_more: "+%{count} tane daha"
+        currencies_subtitle: "%{moniker} için para birimi alanlarında hangi para birimlerinin
+          görüneceğini seçin"
+        currencies_title: "%{moniker} Para Birimleri"
+        currency: Para birimi
+        currency_search_placeholder: Para birimi ara
+        date_format: Tarih formatı
+        default_account_order: Varsayılan Hesap Sırası
+        default_period: Varsayılan Dönem
+        general_subtitle: Tercihlerinizi yapılandırın
+        general_title: Genel
+        language: Dil
+        language_auto: Tarayıcı dili
+        manage_currencies: Para birimlerini yönet
+        manage_currencies_subtitle: Hiç kullanmadığınız para birimlerinin seçimini
+          kaldırın veya listeyi yalnızca birkaç taneye indirin.
+        month_start_day: Bütçe ayı başlangıcı
+        month_start_day_hint: Bütçe ayınızın ne zaman başlayacağını ayarlayın (ör.
+          maaş günü)
+        month_start_day_warning: Bütçeleriniz ve ay-başı-bugüne hesaplamalarınız,
+          her ayın 1'i yerine bu özel başlangıç gününü kullanacaktır.
+        no_additional_currencies: Hiçbiri seçilmedi
+        no_matching_currencies: Para birimi bulunamadı
+        page_title: Tercihler
+        preview:
+          description: Önizleme veya deneysel olarak etiketlenen devam eden özelliklere
+            katılın.
+          title: Önizleme özelliklerini etkinleştir
+        save_currencies: Para birimlerini kaydet
+        select_all_currencies: Tümünü seç
+        select_base_only: Yalnızca ana para birimi
+        selected_currencies_count:
+          one: "%{count} seçildi"
+          other: "%{count} seçildi"
+        sharing_default_label: Yeni hesaplar için varsayılan paylaşım
+        sharing_private: Varsayılan olarak özel tut
+        sharing_shared: Tüm üyelerle paylaş
+        sharing_subtitle: "%{moniker} içinde hesapların nasıl paylaşılacağını kontrol
+          edin"
+        sharing_title: "%{moniker} Paylaşımı"
+        theme_dark: Koyu
+        theme_light: Açık
+        theme_subtitle: Uygulama için tercih edilen temayı seçin
+        theme_system: Sistem
+        theme_title: Tema
+        timezone: Zaman dilimi
+        translations_notice: Lütfen unutmayın, çeşitli diller için çeviriler üzerinde
+          hala çalışıyoruz.
+        budget_title: Bütçe
+        budget_subtitle: Bütçelerinizin nasıl çalışacağını yapılandırın
+        personal_budgets: Kişisel bütçeler
+        personal_budgets_hint: Her aile üyesi için ayrı bütçeleri etkinleştirin.
+        household_budget_enabled: Hane bütçesi
+        household_budget_enabled_hint: Kişisel bütçelerin yanında ortak bir hane bütçesi tutun. Yalnızca kişisel bütçeleri kullanmak için kapatın.
+        budget_sharing_title: Bütçe paylaşımı
+        budget_sharing_subtitle: Diğer üyelerin kişisel bütçenizi görüntülemesine veya düzenlemesine izin verin
+        budget_sharing_no_members: '%{moniker} içinde paylaşım yapılacak başka üye yok'
+        budget_sharing_permission_label: '%{name} erişimi'
+        budget_sharing_permissions:
+          none: Erişim yok
+          read_only: Yalnızca görüntüleme
+          read_write: Düzenleyebilir

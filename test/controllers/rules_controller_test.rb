@@ -3,6 +3,8 @@ require "test_helper"
 class RulesControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
   setup do
+    # Exercise controller jobs independently of the daily login sync.
+    families(:dylan_family).update!(auto_sync_on_login: false)
     sign_in @user = users(:family_admin)
   end
 
@@ -92,141 +94,99 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
   end
 
-  test "rejects a null byte in a condition instead of returning a server error" do
-    assert_no_difference "Rule.count" do
-      post rules_url, params: {
-        rule: {
-          resource_type: "transaction",
-          conditions_attributes: {
-            "0" => { condition_type: "transaction_name", operator: "like", value: "cof\0fee" }
-          },
-          actions_attributes: {
-            "0" => { action_type: "exclude_transaction" }
+  test "creating an email rule through the form records its current matches as the baseline" do
+    account = @user.family.accounts.create!(name: "Baseline", balance: 1000, currency: "USD", accountable: Depository.new)
+    match = account.entries.create!(
+      name: "Baseline cafe", date: Date.current, amount: 10, currency: "USD", entryable: Transaction.new
+    ).transaction
+
+    post rules_url, params: {
+      rule: {
+        name: "Baseline cafe alerts",
+        resource_type: "transaction",
+        conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "baseline cafe" } },
+        actions_attributes: { "0" => { action_type: "send_email_notification" } }
+      }
+    }
+
+    rule = @user.family.rules.find_by!(name: "Baseline cafe alerts")
+    assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
+    assert_equal [ match.id ], NotificationDelivery.where(rule: rule).pluck(:transaction_id)
+  end
+
+  test "creates rule with a split_transaction action from split_rows params" do
+    category = categories(:food_and_drink)
+
+    post rules_url, params: {
+      rule: {
+        effective_date: 30.days.ago.to_date,
+        resource_type: "transaction",
+        conditions_attributes: {
+          "0" => {
+            condition_type: "transaction_name",
+            operator: "like",
+            value: "Netflix+Hulu Bundle"
+          }
+        },
+        actions_attributes: {
+          "0" => {
+            action_type: "split_transaction",
+            split_rows: {
+              "0" => { type: "percentage", name: "Netflix", share: "70", category_id: category.id },
+              "1" => { type: "percentage", name: "Hulu", share: "30", category_id: "" }
+            }
           }
         }
       }
-    end
+    }
 
-    assert_response :unprocessable_entity
-    assert_select "p.text-destructive", text: /Conditions value is invalid/
+    rule = @user.family.rules.order("created_at DESC").first
+
+    assert_equal 1, rule.actions.count
+    action = rule.actions.first
+    assert_equal "split_transaction", action.action_type
+
+    parsed_value = JSON.parse(action.value)
+    assert_equal [ "Netflix", "Hulu" ], parsed_value["splits"].map { |s| s["name"] }
+    assert_equal [ "percentage", "percentage" ], parsed_value["splits"].map { |s| s["type"] }
+    assert_equal category.id, parsed_value["splits"].first["category_id"]
+    assert_nil parsed_value["splits"].last["category_id"]
+
+    assert_redirected_to confirm_rule_url(rule, reload_on_close: true)
   end
 
-  test "rejects a null byte when updating an action" do
-    rule = rules(:one)
-    action = rule.actions.first
+  test "updates the split rows of an existing split_transaction action" do
+    rule = @user.family.rules.create!(
+      name: "Existing split",
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "rent") ],
+      actions: [
+        Rule::Action.new(
+          action_type: "split_transaction",
+          value: { splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ] }.to_json
+        )
+      ]
+    )
+    action = rule.actions.sole
 
     patch rule_url(rule), params: {
       rule: {
         actions_attributes: {
-          "0" => { id: action.id, action_type: "set_transaction_name", value: "bad\0value" }
-        }
-      }
-    }
-
-    assert_response :unprocessable_entity
-    assert_equal action.value, action.reload.value
-  end
-
-  test "rejects a null byte in the condition operator" do
-    assert_no_difference "Rule.count" do
-      post rules_url, params: {
-        rule: {
-          resource_type: "transaction",
-          conditions_attributes: {
-            "0" => { condition_type: "transaction_name", operator: "like\0", value: "coffee" }
-          },
-          actions_attributes: { "0" => { action_type: "exclude_transaction" } }
-        }
-      }
-    end
-
-    assert_response :unprocessable_entity
-    assert_equal "text/plain", response.media_type
-    assert_match(/operator is invalid/i, response.body)
-  end
-
-  test "rejects a null byte in a nested condition operator" do
-    assert_no_difference "Rule.count" do
-      post rules_url, params: {
-        rule: {
-          resource_type: "transaction",
-          conditions_attributes: {
-            "0" => {
-              condition_type: "compound", operator: "and",
-              sub_conditions_attributes: {
-                "0" => { condition_type: "transaction_name", operator: "like\0", value: "coffee" }
-              }
+          "0" => {
+            id: action.id,
+            action_type: "split_transaction",
+            split_rows: {
+              "0" => { type: "percentage", name: "A", share: "60", category_id: categories(:food_and_drink).id },
+              "1" => { type: "percentage", name: "B", share: "40", category_id: "" }
             }
-          },
-          actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+          }
         }
-      }
-    end
-
-    assert_response :unprocessable_entity
-    assert_equal "text/plain", response.media_type
-    assert_match(/operator is invalid/i, response.body)
-  end
-
-  test "rejects a null byte in the condition type without selecting a different type" do
-    post rules_url, params: {
-      rule: {
-        resource_type: "transaction",
-        conditions_attributes: {
-          "0" => { condition_type: "transaction_name\0", operator: "like", value: "coffee" }
-        },
-        actions_attributes: { "0" => { action_type: "exclude_transaction" } }
       }
     }
 
-    assert_response :unprocessable_entity
-    assert_equal "text/plain", response.media_type
-    assert_match(/condition type is invalid/i, response.body)
-  end
-
-  test "rejects a null byte in the action type without failing to render" do
-    assert_no_difference "Rule.count" do
-      post rules_url, params: {
-        rule: {
-          resource_type: "transaction",
-          actions_attributes: { "0" => { action_type: "exclude_transaction\0" } }
-        }
-      }
-    end
-
-    assert_response :unprocessable_entity
-    assert_equal "text/plain", response.media_type
-    assert_match(/action type is invalid/i, response.body)
-  end
-
-  test "rejects a null byte when updating the action type" do
-    rule = rules(:one)
-    action = rule.actions.first
-    original_type = action.action_type
-
-    patch rule_url(rule), params: {
-      rule: { actions_attributes: { "0" => { id: action.id, action_type: "#{original_type}\0" } } }
-    }
-
-    assert_response :unprocessable_entity
-    assert_equal "text/plain", response.media_type
-    assert_match(/action type is invalid/i, response.body)
-    assert_equal original_type, action.reload.action_type
-  end
-
-  test "rejects a null byte in the resource type without failing to render" do
-    assert_no_difference "Rule.count" do
-      post rules_url, params: {
-        rule: {
-          resource_type: "transaction\0",
-          actions_attributes: { "0" => { action_type: "exclude_transaction" } }
-        }
-      }
-    end
-
-    assert_response :unprocessable_entity
-    assert_equal "text/plain", response.media_type
-    assert_match(/resource type is invalid/i, response.body)
+    splits = JSON.parse(action.reload.value)["splits"]
+    assert_equal [ "60", "40" ], splits.map { |split| split["share"] }
+    assert_equal categories(:food_and_drink).id, splits.first["category_id"]
   end
 
   test "rejects unknown action and resource types on create without saving or failing to render" do
@@ -350,13 +310,106 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     family = @user.family
     newest = family.rules.create!(resource_type: "transaction",
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
-    ordered_ids = [ newest.id ] + (family.rules.ordered.pluck(:id) - [ newest.id ])
-    Rule.update_positions!(family, ordered_ids)
+    ordered_keys = [ "rule:#{newest.id}" ] + (family.rules.ordered.pluck(:id) - [ newest.id ]).map { |id| "rule:#{id}" }
+    Rule::Layout.new(family).reorder!(ordered_keys)
 
     get rules_url
 
     assert_response :success
-    assert_equal ordered_ids, css_select("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }
+    assert_equal ordered_keys, css_select("[data-sortable-list-target='item']").map { |item| item["data-sortable-list-id"] }
+  end
+
+  test "index shows groups with their rules in run order" do
+    family = @user.family
+    group = family.rule_groups.create!(name: "Groceries")
+    grouped = family.rules.create!(resource_type: "transaction", name: "Grouped rule", rule_group: group,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    get rules_url
+
+    assert_response :success
+    assert_select "[data-sortable-list-id='group:#{group.id}']" do
+      assert_select "[data-sortable-list-id='#{grouped.id}'][data-rule-group='#{group.id}']"
+    end
+    assert_select "input[type='radio'][name='group'][value='#{group.id}'][data-filter-label='Groceries']"
+  end
+
+  test "index keeps the filters of the URL and ignores values it does not offer" do
+    get rules_url(q: "rent", status: "inactive")
+
+    assert_response :success
+    assert_select "input[name='q'][value='rent']"
+    assert_select "input[type='radio'][name='status'][value='inactive'][checked]"
+    assert_select "label[for='rule_filter_status_inactive']", text: "Inactive"
+    assert_select "[data-rules-filter-target='badge'][data-filter-param='status']:not(.hidden) [data-badge-value]", text: "Inactive"
+
+    get rules_url(status: "bogus")
+
+    assert_select "input[type='radio'][name='status'][value=''][checked]"
+    assert_select "input[type='radio'][name='status'][checked]", count: 1
+    assert_select "[data-rules-filter-target='badges'].hidden"
+  end
+
+  test "index renders search and filter data for each rule" do
+    family = @user.family
+    category = family.categories.first
+    3.times do |index|
+      family.rules.create!(resource_type: "transaction", name: "Rule #{index}",
+        conditions: [ Rule::Condition.new(condition_type: "transaction_category", operator: "=", value: category.id) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ])
+    end
+
+    get rules_url
+
+    assert_response :success
+    assert_select "[data-rule-search*='#{category.name}']", minimum: 3
+    assert_select "input[type='radio'][name='action_type'][value='set_transaction_category'][data-filter-param='action_type']"
+    assert_select "[data-rules-filter-target='badge'][data-filter-param='action_type']"
+  end
+
+  test "index runs the same number of queries for more rules" do
+    family = @user.family
+    category = family.categories.first
+    add_rule = lambda do |index|
+      family.rules.create!(resource_type: "transaction", name: "Rule #{index}",
+        conditions: [ Rule::Condition.new(condition_type: "transaction_category", operator: "=", value: category.id) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id), Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+    count_queries = lambda do
+      count = 0
+      counter = ->(*, payload) { count += 1 unless payload[:name] == "SCHEMA" || payload[:sql].match?(/SAVEPOINT|BEGIN|COMMIT/) }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { get rules_url }
+      count
+    end
+
+    add_rule.call(1)
+    get rules_url
+    few = count_queries.call
+    3.times { |index| add_rule.call(index + 2) }
+
+    assert_equal few, count_queries.call
+  end
+
+  test "index runs the same number of queries however many rules it lists" do
+    family = @user.family
+    create_listed_rule = lambda do
+      family.rules.create!(resource_type: "transaction",
+        conditions: [ Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchants(:netflix).id) ],
+        actions: [ Rule::Action.new(action_type: "set_transaction_category", value: categories(:food_and_drink).id),
+                   Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+    2.times { create_listed_rule.call }
+
+    # Each capture follows a write, which clears the query cache tests keep
+    # across requests.
+    queries_with_few = capture_sql_queries { get rules_url }.size
+
+    4.times { create_listed_rule.call }
+    queries_with_more = capture_sql_queries { get rules_url }.size
+
+    assert_response :success
+    assert_equal queries_with_few, queries_with_more
+    assert_select "span", text: /Netflix/, minimum: 6
   end
 
   test "reorder saves the new order" do
@@ -365,7 +418,7 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
     ordered_ids = family.rules.ordered.pluck(:id).reverse
 
-    patch reorder_rules_url, params: { rule_ids: ordered_ids }, as: :json
+    patch reorder_rules_url, params: { items: ordered_ids.map { |id| "rule:#{id}" } }, as: :json
 
     assert_response :no_content
     assert_equal ordered_ids, family.rules.ordered.pluck(:id)
@@ -378,11 +431,91 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
       actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
     before = family.rules.ordered.pluck(:id, :position)
 
-    patch reorder_rules_url, params: { rule_ids: family.rules.pluck(:id) + [ other_rule.id ] }, as: :json
+    patch reorder_rules_url, params: { items: (family.rules.pluck(:id) + [ other_rule.id ]).map { |id| "rule:#{id}" } }, as: :json
 
     assert_response :unprocessable_entity
     assert_equal before, family.rules.ordered.pluck(:id, :position)
     assert_equal 1, other_rule.reload.position
+  end
+
+  test "creates a rule in a new group" do
+    assert_difference [ "Rule.count", "RuleGroup.count" ], 1 do
+      post rules_url, params: { rule: {
+        resource_type: "transaction",
+        new_rule_group_name: "  Subscriptions ",
+        conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "netflix" } },
+        actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+      } }
+    end
+
+    assert_equal "Subscriptions", Rule.order(:created_at).last.rule_group.name
+  end
+
+  test "saves the rule again when its new group's insert hits the unique index" do
+    family = @user.family
+    conflicted = false
+    # Inserts the same group right before the rule's own insert of it, as a
+    # parallel request would. The rollback also removes this row, so the
+    # retry creates the group; with a committed row it finds it instead.
+    RuleGroup.any_instance.stubs(:assign_next_position).with do
+      unless conflicted
+        conflicted = true
+        RuleGroup.insert!({ family_id: family.id, name: "Bills", position: 0 })
+      end
+      true
+    end
+
+    assert_difference "Rule.count", 1 do
+      post rules_url, params: { rule: {
+        resource_type: "transaction",
+        new_rule_group_name: "Bills",
+        conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "power" } },
+        actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+      } }
+    end
+
+    assert conflicted
+    assert_equal "Bills", Rule.order(:created_at).last.rule_group.name
+  end
+
+  test "shows the error of an invalid new group name" do
+    rule = rules(:one)
+
+    patch rule_url(rule), params: { rule: { new_rule_group_name: "x" * 101 } }
+
+    assert_response :unprocessable_entity
+    assert_nil rule.reload.rule_group_id
+    assert_match "New group", response.body
+  end
+
+  test "rejects a group id that does not exist" do
+    rule = rules(:one)
+
+    patch rule_url(rule), params: { rule: { rule_group_id: SecureRandom.uuid } }
+
+    assert_response :unprocessable_entity
+    assert_nil rule.reload.rule_group_id
+  end
+
+  test "deleting all rules deletes their groups too" do
+    family = @user.family
+    family.rule_groups.create!(name: "Bills")
+
+    delete destroy_all_rules_url
+
+    assert_redirected_to rules_url
+    assert_empty family.rules.reload
+    assert_empty family.rule_groups.reload
+  end
+
+  test "rejects a group of another family" do
+    rule = rules(:one)
+    foreign_group = families(:empty).rule_groups.create!(name: "Foreign")
+
+    patch rule_url(rule), params: { rule: { rule_group_id: foreign_group.id } }
+
+    assert_response :unprocessable_entity
+    assert_nil rule.reload.rule_group_id
   end
 
   test "can destroy conditions and actions while editing" do
@@ -479,6 +612,20 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "td", text: "10 / 7 / 4 / 3"
   end
 
+  test "index renders recent run execution types with design-system tones" do
+    RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "success", transactions_queued: 1,
+                    transactions_processed: 1, transactions_modified: 1, pending_jobs_count: 0, executed_at: Time.current)
+    RuleRun.create!(rule: rules(:one), execution_type: "scheduled", status: "success", transactions_queued: 1,
+                    transactions_processed: 1, transactions_modified: 1, pending_jobs_count: 0, executed_at: 1.minute.ago)
+
+    get rules_url
+
+    assert_response :success
+    assert_select "span.rounded-full[style*='--color-indigo-50']", text: I18n.t("rules.recent_runs.execution_types.manual")
+    assert_select "span.rounded-full[style*='--color-violet-50']", text: I18n.t("rules.recent_runs.execution_types.scheduled")
+    assert_no_match(/\bbg-(blue|purple)-50\b/, response.body)
+  end
+
   # The confirmation screen used to hardcode :openai, so it quoted a provider
   # that would not run — an Anthropic install saw the OpenAI model, and a family
   # on Jev saw whichever LLM model happened to be configured.
@@ -554,6 +701,8 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "guest cannot apply rule" do
+    # Keep the fixture sync on yesterday to cover runs that cross midnight.
+    families(:dylan_family).syncs.update_all(created_at: 1.day.ago)
     sign_in family_guest
     rule = rules(:one)
 
@@ -708,6 +857,143 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     entry = DebugLogEntry.where(category: ClearAiCacheJob::DEBUG_CATEGORY, level: "error").sole
     assert_match "connection refused", entry.message
     assert_equal "connection refused", entry.metadata["error_message"]
+  end
+
+  test "rejects a null byte in a condition instead of returning a server error" do
+    assert_no_difference "Rule.count" do
+      post rules_url, params: {
+        rule: {
+          resource_type: "transaction",
+          conditions_attributes: {
+            "0" => { condition_type: "transaction_name", operator: "like", value: "cof\0fee" }
+          },
+          actions_attributes: {
+            "0" => { action_type: "exclude_transaction" }
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_select "p.text-destructive", text: /Conditions value is invalid/
+  end
+
+  test "rejects a null byte when updating an action" do
+    rule = rules(:one)
+    action = rule.actions.first
+
+    patch rule_url(rule), params: {
+      rule: {
+        actions_attributes: {
+          "0" => { id: action.id, action_type: "set_transaction_name", value: "bad\0value" }
+        }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal action.value, action.reload.value
+  end
+
+  test "rejects a null byte in the condition operator" do
+    assert_no_difference "Rule.count" do
+      post rules_url, params: {
+        rule: {
+          resource_type: "transaction",
+          conditions_attributes: {
+            "0" => { condition_type: "transaction_name", operator: "like\0", value: "coffee" }
+          },
+          actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_match(/operator is invalid/i, response.body)
+  end
+
+  test "rejects a null byte in a nested condition operator" do
+    assert_no_difference "Rule.count" do
+      post rules_url, params: {
+        rule: {
+          resource_type: "transaction",
+          conditions_attributes: {
+            "0" => {
+              condition_type: "compound", operator: "and",
+              sub_conditions_attributes: {
+                "0" => { condition_type: "transaction_name", operator: "like\0", value: "coffee" }
+              }
+            }
+          },
+          actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_match(/operator is invalid/i, response.body)
+  end
+
+  test "rejects a null byte in the condition type without selecting a different type" do
+    post rules_url, params: {
+      rule: {
+        resource_type: "transaction",
+        conditions_attributes: {
+          "0" => { condition_type: "transaction_name\0", operator: "like", value: "coffee" }
+        },
+        actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+      }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_match(/condition type is invalid/i, response.body)
+  end
+
+  test "rejects a null byte in the action type without failing to render" do
+    assert_no_difference "Rule.count" do
+      post rules_url, params: {
+        rule: {
+          resource_type: "transaction",
+          actions_attributes: { "0" => { action_type: "exclude_transaction\0" } }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_match(/action type is invalid/i, response.body)
+  end
+
+  test "rejects a null byte when updating the action type" do
+    rule = rules(:one)
+    action = rule.actions.first
+    original_type = action.action_type
+
+    patch rule_url(rule), params: {
+      rule: { actions_attributes: { "0" => { id: action.id, action_type: "#{original_type}\0" } } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_match(/action type is invalid/i, response.body)
+    assert_equal original_type, action.reload.action_type
+  end
+
+  test "rejects a null byte in the resource type without failing to render" do
+    assert_no_difference "Rule.count" do
+      post rules_url, params: {
+        rule: {
+          resource_type: "transaction\0",
+          actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_equal "text/plain", response.media_type
+    assert_match(/resource type is invalid/i, response.body)
   end
 
   # The edit form resubmits every condition and action id with its current
