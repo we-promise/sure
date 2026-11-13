@@ -128,3 +128,5 @@ ca:
       title: Configura els teus comptes d'Enable Banking
     update:
       success: La configuració d'Enable Banking s'ha actualitzat.
+    entry:
+      bank_note: "Banc: %{name}"

@@ -40,6 +40,24 @@ class Account::ProviderImportAdapter
     raise ArgumentError, "external_id is required" if external_id.blank?
     raise ArgumentError, "source is required" if source.blank?
 
+    # counterparty_iban/counterparty_account_id describe a third party's own
+    # bank account -- unlike everything else callers pass through `extra`,
+    # they get their own deterministically encrypted transaction columns
+    # (see Transaction), not the plain jsonb `extra` column. Popped out here,
+    # before any of the jsonb-merging logic below runs, so they never land in
+    # the unencrypted column even transiently. A nil value from a caller
+    # that always sends the keys (EnableBankingEntry::Processor) means "no
+    # counterparty data in this payload" and never clears a value an earlier
+    # sync captured; a caller that omits the keys entirely (every other
+    # provider) leaves the columns untouched as well.
+    counterparty_keys_present = extra.is_a?(Hash) && (extra.with_indifferent_access.key?(:counterparty_iban) || extra.with_indifferent_access.key?(:counterparty_account_id))
+    if extra.is_a?(Hash)
+      extra = extra.with_indifferent_access
+      incoming_counterparty_iban = IbanNormalizable.normalize(extra[:counterparty_iban])
+      incoming_counterparty_account_id = extra[:counterparty_account_id].presence
+      extra = extra.except(:counterparty_iban, :counterparty_account_id)
+    end
+
     Account.transaction do
       # Find or initialize by both external_id AND source
       # This allows multiple providers to sync same account with separate entries
@@ -76,10 +94,34 @@ class Account::ProviderImportAdapter
           # same branch: an entry that is both user_modified and import_locked reaches
           # here (determine_skip_reason reports user_modified first) but is excluded
           # from that refresh, so this is the only thing that clears its pending flag.
-          if skip_reason == "user_modified" && !incoming_pending && entry.entryable.is_a?(Transaction)
-            if entry.transaction.pending?
-              entry.transaction.update!(extra: clear_pending_flags_from_extra(entry.transaction.extra))
+          if skip_reason == "user_modified" && entry.entryable.is_a?(Transaction)
+            updated_extra = entry.transaction.extra
+
+            if !incoming_pending && entry.transaction.pending?
+              updated_extra = clear_pending_flags_from_extra(updated_extra)
             end
+
+            if updated_extra != entry.transaction.extra
+              entry.transaction.extra = updated_extra
+            end
+
+            # counterparty_iban/counterparty_account_id have no corresponding
+            # UI field, so backfilling them here doesn't risk reverting a
+            # user edit the way overwriting name/category/notes would --
+            # unlike those, protecting the user's work gives no reason to
+            # withhold this data. Without this, a transaction the user
+            # touched before this metadata existed would never receive it,
+            # even on later syncs. Purely additive (only fills a currently
+            # blank column), deliberately unlike the unprotected path below,
+            # which always assigns -- even nil -- so a later correction can
+            # clear a stale value there. A protected entry's already-set
+            # value must never be touched, correction or not.
+            if counterparty_keys_present
+              entry.transaction.counterparty_iban = incoming_counterparty_iban if entry.transaction.counterparty_iban.blank?
+              entry.transaction.counterparty_account_id = incoming_counterparty_account_id if entry.transaction.counterparty_account_id.blank?
+            end
+
+            entry.transaction.save! if entry.transaction.changed?
           end
           # Refresh the provider's own namespaces on a protected entry. Without this
           # a user-modified entry keeps whatever payload it was created with, and a
@@ -241,6 +283,23 @@ class Account::ProviderImportAdapter
       # Persist extra provider metadata on the transaction (non-enriched; always merged)
       apply_provider_extra(entry, extra, replace_extra_namespaces)
 
+      # Unlike the protected path above, a later sync that carries a value
+      # replaces that column, so a corrected IBAN wins. A blank value leaves
+      # its column alone: some ASPSPs drop the IBAN once a pending
+      # transaction is booked and send only a non-IBAN account id, and
+      # clearing here would lose an IBAN an earlier sync captured. The
+      # account id is only a fallback for a missing IBAN, so an incoming
+      # IBAN also replaces it (with nil when the payload has none).
+      if counterparty_keys_present && entry.entryable.is_a?(Transaction)
+        if incoming_counterparty_iban.present?
+          entry.transaction.counterparty_iban = incoming_counterparty_iban
+          entry.transaction.counterparty_account_id = incoming_counterparty_account_id
+        elsif incoming_counterparty_account_id.present?
+          entry.transaction.counterparty_account_id = incoming_counterparty_account_id
+        end
+        entry.transaction.save! if entry.transaction.changed?
+      end
+
       # Auto-detect investment activity labels for investment accounts
       detected_label = investment_activity_label
       if account.investment? && detected_label.nil? && entry.entryable.is_a?(Transaction)
@@ -370,8 +429,10 @@ class Account::ProviderImportAdapter
   # @param source [String] Provider name (e.g., "plaid", "simplefin")
   # @param website_url [String, nil] Optional merchant website
   # @param logo_url [String, nil] Optional merchant logo URL
-  # @return [ProviderMerchant, nil] The merchant object or nil if data is insufficient
-  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil)
+  # @param iban [String, nil] Optional counterparty IBAN, used only as a fallback lookup
+  #   against the importing family's own merchants
+  # @return [Merchant, nil] The merchant object or nil if data is insufficient
+  def find_or_create_merchant(provider_merchant_id:, name:, source:, website_url: nil, logo_url: nil, iban: nil)
     return nil unless provider_merchant_id.present? && name.present?
 
     # First try to find by provider_merchant_id (stable identifier derived from normalized name)

@@ -2892,6 +2892,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
 
   create_table "transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "category_id"
+    t.string "counterparty_account_id"
+    t.string "counterparty_iban"
     t.datetime "created_at", null: false
     t.string "external_id"
     t.jsonb "extra", default: {}, null: false
