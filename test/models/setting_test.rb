@@ -206,6 +206,55 @@ class SettingTest < ActiveSupport::TestCase
     Setting.securities_provider = original_provider.presence || "twelve_data"
   end
 
+  test "Plaid secrets use declared encrypted settings through bracket and named accessors" do
+    %w[plaid_secret plaid_eu_secret].each do |key|
+      secret = "synthetic-#{key}"
+      Setting[key] = secret
+
+      stored = Setting.find_by!(var: key).value
+      refute_includes stored, secret
+      assert_equal secret, Setting[key]
+      assert_equal secret, Setting.public_send(key)
+      assert_not Setting.exists?(var: "dynamic:#{key}")
+
+      Setting.public_send("#{key}=", "replacement-secret")
+      assert_equal "replacement-secret", Setting[key]
+      Setting[key] = nil
+      assert_nil Setting[key]
+    end
+  end
+
+  test "Plaid provider configuration retains ENV fallback and stored-secret precedence" do
+    { Provider::PlaidAdapter => "PLAID_SECRET", Provider::PlaidEuAdapter => "PLAID_EU_SECRET" }.each do |adapter, env_key|
+      key = adapter.configuration.fields.find { |field| field.name == :secret }.setting_key
+      Setting[key] = nil
+
+      with_env_overrides(env_key => "synthetic-env-secret") do
+        assert_no_changes -> { Setting.find_by(var: key.to_s)&.value } do
+          assert_equal "synthetic-env-secret", adapter.config_value(:secret)
+        end
+
+        Setting[key] = "synthetic-stored-secret"
+        assert_equal "synthetic-stored-secret", adapter.config_value(:secret)
+
+        Setting[key] = nil
+        assert_equal "synthetic-env-secret", adapter.config_value(:secret)
+      end
+    end
+  end
+
+  test "Plaid declared settings retain the existing plaintext-read compatibility" do
+    %w[plaid_secret plaid_eu_secret].each do |key|
+      store_raw_setting(key, "synthetic-legacy-secret")
+
+      assert_equal "synthetic-legacy-secret", Setting[key]
+      assert_equal "synthetic-legacy-secret", Setting.find_by!(var: key).value
+
+      Setting[key] = Setting[key]
+      refute_includes Setting.find_by!(var: key).value, "synthetic-legacy-secret"
+    end
+  end
+
   test "reencrypt_secrets_from moves values from the old key to the current key" do
     old_secret_key_base = "old-secret-key-base-" + "a" * 64
     store_raw_setting("openai_access_token", old_setting_encryptor(old_secret_key_base).encrypt_and_sign("sk-old-key"))

@@ -43,6 +43,38 @@ class SecuritySettingSecretsTaskTest < ActiveSupport::TestCase
     assert_not_equal "sk-old-key", Setting.openai_access_token
   end
 
+  test "existing rotation task previews and rotates both Plaid secrets" do
+    keys = %w[plaid_secret plaid_eu_secret]
+    keys.each { |key| store_with_old_key(key, "synthetic-#{key}") }
+    before = keys.index_with { |key| Setting.find_by!(var: key).value }
+
+    with_env_overrides("OLD_SECRET_KEY_BASE" => OLD_SECRET_KEY_BASE) do
+      output = capture_io { @task.invoke }.first
+      result = JSON.parse(output.lines.last)
+      assert result["ok"]
+      assert result["dry_run"]
+      keys.each do |key|
+        assert_equal "would_reencrypt", result["results"][key]
+        assert_equal before[key], Setting.find_by!(var: key).value
+      end
+
+      @task.reenable
+      output = capture_io { @task.invoke("0") }.first
+      result = JSON.parse(output.lines.last)
+      assert result["ok"]
+      keys.each do |key|
+        assert_equal "reencrypted", result["results"][key]
+        assert_equal "synthetic-#{key}", Setting[key]
+        refute_equal before[key], Setting.find_by!(var: key).value
+      end
+
+      @task.reenable
+      output = capture_io { @task.invoke("0") }.first
+      result = JSON.parse(output.lines.last)
+      keys.each { |key| assert_equal "current", result["results"][key] }
+    end
+  end
+
   test "refuses to run without OLD_SECRET_KEY_BASE" do
     output = with_env_overrides("OLD_SECRET_KEY_BASE" => nil) do
       capture_io { assert_raises(SystemExit) { @task.invoke("0") } }.first

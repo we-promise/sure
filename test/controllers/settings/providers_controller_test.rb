@@ -327,17 +327,13 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "correctly identifies declared vs dynamic fields" do
-    # All current provider fields are dynamic, but the logic should correctly
-    # distinguish between declared and dynamic fields
     with_self_hosting do
       # plaid_client_id is a dynamic field (not defined in Setting)
       refute Setting.singleton_class.method_defined?(:plaid_client_id=),
         "plaid_client_id= should NOT be defined on Setting's singleton class"
 
-      # openai_model IS a declared field (defined in Setting)
-      # but it's not a provider field, so it won't go through this controller
-      assert Setting.singleton_class.method_defined?(:openai_model=),
-        "openai_model= should be defined on Setting's singleton class"
+      assert Setting.singleton_class.method_defined?(:plaid_secret=)
+      assert Setting.singleton_class.method_defined?(:plaid_eu_secret=)
     end
   end
 
@@ -356,7 +352,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "batches multiple dynamic fields from same provider atomically" do
+  test "batches declared and dynamic fields from same provider atomically" do
     # Test that multiple fields from Plaid are updated as individual entries
     with_self_hosting do
       # Clear existing fields
@@ -381,7 +377,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "batches dynamic fields from multiple providers atomically" do
+  test "batches provider fields from multiple providers atomically" do
     # Test that fields from different providers are stored as individual entries
     with_self_hosting do
       # Clear existing fields
@@ -457,6 +453,36 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
 
       # Secret should remain unchanged
       assert_equal "real_secret", Setting["plaid_secret"]
+    end
+  end
+
+  test "existing provider forms save and mask declared Plaid secrets" do
+    %w[plaid plaid_eu].each do |provider|
+      key = "#{provider}_secret"
+      secret = "synthetic-#{provider}-secret"
+      patch settings_providers_url, params: { setting: {
+        "#{provider}_client_id" => "synthetic-client", key => secret
+      } }
+
+      assert_redirected_to settings_providers_url
+      ciphertext = Setting.find_by!(var: key).value
+      refute_includes ciphertext, secret
+      assert_equal secret, Setting[key]
+      assert_not Setting.exists?(var: "dynamic:#{key}")
+
+      get connect_form_settings_providers_path(provider_key: provider)
+      assert_response :success
+      assert_select "input[name=?][type=password][value=?]", "setting[#{key}]", "********"
+      refute_includes response.body, secret
+      refute_includes response.body, ciphertext
+
+      patch settings_providers_url, params: { setting: { key => "********" } }
+      assert_redirected_to settings_providers_url
+      assert_equal ciphertext, Setting.find_by!(var: key).value
+
+      patch settings_providers_url, params: { setting: { key => "" } }
+      assert_redirected_to settings_providers_url
+      assert_nil Setting[key]
     end
   end
 
