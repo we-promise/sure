@@ -115,11 +115,20 @@ class User < ApplicationRecord
   # unknown emails. The legacy lookup runs first on every login (one indexed
   # query) so that legacy and encrypted rows cost the same single password
   # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  # A user without a local password (SSO only) still costs one hash, so
+  # response time does not reveal such accounts. A non-String password (a
+  # JSON number) is checked as text instead of raising.
   def self.authenticate_by_email(email:, password:)
-    return nil if password.nil? || password.empty?
+    return nil if password.nil? || password.to_s.empty?
 
+    password = password.to_s
     normalized = email.to_s.strip.downcase
     legacy_user = find_by_legacy_plaintext_email(normalized)
+    user = legacy_user || find_by(email: normalized)
+    if user && user.password_digest.blank?
+      new(password: password)
+      return nil
+    end
     return authenticate_by(email: normalized, password: password) unless legacy_user
 
     legacy_user if legacy_user.authenticate(password)
@@ -204,13 +213,18 @@ class User < ApplicationRecord
 
   # Setting values are shared by every family on the instance, so changing them
   # is a super admin's job: a family admin is anyone who signed up. A
-  # self-hosted instance with a single family has no other tenant to protect,
-  # and installs that predate the super_admin role may not have one, so that
-  # family's admins keep access there.
+  # self-hosted instance with a single real family has no other tenant to
+  # protect. Generated demo households must neither revoke that family's access
+  # nor grant instance access to demo users. Use the generator's synthetic
+  # subscription marker, never an editable family name or user email.
   def manages_instance_settings?
     return true if super_admin?
+    return false unless admin? && Rails.application.config.app_mode.self_hosted?
+    return false if family.subscription&.synthetic?
+    return true if Family.count == 1
 
-    admin? && Rails.application.config.app_mode.self_hosted? && Family.count == 1
+    demo_family_ids = Subscription.where(stripe_id: Subscription::DEMO_STRIPE_ID).select(:family_id)
+    Family.where.not(id: demo_family_ids).limit(2).pluck(:id) == [ family_id ]
   end
 
   def accessible_accounts

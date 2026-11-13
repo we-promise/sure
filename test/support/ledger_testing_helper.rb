@@ -135,6 +135,63 @@ module LedgerTestingHelper
     created_account
   end
 
+  # A manual loan whose opening anchor is its origination: the shape the
+  # principal replay is allowed to run for.
+  def create_loan_account(entries:, **loan_attrs)
+    currency = loan_attrs.delete(:currency) || "USD"
+    account = create_account_with_ledger(
+      account: { type: Loan, currency: currency },
+      entries: entries
+    )
+    account.loan.update!(
+      {
+        subtype: "mortgage",
+        interest_rate: 12,
+        term_months: 360,
+        rate_type: "fixed",
+        start_date: Date.new(2026, 1, 1),
+        initial_balance: 20_000
+      }.merge(loan_attrs)
+    )
+    account.reload
+  end
+
+  def create_checking_account(account)
+    @checking_accounts ||= {}
+    @checking_accounts[account.family_id] ||= account.family.accounts.create!(
+      name: "Checking",
+      balance: 10_000,
+      currency: account.currency,
+      accountable: Depository.new
+    )
+  end
+
+  def create_linked_loan_payment(account, amount, date)
+    Transfer::Creator.new(
+      family: account.family,
+      source_account_id: create_checking_account(account).id,
+      destination_account_id: account.id,
+      date: date,
+      amount: amount
+    ).create
+  end
+
+  def create_linked_loan_drawdown(account, amount, date)
+    Transfer::Creator.new(
+      family: account.family,
+      source_account_id: account.id,
+      destination_account_id: create_checking_account(account).id,
+      date: date,
+      amount: amount
+    ).create
+  end
+
+  def enable_preview_features_for_family!(family)
+    family.users.each do |user|
+      user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    end
+  end
+
   def assert_calculated_ledger_balances(calculated_data:, expected_data:)
     # Convert expected data to a hash for easier lookup
     # Structure: [ { date:, legacy_balances: { balance:, cash_balance: }, balances: { start:, start_cash:, etc... }, flows: { ... }, adjustments: { ... } } ]

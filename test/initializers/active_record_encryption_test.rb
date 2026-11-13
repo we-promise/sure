@@ -3,6 +3,14 @@
 require "test_helper"
 
 class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
+  # Both settings are gated on ActiveRecordEncryptionConfig.backfill_completed?
+  # (see #3214) instead of being unconditionally on. They're expected to be
+  # `true` here because the initializer runs once at boot, before this test
+  # (or any test) can flip Setting.encryption_backfill_completed_version -
+  # the test suite always boots in the "backfill not completed" state.
+  # Coverage for the gating logic itself (both the "complete" and
+  # "not complete" branches) lives in test/lib/active_record_encryption_config_test.rb,
+  # since re-running the initializer per-test isn't possible.
   test "supports reading legacy plaintext data written before encryption was correctly gated" do
     # Without this, any not-yet-backfilled row (see bin/rails
     # security:backfill_encryption) raises ActiveRecord::Encryption::Errors::Decryption
@@ -14,6 +22,21 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     # Without this, deterministic lookups (e.g. User.find_by(email:)) only
     # match already-encrypted rows and silently miss not-yet-backfilled ones.
     assert Rails.application.config.active_record.encryption.extend_queries
+  end
+
+  # jjmata flagged that ExtendedDeterministicQueries/
+  # ExtendedDeterministicUniquenessValidator (called directly in
+  # config/initializers/active_record_encryption.rb - see its comment for
+  # why the public extend_queries config flag alone isn't enough) are
+  # undocumented Rails internals, not part of the public config surface. A
+  # routine Rails patch/minor bump that renames or removes `install_support`
+  # would otherwise raise NameError/NoMethodError synchronously at boot for
+  # every self-hosted install still in the pre-backfill fallback window,
+  # discovered in production rather than here. This turns that into a named,
+  # obvious test failure instead.
+  test "the private Rails APIs extend_queries depends on still exist" do
+    assert_respond_to ActiveRecord::Encryption::ExtendedDeterministicQueries, :install_support
+    assert_respond_to ActiveRecord::Encryption::ExtendedDeterministicUniquenessValidator, :install_support
   end
 
   test "reads a legacy plaintext string value without raising" do
@@ -59,6 +82,125 @@ class ActiveRecordEncryptionInitializerTest < ActiveSupport::TestCase
     # The direct read still works (support_unencrypted_data) - only the
     # deterministic query match is affected.
     assert_equal "legacy-plaintext@example.com", user.reload.email
+  end
+
+  test "User.find_by_email_with_legacy_fallback works around the known limitation for legacy plaintext rows" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
+    )
+
+    assert_equal user, User.find_by_email_with_legacy_fallback("legacy-plaintext@example.com")
+    # Also matches with surrounding whitespace/mixed case, like a raw form param.
+    assert_equal user, User.find_by_email_with_legacy_fallback("  Legacy-Plaintext@Example.com  ")
+  end
+
+  test "User.authenticate_by_email works around the known limitation for legacy plaintext rows" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    user.update!(password: "correct-horse-battery-staple")
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
+    )
+
+    assert_equal user, User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "correct-horse-battery-staple")
+    assert_nil User.authenticate_by_email(email: "legacy-plaintext@example.com", password: "wrong-password")
+  end
+
+  test "User.authenticate_by_email runs exactly one password check for an already-encrypted user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    user.update!(password: "correct-horse-battery-staple")
+
+    BCrypt::Password.expects(:create).never
+    BCrypt::Password.any_instance.expects(:is_password?).twice.returns(true, false)
+
+    assert_equal user, User.authenticate_by_email(email: user.email, password: "correct-horse-battery-staple")
+    assert_nil User.authenticate_by_email(email: user.email, password: "wrong-password")
+  end
+
+  test "User.authenticate_by_email still hashes the password for an SSO-only user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+    user.update_column(:password_digest, nil)
+
+    digest = BCrypt::Password.create("whatever", cost: BCrypt::Engine::MIN_COST)
+    BCrypt::Password.expects(:create).once.returns(digest)
+
+    assert_nil User.authenticate_by_email(email: user.email, password: "whatever")
+  end
+
+  test "User.authenticate_by_email rejects a blank or non-String password without raising" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    user = users(:family_admin)
+
+    BCrypt::Password.expects(:create).never
+    assert_nil User.authenticate_by_email(email: user.email, password: "")
+    assert_nil User.authenticate_by_email(email: user.email, password: nil)
+    assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "")
+
+    BCrypt::Password.unstub(:create)
+    assert_nil User.authenticate_by_email(email: user.email, password: 123456)
+  end
+
+  test "User.authenticate_by_email returns nil for an email that matches no user, plaintext or encrypted" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "whatever")
+  end
+
+  test "User.authenticate_by_email still hashes the password for an email that matches no user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    # A miss must cost one bcrypt digest, like a hit, so response time does
+    # not reveal whether an email is registered.
+    digest = BCrypt::Password.create("whatever", cost: BCrypt::Engine::MIN_COST)
+    BCrypt::Password.expects(:create).once.returns(digest)
+
+    assert_nil User.authenticate_by_email(email: "no-such-user@example.com", password: "whatever")
+  end
+
+  test "email uniqueness also catches a legacy plaintext row" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    # Unlike find_by(email:), the uniqueness validator's query is extended to
+    # plaintext rows, so an SSO signup or email change cannot duplicate a
+    # not-yet-backfilled user.
+
+    user = users(:family_admin)
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", "legacy-plaintext@example.com", user.id ])
+    )
+
+    duplicate = User.new(email: "Legacy-Plaintext@example.com", family: Family.new, skip_password_validation: true)
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:email, :taken)
+
+    # The legacy user itself can still be saved.
+    user.reload.first_name = "Renamed"
+    assert user.valid?, user.errors.full_messages.to_sentence
+  end
+
+  test "deterministic find_by matches a legacy plaintext row for downcase attributes without a model-level normalizes declaration" do
+    skip "Encryption not configured" unless Invitation.encryption_ready? && InviteCode.encryption_ready?
+
+    invitation = invitations(:one)
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE invitations SET email = ? WHERE id = ?", "legacy-invite@example.com", invitation.id ])
+    )
+    assert_equal invitation, Invitation.find_by(email: "legacy-invite@example.com")
+
+    invite_code = InviteCode.create!
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE invite_codes SET token = ? WHERE id = ?", "legacy-token-xyz", invite_code.id ])
+    )
+    assert_equal invite_code, InviteCode.find_by(token: "legacy-token-xyz")
   end
 
   test "reads a legacy plaintext jsonb value as its original Hash, not a String" do
