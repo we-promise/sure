@@ -31,7 +31,7 @@ class PagesController < ApplicationController
   # anywhere. Customize mode, the period picker and each widget's own month
   # links and filter forms carry them along, so changing one control doesn't
   # jump the other widgets back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, :cashflow_month, { money_flow_account_ids: [], spending_category_ids: [], cashflow_account_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -231,14 +231,20 @@ class PagesController < ApplicationController
           }
         },
         "cashflow_donut" => -> {
-          cashflow_data = build_cashflow_donut_data(dashboard_net_totals)
+          accounts = dashboard_income_statement.eligible_accounts
           {
             key: "cashflow_donut",
             title: "pages.dashboard.cashflow_donut.title",
             partial: "pages/dashboard/cashflow_donut",
             layout: section_layout("cashflow_donut"),
-            locals: { cashflow_data: cashflow_data, period: @period },
-            visible: @accounts.any? && cashflow_data[:has_categories],
+            locals: {
+              cashflow_data: build_cashflow_donut_data(dashboard_month_param(:cashflow_month), dashboard_account_ids_param(:cashflow_account_ids, accounts), accounts),
+              accounts: accounts,
+              accessible_account_ids: Current.user.accessible_accounts.pluck(:id).map(&:to_s),
+              view_params: @dashboard_view_params
+            },
+            # Stays visible with no data so the month picker can lead back out.
+            visible: @accounts.any?,
             collapsible: true
           }
         },
@@ -594,7 +600,15 @@ class PagesController < ApplicationController
     # budget: unspent income is a muted track on the outflows ring, spending
     # beyond income is an "over" slice on the inflows ring. Either way both
     # rings close and the gap between them is the difference.
-    def build_cashflow_donut_data(net_totals)
+    #
+    # Like money_flow, the widget has its own month (capped at today while in
+    # progress) and account filter, independent of the dashboard period.
+    # nil account_ids means every eligible account.
+    def build_cashflow_donut_data(month, account_ids, eligible_accounts)
+      period = Period.custom(start_date: month, end_date: [ month.end_of_month, Date.current ].min)
+      statement = account_ids ? Current.family.income_statement(accounts: eligible_accounts.where(id: account_ids)) : dashboard_income_statement
+      net_totals = statement.net_category_totals(period: period)
+
       total_income = net_totals.total_net_income
       total_expense = net_totals.total_net_expense
       net = total_income - total_expense
@@ -619,8 +633,29 @@ class PagesController < ApplicationController
         total_income: total_income.to_f.round(2),
         total_expense: total_expense.to_f.round(2),
         net: net.to_f.round(2),
-        currency: net_totals.currency
+        currency: net_totals.currency,
+        month: month,
+        period: period,
+        account_ids: account_ids
       }
+    end
+
+    # A widget's own month param, clamped to the current month: a future
+    # month would end before it starts once capped at Date.current, which
+    # Period.custom rejects.
+    def dashboard_month_param(key)
+      current_month = Date.current.beginning_of_month
+      month = Date.strptime(params[key], "%Y-%m-%d").beginning_of_month
+      month > current_month ? current_month : month
+    rescue ArgumentError, TypeError
+      current_month
+    end
+
+    # nil means all of the widget's eligible accounts (its unfiltered state)
+    def dashboard_account_ids_param(key, eligible_accounts)
+      ids = Array(params[key]).reject(&:blank?)
+      ids &= eligible_accounts.map { |a| a.id.to_s }
+      ids.presence
     end
 
     def cashflow_donut_segments(category_totals, id_prefix)

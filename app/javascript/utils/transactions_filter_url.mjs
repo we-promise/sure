@@ -18,11 +18,13 @@ export function buildCategoryTransactionsUrl({
   filterValue,
   startDate,
   endDate,
+  accountIds = [],
   basePath = "/transactions",
 }) {
   const params = new URLSearchParams();
   params.append("q[categories][]", filterValue);
   if (startDate) params.append("q[start_date]", startDate);
   if (endDate) params.append("q[end_date]", endDate);
+  for (const id of accountIds) params.append("q[account_ids][]", id);
   return `${basePath}?${params.toString()}`;
 }
