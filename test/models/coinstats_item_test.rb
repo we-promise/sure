@@ -228,4 +228,13 @@ class CoinstatsItemTest < ActiveSupport::TestCase
 
     assert_equal "1 crypto wallets synced, 1 need setup", @coinstats_item.sync_status_summary
   end
+
+  test "declares api_key and raw payloads as encrypted" do
+    skip "Encryption not configured" unless CoinstatsItem.encryption_ready?
+
+    encrypted = Array(CoinstatsItem.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "api_key"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
+  end
 end

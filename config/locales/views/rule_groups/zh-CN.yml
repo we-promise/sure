@@ -1,0 +1,23 @@
+---
+zh-CN:
+  rule_groups:
+    new:
+      title: 新建规则分组
+    edit:
+      title: 重命名分组“%{name}”
+    form:
+      name_label: 名称
+      name_placeholder: 例如：日用品
+      hint: 分组仅用于整理规则列表。规则仍会自上而下依次运行。
+    create:
+      success: 已创建分组
+    update:
+      success: 已重命名分组
+    destroy:
+      success: 已删除分组。其规则保留在原位置且不再属于任何分组。
+    activation:
+      activated: “%{name}”中的所有规则均已开启
+      deactivated: “%{name}”中的所有规则均已关闭
+      partially_switched:
+        one: 1 条规则无法切换。请打开该规则查看原因。
+        other: "%{count} 条规则无法切换。请打开查看原因。"

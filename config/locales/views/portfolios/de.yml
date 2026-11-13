@@ -1,0 +1,14 @@
+---
+de:
+  portfolios:
+    empty_state:
+      add_account: Anlagekonto hinzufügen
+      description: Depot-, Vorsorge- und Krypto-Konten, die du in deine Finanzen und Berichte einbeziehst, erscheinen hier mit ihrem Saldo.
+      title: Keine Anlagekonten zum Anzeigen
+    sections:
+      accounts: Konten
+    show:
+      section_aria: "Abschnitt %{title}. Drücke Enter oder Leertaste, um ihn zum Umsortieren zu greifen, dann bewege ihn mit den Pfeiltasten."
+      sections_aria: Portfolio-Abschnitte
+      subtitle: Deine Anlagekonten und was jedes davon wert ist.
+      title: Portfolio
