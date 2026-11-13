@@ -27,6 +27,21 @@ class TradeRepublicAccount::ActivitiesProcessor
   }.freeze
   CASH_UNLABELED_KEYS = %w[contribution withdrawal].freeze
   SETTLEMENT_COUNTERPART_PREFIX = "trade_republic_settlement_"
+  # Some Trade Republic event types can be a credit or a debit: a tax
+  # correction can raise the tax instead of refunding it, and a corporate
+  # action cash payment can carry a Vorabpauschale charge. Their category
+  # says nothing about the direction, so the signed provider amount decides
+  # when it is present and non-zero; every other type keeps its category
+  # direction. The ssp_*_invoice forms are the same events as their SSP_*
+  # counterparts.
+  SIGNED_AMOUNT_EVENT_TYPES = %w[
+    SSP_TAX_CORRECTION
+    ssp_tax_correction_invoice
+    TAX_REFUND
+    SSP_CORPORATE_ACTION_CASH
+    ssp_corporate_action_invoice_cash
+    SSP_CORPORATE_ACTION_CASH_NON_DIVIDEND
+  ].freeze
   # Keeps the diagnostics entry small for accounts with a long backlog.
   MAX_LOGGED_INCOMPLETE_EXECUTIONS = 50
 
@@ -209,6 +224,11 @@ class TradeRepublicAccount::ActivitiesProcessor
       # cancel out, so the item books nothing.
       return nil if Provider::TradeRepublicTimelineEvent.stamp_duty_cancellation?(event)
 
+      # Tax corrections and corporate action cash can be a credit or a debit;
+      # for those the signed provider amount decides the direction, and every
+      # other cash movement keeps its category direction.
+      cash_sign = signed_amount_sign(event, detail) || -1
+
       case event_category(event)
       when CATEGORY_ORDER_EXECUTION
         return nil if duplicate_savings_plan_invoice?(event, detail, date)
@@ -216,13 +236,13 @@ class TradeRepublicAccount::ActivitiesProcessor
 
         import_order_execution(event, detail, external_id, date) ? :trade : nil
       when CATEGORY_DEPOSIT
-        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "contribution"), sign: -1)
+        import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "contribution"), sign: cash_sign)
       when CATEGORY_WITHDRAWAL
         import_labeled_cash_movement(event, detail, external_id, date, cash_label_key(event, default: "withdrawal"), sign: 1)
       when CATEGORY_INTEREST
         import_labeled_cash_movement(event, detail, external_id, date, "interest", sign: -1)
       when CATEGORY_DIVIDEND
-        import_labeled_cash_movement(event, detail, external_id, date, "dividend", sign: -1)
+        import_labeled_cash_movement(event, detail, external_id, date, "dividend", sign: cash_sign)
       end
     rescue => e
       DebugLogEntry.capture(
@@ -680,6 +700,20 @@ class TradeRepublicAccount::ActivitiesProcessor
 
       event[:category].to_s.presence ||
         Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES[event[:eventType].to_s].to_s
+    end
+
+    # The sign the provider amount carries for event types whose category
+    # does not decide the direction, or nil to keep the category sign.
+    # Trade Republic signs money out as negative and money in as positive;
+    # import_cash_movement books money out as a positive amount, so the
+    # signs are flipped here.
+    def signed_amount_sign(event, detail)
+      return nil unless SIGNED_AMOUNT_EVENT_TYPES.include?(event[:eventType].to_s)
+
+      signed_amount = parse_decimal(detail[:signed_amount])
+      return nil if signed_amount.nil? || signed_amount.zero?
+
+      signed_amount.negative? ? 1 : -1
     end
 
     def cash_label_key(event, default:)
