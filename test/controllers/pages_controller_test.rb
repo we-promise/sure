@@ -339,7 +339,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-controller='sankey-chart']"
   end
 
-  test "dashboard renders the cash flow rings with a surplus closing the outflows ring" do
+  test "dashboard renders the cash flow rings with unspent income as a muted track on the outflows ring" do
     create_transaction(account: @family.accounts.first, name: "Salary", amount: -100_000, category: categories(:income))
     create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
 
@@ -347,28 +347,30 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     assert_select "#cashflow-donut-section"
-    assert_select "#segment_surplus"
-    assert_select "#segment_deficit", count: 0
+    assert_select "#segment_unused"
+    assert_select "#segment_overage", count: 0
+    assert_select "#cashflow-donut-section [data-donut-chart-target='defaultContent']", text: /Spent.*of .* income.* left/m
 
     inflows, outflows = cashflow_donut_rings
     assert inflows.any? { |s| s["id"] == "income_#{categories(:income).id}" }
-    assert_equal "surplus", outflows.last["id"]
+    assert_equal "unused", outflows.last["id"]
     assert_nil outflows.last["filter_value"]
     assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
   end
 
-  test "dashboard renders the cash flow rings with a deficit closing the inflows ring" do
+  test "dashboard renders the cash flow rings with overspend as an overage slice on the inflows ring" do
     create_transaction(account: @family.accounts.first, name: "Salary", amount: -100, category: categories(:income))
     create_transaction(account: @family.accounts.first, name: "Rent", amount: 100_000, category: categories(:food_and_drink))
 
     get root_path
 
     assert_response :ok
-    assert_select "#segment_deficit"
-    assert_select "#segment_surplus", count: 0
+    assert_select "#segment_overage"
+    assert_select "#segment_unused", count: 0
+    assert_select "#cashflow-donut-section [data-donut-chart-target='defaultContent']", text: /over/
 
     inflows, outflows = cashflow_donut_rings
-    assert_equal "deficit", inflows.last["id"]
+    assert_equal "overage", inflows.last["id"]
     assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
   end
 

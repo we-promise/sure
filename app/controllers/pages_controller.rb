@@ -590,9 +590,10 @@ class PagesController < ApplicationController
       { categories: categories, total: total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
     end
 
-    # Two rings on one scale: inflows by category and outflows by category.
-    # The difference is drawn on the smaller ring (surplus beside the outflows,
-    # deficit beside the inflows), so both rings close and the gap is readable.
+    # Two rings on one scale, read like a budget gauge with income as the
+    # budget: unspent income is a muted track on the outflows ring, spending
+    # beyond income is an "over" slice on the inflows ring. Either way both
+    # rings close and the gap between them is the difference.
     def build_cashflow_donut_data(net_totals)
       total_income = net_totals.total_net_income
       total_expense = net_totals.total_net_expense
@@ -603,10 +604,12 @@ class PagesController < ApplicationController
       outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense")
       has_categories = inflows.any? || outflows.any?
 
+      # "unused"/"overage" are the donut controller's special segment ids:
+      # colours pass through untouched, unused sorts last and overage first.
       if net.positive?
-        outflows << cashflow_donut_balance_segment("surplus", net, ring_total, "var(--color-success)", "piggy-bank", net_totals.currency)
+        outflows << cashflow_donut_balance_segment("unused", t("pages.dashboard.cashflow_donut.left"), net, ring_total, "var(--budget-unused-fill)", "piggy-bank", net_totals.currency)
       elsif net.negative?
-        inflows << cashflow_donut_balance_segment("deficit", net.abs, ring_total, "var(--color-destructive)", "trending-down", net_totals.currency)
+        inflows << cashflow_donut_balance_segment("overage", t("pages.dashboard.cashflow_donut.over"), net.abs, ring_total, "var(--color-destructive)", "trending-down", net_totals.currency)
       end
 
       {
@@ -640,10 +643,10 @@ class PagesController < ApplicationController
         end
     end
 
-    def cashflow_donut_balance_segment(id, amount, ring_total, color, icon, currency)
+    def cashflow_donut_balance_segment(id, name, amount, ring_total, color, icon, currency)
       {
         id: id,
-        name: t("pages.dashboard.cashflow_donut.#{id}"),
+        name: name,
         filter_value: nil,
         amount: amount.to_f.round(2),
         currency: currency,

@@ -10,7 +10,7 @@ class DashboardCashflowDonutTest < ApplicationSystemTestCase
     create_transaction(account: account, name: "Groceries", amount: 100, category: categories(:food_and_drink))
   end
 
-  test "draws inflows and outflows as two concentric rings with the surplus closing the inner ring" do
+  test "draws inflows and outflows as two concentric rings with unspent income closing the inner ring" do
     sign_in @user
 
     within "#cashflow-donut-section" do
@@ -19,8 +19,9 @@ class DashboardCashflowDonutTest < ApplicationSystemTestCase
 
       assert rings.first.has_css?("path.visible-path[data-segment-id='income_#{categories(:income).id}']", visible: :all)
       assert rings.last.has_no_css?("path.visible-path[data-segment-id='income_#{categories(:income).id}']", visible: :all)
-      assert rings.last.has_css?("path.visible-path[data-segment-id='surplus']", visible: :all)
-      assert_text "Net Cash Flow"
+      assert rings.last.has_css?("path.visible-path[data-segment-id='unused']", visible: :all)
+      assert_text "Spent"
+      assert_text "left"
     end
   end
 end

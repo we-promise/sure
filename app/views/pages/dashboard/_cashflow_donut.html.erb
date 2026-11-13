@@ -25,12 +25,26 @@
           <div data-donut-chart-target="contentContainer" class="flex justify-center items-center h-full">
             <div data-donut-chart-target="defaultContent" class="flex flex-col items-center">
               <div class="text-secondary text-sm mb-2">
-                <span><%= t("pages.dashboard.cashflow_donut.net_cash_flow") %></span>
+                <span><%= t("pages.dashboard.cashflow_donut.spent") %></span>
               </div>
 
-              <div data-donut-chart-target="amount" class="text-3xl font-medium privacy-sensitive whitespace-nowrap <%= cashflow_data[:net].negative? ? "text-destructive" : "text-primary" %>">
-                <%= format_money Money.new(cashflow_data[:net], cashflow_data[:currency]) %>
+              <div data-donut-chart-target="amount" class="text-3xl font-medium text-primary privacy-sensitive whitespace-nowrap">
+                <%= format_money Money.new(cashflow_data[:total_expense], cashflow_data[:currency]) %>
               </div>
+
+              <p class="text-sm text-secondary privacy-sensitive whitespace-nowrap mt-1">
+                <%= t("pages.dashboard.cashflow_donut.of_income", amount: format_money(Money.new(cashflow_data[:total_income], cashflow_data[:currency]))) %>
+              </p>
+
+              <% if cashflow_data[:net].negative? %>
+                <p class="text-sm font-medium text-destructive privacy-sensitive whitespace-nowrap mt-2">
+                  <%= t("pages.dashboard.cashflow_donut.over_amount", amount: format_money(Money.new(cashflow_data[:net].abs, cashflow_data[:currency]))) %>
+                </p>
+              <% else %>
+                <p class="text-sm font-medium text-success privacy-sensitive whitespace-nowrap mt-2">
+                  <%= t("pages.dashboard.cashflow_donut.left_amount", amount: format_money(Money.new(cashflow_data[:net], cashflow_data[:currency]))) %>
+                </p>
+              <% end %>
             </div>
 
             <% all_segments.each do |segment| %>

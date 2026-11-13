@@ -134,11 +134,14 @@ en:
         weight: "Weight"
       cashflow_donut:
         title: "Cash Flow Rings"
-        net_cash_flow: "Net Cash Flow"
+        spent: "Spent"
+        of_income: "of %{amount} income"
+        left_amount: "%{amount} left"
+        over_amount: "%{amount} over"
+        left: "Left to spend"
+        over: "Over income"
         inflows: "Inflows"
         outflows: "Outflows"
-        surplus: "Surplus"
-        deficit: "Deficit"
         weight: "Weight"
       investment_summary:
         title: "Investments"
