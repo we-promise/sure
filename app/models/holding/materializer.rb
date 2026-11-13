@@ -75,8 +75,10 @@ class Holding::Materializer
       end
       rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, clamped: true) }
 
-      # Only the reverse walk knows the units held before the trades.
-      HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse)
+      # Only the reverse walk knows the units held before the trades. Holdings
+      # a caller built from trades alone are fully explained by them, so any
+      # opening lot an earlier reverse walk left for them goes.
+      HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse || !@calculated_holdings.nil?)
     end
 
     # A caller that persists only part of a calculation (the trade fallback

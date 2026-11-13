@@ -608,6 +608,26 @@ class Balance::MaterializerTest < ActiveSupport::TestCase
     assert_not account.holding_lots.where(security: other).exists?
   end
 
+  # The reverse path keeps an opening lot for a position its trades do not
+  # explain. Once the trades do, the position is built from them alone, so
+  # that opening lot goes.
+  test "a security the trade fallback takes back from the reverse path keeps no opening lot" do
+    account = linked_investment_account
+    security = Security.create!(ticker: "BACKX", name: "Taken back")
+    (10.days.ago.to_date..Date.current).each { |date| Security::Price.create!(security: security, date: date, price: 100) }
+    create_valuation(account: account, amount: 10_000, date: 1.day.ago.to_date, kind: "current_anchor")
+    create_trade(security, account: account, qty: -2, date: 3.days.ago.to_date, price: 100)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+    assert account.reload.holding_lots.opening.where(security: security).exists?, "precondition: the reverse path left an opening lot"
+
+    create_trade(security, account: account, qty: 5, date: 8.days.ago.to_date, price: 100)
+    Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+
+    lots = account.reload.holding_lots.where(security: security)
+    assert_not lots.opening.exists?
+    assert_equal [ 3 ], lots.derived.map(&:qty)
+  end
+
   test "pre-built holdings without their calculator are refused" do
     account, _security = linked_account_with_trade
 
