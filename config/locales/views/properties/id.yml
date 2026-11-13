@@ -1,0 +1,135 @@
+---
+id:
+  properties:
+    edit:
+      edit: Edit %{account}
+      title: Masukkan properti secara manual
+    form:
+      address_line1: Alamat jalan
+      address_line1_placeholder: 123 Main St
+      area: Luas bangunan
+      area_placeholder: '2000'
+      area_unit: Satuan ukuran
+      country: Negara
+      country_placeholder: US
+      locality: Kota
+      locality_placeholder: San Francisco
+      none: Tidak ada
+      postal_code: Kode pos
+      postal_code_placeholder: '94105'
+      region: Provinsi/Wilayah
+      region_placeholder: CA
+      subtype_prompt: Pilih jenis properti
+      year_built: Tahun dibangun
+      year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+      chimnie: Chimnie
+    new:
+      title: Masukkan properti secara manual
+      next: Lanjut
+      avm_option: Tambah via %{provider}
+      avm_title: Tambah properti via %{provider}
+      avm_description: "Masukkan nama properti dan alamatnya. %{provider} akan mencari detail properti dan estimasi nilai pasar untuk Anda."
+      avm_us_only: "%{provider} hanya mendukung properti yang berlokasi di Amerika Serikat."
+      avm_uk_only: "%{provider} hanya mendukung properti residensial yang berlokasi di Inggris Raya."
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_uprn_help: "Nomor Referensi Properti Unik (hingga 12 digit) yang mengidentifikasi setiap alamat di Inggris Raya. Temukan di findmyaddress.co.uk GeoPlace atau tanyakan ke dewan lokal Anda. %{provider} menggunakannya untuk menilai properti secara gratis."
+      avm_county_label: "Wilayah/County (opsional)"
+      avm_town_label: Kota
+      avm_postcode_label: Kode pos
+      avm_submit: Cari properti
+      avm_preview_title: Konfirmasi detail properti
+      avm_preview_description: "Berikut yang ditemukan oleh %{provider}. Tinjau detail sebelum menambahkan properti — belum ada yang dibuat."
+      avm_preview_no_record: "%{provider} tidak dapat menemukan data properti pada alamat ini, sehingga nilai yang ditampilkan adalah estimasi berdasarkan area sekitar. Periksa kembali alamat sebelum melanjutkan."
+      avm_preview_back: Kembali
+      avm_preview_uprn: UPRN
+      avm_preview_range: Rentang estimasi
+      avm_preview_confidence: Tingkat keyakinan
+      avm_confidence:
+        high: Tinggi
+        medium: Sedang
+        low: Rendah
+      avm_attribution_chimnie: "Data penilaian dari Chimnie. Berisi data OS © Crown copyright and database right, data Royal Mail © Royal Mail copyright and database right, dan data HM Land Registry © Crown copyright and database right, dilisensikan di bawah Open Government Licence v3.0."
+      avm_preview_confirm: Tambah properti
+    address:
+      title: Masukkan properti secara manual
+      address_line1_label: Baris Alamat 1
+      address_line1_placeholder: 123 Main Street
+      city_label: Kota
+      city_placeholder: San Francisco
+      state_region_label: Provinsi/Wilayah
+      state_region_placeholder: CA
+      postal_code_label: Kode Pos
+      postal_code_placeholder: '12345'
+      country_label: Negara
+      country_placeholder: USA
+      save: Simpan
+    balances:
+      title: Masukkan properti secara manual
+      market_value_label: Estimasi nilai pasar
+      market_value_tooltip: "Estimasi nilai pasar properti Anda. Angka ini sering ditemukan di situs seperti Zillow atau portal properti, dan bukan angka yang pasti."
+      save: Simpan
+      next: Lanjut
+    overview_fields:
+      name_label: Nama
+      name_placeholder: Rumah liburan
+      subtype_prompt: Pilih jenis
+      property_type_label: Jenis properti
+      year_built_label: "Tahun Dibangun (opsional)"
+      year_built_placeholder: '1990'
+      area_label: "Luas (opsional)"
+      area_placeholder: '1200'
+      square_feet: Kaki Persegi
+      square_meters: Meter Persegi
+      area_unit_label: Satuan Luas
+    overview:
+      living_area: Luas Bangunan
+      market_value: Nilai Pasar
+      purchase_price: Harga Pembelian
+      trend: Tren
+      unknown: Tidak Diketahui
+      year_built: Tahun Dibangun
+    tabs:
+      overview:
+        living_area: Luas Bangunan
+        market_value: Nilai Pasar
+        purchase_price: Harga Pembelian
+        trend: Tren
+        unknown: Tidak Diketahui
+        year_built: Tahun Dibangun
+        edit_account_details: Edit detail akun
+        refresh_valuation: Perbarui penilaian
+        valuation_source: "Dinilai oleh %{provider}, terakhir diperbarui pada %{date}"
+        link_valuation: Perbarui nilai secara otomatis dengan %{provider}
+        link_valuation_description: Nilai properti ini hanya diperbarui secara manual.
+    refresh_valuation:
+      queued: Pembaruan penilaian telah dimulai. Nilai baru akan segera muncul.
+      not_linked: Properti ini tidak terhubung ke penyedia penilaian.
+      not_configured: "%{provider} belum dikonfigurasi. Tambahkan kunci API-nya di Pengaturan → Self-Hosting untuk memperbarui penilaian ini."
+    link_valuation:
+      linked: Terhubung ke %{provider} dan memperbarui nilai properti.
+      link_failed: "%{provider} tidak dapat menilai properti ini, sehingga tidak terhubung. Periksa apakah alamat sudah benar, lalu coba lagi."
+      not_linkable: Properti ini tidak dapat dihubungkan ke penyedia tersebut. Periksa apakah alamatnya lengkap dan berada di negara yang didukung, serta mata uang akun sesuai dengan penyedia.
+    subtypes:
+      apartment:
+        short: Apartemen
+        long: Apartemen
+      plot:
+        short: Kavling
+        long: Kavling / Tanah
+      commercial:
+        short: Komersial
+        long: Properti Komersial
+      rented:
+        short: Disewakan
+        long: Properti Sewaan
+      agri_land:
+        short: Tanah Pertanian
+        long: Lahan Pertanian
+    form_tabs:
+      address: Alamat
+      overview: Ringkasan
+      value: Nilai

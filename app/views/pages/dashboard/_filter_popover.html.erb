@@ -1,0 +1,48 @@
+<%# locals: (button_text:, search_label:, apply_text:, hidden_fields: {}, list_controllers: "list-filter", url: root_path, method: :get, form_data: { turbo_frame: "dashboard_sections", turbo_action: "advance" }) %>
+<%# The checklist filter a dashboard widget puts beside its month picker: a
+    GET form back into the dashboard_sections frame, so the selection lives in
+    the URL, with a searchable list of options (yielded by the caller, one
+    pages/dashboard/filter_popover_option each) and an Apply button.
+    hidden_fields carries every other dashboard view param (the widget's own
+    month, the other widgets' months and filters) through the submit, so
+    applying this filter doesn't reset the rest of the dashboard. The submit
+    advances the address bar (as UI::PeriodPicker's links do), so the state
+    survives a refresh, a bookmark and Back. url, method and form_data let
+    another page reuse the checklist for a form that saves instead. %>
+<%= render DS::Popover.new(variant: :button, no_padding: true) do |popover| %>
+  <% popover.with_button(
+       type: "button",
+       text: button_text,
+       variant: "outline",
+       icon: "list-filter"
+     ) %>
+
+  <% popover.with_custom_content do %>
+    <%= form_with url: url, method: method, data: form_data, class: "p-3 w-56 space-y-2" do %>
+      <% hidden_fields.each do |name, value| %>
+        <% if value.is_a?(Array) %>
+          <% value.each do |item| %>
+            <%= hidden_field_tag "#{name}[]", item, id: nil %>
+          <% end %>
+        <% else %>
+          <%= hidden_field_tag name, value, id: nil %>
+        <% end %>
+      <% end %>
+
+      <div data-controller="<%= list_controllers %>">
+        <%= render DS::SearchInput.new(
+              variant: :embedded,
+              placeholder: search_label,
+              aria_label: search_label,
+              data: { list_filter_target: "input", action: "input->list-filter#filter" }
+            ) %>
+
+        <div class="my-2 max-h-64 overflow-y-auto space-y-1" data-list-filter-target="list">
+          <%= yield %>
+        </div>
+      </div>
+
+      <%= render DS::Button.new(type: "submit", text: apply_text, variant: "primary", full_width: true) %>
+    <% end %>
+  <% end %>
+<% end %>

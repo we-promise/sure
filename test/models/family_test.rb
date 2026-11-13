@@ -2,9 +2,32 @@ require "test_helper"
 
 class FamilyTest < ActiveSupport::TestCase
   include SyncableInterfaceTest
+  include SqlQueryCapture
 
   def setup
     @syncable = families(:dylan_family)
+  end
+
+  test "local_date is the date in the family's zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update!(timezone: "Australia/Sydney")
+    assert_equal Date.new(2026, 1, 16), family.local_date(evening_utc)
+
+    family.update!(timezone: "America/New_York")
+    assert_equal Date.new(2026, 1, 15), family.local_date(Time.utc(2026, 1, 16, 3, 0, 0))
+  end
+
+  test "local_date falls back to the app's zone for a blank or unknown zone" do
+    family = families(:dylan_family)
+    evening_utc = Time.utc(2026, 1, 15, 19, 0, 0)
+
+    family.update_column(:timezone, nil)
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
+
+    family.update_column(:timezone, "Mars/Olympus_Mons")
+    assert_equal evening_utc.in_time_zone(Time.zone).to_date, family.local_date(evening_utc)
   end
 
   test "investment_contributions_category creates category when missing" do
@@ -240,6 +263,53 @@ class FamilyTest < ActiveSupport::TestCase
     assert_not_equal before_destroy, family.reload.entries_cache_version
   end
 
+  test "build_cache_key changes when family currency changes" do
+    family = families(:empty)
+    before = family.build_cache_key("test_key")
+    family.update!(currency: "EUR")
+    after = family.reload.build_cache_key("test_key")
+
+    assert_not_equal before, after
+  end
+
+  test "build_cache_key changes through the account deletion lifecycle and does not revert" do
+    family = families(:dylan_family)
+    newer_account = accounts(:credit_card)
+    older_account = accounts(:depository)
+
+    newer_account.touch
+    k0 = family.build_cache_key("test_key")
+
+    older_account.mark_for_deletion!
+    k1 = family.reload.build_cache_key("test_key")
+
+    older_account.destroy!
+    k2 = family.reload.build_cache_key("test_key")
+
+    assert_not_equal k0, k1
+    assert_not_equal k1, k2
+    # Regression assertion for #4200: ensure key does not revert to pre-deletion state (k0)
+    assert_not_equal k0, k2
+  end
+
+  test "build_cache_key remains unchanged when nothing relevant has changed" do
+    family = families(:dylan_family)
+    key1 = family.build_cache_key("test_key", invalidate_on_data_updates: true)
+    key2 = family.reload.build_cache_key("test_key", invalidate_on_data_updates: true)
+
+    assert_equal key1, key2
+  end
+
+  test "accounts_status_version fetches count and max updated_at in a single query" do
+    family = families(:dylan_family)
+    queries = capture_sql_queries do
+      family.accounts_status_version
+    end
+
+    account_queries = queries.grep(/FROM "accounts"/i)
+    assert_equal 1, account_queries.size, "accounts_status_version should execute only one query"
+  end
+
   test "default currency comes from country ISO data" do
     assert_equal "CAD", Family.default_currency_for_country("CA")
     assert_equal "EUR", Family.default_currency_for_country("DE")
@@ -292,6 +362,39 @@ class FamilyTest < ActiveSupport::TestCase
     family.update!(enabled_currencies: [ "USD" ])
 
     assert_equal [ "SGD", "USD" ], family.reload.enabled_currency_codes
+  end
+
+  test "currency is saved as its ISO code" do
+    family = families(:dylan_family)
+    family.update!(currency: "eur")
+
+    assert_equal "EUR", family.reload.currency
+  end
+
+  test "an existing lowercase currency is saved as its ISO code" do
+    family = families(:dylan_family)
+    family.update_column(:currency, "eur")
+
+    family.update!(name: "Renamed family")
+
+    assert_equal "EUR", family.reload.currency
+  end
+
+  test "rejects a blank or unknown currency" do
+    family = families(:dylan_family)
+
+    [ "", nil, "XYZ" ].each do |value|
+      assert_not family.update(currency: value)
+      assert family.errors.of_kind?(:currency, :invalid)
+    end
+    assert_equal "USD", family.reload.currency
+  end
+
+  test "an existing unknown currency does not block unrelated updates" do
+    family = families(:dylan_family)
+    family.update_column(:currency, "XYZ")
+
+    assert family.update(name: "Renamed family")
   end
 
   test "empty enabled currencies keeps all currencies available" do
@@ -490,6 +593,20 @@ class FamilyTest < ActiveSupport::TestCase
     assert family.valid?
   end
 
+  test "stores an empty timezone from the settings form as nil" do
+    family = families(:dylan_family)
+    family.update!(timezone: "")
+
+    assert_nil family.reload.timezone
+  end
+
+  test "stores a Rails zone name as its IANA identifier" do
+    family = families(:dylan_family)
+    family.update!(timezone: " Pacific Time (US & Canada) ")
+
+    assert_equal "America/Los_Angeles", family.reload.timezone
+  end
+
   test "does not re-validate an existing invalid timezone when saving unrelated changes" do
     family = families(:dylan_family)
     # Bypasses validations, simulating data that predates this validation --
@@ -501,6 +618,39 @@ class FamilyTest < ActiveSupport::TestCase
 
     assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
     assert family.save
+  end
+
+  test "resolved_time_zone returns the family's zone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, "America/New_York")
+
+    assert_equal "America/New_York", family.resolved_time_zone.name
+  end
+
+  test "resolved_time_zone falls back to the app default and logs once for a stale/invalid zone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, "Invalid/Timezone")
+
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    assert_difference "DebugLogEntry.count", 1 do
+      2.times { assert_equal Time.zone, family.resolved_time_zone }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "warn", entry.level
+    assert_includes entry.message, "Invalid/Timezone"
+    assert_equal family, entry.family
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "resolved_time_zone falls back to the app default for a blank timezone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, nil)
+
+    assert_equal Time.zone, family.resolved_time_zone
   end
 
   test "balance_sheet memoizes per user for the same family instance" do
@@ -663,6 +813,37 @@ class FamilyTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
 
     assert_raises(ArgumentError) { family.resolved_categorization_provider }
+  end
+
+  test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+    transaction_date = Date.new(2025, 3, 10)
+    account.entries.create!(date: transaction_date, name: "Groceries",
+                            amount: -50, currency: "USD", entryable: Transaction.new)
+
+    assert_equal transaction_date, family.earliest_activity_date
+
+    # A Trade earlier than the Transaction must win, so a regression that
+    # drops Trade from the filter is caught (#4007).
+    trade_date = Date.new(2020, 6, 15)
+    account.entries.create!(date: trade_date, name: "Investment purchase",
+                            amount: 100, currency: "USD",
+                            entryable: Trade.new(security: securities(:aapl), qty: 1, price: 100, currency: "USD"))
+
+    assert_equal trade_date, family.earliest_activity_date
+  end
+
+  test "earliest_activity_date returns nil when family has no Transaction/Trade entries" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "House", balance: 0, currency: "USD", accountable: Depository.new)
+    account.entries.create!(date: Date.new(2000, 1, 15), name: "Old valuation",
+                            amount: 5000, currency: "USD", entryable: Valuation.new)
+
+    assert_nil family.earliest_activity_date
   end
 
   private

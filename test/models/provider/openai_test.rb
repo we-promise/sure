@@ -89,6 +89,48 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  # The registry and the settings form both stop a custom base URL without a
+  # model before it gets here; this is the provider's own guard behind them.
+  test "a custom base URL without a model is refused" do
+    error = assert_raises(Provider::Openai::Error) do
+      Provider::Openai.new("ollama-local", uri_base: "http://localhost:11434/v1", model: nil)
+    end
+
+    assert_match(/Model is required/, error.message)
+  end
+
+  test "a custom base URL accepts any model name, as a local server's models are its own" do
+    local = Provider::Openai.new("ollama-local", uri_base: "http://localhost:11434/v1", model: "llama3.1")
+
+    assert local.custom_provider?
+    assert local.supports_model?("llama3.1")
+    assert local.supports_model?("qwen2.5:32b")
+  end
+
+  # Some keys only work on a regional host, so setting one must not turn off
+  # the OpenAI-only paths like the Responses API and max_completion_tokens.
+  test "an OpenAI regional host is hosted OpenAI, not a custom provider" do
+    with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
+      regional = Provider::Openai.new("test-token", uri_base: "https://us.api.openai.com")
+
+      assert_not regional.custom_provider?
+      assert regional.supports_responses_endpoint?
+      assert_equal "OpenAI", regional.provider_name
+      assert Provider::Openai.native_pdf_completion_limit?(model: "gpt-6-luna", custom_provider: regional.custom_provider?)
+    end
+  end
+
+  test "only OpenAI's own hosts count as a hosted OpenAI endpoint" do
+    [ "https://api.openai.com", "https://api.openai.com/v1/", "https://us.api.openai.com", "https://EU.api.openai.com/v1" ].each do |url|
+      assert Provider::Openai.hosted_endpoint?(url), url
+    end
+
+    [ "http://us.api.openai.com", "https://evil-api.openai.com", "https://api.openai.com.example.com",
+      "https://us.api.openai.com/proxy", "https://us.api.openai.com:8443", "https://custom.example/v1", "not a url" ].each do |url|
+      assert_not Provider::Openai.hosted_endpoint?(url), url
+    end
+  end
+
   test "legacy and custom PDF processing preserve the fallback output limit" do
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
       Setting.stubs(:llm_max_response_tokens).returns(nil)
@@ -598,17 +640,31 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal "configured model: custom-model", custom_provider.supported_models_description
   end
 
-  test "upsert_langfuse_trace uses client trace upsert" do
-    trace = Struct.new(:id).new("trace_123")
-    fake_client = mock
-
-    fake_client.expects(:trace).with(id: "trace_123", output: { ok: true }, level: "ERROR")
-    @subject.stubs(:langfuse_client).returns(fake_client)
-
-    @subject.send(:upsert_langfuse_trace, trace: trace, output: { ok: true }, level: "ERROR")
+  test "finishes the root observation with output and error level" do
+    trace = mock
+    trace.expects(:end).with(output: { ok: true }, level: "ERROR")
+    @subject.send(:finish_langfuse_trace, trace: trace, output: { ok: true }, level: "ERROR")
   end
 
-  test "log_langfuse_generation upserts trace through client" do
+  test "configured tracing emits chat observations through the shared OpenTelemetry client" do
+    exporter = OpenTelemetry::SDK::Trace::Export::InMemorySpanExporter.new
+    tracing = LangfuseTracing.new(public_key: "pk-test", secret_key: "sk-test", host: "https://langfuse.test",
+      processor: OpenTelemetry::SDK::Trace::Export::SimpleSpanProcessor.new(exporter))
+    Rails.configuration.x.stubs(:langfuse).returns(tracing)
+    with_env_overrides("LANGFUSE_PUBLIC_KEY" => "pk-test", "LANGFUSE_SECRET_KEY" => "sk-test") do
+      @subject.send(:log_langfuse_generation, name: "chat_response", model: "gpt-4.1", input: "Hi", output: "Hello",
+        usage: { "prompt_tokens" => 4, "completion_tokens" => 2 }, session_id: "chat-id", user_identifier: "hashed-id")
+    end
+    assert_equal 2, exporter.finished_spans.size
+    exporter.finished_spans.each do |span|
+      assert_equal "chat-id", span.attributes["langfuse.session.id"]
+      assert_equal "hashed-id", span.attributes["langfuse.user.id"]
+    end
+  ensure
+    tracing&.shutdown
+  end
+
+  test "log_langfuse_generation finishes generation and root observation" do
     trace = Struct.new(:id).new("trace_456")
     generation = mock
     fake_client = mock
@@ -616,7 +672,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     @subject.stubs(:langfuse_client).returns(fake_client)
     @subject.stubs(:create_langfuse_trace).returns(trace)
 
-    fake_client.expects(:trace).with(id: "trace_456", output: "hello")
+    trace.expects(:end).with(output: "hello", level: nil)
     trace.expects(:generation).returns(generation)
     generation.expects(:end).with(output: "hello", usage: { "total_tokens" => 10 })
 
@@ -630,14 +686,14 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     )
   end
 
-  test "create_langfuse_trace logs full error details" do
+  test "create_langfuse_trace logs the error without its backtrace" do
     fake_client = mock
     error = StandardError.new("boom")
 
     @subject.stubs(:langfuse_client).returns(fake_client)
     fake_client.expects(:trace).raises(error)
 
-    Rails.logger.expects(:warn).with(regexp_matches(/Langfuse trace creation failed: boom.*test\/models\/provider\/openai_test\.rb/m))
+    Rails.logger.expects(:warn).with("Langfuse trace creation failed: StandardError: boom")
 
     @subject.send(:create_langfuse_trace, name: "openai.test", input: { foo: "bar" })
   end
@@ -666,7 +722,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 256, subject.system_prompt_reserve
       assert_equal 2048 - 512 - 256, subject.max_history_tokens
       assert_equal 2048 - 512 - 256, subject.max_input_tokens
-      assert_equal 25, subject.max_items_per_call
     end
   end
 
@@ -684,7 +739,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 512, subject.system_prompt_reserve
       assert_equal 4096, subject.max_history_tokens  # explicit overrides derived
       assert_equal 8192 - 1024 - 512, subject.max_input_tokens
-      assert_equal 50, subject.max_items_per_call
     end
   end
 
@@ -742,7 +796,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       subject = Provider::Openai.new("test-token")
       assert_equal 8192, subject.context_window
       assert_equal 1024, subject.max_response_tokens
-      assert_equal 40, subject.max_items_per_call
     end
   ensure
     Setting.llm_context_window = nil
@@ -774,8 +827,8 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     Setting.llm_context_window = nil
   end
 
-  test "auto_categorize fans out oversized batches into sequential sub-calls" do
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10") do
+  test "auto_categorize sends a batch that fits the context window as one call" do
+    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10", "LLM_CONTEXT_WINDOW" => "100000") do
       subject = Provider::Openai.new("test-token")
       transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
       user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
@@ -793,7 +846,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       response = subject.auto_categorize(transactions: transactions, user_categories: user_categories)
 
       assert response.success?
-      assert_equal [ 10, 10, 5 ], seen_sizes
+      assert_equal [ 25 ], seen_sizes
     end
   end
 
@@ -979,6 +1032,108 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assistant_message = messages.find { |m| m[:role] == "assistant" }
     tool_call = assistant_message[:tool_calls].first
     assert_not_includes tool_call.keys, :extra_content
+  end
+
+  test "build_generic_messages replays each tool round as its own assistant/tool pair" do
+    provider = Provider::Openai.new(
+      "test-token",
+      uri_base: "https://example.com/v1",
+      model: "test-model"
+    )
+
+    extra = { "google" => { "thought_signature" => "sig_round_2" } }
+    round_1 = [
+      { call_id: "call_a", name: "get_accounts", arguments: "{}", output: { "accounts" => [] }, round: 1 }
+    ]
+    round_2 = [
+      { call_id: "call_b", name: "get_categories", arguments: "{}", output: { "categories" => [] }, round: 2 },
+      { call_id: "call_c", name: "get_tags", arguments: "{}", output: { "tags" => [] }, extra_content: extra, round: 2 }
+    ]
+
+    build = ->(function_results) do
+      provider.send(:build_generic_messages, prompt: "hi", instructions: "system", function_results: function_results)
+    end
+    second_request = build.call(round_1)
+    third_request = build.call(round_1 + round_2)
+
+    # Each follow-up request must extend the previous one so prefix caches stay valid.
+    assert_equal second_request, third_request.first(second_request.size)
+
+    shape = third_request.map do |message|
+      message[:tool_calls] ? message[:tool_calls].map { |call| call[:id] } : message[:tool_call_id] || message[:role]
+    end
+    assert_equal [ "system", "user", [ "call_a" ], "call_a", [ "call_b", "call_c" ], "call_b", "call_c" ], shape
+
+    round_2_calls = third_request[4][:tool_calls]
+    assert_not round_2_calls.first.key?(:extra_content)
+    assert_equal extra, round_2_calls.last[:extra_content]
+    assert_not_includes third_request.to_json, "\"round\":", "the round tag must not leak into the request"
+  end
+
+  test "OpenRouter chat records provider cost and tokens for an unknown model with a streamer" do
+    provider = Provider::Openai.new("test-token", uri_base: "https://openrouter.ai/api/v1", model: "deepseek/example-model")
+    usage = { "prompt_tokens" => 10, "completion_tokens" => 5, "total_tokens" => 15, "cost" => 0.012345 }
+    provider.send(:client).expects(:chat).returns(
+      "id" => "chatcmpl-synthetic", "choices" => [ { "message" => { "role" => "assistant", "content" => "Hello" } } ],
+      "usage" => usage
+    )
+    chunks = []
+    family = families(:dylan_family)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      response = provider.chat_response("Hello", model: "deepseek/example-model", family: family, streamer: ->(chunk) { chunks << chunk })
+      assert response.success?
+    end
+
+    recorded = family.llm_usages.order(:created_at).last
+    assert_equal BigDecimal("0.012345"), recorded.estimated_cost
+    assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+    assert_equal usage, chunks.last.usage
+  end
+
+  test "OpenRouter chat falls back to token estimates when reported cost is absent or invalid" do
+    provider = Provider::Openai.new("test-token", uri_base: "https://openrouter.ai/api/v1", model: "gpt-4.1")
+    family = families(:dylan_family)
+    expected = LlmUsage.calculate_cost(model: "gpt-4.1", prompt_tokens: 1000, completion_tokens: 100)
+
+    [ {}, { "cost" => -1 }, { "cost" => "NaN" }, { "cost" => "not a cost" } ].each do |extra_usage|
+      usage = { "prompt_tokens" => 1000, "completion_tokens" => 100, "total_tokens" => 1100 }.merge(extra_usage)
+      provider.send(:client).expects(:chat).returns(
+        "id" => "chatcmpl-synthetic", "choices" => [ { "message" => { "role" => "assistant", "content" => "Hello" } } ],
+        "usage" => usage
+      )
+
+      assert_difference -> { family.llm_usages.count }, 1 do
+        assert provider.chat_response("Hello", model: "gpt-4.1", family: family).success?
+      end
+
+      recorded = family.llm_usages.order(:created_at).last
+      assert_equal expected, recorded.estimated_cost
+      assert_equal [ 1000, 100, 1100 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+    end
+  end
+
+  test "OpenRouter Responses stream forwards reported zero cost to the ledger" do
+    provider = Provider::Openai.new("test-token", uri_base: "https://openrouter.ai/api/v1", model: "deepseek/example-model")
+    provider.stubs(:supports_responses_endpoint?).returns(true)
+    usage = { "input_tokens" => 10, "output_tokens" => 5, "total_tokens" => 15, "cost" => 0 }
+    provider.send(:client).responses.expects(:create).with do |parameters:|
+      parameters[:stream].call({
+        "type" => "response.completed",
+        "response" => { "id" => "resp-synthetic", "model" => "deepseek/example-model", "output" => [], "usage" => usage }
+      })
+      true
+    end.returns(nil)
+    family = families(:dylan_family)
+
+    assert_difference -> { family.llm_usages.count }, 1 do
+      response = provider.chat_response("Hello", model: "deepseek/example-model", family: family, streamer: ->(_) { })
+      assert response.success?
+    end
+
+    recorded = family.llm_usages.order(:created_at).last
+    assert_equal BigDecimal("0"), recorded.estimated_cost
+    assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
   end
 
   private

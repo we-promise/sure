@@ -1,7 +1,10 @@
 class Import::QifCategorySelectionsController < ApplicationController
+  include ImportGuestGuardable
+
   layout "imports"
 
   before_action :set_import
+  before_action :require_import_editable!, only: :update
 
   def show
     valid_formats         = @import.valid_date_formats_with_preview

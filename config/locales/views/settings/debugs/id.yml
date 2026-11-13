@@ -1,0 +1,39 @@
+---
+id:
+  settings:
+    debugs:
+      show:
+        page_title: "Debug"
+        title: "Log kejadian debug"
+        subtitle: "Kejadian operasional penting untuk super admin. Terbaru terlebih dahulu."
+        empty: "Tidak ada kejadian debug ditemukan."
+        missing_value: "-"
+        filters:
+          all: "Semua"
+          category: "Kategori"
+          level: "Tingkat"
+          source: "Sumber"
+          provider: "Penyedia"
+          start_date: "Dari"
+          end_date: "Hingga"
+          family_id: "ID Keluarga"
+          account_id: "ID Rekening"
+          user_id: "ID Pengguna"
+          account_provider_id: "ID Penyedia rekening"
+          submit: "Filter"
+          reset: "Atur ulang"
+        table:
+          time: "Waktu"
+          level: "Tingkat"
+          category: "Kategori"
+          source: "Sumber"
+          message: "Pesan"
+          context: "Konteks"
+          metadata: "Metadata"
+          view_metadata: "Lihat"
+        context:
+          provider: "provider=%{value}"
+          family: "family=%{value}"
+          account: "account=%{value}"
+          user: "user=%{value}"
+          account_provider: "account_provider=%{value}"

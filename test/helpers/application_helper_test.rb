@@ -117,4 +117,35 @@ class ApplicationHelperTest < ActionView::TestCase
 
     assert_equal [ "SGD", "USD", "EUR" ], currency_picker_options_for_family(family, extra: "EUR")
   end
+
+  test "#mask_last4 masks all but the last 4 characters" do
+    assert_equal "•••7890", mask_last4("account-number-1234567890")
+    assert_equal "•••2345", mask_last4("12345")
+  end
+
+  test "#mask_last4 returns nil for blank input" do
+    assert_nil mask_last4(nil)
+    assert_nil mask_last4("")
+  end
+
+  test "#mask_last4 handles values shorter than 4 characters" do
+    assert_equal "•••12", mask_last4("12")
+  end
+
+  # `group-open:` matches any open ancestor `.group`, so a chevron inside a
+  # closed disclosure nested in an open one would show as open.
+  test "#disclosure_chevron follows its own details element" do
+    classes = nil
+    singleton_class.send(:define_method, :lucide_icon) do |_key, **opts|
+      classes = CGI.unescapeHTML(opts[:class].to_s)
+      "<svg></svg>".html_safe
+    end
+
+    disclosure_chevron
+
+    assert_includes classes, "[details[open]>summary_&]:rotate-90"
+    assert_not_includes classes, "group-open:"
+  ensure
+    singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
+  end
 end

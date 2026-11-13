@@ -50,6 +50,16 @@ class Setting < RailsSettings::Base
   field :brand_fetch_client_id, type: :string, default: ENV["BRAND_FETCH_CLIENT_ID"]
   field :brand_fetch_high_res_logos, type: :boolean, default: ENV.fetch("BRAND_FETCH_HIGH_RES_LOGOS", "false") == "true"
 
+  # Set by `bin/rails security:backfill_encryption` once every model/field it
+  # covers has been re-encrypted with zero failures. Read at boot (see
+  # ActiveRecordEncryptionConfig.backfill_completed?) to decide whether the
+  # legacy-plaintext fallback (support_unencrypted_data/extend_queries in
+  # config/initializers/active_record_encryption.rb) is still needed.
+  # Versioned rather than a plain boolean so that a *future* expansion of the
+  # backfill task's model coverage doesn't get silently skipped for installs
+  # that completed a backfill under an older, narrower version.
+  field :encryption_backfill_completed_version, type: :integer, default: 0
+
   BRAND_FETCH_LOGO_SIZE_STANDARD = 40
   BRAND_FETCH_LOGO_SIZE_HIGH_RES = 120
   # Matches both legacy single-segment URLs (`/apple.com/icon/...`) and
@@ -99,6 +109,7 @@ class Setting < RailsSettings::Base
   # Property valuation (AVM) provider API keys
   field :rentcast_api_key, type: :string, default: ENV["RENTCAST_API_KEY"]
   field :realie_api_key, type: :string, default: ENV["REALIE_API_KEY"]
+  field :chimnie_api_key, type: :string, default: ENV["CHIMNIE_API_KEY"]
 
   # Transparent encryption for API key fields.  The `field` macro defines the
   # raw getter/setter on the class.  By prepending this module we intercept
@@ -117,6 +128,7 @@ class Setting < RailsSettings::Base
       mansa_api_key
       rentcast_api_key
       realie_api_key
+      chimnie_api_key
       openai_access_token
       anthropic_access_token
       jev_api_key
@@ -134,15 +146,51 @@ class Setting < RailsSettings::Base
       end
     end
 
+    # The settings key is derived from SECRET_KEY_BASE alone, so it is not
+    # covered by Active Record encryption's `previous` schemes. After a
+    # SECRET_KEY_BASE change, stored values only decrypt with the old value;
+    # the getters above would then return the ciphertext itself. This moves
+    # every value the old key decrypts to the current key. Values neither key
+    # decrypts are left alone: they are either plaintext from before
+    # encryption (still readable) or need to be re-entered.
+    def reencrypt_secrets_from(old_secret_key_base, dry_run: true)
+      raise ArgumentError, "old secret_key_base is blank" if old_secret_key_base.blank?
+
+      old_encryptor = build_setting_encryptor(old_secret_key_base)
+      stored = where(var: ENCRYPTED_FIELDS.map(&:to_s)).to_h { |row| [ row.var.to_sym, row.value ] }
+
+      transaction do
+        ENCRYPTED_FIELDS.index_with do |field_name|
+          value = stored[field_name]
+          next :not_stored if value.blank?
+          next :current unless try_decrypt(setting_encryptor, value).nil?
+
+          plaintext = try_decrypt(old_encryptor, value)
+          next :not_decryptable if plaintext.nil?
+          next :would_reencrypt if dry_run
+
+          public_send(:"#{field_name}=", plaintext)
+          :reencrypted
+        end
+      end
+    end
+
     private
 
       def setting_encryptor
-        @setting_encryptor ||= begin
-          key = ActiveSupport::KeyGenerator.new(
-            Rails.application.secret_key_base
-          ).generate_key("setting_encryption", 32)
-          ActiveSupport::MessageEncryptor.new(key)
-        end
+        @setting_encryptor ||= build_setting_encryptor(Rails.application.secret_key_base)
+      end
+
+      def build_setting_encryptor(secret_key_base)
+        key = ActiveSupport::KeyGenerator.new(secret_key_base).generate_key("setting_encryption", 32)
+        ActiveSupport::MessageEncryptor.new(key)
+      end
+
+      def try_decrypt(encryptor, value)
+        encryptor.decrypt_and_verify(value)
+      rescue ActiveSupport::MessageVerifier::InvalidSignature,
+             ActiveSupport::MessageEncryptor::InvalidMessage
+        nil
       end
 
       def encrypt_setting(value)
@@ -152,12 +200,10 @@ class Setting < RailsSettings::Base
 
       def decrypt_setting(value)
         return value if value.blank?
-        setting_encryptor.decrypt_and_verify(value)
-      rescue ActiveSupport::MessageVerifier::InvalidSignature,
-             ActiveSupport::MessageEncryptor::InvalidMessage
+
         # Value was stored before encryption was enabled — return as-is.
         # It will be re-encrypted on next write.
-        value
+        try_decrypt(setting_encryptor, value) || value
       end
   end
 
@@ -186,6 +232,14 @@ class Setting < RailsSettings::Base
   field :auto_sync_enabled, type: :boolean, default: ENV.fetch("AUTO_SYNC_ENABLED", "1") == "1"
   field :auto_sync_time, type: :string, default: ENV.fetch("AUTO_SYNC_TIME", "02:22")
   field :auto_sync_timezone, type: :string, default: ENV.fetch("AUTO_SYNC_TIMEZONE", "UTC")
+
+  # Daily market data (security price) import — mirrors auto_sync_* above.
+  # Default time intentionally unchanged from the previous hardcoded
+  # config/schedule.yml entry (22:00 UTC, ~1h after NYSE close) so existing
+  # installations see no behavior change unless they actively reconfigure it.
+  field :market_data_sync_enabled, type: :boolean, default: ENV.fetch("MARKET_DATA_SYNC_ENABLED", "1") == "1"
+  field :market_data_sync_time, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIME", "22:00")
+  field :market_data_sync_timezone, type: :string, default: ENV.fetch("MARKET_DATA_SYNC_TIMEZONE", "UTC")
 
   AUTO_SYNC_TIME_FORMAT = /\A([01]?\d|2[0-3]):([0-5]\d)\z/
 
@@ -228,6 +282,12 @@ class Setting < RailsSettings::Base
     alias_method :raw_onboarding_state=, :onboarding_state=
     alias_method :raw_openai_model, :openai_model
     alias_method :raw_openai_model=, :openai_model=
+    alias_method :raw_llm_provider, :llm_provider
+
+    # The env var wins over a stored choice, like the other AI settings.
+    def llm_provider
+      ENV["LLM_PROVIDER"].presence || raw_llm_provider
+    end
 
     def onboarding_state
       value = raw_onboarding_state
@@ -327,8 +387,9 @@ class Setting < RailsSettings::Base
     uri_base_value = uri_base.nil? ? openai_uri_base : uri_base
     model_value = model.nil? ? openai_model : model
 
-    # If custom URI base is set, model must also be set
-    if uri_base_value.present? && model_value.blank?
+    # If a custom URI base is set, model must also be set. OpenAI's own
+    # hosts (including regional ones) fall back to the default model.
+    if Provider::Openai.custom_endpoint?(uri_base_value) && model_value.blank?
       raise ValidationError, "OpenAI model is required when custom URI base is configured"
     end
   end

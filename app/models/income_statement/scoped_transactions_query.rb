@@ -10,11 +10,14 @@
 # aliases (`ae`, `a`). The including class must set `@family`.
 module IncomeStatement::ScopedTransactionsQuery
   private
-    # Contributions and loan payments are cash outflows recorded as negative
-    # amounts, so they always classify as expense; other negative amounts
-    # classify as income.
+    # Contributions and loan payments are cash outflows whatever their
+    # sign, so they classify as expense; other negative amounts classify as
+    # income. A family that does not count investing as spending gets its
+    # contributions classified as 'investment' instead, which keeps them out
+    # of income and expense totals while still letting callers sum them.
     def classification_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      contribution = @family.investment_contributions_as_spending? ? "expense" : "investment"
+      "CASE WHEN #{t}.kind = 'investment_contribution' THEN '#{contribution}' WHEN #{t}.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
     # Entry amount converted to the family currency at the day's exchange
@@ -61,6 +64,17 @@ module IncomeStatement::ScopedTransactionsQuery
       Transaction.pending_providers_sql(t)
     end
 
+    # Scheduled (future-dated) entries haven't happened yet, so "actual"
+    # reporting shouldn't count them -- see Entry#excluding_scheduled. Only
+    # needed by the queries here that build their own SQL directly against
+    # `transactions`/`entries` (FamilyStats, CategoryStats); Totals and
+    # DailyExpenseTotals instead select from a caller-supplied
+    # `transactions_scope`, which already carries this exclusion (see
+    # IncomeStatement#totals/#totals_for_period).
+    def excluding_scheduled_sql
+      "AND ae.date <= :today"
+    end
+
     # Tax-advantaged accounts (401k, IRA, HSA, etc.) are retirement savings,
     # not daily expenses, so they're excluded from budget calculations.
     def exclude_tax_advantaged_sql
@@ -84,7 +98,7 @@ module IncomeStatement::ScopedTransactionsQuery
     # Bind params every income statement query needs; classes merge their
     # extras (date range, interval, account ids) on top.
     def base_sql_params(extra = {})
-      { target_currency: @family.currency, family_id: @family.id }.merge(extra).tap do |params|
+      { target_currency: @family.currency, family_id: @family.id, today: Date.current }.merge(extra).tap do |params|
         ids = @family.tax_advantaged_account_ids
         params[:tax_advantaged_account_ids] = ids if ids.present?
       end

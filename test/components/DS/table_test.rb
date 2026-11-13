@@ -67,6 +67,16 @@ class DS::TableTest < ViewComponent::TestCase
     assert_selector "tbody tr.bg-container-inset", count: 1, text: "Rent"
   end
 
+  test "adds row attributes from the row_opts proc" do
+    opts = ->(row) { { data: { controller: "clickable-row", name: row[:name] } } }
+    render_inline(DS::Table.new(rows: ROWS, row_opts: opts)) do |table|
+      table.with_column("Name") { |row| row[:name] }
+    end
+
+    assert_selector "tbody tr[data-controller='clickable-row'][data-name='Rent']"
+    assert_selector "tbody tr[data-controller='clickable-row'][data-name='Internet']"
+  end
+
   test "stands alone as a card by default and sits in an inset frame on request" do
     render_table
     assert_selector "div.table-scroll.rounded-xl.shadow-border-xs"
@@ -74,6 +84,18 @@ class DS::TableTest < ViewComponent::TestCase
 
     render_table(inset: true)
     assert_selector "div.rounded-xl.bg-container-inset.p-1 > div.table-scroll.rounded-lg"
+  end
+
+  test "gives an inset table's header the frame's background, sticky or not" do
+    render_table
+    assert_no_selector "thead th.bg-container-inset"
+
+    render_table(inset: true)
+    assert_selector "thead th.bg-container-inset", count: 2
+
+    render_table(inset: true, sticky_header: true)
+    assert_selector "thead th.sticky.bg-container-inset", count: 2
+    assert_no_selector "thead th.bg-container"
   end
 
   test "caps the height and makes the header cells sticky" do

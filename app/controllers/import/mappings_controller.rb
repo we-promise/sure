@@ -1,5 +1,8 @@
 class Import::MappingsController < ApplicationController
+  include ImportGuestGuardable
+
   before_action :set_import
+  before_action :require_import_editable!
 
   def update
     mapping = @import.mappings.find(params[:id])

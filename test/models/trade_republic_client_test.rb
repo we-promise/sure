@@ -659,6 +659,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "qr_pending", @client.login_stage(pending_login_b64: encoded)
   end
 
+  test "an abandoned QR login is expired once its challenge lapsed" do
+    pending = { "challenge_id" => "challenge-1", "session_blob" => "session=1", "expires_at" => 1.minute.ago.iso8601 }
+    encoded = Base64.strict_encode64(JSON.generate(pending))
+
+    assert_raises(Provider::TradeRepublicClient::LoginExpired) { @client.login_stage(pending_login_b64: encoded) }
+  end
+
   test "rotates the QR payload and token expiry while polling" do
     response_class = Struct.new(:code, :body) do
       def is_a?(klass)
@@ -1105,6 +1112,17 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     %w[CARD_AFT CARD_OCT STAMP_DUTY_TAX_PAID].each do |event_type|
       assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+    end
+  end
+
+  test "maps securities transfers to order executions so their detail is fetched" do
+    categories = Provider::TradeRepublicClient::EVENT_TYPE_CATEGORIES
+    assert_equal "orderExecution", categories["SSP_SECURITIES_TRANSFER_INCOMING"]
+    assert_equal "orderExecution", categories["SSP_SECURITIES_TRANSFER_OUTGOING"]
+
+    %w[SSP_SECURITIES_TRANSFER_INCOMING SSP_SECURITIES_TRANSFER_OUTGOING].each do |event_type|
+      assert_equal :financial, Provider::TradeRepublicTimelineEvent.classify("eventType" => event_type), event_type
+      assert Provider::TradeRepublicClient.requires_trade_detail?("eventType" => event_type), event_type
     end
   end
 
@@ -1734,7 +1752,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_nil timeline.newest_event_id
   end
 
-  test "card and cash events do not consume timeline detail requests" do
+  test "card events do not consume timeline detail requests but transfers read their note" do
     requested = []
     @client.define_singleton_method(:subscribe) do |_websocket, **payload|
       requested << payload
@@ -1756,9 +1774,125 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
     ], nil, [])
 
-    assert_empty requested
+    assert_equal [ { type: "timelineDetailV2", id: "transfer-1" } ], requested
     assert_equal [ "card-1", "transfer-1" ], events.map { |event| event["id"] }
     assert_equal(-12.5, events.first.dig("detail", "signed_amount"))
+    assert_nil events.first.dig("detail", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY)
+  end
+
+  test "a transfer detail with a note section stores the note and keeps the timeline amount" do
+    freeze_time
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: "Invoice 2026-0001") }
+
+    events, = @client.send(:resolve_details, Object.new, [ transfer_item ], nil, [])
+
+    detail = events.first["detail"]
+    assert_equal "Invoice 2026-0001", detail["note"]
+    assert_equal Time.current.iso8601, detail[Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY]
+    assert_equal 50.0, detail["amount"]
+    assert_equal 50.0, detail["signed_amount"]
+    assert_nil detail["isin"]
+    assert_nil detail["quantity"]
+  end
+
+  test "a transfer detail without a note section is marked as read" do
+    freeze_time
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: nil) }
+
+    events, = @client.send(:resolve_details, Object.new, [ transfer_item ], nil, [])
+
+    detail = events.first["detail"]
+    assert_not detail.key?("note")
+    assert_equal Time.current.iso8601, detail[Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY]
+  end
+
+  test "the note is read from the note section only" do
+    raw = transfer_detail(note: nil)
+    raw["sections"] << { "title" => "Reference", "data" => [ { "title" => "Reference", "detail" => { "text" => "from a table" } } ] }
+    raw["sections"] << { "type" => "steps", "title" => "Status", "data" => { "text" => "from steps" } }
+    raw["sections"] << { "type" => "header", "data" => { "text" => "from header" } }
+    raw["sections"] << { "type" => "note", "data" => [ { "text" => "from a table-shaped note" } ] }
+
+    assert_nil @client.send(:normalize_event_detail, raw, item: transfer_item)
+
+    raw["sections"].insert(2, { "type" => "note", "data" => { "text" => "  Invoice 2026-0001  " } })
+
+    assert_equal "Invoice 2026-0001", @client.send(:normalize_event_detail, raw, item: transfer_item)["note"]
+  end
+
+  test "a blank note is ignored" do
+    assert_nil @client.send(:normalize_event_detail, transfer_detail(note: "   "), item: transfer_item)
+  end
+
+  test "stored transfers without a read note are fetched from the backlog" do
+    requested = []
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      helper.send(:transfer_detail, note: "Invoice 2026-0001")
+    end
+    unread = transfer_item(id: "transfer-old").merge("detail" => { "amount" => 50.0, "currency" => "EUR" })
+    read = transfer_item(id: "transfer-read").merge(
+      "detail" => { "amount" => 50.0, Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+    )
+
+    enriched, _warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ unread, read ])
+
+    assert_equal [ "transfer-old" ], requested
+    assert_equal 1, improved
+    assert_equal "Invoice 2026-0001", enriched.find { |event| event["id"] == "transfer-old" }.dig("detail", "note")
+  end
+
+  test "transfers repeated on a catch-up page are not fetched again once their note was read" do
+    requested = []
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      helper.send(:transfer_detail, note: nil)
+    end
+    page = [ transfer_item(id: "transfer-read"), transfer_item(id: "transfer-new") ]
+    events = page.map { |item| @client.send(:build_skeleton_event, item, warnings: []) }
+
+    enriched, = @client.send(:enrich_timeline_details, Object.new, events, note_read_event_ids: [ "transfer-read" ])
+
+    assert_equal [ "transfer-new" ], requested
+    assert_equal %w[transfer-read transfer-new], enriched.map { |event| event["id"] }
+  end
+
+  test "a failed note fetch is marked as attempted and stays pending" do
+    freeze_time
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| raise Provider::TradeRepublicClient::MalformedResponse, "bad detail" }
+    stored = transfer_item.merge("detail" => { "amount" => 50.0 })
+
+    enriched, warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ stored ])
+
+    event = enriched.find { |candidate| candidate["id"] == "transfer-1" }
+    assert_equal 0, improved
+    assert_equal [ "detail fetch failed for event transfer-1" ], warnings
+    assert_equal Time.current.iso8601, event.dig("detail", Provider::TradeRepublicClient::DETAIL_BACKFILL_ATTEMPTED_AT_KEY)
+    assert Provider::TradeRepublicClient.cash_note_pending?(event)
+  end
+
+  test "transfers waiting for their note come last in the backlog order" do
+    note_only = transfer_item(id: "transfer-old").merge("timestamp" => "2020-01-01T10:00:00Z")
+    dividend = {
+      "id" => "dividend-1", "timestamp" => "2026-08-01T10:00:00Z", "eventType" => "SSP_CORPORATE_ACTION_CASH",
+      "category" => "DIVIDEND", "status" => "EXECUTED", "detail" => { "amount" => 4.3 }
+    }
+
+    ordered = [ note_only, dividend ].sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
+
+    assert_equal %w[dividend-1 transfer-old], ordered.map { |event| event["id"] }
+  end
+
+  test "only transfers and direct debits are checked for a note" do
+    assert Provider::TradeRepublicClient.cash_note_pending?(transfer_item(event_type: "BANK_TRANSACTION_OUTGOING_DIRECT_DEBIT"))
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item(event_type: "CARD_TRANSACTION"))
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item(event_type: "INTEREST_PAYOUT"))
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("status" => "CANCELED"))
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("detail" => { "note" => "Invoice 2026-0001" }))
   end
 
   test "new dividends fetch details without changing the timeline amount" do
@@ -2795,7 +2929,54 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       events.map { |event| event.dig("detail", "instrument_name") }
   end
 
+  test "a WAF rejection of the account request is not an expired session" do
+    session = mock
+    session.expects(:get).with("/api/v2/auth/account").returns(waf_rejection)
+    @client.define_singleton_method(:new_session) { |**| session }
+
+    assert_raises(Provider::TradeRepublicClient::WafRequired) do
+      @client.sync(session_txt: '{"tr_session":"s"}')
+    end
+  end
+
+  test "a rejected account request without an error object is an expired session" do
+    [ "null", "[]" ].each do |body|
+      session = mock
+      session.expects(:get).with("/api/v2/auth/account").returns(rejection("403", body))
+      @client.define_singleton_method(:new_session) { |**| session }
+
+      assert_equal "session_expired", @client.sync(session_txt: '{"tr_session":"s"}').data["status"]
+    end
+  end
+
   private
+
+    def transfer_item(id: "transfer-1", event_type: "PAYMENT_INBOUND")
+      {
+        "id" => id,
+        "timestamp" => "2026-08-01T11:00:00Z",
+        "title" => "Max Mustermann",
+        "subtitle" => "Completed",
+        "eventType" => event_type,
+        "amount" => { "value" => 50.0, "currency" => "EUR" }
+      }
+    end
+
+    # A transfer's detail: header, "Overview" table, the optional untitled
+    # note section, then the status steps.
+    def transfer_detail(note:)
+      sections = [
+        { "title" => "You received €50.00", "type" => "header", "data" => { "status" => "executed" } },
+        { "title" => "Overview", "type" => "table", "data" => [
+          { "title" => "Sender", "detail" => { "text" => "Max Mustermann", "type" => "text" } },
+          { "title" => "IBAN", "detail" => { "text" => "DE00 0000 0000 0000 0000 00", "type" => "text" } }
+        ] },
+        { "title" => "Status", "type" => "steps", "data" => [ { "title" => "Received", "detail" => { "text" => "01 Aug" } } ] },
+        { "title" => "Documents", "type" => "documents", "data" => [] }
+      ]
+      sections.insert(2, { "type" => "note", "data" => { "text" => note } }) unless note.nil?
+      { "id" => "transfer-1", "sections" => sections }
+    end
 
     # Same shape as bond_purchase_detail, in English, as Sure receives it.
     def bond_purchase_detail_en
@@ -2947,5 +3128,20 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
           { "items" => [], "cursors" => {} }
         end
       end
+    end
+
+    def waf_rejection
+      rejection("403", { "errorCode" => "WAF_TOKEN_REQUIRED" }.to_json)
+    end
+
+    def rejection(code, body)
+      response_class = Struct.new(:code, :body) do
+        def is_a?(klass)
+          klass == Net::HTTPSuccess ? false : super
+        end
+
+        def [](_header) = nil
+      end
+      response_class.new(code, body)
     end
 end

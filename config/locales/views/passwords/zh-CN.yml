@@ -1,6 +1,7 @@
 ---
 zh-CN:
   passwords:
+    disabled: "Sure 密码修改已禁用。请通过身份提供商管理密码。"
     edit:
       password: 新密码
       password_challenge: 当前密码

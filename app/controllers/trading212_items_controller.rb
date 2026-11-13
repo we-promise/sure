@@ -49,7 +49,7 @@ class Trading212ItemsController < ApplicationController
   def select_accounts
     item = current_trading212_item
     unless item
-      redirect_to settings_providers_path, alert: t(".not_configured")
+      frame_redirect_to settings_providers_path, alert: t(".not_configured")
       return
     end
 

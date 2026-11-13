@@ -107,7 +107,7 @@ class UpItemsController < ApplicationController
     @up_item = requested_up_item
 
     unless @up_item.credentials_configured?
-      redirect_to settings_providers_path, alert: t(".no_credentials_configured")
+      frame_redirect_to settings_providers_path, alert: t(".no_credentials_configured")
       return
     end
 

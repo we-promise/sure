@@ -1,0 +1,21 @@
+---
+zh-CN:
+  activerecord:
+    errors:
+      models:
+        monarch_import:
+          missing_columns: "%{file} 文件缺少以下列：%{columns}。请问是否为正确的 Monarch 导出文件？"
+          malformed_csv: "%{file} 文件不是可读的 CSV：%{error}"
+          invalid_number: "%{value} 不是有效数字"
+          invalid_date: "%{value} 不是形如 2024-01-31 的日期"
+          date_out_of_range: "%{value} 超出了 Sure 可导入的日期范围（%{from} 至 %{to}）"
+          blank_account: "某一行缺少账户名称。请检查该文件是否为 Monarch 导出文件。"
+          blank_transaction_id: "某笔交易缺少 Id。请检查该文件是否为 Monarch 交易导出文件。"
+          opening_balance_changed: "导入期间 %{account} 的期初余额发生了变化。请核对导入内容后重新发布。"
+          target_not_supported: "Sure 无法再导入到 %{accounts}。目标账户必须是无持仓或交易记录的手动账户。请选择其他目标账户后重新发布。"
+          no_accounts: "导出文件中不包含任何账户。请检查您是否从 Monarch 导出了正确的文件。"
+          files:
+            balances: 余额
+            transactions: 交易
+        import/monarch_account_mapping:
+          target_taken: "%{account} 已被用作另一个 Monarch 账户的目标账户。请为 %{monarch} 选择另一个账户，或将其导入为新账户。"

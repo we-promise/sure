@@ -32,6 +32,104 @@ components:
             read: Read access
             read_write: Read and write access
   schemas:
+    Version:
+      type: object
+      additionalProperties: false
+      required:
+      - version
+      - commit_sha
+      properties:
+        version:
+          type: string
+          description: Running Sure version, without a v prefix.
+        commit_sha:
+          type: string
+          nullable: true
+          description: Build commit SHA, or null when unavailable.
+    SplitRequest:
+      type: object
+      required:
+      - split
+      properties:
+        split:
+          type: object
+          required:
+          - splits
+          properties:
+            splits:
+              type: array
+              minItems: 1
+              description: Child transactions. Amounts must sum exactly to the parent
+                amount.
+              items:
+                type: object
+                required:
+                - amount
+                properties:
+                  name:
+                    type: string
+                    nullable: true
+                    description: Defaults to the parent name when omitted
+                  amount:
+                    type: string
+                    description: Same sign convention as the transaction amount
+                  category_id:
+                    type: string
+                    nullable: true
+                  merchant_id:
+                    type: string
+                    nullable: true
+                    description: Omitted or null, the child takes the parent's merchant
+                  tag_ids:
+                    type: array
+                    items:
+                      type: string
+                    nullable: true
+                    description: No tags when omitted
+                  excluded:
+                    type: boolean
+                    nullable: true
+    Split:
+      type: object
+      required:
+      - transaction_id
+      - amount
+      - amount_decimal
+      - amount_cents
+      - currency
+      - children
+      properties:
+        transaction_id:
+          type: string
+        amount:
+          type: string
+          description: Formatted parent amount, rounded for display
+        amount_decimal:
+          type: string
+          description: Exact stored amount; children must sum to this
+        amount_cents:
+          type: integer
+          description: Absolute amount in minor units
+        currency:
+          type: string
+        children:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SplitChild"
+    SplitChild:
+      allOf:
+      - "$ref": "#/components/schemas/Transaction"
+      - type: object
+        required:
+        - amount_decimal
+        - excluded
+        properties:
+          amount_decimal:
+            type: string
+            description: Exact stored amount; send this back when replacing the split
+          excluded:
+            type: boolean
+            description: Whether this child is excluded from totals
     Pagination:
       type: object
       required:
@@ -52,6 +150,127 @@ components:
         total_pages:
           type: integer
           minimum: 0
+    AccountStatementAccount:
+      type: object
+      required:
+      - id
+      - name
+      - currency
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currency:
+          type: string
+    AccountStatement:
+      type: object
+      required:
+      - id
+      - filename
+      - content_type
+      - byte_size
+      - content_sha256
+      - review_status
+      - created_at
+      - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        content_type:
+          type: string
+        byte_size:
+          type: integer
+          minimum: 1
+        content_sha256:
+          type: string
+          description: SHA-256 of the file (lowercase hex); the vault stores each
+            file once per family
+        review_status:
+          type: string
+          enum:
+          - unmatched
+          - linked
+          - rejected
+        period_start_on:
+          type: string
+          format: date
+          nullable: true
+        period_end_on:
+          type: string
+          format: date
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        opening_balance:
+          type: string
+          nullable: true
+        closing_balance:
+          type: string
+          nullable: true
+        institution_name_hint:
+          type: string
+          nullable: true
+        account_last4_hint:
+          type: string
+          nullable: true
+        account:
+          allOf:
+          - "$ref": "#/components/schemas/AccountStatementAccount"
+          nullable: true
+          description: Account the statement is linked to
+        suggested_account:
+          allOf:
+          - "$ref": "#/components/schemas/AccountStatementAccount"
+          nullable: true
+          description: Account the vault suggests for an unlinked statement; linking
+            it is confirmed in the app
+        match_confidence:
+          type: number
+          nullable: true
+          minimum: 0
+          maximum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    AccountStatementResponse:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          "$ref": "#/components/schemas/AccountStatement"
+        meta:
+          type: object
+          required:
+          - duplicate
+          properties:
+            duplicate:
+              type: boolean
+              description: True when the uploaded file was already in the vault; the
+                existing statement is returned and nothing is created
+    AccountStatementCollection:
+      type: object
+      required:
+      - data
+      - meta
+      properties:
+        data:
+          type: array
+          maxItems: 100
+          items:
+            "$ref": "#/components/schemas/AccountStatement"
+        meta:
+          "$ref": "#/components/schemas/Pagination"
     FamilyExportFile:
       type: object
       required:
@@ -1237,6 +1456,8 @@ components:
       - id
       - resource_type
       - active
+      - position
+      - stop_processing
       - conditions
       - actions
       - created_at
@@ -1258,6 +1479,14 @@ components:
           type: string
           format: date
           nullable: true
+        position:
+          type: integer
+          description: Run order within the family; rules run from the lowest position
+            up and the top rule wins per attribute
+        stop_processing:
+          type: boolean
+          description: When true, rules further down do not change transactions this
+            rule matches
         conditions:
           type: array
           items:
@@ -1639,11 +1868,16 @@ components:
       type: object
       required:
       - id
+      - entry_id
       - date
       - amount
+      - amount_decimal
       - currency
       - name
       - classification
+      - kind
+      - excluded
+      - split_parent
       - account
       - tags
       - created_at
@@ -1652,11 +1886,21 @@ components:
         id:
           type: string
           format: uuid
+        entry_id:
+          type: string
+          format: uuid
+          description: Id of the underlying entry. Web routes for a single transaction,
+            such as /transactions/{entry_id}, use this id rather than id.
         date:
           type: string
           format: date
         amount:
           type: string
+          description: Formatted amount, rounded to the currency display precision
+        amount_decimal:
+          type: string
+          description: Exact stored amount as an unrounded, locale-independent decimal
+            string. Positive is an outflow, negative an inflow.
         currency:
           type: string
         name:
@@ -1674,6 +1918,28 @@ components:
           type: boolean
         classification:
           type: string
+        kind:
+          type: string
+          enum:
+          - standard
+          - funds_movement
+          - cc_payment
+          - loan_payment
+          - one_time
+          - investment_contribution
+          description: How budgets and reports treat the transaction. loan_payment
+            counts as an expense; investment_contribution does too when the family
+            counts investment contributions as spending, and is otherwise reported
+            as invested and left out of spending and income; funds_movement, cc_payment
+            and one_time are left out of budget totals.
+        excluded:
+          type: boolean
+          description: Whether the transaction is excluded from budget and report
+            totals. Splitting a transaction marks it excluded.
+        split_parent:
+          type: boolean
+          description: Whether the transaction has been split; its amount is then
+            carried by its split children.
         account:
           "$ref": "#/components/schemas/Account"
         category:
@@ -2158,8 +2424,6 @@ components:
           - CategoryImport
           - RuleImport
           - MerchantImport
-          - PdfImport
-          - QifImport
           - SureImport
         valid:
           type: boolean
@@ -2247,6 +2511,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -2304,6 +2569,7 @@ components:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -3205,6 +3471,93 @@ components:
             "$ref": "#/components/schemas/SecurityPrice"
         pagination:
           "$ref": "#/components/schemas/Pagination"
+    SecurityPriceImportRequest:
+      type: object
+      required:
+      - security_id
+      - prices
+      properties:
+        security_id:
+          type: string
+          format: uuid
+          description: An offline security no provider has ever matched (no offline_reason
+            or price_provider), traded in an account the caller can write to, or held
+            in a linked one
+        prices:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          description: Daily closes, all in one currency. A date already stored is
+            replaced.
+          items:
+            type: object
+            required:
+            - date
+            - price
+            - currency
+            properties:
+              date:
+                type: string
+                format: date
+                description: Not after today in the family time zone
+              price:
+                type: string
+                description: Positive decimal with at most 4 decimal places
+                example: '12.3400'
+              currency:
+                type: string
+                description: ISO 4217 code; must match the security's existing prices,
+                  or the caller's trades in it
+    SecurityPriceImportResult:
+      type: object
+      required:
+      - security_id
+      - currency
+      - created
+      - updated
+      - start_date
+      - end_date
+      properties:
+        security_id:
+          type: string
+          format: uuid
+        currency:
+          type: string
+        created:
+          type: integer
+        updated:
+          type: integer
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+    SecurityPriceImportError:
+      type: object
+      required:
+      - error
+      - errors
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+            - index
+            - message
+            properties:
+              index:
+                type: integer
+                nullable: true
+                description: Position of the offending row in prices, or null for
+                  the request as a whole
+              message:
+                type: string
     Money:
       type: object
       required:
@@ -3265,13 +3618,19 @@ components:
           - net_by_category
           - net_by_account
           description: net_by_account (group_by=account) replaces the Cash Flow node
-            with one account node per account, each balanced by Surplus or Deficit
+            with one account node per account, each balanced by Surplus or Deficit.
+            Where an account in surplus paid one in deficit by confirmed transfer
+            in the period, that amount is a link between the two account nodes instead
         income:
           type: string
         spending:
           type: string
         net_savings:
           type: string
+        invested:
+          type: string
+          description: Money moved into investment accounts, shown as its own node.
+            Zero unless the family does not count investing as spending
         nodes:
           type: array
           items:
@@ -3301,6 +3660,7 @@ components:
                 - account
                 - surplus
                 - deficit
+                - invested
               value:
                 type: string
                 description: Nonnegative decimal in envelope currency
@@ -3365,6 +3725,109 @@ components:
           "$ref": "#/components/schemas/FinancialPeriod"
         sankey:
           "$ref": "#/components/schemas/CashFlowSankey"
+    SpendingVsNormalCategory:
+      type: object
+      required:
+      - id
+      - name
+      - color
+      - filter_value
+      - total
+      - normal
+      - change
+      - ratio
+      properties:
+        id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Null for the synthetic Uncategorized category. A parent's own
+            spending is listed among its subcategories with the parent's id
+        name:
+          type: string
+        color:
+          type: string
+          nullable: true
+        filter_value:
+          type: string
+          description: Value for the transactions category filter
+        total:
+          type: string
+          description: Net spending in the period (expense minus refunds), at least
+            zero
+        normal:
+          type: string
+          nullable: true
+          description: 'Finished period: net spending over the baseline period, scaled
+            to the period length. Unfinished period (in_progress): average net spending
+            over the same number of days from earlier month starts. Null without enough
+            history'
+        change:
+          type: string
+          nullable: true
+          description: total minus normal
+        ratio:
+          type: string
+          nullable: true
+          description: Fractional change against normal (0.5 = 50% more). Null without
+            a positive normal
+        direct:
+          type: boolean
+          description: 'Present on subcategories only: true for the parent''s own
+            spending, booked on the parent rather than a subcategory'
+        subcategories:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SpendingVsNormalCategory"
+          description: Present on parent categories only; adds up to the parent total
+    SpendingVsNormal:
+      type: object
+      required:
+      - currency
+      - period
+      - in_progress
+      - baseline_period
+      - comparable
+      - total
+      - normal_total
+      - categories
+      properties:
+        currency:
+          type: string
+        period:
+          "$ref": "#/components/schemas/FinancialPeriod"
+        in_progress:
+          type: boolean
+          description: 'The period has not ended: it is cut to today, and normal is
+            the average of the same number of days from each of up to 12 earlier month
+            starts'
+        baseline_period:
+          type: object
+          nullable: true
+          required:
+          - start_date
+          - end_date
+          properties:
+            start_date:
+              type: string
+              format: date
+            end_date:
+              type: string
+              format: date
+          description: Up to a year before the period, from the first counted transaction.
+            Null with under 28 days of history
+        comparable:
+          type: boolean
+        total:
+          type: string
+        normal_total:
+          type: string
+          nullable: true
+        categories:
+          type: array
+          items:
+            "$ref": "#/components/schemas/SpendingVsNormalCategory"
+          description: Parent categories, largest total first
     CashFlow:
       type: object
       required:
@@ -3528,6 +3991,7 @@ components:
           - balances
           - recurring_transactions
           - rules
+          - rule_groups
           - rule_actions
           - rule_conditions
           - rule_runs
@@ -3603,6 +4067,9 @@ components:
               type: integer
               minimum: 0
             rules:
+              type: integer
+              minimum: 0
+            rule_groups:
               type: integer
               minimum: 0
             rule_actions:
@@ -4481,6 +4948,195 @@ components:
         error:
           type: string
 paths:
+  "/api/v1/account_statements":
+    get:
+      summary: List statements in the Statement Vault
+      description: 'Lists statements the caller can see: unlinked statements and statements
+        linked to accounts shared with them. Requires an admin or member.'
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      parameters:
+      - name: account_id
+        in: query
+        format: uuid
+        required: false
+        description: Only statements linked to this account
+        schema:
+          type: string
+      - name: review_status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - unmatched
+          - linked
+          - rejected
+      - name: content_sha256
+        in: query
+        required: false
+        description: Find the statement for a file by its SHA-256 (hex)
+        schema:
+          type: string
+      - name: start_date
+        in: query
+        format: date
+        required: false
+        description: Only statements whose period ends on or after this date
+        schema:
+          type: string
+      - name: end_date
+        in: query
+        format: date
+        required: false
+        description: Only statements whose period starts on or before this date
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: 'Page number (default: 1)'
+        schema:
+          type: integer
+      - name: per_page
+        in: query
+        required: false
+        description: 'Items per page (default: 25, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: statements listed
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementCollection"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: invalid filter
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Upload a statement to the Statement Vault
+      description: 'Stores a PDF, CSV or XLSX statement (max 25 MB). With account_id
+        the statement is linked to that account (needs write access to it); without
+        it the vault suggests a match to confirm in the app. The vault stores each
+        file once: uploading the same file again returns the existing statement with
+        meta.duplicate = true. Statements are archived only; no transactions are imported.'
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '201':
+          description: statement stored
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '200':
+          description: file already in the vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest, or API key without write scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: account_id is not an account the caller can write to
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '409':
+          description: file already in the vault, linked to an account the caller
+            cannot see
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: missing or invalid file
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                account_id:
+                  type: string
+                  format: uuid
+                  description: Account to link the statement to
+        required: true
+        description: Statement file (.pdf, .csv or .xlsx)
+  "/api/v1/account_statements/{id}":
+    parameters:
+    - name: id
+      in: path
+      format: uuid
+      required: true
+      schema:
+        type: string
+    get:
+      summary: Show a statement
+      tags:
+      - Account Statements
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: statement found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/AccountStatementResponse"
+        '403':
+          description: guests cannot use the Statement Vault
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: statement not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/accounts":
     get:
       summary: List accounts
@@ -4614,7 +5270,15 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: invite code required or invalid
+          description: 'registration refused: the instance is closed to new registrations,
+            or an invite code is required or invalid'
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '400':
+          description: 'bad request: the user payload is missing, or device information
+            is missing or invalid'
           content:
             application/json:
               schema:
@@ -4722,6 +5386,13 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: 'local login is disabled: the instance is SSO-only, and this
+            account is not a super admin using the emergency override'
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
       requestBody:
         content:
           application/json:
@@ -4761,6 +5432,42 @@ paths:
               - password
               - device
         required: true
+  "/api/v1/auth/sso_providers":
+    get:
+      summary: List configured SSO providers
+      tags:
+      - Auth
+      description: Lists the SSO providers configured on this instance. Each name
+        can be used with GET /auth/mobile/{name} to start mobile SSO.
+      responses:
+        '200':
+          description: providers listed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  providers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: Provider name used in /auth/mobile/{name}
+                        strategy:
+                          type: string
+                          description: OmniAuth strategy, e.g. openid_connect, google_oauth2,
+                            github, saml
+                        label:
+                          type: string
+                          description: Button label
+                      required:
+                      - name
+                      - strategy
+                      - label
+                required:
+                - providers
   "/api/v1/auth/sso_exchange":
     post:
       summary: Exchange mobile SSO authorization code for tokens
@@ -5602,13 +6309,13 @@ paths:
               schema:
                 "$ref": "#/components/schemas/CategoryDetail"
         '422':
-          description: validation error - duplicate name
+          description: validation error - duplicate name or categories locked
           content:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: forbidden - api key missing read_write scope
+          description: forbidden - api key missing read_write scope, or guest user
           content:
             application/json:
               schema:
@@ -6002,8 +6709,13 @@ paths:
       security:
       - apiKeyAuth: []
       responses:
-        '302':
-          description: family export download redirected
+        '200':
+          description: family export zip file
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
         '401':
           description: unauthorized
           content:
@@ -7123,7 +7835,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope or guest user
           content:
             application/json:
               schema:
@@ -7406,6 +8118,7 @@ paths:
           - MintImport
           - ActualImport
           - YnabImport
+          - MonarchImport
           - CategoryImport
           - RuleImport
           - MerchantImport
@@ -7435,6 +8148,14 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
+        '403':
+          description: guest users cannot import family configuration
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - "$ref": "#/components/schemas/ErrorResponse"
+                - "$ref": "#/components/schemas/ErrorResponseWithImportId"
         '422':
           description: validation error or publish rejection
           content:
@@ -7475,7 +8196,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -7586,7 +8309,9 @@ paths:
                   - PdfImport
                   - QifImport
                   - SureImport
-                  description: Import type (defaults to TransactionImport)
+                  description: Import type (defaults to TransactionImport). MonarchImport
+                    imports are created in the web app; requesting one here returns
+                    422 unsupported_type.
                 account_id:
                   type: string
                   format: uuid
@@ -7825,8 +8550,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -7940,8 +8663,6 @@ paths:
                   - CategoryImport
                   - RuleImport
                   - MerchantImport
-                  - PdfImport
-                  - QifImport
                   - SureImport
                   description: Import type to validate (defaults to TransactionImport)
                 account_id:
@@ -8050,6 +8771,46 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/insights/{id}/acknowledge":
+    patch:
+      summary: Acknowledge a proactive insight
+      tags:
+      - Insights
+      description: Marks a visible family insight read and acknowledged, removing
+        it from the feed. Requires read_write scope and preview access. Repeated requests
+        are idempotent.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read_write
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+          format: uuid
+        required: true
+      responses:
+        '204':
+          description: insight acknowledged
+        '401':
+          description: authentication required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: write scope, member access or preview features required
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: insight not found or not visible to the family
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/merchants":
     get:
       summary: List merchants
@@ -8082,6 +8843,12 @@ paths:
                 "$ref": "#/components/schemas/MerchantImportResult"
         '401':
           description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '403':
+          description: guest users cannot import merchants
           content:
             application/json:
               schema:
@@ -9050,6 +9817,51 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+    post:
+      summary: Import closing prices for a security no provider tracks
+      description: Self-hosted instances only. Stores daily closes for an offline
+        security no provider has ever matched (no offline_reason, no price_provider)
+        that is traded in an account the caller can write to, or held in a linked
+        one. All rows are validated first and stored together, or none are. A date
+        already stored is replaced. Security prices are shared, so the closes also
+        value any other family holding the same security. The caller's affected accounts
+        are synced afterwards. Requires the read_write scope.
+      tags:
+      - Security Prices
+      security:
+      - apiKeyAuth: []
+      parameters: []
+      responses:
+        '200':
+          description: closes imported
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPriceImportResult"
+        '403':
+          description: insufficient scope, a guest, or a managed instance
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: security not found among the caller's writable accounts
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: online security or invalid rows; nothing was stored
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SecurityPriceImportError"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SecurityPriceImportRequest"
+        required: true
   "/api/v1/security_prices/{id}":
     parameters:
     - name: id
@@ -9090,6 +9902,140 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/spending_vs_normal":
+    get:
+      summary: Show spending per category against normal
+      tags:
+      - Reports
+      description: 'Net spending per category in a period, compared with each category''s
+        normal. For a finished period, normal is its net spending over the year before
+        the period, scaled to the period length. An unfinished period (in_progress)
+        is cut to today and compared with the average of the same number of days from
+        each of up to 12 earlier month starts, counting only windows that end before
+        the period. The data behind the Reports section "Spending vs normal". Uses
+        the authenticated user''s finance accounts and Sure reporting rules. Experimental:
+        the section is a preview feature, and how normal is defined may still change.'
+      parameters:
+      - name: start_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Inclusive ISO date. Requires end_date; both omitted means the
+          current month to date.
+      - name: end_date
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date
+        description: Inclusive ISO date at or after start_date.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: comparison returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/SpendingVsNormal"
+        '422':
+          description: invalid period
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/transactions/{transaction_id}/split":
+    parameters:
+    - name: transaction_id
+      in: path
+      description: Transaction ID. A split child resolves to its parent.
+      required: true
+      schema:
+        type: string
+    post:
+      summary: Split a transaction
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Splits a transaction into child transactions. The child amounts
+        must sum exactly to the parent amount, using the same sign convention the
+        transaction endpoints return. The parent becomes excluded from totals.
+      parameters: []
+      responses:
+        '201':
+          description: transaction split
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Split"
+        '422':
+          description: amounts do not sum to the parent, or the transaction cannot
+            be split
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SplitRequest"
+    get:
+      summary: Retrieve a transaction split
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Returns the child transactions of a split.
+      responses:
+        '200':
+          description: split returned
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Split"
+        '404':
+          description: transaction is not split
+    patch:
+      summary: Replace a transaction split
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Replaces the children of an existing split. The previous children
+        are destroyed, so anything set on them afterwards is not carried over. Send
+        each child in full, including its merchant_id and tag_ids. A child without
+        a merchant_id takes the parent's merchant.
+      parameters: []
+      responses:
+        '200':
+          description: split replaced
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Split"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/SplitRequest"
+    delete:
+      summary: Remove a transaction split
+      tags:
+      - Transactions
+      security:
+      - apiKeyAuth: []
+      description: Removes the children and restores the parent transaction.
+      responses:
+        '204':
+          description: split removed
+        '404':
+          description: transaction is not split
   "/api/v1/syncs":
     get:
       summary: Lists sync history
@@ -9227,6 +10173,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/TagDetail"
+        '403':
+          description: guest users cannot modify tags
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '422':
           description: validation error - missing name
           content:
@@ -9492,10 +10444,6 @@ paths:
                     investment_activity_label:
                       type: string
                       description: Activity label (e.g. Buy, Sell)
-                    category_id:
-                      type: string
-                      format: uuid
-                      description: Category ID
                     transfer_account_id:
                       type: string
                       format: uuid
@@ -9611,9 +10559,6 @@ paths:
                       type: string
                     investment_activity_label:
                       type: string
-                    category_id:
-                      type: string
-                      format: uuid
         required: true
     delete:
       summary: Delete trade
@@ -9787,7 +10732,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/Transaction"
         '422':
-          description: validation error - missing required fields
+          description: validation error - missing required fields, malformed tag_ids,
+            or a tag, category or merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -9910,6 +10856,13 @@ paths:
                 "$ref": "#/components/schemas/Transaction"
         '404':
           description: transaction not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '422':
+          description: validation error - malformed tag_ids, or a tag, category or
+            merchant id the family cannot use
           content:
             application/json:
               schema:
@@ -10395,3 +11348,26 @@ paths:
                       type: string
                       description: Additional notes
         required: true
+  "/api/v1/version":
+    get:
+      summary: Get the running Sure version
+      tags:
+      - Version
+      description: Requires read or read_write access. Operators may explicitly enable
+        anonymous access with PUBLIC_VERSION_ENDPOINT=true. Responses are not cacheable.
+        Supplied credentials are still validated in public mode.
+      security:
+      - apiKeyAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          description: running version
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Version"
+        '401':
+          description: missing or invalid credentials (default configuration)
+        '403':
+          description: insufficient scope

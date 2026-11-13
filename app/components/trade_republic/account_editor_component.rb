@@ -20,7 +20,7 @@ class TradeRepublic::AccountEditorComponent < ApplicationComponent
   # healthy, fully linked connections among several start closed.
   def open?(item)
     items.size == 1 || qr_login_active?(item) || item.pending_login_state.present? ||
-      !item.good? || setup_cta_visible?(item)
+      item.needs_login? || setup_cta_visible?(item)
   end
 
   # Mirrors the card template's condition for the "X accounts discovered —

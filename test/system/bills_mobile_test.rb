@@ -119,10 +119,10 @@ class BillsMobileTest < ApplicationSystemTestCase
     assert_no_horizontal_scroll("the bill drawer")
   end
 
-  # Bill rows padded 12px under a 16px section header, so every card had a 4px
-  # step. And the review rows kept two buttons beside the text, which left a
-  # phone "VERIZON …" for a question and "Neighborhood …" for a name.
-  test "every list row lines up with its header and review rows read in full on a phone" do
+  # Bill rows follow the transaction recipe: 12px padding below @lg, 16px
+  # above it. Section headings keep their own 16px inset. Review rows must
+  # still show their full text and put their buttons below it on a phone.
+  test "bill rows use responsive padding and review rows read in full on a phone" do
     bill = @family.recurring_transactions.create!(
       name: "Verizon Wireless", account: accounts(:depository), amount: 95, currency: "USD",
       expected_day_of_month: Date.current.day, anchor_date: Date.current,
@@ -149,17 +149,7 @@ class BillsMobileTest < ApplicationSystemTestCase
     assert_text question
     assert_text "Neighborhood Fitness Club"
 
-    offsets = page.evaluate_script(<<~JS)
-      (() => {
-        const visibleChild = (el) => [...el.children].find((c) => c.getClientRects().length > 0);
-        return [...document.querySelectorAll(".\\\\@container a[href*='display=drawer']")].map((link) => {
-          const header = link.closest(".\\\\@container").previousElementSibling.querySelector("h2");
-          return Math.round(visibleChild(link).getBoundingClientRect().left - header.getBoundingClientRect().left);
-        });
-      })()
-    JS
-    assert offsets.any?, "expected bill rows on the overview"
-    assert_equal [ 0 ], offsets.uniq, "bill row content must share its section header's left edge"
+    assert_bill_row_padding 12
 
     [ question, "Neighborhood Fitness Club" ].each do |text|
       layout = page.evaluate_script(<<~JS, text)
@@ -175,6 +165,13 @@ class BillsMobileTest < ApplicationSystemTestCase
       assert_not layout["clipped"], "#{text.inspect} is truncated"
       assert layout["below"], "the buttons for #{text.inspect} should sit under the text"
     end
+
+    # Give the list itself enough width to cross @lg, not just the viewport.
+    page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
+    page.driver.browser.manage.window.resize_to(1920, 1400)
+    visit bills_url
+    assert_text bill.display_name
+    assert_bill_row_padding 16
   ensure
     page.driver.browser.execute_cdp("Emulation.clearDeviceMetricsOverride")
   end
@@ -260,6 +257,18 @@ class BillsMobileTest < ApplicationSystemTestCase
   end
 
   private
+    def assert_bill_row_padding(expected)
+      assert_selector "[data-controller~='clickable-row'] a[data-clickable-row-target='link'][href*='display=drawer']"
+      paddings = page.evaluate_script(<<~JS)
+        [...document.querySelectorAll("a[data-clickable-row-target='link'][href*='display=drawer']")].map((link) => {
+          const row = link.closest("[data-controller~='clickable-row']");
+          const style = getComputedStyle(row);
+          return [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft].map(parseFloat);
+        })
+      JS
+      assert_equal [ [ expected ] * 4 ], paddings.uniq, "bill rows must use #{expected}px padding on every side"
+    end
+
     # The document must never be wider than the viewport, and neither must the
     # scroll container inside it. An open drawer sits outside #main, in a scroll
     # container of its own.

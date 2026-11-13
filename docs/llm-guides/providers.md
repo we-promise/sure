@@ -53,7 +53,7 @@ metadata produces no badge; manual/CSV imports have no pending concept.
 | --- | --- |
 | SimpleFIN | [`SimplefinEntry::Processor.pending?`](../../app/models/simplefin_entry/processor.rb) accepts an explicitly truthy `pending` flag, or `posted` equal to numeric `0` or string `"0"` with a present, positive `transacted_at` timestamp. A blank/missing `posted` value does **not** imply pending. Writes `extra["simplefin"]["pending"]` as true or false so a posted update clears stale pending metadata. |
 | Plaid | [`PlaidEntry::Processor`](../../app/models/plaid_entry/processor.rb) stores bank/credit transaction `pending` and `pending_transaction_id` under `extra["plaid"]`; the linking ID supports pending-to-posted reconciliation. It also stores `original_description`, `payment_channel`, `transaction_code`, `payment_meta` and `counterparties`, and passes `replace_extra_namespaces: ["plaid"]` so the namespace is a snapshot of what Plaid currently reports. The investment transaction processor does not store pending metadata. |
-| Lunchflow | [`LunchflowEntry::Processor`](../../app/models/lunchflow_entry/processor.rb) stores the boolean-cast `isPending` value under `extra["lunchflow"]["pending"]` when the upstream key is present. |
+| Lunchflow | [`LunchflowEntry::Processor`](../../app/models/lunchflow_entry/processor.rb) stores the boolean-cast `isPending` value under `extra["lunchflow"]["pending"]` when the upstream key is present, or `true` when an unidentified card authorization hold is detected. |
 | Monobank | [`MonobankEntry::Processor`](../../app/models/monobank_entry/processor.rb) treats a `hold: true` statement item as pending and writes `extra["monobank"]["pending"]`. Monobank may settle a hold under a *different* id, so the settled record reconciles onto the pending entry through [`Account::ProviderImportAdapter`](../../app/models/account/provider_import_adapter.rb)'s amount/date lookup. A hold that simply disappears is pruned, but only when the statement request actually covered its date range, and never when the entry is `protected_from_sync?` — those only lose the pending flag. `currencyCode` on a statement item is the **operation** currency, not the account's — it varies between items on one account — so entries take their currency from `MonobankAccount#currency` and `currencyCode`/`operationAmount` populate `fx_from`/`fx_amount`. Those two are emitted only for a recognized foreign operation — a known `currencyCode` differing from the account currency, and for `fx_amount` a parseable `operationAmount`, whose failure is captured as a `provider_sync_error`. Independently of that, `operation_amount` keeps the raw minor-unit figure whenever it differs from `amount`. |
 
 SimpleFIN additionally stores `extra["simplefin"]["fx_from"]` when transaction and
@@ -94,10 +94,20 @@ Pending inclusion is provider- and layer-specific:
   only settled transactions. The same initializer bounds a sync against Monobank's
   one-request-per-minute limit and 31-day statement window
   (`max_statement_requests_per_sync`, `pending_lookback_days`,
-  `initial_history_days`); read [the hosting guide](../hosting/monobank.md) before
+  `initial_history_days`); read [the provider guide](../providers/monobank.md) before
   changing the [importer](../../app/models/monobank_item/importer.rb)'s request
   budgeting, and keep the pending lookback wide enough that live holds stay in the
   payload instead of being pruned as stale.
+
+## Exchange rate providers
+
+Exchange rate providers include
+[`Provider::ExchangeRateConcept`](../../app/models/provider/exchange_rate_concept.rb),
+which validates their responses: a rate that `ExchangeRate.valid_rate?` rejects
+(zero, negative, NaN, infinite or missing) turns a single lookup into a failed
+response and is dropped from a series, with a `DebugLogEntry` in the
+`exchange_rates` category. Providers do not need their own check. A database
+constraint on `exchange_rates.rate` rejects anything that still gets through.
 
 ## Transaction naming
 
@@ -206,3 +216,45 @@ putting the token in the **URL path**, so neither [the client](../../app/models/
 nor the importer may put a resolved URL into an exception message, a log line or debug
 metadata; requests are labelled with a static operation name instead. Fio reports no
 pending state, so it is deliberately absent from `Transaction::PENDING_PROVIDERS`.
+
+## Wise payloads and clean-up
+
+Each Wise balance stores the rows it books in `raw_transactions_payload`, and Sure
+re-routes them on every sync. Keep these rules when changing the importer, the row
+processors or the payload keys:
+
+- A Wise amount reaches an entry a person categorized, noted or excluded, unless they
+  changed its amount or currency themselves (a lock), an import owns it, or it is
+  reconciled, split or in a transfer ([`WiseItem::AmountCorrection`](../../app/models/wise_item/amount_correction.rb)).
+- [`WiseItem::Importer`](../../app/models/wise_item/importer.rb) fetches each source
+  from where its coverage ends (`sync_metadata["coverage"]`, raised by
+  `WiseItem::COVERAGE_VERSION`), and the whole history while none is recorded.
+  `import[:complete]` is true only when every source arrived in full, and coverage
+  moves on only when the rows reached every payload. A statement 403 is a refusal, not
+  a failure.
+- Rows carry Sure-owned keys: a transfer's `wise_activity` and `wise_refund_activity`,
+  which a re-fetched copy keeps unless it brings its own (`STICKY_ROW_KEYS`), and
+  `wise_missing_count` while Wise no longer finds the transfer by id.
+- [`WiseItem::BalanceReplay`](../../app/models/wise_item/balance_replay.rb) writes
+  `wise_funding` and `wise_split_parts`/`wise_split_estimated` only for a full-history
+  import whose balances reconcile to Wise's live amounts, and a split payment's parts
+  only when every balance it lists reconciled and a rate bounds each part.
+- [`WiseAccount::Transactions::Processor`](../../app/models/wise_account/transactions/processor.rb)
+  deletes the Wise entries no stored row books only after a complete import, where
+  coverage reaches, from the payload's earliest row on, for entries booked since the
+  balance was linked, never for an entry a person acted on, and at most max(5, 10 %)
+  of the account's Wise entries per sync. Balance markers in `raw_payload`
+  (`WiseAccount::PRESERVED_KEYS`) survive a new snapshot and are merged into the stored
+  one.
+- [`WiseItem::StatementMigration`](../../app/models/wise_item/statement_migration.rb)
+  hands a balance's transfer and activity rows over to the statement rows that carry
+  them (`wise_superseded_by`, `wise_supersedes`), renaming their entries, and keeps
+  each statement row's id (`wise_statement_id`) once given. A sync that re-fetched the
+  whole history may delete beyond the cap the entries whose rows it moved out of the
+  balance's payload or left booking nothing on it (`prune_cap_bypass`).
+- A jar move and interest stay on the balance they were first routed to
+  (`wise_jar_balance_id`), and a row processor books nothing a payload holds for
+  another balance.
+- [`WiseItem::InterbalanceLinker`](../../app/models/wise_item/interbalance_linker.rb)
+  links each conversion, jar move and send to the profile's own account details as a
+  confirmed transfer; removing such a link from the transfer drawer rejects it.

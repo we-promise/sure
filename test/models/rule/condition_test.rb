@@ -319,6 +319,52 @@ class Rule::ConditionTest < ActiveSupport::TestCase
     assert filtered.none? { |t| t.tags.include?(tag) }
   end
 
+  test "applies != condition for transaction_tag" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    other_tag = @family.tags.create!(name: "Business")
+    @account.transactions.first.tags << tag
+    @account.transactions.second.tags << other_tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "!=",
+      value: tag.id
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # Every transaction except the one carrying the tag, including untagged ones
+    assert_equal 4, filtered.count
+    assert filtered.none? { |t| t.tags.include?(tag) }
+  end
+
+  test "applies is_not_null condition for transaction_tag" do
+    scope = @rule_scope
+
+    tag = @family.tags.create!(name: "Reimbursable")
+    other_tag = @family.tags.create!(name: "Business")
+    @account.transactions.first.tags << [ tag, other_tag ]
+    @account.transactions.second.tags << other_tag
+
+    condition = Rule::Condition.new(
+      rule: @transaction_rule,
+      condition_type: "transaction_tag",
+      operator: "is_not_null",
+      value: nil
+    )
+
+    scope = condition.prepare(scope)
+    filtered = condition.apply(scope)
+
+    # The 2 tagged transactions, once each
+    assert_equal 2, filtered.count
+    assert_equal [ @account.transactions.first.id, @account.transactions.second.id ].sort, filtered.map(&:id).sort
+  end
+
   test "compound AND of two transaction_tag conditions matches transactions having both tags" do
     scope = @rule_scope
 

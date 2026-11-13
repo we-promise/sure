@@ -4,9 +4,20 @@ pt-BR:
     securities:
       show:
         disable_mfa: Desabilitar 2FA
-        disable_mfa_confirm: Tem certeza de que deseja desabilitar a autenticação de dois fatores?
-          Isso tornará sua conta menos segura.
+        disable_mfa_confirm: Tem certeza de que deseja desabilitar a autenticação de dois fatores? Isso tornará sua conta menos segura.
         enable_mfa: Habilitar 2FA
-        mfa_description: Adicione uma camada extra de segurança à sua conta exigindo
-          um código do seu aplicativo autenticador ao fazer login
+        mfa_description: Adicione uma camada extra de segurança à sua conta exigindo um código do seu aplicativo autenticador ao fazer login
         mfa_title: Autenticação de Dois Fatores
+        page_title: Segurança
+        sso_title: Contas Conectadas
+        sso_subtitle: Gerencie suas conexões de contas de login único (SSO)
+        sso_disconnect: Desconectar
+        sso_last_used: Último uso
+        sso_never: Nunca
+        sso_no_email: Sem e-mail
+        sso_no_identities: Nenhuma conta SSO conectada
+        sso_connect_hint: Saia da sua conta e entre novamente com um provedor SSO para conectar uma conta.
+        sso_confirm_title: Desconectar Conta?
+        sso_confirm_body: Tem certeza de que deseja desconectar sua conta %{provider}? Você poderá reconectá-la posteriormente fazendo login novamente com esse provedor.
+        sso_confirm_button: Desconectar
+        sso_warning_message: Este é o seu único método de login. Você deve definir uma senha nas suas configurações de segurança antes de desconectar, caso contrário, você poderá ficar bloqueado na sua conta.

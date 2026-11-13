@@ -63,6 +63,11 @@ module Admin
         return
       end
 
+      if password_change_requested? && !password_change_allowed_for?(@user)
+        redirect_to admin_users_path, alert: t(".password_disabled")
+        return
+      end
+
       if password_change_requested?
         errors = validate_password_criteria(user_params[:password])
         if errors.any?
@@ -98,7 +103,7 @@ module Admin
         )
 
         redirect_to admin_users_path, notice: t(".success_family")
-      elsif @user.update(user_update_attributes)
+      elsif update_user_and_log_password_change
         changes = []
         changes << :role if @user.saved_change_to_role?
         changes << :password if @user.saved_change_to_password_digest?
@@ -121,7 +126,17 @@ module Admin
         redirect_to admin_users_path, alert: @user.errors.full_messages.to_sentence.presence || t(".failure")
       end
     rescue ActiveRecord::RecordInvalid => e
-      redirect_to admin_users_path, alert: e.record.errors.full_messages.to_sentence
+      # e.record is the User for a validation failure on the user update, but
+      # the SecurityAuditLog write inside the same transaction can also raise
+      # RecordInvalid — in that case e.record.errors is empty (it's a valid
+      # user, an invalid audit row) and would otherwise show a blank alert.
+      if e.record.is_a?(User)
+        redirect_to admin_users_path, alert: e.record.errors.full_messages.to_sentence
+      else
+        redirect_to admin_users_path, alert: t(".failure")
+      end
+    rescue ActiveRecord::ActiveRecordError
+      redirect_to admin_users_path, alert: t(".failure")
     rescue ActiveRecord::RecordNotFound
       redirect_to admin_users_path, alert: t(".failure")
     end
@@ -174,10 +189,25 @@ module Admin
 
     private
 
-      helper_method :family_label_for
+      helper_method :family_label_for, :password_change_allowed_for?
 
       def set_user
         @user = User.find(params[:id])
+      end
+
+      # Wrapped in a transaction so a failure writing the audit entry rolls
+      # back the password/role change too, instead of leaving a sensitive
+      # change committed with no trail of it.
+      def update_user_and_log_password_change
+        ActiveRecord::Base.transaction do
+          next false unless @user.update(user_update_attributes)
+
+          if @user.saved_change_to_password_digest?
+            SecurityAuditLog.log_password_changed!(user: @user, request: request, actor: Current.true_user)
+          end
+
+          true
+        end
       end
 
       def user_params
@@ -195,6 +225,12 @@ module Admin
 
       def password_change_requested?
         user_params[:password].present? && @user.has_local_password?
+      end
+
+      # Same policy as PasswordsController and local sign-in: a password that
+      # could not be used to sign in must not be set by an admin either.
+      def password_change_allowed_for?(user)
+        user.has_local_password? && AuthConfig.local_login_allowed_for?(user)
       end
 
       def validate_password_criteria(password)

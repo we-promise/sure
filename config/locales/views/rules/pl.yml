@@ -97,10 +97,6 @@ pl:
       no_rules_title: Brak reguł
       page_title: Reguły
       rules_heading: Reguły
-      sort_by: 'Sortuj według:'
-      sort_name: Nazwa
-      sort_updated_at: Data aktualizacji
-      toggle_sort_direction: Zmień kierunek sortowania
     no_action: Brak akcji
     no_condition: Brak warunku
     recent_runs:

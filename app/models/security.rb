@@ -12,7 +12,8 @@ class Security < ApplicationRecord
   # Legacy non-ISO values previously persisted as exchange_operating_mic
   # (e.g. raw EODHD exchange codes) mapped to their ISO MIC.
   MIC_ALIASES = {
-    "WAR" => "XWAR"
+    "WAR" => "XWAR",
+    "GER" => "XETR" # Yahoo search code for Xetra, stored before it was mapped
   }.freeze
 
   KINDS = %w[standard cash].freeze
@@ -255,6 +256,11 @@ class Security < ApplicationRecord
     Money.new(@current_price.price, @current_price.currency)
   end
 
+  # Stores user-supplied closes for a security no provider tracks. See Security::ManualPriceImport.
+  def import_manual_prices!(rows, accounts:)
+    Security::ManualPriceImport.new(security: self, rows: rows, accounts: accounts).import!
+  end
+
   # How many shares one share held at the close of `from` has become by the
   # close of `to`: the product of the ratios of splits whose ex-date falls
   # after `from` and on or before `to`. 1 when there are none.
@@ -293,7 +299,12 @@ class Security < ApplicationRecord
 
     def upcase_symbols
       self.ticker = ticker.upcase
-      self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic) if exchange_operating_mic.present?
+      # Only canonicalize a MIC being written. A stored legacy alias is upgraded by
+      # find_by_ticker_and_exchange, which checks for a canonical twin first;
+      # rewriting it on an unrelated save would collide with that twin.
+      if exchange_operating_mic.present? && will_save_change_to_exchange_operating_mic?
+        self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic)
+      end
     end
 
     def should_generate_logo?

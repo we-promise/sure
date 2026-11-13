@@ -18,6 +18,7 @@ en:
       deletion_in_progress: Deletion in progress
       syncing: Syncing
       requires_update: Re-authentication required
+      session_expires_in: "Login expires in %{time} (%{at})."
       error: Error
       synced: Synced %{time} ago. %{summary}.
       never_synced: Never synced.
