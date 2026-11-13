@@ -17,8 +17,10 @@ class SyncHourlyJob < ApplicationJob
 
   private
 
+    # A connection on its own schedule of a day or longer is synced by that
+    # schedule only, so the hourly sweep leaves it out too.
     def sync_items(syncable_class)
-      syncable_class.active.find_each do |item|
+      SyncSchedule.without_own_daily_schedule(syncable_class.active).find_each do |item|
         item.sync_later
       rescue => e
         Rails.logger.error("Failed to sync #{syncable_class.name} #{item.id}: #{e.message}")
