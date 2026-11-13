@@ -38,7 +38,8 @@ class LegacyIncomeStatementCategoryStats
       params = {
         target_currency: @family.currency,
         interval: @interval,
-        family_id: @family.id
+        family_id: @family.id,
+        today: Date.current
       }
 
       ids = @family.tax_advantaged_account_ids
@@ -92,11 +93,19 @@ class LegacyIncomeStatementCategoryStats
             #{scope_to_account_ids_sql}
           GROUP BY c.id, period, CASE WHEN t.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END
         )
+        -- Mirrors CategoryStats' zero-filled average, added after the refactor.
+        , bounds AS (
+          SELECT COALESCE(MAX(period), date_trunc(:interval, CAST(:today AS date)) - CAST('1 ' || :interval AS interval)) AS last_p
+          FROM period_totals WHERE period < date_trunc(:interval, CAST(:today AS date))
+        )
         SELECT
           category_id,
           classification,
           ABS(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total)) as median,
-          ABS(AVG(total)) as avg
+          ABS(COALESCE(SUM(total) FILTER (WHERE period > (SELECT last_p FROM bounds) - CAST('12 ' || :interval AS interval)), 0) / (
+            SELECT COUNT(*) FROM bounds, generate_series(GREATEST(MIN(period), last_p - CAST('11 ' || :interval AS interval)),
+              GREATEST(MAX(period), last_p), CAST('1 ' || :interval AS interval))
+          )) as avg
         FROM period_totals
         GROUP BY category_id, classification;
       SQL
