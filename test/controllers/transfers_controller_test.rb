@@ -1092,6 +1092,66 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
   end
 
+  test "mark_as_recurring accepts two transfers with the same accounts and amount on different days" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    first = create_dated_transfer(date: Date.new(2026, 1, 1))
+    second = create_dated_transfer(date: Date.new(2026, 1, 28))
+
+    assert_difference -> { RecurringTransaction.where(family: family).count }, +2 do
+      post mark_as_recurring_transfer_url(first)
+      assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+      post mark_as_recurring_transfer_url(second)
+      assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+    end
+
+    assert_equal [ 1, 28 ], RecurringTransaction.where(family: family).order(:expected_day_of_month).pluck(:expected_day_of_month)
+  end
+
+  test "mark_as_recurring treats transfers on adjacent days as separate monthly series" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    first = create_dated_transfer(date: Date.new(2026, 1, 1))
+    second = create_dated_transfer(date: Date.new(2026, 1, 2))
+
+    assert_difference -> { RecurringTransaction.where(family: family).count }, +2 do
+      post mark_as_recurring_transfer_url(first)
+      post mark_as_recurring_transfer_url(second)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_marked_as_recurring"), flash[:notice]
+  end
+
+  test "mark_as_recurring flags a second transfer on the same day of the same series as already existing" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    january = create_dated_transfer(date: Date.new(2026, 1, 28))
+    february = create_dated_transfer(date: Date.new(2026, 2, 28))
+
+    post mark_as_recurring_transfer_url(january)
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(february)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
+  end
+
+  test "mark_as_recurring reports already-exists when a concurrent request wins the insert" do
+    family = users(:family_admin).family
+    family.recurring_transactions.destroy_all
+    transfer = create_dated_transfer(date: Date.new(2026, 1, 28))
+    winner = RecurringTransaction.create_from_transfer(transfer)
+
+    # Our lookup misses, the other request's insert has already landed when
+    # ours collides with it.
+    RecurringTransaction.stubs(:transfer_series_for).returns(nil).then.returns(winner)
+    RecurringTransaction.stubs(:create_from_transfer).raises(ActiveRecord::RecordNotUnique)
+
+    assert_no_difference -> { RecurringTransaction.where(family: family).count } do
+      post mark_as_recurring_transfer_url(transfer)
+    end
+    assert_equal I18n.t("recurring_transactions.transfer_already_exists"), flash[:alert]
+  end
+
   test "mark_as_recurring is rejected when recurring_transactions_disabled" do
     transfer = transfers(:one)
     family = users(:family_admin).family
@@ -1105,6 +1165,13 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def create_dated_transfer(date:, amount: 2000)
+      outflow_entry = create_transaction(date: date, account: accounts(:depository), amount: amount)
+      inflow_entry = create_transaction(date: date, account: accounts(:investment), amount: -amount)
+
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction).tap(&:confirm!)
+    end
+
     def create_confirmed_transfer(to:)
       outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
       inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
