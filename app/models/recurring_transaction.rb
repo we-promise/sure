@@ -477,12 +477,17 @@ class RecurringTransaction < ApplicationRecord
     #   * its destination_account_id is also accessible OR null (so a recurring
     #     transfer never leaks into the list of a user without access to BOTH
     #     endpoints).
-    where(account_id: accessible_account_ids)
-      .or(where(account_id: nil))
-      .merge(
-        where(destination_account_id: accessible_account_ids)
-          .or(where(destination_account_id: nil))
-      )
+    #
+    # Written as one raw SQL predicate on purpose. ActiveRecord's
+    # `merge` replaces an existing hash predicate on the same column instead of
+    # AND-ing it, so a hash-style `where(destination_account_id: ...)` here would
+    # silently wipe out a caller's own destination filter when composed through
+    # `.merge(RecurringTransaction.accessible_by(user))`.
+    where(
+      "(recurring_transactions.account_id IN (:ids) OR recurring_transactions.account_id IS NULL) " \
+      "AND (recurring_transactions.destination_account_id IN (:ids) OR recurring_transactions.destination_account_id IS NULL)",
+      ids: accessible_account_ids
+    )
   }
 
   # Class methods for identification and cleanup
