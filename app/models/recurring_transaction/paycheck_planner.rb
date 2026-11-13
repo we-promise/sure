@@ -53,14 +53,15 @@ class RecurringTransaction
         cash_on_hand - obligation_total
       end
 
-      # Chronological, because both render as a ledger keyed on the due date.
-      # `items` itself stays ordered by share, for weight-first callers.
+      # Chronological, because both render as a ledger keyed on the due date,
+      # the snoozed one where a bill was snoozed. `items` itself stays ordered
+      # by share, for weight-first callers.
       def items_due
-        items.select(&:due_in_period).sort_by { |item| item.occurrence.due_on }
+        items.select(&:due_in_period).sort_by { |item| item.occurrence.effective_due_on }
       end
 
       def items_reserved
-        items.reject(&:due_in_period).sort_by { |item| item.occurrence.due_on }
+        items.reject(&:due_in_period).sort_by { |item| item.occurrence.effective_due_on }
       end
 
       # By what the bill actually costs, not by the slice this period carries.
@@ -178,15 +179,17 @@ class RecurringTransaction
         # Chronological, so each window's own bills claim its paycheck before
         # any later window's overflow reaches back for the spare.
         occurrences = open_payable_occurrences(periods.last[:ends_on])
-                        .sort_by { |occurrence| [ occurrence.due_on, occurrence.id ] }
+                        .sort_by { |occurrence| [ occurrence.effective_due_on, occurrence.id ] }
 
         occurrences.each do |occurrence|
           remaining = to_family_currency(occurrence.remaining_amount_money)
           next unless remaining.positive?
 
-          # A past-due open occurrence still needs paying; it lands whole in
-          # the leading window, since every share of it is already owed.
-          effective_due = [ occurrence.due_on, periods.first[:starts_on] ].max
+          # A snoozed bill falls due on the date it was snoozed to, the one the
+          # overview's pay-period markers file it under. A past-due open
+          # occurrence still needs paying; it lands whole in the leading
+          # window, since every share of it is already owed.
+          effective_due = [ occurrence.effective_due_on, periods.first[:starts_on] ].max
           home = periods.index { |period| effective_due.between?(period[:starts_on], period[:ends_on]) }
           next if home.nil?
 
@@ -243,7 +246,10 @@ class RecurringTransaction
                                     .or(RecurringTransaction.where(destination_account_id: debt_accounts))
               )
               .merge(RecurringTransaction.accessible_by(user))
-              .where("recurring_occurrences.due_on <= ?", through)
+              # The snoozed date, as apportion_bills reads it. A bill snoozed
+              # past the plan is not one of its bills, not even one it failed
+              # to convert.
+              .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} <= ?", through)
               .includes(recurring_transaction: :merchant)
               .to_a
               .tap { |occurrences| preload_confirmed_sums(occurrences) }

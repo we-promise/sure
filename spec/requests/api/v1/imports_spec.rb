@@ -138,8 +138,8 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: Import::TYPES,
-            description: 'Import type (defaults to TransactionImport)'
+            enum: Import::TYPES - %w[MonarchImport],
+            description: 'Import type (defaults to TransactionImport). MonarchImport imports are created in the web app; requesting one here returns 422 unsupported_type.'
           },
           account_id: {
             type: :string,
@@ -246,6 +246,25 @@ RSpec.describe 'API V1 Imports', type: :request do
             name_col_label: 'name'
           }
         end
+
+        run_test!
+      end
+
+      response '403', 'guest users cannot import family configuration' do
+        schema oneOf: [
+          { '$ref' => '#/components/schemas/ErrorResponse' },
+          { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }
+        ]
+
+        let(:user) do
+          family.users.create!(
+            email: 'api-guest@example.com',
+            password: 'password123',
+            password_confirmation: 'password123',
+            role: 'guest'
+          )
+        end
+        let(:body) { { raw_file_content: "name\nGroceries", type: 'CategoryImport' } }
 
         run_test!
       end
@@ -401,7 +420,7 @@ RSpec.describe 'API V1 Imports', type: :request do
           },
           type: {
             type: :string,
-            enum: Import::TYPES,
+            enum: Import::Preflight::IMPORT_TYPES,
             description: 'Import type to validate (defaults to TransactionImport)'
           },
           account_id: {

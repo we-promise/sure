@@ -1,6 +1,10 @@
 class TransfersController < ApplicationController
   include StreamExtensions
 
+  # Most rows besides the two legs a rejection redraws in place; past this the
+  # page reloads instead, as the stream would carry rows the page may not show.
+  MAX_REDRAWN_PAIRED_ROWS = 10
+
   before_action :set_transfer, only: %i[show destroy update update_tags mark_as_recurring]
   before_action :set_accounts, only: %i[new create]
 
@@ -16,16 +20,16 @@ class TransfersController < ApplicationController
     @categories = Current.family.categories.alphabetically_by_hierarchy
     @tags = Current.family.tags.alphabetically
 
-    # Whether the current user can hit `mark_as_recurring`: feature flag on,
-    # AND they have write access to BOTH transfer endpoints. Gating the
-    # view button on this avoids showing a CTA that the controller would
-    # reject via `require_account_permission!` for read-only sharers.
+    # Whether the current user can hit `mark_as_recurring` (feature flag on)
+    # or switch the investment contribution: both need write access to BOTH
+    # transfer endpoints. Gating the view controls on this avoids showing a
+    # CTA that the controller would reject via `require_account_permission!`
+    # for read-only sharers.
     endpoint_ids = [ @transfer.from_account&.id, @transfer.to_account&.id ].compact
     writable_endpoint_count = Account.writable_by(Current.user).where(id: endpoint_ids).distinct.count
-    @can_mark_as_recurring_transfer =
-      !Current.family.recurring_transactions_disabled? &&
-      endpoint_ids.size == 2 &&
-      writable_endpoint_count == 2
+    both_endpoints_writable = endpoint_ids.size == 2 && writable_endpoint_count == 2
+    @can_mark_as_recurring_transfer = !Current.family.recurring_transactions_disabled? && both_endpoints_writable
+    @can_switch_investment_contribution = both_endpoints_writable && @transfer.investment_contribution_switchable?
   end
 
   def create
@@ -87,18 +91,31 @@ class TransfersController < ApplicationController
   end
 
   def update
+    return reject_transfer if rejecting?
+
     outflow_account = @transfer.outflow_transaction.entry.account
+    inflow_account = @transfer.inflow_transaction.entry.account
     return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    # Confirming or rejecting rewrites the kind of both legs
+    return unless require_account_permission!(inflow_account, redirect_path: transactions_url)
 
     Transfer.transaction do
       update_transfer_status
       update_transfer_fees_and_amount
-      update_transfer_details unless transfer_update_params[:status] == "rejected"
+      update_transfer_details
+      update_investment_contribution
     end
 
+    @view_ctx = view_ctx_from_referer
     respond_to do |format|
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
-      format.turbo_stream
+      format.turbo_stream do
+        # The switch moves the amount in or out of the page's expense totals,
+        # which the row replacements in update.turbo_stream would leave stale.
+        if transfer_update_params.key?(:investment_contribution)
+          stream_redirect_to(request.referer.presence || transactions_url)
+        end
+      end
     end
   end
 
@@ -122,10 +139,11 @@ class TransfersController < ApplicationController
   end
 
   def destroy
-    outflow_account = @transfer.outflow_transaction.entry.account
-    return unless require_account_permission!(outflow_account, redirect_path: transactions_url)
+    return unless require_account_permission!(unlink_permission_account, redirect_path: transactions_url)
 
-    @transfer.unlink!
+    # A link the Wise sync makes again on its own is rejected instead, so it
+    # stays removed.
+    WiseItem::InterbalanceLinker.relinks?(@transfer) ? @transfer.reject! : @transfer.unlink!
     redirect_back_or_to transactions_url, notice: t(".success")
   end
 
@@ -190,16 +208,134 @@ class TransfersController < ApplicationController
 
   private
     def set_transfer
-      # Finds the transfer and ensures the user has access to it
+      # Finds the transfer and ensures the user has access to it. Unlinking
+      # (reject/destroy) only needs access to one side, so a user can undo a
+      # match against an account that is not shared with them. Any other
+      # update edits both entries, so it needs access to both sides.
       accessible_transaction_ids = Current.family.transactions
         .joins(entry: :account)
         .merge(Account.accessible_by(Current.user))
         .select(:id)
 
-      @transfer = Transfer
-                    .where(id: params[:id])
-                    .where(inflow_transaction_id: accessible_transaction_ids)
-                    .first!
+      scope = Transfer.where(id: params[:id])
+      inflow_accessible = scope.where(inflow_transaction_id: accessible_transaction_ids)
+      outflow_accessible = scope.where(outflow_transaction_id: accessible_transaction_ids)
+
+      accessible = if unlinking?
+        inflow_accessible.or(outflow_accessible)
+      elsif action_name == "update"
+        inflow_accessible.where(outflow_transaction_id: accessible_transaction_ids)
+      else
+        inflow_accessible
+      end
+
+      @transfer = accessible.first!
+    end
+
+    def rejecting?
+      params.dig(:transfer, :status) == "rejected"
+    end
+
+    def unlinking?
+      action_name == "destroy" || (action_name == "update" && rejecting?)
+    end
+
+    def reject_transfer
+      return unless require_account_permission!(unlink_permission_account, redirect_path: transactions_url)
+
+      @view_ctx = view_ctx_from_referer
+      # Locked, so a confirmation landing meanwhile cannot change what the
+      # rejection undoes after the response was chosen.
+      in_place = @transfer.with_lock do
+        rejection_redraws_in_place?.tap { @transfer.reject! }
+      end
+
+      respond_to do |format|
+        format.html { redirect_back_or_to transactions_url, notice: t(".success") }
+        format.turbo_stream do
+          @redrawn_entries = in_place ? redrawn_entries : []
+          if @redrawn_entries.any?
+            render :reject
+          else
+            stream_redirect_to(request.referer.presence || transactions_url)
+          end
+        end
+      end
+    end
+
+    # The rows a rejection changes: both legs, and any other transaction the
+    # "Transfer?" hint now pairs with one of them (a pair touching a transfer
+    # is never offered, so destroying it can free one), each drawn with that
+    # hint as the list would. Empty, and the page reloads, when the user can
+    # no longer see either leg, when a freed row sits inside a split group
+    # (it needs the group's context), or when more rows than
+    # MAX_REDRAWN_PAIRED_ROWS were freed.
+    def redrawn_entries
+      leg_ids = [ @transfer.inflow_transaction_id, @transfer.outflow_transaction_id ]
+      legs = accessible_transaction_entries(leg_ids)
+      return [] if legs.empty?
+
+      @transfer_hint_transaction_ids = Current.family.transfer_hint_pair_ids(legs.map(&:entryable), user: Current.user)
+      others = accessible_transaction_entries(@transfer_hint_transaction_ids.to_a - leg_ids)
+      return [] if others.size > MAX_REDRAWN_PAIRED_ROWS || others.any? { |entry| entry.parent_entry_id.present? }
+
+      legs + others
+    end
+
+    def accessible_transaction_entries(transaction_ids)
+      return [] if transaction_ids.empty?
+
+      Current.accessible_entries.where(entryable_type: "Transaction", entryable_id: transaction_ids).includes(:entryable).to_a
+    end
+
+    # Whether rejecting changes nothing on the page but the two legs' rows, so
+    # those rows can be redrawn in place. Not when the transfer was confirmed
+    # (its legs go back to income and spending, moving the page's totals), has
+    # fees (rejecting deletes them), or has a leg drawn inside a split group
+    # (its row needs the group's context). Nor when both legs are on a list
+    # outside an account page: such a list draws a transfer once, by its
+    # outflow (EntriesHelper#entries_by_date), so the inflow has no row to
+    # redraw and its date group's count would be off.
+    def rejection_redraws_in_place?
+      legs = Entry.where(entryable_type: "Transaction", entryable_id: [ @transfer.inflow_transaction_id, @transfer.outflow_transaction_id ])
+
+      @transfer.pending? &&
+        @transfer.fee_transactions.none? &&
+        !legs.where.not(parent_entry_id: nil).exists? &&
+        (@view_ctx == "account" || legs.merge(Current.accessible_entries).count < 2)
+    end
+
+    # Rows are drawn the way the page that asked draws them: an account page
+    # signs each leg for its own account, every other list shows a transfer as
+    # +/-. Taken from the page the request came from, the account page of one
+    # of the legs, rather than from a client flag, so a stale link or a row
+    # another response redrew cannot claim a view the page does not have.
+    # Without a Referer it is the global list, which reloads after a rejection.
+    def view_ctx_from_referer
+      path = URI.parse(request.referer.to_s).path
+      return "global" if path.blank?
+
+      leg_account_ids = Entry.where(entryable_type: "Transaction", entryable_id: [ @transfer.inflow_transaction_id, @transfer.outflow_transaction_id ]).pluck(:account_id)
+      leg_account_ids.any? { |id| path == account_path(id) } ? "account" : "global"
+    rescue URI::InvalidURIError
+      "global"
+    end
+
+    # Unlinking (reject/destroy) needs write access to one endpoint, plus every
+    # account holding a fee transaction, since destroying the transfer deletes
+    # those fees. Returns the account to run the permission check against: the
+    # first one the user cannot write to, or a writable endpoint.
+    def unlink_permission_account
+      endpoints = [ @transfer.from_account, @transfer.to_account ].compact
+      fee_accounts = Account.where(id: @transfer.fee_transactions.joins(:entry).select("entries.account_id")).to_a
+      writable_ids = Current.family.accounts.writable_by(Current.user)
+                       .where(id: (endpoints + fee_accounts).map(&:id))
+                       .pluck(:id).to_set
+
+      writable_endpoint = endpoints.find { |account| writable_ids.include?(account.id) }
+      return endpoints.first unless writable_endpoint
+
+      fee_accounts.find { |account| !writable_ids.include?(account.id) } || writable_endpoint
     end
 
     def transfer_params
@@ -234,7 +370,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_update_params
-      params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount)
+      params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount, :investment_contribution)
     end
 
     def update_transfer_status
@@ -245,9 +381,21 @@ class TransfersController < ApplicationController
       end
     end
 
+    def update_investment_contribution
+      return unless transfer_update_params.key?(:investment_contribution)
+
+      @transfer.update_investment_contribution!(ActiveModel::Type::Boolean.new.cast(transfer_update_params[:investment_contribution]))
+    end
+
     def update_transfer_details
-      @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
-      @transfer.update!(notes: transfer_update_params[:notes])
+      # Confirming from the transaction list sends only the status; leave the
+      # category and notes alone unless the form actually submitted them.
+      if transfer_update_params.key?(:category_id)
+        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+      end
+      if transfer_update_params.key?(:notes)
+        @transfer.update!(notes: transfer_update_params[:notes])
+      end
     end
 
     def update_transfer_fees_and_amount

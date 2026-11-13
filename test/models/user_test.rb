@@ -1,9 +1,11 @@
 require "test_helper"
+require "concurrent"
 
 class UserTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
-  uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic
+  uses_transaction :test_first_user_role_lock_makes_concurrent_family_creators_deterministic,
+    :"test_verify_otp?_claim_otp_time_step!_lets_only_one_of_two_racing_connections_claim_a_step"
 
   def setup
     @user = users(:family_admin)
@@ -16,6 +18,76 @@ class UserTest < ActiveSupport::TestCase
 
   test "should be valid" do
     assert @user.valid?, @user.errors.full_messages.to_sentence
+  end
+
+  test "find_by_email_with_legacy_fallback matches encrypted and legacy plaintext email rows" do
+    assert_equal @user, User.find_by_email_with_legacy_fallback(" #{@user.email.upcase} ")
+
+    email = store_legacy_plaintext_email(@user)
+
+    assert_equal @user, User.find_by_email_with_legacy_fallback(email.upcase)
+    assert_nil User.find_by_email_with_legacy_fallback("")
+    assert_nil User.find_by_email_with_legacy_fallback("missing@example.com")
+  end
+
+  test "authenticate_by_email checks the password for legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+
+    assert_equal @user, User.authenticate_by_email(email: email, password: user_password_test)
+    assert_nil User.authenticate_by_email(email: email, password: "wrong")
+    assert_nil User.authenticate_by_email(email: "missing@example.com", password: user_password_test)
+  end
+
+  test "authenticate_by_email uses authenticate_by for encrypted rows and unknown emails" do
+    User.expects(:authenticate_by).with(email: @user.email, password: "wrong").returns(nil)
+    assert_nil User.authenticate_by_email(email: @user.email, password: "wrong")
+
+    User.expects(:authenticate_by).with(email: "missing@example.com", password: "x").returns(nil)
+    assert_nil User.authenticate_by_email(email: "missing@example.com", password: "x")
+  end
+
+  test "find_by_email_with_legacy_fallback does not match a row by its stored ciphertext" do
+    ciphertext = User.connection.select_value(
+      User.sanitize_sql([ "SELECT email FROM users WHERE id = ?", @user.id ])
+    )
+
+    assert_nil User.find_by_email_with_legacy_fallback(ciphertext)
+    assert_nil User.authenticate_by_email(email: ciphertext, password: user_password_test)
+  end
+
+  test "email uniqueness covers legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+
+    duplicate = User.new(
+      family: @user.family,
+      email: " #{email.upcase} ",
+      password: user_password_test,
+      password_confirmation: user_password_test
+    )
+
+    assert_not duplicate.valid?
+    assert duplicate.errors.of_kind?(:email, :taken)
+  end
+
+  test "a legacy plaintext email row stays valid on its own" do
+    store_legacy_plaintext_email(@user)
+
+    assert User.find(@user.id).valid?
+  end
+
+  test "authenticate_by_email rejects a blank password for legacy plaintext email rows" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create(""))
+
+    assert_nil User.authenticate_by_email(email: email, password: "")
+    assert_nil User.authenticate_by_email(email: email, password: nil)
+  end
+
+  test "authenticate_by_email accepts a whitespace-only password like authenticate_by" do
+    email = store_legacy_plaintext_email(@user)
+    @user.update_column(:password_digest, BCrypt::Password.create("        "))
+
+    assert_equal @user, User.authenticate_by_email(email: email, password: "        ")
   end
 
   # email
@@ -224,6 +296,142 @@ class UserTest < ActiveSupport::TestCase
     assert_not user.verify_otp?("123456")
   end
 
+  # A code stays valid for its whole time step (and the 15s drift window), so
+  # without this anyone who saw it could sign in with it a second time.
+  test "verify_otp? accepts a TOTP code only once" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert user.verify_otp?(code)
+    assert_not user.verify_otp?(code)
+    assert_not User.find(user.id).verify_otp?(code), "a freshly loaded user must reject it too"
+  end
+
+  test "otp_code_status answers like verify_otp without spending the code" do
+    user = users(:family_member)
+    user.setup_mfa!
+    backup_code = user.enable_mfa!.first
+
+    travel_to Time.zone.parse("2026-10-07 12:00:10") do
+      code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+      assert_equal :accepted, user.otp_code_status(code)
+      assert_equal :accepted, user.otp_code_status(code), "checking must not claim the time step"
+      assert_equal :accepted, user.otp_code_status(backup_code)
+      assert_equal :accepted, user.otp_code_status(backup_code), "checking must not consume the backup code"
+      assert_equal :invalid, user.otp_code_status("000000")
+      assert_equal :invalid, user.otp_code_status(nil)
+
+      assert_equal :accepted, user.verify_otp(code)
+      assert_equal :replayed, user.otp_code_status(code)
+      assert_equal :accepted, user.verify_otp(backup_code)
+      assert_equal :invalid, user.otp_code_status(backup_code)
+    end
+  end
+
+  test "verify_otp? accepts the next time step's code after one was used" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+
+    travel_to Time.zone.at(1_800_000_000) do
+      assert user.verify_otp?(totp.now)
+    end
+
+    travel_to Time.zone.at(1_800_000_000 + totp.interval) do
+      assert user.verify_otp?(totp.now)
+      assert_not user.verify_otp?(totp.at(1_800_000_000)), "an earlier step stays rejected"
+    end
+  end
+
+  # Two sign-in requests with the same code, both loaded before either records it.
+  test "verify_otp? lets only one of two concurrent uses of a code through" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+    first = User.find(user.id)
+    second = User.find(user.id)
+
+    assert first.verify_otp?(code)
+    assert_not second.verify_otp?(code)
+  end
+
+  # The test above checks two stale instances one after another. The gap
+  # between "verify" and "claim" is too small for real threads to land inside
+  # reliably, so it would not catch a regression that drops the conditional
+  # UPDATE in claim_otp_time_step! for an unconditional one: two connections
+  # racing the same claim on real, separately loaded (stale) instances must
+  # still let only one through, because Postgres serializes the two UPDATEs
+  # on the same row and the loser's WHERE no longer matches.
+  test "verify_otp? claim_otp_time_step! lets only one of two racing connections claim a step" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
+
+    first = User.find(user.id)
+    second = User.find(user.id)
+    latch = Concurrent::CountDownLatch.new(2)
+
+    results = [ first, second ].map do |instance|
+      Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          latch.count_down
+          latch.wait(5)
+          instance.send(:claim_otp_time_step!, time_step)
+        end
+      end
+    end.map(&:value)
+
+    assert_equal 1, results.count(true), "exactly one racing connection should claim the step"
+    assert_not_nil user.reload.otp_last_used_at
+  end
+
+  test "verify_otp tells a replayed code apart from an invalid one" do
+    user = users(:family_member)
+    user.setup_mfa!
+    code = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now
+
+    assert_equal :accepted, user.verify_otp(code)
+    assert_equal :replayed, user.verify_otp(code)
+    assert_equal :replayed, User.find(user.id).verify_otp(code), "a freshly loaded user must see the replay too"
+    assert_equal :invalid, user.verify_otp("invalid")
+    assert_equal :invalid, user.verify_otp("123456")
+  end
+
+  # A claim carried by a stale instance must not mark a time step as used on
+  # a factor enrolled after the secret changed underneath it.
+  test "verify_otp? claim_otp_time_step! does not claim across a replaced secret" do
+    user = users(:family_member)
+    user.setup_mfa!
+    totp = ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances")
+    now = Time.current
+    time_step = totp.verify(totp.at(now), at: now)
+    stale = User.find(user.id)
+
+    user.disable_mfa!
+    user.setup_mfa!
+
+    assert_not stale.send(:claim_otp_time_step!, time_step)
+    assert_nil user.reload.otp_last_used_at, "the new factor must not inherit the old claim"
+  end
+
+  test "setting up or disabling MFA forgets the last used time step" do
+    user = users(:family_member)
+    user.setup_mfa!
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    assert_not_nil user.reload.otp_last_used_at
+
+    user.setup_mfa!
+    assert_nil user.reload.otp_last_used_at
+
+    assert user.verify_otp?(ROTP::TOTP.new(user.otp_secret, issuer: "Sure Finances").now)
+    user.disable_mfa!
+    assert_nil user.reload.otp_last_used_at
+  end
+
   test "verify_otp? does not check backup code digests for normal TOTP input" do
     user = users(:family_member)
     user.setup_mfa!
@@ -367,6 +575,32 @@ class UserTest < ActiveSupport::TestCase
   ensure
     Setting.openai_access_token = previous
     @user.family.update!(assistant_type: "builtin")
+  end
+
+  test "ai_available? is false when the assistant type is mcp_only, even with a provider configured" do
+    previous = Setting.openai_access_token
+    @user.family.update!(assistant_type: "mcp_only")
+    with_env_overrides OPENAI_ACCESS_TOKEN: nil do
+      Setting.openai_access_token = "token"
+
+      Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+      assert_not @user.ai_available?
+      assert_not @user.ai_enabled?
+
+      Rails.application.config.app_mode.stubs(:self_hosted?).returns(false)
+      assert_not @user.ai_available?
+    end
+  ensure
+    Setting.openai_access_token = previous
+  end
+
+  test "ASSISTANT_TYPE=mcp_only overrides the family assistant type" do
+    Rails.application.config.app_mode.stubs(:self_hosted?).returns(true)
+    @user.family.update!(assistant_type: "external")
+    with_env_overrides ASSISTANT_TYPE: "mcp_only", EXTERNAL_ASSISTANT_URL: "http://localhost:18789/v1/chat", EXTERNAL_ASSISTANT_TOKEN: "test-token", EXTERNAL_ASSISTANT_MODEL: "openclaw/main" do
+      assert_not @user.ai_available?
+      assert_not @user.family.assistant_enabled?
+    end
   end
 
   test "intro layout collapses sidebars and enables ai" do
@@ -566,6 +800,31 @@ class UserTest < ActiveSupport::TestCase
     assert_equal new_order, @user.dashboard_section_order
   end
 
+  test "update_dashboard_section_hidden hides and re-adds a section without touching other preferences" do
+    @user.update!(preferences: { "section_order" => %w[balance_sheet net_worth_chart] })
+    assert_equal [], @user.dashboard_hidden_sections
+
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+    @user.update_dashboard_section_hidden("net_worth_chart", true)
+    @user.update_dashboard_section_hidden("balance_sheet", true)
+    assert_equal %w[net_worth_chart balance_sheet], @user.reload.dashboard_hidden_sections
+
+    @user.update_dashboard_section_hidden("net_worth_chart", false)
+    assert_equal %w[balance_sheet], @user.reload.dashboard_hidden_sections
+    assert_equal %w[balance_sheet net_worth_chart], @user.dashboard_section_order
+  end
+
+  test "update_dashboard_preferences keeps a hidden section's place when the rest are reordered" do
+    @user.update!(preferences: {
+      "section_order" => %w[cashflow_sankey net_worth_chart balance_sheet outflows_donut],
+      "hidden_sections" => %w[net_worth_chart]
+    })
+
+    @user.update_dashboard_preferences({ "section_order" => %w[outflows_donut cashflow_sankey balance_sheet] })
+
+    assert_equal %w[outflows_donut cashflow_sankey net_worth_chart balance_sheet], @user.reload.dashboard_section_order
+  end
+
   test "dashboard_section_height returns stored preset or nil" do
     @user.update!(preferences: {})
     assert_nil @user.dashboard_section_height("net_worth_chart")
@@ -641,6 +900,132 @@ class UserTest < ActiveSupport::TestCase
     @user.reload
 
     assert_equal %w[transactions_breakdown], @user.preferences["reports_section_order"]
+  end
+
+  test "Reports reads the order and collapsed set already stored under its original keys" do
+    # Written straight to the column, as preferences saved before the
+    # namespaced readers existed were.
+    @user.update_columns(preferences: {
+      "reports_section_order" => %w[transactions_breakdown net_worth trends_insights],
+      "reports_collapsed_sections" => { "net_worth" => true, "trends_insights" => false }
+    })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown net_worth trends_insights], @user.reports_section_order
+    assert_equal @user.reports_section_order, @user.section_order("reports")
+    assert @user.reports_section_collapsed?("net_worth")
+    assert @user.section_collapsed?("reports", "net_worth")
+    assert_not @user.reports_section_collapsed?("trends_insights")
+    assert_not @user.reports_section_collapsed?("transactions_breakdown")
+  end
+
+  test "update_reports_preferences keeps writing the original keys and merges each toggle" do
+    @user.update!(preferences: { "reports_section_order" => %w[net_worth], "reports_collapsed_sections" => { "net_worth" => true } })
+
+    @user.update_reports_preferences({ "reports_collapsed_sections" => { "trends_insights" => true } })
+    @user.reload
+
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"], "a toggle must not write an order"
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+
+    @user.update_reports_preferences({ "reports_section_order" => %w[trends_insights net_worth] })
+    @user.reload
+
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+    assert_equal %w[reports_collapsed_sections reports_section_order], @user.preferences.keys.sort
+  end
+
+  test "section preferences are namespaced so two pages never touch each other's keys" do
+    @user.update!(preferences: {})
+
+    @user.update_section_preferences("reports", order: %w[transactions_breakdown], collapsed: { "trends_insights" => true })
+    @user.update_section_preferences("portfolio", order: %w[accounts], collapsed: { "accounts" => true })
+    @user.reload
+
+    assert_equal %w[transactions_breakdown], @user.section_order("reports")
+    assert_equal %w[accounts], @user.section_order("portfolio")
+    assert @user.section_collapsed?("reports", "trends_insights")
+    assert_not @user.section_collapsed?("reports", "accounts")
+    assert @user.section_collapsed?("portfolio", "accounts")
+    assert_not @user.section_collapsed?("portfolio", "trends_insights")
+
+    assert_equal %w[transactions_breakdown], @user.reports_section_order
+    assert @user.reports_section_collapsed?("trends_insights")
+    assert_equal %w[reports_section_order reports_collapsed_sections portfolio_section_order portfolio_collapsed_sections].sort,
+      @user.preferences.keys.sort
+  end
+
+  test "the portfolio order defaults to the registry's keys and collapsing writes no order" do
+    @user.update!(preferences: {})
+
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+    assert_not @user.section_collapsed?("portfolio", "accounts")
+
+    @user.update_section_preferences("portfolio", collapsed: { "accounts" => true })
+    @user.reload
+
+    assert @user.section_collapsed?("portfolio", "accounts")
+    assert_nil @user.preferences["portfolio_section_order"], "collapsing must not write an order"
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+  end
+
+  test "section preferences reject an unknown namespace" do
+    assert_raises(ArgumentError) { @user.section_order("dashboard") }
+    assert_raises(ArgumentError) { @user.section_collapsed?("dashboard", "net_worth") }
+    assert_raises(ArgumentError) { @user.update_section_preferences("settings", order: []) }
+  end
+
+  # Safe navigation skips its arguments when the receiver is nil, so the
+  # namespace check has to run before preferences is read.
+  test "section preferences reject an unknown namespace when preferences is nil" do
+    @user.preferences = nil
+
+    assert_raises(ArgumentError) { @user.section_order("dashboard") }
+    assert_raises(ArgumentError) { @user.section_collapsed?("dashboard", "net_worth") }
+    assert_not @user.section_collapsed?("reports", "net_worth")
+  end
+
+  # Both pages' endpoints write through this method, so the shapes the readers
+  # rely on (an array of keys, a hash of key => flag) are enforced here.
+  test "section preferences store only an array of keys and a hash of flags" do
+    @user.update!(preferences: { "reports_section_order" => %w[net_worth], "reports_collapsed_sections" => { "net_worth" => true } })
+
+    @user.update_section_preferences("reports", order: "net_worth", collapsed: "net_worth")
+    @user.reload
+
+    assert_equal %w[net_worth], @user.preferences["reports_section_order"], "a scalar order must not replace the stored one"
+    assert_equal({ "net_worth" => true }, @user.preferences["reports_collapsed_sections"], "a scalar collapsed set must not be stored")
+
+    @user.update_section_preferences("reports", order: [ "trends_insights", :net_worth, "trends_insights" ],
+                                                collapsed: { "trends_insights" => "true", net_worth: "0" })
+    @user.reload
+
+    assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
+    assert_equal({ "net_worth" => false, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+  end
+
+  test "a stored section order that repeats a key reads each key once" do
+    @user.update_columns(preferences: { "reports_section_order" => %w[net_worth trends_insights net_worth] })
+
+    assert_equal %w[net_worth trends_insights], @user.section_order("reports")
+  end
+
+  test "a stored section order that is not an array reads as the default" do
+    @user.update_columns(preferences: { "reports_section_order" => "net_worth", "portfolio_section_order" => { "a" => 1 } })
+
+    assert_equal %w[trends_insights transactions_breakdown], @user.section_order("reports")
+    assert_equal Portfolio::SectionRegistry::KEYS, @user.section_order("portfolio")
+  end
+
+  test "a stored collapsed set that is not a hash reads as nothing collapsed and is replaced by a toggle" do
+    @user.update_columns(preferences: { "reports_collapsed_sections" => "net_worth" })
+
+    assert_not @user.section_collapsed?("reports", "net_worth")
+
+    @user.update_section_preferences("reports", collapsed: { "net_worth" => true })
+
+    assert_equal({ "net_worth" => true }, @user.reload.preferences["reports_collapsed_sections"])
   end
 
   test "handles missing nested keys in preferences for collapsed sections" do
@@ -872,6 +1257,59 @@ class UserTest < ActiveSupport::TestCase
     )
     assert_not user.valid?
     assert_includes user.errors[:password], "can't be blank"
+  end
+
+  test "only a super admin manages instance settings when the instance hosts several families" do
+    assert Family.count > 1
+
+    assert users(:sure_support_staff).manages_instance_settings?
+    assert_not users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "the admins of the only family on a self-hosted instance manage instance settings" do
+    Family.stubs(:count).returns(1)
+
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    assert users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "generated demo families do not revoke the only real family's instance settings access" do
+    Rails.configuration.stubs(:app_mode).returns("self_hosted".inquiry)
+    real_family = families(:dylan_family)
+    Family.where.not(id: real_family.id).each do |demo_family|
+      demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+    end
+
+    assert users(:family_admin).manages_instance_settings?
+    assert_not users(:family_member).manages_instance_settings?
+    assert_not users(:empty).manages_instance_settings?, "demo admins must not manage instance settings"
+
+    # Even a demo-only installation must not grant its public demo login access.
+    Family.stubs(:count).returns(1)
+    assert_not users(:empty).manages_instance_settings?
+    Family.unstub(:count)
+
+    # An unmarked household still counts, even if it calls itself Demo Family.
+    Family.create!(name: "Demo Family")
+    assert_not users(:family_admin).manages_instance_settings?
+  end
+
+  test "demo exclusion does not grant family admins instance access in managed mode" do
+    Family.where.not(id: families(:dylan_family).id).each do |demo_family|
+      demo_family.start_subscription!(Subscription::DEMO_STRIPE_ID)
+    end
+    Rails.configuration.stubs(:app_mode).returns("managed".inquiry)
+
+    assert_not users(:family_admin).manages_instance_settings?
+    assert users(:sure_support_staff).manages_instance_settings?
   end
 
   # First user role assignment tests
@@ -1179,5 +1617,65 @@ class UserTest < ActiveSupport::TestCase
     assert api_key.reload.revoked?
     assert token.reload.revoked_at.present?
     assert grant.reload.revoked_at.present?
+  end
+  test "password_challenge must match the current password when given" do
+    @user.assign_attributes(password_challenge: "wrongpassword123", password: "newpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_challenge, :invalid)
+
+    @user.assign_attributes(password_challenge: "", password: "newpassword123")
+    assert_not @user.valid?
+
+    @user.assign_attributes(password_challenge: user_password_test, password: "newpassword123")
+    assert @user.valid?
+  end
+
+  test "password_challenge is not checked when not given" do
+    @user.password = "newpassword123"
+    assert @user.valid?
+  end
+
+  test "password_confirmation must match when given" do
+    @user.assign_attributes(password: "newpassword123", password_confirmation: "otherpassword123")
+    assert_not @user.valid?
+    assert @user.errors.of_kind?(:password_confirmation, :confirmation)
+
+    @user.password_confirmation = "newpassword123"
+    assert @user.valid?
+  end
+
+  test "update_manual_account_order keeps other groups and only accessible accounts" do
+    @user.update_manual_account_order("credit_card", [ accounts(:credit_card).id ])
+    foreign = families(:empty).accounts.create!(name: "Foreign", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:empty))
+
+    assert @user.update_manual_account_order("depository", [ accounts(:connected).id, foreign.id, accounts(:depository).id, "not-a-uuid" ])
+
+    order = @user.reload.manual_account_order
+    assert_equal [ accounts(:connected).id, accounts(:depository).id ], order["depository"]
+    assert_equal [ accounts(:credit_card).id ], order["credit_card"]
+  end
+
+  test "update_manual_account_order drops family accounts not shared with the user" do
+    unshared = families(:dylan_family).accounts.create!(name: "Unshared", currency: "USD", balance: 0, accountable: Depository.new, owner: users(:family_member))
+
+    assert @user.update_manual_account_order("depository", [ unshared.id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order drops accounts from another group" do
+    @user.update_manual_account_order("depository", [ accounts(:credit_card).id, accounts(:depository).id ])
+
+    assert_equal [ accounts(:depository).id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_manual_account_order rejects account ids that are not a list" do
+    assert_not @user.update_manual_account_order("depository", { "0" => accounts(:depository).id })
+    assert_equal({}, @user.reload.manual_account_order)
+  end
+
+  test "update_manual_account_order rejects unknown groups" do
+    assert_not @user.update_manual_account_order("transactions", [ accounts(:depository).id ])
+    assert_equal({}, @user.reload.manual_account_order)
   end
 end

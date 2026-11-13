@@ -16,6 +16,9 @@ zh-CN:
       troubleshoot: 排查问题
       enable: 启用账户
       disable: 停用账户
+      exclude_from_reports: 从所有报表中排除
+      include_in_reports: 包含在报表中
+      excluded_from_reports_indicator: 已从报表中排除
       set_default: 设为默认
       remove_default: 取消默认
       default_label: 默认
@@ -25,6 +28,36 @@ zh-CN:
       data_not_available: 所选时间段内无可用数据
     create:
       success: 已创建 %{type} 账户
+    logo_caption:
+      appstore: 来自 App Store
+      brandfetch: 来自 Brandfetch
+      duckduckgo: 来自 DuckDuckGo
+      google: 来自 Google
+      googleplay: 来自 Google Play
+      none: 暂无图标
+      rustore: 来自 RuStore
+      uploaded: 由您上传
+      yandex: 来自 Yandex
+    logo_field:
+      current: 当前
+      domain_needed: 输入金融机构域名（例如 tbank.ru）以选择图标。
+      empty: 未找到此域名的图标。您可在下方上传自定义图标。
+      pick: 选择图标
+      pending: 保存后生效
+      remove: 移除
+      removal: 保存后移除；将恢复自动图标
+      searching: 正在搜索…
+    logo_options:
+      size: "%{size} 像素"
+      sources:
+        appstore: App Store
+        brandfetch: Brandfetch
+        duckduckgo: DuckDuckGo
+        google: Google
+        googleplay: Google Play
+        rustore: RuStore
+        yandex: Yandex
+      stored: 已保存的图标
     set_default:
       depository_only: 只有现金和信用卡账户才能设为默认。
     destroy:
@@ -45,10 +78,26 @@ zh-CN:
       institution_name_placeholder: 例如：Chase Bank
       institution_domain_label: 金融机构域名
       institution_domain_placeholder: 例如：chase.com
+      institution_domain_hint: 用于查找金融机构的图标。
+      institution_domain_missing_logo_key_hint: 用于查找金融机构的图标。由于未配置 Brandfetch 客户端 ID，Brandfetch 图标不可用。
+      institution_domain_settings_link: 在自托管设置中添加
+      logo_label: 图标
+      logo_hint: 或上传您自己的 PNG、JPEG、GIF、WebP 或 ICO 格式图片（最大 1 MB），将替换 Brandfetch 图标。
       notes_label: 备注
       notes_placeholder: 存储其他信息，例如账号、排序码、IBAN、路由号码等。
+      exclude_from_reports: 从所有报表中排除
+      enable_category_matcher_label: 启用分类匹配器
+      enable_category_matcher_hint: 启用后，提供商建议的分类将应用于导入的交易。禁用则新交易保持未分类。
+      iban_label: "IBAN"
+      iban_placeholder: "例如：DE89370400440532013000" # pipelock:ignore IBAN
+      iban_set_placeholder: "•••• •••• •••• •••• — 已保存 IBAN，输入新值以替换"
+      iban_remove_label: "移除 IBAN"
     index:
       accounts: 账户
+      financekit_accounts:
+        title: Apple Wallet
+        description: 在 Sure iOS 应用中管理 Apple Wallet 连接与同步。
+      cancel_sync: 取消同步
       manual_accounts:
         other_accounts: 其他账户
       new_account: 新建账户
@@ -61,6 +110,8 @@ zh-CN:
         select: 选择
         navigate: 浏览
         close: 关闭
+        next: 下一步
+        previous: 上一步
       method_selector:
         connected_entry: 连接账户
         connected_entry_eu: 连接欧盟账户
@@ -73,8 +124,10 @@ zh-CN:
       limited_fx_history_warning: 汇率历史仅从 %{date} 起可用。该日期之前的交易将使用近似货币换算——当外汇提供商仅提供有限历史窗口时会出现这种情况。
       tabs:
         activity: 活动
+        extra_repayments: 额外还款
         holdings: 持仓
         overview: 概览
+        schedule: 时间表
         statements: 对账单
       activity:
         amount: 金额
@@ -114,8 +167,11 @@ zh-CN:
         manage: 管理账户
         sharing: 共享
         statements: 对账单
+        exclude_from_reports: 从所有报表中排除
+        include_in_reports: 包含在报表中
     update:
       success: 已更新 %{type} 账户
+      logo_not_applied: 账户已保存，但无法下载所选图标。请重试或上传您自己的图标。
     sidebar:
       missing_data: 缺少历史数据
       missing_data_description: "%{product} 使用第三方提供商获取历史汇率、证券价格等数据。这些数据是计算准确历史账户余额所必需的。"
@@ -128,6 +184,14 @@ zh-CN:
       new_debt: 新增负债
       new_account: 新建账户
       new_account_group: 新建%{account_group}
+      expand_all: 全部展开
+      collapse_all: 全部折叠
+      reorder_account: "移动 %{account}"
+      reorder_hint: 拖动重新排序。使用键盘时，按 Enter 键，然后使用方向键。
+      sort_mode:
+        start: 对账户排序
+        hint: 拖动账户的手柄对其进行重新排序。
+        done: 完成
     types:
       depository: 现金
       investment: 投资
@@ -170,6 +234,7 @@ zh-CN:
       title: 取消与提供商的连接？
       description_html: 您即将把 <strong>%{account_name}</strong> 与 <strong>%{provider_name}</strong> 取消连接。这将把它转换为手动账户。
       warning_title: 这意味着什么
+      warning_wallet_connection: 此 Apple Wallet 连接中的所有账户都将被取消关联。它们的交易和余额将被保留。您可以通过 Sure iOS 应用中的新 Wallet 设置重新连接。
       warning_no_sync: 该账户将不再自动与您的提供商同步
       warning_manual_updates: 您需要手动添加交易并更新余额
       warning_transactions_kept: 所有现有交易和余额都将保留

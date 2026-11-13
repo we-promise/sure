@@ -108,6 +108,33 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     end
   end
 
+  test "openai provider accepts a regional OpenAI host without a model" do
+    ClimateControl.modify(
+      "OPENAI_ACCESS_TOKEN" => "test-token",
+      "OPENAI_URI_BASE" => "https://us.api.openai.com/v1",
+      "OPENAI_MODEL" => ""
+    ) do
+      Setting.stubs(:openai_model).returns(nil)
+
+      provider = Provider::Registry.get_provider(:openai)
+
+      assert_instance_of Provider::Openai, provider
+      assert_not provider.custom_provider?
+    end
+  end
+
+  test "openai provider still needs a model for a custom endpoint" do
+    ClimateControl.modify(
+      "OPENAI_ACCESS_TOKEN" => "test-token",
+      "OPENAI_URI_BASE" => "https://llm.example.com/v1",
+      "OPENAI_MODEL" => ""
+    ) do
+      Setting.stubs(:openai_model).returns(nil)
+
+      assert_nil Provider::Registry.get_provider(:openai)
+    end
+  end
+
   test "preferred_llm_provider returns openai by default" do
     openai = mock("openai")
     Provider::Registry.stubs(:openai).returns(openai)
@@ -133,6 +160,20 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     Setting.stubs(:llm_provider).returns("anthropic")
 
     assert_same openai, Provider::Registry.preferred_llm_provider
+  end
+
+  test "preferred_llm_provider follows LLM_PROVIDER over a stored choice" do
+    original = Setting.raw_llm_provider
+    Setting.llm_provider = "openai"
+    anthropic = mock("anthropic")
+    Provider::Registry.stubs(:openai).returns(mock("openai"))
+    Provider::Registry.stubs(:anthropic).returns(anthropic)
+
+    with_env_overrides("LLM_PROVIDER" => "anthropic") do
+      assert_same anthropic, Provider::Registry.preferred_llm_provider
+    end
+  ensure
+    Setting.llm_provider = original
   end
 
   test "preferred_llm_provider returns nil when no provider is configured" do

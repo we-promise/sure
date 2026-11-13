@@ -1,0 +1,20 @@
+---
+ca:
+  goal_pledges:
+    new:
+      helper_transfer: Sure buscarà un ingrés coincident al teu compte enllaçat. L'aportació queda pendent durant 7 dies i es confirma automàticament quan Sure la detecta.
+      helper_manual: Sure ho registrarà la propera vegada que editis manualment el saldo i confirmarà l'aportació.
+      amount_label: Import
+      account_label: Al compte
+      submit: Registra l'aportació
+      preview_zero: Ara tens {current} estalviats de {target}.
+      preview_nonzero: Arriba al {percent}%, {newTotal} de {target}.
+      preview_reached: Arriba a l'objectiu de {target}. Objectiu assolit.
+    create:
+      success: Aportació registrada. Sure la confirmarà a la propera sincronització.
+    renew:
+      success: El termini de l'aportació s'ha ampliat 7 dies.
+      not_open: Només es poden ampliar les aportacions pendents.
+    destroy:
+      success: Aportació cancel·lada.
+      not_open: Només es poden cancel·lar les aportacions pendents.

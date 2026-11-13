@@ -140,4 +140,78 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
 
     assert_equal "monthly", Preset.detect(@recurring.reload).key
   end
+
+  test "apply interval writes one weekly rule every N weeks and reads it back" do
+    @recurring.update!(anchor_date: nil)
+    assert Preset.apply(@recurring, preset: "interval", interval: "3", interval_unit: "weekly", weekday: "5")
+    @recurring.save!
+
+    rule = @recurring.recurrence_rules.reload.sole
+    assert_equal [ "weekly", 3, 5 ], [ rule.frequency, rule.interval, rule.weekday ]
+    assert_equal @recurring.last_occurrence_date, @recurring.anchor_date, "an every-N cadence needs a phase"
+
+    found = Preset.detect(@recurring)
+    assert_equal [ "interval", 3, "weekly", 5 ], [ found.key, found.interval, found.interval_unit, found.weekday ]
+    assert_equal "Every 3 weeks on Friday", Preset.label(@recurring)
+
+    occurrences = @recurring.schedule.occurrences_between(@recurring.anchor_date, @recurring.anchor_date + 70)
+    assert occurrences.all?(&:friday?)
+    assert_equal [ 21 ], occurrences.each_cons(2).map { |a, b| (b - a).to_i }.uniq
+  end
+
+  test "apply interval in months and years anchors on the chosen day" do
+    Preset.apply(@recurring, preset: "interval", interval: 2, interval_unit: "monthly", day_of_month: 12)
+    @recurring.save!
+
+    rule = @recurring.recurrence_rules.reload.sole
+    assert_equal [ "monthly", 2, 12 ], [ rule.frequency, rule.interval, rule.day_of_month ]
+    assert_equal 12, @recurring.expected_day_of_month
+    assert_equal "Every 2 months on the 12th", Preset.label(@recurring)
+
+    Preset.apply(@recurring, preset: "interval", interval: 2, interval_unit: "yearly",
+                 day_of_month: 1, month_of_year: 9)
+    @recurring.save!
+
+    rule = @recurring.recurrence_rules.reload.sole
+    assert_equal [ "yearly", 2, 1, 9 ], [ rule.frequency, rule.interval, rule.day_of_month, rule.month_of_year ]
+    assert_equal "Every 2 years on September 1st", Preset.label(@recurring)
+  end
+
+  test "an interval a named preset covers is that preset" do
+    Preset.apply(@recurring, preset: "interval", interval: 3, interval_unit: "monthly", day_of_month: 10)
+    @recurring.save!
+    rule_ids = @recurring.recurrence_rules.reload.map(&:id)
+
+    assert_equal "quarterly", Preset.detect(@recurring).key
+    assert_not Preset.apply(@recurring, preset: "quarterly", day_of_month: "10"),
+               "quarterly entered either way is one schedule"
+    assert_equal rule_ids, @recurring.recurrence_rules.reload.map(&:id)
+  end
+
+  test "reapplying a detected interval is a no-op" do
+    Preset.apply(@recurring, preset: "interval", interval: 5, interval_unit: "weekly", weekday: 2)
+    @recurring.save!
+    found = Preset.detect(@recurring.reload)
+
+    assert_not Preset.apply(@recurring, preset: "interval", interval: found.interval.to_s,
+                            interval_unit: found.interval_unit, weekday: found.weekday.to_s)
+  end
+
+  test "apply interval reads the count as a whole base-10 number" do
+    Preset.apply(@recurring, preset: "interval", interval: "08", interval_unit: "weekly", weekday: "5")
+    @recurring.save!
+
+    assert_equal 8, @recurring.recurrence_rules.reload.sole.interval, "a leading zero is not octal"
+  end
+
+  test "apply interval rejects an out-of-range, fractional or malformed count or an unknown unit" do
+    [ [ "0", "weekly" ], [ "", "monthly" ], [ (Preset::MAX_INTERVAL + 1).to_s, "monthly" ], [ "2", "daily" ],
+      [ "2.5", "monthly" ], [ "3abc", "weekly" ] ].each do |interval, unit|
+      recurring = RecurringTransaction.find(@recurring.id)
+
+      assert_not Preset.apply(recurring, preset: "interval", interval: interval, interval_unit: unit)
+      assert recurring.errors.added?(:frequency_interval, :invalid), "#{interval} #{unit} must be refused"
+      assert_empty recurring.recurrence_rules
+    end
+  end
 end

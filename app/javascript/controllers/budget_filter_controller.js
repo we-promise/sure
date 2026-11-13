@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import replaceUrl from "utils/replace_url";
 
 export default class extends Controller {
   static targets = ["onTrack", "overBudget", "tab"];
@@ -55,6 +56,6 @@ export default class extends Controller {
       url.searchParams.set("filter", this.filterValue);
     }
 
-    window.history.replaceState({}, "", url);
+    replaceUrl(url);
   }
 }

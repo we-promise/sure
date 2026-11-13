@@ -60,6 +60,27 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
     end
   end
 
+  # Nobody is paying a bill that isn't active, so its leftover isn't late or
+  # due. The schedule state stays raw: the matcher reads it to keep a late
+  # payment able to settle the leftover.
+  test "a leftover of a bill that isn't active is neither overdue nor due" do
+    travel_to Date.new(2026, 8, 13) do
+      overdue = create_occurrence(due_on: Date.new(2026, 8, 5), original: Date.new(2026, 8, 5))
+      due = create_occurrence(due_on: Date.new(2026, 8, 11), original: Date.new(2026, 8, 11))
+      assert overdue.overdue?
+      assert due.due?
+
+      %w[inactive paused ended].each do |status|
+        @series.update!(status: status)
+
+        assert_not overdue.reload.overdue?, status
+        assert_equal :overdue, overdue.derived_state, status
+        assert_not due.reload.due?, status
+        assert_equal :due, due.derived_state, status
+      end
+    end
+  end
+
   test "partial payment is exact-sum, never tolerance" do
     occurrence = create_occurrence
     occurrence.allocations.create!(allocated_amount: 10, currency: "USD", source: "user_created")

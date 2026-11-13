@@ -54,6 +54,13 @@ module Accountable
       subtype_label_for(subtype, format: :long)
     end
 
+    # Whether accounts of this type can have an IBAN. Only types that are
+    # held at a bank and can send or receive transfers do; assets such as a
+    # vehicle or a property have none.
+    def supports_iban?
+      false
+    end
+
     def subtype_options_for_select
       self::SUBTYPES.keys.map { |subtype| [ long_subtype_label_for(subtype), subtype ] }
     end

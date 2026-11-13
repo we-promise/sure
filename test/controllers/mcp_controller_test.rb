@@ -17,7 +17,8 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
     assert_equal "unauthorized", JSON.parse(response.body)["error"]
     assert response.headers["WWW-Authenticate"].present?, "Must include WWW-Authenticate header"
-    assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource"
+    assert_includes response.headers["WWW-Authenticate"], "oauth-protected-resource/mcp"
+    assert_includes response.headers["WWW-Authenticate"], "scope=\"read_write\""
   end
 
   test "returns 401 with wrong token" do
@@ -169,6 +170,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "env-var token works for a user whose email row is still legacy plaintext" do
+    store_legacy_plaintext_email(@user)
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("initialize").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+    end
+  end
+
   test "returns 401 and warns when env-var token matches but MCP_USER_EMAIL finds no user" do
     with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => "nonexistent@example.com") do # pipelock:ignore
       Rails.logger.expects(:warn).with(regexp_matches(/MCP_USER_EMAIL/)).once
@@ -221,34 +233,129 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
   # -- Notifications (requests without id) --
 
-  test "notifications receive no response body" do
+  test "notifications are accepted with 202 and no body, as MCP's Streamable HTTP transport requires" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
-      assert response.body.blank?, "Notification must not produce a response body"
+      assert_response :accepted
+      assert_equal "", response.body, "Notification must not produce a response body"
     end
   end
 
   test "tools/call sent as notification does not execute" do
+    Usage.expects(:capture).with("mcp_call_served_daily").never
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
-      assert response.body.blank?, "Notification-style tools/call must not execute or respond"
+      assert_response :accepted
+      assert_equal "", response.body, "Notification-style tools/call must not execute or respond"
     end
   end
 
-  test "unknown notification method still returns no content" do
+  test "an unknown notification method is accepted with no body too" do
     with_mcp_env do
       post "/mcp", params: jsonrpc_notification("notifications/unknown").to_json,
            headers: mcp_headers(@token)
 
-      assert_response :no_content
-      assert response.body.blank?
+      assert_response :accepted
+      assert_equal "", response.body
     end
+  end
+
+  test "the handshake's notifications/initialized, sent with the negotiated session, is accepted" do
+    with_mcp_cache do
+      with_mcp_env do
+        post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(@token)
+        assert_response :ok
+        session_id = response.headers["Mcp-Session-Id"]
+
+        post "/mcp", params: jsonrpc_notification("notifications/initialized").to_json,
+             headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => MCP_PROTOCOL_VERSION, "Mcp-Session-Id" => session_id)
+
+        assert_response :accepted
+        assert_equal "", response.body
+      end
+    end
+  end
+
+  # -- Unsupported methods --
+
+  test "GET /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream")
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "DELETE /mcp returns 405 Method Not Allowed instead of 404" do
+    with_mcp_env do
+      delete "/mcp", headers: mcp_headers(@token)
+
+      assert_response :method_not_allowed
+      assert_equal "POST", response.headers["Allow"]
+    end
+  end
+
+  test "GET /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "DELETE /mcp with an expired session id returns 404" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+        Rails.cache.delete("mcp:session:#{session_id}")
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :not_found
+      end
+    end
+  end
+
+  test "GET /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        get "/mcp", headers: mcp_headers(@token).merge("Accept" => "text/event-stream", "Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "DELETE /mcp with a valid session id returns 405" do
+    with_mcp_cache do
+      with_mcp_env do
+        session_id = initialize_mcp_session
+
+        delete "/mcp", headers: mcp_headers(@token).merge("Mcp-Session-Id" => session_id)
+
+        assert_response :method_not_allowed
+        assert_equal "POST", response.headers["Allow"]
+      end
+    end
+  end
+
+  test "GET /mcp without a token still returns 401" do
+    get "/mcp", headers: { "Accept" => "text/event-stream" }
+
+    assert_response :unauthorized
   end
 
   # -- initialize --
@@ -314,10 +421,14 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_includes tool_names, "get_transactions"
       assert_includes tool_names, "get_accounts"
       assert_includes tool_names, "get_holdings"
+      assert_includes tool_names, "set_opening_balance"
       assert_includes tool_names, "get_balance_sheet"
       assert_includes tool_names, "get_income_statement"
       assert_includes tool_names, "update_transaction"
       assert_includes tool_names, "update_budget"
+      assert_includes tool_names, "get_transfer_match_candidates"
+      assert_includes tool_names, "match_transfer"
+      assert_includes tool_names, "review_transfer"
 
       # Each tool has required fields
       tools.each do |tool|
@@ -326,6 +437,27 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         assert tool["inputSchema"].present?, "Tool #{tool['name']} missing inputSchema"
         assert_equal "object", tool["inputSchema"]["type"]
       end
+    end
+  end
+
+  test "tools stay available to external agents when the in-app assistant is off" do
+    @user.family.update!(assistant_type: "mcp_only")
+
+    with_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_equal Assistant.function_classes(@user).size,
+                   JSON.parse(response.body)["result"]["tools"].size
+
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "get_accounts", arguments: {} }).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      result = JSON.parse(response.body)["result"]
+      assert_not result["isError"]
+      assert JSON.parse(result["content"][0]["text"]).key?("accounts")
     end
   end
 
@@ -418,6 +550,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   # -- tools/call --
 
   test "tools/call rejects a preview tool for a user without preview features" do
+    Usage.expects(:capture).with("mcp_call_served_daily").never
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 
     with_mcp_env do
@@ -432,6 +565,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call returns error for unknown tool with request id preserved" do
+    Usage.expects(:capture).with("mcp_call_served_daily").never
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/call", { name: "nonexistent_tool", arguments: {} }, id: 99).to_json,
            headers: mcp_headers(@token)
@@ -445,6 +579,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call executes get_balance_sheet" do
+    Usage.expects(:capture).with("mcp_call_served_daily").once
     with_mcp_env do
       post "/mcp", params: jsonrpc_request("tools/call", {
         name: "get_balance_sheet",
@@ -570,6 +705,7 @@ class McpControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "tools/call wraps function errors as isError response" do
+    Usage.expects(:capture).with("mcp_call_served_daily").once
     with_mcp_env do
       # Force a function error by stubbing
       Assistant::Function::GetBalanceSheet.any_instance.stubs(:call).raises(StandardError, "test error")
@@ -593,6 +729,52 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       assert_equal "The tool failed to run", inner["error"]
       assert_equal "get_balance_sheet", inner["tool"]
       assert_no_match(/test error/, response.body)
+    end
+  end
+
+  # -- Daily usage --
+
+  test "OAuth-authenticated tools/call records daily usage without tool metadata" do
+    app = Doorkeeper::Application.create!(
+      name: "Test MCP Usage Client",
+      redirect_uri: "https://claude.ai/callback",
+      confidential: false
+    )
+    token = Doorkeeper::AccessToken.create!( # pipelock:ignore
+      application: app,
+      resource_owner_id: @user.id,
+      scopes: "read_write",
+      expires_in: 1.year
+    )
+    Usage.expects(:capture).with("mcp_call_served_daily").once
+    Assistant::Function::GetBalanceSheet.any_instance.expects(:call).with({}).returns({ success: true })
+
+    post "/mcp", params: jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json,
+         headers: mcp_headers(token.token)
+
+    assert_response :ok
+    result = JSON.parse(response.body)["result"]
+    assert_equal true, JSON.parse(result["content"][0]["text"])["success"]
+  end
+
+  test "protocol messages and rejected calls do not record daily MCP usage" do
+    Usage.expects(:capture).with("mcp_call_served_daily").never
+    call = jsonrpc_request("tools/call", { name: "get_balance_sheet", arguments: {} }).to_json
+
+    with_mcp_env do
+      [ "initialize", "tools/list" ].each do |method|
+        post "/mcp", params: jsonrpc_request(method).to_json, headers: mcp_headers(@token)
+        assert_response :ok
+      end
+
+      post "/mcp", params: call, headers: mcp_headers("wrong-token")
+      assert_response :unauthorized
+
+      post "/mcp", params: call, headers: mcp_headers(@token).merge("Mcp-Protocol-Version" => "2099-01-01")
+      assert_response :bad_request
+
+      post "/mcp", params: call, headers: mcp_headers(@token).merge("Mcp-Session-Id" => SecureRandom.uuid)
+      assert_response :not_found
     end
   end
 
@@ -652,6 +834,12 @@ class McpControllerTest < ActionDispatch::IntegrationTest
         "Content-Type" => "application/json",
         "Authorization" => "Bearer #{token}"
       }
+    end
+
+    def initialize_mcp_session
+      post "/mcp", params: jsonrpc_request("initialize").to_json, headers: mcp_headers(@token)
+      assert_response :ok
+      response.headers["Mcp-Session-Id"]
     end
 
     def jsonrpc_request(method, params = {}, id: 1)

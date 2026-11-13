@@ -54,6 +54,8 @@ class Merchant::Merger
 
         @merged_count += 1
       end
+
+      Rule.replace_merchant_references!(family, from: source_merchants.map(&:id), to: target_merchant.id)
     end
 
     true

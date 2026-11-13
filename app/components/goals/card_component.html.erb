@@ -46,6 +46,12 @@
     <% if pace_line %>
       <p class="text-xs text-subdued tabular-nums mt-1 privacy-sensitive"><%= pace_line %></p>
     <% end %>
+    <%# A marker, not an alert: the full explanation lives on the goal page. %>
+    <% if goal.currency_conversion_incomplete? %>
+      <p class="mt-1 flex items-center gap-1 text-xs text-secondary">
+        <%= helpers.icon "alert-triangle", size: "xs", color: "warning" %><%= t("goals.goal_card.partial_total") %>
+      </p>
+    <% end %>
   </div>
 
   <%# flex-wrap + gap so the account label and the footer line wrap onto

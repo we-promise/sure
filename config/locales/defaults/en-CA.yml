@@ -42,6 +42,7 @@ en-CA:
       default: "%Y-%m-%d"
       long: "%B %d, %Y"
       short: "%d %b"
+      short_with_year: "%b %d, %Y"
     month_names:
     -
     - January

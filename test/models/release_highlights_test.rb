@@ -26,25 +26,46 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
     assert_nil ReleaseHighlights.pending_tag_for(nil)
   end
 
-  test "no pending tag when the user already saw a newer release than the currently deployed one" do
-    # Simulates a rolling deploy/rollback: the user's browser already marked
-    # a release newer than what this app instance is running right now.
-    @user.mark_release_seen!("v999.0.0")
-
-    assert_nil ReleaseHighlights.pending_tag_for(@user)
-  end
-
   test "unparseable local version yields no pending tag" do
     Sure.stubs(:version).raises(ArgumentError)
 
     assert_nil ReleaseHighlights.pending_tag_for(@user)
   end
 
-  test "mark_release_seen! never regresses to an older tag" do
-    @user.mark_release_seen!("v0.7.5-alpha.7")
-    @user.mark_release_seen!("v0.7.4")
+  test "dismissing a hotfix preserves the legacy base release acknowledgement" do
+    @user.update!(preferences: { "last_seen_release_tag" => "v0.7.5", "custom_preference" => true })
+    Sure.stubs(:version).returns(Calver.new("0.7.5-hotfix.1"))
 
-    assert_equal "v0.7.5-alpha.7", @user.reload.last_seen_release_tag
+    assert_equal "v0.7.5-hotfix.1", ReleaseHighlights.pending_tag_for(@user)
+    @user.mark_release_seen!("v0.7.5-hotfix.1")
+    assert_nil ReleaseHighlights.pending_tag_for(@user.reload)
+    assert @user.preferences["custom_preference"]
+
+    Sure.stubs(:version).returns(Calver.new("0.7.5"))
+    assert_nil ReleaseHighlights.pending_tag_for(@user)
+  end
+
+  test "legacy acknowledgement suppresses the popup before any new dismissal" do
+    @user.update!(preferences: { "last_seen_release_tag" => Sure.version.to_release_tag })
+
+    assert_nil ReleaseHighlights.pending_tag_for(@user.reload)
+  end
+
+  test "stale instances merge acknowledgements across release channels without duplicates" do
+    stale_user = User.find(@user.id)
+    @user.mark_release_seen!("v0.7.6-alpha.1")
+    stale_user.mark_release_seen!("v0.7.5-hotfix.1")
+    @user.mark_release_seen!("v0.7.6-alpha.1")
+
+    @user.reload
+    [ "0.7.6-alpha.1", "0.7.5-hotfix.1" ].each do |version|
+      Sure.stubs(:version).returns(Calver.new(version))
+      assert_nil ReleaseHighlights.pending_tag_for(@user)
+    end
+    assert_equal 2, @user.preferences.fetch("seen_release_tags").size
+
+    Sure.stubs(:version).returns(Calver.new("0.7.6"))
+    assert_equal "v0.7.6", ReleaseHighlights.pending_tag_for(@user)
   end
 
   test "mark_release_seen! accepts a newer tag" do
@@ -71,7 +92,7 @@ class ReleaseHighlightsTest < ActiveSupport::TestCase
   end
 
   test "every release is eligible while the rollout is being tested" do
-    assert ReleaseHighlights.eligible?(Semver.new("0.7.5-alpha.7"))
-    assert ReleaseHighlights.eligible?(Semver.new("0.7.4"))
+    assert ReleaseHighlights.eligible?(Calver.new("0.7.5-alpha.7"))
+    assert ReleaseHighlights.eligible?(Calver.new("0.7.4"))
   end
 end

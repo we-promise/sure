@@ -110,6 +110,37 @@ class RecurringTransaction::AiSetupSuggesterTest < ActiveSupport::TestCase
     refute suggestion.any_proposal?, "all-null fields mean the configuration is already right"
   end
 
+  # The model answers in PRESETS; an "interval" it had never been offered as a
+  # value would come back as an unknown preset.
+  test "configure mode reports an every-N cadence to the provider as custom" do
+    series = @family.recurring_transactions.create!(
+      name: "Water", account: accounts(:depository), amount: 60, currency: "USD",
+      expected_day_of_month: 9, anchor_date: Date.current,
+      last_occurrence_date: 2.months.ago.to_date, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    RecurringTransaction::FrequencyPreset.apply(series, preset: "interval", interval: 2, interval_unit: "monthly",
+                                                         day_of_month: 9)
+    series.save!
+    create_entry(name: "Water", amount: 60, date: Date.current.beginning_of_month + 8.days - 2.months)
+
+    captured = nil
+    provider = Object.new
+    provider.define_singleton_method(:suggest_bill_setup) do |**kwargs|
+      captured = kwargs
+      Provider::Response.new(success?: true, data: RawSuggestion.new(
+        name: nil, amount: nil, frequency: nil, day_of_month: nil, weekday: nil,
+        month_of_year: nil, category_name: nil, bill_type: nil, autopay: nil,
+        confidence: 0.9, rationale: "already right"
+      ), error: nil)
+    end
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+
+    Suggester.new(@family, user: @user).suggest_configuration(series)
+
+    assert_equal "custom", captured[:current_config][:frequency]
+  end
+
   private
 
     def raw(**overrides)

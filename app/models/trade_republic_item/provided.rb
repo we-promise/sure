@@ -6,7 +6,8 @@ module TradeRepublicItem::Provided
 
     Provider::TradeRepublicClient.new(
       phone_number: phone_number,
-      pin: pin
+      pin: pin,
+      device_id: device_id
     )
   end
 

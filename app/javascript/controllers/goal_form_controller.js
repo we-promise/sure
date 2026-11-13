@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import evaluateAmountExpression, { precisionFromStep } from "utils/evaluate_amount_expression";
 
 // Single-form controller for the goal create / edit modal.
 //
@@ -89,7 +90,7 @@ export default class extends Controller {
   // button only enables when a submit would actually succeed.
   isValid() {
     const name = this.hasNameInputTarget ? this.nameInputTarget.value.trim() : "";
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
+    const amount = this.#amount();
     const accountOk = !this.requireAccountValue || this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
     return name.length > 0 && Number.isFinite(amount) && amount > 0 && accountOk;
   }
@@ -116,7 +117,7 @@ export default class extends Controller {
     event.preventDefault();
 
     const nameEmpty = !(this.hasNameInputTarget && this.nameInputTarget.value.trim().length > 0);
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
+    const amount = this.#amount();
     const amountInvalid = !(Number.isFinite(amount) && amount > 0);
     const noAccount = this.requireAccountValue && !this.linkedAccountCheckboxTargets.some((cb) => cb.checked);
 
@@ -150,7 +151,7 @@ export default class extends Controller {
   updateSuggested() {
     if (!this.hasSuggestedTarget) return;
 
-    const amount = this.hasAmountInputTarget ? Number.parseFloat(this.amountInputTarget.value) : Number.NaN;
+    const amount = this.#amount();
     const dateValue = this.hasDateInputTarget ? this.dateInputTarget.value : null;
     const checkedCount = this.linkedAccountCheckboxTargets.filter((cb) => cb.checked).length;
 
@@ -190,6 +191,30 @@ export default class extends Controller {
   clearFieldError(input, errorEl) {
     if (input) input.classList.remove(...this.constructor.INVALID_INPUT_CLASSES);
     if (errorEl) errorEl.classList.add("hidden");
+  }
+
+  // Same locale-aware/expression parsing the money field itself normalizes
+  // to on blur (see money_field_controller.js), rather than raw
+  // Number.parseFloat, which reads a comma decimal like "0,50" as 0 and
+  // wedges the submit button/validation permanently for an otherwise-valid
+  // amount.
+  //
+  // Rounded to the amount field's own precision (derived from its `step`,
+  // same as money_field_controller#fieldPrecision) rather than left as the
+  // raw evaluated result: money_field_controller's blur normalization does
+  // this same rounding before the field is submitted, so an amount that
+  // reads as positive here (e.g. "0.001" with a 2-decimal currency) but
+  // rounds to "0.00" on submit would otherwise pass this validation and
+  // then get rejected server-side (Goal#target_amount must be > 0) — a
+  // false "valid" state reachable by submitting via Enter before blur ever
+  // runs.
+  #amount() {
+    if (!this.hasAmountInputTarget) return Number.NaN;
+    const result = evaluateAmountExpression(this.amountInputTarget.value);
+    if (result === null) return Number.NaN;
+
+    const precision = precisionFromStep(this.amountInputTarget.step);
+    return precision === null ? result : Number(result.toFixed(precision));
   }
 
   #money(value) {

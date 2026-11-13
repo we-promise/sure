@@ -85,7 +85,7 @@ uk:
       # Australia
       super:
         short: Super
-        long: Суперannuation
+        long: "Суперфонд"
       smsf:
         short: SMSF
         long: Самокерований суперфонд
@@ -188,9 +188,12 @@ uk:
       other:
         short: Інше
         long: Інша інвестиція
+      cash_management:
+        short: CMA
+        long: Рахунок управління грошовими коштами
     value_tooltip:
-      cash: Готівка
+      cash: Грошові кошти
       holdings: Активи
       total: Баланс портфеля
-      total_value_tooltip: Загальний баланс портфеля - це сума брокерських готівкових коштів
+      total_value_tooltip: Загальний баланс портфеля - це сума вільних коштів на брокерському рахунку
         (доступних для торгівлі) та поточної ринкової вартості ваших активів.

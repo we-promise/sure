@@ -200,6 +200,34 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   end
 
   # ============================================================================
+  # SECURITY AUDIT LOG MODEL TESTS
+  # ============================================================================
+
+  test "security audit log user_email, ip_address and user_agent are encrypted at rest" do
+    request = ActionDispatch::TestRequest.create
+    request.remote_addr = "203.0.113.5"
+    request.user_agent = "EncryptionVerification/1.0"
+
+    log = SecurityAuditLog.log_mfa_enabled!(user: users(:family_admin), request: request)
+
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+
+    raw_email = log.read_attribute_before_type_cast(:user_email).to_s
+    raw_ip = log.read_attribute_before_type_cast(:ip_address).to_s
+    raw_agent = log.read_attribute_before_type_cast(:user_agent).to_s
+    assert_not_includes raw_email, users(:family_admin).email
+    assert_not_includes raw_ip, "203.0.113.5"
+    assert_not_includes raw_agent, "EncryptionVerification/1.0"
+
+    log.reload
+    assert_equal users(:family_admin).email, log.user_email
+    assert_equal "203.0.113.5", log.ip_address
+    assert_equal "EncryptionVerification/1.0", log.user_agent
+  end
+
+  # ============================================================================
   # MOBILE DEVICE MODEL TESTS
   # ============================================================================
 
@@ -337,27 +365,96 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
     assert_column_not_plaintext(MonobankItem, item.id, :raw_payload, "test")
   end
 
-  test "monobank account payloads and identifiers are encrypted" do
+  test "monobank account payloads are encrypted" do
     skip "No monobank accounts in fixtures" unless MonobankAccount.any?
 
     account = MonobankAccount.first
     account.update!(
       raw_payload: { account_test: "value" },
-      raw_transactions_payload: [ { id: "tx_probe" } ],
-      masked_pan: "537541******9999",
-      iban: "UA-TEST-IBAN-ENCRYPTION-PROBE"
+      raw_transactions_payload: [ { id: "tx_probe" } ]
     )
     account.reload
 
     assert_equal({ "account_test" => "value" }, account.raw_payload)
-    assert_equal "537541******9999", account.masked_pan
-    assert_equal "UA-TEST-IBAN-ENCRYPTION-PROBE", account.iban
 
-    # A partial card number and an IBAN are exactly the fields worth proving opaque.
-    assert_column_not_plaintext(MonobankAccount, account.id, :masked_pan, "537541******9999")
-    assert_column_not_plaintext(MonobankAccount, account.id, :iban, "UA-TEST-IBAN-ENCRYPTION-PROBE")
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_payload, "account_test")
     assert_column_not_plaintext(MonobankAccount, account.id, :raw_transactions_payload, "tx_probe")
+  end
+
+  test "snaptrade account_number is encrypted" do
+    skip "No snaptrade accounts in fixtures" unless SnaptradeAccount.any?
+
+    account = SnaptradeAccount.first
+    account.update!(account_number: "9988776655")
+    account.reload
+
+    assert_equal "9988776655", account.account_number
+
+    # A brokerage account number is exactly the kind of field worth proving opaque.
+    assert_column_not_plaintext(SnaptradeAccount, account.id, :account_number, "9988776655")
+  end
+
+  test "plaid account holdings stored before encryption was enabled can be read and backfilled" do
+    account = PlaidAccount.create!(
+      plaid_item: plaid_items(:one),
+      plaid_id: "holdings_backfill_probe",
+      name: "Brokerage",
+      plaid_type: "investment",
+      currency: "USD",
+      current_balance: 1000
+    )
+    # Store plaintext, as an instance that enabled encryption after syncing would have.
+    PlaidAccount.where(id: account.id).update_all(
+      "raw_holdings_payload = '{\"holdings\": [{\"security_id\": \"sec_probe\"}]}'::jsonb"
+    )
+
+    with_unencrypted_data_supported do
+      account = PlaidAccount.find(account.id)
+      assert_equal "sec_probe", account.raw_holdings_payload["holdings"].first["security_id"]
+
+      account.encrypt
+    end
+
+    assert_equal "sec_probe", account.reload.raw_holdings_payload["holdings"].first["security_id"]
+    assert_column_not_plaintext(PlaidAccount, account.id, :raw_holdings_payload, "sec_probe")
+  end
+
+  test "provider account identifiers are encrypted at rest" do
+    family = families(:dylan_family)
+
+    eb_item = EnableBankingItem.create!(
+      family: family, name: "EB probe", country_code: "FI", application_id: "app", client_certificate: "cert",
+      last_psu_ip: "203.0.113.42"
+    )
+    akahu_account = AkahuAccount.create!(
+      akahu_item: AkahuItem.create!(family: family, name: "Akahu probe", app_token: "app", user_token: "user"),
+      name: "Everyday", account_id: "acc_probe", currency: "NZD", formatted_account: "12-3456-7654321-00"
+    )
+    lunchflow_account = lunchflow_items(:one).lunchflow_accounts.create!(
+      name: "Brokerage", currency: "GBP", account_id: "holdings-probe",
+      raw_holdings_payload: [ { "symbol" => "HOLDPROBE" } ]
+    )
+
+    assert_equal "203.0.113.42", eb_item.reload.last_psu_ip
+    assert_equal "12-3456-7654321-00", akahu_account.reload.formatted_account
+    assert_equal "HOLDPROBE", lunchflow_account.reload.raw_holdings_payload.first["symbol"]
+
+    assert_column_not_plaintext(EnableBankingItem, eb_item.id, :last_psu_ip, "203.0.113.42")
+    assert_column_not_plaintext(AkahuAccount, akahu_account.id, :formatted_account, "7654321")
+    assert_column_not_plaintext(LunchflowAccount, lunchflow_account.id, :raw_holdings_payload, "HOLDPROBE")
+  end
+
+  test "provider identifiers stored before encryption stay readable" do
+    eb_item = EnableBankingItem.create!(
+      family: families(:dylan_family), name: "EB legacy", country_code: "FI", application_id: "app", client_certificate: "cert"
+    )
+    EnableBankingItem.where(id: eb_item.id).update_all("last_psu_ip = '203.0.113.50'")
+
+    # The global setting can be on during the backfill window, so turn it off
+    # here: the attribute's own option must cover the legacy value by itself.
+    with_unencrypted_data_supported(false) do
+      assert_equal "203.0.113.50", eb_item.reload.last_psu_ip
+    end
   end
 
   # ============================================================================
@@ -386,6 +483,14 @@ class EncryptionVerificationTest < ActiveSupport::TestCase
   end
 
   private
+
+    def with_unencrypted_data_supported(enabled = true)
+      previous = ActiveRecord::Encryption.config.support_unencrypted_data
+      ActiveRecord::Encryption.config.support_unencrypted_data = enabled
+      yield
+    ensure
+      ActiveRecord::Encryption.config.support_unencrypted_data = previous
+    end
 
     # Reads +column+ straight from the database, bypassing the model, and asserts the
     # stored bytes do not contain +value+. An accessor round-trip alone cannot tell

@@ -36,6 +36,7 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
   end
 
   test "raises on non-200 response" do
+    Usage.expects(:capture).with("ai_assistant_served_daily").once
     mock_http_error_response(503, "Service Unavailable")
 
     assert_raises(Assistant::Error) do
@@ -45,6 +46,8 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
 
   test "retries transient errors then raises Assistant::Error" do
     Net::HTTP.any_instance.stubs(:request).raises(Net::OpenTimeout, "connection timed out")
+    # Skip the real 1s/2s retry backoff sleeps
+    Assistant::External::Client.any_instance.stubs(:sleep)
 
     error = assert_raises(Assistant::Error) do
       @client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }

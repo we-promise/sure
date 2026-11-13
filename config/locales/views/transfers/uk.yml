@@ -2,6 +2,9 @@ uk:
   transfers:
     create:
       success: Переказ створено
+      exchange_rate_unavailable: Обмінний курс для вибраних валют і дати недоступний
+      date_invalid: недійсна
+      stale_form: Цю форму вже надіслано з іншими даними. Оновіть сторінку та спробуйте ще раз.
     destroy:
       success: Переказ видалено
     form:
@@ -10,14 +13,14 @@ uk:
       outgoing_fee: Комісія за вихідний переказ
       incoming_fee: Комісія за вхідний переказ
       date: Дата
-      destination_amount: Сума призначення
-      destination_amount_display: "Сума призначення: %{amount}"
+      destination_amount: Сума зарахування
+      destination_amount_display: "Сума зарахування: %{amount}"
       exchange_rate_display: "Обмінний курс: %{rate}"
       expense: Витрата
       from: З
       income: Дохід
       select_account: Вибрати рахунок
-      source_amount: Сума джерела
+      source_amount: Сума списання
       submit: Створити переказ
       to: До
       transfer: Переказ
@@ -41,8 +44,8 @@ uk:
       transfer_amount: Сума переказу
       total: Всього
       bank_charges: Банківські комісії
-      source_fee: Комісія джерела
-      destination_fee: Комісія призначення
+      source_fee: Комісія за вихідний переказ
+      destination_fee: Комісія за вхідний переказ
       category: Категорія
       uncategorized: Без категорії
     update:

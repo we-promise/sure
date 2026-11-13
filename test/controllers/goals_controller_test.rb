@@ -49,7 +49,7 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[data-money-field-target=?][data-action=?]", "amount",
-                  "input->goal-form#suggestedChanged paste->money-field#pasteAmount"
+                  "input->goal-form#suggestedChanged paste->money-field#pasteAmount blur->money-field#normalizeAmount"
   end
 
   test "create persists a goal with linked accounts" do
@@ -136,6 +136,41 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_no_match(/Member Private Checking/, response.body)
     assert_no_match(/#{private_account.id}/, response.body)
+  end
+
+  # The builder's money field, not a bare number input: currency symbol and
+  # all. Its label used to point at nothing — `for` carried the label text —
+  # so the check is that it names the input the amount is posted from.
+  test "the consumption dialog asks for the amount with a labelled money field" do
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_select "[data-controller='money-field'] input[type=text][name=amount][id=amount][autofocus]"
+    assert_select "label[for=amount]", text: /#{I18n.t("goals.consume.amount_label")}/
+  end
+
+  # The amount is in goal currency even when it comes off a euro earmark, so
+  # the dialog says which currency it wants and which account holds which.
+  test "the consumption dialog names a foreign account's currency" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "Euro Savings", currency: "EUR", balance: 1_000)
+    @goal.goal_accounts.create!(account: eur, allocated_amount: 500)
+
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_includes response.body, "Euro Savings · EUR"
+    assert_select "p", text: I18n.t("goals.consume.goal_currency_hint", currency: "USD")
+  end
+
+  # Both figures in the dialog blur under privacy mode, as they do on the goal
+  # page. The amount also stays clickable: it is the one field the reader fills.
+  test "the consumption dialog blurs its figures under privacy mode and the amount stays editable" do
+    get consume_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[name=amount].form-field__input.privacy-sensitive.privacy-sensitive-interactive"
+    assert_select "p.privacy-sensitive", text: /is currently backing this goal/
   end
 
   test "consumption is refused against a linked account the viewer cannot see" do
@@ -235,22 +270,70 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
     assert_not_empty @goal.reload.goal_accounts
   end
 
-  test "update rejects a cross-currency account attachment" do
-    # Regression: sync_linked_accounts! used to call goal_accounts.create!
-    # directly, bypassing Goal#linked_accounts_must_match_goal_currency.
+  test "update accepts a foreign-currency account and converts its backing" do
     eur_account = Account.create!(
-      family: @goal.family,
-      accountable: Depository.new,
-      name: "EUR Checking",
-      currency: "EUR",
-      balance: 100
+      family: @goal.family, accountable: Depository.new,
+      name: "EUR Checking", currency: "EUR", balance: 100
     )
-    before_ids = @goal.goal_accounts.pluck(:account_id).sort
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.2)
 
     patch goal_url(@goal), params: { goal: { account_ids: [ eur_account.id ] } }
 
-    assert_response :unprocessable_entity
-    assert_equal before_ids, @goal.reload.goal_accounts.pluck(:account_id).sort
+    assert_redirected_to goal_path(@goal)
+    assert_equal [ eur_account.id ], @goal.reload.goal_accounts.pluck(:account_id)
+    assert_equal "USD", @goal.currency
+    assert_equal 120, Goal.find(@goal.id).current_balance
+  end
+
+  test "create with mixed currencies uses the currency shown for the target" do
+    usd = unclaimed_account("USD pot")
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR pot", currency: "EUR", balance: 100)
+    post goals_url, params: { goal: { name: "Mixed", target_amount: 1_000, account_ids: [ eur.id, usd.id ] } }
+
+    goal = Goal.order(created_at: :desc).first
+    assert_redirected_to goal_path(goal)
+    assert_equal @user.family.primary_currency_code, goal.currency
+    assert_equal [ eur.id, usd.id ].sort, goal.linked_accounts.pluck(:id).sort
+  end
+
+  test "show and index disclose an unavailable account conversion" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR reserve", currency: "EUR", balance: 100)
+    @goal.goal_accounts.build(account: eur)
+    @goal.save!
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    warning = I18n.t("goals.currency_warning.body", count: 1, from: "EUR", to: @goal.currency)
+
+    get goal_url(@goal)
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.show.funding_accounts.rate_unavailable")
+    assert_includes response.body, warning
+    # Above the headline figures, not below the funding breakdown.
+    assert_operator response.body.index(warning), :<, response.body.index(I18n.t("goals.show.funding_accounts_heading"))
+
+    get goals_url
+    assert_response :success
+    assert_select "p", text: I18n.t("goals.goal_card.partial_total")
+  end
+
+  test "detected foreign spending is converted on its date and releases native units" do
+    eur = Account.create!(family: @user.family, accountable: Depository.new,
+                          name: "EUR spending", currency: "EUR", balance: 1_000)
+    @goal.goal_accounts.build(account: eur, allocated_amount: 500)
+    @goal.save!
+    date = 20.days.ago.to_date
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 2)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 3)
+    entry = eur.entries.create!(name: "Travel", date: date, amount: 100, currency: "EUR", entryable: Transaction.new)
+
+    post consume_goal_url(@goal), params: { transaction_id: entry.entryable_id }
+
+    assert_redirected_to goal_path(@goal)
+    assert_equal 200, @goal.reload.consumed_amount
+    assert_equal 400, @goal.goal_accounts.find_by!(account: eur).allocated_amount
+    assert_equal @goal.id, entry.entryable.reload.extra.dig("goal", "consumed_goal_id")
   end
 
   test "pause/resume/complete/archive/unarchive flow" do
@@ -969,6 +1052,41 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
                        I18n.t("goals.form.earmark.whole_balance_alone")
       assert_no_match(/earmark/i, I18n.t("goals.form.earmark.whole_balance_alone"),
         "the hint shown with no other claims should not mention earmarks")
+    end
+
+    # Privacy mode sets `pointer-events: none` on bare .privacy-sensitive, so
+    # the per-account amount has to opt back in or it cannot be typed into.
+    test "each account's earmark is a money field that stays editable in privacy mode" do
+      account = unclaimed_account("Earmark Pot")
+
+      get new_goal_url
+
+      assert_response :success
+      assert_select "label[for=goal_allocations_#{account.id}]", text: /#{I18n.t("goals.form.fields.earmark_for", account: "Earmark Pot")}/
+      # The text input has no native min; the bound rides on the money-field container.
+      assert_select "[data-controller='money-field'][data-money-field-min-value='0'] input#goal_allocations_#{account.id}", count: 1
+      assert_select "input#goal_allocations_#{account.id}[name='goal[allocations][#{account.id}]']", count: 1 do |inputs|
+        input = inputs.first
+        assert_includes input["class"].split, "privacy-sensitive"
+        assert_includes input["class"].split, "privacy-sensitive-interactive"
+        assert_equal I18n.t("goals.form.fields.whole_balance"), input["placeholder"]
+        assert_nil input["value"]
+        assert_equal "allocationInput", input["data-goal-earmark-target"]
+        assert_equal "amount", input["data-money-field-target"]
+        assert_includes input["data-action"], "input->goal-earmark#refresh"
+      end
+    end
+
+    test "a fixed earmark is filled back into its account's field" do
+      account = unclaimed_account("Filled Pot")
+      goal = @user.family.goals.create!(name: "Filled", target_amount: 5_000, currency: "USD") do |g|
+        g.goal_accounts.build(account: account, allocated_amount: 250)
+      end
+
+      get edit_goal_url(goal)
+
+      assert_response :success
+      assert_select "input#goal_allocations_#{account.id}[value='250.00']"
     end
 
   private

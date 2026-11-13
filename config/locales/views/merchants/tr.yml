@@ -20,6 +20,10 @@ tr:
       name_placeholder: Satıcı adı
       website_hint: Logosunun otomatik olarak görüntülenmesi için satıcının web sitesini
         girin
+      iban_placeholder: "IBAN (isteğe bağlı)"
+      iban_set_placeholder: "•••• •••• •••• •••• — IBAN kayıtlı, değiştirmek için yeni bir değer girin"
+      iban_hint: "Biliniyorsa satıcının banka hesap numarası"
+      iban_remove_label: "IBAN'ı kaldır"
       website_placeholder: Web sitesi (örn. starbucks.com)
     index:
       empty: Henüz satıcı yok
@@ -51,6 +55,11 @@ tr:
       unlinked_info: Bu satıcılar yakın zamanda işlemlerinizden kaldırıldı. Bir işleme
         yeniden atanmadıkça 30 gün sonra bu listeden kaybolacaklar.
       unlinked_title: Son bağlantısı kaldırılanlar
+      search_family_merchants: Aile satıcılarında ara...
+      search_provider_merchants: Sağlayıcı satıcılarında ara...
+      no_family_merchants_found: Eşleşen aile satıcısı bulunamadı
+      no_provider_merchants_found: Eşleşen sağlayıcı satıcısı bulunamadı
+      per_page: sayfa başına
     merchant:
       confirm_accept: Satıcıyı sil
       confirm_body: Bu satıcıyı silmek istediğinizden emin misiniz? Satıcıyı kaldırmak
@@ -68,6 +77,8 @@ tr:
       submit: Seçilenleri birleştir
       target_label: Şununla birleştir (hedef)
       title: Satıcıları birleştir
+      sources_search_placeholder: Satıcılarda ara...
+      no_merchants_found: Eşleşen satıcı bulunamadı
     new:
       title: Yeni satıcı
     perform_merge:

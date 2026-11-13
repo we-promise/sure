@@ -20,9 +20,9 @@ class BrexItemsController < ApplicationController
 
     if @brex_item.save
       @brex_item.sync_later
-      render_provider_panel_success(t(".success"))
+      redirect_to accounts_path, notice: t(".success"), status: :see_other
     else
-      render_provider_panel_error
+      render_provider_panel("brex", alert: @brex_item.errors.full_messages.join(", "))
     end
   end
 
@@ -31,9 +31,10 @@ class BrexItemsController < ApplicationController
 
   def update
     if BrexItem::AccountFlow.update_item_with_cache_expiration(@brex_item, family: Current.family, attributes: brex_item_params)
-      render_provider_panel_success(t(".success"))
+      render_provider_panel("brex", notice: t(".success"), fallback_path: accounts_path,
+                            brex_items: Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts))
     else
-      render_provider_panel_error
+      render_provider_panel("brex", alert: @brex_item.errors.full_messages.join(", "))
     end
   end
 
@@ -45,6 +46,7 @@ class BrexItemsController < ApplicationController
 
   def sync
     @brex_item.sync_later unless @brex_item.syncing?
+    return render_provider_panel("brex", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -53,33 +55,6 @@ class BrexItemsController < ApplicationController
   end
 
   private
-
-    def render_provider_panel_success(message)
-      return redirect_to accounts_path, notice: message, status: :see_other unless turbo_frame_request?
-
-      flash.now[:notice] = message
-      @brex_items = Current.family.brex_items.active.ordered.includes(:syncs, :brex_accounts)
-      render_brex_provider_panel(locals: { brex_items: @brex_items }, include_flash: true)
-    end
-
-    def render_provider_panel_error
-      @error_message = @brex_item.errors.full_messages.join(", ")
-      return redirect_to settings_providers_path, alert: @error_message, status: :see_other unless turbo_frame_request?
-
-      render_brex_provider_panel(locals: { error_message: @error_message }, status: :unprocessable_entity)
-    end
-
-    def render_brex_provider_panel(locals:, status: :ok, include_flash: false)
-      streams = [
-        turbo_stream.replace(
-          "brex-providers-panel",
-          partial: "settings/providers/brex_panel",
-          locals: locals
-        )
-      ]
-      streams += flash_notification_stream_items if include_flash
-      render turbo_stream: streams, status: status
-    end
 
     def set_brex_item
       @brex_item = Current.family.brex_items.find(params[:id])

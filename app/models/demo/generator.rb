@@ -1,6 +1,25 @@
 require "securerandom"
 
 class Demo::Generator
+  # Alias the canonical sentinel from Subscription so callers that already
+  # reference Demo::Generator::DEMO_STRIPE_SUBSCRIPTION_ID keep working.
+  DEMO_STRIPE_SUBSCRIPTION_ID = Subscription::DEMO_STRIPE_ID
+
+  # Organic Maps' published donation addresses (organicmaps.app/donate): real,
+  # public and modest. Every sync re-reads a wallet from its chain, so a made-up
+  # address would drop to zero on the demo user's first sync.
+  ONCHAIN_DEMO_WALLETS = [
+    { chain: "bitcoin", address: "bc1qxnn9j9z5xywqz5sdqxaq327vw0x22nhsxc67ld", tokens: [] },
+    { chain: "ethereum", address: "0xC36A638DD2274BDe6097DFD62B3EB5Aa8A67Ec54", tokens: [
+      { symbol: "USDC", name: "USD Coin", decimals: 6, contract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" },
+      { symbol: "USDT", name: "Tether USD", decimals: 6, contract: "0xdAC17F958D2ee523a2206206994597C13D831ec7" }
+    ] },
+    { chain: "solana", address: "9Fcm6Gw5PsivSCcpxCh9GVfj9jcPgQ8Q5mZJhsEuRHJV", tokens: [
+      { symbol: "USDC", name: "USD Coin", decimals: 6, contract: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" },
+      { symbol: "USDT", name: "Tether USD", decimals: 6, contract: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB" }
+    ] }
+  ].freeze
+
   # @param seed [Integer, String, nil] Seed value used to initialise the internal PRNG. If nil, the ENV variable DEMO_DATA_SEED will
   #   be honoured and default to a random seed when not present.
   #
@@ -72,6 +91,7 @@ class Demo::Generator
         create_realistic_accounts!(family)
         create_realistic_transactions!(family)
         generate_budget_auto_fill!(family)
+        create_sample_rules!(family)
 
         puts "🎯 Seeding goals..."
         generate_goals!(family)
@@ -103,8 +123,16 @@ class Demo::Generator
       # Auto-fill current-month budget based on recent spending averages
       generate_budget_auto_fill!(family)
 
+      puts "📏 Creating sample rules..."
+      create_sample_rules!(family)
+
       puts "🎯 Seeding goals..."
       generate_goals!(family)
+
+      # Only the demo family: every family with these wallets reads the same
+      # addresses from the public explorers on each sync.
+      puts "👛 Linking public on-chain wallets..."
+      link_onchain_demo_wallets!(family)
 
       puts "🔑 Creating monitoring API key..."
       create_monitoring_api_key!(family)
@@ -165,7 +193,7 @@ class Demo::Generator
         date_format: "%m-%d-%Y"
       )
 
-      family.start_subscription!("sub_demo_123") if subscribed
+      family.start_subscription!(DEMO_STRIPE_SUBSCRIPTION_ID) if subscribed
 
       # Admin user
       family.users.create!(
@@ -186,6 +214,13 @@ class Demo::Generator
         password: "Password1!",
         onboarded_at: onboarded ? Time.current : nil
       )
+
+      # Demo users showcase opt-in features. Apply after creation because a new
+      # member's role defaults hide the AI sidebar when no provider is configured.
+      family.users.each do |user|
+        user.update!(ai_enabled: true, show_ai_sidebar: true,
+                     preferences: user.preferences.to_h.merge("preview_features_enabled" => true))
+      end
 
       family
     end
@@ -258,6 +293,32 @@ class Demo::Generator
       @interest_cat = family.categories.create!(name: "Loan Interest", color: "#475569")
     end
 
+    # Example rules, two groups and one rule without a group, so the rules page
+    # shows how rules are grouped. All are off, so the demo transactions stay as
+    # generated until someone switches the rules on or applies them.
+    def create_sample_rules!(family)
+      sample_rules = [
+        [ "Subscriptions", [ [ "Netflix", @entertainment_cat ], [ "Spotify", @entertainment_cat ] ] ],
+        [ "Groceries", [ [ "Whole Foods", @groceries_cat ], [ "Trader Joe's", @groceries_cat ] ] ],
+        [ nil, [ [ "Local Coffee", @coffee_cat ] ] ]
+      ]
+
+      sample_rules.each do |group_name, rules|
+        group = family.rule_groups.find_or_create_named!(group_name) if group_name
+
+        rules.each do |name_contains, category|
+          family.rules.create!(
+            name: "#{name_contains} → #{category.name}",
+            resource_type: "transaction",
+            active: false,
+            rule_group: group,
+            conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: name_contains } ],
+            actions_attributes: [ { action_type: "set_transaction_category", value: category.id } ]
+          )
+        end
+      end
+    end
+
     def create_realistic_accounts!(family)
       # Checking accounts (USD)
       @chase_checking = family.accounts.create!(accountable: Depository.new(subtype: "checking"), name: "Chase Premier Checking", balance: 0, currency: "USD")
@@ -302,6 +363,9 @@ class Demo::Generator
         accountable: Loan.new(
           subtype: "mortgage", rate_type: "adjustable", interest_rate: 6.25, term_months: 360,
           start_date: mortgage_start, initial_balance: 320_000,
+          # A deposit and a level-term policy, so the demo mortgage shows the
+          # leverage and insurance cards rather than hiding both.
+          down_payment: 70_000, insurance_rate: 0.36, insurance_rate_type: "level_term",
           rate_changes: [
             { effective_date: (mortgage_start >> 24).iso8601, rate: "5.5" },
             { effective_date: (mortgage_start >> 48).iso8601, rate: "6.75" }
@@ -311,7 +375,10 @@ class Demo::Generator
       )
       @car_loan = family.accounts.create!(
         accountable: Loan.new(subtype: "auto", rate_type: "fixed", interest_rate: 6.9, term_months: 60,
-                              start_date: loans_start, initial_balance: 24_000),
+                              start_date: loans_start, initial_balance: 24_000,
+                              # The other policy shape, on a fixed loan.
+                              down_payment: 4_000, insurance_rate: 0.5,
+                              insurance_rate_type: "decreasing_life"),
         name: "Car Loan", balance: 0, currency: "USD"
       )
       @student_loan = family.accounts.create!(
@@ -1034,6 +1101,24 @@ class Demo::Generator
       end
     end
 
+    # Linked the way a user links them, from an empty snapshot instead of a chain
+    # read, so generating stays offline. The item sync the linker queues fills in
+    # the real balances, history and prices.
+    #
+    # One transaction: jobs are enqueued after commit, so the sync the first link
+    # queues starts with every wallet linked rather than with the first alone.
+    def link_onchain_demo_wallets!(family)
+      item = family.onchain_wallet_item!
+      item.transaction do
+        ONCHAIN_DEMO_WALLETS.each do |wallet|
+          chain = Onchain::Chains.find!(wallet[:chain])
+          assets = [ chain.native_asset(quantity: 0) ] + wallet[:tokens].map { |token| chain.token_asset(**token, quantity: 0) }
+          OnchainWalletItem::WalletLinker.new(item, chain: chain.key, address: Onchain::Chains.canonical_address(chain.key, wallet[:address]))
+            .link(snapshot: Onchain::Snapshot.new(assets: assets, movements: []), selected_keys: assets.map { |asset| OnchainWalletItem::TokenReview.key_for(asset) })
+        end
+      end
+    end
+
     # ---------------------------------------------------------------------------
     #                         Deterministic helper methods
     # ---------------------------------------------------------------------------
@@ -1078,7 +1163,10 @@ class Demo::Generator
         [ @student_loan, "Student Loan Payment", @interest_cat ],
         [ @car_loan, "Auto Loan Payment", @transportation_cat ]
       ].each do |account, memo, interest_category|
-        account.loan.amortization_schedule.payments.each do |payment|
+        # Loan's touch callback can cache a missing account while it is saved
+        # before its parent. Within a sample-data/refresh transaction, the
+        # after-commit cache reset has not run yet, so reload before scheduling.
+        account.loan.reload.amortization_schedule.payments.each do |payment|
           break if payment.date > Date.current
 
           make_loan_payment!(

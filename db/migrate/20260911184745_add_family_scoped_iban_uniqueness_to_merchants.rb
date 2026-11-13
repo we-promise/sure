@@ -31,10 +31,7 @@ class AddFamilyScopedIbanUniquenessToMerchants < ActiveRecord::Migration[8.1]
     end
 
     # Without this, two FamilyMerchant rows in the same family could share
-    # an IBAN (nothing enforced it), so find_by(iban:) in
-    # Account::ProviderImportAdapter#find_or_create_merchant would pick an
-    # unspecified one -- assigning a future Enable Banking transaction to
-    # the wrong family-configured merchant regardless of its name.
+    # an IBAN (nothing enforced it).
     unless valid_index_exists?(INDEX_NAME)
       execute "DROP INDEX CONCURRENTLY IF EXISTS #{INDEX_NAME}"
       add_index :merchants, [ :family_id, :iban ],

@@ -1,4 +1,18 @@
 class TransactionImport < Import
+  SURE_EXPORT_SETTINGS = {
+    amount_type_strategy: "signed_amount",
+    signage_convention: "inflows_negative",
+    date_format: "%Y-%m-%d",
+    number_format: "1,234.56",
+    rows_to_skip: 0
+  }.freeze
+
+  # The column label for each column of Family::DataExporter::TRANSACTIONS_CSV_HEADERS, in its order.
+  SURE_EXPORT_LABELS = %i[
+    date_col_label account_col_label amount_col_label name_col_label
+    category_col_label tags_col_label notes_col_label currency_col_label
+  ].zip(Family::DataExporter::TRANSACTIONS_CSV_HEADERS).to_h.freeze
+
   def import!
     transaction do
       mappings.each(&:create_mappable!)
@@ -132,7 +146,60 @@ class TransactionImport < Import
     csv
   end
 
+  # Sure's own transactions.csv export keeps the stored sign (outflows positive),
+  # ISO dates and plain decimals, so a re-import of it needs matching settings.
+  # Call after assigning a new raw_file_str and before saving it.
+  def preset_for_uploaded_csv
+    if sure_export_csv?(raw_file_str, col_sep)
+      assign_attributes(SURE_EXPORT_SETTINGS)
+    elsif sure_export_csv?(raw_file_str_was, col_sep_was)
+      assign_attributes(amount_type_strategy: "signed_amount", signage_convention: "inflows_positive", date_format: family.date_format)
+    end
+  end
+
+  # A template from another bank's file would bring its own sign, formats,
+  # column names and skipped rows, none of which fit a Sure export.
+  def apply_template!(import_template)
+    return super unless sure_export_csv?(raw_file_str, col_sep)
+
+    update!(template_attributes(import_template).merge(SURE_EXPORT_SETTINGS.stringify_keys, sure_export_labels.stringify_keys))
+  end
+
   private
+    def sure_export_csv?(csv_str, separator)
+      # A dropped file is read as binary bytes; read it as UTF-8 so a BOM or
+      # non-ASCII characters elsewhere in the file cannot raise.
+      headers = header_record(utf8_without_bom(csv_str), separator).map { |header| export_header_key(header) }
+      headers.any? && (Family::DataExporter::TRANSACTIONS_CSV_HEADERS - headers).empty?
+    end
+
+    # Column labels must match the parsed headers exactly, which keep a BOM and
+    # the file's own spelling (e.g. "Date"), so map each export column to it.
+    # Read from the file itself: a Sure export skips no rows, whatever
+    # rows_to_skip the import had before the template reset it.
+    def sure_export_labels
+      headers = header_record(raw_file_str, col_sep)
+      SURE_EXPORT_LABELS.transform_values do |label|
+        headers.find { |header| export_header_key(header) == label } || label
+      end
+    end
+
+    # The first CSV record, read like Import.parse_csv_str reads headers:
+    # leading blank lines are skipped and a quoted field may span lines.
+    def header_record(csv_str, separator)
+      CSV.new(csv_str.to_s.strip, col_sep: separator.presence || ",", liberal_parsing: true).shift.to_a
+    rescue CSV::MalformedCSVError
+      []
+    end
+
+    def export_header_key(header)
+      utf8_without_bom(header).strip.downcase
+    end
+
+    def utf8_without_bom(str)
+      str.to_s.dup.force_encoding(Encoding::UTF_8).scrub.delete_prefix("\uFEFF")
+    end
+
     # The stand-in inflow Family::AutoTransferMatchable fabricates for a
     # transfer into a manual account is named after the transfer, not after
     # the bank's own description, so the name-based duplicate check never

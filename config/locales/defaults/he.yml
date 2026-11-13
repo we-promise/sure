@@ -39,6 +39,7 @@ he:
       default: "%d-%m-%Y"
       long: "%e ב%B, %Y"
       short: "%e %b"
+      short_with_year: "%-d ב%b, %Y"
     month_names:
     -
     - ינואר

@@ -161,7 +161,7 @@ class Demo::FinancekitGenerator
         from = funding_account
         outflow = from.entries.create!(name: entry.name, date: entry.date, amount: -entry.amount,
           currency: entry.currency, entryable: Transaction.new(kind: Transfer.kind_for_account(entry.account)))
-        Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow.entryable)
+        Transfer.create!(inflow_transaction: inflow, outflow_transaction: outflow.entryable, status: "confirmed")
         @funding_accounts_to_sync << from
       end
       inflow.update!(kind: "funds_movement", category: nil)
@@ -220,7 +220,8 @@ class Demo::FinancekitGenerator
         received = transaction!(nancy, -amount, "Received from Dad", last_date - days,
           source_id: received_id, transaction_type: "transfer")
         [ sent, received ].each { |identity| identity.entry.entryable.update!(kind: "funds_movement") }
-        Transfer.create!(outflow_transaction: sent.entry.entryable, inflow_transaction: received.entry.entryable)
+        Transfer.create!(outflow_transaction: sent.entry.entryable, inflow_transaction: received.entry.entryable,
+          status: "confirmed")
         changed.concat([ cash, nancy ])
       end
       changed << nancy if generate_nancy_purchases!(nancy)

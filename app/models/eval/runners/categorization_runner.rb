@@ -1,22 +1,15 @@
 class Eval::Runners::CategorizationRunner < Eval::Runners::Base
-  DEFAULT_BATCH_SIZE = 25  # Matches Provider::Openai limit
-
   protected
 
     def process_samples
       all_samples = samples.to_a
-      batch_size = effective_batch_size
+      batch_size = Provider::LlmConcept.max_items_per_call
       log_progress("Processing #{all_samples.size} samples in batches of #{batch_size}")
 
       all_samples.each_slice(batch_size).with_index do |batch, batch_idx|
         log_progress("Processing batch #{batch_idx + 1}/#{(all_samples.size.to_f / batch_size).ceil}")
         process_batch(batch)
       end
-    end
-
-    # Use smaller batches for custom providers (local LLMs) to reduce context length
-    def effective_batch_size
-      eval_run.provider_config["batch_size"]&.to_i || DEFAULT_BATCH_SIZE
     end
 
     # Get JSON mode from provider config (optional override)
