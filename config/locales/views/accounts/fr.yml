@@ -103,11 +103,6 @@ fr:
       activity:
         amount: Montant
         balance: Solde
-        balance_updates:
-          hidden: Les soldes synchronisés sont masqués
-          hide: Masquer
-          show: Afficher
-          shown: Les soldes synchronisés sont affichés
         confirmed: Confirmé
         date: Date
         entries: entrées

@@ -136,11 +136,6 @@ en:
       activity:
         amount: Amount
         balance: Balance
-        balance_updates:
-          hidden: Synced balances are hidden
-          hide: Hide
-          show: Show
-          shown: Synced balances are shown
         date: Date
         entries: entries
         entry: entry
