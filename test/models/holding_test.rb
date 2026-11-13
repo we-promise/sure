@@ -531,6 +531,22 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal own, batched, "the batch disagrees with #avg_cost"
   end
 
+  # The replay runs on Holding::LotBook, the calculators' own engine, not on
+  # the Holding::CostBasisTracker name kept only for the lot book's parity
+  # suite, so both paths keep working once that name goes.
+  test "the fallback and the batch replay on the lot book" do
+    security = create_security("LOTB", prices: [ { date: Date.current, price: 120 } ])
+    create_trade(security, account: @account, qty: 10, price: 100, date: 3.days.ago.to_date)
+    holding = create_holding(security, Date.current, 10)
+    Holding::CostBasisTracker.expects(:new).never
+
+    assert_equal BigDecimal("100"), Holding.find(holding.id).avg_cost.amount
+
+    batch = [ Holding.find(holding.id) ]
+    Holding.preload_avg_costs(batch)
+    assert_equal BigDecimal("100"), batch.first.avg_cost.amount
+  end
+
   # Like the per-holding fallback, a foreign trade's own rate is used only up
   # to 20 integer digits; past that the batch must not overflow the query.
   test "the batch ignores a numeric rate too large to convert" do

@@ -394,7 +394,7 @@ class Holding < ApplicationRecord
   # starting from the position the rows do not explain, and returns the
   # average cost in `currency`, or nil when it is unknown.
   def self.replay_avg_cost(rows, all_splits, qty:, date:, through:, currency:)
-    tracker = Holding::CostBasisTracker.new
+    book = Holding::LotBook.new
     transferred = false
     position = opening_position(rows, all_splits, qty: qty, date: date)
     splits = all_splits.select { |split| split.ex_date <= through }
@@ -402,7 +402,7 @@ class Holding < ApplicationRecord
     apply_splits = lambda do |up_to|
       while splits.any? && splits.first.ex_date <= up_to
         ratio = splits.shift.ratio
-        tracker.split(ratio)
+        book.split(ratio)
         position = Security::Split.scale(position, ratio)
       end
     end
@@ -420,7 +420,7 @@ class Holding < ApplicationRecord
       if internal_movement && trade_qty.positive?
         transferred = true
       else
-        tracker.apply(unit_cost, trade_qty)
+        book.apply(unit_cost, trade_qty)
       end
 
       position += trade_qty
@@ -432,7 +432,7 @@ class Holding < ApplicationRecord
 
     return nil if transferred
 
-    average = tracker.average_cost
+    average = book.average_cost
     return nil unless average
 
     # Rounded to the scale `cost_basis` is stored at, so the figure is the one
