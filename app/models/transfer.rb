@@ -193,15 +193,31 @@ class Transfer < ApplicationRecord
 
       # The kind is determined by the DESTINATION account (inflow), matching Transfer::Creator logic
       outflow_kind = Transfer.kind_for_account(to_account, from_account: from_account)
-      outflow_attrs = { kind: outflow_kind }
-
-      if outflow_kind == "investment_contribution" && outflow_transaction.category_id.blank?
-        category = to_account.family.investment_contributions_category
-        outflow_attrs[:category] = category if category.present?
-      end
 
       inflow_transaction.update!(kind: "funds_movement")
-      outflow_transaction.update!(outflow_attrs)
+      outflow_transaction.update!(kind: outflow_kind)
+      assign_investment_contribution_category!
+    end
+  end
+
+  # A confirmed transfer into an investment or crypto account books the
+  # outflow as an investment contribution, and the Investment Contributions
+  # category follows when the outflow has none. Provider imports create
+  # confirmed transfers directly instead of going through confirm!, so they
+  # call this themselves (see TradeRepublicAccount::ActivitiesProcessor).
+  def assign_investment_contribution_category!
+    Transfer.transaction do
+      # Lock before reading the category, so a concurrent category change is
+      # not overwritten by a value derived from a stale read (same pattern as
+      # update_investment_contribution!). A category the user explicitly
+      # cleared stays cleared: a locked nil is their choice, not an absence.
+      outflow_transaction.lock!
+      return unless outflow_transaction.kind == "investment_contribution"
+      return if outflow_transaction.category_id.present?
+      return if outflow_transaction.locked?(:category_id)
+
+      category = to_account.family.investment_contributions_category
+      outflow_transaction.update!(category: category) if category.present?
     end
   end
 

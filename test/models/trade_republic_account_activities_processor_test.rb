@@ -1344,7 +1344,7 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "Core S&P 500 USD (Acc)", buy_cash.name
     assert_equal "Buy", buy_cash.transaction.investment_activity_label
     assert_equal "investment_contribution", buy_cash.transaction.kind
-    assert_nil buy_cash.transaction.category_id
+    assert_equal @family.investment_contributions_category, buy_cash.transaction.category
 
     sell_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_sell")
     assert_equal BigDecimal("-529.0"), sell_cash.amount
@@ -1379,6 +1379,26 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
       TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
     end
     assert_equal buy_transfer, buy_cash.transaction.reload.transfer
+  end
+
+  test "a failed category assignment rolls back the settlement transfer" do
+    cash_account, cash_sure = create_linked_cash_account!
+    buy = order_execution_detail(event_id: "evt_settle_buy", quantity: "2.0", isin: "IE00B5BMR087", amount: "1024.92")
+      .deep_merge(title: "Core S&P 500 USD (Acc)", subtitle: "Buy Order", detail: { signed_amount: -1024.92, fees: "1.0", price: "511.96" })
+    @tr_account.update!(raw_timeline_payload: [ buy ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+
+    # process_event rescues the failure and logs it, so assert on the outcome:
+    # no confirmed transfer may survive without its category assignment.
+    Transfer.any_instance.stubs(:assign_investment_contribution_category!).raises(StandardError.new("category assignment failed"))
+
+    assert_no_difference "Transfer.count" do
+      TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    end
+
+    buy_cash = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_settle_buy")
+    assert_nil buy_cash.transaction.reload.transfer
   end
 
   test "settlement counterpart is removed with its trade and never relinked after the user unlinks it" do
