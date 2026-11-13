@@ -89,6 +89,29 @@ class SyncScheduledItemsJobTest < ActiveJob::TestCase
     assert_equal({ "syncable_type" => "PlaidItem", "syncable_id" => @plaid_item.id, "error_class" => "StandardError" }, entry.metadata)
   end
 
+  test "a run whose sync could not be started stays due for the next tick" do
+    schedule = due_schedule(@plaid_item)
+    schedule.update!(interval_minutes: 20160)
+    due_at = 1.minute.ago.change(usec: 0)
+    schedule.update_column(:next_run_at, due_at)
+    PlaidItem.any_instance.stubs(:sync_later_with_provider_refresh).raises(RedisClient::CannotConnectError, "queue down")
+
+    assert_nothing_raised { SyncScheduledItemsJob.perform_now }
+
+    assert_equal due_at, schedule.reload.next_run_at
+    assert_includes SyncSchedule.due, schedule
+  end
+
+  test "a run whose sync started moves on to the next interval" do
+    schedule = due_schedule(@plaid_item)
+    schedule.update!(interval_minutes: 20160)
+    schedule.update_column(:next_run_at, 1.minute.ago)
+
+    SyncScheduledItemsJob.perform_now
+
+    assert_operator schedule.reload.next_run_at, :>, Time.current
+  end
+
   private
     def due_schedule(item)
       item.create_sync_schedule!(interval_minutes: 15).tap do |schedule|
