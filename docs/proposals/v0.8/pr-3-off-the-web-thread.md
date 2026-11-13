@@ -338,6 +338,11 @@ end
 - #3580, #4182 and #4283 each rewrite `McpController`. Whichever lands first, step 6 rebases onto
   its `tools/call` result envelope (`resultType`, `_meta`), and the timeout answers use that
   envelope. `ai_feature` sits next to #3580's `read_only?` on `Assistant::Function`.
+- Step 6 doesn't decide which tokens see which tools. `Ai::ToolJob` runs only what `tools/call`
+  already authorized. `read_only?` means "doesn't write", so `SearchFamilyFiles` is `true` when
+  this branch sets it, and whether a `read` token may see documents is a scope check, as §14 has
+  it (raised on #3580 and #4628). If #3580 lands with `read_only? = false` on `SearchFamilyFiles`,
+  step 6 works unchanged; only chat's approvals (#4440's PR 6) depend on the flag being accurate.
 - Timeouts: `search_family_files` 30 s; `import_bank_statement` the `extract_pdf` route's budget
   (the first servable entry's `timeout_seconds` times its page batches, or a flat cap if that's
   not knowable before reading: **settle in review**, with the Puma and proxy timeouts in mind).
@@ -419,7 +424,7 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 | #4776 Tools/AI onboarding | "Save and test" runs `AiHealth::Probe` (with a new `family:` argument) in the request, which raises once step 8 is on. It edits files steps 2, 4, 5 and 6 change or delete. Per-family keys are PR 9's scope. | **Needs a call:** its family provider settings move to PR 7 and PR 9; its test button enqueues `Ai::ProbeJob`. |
 | #3717 PDF import management, #3735 upload flow | Multi-file upload looping `upload_document` on the web thread; "directly deletable" imports. | Step 4 (each file goes through `upload_document_later`), step 7 (cancelled imports are deletable). |
 | #4516 typed family documents | `content_sha256` with a unique index per family, and duplicate adoption in `upload_document`. | Step 4 (hash and adoption when the pending row is created). |
-| #3580, #4182, #4283 MCP | Rewrite `McpController`; #3580 adds `read_only?` and keeps `SearchFamilyFiles` from `read` tokens, while §14 and #4628 allow `mcp:read` to search. | Step 6 rebases on their envelope. **Needs a call** on `search_family_files` for read tokens before step 6. |
+| #3580, #4182, #4283 MCP | Rewrite `McpController`; #3580 adds `read_only?` and keeps `SearchFamilyFiles` from `read` tokens by setting it to `false`. §14 separates "writes" from "exposes documents" (suggested on #3580 and #4628). | Step 6 rebases on their envelope. It runs only what `tools/call` authorized, so it doesn't depend on how the document question is settled. |
 | #3025 MCP CRUD tools | `Assistant.mcp_function_classes` becomes the MCP list. | Step 6 (`Ai::ToolJob` uses the authorized list). |
 | #4975 "Once" frequency | Edits `apply_suggestion`. | Step 3 carries it into `Suggestion#apply_to`. |
 | #4879 PDF vision probe fix | Fixes the old probe code; 2f still caps at 512. | Step 5 includes the fix and closes #4866. |
@@ -439,7 +444,8 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 - **Helped:** #4779 (follow the No AI choice): every job this PR adds checks availability for its
   user when it runs, not only when it's queued. The web-thread calls in #4425 and #4776 would
   still be gaps.
-- **Shared decision:** #4628 (read-only MCP), on `search_family_files`, as with #3580.
+- **Raised, not blocking:** #4628 (read-only MCP): keep "writes" and "data exposed" as separate
+  attributes, so document access is a scope decision (also suggested on #3580).
 - **Use this PR's pattern once built:** #4641 (receipt upload; see #4425).
 - **Run in `ProcessPdfJob`, with the new stop button:** #1279 (brokerage PDFs), #1378 and #1379
   (the same issue, filed twice).

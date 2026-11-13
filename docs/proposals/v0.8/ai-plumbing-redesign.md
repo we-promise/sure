@@ -1781,6 +1781,9 @@ What happens to today's chat classes in PR 6:
   #4628 (read-only MCP authorization) classifies every tool as read-only or mutating, with an
   unclassified tool treated as mutating. If it lands first, chat uses that classification rather
   than a flag of its own: one classification for MCP scopes, MCP annotations and chat approvals.
+  The classification is about writing only. What data a tool exposes (documents, for
+  `search_family_files` and `get_document_text`) is a separate attribute, checked against the
+  token's scope (section 14), so no read tool is marked as writing to hide it from a token.
   With RubyLLM running the tools, a write tool declares `requires_approval`, derived from it;
   an undecided call ends the turn `:awaiting_approval` with its history, the decision is kept in
   Sure's tables, and the next `respond` with that history runs or refuses the call (spike, live
@@ -2293,11 +2296,20 @@ AI call, in PR 3, with the other web-thread calls (section 19).
   to #3422's metadata search over the vault, saying why (the router's reason, such as
   `:not_configured` or `:no_family_consent`), never "no documents have been uploaded". This
   keeps #3422's MCP-only case working: no AI configured, and the vault still searchable.
-- **With read-only MCP tokens (#4628).** `search_family_files` is a read, so an `mcp:read` token
-  can call it (and its searches spend the operator's AI tokens like any other);
-  `import_bank_statement` creates an import, so it needs `mcp:read_write`. #4628 intersects a
-  token's scope with the user's role, preview gates and tool settings in both `tools/list` and
-  `tools/call`; `Ai.available?` is one more term in that intersection. A call that AI can't serve
+- **With read-only MCP tokens (#4628).** Two separate questions, two separate attributes on each
+  `Assistant::Function` (suggested on #3580 and #4628):
+  - **Does it write?** `search_family_files` doesn't, so it's `read_only?`;
+    `import_bank_statement` creates an import, so it needs `mcp:read_write`. This attribute also
+    drives `readOnlyHint`/`destructiveHint` and chat's `requires_approval` (section 8.4).
+  - **What data does it expose?** `search_family_files` and `get_document_text` expose uploaded
+    documents. Whether a token may see documents is a scope decision checked against the token,
+    beside the user's own access (`FamilyDocument.readable_by`), not a reason to mark either tool
+    as writing. #3580 currently keeps `search_family_files` from `read` tokens with
+    `read_only? = false`; that's under discussion there.
+
+  #4628 intersects a token's scope with the user's role, preview gates and tool settings in both
+  `tools/list` and `tools/call`, and the data attribute is one more term in that intersection, as
+  is `Ai.available?`. A search spends the operator's AI tokens like any other call. A call that AI can't serve
   answers with the router's reason, never with `403 insufficient_scope`, so a client can tell
   "AI isn't set up" from "this token can't write".
 - **Only the model call moves; nothing an MCP client sees changes** (call by @josh-sanders during development of PR #4440). Both tools run
@@ -2543,7 +2555,9 @@ Agents fix failing checks reliably, so each rule here is a test or a cop rather 
 - `mcp_ai_tools_test.rb`: an AI-dependent MCP tool is listed only when its feature is available
   for the token's user, except `search_family_files`, which is always listed and falls back to
   metadata search with the router's reason; no MCP request calls a transport; and, once #4628
-  has landed, an `mcp:read` token sees `search_family_files` but not `import_bank_statement`.
+  has landed, an `mcp:read` token never sees `import_bank_statement`, and sees
+  `search_family_files` exactly when its scope allows documents. Both tools are `read_only?`
+  according to whether they write, whatever the scope.
 - `ai_documents_test.rb` (from 2e): a vault upload is indexed only when `embed` is available for
   its uploader and the uploader's switch is on; a search returns only documents the asking user
   may read; `search_family_files` is always listed and falls back to the metadata search with the
