@@ -5,7 +5,7 @@
 
 <%= turbo_frame_tag dom_id(entry) do %>
   <%= turbo_frame_tag dom_id(trade) do %>
-    <div class="group grid grid-cols-12 items-center <%= entry.excluded ? "text-secondary bg-surface-inset" : "text-primary" %> text-sm font-medium p-4"
+    <div class="group grid grid-cols-12 items-center [html[data-layout-animating]_&:not(:has([aria-expanded=true]))]:[content-visibility:auto] [contain-intrinsic-size:auto_--spacing(18)] <%= entry.excluded ? "text-secondary bg-surface-inset" : "text-primary" %> text-sm font-medium p-4"
          data-controller="clickable-row"
          data-action="click->clickable-row#open">
       <div class="col-span-8 flex items-center gap-4">

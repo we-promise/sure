@@ -1,7 +1,7 @@
 <%# locals: (entry:) %>
 <% transaction = entry.entryable %>
 
-<div class="group flex lg:grid lg:grid-cols-12 items-center text-sm font-medium p-3 lg:p-4 opacity-50 text-secondary"
+<div class="group flex lg:grid lg:grid-cols-12 items-center text-sm font-medium p-3 lg:p-4 opacity-50 text-secondary [html[data-layout-animating]_&:not(:has([aria-expanded=true]))]:[content-visibility:auto] [contain-intrinsic-size:auto_--spacing(18)]"
      data-controller="clickable-row"
      data-action="click->clickable-row#open">
   <div class="pr-4 lg:pr-10 flex items-center gap-3 lg:gap-4 col-span-8 min-w-0">
