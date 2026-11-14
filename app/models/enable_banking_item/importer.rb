@@ -1238,15 +1238,18 @@ class EnableBankingItem::Importer
     # included, so a dormant account doesn't ask for more than the ASPSP serves
     # without SCA on every sync. An account with no stored rows has no anchor,
     # so it uses that limit. The last-sync term is not clamped, so a long
-    # outage is handled as before.
+    # outage is handled as before. Nothing before the user's start date is
+    # requested.
     def incremental_sync_start_date(enable_banking_account)
       newest_stored = newest_stored_transaction_date(enable_banking_account)
       stored_row_start = [ newest_stored && newest_stored - 7.days, STORED_ROW_LOOKBACK_LIMIT.ago.to_date ].compact.max
 
-      [
+      start = [
         enable_banking_item.last_synced_at && (enable_banking_item.last_synced_at.to_date - 7.days),
         stored_row_start
       ].compact.min
+
+      [ start, enable_banking_item.sync_start_date ].compact.max
     end
 
     def newest_stored_transaction_date(enable_banking_account)

@@ -82,6 +82,18 @@ class EnableBankingItem::ImporterFullHistoryTest < ActiveSupport::TestCase
     assert_equal 89.days.ago.to_date, @requests.first[:date_from], "rows from the gap before the last sync are skipped"
   end
 
+  test "an incremental fetch does not start before sync_start_date" do
+    @enable_banking_item.update!(sync_start_date: 3.days.ago.to_date)
+    link!
+    @enable_banking_account.update!(raw_transactions_payload: [ booked_tx("tx_stored", 2.days.ago.to_date.iso8601) ])
+    @enable_banking_item.stubs(:last_synced_at).returns(1.day.ago)
+
+    build_importer(transactions: [ booked_tx("tx_before_start", 5.days.ago.to_date.iso8601) ]).import
+
+    assert_equal 3.days.ago.to_date, @requests.first[:date_from]
+    assert_equal %w[tx_stored], @enable_banking_account.reload.raw_transactions_payload.map { |row| row["transaction_id"] }
+  end
+
   test "a failed first fetch stays a first fetch" do
     link!
     provider = mock()
