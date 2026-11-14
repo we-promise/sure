@@ -281,9 +281,8 @@ class EnableBankingEntry::Processor
   # external_id: this row's id from external_ids_for over the whole payload,
   # which can differ from compute_external_id when rows share a transaction_id.
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
-                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil, shared_transaction_id: false)
+                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil)
     @enable_banking_transaction = enable_banking_transaction
-    @shared_transaction_id = shared_transaction_id
     @external_id = external_id
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
@@ -335,11 +334,6 @@ class EnableBankingEntry::Processor
       Rails.logger.error e.backtrace.join("\n")
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
-
-    # The adapter skips a protected entry, so record which row owns its transaction_id here (only ever adds the key).
-    ref = extra&.dig(:enable_banking, :entry_reference)
-    txn = entry&.entryable
-    txn.update_column(:extra, txn.extra.deep_merge("enable_banking" => { "entry_reference" => ref })) if @shared_transaction_id && ref && txn.is_a?(Transaction) && txn.extra.dig("enable_banking", "entry_reference").nil?
 
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
 
