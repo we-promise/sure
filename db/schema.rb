@@ -2921,6 +2921,54 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.check_constraint "amount >= 0::numeric", name: "check_transfer_amount_non_negative"
   end
 
+  create_table "tricount_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_number"
+    t.string "account_status"
+    t.string "account_type"
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.jsonb "institution_metadata"
+    t.string "member_uuid"
+    t.string "name"
+    t.jsonb "paid_splits", default: {}, null: false
+    t.string "provider"
+    t.jsonb "raw_payload"
+    t.jsonb "raw_transactions_payload"
+    t.date "sync_start_date"
+    t.string "tricount_account_id"
+    t.uuid "tricount_item_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["tricount_item_id", "tricount_account_id"], name: "idx_on_tricount_item_id_tricount_account_id_be89b3545c", unique: true
+    t.index ["tricount_item_id"], name: "index_tricount_accounts_on_tricount_item_id"
+  end
+
+  create_table "tricount_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "app_installation_uuid"
+    t.text "client_public_key"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "institution_color"
+    t.string "institution_domain"
+    t.string "institution_id"
+    t.string "institution_name"
+    t.string "institution_url"
+    t.string "name"
+    t.boolean "pending_account_setup", default: false
+    t.boolean "prefix_account_names", default: false, null: false
+    t.jsonb "raw_institution_payload"
+    t.jsonb "raw_payload"
+    t.boolean "scheduled_for_deletion", default: false
+    t.text "session_token"
+    t.text "sharing_tokens"
+    t.string "status", default: "good"
+    t.datetime "sync_start_date"
+    t.string "tricount_user_id"
+    t.datetime "updated_at", null: false
+    t.index ["family_id"], name: "index_tricount_items_on_family_id"
+    t.index ["status"], name: "index_tricount_items_on_status"
+  end
+
   create_table "truelayer_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "account_id"
     t.string "account_kind", default: "account", null: false
@@ -3317,6 +3365,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "transactions", "transfers"
   add_foreign_key "transfers", "transactions", column: "inflow_transaction_id", on_delete: :cascade
   add_foreign_key "transfers", "transactions", column: "outflow_transaction_id", on_delete: :cascade
+  add_foreign_key "tricount_accounts", "tricount_items"
+  add_foreign_key "tricount_items", "families"
   add_foreign_key "truelayer_accounts", "truelayer_items"
   add_foreign_key "truelayer_items", "families"
   add_foreign_key "up_accounts", "up_items"

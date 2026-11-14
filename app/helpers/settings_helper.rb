@@ -137,6 +137,9 @@ module SettingsHelper
     when "sharesight"
       return { status: :off } unless @sharesight_items&.any?
       sync_based_summary(key)
+    when "tricount"
+      return { status: :off } unless @tricount_items&.any?
+      sync_based_summary(key)
     else
       { status: :off }
     end

@@ -33,6 +33,7 @@ class AccountsController < ApplicationController
     @up_items = visible_provider_items(family.up_items.ordered.with_attached_logo.includes(:up_accounts))
     @monobank_items = visible_provider_items(family.monobank_items.ordered.with_attached_logo.includes(:monobank_accounts))
     @fio_items = visible_provider_items(family.fio_items.active.ordered.with_attached_logo.includes(:fio_accounts))
+    @tricount_items = visible_provider_items(family.tricount_items.ordered.with_attached_logo.includes(:tricount_accounts))
     @enable_banking_items = visible_provider_items(family.enable_banking_items.ordered.with_attached_logo)
     @truelayer_items = visible_provider_items(family.truelayer_items.connected.ordered.with_attached_logo.includes(:truelayer_accounts))
     @coinstats_items = visible_provider_items(family.coinstats_items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts))
@@ -540,6 +541,7 @@ class AccountsController < ApplicationController
         @up_items,
         @monobank_items,
         @fio_items,
+        @tricount_items,
         @enable_banking_items,
         @truelayer_items,
         @coinstats_items,
@@ -833,6 +835,13 @@ class AccountsController < ApplicationController
       @fio_items.each do |item|
         latest_sync = item.latest_sync_record
         @fio_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
+      end
+
+      # Tricount sync stats
+      @tricount_sync_stats_map = {}
+      @tricount_items.each do |item|
+        latest_sync = item.latest_sync_record
+        @tricount_sync_stats_map[item.id] = latest_sync&.sync_stats || {}
       end
     end
 end
