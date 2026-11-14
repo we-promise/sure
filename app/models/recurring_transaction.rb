@@ -9,6 +9,10 @@ class RecurringTransaction < ApplicationRecord
   MAX_END_AFTER_COUNT = 600
 
   belongs_to :family
+  # Paycheck Flow Planner (M2): explicit income-stream owner label (the flow
+  # page "label income to member"). NULL = fall back to the landing
+  # account's owner (PR#1 decision).
+  belongs_to :plan_owner, optional: true, class_name: "User", foreign_key: :plan_owner_user_id
   belongs_to :account, optional: true
   belongs_to :destination_account, optional: true, class_name: "Account"
   belongs_to :merchant, optional: true
@@ -20,6 +24,21 @@ class RecurringTransaction < ApplicationRecord
   has_many :recurring_occurrences, dependent: :destroy
   has_many :recurring_match_rejections, dependent: :destroy
   has_many :recurring_price_changes, dependent: :destroy
+  # Paycheck Flow Planner (M2): flow edges this income series funds.
+  has_many :income_account_allocations,
+           class_name: "IncomeAccountAllocation",
+           foreign_key: :income_series_id,
+           dependent: :destroy
+  # Paycheck Flow Planner (M2 PR#2b): allocations representing this
+  # detected bill/debt. Destroying the series detaches the allocations
+  # (nullify) rather than deleting the owner's planning data. The before_destroy
+  # hook is registered before this association so it persists the explicit
+  # monthly amount on required allocations first — the nullify detaches them
+  # afterwards, and a required allocation whose only amount source is the
+  # series would violate chk_plan_allocations_value_mode if detached with a
+  # NULL amount.
+  before_destroy :persist_detached_allocation_amounts
+  has_many :plan_allocations, foreign_key: :recurring_transaction_id, dependent: :nullify
 
   monetize :amount
   monetize :expected_amount_min, allow_nil: true
@@ -49,9 +68,16 @@ class RecurringTransaction < ApplicationRecord
   validates :end_after_count,
             numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_END_AFTER_COUNT },
             allow_nil: true
+  # Paycheck Flow Planner (M2 PR#2b): hard limit on how many bank accounts
+  # this income series may be linked to (the income config dialog). NULL =
+  # unlimited; at plan time the planner raises a warning, never an error.
+  validates :plan_max_account_links,
+            numericality: { only_integer: true, greater_than_or_equal_to: 1 },
+            allow_nil: true
   validate :merchant_or_name_present
   validate :category_belongs_to_family
   validate :accounts_belong_to_family
+  validate :plan_owner_belongs_to_family
   validate :amount_variance_consistency
   validate :transfer_endpoints_consistent
   validate :payment_url_is_http
@@ -192,6 +218,19 @@ class RecurringTransaction < ApplicationRecord
 
       errors.add(attribute, :wrong_family)
     end
+  end
+
+  def plan_owner_belongs_to_family
+    return if family_id.blank? || plan_owner.blank?
+
+    errors.add(:plan_owner, :wrong_family) unless plan_owner.family_id == family_id
+  end
+
+  # Paycheck Flow Planner (M2): the partner this income stream is attributed
+  # to — the explicit label when set, otherwise the landing account's owner
+  # (PR#1 attribution rule). nil = unattributed.
+  def plan_owner_id
+    plan_owner_user_id.presence || account&.owner_id
   end
 
   def payment_url_is_http
@@ -908,6 +947,24 @@ class RecurringTransaction < ApplicationRecord
   end
 
   private
+    # The series' plan_allocations are detached (dependent: :nullify) on
+    # destroy. A required-mode allocation whose only amount source is this
+    # series would violate chk_plan_allocations_value_mode once the link is
+    # nullified (value_cents NULL and recurring_transaction_id NULL), so the
+    # explicit monthly amount is persisted on those rows first — inside this
+    # destroy's transaction, so the detached state is always valid.
+    def persist_detached_allocation_amounts
+      monthly = monthly_equivalent_amount
+      return if monthly.nil?
+
+      cents = (monthly.amount * 100).round
+      return if cents <= 0
+
+      plan_allocations.where(mode: "required", value_cents: nil).find_each do |allocation|
+        allocation.update_columns(value_cents: cents)
+      end
+    end
+
     # Issue #1590: a recurring transfer's future occurrences rarely share the
     # seed's name (user free-text, importer wording, the auto-matcher's
     # "Transfer to ..."), so name-based matching returns [] and the Cleaner

@@ -1500,6 +1500,126 @@ class AccountTest < ActiveSupport::TestCase
     end
   end
 
+  # M2 PR#2b: the plan-role label and the auto-transfer link.
+  test "plan_role accepts only the known roles (nil = ordinary bank)" do
+    depository = accounts(:depository)
+    assert depository.valid?
+    depository.plan_role = "savings_bucket"
+    assert depository.valid?
+    depository.plan_role = "not_a_role"
+    assert_not depository.valid?
+    assert depository.errors[:plan_role].any?
+  end
+
+  test "auto_transfer_to must be a different account of the same family" do
+    depository = accounts(:depository)
+    credit = accounts(:credit_card)
+
+    depository.auto_transfer_to_account_id = depository.id
+    assert_not depository.valid?
+    assert depository.errors[:auto_transfer_to].any?
+
+    depository.auto_transfer_to_account_id = credit.id
+    assert depository.valid?
+    assert_equal credit, depository.auto_transfer_to
+  end
+
+  # Round 11 issue 8: the sub-account link (parent_account_id) and the
+  # ordered auto-transfer fan-out targets (auto_transfer_target_ids).
+  def create_depository(name)
+    @family.accounts.create!(
+      name: name,
+      balance: 0,
+      currency: "USD",
+      accountable: Depository.new
+    )
+  end
+
+  test "sub-account link: depth 1 accepted, self / cross-family / depth 2 rejected" do
+    parent = create_depository("Parent Vault")
+    child = create_depository("Child Vault")
+
+    # Depth 1 is valid; the associations resolve both ways.
+    child.parent_account_id = parent.id
+    assert child.valid?, "depth-1 sub-account link should be valid: #{child.errors.full_messages}"
+    child.save!
+    assert_equal parent, child.reload.parent_account
+    assert_includes parent.sub_accounts, child
+
+    # Self-reference is rejected.
+    parent.parent_account_id = parent.id
+    assert_not parent.valid?
+    assert parent.errors[:parent_account].any?
+
+    # A parent in another family is rejected.
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en",
+                                  country: "US", timezone: "UTC")
+    foreign = other_family.accounts.create!(name: "Foreign Vault", balance: 0,
+                                            currency: "USD", accountable: Depository.new)
+    orphan = create_depository("Orphan Vault")
+    orphan.parent_account_id = foreign.id
+    assert_not orphan.valid?
+    orphan.errors[:parent_account].any? { |m| m.include?("same family") }
+
+    # DEPTH 2 is rejected: the parent is already a sub-account.
+    grandchild = create_depository("Grandchild Vault")
+    child.reload.parent_account_id = parent.id
+    child.save!
+    grandchild.parent_account_id = child.id
+    assert_not grandchild.valid?
+    grandchild.errors[:parent_account].any? { |m| m.include?("depth-1 only") }
+  end
+
+  test "auto_transfer_target_ids: every target must be a sub-account of the account (round-11 strict rule)" do
+    parent = create_depository("Fan Out Parent")
+    child = create_depository("Fan Out Child")
+    child.parent_account_id = parent.id
+    child.save!
+    other_child = create_depository("Other Child")
+    other_child.parent_account_id = parent.id
+    other_child.save!
+    stranger = create_depository("Stranger Vault")
+
+    # Self target is rejected.
+    parent.auto_transfer_target_ids = [ parent.id ]
+    assert_not parent.valid?
+    parent.errors[:auto_transfer_target_ids].any? { |m| m.include?("itself") }
+
+    # A target outside the family is rejected.
+    other_family = Family.create!(name: "Other", currency: "USD", locale: "en",
+                                  country: "US", timezone: "UTC")
+    foreign = other_family.accounts.create!(name: "Foreign Target", balance: 0,
+                                            currency: "USD", accountable: Depository.new)
+    parent.auto_transfer_target_ids = [ foreign.id ]
+    assert_not parent.valid?
+    parent.errors[:auto_transfer_target_ids].any? { |m| m.include?("same family") }
+
+    # A same-family account that is NOT a sub-account of the source is
+    # rejected (the round-11 strict rule: the source only fans out to its
+    # own sub-accounts).
+    parent.auto_transfer_target_ids = [ stranger.id ]
+    assert_not parent.valid?
+    parent.errors[:auto_transfer_target_ids].any? { |m| m.include?("sub-accounts of this account") }
+
+    # Unknown ids are rejected.
+    parent.auto_transfer_target_ids = [ SecureRandom.uuid ]
+    assert_not parent.valid?
+    parent.errors[:auto_transfer_target_ids].any? { |m| m.include?("family accounts") }
+
+    # Two own sub-accounts (array order = the band order) are valid.
+    parent.auto_transfer_target_ids = [ other_child.id, child.id ]
+    assert parent.valid?, "own sub-accounts as targets should be valid: #{parent.errors.full_messages}"
+    parent.save!
+    assert_equal [ other_child.id, child.id ], parent.reload.auto_transfer_target_ids
+
+    # A child of a DIFFERENT parent is not a sub-account of this account.
+    other_parent = create_depository("Other Parent")
+    other_child.parent_account_id = other_parent.id
+    other_child.save!
+    assert_not parent.valid?
+    parent.errors[:auto_transfer_target_ids].any? { |m| m.include?("sub-accounts of this account") }
+  end
+
   private
     def create_loan_with_start_date(start_date, opening_balance_date)
       Account.create_and_sync(

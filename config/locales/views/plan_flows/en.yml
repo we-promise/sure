@@ -1,0 +1,41 @@
+---
+# NOTE: partials lazy-lookup under "plan_flows.<partial_name>" (no .show
+# segment — house pattern, cf. plans.budget_card). show.html.erb itself is
+# "plan_flows.show"; controller flashes are "plan_flows.<action>".
+en:
+  plan_flows:
+    show:
+      title: Paycheck Flow
+      subtitle: "Where each paycheck lands and what it pays — the family's money map for %{month}."
+      view_aria: Paycheck flow view
+      view_paycheck: Per Paycheck
+      view_monthly: Per Month
+    # Full template (not a partial) — scope is "plan_flows.account_modal".
+    account_modal:
+      title: Add bank account
+      subtitle: Attach an existing family account to the map, or add a manual bank.
+      existing_heading: Existing accounts
+      all_on_map: Every account is already on the map.
+      add_selected: Add to map
+      manual_heading: Add non-synced bank
+      name_label: Name
+      institution_label: Institution (optional)
+      create_submit: Add bank
+      cancel: Cancel
+    add_accounts:
+      accounts_added: Account(s) added to the map.
+    create_account:
+      account_created: Bank account created and added to the map.
+      account_failed: Couldn't create that account.
+    update_account:
+      save_failed: The account update didn't pass the model's checks — check the values and try again.
+    update_income:
+      save_failed: The income update didn't pass the model's checks — check the values and try again.
+    create_allocation:
+      saved: Allocation saved.
+      save_failed: That allocation didn't pass the model's checks — check the amount and try again.
+    update_allocation:
+      saved: Allocation saved.
+      save_failed: That allocation didn't pass the model's checks — check the amount and try again.
+    destroy_allocation:
+      saved: Allocation removed.

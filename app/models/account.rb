@@ -10,10 +10,15 @@ class Account < ApplicationRecord
 
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
+  validate :plan_owner_consistent, if: -> { family_id.present? }
+  validate :plan_owner_belongs_to_family, if: -> { family_id.present? && plan_owner_user_id.present? }
 
   belongs_to :family
   belongs_to :owner, class_name: "User", optional: true
   belongs_to :import, optional: true
+  # Paycheck Flow Planner (M2): the family member the account is labeled to
+  # when plan_ownership is :user.
+  belongs_to :plan_owner, class_name: "User", optional: true, foreign_key: :plan_owner_user_id
 
   has_many :account_shares, dependent: :destroy
   has_many :shared_users, through: :account_shares, source: :user
@@ -26,6 +31,10 @@ class Account < ApplicationRecord
   has_many :holding_lots
   has_many :balances, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
+  # Paycheck Flow Planner (M2): income edges landing on this account.
+  has_many :income_account_allocations, foreign_key: :account_id, dependent: :destroy
+  # Paycheck Flow Planner (M2 PR#2b): allocations pulled out of this bank.
+  has_many :plan_allocations, foreign_key: :account_id, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
   has_many :goals, through: :goal_accounts
   has_many :goal_pledges, dependent: :destroy
@@ -78,6 +87,56 @@ class Account < ApplicationRecord
   end
 
   enum :classification, { asset: "asset", liability: "liability" }, validate: { allow_nil: true }
+
+  # Paycheck Flow Planner (M2): center-column labeling. :shared is Home/Shared;
+  # :user belongs to the family member in plan_owner_user_id.
+  enum :plan_ownership, { shared: "shared", user: "user" }
+
+  # Paycheck Flow Planner (M2 PR#2b): the "bank as allocation" role. A
+  # nullable plain string (deliberately NOT an enum) so adding a new role is
+  # a data change, not a schema migration. nil = ordinary bank. Round 20:
+  # the bank config dialog offers exactly the owner's five account kinds
+  # (Savings / Checking / Credit Card / Loan / Investment); the two debt
+  # roles are the ones the planner's role autofill renders as a
+  # "Pay off <name>" debt row (everything else is a savings-style
+  # destination).
+  PLAN_ROLES = %w[savings_bucket checking credit_card_payoff loan_payoff investment].freeze
+  PLAN_DEBT_ROLES = %w[credit_card_payoff loan_payoff].freeze
+
+  def self.plan_role_debt?(role)
+    PLAN_DEBT_ROLES.include?(role.to_s)
+  end
+
+  validates :plan_role, inclusion: { in: PLAN_ROLES }, allow_nil: true
+
+  # Round 16: explicit per-account logo slug (the bank config dialog's
+  # searchable picker). nil = no explicit choice (the diagram falls back to
+  # the account-name keyword match or no logo). Validated against the
+  # VENDORED set only (app/assets/images/bank-logos/): no runtime fetching.
+  validate :validate_bank_logo_slug
+
+  # Paycheck Flow Planner (M2 PR#2b): this account auto-transfers to another
+  # family account. Set = auto-transfer enabled (data only this round).
+  belongs_to :auto_transfer_to, class_name: "Account", optional: true,
+                                foreign_key: :auto_transfer_to_account_id
+  validate :auto_transfer_target_consistent,
+           if: -> { auto_transfer_to_account_id.present? && family_id.present? }
+
+  # Round 11 issue 8: sub-accounts (a bucket under a plan bank). Depth 1
+  # only -- the sankey renders one child column and
+  # sub_account_consistent rejects chains. auto_transfer_target_ids is the
+  # ordered fan-out target list (array order = the diagram's band order);
+  # the round-11 strict rule: every target must be one of THIS account's
+  # sub-accounts.
+  belongs_to :parent_account, class_name: "Account", optional: true,
+                              foreign_key: :parent_account_id, inverse_of: :sub_accounts
+  has_many :sub_accounts, class_name: "Account", foreign_key: :parent_account_id,
+                          inverse_of: :parent_account
+  attribute :auto_transfer_target_ids, :jsonb
+  validate :sub_account_consistent,
+           if: -> { parent_account_id.present? && family_id.present? }
+  validate :auto_transfer_targets_consistent,
+           if: -> { Array(auto_transfer_target_ids).any? && family_id.present? }
 
   VISIBLE_STATUSES = %w[draft active].freeze
   HISTORICAL_STATUSES = (VISIBLE_STATUSES + %w[disabled]).freeze
@@ -752,6 +811,19 @@ class Account < ApplicationRecord
     balance.to_d - goal_earmarked_total
   end
 
+  # Round 20: the plan-flow bank config dialog's avatar URL. A custom
+  # uploaded logo (the ActiveStorage attachment) wins; then the explicit
+  # bank_logo_slug (a VENDORED app asset, data-driven — the built-in set is
+  # swapped out from under this path by later rounds); otherwise nil (the
+  # dialog renders a neutral circle). Deliberately excludes the cloud
+  # brandfetch / provider logo URLs: the plan flow is 100% local.
+  def plan_flow_avatar_url
+    return Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true) if logo.attached?
+
+    if bank_logo_slug.present? && BankLogoSlugs.available.key?(bank_logo_slug)
+      ActionController::Base.helpers.asset_path("bank-logos/#{bank_logo_slug}.svg")
+    end
+  end
   # Marks the account pending_deletion and enqueues DestroyJob. If the enqueue
   # fails, the account goes back to the status it had, so it is not left hidden
   # from every list with no job coming to delete it. Mirrors DestroyableLater,
@@ -1048,6 +1120,99 @@ class Account < ApplicationRecord
       return if owner_user&.family_id == family_id
 
       errors.add(:owner, :invalid, message: "must belong to the same family as the account")
+    end
+
+    # Plan ownership must agree with the owner it names: a :user label needs
+    # the member set, a :shared label must not carry one (mirrored by
+    # chk_accounts_plan_owner_consistency). Note `shared?` is NOT the enum
+    # predicate here — it is the pre-existing "has account_shares" method — so
+    # the :shared side is expressed as the negation of the `user?` predicate.
+    def plan_owner_consistent
+      if user?
+        errors.add(:plan_owner, :blank) if plan_owner_user_id.blank?
+      else
+        errors.add(:plan_owner, :blank) if plan_owner_user_id.present?
+      end
+    end
+
+    # The plan owner label must name a member of the account's own family
+    # (same pattern as RecurringTransaction#plan_owner_belongs_to_family).
+    def plan_owner_belongs_to_family
+      return if family_id.blank? || plan_owner.blank?
+
+      errors.add(:plan_owner, :invalid, message: "must belong to the same family as the account") if plan_owner.family_id != family_id
+    end
+
+    # M2 PR#2b: the auto-transfer target must be a real account of the same
+    # family and not the account itself (a bank cannot auto-transfer to
+    # itself).
+    def auto_transfer_target_consistent
+      if auto_transfer_to_account_id == id
+        errors.add(:auto_transfer_to, "cannot be the account itself")
+        return
+      end
+
+      errors.add(:auto_transfer_to, "must belong to the same family") if
+        auto_transfer_to.present? && auto_transfer_to.family_id != family_id
+    end
+
+    # Round 11 issue 8: a sub-account link must point at a real account of
+    # the same family, never at the account itself, and DEPTH 1 only — the
+    # parent's own parent must be nil (no chains; the sankey renders one
+    # child column).
+    def sub_account_consistent
+      if parent_account_id == id
+        errors.add(:parent_account, "cannot be the account itself")
+        return
+      end
+
+      # An account that already has sub-accounts cannot also become a
+      # sub-account — linking a parent would chain it into a depth-2 column
+      # the sankey does not render.
+      if sub_accounts.exists?
+        errors.add(:parent_account, "depth-1 only: the account already has sub-accounts")
+        return
+      end
+
+      parent = parent_account
+      if parent.present?
+        if parent.family_id != family_id
+          errors.add(:parent_account, "must belong to the same family")
+        elsif parent.parent_account_id.present?
+          errors.add(:parent_account, "depth-1 only: the parent is already a sub-account")
+        end
+      end
+    end
+
+    # Round 11 issue 8 (strict rule): every auto-transfer fan-out target must
+    # be a real account of the same family, not the account itself, and a
+    # sub-account of THIS account — the source only fans out to its own
+    # sub-accounts.
+    def auto_transfer_targets_consistent
+      Array(auto_transfer_target_ids).each do |target_id|
+        next if target_id.blank?
+
+        target = Account.find_by(id: target_id)
+        if target_id == id
+          errors.add(:auto_transfer_target_ids, "cannot include the account itself")
+        elsif target.nil?
+          errors.add(:auto_transfer_target_ids, "must name family accounts")
+        elsif target.family_id != family_id
+          errors.add(:auto_transfer_target_ids, "must belong to the same family")
+        elsif target.parent_account_id != id
+          errors.add(:auto_transfer_target_ids, "must be sub-accounts of this account")
+        end
+      end
+    end
+
+    # Round 16: the logo slug must name a vendored file (app/assets/images/
+    # bank-logos/<slug>.svg). Unknown slugs 422 inline through the house
+    # update contract; nil is always allowed (no explicit logo).
+    def validate_bank_logo_slug
+      return if bank_logo_slug.blank?
+
+      errors.add(:bank_logo_slug, "is not a known bank logo") unless
+        BankLogoSlugs.available.key?(bank_logo_slug)
     end
 
     # AASM transition callbacks run after the timestamp is set and before the
