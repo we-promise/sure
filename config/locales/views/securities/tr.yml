@@ -4,7 +4,15 @@ tr:
     combobox:
       display: "%{symbol} - %{name} (%{exchange})"
       exchange_label: "%{symbol} (%{exchange})"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (varsayılan)"
+      offline: "%{provider} (duraklatıldı)"
+      unavailable: "%{provider} (kullanılamıyor)"
+      none: "Yok, fiyatlar hesap senkronizasyonundan veya işlemlerden"
     providers:
+      tinkoff_invest: T-Invest (T-Bank)
+      unknown: "Bilinmiyor"
       alpha_vantage: Alpha Vantage
       binance_public: Binance
       eodhd: EODHD

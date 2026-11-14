@@ -49,6 +49,7 @@ fr:
     reset_security:
       success: Titre réinitialisé à la valeur du fournisseur.
     show:
+      price_source_label: "Source des cours"
       avg_cost_label: Coût moyen
       book_value_label: Valeur comptable
       cancel: Annuler

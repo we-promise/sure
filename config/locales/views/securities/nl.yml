@@ -14,3 +14,11 @@ nl:
       binance_public: "Binance"
       moex_public: "MOEX"
       mansa: "Mansa"
+      tinkoff_invest: "T-Invest (T-Bank)"
+      unknown: "Onbekend"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider} (standaard)"
+      offline: "%{provider} (gepauzeerd)"
+      unavailable: "%{provider} (niet beschikbaar)"
+      none: "Geen, koersen uit accountsynchronisatie of transacties"

@@ -56,6 +56,7 @@ zh-TW:
       description: 此投資有缺漏的數值，無法計算其報酬或價值。
       missing_data: 缺少資料
     show:
+      price_source_label: "價格來源"
       avg_cost_label: 平均成本
       current_market_price_label: 目前市價
       delete: 刪除

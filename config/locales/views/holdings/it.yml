@@ -56,6 +56,7 @@ it:
       description: Questo investimento ha valori mancanti e non è stato possibile calcolarne i rendimenti o il valore.
       missing_data: Dati mancanti
     show:
+      price_source_label: "Fonte dei prezzi"
       avg_cost_label: Costo Medio
       current_market_price_label: Prezzo di Mercato Attuale
       delete: Elimina

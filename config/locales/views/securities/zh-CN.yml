@@ -14,3 +14,11 @@ zh-CN:
       binance_public: "Binance"
       moex_public: "MOEX"
       mansa: "Mansa"
+      tinkoff_invest: "T-Invest (T-Bank)"
+      unknown: "未知"
+    price_source:
+      assigned: "%{provider}"
+      default: "%{provider}（默认）"
+      offline: "%{provider}（已暂停）"
+      unavailable: "%{provider}（不可用）"
+      none: "无，价格来自账户同步或交易"

@@ -24,6 +24,7 @@ nb:
         dens avkastning eller verdi.
       missing_data: Manglende data
     show:
+      price_source_label: "Kurskilde"
       avg_cost_label: Gjennomsnittlig kostnad
       current_market_price_label: Gjeldende markedspris
       delete: Slett
