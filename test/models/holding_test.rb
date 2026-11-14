@@ -478,6 +478,36 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), @amzn.cost_basis
   end
 
+  # The materializer carries a lock within its (security, currency) position,
+  # so unlocking releases only that position's locks and carried rows.
+  # Releasing a lock also drops the quantity and figure it was set for, so a
+  # released row carries nothing a later read could mistake for a lock.
+  test "unlock_cost_basis! clears the quantity and figure the lock was set for" do
+    @amzn.set_manual_cost_basis!(BigDecimal("150"))
+    assert_not_nil @amzn.reload.cost_basis_locked_unit_cost, "precondition"
+
+    @amzn.unlock_cost_basis!
+
+    @amzn.reload
+    assert_nil @amzn.cost_basis_locked_qty
+    assert_nil @amzn.cost_basis_locked_unit_cost
+  end
+
+  test "unlock_cost_basis! leaves the same security's locks in another currency" do
+    eur_lock = @account.holdings.create!(security: @amzn.security, date: 3.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR")
+    eur_lock.set_manual_cost_basis!(BigDecimal("90"))
+    eur_carried = @account.holdings.create!(
+      security: @amzn.security, date: 2.days.ago.to_date, qty: 1, price: 100, amount: 100, currency: "EUR",
+      cost_basis: 90, cost_basis_source: "manual", cost_basis_locked: true, cost_basis_carried: true
+    )
+    @amzn.set_manual_cost_basis!(BigDecimal("120"))
+
+    @amzn.unlock_cost_basis!
+
+    assert eur_lock.reload.cost_basis_locked?, "the EUR position's own lock was released"
+    assert_equal [ 90, true ], [ eur_carried.reload.cost_basis&.to_d, eur_carried.cost_basis_locked? ], "the EUR position's carried row was cleared"
+  end
+
   test "unlocked manual allows only calculated to replace" do
     @amzn.set_manual_cost_basis!(BigDecimal("100"))
     @amzn.unlock_cost_basis!

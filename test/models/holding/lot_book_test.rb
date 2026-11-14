@@ -68,6 +68,17 @@ class Holding::LotBookTest < ActiveSupport::TestCase
 
     def add_unknown(*, **); end
 
+    # A user's figure covering every unit held: the pool restarts at it.
+    def restate(unit_cost, held_qty:, **)
+      reset
+      @total_qty = held_qty.to_d
+      @total_cost = unit_cost.to_d * @total_qty
+    end
+
+    def lots
+      []
+    end
+
     def settle_opening(*, **); end
   end
 
@@ -231,6 +242,66 @@ class Holding::LotBookTest < ActiveSupport::TestCase
     assert_nil book.average_cost
     assert_equal 5, book.open_qty
     assert_equal %w[buy transfer], book.lots.map(&:source_id)
+  end
+
+  test "a user's figure sets the cost of every open lot, a transfer lot included" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("100"), 1, source_id: "buy")
+    book.add_unknown(1, source_id: "transfer")
+
+    book.restate(BigDecimal("150"), held_qty: 2)
+
+    assert_equal [ [ "buy", 1, 150 ], [ "transfer", 1, 150 ] ], book.lots.map { |lot| [ lot.source_id, lot.qty, lot.unit_cost ] }
+    assert_equal 150, book.average_cost
+  end
+
+  # The figure covers the units it was set for. The units beyond them are the
+  # latest entered, which keep their own cost beside it.
+  test "units beyond a user's figure keep the cost of the latest entered lots" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("100"), 1, source_id: "entered-later")
+    book.apply(BigDecimal("200"), 1, source_id: "entered-first")
+    entered = { "entered-first" => 0, "entered-later" => 1 }
+
+    book.restate(BigDecimal("150"), held_qty: 2, covered_qty: 1) { |lot| entered[lot.source_id] }
+
+    assert_equal [ [ "entered-later", 1, 100 ], [ "entered-first", 1, 150 ] ], book.lots.map { |lot| [ lot.source_id, lot.qty, lot.unit_cost ] }
+    assert_equal 125, book.average_cost, "(150 x 1 + 100 x 1) / 2"
+  end
+
+  test "a lot of unknown cost beyond a user's figure leaves the average unknown" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("200"), 1, source_id: "buy")
+    book.add_unknown(1, source_id: "transfer")
+    entered = { "buy" => 0, "transfer" => 1 }
+
+    book.restate(BigDecimal("150"), held_qty: 2, covered_qty: 1) { |lot| entered[lot.source_id] }
+
+    assert_nil book.average_cost
+  end
+
+  # Lots of equal rank, such as lots with no source entry or the two pieces
+  # of a lot split by an earlier figure, are taken latest in the book first.
+  test "units beyond a user's figure come from the latest of equally ranked lots" do
+    ranks = [ 1, 2, 1, 2, 2, 0, 1, 2, 2, 2, 1, 0, 0, 0, 1, 0, 2 ]
+    book = Holding::LotBook.new
+    ranks.each_index { |index| book.apply(BigDecimal(index + 1), 1, source_id: index) }
+
+    book.restate(BigDecimal("100"), held_qty: ranks.size, covered_qty: ranks.size - 1) { |lot| ranks[lot.source_id] }
+
+    assert_equal [ 100 ] * 16 + [ 17 ], book.lots.map(&:unit_cost), "the last rank-2 lot in the book keeps its cost"
+  end
+
+  # A linked account can hold units from before its first imported trade,
+  # which no lot represents; the figure covers them too.
+  test "a user's figure covers units held beyond the lots" do
+    book = Holding::LotBook.new
+    book.apply(BigDecimal("200"), 1, source_id: "buy")
+
+    book.restate(BigDecimal("150"), held_qty: 3)
+    book.apply(BigDecimal("190"), 1, source_id: "later")
+
+    assert_equal 160, book.average_cost, "(150 x 3 + 190 x 1) / 4"
   end
 
   test "the tracker keeps its public interface" do

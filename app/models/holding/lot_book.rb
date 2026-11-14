@@ -101,6 +101,44 @@ class Holding::LotBook
     end
   end
 
+  # Sets the cost of the units a user's per-unit figure covers. Of the
+  # `held_qty` units held, `covered_qty` take `unit_cost`, whatever their lots
+  # cost before, transferred-in lots included. The rest are the latest
+  # entered, ranked by the block (higher is later; equal ranks by place in
+  # the book), and keep their own lot cost beside the figure. `held_qty` can
+  # exceed the lots when units were held before the first trade the book was
+  # given; those are covered too.
+  def restate(unit_cost, held_qty:, covered_qty: held_qty, &entered)
+    unit_cost = unit_cost.to_d
+    held = held_qty.to_d
+    uncovered = held - [ covered_qty.to_d, held ].min
+
+    kept = Hash.new(BigDecimal("0"))
+    order = @lots.each_index.to_a
+    order = order.sort_by { |index| [ entered.call(@lots[index]) || -1, index ] } if entered
+    order.reverse_each do |index|
+      break unless uncovered.positive?
+
+      kept[index] = [ @lots[index].qty, uncovered ].min
+      uncovered -= kept[index]
+    end
+    kept_lots = kept.map { |index, qty| @lots[index].with(qty: qty) }
+
+    @lots = @lots.each_with_index.flat_map do |lot, index|
+      [
+        (lot.with(qty: lot.qty - kept[index], unit_cost: unit_cost) if lot.qty > kept[index]),
+        (lot.with(qty: kept[index]) if kept[index].positive?)
+      ].compact
+    end
+
+    priced = kept_lots.select(&:unit_cost)
+    covered = held - kept_lots.sum(BigDecimal("0"), &:qty)
+    reset
+    @unknown = priced.size < kept_lots.size
+    @total_qty = covered + priced.sum(BigDecimal("0"), &:qty)
+    @total_cost = unit_cost * covered + priced.sum(BigDecimal("0")) { |lot| lot.qty * lot.unit_cost }
+  end
+
   # Current weighted-average cost per share, or nil when nothing is held or
   # the cost of what is held is unknown.
   def average_cost

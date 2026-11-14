@@ -1358,6 +1358,9 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       cost_basis: 200,
       cost_basis_source: "manual",
       cost_basis_locked: true,
+      cost_basis_carried: true,
+      cost_basis_locked_qty: 80,
+      cost_basis_locked_unit_cost: 190,
       security_locked: true
     )
 
@@ -1380,6 +1383,9 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal 200.0, imported_holding.cost_basis.to_f
     assert_equal "manual", imported_holding.cost_basis_source
     assert imported_holding.cost_basis_locked
+    assert imported_holding.cost_basis_carried, "a carried lock came back as the user's own"
+    assert_equal 80, imported_holding.cost_basis_locked_qty, "the lock came back covering every unit held"
+    assert_equal 190, imported_holding.cost_basis_locked_unit_cost, "the lock came back seeded from the shown figure"
     assert imported_holding.security_locked
   end
 

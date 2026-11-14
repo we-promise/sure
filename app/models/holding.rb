@@ -240,18 +240,44 @@ class Holding < ApplicationRecord
     new_priority >= cost_basis_source_priority
   end
 
-  # Set cost_basis from user input (locks the value)
+  # Set cost_basis from user input (locks the value). The figure covers the
+  # units held now; a trade entered later is not covered by it, whatever its date.
   def set_manual_cost_basis!(value)
     update!(
       cost_basis: value,
       cost_basis_source: "manual",
-      cost_basis_locked: true
+      cost_basis_locked: true,
+      cost_basis_carried: false,
+      cost_basis_locked_qty: qty,
+      cost_basis_locked_unit_cost: value
     )
   end
 
-  # Unlock cost_basis to allow provider/calculated updates
+  # Unlock cost_basis to allow provider/calculated updates. A lock rolls
+  # forward to later rows (Holding::Materializer), so unlocking also releases
+  # this position's earlier locks, which would otherwise roll forward again
+  # on the next sync, and the rows they were carried onto. A carried row
+  # loses the figure too, for the next sync to work out again. A later lock
+  # the user set is theirs and stays, with the rows carried from it. A lock
+  # carries only within its currency, so other currencies' locks stay too.
+  # A released lock keeps no trace of the quantity and figure it was set for.
+  RELEASED_LOCK = { cost_basis_locked_qty: nil, cost_basis_locked_unit_cost: nil }.freeze
+
   def unlock_cost_basis!
-    update!(cost_basis_locked: false)
+    transaction do
+      if cost_basis_carried?
+        update!(cost_basis_locked: false, cost_basis_carried: false, cost_basis: nil, cost_basis_source: nil, **RELEASED_LOCK)
+      else
+        update!(cost_basis_locked: false, **RELEASED_LOCK)
+      end
+
+      position = account.holdings.where(security_id: security_id, currency: currency, cost_basis_locked: true)
+      next_lock = position.where(cost_basis_carried: false).where("date > ?", date).minimum(:date)
+      carried = position.where(cost_basis_carried: true)
+      carried = carried.where("date < ?", next_lock) if next_lock
+      carried.update_all(cost_basis_locked: false, cost_basis_carried: false, cost_basis: nil, cost_basis_source: nil, updated_at: Time.current, **RELEASED_LOCK)
+      position.where(cost_basis_carried: false).where("date < ?", date).update_all(cost_basis_locked: false, updated_at: Time.current, **RELEASED_LOCK)
+    end
   end
 
   # Check if this holding's security can be changed by provider sync
