@@ -210,6 +210,19 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[purchase_date]']", count: 0
   end
 
+  test "value step asks for the purchase price while the property is being set up" do
+    get balances_property_path(create_draft_property)
+    assert_select "label", text: "Purchase price"
+    assert_select "label", text: "Estimated market value", count: 0
+    assert_no_match "Zillow", response.body
+
+    get balances_property_path(@account)
+    assert_select "label", text: "Estimated market value"
+    assert_select "label", text: "Purchase price", count: 0
+  end
+
+  # A draft left mid-wizard before the purchase date existed, or restored from
+  # an export, already has the reconciliation set_current_balance wrote today.
   test "balances update handles validation errors" do
     Account.any_instance.stubs(:set_current_balance).returns(OpenStruct.new(success?: false, error_message: "Invalid balance"))
 
