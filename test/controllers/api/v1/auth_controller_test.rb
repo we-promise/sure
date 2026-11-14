@@ -737,6 +737,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "User",
       name: "Google User",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -796,6 +797,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       uid: "google-uid-deactivated",
       email: "google-deactivated@example.com",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -824,6 +826,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       uid: "google-uid-race",
       email: "google-race@example.com",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -867,6 +870,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       uid: "google-uid-device-failure",
       email: "google-device-failure@example.com",
       device_info: invalid_device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -913,6 +917,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       uid: "google-uid-123",
       email: "google@example.com",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -945,6 +950,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "User",
       name: "MFA User",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1000,6 +1006,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "Test",
       name: "Race Test",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1037,6 +1044,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "GoogleUser",
       name: "New GoogleUser",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1073,6 +1081,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "Default",
       name: "Member Default",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1103,6 +1112,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "Default",
       name: "Super Default",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1129,6 +1139,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       first_name: "Blocked",
       last_name: "User",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: false
     }, expires_in: 10.minutes)
 
@@ -1146,6 +1157,34 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
 
     # Linking code should NOT be consumed on rejection
     assert Rails.cache.read("mobile_sso_link:#{linking_code}").present?, "Expected linking code to survive a rejected create account attempt"
+  end
+
+  test "sso_create_account does not redeem an invitation for an unverified email" do
+    invitation = families(:dylan_family).invitations.create!(
+      email: "unverified-api@example.com", role: "admin", inviter: users(:family_admin)
+    )
+    linking_code = SecureRandom.urlsafe_base64(32)
+    Rails.cache.write("mobile_sso_link:#{linking_code}", {
+      provider: "openid_connect",
+      uid: "unverified-api-uid",
+      email: "unverified-api@example.com",
+      first_name: "Un",
+      last_name: "Verified",
+      device_info: @device_info.stringify_keys,
+      email_verified: false,
+      allow_account_creation: false
+    }, expires_in: 10.minutes)
+
+    assert_no_difference [ "User.count", "OidcIdentity.count" ] do
+      post "/api/v1/auth/sso_create_account", params: { linking_code: linking_code }
+    end
+
+    assert_response :forbidden
+    assert_match "did not confirm your email", JSON.parse(response.body)["error"]
+    assert_nil invitation.reload.accepted_at
+    log = SsoAuditLog.by_event("jit_blocked").recent.first
+    assert_equal "email_not_verified", log.metadata["reason"]
+    assert_not_includes log.metadata.keys, "email"
   end
 
   test "should reject SSO create account with expired linking code" do
@@ -1183,6 +1222,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "Email",
       name: "Duplicate Email",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1210,6 +1250,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "Rollback",
       name: "Mobile Rollback",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
     OidcIdentity.stubs(:create_from_omniauth).raises(
@@ -1246,6 +1287,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "CreateUser",
       name: "Race CreateUser",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1306,6 +1348,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "Invitee",
       name: "Mobile Invitee",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1334,6 +1377,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       uid: identity.uid,
       email: "removed-mobile-sso@example.com",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
@@ -1365,6 +1409,7 @@ class Api::V1::AuthControllerTest < ActionDispatch::IntegrationTest
       last_name: "Private",
       name: "Mobile Private",
       device_info: @device_info.stringify_keys,
+      email_verified: true,
       allow_account_creation: true
     }, expires_in: 10.minutes)
 
