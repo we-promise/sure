@@ -12,7 +12,7 @@ class IbkrAccount::Processor
     IbkrAccount::HoldingsProcessor.new(ibkr_account).process
     IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
     repair_default_opening_anchor!
-    account.ensure_opening_anchor_precedes_entries
+    move_opening_anchor_before_entries!
 
     account.broadcast_sync_complete
   end
@@ -97,6 +97,22 @@ class IbkrAccount::Processor
       return Date.current if date.blank? || date > Date.current
 
       date
+    end
+
+    # Captured rather than raised, as the anchor repair below is:
+    # broadcast_sync_complete still has to run.
+    def move_opening_anchor_before_entries!
+      account.ensure_opening_anchor_precedes_entries
+    rescue => e
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "error",
+        message: "Failed to move the opening anchor before the oldest entry: #{e.message}",
+        source: self.class.name,
+        provider_key: "ibkr",
+        account_provider: ibkr_account.account_provider,
+        family: ibkr_account.ibkr_item&.family
+      )
     end
 
     def repair_default_opening_anchor!
