@@ -357,4 +357,24 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     end
     assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
+
+  test "a 403 that arrives after midnight is refunded to the day it was counted on" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    test_case = self
+    client = Object.new
+    client.define_singleton_method(:get) do |*|
+      test_case.travel_to Time.zone.local(2026, 8, 22, 0, 0, 1)
+      # Price requests already counted on the new day
+      Rails.cache.write("eodhd:daily:2026-08-22", 5)
+      raise Faraday::ForbiddenError, "403"
+    end
+    @provider.stubs(:client).returns(client)
+
+    travel_to Time.zone.local(2026, 8, 21, 23, 59, 59)
+    assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+
+    assert_equal 1, Rails.cache.read("eodhd:daily:2026-08-21")
+    assert_equal 5, Rails.cache.read("eodhd:daily:2026-08-22")
+  end
 end
