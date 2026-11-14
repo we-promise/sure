@@ -5,8 +5,10 @@ class PlaidAccount::Processor
 
   attr_reader :plaid_account, :as_of
 
-  # `as_of` is the sync's date. Only the loan liability processors read it, to
-  # date a variable rate change.
+  # `as_of` is the sync's date, captured once so one snapshot is not split
+  # across two days when processing runs past midnight. It dates the balance
+  # anchor and the investment holdings, and the loan liability processors read
+  # it to date a variable rate change.
   def initialize(plaid_account, as_of: Date.current)
     @plaid_account = plaid_account
     @as_of = as_of
@@ -147,7 +149,7 @@ class PlaidAccount::Processor
 
     def process_investments
       PlaidAccount::Investments::TransactionsProcessor.new(plaid_account, security_resolver: security_resolver).process
-      PlaidAccount::Investments::HoldingsProcessor.new(plaid_account, security_resolver: security_resolver).process
+      PlaidAccount::Investments::HoldingsProcessor.new(plaid_account, security_resolver: security_resolver, as_of: as_of).process
     rescue => e
       report_exception(e)
     end
@@ -178,7 +180,7 @@ class PlaidAccount::Processor
     # a different price than Plaid's total and read the gap as cash on every
     # day before it.
     def balance_date
-      Date.current
+      as_of
     end
 
     def balance_calculator

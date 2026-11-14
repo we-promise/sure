@@ -414,6 +414,31 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  # The sync's date is captured before processing starts. When processing
+  # runs past the family's midnight, the anchor and the holdings still share
+  # that one date.
+  test "a snapshot processed past midnight keeps the anchor and holdings on the sync date" do
+    family = families(:dylan_family)
+    family.update!(timezone: "UTC")
+    account = family.accounts.create!(name: "Plaid brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    plaid_account = PlaidAccount.create!(plaid_item: plaid_items(:one), plaid_id: "midnight_sync", name: "Brokerage",
+      plaid_type: "investment", plaid_subtype: "brokerage", currency: "USD", current_balance: 1000,
+      raw_holdings_payload: { "holdings" => [
+        { "security_id" => "msft", "quantity" => 10, "institution_price" => 100, "iso_currency_code" => "USD" }
+      ] })
+    AccountProvider.create!(account: account, provider: plaid_account)
+    PlaidAccount::Investments::SecurityResolver.any_instance.stubs(:resolve)
+      .returns(OpenStruct.new(security: securities(:msft), cash_equivalent?: false, brokerage_cash?: false))
+
+    sync_date = Date.new(2026, 12, 17)
+    processor = travel_to(Time.utc(2026, 12, 17, 23, 59)) { PlaidAccount::Processor.new(plaid_account, as_of: family.local_date) }
+    travel_to(Time.utc(2026, 12, 18, 0, 1)) { processor.process }
+
+    account.reload
+    assert_equal sync_date, account.current_anchor_date
+    assert_equal [ sync_date ], account.holdings.where.not(account_provider_id: nil).distinct.pluck(:date)
+  end
+
   test "updates existing current balance anchor when reprocessing" do
     # First process creates the account and anchor
     expect_default_subprocessor_calls

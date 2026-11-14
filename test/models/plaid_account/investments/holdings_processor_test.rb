@@ -326,6 +326,18 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "EUR", holding.currency  # Should use account's currency
   end
 
+  test "dates every holding by the sync date it is given" do
+    @plaid_account.update!(raw_holdings_payload: { "holdings" => [
+      { "security_id" => "aapl", "quantity" => 10, "institution_price" => 100, "iso_currency_code" => "USD" }
+    ] })
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false))
+
+    sync_date = Date.current - 1
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver, as_of: sync_date).process
+
+    assert_equal [ sync_date ], @plaid_account.current_account.holdings.where(security: securities(:aapl)).pluck(:date)
+  end
+
   # A mutual fund's NAV is a session behind, so Plaid prices it as of
   # yesterday on every sync while the stocks are priced today. Both are held,
   # so the holdings page, the dashboard and the assistant all list both.

@@ -1,7 +1,10 @@
 class PlaidAccount::Investments::HoldingsProcessor
-  def initialize(plaid_account, security_resolver:)
+  # `as_of` is the sync's date. Every holding in the snapshot is dated by it,
+  # as the balance anchor is (PlaidAccount::Processor#balance_date).
+  def initialize(plaid_account, security_resolver:, as_of: Date.current)
     @plaid_account = plaid_account
     @security_resolver = security_resolver
+    @as_of = as_of
   end
 
   def process
@@ -22,21 +25,12 @@ class PlaidAccount::Investments::HoldingsProcessor
       # Compute amount using BigDecimal arithmetic to avoid floating point drift
       amount_bd = quantity_bd * price_bd
 
-      # A holding is dated by the sync that reported it, as every other
-      # provider's is, not by institution_price_as_of. A fund whose NAV is a
-      # session behind is still held today, and the account's latest snapshot
-      # (holdings page, dashboard, assistant) must include it. The price is
-      # Plaid's latest, which is what the reverse calculator reads for today,
-      # and the balance anchor is dated on the same day
-      # (PlaidAccount::Processor#balance_date).
-      holding_date = Date.current
-
       import_adapter.import_holding(
         security: security,
         quantity: quantity_bd,
         amount: amount_bd,
         currency: plaid_holding["iso_currency_code"] || account.currency,
-        date: holding_date,
+        date: as_of,
         price: price_bd,
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
@@ -46,7 +40,7 @@ class PlaidAccount::Investments::HoldingsProcessor
   end
 
   private
-    attr_reader :plaid_account, :security_resolver
+    attr_reader :plaid_account, :security_resolver, :as_of
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
