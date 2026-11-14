@@ -127,6 +127,25 @@ class PropertyTest < ActiveSupport::TestCase
     assert_nil @property.family_currency_trend
   end
 
+  test "the purchase valuation is looked up once and again after a reload" do
+    setup_foreign_property(purchase_date: 2.years.ago.to_date, purchase: 100_000, current: 110_000)
+
+    # Uncached, so the request's query cache does not hide a repeat.
+    ActiveRecord::Base.uncached do
+      assert_queries_match(/FROM "entries"/, count: 1) do
+        @property.family_currency_trend_applicable?
+        @property.family_currency_trend
+        @property.purchase_price
+      end
+    end
+
+    @account.entries.create!(
+      date: 3.years.ago.to_date, name: "Earlier", amount: 90_000, currency: "USD",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+    assert_equal 90_000, @property.reload.purchase_price.amount
+  end
+
   private
     def setup_foreign_property(purchase_date:, purchase:, current:)
       @account.family.update!(currency: "EUR")

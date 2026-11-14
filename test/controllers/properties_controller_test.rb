@@ -871,6 +871,21 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "overview shows an infinite family-currency trend from a zero purchase value" do
+    purchase_date = 2.years.ago.to_date
+    foreign_property_with_value(purchase_date: purchase_date, purchase_amount: 0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: purchase_date, rate: 1.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']" do
+      assert_select "span", text: "(＋∞)"
+      assert_select "span", text: /Infinity|NaN/, count: 0
+    end
+  end
+
   test "overview says the rate is unavailable instead of guessing a family-currency trend" do
     foreign_property_with_value(purchase_date: 2.years.ago.to_date)
     ExchangeRate.stubs(:provider).returns(nil)
@@ -890,11 +905,11 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
-    def foreign_property_with_value(purchase_date:)
+    def foreign_property_with_value(purchase_date:, purchase_amount: 100_000)
       @account.family.update!(currency: "EUR")
       @account.entries.valuations.destroy_all
       @account.entries.create!(
-        date: purchase_date, name: "Original purchase price", amount: 100_000, currency: "USD",
+        date: purchase_date, name: "Original purchase price", amount: purchase_amount, currency: "USD",
         entryable: Valuation.new(kind: "opening_anchor")
       )
       @account.update!(balance: 110_000)

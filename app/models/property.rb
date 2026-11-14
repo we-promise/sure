@@ -87,6 +87,11 @@ class Property < ApplicationRecord
     Trend.new(current: current, previous: previous)
   end
 
+  def reload(*)
+    remove_instance_variable(:@first_valuation_entry) if defined?(@first_valuation_entry)
+    super
+  end
+
   def balance_display_name
     "market value"
   end
@@ -163,8 +168,12 @@ class Property < ApplicationRecord
   end
 
   private
+    # Read up to three times per overview render (the card check, the trend
+    # and its purchase value), so it is looked up once.
     def first_valuation_entry
-      account.entries.valuations.order(:date).first
+      return @first_valuation_entry if defined?(@first_valuation_entry)
+
+      @first_valuation_entry = account.entries.valuations.order(:date).first
     end
 
     def first_valuation_amount
