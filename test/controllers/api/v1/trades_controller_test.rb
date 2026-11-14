@@ -1256,6 +1256,28 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "EUR", trade_json["amount_currency"]
   end
 
+  # A stored decimal can be positive and finite yet become 0.0 or Infinity
+  # as a Float, which is what the response carries.
+  test "exchange rate is null when the stored value does not fit a Float" do
+    security = Security.create!(ticker: "TAXF", name: "Float Range Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 100,
+      name: "Buy TAXF",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    )
+    trade = entry.entryable
+
+    [ "1e-400", "1e400" ].each do |stored|
+      trade.update_column(:extra, { "exchange_rate" => stored })
+      get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+      assert_response :success
+      assert_nil JSON.parse(response.body)["exchange_rate"], stored
+      assert_nil trade.reload.numeric_exchange_rate, stored
+    end
+  end
+
   private
 
     def category_ids_from_every_source

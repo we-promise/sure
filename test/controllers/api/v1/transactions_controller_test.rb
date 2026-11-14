@@ -1547,6 +1547,21 @@ end
     end
   end
 
+  # A stored decimal can be positive and finite yet become 0.0 or Infinity
+  # as a Float, which is what the response carries.
+  test "exchange rate is null when the stored value does not fit a Float" do
+    entry = create_transaction(account: @account, name: "Float range row", currency: "EUR", entryable: Transaction.new)
+    transaction = entry.entryable
+
+    [ "1e-400", "1e400" ].each do |stored|
+      transaction.update_column(:extra, { "exchange_rate" => stored })
+      get api_v1_transaction_url(transaction), headers: api_headers(@read_only_api_key)
+      assert_response :success
+      assert_nil JSON.parse(response.body)["exchange_rate"], stored
+      assert_nil transaction.reload.numeric_exchange_rate, stored
+    end
+  end
+
   test "exchange rate is read the way the app converts it and only where it applies" do
     entry = create_transaction(account: @account, name: "Rate row", currency: "EUR", entryable: Transaction.new)
     transaction = entry.entryable
