@@ -73,6 +73,42 @@ class OauthBasicTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_grant", response_body["error"]
   end
 
+  test "a public client refreshes through the oauth token endpoint" do
+    oauth_app, access_token = create_public_client_token
+
+    refreshed = refresh_through_token_endpoint(oauth_app, access_token.plaintext_refresh_token)
+
+    assert_response :success
+    assert refreshed["access_token"].present?
+    assert refreshed["refresh_token"].present?
+    assert_equal access_token.expires_in, refreshed["expires_in"]
+  end
+
+  test "using a refreshed token on mcp revokes the old refresh token" do
+    oauth_app, access_token = create_public_client_token
+    refreshed = refresh_through_token_endpoint(oauth_app, access_token.plaintext_refresh_token)
+
+    post "/mcp", params: { jsonrpc: "2.0", id: 1, method: "initialize", params: {} }.to_json,
+      headers: { "Authorization" => "Bearer #{refreshed["access_token"]}", "Content-Type" => "application/json" }
+    assert_response :success
+
+    refresh_through_token_endpoint(oauth_app, access_token.plaintext_refresh_token)
+    assert_response :bad_request
+    assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+  end
+
+  test "using a refreshed token on the api revokes the old refresh token" do
+    oauth_app, access_token = create_public_client_token
+    refreshed = refresh_through_token_endpoint(oauth_app, access_token.plaintext_refresh_token)
+
+    get "/api/v1/accounts", headers: { "Authorization" => "Bearer #{refreshed["access_token"]}" }
+    assert_response :success
+
+    refresh_through_token_endpoint(oauth_app, access_token.plaintext_refresh_token)
+    assert_response :bad_request
+    assert_equal "invalid_grant", JSON.parse(response.body)["error"]
+  end
+
   test "oauth token endpoint exists and handles requests" do
     post "/oauth/token", params: {
       grant_type: "authorization_code",
@@ -100,7 +136,35 @@ class OauthBasicTest < ActionDispatch::IntegrationTest
   test "doorkeeper configuration is properly set up" do
     # Test that Doorkeeper is configured and working
     assert Doorkeeper.configuration.present?, "Doorkeeper configuration should exist"
-    assert_equal 1.year, Doorkeeper.configuration.access_token_expires_in
+    assert_equal 2.hours, Doorkeeper.configuration.access_token_expires_in
     assert_equal "read", Doorkeeper.configuration.default_scopes.first.to_s
   end
+
+  private
+
+    def create_public_client_token
+      oauth_app = Doorkeeper::Application.create!(
+        name: "MCP Client",
+        redirect_uri: "https://client.example.com/callback",
+        scopes: "read_write",
+        confidential: false
+      )
+      access_token = Doorkeeper::AccessToken.create!(
+        application: oauth_app,
+        resource_owner_id: users(:family_admin).id,
+        expires_in: Doorkeeper.configuration.access_token_expires_in,
+        scopes: "read_write",
+        use_refresh_token: true
+      )
+      [ oauth_app, access_token ]
+    end
+
+    def refresh_through_token_endpoint(oauth_app, refresh_token)
+      post "/oauth/token", params: {
+        grant_type: "refresh_token",
+        refresh_token: refresh_token,
+        client_id: oauth_app.uid
+      }
+      JSON.parse(response.body)
+    end
 end
