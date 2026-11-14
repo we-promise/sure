@@ -80,8 +80,8 @@ class MobileDevice < ApplicationRecord
   # already-checked the user seems. Raises User::InactiveError for a
   # deactivated/concurrently-purged user, distinct from a genuine
   # ActiveRecord::RecordInvalid from Doorkeeper::AccessToken.create! itself.
-  def issue_token!
-    user.with_active_lock! do
+  def issue_token!(password_fingerprint: nil)
+    user.with_active_lock!(password_fingerprint: password_fingerprint) do
       revoke_all_tokens!
 
       access_token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL

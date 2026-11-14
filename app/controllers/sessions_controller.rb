@@ -77,10 +77,11 @@ class SessionsController < ApplicationController
       if user.otp_required?
         log_super_admin_override_login(user)
         session[:mfa_user_id] = user.id
+        session[:mfa_password_fingerprint] = user.password_fingerprint
         redirect_to verify_mfa_path
       else
         log_super_admin_override_login(user)
-        @session = create_session_for(user)
+        @session = create_session_for(user, password_fingerprint: user.password_fingerprint)
 
         if @session
           redirect_to root_path
@@ -226,6 +227,7 @@ class SessionsController < ApplicationController
 
     if user.otp_required?
       session[:mfa_user_id] = user.id
+      session.delete(:mfa_password_fingerprint)
       redirect_to verify_mfa_path
     else
       @session = create_session_for(user)
@@ -308,6 +310,7 @@ class SessionsController < ApplicationController
       # MFA check: If user has MFA enabled, require verification
       if user.otp_required?
         session[:mfa_user_id] = user.id
+        session.delete(:mfa_password_fingerprint)
         redirect_to verify_mfa_path
       else
         @session = create_session_for(user)

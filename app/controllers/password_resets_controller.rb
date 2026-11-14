@@ -38,6 +38,8 @@ class PasswordResetsController < ApplicationController
     end
 
     if update_password_and_log_change
+      # The reset proves only control of the email; end every session the old password opened.
+      @user.sessions.destroy_all
       redirect_to new_session_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity

@@ -6,6 +6,8 @@ class PasswordsController < ApplicationController
 
   def update
     if update_password_and_log_change
+      # Whoever knew the old password must not stay signed in elsewhere; keep this session.
+      Current.user.sessions.where.not(id: Current.session&.id).destroy_all
       redirect_to root_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
