@@ -46,6 +46,15 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
           parallel_requests:, exact_base_url: exact_base_url ? true : false)
   end
 
+  # What a provider takes inline as a PDF, by preset. A bigger file is read through its text
+  # layer or page images instead.
+  PDF_LIMITS = {
+    anthropic: { bytes: 32.megabytes, pages: 100 },
+    openai: { bytes: 32.megabytes, pages: 100 }
+  }.freeze
+
+  def pdf_limits = PDF_LIMITS[preset]
+
   def local? = location == :local
   def cloud? = location == :cloud
   def agent? = agent

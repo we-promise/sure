@@ -181,6 +181,9 @@ class AiHealth
     private
       attr_reader :cache, :force
 
+      # The synthetic statement through ReadPdf on a one-entry plan, the production path:
+      # its text layer, or for the vision check the page as an image (the PDF itself on Anthropic,
+      # which reads PDFs natively).
       def pdf_processing(provider:, endpoint:, access_token:, model:, openai_compatible:, component:, verification:,
                          processing_mode:)
         run(
@@ -191,31 +194,21 @@ class AiHealth
           credential: access_token,
           verification: verification
         ) do
-          result = Timeout.timeout(timeout) do
-            case provider
-            when :openai
-              Provider::Openai::PdfProcessor.new(
-                Ai::Transport::Http.openai_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
-                model: model,
-                pdf_content: SyntheticPdf.bytes,
-                custom_provider: openai_compatible,
-                max_response_tokens: PDF_MAX_RESPONSE_TOKENS,
-                processing_mode: processing_mode
-              ).process
-            when :anthropic
-              raise Failure, :unsupported_provider unless processing_mode == :vision
-
-              Provider::Anthropic::PdfProcessor.new(
-                Ai::Transport::Http.anthropic_client(config_endpoint(provider:, base_url: endpoint, api_key: access_token), timeout:),
-                model: model,
-                pdf_content: SyntheticPdf.bytes
-              ).process
-            else
-              raise Failure, :unsupported_provider
+          raise_unsupported_provider!(provider)
+          config = config_endpoint(provider:, base_url: endpoint, api_key: access_token)
+          route_model = Ai::Config::Model.new(endpoint: config, name: model, capabilities: %i[structured_output vision documents],
+                                              max_output_tokens: PDF_MAX_RESPONSE_TOKENS)
+          plan = Ai::Plan.new(feature: :extract_pdf, lane: :prompt, routes: [ Ai::Route.new(feature: :extract_pdf, model: route_model) ])
+          units =
+            if processing_mode == :text then [ Ai::PdfReading::Unit.text(Pdf::TextExtractor.pages(SyntheticPdf.bytes).join("\n"), page: 1) ]
+            elsif provider.to_sym == :anthropic then [ Ai::PdfReading::Unit.pdf(1) ]
+            else [ Ai::PdfReading::Unit.page(1) ]
             end
-          end
 
-          raise Failure, :invalid_response unless SyntheticPdf.valid_result?(result)
+          value = Timeout.timeout(timeout) do
+            Ai::Generations::ReadPdf.new(units:, content: SyntheticPdf.bytes, family: nil).call(batches: 1, plan:).value!
+          end
+          raise Failure, :invalid_response unless SyntheticPdf.valid_result?(value)
         end
       end
 

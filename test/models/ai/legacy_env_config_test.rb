@@ -66,6 +66,42 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert first_model(config, :chat).capable?(:tools)
   end
 
+  # A PDF as a file only where the provider reads one natively; images as today.
+  test "documents only on OpenAI's own API and Anthropic, vision as today" do
+    openai = first_model(build("OPENAI_ACCESS_TOKEN" => "sk-test"), :extract_pdf)
+    assert openai.capable?(:vision, :documents)
+
+    custom = first_model(build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
+                               "OPENAI_MODEL" => "qwen3"), :extract_pdf)
+    assert custom.capable?(:vision)
+    assert_not custom.capable?(:documents)
+
+    claude = first_model(build("ANTHROPIC_API_KEY" => "sk-ant", "LLM_PROVIDER" => "anthropic"), :extract_pdf)
+    assert claude.capable?(:vision, :documents)
+  end
+
+  test "OPENAI_SUPPORTS_PDF_PROCESSING=false keeps PDF import off, as today" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
+                   "OPENAI_MODEL" => "qwen3", "OPENAI_SUPPORTS_PDF_PROCESSING" => "false")
+
+    assert_empty config.routes_for(:extract_pdf)
+    assert_not first_model(config, :chat).capable?(:vision)
+    assert_equal "qwen3", first_model(config, :bill_setup).name, "only PDF import is off"
+  end
+
+  test "PDF import ignores the 2,048-token baseline, as today, unless LLM_CONTEXT_WINDOW is set" do
+    compatible = { "OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1", "OPENAI_MODEL" => "qwen3-vl" }
+    config = build(compatible)
+
+    assert_nil first_model(config, :extract_pdf).context_window, "pages go in one request, as today"
+    assert_equal 2048, first_model(config, :categorize).context_window, "other features keep the baseline"
+    assert_equal 8192, first_model(build(compatible.merge("LLM_CONTEXT_WINDOW" => "8192")), :extract_pdf).context_window
+  end
+
+  test "an OpenAI model without vision doesn't import PDFs, as today" do
+    assert_empty build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_MODEL" => "o4-mini").routes_for(:extract_pdf)
+  end
+
   test "a custom URL with no model gets an endpoint but no model or routes, as today's registry builds no client" do
     config = build("OPENAI_ACCESS_TOKEN" => "ollama", "OPENAI_URI_BASE" => "http://ollama:11434/v1")
 
@@ -84,9 +120,9 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1-mini", first_model(config, :bill_setup).name
   end
 
-  # Generations list only what Provider::Registry.preferred_llm_provider picks; chat lists every
-  # provider its walk reaches, which stops at a provider it can't build.
-  test "routes follow preferred_llm_provider: generations get its pick, chat every provider it reaches" do
+  # Generations list only the provider today's walk picks; chat lists every provider its walk
+  # reaches, which stops at a provider it can't build.
+  test "routes follow the registry's walk: generations get its pick, chat every provider it reaches" do
     keys = { "OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test" }
     anthropic_unbuildable = keys.merge("ANTHROPIC_BASE_URL" => "https://gateway.example.test")   # a custom URL needs a model
     cases = {
@@ -104,14 +140,14 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
       assert_equal chat, config.routes_for(:chat).map { _1.endpoint.name }, "#{label}: chat"
 
       today = with_env_overrides(AI_VARIABLES.index_with { nil }.merge(env)) do
-        Provider::Registry.preferred_llm_provider
+        generations.first && Provider::Registry.get_provider(generations.first.to_sym)&.default_model
       rescue Provider::Error
         nil
       end
       if today.nil?
         assert_nil first_model(config, :bill_setup), "#{label}: no provider means no model"
       else
-        assert_equal today.default_model, first_model(config, :bill_setup)&.name, "#{label}: the same model as today"
+        assert_equal today, first_model(config, :bill_setup)&.name, "#{label}: the same model as today"
       end
     end
   end
@@ -193,6 +229,27 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
     VectorStore::Pgvector.stubs(:available?).returns(false)
     assert_empty build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic").routes_for(:embed)
+  end
+
+  test "Anthropic only gets no embed route without an embedding server" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    config = build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic")
+
+    assert_equal :pgvector, config.vector_store_backend, "the chunks table is still provisioned"
+    assert_empty config.routes_for(:embed), "api.openai.com without a key can't embed"
+    assert_empty build("ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic", "VECTOR_STORE_PROVIDER" => "qdrant").routes_for(:embed)
+  end
+
+  test "a custom OpenAI URL gets no OpenAI vector store" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-or", "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1", "OPENAI_MODEL" => "google/gemma-4-31b-it")
+
+    assert_nil config.vector_store_backend
+    assert_empty config.routes_for(:embed)
+
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    named = build("OPENAI_ACCESS_TOKEN" => "sk-or", "OPENAI_URI_BASE" => "https://openrouter.ai/api/v1", "OPENAI_MODEL" => "google/gemma-4-31b-it",
+                  "VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => "http://llama.local:8081/v1")
+    assert_equal "http://llama.local:8081/v1", first_model(named, :embed).endpoint.base_url
   end
 
   test "embeddings fall back to the OpenAI URL and key saved in Settings" do

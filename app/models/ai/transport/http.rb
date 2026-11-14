@@ -85,15 +85,6 @@ module Ai::Transport::Http
       ::OpenAI::Client.new(**options, &faraday_options(base || OPENAI_BASE))
     end
 
-    # The anthropic gem's client, for the Anthropic PDF probe, as PDF import uses it. It takes no
-    # proxy or TLS options, so it ignores HTTPS_PROXY and SSL_VERIFY=false, as PDF import does
-    # until it moves onto RubyLLM.
-    def anthropic_client(endpoint, timeout: endpoint.timeout_seconds)
-      options = { api_key: endpoint.api_key.to_s, max_retries: 0, timeout: }
-      options[:base_url] = endpoint.base_url if endpoint.base_url.present?
-      ::Anthropic::Client.new(**options)
-    end
-
     # A plain Faraday connection for a request no client library makes (Anthropic's model lookup),
     # with the resolved proxy and TLS options.
     def faraday(url, timeout:)

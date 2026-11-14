@@ -24,6 +24,13 @@ class Ai::ErrorTest < ActiveSupport::TestCase
     end
   end
 
+  test "a server without a vision projector refusing images is Refused, not an outage" do
+    message = "image input is not supported - hint: if this is unexpected, you may need to provide the mmproj"   # llama.cpp, Ollama
+
+    assert_equal Ai::Error::Refused, Ai::Error.for_status(500, message)
+    assert_equal Ai::Error::Refused, Ai::Error.for_status(500, nil, body: { "error" => { "code" => 500, "message" => message } })
+  end
+
   test "a spent balance is NoCredit, however the provider says it" do
     assert_equal Ai::Error::NoCredit, Ai::Error.for_status(400, "Your credit balance is too low to access the Anthropic API")
     assert_equal Ai::Error::NoCredit, Ai::Error.for_status(429, "You exceeded your current quota", body: { "error" => { "code" => "insufficient_quota" } })

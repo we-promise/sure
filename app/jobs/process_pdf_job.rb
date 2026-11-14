@@ -1,7 +1,11 @@
+# Reads an uploaded PDF: what it is (ReadPdf), its search copy (embed), and for a
+# statement its rows (ExtractBankStatement), through Ai::PdfReading. On extract_pdf's lane.
 class ProcessPdfJob < ApplicationJob
-  queue_as :ai_low_priority
+  queue_as { Ai::Routes.queue_for(:extract_pdf) }
 
-  discard_on(Provider::Error) do |job, err|
+  # Marked failed with its reason before it's raised, and a failed import isn't processed again,
+  # so a retry would do nothing: the user reads it again or uploads again.
+  discard_on(Ai::Error::Base, Pdf::PageImages::Error) do |job, err|
     Rails.logger.error("[ProcessPdfJob] Discarded permanently (job_id=#{job.job_id}, error_class=#{err.class.name})")
   end
 
@@ -13,7 +17,11 @@ class ProcessPdfJob < ApplicationJob
 
     pdf_import.update!(status: :importing)
 
-    begin
+    Ai::CallContext.job("pdf_import:#{pdf_import.id}") { process(pdf_import) }
+  end
+
+  private
+    def process(pdf_import)
       process_result = pdf_import.process_with_ai
       document_type = resolve_document_type(pdf_import, process_result)
       upload_to_vector_store(pdf_import, document_type: document_type)
@@ -50,13 +58,14 @@ class ProcessPdfJob < ApplicationJob
       end
       raise
     end
-  end
 
-  private
-
+    # What the import page shows: why no model could read it (the router's reason or the way's),
+    # the provider's own message (scrubbed of keys by Ai::Error), a rendering failure's concrete
+    # reason (#3275), or the error class.
     def sanitize_error_message(error)
       case error
-      when Provider::Error, RuntimeError, ArgumentError
+      when Ai::Error::Unavailable then PdfImport.unavailable_message(error.reason)
+      when Ai::Error::Base, Pdf::PageImages::Error, RuntimeError, ArgumentError
         I18n.t("imports.pdf_import.processing_failed_with_message",
                message: error.message.truncate(500))
       else
@@ -65,12 +74,8 @@ class ProcessPdfJob < ApplicationJob
       end
     end
 
-    # The statement id is the idempotency key shared with AccountStatement's own
-    # indexing job. The key alone is not enough: the two jobs run on different
-    # queues in no fixed order, so a bare existence check is check-then-write and
-    # two workers that both read "not indexed" both upload, leaving two documents
-    # for one statement. The statement row lock is what actually serializes them,
-    # and it is taken on both sides.
+    # One search copy per statement, shared with IndexAccountStatementJob, which runs on another
+    # queue in no fixed order: both check for the copy under the statement's row lock.
     def upload_to_vector_store(pdf_import, document_type:)
       return unless Ai.available?(:embed, family: pdf_import.family)
 
@@ -84,19 +89,16 @@ class ProcessPdfJob < ApplicationJob
     def upload_document(pdf_import, document_type, statement)
       statement_id = statement&.id
 
-      if statement_id.present? &&
-         pdf_import.family.family_documents.where("metadata->>'account_statement_id' = ?", statement_id).exists?
-        return
-      end
+      documents = pdf_import.family.family_documents
+      return if statement_id.present? && documents.where("metadata->>'account_statement_id' = ?", statement_id).exists?
+      return if documents.where("metadata->>'pdf_import_id' = ?", pdf_import.id).exists?   # read again
 
       family_document = pdf_import.family.upload_document(
         file_content: pdf_import.pdf_file_content,
         filename: pdf_import.pdf_filename,
-        # account_id carried so the document lands with an owning account and is
-        # filtered out of another member's search. This path predates the vault
-        # bridge and was the one leak that outlived it.
         metadata: {
           "type" => document_type,
+          "pdf_import_id" => pdf_import.id,
           "account_statement_id" => statement_id,
           "account_id" => statement&.account_id || pdf_import.account_id
         }.compact

@@ -7,7 +7,7 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
 
   test "writes the template body without calling an LLM, even with AI enabled" do
     assert @family.users.any?(&:ai_enabled?), "fixture family should have a user with AI enabled"
-    Provider::Registry.expects(:preferred_llm_provider).never
+    Assistant.expects(:builtin_provider).never
 
     body = Insight::BodyWriter.new.write(generated_insight)
 

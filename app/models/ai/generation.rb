@@ -106,6 +106,23 @@ class Ai::Generation
 
   def items = batch_key ? Array(instance_variable_get(:"@#{batch_key}")) : nil
 
+  # What one item costs a request, in tokens, for Ai::Batch: its text by default. A page image
+  # costs a fixed estimate (PDF import).
+  def item_cost(item) = Assistant::TokenEstimator.estimate(item)
+
+  # Files sent with this request's input (Ai::Attachment): a PDF or page images.
+  def attachments = []
+
+  # Capabilities this call needs beyond the feature's own, such as `vision` for page images: a
+  # route whose model lacks them is skipped, not sent a request it would refuse.
+  def needs = []
+
+  # How the answers of each batch combine: the merge list's items, one per id. A feature whose
+  # items have no id (statement rows) merges its own way.
+  def merge_values(values)
+    { merge_key => values.flat_map { Array(_1[merge_key]) }.index_by { _1[merge_by] }.values }
+  end
+
   # The initializer's arguments other than the family, for the judgement on a `judge` route.
   def arguments = raise(NotImplementedError, "#{self.class.name} defines no arguments")
 
@@ -159,7 +176,9 @@ class Ai::Generation
 
   private
     def servable?(route)
-      route.judge? ? judgement_class.present? && route.model.capable?(:judge) : route.model.capable?(:structured_output)
+      return judgement_class.present? && route.model.capable?(:judge) if route.judge?
+
+      route.model.capable?(:structured_output, *needs)
     end
 
     def call_single(routes, cancelled:)
@@ -171,7 +190,7 @@ class Ai::Generation
 
     def call_batched(routes, batches:, cancelled:, answered_before:)
       remaining = items.dup
-      answered = []
+      values = []
       served = nil
       answered_by = {}
       done = 0
@@ -180,30 +199,29 @@ class Ai::Generation
         raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
         route = routes.find { !Ai::DownMarks.down?(_1) } || routes.first
-        slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route))
+        slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route), cost: method(:item_cost))
         answers, unanswered = begin
           on_routes(routes, slice)
         rescue Ai::Error::ContextTooLong, Ai::Error::InvalidOutput => error
           # A slice no route can use is skipped, so it doesn't end the run for the items after it.
           # Unusable answers before anything in the run worked still fail: the model may be the problem.
-          raise if error.is_a?(Ai::Error::InvalidOutput) && answered.empty? && !answered_before
+          raise if error.is_a?(Ai::Error::InvalidOutput) && values.empty? && !answered_before
 
           log_unanswered(slice)
           [ [], [] ]
         end
         answers.each do |by, value|
           served = by
-          batch_answers = Array(value[merge_key])
-          batch_answers.each { answered_by[_1[merge_by]] = by }
-          answered.concat(batch_answers)
+          Array(value[merge_key]).each { answered_by[_1[merge_by]] = by } if merge_key
+          values << value
         end
-        log_omitted(slice - unanswered, answered)
+        log_omitted(slice - unanswered, values)
         remaining = unanswered + (remaining - slice)
         done += 1
         break if unanswered.any?   # the routes failed over; a later job retries these
       end
 
-      result(value: { merge_key => answered.index_by { _1[merge_by] }.values }, route: served, remaining:, answered_by:)
+      result(value: merge_values(values), route: served, remaining:, answered_by:)
     end
 
     # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
@@ -386,7 +404,8 @@ class Ai::Generation
       request = Ai::Transport::Base::Request.new(
         feature: request_feature, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
         schema: generation.schema, schema_name: schema_label || feature_key, reasoning_effort: route.reasoning_effort,
-        json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check)
+        json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check),
+        attachments: generation.attachments
       )
       response = route.transport.generate(request)
       add_usage(response.usage)
@@ -402,8 +421,10 @@ class Ai::Generation
     def add_usage(usage) = @usage = [ @usage, usage ].compact.reduce(:+)
 
     # Items the answer left out: an answer missing up to half of its items is still accepted.
-    def log_omitted(items, answered)
-      answered_ids = answered.map { _1[merge_by].to_s }
+    def log_omitted(items, values)
+      return unless merge_key   # one answer for the whole batch, with nothing to leave out
+
+      answered_ids = values.flat_map { Array(_1[merge_key]) }.map { _1[merge_by].to_s }
       log_unanswered(items.reject { answered_ids.include?(_1[:id].to_s) })
     end
 

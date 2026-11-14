@@ -52,10 +52,17 @@ module Ai::Transport::RubyLlmAdapter
       chat.with_thinking(effort:) if effort
       options = provider_options.merge(response_format ? { response_format: } : {})
       chat.with_provider_options(options) if options.any?
-      chat.add_message(role: :user, content: request.input)
+      chat.add_message(role: :user, content: request.input, attachments: ruby_llm_attachments(request.attachments).presence)
 
       message = mapping_errors { chat.generate }
       [ message.content.to_s, Ai::Tokens.from_ruby_llm(message.tokens), raw_id(message), message.finish_reason ]
+    end
+
+    # Files inline, page images at high detail: `detail: "low"` shrinks a page to 512 pixels.
+    def ruby_llm_attachments(attachments)
+      attachments.map do |file|
+        RubyLLM::Attachment.new(StringIO.new(file.data), filename: file.filename, resolution: (:high if file.image?))
+      end
     end
 
     def raw_id(message)
@@ -158,7 +165,8 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::UnauthorizedError, RubyLLM::ForbiddenError then Ai::Error::Unauthorized
         when RubyLLM::RateLimitError then Ai::Error.for_status(429, error.message, body:)
         when RubyLLM::ContextLengthExceededError then Ai::Error::ContextTooLong
-        when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError then Ai::Error::Upstream
+        when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
+          Ai::Error.for_status(status || 500, error.message, body:)
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end

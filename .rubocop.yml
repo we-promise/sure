@@ -33,12 +33,9 @@ Sure/NoAiEnv:
     - "app/models/chat.rb"                                      # chat
     - "app/models/family/ai_settings.rb"                        # family settings
     - "app/models/provider/anthropic.rb"                        # chat
-    - "app/models/provider/anthropic/bank_statement_extractor.rb" # PDF import
-    - "app/models/provider/anthropic/pdf_processor.rb"          # PDF import
     - "app/models/provider/openai.rb"                           # chat
-    - "app/models/provider/registry.rb"                         # provider lookup
+    - "app/models/provider/registry.rb"                         # chat
     - "app/models/setting.rb"                                   # settings pages
-    - "app/models/vector_store/pgvector.rb"                     # embeddings
 
 Layout/IndentationWidth:
   Enabled: true

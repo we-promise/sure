@@ -1,7 +1,8 @@
 require "test_helper"
 
 # One contract every transport passes: error mapping, retries, usage normalisation, the
-# proxy, and that clients are built only by Ai::Transport::Http.
+# proxy, and that clients are built only by Ai::Transport::Http. Attachments, embed and ocr
+# have their own contract tests beside this one.
 class AiTransportContractTest < ActiveSupport::TestCase
   JSON_HEADERS = { "Content-Type" => "application/json" }.freeze
 
@@ -264,9 +265,11 @@ class AiTransportContractTest < ActiveSupport::TestCase
                           with_thinking with_provider_options],
       RubyLLM::Message => %i[content model tokens cost tool_calls finish_reason raw], RubyLLM::ToolCall => %i[name arguments],
       RubyLLM::Embedding => %i[vectors],
-      RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost] }.each do |klass, methods|
+      RubyLLM::Tokens => %i[input output cache_read cache_write reported_cost],
+      RubyLLM::Attachment => %i[filename mime_type resolution] }.each do |klass, methods|
       methods.each { assert klass.public_method_defined?(_1), "#{klass}##{_1}" }
     end
+    assert_includes RubyLLM::Attachment::RESOLUTIONS, :high
     assert_kind_of RubyLLM::Error, RubyLLM::PaymentRequiredError.new
     assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_base=
     assert_includes RubyLLM::Configuration.instance_methods, :typesafe_api_key=
