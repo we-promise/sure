@@ -6,7 +6,7 @@ class Provider::CoinstatsAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("CoinstatsAccount", self)
-  declares_connection key: "coinstats"
+  declares_connection key: "coinstats", panel: { title: "CoinStats" }
 
   # @return [Array<String>] Account types supported by this provider
   def self.supported_account_types

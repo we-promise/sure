@@ -202,39 +202,12 @@ class Settings::ProvidersController < ApplicationController
       end
     end
 
-    # Hardcoded family-scoped panels — provider connections are managed through
-    # their own models (SimplefinItem, LunchflowItem, etc.) rather than global
-    # settings, so they need custom UI per-provider for connection management,
-    # status display, and sync actions. The configuration registry excludes
-    # them (see prepare_show_context).
-    FAMILY_PANELS = [
-      { key: "akahu",          title: "Akahu",           turbo_id: "akahu",          partial: "akahu_panel" },
-      { key: "up",             title: "Up",              turbo_id: "up",             partial: "up_panel" },
-      { key: "monobank",       title: "Monobank",        turbo_id: "monobank",       partial: "monobank_panel" },
-      { key: "fio",            title: "Fio banka",       turbo_id: "fio",            partial: "fio_panel" },
-      { key: "lunchflow",      title: "Lunch Flow",      turbo_id: "lunchflow",      partial: "lunchflow_panel" },
-      { key: "redbark",        title: "Redbark",         turbo_id: "redbark",        partial: "redbark_panel" },
-      { key: "simplefin",      title: "SimpleFIN",       turbo_id: "simplefin",      partial: "simplefin_panel" },
-      { key: "enable_banking", title: "Enable Banking",  turbo_id: "enable_banking", partial: "enable_banking_panel" },
-      { key: "truelayer",      title: "TrueLayer",       turbo_id: "truelayer",      partial: "truelayer_panel" },
-      { key: "coinstats",      title: "CoinStats",       turbo_id: "coinstats",      partial: "coinstats_panel" },
-      { key: "wise",           title: "Wise",            turbo_id: "wise",           partial: "wise_panel" },
-      { key: "mercury",        title: "Mercury",         turbo_id: "mercury",        partial: "mercury_panel" },
-      { key: "brex",           title: "Brex",            turbo_id: "brex",           partial: "brex_panel" },
-      { key: "coinbase",       title: "Coinbase",        turbo_id: "coinbase",       partial: "coinbase_panel" },
-      { key: "binance",        title: "Binance",         turbo_id: "binance",        partial: "binance_panel" },
-      { key: "kraken",         title: "Kraken",          turbo_id: "kraken",         partial: "kraken_panel" },
-      { key: "coinspot",       title: "CoinSpot",        turbo_id: "coinspot",       partial: "coinspot_panel" },
-      { key: "onchain_wallet", title: "On-chain wallets", turbo_id: "onchain_wallet", partial: "onchain_wallet_panel" },
-      { key: "snaptrade",      title: "SnapTrade",       turbo_id: "snaptrade",      partial: "snaptrade_panel", auto_open: "manage" },
-      { key: "ibkr",           title: "Interactive Brokers", turbo_id: "ibkr",      partial: "ibkr_panel" },
-      { key: "trading212",     title: "Trading 212",     turbo_id: "trading212", partial: "trading212_panel" },
-      { key: "trade_republic", title: "Trade Republic",  turbo_id: "trade-republic", partial: "trade_republic_panel" },
-      { key: "indexa_capital", title: "Indexa Capital",  turbo_id: "indexa_capital", partial: "indexa_capital_panel" },
-      { key: "sophtron",       title: "Sophtron",        turbo_id: "sophtron",       partial: "sophtron_panel" },
-      { key: "questrade",      title: "Questrade",       turbo_id: "questrade",      partial: "questrade_panel" },
-      { key: "sharesight",     title: "Sharesight",      turbo_id: "sharesight",     partial: "sharesight_panel" }
-    ].freeze
+    # Family-scoped panels — provider connections are managed through their own
+    # models (SimplefinItem, LunchflowItem, etc.) rather than global settings, so
+    # they need custom UI per-provider for connection management, status display,
+    # and sync actions. Each comes from its adapter's declares_connection panel:.
+    # The configuration registry excludes them (see prepare_show_context).
+    FAMILY_PANELS = Provider::Factory.panel_declarations.freeze
 
     FAMILY_PANEL_KEYS = FAMILY_PANELS.map { |p| p[:key] }.freeze
     FAMILY_PANELS_BY_KEY = FAMILY_PANELS.index_by { |p| p[:key] }.freeze

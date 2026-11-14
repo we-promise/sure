@@ -19,6 +19,19 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     flunk "generated invalid Ruby: #{e.message}\n\n#{source}"
   end
 
+  # The adapter template calls predicate helpers, which a Struct cannot name.
+  def render_adapter(skip_view:)
+    helpers = {
+      class_name: "Gocardless", file_name: "gocardless", options: { skip_view: skip_view },
+      parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ],
+      banking_provider?: true, investment_provider?: false
+    }
+    context = Object.new
+    helpers.each { |name, value| context.define_singleton_method(name) { value } }
+    template = Rails.root.join("lib/generators/provider/family/templates/adapter.rb.tt").read
+    ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+  end
+
   def render_template(name, **locals)
     template = Rails.root.join("lib/generators/provider/family/templates", name).read
     context = Struct.new(*locals.keys).new(*locals.values)
@@ -269,31 +282,6 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  # Bank sync builds its connection rows and drawers from FAMILY_PANELS, so a
-  # section injected into show.html.erb would render outside both.
-  test "adds the provider to the family panels of the real providers controller" do
-    source = Rails.root.join("app/controllers/settings/providers_controller.rb").read
-    result = Provider::FamilyGenerator.append_family_panel_entry(source, key: "gocardless", title: "Gocardless")
-
-    assert_parses result
-    assert_includes result, %(      { key: "gocardless", title: "Gocardless", turbo_id: "gocardless", partial: "gocardless_panel" }\n    ].freeze)
-  end
-
-  test "separates the new family panel from the previous last entry" do
-    result = Provider::FamilyGenerator.append_family_panel_entry(<<~RUBY, key: "gocardless", title: "Gocardless")
-      FAMILY_PANELS = [
-        { key: "akahu", title: "Akahu", turbo_id: "akahu", partial: "akahu_panel" }
-      ].freeze
-    RUBY
-
-    assert_parses result
-    assert_includes result, %(partial: "akahu_panel" },\n  { key: "gocardless")
-  end
-
-  test "returns nil when there are no family panels to update" do
-    assert_nil Provider::FamilyGenerator.append_family_panel_entry("class Foo\nend\n", key: "gocardless", title: "Gocardless")
-  end
-
   # provider_summary leaves a key it doesn't know under Available, so a connected
   # provider only moves to Your connections through its own case.
   test "adds a provider_summary case to the real settings helper" do
@@ -303,6 +291,28 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_parses result
     assert_includes result[/def provider_summary\b.*?\n  end\n/m],
                     %(    when "gocardless"\n      return { status: :off } unless @gocardless_items&.any?\n      sync_based_summary(key)\n    else\n      { status: :off }\n)
+  end
+
+  # Bank sync lists a provider through FAMILY_PANELS, which reads the adapter's
+  # panel: declaration, so the generated adapter must declare one unless the view
+  # (and with it the panel partial) is skipped.
+  test "the generated adapter declares its connection and panel unless the view is skipped" do
+    with_view = render_adapter(skip_view: false)
+    without_view = render_adapter(skip_view: true)
+
+    assert_parses with_view
+    assert_parses without_view
+    assert_includes with_view, %(declares_connection key: "gocardless", panel: { title: "Gocardless" }\n)
+    assert_includes without_view, %(declares_connection key: "gocardless"\n)
+  end
+
+  # An adapter the generator did not write (it existed, or --skip-adapter) lacks the
+  # template's declaration, so the generator has to say what to add.
+  test "recognises an adapter that declares its panel" do
+    assert Provider::FamilyGenerator.panel_declared?(render_adapter(skip_view: false), key: "gocardless")
+    assert_not Provider::FamilyGenerator.panel_declared?(render_adapter(skip_view: true), key: "gocardless")
+    assert_not Provider::FamilyGenerator.panel_declared?("class Provider::GocardlessAdapter < Provider::Base\nend\n", key: "gocardless")
+    assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", panel: { title: "X" }\n), key: "gocardless")
   end
 
   test "returns nil when there is no provider_summary to update" do

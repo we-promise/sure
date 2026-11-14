@@ -6,7 +6,7 @@ class Provider::BinanceAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("BinanceAccount", self)
-  declares_connection key: "binance"
+  declares_connection key: "binance", panel: { title: "Binance" }
 
   # Define which account types this provider supports
   def self.supported_account_types

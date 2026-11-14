@@ -664,6 +664,27 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Sync started/i, response.body)
   end
 
+  test "every account provider but Plaid and FinanceKit has a family panel with its own partial" do
+    panels = Settings::ProvidersController::FAMILY_PANELS
+    declared = Provider::Factory.connection_declarations.map { |declaration| declaration[:key] }
+
+    assert_equal declared - %w[financekit plaid], panels.map { |panel| panel[:key] }
+    assert_equal panels.map { |panel| panel[:title] }.uniq.size, panels.size
+    panels.each do |panel|
+      assert Rails.root.join("app/views/settings/providers/_#{panel[:partial]}.html.erb").exist?, "#{panel[:key]} has no panel partial"
+    end
+  end
+
+  test "family panels keep their declared titles, turbo ids and auto-open targets" do
+    panels = Settings::ProvidersController::FAMILY_PANELS_BY_KEY
+
+    assert_equal({ key: "brex", title: "Brex", turbo_id: "brex", partial: "brex_panel" }, panels.fetch("brex"))
+    assert_equal "Fio banka", panels.fetch("fio")[:title]
+    assert_equal "trade-republic", panels.fetch("trade_republic")[:turbo_id]
+    assert_equal "manage", panels.fetch("snaptrade")[:auto_open]
+    assert_equal Provider::Factory.panel_declarations, Settings::ProvidersController::FAMILY_PANELS
+  end
+
   test "every family panel syncs its provider's own connection model" do
     types = Settings::ProvidersController::PANEL_SYNCABLE_TYPES
 

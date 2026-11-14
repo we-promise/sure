@@ -100,8 +100,13 @@ class Provider::Factory
     # Reads the adapter files rather than the registry, which tests may clear.
     # @return [Array<Hash>] Declarations as built by Provider::Base.declares_connection
     def connection_declarations
-      adapter_files.filter_map { |adapter_name| "Provider::#{adapter_name}".constantize.try(:connection_declaration) }
-                   .sort_by { |declaration| declaration[:key] }
+      declarations(:connection_declaration)
+    end
+
+    # Settings panel declarations of every adapter that declares one, sorted by key.
+    # @return [Array<Hash>] { key:, title:, turbo_id:, partial:, auto_open: }
+    def panel_declarations
+      declarations(:panel_declaration)
     end
 
     # Clear all registered adapters (useful for testing)
@@ -126,6 +131,11 @@ class Provider::Factory
 
         # Check registry again after loading
         registry[provider_type]
+      end
+
+      def declarations(kind)
+        adapter_files.filter_map { |adapter_name| "Provider::#{adapter_name}".constantize.try(kind) }
+                     .sort_by { |declaration| declaration[:key] }
       end
 
       # Discover all adapter files in the provider directory

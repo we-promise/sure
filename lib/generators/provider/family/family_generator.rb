@@ -367,25 +367,22 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     end
   end
 
-  # Bank sync renders a provider's connection row and drawer from FAMILY_PANELS, and
-  # FAMILY_PANEL_KEYS keeps it out of the global provider forms. A connected provider
-  # moves under Your connections through its provider_summary case, and the row's sync
-  # status and Sync button read family_panel_items (PANEL_SYNCABLE_TYPES follows from
-  # the adapter's declares_connection). The row renders the panel partial, so
-  # --skip-view skips all three.
+  # Bank sync renders a provider's connection row and drawer from FAMILY_PANELS, which
+  # the adapter's declares_connection panel: feeds (the adapter template writes it
+  # unless --skip-view). A connected provider moves under Your connections through its
+  # provider_summary case, and the row's sync status and Sync button read
+  # family_panel_items. The row renders the panel partial, so --skip-view skips both.
   def add_bank_sync_entries
     return if options[:skip_view]
 
     controller_path = "app/controllers/settings/providers_controller.rb"
-    add_bank_sync_entry(controller_path, "FAMILY_PANELS", "key: \"#{file_name}\"") do |content|
-      self.class.append_family_panel_entry(content, key: file_name, title: class_name.titleize)
-    end
     add_bank_sync_entry(controller_path, "family_panel_items", "=> @#{file_name}_items") do |content|
       self.class.append_family_panel_item(content, key: file_name)
     end
     add_bank_sync_entry("app/helpers/settings_helper.rb", "provider_summary", "when \"#{file_name}\"") do |content|
       self.class.append_provider_summary_case(content, key: file_name)
     end
+    warn_unless_panel_declared
   end
 
   def update_accounts_controller
@@ -647,12 +644,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     content.sub(/(enum :source, \{)([^}]*)(\})/m) { prefix + new_body + suffix }
   end
 
-  # Appends a panel to Settings::ProvidersController::FAMILY_PANELS.
-  def self.append_family_panel_entry(content, key:, title:)
-    append_last_entry(content, /(FAMILY_PANELS = \[\n)(.*?)(\n[ \t]*\]\.freeze)/m,
-                      %({ key: "#{key}", title: "#{title}", turbo_id: "#{key}", partial: "#{key}_panel" }))
-  end
-
   # Hands the loaded items to the row's sync status through family_panel_items.
   def self.append_family_panel_item(content, key:)
     append_hash_entry(content, /(def family_panel_items\n[ \t]*\{\n)(.*?)(\n[ \t]*\}\n)/m, key, "@#{key}_items")
@@ -686,6 +677,12 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
 
   # Appends `entry` to the multi-line literal whose (opening)(body)(closing) `pattern`
   # captures, indented like the last entry, which has no trailing comma and gets one.
+  # True when an adapter's source declares the connection with a settings panel,
+  # which is what lists the provider in Bank sync.
+  def self.panel_declared?(adapter_source, key:)
+    adapter_source.match?(/^\s*declares_connection key: "#{Regexp.escape(key)}"[^\n]*\bpanel:/)
+  end
+
   def self.append_last_entry(content, pattern, entry)
     match = content.match(pattern)
     return nil unless match
@@ -700,6 +697,17 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   private
 
     # Writes the block's result to `path` unless `marker` shows the entry is already there.
+    # An adapter that already existed, or was skipped, never got the template's
+    # declaration, so the derived Bank sync lists would leave the provider out.
+    def warn_unless_panel_declared
+      adapter_path = "app/models/provider/#{file_name}_adapter.rb"
+      source = File.exist?(adapter_path) ? File.read(adapter_path) : ""
+      return if self.class.panel_declared?(source, key: file_name)
+
+      say "Bank sync will not list #{file_name} until #{adapter_path} declares " \
+          "`declares_connection key: \"#{file_name}\", panel: { title: \"#{class_name.titleize}\" }`", :yellow
+    end
+
     def add_bank_sync_entry(path, name, marker)
       return unless File.exist?(path)
 
