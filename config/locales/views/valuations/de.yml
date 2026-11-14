@@ -65,6 +65,7 @@ de:
       account_updated: Konto aktualisiert
     errors:
       amount_required: Betrag ist erforderlich
+      duplicate_date: Für dieses Datum gibt es bereits eine Kontostandsaktualisierung. Bitte lade die Seite neu und versuche es erneut.
     update:
       account_updated: Konto aktualisiert
       entry_updated: Eintrag aktualisiert

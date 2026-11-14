@@ -42,6 +42,7 @@ id:
       entry_updated: Entri diperbarui
     errors:
       amount_required: Jumlah wajib diisi
+      duplicate_date: Tanggal ini sudah memiliki pembaruan saldo. Muat ulang halaman dan coba lagi.
     form:
       amount: Jumlah
       submit: Tambah pembaruan saldo

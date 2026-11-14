@@ -28,6 +28,7 @@ es:
       entry_updated: Registro actualizado
     errors:
       amount_required: El importe es obligatorio
+      duplicate_date: Esta fecha ya tiene una actualización de saldo. Actualiza la página e inténtalo de nuevo.
     form:
       amount: Importe
       submit: Añadir actualización de saldo
