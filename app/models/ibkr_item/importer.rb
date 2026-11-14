@@ -7,6 +7,8 @@ class IbkrItem::Importer
   HISTORY_TIME_BUDGET = 1.minute
   MAX_HISTORY_FAILURES = 3
 
+  class HistoryRowsFailed < StandardError; end
+
   attr_reader :ibkr_item, :ibkr_provider
 
   def initialize(ibkr_item, ibkr_provider:)
@@ -46,8 +48,9 @@ class IbkrItem::Importer
 
     # Fetches the most recent missing window (so an account linked later
     # catches up without a hole) and imports it like the regular statement.
-    # A window is recorded only once its rows are imported, so one cut short
-    # is fetched again. Returns whether the walk can go on in this sync.
+    # A window is recorded only once all its rows are imported, so one cut
+    # short or with a row that failed is fetched again. Returns whether the
+    # walk can go on in this sync.
     def import_history_window
       pending = ibkr_item.linked_ibkr_accounts.includes(account_provider: :account).filter_map do |ibkr_account|
         state = history_state(ibkr_account)
@@ -74,7 +77,7 @@ class IbkrItem::Importer
     rescue => e
       # Never fails the sync. A window IBKR keeps refusing (1003) or answering without
       # statements is given up after MAX_HISTORY_FAILURES syncs; any other error (busy,
-      # "try again shortly", network) only stops this one.
+      # "try again shortly", network, a row that failed to import) only stops this one.
       DebugLogEntry.capture(
         category: "provider_sync_error", level: "warn", message: "IBKR history import stopped: #{e.class}: #{e.message}",
         source: self.class.name, provider_key: "ibkr", family: ibkr_item.family, metadata: { error_code: e.try(:error_code) }.compact
@@ -108,7 +111,8 @@ class IbkrItem::Importer
     # regular statement; the stored payload stays the current statement's.
     def import_history_rows(ibkr_account, data)
       ibkr_account.raw_activities_payload = data.slice(:trades, :cash_transactions)
-      IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
+      failed = IbkrAccount::ActivitiesProcessor.new(ibkr_account).process[:failed]
+      raise HistoryRowsFailed, "#{failed} rows of #{ibkr_account.ibkr_account_id} failed to import" if failed.to_i.positive?
     ensure
       ibkr_account.restore_attributes([ :raw_activities_payload ])
     end

@@ -130,6 +130,21 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
       "WINDOW_1 requested #{provider.calls.count(WINDOW_1)} times in 6 syncs"
   end
 
+  test "a window whose rows fail to import is fetched again by the next sync" do
+    Account::ProviderImportAdapter.any_instance.stubs(:import_trade).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
+    provider = history_provider
+    assert_equal true, import(provider)[:success]
+    assert_equal [ CURRENT, WINDOW_1 ], provider.calls
+    assert DebugLogEntry.where(source: "IbkrItem::Importer", provider_key: "ibkr").exists?
+
+    Account::ProviderImportAdapter.any_instance.unstub(:import_trade)
+    provider = history_provider
+    import(provider)
+
+    assert_equal [ CURRENT, WINDOW_1, WINDOW_2, WINDOW_3, WINDOW_4 ], provider.calls
+    assert @account.entries.exists?(external_id: "ibkr_trade_901", source: "ibkr")
+  end
+
   test "the next sync resumes after the last imported window" do
     throttled = Provider::IbkrFlex::ApiError.new("Too many requests", error_code: "1018")
     import(FakeFlex.new(CURRENT => @current, WINDOW_1 => window_xml(*WINDOW_1, nav_date: "2024-06-03"), WINDOW_2 => throttled))
