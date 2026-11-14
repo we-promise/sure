@@ -5,6 +5,7 @@ class Provider::CoinspotAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("CoinspotAccount", self)
+  declares_connection key: "coinspot"
 
   # CoinSpot only supplies read-only exchange balances, so it can only back
   # the combined Crypto account type.

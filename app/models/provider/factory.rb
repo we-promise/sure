@@ -96,6 +96,14 @@ class Provider::Factory
       end
     end
 
+    # Connection declarations of every adapter that makes one, sorted by key.
+    # Reads the adapter files rather than the registry, which tests may clear.
+    # @return [Array<Hash>] Declarations as built by Provider::Base.declares_connection
+    def connection_declarations
+      adapter_files.filter_map { |adapter_name| "Provider::#{adapter_name}".constantize.try(:connection_declaration) }
+                   .sort_by { |declaration| declaration[:key] }
+    end
+
     # Clear all registered adapters (useful for testing)
     def clear_registry!
       @registry = {}

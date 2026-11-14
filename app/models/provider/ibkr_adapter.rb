@@ -3,6 +3,7 @@ class Provider::IbkrAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("IbkrAccount", self)
+  declares_connection key: "ibkr"
 
   def self.supported_account_types
     %w[Investment]
