@@ -18,15 +18,17 @@ class FamilyDocument < ApplicationRecord
 
   scope :ready, -> { where(status: "ready") }
 
-  # The documents a user may read: those on an account they can reach, and those with no
-  # account. The store is family-wide, so this is the only filter between members. A statement
-  # not yet matched to an account follows AccountStatement#viewable_by?: statement managers
-  # only. Other documents without an account (a tax return) are the whole family's.
+  # The documents a user may read, among those whose indexing succeeded (an error or unreadable
+  # one has nothing usable): those on an account they can reach, and those with no account. The
+  # store is family-wide, so this is the only filter between members. A statement not yet
+  # matched to an account follows AccountStatement#viewable_by?: statement managers only. Other
+  # documents without an account (a tax return) are the whole family's.
   scope :readable_by, ->(user) {
     unlinked = where(account_id: nil)
     unlinked = unlinked.where("metadata->>'account_statement_id' IS NULL") unless AccountStatement.statement_manager?(user)
 
     unlinked.or(where(account_id: Account.accessible_by(user).select(:id)))
+            .where(status: "ready")
   }
 
   # Watches an asynchronous index until it settles (VectorStore::IndexStatusJob).

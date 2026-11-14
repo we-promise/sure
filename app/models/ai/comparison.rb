@@ -33,9 +33,12 @@ class Ai::Comparison < ApplicationRecord
   def primary_label = route_label(primary_route)
   def shadow_label = route_label(shadow_route)
 
-  # The family's category names for these categorize comparisons' values, by id.
+  # The family's category names for these categorize comparisons' values, by id. The values
+  # are strings, so one that isn't a UUID is dropped before it reaches the uuid column.
   def self.category_names(comparisons, family)
-    ids = comparisons.flat_map { [ _1.primary_value, _1.shadow_value ] }.compact
+    ids = comparisons.flat_map { [ _1.primary_value, _1.shadow_value ] }.compact.select { UuidFormat.valid?(_1) }
+    return {} if ids.empty?
+
     family.categories.where(id: ids).pluck(:id, :name).to_h.transform_keys(&:to_s)
   end
 

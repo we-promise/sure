@@ -24,7 +24,7 @@ class Ai::ShadowJob < ApplicationJob
     return unless family
 
     shadow_feature = Ai::Shadow.feature_for(feature)
-    Ai::CallContext.job("family:#{family.id}:#{shadow_feature}") do
+    Ai::CallContext.job("family:#{family.id}:#{shadow_feature}:#{SecureRandom.hex(8)}") do
       plan = Ai::Router.new(family:).resolve(shadow_feature)
       next unless plan.is_a?(Ai::Plan)
 

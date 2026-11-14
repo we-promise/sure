@@ -120,7 +120,7 @@ module AiTestHelper
       # (3 when it has none), each text's own so a search can tell them apart.
       def run_embed(request)
         vectors = @responder.call(request) || request.texts.map { AiTestHelper.vector_for(_1, request.model.embedding_dimensions || 3) }
-        EmbedResponse.new(vectors: checked_vectors!(request.model, vectors, request.texts.size),
+        EmbedResponse.new(vectors: checked_vectors!(request.model, vectors),
                           usage: Ai::Tokens.new(input_tokens: 4 * request.texts.size, output_tokens: 0))
       end
   end
@@ -210,7 +210,8 @@ module AiTestHelper
   INLINE_FILE = %r{(data:[a-z]+/[a-z0-9.+-]+;base64,)[A-Za-z0-9+/=]+}
 
   AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY
-                        MISTRAL_LIVE_API_KEY COHERE_LIVE_API_KEY JEV_LIVE_API_KEY].freeze
+                        MISTRAL_LIVE_API_KEY COHERE_LIVE_API_KEY JEV_LIVE_API_KEY KILO_API_KEY KILO_ORG_ID
+                        OPENROUTER_LIVE_API_KEY].freeze
 
   def ai_endpoint(name: "test", protocol: :compatible, base_url: "https://llm.example.test/v1", api_key: "test-key", **attributes)
     Ai::Config::Endpoint.new(name:, protocol:, base_url:, api_key:, **attributes)

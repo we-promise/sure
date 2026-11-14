@@ -25,9 +25,14 @@ class Ai::Instrumentation::ComparisonSubscriber
         metadata: {}, created_at: now, updated_at: now
       }
     end
-    Ai::Comparison.insert_all(rows) if rows.any?
+    # subject_id is a uuid column, so a row whose item id isn't one is logged and dropped.
+    uuid_rows, dropped = rows.partition { UuidFormat.valid?(_1[:subject_id]) }
+    if dropped.any?
+      Rails.logger.error("[Ai::Instrumentation::ComparisonSubscriber] dropped #{dropped.size} comparison(s) with non-uuid subject id (family_id=#{payload[:family_id]})")
+    end
+    Ai::Comparison.insert_all(uuid_rows) if uuid_rows.any?
   rescue StandardError => error
-    Rails.logger.error("[Ai::Instrumentation::ComparisonSubscriber] #{error.class}: #{error.message}")
+    Rails.logger.error("[Ai::Instrumentation::ComparisonSubscriber] #{error.class}: #{error.message} (family_id=#{payload.try(:[], :family_id)})")
   end
 
   private

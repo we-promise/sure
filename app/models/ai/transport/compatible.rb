@@ -5,7 +5,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
   include Ai::Transport::JsonMode
 
   # Document OCR services RubyLLM reaches with its own providers (`RubyLLM.ocr`): one page image
-  # per request, because 2.1.1's Cohere call takes one image, and so both bill and record per
+  # per request, because Cohere's Parse call takes one image, and so both bill and record per
   # page. Mistral's hasn't been run live.
   OCR_PRESETS = { mistral: "https://api.mistral.ai/v1", cohere: "https://api.cohere.com" }.freeze
   # Tokens llama-server leaks when started with --special, which OCR models' table tags need:
@@ -24,8 +24,8 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       end
     end
 
-    # Model listing stays on ruby-openai, built by Ai::Transport::Http: RubyLLM 2.1.1 has no
-    # public per-context model listing (Provider#list_models is :nodoc:).
+    # Model listing stays on ruby-openai, built by Ai::Transport::Http: RubyLLM has no public
+    # per-context model listing (Provider#list_models is :nodoc:).
     def probe_models(model, timeout:)
       response = mapping_errors { Ai::Transport::Http.openai_client(endpoint, timeout:).models.list }
       raise Ai::Error::InvalidOutput, "the models list has no data" unless response.is_a?(Hash) && response["data"].is_a?(Array)
@@ -40,18 +40,18 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       model.name
     end
 
-    # The model and the texts, no `dimensions` (a server that can't shorten
-    # vectors would refuse it). RubyLLM 2.1.1 keeps the rows in the server's order (#1160 sorts
-    # by index after 2.1.1); OpenAI-compatible servers answer in order.
+    # The model and the texts, no `dimensions` (a server that can't shorten vectors would refuse
+    # it). RubyLLM sorts the rows by their index when the server sends one; OpenAI-compatible
+    # servers answer in order.
     def run_embed(request)
       refuse_static_headers!
       embedding = attempt do
         mapping_errors do
           ruby_llm_context(timeout: within_budget(endpoint.timeout_seconds)).embed(request.texts, model: request.model.name, provider: ruby_llm_provider,
-                                                task_type: request.task_type, assume_model_exists: true)
+                                                                                  assume_model_exists: true)
         end
       end
-      vectors = checked_vectors!(request.model, embedding.vectors, request.texts.size)
+      vectors = checked_vectors!(request.model, embedding.vectors)
       EmbedResponse.new(vectors:, usage: Ai::Tokens.from_ruby_llm(embedding.tokens))
     end
 
@@ -103,7 +103,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       raise Ai::Error::Refused, "embedding requests can't carry the endpoint's static headers yet"
     end
 
-    # One vector, with the model's dimensions. RubyLLM 2.1.1's embed takes no headers
+    # One vector, with the model's dimensions. RubyLLM's embed takes no headers
     # (crmne/ruby_llm#1556), so an endpoint that needs them is refused rather than probed
     # without them.
     def probe_embedding(model, timeout:)
@@ -113,7 +113,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
         ruby_llm_context(timeout:).embed(Ai::Transport::Base::PROBE_EMBEDDING_INPUT, model: model.name, provider: ruby_llm_provider,
                                                                        assume_model_exists: true)
       end
-      checked_vectors!(model, embedding.vectors, 1).first.size
+      checked_vectors!(model, embedding.vectors).first.size
     end
 
     # OpenRouter keeps its own RubyLLM provider: only it round-trips reasoning_details

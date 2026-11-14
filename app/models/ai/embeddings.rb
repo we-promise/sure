@@ -11,12 +11,12 @@ module Ai::Embeddings
   def index(texts, family:, user: nil)
     model = model_for(:embed, family:, user:)
     Array(texts).each_slice(BATCH_SIZE).flat_map do |slice|
-      embed(model, :embed, family, slice, "RETRIEVAL_DOCUMENT")
+      embed(model, :embed, family, slice)
     end
   end
 
   def query(text, family:, user: nil)
-    embed(model_for(:search_documents, family:, user:), :search_documents, family, [ text ], "RETRIEVAL_QUERY").first
+    embed(model_for(:search_documents, family:, user:), :search_documents, family, [ text ]).first
   end
 
   # The embedding model the route sends to, or Ai::Error::Unavailable with the router's reason.
@@ -30,8 +30,8 @@ module Ai::Embeddings
     route.model
   end
 
-  def embed(model, feature, family, texts, task_type)
-    request = Ai::Transport::Base::EmbedRequest.new(feature:, family:, model:, texts:, task_type:)
+  def embed(model, feature, family, texts)
+    request = Ai::Transport::Base::EmbedRequest.new(feature:, family:, model:, texts:)
     Ai::Transport.for(model.endpoint).embed(request).vectors
   end
 end

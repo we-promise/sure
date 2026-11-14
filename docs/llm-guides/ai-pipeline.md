@@ -33,13 +33,13 @@ flowchart LR
 - **A transport never reads ENV, `Setting` or ActiveRecord.** It takes an `Ai::Config::Endpoint`
   and an `Ai::Config::Model`, built by its caller.
 - **Build clients only in `Ai::Transport::Http`.** It applies the endpoint's timeout and
-  headers, TLS options and the proxy. RubyLLM builds its own connections and takes no TLS
-  options, so its contexts use `Http.ruby_llm_adapter`, a Net::HTTP adapter that adds them. The
-  contract test fails on `OpenAI::Client.new`, `Anthropic::Client.new` or `Faraday.new`
-  anywhere else under `app/models/ai/`.
+  headers, TLS options and the proxy. RubyLLM builds its own connections, so its contexts get
+  TLS options through the context's `config.ssl` and `Http.ruby_llm_adapter`, a Net::HTTP
+  adapter that applies the proxy decision. The contract test fails on `OpenAI::Client.new`,
+  `Anthropic::Client.new` or `Faraday.new` anywhere else under `app/models/ai/`.
 - **Use RubyLLM's public API only**: `RubyLLM.context`, `Context#chat`/`#embed`,
   `Chat#generate`, the `with_*` setters, `RubyLLM::Tool`, `RubyLLM.workflow`,
-  `RubyLLM.with_usage_owner`, `RubyLLM::OpenTelemetry.enable`. Nothing marked `:nodoc:`.
+  `RubyLLM.with_owner`, `RubyLLM::OpenTelemetry.enable`. Nothing marked `:nodoc:`.
   `test/architecture/ai_transport_contract_test.rb` lists the surface Sure uses.
 - **RubyLLM never retries.** Every context has `max_retries = 0`; `Ai::Transport::Base#attempt`
   retries rate limits, 5xx and timeouts up to the endpoint's `max_retries`. RubyLLM retries
@@ -223,6 +223,14 @@ flowchart LR
   with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.
 - CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
   `ai-live` label runs the live tests and evals with repository secrets.
+- End to end: `test/e2e/ai/` drives categorize (Kilo, Jev and a Jev shadow run), merchant
+  detection, bill setup, PDF import, documents and a browser chat round-trip through their jobs
+  and pages, on free live models configured through the AI ENV (`AiE2eHelper#with_live_ai`:
+  Kilo's `kilo-auto/free`, OpenCode Zen's free Jev, and for documents Cohere's `embed-v5.0-fast`
+  into pgvector on a free trial key, `COHERE_LIVE_API_KEY`). The assertions check shape, not
+  accuracy. They skip unless `AI_E2E=1`, and the documents leg without the Cohere key;
+  `ai-e2e.yml` runs them, and the free legs of `test/models/ai/live/` (Cohere's OCR included), on
+  every `v*` tag.
 
 ## Judgements and shadow runs
 
@@ -231,8 +239,10 @@ feature's generation declares with `judged_by`. The generation's loop builds it 
 route with the same items, and both return one value shape, so a route list may mix `judge` and
 LLM routes. The environment configuration never does: with Jev selected, `categorize` lists only
 Jev and the LLM runs as its shadow, so a Jev outage defers the batch rather than sending family
-data to a second vendor. `Ai::Transport::Jev#judge` goes through RubyLLM's `typesafe` provider, fanning a batch
-out on the endpoint's `parallel_requests`. See [Adding a judgement](adding-a-judgement.md).
+data to a second vendor. `Ai::Transport::Jev#judge` goes through RubyLLM's `typesafe` provider for
+TypeSafe-style endpoints (`…/v1/systemone`) and its `openrouter` provider for OpenRouter's
+Decisions gateway (`…/alpha/decisions`), fanning a batch out on the endpoint's
+`parallel_requests`. See [Adding a judgement](adding-a-judgement.md).
 
 **Shadow runs.** A generation that declares
 

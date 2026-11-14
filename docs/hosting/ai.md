@@ -260,16 +260,16 @@ OPENAI_MODEL=anthropic/claude-3.5-sonnet
 Jev is a decision model: it picks each transaction's category from your list and reports a calibrated confidence, instead of generating text. It only categorizes; chat, merchant detection and PDF import keep using the LLM provider.
 
 ```bash
-JEV_API_KEY=...                                        # your TypeSafe key
-# JEV_ENDPOINT=https://api.typesafe.ai/v1/systemone   # the default
-# JEV_MODEL=jev-latest                                 # the default
+JEV_API_KEY=...                                        # your TypeSafe key, or your OpenRouter key
+# JEV_ENDPOINT=https://api.typesafe.ai/v1/systemone   # the default; or https://openrouter.ai/api/alpha/decisions for Jev through OpenRouter
+# JEV_MODEL=jev-latest                                 # the default; ~typesafe/jev-latest through OpenRouter
 CATEGORIZATION_PROVIDER=jev                            # or choose it on the Self-Hosting page
 ```
 
 - **One choice for the instance.** Since v0.7.7 the Jev choice applies to every family on the instance (it was per family before). On upgrade, an instance with one family keeps that family's choice; on an instance with several, every family goes back to the LLM provider until an admin chooses Jev again. Per-feature model lists come with the AI settings pages in a later release.
-- **Endpoints.** Only TypeSafe-style endpoints ending in `/v1/systemone` work, including a self-hosted server. Jev through OpenRouter (`https://openrouter.ai/api/alpha/decisions`) stops working in v0.7.7 and comes back with a later release; any other path isn't supported. Sure leaves an unsupported endpoint out, logs a warning and categorizes with the LLM provider, and the settings form refuses one.
+- **Endpoints.** TypeSafe-style endpoints ending in `/v1/systemone` work, including a self-hosted server; Jev through OpenRouter (`https://openrouter.ai/api/alpha/decisions`) works with your OpenRouter key as `JEV_API_KEY` and `JEV_MODEL=~typesafe/jev-latest` (or a version, such as `typesafe/jev-1.14`). Anything else isn't supported: Sure leaves an unsupported endpoint out, logs a warning and categorizes with the LLM provider, and the settings form refuses one.
 - **Self-hosted servers.** An `http://` endpoint is treated as a server on your own network, on any host (not only localhost). Sure sends it one request at a time; set `JEV_CONCURRENCY` to send more.
-- **Confidence threshold.** Only answers from TypeSafe's own API (`api.typesafe.ai`) are held back by the threshold, since only its confidence has been checked. A self-hosted server's answers always apply, on `http` or `https`.
+- **Confidence threshold.** Only answers from TypeSafe's Jev are held back by the threshold, since only its confidence has been checked: on its own API (`api.typesafe.ai`), or a model whose name contains `typesafe` elsewhere. Other decision models' answers, and a self-hosted server's, always apply.
 - **No failover.** When Jev is chosen and fails, the batch is never sent to the LLM provider instead. A timeout, rate limit or outage is retried later; a rejected key or spent credit ends the run, so start it again once the key or credit is fixed.
 - **At most 254 categories.** Jev picks from a list of at most 255 options, one of them "no category", so a family with more categories can't be categorized with Jev: its runs fail and say so.
 - **Concurrency and timeout.** Jev answers one transaction per request, so a batch runs as parallel requests: 8 at a time on TypeSafe's API (`JEV_CONCURRENCY`), each with `JEV_REQUEST_TIMEOUT` seconds (default 30).

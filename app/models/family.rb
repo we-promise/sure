@@ -65,6 +65,8 @@ class Family < ApplicationRecord
 
   has_many :goals, dependent: :destroy
 
+  def categorization_comparisons = ai_comparisons.for_feature(:categorize)
+
   # Net inflow into every depository account linked to any primary-currency
   # goal, over the given window. Transfers between linked accounts net to zero
   # because both sides of an internal move land inside the same account set;

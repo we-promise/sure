@@ -659,6 +659,19 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the jev panel warns when JEV_ENDPOINT is set to an endpoint RubyLLM can't reach" do
+    with_self_hosting do
+      users(:family_admin).update!(preferences: (users(:family_admin).preferences || {}).merge("preview_features_enabled" => true))
+      with_env_overrides("CATEGORIZATION_PROVIDER" => "jev", "JEV_API_KEY" => "env-jev-key",
+                         "JEV_ENDPOINT" => "https://gw.example.com/v1/jev") do
+        get settings_hosting_url
+
+        assert_response :success
+        assert_select "p.text-warning", /not supported and is ignored/
+      end
+    end
+  end
+
   test "can update jev endpoint and model" do
     with_self_hosting do
       patch settings_hosting_url, params: { setting: { jev_endpoint: "https://api.typesafe.ai/v1/systemone", jev_model: "jev-latest" } }
@@ -752,18 +765,20 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # RubyLLM 2.1.1 reaches only TypeSafe-style paths; OpenRouter's needs 2.2.
-  test "rejects an OpenRouter or other-path jev endpoint" do
+  # Sure's Jev transport speaks TypeSafe's dialect and OpenRouter's decisions dialect; other paths are refused.
+  test "rejects a neither-dialect jev endpoint, accepts the decisions one" do
     with_self_hosting do
       Setting.jev_endpoint = nil
 
-      [ "https://openrouter.ai/api/alpha/decisions", "https://gw.example.com/v1/jev" ].each do |endpoint|
-        patch settings_hosting_url, params: { setting: { jev_endpoint: endpoint } }
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://gw.example.com/v1/jev" } }
 
-        assert_response :unprocessable_entity
-        assert_match(%r{must end in /v1/systemone}, flash[:alert])
-        assert_nil Setting.jev_endpoint
-      end
+      assert_response :unprocessable_entity
+      assert_match(%r{/v1/systemone}, flash[:alert])
+      assert_nil Setting.jev_endpoint
+
+      patch settings_hosting_url, params: { setting: { jev_endpoint: "https://openrouter.ai/api/alpha/decisions" } }
+
+      assert_equal "https://openrouter.ai/api/alpha/decisions", Setting.jev_endpoint
     end
   end
 

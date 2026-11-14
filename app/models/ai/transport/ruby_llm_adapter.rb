@@ -1,6 +1,7 @@
 # What the RubyLLM transports share: one RubyLLM context per endpoint, errors mapped onto
 # Ai::Error, and the probe calls. Only RubyLLM's public API is used (context, chat, generate,
-# the with_* setters, embed, Tool), so an upgrade can't break Sure through a private method.
+# judge, embed, ocr, the with_* setters, Tool), so an upgrade can't break Sure through a
+# private method.
 module Ai::Transport::RubyLlmAdapter
   OPENROUTER_APP_NAME = "Sure".freeze
   OPENROUTER_APP_URL = "https://sure.am".freeze
@@ -19,15 +20,19 @@ module Ai::Transport::RubyLlmAdapter
     # - max_retries 0: Sure retries itself (Ai::Transport::Base#attempt);
     # - the proxy and TLS settings from Ai::Transport::Http, for every provider;
     # - no upload of large files to a provider's Files API, where a statement would stay;
-    # - Sure's instrumenter, which every request passes (the attempt budget, each failed request's error).
+    # - Sure's instrumenter, which every request passes (the attempt budget, each failed request's error);
+    # - split_think_tags: a Chat Completions model that opens with a think block sends its reasoning
+    #   separately, so the content this parses is the answer (the other protocols split thinking themselves).
     def ruby_llm_context(timeout: endpoint.timeout_seconds)
       @ruby_llm_contexts ||= {}
       @ruby_llm_contexts[timeout] ||= RubyLLM.context do |config|
         config.request_timeout = timeout
         config.max_retries = 0
-        config.http_proxy = Ai::Transport::Http.proxy_for(ruby_llm_api_base)
+        config.http_proxy = Ai::Transport::Http.proxy_or_warn(ruby_llm_api_base)
+        config.ssl = Ai::Transport::Http.faraday_ssl_options
         config.faraday_adapter = Ai::Transport::Http.ruby_llm_adapter
         config.auto_upload_large_files = false
+        config.split_think_tags = true
         config.instrumenter = Ai::Transport::Instrumenter.new(config.instrumenter, map_error: method(:mapped_error), scrub: scrubber)
         configure_provider(config)
       end
@@ -101,16 +106,9 @@ module Ai::Transport::RubyLlmAdapter
       chat.add_message(role: :user, content: Ai::Transport::Base::PROBE_TOOL_PROMPT)
       message = mapping_errors { chat.generate }
       check_answering_model!(model.name, message.model)
-      tool_calls(message).any? do |call|
+      message.tool_calls.any? do |call|
         call.name == Ai::Transport::Base::PROBE_TOOL_NAME && call.arguments == { "status" => "ok" }
       end
-    end
-
-    # A Hash keyed by call id on 2.1.1, a collection of ToolCall on 2.2 (RubyLLM #1380).
-    def tool_calls(message)
-      calls = message.tool_calls
-      calls = calls.values if calls.is_a?(Hash)
-      Array(calls)
     end
 
     # Providers often quote the request, and sometimes the key, back in an error, so every
@@ -165,10 +163,14 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::UnauthorizedError, RubyLLM::ForbiddenError then Ai::Error::Unauthorized
         when RubyLLM::RateLimitError then Ai::Error.for_status(429, error.message, body:)
         when RubyLLM::ContextLengthExceededError then Ai::Error::ContextTooLong
+        # Raised before sending: the model can't take this input, not an answer that was unusable.
+        when RubyLLM::UnsupportedAttachmentError, RubyLLM::UnsupportedServerToolError then Ai::Error::Refused
         when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
-          # The provider's own message only: a diagnostic field elsewhere in the body can quote an
+          # The middleware can raise these over a response whose HTTP status is 200 (OpenRouter
+          # answers 200 with an embedded error object), so the class decides it's a 5xx. Only the
+          # provider's own message is read: a diagnostic field elsewhere in the body can quote an
           # earlier "image input is not supported" and turn a retryable 503 into a refusal.
-          Ai::Error.for_status(status || 500, error.message)
+          Ai::Error.for_status((500..599).cover?(status) ? status : 500, error.message)
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end
@@ -176,7 +178,13 @@ module Ai::Transport::RubyLlmAdapter
       return klass.new(error.message, status:) if klass
 
       return Ai::Error::ModelMissing.new(error.message, status:) if missing_model?(status, body)
-      return Ai::Error.from_status(status || 400, error.message, body:) if error.is_a?(RubyLLM::Error)
+      if error.is_a?(RubyLLM::Error)
+        # Raised over a response RubyLLM accepted, or while parsing one (an embedding with no
+        # rows, a judgment it couldn't read), not over an HTTP error status.
+        return Ai::Error::InvalidOutput.new(error.message, status:) unless status.to_i.between?(400, 599)
+
+        return Ai::Error.from_status(status, error.message, body:)
+      end
 
       Ai::Error.from_exception(error)
     end
@@ -189,12 +197,23 @@ module Ai::Transport::RubyLlmAdapter
       status == 404 && error.is_a?(Hash) && error["type"] == "not_found_error" && error["message"].to_s.start_with?("model:")
     end
 
-    # RubyLLM 2.2 raises RubyLLM::ConnectionError (with `timeout?`) where 2.1.1 lets Faraday's
-    # errors through (RubyLLM #1407); Ai::Error.from_exception handles the 2.1.1 ones.
+    # RubyLLM wraps every connection failure in RubyLLM::ConnectionError, whose `timeout?`
+    # counts a connect timeout as one. Sure's contract splits them: no answer at all (refused,
+    # DNS, TLS, a connect timeout) is Unreachable and marks the server down; a server that
+    # accepted the request and went quiet is Timeout.
     def connection_error_class(error)
-      return unless defined?(RubyLLM::ConnectionError) && error.is_a?(RubyLLM::ConnectionError)
+      return unless error.is_a?(RubyLLM::ConnectionError)
 
-      error.respond_to?(:timeout?) && error.timeout? ? Ai::Error::Timeout : Ai::Error::Unreachable
+      error.timeout? && !connect_timeout?(error) ? Ai::Error::Timeout : Ai::Error::Unreachable
+    end
+
+    # A timeout raised while opening the connection: faraday-net_http wraps Net::OpenTimeout
+    # and Errno::ETIMEDOUT in Faraday::TimeoutError, so the Faraday class alone can't tell them
+    # apart.
+    def connect_timeout?(error)
+      cause = error.cause
+      cause = cause.wrapped_exception if cause.respond_to?(:wrapped_exception)
+      cause.is_a?(Net::OpenTimeout) || cause.is_a?(Errno::ETIMEDOUT)
     end
 
     # Declared to the model, never run: `Chat#generate` makes one request and doesn't run tools.

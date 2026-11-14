@@ -734,8 +734,8 @@ class FamilyTest < ActiveSupport::TestCase
     with_env_overrides(AiLegacySetups::CONTROLLED.index_with { nil }.merge(env), &)
   end
 
-  # A path RubyLLM's judge can't reach (only TypeSafe-style /v1/systemone), which JEV_ENDPOINT
-  # can set without passing the settings form.
+  # A path RubyLLM's judge can't reach (only …/v1/systemone and …/alpha/decisions are), which
+  # JEV_ENDPOINT can set without passing the settings form.
   UNSUPPORTED_JEV_ENV = {
     "JEV_API_KEY" => "test_api_key",
     "JEV_ENDPOINT" => "https://internal-gateway.example.com/v1/jev",
@@ -767,14 +767,21 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "the categorize plan leaves out an unsupported Jev endpoint and writes no diagnostics" do
+  test "the categorize plan leaves out an unsupported Jev endpoint and logs it once" do
     family = families(:dylan_family)
+    Ai::LegacyEnvConfig.unreachably_warned = nil
 
-    assert_no_difference "DebugLogEntry.count" do
+    assert_difference -> { DebugLogEntry.where(category: "ai_configuration").count }, 1 do
       with_ai_env(UNSUPPORTED_JEV_ENV) do
         assert_nil Ai.plan(:categorize, family:)
       end
     end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "ai_configuration", entry.category
+    assert_equal "error", entry.level
+    assert_equal "jev", entry.provider_key
+    assert_equal "path", entry.metadata["reason"]
   end
 
   # The currencies whose amounts every converted total leaves out (#3640).

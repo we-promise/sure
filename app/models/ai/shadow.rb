@@ -36,7 +36,7 @@ module Ai::Shadow
     return unless rate.positive? && rand < rate
     return unless Ai::Router.new(family: generation.family).resolve(feature_for(feature)).is_a?(Ai::Plan)
 
-    sent = generation.items - result.remaining
+    sent = generation.items.reject { |item| result.remaining.any? { _1.equal?(item) } }
     Ai::ShadowJob.perform_later(feature.to_s, generation.family.id, fingerprint(generation, sent), side(generation, result))
   rescue StandardError => error
     Rails.logger.warn("[Ai::Shadow] #{feature} for family #{generation.family&.id} not enqueued: #{error.class}: #{error.message}")

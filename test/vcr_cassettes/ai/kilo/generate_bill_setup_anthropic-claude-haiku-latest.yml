@@ -1,0 +1,131 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://api.kilo.ai/api/gateway/v1/responses
+    body:
+      encoding: UTF-8
+      string: '{"model":"~anthropic/claude-haiku-latest","input":[{"role":"user","content":"CHARGE
+        HISTORY (date amount description):\n- 2026-09-03 15.49 NETFLIX.COM\n- 2026-10-03
+        15.49 NETFLIX.COM\n\nAVAILABLE CATEGORIES: Entertainment"}],"instructions":"You
+        configure recurring-bill records for a personal finance app. Given the dated\ncharge
+        history for one obligation, propose the bill''s configuration as JSON only.\n\nRules:\n-
+        Infer the cadence from the gaps between the dates, never from the row count.\n  frequency
+        is one of: monthly, weekly, biweekly, semimonthly, quarterly, semiannual,
+        annual.\n- amount is the typical recent charge as a positive number; when
+        amounts drift,\n  prefer the most recent ones.\n- day_of_month is the modal
+        charge day (monthly-style cadences only); weekday\n  (0=Sunday) only for weekly/biweekly;
+        month_of_year only for annual.\n- category_name must EXACTLY match one of
+        the provided categories, or null.\n- bill_type: \"subscription\" for digital
+        services and memberships, \"installment\"\n  for finite payment plans, otherwise
+        \"bill\".\n- autopay true only when the history shows automatic-payment markers
+        (ACH, AUTOPAY).\n- Set any field the history cannot support to null. Never
+        guess.\n- confidence is 0 to 1 for the proposal overall; rationale is one
+        short sentence.\n\nOutput JSON only, exactly this shape (no markdown, no explanation):\n{\"name\":
+        ..., \"amount\": ..., \"frequency\": ..., \"day_of_month\": ..., \"weekday\":
+        ...,\n \"month_of_year\": ..., \"category_name\": ..., \"bill_type\": ...,
+        \"autopay\": ...,\n \"confidence\": ..., \"rationale\": ...}\n","stream":false,"store":false,"include":["reasoning.encrypted_content"],"max_output_tokens":1024,"text":{"format":{"type":"json_schema","name":"bill_setup_suggestion","schema":{"type":"object","properties":{"name":{"type":["string","null"]},"amount":{"type":["number","null"]},"frequency":{"type":["string","null"],"enum":["monthly","weekly","biweekly","semimonthly","quarterly","semiannual","annual",null]},"day_of_month":{"type":["integer","null"],"minimum":1,"maximum":31},"weekday":{"type":["integer","null"],"minimum":0,"maximum":6},"month_of_year":{"type":["integer","null"],"minimum":1,"maximum":12},"category_name":{"type":["string","null"]},"bill_type":{"type":["string","null"],"enum":["bill","subscription","installment",null]},"autopay":{"type":["boolean","null"]},"confidence":{"type":["number","null"]},"rationale":{"type":["string","null"]}},"required":["name","amount","frequency","day_of_month","weekday","month_of_year","category_name","bill_type","autopay","confidence","rationale"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      X-Kilocode-Organizationid:
+      - "<KILO_ORG_ID>"
+      User-Agent:
+      - Faraday v2.15.1
+      Authorization:
+      - Bearer <KILO_API_KEY>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Cache-Control:
+      - no-cache, no-transform
+      Content-Security-Policy-Report-Only:
+      - 'default-src ''self''; base-uri ''self''; object-src ''none''; frame-ancestors
+        ''self''; form-action ''self''; script-src ''self'' ''unsafe-inline'' ''wasm-unsafe-eval''
+        https://www.googletagmanager.com https://utt.impactcdn.com https://login.kilo.ai
+        https://login-test.kilo.ai https://js.stripe.com https://*.js.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://cdn.platform.openai.com/deployments/watchwood/watchwood.js
+        https://widget.usepylon.com https://assets.churnkey.co; connect-src ''self''
+        https://auth.kilo.ai https://us.i.posthog.com https://us-assets.i.posthog.com
+        https://api.stripe.com https://api.openai.com/v1/watchwood/ https://r.stripe.com
+        https://m.stripe.com https://checkout.stripe.com https://utt.impactcdn.com
+        https://cdn.jsdelivr.net https://unpkg.com https://widget.usepylon.com https://assets.churnkey.co
+        https://api.churnkey.co https://*.churnkey.co https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com
+        wss://cloud-agent-next.kilosessions.ai wss://ingest.kilosessions.ai; img-src
+        ''self'' data: blob: https://lh3.googleusercontent.com https://avatars.githubusercontent.com
+        https://secure.gravatar.com https://gravatar.com https://media.licdn.com https://cdn.discordapp.com
+        https://gitlab.com https://*.stripe.com https://www.googletagmanager.com https://utt.impactcdn.com
+        https://widget.usepylon.com https://assets.churnkey.co https://*.churnkey.co
+        https://www.gravatar.com https://openrouter.ai https://e115e769bcdd4c3d66af59d3332cb394.r2.cloudflarestorage.com;
+        style-src ''self'' ''unsafe-inline''; font-src ''self'' data:; frame-src ''self''
+        https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com
+        https://challenges.cloudflare.com https://www.youtube.com https://widget.usepylon.com
+        https://assets.churnkey.co https://*.churnkey.co; worker-src ''self'' blob:;
+        media-src ''self'' blob:; manifest-src ''self'''
+      Content-Type:
+      - application/json
+      Cross-Origin-Embedder-Policy-Report-Only:
+      - require-corp
+      Cross-Origin-Opener-Policy:
+      - same-origin
+      Cross-Origin-Resource-Policy:
+      - same-origin
+      Date:
+      - Thu, 12 Nov 2026 11:09:57 GMT
+      Permissions-Policy:
+      - geolocation=(self), camera=(), microphone=()
+      Referrer-Policy:
+      - strict-origin-when-cross-origin
+      Server:
+      - Vercel
+      Set-Cookie:
+      - _vcrr_29a0f54ab1d200c5=dpl_E5WZ2EhqVY1ht53HvMmB4JXcEdBh|0.4797; Path=/; Secure;
+        HttpOnly; SameSite=None
+      - _vcrr_99197b56da7577df=dpl_7g9fgyVjZm2sDWzdv6Szf54uyXDw|0.984; Path=/; Secure;
+        HttpOnly; SameSite=None
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Matched-Path:
+      - "/api/v1/[...path]"
+      X-Vercel-Cache:
+      - MISS
+      X-Vercel-Id:
+      - syd1:syd1:syd1::sfo1::gh5dz-1794481797263-386118c4bb95
+      X-Xss-Protection:
+      - '0'
+      Transfer-Encoding:
+      - chunked
+    body:
+      encoding: UTF-8
+      string: '{"id":"gen_01M77Q6EK7XF5FZSD4PEBZS337","object":"response","created_at":1794481800,"status":"completed","completed_at":1794481800,"incomplete_details":null,"error":null,"output":[{"type":"message","id":"msg_1794481800139_4uvkupjsrfj","status":"completed","role":"assistant","content":[{"type":"output_text","text":"{\"name\":\"Netflix\",\"amount\":15.49,\"frequency\":\"monthly\",\"day_of_month\":3,\"weekday\":null,\"month_of_year\":null,\"category_name\":\"Entertainment\",\"bill_type\":\"subscription\",\"autopay\":null,\"confidence\":0.7,\"rationale\":\"Two
+        charges one month apart on the 3rd at 15.49 from Netflix suggest a monthly
+        subscription; autopay cannot be confirmed from the description alone.\"}","annotations":[],"logprobs":[]}]}],"usage":{"input_tokens":1439,"output_tokens":334,"total_tokens":1773,"input_tokens_details":{"cached_tokens":0,"cache_write_tokens":0},"output_tokens_details":{"reasoning_tokens":0},"cost":0.000311,"is_byok":false,"cost_details":{"upstream_inference_cost":0.000311}},"model":"anthropic/claude-haiku-5.5","instructions":"You
+        configure recurring-bill records for a personal finance app. Given the dated\ncharge
+        history for one obligation, propose the bill''s configuration as JSON only.\n\nRules:\n-
+        Infer the cadence from the gaps between the dates, never from the row count.\n  frequency
+        is one of: monthly, weekly, biweekly, semimonthly, quarterly, semiannual,
+        annual.\n- amount is the typical recent charge as a positive number; when
+        amounts drift,\n  prefer the most recent ones.\n- day_of_month is the modal
+        charge day (monthly-style cadences only); weekday\n  (0=Sunday) only for weekly/biweekly;
+        month_of_year only for annual.\n- category_name must EXACTLY match one of
+        the provided categories, or null.\n- bill_type: \"subscription\" for digital
+        services and memberships, \"installment\"\n  for finite payment plans, otherwise
+        \"bill\".\n- autopay true only when the history shows automatic-payment markers
+        (ACH, AUTOPAY).\n- Set any field the history cannot support to null. Never
+        guess.\n- confidence is 0 to 1 for the proposal overall; rationale is one
+        short sentence.\n\nOutput JSON only, exactly this shape (no markdown, no explanation):\n{\"name\":
+        ..., \"amount\": ..., \"frequency\": ..., \"day_of_month\": ..., \"weekday\":
+        ...,\n \"month_of_year\": ..., \"category_name\": ..., \"bill_type\": ...,
+        \"autopay\": ...,\n \"confidence\": ..., \"rationale\": ...}\n","previous_response_id":null,"temperature":1,"top_p":1,"max_output_tokens":1024,"presence_penalty":0,"frequency_penalty":0,"top_logprobs":0,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"max_tool_calls":null,"text":{"format":{"type":"json_schema","name":"bill_setup_suggestion","schema":{"type":"object","properties":{"name":{"type":["string","null"]},"amount":{"type":["number","null"]},"frequency":{"type":["string","null"],"enum":["monthly","weekly","biweekly","semimonthly","quarterly","semiannual","annual",null]},"day_of_month":{"type":["integer","null"],"minimum":1,"maximum":31},"weekday":{"type":["integer","null"],"minimum":0,"maximum":6},"month_of_year":{"type":["integer","null"],"minimum":1,"maximum":12},"category_name":{"type":["string","null"]},"bill_type":{"type":["string","null"],"enum":["bill","subscription","installment",null]},"autopay":{"type":["boolean","null"]},"confidence":{"type":["number","null"]},"rationale":{"type":["string","null"]}},"required":["name","amount","frequency","day_of_month","weekday","month_of_year","category_name","bill_type","autopay","confidence","rationale"],"additionalProperties":false},"strict":true}},"truncation":"disabled","reasoning":{"summary":"auto"},"store":false,"background":false,"service_tier":"auto","metadata":{},"safety_identifier":"43amqyVw3j6pyw01k5oGXRnje58bALy0nanLB/naNFI=","prompt_cache_key":null,"prompt_cache_retention":null}'
+  recorded_at: Thu, 12 Nov 2026 11:10:00 GMT
+recorded_with: VCR 6.3.1

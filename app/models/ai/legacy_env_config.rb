@@ -11,6 +11,10 @@
 #
 # It's built in every process. The release that stops reading the old variables deletes this file.
 class Ai::LegacyEnvConfig
+  class << self
+    attr_accessor :unreachably_warned
+  end
+
   # OpenAI's vector store embeds files on its own side, so the `embed` route names this stand-in
   # model on the OpenAI endpoint.
   VECTOR_STORE_MODEL = "vector_store".freeze
@@ -192,19 +196,30 @@ class Ai::LegacyEnvConfig
     def positive(*values) = values.map(&:to_i).find(&:positive?)
 
     # Jev, when RubyLLM can reach it (Jev.unreachable_reason). An endpoint it can't reach is left
-    # out with a warning, so `categorize` uses the LLM.
+    # out with a warning, so `categorize` uses the LLM. The config is rebuilt on every request, so
+    # each endpoint and reason is logged for support once per process.
     def jev
       return unless Jev.configured?
 
       url = Jev.effective_endpoint
       if (reason = Jev.unreachable_reason(url))
+        key = "#{Jev.redacted_endpoint(url)}|#{reason}"
+        unless (self.class.unreachably_warned ||= Set.new).include?(key)
+          self.class.unreachably_warned << key
+          DebugLogEntry.capture(
+            category: "ai_configuration", level: "error",
+            message: "Jev endpoint is not supported and was ignored; categorize falls back to the LLM provider",
+            source: "Ai::LegacyEnvConfig", provider_key: "jev",
+            metadata: { endpoint: Jev.redacted_endpoint(url), reason:, detail: Jev::UNSUPPORTED.fetch(reason) }
+          )
+        end
         Rails.logger.warn("[Ai::LegacyEnvConfig] Jev left out: #{Jev.redacted_endpoint(url)}: #{Jev::UNSUPPORTED.fetch(reason)}")
         return
       end
 
       endpoint = Jev.endpoint(url, api_key: Jev.api_key, timeout_seconds: ENV.fetch("JEV_REQUEST_TIMEOUT", 30).to_i,
                                    parallel_requests: positive(env("JEV_CONCURRENCY")))
-      Ai::Config::Model.new(endpoint:, name: Jev.effective_model, capabilities: Jev.capabilities(endpoint))
+      Ai::Config::Model.new(endpoint:, name: Jev.effective_model, capabilities: Jev.capabilities(endpoint, model: Jev.effective_model))
     end
 
     def external_assistant
