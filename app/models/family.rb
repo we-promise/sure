@@ -17,6 +17,7 @@ class Family < ApplicationRecord
   include OnchainWalletConnectable
   include SharesightConnectable
   include AiPromptable
+  include TransactionReferences
 
   DATE_FORMATS = [
     [ "MM-DD-YYYY", "%m-%d-%Y" ],

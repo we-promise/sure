@@ -54,7 +54,15 @@ class TransactionCategoriesController < ApplicationController
 
   private
     def entry_params
-      params.require(:entry).permit(:entryable_type, entryable_attributes: [ :id, :category_id ])
+      permitted = params.require(:entry).permit(:entryable_type, entryable_attributes: [ :id, :category_id ])
+
+      category_id = permitted.dig(:entryable_attributes, :category_id)
+      if category_id.present?
+        permitted[:entryable_attributes][:category_id] = Current.family.transaction_category_id_for(category_id) ||
+          raise(ActiveRecord::RecordNotFound)
+      end
+
+      permitted
     end
 
     def needs_rule_notification?(transaction)
