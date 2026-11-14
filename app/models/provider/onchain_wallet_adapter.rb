@@ -5,6 +5,7 @@ class Provider::OnchainWalletAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("OnchainWalletAccount", self)
+  declares_connection key: "onchain_wallet"
 
   def self.supported_account_types
     %w[Crypto]

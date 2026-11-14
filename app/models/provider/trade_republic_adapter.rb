@@ -3,6 +3,7 @@ class Provider::TradeRepublicAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("TradeRepublicAccount", self)
+  declares_connection key: "trade_republic"
 
   def self.supported_account_types
     %w[Depository Investment]

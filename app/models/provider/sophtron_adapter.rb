@@ -4,6 +4,7 @@ class Provider::SophtronAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("SophtronAccount", self)
+  declares_connection key: "sophtron"
 
   # Define which account types this provider supports
   def self.supported_account_types

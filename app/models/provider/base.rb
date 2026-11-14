@@ -38,6 +38,27 @@ class Provider::Base
     []
   end
 
+  # Declares the family connection (the provider's `*_items` record) this adapter
+  # serves. Lists that cover every account provider, such as
+  # ProviderConnectionStatus::PROVIDERS, are derived from these declarations.
+  # @param key [String] The provider key, matching #provider_name (e.g., "brex")
+  # @param item_class [String] The connection model; defaults to "<Key>Item"
+  # @param accounts [Symbol] The connection's provider account association
+  # @param linked_accounts [Symbol, nil] An extra association to preload for status
+  def self.declares_connection(key:, item_class: "#{key.camelize}Item", accounts: :"#{key}_accounts", linked_accounts: nil)
+    @connection_declaration = {
+      key: key,
+      type: item_class,
+      association: item_class.underscore.pluralize.to_sym,
+      accounts: accounts,
+      linked_accounts: linked_accounts
+    }.compact.freeze
+  end
+
+  def self.connection_declaration
+    @connection_declaration
+  end
+
   # Returns provider connection configurations
   # Override in subclasses to provide connection metadata for UI
   # @param family [Family] The family to check connection availability for

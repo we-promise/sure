@@ -3,6 +3,7 @@ class Provider::SharesightAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("SharesightAccount", self)
+  declares_connection key: "sharesight"
 
   def self.supported_account_types
     %w[Investment]
