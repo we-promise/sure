@@ -634,6 +634,20 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-#{category.id}']", text: /#{Regexp.escape(Money.new(cards, "USD").format)}/
   end
 
+  test "breakdown converts a scheduled foreign transaction at the latest stored rate" do
+    travel_to Date.new(2026, 11, 14) do
+      account = @family.accounts.create!(owner: @user, name: "EUR pocket", balance: 0, currency: "EUR", accountable: Depository.new)
+      category = @family.categories.create!(name: "FX rent", color: "#333333")
+      create_transaction(account: account, date: Date.current + 3, amount: 100, currency: "EUR", category: category)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current - 5, rate: 2)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current - 1, rate: 1.5)
+
+      get reports_path(period_type: :monthly)
+
+      assert_select "tr[data-category='category-#{category.id}']", text: /\$150\.00/
+    end
+  end
+
   test "breakdown does not request missing historical rates from the provider on page load" do
     account = @family.accounts.create!(owner: @user, name: "EUR pocket", balance: 0, currency: "EUR", accountable: Depository.new)
     category = @family.categories.create!(name: "FX", color: "#333333")

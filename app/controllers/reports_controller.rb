@@ -247,11 +247,15 @@ class ReportsController < ApplicationController
 
     # At the rate for the entry's exact date, else 1:1, the same lookup as IncomeStatement
     # (LEFT JOIN exchange_rates ON er.date = ae.date ... COALESCE(er.rate, 1)), so the
-    # breakdown matches the cards. Read once per (currency, date) per request.
+    # breakdown matches the cards. A scheduled (future) entry has no rate yet, so it uses the
+    # latest stored one. Read once per (currency, date) per request.
     def converted_entry_amount(entry, family_currency)
       return entry.amount.abs if entry.currency == family_currency
 
-      @entry_rates ||= Hash.new { |rates, (from, to, date)| rates[[ from, to, date ]] = ExchangeRate.find_by(from_currency: from, to_currency: to, date: date)&.rate }
+      @entry_rates ||= Hash.new do |rates, (from, to, date)|
+        stored = ExchangeRate.where(from_currency: from, to_currency: to)
+        rates[[ from, to, date ]] = date > Date.current ? stored.where(date: ..Date.current).order(date: :desc).pick(:rate) : stored.find_by(date: date)&.rate
+      end
       entry.amount.abs * (@entry_rates[[ entry.currency, family_currency, entry.date ]] || 1)
     end
 
