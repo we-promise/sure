@@ -47,7 +47,7 @@ json.kind transaction.kind
 # rate from the row's currency to the account's currency stored on it.
 json.investment_activity_label transaction.investment_activity_label
 json.provider_type transaction.provider_type
-json.security_id transaction.activity_security_id
+json.security_id transaction.serializable_security_id
 json.exchange_rate transaction.numeric_exchange_rate
 
 # Excluded entries are left out of budget and report totals, and splitting

@@ -417,7 +417,7 @@ class Family::DataExporter
           # not exported.
           investment_activity_label: transaction.investment_activity_label,
           provider_type: transaction.provider_type,
-          security_id: transaction.activity_security_id,
+          security_id: transaction.serializable_security_id,
           exchange_rate: transaction.numeric_exchange_rate,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at

@@ -35,12 +35,20 @@ class Transaction < ApplicationRecord
     extra&.dig("exchange_rate")
   end
 
-  # The stored exchange rate as a finite, positive number, or nil when none is
-  # stored or the stored value is not one. The API and the data export read
-  # this, so a malformed value written straight into extra cannot break them.
+  # The stored exchange rate as a number, read the way Money#exchange_to reads
+  # it (to_d), or nil when the app would not use it: none is stored, it is not
+  # a positive number, or the row is already in the account's currency. The
+  # API and the data export read this, so a malformed value written straight
+  # into extra, or an extra that is not a hash, cannot break them.
   def numeric_exchange_rate
-    rate = Float(exchange_rate, exception: false)
-    rate if rate&.finite? && rate.positive?
+    return nil unless extra.is_a?(Hash)
+
+    value = extra["exchange_rate"]
+    return nil unless value.is_a?(Numeric) || value.is_a?(String)
+    return nil if entry&.currency.blank? || entry&.currency == entry&.account&.currency
+
+    rate = value.to_d
+    rate.to_f if rate.finite? && rate.positive?
   end
 
   def exchange_rate=(value)
@@ -460,6 +468,15 @@ class Transaction < ApplicationRecord
 
     nested_security = extra["security"]
     extra["security_id"].presence || (nested_security["id"].presence if nested_security.is_a?(Hash))
+  end
+
+  UUID_FORMAT = /\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/
+
+  # activity_security_id as the API and the data export emit it: a uuid
+  # string, or nil when extra holds anything else under the key.
+  def serializable_security_id
+    id = activity_security_id
+    id if id.is_a?(String) && id.match?(UUID_FORMAT)
   end
 
   # The provider's own type for this row, such as IBKR's "Withholding Tax",

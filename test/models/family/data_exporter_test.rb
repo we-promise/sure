@@ -1327,13 +1327,56 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "export reads a non-hash extra on a trade or transaction as null tax fields" do
+    investment_account = @family.accounts.create!(
+      name: "Malformed Extra Investment Account",
+      accountable: Investment.new,
+      balance: 10_000,
+      currency: "EUR"
+    )
+    security = Security.create!(ticker: "TMX#{SecureRandom.hex(3).upcase}", name: "Malformed Extra Security")
+    trade_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: 500,
+      name: "Buy",
+      currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    transaction_entry = @account.entries.create!(
+      date: Date.parse("2024-05-21"),
+      amount: 1.5,
+      name: "Malformed",
+      currency: "EUR",
+      source: "ibkr",
+      entryable: Transaction.new
+    )
+
+    [ [ 1, 2 ], "raw-string-extra" ].each do |malformed|
+      # Written past the model, as a provider or a migration writing SQL might.
+      trade_entry.entryable.update_column(:extra, malformed)
+      transaction_entry.entryable.update_column(:extra, malformed)
+
+      Zip::File.open_buffer(@exporter.generate_export) do |zip|
+        records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+        trade_data = records.find { |record| record["type"] == "Trade" && record.dig("data", "id") == trade_entry.entryable.id }["data"]
+        transaction_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == transaction_entry.entryable.id }["data"]
+
+        assert_nil trade_data["exchange_rate"]
+        %w[provider_type security_id exchange_rate].each do |field|
+          assert transaction_data.key?(field)
+          assert_nil transaction_data[field], "expected #{field} to be null for extra = #{malformed.inspect}"
+        end
+      end
+    end
+  end
+
   test "exports transaction activity label and safe provider fields in NDJSON" do
     security = Security.create!(ticker: "WHX#{SecureRandom.hex(3).upcase}", name: "Withholding Export Security")
     entry = @account.entries.create!(
       date: Date.parse("2024-05-21"),
       amount: 1.5,
       name: "Withholding Tax",
-      currency: "USD",
+      currency: "EUR",
       source: "ibkr",
       entryable: Transaction.new(
         investment_activity_label: "Dividend",

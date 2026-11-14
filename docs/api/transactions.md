@@ -128,9 +128,9 @@ These are `null` on most transactions. They are set on brokerage cash rows, such
 | Field | Description |
 | --- | --- |
 | `investment_activity_label` | The investment activity of the row, such as `Dividend`, `Interest` or `Fee`. |
-| `provider_type` | The importing provider's own type for the row, for example `"Withholding Tax"`. Use it to tell rows apart that share a label. Only this value is exposed; the provider's raw payload is not. |
-| `security_id` | The security the row relates to, such as the one that paid a dividend. Look it up with `GET /api/v1/securities/{id}`. |
-| `exchange_rate` | The rate from the transaction's currency to the account's currency stored on the row, such as one reported by the provider. |
+| `provider_type` | The importing provider's type for the row, for example IBKR's `"Withholding Tax"`. Use it to tell rows apart that share a label. IBKR, Trading 212, Wise, Akahu and Kraken store the provider's own type. For CoinSpot, Sure sets it from the kind of movement, such as `"receive"` or `"send"`. Only this value is exposed; the provider's raw payload is not. |
+| `security_id` | The id of the Sure security the row relates to, such as the one that paid a dividend, or `null`. `GET /api/v1/securities/{id}` finds it only when one of your accounts holds or has traded that security; otherwise that lookup returns 404. |
+| `exchange_rate` | The rate from the transaction's currency to the account's currency stored on the row, such as one reported by the provider. `null` when none is stored, and when the transaction is in the account's currency, since no conversion applies. |
 
 ### Linking to a transaction
 

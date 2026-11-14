@@ -1099,13 +1099,13 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
       date: Date.current,
       amount: 1001.25,
       name: "Buy TAXF",
-      currency: "USD",
+      currency: "EUR",
       entryable: Trade.new(
         security: security,
         qty: 10,
         price: 100,
         fee: 1.2534,
-        currency: "USD",
+        currency: "EUR",
         investment_activity_label: "Buy",
         extra: { "exchange_rate" => 0.9123, "provider_raw" => { "account_number" => "U1234567" } }
       )
@@ -1116,7 +1116,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
     body = JSON.parse(response.body)
     assert_equal "1.2534", body["fee_decimal"]
-    assert_equal Money.new(BigDecimal("1.2534"), "USD").format, body["fee"]
+    assert_equal Money.new(BigDecimal("1.2534"), "EUR").format, body["fee"]
     assert_equal 0.9123, body["exchange_rate"]
     assert_not body.key?("extra")
     assert_not_includes response.body, "U1234567"
@@ -1140,6 +1140,62 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "0.0", trade_json["fee_decimal"]
     assert trade_json.key?("exchange_rate")
     assert_nil trade_json["exchange_rate"]
+  end
+
+  test "show and index return a null exchange rate instead of failing when extra is not a hash" do
+    security = Security.create!(ticker: "TAXX", name: "Malformed Extra Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 500,
+      name: "Buy TAXX",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    )
+    trade = entry.entryable
+
+    [ [ 1, 2 ], "raw-string-extra" ].each do |malformed|
+      # Written past the model, as a provider or a migration writing SQL might.
+      trade.update_column(:extra, malformed)
+
+      get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+      assert_response :success, "show failed for extra = #{malformed.inspect}"
+      assert_nil JSON.parse(response.body)["exchange_rate"]
+
+      get api_v1_trades_url, params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
+      assert_response :success, "index failed for extra = #{malformed.inspect}"
+      trade_json = JSON.parse(response.body)["trades"].find { |row| row["id"] == trade.id }
+      assert trade_json
+      assert_nil trade_json["exchange_rate"]
+    end
+  end
+
+  test "exchange rate is read the way the app converts it and only where it applies" do
+    security = Security.create!(ticker: "TAXR", name: "Rate Parsing Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 500,
+      name: "Buy TAXR",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "EUR", investment_activity_label: "Buy")
+    )
+    trade = entry.entryable
+
+    # Float() would read "0x10" as 16; the app's to_d reads it as 0 and
+    # refuses to convert with it.
+    trade.update_column(:extra, { "exchange_rate" => "0x10" })
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+
+    trade.update_column(:extra, { "exchange_rate" => "1.0850" })
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_equal 1.085, JSON.parse(response.body)["exchange_rate"]
+
+    # A trade in the account's own currency is never converted, so a stored
+    # rate on it is not exposed.
+    trade.update_columns(currency: @investment_account.currency, extra: { "exchange_rate" => 1.085 })
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
   end
 
   private

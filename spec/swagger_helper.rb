@@ -1051,18 +1051,18 @@ RSpec.configure do |config|
               provider_type: {
                 type: :string,
                 nullable: true,
-                description: "The importing provider's own type for the row, such as \"Withholding Tax\", when the provider records one"
+                description: "The importing provider's type for the row, such as IBKR's \"Withholding Tax\", when one is recorded. For CoinSpot, Sure sets it from the kind of movement."
               },
               security_id: {
                 type: :string,
                 format: :uuid,
                 nullable: true,
-                description: 'Security the row relates to (for example the one that paid a dividend), when the importer recorded it'
+                description: 'Sure security the row relates to (for example the one that paid a dividend), when the importer recorded it. GET /api/v1/securities/{id} finds it only if an account holds or has traded it.'
               },
               exchange_rate: {
                 type: :number,
                 nullable: true,
-                description: "Rate from the transaction's currency to the account's currency stored on it. Null when none is stored."
+                description: "Rate from the transaction's currency to the account's currency stored on it. Null when none is stored or the transaction is in the account's currency."
               },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
@@ -1778,7 +1778,7 @@ RSpec.configure do |config|
               exchange_rate: {
                 type: :number,
                 nullable: true,
-                description: "Rate from the trade's currency to the account's currency stored on the trade, such as one reported by the provider. Null when none is stored."
+                description: "Rate from the trade's currency to the account's currency stored on the trade, such as one reported by the provider. Null when none is stored or the trade is in the account's currency."
               },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
