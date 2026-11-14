@@ -426,10 +426,11 @@ module Security::Provided
   }.freeze
 
   # A fund's own type does name its wrapper, so the sub-class is known. Its
-  # asset class, sector and region come from what it holds (`fund_weights`),
-  # and only when one bucket holds at least FUND_DOMINANT_WEIGHT percent of
-  # the fund. A 60/40 fund or a world ETF has no single answer, so it gets
-  # none rather than a misleading one.
+  # asset class comes from its category when that names one (commodity,
+  # money market), and otherwise from what it holds (`fund_weights`), but
+  # only when one class holds at least FUND_DOMINANT_WEIGHT percent of the
+  # fund. A 60/40 fund has no single answer, so it gets none rather than a
+  # misleading one.
   FUND_SUB_CLASS_FROM_PROVIDER_KIND = {
     "etf" => "etf",
     "fund" => "mutual_fund",
@@ -448,18 +449,22 @@ module Security::Provided
     fund_sub_class = FUND_SUB_CLASS_FROM_PROVIDER_KIND[kind]
     weights = fund_sub_class ? (data.fund_weights || {}) : {}
 
+    mapped_class, mapped_sub_class = ASSET_CLASS_FROM_PROVIDER_KIND[kind]
+    if fund_sub_class
+      mapped_class = fund_asset_class(weights)
+      mapped_sub_class = fund_sub_class if mapped_class
+    end
+    # World_Regions and Sector_Weights describe only the fund's equity
+    # sleeve, so they speak for the fund only when equity is what it holds.
+    # A bond fund with a 1% US-equity sliver is not a North American fund.
+    equity_fund = fund_sub_class && mapped_class == "equity"
+
     attrs = {}
     # Free text with no other writer, so "already set" is the only guard it
     # needs -- a value a user corrected is not re-stated here.
-    provided_sector = data.sector.presence || dominant_fund_weight(weights[:sector])
+    provided_sector = data.sector.presence || (dominant_fund_weight(weights[:equity_sector]) if equity_fund)
     attrs[:sector] = provided_sector if provided_sector.present? && sector.blank?
     attrs[:industry] = data.industry if data.industry.present? && industry.blank?
-
-    mapped_class, mapped_sub_class = ASSET_CLASS_FROM_PROVIDER_KIND[kind]
-    if fund_sub_class
-      mapped_class = dominant_fund_weight(weights[:asset_class])
-      mapped_sub_class = fund_sub_class if mapped_class
-    end
 
     return attrs unless classification_source.in?([ nil, "default" ])
 
@@ -469,27 +474,38 @@ module Security::Provided
       attrs[:classification_source] = "provider"
     end
 
-    # The region the defaults derive from `country_code` is the LISTING
-    # country's. A company's region is its issuer's country; a fund's is where
-    # its holdings are, and its listing or domicile country (Ireland,
-    # Luxembourg) says nothing about that. The provider replaces the region
-    # only while it is still the one the listing implies, so a region someone
-    # set by hand stays.
-    if region.blank? || region == Security::REGIONS.dig(country_code.to_s.upcase, "region")
-      provided_region =
-        if fund_sub_class
-          dominant_fund_weight(weights[:region])
-        else
-          Security::REGIONS.dig(data.issuer_country_code.to_s.upcase, "region")
-        end
-
-      # A classified fund with no dominant region (a world ETF) has its
-      # listing region cleared rather than kept: it is not in that region.
-      attrs[:region] = provided_region if provided_region || (fund_sub_class && mapped_class)
+    # A stock keeps the region its listing country gives it: a provider's
+    # issuer country is the country of incorporation, which moves Accenture
+    # or Medtronic (Irish-domiciled, US-run) to Europe.
+    #
+    # A fund's listing or domicile country (Ireland, Luxembourg) says nothing
+    # about what it holds, so a classified fund's region is the dominant
+    # region of its equity holdings, or none: a world ETF, a bond fund or a
+    # commodity fund has its listing region cleared. The provider replaces
+    # the region only while it is still the one the listing implies, so a
+    # region someone set by hand stays.
+    if fund_sub_class && mapped_class &&
+        (region.blank? || region == Security::REGIONS.dig(country_code.to_s.upcase, "region"))
+      attrs[:region] = (dominant_fund_weight(weights[:equity_region]) if equity_fund)
     end
 
     attrs
   end
+
+  # Nil when the fund is leveraged or inverse, or its weights are not plain
+  # long holdings (a short position, or a class above 100%): its holdings
+  # then say little about its exposure. Cash alone never decides the class:
+  # a commodity-futures ETF holds mostly T-bills as collateral. A money
+  # market fund is classified from its category instead.
+  def fund_asset_class(weights)
+    return nil if weights[:leveraged_or_inverse]
+
+    classes = weights[:asset_class] || {}
+    return nil if classes.values.any? { |percent| percent.negative? || percent > 100 }
+
+    weights[:category_asset_class].presence || dominant_fund_weight(classes.except("liquidity"))
+  end
+  private :fund_asset_class
 
   def dominant_fund_weight(weights)
     return nil if weights.blank?

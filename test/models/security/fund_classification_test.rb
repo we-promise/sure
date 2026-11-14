@@ -1,7 +1,8 @@
 require "test_helper"
 
-# ETFs and funds are classified from what they hold (`fund_weights`), and a
-# region comes from the issuer or the holdings, not from the listing country.
+# ETFs and funds are classified from their category or what they hold
+# (`fund_weights`). A fund's region comes from its equity holdings, not from
+# the listing country; a stock keeps its listing region.
 class Security::FundClassificationTest < ActiveSupport::TestCase
   include ProviderTestHelper
 
@@ -46,7 +47,7 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
   test "a world ETF does not keep the region of the exchange it is listed on" do
     import(info(kind: "ETF", fund_weights: {
       asset_class: { "equity" => 99.6 },
-      region: { "north_america" => 64.0, "europe" => 15.0, "asia_pacific" => 21.0 }
+      equity_region: { "north_america" => 64.0, "europe" => 15.0, "asia_pacific" => 21.0 }
     }))
 
     assert_nil @security.reload.region
@@ -58,62 +59,145 @@ class Security::FundClassificationTest < ActiveSupport::TestCase
   test "an ETF that holds one region gets that region" do
     import(info(kind: "ETF", fund_weights: {
       asset_class: { "equity" => 99.9 },
-      region: { "north_america" => 99.4, "europe" => 0.6 }
+      equity_region: { "north_america" => 99.4, "europe" => 0.6 }
     }))
 
     assert_equal "north_america", @security.reload.region
   end
 
   test "a sector ETF gets its sector, a broad one does not" do
-    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0 }, sector: { "Technology" => 98.0, "Industrials" => 2.0 } }))
+    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0 }, equity_sector: { "Technology" => 98.0, "Industrials" => 2.0 } }))
     assert_equal "Technology", @security.reload.sector
 
     broad = Security.create!(ticker: "IWDA", exchange_operating_mic: "XAMS", country_code: "NL")
-    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0 }, sector: { "Technology" => 25.0, "Healthcare" => 12.0 } }), security: broad)
+    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0 }, equity_sector: { "Technology" => 25.0, "Healthcare" => 12.0 } }), security: broad)
     assert_nil broad.reload.sector
   end
 
   test "a manual classification is not replaced by a fund's holdings" do
     @security.update!(asset_class: "alternative_investment", asset_sub_class: "etf", classification_source: "manual", region: "asia_pacific")
 
-    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0 }, region: { "north_america" => 99.0 } }))
+    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0 }, equity_region: { "north_america" => 99.0 } }))
 
     assert_equal "alternative_investment", @security.reload.asset_class
     assert_equal "asia_pacific", @security.region
   end
 
-  test "a stock's region is its issuer's country, not its listing's" do
-    adr = Security.create!(ticker: "BABA", exchange_operating_mic: "XNYS", country_code: "US")
-    assert_equal "north_america", adr.region
-
-    import(info(kind: "Common Stock", issuer_country_code: "CN"), security: adr)
-
-    assert_equal "asia_pacific", adr.reload.region
-    assert_equal "equity", adr.asset_class
-  end
-
   test "a region someone set by hand is kept" do
-    stock = Security.create!(ticker: "SHEL", exchange_operating_mic: "XLON", country_code: "GB", region: "middle_east_africa")
+    @security.update!(region: "middle_east_africa")
 
-    import(info(kind: "Common Stock", issuer_country_code: "GB"), security: stock)
+    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 99.0 }, equity_region: { "north_america" => 99.0 } }))
 
-    assert_equal "middle_east_africa", stock.reload.region
+    assert_equal "equity", @security.reload.asset_class
+    assert_equal "middle_east_africa", @security.region
   end
 
-  test "an issuer country the region list does not name keeps the listing region" do
-    stock = Security.create!(ticker: "XYZ", exchange_operating_mic: "XNYS", country_code: "US")
+  # SH: a short stock position plus cash collateral above 100%.
+  test "an inverse ETF is left unclassified" do
+    sh = Security.create!(ticker: "SH", exchange_operating_mic: "ARCX", country_code: "US")
+    import(info(kind: "ETF", fund_weights: eodhd_weights("Asset_Allocation" => {
+      "Stock US" => { "Net_Assets_%" => "-100.2" }, "Cash" => { "Net_Assets_%" => "200.2" }
+    })), security: sh)
 
-    import(info(kind: "Common Stock", issuer_country_code: "ZZ"), security: stock)
+    assert_nil sh.reload.asset_class
+    assert_equal "north_america", sh.region
+  end
 
-    assert_equal "north_america", stock.reload.region
+  test "a fund whose category says leveraged or inverse is left unclassified" do
+    import(info(kind: "ETF", fund_weights: eodhd_weights(
+      { "Asset_Allocation" => { "Stock US" => { "Net_Assets_%" => "99.0" } } },
+      "Trading--Leveraged Equity"
+    )))
+
+    assert_nil @security.reload.asset_class
+  end
+
+  test "weights that are not plain long holdings leave a fund unclassified" do
+    import(info(kind: "ETF", fund_weights: { asset_class: { "equity" => 200.0, "liquidity" => -100.0 } }))
+
+    assert_nil @security.reload.asset_class
+  end
+
+  # DBC, USO: futures exposure, T-bills and cash as collateral.
+  test "a commodity ETF that holds mostly cash is not classified as liquidity" do
+    dbc = Security.create!(ticker: "DBC", exchange_operating_mic: "ARCX", country_code: "US")
+    import(info(kind: "ETF", fund_weights: eodhd_weights("Asset_Allocation" => {
+      "Cash" => { "Net_Assets_%" => "92.0" }, "Other" => { "Net_Assets_%" => "8.0" }
+    })), security: dbc)
+
+    assert_nil dbc.reload.asset_class
+  end
+
+  test "a fund's category decides its class over its holdings" do
+    dbc = Security.create!(ticker: "DBC", exchange_operating_mic: "ARCX", country_code: "US")
+    import(info(kind: "ETF", fund_weights: eodhd_weights(
+      { "Asset_Allocation" => { "Cash" => { "Net_Assets_%" => "92.0" }, "Bond" => { "Net_Assets_%" => "8.0" } } },
+      "Commodities Broad Basket"
+    )), security: dbc)
+
+    assert_equal [ "commodity", "etf", nil ], [ dbc.reload.asset_class, dbc.asset_sub_class, dbc.region ]
+
+    mmf = Security.create!(ticker: "VMFXX", exchange_operating_mic: "XNAS", country_code: "US")
+    import(info(kind: "FUND", fund_weights: eodhd_weights(
+      { "Asset_Allocation" => { "Cash" => { "Net_%" => "97.0" }, "Bonds" => { "Net_%" => "3.0" } } },
+      "Money Market-Taxable"
+    )), security: mmf)
+
+    assert_equal [ "liquidity", "mutual_fund" ], [ mmf.reload.asset_class, mmf.asset_sub_class ]
+  end
+
+  # World_Regions and Sector_Weights are percentages of the equity sleeve.
+  test "a bond fund's region and sector do not come from a small equity sleeve" do
+    aggg = Security.create!(ticker: "AGGG", exchange_operating_mic: "XLON", country_code: "GB")
+    import(info(kind: "ETF", fund_weights: eodhd_weights(
+      "Asset_Allocation" => { "Bond" => { "Net_Assets_%" => "98.0" }, "Stock US" => { "Net_Assets_%" => "1.0" }, "Cash" => { "Net_Assets_%" => "1.0" } },
+      "World_Regions" => { "North America" => { "Equity_%" => "100" } },
+      "Sector_Weights" => { "Energy" => { "Equity_%" => "100" } }
+    )), security: aggg)
+
+    aggg.reload
+    assert_equal "fixed_income", aggg.asset_class
+    assert_nil aggg.region
+    assert_nil aggg.sector
+  end
+
+  test "an unclassified fund keeps its listing region rather than its equity sleeve's" do
+    import(info(kind: "ETF", fund_weights: eodhd_weights(
+      "Asset_Allocation" => { "Stock US" => { "Net_Assets_%" => "60.0" }, "Bond" => { "Net_Assets_%" => "40.0" } },
+      "World_Regions" => { "North America" => { "Equity_%" => "100" } }
+    )))
+
+    assert_nil @security.reload.asset_class
+    assert_equal "europe", @security.region
+  end
+
+  # Accenture, Medtronic, Eaton: US-listed and US-run, incorporated in Ireland.
+  test "a stock keeps the region of its listing, not its country of incorporation" do
+    acn = Security.create!(ticker: "ACN", exchange_operating_mic: "XNYS", country_code: "US")
+    provider = Provider::Eodhd.new("test_api_key")
+    provider.stubs(:enforce_daily_limit!)
+    provider.stubs(:throttle_request)
+    provider.stubs(:client).returns(client = mock)
+    client.stubs(:get).returns(stub(body: {
+      "General" => { "Name" => "Accenture plc", "Type" => "Common Stock", "CountryISO" => "IE", "Sector" => "Technology" }
+    }.to_json))
+    acn.stubs(:price_data_provider).returns(provider)
+
+    acn.import_provider_details(include_classification: true)
+
+    assert_equal [ "equity", "stock", "north_america" ], [ acn.reload.asset_class, acn.asset_sub_class, acn.region ]
   end
 
   private
-    def info(kind:, fund_weights: nil, issuer_country_code: nil, sector: nil)
+    def eodhd_weights(etf_data, category = nil)
+      provider = Provider::Eodhd.new("test_api_key")
+      category ? provider.send(:fund_weights_from, etf_data, category: category) : provider.send(:fund_weights_from, etf_data)
+    end
+
+    def info(kind:, fund_weights: nil, sector: nil)
       Provider::SecurityConcept::SecurityInfo.new(
         symbol: "X", name: nil, links: nil, logo_url: nil, description: nil, kind: kind,
-        exchange_operating_mic: nil, sector: sector, industry: nil,
-        issuer_country_code: issuer_country_code, fund_weights: fund_weights
+        exchange_operating_mic: nil, sector: sector, industry: nil, fund_weights: fund_weights
       )
     end
 
