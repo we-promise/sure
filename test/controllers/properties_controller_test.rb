@@ -254,16 +254,20 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[purchase_date]'][value='#{(Entry.min_supported_date + 1).iso8601}']"
   end
 
-  test "value step re-renders a rejected date when the submitted currency is unknown" do
+  test "value step rejects an unknown currency" do
     account = create_draft_property
+    add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)
 
-    patch update_balances_property_path(account), params: {
-      account: { balance: 250_000, currency: "XXX", purchase_date: 1.day.from_now.to_date.iso8601 }
-    }
+    [ 1.day.from_now.to_date, Date.current ].each do |purchase_date|
+      patch update_balances_property_path(account), params: {
+        account: { balance: 250_000, currency: "XXX", purchase_date: purchase_date.iso8601 }
+      }
 
-    assert_response :unprocessable_entity
-    assert_select "input[name='account[balance]'][value='250000.00']"
+      assert_response :unprocessable_entity
+      assert_select "input[name='account[balance]'][value='250000.00']"
+    end
     assert_equal "EUR", account.reload.currency
+    assert_not account.has_opening_anchor?
   end
 
   test "value step keeps the submitted price when the purchase date is rejected" do

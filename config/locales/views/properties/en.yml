@@ -109,6 +109,7 @@ en:
         link_valuation: "Update value automatically with %{provider}"
         link_valuation_description: "This property's value is only updated manually."
     update_balances:
+      invalid_currency: "Choose a currency from the list."
       invalid_purchase_date: "Enter a purchase date that isn't in the future or more than 30 years ago."
     refresh_valuation:
       queued: "The valuation refresh has started. The new value will appear shortly."

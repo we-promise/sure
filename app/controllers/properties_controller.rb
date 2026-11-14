@@ -53,6 +53,10 @@ class PropertiesController < ApplicationController
   end
 
   def update_balances
+    if balance_params[:currency].present? && !known_currency?(balance_params[:currency])
+      return render_balances_error(t(".invalid_currency"))
+    end
+
     if @account.draft? && (date_error = purchase_date_error)
       return render_balances_error(date_error)
     end
@@ -306,10 +310,14 @@ class PropertiesController < ApplicationController
     # A currency the app doesn't know is left out, since the form can't render it.
     def render_balances_error(message)
       submitted = balance_params.slice(:balance, :currency).compact_blank
-      submitted.delete(:currency) unless Money::Currency.all.key?(submitted[:currency].to_s.downcase)
+      submitted.delete(:currency) unless known_currency?(submitted[:currency])
       @account.assign_attributes(submitted)
       @error_message = message
       render :balances, status: :unprocessable_entity
+    end
+
+    def known_currency?(code)
+      Money::Currency.all.key?(code.to_s.downcase)
     end
 
     def purchase_date
