@@ -48,11 +48,16 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # The empty state shows only while there is nothing to list: no manual or Apple
-  # Wallet accounts and no provider connections the viewer may see.
+  # Wallet accounts and no provider connections the viewer may see. These are the
+  # lists the page has always checked.
   test "the index is empty only when no account or connection is listed" do
     controller = AccountsController.new
-    lists = %i[@manual_accounts @financekit_accounts] +
-            AccountsController::INDEX_CONNECTIONS.map { |connection| :"@#{connection[:key]}_items" }
+    lists = %i[@manual_accounts @financekit_accounts @plaid_items @simplefin_items @lunchflow_items
+               @truelayer_items @redbark_items @akahu_items @up_items @monobank_items @fio_items
+               @enable_banking_items @coinstats_items @coinbase_items @mercury_items @brex_items
+               @ibkr_items @snaptrade_items @indexa_capital_items @sophtron_items @binance_items
+               @kraken_items @coinspot_items @questrade_items @wise_items @onchain_wallet_items
+               @trade_republic_items @trading212_items @sharesight_items]
     assert_equal Provider::Factory.connection_declarations.size + 1, lists.size
 
     lists.each { |list| controller.instance_variable_set(list, []) }
