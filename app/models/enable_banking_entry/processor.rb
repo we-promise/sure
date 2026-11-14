@@ -190,6 +190,23 @@ class EnableBankingEntry::Processor
     data[:_pending] == true || unidentified_hold?(data)
   end
 
+  # External id of the stored pending entry this payload settles, when the ASPSP
+  # identifies it: the payload's own external_id, or its entry_reference when a
+  # transaction_id assigned at booking changed the external_id.
+  #
+  # @param pending_external_ids [Set<String>] stored pending entries still open
+  # @return [String, nil]
+  def self.settled_pending_external_id(raw_transaction_data, pending_external_ids)
+    return if pending_external_ids.blank?
+
+    data = raw_transaction_data.with_indifferent_access
+    return if pending_payload?(data)
+
+    reference = data[:entry_reference].presence
+    candidates = [ compute_external_id(data), ("enable_banking_#{reference}" if reference) ]
+    candidates.compact.find { |id| pending_external_ids.include?(id) }
+  end
+
   # External ids of the rows stored under a synthesised content hash, which are
   # the only rows a later identifier can claim.
   #
@@ -224,18 +241,20 @@ class EnableBankingEntry::Processor
   # once per row -- same pattern as the shared import_adapter. Falls back to
   # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
   #
-  # identifierless_external_ids / excluded_external_ids: the batch's live sets,
-  # same pattern again. Both are mutated as claims happen, so a row later in the
-  # same batch sees what earlier rows did -- excluded_ids in the batch processor
-  # is built once, before the loop, and would otherwise be stale.
+  # identifierless_external_ids / excluded_external_ids / pending_external_ids:
+  # the batch's live sets, same pattern again. All are mutated as claims happen,
+  # so a row later in the same batch sees what earlier rows did -- excluded_ids
+  # in the batch processor is built once, before the loop, and would otherwise
+  # be stale.
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
-                 identifierless_external_ids: nil, excluded_external_ids: nil)
+                 identifierless_external_ids: nil, excluded_external_ids: nil, pending_external_ids: nil)
     @enable_banking_transaction = enable_banking_transaction
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
     @known_merchant_names = known_merchant_names
     @identifierless_external_ids = identifierless_external_ids
     @excluded_external_ids = excluded_external_ids
+    @pending_external_ids = pending_external_ids
   end
 
   def process
@@ -258,6 +277,8 @@ class EnableBankingEntry::Processor
     first_hold_import = unidentified_hold? &&
       !account.entries.exists?(source: "enable_banking", external_id: safe_id)
 
+    settled_pending_id = self.class.settled_pending_external_id(data, pending_external_ids)
+
     entry = begin
       import_adapter.import_transaction(
         external_id: external_id,
@@ -268,7 +289,10 @@ class EnableBankingEntry::Processor
         source: "enable_banking",
         merchant: merchant,
         notes: notes,
-        extra: extra
+        extra: extra,
+        # Claims that exact pending entry before the adapter falls back to
+        # matching any pending entry of the same amount.
+        pending_transaction_id: (settled_pending_id unless settled_pending_id == external_id)
       )
     rescue ArgumentError => e
       Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{safe_id}: #{e.message}"
@@ -283,6 +307,7 @@ class EnableBankingEntry::Processor
     end
 
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
+    pending_external_ids.delete(settled_pending_id) if entry && settled_pending_id
 
     entry
   end
@@ -538,6 +563,10 @@ class EnableBankingEntry::Processor
 
     def excluded_external_ids
       @excluded_external_ids ||= Set.new
+    end
+
+    def pending_external_ids
+      @pending_external_ids ||= Set.new
     end
 
     # Re-key the row this movement was already imported under, when the ASPSP has
