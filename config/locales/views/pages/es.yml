@@ -52,6 +52,7 @@ es:
         compact: Compacto
         auto: Automático
         tall: Alto
+        gridlines_label: Líneas de cuadrícula
       net_worth_chart:
         data_not_available: Datos no disponibles para el período seleccionado
         title: Patrimonio neto

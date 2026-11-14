@@ -51,6 +51,40 @@ export default class extends Controller {
     window.dispatchEvent(new Event("resize"));
   }
 
+  // Gridlines on/off for a time-series chart. Flipping the chart's Stimulus
+  // `gridlines` value makes it redraw itself (including the label gutter), so
+  // the change is instant. The menu stays open so the effect is visible.
+  // The switch applies optimistically; if the save fails it is put back, so the
+  // screen never claims a setting the server does not have.
+  async toggleGridlines(event) {
+    const checkbox = event.currentTarget;
+    const enabled = checkbox.checked;
+    const chart = this._section()?.querySelector(
+      '[data-controller~="time-series-chart"]',
+    );
+    const apply = (value) =>
+      chart?.setAttribute(
+        "data-time-series-chart-gridlines-value",
+        String(value),
+      );
+
+    // Rolling back to "the opposite of what I tried" breaks when toggles
+    // overlap (on, then off, both failing would end up on). Roll back to the
+    // last value the server confirmed instead, and only for the newest toggle.
+    this._confirmedGridlines ??= checkbox.defaultChecked;
+    this._gridlinesSequence = (this._gridlinesSequence ?? 0) + 1;
+    const sequence = this._gridlinesSequence;
+
+    apply(enabled);
+
+    if (await this._save({ gridlines: enabled })) {
+      this._confirmedGridlines = enabled;
+    } else if (sequence === this._gridlinesSequence) {
+      checkbox.checked = this._confirmedGridlines;
+      apply(this._confirmedGridlines);
+    }
+  }
+
   _section() {
     return this.element.closest("[data-section-key]");
   }
@@ -73,11 +107,12 @@ export default class extends Controller {
     }
   }
 
+  // Resolves to true when the server accepted the change.
   async _save(payload) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
     if (!csrfToken) {
       console.error("[Dashboard Widget Size] CSRF token not found.");
-      return;
+      return false;
     }
 
     try {
@@ -100,11 +135,14 @@ export default class extends Controller {
           response.status,
         );
       }
+
+      return response.ok;
     } catch (error) {
       console.error(
         "[Dashboard Widget Size] Network error saving layout:",
         error,
       );
+      return false;
     }
   }
 }

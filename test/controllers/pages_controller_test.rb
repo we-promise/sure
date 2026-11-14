@@ -72,6 +72,50 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "single", @user.reload.dashboard_section_width("cashflow_sankey")
   end
 
+  test "net worth gridlines are off by default and persist when switched on and off" do
+    assert_not @user.reload.dashboard_section_gridlines?("net_worth_chart")
+
+    patch "/dashboard/preferences", params: {
+      preferences: { dashboard_section_layout: { net_worth_chart: { gridlines: true } } }
+    }, as: :json
+
+    assert_response :ok
+    assert @user.reload.dashboard_section_gridlines?("net_worth_chart")
+
+    patch "/dashboard/preferences", params: {
+      preferences: { dashboard_section_layout: { net_worth_chart: { gridlines: false } } }
+    }, as: :json
+
+    assert_response :ok
+    assert_not @user.reload.dashboard_section_gridlines?("net_worth_chart")
+  end
+
+  test "switching gridlines does not clobber the widget's height" do
+    patch "/dashboard/preferences", params: {
+      preferences: { dashboard_section_layout: { net_worth_chart: { height: "tall" } } }
+    }, as: :json
+    patch "/dashboard/preferences", params: {
+      preferences: { dashboard_section_layout: { net_worth_chart: { gridlines: true } } }
+    }, as: :json
+
+    assert_equal "tall", @user.reload.dashboard_section_height("net_worth_chart")
+    assert @user.dashboard_section_gridlines?("net_worth_chart")
+  end
+
+  test "dashboard renders the gridlines switch and hands the saved setting to the net worth chart" do
+    get root_path
+
+    assert_response :success
+    assert_select "input#gridlines-net_worth_chart[type=checkbox]:not([checked])"
+    assert_select "#netWorthChart[data-time-series-chart-gridlines-value=false]"
+
+    @user.update_dashboard_preferences({ "dashboard_section_layout" => { "net_worth_chart" => { "gridlines" => true } } })
+    get root_path
+
+    assert_select "input#gridlines-net_worth_chart[type=checkbox][checked]"
+    assert_select "#netWorthChart[data-time-series-chart-gridlines-value=true]"
+  end
+
   test "the Customize button is an icon named for screen readers" do
     get root_path
 

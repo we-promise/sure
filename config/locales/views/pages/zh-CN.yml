@@ -61,6 +61,7 @@ zh-CN:
         compact: 紧凑
         auto: 自动
         tall: 较高
+        gridlines_label: 网格线
       net_worth_chart:
         data_not_available: 所选时间段内无可用数据
         title: 净资产
