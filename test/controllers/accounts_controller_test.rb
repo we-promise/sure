@@ -47,6 +47,39 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ older.id, newer.id ], @controller.view_assigns["trading212_items"].map(&:id)
   end
 
+  # The empty state shows only while there is nothing to list: no manual or Apple
+  # Wallet accounts and no provider connections the viewer may see.
+  test "the index is empty only when no account or connection is listed" do
+    controller = AccountsController.new
+    lists = %i[@manual_accounts @financekit_accounts] +
+            AccountsController::INDEX_CONNECTIONS.map { |connection| :"@#{connection[:key]}_items" }
+    assert_equal Provider::Factory.connection_declarations.size + 1, lists.size
+
+    lists.each { |list| controller.instance_variable_set(list, []) }
+    assert controller.send(:accounts_index_empty?)
+
+    lists.each do |list|
+      controller.instance_variable_set(list, [ :listed ])
+      assert_not controller.send(:accounts_index_empty?), "#{list} is not counted"
+      controller.instance_variable_set(list, [])
+    end
+  end
+
+  test "index shows the empty state for a family with nothing to list, and not once it has a connection" do
+    sign_in user = users(:empty)
+    AccountsController::INDEX_CONNECTIONS.each { |connection| user.family.public_send(connection[:association]).destroy_all }
+    assert_empty user.family.accounts
+
+    get accounts_url
+    assert_response :success
+    assert_includes response.body, I18n.t("accounts.empty.no_accounts")
+
+    user.family.brex_items.create!(name: "Brex", token: "token")
+    get accounts_url
+    assert_response :success
+    assert_not_includes response.body, I18n.t("accounts.empty.no_accounts")
+  end
+
   test "the index sync preload covers every provider's connections" do
     keys = Provider::Factory.connection_declarations.filter_map { |declaration| declaration[:key] if declaration[:lists][:accounts_index] }
     assert_equal Provider::Factory.connection_declarations.map { |declaration| declaration[:key] } - %w[financekit], keys

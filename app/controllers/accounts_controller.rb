@@ -7,7 +7,7 @@ class AccountsController < ApplicationController
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
 
-  helper_method :visible_card_accounts
+  helper_method :visible_card_accounts, :accounts_index_empty?
 
   # The connections /accounts lists, each loaded with its adapter's declared query.
   INDEX_CONNECTIONS = Provider::Factory.connection_declarations
@@ -473,6 +473,13 @@ class AccountsController < ApplicationController
 
       @accessible_account_id_set ||= @accessible_account_ids.to_set
       item.accounts.select { |account| @accessible_account_id_set.include?(account.id) }
+    end
+
+    # True when the index has nothing to list: no manual or Apple Wallet accounts
+    # and no provider connections the viewer may see.
+    def accounts_index_empty?
+      @manual_accounts.empty? && @financekit_accounts.empty? &&
+        INDEX_CONNECTIONS.all? { |connection| instance_variable_get(:"@#{connection[:key]}_items").empty? }
     end
 
     def visible_provider_items(items)
