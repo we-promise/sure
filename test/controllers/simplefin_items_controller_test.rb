@@ -197,11 +197,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     token = Base64.strict_encode64("https://example.com/claim")
 
-    SimplefinConnectionUpdateJob.expects(:perform_later).with(
-      family_id: @family.id,
-      old_simplefin_item_id: @simplefin_item.id,
-      setup_token: token
-    ).once
+    mock_provider = mock()
+    mock_provider.stubs(:validate_setup_token!)
+    mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     patch simplefin_item_url(@simplefin_item), params: {
       simplefin_item: { setup_token: token }
@@ -214,7 +213,7 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
   test "update rejects a token whose claim URL targets a disallowed address" do
     @simplefin_item.update!(status: :requires_update)
     token = Base64.strict_encode64("http://169.254.169.254/latest/meta-data/")
-    SimplefinConnectionUpdateJob.expects(:perform_later).never
+    Provider::Simplefin.any_instance.expects(:claim_access_url).never
 
     patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }
 
@@ -231,6 +230,50 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_includes response.body, I18n.t("simplefin_items.update.errors.blank_token", default: "Please enter a SimpleFIN setup token")
+  end
+
+  # The bridge answers 403 for a token that was already claimed. The claim
+  # used to run in a job, so this request answered with a success toast and
+  # the item stayed requires_update.
+  test "update with a spent token shows the error in the modal and keeps the item" do
+    @simplefin_item.update!(status: :requires_update, access_url: "https://example.com/old_access")
+    token = Base64.strict_encode64("https://example.com/claim")
+
+    mock_provider = mock()
+    mock_provider.stubs(:validate_setup_token!)
+    mock_provider.expects(:claim_access_url).with(token)
+      .raises(Provider::Simplefin::SimplefinError.new("Setup token may be compromised, expired, or already used", :token_compromised))
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+
+    patch simplefin_item_url(@simplefin_item),
+          params: { simplefin_item: { setup_token: token } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :unprocessable_entity
+    assert_select "turbo-frame#modal", text: /#{I18n.t("simplefin_items.update.errors.token_compromised")}/
+    assert_equal "requires_update", @simplefin_item.reload.status
+    assert_equal "https://example.com/old_access", @simplefin_item.access_url
+  end
+
+  # A successful update from the modal must leave the modal, not just toast
+  # into it: the frame gets a redirect stream that visits the accounts page.
+  test "successful update from the edit modal redirects out of the modal" do
+    @simplefin_item.update!(status: :requires_update)
+    token = Base64.strict_encode64("https://example.com/claim")
+
+    mock_provider = mock()
+    mock_provider.stubs(:validate_setup_token!)
+    mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
+
+    patch simplefin_item_url(@simplefin_item),
+          params: { simplefin_item: { setup_token: token } },
+          headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", accounts_path
+    assert_equal "good", @simplefin_item.reload.status
+    assert_equal I18n.t("simplefin_items.update.success"), flash[:notice]
   end
 
   # The edit modal sits in turbo-frame#modal, so Turbo swaps in that frame from
@@ -329,12 +372,9 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
-    # Perform the update - job updates access_url and enqueues sync
-    perform_enqueued_jobs(only: SimplefinConnectionUpdateJob) do
-      patch simplefin_item_url(@simplefin_item), params: {
-        simplefin_item: { setup_token: token }
-      }
-    end
+    patch simplefin_item_url(@simplefin_item), params: {
+      simplefin_item: { setup_token: token }
+    }
 
     assert_redirected_to accounts_path
     assert_equal "SimpleFIN connection updated.", flash[:notice]
@@ -391,12 +431,9 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
     mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
     Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
-    # Perform update - job updates access_url and enqueues sync
-    perform_enqueued_jobs(only: SimplefinConnectionUpdateJob) do
-      patch simplefin_item_url(@simplefin_item), params: {
-        simplefin_item: { setup_token: token }
-      }
-    end
+    patch simplefin_item_url(@simplefin_item), params: {
+      simplefin_item: { setup_token: token }
+    }
 
     assert_redirected_to accounts_path
 
@@ -526,11 +563,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     token = Base64.strict_encode64("https://example.com/claim")
 
-    SimplefinConnectionUpdateJob.expects(:perform_later).with(
-      family_id: @family.id,
-      old_simplefin_item_id: @simplefin_item.id,
-      setup_token: token
-    ).once
+    mock_provider = mock()
+    mock_provider.stubs(:validate_setup_token!)
+    mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }
 
@@ -558,11 +594,10 @@ class SimplefinItemsControllerTest < ActionDispatch::IntegrationTest
 
     token = Base64.strict_encode64("https://example.com/claim")
 
-    SimplefinConnectionUpdateJob.expects(:perform_later).with(
-      family_id: @family.id,
-      old_simplefin_item_id: @simplefin_item.id,
-      setup_token: token
-    ).once
+    mock_provider = mock()
+    mock_provider.stubs(:validate_setup_token!)
+    mock_provider.expects(:claim_access_url).with(token).returns("https://example.com/new_access")
+    Provider::Simplefin.expects(:new).returns(mock_provider).at_least_once
 
     patch simplefin_item_url(@simplefin_item), params: { simplefin_item: { setup_token: token } }
 

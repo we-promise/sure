@@ -1,5 +1,6 @@
 class SimplefinItemsController < ApplicationController
   include SimplefinItems::MapsHelper
+  include StreamExtensions
   before_action :set_simplefin_item, only: [ :show, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
   before_action :require_admin!, only: [ :new, :create, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :balances, :setup_accounts, :complete_account_setup, :dismiss_replacement_suggestion ]
 
@@ -22,24 +23,16 @@ class SimplefinItemsController < ApplicationController
     return render_error(t(".errors.blank_token"), context: :edit) if setup_token.blank?
 
     begin
-      # Validate the token's claim URL (shape and address) early so the user
-      # gets immediate feedback; the job claims it later.
       Provider::Simplefin.new.validate_setup_token!(setup_token)
 
-      # Updating a SimpleFin connection can involve network retries/backoff and account import.
-      # Do it asynchronously so web requests aren't blocked by retry sleeps.
-      SimplefinConnectionUpdateJob.perform_later(
-        family_id: Current.family.id,
-        old_simplefin_item_id: @simplefin_item.id,
-        setup_token: setup_token
-      )
+      # Claim in the request, as create does. The token is single-use, so the
+      # bridge's answer is the only way to know whether the reconnect worked;
+      # claiming in a job left the modal open behind a success toast while
+      # the job was being discarded.
+      @simplefin_item.update_access_url!(setup_token: setup_token)
+      @simplefin_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        render turbo_stream: Array(flash_notification_stream_items)
-      else
-        redirect_to accounts_path, notice: t(".success"), status: :see_other
-      end
+      frame_redirect_to accounts_path, notice: t(".success")
     rescue ArgumentError, URI::InvalidURIError
       render_error(t(".errors.invalid_token"), setup_token, context: :edit)
     rescue Provider::Simplefin::SimplefinError => e

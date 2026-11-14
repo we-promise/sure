@@ -830,8 +830,7 @@ Importing comma-separated-value file(s) requires the `sure-worker` container to 
 
 Sure ships the Sidekiq Web dashboard at `/sidekiq`. The route only exists for a signed-in **super admin** — the first user created on your instance. Anyone else (including logged-out visitors) gets a 404, so there is nothing to configure to keep it safe. If you want a second layer of protection anyway, set both `SIDEKIQ_WEB_USERNAME` and `SIDEKIQ_WEB_PASSWORD` in your environment file to additionally require basic-auth credentials; there are no default credentials.
 
-For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings → Background jobs** — it maps queue state onto the actual records and offers safe recovery actions. The Sidekiq dashboard is a break-glass tool; two warnings when using it directly:
+For day-to-day triage of stuck syncs, imports, and exports, prefer **Settings → Background jobs** — it maps queue state onto the actual records and offers safe recovery actions. The Sidekiq dashboard is a break-glass tool; one warning when using it directly:
 
-- Never manually retry `SimplefinConnectionUpdateJob` — it consumes a single-use setup token, and a retry permanently breaks that connection attempt.
 - Deleting or retrying jobs does **not** update the corresponding Sure record (a deleted `ImportJob` leaves its import stuck in `importing`) — use Settings → Background jobs for record-level recovery.
 
