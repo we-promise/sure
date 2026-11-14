@@ -48,6 +48,20 @@ test("passes the Uncategorized sentinel through unchanged, not a display name", 
   assert.match(url, /q%5Bcategories%5D%5B%5D=__uncategorized__/);
 });
 
+test("appends account ids and statuses as array params", () => {
+  const url = buildCategoryTransactionsUrl({
+    filterValue: "Groceries",
+    startDate: "2026-05-01",
+    endDate: "2026-05-31",
+    accountIds: ["1", "2"],
+    statuses: ["confirmed"],
+  });
+  assert.equal(
+    url,
+    "/transactions?q%5Bcategories%5D%5B%5D=Groceries&q%5Bstart_date%5D=2026-05-01&q%5Bend_date%5D=2026-05-31&q%5Baccount_ids%5D%5B%5D=1&q%5Baccount_ids%5D%5B%5D=2&q%5Bstatus%5D%5B%5D=confirmed",
+  );
+});
+
 test("omits date params when dates are blank", () => {
   const url = buildCategoryTransactionsUrl({
     filterValue: "Groceries",
