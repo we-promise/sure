@@ -95,7 +95,8 @@ class Holding < ApplicationRecord
   SQL
 
   # #calculate_avg_cost for every holding given, in one query: the same
-  # trades, rates, fees and internal-movement rule, read through the same SQL
+  # trades, rates, fees, internal-movement and lot rules (a user-costed lot
+  # counts at its cost; a clamped position has none), read through the same SQL
   # (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals), so
   # the batch cannot answer differently from the holding on its own. Holdings
   # with a stored cost basis are skipped, since #avg_cost never reaches the
@@ -110,17 +111,36 @@ class Holding < ApplicationRecord
       .joins("JOIN entries ON entries.account_id = holdings.account_id AND entries.entryable_type = 'Trade' AND entries.date <= holdings.date")
       .joins("JOIN trades ON trades.id = entries.entryable_id AND trades.security_id = holdings.security_id AND trades.qty > 0")
       .joins(avg_cost_rates_join)
+      .joins(<<~SQL.squish)
+        LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
+          AND lots.source_entry_id = entries.id
+          AND lots.manual_total_cost IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM security_splits lot_splits
+            WHERE lot_splits.security_id = trades.security_id
+              AND lot_splits.ex_date > entries.date
+              AND lot_splits.ex_date <= holdings.date
+          )
+      SQL
       .group("holdings.id")
       .pluck(
         Arel.sql("holdings.id"),
-        Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?))", Trade::INTERNAL_MOVEMENT_LABELS ])),
-        *avg_cost_totals_sql
+        Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?) AND lots.id IS NULL)", Trade::INTERNAL_MOVEMENT_LABELS ])),
+        Arel.sql(<<~SQL.squish),
+          BOOL_OR(EXISTS (
+            SELECT 1 FROM holding_lots clamped_lots
+            WHERE clamped_lots.account_id = holdings.account_id
+              AND clamped_lots.security_id = holdings.security_id
+              AND clamped_lots.clamped
+          ))
+        SQL
+        *avg_cost_totals_sql(lots: true)
       )
       .index_by(&:first)
 
     pending.each do |holding|
-      _id, internal_movement, total_cost, total_qty, rate_missing = rows[holding.id]
-      value = avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency) unless internal_movement
+      _id, internal_movement, clamped, total_cost, total_qty, rate_missing = rows[holding.id]
+      value = avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency) unless internal_movement || clamped
       holding.preload_avg_cost(value)
     end
   end
@@ -151,14 +171,25 @@ class Holding < ApplicationRecord
   # and is not. A rate of zero or less converts nothing, so it counts as
   # missing, as it does in Money#exchange_to. Checked in the same query as
   # the totals rather than in another round trip.
-  def self.avg_cost_totals_sql(currency = :joined)
+  #
+  # `lots: true` is for a query that LEFT JOINs the costed holding_lots as
+  # `lots`: a trade whose lot the user has costed counts at that cost, which
+  # is already in the account's currency, so it needs no rate.
+  def self.avg_cost_totals_sql(currency = :joined, lots: false)
     foreign = currency != :joined ? sanitize_sql_array([ "trades.currency <> ?", currency ]) : "trades.currency <> accounts.currency"
     rate = AVG_COST_TRADE_RATE_SQL
+    cost = "(trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END"
+    missing = "#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0)"
+
+    if lots
+      cost = "CASE WHEN lots.id IS NOT NULL THEN lots.manual_total_cost ELSE #{cost} END"
+      missing = "lots.id IS NULL AND #{missing}"
+    end
 
     [
-      Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
+      Arel.sql("SUM(#{cost})"),
       Arel.sql("SUM(trades.qty)"),
-      Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
+      Arel.sql("BOOL_OR(#{missing})")
     ]
   end
 
@@ -433,11 +464,31 @@ class Holding < ApplicationRecord
     # Calculates weighted average cost from buy trades.
     # Returns nil if no trades exist (cost basis is unknown).
     def calculate_avg_cost
+      # Fewer units than the trades bought (see Holding::ReverseCalculator), so
+      # no figure drawn from those trades is the position's.
+      return nil if HoldingLot.where(account_id: account_id, security_id: security_id, clamped: true).exists?
+
       trades = account.trades
         .with_entry
         .joins(self.class.avg_cost_rates_join(account.currency))
         .where(security_id: security.id)
         .where("trades.qty > 0 AND entries.date <= ?", date)
+
+      # A trade whose lot the user has costed counts at that cost, a
+      # transfer-in included. The cost is already in the account's currency.
+      # This fallback divides by the trades' own quantities, which a later split
+      # does not restate, so a cost set on a lot split since is not used here.
+      trades = trades.joins(self.class.sanitize_sql_array([ <<~SQL.squish, date ]))
+        LEFT JOIN holding_lots lots ON lots.account_id = entries.account_id
+          AND lots.source_entry_id = entries.id
+          AND lots.manual_total_cost IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM security_splits lot_splits
+            WHERE lot_splits.security_id = trades.security_id
+              AND lot_splits.ex_date > entries.date
+              AND lot_splits.ex_date <= ?
+          )
+      SQL
 
       # An internal movement is not a purchase: securities moved in from elsewhere were
       # acquired at a price nothing here knows, so treating the day they
@@ -448,16 +499,16 @@ class Holding < ApplicationRecord
       # row. Averaging the purchases alone and applying that to every unit is
       # the same fabrication in a quieter form: buy one at 30k, receive one, and
       # the position would report 30k a unit for two units it did not cost that.
-      return nil if trades.where(investment_activity_label: Trade::INTERNAL_MOVEMENT_LABELS).exists?
+      return nil if trades.where(investment_activity_label: Trade::INTERNAL_MOVEMENT_LABELS, lots: { id: nil }).exists?
 
       # IS DISTINCT FROM, because `!=` is NULL for an unlabelled row and would
       # drop the ordinary purchases that carry no label at all.
       trades = trades.where(
-        "trades.investment_activity_label NOT IN (?) OR trades.investment_activity_label IS NULL",
+        "trades.investment_activity_label NOT IN (?) OR trades.investment_activity_label IS NULL OR lots.id IS NOT NULL",
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
-      total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency))
+      total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency, lots: true))
 
       self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, currency)
     end

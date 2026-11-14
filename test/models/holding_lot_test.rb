@@ -310,7 +310,6 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       clamped = HoldingLot.opening.find_by!(security: @gapped)
       assert_equal [ 0, true ], [ clamped.qty, clamped.clamped ]
-      assert_equal 125, @account.holdings.find_by!(security: @gapped, date: d(8)).cost_basis, "the figure is today's"
       assert_equal [ @gapped.id ], HoldingLot.where(clamped: true).pluck(:security_id), "nothing flagged on the controls"
     end
   end
@@ -354,12 +353,14 @@ class HoldingLotTest < ActiveSupport::TestCase
       materialize(:reverse)
       lot = HoldingLot.opening.find_by!(security: @opening)
       assert_equal [ BigDecimal("1.333333333333333333"), false ], [ lot.qty, lot.clamped ]
+      assert_equal BigDecimal("102.5"), @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis
 
       @account.holdings.find_by!(security: @opening, date: d(10)).update!(qty: 5, amount: 150)
       materialize(:reverse)
 
       lot.reload
       assert_equal [ 0, true ], [ lot.qty, lot.clamped ], "5 reported against 8 traded"
+      assert_nil @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis, "the stored figure is cleared"
     end
   end
 
@@ -799,6 +800,74 @@ class HoldingLotTest < ActiveSupport::TestCase
       materialize(:forward)
 
       assert_equal 99, @account.holdings.find_by!(security: security, date: d(10)).cost_basis
+    end
+  end
+
+  # --- Clamped positions ---------------------------------------------------------
+
+  test "provider quantity below trade-derived quantity makes the position unknown" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+
+      assert_nil @account.holdings.find_by!(security: @gapped, date: d(9)).cost_basis, "trades alone give 125"
+      assert_equal BigDecimal("102.5"), @account.holdings.find_by!(security: @opening, date: d(9)).cost_basis, "the control keeps its figure"
+    end
+  end
+
+  test "the avg-cost fallback answers nil for a clamped position" do
+    travel_to TODAY do
+      build_reverse_fixture
+      materialize(:reverse)
+      gapped = @account.holdings.find_by!(security: @gapped, date: d(10))
+      control = @account.holdings.find_by!(security: @opening, date: d(10))
+
+      assert_nil Holding.find(gapped.id).avg_cost, "trades alone give 125"
+      assert_not_nil Holding.find(control.id).avg_cost
+    end
+  end
+
+  # --- The fallback reads user-set lot costs ------------------------------------
+
+  # The fallback divides by the trades' own quantities, which a later split
+  # does not restate, so a user-set cost spread over them would read high.
+  # Across a split the transferred units stay unknown, as before the cost was
+  # set, in both the single and the batched path.
+  test "the avg-cost fallback leaves a costed transfer unknown across a later split" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTS2", 30)
+      transfer = trade(security, 10, 30, 2, label: Trade::TRANSFER_LABEL)
+      security.splits.create!(ex_date: d(5), numerator: 2, denominator: 1, source: "manual")
+      provider_row = provider_holding(security, 20, nil)
+      materialize(:reverse)
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(1500)
+
+      assert_nil Holding.find(provider_row.id).avg_cost, "not 1500 / 10, the unsplit units"
+      batch = [ Holding.find(provider_row.id) ]
+      Holding.preload_avg_costs(batch)
+      assert_nil batch.first.avg_cost
+    end
+  end
+
+  test "the avg-cost fallback counts a user-set lot cost, so a linked position resolves" do
+    travel_to TODAY do
+      setup_account
+      link_account
+      security = priced_security("LOTR", 30)
+      transfer = trade(security, 60, 30, 2, label: Trade::TRANSFER_LABEL)
+      buy = trade(security, 40, 20, 3)
+      provider_row = provider_holding(security, 100, nil)
+      materialize(:reverse)
+      assert_nil Holding.find(provider_row.id).avg_cost, "unknown before"
+
+      HoldingLot.find_by!(source_entry: transfer).set_manual_total_cost!(720)
+      assert_equal BigDecimal("15.2"), Holding.find(provider_row.id).avg_cost.amount
+
+      HoldingLot.find_by!(source_entry: buy).set_manual_total_cost!(600)
+      assert_equal BigDecimal("13.2"), Holding.find(provider_row.id).avg_cost.amount, "(720 + 600) / 100"
     end
   end
 
