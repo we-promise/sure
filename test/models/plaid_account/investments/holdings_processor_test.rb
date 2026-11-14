@@ -326,6 +326,23 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "EUR", holding.currency  # Should use account's currency
   end
 
+  test "sums Plaid holdings that resolve to the same security into one row" do
+    @plaid_account.update!(raw_holdings_payload: { "holdings" => [
+      { "security_id" => "aapl_a", "quantity" => 10, "institution_price" => 100, "iso_currency_code" => "USD" },
+      { "security_id" => "aapl_b", "quantity" => 5, "institution_price" => 110, "iso_currency_code" => "USD" }
+    ] })
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false))
+
+    assert_difference "Holding.count", 1 do
+      PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    end
+
+    holding = @plaid_account.current_account.holdings.find_by!(security: securities(:aapl), date: Date.current)
+    assert_equal 15, holding.qty
+    assert_equal 1550, holding.amount
+    assert_in_delta 103.3333, holding.price, 0.001
+  end
+
   test "dates every holding by the sync date it is given" do
     @plaid_account.update!(raw_holdings_payload: { "holdings" => [
       { "security_id" => "aapl", "quantity" => 10, "institution_price" => 100, "iso_currency_code" => "USD" }

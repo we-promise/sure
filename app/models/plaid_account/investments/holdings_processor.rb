@@ -8,30 +8,14 @@ class PlaidAccount::Investments::HoldingsProcessor
   end
 
   def process
-    holdings.each do |plaid_holding|
-      resolved_security_result = security_resolver.resolve(plaid_security_id: plaid_holding["security_id"])
-
-      next unless resolved_security_result.security.present?
-
-      security = resolved_security_result.security
-
-      # Parse quantity and price into BigDecimal for proper arithmetic
-      quantity_bd = parse_decimal(plaid_holding["quantity"])
-      price_bd = parse_decimal(plaid_holding["institution_price"])
-
-      # Skip if essential values are missing
-      next if quantity_bd.nil? || price_bd.nil?
-
-      # Compute amount using BigDecimal arithmetic to avoid floating point drift
-      amount_bd = quantity_bd * price_bd
-
+    positions.each_value do |position|
       import_adapter.import_holding(
-        security: security,
-        quantity: quantity_bd,
-        amount: amount_bd,
-        currency: plaid_holding["iso_currency_code"] || account.currency,
+        security: position[:security],
+        quantity: position[:quantity],
+        amount: position[:amount],
+        currency: position[:currency],
         date: as_of,
-        price: price_bd,
+        price: position[:price],
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
         delete_future_holdings: false  # Plaid doesn't allow holdings deletion
@@ -41,6 +25,41 @@ class PlaidAccount::Investments::HoldingsProcessor
 
   private
     attr_reader :plaid_account, :security_resolver, :as_of
+
+    # One position per Sure security and currency. A holding is dated by the
+    # sync that reported it, as every other provider's is, not by
+    # institution_price_as_of: a fund whose NAV is a session behind is still
+    # held today, and the account's latest snapshot must include it. Two Plaid
+    # holdings can resolve to the same security, and they share that date, so
+    # they are summed into one row rather than one overwriting the other.
+    def positions
+      holdings.each_with_object({}) do |plaid_holding, positions|
+        resolved_security_result = security_resolver.resolve(plaid_security_id: plaid_holding["security_id"])
+
+        next unless resolved_security_result.security.present?
+
+        security = resolved_security_result.security
+
+        # Parse quantity and price into BigDecimal for proper arithmetic
+        quantity_bd = parse_decimal(plaid_holding["quantity"])
+        price_bd = parse_decimal(plaid_holding["institution_price"])
+
+        # Skip if essential values are missing
+        next if quantity_bd.nil? || price_bd.nil?
+
+        currency = plaid_holding["iso_currency_code"] || account.currency
+        # Compute amount using BigDecimal arithmetic to avoid floating point drift
+        amount_bd = quantity_bd * price_bd
+
+        if (position = positions[[ security.id, currency ]])
+          position[:quantity] += quantity_bd
+          position[:amount] += amount_bd
+          position[:price] = position[:amount] / position[:quantity] unless position[:quantity].zero?
+        else
+          positions[[ security.id, currency ]] = { security: security, currency: currency, quantity: quantity_bd, amount: amount_bd, price: price_bd }
+        end
+      end
+    end
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
