@@ -91,62 +91,112 @@
     </div>
   <% end %>
 
-  <%
-    ibkr_item = Current.family.ibkr_items.first_or_initialize(name: "Interactive Brokers")
-    is_new_record = ibkr_item.new_record?
-  %>
+  <% active_items = local_assigns[:ibkr_items] || Current.family.ibkr_items.active.ordered %>
 
-  <% if ibkr_item.persisted? %>
-    <div class="flex flex-wrap justify-end gap-2">
-      <%= button_to sync_ibkr_item_path(ibkr_item, source: "panel"),
-                    method: :post,
-                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                    disabled: ibkr_item.syncing? do %>
-        <%= icon "refresh-cw", size: "sm" %>
-        <%= t(".sync") %>
-      <% end %>
+  <% if active_items.any? %>
+    <div class="space-y-3">
+      <% active_items.each do |item| %>
+        <%= render DS::Disclosure.new(variant: :card) do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <div class="flex items-center justify-between gap-2 w-full">
+              <div class="flex items-center gap-3">
+                <%= render ProviderLogo.new(provider_key: :ibkr) %>
+                <div>
+                  <p class="font-medium text-primary"><%= item.name %></p>
+                  <p class="text-xs text-secondary">
+                    <%= item.credentials_configured? ? item.sync_status_summary : t(".not_configured") %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          <% end %>
 
-      <%= button_to ibkr_item_path(ibkr_item),
-                    method: :delete,
-                    class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                    data: { turbo_confirm: t(".disconnect_confirm") } do %>
-        <%= icon "trash-2", size: "sm" %>
+          <div class="mt-4 space-y-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <%= render DS::Button.new(
+                text: t(".sync"),
+                icon: "refresh-cw",
+                variant: :outline,
+                href: sync_ibkr_item_path(item, source: "panel"),
+                method: :post,
+                disabled: item.syncing?
+              ) %>
+              <%= render DS::Button.new(
+                text: t(".disconnect"),
+                icon: "trash-2",
+                variant: :outline_destructive,
+                href: ibkr_item_path(item),
+                method: :delete,
+                data: { turbo_confirm: t(".disconnect_confirm_named", name: item.name) }
+              ) %>
+            </div>
+
+            <%= styled_form_with model: item,
+                                 url: ibkr_item_path(item),
+                                 scope: :ibkr_item,
+                                 method: :patch,
+                                 data: { turbo: true },
+                                 class: "space-y-3" do |form| %>
+              <%= form.text_field :name,
+                                  label: t(".connection_name_label"),
+                                  placeholder: t(".connection_name_placeholder") %>
+
+              <%= form.text_field :query_id,
+                                  label: t(".query_id_label"),
+                                  placeholder: t(".query_id_placeholder_existing"),
+                                  type: :password,
+                                  value: nil %>
+
+              <%= form.text_field :token,
+                                  label: t(".token_label"),
+                                  placeholder: t(".token_placeholder_existing"),
+                                  type: :password,
+                                  value: nil %>
+
+              <div class="flex flex-wrap justify-end gap-2">
+                <%= render DS::Link.new(
+                  text: t(".setup_accounts"),
+                  icon: "settings",
+                  variant: "secondary",
+                  href: setup_accounts_ibkr_item_path(item),
+                  frame: :modal
+                ) %>
+                <%= render DS::Button.new(text: t(".update_configuration"), type: :submit) %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
       <% end %>
     </div>
+
+    <%= render "settings/providers/add_connection_heading", label: t(".add_connection") %>
   <% end %>
 
-  <%= styled_form_with model: ibkr_item,
-                       url: is_new_record ? ibkr_items_path : ibkr_item_path(ibkr_item),
+  <% new_item = Current.family.ibkr_items.build(name: local_assigns[:new_item_name]) %>
+  <%= styled_form_with model: new_item,
+                       url: ibkr_items_path,
                        scope: :ibkr_item,
-                       method: is_new_record ? :post : :patch,
+                       method: :post,
                        data: { turbo: true },
                        class: "space-y-3" do |form| %>
+    <%= form.text_field :name,
+                        label: t(".connection_name_label"),
+                        placeholder: t(".connection_name_placeholder") %>
+
     <%= form.text_field :query_id,
                         label: t(".query_id_label"),
-                        placeholder: is_new_record ? t(".query_id_placeholder_new") : t(".query_id_placeholder_existing"),
-                        type: :password %>
+                        placeholder: t(".query_id_placeholder_new"),
+                        type: :password,
+                        value: nil %>
 
     <%= form.text_field :token,
                         label: t(".token_label"),
-                        placeholder: is_new_record ? t(".token_placeholder_new") : t(".token_placeholder_existing"),
-                        type: :password %>
+                        placeholder: t(".token_placeholder_new"),
+                        type: :password,
+                        value: nil %>
 
-    <div class="flex flex-wrap justify-end gap-2">
-      <%= form.submit(is_new_record ? t(".save_configuration") : t(".update_configuration")) %>
+    <div class="flex justify-end">
+      <%= form.submit t(".add_connection") %>
     </div>
   <% end %>
-
-  <div class="flex items-center gap-2">
-    <% if ibkr_item.persisted? && ibkr_item.credentials_configured? %>
-      <div class="w-2 h-2 bg-success rounded-full"></div>
-      <p class="text-sm text-secondary">
-        <%= t(".status_configured_prefix", summary: ibkr_item.sync_status_summary) %>
-        <%= link_to t(".accounts_tab"), accounts_path, class: "text-link underline" %>
-        <%= t(".status_configured_suffix") %>
-      </p>
-    <% else %>
-      <div class="w-2 h-2 bg-surface-inset rounded-full"></div>
-      <p class="text-sm text-secondary"><%= t(".not_configured") %></p>
-    <% end %>
-  </div>
 </div>

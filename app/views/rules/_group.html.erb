@@ -1,0 +1,68 @@
+<%# locals: (item:, list_filter:) %>
+<% group = item.group %>
+<% inactive_count = item.rules.count { |rule| !rule.active? } %>
+<div data-sortable-list-target="item"
+     data-sortable-list-id="<%= item.key %>"
+     draggable="true"
+     role="listitem"
+     aria-grabbed="false"
+     data-action="dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd"
+     data-rules-filter-target="group"
+     data-group-id="<%= group.id %>">
+  <%# Opened by the page script (rules_filter_controller), which remembers
+      the fold per device. Buttons in the summary do not toggle it. %>
+  <%= render DS::Disclosure.new(
+    open: true,
+    summary_class: "list-none flex items-center gap-2 bg-surface pr-4 cursor-pointer focus-ring",
+    body_class: nil,
+    data: { rules_filter_target: "disclosure", action: "toggle->rules-filter#groupToggled" }
+  ) do |disclosure| %>
+    <% disclosure.with_summary_content do %>
+      <%= render "rules/drag_handle", label: t("rules.index.reorder_group", name: group.name) %>
+      <div class="flex items-center gap-2 grow min-w-0 py-3" data-rules-group-header>
+        <%= icon("chevron-right", size: "sm", class: "shrink-0 [details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150") %>
+        <%= icon("folder", size: "sm", class: "shrink-0") %>
+        <span class="text-sm font-medium text-primary truncate"><%= group.name %></span>
+        <span class="text-xs text-secondary whitespace-nowrap">
+          <%= t("rules.group.rules_count", count: item.rules.size) %><% if inactive_count.positive? %> &middot; <%= t("rules.group.inactive_count", count: inactive_count) %><% end %>
+        </span>
+      </div>
+      <% unless Current.user&.guest? %>
+        <%= render DS::Menu.new do |menu| %>
+          <% if item.rules.any? %>
+            <% menu.with_item(variant: "button", text: t("rules.group.activate_all"), href: activation_rule_group_path(group, active: true), method: :patch, icon: "toggle-right") %>
+            <% menu.with_item(variant: "button", text: t("rules.group.deactivate_all"), href: activation_rule_group_path(group, active: false), method: :patch, icon: "toggle-left") %>
+          <% end %>
+          <% menu.with_item(variant: "link", text: t("rules.group.rename"), href: edit_rule_group_path(group), icon: "pencil", data: { turbo_frame: "modal" }) %>
+          <% menu.with_item(
+            variant: "button",
+            text: t("rules.group.delete"),
+            href: rule_group_path(group),
+            icon: "trash-2",
+            method: :delete,
+            confirm: CustomConfirm.new(
+              destructive: true,
+              title: t("rules.group.delete_confirm_title", name: group.name),
+              body: t("rules.group.delete_confirm_body"),
+              btn_text: t("rules.group.delete")
+            )) %>
+        <% end %>
+      <% end %>
+    <% end %>
+    <div id="<%= dom_id(group, :rules) %>"
+         class="flex flex-col divide-y divide-subdued border-t border-subdued pl-6"
+         data-controller="sortable-sublist"
+         data-sortable-sublist-url-value="<%= reorder_rule_group_path(group) %>"
+         data-sortable-sublist-param-value="rule_ids"
+         data-action="dragover->sortable-sublist#dragOver drop->sortable-sublist#drop"
+         role="list"
+         aria-label="<%= group.name %>">
+      <% if item.rules.empty? %>
+        <p class="px-4 py-3 text-sm text-secondary"><%= t("rules.group.empty") %></p>
+      <% end %>
+      <% item.rules.each do |rule| %>
+        <%= render "rules/list_rule", rule: rule, sortable_id: rule.id, list_filter: list_filter, list: "sortable-sublist" %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

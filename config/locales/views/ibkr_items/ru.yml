@@ -97,6 +97,8 @@ ru:
       success: Конфигурация Interactive Brokers успешно обновлена.
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Привязать счета из Flex-запроса %{name}"
       connection_description: Подключите отчёт Flex Web Service от Interactive Brokers
       institution_name: Interactive Brokers
       name: Interactive Brokers

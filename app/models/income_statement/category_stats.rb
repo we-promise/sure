@@ -46,7 +46,6 @@ class IncomeStatement::CategoryStats
           #{entries_join_sql("t")}
           #{accounts_join_sql}
           LEFT JOIN categories c ON c.id = t.category_id
-          #{exchange_rates_join_sql}
           WHERE a.family_id = :family_id
             AND t.kind NOT IN (#{budget_excluded_kinds_sql})
             AND ae.excluded = false
@@ -54,6 +53,7 @@ class IncomeStatement::CategoryStats
             #{pending_providers_sql}
             #{exclude_tax_advantaged_sql}
             #{scope_to_account_ids_sql}
+            #{excluding_scheduled_sql}
           GROUP BY c.id, period, #{classification_sql("t")}
         )
         SELECT

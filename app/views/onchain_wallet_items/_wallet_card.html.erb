@@ -50,6 +50,7 @@
             a navigation link. %>
         <% if Current.user&.admin? %>
           <%= render DS::Menu.new(icon_vertical: true, mobile_fullwidth: false, max_width: "280px") do |menu| %>
+            <% sync_schedule_menu_item(menu, onchain_wallet_item) %>
             <% unless onchain_wallet_item.syncing? %>
               <% menu.with_item(
                    variant: "button",

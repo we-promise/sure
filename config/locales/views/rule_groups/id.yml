@@ -1,0 +1,23 @@
+---
+id:
+  rule_groups:
+    new:
+      title: Grup aturan baru
+    edit:
+      title: Ganti nama grup "%{name}"
+    form:
+      name_label: Nama
+      name_placeholder: mis. Belanja Bulanan
+      hint: Grup hanya mengatur daftar aturan. Aturan tetap berjalan dari atas ke bawah.
+    create:
+      success: Grup berhasil dibuat
+    update:
+      success: Nama grup berhasil diubah
+    destroy:
+      success: Grup dihapus. Aturan di dalamnya tetap ada tanpa grup.
+    activation:
+      activated: Semua aturan di "%{name}" aktif
+      deactivated: Semua aturan di "%{name}" nonaktif
+      partially_switched:
+        one: Status 1 aturan tidak dapat diubah. Buka untuk melihat alasannya.
+        other: "Status %{count} aturan tidak dapat diubah. Buka untuk melihat alasannya."

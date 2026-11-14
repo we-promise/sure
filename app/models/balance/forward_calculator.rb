@@ -139,7 +139,11 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     end
 
     def calc_end_date
-      [ account.entries.excluding_pending.maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
+      # Scheduled (future-dated) entries must not extend the calculation window --
+      # otherwise their flows would materialize a balance dated in the future,
+      # and Balance::Materializer#update_account_info would surface that as the
+      # account's *current* balance. See Entry#scheduled? and Balance::SyncCache.
+      [ account.entries.excluding_pending.where(date: ..Date.current).maximum(:date), account.holdings.maximum(:date) ].compact.max || Date.current
     end
 
     # Negative entries amount on an "asset" account means, "account value has increased"
@@ -147,6 +151,10 @@ class Balance::ForwardCalculator < Balance::BaseCalculator
     # Positive entries amount on an "asset" account means, "account value has decreased"
     # Positive entries amount on a "liability" account means, "account debt has increased"
     def signed_entry_flows(entries)
+      if account.loan? && entries.any? && (change = loan_principal_change(entries.first.date))
+        return change.net
+      end
+
       entry_flows = entries.sum(&:amount)
       account.asset? ? -entry_flows : entry_flows
     end

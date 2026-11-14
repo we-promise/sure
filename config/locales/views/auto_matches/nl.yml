@@ -4,7 +4,7 @@ nl:
     title: Automatische matching
     settings:
       enable_label: Automatische matching inschakelen
-      enable_description: Detecteert en stelt automatisch overschrijvingsmatches tussen rekeningen voor bij elke synchronisatie. Suggesties worden pas toegepast nadat je ze hieronder bevestigt.
+      enable_description: Detecteert en stelt automatisch overschrijvingsmatches tussen rekeningen voor bij elke synchronisatie. Suggesties worden pas toegepast nadat u ze hieronder bevestigt.
       admin_only: Alleen beheerders kunnen deze instelling wijzigen.
     update_settings:
       settings_updated: Instellingen voor automatische matching bijgewerkt
@@ -18,7 +18,7 @@ nl:
         other: "%{count} overschrijvingen afgewezen"
     empty:
       title: Geen openstaande suggesties voor automatische matching
-      description: Wanneer een synchronisatie een waarschijnlijke overschrijving tussen twee van je rekeningen detecteert, verschijnt deze hier ter beoordeling.
+      description: Wanneer een synchronisatie een waarschijnlijke overschrijving tussen twee van uw rekeningen detecteert, verschijnt deze hier ter beoordeling.
     table:
       from: Van
       to: Naar
