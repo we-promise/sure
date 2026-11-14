@@ -91,7 +91,7 @@ class SpendingForecastTest < ActiveSupport::TestCase
       series = @family.recurring_transactions.create!(
         name: "Rent", account: @account, amount: 1000, currency: @family.currency,
         expected_day_of_month: 1, last_occurrence_date: entries.last.date,
-        next_expected_date: Date.new(2026, 5, 1), status: status, manual: true
+        next_expected_date: Date.new(2026, 5, 1), status: "active", manual: true
       )
 
       entries.each do |entry|
@@ -102,5 +102,7 @@ class SpendingForecastTest < ActiveSupport::TestCase
           source_amount: source_amount, source_currency: @family.currency
         )
       end
+
+      series.update_column(:status, status)
     end
 end
