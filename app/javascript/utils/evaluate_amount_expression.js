@@ -57,7 +57,13 @@ const MAX_AMOUNT = 99999999999999
 // the same rule (parse_amount_paste.js), so a value means the same typed or
 // pasted. It applies to the terms that are added or subtracted only: a factor
 // of * or / keeps the decimal reading, so "1000*1.1" (10% tax) still works.
-const WHOLE_NUMBER_GROUPED = /^\d{1,3}(?:([.,])\d{3})(?:\1\d{3})*$/
+//
+// A pasted amount may also be grouped with spaces ("1 234,00", as pl or nb
+// write it) or in the Indian style ("1,00,000", which lib/money/formatting.rb
+// emits for Indian locales). A typed token cannot contain a space, so the
+// space form only ever comes from a paste.
+const WHOLE_NUMBER_GROUPED = /^\d{1,3}(?:([.,\u0020\u00a0\u202f])\d{3})(?:\1\d{3})*$/
+const WHOLE_NUMBER_INDIAN_GROUPED = /^\d{1,2}(?:,\d{2})+,\d{3}$/
 
 // Reads an unsigned digit string with a dot or comma in it as a grouped
 // whole number, or returns null when it is not exactly that shape.
@@ -76,8 +82,8 @@ export function parseGroupedWholeNumber(input) {
       return plain <= MAX_AMOUNT ? plain : null
     }
   }
-  if (!WHOLE_NUMBER_GROUPED.test(digits)) return null
-  const value = Number.parseInt(digits.replace(/[.,]/g, ""), 10)
+  if (!WHOLE_NUMBER_GROUPED.test(digits) && !WHOLE_NUMBER_INDIAN_GROUPED.test(digits)) return null
+  const value = Number.parseInt(digits.replace(/[^\d]/g, ""), 10)
   return Number.isFinite(value) && value <= MAX_AMOUNT ? value : null
 }
 

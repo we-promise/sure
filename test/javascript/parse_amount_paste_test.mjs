@@ -287,5 +287,23 @@ describe("parseAmountPaste", () => {
       assert.equal(parseAmountPaste("1500000", pyg), 1500000)
       assert.equal(parseAmountPaste("1 500 000", pyg), 1500000)
     })
+
+    it("accepts a space-grouped amount with zero cents", () => {
+      assert.equal(parseAmountPaste("1 234,00", jpy), 1234)
+      assert.equal(parseAmountPaste("1\u00a0234,00", jpy), 1234)
+      assert.equal(parseAmountPaste("1\u202f234\u202f567.00", pyg), 1234567)
+    })
+
+    it("accepts Indian grouping, as formatted for Indian locales", () => {
+      assert.equal(parseAmountPaste("¥1,00,000", jpy), 100000)
+      assert.equal(parseAmountPaste("¥12,34,567.00", jpy), 1234567)
+    })
+
+    it("still rejects mixed or uneven grouping", () => {
+      assert.equal(parseAmountPaste("1 234.567", jpy), null)
+      assert.equal(parseAmountPaste("1 234,5", jpy), null)
+      assert.equal(parseAmountPaste("1.00.000", pyg), null)
+      assert.equal(parseAmountPaste("1,00,00", jpy), null)
+    })
   })
 })

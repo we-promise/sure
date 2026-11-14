@@ -456,6 +456,12 @@ describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
     assert.equal(evaluateAmountExpression("1.234,567", whole), null)
   })
 
+  it("reads Indian grouping the same as a paste does", () => {
+    assert.equal(evaluateAmountExpression("1,00,000", whole), 100000)
+    assert.equal(evaluateAmountExpression("12,34,567.00", whole), 1234567)
+    assert.equal(evaluateAmountExpression("1.00.000", whole), null)
+  })
+
   it("leaves plain integers alone", () => {
     assert.equal(evaluateAmountExpression("150000000", whole), 150000000)
   })
