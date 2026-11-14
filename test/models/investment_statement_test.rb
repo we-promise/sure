@@ -472,7 +472,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 0, totals.trades_count
   end
 
-  # A buy in a currency with no rate is not a $1-per-unit contribution (#3640).
+  # A buy in a currency with no rate is not a $1-per-unit buy (#3640).
   test "totals leave out a trade in a currency with no rate at all" do
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     usd_account = create_investment_account(balance: 500)
@@ -483,7 +483,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     totals = @statement.totals(period: period)
 
-    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal Money.new(120, "USD"), totals.buys
     assert_equal 2, totals.trades_count
   end
 
@@ -505,8 +505,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     totals = nil
     queries = capture_sql_queries { totals = statement.totals(period: period) }
 
-    assert_equal Money.new(120, "USD"), totals.contributions
-    assert_equal Money.new(40, "USD"), totals.withdrawals
+    assert_equal Money.new(120, "USD"), totals.buys
+    assert_equal Money.new(40, "USD"), totals.sells
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
     assert_equal 2, totals.trades_count
 
     aggregate_queries = queries.grep(/SUM\(CASE WHEN trades\.qty > 0/)
@@ -548,8 +550,9 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     totals = @statement.totals(period: period)
 
     # qty: 0 keeps income out of both direction branches
-    assert_equal Money.new(120, "USD"), totals.contributions
-    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(120, "USD"), totals.buys
+    assert_equal Money.new(0, "USD"), totals.sells
+    assert_equal Money.new(0, "USD"), totals.contributions
     assert_equal Money.new(50, "USD"), totals.dividends
   end
 
@@ -587,7 +590,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
   test "labeled non-income trades still count by direction" do
     # Only Dividend/Interest are excluded from the direction buckets; Buy, Sell
-    # and Reinvestment keep their existing contribution/withdrawal treatment.
+    # and Reinvestment keep their existing buy/sell treatment.
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     account = create_investment_account(balance: 500)
 
@@ -598,9 +601,10 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     totals = @statement.totals(period: period)
 
-    assert_equal Money.new(150, "USD"), totals.contributions
-    # Reinvestment is deliberately not folded into dividend income; doing so
-    # would require removing it from contributions too.
+    assert_equal Money.new(150, "USD"), totals.buys
+    # Neither is money added to the account.
+    assert_equal Money.new(0, "USD"), totals.contributions
+    # Reinvestment is deliberately not folded into dividend income.
     assert_equal Money.new(0, "USD"), totals.dividends
   end
 
@@ -722,12 +726,11 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 1, totals.trades_count
   end
 
-  test "contributions and withdrawals count trades only, not external cash transactions" do
-    # None of the non-trade entries below is income, so reading labelled
-    # transactions for income must not let them move the direction buckets.
-    # Totals#contributions is the cash committed to buying securities:
-    # counting the 800 deposit and the 1 000 buy it funded would count that
-    # money twice.
+  test "contributions and withdrawals count external flows, and buys and sells count trades" do
+    # None of the non-trade entries below is income, so reading transactions
+    # for flows must not move the income buckets, and the trades must not
+    # move the flow buckets: counting the 800 deposit and the 1 000 buy it
+    # funded would count that money twice.
     period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
     account = create_investment_account(balance: 500)
     checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
@@ -738,12 +741,126 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     create_labelled_transaction(account: account, label: "Withdrawal", amount: 50, date: period.start_date)
     create_labelled_transaction(account: account, label: nil, kind: "investment_contribution", amount: -200, date: period.start_date)
     create_linked_transfer(family: @family, from: checking, to: account, amount: 800, date: period.start_date)
+    # Pending and excluded flows wait, as pending income does
+    create_labelled_transaction(account: account, label: "Contribution", amount: -70, date: period.start_date, extra: { "plaid" => { "pending" => true } })
+    create_labelled_transaction(account: account, label: "Contribution", amount: -90, date: period.start_date, excluded: true)
+    # Outside the period
+    create_labelled_transaction(account: account, label: "Contribution", amount: -999, date: period.start_date - 1.day)
 
     totals = @statement.totals(period: period)
 
-    assert_equal Money.new(1000, "USD"), totals.contributions, "only the buy is a contribution"
-    assert_equal Money.new(200, "USD"), totals.withdrawals, "only the sale is a withdrawal"
+    assert_equal Money.new(1300, "USD"), totals.contributions
+    assert_equal Money.new(50, "USD"), totals.withdrawals
+    assert_equal Money.new(1000, "USD"), totals.buys, "only the buy is a buy"
+    assert_equal Money.new(200, "USD"), totals.sells, "only the sale is a sell"
+    assert_equal Money.new(0, "USD"), totals.total_income
     assert_equal 2, totals.trades_count
+  end
+
+  test "contributions convert foreign-currency flows into family currency" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.start_date, rate: 1.1)
+
+    create_labelled_transaction(account: account, label: "Contribution", amount: -100, date: period.start_date)
+
+    assert_equal Money.new(110, "USD"), @statement.totals(period: period).contributions
+  end
+
+  # A deposit follows the same rule as a trade (#3640): no rate at all leaves
+  # it out rather than counting it at 1.
+  test "a contribution in a currency with no rate at all is left out, not counted at 1" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    usd_account = create_investment_account(balance: 500)
+    krw_account = create_investment_account(balance: 500_000, currency: "KRW")
+
+    create_labelled_transaction(account: usd_account, label: "Contribution", amount: -100, date: period.start_date)
+    create_labelled_transaction(account: krw_account, label: "Contribution", amount: -500_000, date: period.start_date)
+    create_labelled_transaction(account: krw_account, label: "Withdrawal", amount: 200_000, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(100, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  test "a contribution with no rate on its day uses the nearest stored rate" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500, currency: "EUR")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: period.start_date - 60.days, rate: 1.2)
+
+    create_labelled_transaction(account: account, label: "Contribution", amount: -100, date: period.start_date)
+    create_labelled_transaction(account: account, label: "Withdrawal", amount: 50, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(120, "USD"), totals.contributions
+    assert_equal Money.new(60, "USD"), totals.withdrawals
+  end
+
+  test "a deposit and the buy it funds count once, as a contribution" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+
+    # The deposit is the money added; the buy only turns part of it into shares.
+    create_labelled_transaction(account: account, label: "Contribution", amount: -1000, date: period.start_date)
+    create_portfolio_trade(account: account, qty: 8, price: 100, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(1000, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(800, "USD"), totals.buys
+  end
+
+  test "a buy paid for with cash already in the account is not a contribution" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000, cash_balance: 1000)
+
+    create_portfolio_trade(account: account, qty: 5, price: 100, date: period.start_date)
+    # A rebalance: selling one position to buy another moves no money in or out.
+    create_portfolio_trade(account: account, qty: -2, price: 100, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+    assert_equal Money.new(500, "USD"), totals.buys
+    assert_equal Money.new(200, "USD"), totals.sells
+    assert_equal 2, totals.trades_count
+  end
+
+  test "a withdrawal counts, whether labelled or a transfer to an account outside the card" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    create_labelled_transaction(account: account, label: "Withdrawal", amount: 150, date: period.start_date)
+    create_linked_transfer(family: @family, from: account, to: checking, amount: 250, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(400, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
+  test "a transfer between two investment accounts on the card is neither a contribution nor a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+
+    create_linked_transfer(family: @family, from: from, to: to, amount: 600, date: period.start_date)
+    # The same move booked by the broker on both sides, with each leg labelled
+    # as if the money came from outside, then linked: the link wins.
+    out_leg = create_labelled_transaction(account: from, label: "Withdrawal", amount: 40, date: period.start_date)
+    in_leg = create_labelled_transaction(account: to, label: "Contribution", amount: -40, date: period.start_date)
+    Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
   end
 
   test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
@@ -783,7 +900,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     period = Period.last_30_days
 
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    dummy_result = { contributions: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, interest: 0, trades_count: 0 }
     InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
 
     statement = InvestmentStatement.new(@family)
@@ -798,7 +915,7 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     period = Period.last_30_days
 
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
-    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    dummy_result = { contributions: 0, withdrawals: 0, buys: 0, sells: 0, dividends: 0, interest: 0, trades_count: 0 }
     InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
 
     InvestmentStatement.new(@family).totals(period: period)
