@@ -1,0 +1,60 @@
+<%# locals: (forecast:, bills_remaining:, bills_next_month:, bills_next_month_unconvertible: 0) %>
+<%# Everyday spending Bills doesn't track, predicted from each category's
+    typical month. Added to the bills still due, it answers "how much more
+    will go out", which the pulse above answers for bills alone. %>
+<% currency = Current.family.currency %>
+<% zero = Money.new(0, currency) %>
+<% periods = [
+     { label: t(".rest_of_month", month: l(Date.current, format: "%B")), spending: forecast.remaining_this_month, bills: bills_remaining || zero },
+     { label: t(".next_month", month: l(Date.current.next_month, format: "%B")), spending: forecast.next_month, bills: bills_next_month || zero }
+   ] %>
+
+<%= render DS::Card.new(class: "gap-4") do %>
+  <div class="flex items-center justify-between gap-3">
+    <p class="text-xs font-medium uppercase text-secondary"><%= t(".title") %></p>
+    <% if bills_one_shot_ai_available? %>
+      <%= render DS::Button.new(
+            text: t(".explain"),
+            icon: "sparkles",
+            variant: :ghost,
+            size: :sm,
+            href: forecast_review_bills_path,
+            frame: chat_frame,
+            data: { action: "app-layout#openRightSidebar" }
+          ) %>
+    <% end %>
+  </div>
+
+  <div class="grid grid-cols-2 gap-4">
+    <% periods.each do |period| %>
+      <div>
+        <p class="text-2xl font-medium text-primary privacy-sensitive leading-tight"><%= format_money(period[:spending] + period[:bills]) %></p>
+        <p class="text-sm text-secondary"><%= period[:label] %></p>
+        <p class="text-xs text-secondary privacy-sensitive">
+          <%= t(".split", spending: format_money(period[:spending]), bills: format_money(period[:bills])) %>
+        </p>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="pt-3 border-t border-subdued space-y-2">
+    <div class="flex justify-between gap-3 text-xs text-secondary">
+      <span><%= t(".category") %></span>
+      <span><%= t(".spent_of_typical") %></span>
+    </div>
+    <% forecast.rows.first(5).each do |row| %>
+      <div class="flex items-center justify-between gap-3 text-sm">
+        <span class="text-primary truncate"><%= row.category&.name || t(".uncategorized") %></span>
+        <span class="text-secondary privacy-sensitive shrink-0">
+          <%= format_money(row.spent) %> / <%= format_money(row.typical) %>
+        </span>
+      </div>
+    <% end %>
+  </div>
+
+  <% if bills_next_month_unconvertible.positive? %>
+    <p class="text-xs text-warning"><%= t(".unconvertible", count: bills_next_month_unconvertible) %></p>
+  <% end %>
+
+  <p class="text-xs text-secondary"><%= t(".basis", count: forecast.history_months) %></p>
+<% end %>

@@ -81,6 +81,7 @@ class BillsController < ApplicationController
     @paid_this_month = closed.select { |occurrence| occurrence.paid? && occurrence.effective_due_on.between?(today.beginning_of_month, month_end) }
 
     compute_kpis(today, month_end)
+    load_forecast(today)
 
     @month_pay_periods = month_pay_periods(today, month_end)
 
@@ -542,6 +543,14 @@ class BillsController < ApplicationController
       @past_due_total, _ = total_of(@overdue) { |occurrence| occurrence.remaining_amount_money }
       @owed_count = owed_now.size
       @needs_action_count = owed_now.count { |occurrence| !occurrence.recurring_transaction.autopay? }
+    end
+
+    # Everyday spending the bills above don't cover, plus next month's bills,
+    # so the card can total what is still to go out.
+    def load_forecast(today)
+      @forecast = SpendingForecast.new(Current.family, user: Current.user, today: today)
+      next_month = today.next_month.all_month
+      @bills_next_month, @bills_next_month_unconvertible = total_of(@open_upcoming.select { |occurrence| next_month.cover?(occurrence.effective_due_on) }) { |occurrence| occurrence.remaining_amount_money }
     end
 
     # A trial converting tomorrow and a month-old one-dollar price rise are not

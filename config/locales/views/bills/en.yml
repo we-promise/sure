@@ -67,6 +67,30 @@ en:
       cancelled_chip: "Cancelled %{date}"
       price_changes: Price changes
       price_change_line: "%{from} → %{to}"
+    forecast:
+      title: Predicted spending
+      explain: Explain with AI
+      rest_of_month: still to go out in %{month}
+      next_month: expected in %{month}
+      split: "%{spending} spending + %{bills} bills"
+      category: Category
+      spent_of_typical: Spent / typical month
+      uncategorized: Uncategorized
+      unconvertible:
+        one: "1 bill next month is not included, no exchange rate available"
+        other: "%{count} bills next month are not included, no exchange rate available"
+      basis:
+        one: Each category's spending in the last full month, without bill payments.
+        other: Each category's typical month (median of the last %{count} full months), without bill payments.
+    forecast_reviews:
+      create:
+        uncategorized: Uncategorized
+        category_line: "- %{category}: typically %{typical} a month, %{spent} spent so far this month"
+        prompt: |-
+          Here is my predicted everyday spending, based on my last %{months} full months and leaving out bills:
+          %{categories}
+
+          About %{remaining} more is expected this month and %{next_month} next month. Explain what stands out compared with my usual spending, flag anything trending up, and suggest where I could cut back.
     month_pulse:
       bill_count:
         one: 1 bill
