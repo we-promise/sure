@@ -4,6 +4,7 @@ class Provider::SimplefinAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("SimplefinAccount", self)
+  declares_connection key: "simplefin"
 
   # Define which account types this provider supports
   def self.supported_account_types
