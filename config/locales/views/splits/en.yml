@@ -22,6 +22,12 @@ en:
       original_date: "Date:"
       original_amount: "Amount"
       split_number: "Split #%{number}"
+      receipt_prompt: Split by the items on the attached receipt.
+      fill_from_receipt: Fill from receipt
+      receipt_applied: Rows were filled from the attached receipt, with tax and discounts spread over the items. Review them before splitting.
+      receipt_unmatched: "The receipt accounts for %{receipt_total}; the rest of the transaction is on the row named \"%{name}\"."
+    itemize:
+      failed: Could not read the receipt right now. You can still split the transaction by hand.
     create:
       success: Transaction split successfully
       not_splittable: This transaction cannot be split.
