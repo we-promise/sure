@@ -313,7 +313,9 @@ class EnableBankingEntry::Processor
       return HOLD_TRANSACTION_NAME if unidentified_hold?
 
       # Build name from available Enable Banking transaction fields
-      # Priority: counterparty name > bank_transaction_code description > remittance_information
+      # Priority: counterparty name > descriptive remittance (combined with the
+      # bank_transaction_code description) > bank_transaction_code description >
+      # any remittance_information
 
       counterparty = counterparty_name
       return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
@@ -325,20 +327,23 @@ class EnableBankingEntry::Processor
         return remittance.truncate(100) if remittance.present?
       end
 
-      # Prefer a descriptive remittance_information over the bank_transaction_code
-      # description. The description is the transaction *type* (SEB sends "Card
-      # purchase", "Direct debit", "Payment" for every row), so it names no one;
-      # the remittance carries the merchant or payee. The description still wins
-      # when the remittance is only a reference number, a technical line or the
-      # holder's own name.
-      remittance = primary_remittance_information
-      return remittance.truncate(100) if descriptive_remittance?(remittance)
+      # The bank_transaction_code description is the transaction *type* (SEB sends
+      # "Card purchase", "Direct debit", "Payment" with no counterparty), so the
+      # payee is only in the remittance. Combine the two, as the other providers
+      # do, so rows of different types to the same payee keep distinct names.
+      bank_tx_description = data.dig(:bank_transaction_code, :description).presence
+      payee = descriptive_remittance_name
+      if payee
+        payee = payee.truncate(100)
+        return payee if bank_tx_description.nil? || payee.casecmp?(bank_tx_description)
+        return "#{payee} - #{bank_tx_description}"
+      end
 
       # Fall back to bank_transaction_code description
-      bank_tx_description = data.dig(:bank_transaction_code, :description)
-      return bank_tx_description if bank_tx_description.present?
+      return bank_tx_description if bank_tx_description
 
       # Fall back to remittance_information
+      remittance = primary_remittance_information
       return remittance.truncate(100) if remittance.present?
 
       # Final fallback: use transaction type indicator
@@ -487,12 +492,24 @@ class EnableBankingEntry::Processor
       self.class.technical_remittance_line?(value)
     end
 
+    # The first remittance line that names the payee, cleaned and matched to a
+    # known merchant the same way as primary_remittance_information.
+    def descriptive_remittance_name
+      line = remittance_information_lines
+        .map { |value| strip_payment_processor_prefix(value) }
+        .find { |value| descriptive_remittance?(value) }
+      return nil if line.nil?
+
+      matched_known_merchant_name(line) || line
+    end
+
     # Remittance text that reads as a name: not a technical booking line, not a
-    # bare reference such as "52220151204 092408560500" (fewer than three
-    # letters) and not the account holder.
+    # masked card number, not a bare reference such as "52220151204
+    # 092408560500" (fewer than three letters) and not the account holder.
     def descriptive_remittance?(value)
       value.present? &&
         !technical_remittance_line?(value) &&
+        !masked_card_text?(value) &&
         value.scan(/\p{L}/).size >= 3 &&
         !account_holder_name?(value)
     end

@@ -1140,7 +1140,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "ACME SHOP", name
   end
 
-  test "prefers the remittance merchant over a generic transaction type description" do
+  test "combines the remittance merchant with a generic transaction type description" do
     # SEB sends no counterparty for card purchases; the merchant is only in the remittance
     name = build_name(
       credit_debit_indicator: "DBIT",
@@ -1148,17 +1148,54 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       bank_transaction_code: { description: "Card purchase" }
     )
 
-    assert_equal "RACKSTA KROG", name
+    assert_equal "RACKSTA KROG - Card purchase", name
   end
 
-  test "prefers the remittance payee over a generic direct debit description" do
-    name = build_name(
+  test "keeps payments of different types to the same payee apart" do
+    direct_debit = build_name(
       credit_debit_indicator: "DBIT",
       remittance_information: [ "TELIA SVERIGE" ],
       bank_transaction_code: { description: "Direct debit" }
     )
+    card_purchase = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
 
-    assert_equal "TELIA SVERIGE", name
+    assert_equal "TELIA SVERIGE - Direct debit", direct_debit
+    assert_equal "TELIA SVERIGE - Card purchase", card_purchase
+  end
+
+  test "uses a later remittance line when the first one is only a reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "52220151204", "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Direct debit" }
+    )
+
+    assert_equal "TELIA SVERIGE - Direct debit", name
+  end
+
+  test "uses the descriptive remittance alone when there is no transaction type description" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "RACKSTA KROG" ],
+      bank_transaction_code: { code: "PMNT" }
+    )
+
+    assert_equal "RACKSTA KROG", name
+  end
+
+  test "keeps the transaction type description when the remittance is a masked card number" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      transaction_id: "txn_masked_pan",
+      remittance_information: [ "474836xxxxxx6879" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "Card purchase", name
   end
 
   test "keeps the transaction type description when the remittance is only a reference" do
