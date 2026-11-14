@@ -85,7 +85,8 @@ class Eval::Langfuse::ExperimentRunner
     def process_items(items)
       results = []
 
-      batch_size = Provider::LlmConcept.max_items_per_call
+      feature = dataset.eval_type == "merchant_detection" ? :detect_merchants : :categorize
+      batch_size = Eval::GenerationClient.batch_size_for(llm_provider, feature)
       items.each_slice(batch_size).with_index do |batch, batch_idx|
         Rails.logger.info("[Langfuse Experiment] Processing batch #{batch_idx + 1}/#{(items.size.to_f / batch_size).ceil}")
 
@@ -145,6 +146,8 @@ class Eval::Langfuse::ExperimentRunner
       if response.success?
         items.map do |item|
           categorization = response.data.find { |c| c.transaction_id.to_s == item["id"].to_s }
+          next missing_answer(item) unless categorization
+
           actual_category = normalize_null(categorization&.category_name)
           expected_category = item.dig("expectedOutput", "category_name")
 
@@ -193,6 +196,8 @@ class Eval::Langfuse::ExperimentRunner
       if response.success?
         items.map do |item|
           detection = response.data.find { |m| m.transaction_id.to_s == item["id"].to_s }
+          next missing_answer(item) unless detection
+
           actual_name = normalize_null(detection&.business_name)
           actual_url = normalize_null(detection&.business_url)
           expected_name = item.dig("expectedOutput", "business_name")
@@ -311,6 +316,15 @@ class Eval::Langfuse::ExperimentRunner
           latency_ms: 0
         }
       end
+    end
+
+    # An item the generation skipped has no answer: an error, not a null that could score as right.
+    # It's published as a failed item scored 0, so Langfuse's accuracy matches the run's.
+    def missing_answer(item)
+      error = "no answer for this item"
+      observation = create_trace_for_item(item, { error: }, 0)
+      queue_score_result(observation, item["id"], 0.0, false, nil, item["expectedOutput"])
+      handle_item_error(item, StandardError.new(error))
     end
 
     def handle_item_error(item, error)

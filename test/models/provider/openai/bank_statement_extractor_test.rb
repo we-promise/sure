@@ -215,12 +215,12 @@ class Provider::Openai::BankStatementExtractorTest < ActiveSupport::TestCase
     build_extractor.extract
   end
 
-  test "resolves json_mode from LLM_JSON_MODE when none is passed" do
+  test "resolves json_mode from the OpenAI endpoint (LLM_JSON_MODE) when none is passed" do
     @client.expects(:chat).with do |request|
       !request[:parameters].key?(:response_format)
     end.returns(chat_response)
 
-    with_env_overrides("LLM_JSON_MODE" => "none") do
+    with_env_overrides("LLM_JSON_MODE" => "none", "OPENAI_ACCESS_TOKEN" => "sk-test") do
       build_extractor.extract
     end
   end
@@ -230,7 +230,7 @@ class Provider::Openai::BankStatementExtractorTest < ActiveSupport::TestCase
       request[:parameters][:response_format] == { type: "json_object" }
     end.returns(chat_response)
 
-    with_env_overrides("LLM_JSON_MODE" => "none") do
+    with_env_overrides("LLM_JSON_MODE" => "none", "OPENAI_ACCESS_TOKEN" => "sk-test") do
       build_extractor(json_mode: "json_object").extract
     end
   end

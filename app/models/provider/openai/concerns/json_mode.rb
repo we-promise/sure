@@ -29,27 +29,14 @@ module Provider::Openai::Concerns::JsonMode
   VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
 
   private
-    # Determine default JSON mode based on configuration hierarchy:
-    # 1. Environment variable (LLM_JSON_MODE) - highest priority, for testing/override
-    # 2. Setting.openai_json_mode - user-configured in app settings
-    # 3. Default: auto mode (recommended for all providers)
-    #
-    # Mode descriptions:
-    # - "auto": Tries strict first, falls back to none if >50% fail (recommended default)
-    # - "strict": Best for thinking models (qwen-thinking, deepseek-reasoner) - skips verbose <think> tags
-    # - "none": Best for non-thinking models (gpt-oss, llama, mistral) - allows reasoning in output
-    # - "json_object": Middle ground, broader compatibility than strict
+    # The OpenAI endpoint's JSON mode in Ai::Config, which Ai::LegacyEnvConfig resolves from
+    # LLM_JSON_MODE, then Setting.openai_json_mode, then auto. Only the PDF workers still read
+    # it here.
     def default_json_mode
-      # 1. Check environment variable first (allows runtime override for testing)
-      env_mode = ENV["LLM_JSON_MODE"]
-      return env_mode if env_mode.present? && VALID_JSON_MODES.include?(env_mode)
-
-      # 2. Check app settings (user-configured)
-      setting_mode = Setting.openai_json_mode
-      return setting_mode if setting_mode.present? && VALID_JSON_MODES.include?(setting_mode)
-
-      # 3. Default: auto mode for all providers (tries strict first, falls back to none if needed)
-      JSON_MODE_AUTO
+      endpoint = Ai::Config.current.endpoints.find { _1.protocol == :compatible && _1.name.start_with?("openai") }
+      # A caller with its own client and no OpenAI endpoint configured still gets the operator's mode.
+      mode = endpoint ? endpoint.json_mode.to_s : Ai::LegacyEnvConfig.openai_json_mode
+      VALID_JSON_MODES.include?(mode) ? mode : JSON_MODE_AUTO
     end
 
     # Applies the resolved mode to a `client.chat` params hash, in place.

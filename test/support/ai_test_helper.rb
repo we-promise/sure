@@ -1,6 +1,9 @@
 # Helpers for testing AI code: the transport level (endpoints, models, call contexts, captured
-# events) and routing (use_ai_routes, use_no_ai).
+# events, cassettes) and routing (use_ai_routes, use_no_ai).
 module AiTestHelper
+  # The llama.cpp server the live tests record against; LLAMA_CPP_URL points them at another.
+  LLAMA_CPP_URL = (ENV["LLAMA_CPP_URL"].presence || "http://10.72.200.61:8180/v1").freeze
+  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
   # One configured setup for every test: a cloud `openai` endpoint, a local `gpu`, an `embed`
@@ -41,7 +44,61 @@ module AiTestHelper
   end
 
   def self.included(base)
-    base.teardown { Ai::Config.override = nil } if base.respond_to?(:teardown)
+    return unless base.respond_to?(:teardown)
+
+    base.teardown do
+      Ai::Config.override = nil
+      AiTestHelper.transport_stub = nil
+    end
+  end
+
+  class << self
+    # Set by stub_ai: builds the transport for an endpoint instead of Ai::Transport.for.
+    attr_accessor :transport_stub
+  end
+
+  # Ai::Transport.for asks the stub first, so stub_ai covers every route, whatever its endpoint.
+  module TransportStub
+    def for(endpoint) = AiTestHelper.transport_stub ? AiTestHelper.transport_stub.call(endpoint) : super
+  end
+  Ai::Transport.singleton_class.prepend(TransportStub)
+
+  # A transport that answers `generate` from the test, through Ai::Transport::Base#generate, so
+  # the call context and the generate.ai event are the real ones.
+  class FakeTransport < Ai::Transport::Base
+    def initialize(endpoint, responder)
+      super(endpoint)
+      @responder = responder
+    end
+
+    private
+      def run_generate(request)
+        answer = @responder.call(request)
+        Response.new(json: JSON.parse(answer.to_json), usage: Ai::Tokens.new(input_tokens: 10, output_tokens: 5),
+                     raw_id: "stub", finish_reason: :stop, json_mode: request.json_mode)
+      end
+  end
+
+  # Makes `feature`'s generations answer `returns` (a value, or a proc taking the request), or
+  # raise `raises`, with no HTTP. Coercion, failover, instrumentation and the requester still
+  # run. Returns the requests sent, in order. A request for another feature fails the test.
+  #   requests = stub_ai(:categorize, returns: { categorizations: [ ... ] })
+  #   stub_ai(:bill_setup, raises: Ai::Error::Timeout)
+  #   stub_ai { |request| request.model.endpoint.name == "gpu" ? raise(Ai::Error::InvalidOutput) : { ... } }
+  def stub_ai(feature = nil, returns: nil, raises: nil, &block)
+    requests = []
+    responder = lambda do |request|
+      # flunk, not raise: a Minitest::Assertion gets past code under test that rescues StandardError.
+      flunk "stub_ai(#{feature.inspect}) got a #{request.feature} request" if feature && request.feature != feature.to_sym
+
+      requests << request
+      raise raises if raises
+      next block.call(request) if block
+
+      returns.respond_to?(:call) ? returns.call(request) : returns
+    end
+    AiTestHelper.transport_stub = ->(endpoint) { FakeTransport.new(endpoint, responder) }
+    requests
   end
 
   # Routes AI through the test setup for the rest of the test, with the named features' routes
@@ -53,6 +110,15 @@ module AiTestHelper
     base = AiTestHelper.test_config
     names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
     Ai::Config.override = AiTestHelper.build_ai_config(base.models, names.merge(routes), vector_store_backend:)
+  end
+
+  # Changes the test setup's openai/gpt-4.1-mini for the rest of the test, for budgets and the like:
+  #   use_ai_model_settings(batch_size: 2)
+  def use_ai_model_settings(**attributes)
+    base = AiTestHelper.test_config
+    models = base.models.map { _1.endpoint.name == "openai" ? _1.with(**attributes) : _1 }
+    names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
+    Ai::Config.override = AiTestHelper.build_ai_config(models, names, vector_store_backend: base.vector_store_backend)
   end
 
   # No AI configured for the rest of the test: every feature is :not_configured.
@@ -80,4 +146,47 @@ module AiTestHelper
   ensure
     ActiveSupport::Notifications.unsubscribe(subscriber) if subscriber
   end
+
+  # Replays (or, with RECORD_CASSETTES=1 and the keys in ENV, records) a cassette under
+  # test/vcr_cassettes/ai/<preset>/. Local servers listen on localhost, which Sure's VCR setup
+  # ignores, so localhost is recorded inside the block only. Keys are filtered.
+  #
+  # With AI_LIVE=1 (the `ai-live` label's workflow) the block runs against the real provider
+  # instead, with VCR off.
+  def with_ai_cassette(preset, name, match: %i[method uri], &block)
+    return with_ai_live(&block) if ENV["AI_LIVE"] == "1"
+
+    recording = ENV["RECORD_CASSETTES"] == "1"
+    path = "ai/#{preset}/#{name}"
+    FileUtils.rm_f(Rails.root.join("test/vcr_cassettes/#{path}.yml")) if recording
+    ignored = VCR.request_ignorer.localhost_ignored?   # restored, so a nested scope doesn't end the outer one's recording
+    VCR.configuration.ignore_localhost = false
+    VCR.use_cassette(path, record: recording ? :all : :none, match_requests_on: match, &block)
+  ensure
+    VCR.configuration.ignore_localhost = ignored unless ignored.nil?
+  end
+
+  # True when a live test can run: it's recording or live with its key, or replaying a cassette.
+  def ai_cassette_available?(preset, name, key:)
+    return ENV[key].present? if ENV["AI_LIVE"] == "1" || ENV["RECORD_CASSETTES"] == "1"
+
+    Rails.root.join("test/vcr_cassettes/ai/#{preset}/#{name}.yml").exist?
+  end
+
+  def with_ai_live
+    config = WebMock::Config.instance
+    previous = [ config.allow_net_connect, config.allow_localhost, config.allow ]
+    WebMock.allow_net_connect!
+    VCR.turned_off(ignore_cassettes: true) { yield }
+  ensure
+    config.allow_net_connect, config.allow_localhost, config.allow = previous if previous
+  end
+end
+
+VCR.configure do |config|
+  AiTestHelper::AI_CASSETTE_KEYS.each do |key|
+    config.filter_sensitive_data("<#{key}>") { ENV[key].presence }
+  end
+  # Recorded as a placeholder, so a cassette replays whichever llama.cpp server LLAMA_CPP_URL names.
+  config.filter_sensitive_data("<LLAMA_CPP_URL>") { AiTestHelper::LLAMA_CPP_URL }
 end

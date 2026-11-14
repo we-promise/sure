@@ -28,7 +28,7 @@ class Eval::Langfuse::ExperimentRunnerTest < ActiveSupport::TestCase
       "string-key-token",
       uri_base: "https://example.test/v1",
       model: "gpt-4.1"
-    )
+    ).returns(stub(supports_responses_endpoint?: false))
 
     runner(
       provider: "openai",
@@ -38,11 +38,12 @@ class Eval::Langfuse::ExperimentRunnerTest < ActiveSupport::TestCase
   end
 
   test "still reads provider config written with symbol keys" do
+    Ai::LegacyEnvConfig.stubs(:openai_uri_base).returns(nil)   # the host's OPENAI_URI_BASE would fill in the blank one
     Provider::Openai.expects(:new).with(
       "symbol-key-token",
       uri_base: nil,
       model: "gpt-4.1"
-    )
+    ).returns(stub(supports_responses_endpoint?: false))
 
     runner(
       provider: "openai",

@@ -8,8 +8,13 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     ANTHROPIC_BASE_URL ANTHROPIC_MODEL ANTHROPIC_REQUEST_TIMEOUT LLM_PROVIDER JEV_API_KEY JEV_ENDPOINT JEV_MODEL
     JEV_REQUEST_TIMEOUT CATEGORIZATION_PROVIDER VECTOR_STORE_PROVIDER EMBEDDING_URI_BASE EMBEDDING_ACCESS_TOKEN
     EMBEDDING_MODEL EMBEDDING_DIMENSIONS EXTERNAL_ASSISTANT_URL EXTERNAL_ASSISTANT_TOKEN EXTERNAL_ASSISTANT_MODEL
-    EXTERNAL_ASSISTANT_AGENT_ID EXTERNAL_ASSISTANT_ALLOWED_EMAILS ASSISTANT_TYPE
+    EXTERNAL_ASSISTANT_AGENT_ID EXTERNAL_ASSISTANT_ALLOWED_EMAILS ASSISTANT_TYPE LLM_JSON_MODE LLM_CONTEXT_WINDOW
+    LLM_MAX_RESPONSE_TOKENS LLM_MAX_ITEMS_PER_CALL ANTHROPIC_MAX_TOKENS
   ].freeze
+
+  # The budget settings take their defaults from the host's LLM_* variables when Setting loads,
+  # which `build` clearing ENV can't undo; a test that needs one stubs it again.
+  setup { %i[llm_context_window llm_max_response_tokens llm_max_items_per_call].each { Setting.stubs(_1).returns(nil) } }
 
   def build(env = {})
     with_env_overrides(AI_VARIABLES.index_with { nil }.merge(env)) { Ai::LegacyEnvConfig.build }
@@ -79,23 +84,97 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
     assert_equal "gpt-4.1-mini", first_model(config, :bill_setup).name
   end
 
-  test "LLM_PROVIDER puts its provider first in every LLM route" do
-    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test", "LLM_PROVIDER" => "anthropic")
+  # Generations list only what Provider::Registry.preferred_llm_provider picks; chat lists every
+  # provider its walk reaches, which stops at a provider it can't build.
+  test "routes follow preferred_llm_provider: generations get its pick, chat every provider it reaches" do
+    keys = { "OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test" }
+    anthropic_unbuildable = keys.merge("ANTHROPIC_BASE_URL" => "https://gateway.example.test")   # a custom URL needs a model
+    cases = {
+      "both keys" => [ keys, %w[openai], %w[openai anthropic] ],
+      "both keys, LLM_PROVIDER=anthropic" => [ keys.merge("LLM_PROVIDER" => "anthropic"), %w[anthropic], %w[anthropic openai] ],
+      "Anthropic preferred but can't be built" => [ anthropic_unbuildable.merge("LLM_PROVIDER" => "anthropic"), [], [] ],
+      "Anthropic can't be built, OpenAI preferred" => [ anthropic_unbuildable, %w[openai], %w[openai] ]
+    }
 
-    %i[bill_setup extract_pdf detect_merchants enhance_merchants categorize chat].each do |feature|
-      assert_equal %w[anthropic openai], config.routes_for(feature).map { _1.endpoint.name }, feature
+    cases.each do |label, (env, generations, chat)|
+      config = build(env)
+      (Ai::LegacyEnvConfig::LLM_FEATURES + %i[categorize]).each do |feature|
+        assert_equal generations, config.routes_for(feature).map { _1.endpoint.name }, "#{label}: #{feature}"
+      end
+      assert_equal chat, config.routes_for(:chat).map { _1.endpoint.name }, "#{label}: chat"
+
+      today = with_env_overrides(AI_VARIABLES.index_with { nil }.merge(env)) do
+        Provider::Registry.preferred_llm_provider
+      rescue Provider::Error
+        nil
+      end
+      if today.nil?
+        assert_nil first_model(config, :bill_setup), "#{label}: no provider means no model"
+      else
+        assert_equal today.default_model, first_model(config, :bill_setup)&.name, "#{label}: the same model as today"
+      end
     end
-    assert_equal "claude-sonnet-4-6", first_model(config, :bill_setup).name
   end
 
-  test "a preferred provider that can't be built routes nothing after it, as callers raise there" do
-    broken = { "OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test", "ANTHROPIC_BASE_URL" => "https://gateway.example.test" }
+  test "each generation entry names today's prompt variant" do
+    native = build("OPENAI_ACCESS_TOKEN" => "sk-test")
+    custom = build("OPENAI_ACCESS_TOKEN" => "x", "OPENAI_URI_BASE" => "http://llm:8080/v1", "OPENAI_MODEL" => "qwen3")
+    anthropic = build("ANTHROPIC_API_KEY" => "ak-test")
 
-    with_env_overrides(broken.merge("LLM_PROVIDER" => "anthropic")) do
-      assert_raises(Provider::Error) { Provider::Registry.preferred_llm_provider }
-    end
-    assert_empty build(broken.merge("LLM_PROVIDER" => "anthropic")).routes_for(:bill_setup)
-    assert_equal %w[openai], build(broken).routes_for(:bill_setup).map { _1.endpoint.name }
+    assert_equal "categorize_transactions", native.routes_for(:categorize).first.prompt
+    assert_equal "categorize_transactions_simple", custom.routes_for(:categorize).first.prompt
+    assert_equal "categorize_transactions_anthropic", anthropic.routes_for(:categorize).first.prompt
+    assert_equal "detect_merchants_simple", custom.routes_for(:detect_merchants).first.prompt
+    assert_equal "enhance_merchants_anthropic", anthropic.routes_for(:enhance_merchants).first.prompt
+    assert_equal "bill_setup", custom.routes_for(:bill_setup).first.prompt
+    assert_equal "bill_setup_anthropic", anthropic.routes_for(:bill_setup).first.prompt
+    assert_nil native.routes_for(:chat).first.prompt
+  end
+
+  # #4836: a regional OpenAI host is native OpenAI — its client uses the Responses API, so its
+  # prompt must not be the simplified one written for small local models.
+  test "a regional OpenAI host keeps the native endpoint, preset and detailed prompt" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "https://us.api.openai.com", "OPENAI_MODEL" => "gpt-4.1")
+
+    endpoint = config.endpoints.find { _1.protocol == :compatible }
+    assert_equal "openai", endpoint.name
+    assert_equal :openai, endpoint.preset
+    assert endpoint.responses_api
+    assert_equal "categorize_transactions", config.routes_for(:categorize).first.prompt
+    assert_nil config.routes_for(:categorize).first.model.context_window
+  end
+
+  test "budgets: a custom server's window defaults to 2048; cloud windows only when set" do
+    defaults = build("OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test")
+    openai = defaults.model(:openai, "gpt-4.1")
+    anthropic = defaults.model(:anthropic, "claude-sonnet-4-6")
+    custom = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://localhost:8080/v1", "OPENAI_MODEL" => "qwen")
+
+    assert_equal 2048, custom.routes_for(:categorize).first.model.context_window
+    assert_nil openai.context_window
+    assert_nil openai.max_output_tokens
+    assert_equal 25, openai.batch_size
+    assert_nil anthropic.context_window
+    assert_equal 4096, anthropic.max_output_tokens
+
+    tuned = build("OPENAI_ACCESS_TOKEN" => "sk-test", "ANTHROPIC_API_KEY" => "ak-test", "LLM_CONTEXT_WINDOW" => "32768",
+                  "LLM_MAX_RESPONSE_TOKENS" => "2048", "LLM_MAX_ITEMS_PER_CALL" => "10", "ANTHROPIC_MAX_TOKENS" => "8192")
+    assert_equal [ 32768, 2048, 10 ], tuned.model(:openai, "gpt-4.1").to_h.values_at(:context_window, :max_output_tokens, :batch_size)
+    assert_equal [ 32768, 8192, 10 ], tuned.model(:anthropic, "claude-sonnet-4-6").to_h.values_at(:context_window, :max_output_tokens, :batch_size)
+  end
+
+  test "batch size prefers ENV, then the setting, then 25" do
+    Setting.stubs(:llm_max_items_per_call).returns(40)
+    assert_equal 7, build("OPENAI_ACCESS_TOKEN" => "sk-test", "LLM_MAX_ITEMS_PER_CALL" => "7").model(:openai, "gpt-4.1").batch_size
+    assert_equal 40, build("OPENAI_ACCESS_TOKEN" => "sk-test").model(:openai, "gpt-4.1").batch_size
+  end
+
+  test "the OpenAI endpoint's JSON mode comes from LLM_JSON_MODE, then the setting, then auto" do
+    Setting.stubs(:openai_json_mode).returns("json_object")
+    assert_equal :none, build("OPENAI_ACCESS_TOKEN" => "sk-test", "LLM_JSON_MODE" => "none").endpoint(:openai).json_mode
+    assert_equal :json_object, build("OPENAI_ACCESS_TOKEN" => "sk-test", "LLM_JSON_MODE" => "bogus").endpoint(:openai).json_mode
+    Setting.stubs(:openai_json_mode).returns(nil)
+    assert_equal :auto, build("OPENAI_ACCESS_TOKEN" => "sk-test").endpoint(:openai).json_mode
   end
 
   test "Anthropic only defaults the vector store to pgvector when the extension is there" do

@@ -19,6 +19,30 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Explain %{title}.", admin.family.reload.ai_prompt(:insight_dig_in)
   end
 
+  test "categorization and merchant detection each have one prompt field" do
+    sign_in users(:family_admin)
+    get settings_ai_prompts_path
+
+    assert_select "textarea#family_ai_prompt_categorizer"
+    assert_select "textarea#family_ai_prompt_merchant"
+    assert_select "input[name=?]", "family[ai_prompt_categorize_transactions]"
+    assert_select "input[name*=categorizer_openai]", count: 0
+  end
+
+  test "an override the key collapse set aside shows until the next save" do
+    admin = users(:family_admin)
+    DebugLogEntry.create!(category: Family::AiPromptable::DROPPED_CATEGORY, level: "warn", message: "dropped", source: "test",
+                          family: admin.family, metadata: { key: "categorize_transactions", text: "My Claude prompt" })
+    sign_in admin
+
+    get settings_ai_prompts_path
+    assert_match "My Claude prompt", response.body
+
+    patch settings_ai_prompts_path, params: { family: { ai_prompt_chat_system: "Be terse." } }
+    get settings_ai_prompts_path
+    assert_no_match "My Claude prompt", response.body
+  end
+
   test "non-admin member cannot view family AI prompts" do
     sign_in users(:family_member)
     get settings_ai_prompts_path
@@ -84,7 +108,7 @@ class Settings::AiPromptsControllerTest < ActionDispatch::IntegrationTest
     patch settings_ai_prompts_path, params: {
       family: {
         ai_prompt_chat_system: "x" * (Family::AiPromptable::MAX_LENGTH + 1),
-        ai_prompt_categorizer_openai: "x" * (Family::AiPromptable::MAX_LENGTH + 1)
+        ai_prompt_categorize_transactions: "x" * (Family::AiPromptable::MAX_LENGTH + 1)
       }
     }
 

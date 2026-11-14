@@ -2326,6 +2326,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.uuid "rule_id", null: false
     t.string "rule_name"
     t.string "status", null: false
+    t.integer "transactions_awaiting_ai", default: 0, null: false
     t.integer "transactions_modified", default: 0, null: false
     t.integer "transactions_processed", default: 0, null: false
     t.integer "transactions_queued", default: 0, null: false

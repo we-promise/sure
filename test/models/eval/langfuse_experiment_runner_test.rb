@@ -1,6 +1,12 @@
 require "test_helper"
 
 class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
+  # Batches of 25, as these tests count on, not the host's LLM_MAX_ITEMS_PER_CALL.
+  setup do
+    use_ai_routes
+    use_ai_model_settings(batch_size: 25)
+  end
+
   test "runs an experiment with dataset identity and observation scores" do
     dataset = stub(name: "categories", eval_type: "categorization", sample_count: 1)
     exporter = mock
@@ -24,7 +30,7 @@ class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
     client.expects(:shutdown)
     provider = mock
     provider.expects(:auto_categorize).returns(Provider::Response.new(success?: true, error: nil,
-      data: [ Provider::LlmConcept::AutoCategorization.new(transaction_id: "item-id", category_name: "Dining") ]))
+      data: [ Eval::GenerationClient::Categorization.new(transaction_id: "item-id", category_name: "Dining") ]))
     runner = Eval::Langfuse::ExperimentRunner.new(dataset, model: "gpt-4.1", client: client)
     runner.stubs(:llm_provider).returns(provider)
 
@@ -66,7 +72,7 @@ class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
       client.expects(:shutdown)
       provider = mock
       provider.expects(:auto_categorize).twice.returns(Provider::Response.new(success?: true, error: nil,
-        data: items.map { |item| Provider::LlmConcept::AutoCategorization.new(transaction_id: item["id"], category_name: "Dining") }))
+        data: items.map { |item| Eval::GenerationClient::Categorization.new(transaction_id: item["id"], category_name: "Dining") }))
       runner = Eval::Langfuse::ExperimentRunner.new(dataset, model: "gpt-4.1", client: client)
       runner.stubs(:llm_provider).returns(provider)
 
@@ -102,10 +108,10 @@ class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
       client.expects(:shutdown)
       provider = mock
       if eval_type == "categorization"
-        data = items.map { |item| Provider::LlmConcept::AutoCategorization.new(transaction_id: item["id"], category_name: "Dining") }
+        data = items.map { |item| Eval::GenerationClient::Categorization.new(transaction_id: item["id"], category_name: "Dining") }
         provider.expects(:auto_categorize).twice.returns(Provider::Response.new(success?: true, error: nil, data: data))
       else
-        data = items.map { |item| Provider::LlmConcept::AutoDetectedMerchant.new(transaction_id: item["id"], business_name: "Cafe", business_url: "https://cafe.test") }
+        data = items.map { |item| Eval::GenerationClient::DetectedMerchant.new(transaction_id: item["id"], business_name: "Cafe", business_url: "https://cafe.test") }
         provider.expects(:auto_detect_merchants).twice.returns(Provider::Response.new(success?: true, error: nil, data: data))
       end
       runner = Eval::Langfuse::ExperimentRunner.new(dataset, model: "gpt-4.1", client: client)
@@ -117,5 +123,25 @@ class Eval::LangfuseExperimentRunnerTest < ActiveSupport::TestCase
       assert_equal 1, result[:metrics][:correct]
       assert_equal 25, result[:metrics][:incorrect]
     end
+  end
+
+  test "an item with no answer is an error, even when it expected none, and Langfuse scores it 0" do
+    dataset = stub(name: "categories", eval_type: "categorization", sample_count: 1)
+    Eval::Langfuse::DatasetExporter.stubs(:new).returns(stub(export: true))
+    client = stub(get_dataset: { "id" => "dataset-id" }, flush_experiment_items: nil, shutdown: nil)
+    client.stubs(:get_dataset_items).returns({ "data" => [ {
+      "id" => "item-id", "input" => { "transaction" => { "description" => "ATM" }, "categories" => [ { "name" => "Dining" } ] },
+      "expectedOutput" => { "category_name" => nil }
+    } ] })
+    client.expects(:create_experiment_item).with { _1[:item_id] == "item-id" && _1[:output] == { error: "no answer for this item" } }
+          .returns(stub(id: "trace-1", span_id: "span-1"))
+    client.expects(:create_score).with { _1[:observation_id] == "span-1" && _1[:value] == 0.0 }
+    provider = stub(auto_categorize: Provider::Response.new(success?: true, error: nil, data: []))
+    runner = Eval::Langfuse::ExperimentRunner.new(dataset, model: "gpt-4.1", client: client)
+    runner.stubs(:llm_provider).returns(provider)
+
+    result = runner.run(run_name: "candidate")
+
+    assert_equal 0.0, result[:metrics][:accuracy]
   end
 end

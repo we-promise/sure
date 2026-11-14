@@ -11,6 +11,16 @@ module Ai::Error
     end
   end
 
+  # Raised by `call!` on a feature that resolves unavailable.
+  class Unavailable < Base
+    attr_reader :reason
+
+    def initialize(reason)
+      @reason = reason
+      super("AI unavailable: #{reason}")
+    end
+  end
+
   Cancelled      = Class.new(Base)
   Unreachable    = Class.new(Base)   # connection refused, DNS, TLS: no response came back
   Timeout        = Class.new(Base)
@@ -21,6 +31,7 @@ module Ai::Error
   ModelMissing   = Class.new(Base)   # the endpoint doesn't have the model
   ContextTooLong = Class.new(Base)   # 400 saying the input is too long
   InvalidOutput  = Class.new(Base)   # parse or schema failure after the transport's fallbacks
+  OutputCut      = Class.new(ContextTooLong)   # the answer stopped at the output limit: split the batch
   Refused        = Class.new(Base)   # any other 4xx: not retried anywhere
 
   # Errors a transport retries itself, up to the endpoint's max_retries.

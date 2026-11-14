@@ -35,19 +35,47 @@ class Eval::ProviderFactory
   private
     attr_reader :provider, :model, :config
 
+    # The run's OpenAI-compatible endpoint: its own token and URL, else the install's (Ai::Config,
+    # from the deprecated ENV or Settings). Categorization and merchant detection run through the
+    # generations; chat through Provider::Openai.
     def build_openai
-      access_token = config[:access_token].presence ||
-                     ENV["OPENAI_ACCESS_TOKEN"].presence ||
-                     Setting.openai_access_token
-
+      installed = Ai::Config.current.endpoints.find { _1.protocol == :compatible && _1.name.start_with?("openai") }
+      access_token = config[:access_token].presence || installed&.api_key
       raise Error, "OpenAI access token not configured" unless access_token.present?
 
-      uri_base = config[:uri_base].presence ||
-                 ENV["OPENAI_URI_BASE"].presence ||
-                 Setting.openai_uri_base
-
-      Provider::Openai.new(access_token, uri_base: uri_base, model: model)
+      # The configured URL even when the install has no token to build its endpoint with: a run
+      # that brings its own token must still reach the gateway, not OpenAI.
+      configured_url = Ai::LegacyEnvConfig.openai_uri_base
+      uri_base = config[:uri_base].presence || installed&.base_url || configured_url
+      # A regional OpenAI host (us.api.openai.com) is native OpenAI, not a custom server (#4836).
+      custom = Provider::Openai.custom_endpoint?(uri_base)
+      own_server = installed && same_server?(uri_base, installed.base_url)
+      # The configured gateway without an installed endpoint still needs its static headers; a
+      # server of the run's own never gets them.
+      gateway_headers = installed.nil? && configured_url && same_server?(uri_base, configured_url) ? Ai::LegacyEnvConfig.static_openai_headers : {}
+      chat_provider = Provider::Openai.new(access_token, uri_base:, model:)
+      endpoint =
+        if own_server
+          # The install's own server: its headers, API choice and timeout, as production calls it.
+          installed.with(api_key: access_token)
+        else
+          Ai::Config::Endpoint.new(
+            name: custom ? "openai_compatible" : "openai", protocol: :compatible, preset: (:openai unless custom),
+            base_url: uri_base, api_key: access_token, extra_headers: gateway_headers,
+            responses_api: chat_provider.supports_responses_endpoint?,   # OPENAI_SUPPORTS_RESPONSES_ENDPOINT, as production
+            # With no installed endpoint, the operator's OPENAI_REQUEST_TIMEOUT and JSON mode, as production.
+            location: uri_base.to_s.start_with?("http:") ? :local : :cloud,
+            timeout_seconds: installed&.timeout_seconds || Provider::Openai.request_timeout,
+            json_mode: installed&.json_mode || Ai::LegacyEnvConfig.openai_json_mode
+          )
+        end
+      # The installed model's limits only when the eval runs that model on that server.
+      budget = Ai::Config.current.models.find { _1.endpoint == installed && _1.name == model } if own_server
+      Eval::GenerationClient.new(endpoint:, model:, budget:, chat_provider:)
     end
+
+    # As the transport reaches them: `…/v1` and `…/v1/` are one server.
+    def same_server?(url, other) = Ai::Transport::Http.compatible_base(url) == Ai::Transport::Http.compatible_base(other)
 
     def build_jev
       api_key = config[:api_key].presence || Provider::Jev.api_key # pipelock:ignore

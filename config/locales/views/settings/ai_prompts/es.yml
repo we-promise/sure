@@ -4,9 +4,7 @@ es:
     ai_prompts:
       show:
         page_title: Indicaciones de IA
-        openai_label: OpenAI
         disable_ai: Desactivar Asistente de IA
-        prompt_instructions: Instrucciones de Indicaciones
         main_system_prompt:
           title: Indicaciones del Sistema Principal
           subtitle: Instrucciones principales que definen cómo se comporta el asistente de IA en todas las conversaciones de chat

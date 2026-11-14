@@ -2,45 +2,13 @@ require "test_helper"
 require "ostruct"
 
 # The `auto` path (models that reject a forced tool_choice) may get a text-only
-# end_turn answer. All six structured-output helpers retry that once.
+# end_turn answer. The PDF and statement helpers on
+# Provider::Anthropic retry that once.
 class Provider::Anthropic::StructuredOutputRetryTest < ActiveSupport::TestCase
   PDF = "%PDF-1.4 fake bytes".b
   AUTO_MODEL = "claude-sonnet-5-5"
 
   HELPERS = {
-    "report_categorizations" => {
-      input: { "categorizations" => [ { "transaction_id" => "txn_1", "category_name" => "Fast Food" } ] },
-      build: ->(client, family) {
-        Provider::Anthropic::AutoCategorizer.new(client, model: AUTO_MODEL, family: family,
-          transactions: [ { id: "txn_1", name: "McDonalds", amount: 20 } ], user_categories: [ { id: "c1", name: "Fast Food" } ]).auto_categorize
-      },
-      check: ->(test, result) { test.assert_equal "Fast Food", result.first.category_name }
-    },
-    "report_merchants" => {
-      input: { "merchants" => [ { "transaction_id" => "txn_1", "business_name" => "Amazon", "business_url" => "amazon.com" } ] },
-      build: ->(client, family) {
-        Provider::Anthropic::AutoMerchantDetector.new(client, model: AUTO_MODEL, family: family,
-          transactions: [ { id: "txn_1", name: "AMZN" } ], user_merchants: []).auto_detect_merchants
-      },
-      check: ->(test, result) { test.assert_equal "Amazon", result.first.business_name }
-    },
-    "report_enhancements" => {
-      input: { "merchants" => [ { "merchant_id" => "m1", "business_url" => "walmart.com" } ] },
-      build: ->(client, family) {
-        Provider::Anthropic::ProviderMerchantEnhancer.new(client, model: AUTO_MODEL, family: family,
-          merchants: [ { id: "m1", name: "Walmart" } ]).enhance_merchants
-      },
-      check: ->(test, result) { test.assert_equal "walmart.com", result.first.business_url }
-    },
-    "report_bill_setup" => {
-      input: { "name" => "Netflix", "amount" => 15.49, "frequency" => "monthly", "day_of_month" => 3,
-               "category_name" => "Subscriptions", "bill_type" => "subscription", "confidence" => 0.9 },
-      build: ->(client, family) {
-        Provider::Anthropic::BillSetupSuggester.new(client, model: AUTO_MODEL, family: family,
-          charges: [ { date: "2026-08-03", amount: 15.49, name: "NETFLIX.COM" } ], categories: [ "Subscriptions" ]).suggest
-      },
-      check: ->(test, result) { test.assert_equal "Netflix", result.name }
-    },
     "report_document_analysis" => {
       input: { "document_type" => "bank_statement", "summary" => "Statement" },
       build: ->(client, family) {
@@ -122,8 +90,7 @@ class Provider::Anthropic::StructuredOutputRetryTest < ActiveSupport::TestCase
     client = stub_client(requests, [ text_response("No.") ])
 
     assert_raises(Provider::Anthropic::Error) do
-      Provider::Anthropic::AutoCategorizer.new(client, model: "claude-haiku-4-5", family: @family,
-        transactions: [ { id: "txn_1", name: "McDonalds", amount: 20 } ], user_categories: []).auto_categorize
+      Provider::Anthropic::PdfProcessor.new(client, model: "claude-haiku-4-5", family: @family, pdf_content: PDF).process
     end
 
     assert_equal 1, requests.size
@@ -133,9 +100,9 @@ class Provider::Anthropic::StructuredOutputRetryTest < ActiveSupport::TestCase
   test "the retry without any text in the first answer only adds the reminder" do
     requests = []
     response = OpenStruct.new(content: [], stop_reason: :end_turn, usage: OpenStruct.new(input_tokens: 5, output_tokens: 0))
-    client = stub_client(requests, [ response, tool_response("report_categorizations", HELPERS["report_categorizations"][:input]) ])
+    client = stub_client(requests, [ response, tool_response("report_document_analysis", HELPERS["report_document_analysis"][:input]) ])
 
-    HELPERS["report_categorizations"][:build].call(client, @family)
+    HELPERS["report_document_analysis"][:build].call(client, @family)
 
     assert_equal [ "user", "user" ], requests.last[:messages].map { |m| m[:role] }
   end

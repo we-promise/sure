@@ -2,8 +2,11 @@
 # LiteLLM, llama.cpp, Ollama, vLLM, LM Studio, embedding servers and the external assistant.
 class Ai::Transport::Compatible < Ai::Transport::Base
   include Ai::Transport::RubyLlmAdapter
+  include Ai::Transport::JsonMode
 
   private
+    def run_generate(request) = generate_with_json_mode(request)
+
     def run_probe(model, check, timeout:)
       case check
       when :models then probe_models(model, timeout:)
