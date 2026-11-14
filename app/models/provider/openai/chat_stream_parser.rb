@@ -18,9 +18,9 @@ class Provider::Openai::ChatStreamParser
       usage = raw_response.dig("usage")
       Chunk.new(type: "response", data: parse_response(raw_response), usage: usage)
     when "response.failed"
-      Chunk.new(type: "error", data: build_response_error("response.failed"), usage: nil)
+      Chunk.new(type: "error", data: build_response_error("response.failed"), usage: response_usage)
     when "response.incomplete"
-      Chunk.new(type: "error", data: build_response_error("response.incomplete"), usage: nil)
+      Chunk.new(type: "error", data: build_response_error("response.incomplete"), usage: response_usage)
     when "error"
       Chunk.new(
         type: "error",
@@ -55,6 +55,12 @@ class Provider::Openai::ChatStreamParser
     def dig_error(hash, key)
       error = hash["error"]
       error.is_a?(Hash) ? error[key] : nil
+    end
+
+    # A failed or incomplete response still reports the tokens it consumed.
+    def response_usage
+      response = object.dig("response")
+      response.is_a?(Hash) ? response["usage"] : nil
     end
 
     def build_response_error(event)
