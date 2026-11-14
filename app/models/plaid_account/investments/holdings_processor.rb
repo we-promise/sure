@@ -26,9 +26,9 @@ class PlaidAccount::Investments::HoldingsProcessor
       # provider's is, not by institution_price_as_of. A fund whose NAV is a
       # session behind is still held today, and the account's latest snapshot
       # (holdings page, dashboard, assistant) must include it. The price is
-      # Plaid's latest, which is what the reverse calculator reads for today.
-      # The price date stays in raw_holdings_payload, where the balance anchor
-      # takes it from (PlaidAccount::Processor#balance_date).
+      # Plaid's latest, which is what the reverse calculator reads for today,
+      # and the balance anchor is dated on the same day
+      # (PlaidAccount::Processor#balance_date).
       holding_date = Date.current
 
       import_adapter.import_holding(

@@ -172,34 +172,14 @@ class PlaidAccount::Processor
       report_exception(e)
     end
 
-    # Plaid prices each holding as of the institution's price date
-    # (institution_price_as_of), which for a sync run before the close is the
-    # previous session's; the total it reports alongside is as of that same
-    # date. Anchoring that total on today would set it against holdings later
-    # repriced for today, and the difference would read as cash on every day
-    # in between -- the shift #3815 removed from IBKR. The anchor goes on the
-    # newest price date the holdings carry; a snapshot with no dated holdings
-    # is today's. (The holdings themselves are dated by the sync day.)
+    # The anchor is dated by the sync day, the same day the holdings are dated
+    # by (HoldingsProcessor), so Plaid's total and the holdings it is made of
+    # sit on one date: the shift #3815 and #3874 removed needs the two apart.
+    # #3874 dated both by institution_price_as_of; with the holdings now on
+    # the sync day, an anchor on the price date would value them there at the
+    # previous sync's price and read the gap as cash on every day before it.
     def balance_date
-      return Date.current unless plaid_account.plaid_type == "investment"
-
-      # A holding dated ahead of today is discounted on its own, so one bad
-      # feed does not pull the anchor off the date the rest agree on.
-      dated = holdings.filter_map { |holding| parse_date(holding["institution_price_as_of"]) }
-      dated.reject { |date| date > Date.current }.max || Date.current
-    end
-
-    def holdings
-      plaid_account.raw_holdings_payload&.dig("holdings") || []
-    end
-
-    def parse_date(value)
-      return nil if value.blank?
-      return value.to_date if value.respond_to?(:to_date) && !value.is_a?(String)
-
-      Date.parse(value.to_s)
-    rescue ArgumentError, TypeError
-      nil
+      Date.current
     end
 
     def balance_calculator
