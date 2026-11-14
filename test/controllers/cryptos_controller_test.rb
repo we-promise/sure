@@ -50,4 +50,26 @@ class CryptosControllerTest < ActionDispatch::IntegrationTest
     assert_equal "exchange", @account.accountable.subtype
     assert @account.supports_trades?
   end
+
+  test "a method sent with a switch from exchange to wallet is dropped and starts no sync" do
+    @account.accountable.update!(subtype: "exchange")
+    Account.any_instance.expects(:sync_later).never
+
+    patch crypto_path(@account), params: { account: { subtype: "wallet", cost_basis_method: "fifo" } }
+
+    @account.reload
+    assert_equal "wallet", @account.accountable.subtype
+    assert @account.cost_basis_average?
+  end
+
+  test "a method sent with a switch from wallet to exchange is kept and starts one sync" do
+    @account.accountable.update!(subtype: "wallet")
+    Account.any_instance.expects(:sync_later).once
+
+    patch crypto_path(@account), params: { account: { subtype: "exchange", cost_basis_method: "fifo" } }
+
+    @account.reload
+    assert_equal "exchange", @account.accountable.subtype
+    assert @account.cost_basis_fifo?
+  end
 end

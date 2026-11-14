@@ -67,6 +67,23 @@ class Holding::Materializer
 
       # Only the reverse walk knows the units held before the trades.
       HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse)
+      persist_lot_disposals
+    end
+
+    # Recorded only under fifo, so an account sold by average keeps none; its
+    # disposal costs are in the account's currency, like its derived lots. The
+    # calculators replay every security, so a scoped run keeps to its own.
+    def persist_lot_disposals
+      by_security = @calculator.lot_disposals_by_security
+      by_security = by_security.slice(*security_ids) if security_ids
+      rows = by_security.values.flatten.map do |disposal|
+        {
+          account_id: account.id, sale_entry_id: disposal.sale_id, lot_source_entry_id: disposal.lot_source_id,
+          qty: disposal.qty, unit_cost: disposal.unit_cost, currency: account.currency
+        }
+      end
+
+      HoldingLotDisposal.store!(account, rows, security_ids: security_ids)
     end
 
     def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
