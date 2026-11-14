@@ -485,6 +485,15 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 110.0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
   end
 
+  test "a refund in the current month does not move the category's expense window" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_month = Date.current.beginning_of_month
+    3.times { |i| create_transaction(account: @checking_account, date: this_month - (i + 1).months, amount: 300, category: @groceries_category) }
+    create_transaction(account: @checking_account, date: this_month, amount: -50, category: @groceries_category)
+
+    assert_equal 300.0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
   test "category average after months without any activity covers the 12 months up to the current one" do
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
     this_month = Date.current.beginning_of_month
