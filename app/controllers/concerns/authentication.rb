@@ -69,7 +69,13 @@ module Authentication
     # waits on a row lock held by a family/user purge, which then commits). The
     # in-memory user is stale and its family is gone, so treat the session as
     # dead instead of letting downstream code call methods on a nil family.
+    #
+    # While impersonating, Current.user is the impersonated user but
+    # Current.session is the super admin's own session. If only the impersonated
+    # user's family vanished, end the impersonation (like
+    # end_impersonation_if_target_inactive!) and keep the admin signed in.
     def end_orphaned_session!
+      end_impersonation_if_target_orphaned!
       return if Current.user && Current.family
 
       session_record = Current.session
@@ -82,6 +88,17 @@ module Authentication
       cookies.delete(:session_token)
       Current.session = nil
       redirect_to new_session_url
+    end
+
+    def end_impersonation_if_target_orphaned!
+      impersonated = Current.impersonated_user
+      return unless impersonated && impersonated.family.nil?
+
+      Rails.logger.warn(
+        "[AUTH] Ending impersonation_session_id=#{Current.session.active_impersonator_session_id}: " \
+        "impersonated user_id=#{impersonated.id} family_id=#{impersonated.family_id.inspect} no longer exists"
+      )
+      Current.session.update!(active_impersonator_session: nil)
     end
 
     def self_hosted_first_login?
