@@ -21,6 +21,11 @@ class Provider::Eodhd < Provider
   # EODHD uses {SYMBOL}.{EXCHANGE} ticker format with its own exchange codes
   MIC_TO_EODHD_EXCHANGE = {
     "XNYS" => "US", "XNAS" => "US", "XASE" => "US",
+    # Other US venues (NASDAQ segments, NYSE Arca, Cboe, IEX, MEMX, regionals, OTC tiers)
+    # also trade under EODHD's composite US code
+    "ARCX" => "US", "BATS" => "US", "OTCM" => "US", "XNGS" => "US", "XNMS" => "US", "XNCM" => "US", "XARC" => "US",
+    "XOTC" => "US", "PINX" => "US", "OTCQ" => "US", "OTCB" => "US", "PSGM" => "US", "XCHI" => "US", "XCIS" => "US",
+    "EDGX" => "US", "IEXG" => "US", "MEMX" => "US",
     "XLON" => "LSE",
     "XETR" => "XETRA",
     "XTSE" => "TO",
