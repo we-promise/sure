@@ -47,9 +47,11 @@ class Holding < ApplicationRecord
 
   # The stored per-share cost when it is a real value:
   # - If locked (user-set), trust the value even if 0 (valid for airdrops)
+  # - If worked out from the trades and lots, trust 0 too: a lot the user
+  #   says cost nothing, or a buy at a price of 0
   # - Otherwise require positive since providers sometimes return 0 when unknown
   def known_cost_basis
-    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive?)
+    cost_basis if cost_basis.present? && (cost_basis_locked? || cost_basis.positive? || cost_basis_source == "calculated")
   end
 
   # Returns average cost per share, or nil if unknown.
@@ -238,6 +240,26 @@ class Holding < ApplicationRecord
     # Allow refreshes from the same source (e.g., new trades change calculated cost basis,
     # or providers send updated cost basis).
     new_priority >= cost_basis_source_priority
+  end
+
+  # The position's open lots, the opening lot first and then by acquisition.
+  # The stored lots are the position as it stands, so only its latest row
+  # shows them, and only while they add up to it (HoldingLot.in_partition).
+  def open_lots
+    return HoldingLot.none unless date == account.holdings.where(security_id: security_id).maximum(:date)
+    return HoldingLot.none unless HoldingLot.in_partition([ account_id ], [ security_id ]).include?([ account_id, security_id ])
+
+    HoldingLot.where(account_id: account_id, security_id: security_id).where("qty > 0")
+      .order(Arel.sql("acquired_on ASC NULLS FIRST"), :created_at)
+  end
+
+  # Whether the provider supplies the position's cost: its latest row, the one
+  # its lots describe, holds a provider's figure. Restatement leaves a
+  # provider's rows alone, so a lot cost set under it would change nothing the
+  # position shows.
+  def provider_cost_position?
+    latest = account.holdings.where(security_id: security_id).order(date: :desc, id: :asc).first
+    latest.present? && latest.cost_basis_source == "provider" && latest.known_cost_basis.present?
   end
 
   # Set cost_basis from user input (locks the value)
