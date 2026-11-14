@@ -70,7 +70,7 @@ class PosthogTest < ActiveSupport::TestCase
     def load_initializer(**overrides)
       with_env_overrides({ POSTHOG_KEY: nil, POSTHOG_HOST: nil, POSTHOG_FEEDBACK_ENABLED: "true",
                           POSTHOG_DEVELOPMENT_ENABLED: "false" }.merge(overrides)) do
-        load Rails.root.join("config/initializers/posthog.rb")
+        load Rails.root.join("config/initializers/00_posthog.rb")
       end
     end
 end
