@@ -696,4 +696,16 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
 
     assert_equal 2, @account.entries.where(source: "enable_banking").count
   end
+
+  test "a suffixed sibling does not claim an excluded pending entry its plain-id row owns" do
+    sync_shared(raw_shared_tid_transaction(entry_reference: nil, amount: "7.00").merge(status: "PDNG", _pending: true, booking_date: 3.days.ago.to_date.to_s))
+    @account.entries.find_by!(external_id: "enable_banking_tid-x").update!(excluded: true)
+    rows = [ raw_shared_tid_transaction(entry_reference: "r-a", amount: "7.00"),
+             raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00").merge(booking_date: 1.day.ago.to_date.to_s) ]
+    2.times { sync_shared(*rows) }
+
+    assert @account.entries.find_by!(external_id: "enable_banking_tid-x").excluded?
+    assert_equal [ [ sibling_id("r-b"), BigDecimal("7.00") ] ],
+                 @account.entries.where(source: "enable_banking", excluded: false).pluck(:external_id, :amount)
+  end
 end

@@ -320,6 +320,7 @@ class EnableBankingEntry::Processor
         name: name,
         source: "enable_banking",
         merchant: merchant,
+        allow_heuristic_matching: !plain_sibling_pending_match?,
         notes: notes,
         extra: extra
       )
@@ -360,6 +361,18 @@ class EnableBankingEntry::Processor
       id = @external_id || self.class.compute_external_id(data)
       raise ArgumentError, "Enable Banking transaction missing required identifier (transaction_id, entry_reference, or identifiable content)" unless id
       id
+    end
+
+    # A suffixed row must not claim, through the adapter's exact-amount pending match, the
+    # pending entry still under its plain id. That entry belongs to the row keeping the plain
+    # id, and stays pending when that row skips it as protected (excluded or import-locked).
+    def plain_sibling_pending_match?
+      plain_id = self.class.compute_external_id(data)
+      return false if @external_id.nil? || @external_id == plain_id
+
+      plain = account.entries.find_by(source: "enable_banking", external_id: plain_id)
+      plain&.entryable.try(:pending?) &&
+        import_adapter.find_pending_transaction(date: date, amount: amount, currency: currency, source: "enable_banking") == plain
     end
 
     def name
