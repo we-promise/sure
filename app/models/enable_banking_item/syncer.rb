@@ -21,6 +21,9 @@ class EnableBankingItem::Syncer
     # Phase 1: Import data from Enable Banking API
     sync.update!(status_text: "Importing accounts from Enable Banking...") if sync.respond_to?(:status_text)
     import_result = enable_banking_item.import_latest_enable_banking_data
+    # Before the failure check: a cut-short fetch is not retried, so it is
+    # reported even when another account fails in the same sync.
+    collect_truncated_history_warning(sync, import_result[:transactions_truncated].to_i)
 
     unless import_result[:success]
       # A session-level auth failure detected mid-import flips the item to
@@ -42,8 +45,6 @@ class EnableBankingItem::Syncer
       end
       raise StandardError.new(error_msg.presence || "Import failed")
     end
-
-    collect_truncated_history_warning(sync, import_result[:transactions_truncated].to_i)
 
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)

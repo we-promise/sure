@@ -1239,7 +1239,7 @@ class EnableBankingItem::Importer
     # without SCA on every sync. An account with no stored rows has no anchor,
     # so it uses that limit. The last-sync term is not clamped, so a long
     # outage is handled as before. Nothing before the user's start date is
-    # requested.
+    # requested, and nothing after today.
     def incremental_sync_start_date(enable_banking_account)
       newest_stored = newest_stored_transaction_date(enable_banking_account)
       stored_row_start = [ newest_stored && newest_stored - 7.days, STORED_ROW_LOOKBACK_LIMIT.ago.to_date ].compact.max
@@ -1249,7 +1249,7 @@ class EnableBankingItem::Importer
         stored_row_start
       ].compact.min
 
-      [ start, enable_banking_item.sync_start_date ].compact.max
+      [ [ start, enable_banking_item.sync_start_date ].compact.max, Date.current ].min
     end
 
     def newest_stored_transaction_date(enable_banking_account)
