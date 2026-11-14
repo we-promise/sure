@@ -1139,6 +1139,34 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_not RecurringTransaction.exists?(auto_recurring.id)
   end
 
+  test "accessible_by composes with an earlier destination_account_id filter instead of replacing it" do
+    admin = users(:family_admin)
+    to_depository = create_transfer_series("To savings", accounts(:connected))
+    to_loan = create_transfer_series("Mortgage payment", accounts(:loan))
+    expense = create_transfer_series("Rent", nil)
+
+    debt_accounts = Account.where(family_id: @family.id, accountable_type: %w[CreditCard Loan]).select(:id)
+    results = RecurringTransaction
+                .where(destination_account_id: nil)
+                .or(RecurringTransaction.where(destination_account_id: debt_accounts))
+                .merge(RecurringTransaction.accessible_by(admin))
+
+    assert_includes results, expense
+    assert_includes results, to_loan
+    assert_not_includes results, to_depository
+  end
+
+  test "accessible_by composes with an earlier id filter" do
+    admin = users(:family_admin)
+    kept = create_transfer_series("Rent", nil)
+    other = create_transfer_series("Gym", nil)
+
+    results = RecurringTransaction.where(id: kept.id).merge(RecurringTransaction.accessible_by(admin))
+
+    assert_equal [ kept ], results.to_a
+    assert_not_includes results, other
+  end
+
   # Account access scoping tests
   test "accessible_by scope returns only recurring transactions from accessible accounts" do
     admin = users(:family_admin)
@@ -1822,6 +1850,14 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   private
+
+    def create_transfer_series(name, destination)
+      @family.recurring_transactions.create!(
+        name: name, account: @account, destination_account: destination, amount: 100, currency: "USD",
+        expected_day_of_month: 5, last_occurrence_date: Date.current,
+        next_expected_date: 5.days.from_now.to_date, status: "active", manual: true
+      )
+    end
 
     def stale_hint_series
       stale = 45.days.ago.to_date
