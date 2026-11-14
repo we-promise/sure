@@ -350,10 +350,11 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     Rails.cache.write("eodhd:daily:#{Date.current}", 10)
     @provider.stubs(:throttle_request)
     @provider.stubs(:client).returns(mock_client = mock)
-    mock_client.expects(:get).once.raises(Faraday::ClientError.new("402", { status: 402 }))
+    # Twice: a 402 leaves no "failed recently" marker, so the next lookup still asks EODHD
+    mock_client.expects(:get).twice.raises(Faraday::ClientError.new("402", { status: 402 }))
 
     with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      2.times { assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success? }
     end
     assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
