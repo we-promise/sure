@@ -750,6 +750,62 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
   end
 
+  create_table "etoro_accounts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "account_type"
+    t.decimal "cash_balance", precision: 19, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.decimal "current_balance", precision: 19, scale: 4
+    t.string "display_mode", default: "holdings", null: false
+    t.string "etoro_account_id"
+    t.uuid "etoro_item_id", null: false
+    t.datetime "last_positions_sync"
+    t.uuid "main_account_id"
+    t.bigint "mirror_id"
+    t.string "name"
+    t.jsonb "position_settlement_types", default: {}, null: false
+    t.jsonb "raw_balance_history_payload", default: [], null: false
+    t.jsonb "raw_positions_payload", default: [], null: false
+    t.jsonb "raw_trades_payload", default: [], null: false
+    t.date "trades_synced_through"
+    t.datetime "updated_at", null: false
+    t.index ["etoro_item_id", "etoro_account_id"], name: "index_etoro_accounts_on_item_and_account_id", unique: true, where: "(etoro_account_id IS NOT NULL)"
+    t.index ["etoro_item_id"], name: "index_etoro_accounts_on_etoro_item_id"
+    t.index ["main_account_id", "mirror_id"], name: "index_etoro_accounts_on_main_account_and_mirror", unique: true, where: "(main_account_id IS NOT NULL)"
+  end
+
+  create_table "etoro_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "api_key"
+    t.datetime "created_at", null: false
+    t.uuid "family_id", null: false
+    t.string "name"
+    t.boolean "own_securities", default: false, null: false
+    t.boolean "pending_account_setup", default: false, null: false
+    t.jsonb "raw_instruments_payload", default: {}, null: false
+    t.boolean "scheduled_for_deletion", default: false, null: false
+    t.string "status", default: "good", null: false
+    t.datetime "updated_at", null: false
+    t.string "user_key"
+    t.index ["family_id"], name: "index_etoro_items_on_family_id"
+    t.index ["status"], name: "index_etoro_items_on_status"
+  end
+
+  create_table "etoro_portfolio_snapshots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.decimal "cash", precision: 19, scale: 4, null: false
+    t.boolean "closed", default: false, null: false
+    t.datetime "created_at", null: false
+    t.date "date", null: false
+    t.decimal "deposits", precision: 19, scale: 4
+    t.uuid "etoro_account_id", null: false
+    t.jsonb "holdings", default: {}, null: false
+    t.bigint "mirror_id", null: false
+    t.decimal "total", precision: 19, scale: 4, null: false
+    t.datetime "updated_at", null: false
+    t.string "username"
+    t.decimal "withdrawals", precision: 19, scale: 4
+    t.index ["etoro_account_id", "mirror_id", "date"], name: "index_etoro_portfolio_snapshots_on_part_and_date", unique: true
+  end
+
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "active", default: true
     t.datetime "created_at", null: false
@@ -3173,6 +3229,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "entries", "accounts", on_delete: :cascade
   add_foreign_key "entries", "entries", column: "parent_entry_id", on_delete: :cascade
   add_foreign_key "entries", "imports"
+  add_foreign_key "etoro_accounts", "etoro_accounts", column: "main_account_id", on_delete: :cascade
+  add_foreign_key "etoro_accounts", "etoro_items"
+  add_foreign_key "etoro_items", "families"
+  add_foreign_key "etoro_portfolio_snapshots", "etoro_accounts", on_delete: :cascade
   add_foreign_key "eval_results", "eval_runs"
   add_foreign_key "eval_results", "eval_samples"
   add_foreign_key "eval_runs", "eval_datasets"

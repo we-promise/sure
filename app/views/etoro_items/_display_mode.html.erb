@@ -1,0 +1,42 @@
+<%# locals: (etoro_item:, etoro_account:) %>
+<%# How a linked eToro account shows in Sure. Changing the mode asks first, as
+    the rebuild drops the user's changes to eToro's trades and holdings, then
+    saves the mode and syncs the connection, which rebuilds the account. The
+    change is submitted with the button rather than on picking a mode, so
+    cancelling it leaves an unsubmitted choice, as in any form. The mode shows
+    without the choice while a sync runs, and when the user may not change it
+    (EtoroAccount#display_mode_changeable_by?). Ids are scoped to the account,
+    as a card lists one control per account. %>
+<% account = etoro_account.current_account %>
+<div class="px-4 space-y-1">
+  <% if etoro_item.syncing? || !etoro_account.display_mode_changeable_by?(Current.user) %>
+    <p class="text-sm text-primary"><%= t(".current", account: account.name, mode: t(".options.#{etoro_account.display_mode}")) %></p>
+    <% if etoro_item.syncing? %>
+      <p class="text-xs text-secondary"><%= t(".wait_for_sync") %></p>
+    <% end %>
+  <% else %>
+    <% confirm = CustomConfirm.new(
+         title: t(".confirm.title", account: account.name),
+         body: t(".confirm.body"),
+         btn_text: t(".confirm.button"),
+         destructive: true
+       ) %>
+    <%# The hint follows the mode picked, before the change is submitted. %>
+    <div class="space-y-1" data-controller="select-hint" data-action="dropdown:select->select-hint#update">
+      <%= form_with url: update_display_mode_etoro_item_path(etoro_item), method: :patch, namespace: dom_id(etoro_account, :display_mode),
+                    class: "max-w-xs flex items-end gap-2", data: { turbo_frame: "_top", turbo_confirm: confirm.to_data_attribute } do |form| %>
+        <%= hidden_field_tag :etoro_account_id, etoro_account.id, id: nil %>
+        <div class="grow">
+          <%= render DS::Select.new(form: form, method: :display_mode, selected: etoro_account.display_mode, scoped_ids: true,
+                                    label: t(".label", account: account.name),
+                                    items: EtoroAccount.display_modes.keys.map { |mode| { value: mode, label: t(".options.#{mode}") } }) %>
+        </div>
+        <%= render DS::Button.new(text: t(".change"), variant: :secondary, type: :submit) %>
+      <% end %>
+      <% EtoroAccount.display_modes.each_key do |mode| %>
+        <%= tag.p t(".hint.#{mode}"), class: "text-xs text-secondary", hidden: mode != etoro_account.display_mode,
+                  data: { select_hint_target: "hint", value: mode } %>
+      <% end %>
+    </div>
+  <% end %>
+</div>

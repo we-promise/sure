@@ -70,7 +70,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 10
+  CURRENT_BACKFILL_VERSION = 11
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -111,6 +111,7 @@ module ActiveRecordEncryptionConfig
     coinbase_items: [ "CoinbaseItem", %i[api_key api_secret raw_payload raw_institution_payload] ],
     coinspot_items: [ "CoinspotItem", %i[api_key api_secret raw_payload] ],
     coinstats_items: [ "CoinstatsItem", %i[api_key raw_payload raw_institution_payload] ],
+    etoro_items: [ "EtoroItem", %i[api_key user_key raw_instruments_payload] ],
     ibkr_items: [ "IbkrItem", %i[query_id token raw_payload] ],
     indexa_capital_items: [ "IndexaCapitalItem", %i[password api_token username document raw_payload raw_institution_payload] ],
     kraken_items: [ "KrakenItem", %i[api_key api_secret raw_payload] ],
@@ -141,6 +142,7 @@ module ActiveRecordEncryptionConfig
     akahu_accounts: [ "AkahuAccount", %i[raw_payload raw_transactions_payload formatted_account] ],
     binance_accounts: [ "BinanceAccount", %i[raw_payload raw_transactions_payload] ],
     brex_accounts: [ "BrexAccount", %i[raw_payload raw_transactions_payload] ],
+    etoro_accounts: [ "EtoroAccount", %i[raw_positions_payload raw_trades_payload raw_balance_history_payload] ],
     ibkr_accounts: [ "IbkrAccount", %i[raw_holdings_payload raw_activities_payload raw_cash_report_payload raw_equity_summary_payload] ],
     indexa_capital_accounts: [ "IndexaCapitalAccount", %i[raw_payload raw_holdings_payload raw_activities_payload] ],
     kraken_accounts: [ "KrakenAccount", %i[raw_payload raw_transactions_payload] ],

@@ -1,0 +1,201 @@
+<% content_for :title, t(".page_title") %>
+
+<%= render DS::Dialog.new(disable_click_outside: true) do |dialog| %>
+  <% dialog.with_header(title: t(".dialog_title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "chart-line", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-6">
+      <%= render DS::Note.new(title: t(".info_box.title")) do %>
+        <ul class="list-disc list-inside space-y-1">
+          <li><%= t(".info_box.items.item_1") %></li>
+          <% if @imports_trades %>
+            <li><%= t(".info_box.items.item_2") %></li>
+          <% end %>
+          <li><%= t(".info_box.items.item_3") %></li>
+          <% if @etoro_accounts.any?(&:copy?) %>
+            <li><%= t(".info_box.items.copies") %></li>
+          <% end %>
+        </ul>
+      <% end %>
+
+      <%# The sync discovers the accounts. While it runs, the browser re-fetches
+          this frame on its own request until the server renders it without the
+          polling attributes. The family's sync toast can't do it: it holds its
+          refresh while a dialog is open, and a morph would close this one. %>
+      <%= turbo_frame_tag "etoro-setup-accounts", target: "_top" do %>
+      <% if @waiting_for_sync %>
+        <%= tag.div class: "flex flex-col items-center justify-center py-6 space-y-3",
+                    data: { controller: "polling",
+                            polling_frame_id_value: "etoro-setup-accounts",
+                            polling_url_value: setup_accounts_etoro_item_path(@etoro_item),
+                            polling_interval_value: 5000 } do %>
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <p class="text-secondary text-center"><%= t(".status.fetching_accounts") %></p>
+        <% end %>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t(".buttons.refresh"),
+            variant: "secondary",
+            icon: "refresh-cw",
+            href: setup_accounts_etoro_item_path(@etoro_item),
+            frame: "_top"
+          ) %>
+          <%= render DS::Link.new(
+            text: t(".buttons.cancel"),
+            variant: "ghost",
+            href: accounts_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% elsif @sync_failed %>
+        <div id="etoro-setup-sync-failed" class="flex flex-col items-center justify-center py-6 space-y-3">
+          <%= icon "alert-circle", size: "lg", class: "text-warning" %>
+          <p class="text-primary text-center font-medium"><%= t(".status.sync_failed_title") %></p>
+          <p class="text-secondary text-center text-sm"><%= t(".status.sync_failed_description") %></p>
+        </div>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t(".buttons.try_again"),
+            variant: "secondary",
+            icon: "refresh-cw",
+            href: setup_accounts_etoro_item_path(@etoro_item),
+            frame: "_top"
+          ) %>
+          <%= render DS::Link.new(
+            text: t(".buttons.cancel"),
+            variant: "ghost",
+            href: accounts_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% elsif @no_accounts_found %>
+        <div class="flex flex-col items-center justify-center py-6 space-y-3">
+          <%= icon "alert-circle", size: "lg", class: "text-warning" %>
+          <p class="text-primary text-center font-medium"><%= t(".status.no_accounts_found_title") %></p>
+          <p class="text-secondary text-center text-sm"><%= t(".status.no_accounts_found_description") %></p>
+        </div>
+        <div class="flex gap-3 justify-center">
+          <%= render DS::Link.new(
+            text: t(".buttons.back_to_settings"),
+            variant: "secondary",
+            href: settings_providers_path,
+            frame: "_top"
+          ) %>
+        </div>
+      <% else %>
+        <%= form_with url: complete_account_setup_etoro_item_path(@etoro_item), method: :post, data: { turbo_frame: "_top" } do %>
+          <% if @unlinked_accounts.any? %>
+            <div class="space-y-4">
+              <h3 class="font-medium text-primary"><%= t(".available_accounts.title") %></h3>
+
+              <% @unlinked_accounts.each do |etoro_account| %>
+                <div class="border border-primary rounded-lg p-4 hover:bg-surface transition-colors">
+                  <div class="flex items-center gap-3">
+                    <input type="checkbox"
+                           id="account_<%= etoro_account.id %>"
+                           name="account_ids[]"
+                           value="<%= etoro_account.id %>"
+                           checked
+                           class="checkbox checkbox--light cursor-pointer">
+                    <label for="account_<%= etoro_account.id %>" class="flex-1 cursor-pointer">
+                      <h4 class="font-medium text-primary"><%= etoro_account.name %></h4>
+                      <p class="text-sm text-secondary">
+                        <%= t(
+                          ".available_accounts.account_summary",
+                          account_type: t(".available_accounts.account_type_investment"),
+                          balance: number_to_currency(etoro_account.current_balance || 0, unit: Money::Currency.new(etoro_account.currency.presence || Current.family.currency).symbol)
+                        ) %>
+                      </p>
+                      <% if etoro_account.copy? %>
+                        <%= render "etoro_items/copy_status", etoro_account: etoro_account %>
+                      <% elsif etoro_account.etoro_account_id.present? %>
+                        <p class="text-xs text-secondary"><%= t(".available_accounts.account_id", account_id: etoro_account.etoro_account_id) %></p>
+                      <% end %>
+                    </label>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-6">
+              <%= render DS::Link.new(
+                text: t(".buttons.cancel"),
+                variant: :secondary,
+                href: accounts_path,
+                frame: "_top"
+              ) %>
+              <%= render DS::Button.new(
+                text: t(".buttons.create_selected_accounts"),
+                icon: "plus",
+                type: :submit
+              ) %>
+            </div>
+          <% end %>
+        <% end %>
+
+        <% if @unlinked_accounts.any? && @linkable_accounts.any? %>
+          <div class="border-t border-secondary pt-4 mt-2">
+            <p class="text-xs text-secondary mb-3"><%= t(".link_existing.description") %></p>
+            <div class="space-y-2">
+              <% @unlinked_accounts.each do |etoro_account| %>
+                <%= styled_form_with url: link_existing_account_etoro_items_path, method: :post, data: { turbo_frame: "_top" }, class: "space-y-2" do |link_form| %>
+                  <%= link_form.hidden_field :etoro_account_id, value: etoro_account.id %>
+                  <%= link_form.select :account_id,
+                        options_for_select(@linkable_accounts.map { |a| [ t(".link_existing.manual_account_option", name: a.name, balance: number_to_currency(a.balance, unit: Money::Currency.new(a.currency.presence || Current.family.currency).symbol)), a.id ] }),
+                        { label: etoro_account.name, prompt: t(".link_existing.select_prompt") },
+                        { required: true } %>
+                  <div class="flex justify-end">
+                    <%= render DS::Button.new(
+                      text: t(".buttons.link"),
+                      variant: :secondary,
+                      type: :submit
+                    ) %>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <% if @linked_accounts.any? %>
+          <div class="<%= "border-t border-primary pt-6 mt-4" if @unlinked_accounts.any? %>">
+            <h3 class="font-medium text-primary mb-4"><%= t(".linked_accounts.title") %></h3>
+            <% @linked_accounts.each do |etoro_account| %>
+              <div class="border border-success/20 bg-success/5 rounded-lg p-4 mb-2">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-3">
+                    <%= icon "check-circle", class: "text-success" %>
+                    <div>
+                      <h4 class="font-medium text-primary"><%= etoro_account.name %></h4>
+                      <p class="text-sm text-secondary"><%= t(".linked_accounts.linked_to_html", account: link_to(etoro_account.current_account.name, account_path(etoro_account.current_account), class: "link")) %></p>
+                      <% if etoro_account.copy? %>
+                        <%= render "etoro_items/copy_status", etoro_account: etoro_account %>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+
+            <% if @unlinked_accounts.blank? %>
+              <div class="flex justify-end mt-4">
+                <%= render DS::Link.new(
+                  text: t(".buttons.done"),
+                  variant: "primary",
+                  href: accounts_path,
+                  frame: "_top"
+                ) %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>
