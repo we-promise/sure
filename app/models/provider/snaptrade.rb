@@ -440,7 +440,8 @@ class Provider::Snaptrade
       raise incomplete_activities_error(account_id, "SnapTrade activities page at offset #{activities.size} was empty, total #{known_total}") if rows.empty? && more && page.positive?
       return first_response.merge("data" => activities) if rows.empty? || !more
 
-      # Every page so far was full and distinct, so rows are still missing with or without a total.
+      # Every page so far was full and distinct. With a total, rows are still missing; without one, they may be
+      # (exactly 100 full pages also lands here). Either way, raise rather than move the cursor past them.
       if page == MAX_ACTIVITY_PAGES - 1
         raise incomplete_activities_error(
           account_id,
