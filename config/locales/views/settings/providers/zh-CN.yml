@@ -405,7 +405,7 @@ zh-CN:
           cash_report_options: 选项：无
           cash_report_fields: 字段：Currency、Ending Cash
           cash_transactions: 现金交易：
-          cash_transactions_options: 选项：Dividends、Deposits & Withdrawals、Detail
+          cash_transactions_options: 选项：Dividends、Deposits & Withdrawals、Payment In Lieu Of Dividends、Withholding Tax、Broker Interest Paid、Broker Interest Received、Bond Interest Paid、Bond Interest Received、Other Fees、Commission Adjustments、Detail
           cash_transactions_fields: 字段：Amount、Conid、Currency、FX Rate To Base、Report Date、Transaction ID、Type
           change_in_position_value_summary: 仓位价值变动汇总：Currency、End Of Period Value
           net_asset_value: 基础币种下的净资产值（NAV）：

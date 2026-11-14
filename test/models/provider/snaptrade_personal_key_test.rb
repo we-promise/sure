@@ -42,7 +42,8 @@ class Provider::SnaptradePersonalKeyTest < ActiveSupport::TestCase
       @provider.get_account_activities(account_id: "acc-1", start_date: Date.new(2024, 1, 1), end_date: Date.new(2024, 12, 31))
     end
 
-    assert_equal "clientId=#{CLIENT_ID}&endDate=2024-12-31&startDate=2024-01-01&timestamp=#{TIMESTAMP}", @request.uri.query
+    assert_equal "clientId=#{CLIENT_ID}&endDate=2024-12-31&limit=1000&offset=0&startDate=2024-01-01&timestamp=#{TIMESTAMP}",
+                 @request.uri.query
     assert_equal expected_signature(@request), @request.headers["Signature"]
   end
 
