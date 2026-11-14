@@ -317,19 +317,30 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
 
   test "clearing a sold position leaves another source's row for the same security today" do
     travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
-    other = @account.holdings.create!(security: securities(:aapl), date: Date.current, currency: "USD", qty: 5, price: 150, amount: 750)
+    plaid = AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    other = @account.holdings.create!(security: securities(:aapl), date: Date.current, currency: "USD", qty: 5, price: 150, amount: 750,
+                                      account_provider_id: plaid.id)
     sync_positions!([])
 
     assert_equal 5, other.reload.qty
   end
 
-  test "an empty list kept against the account total is recorded for support" do
+  test "an empty list kept against the account total is logged for support" do
     travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
 
-    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "warn").count }, 1 do
-      sync_positions!([], total: 2500)
-    end
+    Rails.logger.stubs(:warn)
+    Rails.logger.expects(:warn).with(regexp_matches(/kept positions/)).at_least_once
+    sync_positions!([], total: 2500)
     assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "a calculated holding without a provider does not stop a sold position from clearing" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+    sync_positions!([], total: 2500) # kept: the total still reports holdings
+    @account.holdings.create!(security: securities(:aapl), date: Date.current, currency: "USD", qty: 10, price: 150, amount: 1500)
+    sync_positions!([])
+
+    assert_empty current_tickers
   end
 
   # === ActivitiesProcessor Tests ===

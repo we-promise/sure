@@ -55,9 +55,10 @@ class SnaptradeAccount::HoldingsProcessor
       vanished_positions.find_each do |h|
         security = h.provider_security || h.security
         # The adapter matches a row without external_id by security, date and
-        # currency alone, so never zero another provider's row for today.
+        # currency alone, so never zero another provider's row for today. Rows without a
+        # provider are Sure's own materialized ones, which the sync rewrites anyway.
         next if account.holdings.where(security: security, date: Date.current, currency: h.currency)
-          .where("account_provider_id IS DISTINCT FROM ?", provider_id).exists?
+          .where.not(account_provider_id: [ nil, provider_id ]).exists?
 
         import_adapter.import_holding(security: security, quantity: 0, amount: 0, currency: h.currency,
           date: Date.current, price: h.price, account_provider_id: provider_id, source: "snaptrade", delete_future_holdings: false)
@@ -71,23 +72,11 @@ class SnaptradeAccount::HoldingsProcessor
     end
 
     def capture_kept_empty_snapshot
+      # holdings_unavailable accounts always report an empty list; only log a surprising one.
+      return if @snaptrade_account.institution_metadata&.dig("sync_status", "holdings", "holdings_unavailable")
       return unless vanished_positions.exists?
 
-      DebugLogEntry.capture(
-        category: "provider_sync",
-        level: "warn",
-        message: "Kept SnapTrade positions: the positions list is empty but the account still reports holdings",
-        source: self.class.name,
-        provider_key: "snaptrade",
-        account: account,
-        account_provider_id: @snaptrade_account.account_provider&.id,
-        metadata: {
-          holdings_unavailable: @snaptrade_account.institution_metadata&.dig("sync_status", "holdings", "holdings_unavailable"),
-          current_balance: @snaptrade_account.current_balance&.to_s,
-          cash_balance: @snaptrade_account.cash_balance&.to_s,
-          positions_kept: vanished_positions.count
-        }
-      )
+      Rails.logger.warn("SnapTrade: kept positions for account #{account.id}: the positions list is empty but the account total still reports holdings")
     end
 
     # Non-cash value in the account total (or no total) means positions exist --
