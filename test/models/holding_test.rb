@@ -147,6 +147,54 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 2, queries.count { |sql| sql.include?('FROM "trades"') }
   end
 
+  # The fallback divides the cost of the purchases by their share count. After
+  # a split the holding's qty is in the new shares, so the purchases have to be
+  # counted in them too, or the cost per share is the pre-split figure.
+  test "the fallback cost per share halves from a 2-for-1 ex-date and keeps total cost" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+    before = split_holding(security, ex_date - 1, 10)
+    on = split_holding(security, ex_date, 20)
+
+    assert_equal Money.new(100), before.avg_cost
+    assert_equal Money.new(50), on.avg_cost
+    assert_equal before.avg_cost * before.qty, on.avg_cost * on.qty
+  end
+
+  test "a buy on the ex-date is not scaled again" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+    create_trade(security, account: @account, qty: 10, price: 50, date: ex_date)
+
+    # 1,000 + 500 over 20 post-split shares from the first buy and 10 from the second.
+    assert_equal Money.new(50), split_holding(security, ex_date, 30).avg_cost
+  end
+
+  test "a 1-for-10 reverse split scales the fallback the other way" do
+    security, ex_date = split_security(1, 10)
+    create_trade(security, account: @account, qty: 100, price: 10, date: ex_date - 2)
+
+    assert_equal Money.new(10), split_holding(security, ex_date - 1, 100).avg_cost
+    assert_equal Money.new(100), split_holding(security, ex_date, 10).avg_cost
+  end
+
+  test "without split rows the fallback is unchanged" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
+    before = @amzn.avg_cost
+
+    unrelated, = split_security(2, 1)
+
+    assert_equal before, Holding.find(@amzn.id).avg_cost
+    assert_not_empty unrelated.splits
+  end
+
+  test "the trend of a post-split fallback holding measures against the split-adjusted cost" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+
+    assert_equal Money.new(1000), split_holding(security, ex_date, 20).trend.previous
+  end
+
   # Each case pins the figure #avg_cost gives on its own, then checks the batch
   # hands the holding that same figure and that reading it afterwards runs no
   # query, so the answer is the preload's and not the per-holding fallback's.
@@ -204,6 +252,31 @@ class HoldingTest < ActiveSupport::TestCase
     end
   end
 
+  # InvestmentStatement reads every position's fallback through the batch, so
+  # the batch must count a pre-split buy in post-split shares as #avg_cost does.
+  test "the batched average cost counts purchases in post-split shares" do
+    security, ex_date = split_security(2, 1)
+    create_trade(security, account: @account, qty: 10, price: 100, date: ex_date - 2)
+    create_trade(security, account: @account, qty: 10, price: 50, date: ex_date)
+    before = split_holding(security, ex_date - 1, 10)
+    on = split_holding(security, ex_date, 30)
+    unsplit = create_security("NOSPL", prices: [ { date: Date.current, price: 10 } ])
+    create_trade(unsplit, account: @account, qty: 4, price: 8, date: Date.current)
+    unsplit_holding = create_holding(unsplit, Date.current, 4)
+
+    expected = { before => Money.new(100), on => Money.new(50), unsplit_holding => Money.new(8) }
+    expected.each { |holding, value| assert_cost value, Holding.find(holding.id).avg_cost, "#{holding.date} per holding" }
+
+    batch = Holding.where(id: expected.keys.map(&:id)).includes(:security).to_a
+    Holding.preload_avg_costs(batch)
+
+    batch.each do |holding|
+      original = expected.keys.find { |h| h.id == holding.id }
+      queries = Holding.uncached { capture_sql_queries { assert_cost expected[original], holding.avg_cost, "#{holding.date} batched" } }
+      assert_empty queries, "#{holding.date} read its cost after the preload"
+    end
+  end
+
   test "the batched average cost reads every holding's trades in one query" do
     batch_sizes = [ 2, 4 ].map do |count|
       holdings = Array.new(count) do |i|
@@ -212,10 +285,12 @@ class HoldingTest < ActiveSupport::TestCase
         create_holding(security, Date.current, 1)
       end
 
-      capture_sql_queries { Holding.preload_avg_costs(holdings) }.size
+      queries = capture_sql_queries { Holding.preload_avg_costs(holdings) }
+      [ queries.count { |sql| sql.include?("JOIN trades") }, queries.size ]
     end
 
-    assert_equal [ 1, 1 ], batch_sizes
+    # One query for the trades, one for the splits, whatever the batch size.
+    assert_equal [ [ 1, 2 ], [ 1, 2 ] ], batch_sizes
   end
 
   test "the batch leaves a stored cost basis alone and does not query for it" do
@@ -260,6 +335,18 @@ class HoldingTest < ActiveSupport::TestCase
     @amzn.reload
 
     assert_equal Money.new(4000), @amzn.day_change.current
+  end
+
+  # The splits are read once per instance; a reload must read them again, as
+  # it must for a remap, which changes the security they belong to.
+  test "a reload reads the security's splits again" do
+    create_trade(@amzn.security, account: @account, qty: 15, price: 200.00, date: 10.days.ago.to_date)
+    assert_equal Money.new(200), @amzn.avg_cost
+    @amzn.security.splits.create!(ex_date: 5.days.ago.to_date, numerator: 2, denominator: 1, source: "manual")
+
+    @amzn.reload
+
+    assert_equal Money.new(100), @amzn.avg_cost
   end
 
   # The batch reads the stored rows, so for a holding that is unsaved or has
@@ -697,6 +784,19 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   private
+
+    # A security with a split of numerator:denominator three days ago, and a
+    # price on each day around it.
+    def split_security(numerator, denominator)
+      ex_date = 3.days.ago.to_date
+      security = create_security("SP#{SecureRandom.hex(2).upcase}", prices: (ex_date - 2..Date.current).map { |date| { date: date, price: 50 } })
+      security.splits.create!(ex_date: ex_date, numerator: numerator, denominator: denominator, source: "manual")
+      [ security, ex_date ]
+    end
+
+    def split_holding(security, date, qty)
+      @account.holdings.create!(date: date, security: security, qty: qty, price: 50, amount: qty * 50, currency: "USD")
+    end
 
     def assert_cost(expected, actual, message)
       expected.nil? ? assert_nil(actual, message) : assert_equal(expected, actual, message)

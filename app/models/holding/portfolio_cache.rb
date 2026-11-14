@@ -77,14 +77,7 @@ class Holding::PortfolioCache
   # (an account with no entries starts yesterday), and a split between the
   # snapshot and that start still changed the count it reported.
   def split_factor_between(security_id, from, to)
-    return Rational(1) if from.nil? || to.nil? || from >= to
-
-    splits_through_today.reduce(Rational(1)) do |factor, split|
-      next factor unless split.security_id == security_id
-      next factor unless split.ex_date > from && split.ex_date <= to
-
-      factor * split.ratio
-    end
+    Security::Split.factor_between(splits_through_today.select { |split| split.security_id == security_id }, from, to)
   end
 
   private

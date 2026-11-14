@@ -108,19 +108,40 @@ class Holding < ApplicationRecord
       .joins("JOIN entries ON entries.account_id = holdings.account_id AND entries.entryable_type = 'Trade' AND entries.date <= holdings.date")
       .joins("JOIN trades ON trades.id = entries.entryable_id AND trades.security_id = holdings.security_id AND trades.qty > 0")
       .joins(avg_cost_rates_join)
-      .group("holdings.id")
+      .group("holdings.id", "entries.date")
       .pluck(
         Arel.sql("holdings.id"),
+        Arel.sql("entries.date"),
         Arel.sql(sanitize_sql_array([ "BOOL_OR(trades.investment_activity_label IN (?))", Trade::INTERNAL_MOVEMENT_LABELS ])),
         *avg_cost_totals_sql
       )
-      .index_by(&:first)
+      .group_by(&:first)
+
+    # Each day's purchases are counted in the shares the holding is in, as
+    # in #split_adjusted, so the splits of every security are read once.
+    splits = Security::Split.where(security_id: pending.map(&:security_id).uniq).group_by(&:security_id)
 
     pending.each do |holding|
-      _id, internal_movement, total_cost, total_qty, rate_missing = rows[holding.id]
-      value = avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency) unless internal_movement
+      days = rows.fetch(holding.id, [])
+      internal_movement = days.any? { |_id, _date, internal, *| internal }
+      rate_missing = days.any? { |*, missing| missing }
+      value = unless internal_movement || rate_missing
+        security_splits = splits.fetch(holding.security_id, [])
+        total_cost = days.sum(BigDecimal("0")) { |_id, _date, _internal, cost, _qty, _missing| cost }
+        total_qty = days.sum(BigDecimal("0")) do |_id, trade_date, _internal, _cost, qty, _missing|
+          split_adjusted_qty(security_splits, qty, trade_date, holding.date)
+        end
+        avg_cost_from_totals(total_cost, total_qty, false, holding.currency)
+      end
       holding.preload_avg_cost(value)
     end
+  end
+
+  # `qty` bought on `trade_date`, in the shares a holding dated `holding_date`
+  # is counted in. Shared by #split_adjusted and .preload_avg_costs.
+  def self.split_adjusted_qty(splits, qty, trade_date, holding_date)
+    factor = Security::Split.factor_between(splits, trade_date, holding_date)
+    factor == 1 ? qty : Security::Split.scale(qty, factor)
   end
 
   # Joins each trade to the table's rate for its day into the account's
@@ -387,6 +408,7 @@ class Holding < ApplicationRecord
       remove_instance_variable(:@preloaded_avg_cost) if defined?(@preloaded_avg_cost)
       remove_instance_variable(:@trend) if defined?(@trend)
       remove_instance_variable(:@day_change) if defined?(@day_change)
+      remove_instance_variable(:@splits) if defined?(@splits)
     end
 
     def amount_in_account_currency
@@ -435,8 +457,24 @@ class Holding < ApplicationRecord
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
-      total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency))
+      # Grouped by day so each day's purchases can be counted in the shares
+      # this holding is in (#split_adjusted).
+      rows = trades.group("entries.date").pluck(Arel.sql("entries.date"), *self.class.avg_cost_totals_sql(account.currency))
+      return nil if rows.any? { |_date, _cost, _qty, rate_missing| rate_missing }
 
-      self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, currency)
+      total_cost = rows.sum(BigDecimal("0")) { |_date, cost, _qty, _rate_missing| cost }
+      total_qty = rows.sum(BigDecimal("0")) { |trade_date, _cost, qty, _rate_missing| split_adjusted(qty, trade_date) }
+
+      self.class.avg_cost_from_totals(total_cost, total_qty, false, currency)
+    end
+
+    # A day's purchases in the shares this holding is counted in: a buy before
+    # a 2-for-1 ex-date counts double from that date on, so the cost per share
+    # halves while the total cost stays the same, as the holding calculators
+    # have it. A buy on the ex-date is already in the new shares, as in
+    # Security#split_factor_between. The splits are read once per holding.
+    def split_adjusted(qty, trade_date)
+      @splits ||= security.splits.to_a
+      self.class.split_adjusted_qty(@splits, qty, trade_date, date)
     end
 end
