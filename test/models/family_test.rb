@@ -887,7 +887,7 @@ class FamilyTest < ActiveSupport::TestCase
     assert_not_equal before, after
   end
 
-  test "build_cache_key changes when family currency changes" do
+  test "build_cache_key for net worth changes when family currency changes" do
     family = families(:dylan_family)
 
     before = family.build_cache_key("net_worth", invalidate_on_data_updates: true)
