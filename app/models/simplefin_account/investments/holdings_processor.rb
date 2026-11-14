@@ -4,7 +4,14 @@ class SimplefinAccount::Investments::HoldingsProcessor
   end
 
   def process
-    return if holdings_data.empty?
+    simplefin_account.with_lock { process_holdings }
+  end
+
+  def process_holdings
+    if holdings_data.empty?
+      close_positions if simplefin_account.raw_holdings_payload == []
+      return
+    end
     return unless [ "Investment", "Crypto" ].include?(account&.accountable_type)
 
     # SimpleFIN reports one record per LOT, so a single position can arrive as
@@ -162,8 +169,48 @@ class SimplefinAccount::Investments::HoldingsProcessor
     end
   end
 
+  private :process_holdings
+
   private
     attr_reader :simplefin_account
+
+    def close_positions
+      return unless [ "Investment", "Crypto" ].include?(account&.accountable_type)
+      provider = simplefin_account.ensure_account_provider!
+      return unless provider
+
+      if account.simplefin_account_id == simplefin_account.id
+        account.holdings.where(account_provider_id: nil)
+          .where("external_id ~ ?", "^simplefin_.+_[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+          .update_all(account_provider_id: provider.id)
+      end
+
+      snapshot_date = Date.current
+      holdings = account.holdings.where(account_provider: provider)
+        .where("date <= ?", snapshot_date).includes(:security, :provider_security)
+        .order(date: :desc, id: :asc).to_a
+        .uniq { |holding| [ holding.provider_security_id || holding.security_id, holding.currency ] }
+
+      holdings.each do |holding|
+        next if holding.qty.zero? && holding.amount.zero?
+
+        holding.with_lock do
+          next unless holding.account_provider_id == provider.id
+
+          collision = account.holdings.find_by(security_id: holding.security_id, currency: holding.currency, date: snapshot_date)
+          next if collision && collision.account_provider_id != provider.id
+
+          closed = holding.date == snapshot_date ? holding : holding.dup
+          closed.assign_attributes(
+            date: snapshot_date, qty: 0, amount: 0, price: 0,
+            external_id: "simplefin_closed_#{provider.id}_#{holding.provider_security_id || holding.security_id}_#{holding.currency}_#{snapshot_date}"
+          )
+          Holding.transaction(requires_new: true) { closed.save! }
+        end
+      rescue ActiveRecord::RecordNotUnique
+        next
+      end
+    end
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)

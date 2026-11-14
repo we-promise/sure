@@ -823,10 +823,14 @@ class Account < ApplicationRecord
   end
 
   def current_holdings
-    if (provider_snapshot_date = latest_provider_holdings_snapshot_date)
-      holdings
-        .where.not(account_provider_id: nil)
-        .where(date: provider_snapshot_date)
+    if holdings.where.not(account_provider_id: nil).exists?
+      closed_provider_ids = account_providers.where(provider_type: "SimplefinAccount").includes(:provider).filter_map do |link|
+        link.id if link.provider.raw_holdings_payload == []
+      end
+
+      eligible_holdings = holdings.where.not(account_provider_id: [ nil, *closed_provider_ids ])
+      eligible_holdings
+        .where(date: eligible_holdings.maximum(:date))
         .where.not(qty: 0)
         .order(amount: :desc)
     else

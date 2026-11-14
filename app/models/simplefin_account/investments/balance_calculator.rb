@@ -31,7 +31,7 @@ class SimplefinAccount::Investments::BalanceCalculator
     attr_reader :simplefin_account
 
     def holdings_data
-      @holdings_data ||= simplefin_account.raw_holdings_payload.presence ||
+      @holdings_data ||= simplefin_account.raw_holdings_payload ||
                          simplefin_account.raw_payload&.dig("holdings") ||
                          []
     end
