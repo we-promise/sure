@@ -272,6 +272,15 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal [ BigDecimal("15"), BigDecimal("45"), "CAD" ], [ holding.price, holding.amount, holding.currency ]
   end
 
+  test "an option position without option_type still uses its contract multiplier" do
+    @snaptrade_account.update!(raw_holdings_payload: [ option_position("XYZ   261218C00050000", nil, units: "3", price: "1.50") ])
+
+    SnaptradeAccount::HoldingsProcessor.new(@snaptrade_account).process
+
+    holding = @account.holdings.joins(:security).find_by!(securities: { ticker: "XYZ   261218C00050000" })
+    assert_equal BigDecimal("450"), holding.amount
+  end
+
   test "position-created option security gets the trade importer's name and exchange" do
     occ = "AAPL  261218C00240000"
     @snaptrade_account.update!(

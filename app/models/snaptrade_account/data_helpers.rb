@@ -299,6 +299,7 @@ module SnaptradeAccount::DataHelpers
 
       data = data.with_indifferent_access
       is_option = option_data.present? ||
+                  data[:kind].to_s.casecmp?("option") ||
                   data[:option_type].present? ||
                   !data[:is_mini_option].nil?
       return 1 unless is_option
