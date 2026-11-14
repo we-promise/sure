@@ -1366,6 +1366,52 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports the activity label and safe provider fields on split lines" do
+    security = Security.create!(ticker: "SPL#{SecureRandom.hex(3).upcase}", name: "Split Line Security")
+    parent = @account.entries.create!(
+      date: Date.parse("2024-05-22"),
+      amount: -10,
+      name: "Dividend to split",
+      currency: "EUR",
+      entryable: Transaction.new(investment_activity_label: "Dividend")
+    )
+    child = parent.split!([
+      { name: "Dividend part", amount: -6 },
+      { name: "Other part", amount: -4 }
+    ]).first
+    # Split children start without these; a provider or a later edit can
+    # store them, as on any other row.
+    child.update_columns(source: "ibkr")
+    child.entryable.update_columns(
+      investment_activity_label: "Dividend",
+      extra: {
+        "exchange_rate" => 1.08,
+        "security_id" => security.id,
+        "ibkr" => { "type" => "Dividends", "account_id" => "U5550001" }
+      }
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+      records = ndjson.split("\n").map { |line| JSON.parse(line) }
+      parent_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == parent.entryable.id }["data"]
+      lines = parent_data["split_lines"]
+      child_line = lines.find { |line| line["id"] == child.entryable.id }
+      other_line = lines.find { |line| line["id"] != child.entryable.id }
+
+      assert_equal "Dividend", child_line["investment_activity_label"]
+      assert_equal "Dividends", child_line["provider_type"]
+      assert_equal security.id, child_line["security_id"]
+      assert_equal 1.08, child_line["exchange_rate"]
+      assert_equal "EUR", child_line["amount_currency"]
+      %w[investment_activity_label provider_type security_id exchange_rate].each do |field|
+        assert other_line.key?(field), "expected #{field} on the split line"
+        assert_nil other_line[field]
+      end
+      assert_not_includes ndjson, "U5550001"
+    end
+  end
+
   test "export reads a non-hash extra on a trade or transaction as null tax fields" do
     investment_account = @family.accounts.create!(
       name: "Malformed Extra Investment Account",

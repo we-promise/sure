@@ -396,7 +396,7 @@ class Family::DataExporter
         :tags,
         entry: [
           :account,
-          { child_entries: { entryable: :tags } }
+          { child_entries: [ :account, { entryable: :tags } ] }
         ]
       ).find_each do |transaction|
         transaction_data = {
@@ -593,6 +593,11 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          investment_activity_label: transaction.investment_activity_label,
+          provider_type: transaction.provider_type,
+          security_id: transaction.serializable_security_id,
+          exchange_rate: transaction.numeric_exchange_rate,
+          amount_currency: child_entry.currency,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
