@@ -299,6 +299,11 @@ describe("parseAmountPaste", () => {
       assert.equal(parseAmountPaste("¥12,34,567.00", jpy), 1234567)
     })
 
+    it("rejects a leading zero group", () => {
+      assert.equal(parseAmountPaste("0.500", jpy), null)
+      assert.equal(parseAmountPaste("¥01,00,000", jpy), null)
+    })
+
     it("still rejects mixed or uneven grouping", () => {
       assert.equal(parseAmountPaste("1 234.567", jpy), null)
       assert.equal(parseAmountPaste("1 234,5", jpy), null)

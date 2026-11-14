@@ -433,6 +433,29 @@ describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
     assert.equal(evaluateAmountExpression("1.000+1000*1.5", whole), 2500)
   })
 
+  it("rejects a factor of * or / that reads both as grouping and as a decimal", () => {
+    // "150.000*12" could be 150000 a month for a year or 150 times 12.
+    assert.equal(evaluateAmountExpression("150.000*12", whole), null)
+    assert.equal(evaluateAmountExpression("12*150.000", whole), null)
+    assert.equal(evaluateAmountExpression("150.000+150.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("1.000*1.1", whole), null)
+    assert.equal(evaluateAmountExpression("1,500/3", whole), null)
+    assert.equal(evaluateAmountExpression("-1.500*2", whole), null)
+    // Not a thousands group, so still a plain decimal factor.
+    assert.equal(evaluateAmountExpression("1000*0.125", whole), 125)
+    assert.equal(evaluateAmountExpression("1000*1.25", whole), 1250)
+    // Fields with decimals are unaffected.
+    assert.equal(evaluateAmountExpression("1.500*2", { precision: 2 }), 3)
+  })
+
+  it("rejects a leading zero group instead of reading it as grouping", () => {
+    assert.equal(evaluateAmountExpression("0.500", whole), null)
+    assert.equal(evaluateAmountExpression("05.000", whole), null)
+    assert.equal(evaluateAmountExpression("0.500,00", whole), null)
+    assert.equal(evaluateAmountExpression("01,00,000", whole), null)
+    assert.equal(evaluateAmountExpression("0", whole), 0)
+  })
+
   it("accepts a zero cents part on a whole amount", () => {
     assert.equal(evaluateAmountExpression("1.500.000,00", whole), 1500000)
     assert.equal(evaluateAmountExpression("1500.00", whole), 1500)

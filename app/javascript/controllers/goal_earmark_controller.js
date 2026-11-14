@@ -77,10 +77,12 @@ export default class extends Controller {
     }
 
     // In a whole-number currency (PYG, JPY) a dot or comma is grouping, as
-    // the field itself reads it: "1.500" is 1500, not 1.5.
+    // the field itself reads it: "1.500" is 1500, not 1.5. A typed amount
+    // cannot contain a space, so space grouping (accepted from a paste) is
+    // not read here either.
     let entered;
     if (precisionFromStep(input.step) === 0 && /[.,]/.test(raw)) {
-      entered = parseGroupedWholeNumber(raw);
+      entered = /\s/.test(raw) ? null : parseGroupedWholeNumber(raw);
       if (entered === null) return this.#hide(warning);
     } else {
       if (!this.constructor.ALLOCATION_PATTERN.test(raw))

@@ -56,14 +56,25 @@ const MAX_AMOUNT = 99999999999999
 // rejected rather than rounded to a fraction of what was meant. Pasting uses
 // the same rule (parse_amount_paste.js), so a value means the same typed or
 // pasted. It applies to the terms that are added or subtracted only: a factor
-// of * or / keeps the decimal reading, so "1000*1.1" (10% tax) still works.
+// of * or / keeps the decimal reading, so "1000*1.1" (10% tax) still works,
+// except that a factor shaped like one thousands group ("150.000*12") is
+// rejected, since it reads both ways.
 //
 // A pasted amount may also be grouped with spaces ("1 234,00", as pl or nb
 // write it) or in the Indian style ("1,00,000", which lib/money/formatting.rb
 // emits for Indian locales). A typed token cannot contain a space, so the
 // space form only ever comes from a paste.
-const WHOLE_NUMBER_GROUPED = /^\d{1,3}(?:([.,\u0020\u00a0\u202f])\d{3})(?:\1\d{3})*$/
-const WHOLE_NUMBER_INDIAN_GROUPED = /^\d{1,2}(?:,\d{2})+,\d{3}$/
+//
+// The leading group starts with 1-9: nobody groups 500 as "0.500", so that
+// shape is a decimal and is rejected rather than read as 500.
+const WHOLE_NUMBER_GROUPED = /^[1-9]\d{0,2}(?:([.,\u0020\u00a0\u202f])\d{3})(?:\1\d{3})*$/
+const WHOLE_NUMBER_INDIAN_GROUPED = /^[1-9]\d?(?:,\d{2})+,\d{3}$/
+
+// A factor of * or / that reads both ways in a whole-number field: one
+// separator after a 1-3 digit lead, then three digits ("150.000", "1,500").
+// As grouping it is 150000, as a decimal 150, so "150.000*12" could mean
+// 1800000 or 1800. It is rejected instead of guessed.
+const AMBIGUOUS_WHOLE_NUMBER_FACTOR = /^[1-9]\d{0,2}[.,]\d{3}$/
 
 // Reads an unsigned digit string with a dot or comma in it as a grouped
 // whole number, or returns null when it is not exactly that shape.
@@ -173,8 +184,16 @@ export default function evaluateAmountExpression(value, options = {}) {
   if (numberTokens.some((t) => !NUMBER.test(t.trim()))) return null
 
   // A factor of * or / is a multiplier, not an amount, so it is never read as
-  // whole-number grouping.
+  // whole-number grouping. One that would also read as a grouped amount is
+  // rejected (AMBIGUOUS_WHOLE_NUMBER_FACTOR).
   const isFactor = (i) => /[*/]/.test(`${tokens[2 * i - 1] ?? ""}${tokens[2 * i + 1] ?? ""}`)
+  if (
+    options.precision === 0 &&
+    numberTokens.some(
+      (t, i) => isFactor(i) && AMBIGUOUS_WHOLE_NUMBER_FACTOR.test(t.trim().replace(/^[+-]/, "")),
+    )
+  )
+    return null
   const numbers = numberTokens.map((t, i) =>
     parseTypedNumber(t.trim(), isFactor(i) ? { ...options, precision: undefined } : options),
   )
