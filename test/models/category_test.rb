@@ -291,13 +291,21 @@ class CategoryTest < ActiveSupport::TestCase
     english_fees = @family.categories.create!(name: I18n.t(Category::FEES_NAME_KEY, locale: :en), color: "#6b7280", lucide_icon: "receipt")
 
     assert_no_difference -> { @family.categories.count } do
-      I18n.with_locale(:ko) do
+      I18n.with_locale(:fr) do
         assert_equal english_fees, @family.categories.find_or_create_fees!
       end
     end
   end
 
   test "find_or_create_fees! creates the category in the active locale when none exists" do
+    @family.categories.where(name: LanguagesHelper::SUPPORTED_LOCALES.map { |l| I18n.t(Category::FEES_NAME_KEY, locale: l) }).destroy_all
+
+    I18n.with_locale(:fr) do
+      assert_equal "Frais", @family.categories.find_or_create_fees!.name
+    end
+  end
+
+  test "find_or_create_fees! creates the Korean name when Korean is active" do
     @family.categories.where(name: LanguagesHelper::SUPPORTED_LOCALES.map { |l| I18n.t(Category::FEES_NAME_KEY, locale: l) }).destroy_all
 
     I18n.with_locale(:ko) do
