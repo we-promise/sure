@@ -741,7 +741,8 @@ class ReportsController < ApplicationController
         # Scope to family's categories to prevent cross-family data access
         subcategory_ids = Current.family.categories.where(parent_id: category_id).pluck(:id)
         all_category_ids = [ category_id ] + subcategory_ids
-        scope = scope.where(category_id: all_category_ids)
+        # Trades have no category, so a category filter leaves them out.
+        scope = scope.model == Trade ? scope.none : scope.where(category_id: all_category_ids)
       end
 
       # Filter by account
