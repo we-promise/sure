@@ -39,6 +39,8 @@ ca:
       edit_chat_title: Edita el títol del xat
       start_new_chat: Inicia un xat nou
     demo_banner_message: "Tokens gratuïts per a LLM cortesia de Vercel AI Gateway. Els resultats poden variar perquè canviem sovint els pesos dels models per fer proves. Consulta la documentació de Vercel per saber on van les teves converses! 🤖"
+    demo_banner_message_addendum_html: "(consulta %{link})"
+    demo_banner_link: "aquí"
     demo_banner_title: Mode demostració actiu
     destroy:
       notice: Xat eliminat correctament
