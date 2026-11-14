@@ -403,6 +403,59 @@ describe("evaluateAmountExpression", () => {
   })
 })
 
+describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
+  // A currency with no decimals has no decimal point to type, so a dot or
+  // comma there can only be grouping. Without this, "150.000.000" typed into
+  // a PYG field was read as 150.000000, i.e. 150.
+  const whole = { precision: 0 }
+
+  it("reads dot-grouped thousands as one whole amount", () => {
+    assert.equal(evaluateAmountExpression("150.000.000", whole), 150000000)
+    assert.equal(evaluateAmountExpression("500.000", whole), 500000)
+    assert.equal(evaluateAmountExpression("1.500", whole), 1500)
+  })
+
+  it("reads comma-grouped thousands as one whole amount", () => {
+    assert.equal(evaluateAmountExpression("150,000,000", whole), 150000000)
+    assert.equal(evaluateAmountExpression("1,500", whole), 1500)
+  })
+
+  it("groups every added or subtracted term in an expression", () => {
+    assert.equal(evaluateAmountExpression("150.000.000+5.000", whole), 150005000)
+    assert.equal(evaluateAmountExpression("1.000-500", whole), 500)
+  })
+
+  it("keeps the decimal reading for a factor of * or /", () => {
+    // 10% consumption tax on a JPY amount; on main this gave 1100.
+    assert.equal(Math.round(evaluateAmountExpression("1000*1.1", whole)), 1100)
+    assert.equal(evaluateAmountExpression("10000*1.5", whole), 15000)
+    assert.equal(evaluateAmountExpression("3000/1,5", whole), 2000)
+    assert.equal(evaluateAmountExpression("1.000+1000*1.5", whole), 2500)
+  })
+
+  it("rejects a separator that is not a three-digit group instead of rounding it", () => {
+    assert.equal(evaluateAmountExpression("150.5", whole), null)
+    assert.equal(evaluateAmountExpression("150.000000", whole), null)
+    assert.equal(evaluateAmountExpression("1.23.456", whole), null)
+    assert.equal(evaluateAmountExpression("1234.567", whole), null)
+    assert.equal(evaluateAmountExpression("12.", whole), null)
+  })
+
+  it("rejects mixed grouping characters", () => {
+    assert.equal(evaluateAmountExpression("1.234,567", whole), null)
+  })
+
+  it("leaves plain integers alone", () => {
+    assert.equal(evaluateAmountExpression("150000000", whole), 150000000)
+  })
+
+  it("keeps the decimal reading for fields with decimals", () => {
+    assert.equal(evaluateAmountExpression("1.500", { precision: 2 }), 1.5)
+    assert.equal(evaluateAmountExpression("150.000.000", { precision: 2 }), null)
+    assert.equal(evaluateAmountExpression("1.500", { precision: null }), 1.5)
+  })
+})
+
 describe("formatAmountForDisplay", () => {
   it("renders a dot when the raw text had no comma", () => {
     assert.equal(formatAmountForDisplay(12.5, 2, "12.50"), "12.50")

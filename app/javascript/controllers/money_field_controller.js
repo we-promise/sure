@@ -85,7 +85,9 @@ export default class extends Controller {
       return;
     }
 
-    const result = evaluateAmountExpression(raw);
+    const result = evaluateAmountExpression(raw, {
+      precision: this.#fieldPrecision(),
+    });
     if (result === null) {
       this.amountTarget.setCustomValidity(
         this.invalidMessageValue || "Enter a valid amount or expression.",
@@ -114,8 +116,11 @@ export default class extends Controller {
   // within the same number is blocked, unless it's replacing the existing
   // one (a text selection that spans it), so correcting via select-and-
   // retype still works.
+  // A whole-number field (precision 0) has no decimal point, so a repeated
+  // separator there is thousands grouping ("150.000.000") and is allowed.
   guardSeparator(event) {
     if (event.inputType !== "insertText" || !/[.,]/.test(event.data || "")) return;
+    if (this.#fieldPrecision() === 0) return;
 
     const { selectionStart, selectionEnd, value } = event.target;
     let tokenStart = selectionStart;
@@ -150,6 +155,10 @@ export default class extends Controller {
     new CurrenciesService().get(currency).then((currencyData) => {
       if (requestId !== this.requestSequence) return;
 
+      // The text was typed for the previous currency, so read it with that
+      // currency's precision before the step below switches it.
+      const typedPrecision = this.#fieldPrecision();
+
       this.amountTarget.step =
         this.hasStepValue &&
         this.stepValue !== "" &&
@@ -159,7 +168,9 @@ export default class extends Controller {
 
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
-        const parsedAmount = evaluateAmountExpression(rawValue);
+        const parsedAmount = evaluateAmountExpression(rawValue, {
+          precision: typedPrecision,
+        });
         if (parsedAmount !== null) {
           const precision =
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)
@@ -193,11 +204,14 @@ export default class extends Controller {
   // that read both ways, so "1,234" in a euro field is 1.234, not 1234.
   pasteAmount(event) {
     const text = (event.clipboardData || window.clipboardData)?.getData("text") ?? "";
-    const parsed = parseAmountPaste(text, { separator: this.#pasteSeparator() });
+    const precision = this.#fieldPrecision();
+    const parsed = parseAmountPaste(text, {
+      separator: this.#pasteSeparator(),
+      precision,
+    });
     if (parsed === null) return;
 
     event.preventDefault();
-    const precision = this.#fieldPrecision();
     this.amountTarget.value =
       precision === null ? formatUnroundedAmount(parsed) : parsed.toFixed(precision);
 
@@ -221,10 +235,10 @@ export default class extends Controller {
     const raw = this.amountTarget.value;
     if (typeof raw !== "string" || raw.trim() === "") return;
 
-    const result = evaluateAmountExpression(raw);
+    const precision = this.#fieldPrecision();
+    const result = evaluateAmountExpression(raw, { precision });
     if (result === null) return;
 
-    const precision = this.#fieldPrecision();
     this.amountTarget.value = formatAmountForDisplay(result, precision, raw);
 
     this.amountTarget.dispatchEvent(new Event("input", { bubbles: true }));
@@ -273,10 +287,10 @@ export default class extends Controller {
     const raw = this.amountTarget.value;
     if (typeof raw !== "string" || raw.trim() === "") return;
 
-    const result = evaluateAmountExpression(raw);
+    const precision = this.#fieldPrecision();
+    const result = evaluateAmountExpression(raw, { precision });
     if (result === null) return;
 
-    const precision = this.#fieldPrecision();
     const canonical =
       precision === null ? formatUnroundedAmount(result) : result.toFixed(precision);
     event.formData.set(this.amountTarget.name, canonical);

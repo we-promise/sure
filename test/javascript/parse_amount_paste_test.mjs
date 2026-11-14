@@ -15,10 +15,19 @@ const PARSE_LOCALE_FLOAT_URL = new URL(
   import.meta.url,
 )
 
-const source = (await readFile(SOURCE_URL, "utf8")).replace(
-  '"utils/parse_locale_float"',
-  JSON.stringify(PARSE_LOCALE_FLOAT_URL.href),
+const EVALUATE_AMOUNT_EXPRESSION_URL = new URL(
+  "../../app/javascript/utils/evaluate_amount_expression.js",
+  import.meta.url,
 )
+
+const source = (await readFile(SOURCE_URL, "utf8"))
+  .replace('"utils/parse_locale_float"', JSON.stringify(PARSE_LOCALE_FLOAT_URL.href))
+  .replace(
+    '"utils/evaluate_amount_expression"',
+    JSON.stringify(EVALUATE_AMOUNT_EXPRESSION_URL.href),
+  )
+
+const { default: evaluateAmountExpression } = await import(EVALUATE_AMOUNT_EXPRESSION_URL)
 
 const { default: parseAmountPaste } = await import(
   `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`
@@ -236,6 +245,42 @@ describe("parseAmountPaste", () => {
 
     it('still parses "1\\u00a0234,56" as 1234.56, since a no-break space groups digits', () => {
       assert.equal(parseAmountPaste("1\u00a0234,56"), 1234.56)
+    })
+  })
+
+  describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
+    // Same rule as typing into the field: a dot or comma is grouping, so a
+    // value means the same pasted as typed. The currency's separator hint
+    // must not turn "1,500" into 1.5 (PYG's separator is ",").
+    const pyg = { separator: ",", precision: 0 }
+    const jpy = { separator: ".", precision: 0 }
+
+    it('parses "150.000.000" as 150000000', () => {
+      assert.equal(parseAmountPaste("150.000.000", pyg), 150000000)
+    })
+
+    it('parses "₲ 1.500.000" as 1500000', () => {
+      assert.equal(parseAmountPaste("₲ 1.500.000", pyg), 1500000)
+    })
+
+    it('parses "-₲ 1.500" as -1500', () => {
+      assert.equal(parseAmountPaste("-₲ 1.500", pyg), -1500)
+    })
+
+    it("reads a pasted amount the same as a typed one", () => {
+      const whole = { precision: 0 }
+      assert.equal(parseAmountPaste("1.000", jpy), evaluateAmountExpression("1.000", whole))
+      assert.equal(parseAmountPaste("1,500", pyg), evaluateAmountExpression("1,500", whole))
+    })
+
+    it("leaves a non-grouped separator to the browser instead of rounding it", () => {
+      assert.equal(parseAmountPaste("1.5", pyg), null)
+      assert.equal(parseAmountPaste("$1,234.56", jpy), null)
+    })
+
+    it("still parses plain and space-grouped integers", () => {
+      assert.equal(parseAmountPaste("1500000", pyg), 1500000)
+      assert.equal(parseAmountPaste("1 500 000", pyg), 1500000)
     })
   })
 })

@@ -48,11 +48,36 @@ const MAX_AMOUNT = 99999999999999
 // in which single character is accepted as the decimal point — a token
 // using the other one is then rejected rather than silently accepted, so
 // once that preference exists there is no ambiguity left to resolve at all.
-function parseTypedNumber(token, { separator } = {}) {
+//
+// A whole-number field (`precision: 0`, e.g. PYG, CLP, JPY) has no decimal
+// point to type, so there a dot or comma can only be thousands grouping:
+// "150.000.000" is 150000000. Only exact three-digit groups with one
+// grouping character are accepted; anything else ("150.5", "150.000000") is
+// rejected rather than rounded to a fraction of what was meant. Pasting uses
+// the same rule (parse_amount_paste.js), so a value means the same typed or
+// pasted. It applies to the terms that are added or subtracted only: a factor
+// of * or / keeps the decimal reading, so "1000*1.1" (10% tax) still works.
+const WHOLE_NUMBER_GROUPED = /^\d{1,3}(?:([.,])\d{3})(?:\1\d{3})*$/
+
+// Reads an unsigned digit string with a dot or comma in it as a grouped
+// whole number, or returns null when it is not exactly that shape.
+export function parseGroupedWholeNumber(digits) {
+  if (!WHOLE_NUMBER_GROUPED.test(digits)) return null
+  const value = Number.parseInt(digits.replace(/[.,]/g, ""), 10)
+  return Number.isFinite(value) && value <= MAX_AMOUNT ? value : null
+}
+
+function parseTypedNumber(token, { separator, precision } = {}) {
   if (token.length > MAX_TOKEN_LENGTH) return null
 
   const negative = token.startsWith("-")
   const unsigned = token.replace(/^[+-]/, "")
+
+  if (precision === 0 && /[.,]/.test(unsigned)) {
+    const value = parseGroupedWholeNumber(unsigned)
+    if (value === null) return null
+    return negative ? -value : value
+  }
 
   const separators = unsigned.match(/[.,]/g) || []
   if (separators.length > 1) return null
@@ -127,7 +152,12 @@ export default function evaluateAmountExpression(value, options = {}) {
 
   if (numberTokens.some((t) => !NUMBER.test(t.trim()))) return null
 
-  const numbers = numberTokens.map((t) => parseTypedNumber(t.trim(), options))
+  // A factor of * or / is a multiplier, not an amount, so it is never read as
+  // whole-number grouping.
+  const isFactor = (i) => /[*/]/.test(`${tokens[2 * i - 1] ?? ""}${tokens[2 * i + 1] ?? ""}`)
+  const numbers = numberTokens.map((t, i) =>
+    parseTypedNumber(t.trim(), isFactor(i) ? { ...options, precision: undefined } : options),
+  )
   if (numbers.some((n) => n === null)) return null
 
   if (operatorTokens.length === 0) {
