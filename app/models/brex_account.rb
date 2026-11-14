@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class BrexAccount < ApplicationRecord
+class BrexAccount < ProviderAccount
   include CurrencyNormalizable, Encryptable
 
   CARD_PRIMARY_ACCOUNT_ID = "card_primary"
@@ -11,9 +11,6 @@ class BrexAccount < ApplicationRecord
   end
 
   belongs_to :brex_item
-
-  has_one :account_provider, as: :provider, dependent: :destroy
-  has_one :account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
   validates :account_id, uniqueness: { scope: :brex_item_id }
@@ -129,10 +126,6 @@ class BrexAccount < ApplicationRecord
       "card_type" => metadata[:card_type].presence || metadata[:type].presence,
       "last_four" => last_four(metadata[:last_four].presence || metadata[:last4].presence || metadata[:card_last_four].presence)
     }.compact
-  end
-
-  def current_account
-    account
   end
 
   def linked_account
