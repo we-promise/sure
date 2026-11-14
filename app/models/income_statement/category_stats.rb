@@ -58,24 +58,37 @@ class IncomeStatement::CategoryStats
         ),
         bounds AS (
           SELECT COALESCE(MAX(period), date_trunc(:interval, CAST(:today AS date)) - CAST('1 ' || :interval AS interval)) AS last_p
-          FROM period_totals WHERE period < date_trunc(:interval, CAST(:today AS date))
+          FROM period_totals WHERE period < date_trunc(:interval, CAST(:today AS date)) AND total IS NOT NULL
         )
-        -- end_p: the category's latest period with spending, or the latest past period in scope.
+        -- A NULL total is a period whose only rows have no exchange rate (see
+        -- converted_amount_sql). It has no measurable spending, so it neither
+        -- starts, ends nor counts toward a category's run of periods.
+        -- start_p: the category's first period with measurable spending.
+        -- end_p: its latest one, or the latest past period in scope.
         , windowed AS (
-          SELECT period_totals.*, GREATEST(MAX(period) OVER (PARTITION BY category_id, classification), (SELECT last_p FROM bounds)) AS end_p
+          SELECT period_totals.*,
+            MIN(period) FILTER (WHERE total IS NOT NULL) OVER (PARTITION BY category_id, classification) AS start_p,
+            GREATEST(MAX(period) FILTER (WHERE total IS NOT NULL) OVER (PARTITION BY category_id, classification), (SELECT last_p FROM bounds)) AS end_p
           FROM period_totals
         )
         SELECT
           category_id,
           classification,
           ABS(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY total)) as median,
-          -- Average over every period from the category's first one to end_p,
-          -- at most 12 periods, so periods without spending count as zero. The
-          -- unfinished current period counts only once it has spending.
-          ABS(COALESCE(SUM(total) FILTER (WHERE period > end_p - CAST('12 ' || :interval AS interval)), 0) / (
-            SELECT COUNT(*) FROM generate_series(GREATEST(MIN(period), MAX(end_p) - CAST('11 ' || :interval AS interval)),
-              MAX(end_p), CAST('1 ' || :interval AS interval))
-          )) as avg
+          -- Average over every period from start_p to end_p, at most 12
+          -- periods, so periods without spending count as zero. The unfinished
+          -- current period counts only once it has spending. Periods with
+          -- nothing convertible are left out of the count, and a category with
+          -- no measurable period has no average.
+          CASE WHEN MAX(start_p) IS NOT NULL THEN
+            ABS(COALESCE(SUM(total) FILTER (WHERE period > end_p - CAST('12 ' || :interval AS interval)), 0) / NULLIF((
+              SELECT COUNT(*) FROM generate_series(GREATEST(MAX(start_p), MAX(end_p) - CAST('11 ' || :interval AS interval)),
+                MAX(end_p), CAST('1 ' || :interval AS interval))
+            ) - COUNT(*) FILTER (
+              WHERE total IS NULL AND period > start_p AND period <= end_p
+                AND period > end_p - CAST('12 ' || :interval AS interval)
+            ), 0))
+          END as avg
         FROM windowed
         GROUP BY category_id, classification;
       SQL
