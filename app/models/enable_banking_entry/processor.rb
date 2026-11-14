@@ -93,8 +93,10 @@ class EnableBankingEntry::Processor
       # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
       # own entry, so the plain one is another row's unless its amount matches or was edited.
       legacy = stored[legacy_id]
-      kept = legacy&.entryable.try(:extra)&.dig("enable_banking", "entry_reference") if indexes.size > 1
-      owner = free.find { |i| ref[i] == kept } if kept
+      kept = legacy&.entryable.try(:extra)&.dig("enable_banking", "entry_reference")&.to_s if indexes.size > 1
+      owner = free.find { |i| ref[i] == kept } if kept && indexes.any? { |i| ref[i] == kept }
+      # A stored reference missing from the payload (re-issued, or aged out): keep the entry only on an exact match.
+      owner = nil if kept && indexes.none? { |i| ref[i] == kept } && owner && score[owner] < 2
       owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.user_modified? && !legacy.locked?(:amount)
       indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
     end
@@ -329,6 +331,11 @@ class EnableBankingEntry::Processor
       Rails.logger.error e.backtrace.join("\n")
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
+
+    # The adapter skips a protected entry, so record which row owns its transaction_id here (only ever adds the key).
+    ref = extra&.dig(:enable_banking, :entry_reference)
+    txn = entry&.entryable
+    txn.update_column(:extra, txn.extra.deep_merge("enable_banking" => { "entry_reference" => ref })) if ref && txn.is_a?(Transaction) && txn.extra.dig("enable_banking", "entry_reference").nil?
 
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
 

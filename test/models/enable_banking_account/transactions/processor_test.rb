@@ -624,4 +624,41 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal BigDecimal("-9.00"), refund.reload.amount
     assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: sibling_id("r-a")).amount
   end
+  test "a relink where the bank re-issued the plain row's entry_reference does not duplicate it" do
+    other = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
+    [ "r-a", "r-a2" ].each do |ref|
+      @enable_banking_account.update!(raw_transactions_payload: [ raw_shared_tid_transaction(entry_reference: ref, amount: "9.00"), other ])
+      EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    end
+
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
+
+  test "unlocking a categorised settled hold under a shared transaction_id does not duplicate it" do
+    pending = raw_shared_tid_transaction(entry_reference: "r-p", amount: "50.00").merge(status: "PDNG", _pending: true)
+    @enable_banking_account.update!(raw_transactions_payload: [ pending ])
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    plain = @account.entries.find_by!(external_id: "enable_banking_tid-x")
+    plain.mark_user_modified!
+    @enable_banking_account.update!(raw_transactions_payload: [
+      raw_shared_tid_transaction(entry_reference: "r-a", amount: "57.00"),
+      raw_shared_tid_transaction(entry_reference: "r-b", amount: "20.00")
+    ])
+    2.times { EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process }
+
+    plain.unlock_for_sync!
+    2.times { EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process }
+
+    assert_equal [ 20, 57 ], @account.entries.where(source: "enable_banking").pluck(:amount).sort
+  end
+
+  test "a numeric entry_reference keeps its plain entry" do
+    @enable_banking_account.update!(raw_transactions_payload: [
+      raw_shared_tid_transaction(entry_reference: 12345, amount: "9.00"),
+      raw_shared_tid_transaction(entry_reference: 67890, amount: "7.00")
+    ])
+    2.times { EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process }
+
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
 end
