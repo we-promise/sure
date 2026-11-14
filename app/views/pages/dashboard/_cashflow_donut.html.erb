@@ -9,6 +9,9 @@
   # widget's selection exactly.
   drilldown_account_ids = selected_account_ids.sort == accessible_account_ids.sort ? nil : selected_account_ids
   period = cashflow_data[:period]
+  # The ring amounts exclude pending entries (IncomeStatement scopes to
+  # excluding_pending), so both drill-down paths filter to confirmed too.
+  drilldown_statuses = [ "confirmed" ]
   # The other widgets' months and filters, carried through this widget's
   # links and form so changing it doesn't reset them.
   other_view_params = view_params.except(:cashflow_month, :cashflow_account_ids)
@@ -79,7 +82,8 @@
       data-donut-chart-enable-click-value="true"
       data-donut-chart-start-date-value="<%= period.date_range.first %>"
       data-donut-chart-end-date-value="<%= period.date_range.last %>"
-      data-donut-chart-account-ids-value="<%= (drilldown_account_ids || []).to_json %>">
+      data-donut-chart-account-ids-value="<%= (drilldown_account_ids || []).to_json %>"
+      data-donut-chart-statuses-value="<%= drilldown_statuses.to_json %>">
       <!-- Donut Chart: outer ring inflows, inner ring outflows -->
       <div class="w-full @2xl:w-1/3 max-w-75 px-4">
         <div class="h-75 relative">
@@ -176,7 +180,7 @@
                 <% end %>
 
                 <% if segment[:clickable] %>
-                  <%= link_to transactions_path(q: { categories: [ segment[:filter_value] ], start_date: period.date_range.first, end_date: period.date_range.last, account_ids: drilldown_account_ids }.compact),
+                  <%= link_to transactions_path(q: { categories: [ segment[:filter_value] ], status: drilldown_statuses, start_date: period.date_range.first, end_date: period.date_range.last, account_ids: drilldown_account_ids }.compact),
                       class: "flex items-center justify-between mx-3 p-3 rounded-lg cursor-pointer group gap-3",
                       data: {
                         turbo_frame: "_top",

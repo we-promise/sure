@@ -25,6 +25,9 @@ export default class extends Controller {
     startDate: String,
     endDate: String,
     accountIds: { type: Array, default: [] },
+    // e.g. ["confirmed"] when the segment amounts exclude pending entries,
+    // so the drill-down lists only what the arc counted.
+    statuses: { type: Array, default: [] },
   };
 
   #viewBoxSize = 100;
@@ -345,6 +348,7 @@ export default class extends Controller {
         startDate: this.startDateValue,
         endDate: this.endDateValue,
         accountIds: this.accountIdsValue,
+        statuses: this.statusesValue,
       }),
     );
   }

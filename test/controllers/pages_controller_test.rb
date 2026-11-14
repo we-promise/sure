@@ -404,6 +404,17 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_select "#cashflow-donut-section [data-donut-chart-account-ids-value='#{[ account.id.to_s ].to_json}']"
   end
 
+  test "the cash flow rings' drill-downs only list confirmed transactions, like the ring amounts" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -1_000, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section a[href*='q%5Bcategories%5D%5B%5D=#{CGI.escape(categories(:food_and_drink).filter_value)}'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
+    assert_select "#cashflow-donut-section [data-donut-chart-statuses-value='#{[ "confirmed" ].to_json}']"
+  end
+
   test "dashboard keeps the cash flow rings' controls when the selection has no data" do
     empty_account = @family.accounts.create!(name: "Rings Empty Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
 
