@@ -7,6 +7,7 @@ zh-CN:
     entries:
       default_name: Wise 交易
       fee_name: Wise 手续费
+      refund_name: Wise 退款
     activities:
       jar_deposit: 转入 Jar 储蓄罐
       jar_withdrawal: 从 Jar 储蓄罐转出
@@ -42,6 +43,9 @@ zh-CN:
       credentials_invalid: Wise API 令牌无效或权限不足
       failed: 同步失败。请重试或联系支持人员。
       import_failed: Wise 导入失败。
+      fetch_failed:
+        one: 有 %{count} 个 Wise 请求失败。下次同步时将重试。
+        other: 有 %{count} 个 Wise 请求失败。下次同步时将重试。
       accounts_failed:
         one: 有 %{count} 个余额导入失败。
         other: 有 %{count} 个余额导入失败。
@@ -144,6 +148,7 @@ zh-CN:
       title: 将 %{account_name} 与 Wise 关联
       description: 选择要与此账户关联的 Wise 币种余额。交易将自动同步。
       no_accounts_found: 未找到未关联的 Wise 余额。
+      not_found: 未找到账户或 Wise 余额。
       link_account: 关联余额
       cancel: 取消
     link_accounts:
@@ -154,6 +159,9 @@ zh-CN:
       not_found: 未找到账户或 Wise 余额。
       success: 已成功将 %{account_name} 与 Wise 关联
       failed: 关联账户失败。请重试。
+      account_already_linked: 此账户已关联到其他提供商。
+      unsupported_account_type: Wise 余额只能关联到现金账户。
+      currency_mismatch: 此 Wise 余额的币种为 %{balance_currency}，而该账户的币种为 %{account_currency}。请选择与账户币种一致的余额。
     complete_account_setup:
       not_found: 未找到 Wise 余额。
       success: 账户创建并关联成功。

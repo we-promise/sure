@@ -191,5 +191,7 @@ zh-CN:
     value_tooltip:
       cash: 现金
       holdings: 持仓
+      projected: 预计余额
+      scheduled: 已计划
       total: 投资组合余额
       total_value_tooltip: 投资组合总余额是券商现金（可用于交易）与当前持仓市值之和。

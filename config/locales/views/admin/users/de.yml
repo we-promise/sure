@@ -6,7 +6,7 @@ de:
         title: "Benutzerverwaltung"
         description: Benutzerrollen für deine Instanz verwalten. Super-Admins haben Zugriff auf SSO-Provider und Benutzerverwaltung.
         section_title: "Benutzer"
-        you: "(Sie)"
+        you: "(du)"
         trial_ends_at: "Testversion endet"
         not_available: "k. A."
         no_users: "Keine Benutzer gefunden."

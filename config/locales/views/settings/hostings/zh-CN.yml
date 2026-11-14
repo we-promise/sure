@@ -100,6 +100,10 @@ zh-CN:
           tinkoff_invest: T-Invest (T-Bank)
           frankfurter: Frankfurter
           mansa: Mansa
+      reset_market_data:
+        market_data_reset: 市场数据重置已加入队列。汇率和价格将重新导入，随后所有账户将同步。
+        market_data_reset_already_queued: 市场数据重置已在队列中或正在运行。
+        market_data_reset_failed: 无法将市场数据重置加入队列。未删除任何数据，请重试。
       show:
         demo_refresh: 演示数据刷新
         clear_cache: 清除数据缓存
@@ -107,6 +111,11 @@ zh-CN:
         confirm_clear_cache:
           body: 确定要清除数据缓存吗？这将移除所有汇率、证券价格、账户余额及其他数据，且不可撤销。
           title: 确认清除数据缓存？
+        reset_market_data: 重置所有家庭的市场数据
+        reset_market_data_warning: 删除您的提供商可重新加载的汇率和证券价格，重新导入它们，然后同步每个账户。在导入完成前，外币总额可能会显示为未换算状态。
+        confirm_reset_market_data:
+          title: 重置所有家庭的市场数据？
+          body: 这将删除此实例上每个家庭中提供商可重新加载的汇率和证券价格，并重新导入。在导入完成前，外币金额可能会显示为未换算状态。此操作无法撤销。
         danger_zone: 高风险操作
         financial_data_providers: 金融数据提供商
         general: 通用设置

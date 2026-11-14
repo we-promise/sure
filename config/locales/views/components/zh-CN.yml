@@ -80,10 +80,12 @@ zh-CN:
           actual: 记录余额
           scheduled: 原始计划
           projected: 从今日起的预测
+          extra: 含额外还款
           today: 今天
           interactive_chart: 交互式图表
           no_payoff: 按当前还款进度无法还清
           aria_description: 贷款余额图表。记录余额 %{current_balance}。原始计划结清日期 %{scheduled_payoff_date}。从今日余额起的预测结清日期 %{projected_payoff_date}。
+          aria_extra_payoff: 含额外还款的预测结清日期 %{date}。
           aria_actual_history_starts: 记录余额历史始于 %{date}。
           aria_interest_share: 第一年的还款中约有 %{first}% 为利息；最后一年的还款中约有 %{last}% 为利息。
           aria_interest_share_overall: 在所有还款中约有 %{share}% 为利息。
@@ -103,6 +105,8 @@ zh-CN:
       activity_date:
         balance_tooltip: 当日结束余额，已包含所有交易和调整
         no_balance_data: 此日期没有余额数据
+        projected: 预计
+        projected_balance_tooltip: 估算值：当前余额加上截至该日期的已计划项目
     period_picker:
       aria_label: 时间范围：%{period}
   ds:
