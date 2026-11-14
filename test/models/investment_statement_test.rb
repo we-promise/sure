@@ -852,14 +852,123 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
     create_linked_transfer(family: @family, from: from, to: to, amount: 600, date: period.start_date)
     # The same move booked by the broker on both sides, with each leg labelled
-    # as if the money came from outside, then linked: the link wins.
+    # as if the money came from outside, then linked and confirmed: the link
+    # wins.
     out_leg = create_labelled_transaction(account: from, label: "Withdrawal", amount: 40, date: period.start_date)
     in_leg = create_labelled_transaction(account: to, label: "Contribution", amount: -40, date: period.start_date)
-    Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable)
+    Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable).confirm!
 
     totals = @statement.totals(period: period)
 
     assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  # Auto-matching creates pending transfers, and Transfer#confirm! promises an
+  # unconfirmed suggestion never moves reports. Until it is confirmed, each
+  # leg is what its label says.
+  test "an unconfirmed transfer suggestion does not change contributions or withdrawals" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+
+    out_leg = create_labelled_transaction(account: from, label: "Withdrawal", amount: 40, date: period.start_date)
+    in_leg = create_labelled_transaction(account: to, label: "Contribution", amount: -40, date: period.start_date)
+    transfer = Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable)
+    assert transfer.pending?
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(40, "USD"), totals.contributions
+    assert_equal Money.new(40, "USD"), totals.withdrawals
+  end
+
+  # The totals depend on transfers, and linking or unlinking two existing
+  # transactions does not always write to their entries.
+  test "creating, confirming and removing a transfer each refresh the cached totals" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+    out_leg = create_labelled_transaction(account: from, label: "Withdrawal", amount: 40, date: period.start_date)
+    in_leg = create_labelled_transaction(account: to, label: "Contribution", amount: -40, date: period.start_date)
+    contributions = -> { InvestmentStatement.new(@family.reload, user: nil).totals(period: period).contributions }
+
+    assert_equal Money.new(40, "USD"), contributions.call
+
+    transfer = Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable, status: "confirmed")
+    assert_equal Money.new(0, "USD"), contributions.call, "after a confirmed link"
+
+    transfer.destroy!
+    assert_equal Money.new(40, "USD"), contributions.call, "after the link is removed"
+
+    suggestion = Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable)
+    assert_equal Money.new(40, "USD"), contributions.call, "a suggestion changes nothing"
+
+    suggestion.confirm!
+    assert_equal Money.new(0, "USD"), contributions.call, "after the suggestion is confirmed"
+  end
+
+  # PlaidAccount maps Plaid's investment type "cash", the type of its
+  # dividend and interest rows, to the "Other" label.
+  test "an Other cash row is neither a contribution nor a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+
+    create_labelled_transaction(account: account, label: "Other", amount: -25, date: period.start_date)
+    create_labelled_transaction(account: account, label: "Other", amount: 10, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  # SimpleFIN writes every investment-account activity, buys and sales
+  # included, as an unlabelled standard Transaction.
+  test "an unlabelled cash row is neither a contribution nor a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+
+    create_labelled_transaction(account: account, label: nil, amount: 500, date: period.start_date)
+    create_labelled_transaction(account: account, label: nil, amount: -300, date: period.start_date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+  end
+
+  # A link written without Transfer::Creator or #confirm! (an import, an
+  # older row) can leave both legs standard and unlabelled. Between two
+  # accounts on the card such a pair counts on neither side; from a bank
+  # account outside it, the investment leg is still a contribution.
+  test "a confirmed transfer with unlabelled standard legs counts only when its other leg is off the card" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    link = lambda do |out_account, in_account, label, amount|
+      out_leg = create_labelled_transaction(account: out_account, label: label, amount: amount, date: period.start_date)
+      in_leg = create_labelled_transaction(account: in_account, label: label, amount: -amount, date: period.start_date)
+      Transfer.create!(outflow_transaction: out_leg.entryable, inflow_transaction: in_leg.entryable, status: "confirmed")
+      assert_equal "standard", in_leg.entryable.reload.kind, "precondition: the link did not change the leg's kind"
+    end
+
+    link.call(from, to, nil, 40)
+    link.call(from, to, "Other", 41)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals
+
+    link.call(checking, to, nil, 300)
+
+    totals = InvestmentStatement.new(@family).totals(period: period)
+
+    assert_equal Money.new(300, "USD"), totals.contributions
     assert_equal Money.new(0, "USD"), totals.withdrawals
   end
 
