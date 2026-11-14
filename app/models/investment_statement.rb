@@ -21,6 +21,8 @@ class InvestmentStatement
     PeriodTotals.new(
       contributions: Money.new(result[:contributions], family.currency),
       withdrawals: Money.new(result[:withdrawals], family.currency),
+      buys: Money.new(result[:buys], family.currency),
+      sells: Money.new(result[:sells], family.currency),
       dividends: Money.new(result[:dividends], family.currency),
       interest: Money.new(result[:interest], family.currency),
       trades_count: result[:trades_count],
@@ -430,7 +432,7 @@ class InvestmentStatement
       @all_time_totals ||= totals(period: Period.all_time)
     end
 
-    PeriodTotals = Data.define(:contributions, :withdrawals, :dividends, :interest, :trades_count, :currency) do
+    PeriodTotals = Data.define(:contributions, :withdrawals, :buys, :sells, :dividends, :interest, :trades_count, :currency) do
       def net_flow
         contributions - withdrawals
       end
@@ -812,7 +814,7 @@ class InvestmentStatement
       account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query/v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
+        "investment_statement", "totals_query/v3", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
         # A rate stored later can complete totals that left an amount out.
         ExchangeRate.maximum(:updated_at)&.to_i
