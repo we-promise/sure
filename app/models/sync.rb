@@ -63,6 +63,9 @@ class Sync < ApplicationRecord
     def for_family(family, resource_owner: nil)
       query = where(syncable_type: "Family", syncable_id: family.id)
       query = query.or(where(syncable_type: "Account", syncable_id: account_syncable_ids(family, resource_owner)))
+      # A Bitcoin wallet syncs on its own and is visible with its account.
+      query = query.or(where(syncable_type: "BitcoinWalletAccount",
+        syncable_id: BitcoinWalletAccount.where(account_id: account_syncable_ids(family, resource_owner)).select(:id)))
 
       family_syncable_associations.each do |association|
         query = query.or(

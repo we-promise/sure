@@ -54,7 +54,7 @@ module Syncable
   def sync_later(parent_sync: nil, window_start_date: nil, window_end_date: nil)
     Sync.transaction do
       with_lock do
-        sync = self.syncs.visible.first
+        sync = coalescible_syncs(parent_sync: parent_sync).first
 
         if sync
           Rails.logger.info("There is an existing recent sync, expanding window if needed (#{sync.id})")
@@ -104,6 +104,11 @@ module Syncable
   end
 
   private
+    # Accounts can narrow reuse when new ledger data requires another execution.
+    def coalescible_syncs(parent_sync: nil)
+      syncs.visible
+    end
+
     def latest_sync
       latest_sync_record
     end

@@ -25,6 +25,7 @@ class Account < ApplicationRecord
   has_many :holdings, dependent: :destroy
   has_many :holding_lots
   has_many :balances, dependent: :destroy
+  has_one :bitcoin_wallet_account, dependent: :destroy
   has_many :recurring_transactions, dependent: :destroy
   has_many :goal_accounts, dependent: :destroy
   has_many :goals, through: :goal_accounts
