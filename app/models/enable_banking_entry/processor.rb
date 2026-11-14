@@ -23,6 +23,9 @@ class EnableBankingEntry::Processor
   # 2-letter FamilyMerchant name matching inside unrelated text, like "IT" would
   # inside "NAME IT" -- a real chain name observed in this issue's own data).
   MIN_KNOWN_MERCHANT_MATCH_LENGTH = 3
+  # A remittance line that is only a labelled reference ("Reference 0394676",
+  # "Faktura nr 12345", "OCR: 4711"), which names no payee.
+  REFERENCE_LINE = /\A(?:ref(?:erence|erens)?|invoice|faktura|ocr)\b\.?\s*(?:no\.?|nr\.?|number)?\s*[:#]?\s*(?=[^\s]*\d)[\w\/-]+\z/i
 
   # Prefix of the identifier synthesised for a transaction the ASPSP returned
   # with neither transaction_id nor entry_reference.
@@ -494,22 +497,30 @@ class EnableBankingEntry::Processor
 
     # The first remittance line that names the payee, cleaned and matched to a
     # known merchant the same way as primary_remittance_information.
+    # A known merchant is trusted before the letter-count heuristic, so short
+    # names such as "H&M" are kept.
     def descriptive_remittance_name
-      line = remittance_information_lines
-        .map { |value| strip_payment_processor_prefix(value) }
-        .find { |value| descriptive_remittance?(value) }
-      return nil if line.nil?
+      remittance_information_lines.each do |value|
+        line = strip_payment_processor_prefix(value)
+        next if technical_remittance_line?(line) || masked_card_text?(line) || account_holder_name?(line)
 
-      matched_known_merchant_name(line) || line
+        known_merchant = matched_known_merchant_name(line)
+        return known_merchant if known_merchant
+        return line if descriptive_remittance?(line)
+      end
+
+      nil
     end
 
     # Remittance text that reads as a name: not a technical booking line, not a
-    # masked card number, not a bare reference such as "52220151204
-    # 092408560500" (fewer than three letters) and not the account holder.
+    # masked card number, not a reference such as "52220151204 092408560500"
+    # (fewer than three letters) or "Reference 0394676", and not the account
+    # holder.
     def descriptive_remittance?(value)
       value.present? &&
         !technical_remittance_line?(value) &&
         !masked_card_text?(value) &&
+        !value.match?(REFERENCE_LINE) &&
         value.scan(/\p{L}/).size >= 3 &&
         !account_holder_name?(value)
     end

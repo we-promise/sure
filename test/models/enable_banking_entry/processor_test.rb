@@ -1177,6 +1177,49 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "TELIA SVERIGE - Direct debit", name
   end
 
+  test "keeps the transaction type description when the remittance is a labelled reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Reference 0394676" ],
+      bank_transaction_code: { description: "Credit transfer" }
+    )
+
+    assert_equal "Credit transfer", name
+  end
+
+  test "skips a labelled reference and uses the payee on a later line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Faktura nr 12345", "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Direct debit" }
+    )
+
+    assert_equal "TELIA SVERIGE - Direct debit", name
+  end
+
+  test "keeps a short known merchant name over a later descriptive line" do
+    @family.merchants.create!(name: "H&M")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "H&M", "LONDON" ]
+    )
+
+    assert_equal "H&M", name
+  end
+
+  test "does not treat a merchant name starting with a reference keyword as a reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "REFILL STATION 2" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "REFILL STATION 2 - Card purchase", name
+  end
+
   test "uses the descriptive remittance alone when there is no transaction type description" do
     name = build_name(
       credit_debit_indicator: "DBIT",
