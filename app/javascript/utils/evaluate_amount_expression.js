@@ -61,7 +61,8 @@ const WHOLE_NUMBER_GROUPED = /^\d{1,3}(?:([.,])\d{3})(?:\1\d{3})*$/
 
 // Reads an unsigned digit string with a dot or comma in it as a grouped
 // whole number, or returns null when it is not exactly that shape.
-export function parseGroupedWholeNumber(digits) {
+export function parseGroupedWholeNumber(input) {
+  let digits = input
   // A zero cents part ("1.500.000,00", "1500.00") is still a whole amount, as
   // long as its separator is not the grouping one.
   const zeroCents = digits.match(/^(.+)([.,])0{1,2}$/)
