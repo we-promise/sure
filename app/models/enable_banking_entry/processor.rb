@@ -91,11 +91,13 @@ class EnableBankingEntry::Processor
       free = indexes.reject { |i| stored.key?(suffixed[i]) }
       legacy = stored[legacy_id]
       kept = legacy&.entryable.try(:provider_entry_reference) if indexes.size > 1
-      # Without a stored reference, a locked currency is the owner's, not the bank's: match on amount and date only.
+      # Without a stored reference, a locked currency is the owner's, not the bank's: match on amount and date only,
+      # and use the currency only to break a tie.
       match_currency = kept.present? || !legacy&.locked?(:currency)
       score = ->(i) { movement_match(legacy, rows[i], account, match_currency: match_currency) }
+      same_currency = ->(i) { match_currency || movement_match(legacy, rows[i], account).zero? ? 0 : 1 }
       # Rows that already have a suffixed entry never take the plain id; if all do, nobody does (no duplicate).
-      owner = free.each_with_index.max_by { |i, pos| [ score[i], -pos ] }&.first
+      owner = free.each_with_index.max_by { |i, pos| [ score[i], same_currency[i], -pos ] }&.first
       # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
       # own entry, so the plain one is another row's unless its amount matches or was edited.
       owner = free.find { |i| ref[i] == kept } if kept && indexes.any? { |i| ref[i] == kept }
