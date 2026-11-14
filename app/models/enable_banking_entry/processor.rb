@@ -95,7 +95,7 @@ class EnableBankingEntry::Processor
       # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
       # own entry, so the plain one is another row's unless its amount matches or was edited.
       legacy = stored[legacy_id]
-      kept = legacy&.entryable.try(:extra)&.dig("enable_banking", "entry_reference")&.to_s if indexes.size > 1
+      kept = legacy&.entryable.try(:provider_entry_reference) if indexes.size > 1
       owner = free.find { |i| ref[i] == kept } if kept && indexes.any? { |i| ref[i] == kept }
       # A stored reference missing from the payload (re-issued, or aged out): keep the entry only on an exact match.
       # The entry's date is not the bank's when the user locked it or a settled hold froze it: an amount match is then exact.
@@ -304,6 +304,7 @@ class EnableBankingEntry::Processor
     end
 
     claim_identifierless_predecessor!
+    skips = import_adapter.skipped_entries.size
 
     # EnableBankingAccount::Transactions::Processor re-processes the whole stored
     # payload on every sync, so a live hold passes through here once per sync until
@@ -338,6 +339,7 @@ class EnableBankingEntry::Processor
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
 
+    store_entry_reference(entry) if import_adapter.skipped_entries.size == skips
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
 
     entry
@@ -375,6 +377,16 @@ class EnableBankingEntry::Processor
       plain = account.entries.find_by(source: "enable_banking", external_id: plain_id)
       plain&.entryable.try(:pending?) &&
         import_adapter.find_pending_transaction(date: date, amount: amount, currency: currency, source: "enable_banking") == plain
+    end
+
+    # external_ids_for reads the stored entry_reference to tell rows sharing a transaction_id
+    # apart. It has its own column, so it is not part of the details rules match on. An entry
+    # the adapter skipped as protected keeps what it had, as it keeps the rest of its data.
+    def store_entry_reference(entry)
+      reference = data[:entry_reference].to_s
+      return if reference.blank? || data[:transaction_id].blank? || pending_payload? || !entry&.entryable.is_a?(Transaction)
+
+      entry.transaction.update_column(:provider_entry_reference, reference) unless entry.transaction.provider_entry_reference == reference
     end
 
     def name
@@ -453,7 +465,6 @@ class EnableBankingEntry::Processor
 
       eb[:merchant_category_code] = data[:merchant_category_code] if data[:merchant_category_code].present?
       eb[:pending] = true if pending_payload?
-      eb[:entry_reference] = data[:entry_reference] if data[:transaction_id].present? && !pending_payload?
 
       eb.compact!
       eb.empty? ? nil : { enable_banking: eb }

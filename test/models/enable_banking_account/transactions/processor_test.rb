@@ -537,7 +537,7 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     second = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00")
     @enable_banking_account.update!(raw_transactions_payload: [ first, second ])
     EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
-    @account.entries.find_by!(external_id: "enable_banking_tid-x").transaction.update!(extra: {}) # stored without its entry_reference
+    @account.entries.find_by!(external_id: "enable_banking_tid-x").transaction.update!(provider_entry_reference: nil) # stored without its entry_reference
 
     # e.g. a relinked account whose first window misses r-a
     @enable_banking_account.update!(raw_transactions_payload: [ second, raw_shared_tid_transaction(entry_reference: "r-c", amount: "5.00") ])
@@ -720,5 +720,14 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
 
     assert_equal [ [ "enable_banking_tid-x", "EUR" ], [ sibling_id("r-u"), "USD" ] ],
                  @account.entries.where(source: "enable_banking").order(:external_id).pluck(:external_id, :currency)
+  end
+
+  test "the stored entry_reference leaves transaction details empty" do
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"), raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00"))
+    entry = @account.entries.find_by!(external_id: "enable_banking_tid-x")
+
+    assert_equal "r-a", entry.transaction.provider_entry_reference
+    filter = Rule::ConditionFilter::TransactionDetails.new(Rule.new(family: @family, resource_type: "transaction"))
+    assert_includes filter.apply(@family.transactions.joins(:entry), "is_null", nil).pluck(:id), entry.entryable_id
   end
 end
