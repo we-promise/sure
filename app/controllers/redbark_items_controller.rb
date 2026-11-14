@@ -80,6 +80,8 @@ class RedbarkItemsController < ApplicationController
 
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @redbark_item = Current.family.redbark_items.first
 
     unless @redbark_item&.credentials_configured?
@@ -94,6 +96,8 @@ class RedbarkItemsController < ApplicationController
 
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(account)
+
     redbark_item = Current.family.redbark_items.first
 
     unless redbark_item&.credentials_configured?

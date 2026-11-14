@@ -164,6 +164,8 @@ class TruelayerItemsController < ApplicationController
   # Links an unlinked TrueLayer account to an existing manual account.
   def select_existing_account
     @account = Current.family.accounts.find(params[:account_id])
+    return unless require_linkable_account!(@account)
+
     @truelayer_accounts = TruelayerAccount.where(truelayer_item: Current.family.truelayer_items.active)
       .left_joins(:account_provider).where(account_providers: { id: nil })
       .includes(:truelayer_item).order(:name)
@@ -173,6 +175,8 @@ class TruelayerItemsController < ApplicationController
   def link_existing_account
     account = Current.family.accounts.find(params[:account_id])
     truelayer_account = TruelayerAccount.where(truelayer_item: Current.family.truelayer_items.active).find(params[:truelayer_account_id])
+
+    return unless require_linkable_account!(account)
 
     if account.account_providers.any?
       return redirect_to(account_path(account), alert: t(".only_manual"), status: :see_other)
