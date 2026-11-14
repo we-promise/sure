@@ -72,6 +72,10 @@ vi:
       attachments: Tệp đính kèm
       exclude: Loại trừ
       exclude_description: Giao dịch bị loại trừ sẽ bị xóa khỏi tính toán ngân sách và báo cáo.
+      auto_excluded_title: "Đã tự động loại trừ"
+      auto_excluded_stale_pending: "Vào %{date}, đồng bộ ngân hàng đã loại trừ giao dịch đang chờ này vì giao dịch chưa được ghi sổ sau %{days} ngày."
+      auto_excluded_posted_match: "Vào %{date}, đồng bộ ngân hàng đã loại trừ giao dịch đang chờ này vì phiên bản đã ghi sổ của nó đến dưới dạng một giao dịch riêng."
+      auto_excluded_other: "Vào %{date}, đồng bộ ngân hàng đã loại trừ giao dịch này."
       activity_type: Loại hoạt động
       activity_type_description: Loại hoạt động đầu tư (Mua, Bán, Cổ tức, v.v.). Tự động phát hiện hoặc đặt thủ công.
       one_time_title: "%{type} một lần"

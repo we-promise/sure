@@ -74,6 +74,10 @@ it:
       attachments: Allegati
       exclude: Escludi
       exclude_description: Le transazioni escluse verranno rimosse dai calcoli del budget e dai rapporti.
+      auto_excluded_title: "Esclusa automaticamente"
+      auto_excluded_stale_pending: "Il %{date} la sincronizzazione bancaria ha escluso questa transazione in sospeso perché non era stata contabilizzata entro %{days} giorni."
+      auto_excluded_posted_match: "Il %{date} la sincronizzazione bancaria ha escluso questa transazione in sospeso perché la sua versione contabilizzata è arrivata come transazione separata."
+      auto_excluded_other: "Il %{date} la sincronizzazione bancaria ha escluso questa transazione."
       activity_type: Tipo di attività
       activity_type_description: Tipo di attività di investimento (Acquisto, Vendita, Dividendo, ecc.). Rilevato automaticamente o impostato manualmente.
       one_time_title: "%{type} una tantum"
