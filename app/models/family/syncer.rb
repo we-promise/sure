@@ -30,7 +30,8 @@ class Family::Syncer
   # Every `*_items` association whose model is Syncable, found by reflection
   # so a new integration takes part in the nightly family sync (and may carry
   # a SyncSchedule) as soon as it includes Syncable and exposes a `syncable`
-  # scope.
+  # scope. This list also drives the destructive Family::FinancialDataReset, so
+  # an association added here is wiped by a reset as well.
   def self.syncable_item_associations
     Family.reflect_on_all_associations(:has_many).filter_map do |association|
       next unless association.name.to_s.end_with?("_items")
