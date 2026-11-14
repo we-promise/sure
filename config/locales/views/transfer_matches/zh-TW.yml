@@ -2,6 +2,7 @@
 zh-TW:
   transfer_matches:
     create:
+      already_matched: "其中一筆交易已屬於另一筆轉帳。"
       success: 轉帳已建立
     new:
       header:
