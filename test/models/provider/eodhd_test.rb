@@ -197,7 +197,9 @@ class Provider::EodhdTest < ActiveSupport::TestCase
   end
 
   test "clamps history to one year at the free-tier request cap" do
-    assert_equal 365, @provider.max_history_days
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      assert_equal 365, @provider.max_history_days
+    end
   end
 
   test "does not clamp history when the request cap is raised for a paid plan" do
