@@ -216,6 +216,39 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert_equal :unauthorized, response.error.error_type
   end
 
+  test "bad request error omits raw response body from message" do
+    stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
+      .to_return(status: 400, body: '{"secret":"value"}')
+
+    error = assert_raises(Provider::Sophtron::Error) do
+      Provider::Sophtron.response_data!(@provider.health_check_auth)
+    end
+
+    assert_equal "Bad request to Sophtron API", error.message
+    assert_equal '{"secret":"value"}', error.details
+  end
+
+  test "fetch failure error omits raw response body from message" do
+    stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
+      .to_return(status: [ 500, "Internal Server Error" ], body: '{"secret":"value"}', headers: { "Content-Type" => "application/json" })
+
+    error = assert_raises(Provider::Sophtron::Error) do
+      Provider::Sophtron.response_data!(@provider.health_check_auth)
+    end
+
+    assert_equal "Sophtron API request failed: 500 Internal Server Error", error.message
+    assert_equal '{"secret":"value"}', error.details
+  end
+
+  test "invalid base url raises configuration error" do
+    error = assert_raises(Provider::Sophtron::Error) do
+      Provider::Sophtron.new("developer-user", @access_key, base_url: "https://bad host")
+    end
+
+    assert_equal :configuration_error, error.error_type
+    assert_match(/Invalid Sophtron base URL:/, error.message)
+  end
+
   private
 
     def provider_data(response)
