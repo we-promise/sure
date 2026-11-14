@@ -33,3 +33,5 @@ pt-PT:
               below_consumed: Não é possível definir um objetivo abaixo do que este objetivo já registou como gasto.
             currency:
               locked_after_linked: Não é possível alterar a moeda depois de o objetivo estar associado a contas.
+            progress_basis:
+              locked_once_completed: Reabra este objetivo antes de alterar o que conta para ele.

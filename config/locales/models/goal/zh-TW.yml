@@ -22,3 +22,5 @@ zh-TW:
               must_belong_to_family: 已連結的帳戶必須和這個目標屬於同一個家庭。
             currency:
               locked_after_linked: 目標連結帳戶之後就不能再更改幣別了。
+            progress_basis:
+              locked_once_completed: 請先重新開啟此目標，再變更計入方式。

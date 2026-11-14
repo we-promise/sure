@@ -148,6 +148,12 @@ es:
         of_target: de la meta
         market_value: Valor de mercado %{amount}
         aria_label: Objetivo completado al %{percent}%. %{amount} de %{target} ahorrados.
+        basis:
+          balance: Tiene en cuenta lo que valen hoy las cuentas
+          contributions: Tiene en cuenta solo lo que has aportado
+        basis_at_completion:
+          balance: Tuvo en cuenta lo que valían las cuentas al completar el objetivo
+          contributions: Tuvo en cuenta solo lo que habías aportado al completar el objetivo
       projection:
         heading: Proyección
         legend_saved: Ahorrado
@@ -271,6 +277,7 @@ es:
         whole_balance: "Vacío: todo el saldo"
         earmark_for: Importe reservado para %{account}
         earmark_hint: Deja un importe en blanco para dedicar todo el saldo de esa cuenta.
+        progress_basis: Qué se tiene en cuenta para este objetivo
       subtypes:
         checking: Corriente
         savings: Ahorro
@@ -278,3 +285,11 @@ es:
         cd: Depósito a plazo
         money_market: Mercado monetario
         other: Otra
+      progress_basis_locked: Este objetivo está completado. Vuelve a abrirlo para cambiar lo que se tiene en cuenta.
+      progress_bases:
+        balance:
+          label: Lo que valen hoy las cuentas
+          hint: Valor de mercado. Las ganancias y pérdidas de las inversiones cuentan para el objetivo.
+        contributions:
+          label: Solo lo que he aportado
+          hint: Aportaciones netas. Las ganancias y pérdidas del mercado quedan fuera.

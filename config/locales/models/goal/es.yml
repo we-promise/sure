@@ -22,3 +22,5 @@ es:
               must_belong_to_family: Las cuentas vinculadas deben pertenecer a la misma familia que el objetivo.
             currency:
               locked_after_linked: No se puede cambiar la moneda cuando el objetivo ya está vinculado a cuentas.
+            progress_basis:
+              locked_once_completed: Vuelve a abrir este objetivo antes de cambiar lo que se tiene en cuenta.
