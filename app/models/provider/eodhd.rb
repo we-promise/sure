@@ -13,6 +13,9 @@ class Provider::Eodhd < Provider
   # Maximum API calls per day (EODHD free/basic plans are very restrictive)
   MAX_REQUESTS_PER_DAY = 20
 
+  # EODHD bills each fundamentals request as 10 API calls against the daily allowance
+  FUNDAMENTALS_REQUEST_COST = 10
+
   # The free tier provides ~1 year of EOD data; paid plans go back 30+ years.
   # Raising EODHD_MAX_REQUESTS_PER_DAY above the free cap signals a paid key.
   def max_history_days
@@ -175,7 +178,7 @@ class Provider::Eodhd < Provider
       failed_key = "eodhd:fundamentals_failed:#{Digest::SHA256.hexdigest(api_key.to_s)[0, 8]}:#{ticker}"
       raise Error, "Fundamentals for #{ticker} failed recently; retrying later" if Rails.cache.read(failed_key)
 
-      enforce_daily_limit!
+      enforce_daily_limit!(cost: FUNDAMENTALS_REQUEST_COST)
       throttle_request
 
       begin
@@ -320,10 +323,13 @@ class Provider::Eodhd < Provider
 
     # Enforces the daily rate limit. Raises RateLimitError if the limit is exhausted.
     # Uses atomic increment-then-check to avoid TOCTOU races between concurrent workers.
-    def enforce_daily_limit!
-      new_count = Rails.cache.increment(daily_cache_key, 1, expires_in: 24.hours).to_i
+    # `cost` is how many API calls EODHD bills for the request. A refused request is
+    # taken back off the count, so a refused fundamentals call leaves the rest for prices.
+    def enforce_daily_limit!(cost: 1)
+      new_count = Rails.cache.increment(daily_cache_key, cost, expires_in: 24.hours).to_i
 
       if new_count > max_requests_per_day
+        Rails.cache.decrement(daily_cache_key, cost)
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
       end
     end

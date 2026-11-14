@@ -227,7 +227,7 @@ class Provider::EodhdTest < ActiveSupport::TestCase
       result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
       assert_not result.success?
     end
-    assert_equal 1, Rails.cache.read("eodhd:daily:#{Date.current}")
+    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
 
   test "fetch_security_info retries after a transient failure" do
@@ -239,7 +239,58 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     mock_client.expects(:get).times(3).raises(Faraday::ServerError.new("502"))
       .then.raises(Faraday::TimeoutError.new("timeout")).then.returns(ok)
 
-    2.times { assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success? }
+    # Three fundamentals calls cost 30 requests, more than the free cap, so use a paid limit
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100") do
+      2.times { assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success? }
+      assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+    end
+  end
+
+  test "a fundamentals call counts as ten requests against the daily limit" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    ok = mock
+    ok.stubs(:body).returns({ "General" => { "Name" => "Apple Inc" } }.to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).once.returns(ok)
+
     assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+  end
+
+  test "a fundamentals call is refused when fewer than ten requests remain" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Rails.cache.write("eodhd:daily:#{Date.current}", 15)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).never
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+
+      assert_not result.success?
+      assert_kind_of Provider::Eodhd::RateLimitError, result.error
+    end
+  end
+
+  test "a refused fundamentals call leaves the remaining requests for prices" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Rails.cache.write("eodhd:daily:#{Date.current}", 15)
+    @provider.stubs(:throttle_request)
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      assert_equal 15, Rails.cache.read("eodhd:daily:#{Date.current}")
+
+      prices = mock
+      prices.stubs(:body).returns([ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
+      @provider.stubs(:client).returns(mock_client = mock)
+      mock_client.expects(:get).once.returns(prices)
+
+      assert @provider.fetch_security_prices(
+        symbol: "AAPL", exchange_operating_mic: "XNYS",
+        start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
+      ).success?
+    end
   end
 end
