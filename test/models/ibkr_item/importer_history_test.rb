@@ -39,7 +39,7 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     Security.any_instance.stubs(:import_provider_prices)
   end
 
-  # R2-5: a quiet year (no trades, cash or NAV rows) does not end the walk.
+  # A quiet year (no trades, cash or NAV rows) does not end the walk.
   test "imports each older window as it is fetched, back to the oldest year IBKR keeps" do
     provider = history_provider
 
@@ -57,7 +57,6 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert_equal [ CURRENT, WINDOW_1, WINDOW_2, WINDOW_3, WINDOW_4, CURRENT ], provider.calls
   end
 
-  # R2-4
   test "a statement for another range than the one asked ends the walk" do
     provider = FakeFlex.new(CURRENT => @current, WINDOW_1 => @current)
 
@@ -66,7 +65,6 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert_equal [ CURRENT, WINDOW_1, CURRENT ], provider.calls
   end
 
-  # R2-1
   test "backfilled history older than the default opening anchor moves the anchor before it" do
     @ibkr_account.account_provider.destroy!
     account = Account.create_from_ibkr_account(@ibkr_account.reload)
@@ -87,8 +85,7 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert_in_delta 0, balances[Date.new(2023, 6, 1)].start_balance, 0.01, "the day of the deposit starts from zero"
   end
 
-  # ADV-1: progress used to be committed when a window was fetched, while its
-  # rows waited in the payload for process_accounts.
+  # Progress is recorded only once the window's rows are imported, not when it is fetched.
   test "a window is imported in the sync that fetched it, even if that sync stops before processing" do
     import(history_provider)
     import(FakeFlex.new(CURRENT => @current))
@@ -97,7 +94,6 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "ibkr_trade_901")
   end
 
-  # ADV-2, ADV-8, ADV-9, R2-3, R4-1, R4-3
   test "a failing window never fails the sync, is retried, and is given up only after repeated permanent errors" do
     provider = FakeFlex.new(CURRENT => @current, WINDOW_1 => window_xml(*WINDOW_1, trade_id: "901", nav_date: "2024-06-03"),
                             WINDOW_2 => OpenSSL::SSL::SSLError.new("SSL_read: unexpected eof"))
@@ -119,7 +115,6 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert_equal [ CURRENT, WINDOW_2 ] * IbkrItem::Importer::MAX_HISTORY_FAILURES + [ CURRENT ], provider.calls
   end
 
-  # R3-1
   test "a window IBKR answers without statements is given up eventually" do
     empty = "<FlexQueryResponse queryName=\"Sure Test\" type=\"AF\"><FlexStatements count=\"0\" /></FlexQueryResponse>"
     provider = FakeFlex.new(CURRENT => @current, WINDOW_1 => empty)
@@ -157,7 +152,6 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "ibkr_trade_801")
   end
 
-  # ADV-7
   test "no new window is started once the time budget is spent" do
     provider = history_provider(CURRENT => -> { travel IbkrItem::Importer::HISTORY_TIME_BUDGET + 1.second; @current })
 
@@ -166,7 +160,6 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert_equal [ CURRENT ], provider.calls
   end
 
-  # ADV-3
   test "a disabled account is not walked back until it is enabled again" do
     @account.disable!
     provider = history_provider
@@ -179,7 +172,6 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "ibkr_trade_901")
   end
 
-  # ADV-4
   test "linking the IBKR account to another Sure account walks its history back again" do
     import(history_provider)
     @ibkr_account.account_provider.destroy!

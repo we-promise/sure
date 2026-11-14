@@ -42,7 +42,6 @@ class Provider::IbkrFlexTest < ActiveSupport::TestCase
     assert_requested send_request, times: 2
   end
 
-  # ADV-5
   test "a throttled GetStatement is retried too" do
     stub_request(:get, "#{BASE_URL}/SendRequest").with(query: hash_including("q" => "QUERY123")).to_return(body: SUCCESS)
     stub_request(:get, "#{BASE_URL}/GetStatement").with(query: hash_including("q" => "REF1"))
@@ -51,7 +50,7 @@ class Provider::IbkrFlexTest < ActiveSupport::TestCase
     assert_equal STATEMENT, @provider.download_statement
   end
 
-  # ADV-6: 10 requests a minute per token, whatever IBKR answers.
+  # 10 requests a minute per token, whatever IBKR answers.
   test "calls are spaced to IBKR's per-token limit" do
     sleeps = []
     @provider.stubs(:sleep).with { |seconds| sleeps << seconds }
@@ -87,7 +86,7 @@ class Provider::IbkrFlexTest < ActiveSupport::TestCase
       times: Provider::IbkrFlex::MAX_THROTTLE_RETRIES + 1
   end
 
-  # R4-3: a maintenance page or a cut-off transfer carries no IBKR code, so history import retries it
+  # A maintenance page or a cut-off transfer carries no IBKR code, so history import retries it
   test "an HTML page or a cut-off GetStatement raises an ApiError without an error code" do
     stub_request(:get, "#{BASE_URL}/SendRequest").with(query: hash_including("q" => "QUERY123")).to_return(body: SUCCESS)
     stub_request(:get, "#{BASE_URL}/GetStatement").with(query: hash_including("q" => "REF1"))
