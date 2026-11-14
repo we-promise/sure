@@ -1,6 +1,9 @@
 class AccountsController < ApplicationController
   include StreamExtensions
 
+  # Sparkline frames load lazily from the sidebar on every page and render no
+  # layout: skip layout-only setup and never start an auto-sync from them.
+  skip_before_action :sync_family, :set_default_chat, :restore_active_tabs, :detect_os, only: :sparkline
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
@@ -247,7 +250,10 @@ class AccountsController < ApplicationController
     # We defer the expensive series computation until we know the content is stale.
     # A URL carrying the current version can't go stale, so the browser may reuse it.
     expires_in 1.day if params[:v] == @account.sparkline_version
-    if stale?(etag: @account.sparkline_cache_key)
+    # The body echoes the requesting frame id, so a reused copy must come from the same frame.
+    response.headers["Vary"] = [ response.headers["Vary"], "Turbo-Frame" ].compact.join(", ")
+    # The frame id is part of the response body, so it is part of the ETag.
+    if stale?(etag: [ @account.sparkline_cache_key, turbo_frame_request_id ])
       @sparkline_series = @account.sparkline_series
       render layout: false
     end
