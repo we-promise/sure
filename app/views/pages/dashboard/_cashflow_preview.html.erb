@@ -1,4 +1,4 @@
-<%# locals: (period:, legacy_data:) %>
+<%# locals: (period:, legacy_data:, currency:) %>
 <% feedback = feedback_config(:sankey) %>
 <% if feedback[:api_key].present? %>
   <%= render "shared/posthog_bootstrap" %>
@@ -24,7 +24,7 @@
       with the controllers still connected, so the graph is fetched again and tracking resumes. %>
   <div data-controller="cash-flow" data-sankey-preview-target="display" class="ph-no-capture"
     data-action="turbo:before-cache@document->cash-flow#clear turbo:morph@document->cash-flow#load"
-    data-cash-flow-url-value="<%= dashboard_cash_flow_path(start_date: period.start_date.iso8601, end_date: period.end_date.iso8601) %>"
+    data-cash-flow-url-value="<%= dashboard_cash_flow_path(start_date: period.start_date.iso8601, end_date: period.end_date.iso8601, currency: currency) %>"
     data-cash-flow-group-by-value="<%= Current.user.cashflow_sankey_group_by %>">
     <%# Outside the loading/content states, so the grouping can be switched back from an empty graph. %>
     <div class="px-4 flex flex-wrap items-center justify-end gap-2">

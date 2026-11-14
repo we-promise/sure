@@ -65,6 +65,8 @@ class Settings::HostingsController < ApplicationController
   end
 
   def update
+    had_exchange_rate_provider = exchange_rate_provider_available?
+
     if hosting_params.key?(:onboarding_state)
       onboarding_state = hosting_params[:onboarding_state].to_s
       Setting.onboarding_state = onboarding_state
@@ -114,6 +116,11 @@ class Settings::HostingsController < ApplicationController
 
     if hosting_params.key?(:exchange_rate_provider)
       Setting.exchange_rate_provider = hosting_params[:exchange_rate_provider]
+    end
+
+    # Reporting currencies added while no provider was set up got no rates.
+    if !had_exchange_rate_provider && exchange_rate_provider_available?
+      ImportReportingCurrencyRatesJob.perform_later_for_reporting_families
     end
 
     if hosting_params.key?(:securities_provider)
@@ -363,6 +370,12 @@ class Settings::HostingsController < ApplicationController
   end
 
   private
+    def exchange_rate_provider_available?
+      ExchangeRate.provider.present?
+    rescue Provider::Registry::Error
+      false
+    end
+
     # Strong parameters for the self-hosting settings form.
     def hosting_params
       return ActionController::Parameters.new unless params.key?(:setting)

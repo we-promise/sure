@@ -96,6 +96,73 @@ class MarketDataImporterTest < ActiveSupport::TestCase
     MarketDataImporter.new(mode: :snapshot).import_exchange_rates
   end
 
+  test "syncs every held currency into each additional reporting currency" do
+    family = Family.create!(name: "Smith", currency: "USD", enabled_currencies: [ "EUR" ])
+    account = family.accounts.create!(name: "Chequing", currency: "CAD", balance: 100, accountable: Depository.new)
+    account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "CAD", name: "Coffee", entryable: Transaction.new)
+
+    # CAD→USD as before, plus the primary and account currencies into the reporting currency.
+    [ %w[CAD USD], %w[USD EUR], %w[CAD EUR] ].each do |from, to|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .once
+               .returns(provider_success_response([]))
+    end
+
+    MarketDataImporter.new(mode: :snapshot).import_exchange_rates
+  end
+
+  test "syncs holding currencies into each additional reporting currency" do
+    family = Family.create!(name: "Smith", currency: "USD", enabled_currencies: [ "EUR" ])
+    account = family.accounts.create!(name: "Brokerage", currency: "CAD", balance: 0, accountable: Investment.new)
+    security = Security.create!(ticker: "VOD", exchange_operating_mic: "XLON")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 100, amount: 100, currency: "GBP")
+
+    # A provider holding priced in GBP converts straight into the report currency.
+    [ %w[CAD USD], %w[USD EUR], %w[CAD EUR], %w[GBP EUR] ].each do |from, to|
+      @provider.expects(:fetch_exchange_rates)
+               .with(from: from, to: to, start_date: anything, end_date: anything)
+               .once
+               .returns(provider_success_response([]))
+    end
+
+    MarketDataImporter.new(mode: :snapshot).import_exchange_rates
+  end
+
+  test "starts each reporting pair at the first date its source currency was held" do
+    family = Family.create!(name: "Smith", currency: "USD", enabled_currencies: [ "EUR" ])
+    old_account = family.accounts.create!(name: "Chequing", currency: "USD", balance: 100, accountable: Depository.new)
+    new_account = family.accounts.create!(name: "Travel", currency: "CAD", balance: 100, accountable: Depository.new)
+    old_account.entries.create!(date: 400.days.ago.to_date, amount: 10, currency: "USD", name: "Rent", entryable: Transaction.new)
+    new_account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "CAD", name: "Coffee", entryable: Transaction.new)
+
+    pairs = MarketDataImporter.new.send(:required_exchange_rate_pairs).index_by { |pair| [ pair[:source], pair[:target] ] }
+
+    # The old USD history does not drag the new CAD account's EUR rates back with it.
+    assert_equal 400.days.ago.to_date, pairs.fetch([ "USD", "EUR" ])[:start_date]
+    assert_equal MarketDataImporter::SNAPSHOT_DAYS.days.ago.to_date, pairs.fetch([ "CAD", "EUR" ])[:start_date]
+  end
+
+  test "finds reporting pairs in the same number of queries however many families have them" do
+    add_family = lambda do |name|
+      family = Family.create!(name: name, currency: "USD", enabled_currencies: [ "EUR" ])
+      account = family.accounts.create!(name: "Chequing", currency: "CAD", balance: 100, accountable: Depository.new)
+      account.entries.create!(date: 10.days.ago.to_date, amount: 10, currency: "CAD", name: "Coffee", entryable: Transaction.new)
+    end
+    queries_to_find_pairs = lambda do
+      count = 0
+      counter = ->(*, payload) { count += 1 unless payload[:name] == "SCHEMA" || payload[:cached] }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record") { MarketDataImporter.new.send(:required_exchange_rate_pairs) }
+      count
+    end
+
+    add_family.call("One")
+    with_one_family = queries_to_find_pairs.call
+    3.times { |i| add_family.call("More #{i}") }
+
+    assert_equal with_one_family, queries_to_find_pairs.call
+  end
+
   test "syncs security prices" do
     security = Security.create!(ticker: "AAPL", exchange_operating_mic: "XNAS")
     family = Family.create!(name: "Smith", currency: "USD")

@@ -5,11 +5,14 @@ class InvestmentStatement
 
   monetize :total_contributions, :total_dividends, :total_interest, :unrealized_gains
 
-  attr_reader :family, :user
+  attr_reader :family, :user, :currency
 
-  def initialize(family, user: nil)
+  # `currency:` reports in one of the family's enabled currencies instead of
+  # its primary one.
+  def initialize(family, user: nil, currency: nil)
     @family = family
     @user = user || Current.user
+    @currency = Family.normalize_currency_code(currency) || family.currency
   end
 
   # Get totals for a specific period
@@ -19,12 +22,12 @@ class InvestmentStatement
     result = totals_query(account_ids: account_ids, date_range: period.date_range)
 
     PeriodTotals.new(
-      contributions: Money.new(result[:contributions], family.currency),
-      withdrawals: Money.new(result[:withdrawals], family.currency),
-      dividends: Money.new(result[:dividends], family.currency),
-      interest: Money.new(result[:interest], family.currency),
+      contributions: Money.new(result[:contributions], currency),
+      withdrawals: Money.new(result[:withdrawals], currency),
+      dividends: Money.new(result[:dividends], currency),
+      interest: Money.new(result[:interest], currency),
       trades_count: result[:trades_count],
-      currency: family.currency
+      currency: currency
     )
   end
 
@@ -36,20 +39,20 @@ class InvestmentStatement
 
   # Total portfolio value across all investment accounts
   def portfolio_value
-    investment_accounts.sum { |a| convert_to_family_currency(a.balance, a.currency) }
+    investment_accounts.sum { |a| convert_to_report_currency(a.balance, a.currency) }
   end
 
   def portfolio_value_money
-    Money.new(portfolio_value, family.currency)
+    Money.new(portfolio_value, currency)
   end
 
   # Total cash in investment accounts
   def cash_balance
-    investment_accounts.sum { |a| convert_to_family_currency(a.cash_balance, a.currency) }
+    investment_accounts.sum { |a| convert_to_report_currency(a.cash_balance, a.currency) }
   end
 
   def cash_balance_money
-    Money.new(cash_balance, family.currency)
+    Money.new(cash_balance, currency)
   end
 
   # Total holdings value
@@ -58,12 +61,12 @@ class InvestmentStatement
   end
 
   def holdings_value_money
-    Money.new(holdings_value, family.currency)
+    Money.new(holdings_value, currency)
   end
 
   # All current holdings across investment accounts. Holdings are returned in
   # their native currency; callers that aggregate across accounts must convert
-  # to family currency via convert_to_family_currency.
+  # to report currency via convert_to_report_currency.
   #
   # Memoized: top_holdings, allocation, unrealized_gains, unrealized_gains_trend,
   # and day_change each call this, so an unmemoized version ran the same
@@ -105,7 +108,7 @@ class InvestmentStatement
       .map do |security, value, holdings|
         HoldingAllocation.new(
           security: security,
-          amount: Money.new(value, family.currency),
+          amount: Money.new(value, currency),
           weight: (value / total * 100).round(2),
           trend: combined_holding_trend(holdings)
         )
@@ -126,7 +129,7 @@ class InvestmentStatement
     rolled_up.map do |security, value, holdings|
       HoldingAllocation.new(
         security: security,
-        amount: Money.new(value, family.currency),
+        amount: Money.new(value, currency),
         weight: (value / total * 100).round(2),
         trend: combined_holding_trend(holdings)
       )
@@ -140,8 +143,8 @@ class InvestmentStatement
   # (`positive_account_cash`) -- placed where the grouping says cash belongs.
   # So every grouping and every level of the drill-down sums to the same
   # total, and weights sum to 100 within rounding. Segments are sorted largest
-  # first. Amounts convert to the family currency at the latest rate; a
-  # currency with no rate counts 1:1 (`convert_to_family_currency`).
+  # first. Amounts convert to the report currency at the latest rate; a
+  # currency with no rate counts 1:1 (`convert_to_report_currency`).
   ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region account currency kind].freeze
 
   # The bucket a holding falls into when the column it is grouped by is empty.
@@ -214,11 +217,11 @@ class InvestmentStatement
     sort_holdings_table_rows(rows, sort: sort, dir: dir)
   end
 
-  # Unrealized gains across all holdings, summed in family currency
+  # Unrealized gains across all holdings, summed in report currency
   def unrealized_gains
     holdings_with_avg_costs.sum do |holding|
       trend = holding.trend
-      trend ? convert_to_family_currency(trend.value, holding.currency) : 0
+      trend ? convert_to_report_currency(trend.value, holding.currency) : 0
     end
   end
 
@@ -246,20 +249,19 @@ class InvestmentStatement
     return nil if holdings_with_cost_basis.empty?
 
     current = holdings_with_cost_basis.sum do |h|
-      convert_to_family_currency(h.amount, h.currency)
+      convert_to_report_currency(h.amount, h.currency)
     end
     previous = holdings_with_cost_basis.sum do |h|
-      convert_to_family_currency(h.qty * h.avg_cost.amount, h.currency)
+      convert_to_report_currency(h.qty * h.avg_cost.amount, h.currency)
     end
 
     Trend.new(
-      current: Money.new(current, family.currency),
-      previous: Money.new(previous, family.currency)
+      current: Money.new(current, currency),
+      previous: Money.new(previous, currency)
     )
   end
 
   def period_return_trend(period: Period.current_month)
-    currency = family.currency
     account_ids = investment_account_ids
     return nil if account_ids.empty?
 
@@ -376,22 +378,22 @@ class InvestmentStatement
     Trend.new(current: holding.amount_money, previous: previous.amount_money)
   end
 
-  # Day change across portfolio, summed in family currency
+  # Day change across portfolio, summed in report currency
   def day_change
     changes = current_holdings.to_a.filter_map do |h|
       t = holding_day_change(h)
       next nil unless t
       [
-        convert_to_family_currency(t.current.amount, h.currency),
-        convert_to_family_currency(t.previous.amount, h.currency)
+        convert_to_report_currency(t.current.amount, h.currency),
+        convert_to_report_currency(t.previous.amount, h.currency)
       ]
     end
 
     return nil if changes.empty?
 
     Trend.new(
-      current: Money.new(changes.sum { |c, _| c }, family.currency),
-      previous: Money.new(changes.sum { |_, p| p }, family.currency)
+      current: Money.new(changes.sum { |c, _| c }, currency),
+      previous: Money.new(changes.sum { |_, p| p }, currency)
     )
   end
 
@@ -414,8 +416,8 @@ class InvestmentStatement
         foreign = (account_currencies + holding_currencies)
                     .compact
                     .uniq
-                    .reject { |c| c == family.currency }
-        ExchangeRate.rates_for(foreign, to: family.currency, date: Date.current)
+                    .reject { |c| c == currency }
+        ExchangeRate.rates_for(foreign, to: currency, date: Date.current)
       end
     end
 
@@ -424,10 +426,10 @@ class InvestmentStatement
     # `Money * numeric` preserves the source currency — so multiplying a
     # foreign-currency Money by a rate would FX-scale the amount but keep the
     # wrong currency label, corrupting downstream sums.
-    def convert_to_family_currency(amount, from_currency)
+    def convert_to_report_currency(amount, from_currency)
       return amount if amount.nil?
       numeric = amount.is_a?(Money) ? amount.amount : amount
-      return numeric if from_currency == family.currency
+      return numeric if from_currency == currency
       rate = exchange_rates[from_currency] || 1
       numeric * rate
     end
@@ -472,7 +474,7 @@ class InvestmentStatement
     # one here while the drill-down below drops it.
     def allocation_by_currency
       grouped = Hash.new(0)
-      allocatable_holdings.each { |holding| grouped[holding.currency] += convert_to_family_currency(holding.amount, holding.currency) }
+      allocatable_holdings.each { |holding| grouped[holding.currency] += convert_to_report_currency(holding.amount, holding.currency) }
       positive_account_cash.each { |account, value| grouped[account.currency] += value }
       build_segments(grouped.map { |currency, value| [ currency, currency, value ] })
     end
@@ -488,7 +490,7 @@ class InvestmentStatement
         elsif holding.security.crypto? then "crypto"
         else "standard"
         end
-        grouped[kind] += convert_to_family_currency(holding.amount, holding.currency)
+        grouped[kind] += convert_to_report_currency(holding.amount, holding.currency)
       end
       grouped["cash"] += account_cash_total if account_cash_total.positive?
       build_segments(grouped.map { |kind, value| [ kind, kind, value ] })
@@ -507,7 +509,7 @@ class InvestmentStatement
       grouped = Hash.new(0)
 
       allocatable_holdings.each do |holding|
-        value = convert_to_family_currency(holding.amount, holding.currency)
+        value = convert_to_report_currency(holding.amount, holding.currency)
         grouped[classification_bucket(holding.security, column, cash_bucket)] += value
       end
 
@@ -524,7 +526,7 @@ class InvestmentStatement
 
       holdings_classified_as(:asset_class, asset_class, CASH_ASSET_CLASS).each do |holding|
         bucket = classification_bucket(holding.security, :asset_sub_class, CASH_SUB_CLASS)
-        grouped[bucket] += convert_to_family_currency(holding.amount, holding.currency)
+        grouped[bucket] += convert_to_report_currency(holding.amount, holding.currency)
       end
 
       grouped[CASH_SUB_CLASS] += account_cash_total if asset_class == CASH_ASSET_CLASS && account_cash_total.positive?
@@ -535,7 +537,7 @@ class InvestmentStatement
     # The bottom of the ladder. Named by security so the row reads as a position
     # rather than as another bucket.
     #
-    # It lists one row per security, summed in the family currency, and adds the
+    # It lists one row per security, summed in the report currency, and adds the
     # account cash the parent counts (`account_cash_rows`), so at every level a
     # bucket's positions sum to the bucket.
     def allocation_holdings_within(column, bucket, cash_bucket = nil, parent: nil)
@@ -546,7 +548,7 @@ class InvestmentStatement
       grouped = Hash.new(0)
       names = {}
       holdings_classified_as(column, bucket, cash_bucket, parent: parent).each do |holding|
-        grouped[holding.security_id] += convert_to_family_currency(holding.amount, holding.currency)
+        grouped[holding.security_id] += convert_to_report_currency(holding.amount, holding.currency)
         names[holding.security_id] ||= holding.security.name.presence || holding.security.ticker
       end
       build_segments(grouped.map { |id, value| [ id, names[id], value ] } + cash_rows)
@@ -565,7 +567,7 @@ class InvestmentStatement
       [ [ "cash", I18n.t("models.investment_statement.cash"), account_cash_total ] ]
     end
 
-    # Each investment account with cash, and that cash in the family currency.
+    # Each investment account with cash, and that cash in the report currency.
     # An account's cash is its balance less its allocatable holdings, each
     # converted on its own and then subtracted, kept only where positive. Every
     # allocation grouping and level counts account cash through this one rule,
@@ -580,16 +582,16 @@ class InvestmentStatement
     # Per account, so one account's margin cannot net against another's cash.
     def positive_account_cash
       @positive_account_cash ||= investment_accounts.filter_map do |account|
-        balance = convert_to_family_currency(account.balance.to_d, account.currency)
+        balance = convert_to_report_currency(account.balance.to_d, account.currency)
         cash = balance - account_holdings_totals[account.id]
         [ account, cash ] if cash.positive?
       end
     end
 
-    # Each account's allocatable holdings in the family currency, by account id.
+    # Each account's allocatable holdings in the report currency, by account id.
     def account_holdings_totals
       @account_holdings_totals ||= allocatable_holdings.each_with_object(Hash.new(0)) do |holding, totals|
-        totals[holding.account_id] += convert_to_family_currency(holding.amount, holding.currency)
+        totals[holding.account_id] += convert_to_report_currency(holding.amount, holding.currency)
       end
     end
 
@@ -630,7 +632,7 @@ class InvestmentStatement
     # net a negative row that the bottom level then drops.
     def allocatable_holdings
       @allocatable_holdings ||= current_holdings.select do |holding|
-        convert_to_family_currency(holding.amount, holding.currency).positive?
+        convert_to_report_currency(holding.amount, holding.currency).positive?
       end
     end
 
@@ -642,12 +644,12 @@ class InvestmentStatement
       rows
         .sort_by { |_, _, value| -value }
         .map do |id, name, value|
-          AllocationSegment.new(id: id.to_s, name: name, amount: Money.new(value, family.currency), weight: (value / total * 100).round(2))
+          AllocationSegment.new(id: id.to_s, name: name, amount: Money.new(value, currency), weight: (value / total * 100).round(2))
         end
     end
 
     # One row of #holdings_table_rows: a security rolled up across the
-    # accounts that hold it, in family currency.
+    # accounts that hold it, in report currency.
     HoldingsTableRow = Data.define(
       :security, :positions, :accounts_count, :qty, :avg_cost, :amount, :weight,
       :unrealized, :day_change, :missing_cost_basis
@@ -677,20 +679,20 @@ class InvestmentStatement
       unrealized = nil
       known_qty = known.sum(&:qty)
       if known.any?
-        cost = known.sum { |holding| convert_to_family_currency(holding.qty * holding.avg_cost.amount, holding.currency) }
-        known_value = known.sum { |holding| convert_to_family_currency(holding.amount, holding.currency) }
-        unrealized = Trend.new(current: Money.new(known_value, family.currency), previous: Money.new(cost, family.currency))
+        cost = known.sum { |holding| convert_to_report_currency(holding.qty * holding.avg_cost.amount, holding.currency) }
+        known_value = known.sum { |holding| convert_to_report_currency(holding.amount, holding.currency) }
+        unrealized = Trend.new(current: Money.new(known_value, currency), previous: Money.new(cost, currency))
       end
 
       day_changes = positions.filter_map do |holding|
         trend = holding_day_change(holding)
         next unless trend
-        [ convert_to_family_currency(trend.current.amount, holding.currency), convert_to_family_currency(trend.previous.amount, holding.currency) ]
+        [ convert_to_report_currency(trend.current.amount, holding.currency), convert_to_report_currency(trend.previous.amount, holding.currency) ]
       end
       day_change = if day_changes.any?
         Trend.new(
-          current: Money.new(day_changes.sum(&:first), family.currency),
-          previous: Money.new(day_changes.sum(&:last), family.currency)
+          current: Money.new(day_changes.sum(&:first), currency),
+          previous: Money.new(day_changes.sum(&:last), currency)
         )
       end
 
@@ -699,8 +701,8 @@ class InvestmentStatement
         positions: positions,
         accounts_count: positions.map(&:account_id).uniq.size,
         qty: qty,
-        avg_cost: (cost && known_qty.positive?) ? Money.new(cost / known_qty, family.currency) : nil,
-        amount: Money.new(value, family.currency),
+        avg_cost: (cost && known_qty.positive?) ? Money.new(cost / known_qty, currency) : nil,
+        amount: Money.new(value, currency),
         weight: total.zero? ? 0 : (value / total * 100).round(2),
         unrealized: unrealized,
         day_change: day_change,
@@ -773,12 +775,12 @@ class InvestmentStatement
           # accounts yields two rows; a negative row in one would otherwise net
           # against the good row in the other and understate the position.
           positive_holdings = holdings.select do |holding|
-            convert_to_family_currency(holding.amount, holding.currency).positive?
+            convert_to_report_currency(holding.amount, holding.currency).positive?
           end
           next if positive_holdings.empty?
 
           security = positive_holdings.first.security
-          value = positive_holdings.sum { |h| convert_to_family_currency(h.amount, h.currency) }
+          value = positive_holdings.sum { |h| convert_to_report_currency(h.amount, h.currency) }
 
           # positive_holdings, not holdings, so the trend excludes the bad row too.
           [ security, value, positive_holdings ]
@@ -794,15 +796,15 @@ class InvestmentStatement
         trend = holding.trend
         next unless trend
 
-        currents << convert_to_family_currency(trend.current, holding.currency)
-        previouses << convert_to_family_currency(trend.previous, holding.currency)
+        currents << convert_to_report_currency(trend.current, holding.currency)
+        previouses << convert_to_report_currency(trend.previous, holding.currency)
       end
 
       return nil if currents.empty?
 
       Trend.new(
-        current: Money.new(currents.sum, family.currency),
-        previous: Money.new(previouses.sum, family.currency)
+        current: Money.new(currents.sum, currency),
+        previous: Money.new(previouses.sum, currency)
       )
     end
 
@@ -812,18 +814,19 @@ class InvestmentStatement
 
     def totals_query(account_ids:, date_range:)
       if account_ids.empty?
-        return Totals.new(family, account_ids: account_ids, date_range: date_range).call
+        return Totals.new(family, account_ids: account_ids, date_range: date_range, currency: currency).call
       end
 
       account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query/v2", family.id, user&.id, family.currency,
-        account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version
-      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
+        "investment_statement", "totals_query/v2", family.id, user&.id, currency,
+        account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
+        ExchangeRate.cache_version(to: currency) # entries convert by their own currency
+      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range, currency: currency).call }
     end
 
     def monetizable_currency
-      family.currency
+      currency
     end
 end

@@ -846,6 +846,69 @@ class FamilyTest < ActiveSupport::TestCase
     assert_nil family.earliest_activity_date
   end
 
+  test "reporting currencies are the primary currency plus the enabled additional ones" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD", "EUR" ])
+
+    assert_equal [ "SGD", "USD", "EUR" ], family.reporting_currency_codes
+    assert_equal %w[SGD USD EUR], family.reporting_currency_objects.map(&:iso_code)
+    assert_equal "EUR", family.reporting_currency_code("eur")
+    assert_equal "SGD", family.reporting_currency_code("GBP")
+    assert_equal "SGD", family.reporting_currency_code(nil)
+    assert_equal "SGD", family.reporting_currency_code("not-a-currency")
+  end
+
+  test "a family without a narrowed currency list reports only in its primary currency" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [])
+
+    assert_equal [ "SGD" ], family.reporting_currency_codes
+    assert_equal "SGD", family.reporting_currency_code("USD")
+  end
+
+  test "an additional reporting currency needs an exchange rate provider even with only primary-currency data" do
+    family = families(:empty)
+    family.update!(currency: "USD", enabled_currencies: [])
+    family.accounts.create!(name: "Checking", balance: 100, currency: "USD", accountable: Depository.new)
+    assert_not family.requires_exchange_rates_data_provider?, "precondition: nothing to convert in USD"
+
+    family.update!(enabled_currencies: [ "EUR" ])
+
+    assert family.requires_exchange_rates_data_provider?
+    ExchangeRate.stubs(:provider).returns(nil)
+    Security.stubs(:provider).returns(nil)
+    assert family.missing_data_provider?
+  end
+
+  test "adding a reporting currency fetches its exchange rates" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
+
+    assert_enqueued_with(job: ImportReportingCurrencyRatesJob, args: [ family ]) do
+      family.update!(enabled_currencies: [ "USD", "EUR" ])
+    end
+  end
+
+  test "the old primary currency left enabled becomes a reporting currency and fetches its rates" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
+
+    assert_enqueued_with(job: ImportReportingCurrencyRatesJob, args: [ family ]) do
+      family.update!(currency: "USD")
+    end
+  end
+
+  test "removing or keeping reporting currencies fetches nothing" do
+    family = families(:dylan_family)
+    family.update!(currency: "SGD", enabled_currencies: [ "USD", "EUR" ])
+
+    assert_no_enqueued_jobs(only: ImportReportingCurrencyRatesJob) do
+      family.update!(enabled_currencies: [ "USD" ])
+      family.update!(enabled_currencies: [ "usd" ])
+      family.update!(enabled_currencies: [])
+    end
+  end
+
   private
     def set_preview_features(user, enabled)
       user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => enabled))

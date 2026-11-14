@@ -223,6 +223,48 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal %w[Card], balance_sheet.liabilities.account_groups.first.accounts.map(&:name)
   end
 
+  test "reports in a requested currency, converting balances at today's rate" do
+    create_account(balance: 1000, accountable: Depository.new)
+    create_account(balance: 400, accountable: CreditCard.new)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    balance_sheet = BalanceSheet.new(@family, currency: "EUR")
+
+    assert_equal "EUR", balance_sheet.currency
+    assert_equal 500, balance_sheet.assets.total
+    assert_equal 200, balance_sheet.liabilities.total
+    assert_equal Money.new(300, "EUR"), balance_sheet.net_worth_money
+    assert_equal "EUR", balance_sheet.assets.account_groups.first.currency
+  end
+
+  test "a net worth series cached before the rates arrived is rebuilt once they do" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.custom(start_date: 2.days.ago.to_date, end_date: Date.current)
+    account = create_account(balance: 1000, accountable: Depository.new)
+    (period.start_date..period.end_date).each { |date| create_balance(account: account, date: date, balance: 1000) }
+    end_value = -> { BalanceSheet.new(@family, currency: "EUR").net_worth_series(period: period).values.index_by(&:date).fetch(period.end_date).value.amount }
+    cached_at = Time.current.change(usec: 100_000)
+
+    # Another rate lands just before the series is cached, and the missing ones
+    # within the same second after: the cache must still tell them apart.
+    travel_to(cached_at, with_usec: true) do
+      ExchangeRate.create!(from_currency: "GBP", to_currency: "EUR", date: Date.current, rate: 1.1)
+      assert_equal 1000, end_value.call, "precondition: without a rate the series falls back to 1:1"
+    end
+
+    travel_to(cached_at + 0.5.seconds, with_usec: true) do
+      (period.start_date..period.end_date).each do |date|
+        ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 0.5)
+      end
+
+      assert_equal 500, end_value.call
+    end
+  end
+
+  test "an unknown requested currency falls back to the family's" do
+    assert_equal @family.currency, BalanceSheet.new(@family, currency: "not-a-currency").currency
+  end
+
   private
     def create_account(attributes = {})
       account = @family.accounts.create! name: "Test", currency: "USD", **attributes

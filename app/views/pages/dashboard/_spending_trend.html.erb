@@ -121,7 +121,7 @@
       style="height: var(--dash-widget-h, 13rem);"
       data-controller="spending-chart"
       data-spending-chart-data-value="<%= chart_data.to_json %>"
-      data-spending-chart-currency-value="<%= Current.family.currency %>"
+      data-spending-chart-currency-value="<%= data[:currency] %>"
       data-spending-chart-current-label-value="<%= I18n.l(data[:month], format: :month_year).capitalize %>"
       data-spending-chart-previous-label-value="<%= previous_label %>">
     </div>

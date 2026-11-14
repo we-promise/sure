@@ -22,12 +22,14 @@ class Account::MarketDataImporter
     # 1. ENTRY-BASED PAIRS – currencies that differ from the account currency.
     # Each is also fetched against the family currency: transfer matching derives
     # cross rates through it and does not chain entry -> account -> family rates.
+    # The reporting currencies are targets too, since the report queries convert
+    # each entry straight into the currency being viewed.
     account.entries
            .where.not(currency: account.currency)
            .group(:currency)
            .minimum(:date)
            .each do |source_currency, date|
-      [ account.currency, family_currency ].uniq.each do |target_currency|
+      [ account.currency, family_currency, *reporting_currencies ].uniq.each do |target_currency|
         next if target_currency == source_currency
 
         key = [ source_currency, target_currency ]
@@ -39,6 +41,26 @@ class Account::MarketDataImporter
     if foreign_account?
       key = [ account.currency, family_currency ]
       pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
+    end
+
+    # 2b. REPORTING-CURRENCY PAIRS – the dashboard can be viewed in any of the
+    # family's additional currencies, so the account converts into each.
+    (reporting_currencies - [ account.currency ]).each do |target_currency|
+      key = [ account.currency, target_currency ]
+      pair_dates[key] = [ pair_dates[key], account.start_date ].compact.min
+    end
+
+    # 2c. HOLDING-CURRENCY PAIRS – a provider holding priced in another currency
+    # converts straight into the family currency and each reporting currency.
+    account.holdings
+           .where.not(currency: account.currency)
+           .group(:currency)
+           .minimum(:date)
+           .each do |source_currency, date|
+      ([ family_currency, *reporting_currencies ] - [ source_currency ]).each do |target_currency|
+        key = [ source_currency, target_currency ]
+        pair_dates[key] = [ pair_dates[key], date ].compact.min
+      end
     end
 
     # 3. SECURITY PRICE PAIRS – holdings convert each security price into the
@@ -108,7 +130,16 @@ class Account::MarketDataImporter
     end
 
     def needs_exchange_rates?
-      has_multi_currency_entries? || foreign_account? || security_price_currency_start_dates.any?
+      has_multi_currency_entries? || foreign_account? || security_price_currency_start_dates.any? ||
+        (reporting_currencies - [ account.currency ]).any?
+    end
+
+    # The family's additional reporting currencies, without the primary one that
+    # the pairs above already target.
+    def reporting_currencies
+      return [] if account.family.nil?
+
+      account.family.reporting_currency_codes - [ account.family.primary_currency_code ]
     end
 
     def has_multi_currency_entries?

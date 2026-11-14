@@ -54,6 +54,22 @@ class IncomeStatementTest < ActiveSupport::TestCase
     IncomeStatement.new(@family).send(:category_stats)
   end
 
+  test "a new statement invalidates family_stats when a rate lands within the second it was cached" do
+    cached_at = Time.current.change(usec: 100_000)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    IncomeStatement::FamilyStats.expects(:new).twice.returns(stub(call: []))
+
+    travel_to(cached_at, with_usec: true) do
+      ExchangeRate.create!(from_currency: "GBP", to_currency: "EUR", date: Date.current, rate: 1.1)
+      IncomeStatement.new(@family).send(:family_stats)
+    end
+    travel_to(cached_at + 0.5.seconds, with_usec: true) do
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+      IncomeStatement.new(@family).send(:family_stats)
+    end
+  end
+
   test "family_stats and category_stats are served from cache when nothing has changed" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     IncomeStatement::FamilyStats.expects(:new).once.returns(stub(call: []))
@@ -1000,6 +1016,19 @@ class IncomeStatementTest < ActiveSupport::TestCase
     income_statement.expense_totals(period: period)
 
     assert_equal 1, totals_query_calls
+  end
+
+  test "reports in a requested currency, converting each entry at its day's rate" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+    period = Period.last_30_days
+
+    statement = IncomeStatement.new(@family, currency: "EUR")
+
+    assert_equal "EUR", statement.currency
+    assert_equal 450, statement.expense_totals(period: period).total
+    assert_equal "EUR", statement.expense_totals(period: period).currency
+    assert_equal Money.new(500, "EUR"), statement.totals(date_range: period.date_range).income_money
+    assert_equal Money.new(450, "EUR"), statement.totals(date_range: period.date_range).expense_money
   end
 
   private

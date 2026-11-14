@@ -738,6 +738,42 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     InvestmentStatement.new(@family.reload).totals(period: period)
   end
 
+  test "totals cache invalidates when a rate lands within the second they were cached" do
+    create_investment_account(balance: 500)
+    period = Period.last_30_days
+    cached_at = Time.current.change(usec: 100_000)
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    InvestmentStatement::Totals.expects(:new).twice.returns(stub(call: dummy_result))
+
+    # Rates into the statement's currency (the family's USD) are the ones its
+    # totals convert with.
+    travel_to(cached_at, with_usec: true) do
+      ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.3)
+      InvestmentStatement.new(@family).totals(period: period)
+    end
+    travel_to(cached_at + 0.5.seconds, with_usec: true) do
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+      InvestmentStatement.new(@family).totals(period: period)
+    end
+  end
+
+  test "totals cache ignores rates into other currencies" do
+    create_investment_account(balance: 500)
+    period = Period.last_30_days
+
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    dummy_result = { contributions: 0, withdrawals: 0, dividends: 0, interest: 0, trades_count: 0 }
+    InvestmentStatement::Totals.expects(:new).once.returns(stub(call: dummy_result))
+
+    InvestmentStatement.new(@family).totals(period: period)
+    travel 1.second do
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+      InvestmentStatement.new(@family).totals(period: period)
+    end
+  end
+
   # Two parcels of one security, materialised the way a sync does: 60 bought on
   # 2024-01-10 at $12 and 40 on 2024-03-05 at $20 (blended $15.20), then 40 sold
   # on 2024-06-01 at $25 and priced at $30 the day after. Average cost relieves
@@ -787,6 +823,39 @@ class InvestmentStatementTest < ActiveSupport::TestCase
 
       assert_nil sale.realized_gain_loss
     end
+  end
+
+  test "period totals convert each trade at its day's rate into the requested currency" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 500)
+    create_trade(account: account, qty: 2, amount: 120, date: period.start_date)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: period.start_date, rate: 0.5)
+
+    totals = InvestmentStatement.new(@family, user: nil, currency: "EUR").totals(period: period)
+
+    assert_equal Money.new(60, "EUR"), totals.contributions
+    assert_equal "EUR", totals.currency
+  end
+
+  test "portfolio_value and cash_balance convert to a requested currency" do
+    create_investment_account(balance: 1000, cash_balance: 100, currency: "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    statement = InvestmentStatement.new(@family, user: nil, currency: "EUR")
+
+    assert_equal "EUR", statement.currency
+    assert_equal 500, statement.portfolio_value
+    assert_equal 50, statement.cash_balance
+    assert_equal Money.new(500, "EUR"), statement.portfolio_value_money
+  end
+
+  test "allocation segments convert to a requested currency" do
+    create_investment_account(balance: 1000, cash_balance: 1000, currency: "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    segments = InvestmentStatement.new(@family, user: nil, currency: "EUR").allocation_by("asset_class").index_by(&:id)
+
+    assert_equal Money.new(500, "EUR"), segments["liquidity"].amount
   end
 
   # ---------------------------------------------- allocation by classification
@@ -1415,6 +1484,33 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(2090, "USD"), day_change.previous
     per_holding = @statement.current_holdings.filter_map { |h| h.day_change }
     assert_equal per_holding.sum { |t| t.current.amount }, day_change.current.amount
+  end
+
+  test "allocation by currency and by kind report in a requested currency" do
+    account = create_investment_account(balance: 1000)
+    stock = Security.create!(ticker: "AAPL", name: "Apple")
+    Holding.create!(account: account, security: stock, date: Date.current, qty: 10, price: 100, amount: 1000, currency: "USD")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    statement = InvestmentStatement.new(@family, user: nil, currency: "EUR")
+
+    assert_equal [ [ "USD", Money.new(500, "EUR") ] ], statement.allocation_by("currency").map { |s| [ s.id, s.amount ] }
+    assert_equal [ [ "standard", Money.new(500, "EUR") ] ], statement.allocation_by("kind").map { |s| [ s.id, s.amount ] }
+  end
+
+  test "holdings_table_rows report in a requested currency" do
+    account = create_investment_account(balance: 2000)
+    aapl = Security.create!(ticker: "AAPL", name: "Apple")
+    Holding.create!(account: account, security: aapl, date: 1.day.ago.to_date, qty: 10, price: 190, amount: 1900, currency: "USD", cost_basis: 150, cost_basis_locked: true)
+    Holding.create!(account: account, security: aapl, date: Date.current, qty: 10, price: 200, amount: 2000, currency: "USD", cost_basis: 150, cost_basis_locked: true)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.5)
+
+    row = InvestmentStatement.new(@family, user: nil, currency: "EUR").holdings_table_rows.first
+
+    assert_equal Money.new(1000, "EUR"), row.amount_money
+    assert_equal Money.new(75, "EUR"), row.avg_cost
+    assert_equal Money.new(250, "EUR"), row.unrealized.value
+    assert_equal Money.new(50, "EUR"), row.day_change.value
   end
 
   test "holdings_table_rows measures a row's return over the positions whose cost basis is known" do

@@ -125,4 +125,24 @@ class ExchangeRateTest < ActiveSupport::TestCase
       )
     end
   end
+
+  test "cache_version reads only the rates into the target currency" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    later = travel_to(1.minute.from_now) { ExchangeRate.create!(from_currency: "USD", to_currency: "GBP", date: Date.current, rate: 0.8) }
+
+    assert_operator ExchangeRate.cache_version(to: "USD"), :<, later.updated_at.to_f
+    assert_equal later.updated_at.to_f, ExchangeRate.cache_version(to: "GBP")
+  end
+
+  test "cache_version narrows to the converted pairs and skips the query when nothing converts" do
+    eur = ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.1)
+    travel_to(1.minute.from_now) { ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: Date.current, rate: 1.3) }
+
+    assert_equal eur.updated_at.to_f, ExchangeRate.cache_version(to: "USD", from: %w[EUR USD])
+    queries = []
+    callback = ->(*, payload) { queries << payload[:sql] if payload[:sql].match?(/\bexchange_rates\b/) }
+    result = ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { ExchangeRate.cache_version(to: "USD", from: %w[USD]) }
+    assert_nil result
+    assert_empty queries
+  end
 end
