@@ -16,8 +16,10 @@ class Property < ApplicationRecord
 
   has_one :address, as: :addressable, dependent: :destroy
   # Transactions with this tag count as the property's purchase costs. The
-  # tag must be the family's own (checked on Account, which knows the family).
+  # tag must be one of the family's own. A property not yet attached to a
+  # saved account cannot reach the family, so Account checks it on create.
   belongs_to :cost_tag, class_name: "Tag", optional: true
+  validate :cost_tag_in_family, if: -> { cost_tag_id.present? && will_save_change_to_cost_tag_id? }
 
   accepts_nested_attributes_for :address
 
@@ -63,6 +65,12 @@ class Property < ApplicationRecord
 
   def trend
     Trend.new(current: account.balance_money, previous: first_valuation_amount)
+  end
+
+  # Whether the given family owns this property's cost tag. An id that
+  # matches no tag (deleted meanwhile, or made up) is not the family's.
+  def cost_tag_in?(family)
+    cost_tag_id.nil? || family.tags.exists?(id: cost_tag_id)
   end
 
   # Whether the overview should also show the trend in the family currency:
@@ -233,6 +241,13 @@ class Property < ApplicationRecord
   end
 
   private
+    def cost_tag_in_family
+      family = account&.family
+      return if family.nil? || cost_tag_in?(family)
+
+      errors.add(:cost_tag, :other_family)
+    end
+
     # Read up to three times per overview render (the card check, the trend
     # and its purchase value), so it is looked up once.
     def first_valuation_entry

@@ -8,7 +8,9 @@ class Account < ApplicationRecord
 
   after_destroy_commit :move_account_statements_to_inbox
 
-  validate :cost_tag_in_family, if: -> { property? && accountable&.will_save_change_to_cost_tag_id? }
+  # Property checks its cost tag once it belongs to a saved account; a new
+  # one cannot reach the family yet, so the new account checks it.
+  validate :cost_tag_in_family, if: -> { new_record? && property? && accountable&.cost_tag_id.present? }
   validates :name, :balance, :currency, presence: true
   validate :owner_belongs_to_family, if: -> { owner_id.present? && family_id.present? }
 
@@ -1052,8 +1054,7 @@ class Account < ApplicationRecord
     end
 
     def cost_tag_in_family
-      tag = accountable.cost_tag
-      return if tag.nil? || tag.family_id == family_id
+      return if family && accountable.cost_tag_in?(family)
 
       errors.add(:base, :cost_tag_other_family)
     end

@@ -919,6 +919,18 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_nil @account.property.reload.cost_tag_id
   end
 
+  test "rejects a cost tag that no longer exists" do
+    tag = @account.family.tags.create!(name: "Land costs")
+    tag.destroy!
+
+    patch property_path(@account), params: {
+      account: { accountable_attributes: { id: @account.accountable.id, cost_tag_id: tag.id } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_nil @account.property.reload.cost_tag_id
+  end
+
   test "edit form offers the family's tags as the cost tag" do
     get edit_property_path(@account)
 

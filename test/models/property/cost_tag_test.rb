@@ -18,6 +18,8 @@ class Property::CostTagTest < ActiveSupport::TestCase
       entryable: Valuation.new(kind: "opening_anchor")
     )
     @account.update!(balance: 550_000)
+    # Saving the tag loaded the account and family; tests change the family's currency.
+    @property.reload
   end
 
   test "sums the tagged transactions in any of the family's accounts into the cost basis" do
@@ -173,6 +175,36 @@ class Property::CostTagTest < ActiveSupport::TestCase
 
     assert_not @account.update(accountable_attributes: { id: @property.id, cost_tag_id: other_tag.id })
     assert_equal @tag.id, @property.reload.cost_tag_id
+  end
+
+  test "a property saved on its own also checks the cost tag" do
+    other_tag = families(:empty).tags.create!(name: "Someone else's")
+
+    assert_not @property.update(cost_tag: other_tag)
+    assert_includes @property.errors.details[:cost_tag], { error: :other_family }
+    assert_equal @tag.id, @property.reload.cost_tag_id
+  end
+
+  test "a cost tag id that matches no tag is rejected" do
+    missing_id = SecureRandom.uuid
+
+    assert_not @account.update(accountable_attributes: { id: @property.id, cost_tag_id: missing_id })
+    assert_not @property.reload.update(cost_tag_id: missing_id)
+    assert_equal @tag.id, @property.reload.cost_tag_id
+  end
+
+  test "a new property account checks its cost tag" do
+    other_tag = families(:empty).tags.create!(name: "Someone else's")
+    account = @family.accounts.build(
+      name: "Plot", balance: 0, currency: "USD", owner: @admin,
+      accountable: Property.new(cost_tag_id: other_tag.id)
+    )
+
+    assert_not account.save
+    assert_includes account.errors.details[:base], { error: :cost_tag_other_family }
+
+    account.accountable.cost_tag = @tag
+    assert account.save
   end
 
   test "deleting the tag unlinks the property and replacing it moves the link" do
