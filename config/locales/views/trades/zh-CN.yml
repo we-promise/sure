@@ -70,3 +70,6 @@ zh-CN:
       sell: 卖出
       settings: 设置
       type_label: 类型
+    trade:
+      scheduled: 已计划
+      scheduled_tooltip: 日期在未来 — 在此之前不会影响您的余额

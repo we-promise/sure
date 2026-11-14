@@ -14,6 +14,7 @@ zh-CN:
       service_down_label: 服务不可用
       service_down_desc: Lunch Flow API 可能暂时不可用
       check_provider_settings: 检查提供商设置
+      unexpected_error: 发生意外错误，请稍后再试。
     setup_required:
       title: 需要设置 Lunch Flow
       api_key_not_configured: 未配置 API 密钥
@@ -57,6 +58,14 @@ zh-CN:
       no_accounts_description: 此连接尚未链接任何账户。
       no_accounts_title: 无账户
       setup_action: 设置新账户
+      sync_status:
+        no_accounts: 未找到账户
+        synced:
+          one: 已同步 %{count} 个账户
+          other: 已同步 %{count} 个账户
+        partial_setup:
+          one: 已同步 %{linked} 个，%{unlinked} 个需要设置
+          other: 已同步 %{linked} 个，%{unlinked} 个需要设置
       setup_description: 已连接 %{linked} / %{total} 个账户。请为您新导入的 Lunch Flow 账户选择账户类型。
       setup_needed: 新账户已准备好设置
       status: 上次同步于 %{timestamp} 前
@@ -100,7 +109,12 @@ zh-CN:
       missing_parameters: 缺少必需参数
       success: 已成功将 %{account_name} 与 Lunch Flow 关联
       no_api_key: 缺少 Lunch Flow API 密钥。
+    subtype_select:
+      placeholder:
+        subtype: 选择子类型
+        type: 选择类型
     setup_accounts:
+      page_title: 设置 Lunch Flow 账户
       account_type_label: 账户类型：
       all_accounts_linked: 您的所有 Lunch Flow 账户都已设置完成。
       api_error: API 错误：%{message}
@@ -164,6 +178,7 @@ zh-CN:
       creation_failed: 创建账户失败：%{error}
       no_accounts: 没有需要设置的账户。
       success: 成功创建 %{count} 个账户。
+      unexpected_error: 发生意外错误
     sync:
       success: 已开始同步
     update:
