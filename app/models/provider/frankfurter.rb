@@ -21,8 +21,11 @@ class Provider::Frankfurter < Provider
   # No published rate limit, but a light throttle is cheap insurance.
   MIN_REQUEST_INTERVAL = 0.15
 
-  def initialize
-    # No API key required, public endpoint only.
+  # No API key required. The defaults suit background syncs; a request-thread
+  # caller can pass a tighter timeout and no retries.
+  def initialize(timeout: 20, max_retries: 3)
+    @timeout = timeout
+    @max_retries = max_retries
   end
 
   def healthy?
@@ -106,11 +109,11 @@ class Provider::Frankfurter < Provider
 
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
-        faraday.options.open_timeout = 5
-        faraday.options.timeout      = 20
+        faraday.options.open_timeout = [ 5, @timeout ].min
+        faraday.options.timeout      = @timeout
 
         faraday.request(:retry, {
-          max: 3,
+          max: @max_retries,
           interval: 0.5,
           interval_randomness: 0.5,
           backoff_factor: 2,

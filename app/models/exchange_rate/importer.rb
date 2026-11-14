@@ -4,8 +4,9 @@ class ExchangeRate::Importer
 
   PROVISIONAL_LOOKBACK_DAYS = 5
 
-  def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, clear_cache: false)
+  def initialize(exchange_rate_provider:, from:, to:, start_date:, end_date:, clear_cache: false, provider_name: ExchangeRate.provider_name)
     @exchange_rate_provider = exchange_rate_provider
+    @current_provider_name = provider_name
     @from = from
     @to = to
     @start_date = start_date
@@ -109,13 +110,7 @@ class ExchangeRate::Importer
   end
 
   private
-    attr_reader :exchange_rate_provider, :from, :to, :start_date, :end_date, :clear_cache
-
-    # Resolves the provider name the same way as ExchangeRate::Provided.provider:
-    # ENV takes precedence over the DB Setting to stay consistent in env-configured deployments.
-    def current_provider_name
-      @current_provider_name ||= (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
-    end
+    attr_reader :exchange_rate_provider, :from, :to, :start_date, :end_date, :clear_cache, :current_provider_name
 
     def upsert_rows(rows)
       batch_size = 200

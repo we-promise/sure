@@ -2,14 +2,31 @@ module ExchangeRate::Provided
   extend ActiveSupport::Concern
 
   class_methods do
-    def provider
-      provider = ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider
-      registry = Provider::Registry.for_concept(:exchange_rates)
-      registry.get_provider(provider.to_sym)
+    def provider(name = provider_name)
+      Provider::Registry.for_concept(:exchange_rates).get_provider(name.to_sym)
+    end
+
+    # Name of the backend `provider` uses. The default, Twelve Data, needs an API key;
+    # without one, use keyless Frankfurter rather than no provider, which would convert
+    # foreign amounts at 1:1. Pair metadata and sync diagnostics key on this name, so
+    # adding or removing the key is detected like any other provider change.
+    def provider_name
+      configured = configured_provider_name
+      Provider::Registry.for_concept(:exchange_rates).get_provider(configured.to_sym) ? configured : "frankfurter"
+    end
+
+    def configured_provider_name
+      (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
+    end
+
+    def fallback_provider?
+      provider_name != configured_provider_name
     end
 
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
+
+    FALLBACK_DOWN_KEY = "exchange_rate:fallback_frankfurter_down"
 
     def find_or_fetch_rate(from:, to:, date: Date.current, cache: true)
       rate = find_by(from_currency: from, to_currency: to, date: date)
@@ -26,10 +43,17 @@ module ExchangeRate::Provided
                   .first
       return nearest if nearest.present?
 
-      return nil unless provider.present? # No provider configured (some self-hosted apps)
+      fx_provider = provider
+      return nil unless fx_provider.present? # No provider configured (some self-hosted apps)
 
-      response = provider.fetch_exchange_rate(from: from, to: to, date: date)
+      # Keyless fallback on a signed-in request (e.g. reports): one short try, then skip Frankfurter for a
+      # minute after a timeout or connection error (no error body), so loops can't each wait. Jobs keep retries.
+      fail_fast = Current.session.present? && fallback_provider?
+      return nil if fail_fast && Rails.cache.read(FALLBACK_DOWN_KEY)
+      fx_provider = Provider::Frankfurter.new(timeout: 3, max_retries: 0) if fail_fast
 
+      response = fx_provider.fetch_exchange_rate(from: from, to: to, date: date)
+      Rails.cache.write(FALLBACK_DOWN_KEY, true, expires_in: 1.minute) if fail_fast && !response.success? && response.error.details.nil?
       return nil unless response.success? # Provider error
 
       rate = response.data
@@ -101,7 +125,9 @@ module ExchangeRate::Provided
 
     # @return [Integer] The number of exchange rates synced
     def import_provider_rates(from:, to:, start_date:, end_date:, clear_cache: false)
-      unless provider.present?
+      name = provider_name
+      exchange_rate_provider = provider(name)
+      unless exchange_rate_provider.present?
         Rails.logger.warn("No provider configured for ExchangeRate.import_provider_rates")
         return 0
       end
@@ -125,7 +151,8 @@ module ExchangeRate::Provided
 
       begin
         ExchangeRate::Importer.new(
-          exchange_rate_provider: provider,
+          exchange_rate_provider: exchange_rate_provider,
+          provider_name: name,
           from: from,
           to: to,
           start_date: start_date,
