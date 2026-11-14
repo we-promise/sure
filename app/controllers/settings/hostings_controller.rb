@@ -65,6 +65,8 @@ class Settings::HostingsController < ApplicationController
   end
 
   def update
+    market_data_settings_before = market_data_settings_snapshot
+
     if hosting_params.key?(:onboarding_state)
       onboarding_state = hosting_params[:onboarding_state].to_s
       Setting.onboarding_state = onboarding_state
@@ -152,6 +154,9 @@ class Settings::HostingsController < ApplicationController
     update_encrypted_setting(:alpha_vantage_api_key)
     update_encrypted_setting(:tinkoff_invest_api_key)
     update_encrypted_setting(:mansa_api_key)
+
+    Current.family.sync_later if market_data_settings_before != market_data_settings_snapshot
+
     update_encrypted_setting(:rentcast_api_key)
     update_encrypted_setting(:realie_api_key)
     update_encrypted_setting(:chimnie_api_key)
@@ -564,6 +569,20 @@ class Settings::HostingsController < ApplicationController
       return if value == "********"
 
       Setting.public_send(:"#{param_key}=", value.presence)
+    end
+
+    def market_data_settings_snapshot
+      %i[
+        exchange_rate_provider
+        securities_provider
+        securities_providers
+        twelve_data_api_key
+        tiingo_api_key
+        eodhd_api_key
+        alpha_vantage_api_key
+        tinkoff_invest_api_key
+        mansa_api_key
+      ].to_h { |key| [ key, Setting.public_send(key) ] }
     end
 
     def current_user_timezone
