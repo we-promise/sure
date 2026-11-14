@@ -45,8 +45,8 @@ json.kind transaction.kind
 # exposed, never the provider payload itself: the provider's own type for the
 # row (e.g. "Withholding Tax"), the Sure security the row relates to, and the
 # rate from the row's currency to the account's currency stored on it.
-# amount_currency is the currency that rate converts from, the same as
-# `currency` here, named as trades name it.
+# amount_currency is the currency of the amount, which that rate converts
+# from, the same as `currency` here.
 json.investment_activity_label transaction.investment_activity_label
 json.provider_type transaction.provider_type
 json.security_id transaction.serializable_security_id

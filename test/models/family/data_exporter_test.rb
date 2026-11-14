@@ -1327,9 +1327,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
-  # A trade's exchange_rate converts from its entry's currency, which can
-  # differ from trade.currency, so each record names the amount's currency.
-  test "exports the currency exchange_rate converts from on trades and transactions" do
+  # A trade's exchange_rate converts from currency (the trade's), and the
+  # entry's currency can differ from it, so each record names the amount's
+  # currency too.
+  test "exports the amount's currency next to the rate on trades and transactions" do
     investment_account = @family.accounts.create!(
       name: "Amount Currency Account",
       accountable: Investment.new,
@@ -1341,8 +1342,8 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       date: Date.parse("2024-05-20"),
       amount: 100,
       name: "Buy",
-      currency: "EUR",
-      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy",
+      currency: "GBP",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy",
         extra: { "exchange_rate" => 1.1 })
     )
     transaction_entry = investment_account.entries.create!(
@@ -1358,8 +1359,8 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       trade_data = records.find { |record| record["type"] == "Trade" && record.dig("data", "id") == trade_entry.entryable.id }["data"]
       transaction_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == transaction_entry.entryable.id }["data"]
 
-      assert_equal "EUR", trade_data["amount_currency"]
-      assert_equal "USD", trade_data["currency"]
+      assert_equal "GBP", trade_data["amount_currency"]
+      assert_equal "EUR", trade_data["currency"]
       assert_equal 1.1, trade_data["exchange_rate"]
       assert_equal "EUR", transaction_data["amount_currency"]
       assert_equal 1.1, transaction_data["exchange_rate"]

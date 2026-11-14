@@ -1782,11 +1782,11 @@ RSpec.configure do |config|
               exchange_rate: {
                 type: :number,
                 nullable: true,
-                description: "Rate from amount_currency (the currency of the trade's amount) to the account's currency stored on the trade, such as one reported by the provider. Null when none is stored or the amount is in the account's currency."
+                description: "Rate from currency (the trade's, which price and fee are in) to the account's currency stored on the trade, such as one reported by the provider. The cost basis converts with it. Null when none is stored or the trade is in the account's currency."
               },
               amount_currency: {
                 type: :string,
-                description: "Currency of the trade's amount, which exchange_rate converts from. It can differ from currency, the trade's own."
+                description: "Currency of the trade's amount (the entry's). It can differ from currency, the trade's own, which exchange_rate converts from."
               },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {

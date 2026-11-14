@@ -38,21 +38,24 @@ class Trade < ApplicationRecord
     extra&.dig("exchange_rate")
   end
 
-  # The stored exchange rate as a number, read the way Money#exchange_to reads
-  # it (to_d), or nil when the app would not use it: none is stored, it is not
-  # a positive number that survives the conversion to Float, or the entry is
-  # already in the account's currency. The API and the data export read this,
-  # so a malformed value written straight into extra, or an extra that is not
-  # a hash, cannot break them.
+  # The stored exchange rate, from the trade's currency to the account's, as a
+  # number, read the way Money#exchange_to reads it (to_d). The cost basis
+  # (Holding::TradeCalculatorHelpers, Holding.avg_cost_rates_join) converts
+  # price and fee from trade.currency with it, and the web form and
+  # PATCH /api/v1/trades/:id change only entry.currency, so trade.currency is
+  # the currency the rate was given for. nil when the app would not use it:
+  # none is stored, it is not a positive number that survives the conversion
+  # to Float, or the trade is already in the account's currency. The API and
+  # the data export read this, so a malformed value written straight into
+  # extra, or an extra that is not a hash, cannot break them.
   def numeric_exchange_rate
     return nil unless extra.is_a?(Hash)
 
     value = extra["exchange_rate"]
     return nil unless value.is_a?(Numeric) || value.is_a?(String)
-    # The app converts entry.amount_money, so the entry's currency decides,
-    # as in Transaction#numeric_exchange_rate. The web form and the API
-    # update change entry.currency and leave trade.currency as it was.
-    return nil if entry&.currency.blank? || entry.currency == entry.account&.currency
+
+    account_currency = entry&.account&.currency
+    return nil if currency.blank? || account_currency.blank? || currency == account_currency
 
     rate = value.to_d.to_f
     rate if rate.finite? && rate.positive?

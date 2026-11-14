@@ -132,7 +132,7 @@ These are `null` on most transactions. They are set on brokerage cash rows, such
 | `provider_type` | The importing provider's type for the row, for example IBKR's `"Withholding Tax"`. Use it to tell rows apart that share a label. IBKR, Trading 212, Wise, Akahu and Kraken store the provider's own type. For CoinSpot, Sure sets it from the kind of movement, such as `"receive"` or `"send"`. Only this value is exposed; the provider's raw payload is not. |
 | `security_id` | The id of the Sure security the row relates to, such as the one that paid a dividend, or `null`. `GET /api/v1/securities/{id}` finds it only when one of your accounts holds or has traded that security; otherwise that lookup returns 404. |
 | `exchange_rate` | The rate from the transaction's currency to the account's currency stored on the row, such as one reported by the provider. `null` when none is stored, and when the transaction is in the account's currency, since no conversion applies. |
-| `amount_currency` | The currency `exchange_rate` converts from. On a transaction it is always the same as `currency`; it is there so trades and transactions name it the same way. |
+| `amount_currency` | The currency of the amount, which `exchange_rate` converts from. On a transaction it is always the same as `currency`. Trades carry the same field, where it can differ from the trade's `currency`. |
 
 ### Linking to a transaction
 

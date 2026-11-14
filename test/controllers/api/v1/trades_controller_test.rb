@@ -1199,61 +1199,55 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_nil JSON.parse(response.body)["exchange_rate"]
   end
 
-  # The app converts entry.amount_money, in the entry's currency, with the
-  # stored rate (Balance::SyncCache, Account#convert_scheduled_entry_amount),
-  # and the web form and PATCH /api/v1/trades/:id change entry.currency
-  # without touching trade.currency. The entry's currency decides, as it does
-  # for transactions.
-  test "exchange rate follows the entry's currency, not the trade's" do
+  # The cost basis converts price and fee from trade.currency with the stored
+  # rate (Holding::TradeCalculatorHelpers), and the web form and
+  # PATCH /api/v1/trades/:id change entry.currency without touching
+  # trade.currency, so the rate stays tied to the trade's currency.
+  test "exchange rate stays tied to the trade's currency when the entry's currency changes" do
     security = Security.create!(ticker: "TAXC", name: "Currency Mismatch Security", country_code: "US")
     entry = @investment_account.entries.create!(
       date: Date.current,
       amount: 100,
       name: "Buy TAXC",
       currency: "EUR",
-      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy",
         extra: { "exchange_rate" => 1.1 })
     )
     trade = entry.entryable
-    assert_equal 110, entry.amount_money.exchange_to("USD", custom_rate: trade.exchange_rate).amount, "the app applies the rate"
 
-    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    patch api_v1_trade_url(trade), params: { trade: { currency: "GBP" } }, headers: api_headers(read_write_api_key)
     assert_response :success
-    assert_equal 1.1, JSON.parse(response.body)["exchange_rate"]
-
-    # The other way round: the entry is in the account's currency, so the app
-    # never applies the rate, whatever trade.currency says.
-    entry.update_columns(currency: @investment_account.currency)
-    trade.update_columns(currency: "EUR")
-    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
-    assert_nil JSON.parse(response.body)["exchange_rate"]
-  end
-
-  # exchange_rate converts from the amount's currency, which is the entry's
-  # and can differ from trade.currency, so the payload names it.
-  test "amount_currency names the currency exchange_rate converts from" do
-    security = Security.create!(ticker: "TAXA", name: "Amount Currency Security", country_code: "US")
-    entry = @investment_account.entries.create!(
-      date: Date.current,
-      amount: 100,
-      name: "Buy TAXA",
-      currency: "EUR",
-      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy",
-        extra: { "exchange_rate" => 1.1 })
-    )
-    trade = entry.entryable
+    assert_equal "GBP", entry.reload.currency
+    assert_equal "EUR", trade.reload.currency
+    assert_equal 110, Money.new(trade.price, trade.currency).exchange_to("USD", custom_rate: trade.exchange_rate).amount,
+      "the cost basis converts from the trade's currency with the stored rate"
 
     get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
     assert_response :success
     body = JSON.parse(response.body)
-    assert_equal "EUR", body["amount_currency"]
-    assert_equal "USD", body["currency"]
     assert_equal 1.1, body["exchange_rate"]
+    assert_equal "EUR", body["currency"]
+    assert_equal "GBP", body["amount_currency"]
 
     get api_v1_trades_url, params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
     assert_response :success
     trade_json = JSON.parse(response.body)["trades"].find { |row| row["id"] == trade.id }
-    assert_equal "EUR", trade_json["amount_currency"]
+    assert_equal 1.1, trade_json["exchange_rate"]
+    assert_equal "GBP", trade_json["amount_currency"]
+
+    # Moving the entry into the account's currency leaves the rate the cost
+    # basis still applies.
+    patch api_v1_trade_url(trade), params: { trade: { currency: @investment_account.currency } }, headers: api_headers(read_write_api_key)
+    assert_response :success
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_equal 1.1, JSON.parse(response.body)["exchange_rate"]
+
+    # A trade in the account's own currency never converts with the rate,
+    # whatever the entry's currency is.
+    entry.update_columns(currency: "EUR")
+    trade.update_columns(currency: @investment_account.currency)
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
   end
 
   # A stored decimal can be positive and finite yet become 0.0 or Infinity

@@ -482,8 +482,8 @@ class Family::DataExporter
             fee: trade.fee,
             investment_activity_label: trade.investment_activity_label,
             exchange_rate: trade.numeric_exchange_rate,
-            # The currency exchange_rate converts from: the entry's, which
-            # can differ from trade.currency above.
+            # exchange_rate converts from currency (the trade's). The amount
+            # is in the entry's currency, which can differ from it.
             amount_currency: trade.entry.currency,
             created_at: trade.created_at,
             updated_at: trade.updated_at
