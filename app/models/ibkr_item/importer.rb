@@ -77,18 +77,28 @@ class IbkrItem::Importer
     rescue => e
       # Never fails the sync. A window IBKR keeps refusing (1003) or answering without
       # statements is given up after MAX_HISTORY_FAILURES syncs; any other error (busy,
-      # "try again shortly", network, a row that failed to import) only stops this one.
+      # "try again shortly", network, XML that does not parse, a row that failed to
+      # import) only stops this one.
       DebugLogEntry.capture(
         category: "provider_sync_error", level: "warn", message: "IBKR history import stopped: #{e.class}: #{e.message}",
         source: self.class.name, provider_key: "ibkr", family: ibkr_item.family, metadata: { error_code: e.try(:error_code) }.compact
       )
-      return false unless e.is_a?(IbkrItem::ReportParser::ParseError) || e.try(:error_code).to_s == "1003"
+      return false unless no_statements_error?(e)
 
       pending&.each do |ibkr_account, state|
         failures = state["failures"].to_i + 1
         save_history_state(ibkr_account, state.merge("failures" => failures, "done" => failures >= MAX_HISTORY_FAILURES))
       end
       false
+    end
+
+    # IBKR refused the window (1003), or answered it with well-formed XML that
+    # holds no statements. XML that does not parse, such as a cut-off body,
+    # is only retried.
+    def no_statements_error?(error)
+      return error.error_code.to_s == "1003" if error.respond_to?(:error_code)
+
+      error.is_a?(IbkrItem::ReportParser::ParseError) && !error.cause.is_a?(Nokogiri::XML::SyntaxError)
     end
 
     # Kept per linked Sure account, so linking another one walks back again.

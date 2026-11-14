@@ -125,6 +125,17 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
       "WINDOW_1 requested #{provider.calls.count(WINDOW_1)} times in 6 syncs"
   end
 
+  test "a cut-off statement is retried, never counted as one IBKR has no statements for" do
+    truncated = window_xml(*WINDOW_1, trade_id: "901", nav_date: "2024-06-03")[0, 200]
+    provider = FakeFlex.new(CURRENT => @current, WINDOW_1 => truncated)
+
+    (IbkrItem::Importer::MAX_HISTORY_FAILURES + 1).times { import(provider) }
+    assert_equal [ CURRENT, WINDOW_1 ] * (IbkrItem::Importer::MAX_HISTORY_FAILURES + 1), provider.calls
+
+    import(history_provider)
+    assert @account.entries.exists?(external_id: "ibkr_trade_901", source: "ibkr")
+  end
+
   test "a window whose rows fail to import is fetched again by the next sync" do
     Account::ProviderImportAdapter.any_instance.stubs(:import_trade).raises(ActiveRecord::ConnectionNotEstablished, "connection lost")
     provider = history_provider
