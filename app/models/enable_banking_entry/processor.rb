@@ -89,13 +89,15 @@ class EnableBankingEntry::Processor
 
     groups.each do |legacy_id, indexes|
       free = indexes.reject { |i| stored.key?(suffixed[i]) }
-      score = ->(i) { movement_match(stored[legacy_id], rows[i], account) }
+      legacy = stored[legacy_id]
+      kept = legacy&.entryable.try(:provider_entry_reference) if indexes.size > 1
+      # Without a stored reference, a locked currency is the owner's, not the bank's: match on amount and date only.
+      match_currency = kept.present? || !legacy&.locked?(:currency)
+      score = ->(i) { movement_match(legacy, rows[i], account, match_currency: match_currency) }
       # Rows that already have a suffixed entry never take the plain id; if all do, nobody does (no duplicate).
       owner = free.each_with_index.max_by { |i, pos| [ score[i], -pos ] }&.first
       # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
       # own entry, so the plain one is another row's unless its amount matches or was edited.
-      legacy = stored[legacy_id]
-      kept = legacy&.entryable.try(:provider_entry_reference) if indexes.size > 1
       owner = free.find { |i| ref[i] == kept } if kept && indexes.any? { |i| ref[i] == kept }
       # A stored reference missing from the payload (re-issued, or aged out): keep the entry only on an exact match.
       # The entry's date is not the bank's when the user locked it or a settled hold froze it: an amount match is then exact.
@@ -108,13 +110,14 @@ class EnableBankingEntry::Processor
   end
 
   # 2: same signed amount, currency and date as the entry; 1: same signed amount and currency; 0: neither.
-  def self.movement_match(entry, data, account)
+  # match_currency: false leaves the currency out.
+  def self.movement_match(entry, data, account, match_currency: true)
     amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
     return 0 if entry.nil? || amount.blank?
 
     signed = BigDecimal(amount.to_s).abs * (data[:credit_debit_indicator] == "CRDT" ? -1 : 1)
     currency = parse_currency(data.dig(:transaction_amount, :currency)) || parse_currency(data[:currency]) || account.currency
-    return 0 unless entry.amount == signed && entry.currency == currency
+    return 0 unless entry.amount == signed && (!match_currency || entry.currency == currency)
 
     entry.date == transaction_date(data, account.family&.timezone) ? 2 : 1
   rescue ArgumentError, TypeError

@@ -761,4 +761,19 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
 
     assert_equal 2, @account.entries.where(source: "enable_banking").count
   end
+
+  test "a legacy plain entry with a locked, changed currency keeps its original row" do
+    legacy = create_transaction(
+      account: @account, name: "Laundromat", date: 2.days.ago.to_date, amount: 7, currency: "GBP",
+      external_id: "enable_banking_tid-x", source: "enable_banking"
+    )
+    legacy.update!(currency: "EUR")
+    legacy.lock_saved_attributes!
+    gbp = raw_shared_tid_transaction(entry_reference: "r-g", amount: "7.00").deep_merge(transaction_amount: { currency: "GBP" })
+    eur = raw_shared_tid_transaction(entry_reference: "r-e", amount: "7.00").merge(booking_date: 1.day.ago.to_date.to_s)
+    2.times { sync_shared(gbp, eur) }
+
+    assert_equal [ [ "enable_banking_tid-x", "EUR" ], [ sibling_id("r-e"), "EUR" ] ].sort,
+                 @account.entries.where(source: "enable_banking").pluck(:external_id, :currency).sort
+  end
 end
