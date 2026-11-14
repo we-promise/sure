@@ -44,7 +44,8 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
         },
         metadata: {
           current_rate: round(current_rate, 1),
-          previous_rate: round(previous_rate, 1)
+          previous_rate: round(previous_rate, 1),
+          accounts_digest: shared_accounts_digest
         },
         period: last_month,
         dedup_key: "savings_rate_change:#{month_token(last_month.start_date)}"

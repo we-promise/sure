@@ -66,7 +66,8 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         metadata: {
           category_id: anomaly[:category_id],
           direction: direction,
-          deviation_bucket: (round(anomaly[:deviation_pct].abs, 0).to_i / 25) * 25
+          deviation_bucket: (round(anomaly[:deviation_pct].abs, 0).to_i / 25) * 25,
+          accounts_digest: shared_accounts_digest
         },
         period: period,
         dedup_key: "spending_anomaly:#{anomaly[:category_id]}:#{month_token(period.start_date)}"

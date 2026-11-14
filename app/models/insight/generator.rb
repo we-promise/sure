@@ -44,12 +44,42 @@ class Insight::Generator
   private
     attr_reader :family
 
-    def income_statement
-      @income_statement ||= IncomeStatement.new(family)
+    # The feed is one list shared by the whole family, so every figure in it is
+    # computed only from accounts each active member may open. Without this a
+    # member's private account would feed totals that everyone reads.
+    #
+    # The ids are read once per run, so every figure and the digest describe
+    # the same account set even if access changes while the generator runs.
+    def shared_accounts
+      @shared_accounts ||= family.accounts.where(id: shared_account_ids)
     end
 
-    def balance_sheet
-      @balance_sheet ||= BalanceSheet.new(family)
+    def shared_account_ids
+      @shared_account_ids ||= family.accounts.accessible_by_all_active_members.order(:id).pluck(:id)
+    end
+
+    # The account scope is passed explicitly: IncomeStatement falls back to
+    # `Current.user`, which is nil in the nightly job and would mean "every
+    # account in the family". Status, report and tax filters stay its own.
+    def income_statement
+      @income_statement ||= IncomeStatement.new(family, accounts: shared_accounts)
+    end
+
+    # Totals have no single account that Insight.about_shared_accounts could
+    # recheck on read, so an aggregate insight carries the account set it was
+    # computed from. When a share is granted or revoked the digest changes and
+    # the job rewrites the body (see GenerateInsightsJob#upsert_insights), so
+    # prose written from the old set does not outlive it.
+    def shared_accounts_digest
+      @shared_accounts_digest ||= Digest::SHA256.hexdigest(shared_account_ids.join(","))
+    end
+
+    # Recurring series follow the same rule, matching
+    # RecurringTransaction.accessible_by: a series without an account (legacy
+    # rows) belongs to nobody in particular and stays in.
+    def shared_recurring_transactions
+      RecurringTransaction.where(account_id: nil)
+                          .or(RecurringTransaction.where(account_id: shared_accounts.select(:id)))
     end
 
     def build_insight(insight_type:, priority:, title:, template_key:, facts:, dedup_key:, metadata:, period: nil)
