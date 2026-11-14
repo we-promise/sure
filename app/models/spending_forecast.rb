@@ -98,13 +98,17 @@ class SpendingForecast
     end
 
     # A partly allocated entry stays in whole, so its bill share counts twice;
-    # dropping it would lose the unallocated rest, the larger error.
+    # dropping it would lose the unallocated rest, the larger error. Coverage
+    # is measured in the entry's currency (source_amount), so a cross-currency
+    # allocation without an exchange rate covers nothing, and allocations from
+    # ended bills don't count, as in the allocator's capacity checks.
     def bill_entry_ids
       RecurringAllocation.confirmed
-                         .joins(:recurring_occurrence, :entry)
+                         .joins(:entry, recurring_occurrence: :recurring_transaction)
                          .where(recurring_occurrences: { family_id: family.id })
+                         .where.not(recurring_transactions: { status: "ended" })
                          .group("recurring_allocations.entry_id", "entries.amount")
-                         .having("SUM(COALESCE(recurring_allocations.source_amount, recurring_allocations.allocated_amount)) >= ABS(entries.amount)")
+                         .having("SUM(recurring_allocations.source_amount) >= ABS(entries.amount)")
                          .select("recurring_allocations.entry_id")
     end
 

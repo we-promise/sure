@@ -50,6 +50,20 @@ class SpendingForecastTest < ActiveSupport::TestCase
     assert_equal [ @housing ], SpendingForecast.new(@family).rows.map(&:category)
   end
 
+  test "keeps an entry only an ended bill covers" do
+    entries = (1..3).map { |month| spend(@housing, 1000, Date.new(2026, month, 1)) }
+    match_to_bill(entries, status: "ended")
+
+    assert_equal [ @housing ], SpendingForecast.new(@family).rows.map(&:category)
+  end
+
+  test "keeps an entry whose bill allocation has no entry-currency amount" do
+    entries = (1..3).map { |month| spend(@housing, 1000, Date.new(2026, month, 1)) }
+    match_to_bill(entries, source_amount: nil)
+
+    assert_equal [ @housing ], SpendingForecast.new(@family).rows.map(&:category)
+  end
+
   test "leaves out investment transfers, as reports do" do
     (1..3).each do |month|
       create_transaction(account: @account, amount: 500, currency: @family.currency, date: Date.new(2026, month, 1))
@@ -73,18 +87,19 @@ class SpendingForecastTest < ActiveSupport::TestCase
       create_transaction(account: @account, amount: amount, currency: @family.currency, date: date, category: category)
     end
 
-    def match_to_bill(entries)
+    def match_to_bill(entries, status: "active", source_amount: 1000)
       series = @family.recurring_transactions.create!(
         name: "Rent", account: @account, amount: 1000, currency: @family.currency,
         expected_day_of_month: 1, last_occurrence_date: entries.last.date,
-        next_expected_date: Date.new(2026, 5, 1), status: "active", manual: true
+        next_expected_date: Date.new(2026, 5, 1), status: status, manual: true
       )
 
       entries.each do |entry|
         occurrence = series.recurring_occurrences.create!(family: @family, original_due_on: entry.date, due_on: entry.date, currency: @family.currency)
         RecurringAllocation.create!(
           recurring_occurrence: occurrence, entry: entry, state: :confirmed, source: :user_confirmed,
-          allocated_amount: 1000, currency: @family.currency, paid_on: entry.date
+          allocated_amount: 1000, currency: @family.currency, paid_on: entry.date,
+          source_amount: source_amount, source_currency: @family.currency
         )
       end
     end
