@@ -61,6 +61,7 @@ class SnaptradeAccount::HoldingsProcessor
     # for a few days only: value SnapTrade can't list (filtered futures,
     # unsupported assets, cash in other currencies) must not pin a sold position.
     def positions_in_total?
+      return true if @snaptrade_account.institution_metadata&.dig("sync_status", "holdings", "holdings_unavailable")
       last = account.holdings.where(account_provider_id: @snaptrade_account.account_provider&.id, external_id: nil).maximum(:date)
       return false if last && last < 3.days.ago.to_date
       total = @snaptrade_account.current_balance or return true
@@ -122,6 +123,11 @@ class SnaptradeAccount::HoldingsProcessor
 
       return true if ticker.blank? # cash rows carry no symbol
 
+      # Holdings can't be negative; a short only counts in the account total.
+      quantity = parse_decimal(data["units"] || data[:units])
+      return if quantity.nil?
+      return true if quantity.negative?
+
       Rails.logger.info "SnaptradeAccount::HoldingsProcessor - Processing holding for ticker: #{ticker}"
 
       # Resolve or create the security
@@ -130,11 +136,8 @@ class SnaptradeAccount::HoldingsProcessor
       security = resolve_security(ticker, symbol_data, account: account, account_provider_id: @snaptrade_account.account_provider&.id, provider_row: true)
       return unless security
 
-      # Parse values
-      quantity = parse_decimal(data["units"] || data[:units])
       price = parse_decimal(data["price"] || data[:price])
-      return if quantity.nil? || price.nil?
-      return true if quantity.negative? # holdings can't be negative; a short only counts in the account total
+      return if price.nil?
 
       # Calculate amount
       amount = quantity * price

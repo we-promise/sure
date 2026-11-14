@@ -286,6 +286,14 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "an empty snapshot does not clear positions on an account SnapTrade flags holdings_unavailable" do
+    meta = { "sync_status" => { "holdings" => { "holdings_unavailable" => true } } }
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ stock_position ]) }
+    travel_to(Date.new(2026, 12, 28)) { sync_positions!([], institution_metadata: meta) }
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
   # === ActivitiesProcessor Tests ===
 
   test "activities processor maps BUY type to Buy label" do
