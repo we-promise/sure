@@ -107,9 +107,9 @@ class Property < ApplicationRecord
 
   # The transactions carrying the cost tag, in any of the family's accounts
   # that +user+ can see, closed ones included (the costs stay part of the
-  # purchase). Excluded, pending and split-parent entries and transfers
-  # (Transaction::TRANSFER_KINDS, loan payments among them) are left out, as
-  # in spending totals.
+  # purchase). Excluded, pending, scheduled (future-dated) and split-parent
+  # entries and transfers (Transaction::TRANSFER_KINDS, loan payments among
+  # them) are left out, as in spending totals.
   def cost_entries_for(user)
     return Entry.none if cost_tag_id.nil?
 
@@ -120,6 +120,7 @@ class Property < ApplicationRecord
            .where(entryable_type: "Transaction", entryable_id: Transaction.where(id: tagged).where.not(kind: Transaction::TRANSFER_KINDS).select(:id))
            .where(excluded: false)
            .excluding_pending
+           .excluding_scheduled
            .excluding_split_parents
   end
 

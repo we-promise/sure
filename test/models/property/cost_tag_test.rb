@@ -152,6 +152,18 @@ class Property::CostTagTest < ActiveSupport::TestCase
     assert_equal Money.new(2_000, "USD"), @property.purchase_costs_for(@admin)
   end
 
+  test "scheduled transactions are not purchase costs until their date" do
+    create_transaction(account: accounts(:depository), amount: 2_000, date: @purchase_date, tags: [ @tag ])
+    create_transaction(account: accounts(:depository), amount: 900, date: Date.current + 10, tags: [ @tag ])
+
+    assert_equal Money.new(2_000, "USD"), @property.purchase_costs_for(@admin)
+    assert_equal 1, @property.cost_entries_for(@admin).count
+
+    travel_to Date.current + 10 do
+      assert_equal Money.new(2_900, "USD"), @property.reload.purchase_costs_for(@admin)
+    end
+  end
+
   test "reload recomputes the costs" do
     create_transaction(account: accounts(:depository), amount: 100, date: @purchase_date, tags: [ @tag ])
     assert_equal Money.new(100, "USD"), @property.purchase_costs_for(@admin)
