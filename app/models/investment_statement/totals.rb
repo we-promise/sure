@@ -8,7 +8,7 @@ class InvestmentStatement::Totals
   def call
     return empty_result if @account_ids.empty?
 
-    result = select_without_jit(query_sql)
+    result = ActiveRecord::Base.connection.select_one(query_sql)
 
     {
       contributions: result["contributions"]&.to_d || 0,
@@ -22,21 +22,6 @@ class InvestmentStatement::Totals
   end
 
   private
-    # Portfolio::FlowClassifier's CASE carries a correlated EXISTS (the
-    # security-transfer check) that the planner prices for every row, so a
-    # few hundred entries already push the estimate past jit_above_cost, and
-    # compiling the plan then takes far longer than running it: on five years
-    # of synthetic data, about 750 ms of a 900 ms query. SET LOCAL ends with
-    # the enclosing transaction, so no other statement is affected.
-    def select_without_jit(sql)
-      connection = ActiveRecord::Base.connection
-
-      connection.transaction(requires_new: true) do
-        connection.execute("SET LOCAL jit = off")
-        connection.select_one(sql)
-      end
-    end
-
     def empty_result
       {
         contributions: 0,
@@ -105,7 +90,10 @@ class InvestmentStatement::Totals
     #
     # A row in a currency with no rate at all is left out, not counted at 1,
     # as in InvestmentStatement; ExchangeRate.rate_sql gives the
-    # nearest stored rate otherwise.
+    # nearest stored rate otherwise. The lateral `fx` subquery looks the rate
+    # up once per row: written into each of the six sums, its two correlated
+    # lookups were priced six times over, and the estimate crossed
+    # jit_above_cost.
     #
     # account_ids is already scoped to the family's visible (draft/active)
     # investment accounts, so the query trusts that input and skips a join back
@@ -156,19 +144,21 @@ class InvestmentStatement::Totals
     end
 
     def aggregation_sql
-      rate = ExchangeRate.rate_sql(from: "entries.currency", to: ":target_currency", on: "entries.date")
-
       ActiveRecord::Base.sanitize_sql_array([ <<~SQL, sql_params ])
         SELECT
-          COALESCE(SUM(CASE WHEN flow.flow_class = 'external_inflow' THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as contributions,
-          COALESCE(SUM(CASE WHEN flow.flow_class = 'external_outflow' THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as withdrawals,
-          COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as buys,
-          COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as sells,
-          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Dividend' THEN entries.amount * #{rate} ELSE 0 END), 0) as dividends,
-          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Interest' THEN entries.amount * #{rate} ELSE 0 END), 0) as interest,
+          COALESCE(SUM(CASE WHEN flow.flow_class = 'external_inflow' THEN ABS(entries.amount * fx.rate) ELSE 0 END), 0) as contributions,
+          COALESCE(SUM(CASE WHEN flow.flow_class = 'external_outflow' THEN ABS(entries.amount * fx.rate) ELSE 0 END), 0) as withdrawals,
+          COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * fx.rate) ELSE 0 END), 0) as buys,
+          COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * fx.rate) ELSE 0 END), 0) as sells,
+          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Dividend' THEN entries.amount * fx.rate ELSE 0 END), 0) as dividends,
+          COALESCE(-SUM(CASE WHEN #{label_sql} = 'Interest' THEN entries.amount * fx.rate ELSE 0 END), 0) as interest,
           COUNT(trades.id) as trades_count
         FROM entries
         __FLOW_JOINS__
+        CROSS JOIN LATERAL (
+          SELECT #{ExchangeRate.rate_sql(from: "entries.currency", to: ":target_currency", on: "entries.date")} AS rate
+          OFFSET 0
+        ) fx
         LEFT JOIN LATERAL (
           SELECT __FLOW_CLASS__ AS flow_class
           WHERE __RECORDED_FLOW__

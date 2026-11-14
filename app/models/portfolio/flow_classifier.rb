@@ -152,6 +152,10 @@ class Portfolio::FlowClassifier
   # relies on this bound as well: there, a NULL counterpart means the other
   # leg is outside the scope.
   #
+  # The security-transfer legs are joined grouped, one row per date,
+  # security and quantity, so that join cannot fan out either (see
+  # #security_transfer_legs_sql).
+  #
   # Only a confirmed Transfer links two legs. An auto-match starts out
   # pending and, as Transfer#confirm! promises, an unconfirmed suggestion
   # never moves a report, so until the user confirms it each leg is
@@ -171,6 +175,11 @@ class Portfolio::FlowClassifier
           WHEN flow_transfers.inflow_transaction_id = transactions.id THEN flow_transfers.outflow_transaction_id
           ELSE flow_transfers.inflow_transaction_id
         END
+      LEFT JOIN (#{security_transfer_legs_sql}) flow_security_transfers
+        ON entries.entryable_type = 'Trade'
+        AND flow_security_transfers.date = entries.date
+        AND flow_security_transfers.security_id = trades.security_id
+        AND flow_security_transfers.qty = -trades.qty
     SQL
   end
 
@@ -296,22 +305,45 @@ class Portfolio::FlowClassifier
       "CASE WHEN flow_counterpart_entries.account_id = ANY(#{scope_ids_sql}) THEN 'internal' ELSE #{direction_sql} END"
     end
 
+    # True when #security_transfer_legs_sql found a Transfer trade on the
+    # same date and security, with the opposite quantity, in a scope account
+    # other than this entry's. Each group carries the lowest and highest
+    # account id among its legs, so a leg in another account exists exactly
+    # when either differs from this entry's. With no group, both are NULL and
+    # the CASE takes the direction.
     def security_transfer_counterpart_in_scope_sql
       <<~SQL.squish
-        EXISTS (
-          SELECT 1
-          FROM entries counterpart_entries
-          JOIN trades counterpart_trades
-            ON counterpart_trades.id = counterpart_entries.entryable_id
-            AND counterpart_entries.entryable_type = 'Trade'
-          WHERE counterpart_entries.account_id = ANY(#{scope_ids_sql})
-            AND counterpart_entries.account_id <> entries.account_id
-            AND counterpart_entries.date = entries.date
-            AND counterpart_entries.excluded IS NOT TRUE
-            AND counterpart_trades.security_id = trades.security_id
-            AND counterpart_trades.qty = -trades.qty
-            AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
-        )
+        (flow_security_transfers.min_account_id <> entries.account_id
+          OR flow_security_transfers.max_account_id <> entries.account_id)
+      SQL
+    end
+
+    # Every live Transfer trade in the scope's accounts, grouped by date,
+    # security and quantity. A correlated EXISTS asked the same question per
+    # row, and the planner priced each probe against the whole scope, so its
+    # estimate grew with the square of the entries and a few thousand crossed
+    # jit_above_cost; JIT compilation then took longer than the query.
+    # Grouped and hash-joined, the cost stays proportional to the rows read.
+    #
+    # entries.excluded is nullable, and a NULL leg is live here as it is to
+    # #classify, hence IS NOT TRUE rather than = false. uuid has no MIN or
+    # MAX, so the ids are compared as text.
+    def security_transfer_legs_sql
+      <<~SQL.squish
+        SELECT
+          counterpart_entries.date,
+          counterpart_trades.security_id,
+          counterpart_trades.qty,
+          MIN(counterpart_entries.account_id::text)::uuid AS min_account_id,
+          MAX(counterpart_entries.account_id::text)::uuid AS max_account_id
+        FROM entries counterpart_entries
+        JOIN trades counterpart_trades
+          ON counterpart_trades.id = counterpart_entries.entryable_id
+          AND counterpart_entries.entryable_type = 'Trade'
+        WHERE counterpart_entries.account_id = ANY(#{scope_ids_sql})
+          AND counterpart_entries.excluded IS NOT TRUE
+          AND counterpart_trades.investment_activity_label = '#{TRANSFER_LABEL}'
+        GROUP BY counterpart_entries.date, counterpart_trades.security_id, counterpart_trades.qty
       SQL
     end
 

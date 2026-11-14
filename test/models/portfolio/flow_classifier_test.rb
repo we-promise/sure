@@ -242,6 +242,38 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_outflow, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
   end
 
+  # The opposite leg has to sit in another account. One in the same account
+  # is a second move of the same position, not where this one came from. Once
+  # a leg in another account joins, the in-leg has a counterpart in another
+  # account, that leg has the in-leg, and the same-account leg still has none.
+  #
+  # The SQL form compares the entry's account with the lowest and the
+  # highest account id among the opposite legs, so the scenario runs with
+  # fixed ids in both orders: the other account's id below the in-leg's, and
+  # above it.
+  test "a security transfer's opposite leg in its own account is not its counterpart" do
+    low = @family.accounts.create!(id: "00000000-0000-4000-8000-000000000001", name: "Low", balance: 1000, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    high = @family.accounts.create!(id: "ffffffff-ffff-4fff-bfff-fffffffffffe", name: "High", balance: 1000, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    scope = Portfolio::FlowClassifier.new(scope_account_ids: [ low.id, high.id ])
+
+    [ [ low, high ], [ high, low ] ].each do |own, other|
+      security = create_portfolio_security
+
+      in_leg = create_portfolio_trade(account: own, security: security, qty: 10, price: 50, label: "Transfer")
+      same_account_out = create_portfolio_trade(account: own, security: security, qty: -10, price: 50, label: "Transfer")
+
+      assert_equal :external_inflow, scope.classify(in_leg)
+      assert_equal :external_inflow, scope.classify_ids([ in_leg.id ])[in_leg.id]
+
+      other_out = create_portfolio_trade(account: other, security: security, qty: -10, price: 50, label: "Transfer")
+      ids = [ in_leg.id, same_account_out.id, other_out.id ]
+
+      expected = { in_leg.id => :internal, same_account_out.id => :external_outflow, other_out.id => :internal }
+      assert_equal expected, ids.index_with { |id| scope.classify(Entry.find(id)) }, "own account #{own.name}"
+      assert_equal expected, scope.classify_ids(ids), "own account #{own.name}"
+    end
+  end
+
   test "an unlabelled or Other trade is internal" do
     unlabelled = create_portfolio_trade(account: @brokerage, qty: 2, price: 10, label: nil)
     unlabelled.entryable.update!(investment_activity_label: nil)
