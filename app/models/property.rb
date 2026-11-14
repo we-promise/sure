@@ -62,6 +62,31 @@ class Property < ApplicationRecord
     Trend.new(current: account.balance_money, previous: first_valuation_amount)
   end
 
+  # Whether the overview should also show the trend in the family currency:
+  # the property is valued in another currency and has a purchase value.
+  def family_currency_trend_applicable?
+    account.currency != account.family.currency && first_valuation_entry.present?
+  end
+
+  # The trend measured in the family currency, so a currency move that hides
+  # or invents a gain shows up. The purchase value is converted at the rate on
+  # its own date and the current value at today's rate.
+  #
+  # Only stored exchange rates are used (no provider call while rendering),
+  # picked as ExchangeRate.find_stored_rate does: the latest on or before the
+  # date, else the earliest after it. Never 1:1; nil when no rate is stored.
+  def family_currency_trend
+    return nil unless family_currency_trend_applicable?
+
+    purchase = first_valuation_entry
+    family_currency = account.family.currency
+    previous = convert_with_stored_rate(purchase.amount_money, family_currency, purchase.date)
+    current = convert_with_stored_rate(account.balance_money, family_currency, Date.current)
+    return nil if previous.nil? || current.nil?
+
+    Trend.new(current: current, previous: previous)
+  end
+
   def balance_display_name
     "market value"
   end
@@ -138,7 +163,20 @@ class Property < ApplicationRecord
   end
 
   private
+    def first_valuation_entry
+      account.entries.valuations.order(:date).first
+    end
+
     def first_valuation_amount
-      account.entries.valuations.order(:date).first&.amount_money || account.balance_money
+      first_valuation_entry&.amount_money || account.balance_money
+    end
+
+    def convert_with_stored_rate(money, to_currency, date)
+      return money if money.currency.iso_code == to_currency
+
+      rate = ExchangeRate.find_stored_rate(from: money.currency.iso_code, to: to_currency, date: date)
+      return nil unless rate
+
+      money.exchange_to(to_currency, custom_rate: rate.rate)
     end
 end
