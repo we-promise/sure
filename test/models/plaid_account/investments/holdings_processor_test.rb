@@ -343,6 +343,20 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_in_delta 103.3333, holding.price, 0.001
   end
 
+  test "holdings of one security that net to zero are stored with no value" do
+    @plaid_account.update!(raw_holdings_payload: { "holdings" => [
+      { "security_id" => "aapl_long", "quantity" => 10, "institution_price" => 110, "iso_currency_code" => "USD" },
+      { "security_id" => "aapl_short", "quantity" => -10, "institution_price" => 100, "iso_currency_code" => "USD" }
+    ] })
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false))
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    holding = @plaid_account.current_account.holdings.find_by!(security: securities(:aapl), date: Date.current)
+    assert_equal 0, holding.qty
+    assert_equal 0, holding.amount
+  end
+
   test "dates every holding by the sync date it is given" do
     @plaid_account.update!(raw_holdings_payload: { "holdings" => [
       { "security_id" => "aapl", "quantity" => 10, "institution_price" => 100, "iso_currency_code" => "USD" }

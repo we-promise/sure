@@ -12,7 +12,8 @@ class PlaidAccount::Investments::HoldingsProcessor
       import_adapter.import_holding(
         security: position[:security],
         quantity: position[:quantity],
-        amount: position[:amount],
+        # Holdings that net to zero are a closed position: no value either.
+        amount: position[:quantity].zero? ? 0 : position[:amount],
         currency: position[:currency],
         date: as_of,
         price: position[:price],
@@ -30,7 +31,7 @@ class PlaidAccount::Investments::HoldingsProcessor
     # sync that reported it, as every other provider's is, not by
     # institution_price_as_of: a fund whose NAV is a session behind is still
     # held today, and the account's latest snapshot must include it. Two Plaid
-    # holdings can resolve to the same security, and they share that date, so
+    # holdings the resolver maps to the same security share that date, so
     # they are summed into one row rather than one overwriting the other.
     def positions
       holdings.each_with_object({}) do |plaid_holding, positions|
