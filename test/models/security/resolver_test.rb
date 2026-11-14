@@ -55,6 +55,38 @@ class Security::ResolverTest < ActiveSupport::TestCase
     end
   end
 
+  test "keeps a provider candidate when only its ticker matches" do
+    ticker_only = Security.new(ticker: "BOND", exchange_operating_mic: nil, country_code: nil)
+
+    Security.expects(:search_provider)
+            .with("BOND", exchange_operating_mic: "MISX", technical_failure: anything)
+            .returns([ ticker_only ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("BOND", exchange_operating_mic: "MISX").resolve
+
+      assert_equal "BOND", resolved.ticker
+      assert_nil resolved.exchange_operating_mic
+      refute resolved.offline
+    end
+  end
+
+  test "falls back to the selected security when provider candidates match neither ticker nor exchange" do
+    unrelated = Security.new(ticker: "AGG", exchange_operating_mic: nil, country_code: nil)
+
+    Security.expects(:search_provider).returns([ unrelated ])
+
+    assert_difference "Security.count", 1 do
+      resolved = Security::Resolver.new("BOND", exchange_operating_mic: "MISX").resolve
+
+      assert_equal "BOND", resolved.ticker
+      assert_equal "MISX", resolved.exchange_operating_mic
+      assert resolved.offline
+    end
+
+    assert_nil Security.find_by(ticker: "AGG")
+  end
+
   test "resolves offline security" do
     Security.expects(:search_provider).returns([])
 
@@ -65,6 +97,19 @@ class Security::ResolverTest < ActiveSupport::TestCase
       assert_equal "FOO", resolved.ticker
       assert resolved.offline, "Offline securities should be flagged offline"
     end
+  end
+
+  test "an unrelated country-filtered result does not demote a shared online security" do
+    shared = Security.create!(ticker: "SAFE", exchange_operating_mic: "XNAS", country_code: "US", offline: false)
+    unrelated = Security.new(ticker: "OTHER", exchange_operating_mic: "XLON", country_code: "GB")
+    Security.expects(:search_provider).returns([ unrelated ])
+
+    assert_no_difference "Security.count" do
+      resolved = Security::Resolver.new("SAFE", exchange_operating_mic: "XNAS", country_code: "GB").resolve
+      assert_equal shared, resolved
+    end
+    assert_not shared.reload.offline?
+    assert_equal "US", shared.country_code
   end
 
   test "returns nil when symbol blank" do
@@ -364,11 +409,12 @@ class Security::ResolverTest < ActiveSupport::TestCase
 
     Security.expects(:search_provider).returns([])
 
-    resolved = Security::Resolver.new("XMAW5", exchange_operating_mic: "XNAS", country_code: "US").resolve
+    resolved = Security::Resolver.new("XMAW5", exchange_operating_mic: "XNAS", country_code: "GB").resolve
 
     assert_equal db_security, resolved
     resolved.reload
     assert resolved.offline?
+    assert_equal "US", resolved.country_code, "A no-match retry must preserve the shared security's country"
     assert_nil resolved.offline_reason, "A confirmed no-match must stop the DB fast-path bypass on later resolves"
   end
 

@@ -50,10 +50,15 @@ class Security::Resolver
         exchange_operating_mic: exchange_operating_mic
       )
 
-      security.assign_attributes(
-        country_code: country_code,
-        offline: true # This tells us that we shouldn't try to fetch prices later
-      )
+      # Preserve shared catalog records while letting a pending resolution settle.
+      return security if security.persisted? && !(security.offline? && security.offline_reason == "resolution_pending")
+
+      if security.new_record?
+        security.assign_attributes(
+          country_code: country_code,
+          offline: true # This tells us that we shouldn't try to fetch prices later
+        )
+      end
       # Don't clobber a more specific existing reason (e.g. "provider_disabled",
       # "health_check_failed") with "resolution_pending" — only write a new
       # reason when the record doesn't already have a more specific one.
@@ -121,11 +126,8 @@ class Security::Resolver
       return nil unless exchange_operating_mic.present?
 
       match = provider_search_result.find do |s|
-        ticker_matches = s.ticker&.upcase.to_s == symbol.upcase.to_s
-        exchange_matches = exchange_operating_mics_equivalent?(
-          s.exchange_operating_mic,
-          exchange_operating_mic
-        )
+        ticker_matches = ticker_matches?(s)
+        exchange_matches = exchange_matches?(s)
 
         if country_code && exchange_operating_mic
           ticker_matches && exchange_matches && country_matches?(s.country_code)
@@ -139,6 +141,7 @@ class Security::Resolver
       find_or_create_provider_match!(match)
     end
 
+    # Rank close matches, rejecting unrelated tickers and exchanges when an exchange was requested.
     def close_match_from_provider
       filtered_candidates = provider_search_result
 
@@ -155,8 +158,8 @@ class Security::Resolver
       # 4. Rank by exchange_operating_mic relevance (lower index in the list is more relevant)
       sorted_candidates = filtered_candidates.sort_by do |s|
         [
-          s.ticker&.upcase.to_s == symbol.upcase.to_s ? 0 : 1,
-          exchange_operating_mic.present? && exchange_operating_mics_equivalent?(s.exchange_operating_mic, exchange_operating_mic) ? 0 : 1,
+          ticker_matches?(s) ? 0 : 1,
+          exchange_matches?(s) ? 0 : 1,
           sorted_country_codes_by_relevance.index(s.country_code&.upcase.to_s) || sorted_country_codes_by_relevance.length,
           sorted_exchange_operating_mics_by_relevance.index(Security.canonical_exchange_operating_mic(s.exchange_operating_mic)) || sorted_exchange_operating_mics_by_relevance.length
         ]
@@ -165,6 +168,12 @@ class Security::Resolver
       match = sorted_candidates.first
 
       return nil unless match
+
+      if exchange_operating_mic.present?
+        # An explicit exchange scopes the lookup; do not persist a broad-search
+        # result that matches neither the requested ticker nor exchange.
+        return nil unless ticker_matches?(match) || exchange_matches?(match)
+      end
 
       find_or_create_provider_match!(match)
     end
@@ -234,6 +243,17 @@ class Security::Resolver
       candidate_country.upcase == country_code.upcase
     end
 
+    # Compare provider tickers case-insensitively using the same rule in every match path.
+    def ticker_matches?(candidate)
+      candidate.ticker&.upcase.to_s == symbol
+    end
+
+    # Apply the shared MIC equivalence rule to provider candidates.
+    def exchange_matches?(candidate)
+      exchange_operating_mics_equivalent?(candidate.exchange_operating_mic, exchange_operating_mic)
+    end
+
+    # Compare canonical market MICs so segment aliases use one matching rule.
     def exchange_operating_mics_equivalent?(left, right)
       return false if left.blank? || right.blank?
 
