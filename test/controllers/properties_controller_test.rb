@@ -147,6 +147,69 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "value step dates the first valuation on the purchase date" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 150_000_000, currency: "PYG", purchase_date: 3.years.ago.to_date.iso8601 }
+    }
+
+    assert_redirected_to address_property_path(account)
+    account.reload
+    assert_equal "PYG", account.currency
+    assert_equal 150_000_000, account.balance
+
+    valuations = account.entries.valuations
+    assert_equal 1, valuations.count
+    assert_equal 3.years.ago.to_date, valuations.first.date
+    assert_equal "PYG", valuations.first.currency
+    assert_equal Money.new(150_000_000, "PYG"), account.property.purchase_price
+  end
+
+  test "value step defaults the purchase date to today" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: { account: { balance: 500_000, currency: "USD" } }
+
+    assert_redirected_to address_property_path(account)
+    assert_equal [ Date.current ], account.entries.valuations.pluck(:date)
+  end
+
+  test "resubmitting the value step moves the purchase valuation instead of adding one" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    patch update_balances_property_path(account), params: {
+      account: { balance: 150_000_000, currency: "PYG", purchase_date: 2.years.ago.to_date.iso8601 }
+    }
+
+    valuation = account.entries.valuations.sole
+    assert_equal 2.years.ago.to_date, valuation.date
+    assert_equal 150_000_000, valuation.amount
+    assert_equal "PYG", valuation.currency
+  end
+
+  test "value step rejects a purchase date in the future" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100, currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_empty account.entries.valuations
+  end
+
+  test "value step shows the purchase date only while the property is being set up" do
+    get balances_property_path(create_draft_property)
+    assert_select "input[name='account[purchase_date]']"
+
+    get balances_property_path(@account)
+    assert_select "input[name='account[purchase_date]']", count: 0
+  end
+
   test "balances update handles validation errors" do
     Account.any_instance.stubs(:set_current_balance).returns(OpenStruct.new(success?: false, error_message: "Invalid balance"))
 
@@ -928,5 +991,12 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       provider.stubs(:valuation_currency).returns("USD")
       provider.stubs(:fetch_property_valuation).returns(response)
       provider
+    end
+
+    def create_draft_property
+      @user.family.accounts.create!(
+        name: "Land", balance: 0, currency: "EUR", status: "draft", owner: @user,
+        accountable: Property.new(subtype: "plot")
+      )
     end
 end

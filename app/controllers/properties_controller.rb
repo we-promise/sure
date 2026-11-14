@@ -53,10 +53,19 @@ class PropertiesController < ApplicationController
   end
 
   def update_balances
+    if @account.draft? && (date_error = purchase_date_error)
+      @error_message = date_error
+      return render :balances, status: :unprocessable_entity
+    end
+
     result = nil
     Account.transaction do
       @account.update!(currency: balance_params[:currency]) if balance_params[:currency].present?
-      result = @account.set_current_balance(balance_params[:balance].to_d)
+      result = if @account.draft?
+        set_purchase_value(balance_params[:balance].to_d, purchase_date)
+      else
+        @account.set_current_balance(balance_params[:balance].to_d)
+      end
       raise ActiveRecord::Rollback unless result.success?
     end
 
@@ -69,7 +78,7 @@ class PropertiesController < ApplicationController
         redirect_to address_property_path(@account)
       end
     else
-      @error_message = result&.error_message
+      @error_message = result.respond_to?(:error_message) ? result.error_message : result&.error
       render :balances, status: :unprocessable_entity
     end
   end
@@ -276,7 +285,34 @@ class PropertiesController < ApplicationController
     end
 
     def balance_params
-      params.require(:account).permit(:balance, :currency)
+      params.require(:account).permit(:balance, :currency, :purchase_date)
+    end
+
+    # The setup wizard's value is what the property was bought for, so it is
+    # the opening anchor ("Original purchase price") on the purchase date,
+    # as the generic account form does with its opening balance date.
+    # Resubmitting the step moves that one valuation rather than adding one.
+    def set_purchase_value(balance, date)
+      result = Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: balance, date: date)
+      return result unless result.success?
+
+      # The amount was typed in the currency just saved, which a resubmitted
+      # step may have changed.
+      @account.valuations.opening_anchor.first.entry.update!(currency: @account.currency)
+      @account.update!(balance: balance)
+      @account.sync_later
+      result
+    end
+
+    def purchase_date
+      balance_params[:purchase_date].presence&.to_date || Date.current
+    end
+
+    def purchase_date_error
+      date = purchase_date
+      t("properties.update_balances.invalid_purchase_date") unless date > Entry.min_supported_date && date <= Date.current
+    rescue Date::Error
+      t("properties.update_balances.invalid_purchase_date")
     end
 
     def address_params
