@@ -13,10 +13,10 @@ json.investment_activity_label trade.investment_activity_label
 # locale-independent decimal string (the stored value).
 json.fee trade.fee_money.format
 json.fee_decimal trade.fee.to_s("F")
-# The rate from the trade's currency to the account's currency stored on the
-# trade, for example by a provider that reports its own rate. Null when the
-# trade carries none, in which case market rates are used, and when the trade
-# is in the account's currency.
+# The rate from the currency of the trade's amount (the entry's) to the
+# account's currency stored on the trade, for example by a provider that
+# reports its own rate. Null when the trade carries none, in which case market
+# rates are used, and when the amount is in the account's currency.
 json.exchange_rate trade.numeric_exchange_rate
 
 json.account do

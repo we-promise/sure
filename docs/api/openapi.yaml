@@ -3258,9 +3258,9 @@ components:
         exchange_rate:
           type: number
           nullable: true
-          description: Rate from the trade's currency to the account's currency stored
-            on the trade, such as one reported by the provider. Null when none is
-            stored or the trade is in the account's currency.
+          description: Rate from the currency of the trade's amount to the account's
+            currency stored on the trade, such as one reported by the provider. Null
+            when none is stored or the amount is in the account's currency.
         account:
           "$ref": "#/components/schemas/Account"
         security:

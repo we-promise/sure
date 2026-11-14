@@ -1193,7 +1193,38 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
 
     # A trade in the account's own currency is never converted, so a stored
     # rate on it is not exposed.
+    entry.update_columns(currency: @investment_account.currency)
     trade.update_columns(currency: @investment_account.currency, extra: { "exchange_rate" => 1.085 })
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
+  # The app converts entry.amount_money, in the entry's currency, with the
+  # stored rate (Balance::SyncCache, Account#convert_scheduled_entry_amount),
+  # and the web form and PATCH /api/v1/trades/:id change entry.currency
+  # without touching trade.currency. The entry's currency decides, as it does
+  # for transactions.
+  test "exchange rate follows the entry's currency, not the trade's" do
+    security = Security.create!(ticker: "TAXC", name: "Currency Mismatch Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 100,
+      name: "Buy TAXC",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 1.1 })
+    )
+    trade = entry.entryable
+    assert_equal 110, entry.amount_money.exchange_to("USD", custom_rate: trade.exchange_rate).amount, "the app applies the rate"
+
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_response :success
+    assert_equal 1.1, JSON.parse(response.body)["exchange_rate"]
+
+    # The other way round: the entry is in the account's currency, so the app
+    # never applies the rate, whatever trade.currency says.
+    entry.update_columns(currency: @investment_account.currency)
+    trade.update_columns(currency: "EUR")
     get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
     assert_nil JSON.parse(response.body)["exchange_rate"]
   end

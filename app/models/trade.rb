@@ -40,7 +40,7 @@ class Trade < ApplicationRecord
 
   # The stored exchange rate as a number, read the way Money#exchange_to reads
   # it (to_d), or nil when the app would not use it: none is stored, it is not
-  # a positive number, or the trade is already in the account's currency. The
+  # a positive number, or the entry is already in the account's currency. The
   # API and the data export read this, so a malformed value written straight
   # into extra, or an extra that is not a hash, cannot break them.
   def numeric_exchange_rate
@@ -48,7 +48,10 @@ class Trade < ApplicationRecord
 
     value = extra["exchange_rate"]
     return nil unless value.is_a?(Numeric) || value.is_a?(String)
-    return nil if currency.blank? || currency == entry&.account&.currency
+    # The app converts entry.amount_money, so the entry's currency decides,
+    # as in Transaction#numeric_exchange_rate. The web form and the API
+    # update change entry.currency and leave trade.currency as it was.
+    return nil if entry&.currency.blank? || entry.currency == entry.account&.currency
 
     rate = value.to_d
     rate.to_f if rate.finite? && rate.positive?
