@@ -1,0 +1,307 @@
+---
+pt-PT:
+  settings:
+    providers:
+      update:
+        updated_successfully: Definições do serviço atualizadas com sucesso
+        no_changes: Não foram feitas alterações
+      not_authorized: Não autorizado
+      bank_sync:
+        page_title: Sincronização bancária
+        lede: Associe as suas contas externas para sincronizar automaticamente transações, saldos e posições com o Sure.
+      status:
+        ok: Ligado
+        warn: Requer ação
+        err: Erro
+        "off": Não configurado
+      maturity:
+        beta: Beta
+        alpha: Alpha
+      drawer_trust_statement: "Acesso apenas de leitura. O Sure nunca pode mover dinheiro e as suas credenciais são armazenadas encriptadas."
+      drawer_trust_statement_encryption_unconfigured: "Acesso apenas de leitura. O Sure nunca pode mover dinheiro. Configure chaves de encriptação explícitas antes de armazenar credenciais de serviços em produção."
+      provider_setup_encryption_warning:
+        title: Faltam as chaves de encriptação
+        message: "Esta instalação autoalojada não configurou chaves de encriptação explícitas do Active Record. Configure primary_key, deterministic_key e key_derivation_salt antes de guardar credenciais de serviços em produção."
+      setup_steps:
+        eyebrow: Configuração
+        need_help: "Precisa de ajuda?"
+      connect: Ligar
+      groups:
+        your_connections: As suas ligações
+        available: Disponível
+        empty_available: Todos os serviços disponíveis estão ligados.
+      health_strip:
+        connected: ligado
+        needs_attention: requer atenção
+        accounts_syncing: contas a sincronizar
+        last_synced: Última sincronização há %{time}
+      meta:
+        sync_error: Erro de sincronização
+        no_recent_sync: Sincronização em atraso
+        reconsent_required: Necessário novo consentimento
+        login_required: "Início de sessão necessário"
+        login_expires_soon: "A sessão expira dentro de %{time} (%{at})"
+        reconsent_needed:
+          one: Necessário novo consentimento em 1 dia
+          other: Necessário novo consentimento em %{count} dias
+        last_synced: Sincronizado há %{time}
+      sync_all: Sincronizar tudo
+      sync_all_in_progress: A sincronizar todos os serviços ligados…
+      sync_all_recently: Sincronização já em curso. Tente novamente daqui a um momento.
+      sync_provider: Sincronizar agora
+      sync_provider_in_progress: Sincronização iniciada.
+      recently_synced: Sincronizado recentemente. Tente novamente daqui a um momento.
+      taglines:
+        akahu: Sincronize instituições financeiras da Nova Zelândia via Akahu.
+        simplefin: Ligue contas bancárias dos EUA através do protocolo aberto SimpleFIN.
+        lunchflow: Ligue 20 mil+ bancos de 40+ países (RU, UE, EUA e mais!)
+        redbark: Sincronize contas bancárias australianas através do open banking Redbark.
+        enable_banking: Sincronize contas bancárias europeias através do open banking PSD2.
+        coinstats: Acompanhe toda a sua carteira de criptomoedas em carteiras e exchanges.
+        wise: Sincronize automaticamente os seus saldos multi-moeda Wise e transferências internacionais.
+        mercury: Sincronize automaticamente as suas contas bancárias empresariais Mercury.
+        brex: Sincronize o numerário e a atividade do cartão empresarial Brex com acesso apenas de leitura.
+        coinbase: Importe as suas posições cripto Coinbase e acompanhe o desempenho.
+        binance: Sincronize os seus saldos à vista Binance utilizando uma chave de API apenas de leitura.
+        kraken: Sincronize os saldos Kraken e as execuções de negociação à vista utilizando uma chave de API apenas de leitura.
+        onchain_wallet: Acompanhe carteiras Bitcoin, EVM, Solana, Cosmos e Polkadot de autocustódia a partir dos seus endereços públicos.
+        snaptrade: Ligue contas de corretagem através da rede de agregação SnapTrade.
+        trading212: Sincronize a sua carteira de investimento Trading 212 utilizando uma chave de API apenas de leitura.
+        ibkr: Sincronize contas de investimento Interactive Brokers através de importações de Flex Query.
+        questrade: Sincronize as suas contas de investimento Questrade diretamente através da API Questrade.
+        indexa_capital: Acompanhe a sua carteira de investimento automatizada Indexa Capital.
+        sophtron: Ligue bancos e utilities dos EUA e do Canadá.
+        plaid: Ligue milhares de instituições financeiras dos EUA via Plaid.
+        plaid_eu: Ligue instituições financeiras europeias via Plaid (PSD2 / Open Banking).
+      search_filters:
+        aria_label: Pesquisar serviços
+        placeholder: Pesquisar serviços
+        chips:
+          all: Tudo
+          bank: Bancos
+          crypto: Cripto
+          investment: Investimentos
+      empty_filter: Nenhum serviço corresponde ao seu filtro.
+      clear_filter: Limpar filtros
+      encryption_error:
+        title: Faltam as chaves de encriptação
+        message: "A sincronização bancária necessita de encriptação do Active Record configurada. Defina primary_key, deterministic_key e key_derivation_salt nas suas credenciais do Rails ou variáveis de ambiente."
+      provider_form:
+        save_and_connect: "Guardar e ligar"
+      coinbase_panel:
+        setup_instructions: "Para ligar a Coinbase:"
+        step1_html: Aceda a <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank" rel="noopener noreferrer" class="text-primary underline">Definições da API Coinbase</a>
+        step2: Crie uma nova chave de API com permissões apenas de leitura (ver contas, ver transações)
+        step3: Copie a sua chave de API e segredo de API e cole-os abaixo
+        api_key_label: Chave de API
+        api_key_placeholder: Introduza a sua chave de API Coinbase
+        api_secret_label: Segredo de API
+        api_secret_placeholder: Introduza o seu segredo de API Coinbase
+        connect_button: Ligar Coinbase
+        syncing: A sincronizar...
+        sync: Sincronizar
+        disconnect: Desligar
+        disconnect_confirm: Tem a certeza de que pretende desligar esta ligação Coinbase? As suas contas sincronizadas tornar-se-ão contas manuais.
+      binance_panel:
+        setup_instructions: "Para ligar a Binance, crie uma chave de API apenas de leitura:"
+        step1_html: 'Aceda a <a href="https://www.binance.com/en/my/settings/api-management" target="_blank" rel="noopener noreferrer" class="underline">Gestão de API Binance</a>'
+        step2: "Crie uma nova chave de API apenas com a permissão Ativar Leitura"
+        step3: "Cole abaixo a sua Chave de API e Segredo"
+        no_withdraw_title: "Apenas chave de leitura"
+        no_withdraw_body: "Não ative as permissões de levantamento ao criar a sua chave de API Binance. O Sure precisa apenas de acesso de leitura."
+        ip_hint_title: "Lista de permissões de IP necessária"
+        ip_hint_body: "Adicione o IP de saída do servidor da aplicação à lista de permissões da Chave de API Binance:"
+        ip_hint_contact_admin: "Contacte o seu administrador para obter o endereço IP de saída do servidor da aplicação."
+        api_key_label: Chave de API
+        api_key_placeholder: Cole a sua Chave de API Binance
+        api_secret_label: Segredo de API
+        api_secret_placeholder: Cole o seu Segredo de API Binance
+        connect_button: Ligar Binance
+        syncing: A sincronizar...
+        sync: Sincronizar
+        historical_import: "Definições de Importação Histórica"
+        sync_start_date_label: "Importar dados desde"
+        sync_start_date_help: "Selecione até que ponto no passado pretende obter as negociações históricas."
+        disconnect: Desligar
+        disconnect_confirm: "Tem a certeza de que pretende desligar a Binance?"
+      kraken_panel:
+        step1_html: 'Aceda a <a href="https://pro.kraken.com/app/settings/api" target="_blank" rel="noopener noreferrer" class="underline">Definições de API Kraken</a>'
+        step2: "Crie uma chave de API apenas com Query Funds e Query Closed Orders & Trades."
+        step3: "Cole abaixo a chave de API e a chave privada."
+        read_only_title: "Apenas sincronização de exchange de leitura"
+        read_only_body: "Não conceda permissões de negociação, cancelamento, levantamento, exportação, ledger, Earn, staking ou transferência. O Sure importa apenas saldos, posições e execuções de negociação à vista."
+        default_connection_name: Kraken
+        add_connection: Adicionar ligação Kraken
+        update_connection: Atualizar ligação
+        connection_name_label: Nome da ligação
+        connection_name_placeholder: Kraken Principal
+        api_key_label: Chave de API
+        api_key_placeholder: Cole a sua chave de API Kraken
+        keep_api_key_placeholder: Deixe em branco para manter a chave de API existente
+        api_secret_label: Chave Privada
+        api_secret_placeholder: Cole a sua chave privada Kraken
+        keep_api_secret_placeholder: Deixe em branco para manter a chave privada existente
+        setup_accounts: Configurar conta
+        syncing: A sincronizar...
+        sync: Sincronizar
+        disconnect: Desligar
+        disconnect_confirm: "Tem a certeza de que pretende desligar %{name}?"
+      onchain_wallet_panel:
+        add_wallet: Adicionar carteira
+        advanced: Avançado
+        disconnect_all: Desligar todas as carteiras
+        disconnect_all_confirm: Isto remove todos os endereços monitorizados e as respetivas contas. Continuar?
+        etherscan_api_key_label: Chave de API Etherscan (opcional)
+        etherscan_api_key_placeholder: Cole uma chave de API Etherscan
+        etherscan_hint: As leituras do Ethereum funcionam sem chave. Adicionar uma chave Etherscan apenas aumenta o limite de frequência para o Ethereum.
+        keep_etherscan_api_key: Deixe em branco para manter a chave existente
+        manage_wallets: Gerir carteiras
+        keyless_body: O Sure apenas lê dados públicos da cadeia. Não estão envolvidas chaves, frases-semente ou assinaturas, e nada pode ser gasto.
+        keyless_title: Apenas leitura, sem necessidade de chaves
+        save: Guardar
+        sync_start_date_hint: As transferências anteriores a esta data são ignoradas. Deixe em branco para importar tudo o que o explorador reportar.
+        sync_start_date_label: Ignorar transferências anteriores a
+      enable_banking_panel:
+        callback_url_instruction: "Para o URL de callback, utilize %{callback_url}."
+        connection_error: Erro de Ligação
+        step_1_html: "Aceda a %{link} e obtenha as suas credenciais de programador."
+        step_2: "Escolha o seu país e cole abaixo o Application ID + Client Certificate."
+        step_3: "Guarde e, em seguida, utilize Adicionar Ligação para ligar o seu banco."
+        config_locked_title: "Configuração bloqueada"
+        config_locked_message: "Desligue todos os bancos ligados antes de alterar estas credenciais."
+        application_id_label: "Application ID"
+        application_id_placeholder_new: "Introduza o application ID"
+        application_id_placeholder_update: "Introduza o novo ID para atualizar"
+        client_certificate_label: "Client Certificate (com Chave Privada)"
+        keep_client_certificate_hint: "Deixe em branco para manter o certificado atual"
+        save_and_connect: "Guardar e ligar"
+        update_connection: "Atualizar ligação"
+        connected_bank: "Banco Ligado"
+        session_expires: "A sessão expira: %{date}"
+        unknown: "Desconhecido"
+        connection: "Ligação"
+        session_expired_reconnect: "Sessão expirada - voltar a ligar"
+        configured: "Configurado"
+        ready_to_link: "Pronto para ligar contas"
+        sync: "Sincronizar"
+        reconnect: "Voltar a ligar"
+        connect_bank: "Ligar banco"
+        remove: "Remover"
+        remove_confirm: "Tem a certeza de que pretende remover esta ligação?"
+        add_connection: "Adicionar Ligação"
+        syncing: "A sincronizar"
+        select_country: "Selecione o país..."
+        country_label: "País"
+      lunchflow_panel:
+        step_1_html: "Aceda a %{link} e crie uma chave de API."
+        step_2: "Cole abaixo a sua chave e ligue."
+        step_3: "Depois, aceda a Contas para ligar as suas contas sincronizadas."
+        api_key_label: "Chave de API"
+        api_key_placeholder_new: "Cole aqui a chave de API"
+        api_key_placeholder_update: "Introduza a nova chave de API para atualizar"
+        base_url_label: "URL Base (Opcional)"
+        base_url_placeholder: "https://lunchflow.app/api/v1 (predefinido)"
+        save_and_connect: "Guardar e ligar"
+        update_connection: "Atualizar ligação"
+      akahu_panel:
+        step_1_html: "Aceda a %{link} e crie uma aplicação pessoal."
+        step_2: "Copie o seu token de aplicação e token de utilizador."
+        step_3: "Cole abaixo os tokens, guarde e, em seguida, ligue as suas contas sincronizadas."
+      up_panel:
+        step_1_html: "Aceda a %{link} e gere um token de acesso pessoal."
+        step_2: "Copie o seu token de acesso pessoal."
+        step_3: "Cole abaixo o token, guarde e, em seguida, ligue as suas contas sincronizadas."
+      simplefin_panel:
+        step_1_html: "Aceda a %{link} para obter um token de configuração de utilização única."
+        step_2: "Cole abaixo o token e ligue."
+        step_3: "Depois, aceda a Contas para ligar as suas contas sincronizadas."
+        setup_token_label: "Token de Configuração"
+        setup_token_placeholder: "Cole o token de configuração SimpleFIN"
+        save_and_connect: "Guardar e ligar"
+      plaid_panel:
+        step_1_html: "Abra %{link} e copie o seu Client ID e Secret Key."
+        step_2: "Escolha um ambiente. Utilize sandbox para testar e production para contas reais."
+        step_3: "Cole abaixo as suas credenciais e ligue."
+      plaid_eu_panel:
+        step_1_html: "Abra %{link} e copie o seu EU Client ID e Secret Key."
+      not_found: Serviço não encontrado.
+      sync_provider_no_items: Sem ligações disponíveis para sincronizar.
+      ibkr_panel:
+        add_connection: "Adicionar ligação Interactive Brokers"
+        connection_name_label: "Nome da ligação"
+        connection_name_placeholder: "ex.: IBKR Irlanda, IBKR EUA"
+        disconnect: "Desligar"
+        disconnect_confirm_named: "Desligar %{name}?"
+        setup_accounts: "Configurar contas"
+        steps:
+          step_1: 'No seu Client Portal IBKR, navegue até "Performance & Reports" > "Flex Queries".'
+          step_2: 'Clique no ícone "+" na secção "Activity Flex Query" para criar uma nova consulta.'
+          step_3: 'Dê um nome à consulta (por exemplo, "Sure Sync"), reveja depois os detalhes da Flex Query abaixo e ative as secções, campos e opções de configuração listados.'
+          step_4: 'Guarde a consulta, anote o seu "Query ID" e utilize depois o ícone de engrenagem na secção "Flex Web Service Configuration" para gerar um Token de acesso.'
+          step_5: "Cole abaixo o seu Query ID e Token, guarde a configuração e aceda depois a Contas para ligar as contas IBKR descobertas."
+        flex_query_details:
+          eyebrow: Flex Query
+          title: Secções, campos e configuração
+          summary: Expanda para ver as secções, campos e definições exatos que a sua Activity Flex Query IBKR deve incluir.
+          sections_heading: Ative estas secções e campos
+          configuration_heading: Defina estas opções de consulta
+        sections:
+          account_information: "Informações da Conta: Account ID, Currency"
+          cash_report: "Relatório de Numerário:"
+          cash_report_options: "Opções: None"
+          cash_report_fields: "Campos: Currency, Ending Cash"
+          cash_transactions: "Transações de Numerário:"
+          cash_transactions_options: "Opções: Dividends, Deposits & Withdrawals, Detail"
+          cash_transactions_fields: "Campos: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type"
+          change_in_position_value_summary: "Alteração no Resumo do Valor da Posição: Currency, End Of Period Value"
+          net_asset_value: "Valor Líquido dos Ativos (NAV) em Base:"
+          net_asset_value_options: "Opções: None"
+          net_asset_value_fields: "Campos: Currency, Report Date, Total"
+          open_positions: "Posições Abertas:"
+          open_positions_options: "Opções: Summary"
+          open_positions_fields: "Campos: Asset Class, Conid, Cost Basis Price, Currency, FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security ID Type, Side, Symbol"
+          trades: "Negociações:"
+          trades_options: "Opções: Execution"
+          trades_fields: "Campos: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base, IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade ID, TradePrice, Transaction ID"
+        configuration:
+          models: "Modelos: Opcional"
+          format: "Formato: XML"
+          period: "Período: Últimos 365 Dias de Calendário"
+          date_format: "Formato de Data: yyyy-MM-dd"
+          time_format: "Formato de Hora: HH:mm:ss"
+          date_time_separator: "Separador Data/Hora: ; (ponto e vírgula)"
+          profit_and_loss: "Ganhos e Perdas: Predefinição"
+          all_other_options: 'Todas as outras opções de configuração: "No"'
+        report_window_note: "Os relatórios Flex IBKR estão limitados à janela de consulta que configurou no IBKR. O Sure importará as posições atuais completas mais até aos últimos 365 dias de atividade deste relatório."
+        sync: Sincronizar
+        query_id_label: Query ID
+        query_id_placeholder_new: Introduza o seu IBKR Flex Query ID
+        query_id_placeholder_existing: Deixe em branco para manter o Query ID atual
+        token_label: Token
+        token_placeholder_new: Introduza o seu IBKR Flex Web Service Token
+        token_placeholder_existing: Deixe em branco para manter o Token atual
+        update_configuration: Atualizar Configuração
+        not_configured: Não configurado.
+      trading212_panel:
+        steps:
+          step_1: Aceda a Trading 212 → Definições → API (aplicação web ou móvel).
+          step_2: Gere uma nova chave de API — a Trading 212 mostrar-lhe-á um API ID e um Secret Key.
+          step_3: Cole ambos abaixo, selecione o seu ambiente e moeda da conta e guarde.
+        api_key_label: API ID
+        api_key_placeholder_new: Cole o seu Trading 212 API ID
+        api_key_placeholder_existing: Deixe em branco para manter o API ID atual
+        api_secret_label: Secret Key
+        api_secret_placeholder_new: Cole o seu Trading 212 Secret Key
+        api_secret_placeholder_existing: Deixe em branco para manter o Secret Key atual
+        environment_label: Ambiente
+        environment_live: Conta ao vivo
+        environment_demo: Conta de demonstração
+        currency_label: Moeda da conta
+        save_configuration: Guardar Configuração
+        update_configuration: Atualizar Configuração
+        sync: Sincronizar
+        disconnect_confirm: Desligar Trading 212?
+        status_configured_prefix: "Configurado. Visite o"
+        accounts_tab: Contas
+        status_configured_suffix: separador para gerir as contas descobertas.
+        not_configured: Não configurado.

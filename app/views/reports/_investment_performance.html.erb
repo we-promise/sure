@@ -167,7 +167,7 @@
               <%= render DS::Disclosure.new(variant: :inline) do |disclosure| %>
                 <% disclosure.with_summary_content do %>
                   <span class="flex items-center gap-1 text-xs text-secondary hover:text-primary">
-                    <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+                    <%= disclosure_chevron %>
                     <%= t("reports.investment_performance.view_details") %>
                     (<%= t("reports.investment_performance.holdings_count", count: data[:holdings].count) %>, <%= t("reports.investment_performance.sells_count", count: data[:sell_trades].count) %>)
                   </span>
@@ -225,16 +225,7 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <% investment_metrics[:accounts].each do |account| %>
-            <%= link_to account_path(account), class: "bg-container-inset rounded-lg p-4 flex items-center justify-between hover:bg-container-hover transition-colors" do %>
-              <div class="flex items-center gap-3">
-                <%= render "accounts/logo", account: account, size: "sm" %>
-                <div>
-                  <p class="font-medium text-primary text-sm"><%= account.name %></p>
-                  <p class="text-xs text-secondary"><%= account.short_subtype_label %></p>
-                </div>
-              </div>
-              <p class="font-medium text-primary privacy-sensitive"><%= format_money(account.balance_money) %></p>
-            <% end %>
+            <%= render "accounts/balance_card", account: account, href: account_path(account) %>
           <% end %>
         </div>
       </div>

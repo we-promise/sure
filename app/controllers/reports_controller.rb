@@ -22,6 +22,10 @@ class ReportsController < ApplicationController
   end
 
   def update_preferences
+    # `require` passes a scalar through, and indexing a String by key raises,
+    # so a body whose `preferences` is not an object is refused here.
+    return head :bad_request unless params[:preferences].is_a?(ActionController::Parameters)
+
     if Current.user.update_reports_preferences(preferences_params)
       head :ok
     else
@@ -146,11 +150,13 @@ class ReportsController < ApplicationController
     end
 
     def preferences_params
+      # Only the two reports keys are passed on; User#update_section_preferences
+      # drops any value that is not an array of keys or a hash of flags.
       prefs = params.require(:preferences)
-      {}.tap do |permitted|
-        permitted["reports_collapsed_sections"] = prefs[:reports_collapsed_sections].to_unsafe_h if prefs[:reports_collapsed_sections]
-        permitted["reports_section_order"] = prefs[:reports_section_order] if prefs[:reports_section_order]
-      end
+      {
+        "reports_collapsed_sections" => prefs[:reports_collapsed_sections],
+        "reports_section_order" => prefs[:reports_section_order]
+      }
     end
 
     def build_reports_sections

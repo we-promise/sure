@@ -107,6 +107,30 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert local.supports_model?("qwen2.5:32b")
   end
 
+  # Some keys only work on a regional host, so setting one must not turn off
+  # the OpenAI-only paths like the Responses API and max_completion_tokens.
+  test "an OpenAI regional host is hosted OpenAI, not a custom provider" do
+    with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
+      regional = Provider::Openai.new("test-token", uri_base: "https://us.api.openai.com")
+
+      assert_not regional.custom_provider?
+      assert regional.supports_responses_endpoint?
+      assert_equal "OpenAI", regional.provider_name
+      assert Provider::Openai.native_pdf_completion_limit?(model: "gpt-6-luna", custom_provider: regional.custom_provider?)
+    end
+  end
+
+  test "only OpenAI's own hosts count as a hosted OpenAI endpoint" do
+    [ "https://api.openai.com", "https://api.openai.com/v1/", "https://us.api.openai.com", "https://EU.api.openai.com/v1" ].each do |url|
+      assert Provider::Openai.hosted_endpoint?(url), url
+    end
+
+    [ "http://us.api.openai.com", "https://evil-api.openai.com", "https://api.openai.com.example.com",
+      "https://us.api.openai.com/proxy", "https://us.api.openai.com:8443", "https://custom.example/v1", "not a url" ].each do |url|
+      assert_not Provider::Openai.hosted_endpoint?(url), url
+    end
+  end
+
   test "legacy and custom PDF processing preserve the fallback output limit" do
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
       Setting.stubs(:llm_max_response_tokens).returns(nil)

@@ -145,6 +145,8 @@ class Transaction::Search
   end
   # Automatic-categorization provenance filter values (used by the view)
   AI_STATUSES = %w[current history].freeze
+  # An automatic category enrichment that is still the transaction's category.
+  CURRENT_AUTO_CATEGORY_SQL = "de.value = to_jsonb(transactions.category_id::text) AND #{Transaction::UNSUPERSEDED_ENRICHMENT_SQL}".freeze
 
   ATTACHMENT_STATUSES = %w[with without].freeze
 
@@ -153,6 +155,7 @@ class Transaction::Search
   attribute :amount_operator, :string
   attribute :types, array: true
   attribute :status, array: true
+  attribute :reconcile_status, array: true
   attribute :accounts, array: true
   attribute :account_ids, array: true
   attribute :start_date, :string
@@ -186,6 +189,7 @@ class Transaction::Search
       query = self.class.apply_category_filter(query, categories, family)
       query = self.class.apply_type_filter(query, types)
       query = apply_status_filter(query, status)
+      query = apply_reconcile_status_filter(query, reconcile_status)
       query = self.class.apply_merchant_filter(query, merchants)
       query = self.class.apply_tag_filter(query, tags)
       query = apply_ai_status_filter(query, ai_status)
@@ -315,11 +319,11 @@ class Transaction::Search
 
       case wanted.sort
       when [ "current" ]
-        query.where(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+        query.where(auto_enrichment_exists_sql(CURRENT_AUTO_CATEGORY_SQL), sources: Transaction::AUTO_CATEGORY_SOURCES)
       when [ "history" ]
         query
           .where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
-          .where.not(auto_enrichment_exists_sql("de.value = to_jsonb(transactions.category_id::text)"), sources: Transaction::AUTO_CATEGORY_SOURCES)
+          .where.not(auto_enrichment_exists_sql(CURRENT_AUTO_CATEGORY_SQL), sources: Transaction::AUTO_CATEGORY_SOURCES)
       else
         query.where(auto_enrichment_exists_sql, sources: Transaction::AUTO_CATEGORY_SOURCES)
       end
@@ -373,5 +377,27 @@ class Transaction::Search
       else
         query
       end
+    end
+
+    # Filters by the manual reconciled_status enum (see Entry#reconciled_status).
+    # Scoped to manual accounts — every entry defaults to "unreconciled"
+    # regardless of account type, but the UI/update paths only ever
+    # show/change this for accounts with no live bank sync. Without this
+    # scope, selecting "Unreconciled" would also match every synced
+    # transaction in the family.
+    #
+    # Unlike apply_status_filter (bank-sync pending/confirmed), this is a
+    # user-controlled flag, so any subset of the three values is meaningful —
+    # there's no "all selected = no filter" shortcut.
+    def apply_reconcile_status_filter(query, reconcile_statuses)
+      return query unless reconcile_statuses.present?
+
+      valid_statuses = reconcile_statuses & Entry.reconciled_statuses.keys
+      return query if valid_statuses.empty?
+
+      # Subquery rather than pluck(:id) — avoids loading every manual
+      # account id into Ruby, consistent with the writable-accounts scoping
+      # in Transactions::BulkUpdatesController#create.
+      query.where(entries: { account_id: family.accounts.manual.select(:id), reconciled_status: valid_statuses })
     end
 end

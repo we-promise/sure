@@ -1,0 +1,51 @@
+---
+hu:
+  settings:
+    profiles:
+      destroy:
+        cannot_remove_self: Nem távolíthatod el magadat a fiókból.
+        member_removal_failed: Probléma merült fel a tag eltávolítása során.
+        member_removed: A tag sikeresen eltávolítva.
+        not_authorized: Nincs jogosultságod tagok eltávolítására.
+      show:
+        confirm_delete:
+          body: Biztosan véglegesen törölni szeretnéd a fiókodat? Ez a művelet visszavonhatatlan.
+          title: Fiók törlése?
+        confirm_reset:
+          body: Biztosan vissza szeretnéd állítani a fiókodat? Ez törli az összes számládat, kategóriádat, kereskedődet, címkédet és egyéb adatodat. Ez a művelet nem vonható vissza.
+          title: Fiók visszaállítása?
+        confirm_reset_with_sample_data:
+          body: Biztosan vissza szeretnéd állítani a fiókodat és betölteni a mintaadatokat? Ez törli a meglévő adataidat, és demo adatokkal helyettesíti azokat, hogy biztonságosan felfedezhessed a Sure-t.
+          title: Fiók visszaállítása és mintaadatok betöltése?
+        confirm_remove_invitation:
+          body: Biztosan el szeretnéd távolítani a %{email} részére szóló meghívót?
+          title: Meghívó eltávolítása
+        confirm_remove_member:
+          body: Biztosan el szeretnéd távolítani %{name} személyt a fiókodból?
+          title: Tag eltávolítása
+        danger_zone_title: Veszélyes zóna
+        delete_account: Fiók törlése
+        delete_account_warning: A fiók törlése véglegesen eltávolítja az összes adatodat, és nem vonható vissza.
+        reset_account: Fiók visszaállítása
+        reset_account_warning: A fiók visszaállítása törli az összes számládat, kategóriádat, kereskedődet, címkédet és egyéb adatodat, de a felhasználói fiókod megmarad.
+        reset_account_with_sample_data: Visszaállítás és előtöltés
+        reset_account_with_sample_data_warning: Töröld az összes meglévő adatodat, majd tölts be friss mintaadatokat, hogy egy előre kitöltött környezetben fedezhesd fel az alkalmazást.
+        email: E-mail cím
+        first_name: Keresztnév
+        group_form_input_placeholder: Adj meg egy csoportnevet
+        group_form_label: Csoport neve
+        group_title: Csoporttagok
+        household_form_input_placeholder: Adj meg egy háztartásnevet
+        household_form_label: Háztartás neve
+        household_subtitle: A meghívottak bejelentkezhetnek a %{moniker} fiókodba és hozzáférhetnek a megosztott erőforrásokhoz.
+        household_title: Háztartás
+        invitation_link: Meghívó link
+        invite_member: Tag hozzáadása
+        last_name: Vezetéknév
+        page_title: Profiladatok
+        pending: Függőben
+        profile_subtitle: Szabd testre, hogyan jelensz meg a %{product_name} alkalmazásban
+        profile_title: Személyes
+        remove_invitation: Meghívó eltávolítása
+        remove_member: Tag eltávolítása
+        save: Mentés
