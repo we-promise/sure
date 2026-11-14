@@ -31,11 +31,12 @@ class SimplefinAccount::Transactions::Processor
     # Each entry is processed inside a transaction, but to avoid locking up the DB when
     # there are hundreds or thousands of transactions, we process them individually.
     transactions.each do |transaction_data|
-      SimplefinEntry::Processor.new(
+      entry = SimplefinEntry::Processor.new(
         transaction_data,
         simplefin_account: simplefin_account,
         import_adapter: adapter
       ).process
+      SimplefinAccount::Transactions::TradeAutofill.convert(entry) if entry
       processed_count += 1
     rescue => e
       error_count += 1

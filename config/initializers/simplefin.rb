@@ -12,6 +12,8 @@ Rails.application.configure do
   pending_env = ENV["SIMPLEFIN_INCLUDE_PENDING"].to_s.strip.downcase
   config.x.simplefin.include_pending = pending_env.blank? ? true : !falsy.include?(pending_env)
   config.x.simplefin.debug_raw = truthy.include?(ENV["SIMPLEFIN_DEBUG_RAW"].to_s.strip.downcase)
+  # Opt in only after reviewing the parsed descriptions and existing securities.
+  config.x.simplefin.trade_autofill_enabled = truthy.include?(ENV["SIMPLEFIN_TRADE_AUTOFILL_ENABLED"].to_s.strip.downcase)
 
   # Common money market fund tickers that should be treated as cash equivalents
   # These are settlement funds that users consider "cash available to invest"
