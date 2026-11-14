@@ -553,6 +553,16 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to new_property_path
   end
 
+  test "new and edit forms let the user keep notes on the property" do
+    @account.update!(notes: "Cadastral number 12345")
+
+    get edit_property_url(@account)
+    assert_select "textarea[name='account[notes]']", text: "Cadastral number 12345"
+
+    get new_property_url
+    assert_select "textarea[name='account[notes]']"
+  end
+
   test "edit form leaves out the icon picker, which property updates do not save" do
     get edit_property_url(@account)
 
