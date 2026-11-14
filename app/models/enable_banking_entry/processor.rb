@@ -101,7 +101,7 @@ class EnableBankingEntry::Processor
       # The entry's date is not the bank's when the user locked it or a settled hold froze it: an amount match is then exact.
       own_date = legacy && (legacy.locked?(:date) || legacy.entryable.try(:extra)&.key?("auto_claimed_pending_ids"))
       owner = nil if kept && indexes.none? { |i| ref[i] == kept } && owner && score[owner] < (own_date ? 1 : 2)
-      owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.protected_from_sync? && !legacy.locked?(:amount)
+      owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.protected_from_sync? && !legacy.locked?(:amount) && !legacy.locked?(:currency)
       indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
     end
     ids
@@ -375,7 +375,10 @@ class EnableBankingEntry::Processor
       return false if @external_id.nil? || @external_id == plain_id
 
       plain = account.entries.find_by(source: "enable_banking", external_id: plain_id)
+      # The adapter tries a scheduled or manual duplicate before the pending match; keep those.
       plain&.entryable.try(:pending?) &&
+        !import_adapter.find_scheduled_transaction(date: date, amount: amount, currency: currency) &&
+        !import_adapter.find_duplicate_transaction(date: date, amount: amount, currency: currency) &&
         import_adapter.find_pending_transaction(date: date, amount: amount, currency: currency, source: "enable_banking") == plain
     end
 

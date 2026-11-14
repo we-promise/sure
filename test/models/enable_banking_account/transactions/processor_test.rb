@@ -730,4 +730,35 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     filter = Rule::ConditionFilter::TransactionDetails.new(Rule.new(family: @family, resource_type: "transaction"))
     assert_includes filter.apply(@family.transactions.joins(:entry), "is_null", nil).pluck(:id), entry.entryable_id
   end
+
+  [ [ "manual duplicate", 0 ], [ "scheduled bill", 5 ] ].each do |kind, days_ahead|
+    test "a suffixed sibling still claims its #{kind} when the plain entry is an excluded pending" do
+      sync_shared(raw_shared_tid_transaction(entry_reference: nil, amount: "7.00").merge(status: "PDNG", _pending: true, booking_date: 3.days.ago.to_date.to_s))
+      @account.entries.find_by!(external_id: "enable_banking_tid-x").update!(excluded: true)
+      manual = create_transaction(account: @account, name: "Shop", date: 1.day.ago.to_date, amount: 7, currency: "EUR")
+      manual.update_columns(created_at: days_ahead.days.ago) if days_ahead.positive?
+      rows = [ raw_shared_tid_transaction(entry_reference: "r-a", amount: "7.00"),
+               raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00").merge(booking_date: 1.day.ago.to_date.to_s) ]
+      2.times { sync_shared(*rows) }
+
+      assert_equal [ [ manual.id, sibling_id("r-b") ] ], @account.entries.where(excluded: false, amount: 7).pluck(:id, :external_id)
+    end
+  end
+
+  test "a plain entry stored without its entry_reference keeps its row when its currency is locked" do
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"),
+                raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00").merge(booking_date: 3.days.ago.to_date.to_s))
+    plain = @account.entries.find_by!(external_id: "enable_banking_tid-x")
+    plain.transaction.update_column(:provider_entry_reference, nil)
+    plain.update!(currency: "USD")
+    plain.lock_saved_attributes!
+    assert_not plain.reload.user_modified?
+
+    2.times do
+      sync_shared(raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"),
+                  raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00").merge(booking_date: 3.days.ago.to_date.to_s))
+    end
+
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
 end
