@@ -294,6 +294,44 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal [ securities(:aapl).ticker ], current_tickers
   end
 
+  test "a positions list this sync did not fetch does not clear positions" do
+    travel_to(Date.new(2026, 12, 18)) { sync_positions!([ stock_position ]) }
+    travel_to(Date.new(2026, 12, 28)) { sync_positions!([], last_holdings_sync: 2.hours.ago) }
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "a row without a symbol that is not cash does not clear the other positions" do
+    sync_positions!([ stock_position, stock_position(securities(:msft).ticker) ])
+    sync_positions!([ stock_position, { "instrument" => { "kind" => "stock" }, "units" => "5", "price" => "300", "currency" => "USD" } ])
+
+    assert_equal [ securities(:aapl).ticker, securities(:msft).ticker ].sort, current_tickers
+  end
+
+  test "a cash row without a symbol still lets sold positions clear" do
+    sync_positions!([ stock_position, stock_position(securities(:msft).ticker) ])
+    sync_positions!([ stock_position, { "instrument" => { "kind" => "cash", "code" => "USD" }, "units" => "1", "price" => "1", "currency" => "USD" } ])
+
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
+  test "clearing a sold position leaves another source's row for the same security today" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+    other = @account.holdings.create!(security: securities(:aapl), date: Date.current, currency: "USD", qty: 5, price: 150, amount: 750)
+    sync_positions!([])
+
+    assert_equal 5, other.reload.qty
+  end
+
+  test "an empty list kept against the account total is recorded for support" do
+    travel_to(1.day.ago) { sync_positions!([ stock_position ]) }
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "warn").count }, 1 do
+      sync_positions!([], total: 2500)
+    end
+    assert_equal [ securities(:aapl).ticker ], current_tickers
+  end
+
   # === ActivitiesProcessor Tests ===
 
   test "activities processor maps BUY type to Buy label" do
@@ -855,7 +893,7 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
   private
 
     def sync_positions!(positions, activities = [], total: 1000, **attrs)
-      @snaptrade_account.update!(currency: "USD", cash_balance: 1000, current_balance: total,
+      @snaptrade_account.update!(currency: "USD", cash_balance: 1000, current_balance: total, last_holdings_sync: Time.current,
         raw_holdings_payload: positions, raw_activities_payload: activities, **attrs)
       SnaptradeAccount::Processor.new(@snaptrade_account.reload).process
     end

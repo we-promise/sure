@@ -34,9 +34,11 @@ class SnaptradeAccount::HoldingsProcessor
       end
     end
 
-    # A row that failed or was skipped must not read as a closed position, nor
-    # an empty list SnapTrade's own total contradicts.
-    zero_vanished_positions unless failed || (holdings_data.blank? && positions_in_total?)
+    # A row that failed or was skipped must not read as a closed position, nor a
+    # list this sync didn't fetch, nor an empty list SnapTrade's own total contradicts.
+    if !failed && @snaptrade_account.last_holdings_sync&.after?(1.hour.ago)
+      holdings_data.blank? && positions_in_total? ? capture_kept_empty_snapshot : zero_vanished_positions
+    end
 
     # Always run, even with no security holdings — secondary-currency cash
     # should still be surfaced (issue #1809).
@@ -49,12 +51,43 @@ class SnaptradeAccount::HoldingsProcessor
     # position the broker no longer reports (closed, expired) would stay
     # current forever. Write it a zero row today instead.
     def zero_vanished_positions
-      provider_id = @snaptrade_account.account_provider&.id or return
-      scope = account.holdings.where(account_provider_id: provider_id, external_id: nil)
-      scope.where(date: scope.maximum(:date)).where.not(qty: 0).where.not(security_id: @imported.to_a).find_each do |h|
-        import_adapter.import_holding(security: h.provider_security || h.security, quantity: 0, amount: 0, currency: h.currency,
+      provider_id = @snaptrade_account.account_provider&.id
+      vanished_positions.find_each do |h|
+        security = h.provider_security || h.security
+        # The adapter matches a row without external_id by security, date and
+        # currency alone, so never zero another provider's row for today.
+        next if account.holdings.where(security: security, date: Date.current, currency: h.currency)
+          .where("account_provider_id IS DISTINCT FROM ?", provider_id).exists?
+
+        import_adapter.import_holding(security: security, quantity: 0, amount: 0, currency: h.currency,
           date: Date.current, price: h.price, account_provider_id: provider_id, source: "snaptrade", delete_future_holdings: false)
       end
+    end
+
+    def vanished_positions
+      provider_id = @snaptrade_account.account_provider&.id or return Holding.none
+      scope = account.holdings.where(account_provider_id: provider_id, external_id: nil)
+      scope.where(date: scope.maximum(:date)).where.not(qty: 0).where.not(security_id: @imported.to_a)
+    end
+
+    def capture_kept_empty_snapshot
+      return unless vanished_positions.exists?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Kept SnapTrade positions: the positions list is empty but the account still reports holdings",
+        source: self.class.name,
+        provider_key: "snaptrade",
+        account: account,
+        account_provider_id: @snaptrade_account.account_provider&.id,
+        metadata: {
+          holdings_unavailable: @snaptrade_account.institution_metadata&.dig("sync_status", "holdings", "holdings_unavailable"),
+          current_balance: @snaptrade_account.current_balance&.to_s,
+          cash_balance: @snaptrade_account.cash_balance&.to_s,
+          positions_kept: vanished_positions.count
+        }
+      )
     end
 
     # Non-cash value in the account total (or no total) means positions exist --
@@ -121,7 +154,8 @@ class SnaptradeAccount::HoldingsProcessor
         ticker = symbol_data["raw_symbol"] || symbol_data[:raw_symbol]
       end
 
-      return true if ticker.blank? # cash rows carry no symbol
+      # A cash row carries no symbol; any other row without one is unreadable.
+      return symbol_data[:kind].to_s.casecmp?("cash") if ticker.blank?
 
       # Holdings can't be negative; a short only counts in the account total.
       quantity = parse_decimal(data["units"] || data[:units])
