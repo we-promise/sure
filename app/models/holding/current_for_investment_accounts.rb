@@ -1,5 +1,16 @@
 class Holding::CurrentForInvestmentAccounts
-  # Each requested account's latest provider import day is computed once,
+  # The same rows as Account#current_holdings, for many accounts at once: a
+  # linked account's provider rows on its latest provider snapshot date
+  # (Account#latest_provider_holdings_snapshot_date), otherwise each
+  # security's latest row in the account currency.
+  #
+  # The snapshot is keyed on the holding's date, not on updated_at. Syncs run
+  # in the family's time zone (Sync#perform), so the date a sync writes is
+  # the family's local day, while updated_at::date is the UTC day. Keyed on
+  # updated_at, a family west of UTC saw yesterday's rows as today's: a
+  # position sold since then stayed listed and one still held counted twice.
+  #
+  # Each requested account's latest provider snapshot date is computed once,
   # grouped by account, rather than as a subquery correlated to every row.
   # Correlated, it rescans the account's provider holdings per row, which is
   # quadratic in the number of provider rows an account keeps. The grouped
@@ -9,8 +20,8 @@ class Holding::CurrentForInvestmentAccounts
   CURRENT_HOLDINGS_SQL = <<~SQL.squish.freeze
     (
       holdings.account_provider_id IS NOT NULL
-      AND (holdings.account_id, holdings.updated_at::date) IN (
-        SELECT provider_holdings.account_id, MAX(provider_holdings.updated_at::date)
+      AND (holdings.account_id, holdings.date) IN (
+        SELECT provider_holdings.account_id, MAX(provider_holdings.date)
         FROM holdings provider_holdings
         WHERE provider_holdings.account_id IN (:account_ids)
           AND provider_holdings.account_provider_id IS NOT NULL

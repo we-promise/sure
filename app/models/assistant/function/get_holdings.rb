@@ -131,13 +131,11 @@ class Assistant::Function::GetHoldings < Assistant::Function
         accounts = accounts.where(name: params["accounts"])
       end
 
-      holdings = Holding.where(account: accounts)
-        .where(
-          id: Holding.where(account: accounts)
-            .select("DISTINCT ON (account_id, security_id) id")
-            .where.not(qty: 0)
-            .order(:account_id, :security_id, date: :desc)
-        )
+      # The same current holdings the dashboard and the holdings page show.
+      # Each security's latest non-zero row is not enough for a linked
+      # account: a position sold between two days' syncs keeps its non-zero
+      # row from the earlier day.
+      holdings = Holding::CurrentForInvestmentAccounts.new(accounts.ids).relation
 
       if params["securities"].present?
         holdings = holdings.joins(:security).where(securities: { ticker: params["securities"] })
