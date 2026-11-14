@@ -423,9 +423,9 @@ zh-CN:
       not_manual_account: 核对状态仅适用于手动录入的账户（无银行同步）
       statuses:
         unreconciled: 未核对
-        cleared: 已结清
+        cleared: 已核实
         reconciled: 已核对
       badge:
-        unreconciled_tooltip: 尚未与对账单核对。点击标记为已结清。
+        unreconciled_tooltip: 尚未与对账单核对。点击标记为已核实。
         cleared_tooltip: 已在对账单上确认，但尚未完全核对。点击标记为已核对。
         reconciled_tooltip: 对账单周期已完全核对。点击重置为未核对。
