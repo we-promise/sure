@@ -17,6 +17,15 @@ class BillsControllerTest < ActionDispatch::IntegrationTest
     ensure_tailwind_build
   end
 
+  # The Plan hub is where preview users reach Bills, so the trail says so.
+  test "trails the Bills page under the Plan hub" do
+    get bills_url
+
+    assert_response :success
+    assert_select "[data-breadcrumbs] a[href=?]", plan_path
+    assert_select "[data-breadcrumbs] span", text: I18n.t("breadcrumbs.bills")
+  end
+
   test "redirects users without preview access" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => false))
 

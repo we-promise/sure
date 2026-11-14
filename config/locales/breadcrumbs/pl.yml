@@ -10,6 +10,7 @@ pl:
     appearance: Wygląd
     appearances: Wygląd
     bank_sync: Synchronizacja z bankiem
+    bills: Rachunki
     binance_items: Binance
     brex_items: Brex
     budget_categories: Kategorie budżetu
