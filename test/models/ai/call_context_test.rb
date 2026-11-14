@@ -29,6 +29,20 @@ class Ai::CallContextTest < ActiveSupport::TestCase
                  usage[:workflow_metadata].transform_keys(&:to_s))
   end
 
+  test "a pool thread re-entering the call keeps the job as its requests' parent" do
+    usage = capture_ai_events("usage.ruby_llm") do
+      Ai::CallContext.job("rule_run:42") do
+        with_ai_call_context(feature: :categorize, model: @model, family: @family) do |call|
+          Thread.new do
+            Ai::CallContext.within(call, owner: @family) { Ai::Transport.for(@model.endpoint).send(:probe_chat, @model) }
+          end.join
+        end
+      end
+    end.sole.payload
+
+    assert_equal "rule_run:42", usage[:workflow_parent_id]
+  end
+
   test "the context is fiber storage, so threads started inside a call inherit it" do
     seen = with_ai_call_context(feature: :chat, model: @model) do |call|
       [ call.call_id, Thread.new { Ai::CallContext.current&.call_id }.value ]

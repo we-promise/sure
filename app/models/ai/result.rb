@@ -1,9 +1,14 @@
 # What every AI call returns. `call` returns one; `call!` returns its value or
 # raises its Ai::Error.
-Ai::Result = Data.define(:value, :error, :availability, :usage, :route, :failed_over_from, :remaining, :correlation_id) do
-  def initialize(value: nil, error: nil, availability: nil, usage: nil, route: nil, failed_over_from: nil, remaining: [], correlation_id: nil)
+# `route` is the last route that answered; `answered_by` maps each answered item id to its own,
+# since a slice can be answered part by one route and part by its fallback.
+Ai::Result = Data.define(:value, :error, :availability, :usage, :route, :failed_over_from, :remaining, :correlation_id, :answered_by) do
+  def initialize(value: nil, error: nil, availability: nil, usage: nil, route: nil, failed_over_from: nil, remaining: [], correlation_id: nil,
+                 answered_by: {})
     super
   end
+
+  def route_for(item_id) = answered_by.fetch(item_id, route)
 
   def self.unavailable(availability) = new(availability:)
 

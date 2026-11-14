@@ -215,9 +215,65 @@ flowchart LR
 - `stub_ai(:categorize, returns: { categorizations: [...] })` answers the feature's generations
   without HTTP, still running coercion, failover, instrumentation and the requester; it returns
   the requests sent. `raises: Ai::Error::Timeout` fails them; a block answers per request.
-- `use_ai_model_settings(batch_size: 2)` changes the test setup's OpenAI model for the rest of the test.
+- `use_ai_model_settings(batch_size: 2)` changes every model in the test setup for the rest of the test,
+  keeping the routes `use_ai_routes` chose; `use_ai_model_settings("gpu/qwen3-8b", batch_size: 2)`
+  changes only that one.
 - `test/models/ai/live/` replays cassettes with `with_ai_cassette(preset, name)` under
   `test/vcr_cassettes/ai/<preset>/`; record them
   with `RECORD_CASSETTES=1` and the keys in ENV, or run them live with `AI_LIVE=1`.
 - CI: `ai-evals.yml` runs the eval datasets against recorded answers on any AI change; the
   `ai-live` label runs the live tests and evals with repository secrets.
+
+## Judgements and shadow runs
+
+**Judgements.** A decision model (Jev) answers a feature through an `Ai::Judgement`, which the
+feature's generation declares with `judged_by`. The generation's loop builds it on a `judge`
+route with the same items, and both return one value shape, so a route list may mix `judge` and
+LLM routes. The environment configuration never does: with Jev selected, `categorize` lists only
+Jev and the LLM runs as its shadow, so a Jev outage defers the batch rather than sending family
+data to a second vendor. `Ai::Transport::Jev#judge` goes through RubyLLM's `typesafe` provider, fanning a batch
+out on the endpoint's `parallel_requests`. See [Adding a judgement](adding-a-judgement.md).
+
+**Shadow runs.** A generation that declares
+
+```ruby
+shadow subject: "Transaction",
+       compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
+```
+
+is sampled after each successful call at the family's rate; `Ai::GenerationJob` samples once
+the answer is applied, so a retried batch isn't shadowed twice. On a hit, `Ai::Shadow` enqueues
+`Ai::ShadowJob` with a fingerprint of the items the call was sent (each item's id and a digest of
+it, and a digest of the rest of the input) and the primary's compared answer, never the items:
+job arguments sit in Redis and the Sidekiq UI. The job asks the feature's requester to rebuild
+those items (`ai_shadow_generation`), leaves out any whose digest no longer matches, skips the run
+if the rest of the input changed, and runs them on the `shadow_<feature>` route; its calls are recorded under `shadow_<feature>` and tagged `shadow`, and
+its answer goes only to the `compare.ai_shadow` event, which
+`Ai::Instrumentation::ComparisonSubscriber` writes to `Ai::Comparison`: one row per item, with the
+route that answered that item on each side. Nothing is applied.
+
+| Concern | File |
+|---|---|
+| The judgement base and categorize's | `app/models/ai/judgement.rb`, `app/models/ai/judgements/` |
+| The Jev transport | `app/models/ai/transport/jev.rb` |
+| Sampling and the job | `app/models/ai/shadow.rb`, `app/jobs/ai/shadow_job.rb` |
+| Comparisons | `app/models/ai/comparison.rb`, `app/models/ai/instrumentation/comparison_subscriber.rb` |
+| The deprecated Jev settings | `app/models/ai/legacy_env_config/jev.rb` |
+
+**Rules**
+
+- `compare` maps a value to `{ item id => [value, confidence] }` with ids, not names, so renamed
+  categories still compare. An item both sides answered agrees when the values match (a shared
+  abstention included); an item only one side answered never agrees.
+- Only `ComparisonSubscriber` writes `Ai::Comparison`, and a shadow answer is never written to
+  the item (`test/architecture/ai_shadow_test.rb`).
+- A shadow job never retries: a failed diagnostic is skipped.
+
+**Tests**
+
+- `stub_ai` answers judge requests by item id (see the judgement guide); a block can tell
+  `Ai::Transport::Base::JudgeRequest` from `Request`, and `request.feature` is
+  `:shadow_categorize` on a shadow run.
+- `perform_enqueued_jobs` around `Ai::GenerationJob.perform_now(:categorize, …)` runs the shadow
+  job too (`test/jobs/ai/shadow_job_test.rb`).
+

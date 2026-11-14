@@ -1,5 +1,5 @@
-# Picks a category for each transaction from the family's own, or none. On a Jev route,
-# Family::AutoCategorizer calls Provider::Jev itself instead.
+# Picks a category for each transaction from the family's own, or none. On a `judge` model
+# (Jev), Ai::Judgements::CategorizeTransaction answers instead, in the same shape.
 class Ai::Generations::CategorizeTransactions < Ai::Generation
   feature :categorize
   prompt "categorize_transactions"
@@ -9,6 +9,10 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   required :transaction_id
   aliases categorizations: %w[results], transaction_id: %w[id txn_id], category_name: %w[category name]
   blank_item { _1[:category_name].nil? }
+  judged_by Ai::Judgements::CategorizeTransaction
+  # Category ids, not names, so renamed or duplicate categories still compare.
+  shadow subject: "Transaction",
+         compare: ->(value) { value[:categorizations].to_h { [ _1[:transaction_id].to_s, [ category_id_for(_1[:category_name]), _1[:confidence] ] ] } }
 
   # Common ways a model names a category the family spells differently.
   NAME_VARIATIONS = [
@@ -29,6 +33,8 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   end
 
   def prompt_locals = { transactions: items, categories: @categories }
+
+  def arguments = { transactions: items, categories: @categories }
 
   # The family's spelling of the category the model named: exact, then ignoring case, then a
   # fuzzy match. Nil when nothing matches.
@@ -59,6 +65,8 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
   end
 
   private
+    def category_id_for(name) = name && @categories.find { _1[:name].to_s == name.to_s }&.dig(:id)&.to_s
+
     def category_name_for(name)
       names = @categories.map { _1[:name].to_s }
       names.find { _1 == name } || names.find { _1.casecmp?(name) } || fuzzy_match(name, names)

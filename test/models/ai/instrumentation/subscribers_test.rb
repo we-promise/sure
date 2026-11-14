@@ -33,8 +33,8 @@ class Ai::Instrumentation::SubscribersTest < ActiveSupport::TestCase
     content = Ai::Instrumentation.subscribe!(env: { "LANGFUSE_PUBLIC_KEY" => "pk", "LANGFUSE_SECRET_KEY" => "sk" })
     off = Ai::Instrumentation.subscribe!(env: {})
 
-    assert_equal 5, content.size
-    assert_equal 4, off.size
+    assert_equal 6, content.size
+    assert_equal 5, off.size, "usage (three), the debug log and shadow comparisons run in every mode"
   ensure
     [ *content, *off ].each { ActiveSupport::Notifications.unsubscribe(_1) }
   end

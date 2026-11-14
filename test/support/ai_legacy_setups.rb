@@ -26,7 +26,7 @@ module AiLegacySetups
     "C7" => [ "both keys, LLM_PROVIDER=anthropic", OPENAI.merge(ANTHROPIC).merge("LLM_PROVIDER" => "anthropic"), {}, {} ],
     "C8" => [ "OpenAI key, OPENAI_MODEL=o4-mini", OPENAI.merge("OPENAI_MODEL" => "o4-mini"), {}, {} ],
     "C9" => [ "Jev only (CATEGORIZATION_PROVIDER=jev)", { "JEV_API_KEY" => "jev-test", "CATEGORIZATION_PROVIDER" => "jev" }, {}, {} ],
-    "M1" => [ "OpenAI and Jev keys, the family chose Jev", OPENAI.merge("JEV_API_KEY" => "jev-test"), {}, { categorization_provider: "jev" } ],
+    "M1" => [ "OpenAI and Jev keys, the instance chose Jev", OPENAI.merge("JEV_API_KEY" => "jev-test"), { categorization_provider: "jev" }, {} ],
     "M2" => [ "both keys, LLM_PROVIDER=anthropic, an embedding server",
               OPENAI.merge(ANTHROPIC).merge("LLM_PROVIDER" => "anthropic", "EMBEDDING_URI_BASE" => "http://ollama:11434/v1",
                                             "EMBEDDING_MODEL" => "nomic-embed-text"), {}, {} ],
@@ -41,10 +41,16 @@ module AiLegacySetups
   # Runs the block in the setup, against today's code and Ai::LegacyEnvConfig.
   def in_ai_setup(id, family:, &block)
     _label, env, settings, family_attributes = SETUPS.fetch(id)
+    # Several AI settings take their defaults from the host's ENV when Setting loads, which clearing
+    # ENV here can't undo: the ones the setup doesn't name read as unset, for this setup only, so a
+    # later setup in the same test reads its own.
+    unset = Ai::LegacyEnvConfig::SETTING_FIELDS - settings.keys
+    unset.each { Setting.stubs(_1).returns(nil) }
     settings.each { |field, value| Setting.public_send("#{field}=", value) }
     family.update!(family_attributes) if family_attributes.any?
     with_env_overrides(CONTROLLED.index_with { nil }.merge(env), &block)
   ensure
+    Setting.unstub(*unset) if unset&.any?
     settings.each_key { |field| Setting.public_send("#{field}=", nil) }
     Setting.clear_cache
   end

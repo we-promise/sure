@@ -14,7 +14,7 @@ class Ai::Router
     feature = feature.to_sym
     spec = Ai::Routes.fetch(feature)
     listed = @config.routes_for(spec[:route_of] || feature)
-                    .select { |route| route.agent? == agent_chat?(feature) && route.serves_user?(@user) && route.serves?(@family) }
+                    .select { |route| route.agent? == agent_chat?(feature) && route.serves_user?(@user) }
     return Ai::Availability.unavailable(feature, :not_configured) if listed.empty?   # first: nothing to consent to
 
     if (reason = Ai::Consent.denial(feature, user: @user))

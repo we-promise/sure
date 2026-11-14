@@ -4,7 +4,8 @@ module AiTestHelper
   # The llama.cpp server the live tests record against. Live and recording runs need LLAMA_CPP_URL
   # set; the default is only the address replayed cassettes are matched on.
   LLAMA_CPP_URL = (ENV["LLAMA_CPP_URL"].presence || "http://localhost:8180/v1").freeze
-  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
+  AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY
+                        JEV_LIVE_API_KEY].freeze
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
   # One configured setup for every test: a cloud `openai` endpoint, a local `gpu`, an `embed`
@@ -15,7 +16,7 @@ module AiTestHelper
       openai = endpoint.(:openai, preset: :openai, responses_api: true)
       gpu = endpoint.(:gpu, base_url: "http://gpu.local:8080/v1", location: :local)
       embed = endpoint.(:embed, base_url: "http://embed.local:8081/v1", location: :local)
-      jev = Ai::Config::Endpoint.new(name: :jev, protocol: :jev, preset: :jev, base_url: "https://api.typesafe.ai/v1/systemone", api_key: "test-key")
+      jev = Ai::Config::Endpoint.new(name: :jev, protocol: :jev, preset: :jev, base_url: "https://api.typesafe.ai", api_key: "test-key")
       agent = endpoint.(:agent, base_url: "https://agent.example.test/v1", agent: true, agent_settings: { allowed_emails: [] })
 
       models = [
@@ -64,8 +65,8 @@ module AiTestHelper
   end
   Ai::Transport.singleton_class.prepend(TransportStub)
 
-  # A transport that answers `generate` from the test, through Ai::Transport::Base#generate, so
-  # the call context and the generate.ai event are the real ones.
+  # A transport that answers `generate` and `judge` from the test, through Ai::Transport::Base,
+  # so the call context and the `.ai` events are the real ones.
   class FakeTransport < Ai::Transport::Base
     def initialize(endpoint, responder)
       super(endpoint)
@@ -78,11 +79,31 @@ module AiTestHelper
         Response.new(json: JSON.parse(answer.to_json), usage: Ai::Tokens.new(input_tokens: 10, output_tokens: 5),
                      raw_id: "stub", finish_reason: :stop, json_mode: request.json_mode)
       end
+
+      # The test answers { item id => { question => answer } }; an answer is a RubyLLM answer, a
+      # category name, or [name, confidence]. A missing id is a malformed answer.
+      def run_judge(request)
+        given = @responder.call(request).to_h.transform_keys(&:to_s)
+        answers = request.states.keys.to_h do |id|
+          [ id, given[id]&.to_h { |name, answer| [ name.to_sym, AiTestHelper.judge_answer(answer) ] } ]
+        end
+        JudgeResponse.new(answers:, usage: Ai::Tokens.new(input_tokens: 10 * answers.size, output_tokens: 0))
+      end
+  end
+
+  def self.judge_answer(answer)
+    return answer unless answer.is_a?(String) || answer.is_a?(Array)
+
+    choice, confidence = Array(answer)
+    confidence ||= 0.9
+    RubyLLM::Choice.new(choice:, probabilities: { choice => confidence }, confidence:)
   end
 
   # Makes `feature`'s generations answer `returns` (a value, or a proc taking the request), or
   # raise `raises`, with no HTTP. Coercion, failover, instrumentation and the requester still
   # run. Returns the requests sent, in order. A request for another feature fails the test.
+  # On a `judge` route the request is a JudgeRequest, answered by item id (FakeTransport#run_judge):
+  #   stub_ai(:categorize) { |request| request.states.keys.index_with { { category: "Groceries" } } }
   #   requests = stub_ai(:categorize, returns: { categorizations: [ ... ] })
   #   stub_ai(:bill_setup, raises: Ai::Error::Timeout)
   #   stub_ai { |request| request.model.endpoint.name == "gpu" ? raise(Ai::Error::InvalidOutput) : { ... } }
@@ -103,27 +124,42 @@ module AiTestHelper
   end
 
   # Routes AI through the test setup for the rest of the test, with the named features' routes
-  # replaced; the teardown restores the built config.
+  # replaced; the teardown restores the built config. Each call builds on the test's earlier
+  # use_ai_routes and use_ai_model_settings.
   #   use_ai_routes
   #   use_ai_routes(categorize: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
   #   use_ai_routes(chat: [])   # chat :not_configured, everything else routed
   def use_ai_routes(vector_store_backend: :pgvector, **routes)
-    base = AiTestHelper.test_config
-    names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
-    Ai::Config.override = AiTestHelper.build_ai_config(base.models, names.merge(routes), vector_store_backend:)
+    base = ai_test_config
+    use_ai_test_config(base.models, route_names(base).merge(routes), vector_store_backend:)
   end
 
-  # Changes the test setup's openai/gpt-4.1-mini for the rest of the test, for budgets and the like:
+  # Changes the test setup's models for the rest of the test, for budgets and the like, keeping the
+  # routes an earlier use_ai_routes set: every model, or only the one named as use_ai_routes names it.
   #   use_ai_model_settings(batch_size: 2)
-  def use_ai_model_settings(**attributes)
-    base = AiTestHelper.test_config
-    models = base.models.map { _1.endpoint.name == "openai" ? _1.with(**attributes) : _1 }
-    names = base.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
-    Ai::Config.override = AiTestHelper.build_ai_config(models, names, vector_store_backend: base.vector_store_backend)
+  #   use_ai_model_settings("gpu/qwen3-8b", batch_size: 2)
+  def use_ai_model_settings(model = nil, **attributes)
+    base = ai_test_config
+    named = base.models.map { "#{_1.endpoint.name}/#{_1.name}" }
+    raise ArgumentError, "no #{model} in the test setup; it has #{named.join(", ")}" if model && named.exclude?(model)
+
+    models = base.models.map { model.nil? || "#{_1.endpoint.name}/#{_1.name}" == model ? _1.with(**attributes) : _1 }
+    use_ai_test_config(models, route_names(base), vector_store_backend: base.vector_store_backend)
   end
 
   # No AI configured for the rest of the test: every feature is :not_configured.
-  def use_no_ai = Ai::Config.override = Ai::Config.new
+  def use_no_ai
+    @ai_test_config = nil
+    Ai::Config.override = Ai::Config.new
+  end
+
+  def ai_test_config = @ai_test_config || AiTestHelper.test_config
+
+  def use_ai_test_config(models, routes, vector_store_backend:)
+    @ai_test_config = Ai::Config.override = AiTestHelper.build_ai_config(models, routes, vector_store_backend:)
+  end
+
+  def route_names(config) = config.routes.transform_values { |list| list.map { "#{_1.endpoint.name}/#{_1.model.name}" } }
 
   def ai_endpoint(name: "test", protocol: :compatible, base_url: "https://llm.example.test/v1", api_key: "test-key", **attributes)
     Ai::Config::Endpoint.new(name:, protocol:, base_url:, api_key:, **attributes)

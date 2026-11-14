@@ -21,6 +21,7 @@ Sure/NoAiEnv:
     - "lib/**/*.rb"
   Exclude:
     - "app/models/ai/legacy_env_config.rb"
+    - "app/models/ai/legacy_env_config/jev.rb"
     - "db/migrate/**/*"
     # allowlist
     - "app/controllers/settings/hostings_controller.rb"        # settings pages
@@ -34,7 +35,6 @@ Sure/NoAiEnv:
     - "app/models/provider/anthropic.rb"                        # chat
     - "app/models/provider/anthropic/bank_statement_extractor.rb" # PDF import
     - "app/models/provider/anthropic/pdf_processor.rb"          # PDF import
-    - "app/models/provider/jev.rb"                              # Jev
     - "app/models/provider/openai.rb"                           # chat
     - "app/models/provider/registry.rb"                         # provider lookup
     - "app/models/setting.rb"                                   # settings pages

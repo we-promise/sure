@@ -6,7 +6,8 @@
 #   2. Stop if `cancelled` returns true, here and before every batch.
 #   3. Take the first route not marked down (Ai::DownMarks). Render its prompt (Ai::Prompt), take
 #      the next batch sized for its model (Ai::Batch), call its transport's `generate`, and
-#      coerce the answer (Ai::Schema).
+#      coerce the answer (Ai::Schema). On a `judge` model, the feature's judgement (`judged_by`)
+#      answers the same batch instead.
 #   4. On a failover error (Ai::DownMarks::FAILOVER), mark it down and take the next route. On
 #      InvalidOutput, escalate to the next route; when no route answers it, halve the batch on
 #      the route that found it unusable (BISECT_DEPTH times at most) and skip what still fails. On ContextTooLong
@@ -16,7 +17,10 @@
 #      batch in the run worked (`answered_before` carries that across Ai::GenerationJob's
 #      chain). Skipped items are logged. Nothing else is retried here; the transport has retried
 #      429s and 5xxs.
-#   5. Return an Ai::Result with the route that answered and the items not reached.
+#   5. Return an Ai::Result with the route that answered and the items not reached. When the
+#      feature declares `shadow` and the family's rate samples this call, enqueue Ai::ShadowJob
+#      with the ids of every item sent, answered or not, apart from those left for a later job
+#      (Ai::GenerationJob does this itself, after applying the answer).
 #
 # `call(batches: 1)` runs one batch, which is what Ai::GenerationJob does (small batches,
 # so other work takes turns); plain `call` runs them all and merges the answers. `call!` returns the value or
@@ -39,7 +43,7 @@ class Ai::Generation
   end
 
   class_attribute :feature_key, :prompt_key, :static_schema, :schema_label, :batch_key, :merge_key, :merge_by,
-                  :blank_item_check, instance_writer: false
+                  :blank_item_check, :judgement_class, :shadow_compare, :shadow_subject, instance_writer: false
   class_attribute :key_aliases, default: {}, instance_writer: false
   class_attribute :required_keys, default: [], instance_writer: false
 
@@ -72,6 +76,18 @@ class Ai::Generation
 
     # Item fields without which an answer can't be matched to its input.
     def required(*keys) = self.required_keys = keys.map(&:to_sym)
+
+    # The Ai::Judgement that answers this feature on a `judge` model (Jev). It takes #arguments
+    # and returns the same value shape.
+    def judged_by(klass) = self.judgement_class = klass
+
+    # Runs the feature on its `shadow_<feature>` route as its own job, compared and never applied.
+    # `compare` maps a value to { item id => [value, confidence] }, run on the
+    # generation, so it can turn names into ids; `subject` is the class each item id names.
+    def shadow(compare:, subject:)
+      self.shadow_compare = compare
+      self.shadow_subject = subject.to_s
+    end
   end
 
   attr_reader :family, :user, :locale
@@ -90,23 +106,34 @@ class Ai::Generation
 
   def items = batch_key ? Array(instance_variable_get(:"@#{batch_key}")) : nil
 
+  # The initializer's arguments other than the family, for the judgement on a `judge` route.
+  def arguments = raise(NotImplementedError, "#{self.class.name} defines no arguments")
+
   # A copy holding only `slice`, so prompt_locals only ever sees one batch.
   def with_items(slice) = dup.tap { _1.instance_variable_set(:"@#{batch_key}", slice) }
 
   def call!(...) = call(...).value!
 
+  # The value as { item id => [value, confidence] }, for Ai::Comparison.
+  def compared(value) = instance_exec(value, &shadow_compare)
+
   # answered_before: an earlier call in the same run answered a batch (Ai::GenerationJob's chain).
-  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false)
+  # shadow: false when the caller samples the shadow itself, once its answer is applied.
+  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false, shadow: true)
     plan ||= Ai::Router.new(family:, user:).resolve(feature_key)
     return Ai::Result.unavailable(plan) unless plan.is_a?(Ai::Plan)
 
-    routes = plan.routes.select { !_1.judge? && _1.model.capable?(:structured_output) }
+    @recorded_feature = plan.feature
+
+    routes = plan.routes.select { servable?(_1) }
     return Ai::Result.unavailable(Ai::Availability.unavailable(feature_key, :capability_missing)) if routes.empty?
 
     @usage = nil
     @failed_over_from = []
     @logged_ids = Set.new
-    batch_key ? call_batched(routes, batches:, cancelled:, answered_before:) : call_single(routes, cancelled:)
+    result = batch_key ? call_batched(routes, batches:, cancelled:, answered_before:) : call_single(routes, cancelled:)
+    Ai::Shadow.enqueue(self, result) if shadow && !shadow_run?
+    result
   rescue Ai::Error::Base => error
     Ai::Result.failure(error, usage: @usage, failed_over_from: @failed_over_from.presence, correlation_id: Ai::CallContext.correlation_id)
   end
@@ -131,6 +158,10 @@ class Ai::Generation
   end
 
   private
+    def servable?(route)
+      route.judge? ? judgement_class.present? && route.model.capable?(:judge) : route.model.capable?(:structured_output)
+    end
+
     def call_single(routes, cancelled:)
       raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
@@ -142,6 +173,7 @@ class Ai::Generation
       remaining = items.dup
       answered = []
       served = nil
+      answered_by = {}
       done = 0
 
       while remaining.any? && (batches.nil? || done < batches)
@@ -159,9 +191,11 @@ class Ai::Generation
           log_unanswered(slice)
           [ [], [] ]
         end
-        answers.each do |answered_by, value|
-          served = answered_by
-          answered.concat(Array(value[merge_key]))
+        answers.each do |by, value|
+          served = by
+          batch_answers = Array(value[merge_key])
+          batch_answers.each { answered_by[_1[merge_by]] = by }
+          answered.concat(batch_answers)
         end
         log_omitted(slice - unanswered, answered)
         remaining = unanswered + (remaining - slice)
@@ -169,7 +203,7 @@ class Ai::Generation
         break if unanswered.any?   # the routes failed over; a later job retries these
       end
 
-      result(value: { merge_key => answered.index_by { _1[merge_by] }.values }, route: served, remaining:)
+      result(value: { merge_key => answered.index_by { _1[merge_by] }.values }, route: served, remaining:, answered_by:)
     end
 
     # Runs `slice` (nil for a feature without items) down the routes: failover and escalation
@@ -346,16 +380,26 @@ class Ai::Generation
 
     def run(route, slice)
       generation = slice ? with_items(slice) : self
+      return judge(route, generation) if route.judge?
+
       prompt = Ai::Prompt.for(feature_key, default: prompt_key, route:, family:, locale: prompt_locale, locals: generation.prompt_locals)
       request = Ai::Transport::Base::Request.new(
-        feature: feature_key, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
+        feature: request_feature, family:, model: route.model, instructions: prompt.instructions, input: prompt.input,
         schema: generation.schema, schema_name: schema_label || feature_key, reasoning_effort: route.reasoning_effort,
         json_mode: route.effective_json_mode, failed_ratio: (generation.method(:failed_ratio) if batch_key && blank_item_check)
       )
       response = route.transport.generate(request)
-      @usage = @usage ? @usage + response.usage : response.usage
+      add_usage(response.usage)
       generation.coerce(response.json)
     end
+
+    def judge(route, generation)
+      value, usage = judgement_class.new(**generation.arguments, family:).run(route, feature: request_feature)
+      add_usage(usage)
+      value
+    end
+
+    def add_usage(usage) = @usage = [ @usage, usage ].compact.reduce(:+)
 
     # Items the answer left out: an answer missing up to half of its items is still accepted.
     def log_omitted(items, answered)
@@ -375,8 +419,11 @@ class Ai::Generation
       )
     end
 
-    # The tokens the prompt takes before any item: rendered once per route with no items.
+    # The tokens the prompt takes before any item: rendered once per route with no items. A judge
+    # model has no prompt.
     def fixed_tokens(route)
+      return 0 if route.judge?
+
       @fixed_tokens ||= {}
       @fixed_tokens[route] ||= begin
         empty = with_items([])
@@ -386,11 +433,16 @@ class Ai::Generation
       end
     end
 
+    # The feature the call is recorded under: shadow_<feature> on a shadow run, so its usage is its own.
+    def request_feature = @recorded_feature || feature_key
+
+    def shadow_run? = request_feature != feature_key
+
     # The user's locale when a user started the work, otherwise the family's.
     def prompt_locale = locale || user&.locale.presence || family&.locale.presence
 
-    def result(value:, route:, remaining: [])
+    def result(value:, route:, remaining: [], answered_by: {})
       Ai::Result.new(value:, usage: @usage, route:, failed_over_from: @failed_over_from.presence, remaining:,
-                     correlation_id: Ai::CallContext.correlation_id)
+                     correlation_id: Ai::CallContext.correlation_id, answered_by:)
     end
 end

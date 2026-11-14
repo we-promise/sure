@@ -37,7 +37,7 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
       provider: "openai",
       model: "gpt-4.1",
       name: "test_run",
-      provider_config: { "access_token" => "test-token" },
+      provider_config: { "access_token" => "test-token", "uri_base" => "https://api.openai.com/v1" },   # not the host's OPENAI_URI_BASE
       status: "pending"
     )
 
@@ -229,5 +229,30 @@ class Eval::Runners::CategorizationRunnerTest < ActiveSupport::TestCase
     assert_not result.correct
     assert_equal "no answer for this sample", result.actual_output["error"]
     assert_equal 0.0, Eval::Metrics::CategorizationMetrics.new(eval_run).calculate[:null_accuracy]
+  end
+
+  # Jev runs through the generation's judgement and keeps each answer's calibrated confidence.
+  test "a Jev run records each answer's confidence" do
+    dataset = Eval::Dataset.create!(name: "test_cat_jev_#{SecureRandom.hex(4)}", eval_type: "categorization", version: "1.0")
+    dataset.samples.create!(
+      input_data: { "id" => "txn_1", "amount" => 10, "classification" => "expense", "description" => "McDonalds" },
+      expected_output: { "category_name" => "Fast Food" }, context_data: { "categories" => @categories }, difficulty: "easy"
+    )
+    # TypeSafe's endpoint named, so a host's JEV_ENDPOINT can't redirect the run away from the stub.
+    eval_run = Eval::Run.create!(dataset:, provider: "jev", model: "jev-latest", name: "jev_run",
+                                 provider_config: { "api_key" => "test-key", "endpoint" => Ai::LegacyEnvConfig::Jev::DEFAULT_ENDPOINT },
+                                 status: "pending")
+    stub_request(:post, "https://api.typesafe.ai/v1/systemone").to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: { model: "jev-latest", usage: { input_tokens: 90, output_tokens: 0 },
+              answers: { category: { type: "choice", choice: "Fast Food", confidence: 0.91,
+                                     probabilities: { "Food & Drink" => 0.05, "Fast Food" => 0.91, "__uncategorized__" => 0.04 } } } }.to_json
+    )
+
+    Eval::Runners::CategorizationRunner.new(eval_run).run
+
+    result = eval_run.reload.results.sole
+    assert result.correct
+    assert_in_delta 0.91, result.metadata["confidence"], 0.0001
   end
 end

@@ -1,9 +1,12 @@
 # What an eval run calls for categorization and merchant detection: the same generations
 # production runs (Ai::Generations::*), on the run's own endpoint and model, so an eval measures
-# the shipped prompts, JSON policy and coercion. Answers come back as the Provider::Response the
-# runners read. Chat evals go through Provider::Openai, as chat does.
+# the shipped prompts, JSON policy and coercion. On a Jev endpoint, the generation's judgement
+# answers, with each answer's confidence. Answers come back as the Provider::Response the runners
+# read. Chat evals go through Provider::Openai, as chat does.
 class Eval::GenerationClient
-  Categorization = Data.define(:transaction_id, :category_name)
+  Categorization = Data.define(:transaction_id, :category_name, :confidence, :probabilities) do
+    def initialize(transaction_id:, category_name:, confidence: nil, probabilities: nil) = super
+  end
   DetectedMerchant = Data.define(:transaction_id, :business_name, :business_url)
 
   FEATURES = %i[categorize detect_merchants].freeze
@@ -27,7 +30,7 @@ class Eval::GenerationClient
   def auto_categorize(transactions:, user_categories:, json_mode: nil, **)
     respond(:categorize, json_mode) do
       value = Ai::Generations::CategorizeTransactions.new(transactions:, categories: user_categories, family: nil).call!
-      value[:categorizations].map { Categorization.new(transaction_id: _1[:transaction_id], category_name: _1[:category_name]) }
+      value[:categorizations].map { Categorization.new(**_1.slice(:transaction_id, :category_name, :confidence, :probabilities)) }
     end
   end
 
@@ -41,8 +44,10 @@ class Eval::GenerationClient
   # A one-route config for `feature` on the run's model, with the prompt variant for this kind
   # of endpoint.
   def ai_config(feature, json_mode: nil)
-    model = Ai::Config::Model.new(endpoint: @endpoint, name: @model_name, capabilities: %i[structured_output],
-                                  context_window: @budget ? @budget.context_window : (Assistant::TokenBudget.context_window if Provider::Openai.custom_endpoint?(@endpoint.base_url)),
+    judge = @endpoint.protocol == :jev
+    model = Ai::Config::Model.new(endpoint: @endpoint, name: @model_name,
+                                  capabilities: judge ? Ai::LegacyEnvConfig::Jev.capabilities(@endpoint) : %i[structured_output],
+                                  context_window: (@budget ? @budget.context_window : (Assistant::TokenBudget.context_window if Provider::Openai.custom_endpoint?(@endpoint.base_url)) unless judge),
                                   max_output_tokens: @budget&.max_output_tokens,
                                   batch_size: @budget&.batch_size || Ai::Config::Model::DEFAULT_BATCH_SIZE)
     route = Ai::Route.new(feature:, model:, json_mode: json_mode.presence,

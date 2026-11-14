@@ -19,7 +19,12 @@ module Ai::CallContext
 
     def expired? = !deadline.nil? && remaining <= 0
 
-    def metadata = { feature:, call_id:, correlation_id:, family_id:, endpoint:, model: }.compact.transform_values(&:to_s)
+    # A shadow run's calls carry `shadow`, so usage shows shadow spend apart.
+    def shadow? = Ai::Shadow.shadow?(feature)
+
+    def metadata
+      { feature:, call_id:, correlation_id:, family_id:, endpoint:, model:, shadow: (true if shadow?) }.compact.transform_values(&:to_s)
+    end
   end
 
   module_function
@@ -50,6 +55,23 @@ module Ai::CallContext
     end
   ensure
     Fiber[CALL_KEY] = previous
+  end
+
+  # Re-enters `call` on another thread, for a transport that fans one call out (Jev).
+  # RubyLLM 2.1.1 keeps the workflow per thread, so a pool thread's requests would otherwise reach
+  # `usage.ruby_llm` without the call's id and write no usage row, and without the job as their
+  # parent: the job's workflow is re-entered first, as `job` opened it.
+  def within(call, owner: nil)
+    previous = [ Fiber[CALL_KEY], Fiber[CORRELATION_KEY] ]
+    Fiber[CALL_KEY] = call
+    Fiber[CORRELATION_KEY] = call.correlation_id
+
+    in_call = -> { RubyLLM.workflow("ai.#{call.feature}", id: call.call_id, metadata: call.metadata) { yield call } }
+    RubyLLM.with_usage_owner(owner) do
+      call.correlation_id ? RubyLLM.workflow("sure.job", id: call.correlation_id) { in_call.call } : in_call.call
+    end
+  ensure
+    Fiber[CALL_KEY], Fiber[CORRELATION_KEY] = previous
   end
 
   def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)

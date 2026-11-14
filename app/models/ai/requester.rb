@@ -12,6 +12,7 @@
 #     def ai_finished(count)                       # once, after the last batch
 #     def ai_failed(error)                         # once, when the job gives up
 #     def ai_cancelled?                            # true when the user cancelled
+#     def ai_shadow_generation                     # optional: these ids as they are now, for Ai::ShadowJob
 #   end
 module Ai::Requester
   extend ActiveSupport::Concern

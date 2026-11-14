@@ -78,16 +78,19 @@ class Eval::ProviderFactory
     # As the transport reaches them: `…/v1` and `…/v1/` are one server.
     def same_server?(url, other) = Ai::Transport::Http.compatible_base(url) == Ai::Transport::Http.compatible_base(other)
 
+    # The run's Jev endpoint, else the install's: categorization through the generation's
+    # judgement, as production runs it.
     def build_jev
-      api_key = config[:api_key].presence || Provider::Jev.api_key # pipelock:ignore
-
+      jev = Ai::LegacyEnvConfig::Jev
+      api_key = config[:api_key].presence || jev.api_key # pipelock:ignore
       raise Error, "Jev API key not configured" unless api_key.present?
 
-      Provider::Jev.new(
-        api_key,
-        endpoint: config[:endpoint].presence || Provider::Jev.effective_endpoint,
-        model: model,
-        concurrency: config[:concurrency]
-      )
+      url = config[:endpoint].presence || jev.effective_endpoint
+      if (reason = jev.unreachable_reason(url))
+        raise Error, "Jev endpoint not supported: #{jev.redacted_endpoint(url)}: #{jev::UNSUPPORTED.fetch(reason)}"
+      end
+
+      endpoint = jev.endpoint(url, api_key:, timeout_seconds: 30, parallel_requests: config[:concurrency])
+      Eval::GenerationClient.new(endpoint:, model:)
     end
 end

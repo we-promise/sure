@@ -16,13 +16,16 @@ class Setting < RailsSettings::Base
   field :anthropic_base_url, type: :string, default: ENV["ANTHROPIC_BASE_URL"]
   field :llm_provider, type: :string, default: ENV.fetch("LLM_PROVIDER", "openai")
 
-  # Jev (TypeSafe) — a classification provider, not an LLM. Reachable either
-  # through OpenRouter's Decisions API (the default) or TypeSafe's own endpoint.
+  # Jev (TypeSafe), a decision model, not an LLM: TypeSafe's own endpoint or a
+  # TypeSafe-style server at …/v1/systemone (Ai::LegacyEnvConfig::Jev).
   # Deliberately no OPENROUTER_API_KEY fallback: an operator holding that key
   # for an unrelated purpose should not silently enable Jev.
   field :jev_api_key, type: :string, default: ENV["JEV_API_KEY"]
   field :jev_endpoint, type: :string, default: ENV["JEV_ENDPOINT"]
   field :jev_model, type: :string, default: ENV["JEV_MODEL"]
+  # Which model categorizes every family's transactions: "llm" (the default) or "jev".
+  # CATEGORIZATION_PROVIDER overrides it (Ai::LegacyEnvConfig.categorization_provider).
+  field :categorization_provider, type: :string, default: nil
 
   # LLM token budget (applies to every outbound LLM call: chat, auto-categorize,
   # merchant detection, enhance-merchants, PDF processing). Defaults track
