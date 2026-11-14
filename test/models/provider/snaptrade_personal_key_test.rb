@@ -47,6 +47,25 @@ class Provider::SnaptradePersonalKeyTest < ActiveSupport::TestCase
     assert_equal expected_signature(@request), @request.headers["Signature"]
   end
 
+  test "activities are paged with each page signed for its own offset" do
+    requests = []
+    pages = [
+      { data: Array.new(1000) { |i| { id: "a#{i}" } }, pagination: { offset: 0, limit: 1000, total: 1002 } },
+      { data: [ { id: "a1000" }, { id: "a1001" } ], pagination: { offset: 1000, limit: 1000, total: 1002 } }
+    ]
+    stub_request(:get, %r{\Ahttps://api\.snaptrade\.com/api/v1/accounts/acc-1/activities\?})
+      .to_return { |request| requests << request; { status: 200, body: pages[requests.size - 1].to_json } }
+
+    response = travel_to(Time.zone.at(TIMESTAMP)) { @provider.get_account_activities(account_id: "acc-1") }
+
+    assert_equal 1002, response["data"].size
+    assert_equal %w[0 1000], requests.map { |r| URI.decode_www_form(r.uri.query).to_h["offset"] }
+    requests.each do |request|
+      assert_nil request.headers["Authorization"]
+      assert_equal expected_signature(request), request.headers["Signature"]
+    end
+  end
+
   # A known vector, built by hand from the documented canonical form: keys
   # sorted at every level, no whitespace, and the body URL's "&" left as is.
   test "connection portal login signs and sends the canonical JSON body" do
