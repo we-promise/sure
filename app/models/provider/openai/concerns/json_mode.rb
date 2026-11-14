@@ -28,6 +28,9 @@ module Provider::Openai::Concerns::JsonMode
 
   VALID_JSON_MODES = [ JSON_MODE_STRICT, JSON_MODE_OBJECT, JSON_MODE_NONE, JSON_MODE_AUTO ].freeze
 
+  # Threshold for auto mode: if more than this percentage returns null, retry with none mode
+  AUTO_MODE_NULL_THRESHOLD = 0.5
+
   private
     # Determine default JSON mode based on configuration hierarchy:
     # 1. Environment variable (LLM_JSON_MODE) - highest priority, for testing/override
@@ -71,5 +74,52 @@ module Provider::Openai::Concerns::JsonMode
       else
         params[:response_format] = { type: "json_object" }
       end
+    end
+
+    # Runs a structured-output chat request under `mode` with the shared
+    # fallback strategy. The block receives (mode, with_reasoning_effort) and
+    # performs one request. Strict requests rejected with HTTP 400 are retried
+    # once in none mode without the response format or the reasoning effort,
+    # since either can cause the 400; auto mode handles its own strict attempt
+    # below, so a 400 reaching this rescue in auto mode came from the none-mode
+    # retry and propagates.
+    def request_with_json_mode_fallback(mode, operation:, expected_count:, failed:, &request)
+      if mode == JSON_MODE_AUTO
+        request_with_auto_mode(operation: operation, expected_count: expected_count, failed: failed, &request)
+      else
+        request.call(mode, true)
+      end
+    rescue Faraday::BadRequestError => e
+      raise unless mode == JSON_MODE_STRICT
+
+      Rails.logger.warn("Strict JSON mode failed for #{operation}, falling back to none mode: #{e.message}")
+      request.call(JSON_MODE_NONE, false)
+    end
+
+    # Auto mode: try strict first, fall back to none when the provider rejects
+    # the schema, the reply cannot be parsed, or too many results are null or
+    # missing. Models that cannot reason in strict mode often return null for
+    # everything or omit the items they cannot handle, so if more than
+    # AUTO_MODE_NULL_THRESHOLD of the expected results failed the request is
+    # retried without the constraint. Only the provider-rejection retry drops
+    # the reasoning effort.
+    def request_with_auto_mode(operation:, expected_count:, failed:, &request)
+      result = begin
+        request.call(JSON_MODE_STRICT, true)
+      rescue Provider::Openai::ResponseFormatError => e
+        Rails.logger.warn("Auto mode: strict JSON response for #{operation} could not be parsed (#{e.message}), retrying with none mode")
+        return request.call(JSON_MODE_NONE, true)
+      rescue Faraday::BadRequestError => e
+        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider for #{operation} (#{e.message}), retrying with none mode")
+        return request.call(JSON_MODE_NONE, false)
+      end
+
+      null_count = result.count(&failed)
+      missing_count = expected_count - result.size
+      failed_ratio = expected_count > 0 ? (null_count + missing_count).to_f / expected_count : 0.0
+      return result unless failed_ratio > AUTO_MODE_NULL_THRESHOLD
+
+      Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% of #{operation} failed (#{null_count} nulls, #{missing_count} missing) in strict mode, retrying with none mode")
+      request.call(JSON_MODE_NONE, true)
     end
 end

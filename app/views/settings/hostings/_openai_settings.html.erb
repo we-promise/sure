@@ -72,6 +72,24 @@
                     data: { "auto-submit-form-target": "auto" } } %>
   <p class="text-xs text-secondary mt-1"><%= t(".json_mode_help") %></p>
 
+  <%= form.text_field :openai_reasoning_effort,
+                      label: t(".reasoning_effort_label"),
+                      placeholder: t(".reasoning_effort_placeholder"),
+                      value: @openai_reasoning_effort_input || Provider::Openai.reasoning_effort,
+                      list: "openai_reasoning_effort_suggestions",
+                      autocomplete: "off",
+                      autocapitalize: "none",
+                      spellcheck: "false",
+                      inputmode: "text",
+                      disabled: ENV["OPENAI_REASONING_EFFORT"].present?,
+                      data: { "auto-submit-form-target": "auto" } %>
+  <datalist id="openai_reasoning_effort_suggestions">
+    <% Provider::Openai::REASONING_EFFORT_SUGGESTIONS.each do |effort| %>
+      <option value="<%= effort %>">
+    <% end %>
+  </datalist>
+  <p class="text-xs text-secondary mt-1"><%= t(".reasoning_effort_help") %></p>
+
   <div class="pt-4 border-t border-secondary">
     <h3 class="font-medium mb-1"><%= t(".budget_heading") %></h3>
     <p class="text-xs text-secondary mb-3"><%= t(".budget_description") %></p>

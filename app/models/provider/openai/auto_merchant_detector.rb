@@ -2,9 +2,6 @@ class Provider::Openai::AutoMerchantDetector
   include Provider::Openai::Concerns::UsageRecorder
   include Provider::Openai::Concerns::JsonMode
 
-  # Threshold for auto mode: if more than this percentage returns null, retry with none mode
-  AUTO_MODE_NULL_THRESHOLD = 0.5
-
   # Key aliases accepted from models that don't follow the schema's field names
   TRANSACTION_ID_KEYS = %w[transaction_id id txn_id].freeze
   BUSINESS_NAME_KEYS = %w[business_name name merchant_name merchant].freeze
@@ -107,7 +104,7 @@ class Provider::Openai::AutoMerchantDetector
         user_merchants: user_merchants
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -119,7 +116,10 @@ class Provider::Openai::AutoMerchantDetector
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
 
       Rails.logger.info("Tokens used to auto-detect merchants: #{response.dig("usage", "total_tokens")}")
 
@@ -144,59 +144,17 @@ class Provider::Openai::AutoMerchantDetector
     end
 
     def auto_detect_merchants_openai_generic
-      if json_mode == JSON_MODE_AUTO
-        auto_detect_merchants_with_auto_mode
-      else
-        auto_detect_merchants_with_mode(json_mode)
-      end
-    rescue Faraday::BadRequestError => e
-      # If strict mode fails (HTTP 400), fall back to none mode
-      # This handles providers that don't support json_schema response format.
-      # Auto mode performs its own strict-attempt fallback; a BadRequestError
-      # reaching this rescue while in auto mode came from a none-mode retry.
-      if json_mode == JSON_MODE_STRICT
-        Rails.logger.warn("Strict JSON mode failed, falling back to none mode: #{e.message}")
-        auto_detect_merchants_with_mode(JSON_MODE_NONE)
-      else
-        raise
+      request_with_json_mode_fallback(
+        json_mode,
+        operation: "merchant detection",
+        expected_count: transactions.size,
+        failed: ->(r) { r.business_name.blank? || r.business_url.blank? }
+      ) do |mode, with_reasoning_effort|
+        auto_detect_merchants_with_mode(mode, with_reasoning_effort: with_reasoning_effort)
       end
     end
 
-    # Auto mode: try strict first, fall back to none if too many nulls or missing results
-    def auto_detect_merchants_with_auto_mode
-      result = begin
-        auto_detect_merchants_with_mode(JSON_MODE_STRICT)
-      rescue Provider::Openai::ResponseFormatError => e
-        Rails.logger.warn("Auto mode: strict JSON response could not be parsed (#{e.message}), retrying with none mode")
-        return auto_detect_merchants_with_mode(JSON_MODE_NONE)
-      rescue Faraday::BadRequestError => e
-        # Handle the provider-rejects-strict-schema fallback inside auto mode so
-        # a failure of the none-mode retry propagates instead of re-entering
-        # the outer BadRequestError rescue and firing a second fallback.
-        Rails.logger.warn("Auto mode: strict JSON mode rejected by provider (#{e.message}), retrying with none mode")
-        return auto_detect_merchants_with_mode(JSON_MODE_NONE)
-      end
-
-      # Check if too many nulls OR missing results were returned
-      # Models that can't reason in strict mode often:
-      # 1. Return null for everything, OR
-      # 2. Simply omit transactions they can't detect (returning fewer results than input)
-      # A detection is only usable downstream with both a name and a URL, so an
-      # item missing either counts as a failure for the retry heuristic.
-      null_count = result.count { |r| r.business_name.blank? || r.business_url.blank? }
-      missing_count = transactions.size - result.size
-      failed_count = null_count + missing_count
-      failed_ratio = transactions.size > 0 ? failed_count.to_f / transactions.size : 0.0
-
-      if failed_ratio > AUTO_MODE_NULL_THRESHOLD
-        Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed (#{null_count} nulls, #{missing_count} missing) in strict mode, retrying with none mode")
-        auto_detect_merchants_with_mode(JSON_MODE_NONE)
-      else
-        result
-      end
-    end
-
-    def auto_detect_merchants_with_mode(mode)
+    def auto_detect_merchants_with_mode(mode, with_reasoning_effort: true)
       span = langfuse_trace&.generation(name: "auto_detect_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         transactions: transactions,
@@ -219,6 +177,7 @@ class Provider::Openai::AutoMerchantDetector
         strict: true,
         schema: json_schema
       })
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat) if with_reasoning_effort
 
       response = client.chat(parameters: params)
 

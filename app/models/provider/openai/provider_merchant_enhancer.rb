@@ -92,7 +92,7 @@ class Provider::Openai::ProviderMerchantEnhancer
         merchants: merchants
       })
 
-      response = client.responses.create(parameters: {
+      params = {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         input: [ { role: "developer", content: developer_message } ],
         text: {
@@ -104,7 +104,10 @@ class Provider::Openai::ProviderMerchantEnhancer
           }
         },
         instructions: instructions
-      })
+      }
+      params = Provider::Openai.apply_reasoning_effort(params, api: :responses)
+
+      response = client.responses.create(parameters: params)
 
       Rails.logger.info("Tokens used to enhance provider merchants: #{response.dig("usage", "total_tokens")}")
 
@@ -125,37 +128,17 @@ class Provider::Openai::ProviderMerchantEnhancer
     end
 
     def enhance_merchants_generic
-      if json_mode == JSON_MODE_AUTO
-        enhance_merchants_with_auto_mode
-      else
-        enhance_merchants_with_mode(json_mode)
-      end
-    rescue Faraday::BadRequestError => e
-      if json_mode == JSON_MODE_STRICT || json_mode == JSON_MODE_AUTO
-        Rails.logger.warn("Strict JSON mode failed for merchant enhancement, falling back to none mode: #{e.message}")
-        enhance_merchants_with_mode(JSON_MODE_NONE)
-      else
-        raise
+      request_with_json_mode_fallback(
+        json_mode,
+        operation: "merchant enhancement",
+        expected_count: merchants.size,
+        failed: ->(r) { r.business_url.nil? }
+      ) do |mode, with_reasoning_effort|
+        enhance_merchants_with_mode(mode, with_reasoning_effort: with_reasoning_effort)
       end
     end
 
-    def enhance_merchants_with_auto_mode
-      result = enhance_merchants_with_mode(JSON_MODE_STRICT)
-
-      null_count = result.count { |r| r.business_url.nil? }
-      missing_count = merchants.size - result.size
-      failed_count = null_count + missing_count
-      failed_ratio = merchants.size > 0 ? failed_count.to_f / merchants.size : 0.0
-
-      if failed_ratio > Provider::Openai::AutoMerchantDetector::AUTO_MODE_NULL_THRESHOLD
-        Rails.logger.info("Auto mode: #{(failed_ratio * 100).round}% failed in strict mode for merchant enhancement, retrying with none mode")
-        enhance_merchants_with_mode(JSON_MODE_NONE)
-      else
-        result
-      end
-    end
-
-    def enhance_merchants_with_mode(mode)
+    def enhance_merchants_with_mode(mode, with_reasoning_effort: true)
       span = langfuse_trace&.generation(name: "enhance_provider_merchants_api_call", model: model.presence || Provider::Openai::DEFAULT_MODEL, input: {
         model: model.presence || Provider::Openai::DEFAULT_MODEL,
         merchants: merchants,
@@ -175,6 +158,7 @@ class Provider::Openai::ProviderMerchantEnhancer
         strict: true,
         schema: json_schema
       })
+      params = Provider::Openai.apply_reasoning_effort(params, api: :chat) if with_reasoning_effort
 
       response = client.chat(parameters: params)
 
