@@ -10,6 +10,20 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "held_securities_on lists positive standard holdings on that day, a provider row first" do
+    account = accounts(:investment)
+    aapl = securities(:aapl)
+    # Clear of the fixture rows (today and yesterday at load time), even when
+    # the suite runs across midnight.
+    provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    account.holdings.create!(security: aapl, date: 5.days.ago.to_date, qty: 7, price: 200, amount: 1400, currency: "EUR", account_provider: provider)
+    account.holdings.create!(security: aapl, date: 5.days.ago.to_date, qty: 5, price: 200, amount: 1000, currency: "USD")
+    account.holdings.create!(security: securities(:msft), date: 5.days.ago.to_date, qty: 0, price: 400, amount: 0, currency: "USD")
+
+    assert_equal [ [ aapl, 7 ] ], account.held_securities_on(5.days.ago.to_date)
+    assert_equal [ [ aapl, 10 ] ], account.held_securities_on(1.year.from_now.to_date)
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy

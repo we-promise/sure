@@ -103,7 +103,9 @@ class Api::V1::TradesController < Api::V1::BaseController
     # TransactionsController#update: if one fails, a retry still finds the
     # change to make.
     Entry.transaction do
-      if @entry.update(updatable.except(:nature))
+      @entry.assign_attributes(updatable.except(:nature))
+
+      if Trade::SaleLimit.save(@entry)
         # Read before the follow-up writes below reset saved_changes. A request
         # that changes nothing must not mark the entry user-modified, which would
         # stop provider imports from updating it.

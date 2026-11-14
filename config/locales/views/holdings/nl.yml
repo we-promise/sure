@@ -52,6 +52,9 @@ nl:
         other: "%{count} posities"
       return: "Totaal rendement"
       weight: "Gewicht"
+      negative_position: "%{name} (%{ticker}): onder nul sinds %{date}, laagste %{qty}."
+      negative_positions_hint: "Waarschijnlijk ontbreekt een aankoop of overboeking. Voeg die toe of corrigeer de transacties die de positie onder nul brachten."
+      negative_positions_title: "Sommige posities zijn onder nul gekomen"
     missing_price_tooltip:
       description: "Deze belegging heeft ontbrekende waarden en we konden het rendement of de waarde niet berekenen."
       missing_data: "Ontbrekende gegevens"

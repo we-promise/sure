@@ -3,9 +3,10 @@ class Holding::ForwardCalculator
 
   attr_reader :account
 
-  def initialize(account, security_ids: nil)
+  def initialize(account, security_ids: nil, excluded_entry_ids: nil)
     @account = account
     @security_ids = security_ids
+    @excluded_entry_ids = excluded_entry_ids
     # The lots of each security, which also give the weighted-average cost
     # basis, relieving sells so the figure stays correct after a position is
     # fully sold and repurchased.
@@ -44,7 +45,7 @@ class Holding::ForwardCalculator
 
   private
     def portfolio_cache
-      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids)
+      @portfolio_cache ||= Holding::PortfolioCache.new(account, security_ids: @security_ids, excluded_entry_ids: @excluded_entry_ids)
     end
 
     def empty_portfolio

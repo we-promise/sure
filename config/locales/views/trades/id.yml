@@ -1,6 +1,9 @@
 ---
 id:
   trades:
+    sale_limit:
+      exceeds_holding: "Anda tidak dapat menjual %{qty} %{ticker}: akun hanya memiliki %{available} pada %{date}."
+      exceeds_later_holding: "Anda tidak dapat menjual %{qty} %{ticker}: paling banyak %{available} dapat dijual pada tanggal ini, jika tidak posisinya menjadi di bawah nol pada %{date}."
     api_errors:
       activity_label_must_match_type: "investment_activity_label harus berupa %{label} ketika type adalah %{type}"
       invalid_activity_label: Label aktivitas investasi tidak valid
@@ -26,6 +29,9 @@ id:
       type_interest: Bunga
       dividend_requires_security: Efek diperlukan untuk dividen
       trade_requires_security: Efek (ticker) diperlukan untuk transaksi beli dan jual
+      held_security: "%{name} (%{ticker}), %{qty} dimiliki"
+      held_security_prompt: Pilih kepemilikan
+      held_security_hint: Tidak ada di daftar? Tambahkan pembeliannya terlebih dahulu.
     header:
       buy: Beli
       sell: Jual
