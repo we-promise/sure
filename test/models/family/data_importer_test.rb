@@ -594,6 +594,44 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_nil @family.accounts.find_by!(name: "Replayed Plot").property.cost_tag_id
   end
 
+  test "a replayed import clears a cost tag link the file no longer has" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    tag = @family.tags.create!(name: "Replayed Land Costs")
+    session.source_mappings.create!(family: @family, source_type: "Tag", source_id: "tag-1", target: tag)
+    plot = { type: "Account", data: { id: "old-plot", name: "Relinked Plot", balance: "100", currency: "USD",
+                                      accountable_type: "Property", accountable: { cost_tag_id: "tag-1" } } }
+
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    property = @family.accounts.find_by!(name: "Relinked Plot").property
+    assert_equal tag.id, property.cost_tag_id
+
+    plot[:data][:accountable] = { cost_tag_id: "tag-unknown" }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    assert_nil property.reload.cost_tag_id
+
+    plot[:data][:accountable] = { cost_tag_id: "tag-1" }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    assert_equal tag.id, property.reload.cost_tag_id
+
+    plot[:data][:accountable] = { cost_tag_id: nil }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+    assert_nil property.reload.cost_tag_id
+  end
+
+  test "an import without the cost tag key keeps the property's link" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    tag = @family.tags.create!(name: "Kept Land Costs")
+    session.source_mappings.create!(family: @family, source_type: "Tag", source_id: "tag-1", target: tag)
+    plot = { type: "Account", data: { id: "old-plot", name: "Kept Plot", balance: "100", currency: "USD",
+                                      accountable_type: "Property", accountable: { cost_tag_id: "tag-1" } } }
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+
+    plot[:data][:accountable] = {}
+    Family::DataImporter.new(@family, build_ndjson([ plot ]), import_session: session).import!
+
+    assert_equal tag.id, @family.accounts.find_by!(name: "Kept Plot").property.cost_tag_id
+  end
+
   test "imports merchants" do
     ndjson = build_ndjson([
       {

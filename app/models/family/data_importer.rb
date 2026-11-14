@@ -483,19 +483,23 @@ class Family::DataImporter
     end
 
     # A property's cost tag is imported after the accounts, so the link is
-    # restored once both have their new ids. A tag the import does not carry,
-    # or a session mapping to a tag since deleted, leaves the property unlinked.
+    # restored once both have their new ids. A record that carries the key
+    # sets the link: no tag, a tag the import does not carry, or a session
+    # mapping to a tag since deleted leaves the property unlinked, clearing a
+    # link an earlier import made. A record without the key (an older export,
+    # or another app's) keeps the property's link.
     def link_property_cost_tags(records)
       records.each do |record|
         data = record["data"] || {}
-        old_tag_id = data.dig("accountable", "cost_tag_id")
-        next unless data["accountable_type"] == "Property" && old_tag_id.present?
+        accountable = data["accountable"]
+        next unless data["accountable_type"] == "Property" && accountable.is_a?(Hash) && accountable.key?("cost_tag_id")
 
         account = mapped_record(:accounts, data["id"], @family.accounts, record_type: "Account")
-        tag_id = mapped_id(:tags, old_tag_id, record_type: "Account", required: false)
-        next unless account&.property? && tag_id && @family.tags.exists?(id: tag_id)
+        next unless account&.property?
 
-        account.property.update!(cost_tag_id: tag_id)
+        tag_id = mapped_id(:tags, accountable["cost_tag_id"], record_type: "Account", required: false)
+        tag_id = nil unless tag_id && @family.tags.exists?(id: tag_id)
+        account.property.update!(cost_tag_id: tag_id) unless account.property.cost_tag_id == tag_id
       end
     end
 
