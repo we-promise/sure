@@ -59,12 +59,15 @@ class GoalPledge < ApplicationRecord
     return false unless entry.account_id == account_id
 
     is_valuation = entry.entryable.is_a?(Valuation)
+    is_trade = entry.entryable.is_a?(Trade)
 
     if is_valuation
       # Never match a valuation delta on an investment or crypto account: it may
       # be a market move, not a deposit, and would false-match.
       return false if account&.balance_type == :investment
       return false if valuation_delta.nil? || valuation_delta.to_d <= 0
+    elsif is_trade
+      return false unless kind_transfer? && self.class.deposit_trade?(entry)
     elsif kind_transfer? && !entry.amount.to_d.negative?
       return false
     end
@@ -73,8 +76,16 @@ class GoalPledge < ApplicationRecord
     latest = [ created_at.to_date + MATCH_DATE_TOLERANCE_DAYS.days, expires_at.to_date ].max
     return false unless entry.date >= earliest && entry.date <= latest
 
-    native_amount = (is_valuation ? valuation_delta.to_d : entry.amount.to_d).abs
-    txn_amount = goal.convert_money!(Money.new(native_amount, entry.currency.presence || account.currency), date: entry.date).amount
+    native_money = if is_valuation
+      Money.new(valuation_delta.to_d.abs, entry.currency.presence || account.currency)
+    elsif is_trade
+      # A deposit trade carries no cash amount; what arrived is the coins, at
+      # the trade's price.
+      Money.new((entry.trade.qty * entry.trade.price).abs, entry.trade.currency)
+    else
+      Money.new(entry.amount.to_d.abs, entry.currency.presence || account.currency)
+    end
+    txn_amount = goal.convert_money!(native_money, date: entry.date).amount
     pledge_amount = amount.to_d
     diff_abs = (txn_amount - pledge_amount).abs
 
@@ -101,6 +112,40 @@ class GoalPledge < ApplicationRecord
         transaction.update!(extra: extra)
 
         update!(status: "matched", matched_transaction_id: transaction.id)
+      end
+    end
+  end
+
+  # Coins arriving in a crypto account: a self-custody wallet books them as a
+  # transfer-in trade with no cash side, so that trade is the account's
+  # deposit. A buy only swaps cash already in the account for coins, and a
+  # transfer-in on an investment account moves securities, so neither counts.
+  def self.deposit_trade?(entry)
+    trade = entry.entryable
+    return false unless trade.is_a?(Trade)
+    return false unless entry.account&.accountable_type == "Crypto"
+
+    trade.investment_activity_label == Trade::TRANSFER_LABEL && trade.qty.to_d.positive?
+  end
+
+  # Trade-backed match: the trade is stamped like a transaction, since a
+  # wallet re-imports every movement on each sync and the same trade must not
+  # pay a second pledge. There is no transaction to link.
+  def resolve_with_trade!(trade)
+    with_lock do
+      raise NotOpenError, "Pledge no longer open" unless status_open?
+
+      trade.with_lock do
+        pledge_id_in_extra = trade.extra.dig("goal", "pledge_id")
+        if pledge_id_in_extra.present? && pledge_id_in_extra != id
+          raise AlreadyClaimedError, "Trade ##{trade.id} already claimed by pledge ##{pledge_id_in_extra}"
+        end
+
+        extra = trade.extra || {}
+        extra["goal"] = (extra["goal"] || {}).merge("pledge_id" => id)
+        trade.update!(extra: extra)
+
+        update!(status: "matched")
       end
     end
   end
