@@ -957,6 +957,29 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the cost link leaves out transfers and accounts the viewer can't see" do
+    tag = cost_tagged_property
+    create_cost(accounts(:depository), 8_000, tag)
+    create_cost(accounts(:credit_card), 2_000, tag)
+    # A tagged transfer is not a cost.
+    accounts(:depository).entries.create!(
+      date: 1.year.ago.to_date, name: "To savings", amount: 5_000, currency: "USD",
+      entryable: Transaction.new(tags: [ tag ], kind: "funds_movement")
+    )
+    # Not shared with the member.
+    create_cost(accounts(:investment), 3_000, tag)
+    AccountShare.create!(account: @account, user: users(:family_member), permission: "read_only")
+    sign_in users(:family_member)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "*", text: /\$10,000/
+      assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
+    end
+  end
+
   test "overview says the rate is unavailable for a cost without a stored rate" do
     tag = cost_tagged_property
     eur_account = @account.family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @user, accountable: Depository.new)
