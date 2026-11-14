@@ -232,10 +232,38 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       account: { balance: 100_000, currency: "EUR", purchase_date: Date.yesterday.iso8601 }
     }
     assert_redirected_to address_property_path(account)
+    assert_equal Date.yesterday, account.reload.opening_anchor_date
+  end
+
+  test "value step dates a blank purchase date before a value the draft already has" do
+    account = create_draft_property
+    oldest = 5.years.ago.to_date
+    add_reconciliation(account, date: oldest, amount: 90_000)
 
     patch update_balances_property_path(account), params: { account: { balance: 100_000, currency: "EUR" } }
+
     assert_redirected_to address_property_path(account)
-    assert_equal Date.yesterday, account.reload.opening_anchor_date
+    assert_equal oldest.prev_day, account.reload.opening_anchor_date
+  end
+
+  test "value step keeps the default purchase date within the accepted range" do
+    account = create_draft_property
+    add_reconciliation(account, date: Entry.min_supported_date + 1, amount: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[purchase_date]'][value='#{(Entry.min_supported_date + 1).iso8601}']"
+  end
+
+  test "value step re-renders a rejected date when the submitted currency is unknown" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "XXX", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='250000.00']"
+    assert_equal "EUR", account.reload.currency
   end
 
   test "value step keeps the submitted price when the purchase date is rejected" do

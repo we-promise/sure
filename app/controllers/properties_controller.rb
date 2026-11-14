@@ -303,8 +303,11 @@ class PropertiesController < ApplicationController
     end
 
     # Re-renders the value step with what the user typed, not the saved value.
+    # A currency the app doesn't know is left out, since the form can't render it.
     def render_balances_error(message)
-      @account.assign_attributes(balance_params.slice(:balance, :currency).compact_blank)
+      submitted = balance_params.slice(:balance, :currency).compact_blank
+      submitted.delete(:currency) unless Money::Currency.all.key?(submitted[:currency].to_s.downcase)
+      @account.assign_attributes(submitted)
       @error_message = message
       render :balances, status: :unprocessable_entity
     end
@@ -314,12 +317,14 @@ class PropertiesController < ApplicationController
     end
 
     # The purchase valuation must come before any other value the draft
-    # already has, so the default is the latest date that allows it.
+    # already has, so the default is the latest date that allows it, kept
+    # within the range the field accepts.
     def default_purchase_date
       return @account.opening_anchor_date if @account.has_opening_anchor?
 
       oldest = Account::OpeningBalanceManager.new(@account).oldest_entry_date
-      oldest ? [ oldest.prev_day, Date.current ].min : Date.current
+      latest = oldest ? [ oldest.prev_day, Date.current ].min : Date.current
+      [ latest, Entry.min_supported_date + 1 ].max
     end
 
     def purchase_date_error
