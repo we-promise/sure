@@ -45,6 +45,39 @@ class SplitsTest < ApplicationSystemTestCase
     assert_equal [ tags(:one).id ], child.entryable.tag_ids
   end
 
+  test "a split row set to no merchant keeps it when the split is edited again" do
+    @entry.entryable.update!(merchant: merchants(:amazon))
+
+    visit edit_transaction_split_path(@entry)
+
+    within "dialog" do
+      within all("[data-split-transaction-target='row']", minimum: 2).first do
+        find("[data-merchant-select-target='button']").click
+        find("[role='option'][data-merchant-id='#{SplitsHelper::NO_MERCHANT}']").click
+      end
+
+      click_button I18n.t("splits.edit.submit")
+    end
+
+    assert_text I18n.t("splits.update.success")
+    assert_nil @entry.reload.child_entries.find_by!(name: "Groceries").entryable.merchant_id
+
+    visit edit_transaction_split_path(@entry)
+
+    within "dialog" do
+      within all("[data-split-transaction-target='row']", minimum: 2).first do
+        assert_selector "[data-merchant-select-target='selectionContainer']", text: I18n.t("splits.new.without_merchant")
+      end
+
+      click_button I18n.t("splits.edit.submit")
+    end
+
+    assert_text I18n.t("splits.update.success")
+    child = @entry.reload.child_entries.find_by!(name: "Groceries")
+    assert_nil child.entryable.merchant_id
+    assert child.entryable.locked?(:merchant_id)
+  end
+
   test "tag picker in a split row stays as tall as the other pickers" do
     visit edit_transaction_split_path(@entry)
 

@@ -34,7 +34,8 @@ class SplitsController < ApplicationController
     end
 
     set_form_options
-    @children = @entry.child_entries.includes(entryable: :tags)
+    # In the order the rows were entered; without an ORDER BY a rewritten row can move.
+    @children = @entry.child_entries.order(:created_at, :id).includes(entryable: :tags)
   end
 
   def update
@@ -111,11 +112,16 @@ class SplitsController < ApplicationController
       raw_splits = raw_splits.values if raw_splits.respond_to?(:values)
 
       raw_splits.map do |s|
+        # A blank merchant follows the parent's; a picked merchant or "no merchant" is the row's own.
+        no_merchant = s[:merchant_id] == SplitsHelper::NO_MERCHANT
+        scoped = references.scope(category_id: s[:category_id], merchant_id: (s[:merchant_id] unless no_merchant), tag_ids: s[:tag_ids])
+
         {
           name: s[:name],
           amount: s[:amount].to_d * -1,
           excluded: s[:excluded],
-          **references.scope(category_id: s[:category_id], merchant_id: s[:merchant_id], tag_ids: s[:tag_ids])
+          own_merchant: no_merchant || scoped[:merchant_id].present?,
+          **scoped
         }
       end
     end
