@@ -1,0 +1,8 @@
+CHARGE HISTORY (date amount description):
+- 2026-09-01 15.99 NETFLIX.COM
+- 2026-10-01 15.99 NETFLIX.COM
+
+AVAILABLE CATEGORIES: Entertainment, Utilities
+
+CURRENT CONFIGURATION:
+{"name":"Netflix","amount":"15.99","frequency":"monthly","day_of_month":1}

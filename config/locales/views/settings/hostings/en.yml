@@ -152,7 +152,7 @@ en:
       categorization_provider_selector:
         title: Transaction Categorization
         preview_pill: Preview
-        description: Choose which provider categorizes transactions. This is separate from the AI provider above, which handles chat and PDF processing.
+        description: Choose which provider categorizes transactions for every family on this instance. This is separate from the AI provider above, which handles chat and PDF processing.
         env_notice: "Set to %{type} through environment variables."
         provider_label: Categorization provider
         provider_llm: AI provider (OpenAI or Anthropic)
@@ -186,7 +186,7 @@ en:
         endpoint_placeholder: "https://api.typesafe.ai/v1/systemone (default)"
         model_label: Model (Optional)
         model_placeholder: "jev-latest (default)"
-        model_help: Defaults to TypeSafe directly. To reach Jev through OpenRouter instead, set the endpoint to https://openrouter.ai/api/alpha/decisions and the model to ~typesafe/jev-latest.
+        model_help: Defaults to TypeSafe directly. A self-hosted server works too if its URL ends in /v1/systemone. Jev through OpenRouter isn't supported until a later release.
       openai_settings:
         description: Enter the access token and optionally configure a custom OpenAI-compatible provider
         env_configured_message: Successfully configured through environment variables.
@@ -332,7 +332,8 @@ en:
         invalid_llm_budget: "%{field} must be a whole number ≥ %{minimum}."
         invalid_anthropic_base_url: Anthropic Base URL must be an http(s) URL.
         anthropic_model_required_for_base_url: Anthropic Model is required when a custom Base URL is set.
-        invalid_jev_endpoint: Jev Endpoint must be an https URL. Plain http is accepted only for localhost.
+        invalid_jev_endpoint: Jev Endpoint must be an http or https URL. Use http only for a server on your own network.
+        unsupported_jev_endpoint: Jev Endpoint must end in /v1/systemone, as TypeSafe's does. Jev through OpenRouter isn't supported until a later release.
         invalid_categorization_rate: "%{field} must be a number between 0 and 1."
         scheduler_sync_failed: Settings saved, but failed to update the sync schedule. Please try again or check the server logs.
       disconnect_external_assistant:

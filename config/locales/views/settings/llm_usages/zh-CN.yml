@@ -8,13 +8,13 @@ zh-CN:
         start_date: 开始日期
         end_date: 结束日期
         filter: 筛选
-        total_requests: 请求总数
+        total_calls: "调用总数"
+        avg_cost_per_call: "平均每次调用费用"
+        based_on_calls: "基于 %{with_cost} / %{total} 次带费用数据的调用"
         total_tokens: Token 总数
         prompt: 提示词
         completion: 补全
         total_cost: 总费用
-        avg_cost_per_request: 平均每次请求费用
-        based_on_requests: 基于 %{with_cost} / %{total} 个带费用数据的请求
         cost_by_operation: 按操作统计费用
         cost_by_model: 按模型统计费用
         recent_usage: 最近用量

@@ -6,11 +6,9 @@ class VectorStore::Registry
   }.freeze
 
   class << self
-    # Returns the configured adapter instance.
-    # Reads from VECTOR_STORE_PROVIDER env var; without an explicit override,
-    # Anthropic installs (Setting.llm_provider == "anthropic") default to
-    # :pgvector, and anything else falls back to :openai when OpenAI
-    # credentials are present.
+    # Returns the configured adapter instance. Which store is used comes from
+    # Ai::Config (Ai::LegacyEnvConfig keeps the rule: VECTOR_STORE_PROVIDER,
+    # else pgvector on Anthropic installs, else OpenAI's store with an OpenAI key).
     def adapter
       name = adapter_name
       return nil unless name
@@ -23,18 +21,7 @@ class VectorStore::Registry
     end
 
     def adapter_name
-      explicit = ENV["VECTOR_STORE_PROVIDER"].presence
-      return explicit.to_sym if explicit && ADAPTERS.key?(explicit.to_sym)
-
-      # Default routing:
-      #   - When the configured LLM provider is Anthropic (which has no hosted
-      #     vector store), fall back to the local pgvector adapter. The
-      #     Embeddable concern still pulls embeddings from EMBEDDING_URI_BASE /
-      #     OPENAI_ACCESS_TOKEN — Anthropic users typically point this at
-      #     Voyage AI, a local Ollama instance, or OpenAI embeddings.
-      #   - Otherwise, use OpenAI when credentials are available.
-      return :pgvector if Setting.llm_provider == "anthropic"
-      :openai if openai_access_token.present?
+      Ai::Config.current.vector_store_backend
     end
 
     # True when pgvector is the effective vector store — whether set explicitly
@@ -61,14 +48,12 @@ class VectorStore::Registry
         end
       end
 
+      # The `embed` route's vector store endpoint.
       def build_openai
-        token = openai_access_token
-        return nil unless token.present?
+        endpoint = Ai::Config.current.routes_for(:embed).map(&:endpoint).find(&:vector_store?)
+        return nil unless endpoint&.api_key
 
-        VectorStore::Openai.new(
-          access_token: token,
-          uri_base: ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base
-        )
+        VectorStore::Openai.new(access_token: endpoint.api_key, uri_base: endpoint.base_url)
       end
 
       def build_pgvector
@@ -86,10 +71,6 @@ class VectorStore::Registry
         api_key = ENV["QDRANT_API_KEY"].presence
 
         VectorStore::Qdrant.new(url: url, api_key: api_key)
-      end
-
-      def openai_access_token
-        ENV["OPENAI_ACCESS_TOKEN"].presence || Setting.openai_access_token
       end
   end
 end
