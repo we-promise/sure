@@ -329,6 +329,34 @@ module Security::Provided
     nil
   end
 
+  SPLIT_CHECK_INTERVAL = 12.hours
+  BROKER_SPLIT_WINDOW = 7.days
+
+  # Records the stock splits the price provider reports with an ex-date in the
+  # range, one per ex-date. A split already on file is left as it is, so one
+  # entered by hand wins over the provider's. Checked at most once per
+  # SPLIT_CHECK_INTERVAL per security and date range, because every account
+  # holding it syncs through here and a short range must not stand in for a
+  # longer one. A split is skipped when a broker already booked a zero-price
+  # "Other" trade for this security within BROKER_SPLIT_WINDOW of its ex-date:
+  # applying both would change the share count twice. Returns the number of
+  # splits added.
+  def import_provider_splits(start_date:, end_date:, clear_cache: false)
+    provider = price_data_provider
+    return 0 unless provider&.supports_splits?
+
+    if !clear_cache && !Rails.cache.write(split_check_key(start_date, end_date), true, expires_in: SPLIT_CHECK_INTERVAL, unless_exist: true)
+      return 0
+    end
+
+    begin
+      record_provider_splits(provider, start_date, end_date)
+    rescue StandardError
+      Rails.cache.delete(split_check_key(start_date, end_date))
+      raise
+    end
+  end
+
   def import_provider_prices(start_date:, end_date:, clear_cache: false)
     unless price_data_provider.present?
       Rails.logger.warn("No provider configured for Security.import_provider_prices")
@@ -344,4 +372,55 @@ module Security::Provided
     )
     [ importer.import_provider_prices, importer.provider_error ]
   end
+
+  private
+
+    def split_check_key(start_date, end_date)
+      "security_split_check:#{id}:#{start_date}:#{end_date}"
+    end
+
+    def broker_booked_split?(ex_date)
+      Trade.joins(:entry)
+           .where(security_id: id, investment_activity_label: "Other")
+           .where("COALESCE(trades.price, 0) = 0")
+           .where(entries: { date: (ex_date - BROKER_SPLIT_WINDOW)..(ex_date + BROKER_SPLIT_WINDOW) })
+           .exists?
+    end
+
+    def record_provider_splits(provider, start_date, end_date)
+      response = provider.fetch_security_splits(
+        symbol: ticker,
+        exchange_operating_mic: exchange_operating_mic,
+        start_date: start_date,
+        end_date: end_date
+      )
+
+      unless response.success?
+        Rails.cache.delete(split_check_key(start_date, end_date))
+        DebugLogEntry.capture(
+          category: "security_split_fetch",
+          level: "warn",
+          message: "Split fetch failed",
+          source: self.class.name,
+          provider: provider,
+          metadata: { security_id: id, ticker: ticker, provider_error: response.error&.message }
+        )
+        return 0
+      end
+
+      known_ex_dates = splits.where(ex_date: start_date..end_date).pluck(:ex_date).to_set
+      response.data.count do |split|
+        next false if known_ex_dates.include?(split.ex_date)
+        next false if broker_booked_split?(split.ex_date)
+
+        splits.create!(
+          ex_date: split.ex_date,
+          numerator: split.numerator,
+          denominator: split.denominator,
+          source: provider.class.name.demodulize.underscore
+        )
+      rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+        false
+      end
+    end
 end

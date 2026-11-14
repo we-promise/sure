@@ -731,6 +731,89 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     end
   end
 
+  test "fetch_security_splits reads split events as new shares per old share" do
+    ex_date = Date.new(2026, 10, 9)
+    chart_response = mock
+    chart_response.stubs(:body).returns({
+      chart: {
+        result: [ {
+          meta: { exchangeName: "PCX" },
+          events: {
+            splits: {
+              Time.utc(2026, 10, 9).to_i.to_s => { date: Time.utc(2026, 10, 9).to_i, numerator: 2, denominator: 1, splitRatio: "2:1" },
+              Time.utc(2025, 3, 3).to_i.to_s => { date: Time.utc(2025, 3, 3).to_i, numerator: 1, denominator: 10, splitRatio: "1:10" },
+              Time.utc(2025, 5, 5).to_i.to_s => { date: Time.utc(2025, 5, 5).to_i, numerator: 1, denominator: 1, splitRatio: "1:1" }
+            }
+          }
+        } ]
+      }
+    }.to_json)
+    chart_client = mock
+    chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/DXJ$})).returns(chart_response)
+    @provider.stubs(:client).returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    response = @provider.fetch_security_splits(
+      symbol: "DXJ", exchange_operating_mic: "ARCX", start_date: Date.new(2025, 1, 1), end_date: ex_date
+    )
+
+    assert response.success?
+    assert @provider.supports_splits?
+    assert_equal [ Date.new(2025, 3, 3), ex_date ], response.data.map(&:ex_date)
+    assert_equal [ [ 1, 10 ], [ 2, 1 ] ], response.data.map { |split| [ split.numerator, split.denominator ] }
+  end
+
+  test "fetch_security_splits is empty when the chart has no split events" do
+    chart_response = mock
+    chart_response.stubs(:body).returns({ chart: { result: [ { meta: { exchangeName: "PCX" } } ] } }.to_json)
+    chart_client = mock
+    chart_client.stubs(:get).returns(chart_response)
+    @provider.stubs(:client).returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    response = @provider.fetch_security_splits(
+      symbol: "DXJ", exchange_operating_mic: "ARCX", start_date: Date.new(2025, 1, 1), end_date: Date.new(2026, 10, 9)
+    )
+
+    assert response.success?
+    assert_empty response.data
+  end
+
+  test "fetch_security_splits dates a split in the exchange timezone" do
+    chart_response = mock
+    chart_response.stubs(:body).returns({
+      chart: { result: [ {
+        meta: { exchangeTimezoneName: "Pacific/Auckland" },
+        events: { splits: { "x" => { date: Time.utc(2026, 10, 24, 21).to_i, numerator: 2, denominator: 1 } } }
+      } ] }
+    }.to_json)
+    chart_client = mock
+    chart_client.stubs(:get).returns(chart_response)
+    @provider.stubs(:client).returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    response = @provider.fetch_security_splits(
+      symbol: "SMI", exchange_operating_mic: "XNZE", start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 11, 1)
+    )
+
+    assert_equal [ Date.new(2026, 10, 25) ], response.data.map(&:ex_date)
+  end
+
+  test "fetch_security_splits clamps a start date older than Yahoo's history" do
+    chart_response = mock
+    chart_response.stubs(:body).returns({ chart: { result: [ { meta: {} } ] } }.to_json)
+    chart_client = mock
+    chart_client.stubs(:get).returns(chart_response)
+    @provider.stubs(:client).returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    response = @provider.fetch_security_splits(
+      symbol: "DXJ", exchange_operating_mic: "ARCX", start_date: Date.new(2005, 1, 1), end_date: Date.new(2026, 10, 9)
+    )
+
+    assert response.success?, response.error&.message
+  end
+
   # ================================
   #         Caching Tests
   # ================================

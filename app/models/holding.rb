@@ -149,13 +149,35 @@ class Holding < ApplicationRecord
   # and is not. A rate of zero or less converts nothing, so it counts as
   # missing, as it does in Money#exchange_to. Checked in the same query as
   # the totals rather than in another round trip.
-  def self.avg_cost_totals_sql(currency = :joined)
+  #
+  # Quantity counts in the shares held on `as_of` (`:joined` for a joined
+  # `holdings.date`, else a date bound as a value): a purchase made before a
+  # split is restated by the splits since, which leaves its cost alone, so the
+  # average falls with the price a split cuts.
+  def self.avg_cost_totals_sql(currency = :joined, as_of = :joined)
+    as_of_sql = as_of == :joined ? "holdings.date" : sanitize_sql_array([ "?", as_of ])
+    split_factor = <<~SQL.squish
+      COALESCE((
+        SELECT EXP(SUM(LN(security_splits.numerator::float8 / security_splits.denominator)))::numeric
+        FROM security_splits
+        WHERE security_splits.security_id = trades.security_id
+          AND security_splits.ex_date > entries.date
+          AND security_splits.ex_date <= #{as_of_sql}
+      ), 1)
+    SQL
+    # The factor goes through float8, good to about 16 significant digits, so
+    # the summed quantity is rounded to 12 significant digits (judged by the
+    # adjusted total's magnitude, capped at the column's scale): enough to land
+    # 30,000,000 shares through a 1-for-3 split on exactly 10,000,000, and fine
+    # enough to keep a position of a billionth of a share.
+    adjusted_qty = "SUM(trades.qty * #{split_factor})"
+    qty_scale = "LEAST(18, GREATEST(0, 11 - FLOOR(LOG(GREATEST(ABS(#{adjusted_qty}), 1e-18)))::int))"
     foreign = currency != :joined ? sanitize_sql_array([ "trades.currency <> ?", currency ]) : "trades.currency <> accounts.currency"
     rate = AVG_COST_TRADE_RATE_SQL
 
     [
       Arel.sql("SUM((trades.price * trades.qty + trades.fee) * CASE WHEN #{foreign} THEN #{rate} ELSE 1 END)"),
-      Arel.sql("SUM(trades.qty)"),
+      Arel.sql("ROUND(#{adjusted_qty}, #{qty_scale})"),
       Arel.sql("BOOL_OR(#{foreign} AND (#{rate} IS NULL OR #{rate} <= 0))")
     ]
   end
@@ -435,7 +457,7 @@ class Holding < ApplicationRecord
         Trade::INTERNAL_MOVEMENT_LABELS
       )
 
-      total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency))
+      total_cost, total_qty, rate_missing = trades.pick(*self.class.avg_cost_totals_sql(account.currency, date))
 
       self.class.avg_cost_from_totals(total_cost, total_qty, rate_missing, currency)
     end

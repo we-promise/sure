@@ -17,6 +17,7 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
     Entry.delete_all
 
     @provider = mock("provider")
+    @provider.stubs(:supports_splits?).returns(false)
     Provider::Registry.any_instance
                       .stubs(:get_provider)
                       .with(:twelve_data)
