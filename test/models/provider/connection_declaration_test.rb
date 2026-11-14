@@ -168,6 +168,15 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
     "wise"           => ->(i) { i.ordered.includes(:wise_accounts, :accounts) }
   }.freeze
 
+  # Stands in for an in-memory sort, so the relation before it is still pinned, along
+  # with the attribute it sorts on.
+  SORT_PROBE = Module.new do
+    def sort_by(&key)
+      attribute = key.call(Class.new(BasicObject) { define_method(:method_missing) { |name| name } }.new)
+      [ :sort_by, attribute, self ]
+    end
+  end
+
   test "each provider on /accounts declares the query its connections load with" do
     family = families(:dylan_family)
     declarations = Provider::Factory.connection_declarations.index_by { |declaration| declaration[:key] }
@@ -175,7 +184,7 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
     assert_equal ACCOUNTS_INDEX_QUERIES.keys, declarations.select { |_key, declaration| declaration[:lists][:accounts_index] }.keys
     assert_nil declarations.fetch("financekit")[:lists][:accounts_index], "FinanceKit lists its accounts on its own"
     ACCOUNTS_INDEX_QUERIES.each do |key, query|
-      items = family.public_send(declarations.fetch(key)[:association])
+      items = family.public_send(declarations.fetch(key)[:association]).extending(SORT_PROBE)
       assert_equal query_shape(query.call(items)), query_shape(declarations.fetch(key)[:lists][:accounts_index].call(items)), key
     end
   end
@@ -195,9 +204,10 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
 
   private
 
-    # A relation by its query and preloads; a list a query already loaded (and sorted)
-    # by its records.
+    # A relation by its query and preloads; a sorted one (see SORT_PROBE) also by its sort.
     def query_shape(items)
-      items.is_a?(Array) ? [ :loaded, items.map(&:id) ] : [ items.to_sql, items.includes_values ]
+      return [ *items.first(2), *query_shape(items.last) ] if items.is_a?(Array)
+
+      [ items.to_sql, items.includes_values ]
     end
 end
