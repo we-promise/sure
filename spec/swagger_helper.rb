@@ -1043,6 +1043,27 @@ RSpec.configure do |config|
               },
               excluded: { type: :boolean, description: 'Whether the transaction is excluded from budget and report totals. Splitting a transaction marks it excluded.' },
               split_parent: { type: :boolean, description: 'Whether the transaction has been split; its amount is then carried by its split children.' },
+              investment_activity_label: {
+                type: :string,
+                nullable: true,
+                description: 'Investment activity of a brokerage cash row, such as Dividend, Interest or Fee'
+              },
+              provider_type: {
+                type: :string,
+                nullable: true,
+                description: "The importing provider's own type for the row, such as \"Withholding Tax\", when the provider records one"
+              },
+              security_id: {
+                type: :string,
+                format: :uuid,
+                nullable: true,
+                description: 'Security the row relates to (for example the one that paid a dividend), when the importer recorded it'
+              },
+              exchange_rate: {
+                type: :number,
+                nullable: true,
+                description: "Rate from the transaction's currency to the account's currency stored on it. Null when none is stored."
+              },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
               merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },
@@ -1752,6 +1773,13 @@ RSpec.configure do |config|
               qty: { type: :string },
               price: { type: :string },
               investment_activity_label: { type: :string, nullable: true },
+              fee: { type: :string, description: 'Fee charged on the trade, formatted like price' },
+              fee_decimal: { type: :string, description: 'Fee as the exact stored, unrounded, locale-independent decimal string. A purchase fee adds to the cost and a sale fee comes off the proceeds' },
+              exchange_rate: {
+                type: :number,
+                nullable: true,
+                description: "Rate from the trade's currency to the account's currency stored on the trade, such as one reported by the provider. Null when none is stored."
+              },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
                 type: :object,

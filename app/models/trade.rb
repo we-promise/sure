@@ -38,6 +38,14 @@ class Trade < ApplicationRecord
     extra&.dig("exchange_rate")
   end
 
+  # The stored exchange rate as a finite, positive number, or nil when none is
+  # stored or the stored value is not one. The API and the data export read
+  # this, so a malformed value written straight into extra cannot break them.
+  def numeric_exchange_rate
+    rate = Float(exchange_rate, exception: false)
+    rate if rate&.finite? && rate.positive?
+  end
+
   def exchange_rate=(value)
     if value.blank?
       self.extra = (extra || {}).merge("exchange_rate" => nil, "exchange_rate_invalid" => false)

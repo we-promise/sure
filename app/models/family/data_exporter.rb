@@ -413,6 +413,12 @@ class Family::DataExporter
           merchant_id: transaction.merchant_id,
           tag_ids: transaction.tag_ids,
           kind: transaction.kind,
+          # Safe reads of what importers keep in extra; the payload itself is
+          # not exported.
+          investment_activity_label: transaction.investment_activity_label,
+          provider_type: transaction.provider_type,
+          security_id: transaction.activity_security_id,
+          exchange_rate: transaction.numeric_exchange_rate,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
@@ -472,6 +478,9 @@ class Family::DataExporter
             price: trade.price,
             amount: trade.entry.amount,
             currency: trade.currency,
+            fee: trade.fee,
+            investment_activity_label: trade.investment_activity_label,
+            exchange_rate: trade.numeric_exchange_rate,
             created_at: trade.created_at,
             updated_at: trade.updated_at
           }

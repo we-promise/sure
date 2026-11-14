@@ -1291,6 +1291,86 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports trade fee, activity label and stored exchange rate in NDJSON" do
+    investment_account = @family.accounts.create!(
+      name: "Tax Investment Account",
+      accountable: Investment.new,
+      balance: 10_000,
+      currency: "EUR"
+    )
+    security = Security.create!(ticker: "TAX#{SecureRandom.hex(3).upcase}", name: "Tax Export Security")
+    entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: 1002.5,
+      name: "Buy",
+      currency: "USD",
+      entryable: Trade.new(
+        security: security,
+        qty: 10,
+        price: 100,
+        fee: 2.5,
+        currency: "USD",
+        investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 0.92, "ibkr" => { "account_id" => "U1234567" } }
+      )
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      trade_data = records.find { |record| record["type"] == "Trade" && record.dig("data", "id") == entry.entryable.id }["data"]
+
+      assert_equal "2.5", BigDecimal(trade_data["fee"].to_s).to_s("F")
+      assert_equal "Buy", trade_data["investment_activity_label"]
+      assert_equal 0.92, trade_data["exchange_rate"]
+      assert_not trade_data.key?("extra")
+      assert_not_includes zip.read("all.ndjson"), "U1234567"
+    end
+  end
+
+  test "exports transaction activity label and safe provider fields in NDJSON" do
+    security = Security.create!(ticker: "WHX#{SecureRandom.hex(3).upcase}", name: "Withholding Export Security")
+    entry = @account.entries.create!(
+      date: Date.parse("2024-05-21"),
+      amount: 1.5,
+      name: "Withholding Tax",
+      currency: "USD",
+      source: "ibkr",
+      entryable: Transaction.new(
+        investment_activity_label: "Dividend",
+        extra: {
+          "exchange_rate" => 0.93,
+          "security_id" => security.id,
+          "ibkr" => { "type" => "Withholding Tax", "conid" => "CONID-SECRET-2" }
+        }
+      )
+    )
+    plain_entry = @account.entries.create!(
+      date: Date.parse("2024-05-22"),
+      amount: 10,
+      name: "Plain",
+      currency: "USD",
+      entryable: Transaction.new
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      transaction_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == entry.entryable.id }["data"]
+      plain_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == plain_entry.entryable.id }["data"]
+
+      assert_equal "Dividend", transaction_data["investment_activity_label"]
+      assert_equal "Withholding Tax", transaction_data["provider_type"]
+      assert_equal security.id, transaction_data["security_id"]
+      assert_equal 0.93, transaction_data["exchange_rate"]
+      assert_not transaction_data.key?("extra")
+      assert_not_includes zip.read("all.ndjson"), "CONID-SECRET-2"
+
+      %w[investment_activity_label provider_type security_id exchange_rate].each do |field|
+        assert plain_data.key?(field)
+        assert_nil plain_data[field]
+      end
+    end
+  end
+
   private
 
     def create_transaction_entry(account, amount:, date:, name:)

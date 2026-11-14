@@ -1451,6 +1451,60 @@ end
     assert_equal false, row["excluded"]
   end
 
+  test "show exposes the activity label and the safe provider fields, not the raw extra" do
+    security = Security.create!(ticker: "WHT#{SecureRandom.hex(2).upcase}", name: "Withholding Security", country_code: "US")
+    entry = create_transaction(
+      account: @account,
+      amount: 1.5,
+      name: "Withholding Tax for WHT",
+      source: "ibkr",
+      external_id: "ibkr_cash_#{SecureRandom.hex(4)}",
+      entryable: Transaction.new(
+        investment_activity_label: "Dividend",
+        extra: {
+          "exchange_rate" => 0.9215,
+          "security_id" => security.id,
+          "ibkr" => { "type" => "Withholding Tax", "conid" => "CONID-SECRET-1", "account_id" => "U7654321" }
+        }
+      )
+    )
+
+    get api_v1_transaction_url(entry.entryable), headers: api_headers(@read_only_api_key)
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    assert_equal "Dividend", body["investment_activity_label"]
+    assert_equal "Withholding Tax", body["provider_type"]
+    assert_equal security.id, body["security_id"]
+    assert_equal 0.9215, body["exchange_rate"]
+    assert_not body.key?("extra")
+    assert_not_includes response.body, "CONID-SECRET-1"
+    assert_not_includes response.body, "U7654321"
+  end
+
+  test "index returns null tax fields for a plain transaction and ignores a provider payload that is not a hash" do
+    entry = create_transaction(
+      account: @account,
+      name: "Plain row",
+      source: "plaid",
+      entryable: Transaction.new
+    )
+    # Written past validation, as a provider writing extra directly might.
+    entry.entryable.update_column(:extra, { "plaid" => "raw-string-payload", "security" => "raw-string-security", "exchange_rate" => "not-a-number" })
+
+    get api_v1_transactions_url, params: { account_id: @account.id, per_page: 100 }, headers: api_headers(@read_only_api_key)
+    assert_response :success
+
+    txn_json = JSON.parse(response.body)["transactions"].find { |txn| txn["id"] == entry.entryable.id }
+    assert txn_json
+    %w[investment_activity_label provider_type security_id exchange_rate].each do |field|
+      assert txn_json.key?(field), "expected #{field} in the response"
+      assert_nil txn_json[field], "expected #{field} to be null"
+    end
+    assert_not_includes response.body, "raw-string-payload"
+    assert_not_includes response.body, "raw-string-security"
+  end
+
   private
 
     def foreign_category

@@ -77,6 +77,10 @@ A transaction response includes:
   "kind": "standard",
   "excluded": false,
   "split_parent": false,
+  "investment_activity_label": null,
+  "provider_type": null,
+  "security_id": null,
+  "exchange_rate": null,
   "account": {
     "id": "uuid",
     "name": "Checking Account",
@@ -116,6 +120,17 @@ A transaction response includes:
 | `kind` | One of `standard`, `funds_movement`, `cc_payment`, `loan_payment`, `one_time`, `investment_contribution`. Budgets and reports count `loan_payment` as an expense whatever the sign of its amount, and leave `funds_movement`, `cc_payment` and `one_time` out. `investment_contribution` also counts as an expense when the family counts investment contributions as spending (the default); when that setting is off it is reported as invested and left out of spending and income. `classification` only follows the amount's sign. |
 | `excluded` | `true` when the transaction is left out of budget and report totals. |
 | `split_parent` | `true` when the transaction has been split. Splitting a transaction marks it excluded, and its split children carry the amount. |
+
+### Investment activity and provider fields
+
+These are `null` on most transactions. They are set on brokerage cash rows, such as dividends, interest, fees and withholding tax, by the providers that record them.
+
+| Field | Description |
+| --- | --- |
+| `investment_activity_label` | The investment activity of the row, such as `Dividend`, `Interest` or `Fee`. |
+| `provider_type` | The importing provider's own type for the row, for example `"Withholding Tax"`. Use it to tell rows apart that share a label. Only this value is exposed; the provider's raw payload is not. |
+| `security_id` | The security the row relates to, such as the one that paid a dividend. Look it up with `GET /api/v1/securities/{id}`. |
+| `exchange_rate` | The rate from the transaction's currency to the account's currency stored on the row, such as one reported by the provider. |
 
 ### Linking to a transaction
 

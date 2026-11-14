@@ -35,6 +35,14 @@ class Transaction < ApplicationRecord
     extra&.dig("exchange_rate")
   end
 
+  # The stored exchange rate as a finite, positive number, or nil when none is
+  # stored or the stored value is not one. The API and the data export read
+  # this, so a malformed value written straight into extra cannot break them.
+  def numeric_exchange_rate
+    rate = Float(exchange_rate, exception: false)
+    rate if rate&.finite? && rate.positive?
+  end
+
   def exchange_rate=(value)
     if value.blank?
       self.extra = (extra || {}).merge("exchange_rate" => nil, "exchange_rate_invalid" => false)
@@ -448,7 +456,22 @@ class Transaction < ApplicationRecord
   end
 
   def activity_security_id
-    extra&.dig("security_id").presence || extra&.dig("security", "id").presence
+    return nil unless extra.is_a?(Hash)
+
+    nested_security = extra["security"]
+    extra["security_id"].presence || (nested_security["id"].presence if nested_security.is_a?(Hash))
+  end
+
+  # The provider's own type for this row, such as IBKR's "Withholding Tax",
+  # read from extra[<entry source>]["type"] where importers keep it. Only this
+  # string is exposed; the rest of the provider payload stays internal.
+  def provider_type
+    source = entry&.source
+    return nil if source.blank? || !extra.is_a?(Hash)
+
+    payload = extra[source]
+    type = payload["type"] if payload.is_a?(Hash)
+    type.presence if type.is_a?(String)
   end
 
   def activity_security

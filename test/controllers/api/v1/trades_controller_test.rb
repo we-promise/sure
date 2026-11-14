@@ -1093,6 +1093,55 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert trade_data.key?("notes")
   end
 
+  test "show exposes the fee and the exchange rate stored on the trade" do
+    security = Security.create!(ticker: "TAXF", name: "Tax Fields Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 1001.25,
+      name: "Buy TAXF",
+      currency: "USD",
+      entryable: Trade.new(
+        security: security,
+        qty: 10,
+        price: 100,
+        fee: 1.2534,
+        currency: "USD",
+        investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 0.9123, "provider_raw" => { "account_number" => "U1234567" } }
+      )
+    )
+
+    get api_v1_trade_url(entry.entryable), headers: api_headers(read_only_api_key)
+    assert_response :success
+
+    body = JSON.parse(response.body)
+    assert_equal "1.2534", body["fee_decimal"]
+    assert_equal Money.new(BigDecimal("1.2534"), "USD").format, body["fee"]
+    assert_equal 0.9123, body["exchange_rate"]
+    assert_not body.key?("extra")
+    assert_not_includes response.body, "U1234567"
+  end
+
+  test "index returns a zero fee and a null exchange rate when the trade has none" do
+    security = Security.create!(ticker: "TAXN", name: "No Rate Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 500,
+      name: "Buy TAXN",
+      currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+
+    get api_v1_trades_url, params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
+    assert_response :success
+
+    trade_json = JSON.parse(response.body)["trades"].find { |trade| trade["id"] == entry.entryable.id }
+    assert trade_json
+    assert_equal "0.0", trade_json["fee_decimal"]
+    assert trade_json.key?("exchange_rate")
+    assert_nil trade_json["exchange_rate"]
+  end
+
   private
 
     def category_ids_from_every_source
