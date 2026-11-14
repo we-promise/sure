@@ -100,12 +100,48 @@ class RecurringTransaction::PriceChangeDetectorTest < ActiveSupport::TestCase
       "the entry on the change must be the confirmed settlement's"
   end
 
+  test "only the two most recent paid occurrences of each series count" do
+    series = create_series(amount: 79.99, manual: false)
+    settle(series, 2.months.ago.to_date, 50)
+    settle(series, 1.month.ago.to_date, 94.99)
+    settle(series, Date.current, 94.99)
+
+    assert_equal 1, @detector.detect!
+    assert_equal 94.99, series.reload.amount
+  end
+
+  test "occurrence lookups do not grow with the number of series" do
+    # Distinct names: series sharing account, name and amount violate the
+    # recurring_transactions dedup unique index.
+    2.times do |i|
+      series = create_series(amount: 79.99, manual: false, name: "SERVICE #{i}")
+      settle(series, (i + 1).months.ago.to_date, 79.99)
+      settle(series, Date.current - i, 79.99)
+    end
+    baseline = count_queries { @detector.detect! }
+
+    3.times do |i|
+      series = create_series(amount: 79.99, manual: false, name: "SERVICE #{i + 2}")
+      settle(series, (i + 3).months.ago.to_date, 79.99)
+      settle(series, Date.current - i - 3, 79.99)
+    end
+
+    assert_equal baseline, count_queries { @detector.detect! }
+  end
+
   private
-    def create_series(amount:, manual:)
+    def count_queries(&block)
+      count = 0
+      counter = ->(*, payload) { count += 1 unless payload[:name].in?(%w[SCHEMA TRANSACTION]) }
+      ActiveSupport::Notifications.subscribed(counter, "sql.active_record", &block)
+      count
+    end
+
+    def create_series(amount:, manual:, name: "FIBER INTERNET")
       due = Date.current + 20
 
       @family.recurring_transactions.create!(
-        name: "FIBER INTERNET",
+        name: name,
         account: @account,
         amount: amount,
         currency: "USD",
