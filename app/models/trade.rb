@@ -88,10 +88,24 @@ class Trade < ApplicationRecord
     Trend.new(current: current_value, previous: cost_basis)
   end
 
+  # Set by callers that list many disposals, so calculate_realized_gain_loss
+  # reads one preloaded set per account instead of querying holdings per
+  # trade. An empty array is authoritative: it means "preloaded, and there
+  # are none", not "not preloaded".
+  #
+  # Written out rather than attr_writer because realized_gain_loss memoises
+  # on first call: a trade measured before its holdings arrived would keep the
+  # figure it derived without them.
+  def preloaded_holdings=(value)
+    @preloaded_holdings = value
+    remove_instance_variable(:@realized_gain_loss) if defined?(@realized_gain_loss)
+  end
+
   # Set by callers that list many disposals, so the proceeds conversion below
   # reads one preloaded set instead of a query per foreign disposal. Keyed
   # `[from, to, date]`.
   #
+  # A key present with nil means the rate was looked for and does not exist.
   # NOT authoritative when a key is absent, unlike preloaded_holdings: a caller
   # that preloads rates without preloading holdings leaves the basis side
   # unknowable without a query, so the preload keys it on the account's
@@ -141,6 +155,8 @@ class Trade < ApplicationRecord
         date: wanted.map(&:third).uniq
       )
       .to_h { |rate| [ [ rate.from_currency, rate.to_currency, rate.date ], rate.rate ] }
+
+    wanted.each { |key| rates[key] = nil unless rates.key?(key) }
 
     trades.each { |trade| trade.preloaded_exchange_rates = rates }
   end
@@ -215,9 +231,10 @@ class Trade < ApplicationRecord
 
       holding = basis_holding
 
-      return nil unless holding&.avg_cost
+      avg_cost = holding&.avg_cost
+      return nil unless avg_cost
 
-      cost_basis = holding.avg_cost * qty.abs
+      cost_basis = avg_cost * qty.abs
       # A disposal's fee is what selling cost, so it comes off the proceeds.
       sale_proceeds = converted_to_basis_currency(price_money * qty.abs - fee_money, cost_basis.currency)
 
@@ -247,28 +264,25 @@ class Trade < ApplicationRecord
     # the rate, and its absence is a fact to report rather than a 1.0 nobody
     # can see.
     #
-    # A rate that is present but not positive is absent for this purpose.
-    # `ExchangeRate` validates presence only -- neither the model nor the
-    # column requires a positive number -- so a provider or an import can leave
-    # a 0 behind, and multiplying by it books the disposal as a total loss the
-    # user never made. A negative one is worse: it flips the sign. Both are the
-    # missing-rate case wearing a number, and reporting no figure is the whole
-    # point of the paragraph above.
+    # A rate that is present but not positive is absent for this purpose. The
+    # table refuses one, but a preloaded map is handed in. Multiplying by 0
+    # books the disposal as a total loss the user never made, and a negative
+    # flips the sign.
     def converted_to_basis_currency(proceeds, basis_currency)
       from = proceeds.currency.iso_code
       to = basis_currency.iso_code
       return proceeds if from == to
 
-      rate = preloaded_rate(from, to) ||
-             ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
+      rate = exchange_rate_on_entry_date(from, to)
       return nil unless rate.to_d.positive?
 
       Money.new(proceeds.amount * rate, to)
     end
 
-    def preloaded_rate(from, to)
-      return nil unless defined?(@preloaded_exchange_rates)
+    def exchange_rate_on_entry_date(from, to)
+      key = [ from, to, entry.date ]
+      return @preloaded_exchange_rates[key] if @preloaded_exchange_rates&.key?(key)
 
-      (@preloaded_exchange_rates || {})[[ from, to, entry.date ]]
+      ExchangeRate.find_by(from_currency: from, to_currency: to, date: entry.date)&.rate
     end
 end

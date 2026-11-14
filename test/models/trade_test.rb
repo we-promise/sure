@@ -101,11 +101,10 @@ class TradeTest < ActiveSupport::TestCase
       create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
     end
 
-    # The ivar directly, as ReportsController does on this branch -- there is
-    # no public writer for it upstream yet. Outside the capture on purpose: the
-    # cost being counted is the rates', not the holdings'.
+    # Outside the capture on purpose: the cost being counted is the rates', not
+    # the holdings'.
     holdings = account.holdings.to_a
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+    trades.each { |trade| trade.preloaded_holdings = holdings }
 
     queries = capture_sql_queries do
       Trade.preload_exchange_rates(trades)
@@ -115,6 +114,44 @@ class TradeTest < ActiveSupport::TestCase
     assert_equal 1, queries.size,
                  "four disposals on four dates cost one rate query, not one each"
     assert_equal [ BigDecimal(250) ] * 4, trades.map { |t| t.realized_gain_loss.value.amount }
+  end
+
+  # A date with no rate is an answer too, so it costs no lookup of its own.
+  test "preloading answers a disposal whose date has no rate without a lookup of its own" do
+    account, security = cross_currency_account
+
+    trades = (0..3).map do |offset|
+      date = Date.new(2026, 3, 10) + offset
+      account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                               amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+      create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
+    end
+
+    holdings = account.holdings.to_a
+    trades.each { |trade| trade.preloaded_holdings = holdings }
+
+    queries = capture_sql_queries do
+      Trade.preload_exchange_rates(trades)
+      trades.each { |trade| trade.realized_gain_loss }
+    end.grep(/exchange_rates/)
+
+    assert_equal 1, queries.size, "four disposals with no rate cost one query, not five"
+    assert_equal [ nil ] * 4, trades.map(&:realized_gain_loss)
+  end
+
+  # The other side of that answer: a pair the preload never asked about is not
+  # known to be missing, so it still takes its single lookup.
+  test "a disposal whose pair the preload did not ask about still takes its lookup" do
+    account, security = cross_currency_account
+    date = Date.new(2026, 3, 10)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "GBP", date: date, rate: 0.8)
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                             amount: BigDecimal(750), currency: "GBP", cost_basis: 100)
+    trade = create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR").entryable
+
+    Trade.preload_exchange_rates([ trade ])
+
+    assert_equal BigDecimal(40), trade.realized_gain_loss.value.amount
   end
 
   # The preload keys its basis side on the ACCOUNT's currency; the conversion
@@ -135,7 +172,7 @@ class TradeTest < ActiveSupport::TestCase
     end
 
     holdings = account.holdings.to_a
-    trades.each { |trade| trade.instance_variable_set(:@preloaded_holdings, holdings) }
+    trades.each { |trade| trade.preloaded_holdings = holdings }
 
     queries = capture_sql_queries do
       Trade.preload_exchange_rates(trades)
@@ -240,6 +277,22 @@ class TradeTest < ActiveSupport::TestCase
     trade.reload
 
     assert_equal BigDecimal("1.1234567890"), trade.price
+  end
+
+  # realized_gain_loss memoises on first call, so a trade measured before its
+  # holdings arrived would keep the figure it derived without them. The writer
+  # clears that memo; attr_writer would not, and the stale nil would stand.
+  test "assigning preloaded holdings re-derives a realised figure already taken" do
+    account, security = position_with_known_cost_basis
+    sell = build_negative_trade(account, security, label: "Sell")
+
+    sell.preloaded_holdings = []
+    assert_nil sell.realized_gain_loss, "an empty preload is authoritative: no holding, no basis"
+
+    sell.preloaded_holdings = account.holdings.to_a
+
+    assert_equal BigDecimal(80), sell.realized_gain_loss.value.amount,
+                 "40 sold at 3 against a basis of 1: the second assignment must be read"
   end
 
   test "a transfer out realises nothing, however it is priced" do
