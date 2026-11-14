@@ -107,7 +107,7 @@ class AccountsController < ApplicationController
       Account::ReconciliationIndicator.for_accounts([ @account ])[@account.id]
     end
     @q = activity_search_params
-    entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
+    entries = @account.entries.excluding_split_parents.excluding_cash_anchors.search(@q, family).reverse_chronological.includes(:entryable)
     if statement_tab_active?
       build_statement_tab_data
       return render_statement_tab_frame if statement_tab_frame_request?

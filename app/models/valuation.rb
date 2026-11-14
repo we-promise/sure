@@ -4,7 +4,8 @@ class Valuation < ApplicationRecord
   enum :kind, {
     reconciliation: "reconciliation",
     opening_anchor: "opening_anchor",
-    current_anchor: "current_anchor"
+    current_anchor: "current_anchor",
+    cash_anchor: "cash_anchor"
   }, validate: true, default: "reconciliation"
 
   class << self
