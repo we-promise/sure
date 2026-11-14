@@ -74,7 +74,10 @@ RSpec.describe 'API V1 Budget Categories', type: :request do
                 description: 'Items per page (default: 25, max: 100)'
       parameter name: :budget_id, in: :query, required: false,
                 schema: { type: :string, format: :uuid },
-                description: 'Filter by budget ID'
+                description: 'Filter by budget ID. Listing one budget also returns each line\'s ' \
+                             'actual_spending, rolled_over_amount and available_to_spend. For the household ' \
+                             'budget or your own, it first adds lines for categories created after the ' \
+                             'budget, as opening it on the web does.'
       parameter name: :category_id, in: :query, required: false,
                 schema: { type: :string, format: :uuid },
                 description: 'Filter by category ID'
