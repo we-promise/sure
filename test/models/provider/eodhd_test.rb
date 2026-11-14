@@ -227,7 +227,8 @@ class Provider::EodhdTest < ActiveSupport::TestCase
       result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
       assert_not result.success?
     end
-    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+    # The refused (403) call is counted as one request, not ten
+    assert_equal 1, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
 
   test "fetch_security_info retries after a transient failure" do
@@ -292,5 +293,55 @@ class Provider::EodhdTest < ActiveSupport::TestCase
         start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
       ).success?
     end
+  end
+
+  test "fundamentals refused by the plan do not use up the day's price requests" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    prices = mock
+    prices.stubs(:body).returns([ { "date" => "2026-08-21", "close" => 1.0 } ].to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).raises(Faraday::ForbiddenError.new("403")).then
+      .raises(Faraday::ForbiddenError.new("403")).then.returns(prices)
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+      assert_not @provider.fetch_security_info(symbol: "MSFT", exchange_operating_mic: "XNYS").success?
+      assert_equal 2, Rails.cache.read("eodhd:daily:#{Date.current}")
+
+      assert @provider.fetch_security_prices(
+        symbol: "AAPL", exchange_operating_mic: "XNYS",
+        start_date: Date.new(2026, 8, 21), end_date: Date.new(2026, 8, 21)
+      ).success?
+    end
+  end
+
+  test "a fundamentals lookup for an unknown ticker still counts as ten requests" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).once.raises(Faraday::ResourceNotFound.new("404"))
+
+    assert_not @provider.fetch_security_info(symbol: "NOPE", exchange_operating_mic: "XNYS").success?
+    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+  end
+
+  test "taking a refused request back off the count never makes it negative" do
+    store = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(store)
+    key = "eodhd:daily:#{Date.current}"
+    store.write(key, 15)
+    # The counter is evicted (or the cache cleared) between the increment and the refund
+    original_decrement = store.method(:decrement)
+    store.define_singleton_method(:decrement) do |name, amount = 1, **options|
+      delete(name)
+      original_decrement.call(name, amount, **options)
+    end
+    @provider.stubs(:throttle_request)
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+    end
+    assert_equal 0, store.read(key).to_i
   end
 end

@@ -189,8 +189,13 @@ class Provider::Eodhd < Provider
 
         parsed = JSON.parse(response.body)
         check_api_error!(parsed)
-      rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error
+      rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error => e
         Rails.cache.write(failed_key, true, expires_in: 7.days)
+        # EODHD documents that a lookup for an unknown ticker (404) is billed at its
+        # full price, but not whether a request the plan does not include (403, e.g.
+        # fundamentals on the free plan) is. Count it as one request rather than ten:
+        # under-counting a refused call is safer than refusing the day's prices.
+        refund_daily_requests(FUNDAMENTALS_REQUEST_COST - 1) if e.is_a?(Faraday::ForbiddenError)
         raise
       end
 
@@ -325,13 +330,23 @@ class Provider::Eodhd < Provider
     # Uses atomic increment-then-check to avoid TOCTOU races between concurrent workers.
     # `cost` is how many API calls EODHD bills for the request. A refused request is
     # taken back off the count, so a refused fundamentals call leaves the rest for prices.
+    # Between the increment and the refund a concurrent request sees the higher count and
+    # may be refused although it would fit; that costs it one retry on the next sync.
     def enforce_daily_limit!(cost: 1)
       new_count = Rails.cache.increment(daily_cache_key, cost, expires_in: 24.hours).to_i
 
       if new_count > max_requests_per_day
-        Rails.cache.decrement(daily_cache_key, cost)
+        refund_daily_requests(cost)
         raise RateLimitError, "EODHD daily rate limit of #{max_requests_per_day} requests exhausted"
       end
+    end
+
+    # Takes requests back off today's count. If the counter vanished in the meantime
+    # (evicted, or the cache cleared), the decrement recreates it below zero; put it
+    # back to zero so it does not hand out free requests.
+    def refund_daily_requests(amount)
+      count = Rails.cache.decrement(daily_cache_key, amount, expires_in: 24.hours).to_i
+      Rails.cache.increment(daily_cache_key, -count, expires_in: 24.hours) if count.negative?
     end
 
     # throttle_request and min_request_interval provided by RateLimitable
