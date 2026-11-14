@@ -2739,6 +2739,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.jsonb "data"
     t.string "error"
     t.datetime "failed_at"
+    t.datetime "last_attempted_at"
     t.boolean "full_resync_requested", default: false, null: false
     t.uuid "parent_id"
     t.datetime "pending_at"
