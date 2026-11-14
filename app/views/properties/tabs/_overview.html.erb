@@ -39,12 +39,12 @@
     <% foreign = account.currency != account.family.currency %>
     <div class="contents" data-testid="purchase-costs">
       <% costs = account.property.purchase_costs_for(Current.user) %>
-      <%= summary_card title: t(foreign ? ".purchase_costs_in_currency" : ".purchase_costs", currency: account.family.currency) do %>
+      <% cost_link = link_to t(".cost_transactions", count: account.property.cost_entries_for(Current.user).count, tag: cost_tag.name),
+                             transactions_path(q: { tags: [ cost_tag.name ] }),
+                             class: "block text-sm text-secondary hover:underline",
+                             data: { turbo_frame: "_top" } %>
+      <%= summary_card title: t(foreign ? ".purchase_costs_in_currency" : ".purchase_costs", currency: account.family.currency), footer: cost_link do %>
         <%= costs ? format_money(costs) : t(".rate_unavailable") %>
-        <%= link_to t(".cost_transactions", count: account.property.cost_entries_for(Current.user).count, tag: cost_tag.name),
-                    transactions_path(q: { tags: [ cost_tag.name ] }),
-                    class: "block text-sm font-normal text-secondary hover:underline",
-                    data: { turbo_frame: "_top" } %>
       <% end %>
 
       <%= summary_card title: t(foreign ? ".cost_basis_in_currency" : ".cost_basis", currency: account.family.currency) do %>

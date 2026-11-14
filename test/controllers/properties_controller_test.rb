@@ -951,6 +951,8 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       assert_select "h4", text: "Purchase costs"
       assert_select "*", text: /\$10,000/
       assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
+      # Outside the blurred value, so privacy mode leaves the link clickable.
+      assert_select ".privacy-sensitive a", count: 0
       assert_select "*", text: /\$510,000/
       assert_select "span", text: /\$40,000/
       assert_select "span", text: "(7.8%)"
