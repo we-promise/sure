@@ -213,58 +213,11 @@ class PdfImport < Import
     end
   end
 
-  def process_with_ai
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # process_pdf (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_no_pdf_support") unless provider.supports_pdf_processing?
+  # Reads the PDF with the first model in extract_pdf's route and records its summary and type.
+  def process_with_ai = ai_processor.process
 
-    response = provider.process_pdf(
-      pdf_content: pdf_file_content,
-      family: family
-    )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown PDF processing error"
-      raise Provider::Error, error_message
-    end
-
-    result = response.data
-    update!(
-      ai_summary: result.summary,
-      document_type: result.document_type
-    )
-
-    result
-  end
-
-  def extract_transactions
-    return unless statement_with_transactions?
-
-    # Honors Setting.llm_provider (issue #2113) — Provider::Anthropic implements
-    # extract_bank_statement (PR #1985).
-    provider = Provider::Registry.preferred_llm_provider
-    raise Provider::Error, I18n.t("imports.pdf_import.errors.provider_not_configured") unless provider
-
-    response = provider.extract_bank_statement(
-      pdf_content: pdf_file_content,
-      family: family
-    )
-
-    unless response.success?
-      error_message = response.error&.message || "Unknown extraction error"
-      raise Provider::Error, error_message
-    end
-
-    # BankStatementExtractor returns symbol keys, but every reader here (and in
-    # generate_rows_from_extracted_data) digs with strings. jsonb keeps the hash
-    # exactly as assigned until the record is reloaded, so without this the
-    # in-memory read comes back empty and the import produces no rows at all.
-    data = response.data.deep_stringify_keys
-    update!(extracted_data: data)
-    data
-  end
+  # Extracts a statement's transactions into extracted_data. Nil for other document types.
+  def extract_transactions = ai_processor.extract_transactions
 
   def bank_statement?
     document_type == "bank_statement"
@@ -454,6 +407,7 @@ class PdfImport < Import
   end
 
   private
+    def ai_processor = PdfImport::AiProcessor.new(self)
 
     # A statement's posting date routinely differs by a day or two from the date
     # a provider recorded for the same transaction, so matching allows a small

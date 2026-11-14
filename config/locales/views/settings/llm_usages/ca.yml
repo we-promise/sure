@@ -3,9 +3,6 @@ ca:
   settings:
     llm_usages:
       show:
-        avg_cost_per_request: Cost mitjà/sol·licitud
-        based_on_requests: Basat en %{with_cost} de %{total} sol·licituds amb dades
-          de cost
         col_cost: Cost
         col_date: Data
         col_model: Model
@@ -26,5 +23,7 @@ ca:
         start_date: Data d'inici
         subtitle: Fes el seguiment del teu ús d'IA i els costos estimats
         total_cost: Cost total
-        total_requests: Total de sol·licituds
+        total_calls: "Total de crides"
+        avg_cost_per_call: "Cost mitjà/crida"
+        based_on_calls: "Basat en %{with_cost} de %{total} crides amb dades de cost"
         total_tokens: Total de tokens

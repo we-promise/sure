@@ -94,6 +94,9 @@ class Provider::Openai < Provider
     {}
   end
 
+  # The model a call uses when it doesn't name one.
+  attr_reader :default_model
+
   # Builds a client that uses the effective request timeout for every OpenAI call.
   # Static extra headers from OPENAI_EXTRA_HEADERS are attached at construction;
   # session-valued headers are withheld for per-request resolution.
@@ -113,7 +116,9 @@ class Provider::Openai < Provider
     static_headers = parsed_headers.except(*@session_extra_headers.keys)
     client_options[:extra_headers] = static_headers if static_headers.present?
 
-    @client = ::OpenAI::Client.new(**client_options)
+    # The proxy and TLS settings come from Ai::Transport::Http, the one resolver every AI client
+    # uses (loopback never proxied, HTTPS_PROXY then HTTP_PROXY, NO_PROXY with CIDR blocks).
+    @client = ::OpenAI::Client.new(**client_options, &Ai::Transport::Http.faraday_options(llm_uri_base || Ai::Transport::Http::OPENAI_BASE))
     @uri_base = llm_uri_base
     if custom_provider? && llm_model.blank?
       raise Error, "Model is required when using a custom OpenAI‑compatible provider"

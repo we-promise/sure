@@ -633,16 +633,13 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     rule = rules(:one)
     rule.actions.create!(action_type: "auto_categorize")
     @user.family.update!(categorization_provider: "jev")
-    # The general stub catches the :openai lookup preferred_llm_provider makes;
-    # the specific one wins for :jev.
-    Provider::Registry.stubs(:get_provider).returns(nil)
-    Provider::Registry.stubs(:get_provider).with(:jev).returns(Provider::Jev.allocate)
-    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+    # The family's plan starts at Jev, so the estimate names Jev's model, not the LLM after it.
+    use_ai_routes(categorize: %w[jev/jev-latest openai/gpt-4.1-mini])
 
     get confirm_rule_url(rule)
 
     assert_response :success
-    assert_match "~typesafe/jev-latest", response.body
+    assert_match "jev-latest", response.body
   end
 
   test "confirm says the active rules above run first" do

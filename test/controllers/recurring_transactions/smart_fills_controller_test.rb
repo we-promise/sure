@@ -7,6 +7,7 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     sign_in @user = users(:family_admin)
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family = @user.family
+    use_ai_routes
     @entry = accounts(:depository).entries.create!(
       date: Date.current, amount: 40, currency: "USD", name: "GYM MEMBERSHIP",
       entryable: Transaction.new
@@ -56,21 +57,32 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
       { count: 1 }, "the entry's own prefill must survive a failed suggestion"
   end
 
-  test "forbidden without an LLM provider" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+  test "sent back with the reason when no model is set up for bills" do
+    use_no_ai
 
     post smart_fill_recurring_transactions_url(entry_id: @entry.id)
 
-    assert_response :forbidden
+    assert_redirected_to root_path
+    assert_equal Ai::Availability.unavailable(:bill_setup, :not_configured).message_for(@user), flash[:alert]
   end
 
-  test "forbidden without AI consent" do
+  test "sent back without the user's AI switch" do
     stub_provider(raw)
     @user.update!(ai_enabled: false)
 
     post smart_fill_recurring_transactions_url(entry_id: @entry.id)
 
+    assert_redirected_to root_path
+    assert_equal Ai::Availability.unavailable(:bill_setup, :user_disabled).message_for(@user), flash[:alert]
+  end
+
+  test "a JSON request gets the reason" do
+    use_no_ai
+
+    post smart_fill_recurring_transactions_url(entry_id: @entry.id, format: :json)
+
     assert_response :forbidden
+    assert_equal({ "error" => "ai_unavailable", "reason" => "not_configured" }, response.parsed_body)
   end
 
   test "a generic entry name skips ILIKE evidence gathering, using only the picked entry" do

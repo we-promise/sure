@@ -111,42 +111,17 @@ class Assistant::External::Client
       model
     end
 
+    # The proxy comes from Ai::Transport::Http, the one resolver every AI client uses:
+    # HTTPS_PROXY, then HTTP_PROXY, whatever the scheme; NO_PROXY with CIDR blocks; loopback
+    # never proxied. A nil proxy address stops Net::HTTP's own ENV lookup.
     def build_http(uri)
-      proxy_uri = resolve_proxy(uri)
+      proxy_uri = Ai::Transport::Http.net_http_proxy(uri.to_s)
 
-      if proxy_uri
-        http = Net::HTTP.new(uri.host, uri.port, proxy_uri.host, proxy_uri.port, proxy_uri.user, proxy_uri.password)
-      else
-        http = Net::HTTP.new(uri.host, uri.port)
-      end
-
+      http = Net::HTTP.new(uri.host, uri.port, proxy_uri&.host, proxy_uri&.port, proxy_uri&.user, proxy_uri&.password)
       http.use_ssl = (uri.scheme == "https")
       http.open_timeout = TIMEOUT_CONNECT
       http.read_timeout = TIMEOUT_READ
       http
-    end
-
-    def resolve_proxy(uri)
-      proxy_env = (uri.scheme == "https") ? "HTTPS_PROXY" : "HTTP_PROXY"
-      proxy_url = ENV[proxy_env] || ENV[proxy_env.downcase]
-      return nil if proxy_url.blank?
-
-      no_proxy = ENV["NO_PROXY"] || ENV["no_proxy"]
-      return nil if host_bypasses_proxy?(uri.host, no_proxy)
-
-      URI(proxy_url)
-    rescue URI::InvalidURIError => e
-      Rails.logger.warn("[External::Client] Invalid proxy URL ignored: #{e.message}")
-      nil
-    end
-
-    def host_bypasses_proxy?(host, no_proxy)
-      return false if no_proxy.blank?
-      host_down = host.downcase
-      no_proxy.split(",").any? do |pattern|
-        pattern = pattern.strip.downcase.delete_prefix(".")
-        host_down == pattern || host_down.end_with?(".#{pattern}")
-      end
     end
 
     def build_request(uri, messages, user)
