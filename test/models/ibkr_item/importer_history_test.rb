@@ -151,6 +151,51 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "ibkr_trade_901", source: "ibkr")
   end
 
+  test "a row that keeps failing is skipped after repeated syncs and the walk goes on" do
+    bad = %(<CashTransaction type="Deposits/Withdrawals" transactionID="77" amount="100" currency="CHF" fxRateToBase="1" reportDate="2024-06-03" />)
+    Account::ProviderImportAdapter.any_instance.stubs(:import_transaction).raises(ActiveRecord::RecordInvalid.new(Entry.new))
+    provider = history_provider(WINDOW_1 => window_xml(*WINDOW_1, trade_id: "901", nav_date: "2024-06-03", cash_transaction: bad))
+
+    (IbkrItem::Importer::MAX_HISTORY_FAILURES + 2).times { import(provider) }
+
+    assert_equal IbkrItem::Importer::MAX_HISTORY_FAILURES, provider.calls.count(WINDOW_1)
+    assert_equal 1, provider.calls.count(WINDOW_4), "older windows are fetched once the row is skipped: #{provider.calls.inspect}"
+    assert @account.entries.exists?(external_id: "ibkr_trade_901", source: "ibkr"), "the window's other rows are kept"
+    skipped = DebugLogEntry.where(source: "IbkrItem::Importer", provider_key: "ibkr", level: "error").sole
+    assert_includes skipped.message, "cash 77"
+  end
+
+  test "a row that keeps failing in one sub-account holds the others back only until it is skipped" do
+    other_account = families(:dylan_family).accounts.create!(name: "IBKR Retirement", balance: 0, cash_balance: 0, currency: "USD",
+                                                             accountable: Investment.new(subtype: "brokerage"))
+    ibkr_accounts(:secondary_account).ensure_account_provider!(other_account)
+    bad = %(<CashTransaction type="Deposits/Withdrawals" transactionID="77" amount="100" currency="CHF" fxRateToBase="1" reportDate="2024-06-03" />)
+    Account::ProviderImportAdapter.any_instance.stubs(:import_transaction).raises(ActiveRecord::RecordInvalid.new(Entry.new))
+    provider = history_provider(
+      WINDOW_1 => combined_xml(window_xml(*WINDOW_1, cash_transaction: bad),
+                               window_xml(*WINDOW_1, trade_id: "902", nav_date: "2024-06-03", account_id: "U7654321")),
+      WINDOW_2 => combined_xml(window_xml(*WINDOW_2), window_xml(*WINDOW_2, trade_id: "802", nav_date: "2023-06-01", account_id: "U7654321"))
+    )
+
+    import(provider)
+    assert other_account.entries.exists?(external_id: "ibkr_trade_902"), "the other sub-account's rows are imported in the first sync"
+
+    (IbkrItem::Importer::MAX_HISTORY_FAILURES + 1).times { import(provider) }
+
+    assert_equal IbkrItem::Importer::MAX_HISTORY_FAILURES, provider.calls.count(WINDOW_1)
+    assert other_account.entries.exists?(external_id: "ibkr_trade_802"), "the other sub-account walks back too: #{provider.calls.inspect}"
+  end
+
+  test "a window whose XML never parses is skipped after more syncs than a refused one" do
+    bad = window_xml(*WINDOW_1, trade_id: "901", nav_date: "2024-06-03").sub("<OpenPositions />", "<OpenPositions>&</OpenPositions>")
+    provider = history_provider(WINDOW_1 => bad)
+
+    (IbkrItem::Importer::MAX_PARSE_FAILURES + 1).times { import(provider) }
+
+    assert_equal IbkrItem::Importer::MAX_PARSE_FAILURES, provider.calls.count(WINDOW_1)
+    assert_equal 1, provider.calls.count(WINDOW_2), "older windows are fetched once it is skipped: #{provider.calls.inspect}"
+  end
+
   test "the next sync resumes after the last imported window" do
     throttled = Provider::IbkrFlex::ApiError.new("Too many requests", error_code: "1018")
     import(FakeFlex.new(CURRENT => @current, WINDOW_1 => window_xml(*WINDOW_1, nav_date: "2024-06-03"), WINDOW_2 => throttled))
@@ -220,7 +265,7 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
       IbkrItem::Importer.new(@ibkr_item.reload, ibkr_provider: provider).import
     end
 
-    def window_xml(from_date, to_date, trade_id: nil, nav_date: nil, total: "1000.00", cash: nil, cash_transaction: nil)
+    def window_xml(from_date, to_date, trade_id: nil, nav_date: nil, total: "1000.00", cash: nil, cash_transaction: nil, account_id: "U1234567")
       trade = %(<Trade assetCategory="STK" tradeID="#{trade_id}" transactionID="#{trade_id}a" conid="265598" symbol="AAPL" quantity="1" tradePrice="120.00" currency="USD" fxRateToBase="0.90" buySell="BUY" tradeDate="#{nav_date}" ibCommission="-1.00" ibCommissionCurrency="USD" />) if trade_id
       nav = %(<EquitySummaryByReportDateInBase currency="CHF" reportDate="#{nav_date}" total="#{total}" />) if nav_date
       cash_report = %(<CashReport><CashReportCurrency currency="BASE_SUMMARY" endingCash="#{cash}" /><CashReportCurrency currency="CHF" endingCash="#{cash}" /></CashReport>) if cash
@@ -228,8 +273,8 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
       <<~XML
         <FlexQueryResponse queryName="Sure Test" type="AF">
           <FlexStatements count="1">
-            <FlexStatement accountId="U1234567" fromDate="#{from_date.iso8601}" toDate="#{to_date.iso8601}">
-              <AccountInformation accountId="U1234567" currency="CHF" />
+            <FlexStatement accountId="#{account_id}" fromDate="#{from_date.iso8601}" toDate="#{to_date.iso8601}">
+              <AccountInformation accountId="#{account_id}" currency="CHF" />
               #{cash_report}
               <EquitySummaryInBase>#{nav}</EquitySummaryInBase>
               <OpenPositions />
@@ -239,5 +284,11 @@ class IbkrItem::ImporterHistoryTest < ActiveSupport::TestCase
           </FlexStatements>
         </FlexQueryResponse>
       XML
+    end
+
+    # One response holding the statements of several sub-accounts.
+    def combined_xml(first, *others)
+      statements = others.map { |xml| xml[%r{<FlexStatement .*</FlexStatement>}m] }
+      first.sub("</FlexStatements>", "#{statements.join}</FlexStatements>").sub(%(count="1"), %(count="#{others.size + 1}"))
     end
 end
