@@ -368,15 +368,12 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
 
   # Bank sync renders a provider's connection row and drawer from FAMILY_PANELS, which
   # the adapter's declares_connection panel: feeds (the adapter template always writes
-  # it). A connected provider moves under Your connections through its provider_summary
-  # case, and the row's sync status and Sync button read family_panel_items.
+  # it). The same declaration moves a connected provider under Your connections, and
+  # the row's sync status and Sync button read family_panel_items.
   def add_bank_sync_entries
     controller_path = "app/controllers/settings/providers_controller.rb"
     add_bank_sync_entry(controller_path, "family_panel_items", "=> @#{file_name}_items") do |content|
       self.class.append_family_panel_item(content, key: file_name)
-    end
-    add_bank_sync_entry("app/helpers/settings_helper.rb", "provider_summary", "when \"#{file_name}\"") do |content|
-      self.class.append_provider_summary_case(content, key: file_name)
     end
     warn_unless_panel_declared
   end
@@ -643,23 +640,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   # Hands the loaded items to the row's sync status through family_panel_items.
   def self.append_family_panel_item(content, key:)
     append_hash_entry(content, /(def family_panel_items\n[ \t]*\{\n)(.*?)(\n[ \t]*\}\n)/m, key, "@#{key}_items")
-  end
-
-  # Adds a `when "<key>"` branch to SettingsHelper#provider_summary, just before the
-  # `else` that leaves unknown keys under Available.
-  def self.append_provider_summary_case(content, key:)
-    pattern = /(def provider_summary\b.*?\n)([ \t]*)(else\n[ \t]*\{ status: :off \}\n)/m
-    match = content.match(pattern)
-    return nil unless match
-
-    indent = match[2]
-    branch = <<~RUBY.gsub(/^/, indent)
-      when "#{key}"
-        return { status: :off } unless @#{key}_items&.any?
-        sync_based_summary(key)
-    RUBY
-
-    content.sub(pattern) { match[1] + branch + indent + match[3] }
   end
 
   # Appends `"key" => value` to a multi-line hash, lining its arrow up with the last entry's.
