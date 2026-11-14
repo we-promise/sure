@@ -76,4 +76,63 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
     assert_equal providers.chunk_while { |a, b| a == b }.map(&:first).sort,
                  providers.chunk_while { |a, b| a == b }.map(&:first)
   end
+
+  # The Bank sync page and each provider's panel load items with these queries, which
+  # differ per provider and per list: credential filters, select(:id) and preloads.
+  ITEM_LIST_QUERIES = {
+    "akahu"          => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "binance"        => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "brex"           => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered.includes(:syncs, :brex_accounts) } ],
+    "coinbase"       => [ ->(i) { i.ordered }, ->(i) { i.ordered } ],
+    "coinspot"       => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "coinstats"      => [ ->(i) { i.ordered }, ->(i) { i.ordered } ],
+    "enable_banking" => [ ->(i) { i.ordered }, ->(i) { i.ordered } ],
+    "fio"            => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "ibkr"           => [ ->(i) { i.ordered.select(:id) }, ->(i) { i.ordered } ],
+    "indexa_capital" => [ ->(i) { i.ordered.select(:id) }, ->(i) { i.ordered } ],
+    "kraken"         => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "lunchflow"      => [ ->(i) { i.where.not(api_key: [ nil, "" ]).ordered.select(:id) }, ->(i) { i.ordered } ],
+    "mercury"        => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered.includes(:syncs, :mercury_accounts) } ],
+    "monobank"       => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "onchain_wallet" => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "questrade"      => [ ->(i) { i.active.ordered.select(:id) }, ->(i) { i.active.ordered } ],
+    "redbark"        => [ ->(i) { i.where.not(api_key: [ nil, "" ]).ordered.select(:id) }, ->(i) { i.ordered } ],
+    "sharesight"     => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "simplefin"      => [ ->(i) { i.where.not(access_url: [ nil, "" ]).ordered.select(:id) }, ->(i) { i.ordered } ],
+    "snaptrade"      => [ ->(i) { i.ordered }, ->(i) { i.includes(:snaptrade_accounts).ordered } ],
+    "sophtron"       => [ ->(i) { i.where.not(user_id: [ nil, "" ], access_key: [ nil, "" ]).ordered.select(:id) }, ->(i) { i.ordered } ],
+    "trade_republic" => [ ->(i) { i.active.ordered.includes(:trade_republic_accounts) }, ->(i) { i.active.ordered.includes(:trade_republic_accounts) } ],
+    "trading212"     => [ ->(i) { i.ordered }, ->(i) { i.ordered } ],
+    "truelayer"      => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "up"             => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered } ],
+    "wise"           => [ ->(i) { i.active.ordered }, ->(i) { i.active.ordered.includes(:syncs, :wise_accounts) } ]
+  }.freeze
+
+  test "each panel provider declares the queries its Bank sync page and panel load items with" do
+    family = families(:dylan_family)
+    declarations = Provider::Factory.connection_declarations.index_by { |declaration| declaration[:key] }
+
+    assert_equal Settings::ProvidersController::FAMILY_PANEL_KEYS.sort, ITEM_LIST_QUERIES.keys
+    ITEM_LIST_QUERIES.each do |key, (page, panel)|
+      items = family.public_send(declarations.fetch(key)[:association])
+      lists = declarations.fetch(key)[:lists]
+
+      { settings_page: page, settings_panel: panel }.each do |list, query|
+        expected = query.call(items)
+        actual = lists.fetch(list).call(items)
+        assert_equal expected.to_sql, actual.to_sql, "#{key} #{list}"
+        assert_equal expected.includes_values, actual.includes_values, "#{key} #{list} preloads"
+      end
+    end
+  end
+
+  test "a list query may be scope names or a lambda, and an unknown list is rejected" do
+    adapter = Class.new(Provider::Base)
+    adapter.declares_connection(key: "brex", name: "Brex", lists: { settings_page: %i[active ordered] })
+    items = families(:dylan_family).brex_items
+
+    assert_equal items.active.ordered.to_sql, adapter.connection_declaration[:lists][:settings_page].call(items).to_sql
+    assert_equal items.ordered.to_sql, adapter.connection_declaration[:lists][:settings_panel].call(items).to_sql
+    assert_raises(ArgumentError) { adapter.declares_connection(key: "brex", name: "Brex", lists: { settings_pages: %i[ordered] }) }
+  end
 end

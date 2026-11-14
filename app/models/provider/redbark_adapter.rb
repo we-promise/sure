@@ -5,7 +5,8 @@ class Provider::RedbarkAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("RedbarkAccount", self)
   declares_connection key: "redbark", name: "Redbark", panel: true,
-                      metadata: { region: "AU", kinds: %w[Bank], maturity: :beta, logo_text: "RB", logo_color: "#b91c1c", domain: "redbark.com" }
+                      metadata: { region: "AU", kinds: %w[Bank], maturity: :beta, logo_text: "RB", logo_color: "#b91c1c", domain: "redbark.com" },
+                      lists: { settings_page: ->(items) { items.where.not(api_key: [ nil, "" ]).ordered.select(:id) } }
 
   # Define which account types this provider supports
   def self.supported_account_types

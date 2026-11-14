@@ -5,7 +5,11 @@ class Provider::BrexAdapter < Provider::Base
   # Register this adapter with the factory
   Provider::Factory.register("BrexAccount", self)
   declares_connection key: "brex", name: "Brex", panel: true,
-                      metadata: { region: "US", kinds: %w[Bank], maturity: :beta, logo_text: "BX", logo_color: "#059669", domain: "brex.com" }
+                      metadata: { region: "US", kinds: %w[Bank], maturity: :beta, logo_text: "BX", logo_color: "#059669", domain: "brex.com" },
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: ->(items) { items.active.ordered.includes(:syncs, :brex_accounts) }
+                      }
 
   def self.supported_account_types
     %w[Depository CreditCard]

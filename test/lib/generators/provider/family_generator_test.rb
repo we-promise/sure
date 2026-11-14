@@ -299,7 +299,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   test "the generated adapter declares the metadata every provider needs" do
     { banking: %w[Bank], investment: %w[Investment] }.each do |type, kinds|
       adapter = render_adapter(skip_view: false, banking: type == :banking)
-      metadata = eval(adapter[/^\s*metadata: (\{.*\})$/, 1].to_s)
+      metadata = eval(adapter[/^\s*metadata: (\{.*\}),?$/, 1].to_s)
 
       assert_kind_of Hash, metadata, "#{type} adapter has no metadata"
       %i[region kinds maturity logo_text].each { |field| assert metadata[field].present?, "#{type} metadata has no #{field}" }
@@ -333,6 +333,15 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
         assert_includes output, "Bank sync will not list gocardless", "skip_view: #{skip_view}"
         assert_includes output, "metadata: {", "skip_view: #{skip_view}"
       end
+    end
+  end
+
+  # The generated panel counts only connections that have their secret, so the panel
+  # list loads those rather than the default.
+  test "the generated adapter's panel loads only connections that have their secret" do
+    [ false, true ].each do |skip_view|
+      assert_includes render_adapter(skip_view: skip_view),
+                      %(lists: { settings_panel: ->(items) { items.where.not(api_key: [ nil, "" ]) } }\n), "skip_view: #{skip_view}"
     end
   end
 

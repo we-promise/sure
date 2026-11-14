@@ -334,38 +334,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     end
   end
 
-  def update_settings_controller
-    controller_path = "app/controllers/settings/providers_controller.rb"
-    return unless File.exist?(controller_path)
-
-    content = File.read(controller_path)
-
-    # Add instance variable for items
-    items_var = "@#{file_name}_items"
-    unless content.include?(items_var)
-      # Find the last @*_items assignment line and insert after it
-      lines = content.lines
-      last_items_index = nil
-
-      lines.each_with_index do |line, index|
-        if line =~ /@\w+_items = Current\.family\.\w+_items/
-          last_items_index = index
-        end
-      end
-
-      if last_items_index
-        # Get indentation from the found line
-        indentation = lines[last_items_index][/^\s*/]
-        new_line = "#{indentation}#{items_var} = Current.family.#{file_name}_items.ordered.select(:id)\n"
-        lines.insert(last_items_index + 1, new_line)
-        write_file(controller_path, lines.join)
-        say "Added #{items_var} instance variable", :green
-      else
-        say "Could not find existing @*_items assignments, please add manually: #{items_var} = Current.family.#{file_name}_items.ordered.select(:id)", :yellow
-      end
-    end
-  end
-
   # Bank sync lists a provider, with its connection row, summary and sync status, from
   # the adapter's declares_connection panel:, which the adapter template always writes.
   def add_bank_sync_entries
