@@ -20,8 +20,9 @@ class TransfersController < ApplicationController
     @categories = Current.family.categories.alphabetically_by_hierarchy
     @tags = Current.family.tags.alphabetically
 
-    # Whether the current user can hit `mark_as_recurring` (feature flag on)
-    # or switch the investment contribution: both need write access to BOTH
+    # Whether the current user can hit `mark_as_recurring` (feature flag on),
+    # switch the investment contribution or pick the category here: all need
+    # write access to BOTH
     # transfer endpoints. Gating the view controls on this avoids showing a
     # CTA that the controller would reject via `require_account_permission!`
     # for read-only sharers.
@@ -30,6 +31,7 @@ class TransfersController < ApplicationController
     both_endpoints_writable = endpoint_ids.size == 2 && writable_endpoint_count == 2
     @can_mark_as_recurring_transfer = !Current.family.recurring_transactions_disabled? && both_endpoints_writable
     @can_switch_investment_contribution = both_endpoints_writable && @transfer.investment_contribution_switchable?
+    @can_update_transfer_category = both_endpoints_writable && @transfer.categorizable?
   end
 
   def create
@@ -112,7 +114,11 @@ class TransfersController < ApplicationController
       format.turbo_stream do
         # The switch moves the amount in or out of the page's expense totals,
         # which the row replacements in update.turbo_stream would leave stale.
-        if transfer_update_params.key?(:investment_contribution)
+        # Confirming an investment withdrawal makes its cash leg hold the
+        # category, so the transactions list shows that leg instead of the
+        # outflow row those replacements target.
+        if transfer_update_params.key?(:investment_contribution) ||
+            (transfer_update_params[:status] == "confirmed" && @transfer.investment_withdrawal?)
           stream_redirect_to(request.referer.presence || transactions_url)
         end
       end
@@ -391,7 +397,11 @@ class TransfersController < ApplicationController
       # Confirming from the transaction list sends only the status; leave the
       # category and notes alone unless the form actually submitted them.
       if transfer_update_params.key?(:category_id)
-        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+        category_transaction = @transfer.category_transaction
+        category_transaction.update!(category_id: transfer_update_params[:category_id])
+        # Like a category picked from the transaction list, so a provider
+        # sync does not replace it.
+        category_transaction.lock_saved_attributes!
       end
       if transfer_update_params.key?(:notes)
         @transfer.update!(notes: transfer_update_params[:notes])

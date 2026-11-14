@@ -64,10 +64,10 @@ id:
     new:
       new_transaction: Transaksi baru
     transaction_category:
-      set_on_outflow: "Kategori milik sisi keluar dari transfer ini dan hanya dapat diubah di sana"
+      set_on_counterpart: "Kategori milik sisi lain dari transfer ini dan hanya dapat diubah di sana"
     show:
-      category_set_on_hidden_outflow: "Ini adalah sisi masuk dari suatu transfer. Kategorinya milik sisi keluar, pada rekening yang tidak dapat Anda akses, dan hanya dapat diubah di sana."
-      category_set_on_outflow: "Ini adalah sisi masuk dari suatu transfer. Kategorinya milik sisi keluar dan hanya dapat diubah di sana, sehingga anggaran hanya menghitungnya satu kali."
+      category_set_on_hidden_counterpart: "Kategori milik sisi lain dari transfer ini, pada rekening yang tidak dapat Anda akses, dan hanya dapat diubah di sana."
+      category_set_on_counterpart: "Kategori milik sisi lain dari transfer ini dan hanya dapat diubah di sana."
       keep_both: Tidak, simpan keduanya
       loan_payment: Pembayaran Pinjaman
       mark_recurring: Tandai sebagai Berulang

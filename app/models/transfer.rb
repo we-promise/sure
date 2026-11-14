@@ -166,14 +166,36 @@ class Transfer < ApplicationRecord
     true
   end
 
-  # Based on the destination account rather than outflow_transaction.kind,
-  # which can be stale on rows a provider sync overwrote before
+  # Based on the accounts rather than outflow_transaction.kind, which can be
+  # stale on rows a provider sync overwrote before
   # Account::ProviderImportAdapter derived matched legs from their transfer
   # (see Transaction#payment?, which has the same to_account-based reasoning).
   def categorizable?
     return false unless to_account
+    return true if investment_withdrawal?
 
     !Transaction::UNCATEGORIZED_EXCLUDED_KINDS.include?(kind_for_leg(outflow_transaction))
+  end
+
+  # Money returned from an investment or crypto account to a cash account,
+  # e.g. sale proceeds booked on a broker's cash account. It stays a
+  # funds_movement outside budgets and the Uncategorized bucket, but can carry
+  # a category like a contribution in the other direction. Like a
+  # contribution, this holds while an auto-match is still pending, so the
+  # cash leg owns the category from the start and confirming moves nothing.
+  def investment_withdrawal?
+    return false unless from_account && to_account
+
+    investment_account?(from_account) && !investment_account?(to_account) && !to_account.liability?
+  end
+
+  # The leg that holds the category of a categorizable transfer: the cash
+  # side, which budgets and reports count when the transfer counts at all.
+  # That is the outflow, except for an investment withdrawal, where the cash
+  # side is the inflow. The other leg shows this leg's category read-only
+  # (Transaction#category_set_on_transfer_counterpart?).
+  def category_transaction
+    investment_withdrawal? ? inflow_transaction : outflow_transaction
   end
 
   def reject!
@@ -224,6 +246,10 @@ class Transfer < ApplicationRecord
   end
 
   private
+    def investment_account?(account)
+      account.investment? || account.crypto?
+    end
+
     def contribution_by_default?
       to_account.present? && Transfer.kind_for_account(to_account, from_account: from_account) == "investment_contribution"
     end

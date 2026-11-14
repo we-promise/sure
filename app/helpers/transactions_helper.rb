@@ -115,7 +115,7 @@ module TransactionsHelper
   # row fresh:
   #
   # - the records it reads (entry, transaction, tags, merchant, transfer and
-  #   its other leg, whose kind and category an inflow row depends on, the
+  #   its other leg, whose kind and category the row may show read-only, the
   #   security a brokerage activity shows a logo for)
   # - the displayed attributes of the accounts and categories it shows, and
   #   whether an account supports trades (a crypto account's subtype); their
@@ -169,7 +169,7 @@ module TransactionsHelper
       transfer&.cache_key_with_version,
       other_leg&.cache_key_with_version,
       account_key.(counterpart),
-      (category_key.(other_leg.category) if transfer && !outflow_leg),
+      (category_key.(other_leg.category) if transfer),
       transaction.activity_security&.cache_key_with_version
     ]
   end
