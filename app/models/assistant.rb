@@ -70,6 +70,8 @@ module Assistant
         Function::GetUncategorizedTransactions,
         Function::GetAccounts,
         Function::GetHoldings,
+        Function::GetTrades,
+        Function::CreateTrade,
         Function::GetBalanceSheet,
         Function::GetIncomeStatement,
         Function::GetBudget,
