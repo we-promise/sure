@@ -8,7 +8,7 @@ class InvestmentStatement::Totals
   def call
     return empty_result if @account_ids.empty?
 
-    result = ActiveRecord::Base.connection.select_one(query_sql)
+    result = select_without_jit(query_sql)
 
     {
       contributions: result["contributions"]&.to_d || 0,
@@ -22,6 +22,21 @@ class InvestmentStatement::Totals
   end
 
   private
+    # Portfolio::FlowClassifier's CASE carries a correlated EXISTS (the
+    # security-transfer check) that the planner prices for every row, so a
+    # few hundred entries already push the estimate past jit_above_cost, and
+    # compiling the plan then takes far longer than running it: on five years
+    # of synthetic data, about 750 ms of a 900 ms query. SET LOCAL ends with
+    # the enclosing transaction, so no other statement is affected.
+    def select_without_jit(sql)
+      connection = ActiveRecord::Base.connection
+
+      connection.transaction(requires_new: true) do
+        connection.execute("SET LOCAL jit = off")
+        connection.select_one(sql)
+      end
+    end
+
     def empty_result
       {
         contributions: 0,
@@ -42,6 +57,7 @@ class InvestmentStatement::Totals
       aggregation_sql
         .sub("__FLOW_JOINS__") { flow_classifier.sql_joins }
         .gsub("__FLOW_CLASS__") { "(#{flow_classifier.sql_case})" }
+        .gsub("__RECORDED_FLOW__") { recorded_flow_sql }
     end
 
     # Contributions and withdrawals are money that entered or left the
@@ -55,6 +71,12 @@ class InvestmentStatement::Totals
     # The classifier picks the direction from the sign (a Transaction) or the
     # quantity (a Trade), so ABS of the amount in its class is the size of
     # the flow.
+    #
+    # The card counts a flow only when the row says it is one (see
+    # #recorded_flow_sql), not by the sign the classifier falls back to for
+    # any other cash row. Only those rows, income and trades are read, and
+    # the lateral `flow` subquery classifies each of them once (OFFSET 0
+    # keeps the planner from inlining the CASE into both sums).
     #
     # Buys (qty > 0) and sells (qty < 0) are still summed, as before, under
     # their own names: the cash committed to buying securities and the cash
@@ -97,13 +119,49 @@ class InvestmentStatement::Totals
       @flow_classifier ||= Portfolio::FlowClassifier.new(scope_account_ids: @account_ids)
     end
 
+    # The rows that record a movement of money in or out: a Trade or a
+    # Transaction labelled Contribution, Withdrawal or Transfer (the
+    # classifier calls any other Trade internal), a Transaction of a transfer
+    # kind, or a leg of a confirmed Transfer whose other leg is outside the
+    # scope (flow_transfers and flow_counterpart_entries, joined by the
+    # classifier). Transfer::Creator and Transfer#confirm! give both legs a
+    # transfer kind; a link written another way (an import, an older row) can
+    # leave them standard. Such a leg is still money in or out when its other
+    # leg is outside the scope, and the classifier gives it its direction. With
+    # the other leg in the scope it is not counted: the classifier resolves a
+    # link only for a transfer kind or label and reads any other row by its
+    # sign, so the move would count on both sides.
+    #
+    # Any other cash row is left out, even though the classifier gives it a
+    # direction by its sign. Providers write investment activity that is not
+    # a flow that way: SimpleFIN records buys and sales as unlabelled
+    # Transactions, and Plaid labels its "cash" type, which covers dividends
+    # and interest, "Other". Counting those by sign would bring back the
+    # trades-as-contributions reading this card replaced. A manual deposit
+    # counts once it is labelled Contribution.
+    def recorded_flow_sql
+      labels = (Portfolio::FlowClassifier::EXTERNAL_LABELS + [ Portfolio::FlowClassifier::TRANSFER_LABEL ])
+
+      <<~SQL.squish
+        (
+          COALESCE(trades.investment_activity_label, transactions.investment_activity_label) IN (#{quote_list(labels)})
+          OR transactions.kind IN (#{quote_list(Transaction::TRANSFER_KINDS)})
+          OR (flow_transfers.inflow_transaction_id IS NOT NULL AND flow_counterpart_entries.account_id IS NULL)
+        )
+      SQL
+    end
+
+    def quote_list(values)
+      values.map { |value| ActiveRecord::Base.connection.quote(value) }.join(", ")
+    end
+
     def aggregation_sql
       rate = ExchangeRate.rate_sql(from: "entries.currency", to: ":target_currency", on: "entries.date")
 
       ActiveRecord::Base.sanitize_sql_array([ <<~SQL, sql_params ])
         SELECT
-          COALESCE(SUM(CASE WHEN __FLOW_CLASS__ = 'external_inflow' THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as contributions,
-          COALESCE(SUM(CASE WHEN __FLOW_CLASS__ = 'external_outflow' THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as withdrawals,
+          COALESCE(SUM(CASE WHEN flow.flow_class = 'external_inflow' THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as contributions,
+          COALESCE(SUM(CASE WHEN flow.flow_class = 'external_outflow' THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as withdrawals,
           COALESCE(SUM(CASE WHEN trades.qty > 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as buys,
           COALESCE(SUM(CASE WHEN trades.qty < 0 AND NOT #{income_label_sql} THEN ABS(entries.amount * #{rate}) ELSE 0 END), 0) as sells,
           COALESCE(-SUM(CASE WHEN #{label_sql} = 'Dividend' THEN entries.amount * #{rate} ELSE 0 END), 0) as dividends,
@@ -111,6 +169,11 @@ class InvestmentStatement::Totals
           COUNT(trades.id) as trades_count
         FROM entries
         __FLOW_JOINS__
+        LEFT JOIN LATERAL (
+          SELECT __FLOW_CLASS__ AS flow_class
+          WHERE __RECORDED_FLOW__
+          OFFSET 0
+        ) flow ON true
         WHERE entries.account_id IN (:account_ids)
           AND entries.date BETWEEN :start_date AND :end_date
           AND entries.excluded = false
@@ -118,6 +181,7 @@ class InvestmentStatement::Totals
             entries.entryable_type = 'Trade'
             OR (
               entries.entryable_type = 'Transaction'
+              AND (transactions.investment_activity_label IN ('Dividend', 'Interest') OR __RECORDED_FLOW__)
               #{Transaction.pending_providers_sql("transactions")}
             )
           )

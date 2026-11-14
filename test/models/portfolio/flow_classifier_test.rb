@@ -164,6 +164,24 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :external_outflow, @brokerage_scope.classify_ids([ outflow.id ])[outflow.id]
   end
 
+  test "a pending transfer suggestion links nothing until it is confirmed" do
+    outflow = create_labelled_transaction(account: @brokerage, label: "Withdrawal", amount: 40)
+    inflow = create_labelled_transaction(account: @ira, label: "Contribution", amount: -40)
+    transfer = Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable)
+    assert transfer.pending?
+
+    assert_equal :external_outflow, @family_scope.classify(outflow.reload)
+    assert_equal :external_inflow, @family_scope.classify(inflow.reload)
+    by_sql = @family_scope.classify_ids([ outflow.id, inflow.id ])
+    assert_equal :external_outflow, by_sql[outflow.id]
+    assert_equal :external_inflow, by_sql[inflow.id]
+
+    transfer.confirm!
+
+    assert_equal :internal, @family_scope.classify(outflow.reload)
+    assert_equal :internal, @family_scope.classify_ids([ outflow.id ])[outflow.id]
+  end
+
   test "an investment contribution from outside the scope is an external inflow" do
     transfer = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 1000)
     inflow = transfer.inflow_transaction.entry

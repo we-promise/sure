@@ -817,8 +817,23 @@ class InvestmentStatement
         "investment_statement", "totals_query/v3", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
         # A rate stored later can complete totals that left an amount out.
-        ExchangeRate.maximum(:updated_at)&.to_i
+        ExchangeRate.maximum(:updated_at)&.to_i,
+        transfers_version(account_ids)
       ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
+    end
+
+    # Contributions and withdrawals depend on which transactions a confirmed
+    # Transfer links (Portfolio::FlowClassifier), and linking, confirming or
+    # removing a transfer between two existing transactions need not write
+    # to either entry, so entries_cache_version alone would miss it. The
+    # count catches a removal; the timestamp catches a confirmation.
+    def transfers_version(account_ids)
+      leg_ids = Entry.where(account_id: account_ids, entryable_type: "Transaction").select(:entryable_id)
+      count, max_at = Transfer
+        .where(inflow_transaction_id: leg_ids)
+        .or(Transfer.where(outflow_transaction_id: leg_ids))
+        .pick(Arel.sql("count(*)"), Arel.sql("max(transfers.updated_at)"))
+      "#{count}-#{max_at&.to_f}"
     end
 
     def monetizable_currency

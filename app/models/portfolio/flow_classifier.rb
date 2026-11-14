@@ -144,15 +144,29 @@ class Portfolio::FlowClassifier
   # opposite amounts, so a transaction is a leg of at most one transfer. A
   # writer that bypasses validations (insert_all) could break that, and a SUM
   # over this join would then count the entry twice.
+  #
+  # The counterpart entry is only looked up among the scope's accounts, which
+  # is all #transfer_resolution_sql asks of it: entries has no index on
+  # entryable_id, and without the account bound the join reads every
+  # Transaction entry in the database. InvestmentStatement::Totals#recorded_flow_sql
+  # relies on this bound as well: there, a NULL counterpart means the other
+  # leg is outside the scope.
+  #
+  # Only a confirmed Transfer links two legs. An auto-match starts out
+  # pending and, as Transfer#confirm! promises, an unconfirmed suggestion
+  # never moves a report, so until the user confirms it each leg is
+  # classified as if it were unlinked.
   def sql_joins
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
       LEFT JOIN transactions ON entries.entryable_type = 'Transaction' AND transactions.id = entries.entryable_id
       LEFT JOIN transfers flow_transfers
         ON entries.entryable_type = 'Transaction'
+        AND flow_transfers.status = 'confirmed'
         AND (flow_transfers.inflow_transaction_id = transactions.id OR flow_transfers.outflow_transaction_id = transactions.id)
       LEFT JOIN entries flow_counterpart_entries
         ON flow_counterpart_entries.entryable_type = 'Transaction'
+        AND flow_counterpart_entries.account_id = ANY(#{scope_ids_sql})
         AND flow_counterpart_entries.entryable_id = CASE
           WHEN flow_transfers.inflow_transaction_id = transactions.id THEN flow_transfers.outflow_transaction_id
           ELSE flow_transfers.inflow_transaction_id
@@ -237,12 +251,13 @@ class Portfolio::FlowClassifier
       end
     end
 
-    # The account on the other leg of a linked Transfer, by id only; the
+    # The account on the other leg of a confirmed Transfer, by id only; the
     # counterpart account itself is never loaded, so a scope check cannot
-    # leak an account the user is not allowed to see.
+    # leak an account the user is not allowed to see. A pending auto-match
+    # links nothing yet (see #sql_joins).
     def transfer_counterpart_account_id(transaction)
       transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow
-      return nil unless transfer
+      return nil unless transfer&.confirmed?
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
       Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id)&.to_s
