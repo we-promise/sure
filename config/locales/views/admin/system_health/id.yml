@@ -23,7 +23,7 @@ id:
           empty: "Tidak ada keluarga uji coba yang tercatat dalam rentang ini"
         cleanup:
           title: "Kelayakan pembersihan"
-          description: "Sesuai cakupan pembersihan yang ada: langganan dijeda atau uji coba berakhir lebih dari 14 hari lalu, atau tanpa langganan dan keluarga berusia lebih dari 45 + 14 hari. Menampilkan hingga %{limit} keluarga."
+          description: "Sesuai cakupan pembersihan yang ada: langganan berstatus dijeda atau uji coba yang berakhir lebih dari 14 hari lalu, atau tanpa langganan dan keluarga berusia lebih dari 45 + 14 hari. Menampilkan hingga %{limit} keluarga."
           eligibility_help: "Login terbaru tidak mencegah kecocokan. Kelayakan tidak memastikan penghapusan; 90 hari adalah retensi arsip, bukan ambang batas pembersihan uji coba."
           disabled: "Pembersihan uji coba terjadwal dinonaktifkan di luar mode terkelola. Ini hanya kecocokan cakupan."
           empty: "Tidak ada keluarga yang cocok dengan cakupan pembersihan"
@@ -52,7 +52,7 @@ id:
           incomplete_expired: "Belum lengkap, kedaluwarsa"
           trialing: "Uji coba"
           active: "Aktif"
-          past_due: "Jatuh tempo"
+          past_due: "Lewat jatuh tempo"
           canceled: "Dibatalkan"
           unpaid: "Belum dibayar"
           paused: "Dijeda"
