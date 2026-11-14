@@ -62,7 +62,7 @@ class Trading212Item::Importer
 
     def build_account_name(account_id)
       base = I18n.t("trading212_items.defaults.name")
-      account_id.present? ? "#{base} (#{account_id})" : base
+      account_id.present? ? "#{base} (#{IdentifierMask.last4(account_id)})" : base
     end
 
     def parse_decimal(value)

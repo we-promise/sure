@@ -28,7 +28,7 @@
                   </div>
                   <div class="text-xs text-secondary mt-1">
                     <% if account[:iban].present? %>
-                      •<%= account[:iban].last(4) %> •
+                      <%= mask_last4(account[:iban]) %> •
                     <% end %>
                     <%= account[:institution_name] %> • <%= account[:currency] %> • <%= account[:status] %>
                   </div>

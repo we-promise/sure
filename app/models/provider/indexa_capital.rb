@@ -103,7 +103,7 @@ class Provider::IndexaCapital
     # Indexa Capital account numbers are 8-char alphanumeric (e.g., "LPYH3MCQ")
     def sanitize_account_number!(account_number)
       unless account_number.present? && account_number.match?(/\A[A-Za-z0-9]+\z/)
-        raise Error.new("Invalid account number format: #{account_number}", :bad_request)
+        raise Error.new("Invalid account number format: #{IdentifierMask.last4(account_number)}", :bad_request)
       end
     end
 
@@ -238,7 +238,7 @@ class Provider::IndexaCapital
       when "pension", "epsv" then "Pension Plan"
       else acct[:type]&.titleize || "Account"
       end
-      "Indexa Capital #{type_label} (#{acct[:account_number]})"
+      "Indexa Capital #{type_label} (#{IdentifierMask.last4(acct[:account_number])})"
     end
 
     # Extract current balance from performance endpoint's portfolios array

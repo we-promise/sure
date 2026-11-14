@@ -18,6 +18,11 @@ class IbkrAccount < ApplicationRecord
   validates :name, :currency, presence: true
   validates :ibkr_account_id, uniqueness: { scope: :ibkr_item_id, allow_nil: true }
 
+  # IBKR names no account, so the masked account id stands in.
+  def self.default_name(ibkr_account_id)
+    ibkr_account_id.present? ? "Interactive Brokers (#{IdentifierMask.last4(ibkr_account_id)})" : "Interactive Brokers"
+  end
+
   def current_account
     account || linked_account
   end
