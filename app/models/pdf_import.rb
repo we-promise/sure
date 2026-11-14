@@ -235,6 +235,7 @@ class PdfImport < Import
       ai_summary: result.summary,
       document_type: result.document_type
     )
+    sync_statement_metadata_from_process_result(result)
 
     result
   end
@@ -263,6 +264,7 @@ class PdfImport < Import
     # in-memory read comes back empty and the import produces no rows at all.
     data = response.data.deep_stringify_keys
     update!(extracted_data: data)
+    sync_statement_metadata_from_extracted_data(data)
     data
   end
 
@@ -592,5 +594,68 @@ class PdfImport < Import
       return if account_statement.blank? || (account_statement.family_id == family_id && account_statement.pdf?)
 
       errors.add(:account_statement, :invalid)
+    end
+
+    def sync_statement_metadata_from_extracted_data(data)
+      return unless statement_backed?
+
+      start_date = data.dig("period", "start_date").presence
+      end_date = data.dig("period", "end_date").presence
+      opening_bal = data["opening_balance"]
+      closing_bal = data["closing_balance"]
+      bank_name = data["bank_name"].presence
+      last4 = data["account_number"].presence&.to_s&.last(4)
+
+      apply_statement_metadata_updates(
+        start_date: start_date,
+        end_date: end_date,
+        opening_balance: opening_bal,
+        closing_balance: closing_bal,
+        institution_name: bank_name,
+        account_last4: last4
+      )
+    end
+
+    def sync_statement_metadata_from_process_result(result)
+      return unless statement_backed?
+      return unless result.respond_to?(:extracted_data) && result.extracted_data.is_a?(Hash)
+
+      data = result.extracted_data.deep_stringify_keys
+      start_date = data["statement_period_start"].presence
+      end_date = data["statement_period_end"].presence
+      opening_bal = data["opening_balance"]
+      closing_bal = data["closing_balance"]
+      institution = data["institution_name"].presence
+
+      apply_statement_metadata_updates(
+        start_date: start_date,
+        end_date: end_date,
+        opening_balance: opening_bal,
+        closing_balance: closing_bal,
+        institution_name: institution,
+        account_last4: nil
+      )
+    end
+
+    def apply_statement_metadata_updates(start_date:, end_date:, opening_balance:, closing_balance:, institution_name:, account_last4:)
+      updates = {}
+      updates[:period_start_on] = Date.parse(start_date) if start_date
+      updates[:period_end_on] = Date.parse(end_date) if end_date
+      updates[:opening_balance] = opening_balance if opening_balance.present?
+      updates[:closing_balance] = closing_balance if closing_balance.present?
+      updates[:institution_name_hint] = institution_name if institution_name && account_statement.institution_name_hint.blank?
+      updates[:account_last4_hint] = account_last4 if account_last4 && account_statement.account_last4_hint.blank?
+
+      if updates[:period_start_on] && updates[:period_end_on] && updates[:period_start_on] > updates[:period_end_on]
+        updates.delete(:period_start_on)
+      elsif updates[:period_start_on] && account_statement.period_end_on && updates[:period_start_on] > account_statement.period_end_on
+        updates.delete(:period_start_on)
+      elsif updates[:period_end_on] && account_statement.period_start_on && account_statement.period_start_on > updates[:period_end_on]
+        updates[:period_start_on] = updates[:period_end_on].beginning_of_month
+      end
+
+      account_statement.update(updates) if updates.any?
+    rescue Date::Error, ArgumentError => e
+      Rails.logger.warn("Failed to parse statement dates from extracted data: #{e.message}")
     end
 end

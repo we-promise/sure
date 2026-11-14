@@ -145,6 +145,35 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "Coffee", @import.extracted_transactions.first["name"]
   end
 
+  test "extract_transactions syncs period and balances to statement_backed import" do
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-09", end_date: "2026-11-06" },
+          opening_balance: 325.0,
+          closing_balance: 3176.22,
+          bank_name: "American Express",
+          account_number: "2007",
+          transactions: [ { date: "2026-10-15", amount: "-10.0", name: "Lunch" } ]
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal Date.parse("2026-10-09"), @statement.period_start_on
+    assert_equal Date.parse("2026-11-06"), @statement.period_end_on
+    assert_equal 325.0, @statement.opening_balance
+    assert_equal 3176.22, @statement.closing_balance
+    assert_equal "American Express", @statement.institution_name_hint
+    assert_equal "2007", @statement.account_last4_hint
+  end
+
   test "publishing does not re-match a row against an entry row generation already consumed" do
     create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
 
