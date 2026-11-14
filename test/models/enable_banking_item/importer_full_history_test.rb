@@ -68,7 +68,18 @@ class EnableBankingItem::ImporterFullHistoryTest < ActiveSupport::TestCase
     @enable_banking_item.stubs(:last_synced_at).returns(1.hour.ago)
     build_importer.import
     assert_nil @requests.last[:strategy], "an account without transactions gets strategy=longest on every sync"
-    assert_equal 1.hour.ago.to_date - 7.days, @requests.last[:date_from]
+  end
+
+  test "an account with an empty stored payload is fetched over the 89-day window" do
+    # Fetched empty, then unlinked while the item kept syncing, then relinked.
+    @enable_banking_account.update!(raw_transactions_payload: [])
+    link!
+    @enable_banking_item.stubs(:last_synced_at).returns(1.hour.ago)
+
+    build_importer.import
+
+    assert_nil @requests.first[:strategy]
+    assert_equal 89.days.ago.to_date, @requests.first[:date_from], "rows from the gap before the last sync are skipped"
   end
 
   test "a failed first fetch stays a first fetch" do

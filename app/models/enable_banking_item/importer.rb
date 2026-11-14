@@ -1236,17 +1236,17 @@ class EnableBankingItem::Importer
     # an existing account), so its incremental fetch doesn't leave a gap. The
     # stored-row term never goes past STORED_ROW_LOOKBACK_LIMIT, overlap
     # included, so a dormant account doesn't ask for more than the ASPSP serves
-    # without SCA on every sync. The last-sync term is not clamped, so a long
+    # without SCA on every sync. An account with no stored rows has no anchor,
+    # so it uses that limit. The last-sync term is not clamped, so a long
     # outage is handled as before.
     def incremental_sync_start_date(enable_banking_account)
       newest_stored = newest_stored_transaction_date(enable_banking_account)
+      stored_row_start = [ newest_stored && newest_stored - 7.days, STORED_ROW_LOOKBACK_LIMIT.ago.to_date ].compact.max
 
-      starts = [
+      [
         enable_banking_item.last_synced_at && (enable_banking_item.last_synced_at.to_date - 7.days),
-        newest_stored && [ newest_stored - 7.days, STORED_ROW_LOOKBACK_LIMIT.ago.to_date ].max
-      ].compact
-
-      starts.min || 30.days.ago.to_date
+        stored_row_start
+      ].compact.min
     end
 
     def newest_stored_transaction_date(enable_banking_account)
