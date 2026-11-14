@@ -1,0 +1,14 @@
+<%= turbo_frame_tag "#{@bundle.slug}_sparkline" do %>
+  <div class="flex items-center justify-end gap-1">
+    <div class="w-8 h-5">
+      <%= render "shared/sparkline", id: "#{@bundle.slug}_sparkline_chart", series: @sparkline_series %>
+    </div>
+
+    <%# A previous value of zero makes the percentage infinite, with nothing useful to print %>
+    <% if @sparkline_series.trend && @sparkline_series.trend.percent.finite? %>
+      <%= tag.p @sparkline_series.trend.percent_formatted,
+                  style: "color: #{@sparkline_series.trend.color}",
+                  class: "font-mono text-right text-xs font-medium text-primary" %>
+    <% end %>
+  </div>
+<% end %>

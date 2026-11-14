@@ -271,7 +271,7 @@ end %>
   // the global is fresh and the call is a no-op.
   (function () {
     var state = window.__sidebarScrollPreserve ||
-      (window.__sidebarScrollPreserve = { groupStates: null, scrollTop: null });
+      (window.__sidebarScrollPreserve = { groupStates: null, bundleStates: null, scrollTop: null });
 
     var PREFIX_RE = /^(mobile_)?(all|asset|liability)_/;
     // Accepted group keys, derived from Accountable::TYPES at render time
@@ -307,10 +307,34 @@ end %>
       return null;
     }
 
+    // Institution bundles nest inside a group's wrapper, so they would take
+    // the group's key; they are tracked on their own (bundleStates()).
     function groupDetails() {
       var root = container();
       if (!root) return [];
-      return Array.prototype.slice.call(root.querySelectorAll("details"));
+      return Array.prototype.slice.call(root.querySelectorAll("details:not([data-institution-bundle])"));
+    }
+
+    // The desktop sidebar and the mobile overlay each hold copies of the
+    // institution bundles; record() keeps the state of the copy on screen.
+    function bundleDetails() {
+      var roots = [container(), document.querySelector('[data-app-layout-target="mobileSidebar"]')];
+      return roots.reduce(function (all, root) {
+        if (!root) return all;
+        return all.concat(Array.prototype.slice.call(root.querySelectorAll("details[data-institution-bundle][id]")));
+      }, []);
+    }
+
+    // An institution bundle's id with the tab and mobile prefixes stripped,
+    // so every copy of it shares one state, like its group's.
+    function bundleKeyOf(details) {
+      return details.id.replace(PREFIX_RE, "");
+    }
+
+    function bundleStates() {
+      var states = Object.create(null);
+      bundleDetails().forEach(function (d) { record(states, bundleKeyOf(d), d); });
+      return states;
     }
 
     // Prototype-free map of group key -> open/closed for every account group,
@@ -324,10 +348,17 @@ end %>
         var k = groupKeyOf(d);
         if (k) {
           if (!states) states = Object.create(null);
-          states[k] = d.open;
+          record(states, k, d);
         }
       });
       return states;
+    }
+
+    // Every group is rendered once per tab panel and again for mobile, and
+    // only the copy on screen is the one the user opened or closed, so it
+    // wins over the hidden copies, whatever their order in the page.
+    function record(states, key, details) {
+      if (!(key in states) || details.getClientRects().length > 0) states[key] = details.open;
     }
 
     // Key of the group holding the active account, or null. The active account
@@ -347,6 +378,7 @@ end %>
       var el = container();
       if (!el) return;
       state.groupStates = groupStates();
+      state.bundleStates = bundleStates();
       // Always save the scroll offset, even when every group is collapsed:
       // the sidebar can still be scrolled (headers, "New" buttons, the bottom
       // of a long list), so coupling the save to "any group open" would drop
@@ -356,7 +388,7 @@ end %>
 
     function restore() {
       var el = container();
-      if (!el || !state.groupStates) return;
+      if (!el || (!state.groupStates && !state.bundleStates)) return;
       var activeKey = activeGroupKey();
       // Re-apply the user's pre-navigation open/closed state to every group we
       // captured. A group the user collapsed stays closed even if the server
@@ -364,11 +396,21 @@ end %>
       // holding the active account is forced open so it is never hidden.
       // Groups not in state.groupStates (new since capture) are left as the
       // server rendered them.
-      groupDetails().forEach(function (d) {
-        var k = groupKeyOf(d);
-        if (!k || !Object.prototype.hasOwnProperty.call(state.groupStates, k)) return;
-        d.open = (k === activeKey) ? true : state.groupStates[k];
-      });
+      if (state.groupStates) {
+        groupDetails().forEach(function (d) {
+          var k = groupKeyOf(d);
+          if (!k || !Object.prototype.hasOwnProperty.call(state.groupStates, k)) return;
+          d.open = (k === activeKey) ? true : state.groupStates[k];
+        });
+      }
+      // A bundle holding the active account stays open, like its group.
+      if (state.bundleStates) {
+        bundleDetails().forEach(function (d) {
+          var k = bundleKeyOf(d);
+          if (!Object.prototype.hasOwnProperty.call(state.bundleStates, k)) return;
+          d.open = d.querySelector("[data-active-account]") ? true : state.bundleStates[k];
+        });
+      }
       // Force a synchronous layout pass so scrollHeight reflects the re-opened
       // groups before we write scrollTop; otherwise the browser clamps the
       // restored offset to the (still-short) container.

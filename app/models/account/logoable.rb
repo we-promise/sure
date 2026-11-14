@@ -47,11 +47,18 @@ module Account::Logoable
     Rails.application.routes.url_helpers.rails_blob_path(logo, only_path: true) if logo.attached? && logo.blob.persisted?
   end
 
-  def brandfetch_logo_url
-    return if institution_domain.blank? || Setting.brand_fetch_client_id.blank?
+  class_methods do
+    # The Brandfetch icon for an institution domain, when Brandfetch is configured.
+    def brandfetch_logo_url_for(domain)
+      return if domain.blank? || Setting.brand_fetch_client_id.blank?
 
-    logo_size = Setting.brand_fetch_logo_size
-    "https://cdn.brandfetch.io/#{institution_domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+      logo_size = Setting.brand_fetch_logo_size
+      "https://cdn.brandfetch.io/#{domain}/icon/fallback/lettermark/w/#{logo_size}/h/#{logo_size}?c=#{Setting.brand_fetch_client_id}"
+    end
+  end
+
+  def brandfetch_logo_url
+    self.class.brandfetch_logo_url_for(institution_domain)
   end
 
   # Where the stored logo came from: a favicon service, "appstore",

@@ -1520,6 +1520,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'read'::character varying::text, 'dismissed'::character varying::text, 'expired'::character varying::text])", name: "chk_insights_status"
   end
 
+  create_table "institution_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.uuid "family_id", null: false
+    t.string "institution_domain"
+    t.string "key", null: false
+    t.string "logo_selection", default: "automatic", null: false
+    t.string "name"
+    t.datetime "updated_at", null: false
+    t.index ["family_id", "key"], name: "index_institution_groups_on_family_id_and_key", unique: true
+    t.index ["family_id"], name: "index_institution_groups_on_family_id"
+  end
+
   create_table "investments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.datetime "created_at", null: false
     t.jsonb "locked_attributes", default: {}
@@ -3231,6 +3244,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "indexa_capital_accounts", "indexa_capital_items"
   add_foreign_key "indexa_capital_items", "families"
   add_foreign_key "insights", "families"
+  add_foreign_key "institution_groups", "families"
   add_foreign_key "invitations", "families"
   add_foreign_key "invitations", "users", column: "inviter_id"
   add_foreign_key "kraken_accounts", "kraken_items"

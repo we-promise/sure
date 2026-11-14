@@ -1,0 +1,54 @@
+<%# locals: (bundle:, account_group:, mobile: false, all_tab: false, reconciliation_indicators: {}) %>
+<%# Several accounts at one institution: one row with the group's own icon,
+    name and combined total, opening onto the accounts (without icons of
+    their own), indented under it, like an account group. The row is laid out like
+    an account's, so the total lines up with theirs; the name links to the
+    institution's page (a link inside <summary> navigates without toggling
+    it). %>
+<% bundle_path = institution_group_path(bundle) %>
+<% active = page_active?(bundle_path) %>
+<% open = active || bundle.accounts.any? { |account| page_active?(account_path(account)) } %>
+<%= render DS::Disclosure.new(open: open,
+                              id: bundle.dom_id(account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile)),
+                              class: "group/bundle",
+                              data: { institution_bundle: bundle.key },
+                              summary_class: class_names(
+                                "flex items-center px-3 py-2 rounded-lg cursor-pointer list-none [&::-webkit-details-marker]:hidden focus-ring",
+                                active ? "bg-container" : "hover:bg-surface-hover"
+                              ),
+                              body_class: "ml-6 pl-2 border-l border-secondary space-y-1 mt-1") do |disclosure| %>
+  <% disclosure.with_summary_content do %>
+  <%= tag.div class: "flex items-center gap-2 w-full min-w-0",
+              title: t("accounts.sidebar.institution_bundle_title", institution: bundle.name, count: bundle.accounts.size) do %>
+    <%= render "accounts/logo", account: bundle.lead_account, url: bundle.logo_url, name: bundle.name, size: "sm", color: account_group.color %>
+
+    <div class="min-w-0 grow">
+      <%= link_to bundle.name, bundle_path,
+            class: class_names("block text-sm text-primary font-medium truncate hover:underline", "animate-pulse" => bundle.syncing?),
+            data: active ? { active_account: true } : {} %>
+      <p class="flex items-center gap-1 text-sm text-secondary" data-institution-bundle-toggle>
+        <span class="truncate"><%= t("accounts.sidebar.institution_accounts", count: bundle.accounts.size) %></span>
+        <%= icon "chevron-down", size: "xs", class: "shrink-0 transition-transform group-open/bundle:rotate-180" %>
+        <span class="sr-only"><%= t("accounts.sidebar.institution_bundle_toggle", institution: bundle.name) %></span>
+      </p>
+    </div>
+
+    <div class="ml-auto text-right grow h-10">
+      <%= tag.p format_money(bundle.total_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
+      <%= turbo_frame_tag "#{bundle.slug}_sparkline",
+                          src: sparkline_institution_group_path(bundle, v: bundle.sparkline_version(sidebar_sparkline_versions(Current.family))),
+                          loading: "lazy",
+                          data: sparkline_frame_data do %>
+        <div class="flex items-center w-8 h-4 ml-auto">
+          <div class="w-6 h-px bg-loader"></div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+  <% end %>
+
+  <% bundle.accounts.each do |account| %>
+    <%# No logo: the institution's icon above, the indent and the line mark them as its accounts. %>
+    <%= render "accounts/sidebar_account_row", account: account, account_group: account_group, reconciliation_indicator: reconciliation_indicators[account.id], show_logo: false %>
+  <% end %>
+<% end %>

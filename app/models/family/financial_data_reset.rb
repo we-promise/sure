@@ -13,6 +13,7 @@ class Family::FinancialDataReset
     import_mappings
     accounts
     account_shares
+    institution_groups
     account_providers
     entries
     transactions
@@ -127,6 +128,7 @@ class Family::FinancialDataReset
       scope(:holdings).destroy_all
       scope(:balances).destroy_all
       scope(:account_shares).destroy_all
+      scope(:institution_groups).destroy_all
       scope(:account_providers).destroy_all
       scope(:recurring_transactions).destroy_all
       scope(:rules).destroy_all
@@ -246,6 +248,7 @@ class Family::FinancialDataReset
           import_mappings: Import::Mapping.where(import_id: import_ids),
           accounts: account_scope,
           account_shares: AccountShare.where(account_id: account_ids),
+          institution_groups: InstitutionGroup.where(family_id: family.id),
           account_providers: AccountProvider.where(account_id: account_ids),
           entries: Entry.where(account_id: account_ids),
           transactions: transaction_scope,
@@ -286,6 +289,7 @@ class Family::FinancialDataReset
     def active_storage_attachment_scopes
       scopes = [
         attachment_scope(Account, account_ids),
+        attachment_scope(InstitutionGroup, scope(:institution_groups).select(:id)),
         attachment_scope(AccountStatement, scope(:account_statements).select(:id)),
         attachment_scope(FamilyExport, scope(:family_exports).select(:id)),
         attachment_scope(Import, scope(:imports).select(:id)),
