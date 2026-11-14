@@ -907,6 +907,21 @@ class RecurringTransaction < ApplicationRecord
     )
   end
 
+  # The tolerance band the matcher uses: the series' own tolerance, widened by
+  # what a manual attach has taught. Every amount decision reads this one value.
+  def effective_amount_tolerance_pct
+    [ amount_tolerance_pct, learned_amount_tolerance_pct ].max
+  end
+
+  # What a manual attach has taught, sanitised: a non-finite or invalid hint
+  # reads as zero, and an imported value never exceeds the learnable maximum.
+  # Display and matching both read this, so the copy cannot diverge from behavior.
+  def learned_amount_tolerance_pct
+    learned = BigDecimal((matcher_hints || {})["learned_tolerance_pct"].to_s, exception: false)
+    learned = BigDecimal("0") unless learned&.finite?
+    [ learned, Matcher::MAX_LEARNED_TOLERANCE_PCT ].min
+  end
+
   private
     # Issue #1590: a recurring transfer's future occurrences rarely share the
     # seed's name (user free-text, importer wording, the auto-matcher's

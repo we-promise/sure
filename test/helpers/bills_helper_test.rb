@@ -472,7 +472,8 @@ class BillsHelperTest < ActionView::TestCase
   end
 
   test "matcher hints strip blanks and cast the tolerance" do
-    series = OpenStruct.new(matcher_hints: { "name_aliases" => [ "PEPSICO", "" ], "learned_tolerance_pct" => "7.5" })
+    series = OpenStruct.new(matcher_hints: { "name_aliases" => [ "PEPSICO", "" ], "learned_tolerance_pct" => "7.5" },
+                            learned_amount_tolerance_pct: BigDecimal("7.5"))
 
     hints = bills_matcher_hints(series)
 
