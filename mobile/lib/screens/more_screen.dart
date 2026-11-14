@@ -7,6 +7,8 @@ import 'budgets_screen.dart';
 import 'calendar_screen.dart';
 import 'cash_flow_screen.dart';
 import 'recent_transactions_screen.dart';
+import 'widget_settings_screen.dart';
+import '../services/widget_bridge_service.dart';
 
 class MoreScreen extends StatelessWidget {
   const MoreScreen({super.key});
@@ -82,6 +84,27 @@ class MoreScreen extends StatelessWidget {
                 ),
               ],
             ),
+            if (WidgetBridgeService.instance.isSupported) ...[
+              const SizedBox(height: 16),
+              SureListGroup(
+                children: [
+                  SureListRow(
+                    leading: _iconBadge(context, Icons.widgets_outlined),
+                    title: 'Home Screen Widget',
+                    subtitle: 'Let the widget refresh balances on its own',
+                    showChevron: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WidgetSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
