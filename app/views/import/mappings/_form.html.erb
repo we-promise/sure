@@ -6,9 +6,33 @@
                      class: "grid grid-cols-3 gap-2 items-center",
                      data: { controller: "auto-submit-form" },
                      html: { id: dom_id(mapping, :form) } do |form| %>
-  <span><%= mapping.key.blank? ? "(unassigned)" : mapping.key %></span>
+  <% if mapping.is_a?(Import::SecurityMapping) %>
+    <span><%= mapping.display_key %></span>
+  <% else %>
+    <span><%= mapping.key.blank? ? "(unassigned)" : mapping.key %></span>
+  <% end %>
 
-  <% if mapping.mappable_class.present? %>
+  <% if mapping.is_a?(Import::SecurityMapping) %>
+    <% if Security.providers.any? %>
+      <div class="form-field combobox">
+        <% if mapping.mappable.present? %>
+          <p class="text-sm text-secondary mb-1"><%= t(".current_security", security: mapping.display_name) %></p>
+        <% end %>
+        <%= form.combobox :value,
+                          securities_path(country_code: Current.family.country),
+                          name_when_new: "import_mapping[value]",
+                          placeholder: t(".security_placeholder"),
+                          disabled: mapping.import.complete?,
+                          data: { "auto-submit-form-target": "auto", "autosubmit-trigger-event": "hw-combobox:selection" } %>
+      </div>
+    <% else %>
+      <%= form.text_field :value,
+                          value: mapping.mappable&.ticker,
+                          placeholder: t(".security_placeholder"),
+                          disabled: mapping.import.complete?,
+                          "data-auto-submit-form-target": "auto", "data-autosubmit-trigger-event": "change", id: dom_id(mapping, :value) %>
+    <% end %>
+  <% elsif mapping.mappable_class.present? %>
     <%= form.hidden_field :mappable_type, value: mapping.mappable_class, id: dom_id(mapping, :mappable_type) %>
     <%= form.select :mappable_id,
                       mapping.selectable_values,

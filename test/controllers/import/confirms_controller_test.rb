@@ -41,6 +41,31 @@ class Import::ConfirmsControllerTest < ActionDispatch::IntegrationTest
     assert_select "span.sr-only", text: "Step 3", count: 1
   end
 
+  test "renders the security mapping step for a trade import" do
+    import = imports(:trade)
+    import.update!(
+      account: accounts(:depository),
+      raw_file_str: "date,ticker,qty,price,currency,name\n01/01/2024,AAPL,10,150.00,USD,Apple Buy\n",
+      date_col_label: "date",
+      ticker_col_label: "ticker",
+      qty_col_label: "qty",
+      price_col_label: "price",
+      date_format: "%m/%d/%Y",
+      signage_convention: "inflows_positive"
+    )
+    import.generate_rows_from_csv
+    import.sync_mappings
+    TradeImport.any_instance.stubs(:cleaned?).returns(true)
+    Security.stubs(:providers).returns([ :synth ])
+
+    security_step = import.mapping_steps.index(Import::SecurityMapping) + 1
+
+    get import_confirm_path(import, step: security_step)
+
+    assert_response :success
+    assert_select "span.sr-only", text: "Step #{security_step}"
+  end
+
   test "redirects if not cleaned" do
     import = imports(:transaction)
 
