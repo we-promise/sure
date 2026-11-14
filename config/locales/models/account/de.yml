@@ -15,8 +15,6 @@ de:
         subtype: Investmenttyp
       loan:
         subtype: Kreditart
-      property:
-        subtype: Immobilientyp
     models:
       account: Konto
       account/credit: Kreditkarte
