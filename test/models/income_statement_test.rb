@@ -513,6 +513,16 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 70.0, IncomeStatement.new(@family).avg_expense(interval: "week", category: @groceries_category)
   end
 
+  test "weekly category average with current-week spending still covers at most 12 weeks" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    this_week = Date.current.beginning_of_week
+    20.times { |i| create_transaction(account: @checking_account, date: this_week - (i + 1).weeks, amount: i == 11 ? 1300 : 100, category: @groceries_category) }
+    create_transaction(account: @checking_account, date: this_week, amount: 220, category: @groceries_category)
+
+    # Weeks -11 .. -1 and the current week; week -12 (1300) is outside the window.
+    assert_equal 110.0, IncomeStatement.new(@family).avg_expense(interval: "week", category: @groceries_category)
+  end
+
   # NEW TESTS: Transfer and Kind Filtering
   # NOTE: These tests now pass because kind filtering is working after the refactoring!
   test "excludes regular transfers from income statement calculations" do
