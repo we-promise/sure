@@ -2150,7 +2150,97 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_nil security.exchange_operating_mic
   end
 
+  test "PEA imports its trades and books its funding transfer as a contribution" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    cash_provider, cash_sure = create_linked_cash_account!
+    transfer = pea_transfer_event
+    pea_provider.update!(raw_timeline_payload: [ transfer, pea_buy_event ])
+    cash_provider.update!(raw_timeline_payload: [ transfer ])
+
+    process_all(pea_provider, cash_provider)
+
+    trade = pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_buy")
+    assert_equal "Trade", trade.entryable_type
+    assert_equal BigDecimal("10"), trade.entryable.qty
+    contribution = pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_transfer")
+    assert_equal BigDecimal("-300"), contribution.amount
+    withdrawal = cash_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_transfer")
+    assert_equal BigDecimal("300"), withdrawal.amount
+  end
+
+  test "PEA moves its trades off the primary portfolio unless the user edited them" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    @tr_account.update!(kind: "portfolio", raw_timeline_payload: [ pea_buy_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    assert_not_nil find_trade("trade_republic_event_evt_pea_buy")
+
+    edited_event = order_execution_detail(event_id: "evt_pea_edited", quantity: "1", isin: "FR0011550185", amount: "30")
+    @tr_account.update!(raw_timeline_payload: [ pea_buy_event, edited_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    find_trade("trade_republic_event_evt_pea_edited").mark_user_modified!
+
+    # The importer now routes both events to the PEA.
+    @tr_account.update!(raw_timeline_payload: [])
+    pea_provider.update!(raw_timeline_payload: [ pea_buy_event, edited_event ])
+    process_all(@tr_account, pea_provider)
+
+    assert_nil find_trade("trade_republic_event_evt_pea_buy")
+    assert_not_nil find_trade("trade_republic_event_evt_pea_edited")
+    assert_not_nil pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_buy")
+    # The edited primary copy stays the only booking of its event.
+    assert_nil pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_edited")
+  end
+
+  test "PEA keeps the primary copy while it has no entry of its own" do
+    pea_provider, pea_sure = create_linked_pea_account!
+    @tr_account.update!(raw_timeline_payload: [ pea_buy_event ])
+    TradeRepublicAccount::ActivitiesProcessor.new(@tr_account.reload).process
+    assert_not_nil find_trade("trade_republic_event_evt_pea_buy")
+
+    # Routed to the PEA, but without the detail its trade import needs.
+    @tr_account.update!(raw_timeline_payload: [])
+    pea_provider.update!(raw_timeline_payload: [ pea_buy_event.except(:detail) ])
+    process_all(@tr_account, pea_provider)
+
+    assert_not_nil find_trade("trade_republic_event_evt_pea_buy")
+    assert_nil pea_sure.entries.find_by(external_id: "trade_republic_event_evt_pea_buy")
+  end
+
   private
+
+    def create_linked_pea_account!
+      pea_provider = @item.trade_republic_accounts.create!(
+        name: "PEA",
+        kind: "pea",
+        trade_republic_account_id: "pea:PEA1",
+        currency: "EUR"
+      )
+      pea_sure = @family.accounts.create!(
+        name: "Trade Republic PEA",
+        balance: 0,
+        cash_balance: 0,
+        currency: "EUR",
+        accountable: Investment.new(subtype: "pea")
+      )
+      pea_provider.ensure_account_provider!(pea_sure)
+      [ pea_provider.reload, pea_sure ]
+    end
+
+    def pea_buy_event
+      order_execution_detail(event_id: "evt_pea_buy", quantity: "10", isin: "FR0011550185", amount: "300")
+        .merge(cashAccountNumber: "PEA-CASH")
+    end
+
+    def pea_transfer_event
+      {
+        id: "evt_pea_transfer",
+        timestamp: "2026-07-15T09:00:00Z",
+        eventType: "PEA_DEPOSIT_DEBIT",
+        title: "PEA",
+        cashAccountNumber: "CASH-1",
+        detail: { amount: "300", signed_amount: "-300", currency: "EUR" }
+      }
+    end
 
     def create_linked_crypto_account!
       crypto_provider = @item.trade_republic_accounts.create!(

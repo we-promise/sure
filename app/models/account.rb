@@ -555,7 +555,8 @@ class Account < ApplicationRecord
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],
       # The exchange subtype is the Crypto subtype that supports trades.
-      "crypto" => [ "Crypto", "exchange", "Trade Republic Crypto" ]
+      "crypto" => [ "Crypto", "exchange", "Trade Republic Crypto" ],
+      "pea" => [ "Investment", "pea", "Trade Republic PEA" ]
     }.freeze
 
     def create_from_trade_republic_account(trade_republic_account)

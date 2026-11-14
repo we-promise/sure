@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_11_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2800,8 +2800,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "kind", default: "portfolio", null: false
     t.datetime "last_positions_sync"
     t.string "name"
+    t.string "provider_cash_account_id"
     t.jsonb "raw_positions_payload", default: [], null: false
     t.jsonb "raw_timeline_payload", default: [], null: false
+    t.datetime "timeline_backfill_started_at"
+    t.datetime "timeline_backfilled_at"
     t.string "trade_republic_account_id"
     t.uuid "trade_republic_item_id", null: false
     t.datetime "updated_at", null: false
