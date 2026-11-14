@@ -13,14 +13,13 @@
 
   <div class="@container">
     <div class="<%= summary_grid_class %>" data-testid="credit-card-summary-grid">
-      <%# The bill. This and the next card are a SPLIT of the balance in the page
-          header, not two more balances: the statement that closed is what you owe
-          now, and everything charged since belongs to the statement still
-          building. The two add back up to the debt, which is the one number the
-          header already gives; what the header cannot say is how much of it is
-          already a bill, and that is what this tab is for. %>
+      <%# The bill. This card shows what is still owed on the statement that
+          closed, after any payments made since it closed. The next card shows
+          what has been charged or adjusted since then. Together they add back up
+          to the current debt in the header. When the closed bill is a credit,
+          this card shows that credit as a negative amount. %>
       <%= summary_card title: t(".statement_balance") do %>
-        <%= summary.balance ? format_money(summary.balance) : t(".unknown") %>
+        <%= summary.remaining ? format_money(summary.remaining) : t(".unknown") %>
         <span class="mt-2 block space-y-1 text-sm text-secondary">
           <% if summary.due_date && due_for_last_balance %>
             <span class="block">
@@ -28,11 +27,6 @@
             </span>
             <span class="block <%= summary.status == :overdue ? "text-destructive" : "" %>">
               <%= credit_card_due_countdown((summary.due_date - today).to_i) %>
-            </span>
-          <% end %>
-          <% if summary.remaining&.positive? && summary.balance && summary.remaining.amount < summary.balance.amount %>
-            <span class="block privacy-sensitive">
-              <%= t(".remaining_due", amount: format_money(summary.remaining)) %>
             </span>
           <% end %>
           <% if summary.status == :paid %>
@@ -73,15 +67,26 @@
           <% elsif summary.next_close %>
             <span class="block"><%= t(".closes_on", date: l(summary.next_close, format: :long)) %></span>
           <% end %>
-          <% if summary.charges && summary.credits %>
+          <% if summary.charges && summary.payments_applied %>
             <span class="flex items-center justify-between gap-4">
               <span><%= t(".charges") %></span>
               <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.charges) %></span>
             </span>
-            <span class="flex items-center justify-between gap-4">
-              <span><%= t(".payments_credits") %></span>
-              <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.credits.abs) %></span>
-            </span>
+            <%# Only the payments that reduced these charges appear here. The part
+                used to settle the closed bill is already on the card before this,
+                so the lines above add up to the total. %>
+            <% if summary.payments_applied.positive? %>
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".payments_applied") %></span>
+                <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.payments_applied) %></span>
+              </span>
+            <% end %>
+            <% if summary.adjustments && !summary.adjustments.zero? %>
+              <span class="flex items-center justify-between gap-4">
+                <span><%= t(".balance_updates") %></span>
+                <span class="font-medium text-primary privacy-sensitive"><%= format_money(summary.adjustments) %></span>
+              </span>
+            <% end %>
           <% end %>
         </span>
       <% end %>
@@ -119,7 +124,7 @@
       that explains nothing. Set against the statement balance above it answers
       the question the cardholder actually has, which is whether paying the
       minimum clears the bill. %>
-  <% if card.minimum_payment_shortfall?(as_of: today) %>
+  <% if card.minimum_payment_shortfall?(as_of: today, balance: summary.balance) %>
     <div class="mt-2">
       <%= render DS::Alert.new(variant: :warning) do %>
         <%= t(".above_minimum",
