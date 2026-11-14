@@ -4,7 +4,7 @@ class PropertiesController < ApplicationController
   before_action :set_property, only: [ :balances, :address, :update_balances, :update_address, :refresh_valuation, :link_valuation ]
   before_action :require_property_write_permission!, only: [ :update_balances, :update_address, :refresh_valuation, :link_valuation ]
 
-  helper_method :avm_provider_class
+  helper_method :avm_provider_class, :default_purchase_date
 
   def new
     @account = Current.family.accounts.build(accountable: Property.new)
@@ -54,8 +54,7 @@ class PropertiesController < ApplicationController
 
   def update_balances
     if @account.draft? && (date_error = purchase_date_error)
-      @error_message = date_error
-      return render :balances, status: :unprocessable_entity
+      return render_balances_error(date_error)
     end
 
     result = nil
@@ -78,8 +77,7 @@ class PropertiesController < ApplicationController
         redirect_to address_property_path(@account)
       end
     else
-      @error_message = result.respond_to?(:error_message) ? result.error_message : result&.error
-      render :balances, status: :unprocessable_entity
+      render_balances_error(result.respond_to?(:error_message) ? result.error_message : result&.error)
     end
   end
 
@@ -304,8 +302,24 @@ class PropertiesController < ApplicationController
       result
     end
 
+    # Re-renders the value step with what the user typed, not the saved value.
+    def render_balances_error(message)
+      @account.assign_attributes(balance_params.slice(:balance, :currency).compact_blank)
+      @error_message = message
+      render :balances, status: :unprocessable_entity
+    end
+
     def purchase_date
-      balance_params[:purchase_date].presence&.to_date || Date.current
+      balance_params[:purchase_date].presence&.to_date || default_purchase_date
+    end
+
+    # The purchase valuation must come before any other value the draft
+    # already has, so the default is the latest date that allows it.
+    def default_purchase_date
+      return @account.opening_anchor_date if @account.has_opening_anchor?
+
+      oldest = Account::OpeningBalanceManager.new(@account).oldest_entry_date
+      oldest ? [ oldest.prev_day, Date.current ].min : Date.current
     end
 
     def purchase_date_error

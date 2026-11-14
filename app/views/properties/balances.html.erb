@@ -18,7 +18,7 @@
             <% if @account.draft? %>
               <%= form.date_field :purchase_date,
                   label: t(".purchase_date_label"),
-                  value: params.dig(:account, :purchase_date).presence || (@account.has_opening_anchor? ? @account.opening_anchor_date : Date.current),
+                  value: params.dig(:account, :purchase_date).presence || default_purchase_date,
                   min: Entry.min_supported_date + 1,
                   max: Date.current %>
             <% end %>

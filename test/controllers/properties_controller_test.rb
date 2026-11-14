@@ -221,8 +221,40 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "label", text: "Purchase price", count: 0
   end
 
-  # A draft left mid-wizard before the purchase date existed, or restored from
-  # an export, already has the reconciliation set_current_balance wrote today.
+  test "value step defaults the purchase date to before a value the draft already has" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[purchase_date]'][value='#{Date.yesterday.iso8601}']"
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: Date.yesterday.iso8601 }
+    }
+    assert_redirected_to address_property_path(account)
+
+    patch update_balances_property_path(account), params: { account: { balance: 100_000, currency: "EUR" } }
+    assert_redirected_to address_property_path(account)
+    assert_equal Date.yesterday, account.reload.opening_anchor_date
+  end
+
+  test "value step keeps the submitted price when the purchase date is rejected" do
+    account = create_draft_property
+    add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "EUR", purchase_date: Date.current.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='250000.00']"
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 260_000, currency: "EUR", purchase_date: 1.day.from_now.to_date.iso8601 }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='260000.00']"
+  end
+
   test "balances update handles validation errors" do
     Account.any_instance.stubs(:set_current_balance).returns(OpenStruct.new(success?: false, error_message: "Invalid balance"))
 
@@ -1010,6 +1042,13 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       @user.family.accounts.create!(
         name: "Land", balance: 0, currency: "EUR", status: "draft", owner: @user,
         accountable: Property.new(subtype: "plot")
+      )
+    end
+
+    def add_reconciliation(account, date:, amount:)
+      account.entries.create!(
+        date: date, name: "Manual value update", amount: amount, currency: account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
       )
     end
 end
