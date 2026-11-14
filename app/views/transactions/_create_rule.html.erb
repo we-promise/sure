@@ -1,0 +1,14 @@
+<%# locals: (entry:) %>
+<div class="flex items-center justify-between gap-2 p-3" id="<%= dom_id(entry, :create_rule) %>">
+  <div class="text-sm space-y-1">
+    <h4 class="text-primary"><%= t("transactions.show.create_rule_title") %></h4>
+    <p class="text-secondary"><%= t("transactions.show.create_rule_subtitle") %></p>
+  </div>
+  <%= render DS::Link.new(
+    text: t("transactions.show.create_rule"),
+    icon: "git-branch",
+    variant: "outline",
+    href: @create_rule_href,
+    frame: :modal
+  ) %>
+</div>
