@@ -374,7 +374,7 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
   # close. The holdings are dated by the sync day, so Plaid's total has to be
   # anchored on that day too, or the reverse calculator values the holdings on
   # the price date at the previous sync's price and reads the gap as cash on
-  # every day before it (the shift #3815 and #3874 removed).
+  # every day before it.
   test "a lagging price date leaves no cash on the anchor day or before" do
     family = families(:dylan_family)
     family.update!(timezone: "UTC")

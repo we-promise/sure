@@ -172,12 +172,11 @@ class PlaidAccount::Processor
       report_exception(e)
     end
 
-    # The anchor is dated by the sync day, the same day the holdings are dated
-    # by (HoldingsProcessor), so Plaid's total and the holdings it is made of
-    # sit on one date: the shift #3815 and #3874 removed needs the two apart.
-    # #3874 dated both by institution_price_as_of; with the holdings now on
-    # the sync day, an anchor on the price date would value them there at the
-    # previous sync's price and read the gap as cash on every day before it.
+    # Plaid's total and the holdings it is made of must sit on one date. The
+    # holdings are dated by the sync day (HoldingsProcessor), so the anchor is
+    # too. On any other day the reverse calculator would value the holdings at
+    # a different price than Plaid's total and read the gap as cash on every
+    # day before it.
     def balance_date
       Date.current
     end

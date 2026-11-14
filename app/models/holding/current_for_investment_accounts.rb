@@ -6,9 +6,8 @@ class Holding::CurrentForInvestmentAccounts
   #
   # The snapshot is keyed on the holding's date, not on updated_at. Syncs run
   # in the family's time zone (Sync#perform), so the date a sync writes is
-  # the family's local day, while updated_at::date is the UTC day. Keyed on
-  # updated_at, a family west of UTC saw yesterday's rows as today's: a
-  # position sold since then stayed listed and one still held counted twice.
+  # the family's local day, while updated_at::date is the UTC day: for a
+  # family west of UTC, two days' syncs can share one updated_at date.
   #
   # Each requested account's latest provider snapshot date is computed once,
   # grouped by account, rather than as a subquery correlated to every row.

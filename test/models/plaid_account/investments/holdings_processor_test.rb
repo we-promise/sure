@@ -326,9 +326,9 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal "EUR", holding.currency  # Should use account's currency
   end
 
-  # #3484's case: a mutual fund's NAV is a session behind, so Plaid prices it
-  # as of yesterday on every sync while the stocks are priced today. Both are
-  # held, so the holdings page, the dashboard and the assistant all list both.
+  # A mutual fund's NAV is a session behind, so Plaid prices it as of
+  # yesterday on every sync while the stocks are priced today. Both are held,
+  # so the holdings page, the dashboard and the assistant all list both.
   test "a fund priced a session behind stays in the account's current holdings" do
     account, plaid_account = linked_plaid_brokerage
     plaid_sync!(plaid_account, Date.new(2026, 12, 17), "AAPL" => [ Date.new(2026, 12, 17), 100 ], "MSFT" => [ Date.new(2026, 12, 16), 50 ])
@@ -341,9 +341,8 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
   end
 
   # A Saturday sync re-imports AAPL with Friday's price unchanged, while the
-  # fund gets its Friday NAV. Under price dating AAPL's row was rewritten in
-  # place with no change, so neither its date nor its updated_at moved, and
-  # the fund's new row alone made up the latest day.
+  # fund gets its Friday NAV. AAPL must not drop out of the latest snapshot
+  # because its price and price date did not change.
   test "a holding re-imported unchanged on a later day stays current" do
     account, plaid_account = linked_plaid_brokerage
     plaid_sync!(plaid_account, Date.new(2026, 12, 18), "AAPL" => [ Date.new(2026, 12, 18), 101 ], "MSFT" => [ Date.new(2026, 12, 17), 51 ])
