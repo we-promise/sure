@@ -300,6 +300,23 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     assert_equal 2000, @linked_account.balance
   end
 
+  test "moves a linked account's anchor without a waypoint when asked not to record one" do
+    manager = Account::CurrentBalanceManager.new(@linked_account)
+    assert manager.set_current_balance(1000).success?
+    anchor_id = @linked_account.valuations.current_anchor.sole.id
+
+    travel_to Date.current + 1.day do
+      assert_no_difference -> { @linked_account.valuations.count } do
+        assert manager.set_current_balance(2000, record_waypoint: false).success?
+      end
+
+      anchor = @linked_account.valuations.current_anchor.sole
+      assert_equal anchor_id, anchor.id
+      assert_equal [ 2000, Date.current ], [ anchor.entry.amount, anchor.entry.date ]
+      assert_empty @linked_account.valuations.reconciliation
+    end
+  end
+
   test "does not preserve same-day anchor as reconciliation" do
     manager = Account::CurrentBalanceManager.new(@linked_account)
 

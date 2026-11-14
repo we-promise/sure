@@ -228,6 +228,27 @@ Rails.application.routes.draw do
     end
   end
 
+  # StashAway signs in with a password and, when StashAway asks for it, an
+  # SMS code, so the login steps are member routes of their own.
+  resources :stashaway_items, only: [ :create, :destroy ] do
+    collection do
+      get :select_accounts
+      get :select_existing_account
+      post :link_existing_account
+    end
+
+    member do
+      post :sync
+      post :login
+      post :verify_code
+      post :resend_code
+      post :cancel_login
+      post :forget_password
+      get :setup_accounts
+      post :complete_account_setup
+    end
+  end
+
   # Trade Republic routes (login steps are TR-specific: web login needs a
   # two-phase initiate/confirm handshake with the Trade Republic app)
   resources :trade_republic_items, only: [ :show, :create, :update, :destroy ] do

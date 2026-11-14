@@ -551,6 +551,26 @@ class Account < ApplicationRecord
       create_and_sync(attributes, skip_initial_sync: true)
     end
 
+    def create_from_stashaway_account(stashaway_account)
+      family = stashaway_account.stashaway_item.family
+
+      attributes = {
+        family: family,
+        name: I18n.t(
+          "stashaway_items.defaults.account_name",
+          region: stashaway_account.stashaway_item.region_info.name_prefix,
+          name: stashaway_account.name.presence || I18n.t("stashaway_items.defaults.name")
+        ),
+        balance: 0,
+        cash_balance: 0,
+        currency: stashaway_account.currency.presence || family.currency,
+        accountable_type: stashaway_account.accountable_type,
+        accountable_attributes: { subtype: stashaway_account.accountable_subtype }
+      }
+
+      create_and_sync(attributes, skip_initial_sync: true)
+    end
+
     TRADE_REPUBLIC_ACCOUNT_TYPES = {
       "portfolio" => [ "Investment", "brokerage", "Trade Republic Portfolio" ],
       "cash" => [ "Depository", "checking", "Trade Republic Cash" ],

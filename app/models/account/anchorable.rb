@@ -70,8 +70,9 @@ module Account::Anchorable
   # as of a statement rather than of this moment; it defaults to today.
   # Pass schedule_sync: false when the caller schedules the account sync
   # itself, such as a provider sync that syncs its accounts afterwards.
-  def set_current_balance(balance, date: nil, schedule_sync: true)
-    result = current_balance_manager.set_current_balance(balance, date: date)
+  # See Account::CurrentBalanceManager#set_current_balance for record_waypoint.
+  def set_current_balance(balance, date: nil, schedule_sync: true, record_waypoint: true)
+    result = current_balance_manager.set_current_balance(balance, date: date, record_waypoint: record_waypoint)
     sync_later if schedule_sync && result.success?
     result
   end
