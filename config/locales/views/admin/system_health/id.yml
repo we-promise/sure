@@ -1,0 +1,432 @@
+---
+id:
+  admin:
+    system_health:
+      hosted_usage:
+        loading: "Memuat penggunaan terkelola…"
+        title: "Penggunaan terkelola"
+        snapshot: "Cuplikan basis data baca-saja per %{time}"
+        summary:
+          trial_households_count: "Keluarga uji coba (30 hari terakhir)"
+          trial_members_count: "Akun anggota uji coba saat ini"
+          trials_expiring_soon_count: "Uji coba berakhir dalam 7 hari ke depan"
+          cleanup_eligible_count: "Keluarga memenuhi syarat pembersihan"
+          active_supporter_households_count: "Keluarga pendukung aktif (lokal)"
+          supporter_subscription_count: "Baris langganan tertaut Stripe"
+        summary_help: "Total uji coba mencakup langganan yang tercatat dalam 30 hari terakhir. Total uji coba yang segera berakhir, pembersihan, dan pendukung mencakup semua baris aktif yang cocok, tanpa batas tabel."
+        limitations_title: "Apa yang dapat dijelaskan oleh angka-angka ini"
+        limitations: "Tabel saat ini tidak menyimpan riwayat uji coba, pembayaran, atau aktivitas sesi secara lengkap. Pembuatan langganan dapat mencerminkan hasil impor. Akun anggota bukan orang unik yang terverifikasi. Tampilan ini tidak mengubah data keluarga atau langganan apa pun. Pengaturan ulang demo bersama menghapus keluarga dan sesi lama, sehingga riwayat pengunjung tidak dapat direkonstruksi."
+        trials:
+          title: "Keluarga uji coba terbaru"
+          description: "Langganan yang tercatat sejak %{date} yang masih memiliki tanggal berakhir uji coba, termasuk uji coba yang dikonversi. Menampilkan hingga %{limit} keluarga."
+          sessions_help: "Sesi adalah catatan masuk yang tersimpan untuk pengguna aktif, bukan pengguna yang sedang online atau kunjungan. Keluar akan menghapus catatan tersebut. Waktu pembuatan terbaru bukan waktu terakhir terlihat."
+          empty: "Tidak ada keluarga uji coba yang tercatat dalam rentang ini"
+        cleanup:
+          title: "Kelayakan pembersihan"
+          description: "Sesuai cakupan pembersihan yang ada: langganan dijeda atau uji coba berakhir lebih dari 14 hari lalu, atau tanpa langganan dan keluarga berusia lebih dari 45 + 14 hari. Menampilkan hingga %{limit} keluarga."
+          eligibility_help: "Login terbaru tidak mencegah kecocokan. Kelayakan tidak memastikan penghapusan; 90 hari adalah retensi arsip, bukan ambang batas pembersihan uji coba."
+          disabled: "Pembersihan uji coba terjadwal dinonaktifkan di luar mode terkelola. Ini hanya kecocokan cakupan."
+          empty: "Tidak ada keluarga yang cocok dengan cakupan pembersihan"
+          reasons:
+            expired_trial_grace_elapsed: "Uji coba berakhir; masa tenggang 14 hari berlalu"
+            no_subscription_grace_elapsed: "Tanpa langganan; 45 + 14 hari berlalu"
+        supporters:
+          title: "Status pendukung lokal"
+          description: "Baris langganan lokal saat ini dengan ID pelanggan dan ID langganan berformat Stripe; langganan demo sintetis dikecualikan. Status tidak memverifikasi pembayaran yang diterima atau tanggal pembayaran pertama. Tidak ada permintaan Stripe yang dikirim."
+          empty: "Tidak ada baris langganan tertaut Stripe"
+        columns:
+          household: "ID Keluarga"
+          recorded_at: "Langganan tercatat"
+          trial_ends_at: "Uji coba berakhir"
+          status: "Status saat ini"
+          members: "Akun anggota"
+          retained_sessions: "Sesi masuk tersimpan"
+          recent_sessions: "Sesi tersimpan dibuat dalam 30 hari terakhir"
+          latest_session: "Masuk tersimpan terbaru"
+          cleanup_eligible: "Layak dibersihkan"
+          cleanup_reason: "Alasan"
+          subscription_rows: "Baris langganan"
+        statuses:
+          unknown: "Tidak diketahui"
+          incomplete: "Belum lengkap"
+          incomplete_expired: "Belum lengkap, kedaluwarsa"
+          trialing: "Uji coba"
+          active: "Aktif"
+          past_due: "Jatuh tempo"
+          canceled: "Dibatalkan"
+          unpaid: "Belum dibayar"
+          paused: "Dijeda"
+          no_subscription: "Tanpa langganan"
+        not_recorded: "Tidak tercatat"
+        eligible: "Layak"
+        not_eligible: "Tidak layak"
+        synthetic_demo: "Demo sintetis"
+      push_notifications:
+        send_test: "Kirim notifikasi push uji coba"
+        queueing: "Mengantrekan…"
+        title: "Notifikasi push"
+        requested_at: "Uji coba terbaru diminta pada %{time}"
+        result_help: "Penerimaan APNs tidak memastikan pengiriman ke perangkat Anda. Muat ulang untuk melihat hasil worker. Hasil disimpan selama 24 jam."
+        results_label: "Hasil uji coba"
+        device: "Perangkat %{number}"
+        pending: "Menunggu"
+        refresh: "Muat ulang hasil"
+        columns:
+          device: "Perangkat"
+          environment: "Lingkungan APNs"
+          status: "Hasil"
+          checked_at: "Pembaruan terakhir"
+        environments:
+          sandbox: "Sandbox"
+          production: "Produksi"
+        messages:
+          enqueue_failed: "Uji coba tidak dapat dimasukkan ke antrean. Periksa Sidekiq dan muat ulang hasil di bawah ini."
+          ready: "Kirim notifikasi uji coba ke perangkat iOS aktif yang terdaftar pada akun Anda."
+          queued: "Notifikasi uji coba dimasukkan ke antrean. Muat ulang hasil di bawah ini untuk memeriksa statusnya."
+          hosted_only: "Notifikasi push hanya tersedia dalam mode terkelola."
+          ineligible: "Hanya super-admin aktif yang dapat mengirim notifikasi uji coba."
+          no_devices: "Aktifkan notifikasi push di aplikasi Sure iOS untuk akun ini agar dapat mengirim uji coba."
+          disabled: "Pengiriman push telah dinonaktifkan oleh operator."
+          not_configured: "Kredensial APNs belum dikonfigurasi."
+          cooldown: "Harap tunggu 30 detik sebelum mengirim uji coba lagi."
+          storage_unavailable: "Permintaan uji coba tidak dapat disimpan. Periksa konfigurasi cache bersama."
+        statuses:
+          queued: "Dalam antrean"
+          accepted: "Diterima oleh APNs"
+          skipped: "Dilewati: tidak lagi memenuhi syarat"
+          rejected: "Ditolak oleh APNs; periksa log debug push"
+          unregistered: "Registrasi perangkat tidak lagi valid"
+          retrying: "Mencoba ulang kegagalan sementara"
+          failed: "Gagal; periksa log debug push"
+          enqueue_failed: "Tidak dapat masuk antrean; periksa Sidekiq"
+          expired: "Kedaluwarsa tanpa hasil akhir"
+      push_notification:
+        title: "Notifikasi uji coba Sure"
+        body: "Ini adalah notifikasi push uji coba untuk akun Sure Anda."
+      verify_worker_ai:
+        queued: "Pemeriksaan worker telah masuk antrean. Hasilnya akan muncul di bawah ini setelah proses worker mengambilnya, biasanya dalam beberapa detik."
+      optional_services:
+        title: Layanan opsional
+        description: "Integrasi operator opsional. Layanan yang belum dikonfigurasi bersifat informasional. Pemeriksaan ini hanya memeriksa pengaturan; tidak menguji konektivitas, mengirim event uji coba, atau mengubah persetujuan analitik. Rentangkan layanan untuk detail pengaturan."
+        missing_settings: "Pengaturan yang kurang: %{settings}"
+        statuses:
+          configured: Terkonfigurasi
+          not_configured: Belum dikonfigurasi
+          incomplete: Konfigurasi belum lengkap
+          disabled: Dinonaktifkan pada proses ini
+          not_checked: Belum diverifikasi
+        notes:
+          environment_disabled: "Integrasi yang dimuat dinonaktifkan untuk lingkungan Rails ini."
+          explicitly_disabled: "SKYLIGHT_ENABLED secara eksplisit menonaktifkan instrumentasi."
+          self_hosted_checkout_disabled: "Checkout langganan dan portal penagihan dinonaktifkan dalam mode self-hosted. Webhook Stripe tetap dapat dikonfigurasi; ID harga checkout tidak diperlukan di sini."
+          browser_analytics_disabled: "Analitik browser dinonaktifkan untuk lingkungan ini. Ini tidak menonaktifkan klien server yang dikonfigurasi terpisah."
+          shared_feedback_configured: "Umpan balik self-hosted memiliki proyek bawaan terpisah dan diaktifkan oleh konfigurasinya. Ini tidak memerlukan POSTHOG_KEY operator. Pilihan keluar browser dan ketersediaan SDK tidak diperiksa."
+          shared_feedback_disabled: "Proyek umpan balik self-hosted terpisah dinonaktifkan oleh pengaturan umpan balik atau lingkungannya. Ini tidak menonaktifkan analitik milik operator."
+          production_only: "Integrasi ini hanya digunakan di produksi menurut konfigurasi aplikasi saat ini."
+        services:
+          langfuse:
+            title: Langfuse
+            description: "Pelacakan AI dan pelaporan evaluasi opsional. Tidak ada trace atau permintaan evaluasi yang dikirim oleh pemeriksaan ini."
+            guidance: "Atur LANGFUSE_PUBLIC_KEY dan LANGFUSE_SECRET_KEY bersama-sama. LANGFUSE_HOST bersifat opsional. Mulai ulang layanan terkait setelah mengubah pengaturan ini."
+          sentry:
+            title: Sentry
+            description: "Pelaporan kesalahan dan kinerja opsional. Initializer saat ini mengaktifkan pelaporan hanya di produksi."
+            guidance: "Atur SENTRY_DSN dan mulai ulang layanan terkait. Ini memeriksa konfigurasi SDK yang dimuat tanpa menangkap kesalahan atau mengirim event."
+          skylight:
+            title: Skylight
+            description: "Instrumentasi kinerja aplikasi opsional. Keberadaan konfigurasi tidak memastikan agen sedang berjalan atau melapor."
+            guidance: "Atur SKYLIGHT_AUTHENTICATION dan pastikan Skylight dimuat di lingkungan Rails yang dituju. SKYLIGHT_ENABLED=false menonaktifkan instrumentasi; flag saja tidak memuat gem. Mulai ulang setelah perubahan."
+          stripe:
+            title: Stripe
+            description: "Penagihan langganan dan webhook pembayaran opsional. Pemeriksaan ini tidak membuat klien Stripe, memvalidasi kredensial, atau mengirim permintaan pembayaran."
+            guidance: "Atur STRIPE_SECRET_KEY dan STRIPE_WEBHOOK_SECRET bersama-sama. Checkout langganan terkelola juga memerlukan STRIPE_MONTHLY_PRICE_ID dan STRIPE_ANNUAL_PRICE_ID."
+          posthog:
+            title: PostHog
+            description: "Analitik milik operator opsional, menggunakan konfigurasi yang dimuat saat boot. Terkonfigurasi tidak berarti pengguna telah menyetujui analitik."
+            guidance: "Atur POSTHOG_KEY dan POSTHOG_HOST yang tidak kosong, atau biarkan host tidak diatur untuk menggunakan bawaan. Analitik browser memerlukan produksi atau POSTHOG_DEVELOPMENT_ENABLED di pengembangan. POSTHOG_FEEDBACK_ENABLED mengatur umpan balik self-hosted terpisah, bukan analitik operator."
+          logtail:
+            title: Logtail
+            description: "Penerusan log produksi opsional. Saat belum dikonfigurasi, aplikasi tetap mencatat ke output standar."
+            guidance: "Atur LOGTAIL_API_KEY dan LOGTAIL_INGESTING_HOST bersama-sama lalu mulai ulang layanan terkait. Tidak ada log uji coba yang dikirim oleh pemeriksaan ini."
+      configuration:
+        description: "Konfigurasi yang terlihat oleh proses web ini. Pemeriksaan ini tidak mengirim email, menghubungi penyedia, atau mengunggah maupun mengunduh file. Terkonfigurasi berarti pengaturan tersedia, bukan berarti pengiriman, akses penyedia, atau akses penyimpanan telah diverifikasi."
+        statuses:
+          configured: Terkonfigurasi
+          not_configured: Belum dikonfigurasi
+          incomplete: Konfigurasi belum lengkap
+          disabled: Dinonaktifkan
+          not_checked: Belum diverifikasi
+        settings_needed: Pengaturan yang perlu ditinjau
+        unknown_provider: Pilihan penyedia tidak dikenal
+        provider_statuses:
+          configured: Terkonfigurasi
+          not_configured: Kunci API tidak ada
+          invalid: Pilihan tidak valid
+        configure_providers: Buka pengaturan self-hosting
+        storage_backend: "Penyimpanan dipilih: %{backend}"
+        storage_backends:
+          local: Disk lokal
+          test: Disk uji coba
+          amazon: Amazon S3
+          cloudflare: Cloudflare R2
+          generic_s3: Penyimpanan kompatibel S3
+          google: Google Cloud Storage
+          other: Backend kustom atau tidak dikenal
+        checks:
+          smtp:
+            title: Email (SMTP)
+            statuses:
+              configured: "Pengaturan SMTP tersedia."
+              not_configured: "SMTP belum dikonfigurasi. Pengaturan ulang kata sandi, undangan, dan email sistem lainnya tidak dapat dikirim melalui SMTP."
+              incomplete: "Sebagian pengaturan email kurang atau belum lengkap. Email sistem atau tautan di dalamnya mungkin tidak berfungsi."
+              disabled: "Pengiriman email dinonaktifkan dalam konfigurasi mailer yang berjalan."
+              not_checked: "Proses ini menggunakan metode pengiriman selain SMTP, seperti pratinjau pengembangan. Pengiriman SMTP tidak dinilai."
+            guidance: "SMTP tidak dapat dikonfigurasi di UI admin. Atur variabel lingkungan email untuk layanan web maupun worker, lalu mulai ulang keduanya. SMTP_USERNAME dan SMTP_PASSWORD dapat dikosongkan keduanya untuk relay tanpa autentikasi."
+            issues:
+              address: SMTP_ADDRESS
+              port: SMTP_PORT (angka dari 1 hingga 65535)
+              sender: EMAIL_SENDER (ganti bawaan sender@sure.local)
+              app_domain: APP_DOMAIN (digunakan di tautan email)
+              authentication: SMTP_USERNAME dan SMTP_PASSWORD (berikan keduanya atau tidak sama sekali)
+          securities:
+            title: Harga pasar
+            statuses:
+              configured: "Semua penyedia harga pasar yang aktif memiliki konfigurasi."
+              not_configured: "Penyedia harga pasar yang aktif kekurangan kunci API-nya. Pencarian sekuritas dan pencarian harga otomatis tidak tersedia melalui penyedia ini."
+              incomplete: "Setidaknya satu penyedia harga pasar yang aktif kekurangan konfigurasi atau memiliki pilihan tidak valid. Sekuritas yang ditetapkan ke penyedia tersebut mungkin tidak menerima pembaruan harga."
+              disabled: "Tidak ada penyedia harga pasar yang diaktifkan. Pencarian sekuritas dan pencarian harga otomatis tidak tersedia."
+            guidance: "Pilih penyedia dan tambahkan kunci API yang diperlukan di pengaturan self-hosting, atau konfigurasikan di lingkungan deployment. Penimpaan lingkungan lebih diprioritaskan. Penyedia publik tidak memerlukan kunci API."
+          exchange_rates:
+            title: Nilai tukar mata uang asing
+            statuses:
+              configured: "Penyedia nilai tukar yang dipilih memiliki konfigurasi."
+              not_configured: "Tidak ada penyedia nilai tukar yang dapat digunakan yang dikonfigurasi. Konversi mata uang otomatis mungkin tidak tersedia jika kurs tersimpan tidak ada."
+            guidance: "Pilih penyedia nilai tukar dan tambahkan kunci API-nya jika diperlukan di pengaturan self-hosting, atau konfigurasikan di lingkungan deployment. EXCHANGE_RATE_PROVIDER dan penimpaan lingkungan kunci API penyedia lebih diprioritaskan."
+            issues:
+              invalid_provider: "Penyedia nilai tukar yang dipilih tidak dikenal. Pencarian kurs otomatis gagal hingga penyedia yang didukung dipilih."
+          storage:
+            title: Unggahan file dan penyimpanan
+            statuses:
+              configured: "Pengaturan penyimpanan tersedia; disk lokal tidak memerlukan kredensial cloud."
+              not_configured: "Backend penyimpanan yang dipilih tidak memiliki konfigurasi yang cocok. Unggahan file mungkin tidak tersedia."
+              incomplete: "Pengaturan penyimpanan wajib kurang atau belum lengkap. Unggahan atau pengambilan file mungkin tidak berfungsi."
+              not_checked: "Backend ini menggunakan penemuan kredensial eksternal atau konfigurasi kustom. Aksesnya tidak dapat ditentukan dari pengaturan ini saja."
+            guidance: "Tinjau ACTIVE_STORAGE_SERVICE dan pengaturan deployment backend yang dipilih. Disk lokal memerlukan penyimpanan persisten yang dipakai bersama oleh layanan web dan worker. Mengubah backend tidak memigrasikan file yang ada; rencanakan migrasi secara terpisah."
+            issues:
+              root: Root penyimpanan lokal
+              bucket: Bucket penyimpanan
+              region: Wilayah penyimpanan
+              credentials: Kunci akses dan kunci rahasia penyimpanan (berikan keduanya atau gunakan penemuan kredensial eksternal)
+              endpoint: Endpoint penyimpanan (dan CLOUDFLARE_ACCOUNT_ID untuk R2)
+      show:
+        title: Kesehatan sistem
+        tabs:
+          hosted_usage: "Penggunaan"
+          background_jobs: "Pekerjaan"
+          ai: "AI"
+          configuration: "Konfigurasi"
+        alert:
+          title: Pekerjaan latar belakang tidak berjalan
+        status_section_title: Status Sidekiq
+        status_section_description: Status terkini pekerja latar belakang yang menjalankan sinkronisasi, saldo, dan perhitungan kekayaan bersih.
+        counters_section_title: Penghitung pekerjaan
+        counters_section_description: Penghitung agregat Sidekiq di semua antrean.
+        queues_section_title: Antrean
+        queues_section_description: Kedalaman per antrean dan usia pekerjaan tertua. Latensi adalah jumlah detik pekerjaan tertua telah menunggu.
+        labels:
+          status: Status
+          processes: Proses worker
+          last_heartbeat: Detak jantung terakhir
+          max_queue_latency: Usia pekerjaan tertua
+          enqueued: Dalam antrean
+          retries: Percobaan ulang
+          failed: Gagal
+          processed_total: Total diproses
+          queue: Antrean
+          size: Ukuran
+          latency: Latensi
+        values:
+          healthy: Sehat
+          unhealthy: Menurun
+          time_ago: "%{time_ago} lalu"
+          never: Tidak pernah
+          seconds: "%{seconds} dtk"
+          no_queues: "Tidak ada antrean yang terdaftar. Worker mungkin tidak berjalan."
+        ai:
+          run_checks: Jalankan pemeriksaan lagi
+          last_checked: "Pemeriksaan langsung selesai %{time_ago} lalu. Hasil di-cache sebentar."
+          not_checked_help: Buka URL status AI secara langsung atau jalankan pemeriksaan untuk memverifikasi keaktifan layanan.
+          loading: "Menjalankan pemeriksaan langsung…"
+          alerts:
+            custom_openai:
+              title: Pemeriksaan vector-store terkelola gagal di endpoint kustom ini
+              message: Endpoint yang dikonfigurasi tidak lolos pemeriksaan keaktifan /v1/vector_stores. Sebagian besar endpoint lokal dan kompatibel OpenAI tidak mengimplementasikan API tersebut. Obrolan dan pemrosesan PDF mungkin tetap berfungsi; gunakan pgvector dengan endpoint embeddings terpisah untuk pengaturan lokal standar. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            function_calling_unsupported:
+              title: Model tidak mendukung pemanggilan fungsi
+              message: Endpoint melayani permintaan obrolan biasa tetapi menolak permintaan yang sama saat membawa parameter tools. Asisten AI membaca rekening, transaksi, dan kepemilikan melalui pemanggilan fungsi, sehingga obrolan terus gagal — sering kali dengan 404 yang tidak informatif — hingga modelnya mendukung tools. Pilih model yang didokumentasikan penyedianya mendukung function calling. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            function_calling_not_used:
+              title: Model menjawab tanpa memanggil alat yang diminta
+              message: Endpoint menerima parameter tools, tetapi model membalas dengan teks alih-alih memanggil alat pemeriksaan kesehatan. Asisten AI tidak dapat membaca data keuangan tanpa pemanggilan alat, sehingga obrolan mungkin menjawab kosong atau dengan angka karangan. Utamakan model yang didokumentasikan penyedianya mendukung function calling.
+            llm_probe_failed:
+              title: Pemeriksaan langsung LLM gagal
+              message: Sure tidak dapat memverifikasi endpoint dan model yang dikonfigurasi. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            llm_model_not_available:
+              title: Model AI yang dikonfigurasi tidak tersedia
+              message: Endpoint merespons, tetapi tidak mencantumkan atau melayani model yang dikonfigurasi. Pilih model aktif untuk penyedia yang dipilih, lalu jalankan pemeriksaan lagi. Untuk Gemini melalui lapisan translasi kompatibel OpenAI, gunakan model yang didukung saat ini seperti gemini-3.8-flash.
+            pdf_text_extraction_failed:
+              title: Pemeriksaan ekstraksi teks PDF sintetis gagal
+              message: Sure tidak dapat menyelesaikan jalur berbasis teks yang mengekstrak teks PDF tertanam secara lokal dan mengirimkannya ke model yang dikonfigurasi. Tidak ada data pelanggan yang dikirim. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            pdf_vision_processing_failed:
+              title: Pemeriksaan visi/nativ PDF sintetis gagal
+              message: Sure tidak dapat menyelesaikan jalur gambar atau dokumen nativ PDF melalui model yang dikonfigurasi. Tidak ada data pelanggan yang dikirim. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            vector_probe_failed:
+              title: Pemeriksaan langsung pencarian dokumen gagal
+              message: Sure tidak dapat memverifikasi vector store yang dipilih dan setiap layanan embedding yang diperlukan. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            pgvector_extension_not_enabled:
+              title: Ekstensi vektor PostgreSQL belum diaktifkan
+              message: Adaptor pgvector dipilih, tetapi PostgreSQL belum mengaktifkan ekstensi vector untuk basis data ini. Gunakan image PostgreSQL yang menyertakan pgvector, lalu aktifkan ekstensi sebagai pemilik basis data atau superuser dan jalankan ulang migrasi dengan VECTOR_STORE_PROVIDER=pgvector.
+            pgvector_table_not_found:
+              title: Tabel vector_store_chunks tidak ditemukan
+              message: Ekstensi pgvector diaktifkan, tetapi tabel chunks tidak ditemukan. Periksa status migrasi, lalu jalankan ulang migrasi vector-store dengan VECTOR_STORE_PROVIDER=pgvector agar Sure dapat membuat vector_store_chunks.
+            pgvector_probe_failed:
+              title: Pemeriksaan penyimpanan pgvector gagal
+              message: Sure tidak dapat melakukan kueri pada tabel chunks pgvector. Periksa izin PostgreSQL, ekstensi vector, dan migrasi vector_store_chunks. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            embedding_dimensions_mismatch:
+              title: Dimensi embedding tidak cocok
+              message: Endpoint embedding mengembalikan vektor yang panjangnya tidak cocok dengan EMBEDDING_DIMENSIONS. Atur EMBEDDING_MODEL dan EMBEDDING_DIMENSIONS ke ukuran vektor yang didokumentasikan model, mulai ulang Sure agar lingkungan bertahan, lalu ubah atau buat ulang kolom/tabel embedding pgvector dan embed ulang dokumen jika data yang ada menggunakan ukuran berbeda.
+            embedding_probe_timeout:
+              title: Pemeriksaan langsung embedding habis waktu
+              message: Endpoint embedding tidak merespons sebelum AI_HEALTH_PROBE_TIMEOUT. Naikkan batas waktu pemeriksaan kesehatan tersebut jika penyedia lambat, lalu mulai ulang Sure agar lingkungan bertahan di setiap proses. Jika panggilan obrolan AI normal juga habis waktu, naikkan OPENAI_REQUEST_TIMEOUT secara terpisah.
+            embedding_probe_failed:
+              title: Pemeriksaan langsung embedding gagal
+              message: Sure tidak dapat membuat embedding uji singkat melalui endpoint dan model yang dikonfigurasi. Periksa EMBEDDING_URI_BASE, EMBEDDING_MODEL, EMBEDDING_ACCESS_TOKEN, dan log penyedia embedding. Kegagalan dicatat di Pengaturan → Log debug dan Rails.logger.
+            qdrant:
+              title: Dukungan Qdrant belum diimplementasikan
+              message: Adaptor Qdrant sudah disiapkan kerangkanya, tetapi operasi unggah dan pencarian dokumen saat ini gagal. Pilih OpenAI atau pgvector untuk pencarian dokumen.
+            missing_vector_store:
+              title: Tidak ada vector store yang dikonfigurasi
+              message: Dokumen yang diunggah tidak dapat diindeks atau dicari hingga adaptor vector-store beserta persyaratannya dikonfigurasi.
+            unavailable_vector_store:
+              title: Vector store yang dipilih tidak tersedia
+              message: Periksa persyaratan adaptor di bawah ini. Untuk pgvector, basis data harus menyediakan ekstensi vector atau tabel vector_store_chunks yang sudah ada.
+          llm:
+            title: Pemrosesan LLM dan PDF
+            description: Pemeriksaan langsung memverifikasi model yang dikonfigurasi, memintanya melakukan satu pemanggilan fungsi sederhana seperti yang dilakukan asisten, lalu secara terpisah menguji ekstraksi teks dan pemrosesan visi/nativ dengan PDF sintetis satu halaman tanpa data pelanggan. Nilai kredensial tidak pernah ditampilkan.
+          vector_store:
+            title: Vector store dan pencarian dokumen
+            description: Pemeriksaan langsung menguji API vector-store terkelola, atau menguji tabel pgvector dan membuat satu embedding singkat tanpa menyimpannya.
+          labels:
+            selected_provider: Penyedia dipilih
+            effective_provider: Penyedia efektif
+            model: Model
+            endpoint: Endpoint
+            function_calling: Function calling (tools)
+            pdf_text_extraction: Jalur ekstraksi teks PDF
+            pdf_vision_processing: Jalur visi/nativ PDF
+            llm_request_timeout: Batas waktu permintaan LLM
+            probe_request_timeout: Batas waktu pemeriksaan kesehatan
+            openai_credentials: Kredensial OpenAI
+            openai_compatible_credentials: Kredensial API kompatibel OpenAI
+            anthropic_credentials: Kredensial Anthropic
+            adapter: Adaptor
+            adapter_available: Adaptor tersedia
+            pgvector_extension: Ekstensi vektor PostgreSQL
+            pgvector_table: Tabel vector chunks
+            embedding_model: Model embedding
+            embedding_endpoint: Endpoint embedding
+            embedding_dimensions: Dimensi embedding
+            function_calling_failure_reason: Alasan kegagalan function-calling
+            pdf_text_extraction_failure_reason: Alasan kegagalan ekstraksi teks
+            pdf_vision_processing_failure_reason: Alasan kegagalan visi/nativ
+            storage_probe: Pemeriksaan penyimpanan pgvector
+            embedding_probe: Pemeriksaan endpoint embedding
+            failure_reason: Alasan kegagalan
+          providers:
+            openai: OpenAI
+            openai_compatible: Kompatibel OpenAI
+            anthropic: Anthropic
+            ollama: Ollama
+            openrouter: OpenRouter
+            together: Together
+            kilo: Kilo
+            cloudflare: Cloudflare
+            custom_openai_compatible: Endpoint kustom
+          adapters:
+            openai: Vector store terkelola OpenAI
+            pgvector: pgvector
+            qdrant: Qdrant
+          values:
+            configured: Terkonfigurasi
+            not_configured: Belum dikonfigurasi
+            fallback: "(cadangan)"
+            not_set: Belum diatur
+            "yes": "Ya"
+            "no": "Tidak"
+            enabled: Diaktifkan
+            available_not_enabled: Tersedia, belum diaktifkan
+            not_available: Tidak tersedia
+            available: Tersedia
+            not_found: Tidak ditemukan
+          function_calling_statuses:
+            supported: Panggilan alat langsung berhasil
+            unsupported: Tidak didukung oleh penyedia/model efektif
+            not_used: Tools diterima, tetapi model tidak memanggilnya
+            failing: Pemeriksaan langsung gagal
+            not_checked: Belum diperiksa
+            unavailable: Tidak tersedia hingga penyedia LLM dikonfigurasi
+          pdf_statuses:
+            supported: Pemeriksaan PDF sintetis berhasil
+            failing: Pemeriksaan PDF sintetis gagal
+            unsupported: Dinonaktifkan atau tidak didukung oleh penyedia/model efektif
+            not_checked: Belum diperiksa
+            unavailable: Tidak tersedia hingga penyedia LLM dikonfigurasi
+          probe_statuses:
+            passing: Pemeriksaan langsung berhasil
+            failing: Pemeriksaan langsung gagal
+            not_checked: Belum diperiksa
+            not_configured: Belum dikonfigurasi
+          vector_statuses:
+            passing: Pemeriksaan langsung berhasil
+            failing: Pemeriksaan langsung gagal
+            not_checked: Belum diperiksa
+            not_configured: Belum dikonfigurasi
+            scaffolded: Kerangka dasar
+            missing: Belum dikonfigurasi
+          failure_codes:
+            model_not_available: Model yang dikonfigurasi tidak dikembalikan oleh penyedia
+            no_tool_call: Model menjawab tanpa memanggil alat pemeriksaan kesehatan
+            tools_refused: Layanan melayani permintaan yang sama tanpa tools dan menolaknya saat disertai tools
+            invalid_response: Layanan mengembalikan respons tak terduga
+            dimensions_mismatch: Dimensi vektor embedding tidak cocok dengan dimensi yang dikonfigurasi
+            extension_not_enabled: Ekstensi vektor PostgreSQL belum diaktifkan
+            table_not_found: Tabel vector_store_chunks tidak ditemukan
+            render_missing_binary: Perender pdftoppm (poppler-utils) tidak tersedia di kontainer ini
+            timeout: Layanan tidak merespons sebelum batas waktu pemeriksaan
+            request_failed: Permintaan layanan gagal
+            unsupported_provider: Penyedia tidak mendukung pemeriksaan ini
+          worker:
+            title: Verifikasi worker
+            description: Pemeriksaan di atas berjalan dari proses web ini. Sebagian besar pekerjaan AI -- respons asisten, pemrosesan PDF, embedding, kategorisasi otomatis, dan deteksi merchant -- sebenarnya berjalan di proses worker Sidekiq, yang dapat berbeda dalam akses jaringan, DNS, aturan proxy, atau bahkan kredensial yang dimuat. Antrekan pemeriksaan untuk memverifikasi konfigurasi dan konektivitas worker sendiri.
+            verify_button: Verifikasi konfigurasi worker
+            coverage_notice: Setiap pemeriksaan memverifikasi tepat satu proses worker -- mana saja yang mengambilnya dari antrean. Dengan lebih dari satu replika worker, hasil lulus tidak memastikan setiap worker sehat; antrekan pemeriksaan lagi untuk mengambil sampel lain.
+            empty:
+              title: Belum ada worker yang melapor
+              description: Klik "Verifikasi konfigurasi worker" untuk mengantrekan pemeriksaan asinkron. Hasilnya muncul di sini setelah proses worker mengambilnya.
+            labels:
+              process: Proses worker
+              checked_at: Diperiksa
+              configuration: Konfigurasi
+            configuration_statuses:
+              match: Cocok dengan web
+              mismatch: Berbeda dengan web
+            statuses:
+              passing: Lulus
+              failing: Gagal
+              stale: Usang
+            settings_origin:
+              title: Pengaturan mana yang memerlukan mulai ulang?
+              database_backed: "Pengaturan penyedia, model, dan kunci API yang diubah di Pengaturan → Self-Hosting disimpan di basis data. rails-settings-cached membatalkan cache bersama saat penulisan, sehingga web dan worker langsung menggunakan nilai baru untuk permintaan atau pekerjaan antrean berikutnya -- tanpa perlu mulai ulang."
+              env_backed: "Konfigurasi embedding, dan nilai apa pun yang hanya diatur melalui variabel lingkungan, bersifat tetap saat setiap kontainer dimulai. Rails tidak dapat mengubah lingkungan kontainer lain, sehingga mengubahnya memerlukan mulai ulang atau pembuatan ulang layanan web dan worker -- dan alat deployment yang hanya memulai ulang salah satunya (rollout parsial, Secret yang diperbarui tanpa mulai ulang pod) tidak akan mengambil perubahan tersebut."
+          local_setup:
+            title: Pengaturan lokal yang disarankan
+            description: Jalankan LLM melalui endpoint kompatibel OpenAI lokal Anda, simpan vektor dokumen di pgvector, dan arahkan pengaturan embedding ke endpoint embeddings yang kompatibel OpenAI. Image PostgreSQL harus menyertakan ekstensi vector, dan dimensi embedding harus cocok dengan model yang dipilih.
