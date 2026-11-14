@@ -18,10 +18,22 @@ module Provider::SecurityConcept
   # defaults `currency:`. This Data has ten implementers; without the
   # defaults every one of them would raise at construction the day these
   # fields were added.
+  #
+  # `issuer_country_code` is the country of the company behind the security
+  # (ISO alpha-2), which is not always where it is listed: an ADR, or a
+  # European company with a US line.
+  #
+  # `fund_weights` is what a fund or ETF holds, as percentages of the fund,
+  # keyed in this application's vocabulary so the provider owns the mapping
+  # of its own labels:
+  #   { asset_class: { "equity" => 99.1, ... },
+  #     region: { "north_america" => 62.0, ... },
+  #     sector: { "Technology" => 24.5, ... } }
+  # Nil for anything that is not a fund, or when the provider has no breakdown.
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                             :sector, :industry) do
+                             :sector, :industry, :issuer_country_code, :fund_weights) do
     def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
-                   sector: nil, industry: nil)
+                   sector: nil, industry: nil, issuer_country_code: nil, fund_weights: nil)
       super
     end
   end

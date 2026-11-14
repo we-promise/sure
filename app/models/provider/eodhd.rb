@@ -210,7 +210,9 @@ class Provider::Eodhd < Provider
         kind: general.dig("Type"),
         exchange_operating_mic: exchange_operating_mic,
         sector: general.dig("Sector"),
-        industry: general.dig("Industry")
+        industry: general.dig("Industry"),
+        issuer_country_code: general.dig("CountryISO").presence&.upcase,
+        fund_weights: fund_weights_from(parsed["ETF_Data"] || parsed["MutualFund_Data"])
       )
     end
   end
@@ -321,6 +323,70 @@ class Provider::Eodhd < Provider
       cache_keys.lazy.map { |key| Rails.cache.read(key) }.find(&:present?) ||
         EXCHANGE_CURRENCY[eodhd_exchange] ||
         EXCHANGE_CURRENCY[exchange_operating_mic]
+    end
+
+    # EODHD's fund breakdown labels, mapped to Security::ASSET_CLASSES and
+    # Security::REGION_KEYS. ETF_Data and MutualFund_Data use different labels
+    # for the same buckets. "Other", "NotClassified", "Preferred" and
+    # "Convertible" map to nothing: they count towards the fund but not
+    # towards any class.
+    FUND_ASSET_CLASSES = {
+      "Stock US" => "equity", "Stock non-US" => "equity", "US Stocks" => "equity", "Non US Stocks" => "equity",
+      "Bond" => "fixed_income", "Bonds" => "fixed_income",
+      "Cash" => "liquidity"
+    }.freeze
+
+    FUND_REGIONS = {
+      "North America" => "north_america",
+      "Latin America" => "latin_america",
+      "United Kingdom" => "europe", "Europe Developed" => "europe", "Europe Emerging" => "europe",
+      "Africa/Middle East" => "middle_east_africa",
+      "Japan" => "asia_pacific", "Australasia" => "asia_pacific",
+      "Asia Developed" => "asia_pacific", "Asia Emerging" => "asia_pacific"
+    }.freeze
+
+    # ETF_Data keys its breakdowns by label:
+    #   "Asset_Allocation" => { "Stock US" => { "Net_Assets_%" => "60.1" } }
+    #   "World_Regions"    => { "North America" => { "Equity_%" => "61.2" } }
+    #   "Sector_Weights"   => { "Technology" => { "Equity_%" => "24.5" } }
+    # MutualFund_Data groups regions and sectors into lists:
+    #   "Asset_Allocation" => { "US Stocks" => { "Net_%" => "60.1" } }
+    #   "World_Regions"    => { "Americas" => [ { "Name" => "North America", "Stocks_%" => "61.2" } ] }
+    #   "Sector_Weights"   => { "Cyclical" => [ { "Type" => "Basic Materials", "Amount_%" => "2.5" } ] }
+    def fund_weights_from(fund_data)
+      return nil unless fund_data.is_a?(Hash)
+
+      weights = {
+        asset_class: sum_fund_weights(fund_data["Asset_Allocation"], FUND_ASSET_CLASSES, %w[Net_Assets_% Net_%]),
+        region: sum_fund_weights(fund_data["World_Regions"], FUND_REGIONS, %w[Equity_% Stocks_%]),
+        sector: sum_fund_weights(fund_data["Sector_Weights"], nil, %w[Equity_% Amount_%])
+      }.compact_blank
+
+      weights.presence
+    end
+
+    # Sums each entry's percentage into its mapped bucket. With no mapping the
+    # provider's own label is the bucket (sectors are free text).
+    def sum_fund_weights(section, mapping, value_keys)
+      entries =
+        case section
+        when Hash
+          section.flat_map do |label, value|
+            value.is_a?(Array) ? value.map { |row| [ row["Name"] || row["Type"], row ] } : [ [ label, value ] ]
+          end
+        else
+          []
+        end
+
+      entries.each_with_object(Hash.new(0.0)) do |(label, row), totals|
+        next unless row.is_a?(Hash)
+
+        bucket = mapping ? mapping[label] : label.presence
+        percent = value_keys.lazy.map { |key| row[key] }.find(&:present?)
+        next if bucket.nil? || percent.nil?
+
+        totals[bucket] += percent.to_f
+      end.to_h
     end
 
     # Cache key for tracking daily API usage
