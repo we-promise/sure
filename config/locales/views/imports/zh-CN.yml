@@ -230,6 +230,7 @@ zh-CN:
         qif_account_required: 请为 QIF 导入选择一个账户
       update:
         qif_uploaded: QIF 文件上传成功。
+        qif_account_required: 请为 QIF 导入选择一个账户
         monarch_uploaded: Monarch 导出文件已上传。
         monarch_balances_required: 请选择 Monarch 余额导出文件。
       show:
