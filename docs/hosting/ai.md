@@ -372,6 +372,7 @@ AI_DEBUG_MODE=true
 - The `OPENAI_ACCESS_TOKEN` can be any non-empty value (Ollama ignores it)
 - If you don't set a model, chats will fail with a validation error
 - Auto-categorization uses a conservative default `LLM_CONTEXT_WINDOW=2048`, so large category lists or schemas can exhaust the prompt budget before any transactions are sent
+- Ollama caps each model's context at **4096 tokens by default** and truncates longer requests silently. Sure sends the assistant's tool definitions with every request, so a small context can cut off tool results mid-turn and the assistant then answers that it has no financial data even though `get_accounts` runs fine. Set the context to at least `LLM_CONTEXT_WINDOW` plus headroom for tool definitions, tool results, and the reply. Sure talks to Ollama's OpenAI-compatible endpoint, which cannot set `num_ctx` per request — bake the limit into the model with a Modelfile (`PARAMETER num_ctx 16384`, then `ollama create` a model from it and point `OPENAI_MODEL` at that model) or set the server-wide default by starting `ollama serve` with `OLLAMA_CONTEXT_LENGTH=16384` — and raise the two together if long chats or large batches come back truncated
 - If requests start timing out after raising `LLM_CONTEXT_WINDOW`, increase `OPENAI_REQUEST_TIMEOUT` too; these are separate limits. You can also set this in **Settings → Self-Hosting → OpenAI → Request Timeout** when the environment variable is not configured.
 - Responses from custom providers are **not streamed** — the chat shows "Thinking…" until the entire reply is generated, and a turn that chains tool calls stays there through every round, since tool-call responses have no text to display. If the chat errors while your model is clearly still working, raise `AI_RESPONSE_TIMEOUT` or lower `ASSISTANT_MAX_TOOL_CALL_ITERATIONS`; `OPENAI_REQUEST_TIMEOUT` alone will not help. `AI_RESPONSE_TIMEOUT` has to cover the whole turn, so size it as `(1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × OPENAI_REQUEST_TIMEOUT` plus tool execution and queue wait — a sum, not simply a larger number than the per-call limit
 - AI jobs run one at a time by default (`RAILS_AI_MAX_THREADS=1`), which suits a local model with one slot; see [Where AI jobs run](#where-ai-jobs-run-sidekiq-lanes) before raising it
@@ -395,6 +396,8 @@ services:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    environment:
+      - OLLAMA_CONTEXT_LENGTH=${OLLAMA_CONTEXT_LENGTH:-16384} # must cover LLM_CONTEXT_WINDOW plus tool definitions and the reply
     volumes:
       - ollama_data:/root/.ollama
     # Uncomment if you have an NVIDIA GPU
