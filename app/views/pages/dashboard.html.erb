@@ -179,6 +179,19 @@
                 aria-label="<%= t("global.expand") %>">
                 <%= icon("maximize-2", size: "sm", class: "!w-3.5 !h-3.5") %>
               </button>
+              <button
+                type="button"
+                hidden
+                class="flex items-center justify-center w-6 h-6 rounded-md text-secondary hover:text-primary hover:bg-container-inset-hover transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-visible:opacity-100"
+                data-cashflow-expand-target="labelModeToggle"
+                data-action="click->cashflow-expand#toggleLabelMode"
+                data-expand-label="<%= t("pages.dashboard.cashflow_sankey.show_all_labels") %>"
+                data-collapse-label="<%= t("pages.dashboard.cashflow_sankey.compact_labels") %>"
+                aria-expanded="false"
+                aria-label="<%= t("pages.dashboard.cashflow_sankey.show_all_labels") %>">
+                <span data-icon="expand" aria-hidden="true"><%= icon("chevrons-up-down", size: "sm", class: "!w-3.5 !h-3.5") %></span>
+                <span data-icon="collapse" aria-hidden="true" style="display:none"><%= icon("chevrons-down-up", size: "sm", class: "!w-3.5 !h-3.5") %></span>
+              </button>
             <% end %>
             <% if @customizing_dashboard %>
               <% hide_label = t("pages.dashboard.customize.hide", title: t(section[:title])) %>

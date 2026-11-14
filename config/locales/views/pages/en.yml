@@ -119,6 +119,8 @@ en:
         retry: "Try again"
         title: "Cashflow"
         zoom_out: "Back to full cashflow"
+        show_all_labels: "Label every category"
+        compact_labels: "Compact view"
         no_data_title: "No cash flow data for this time period"
         no_data_description: "Add transactions to display cash flow data or expand the time period"
         add_transaction: "Add transaction"
