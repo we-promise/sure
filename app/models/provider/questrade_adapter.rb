@@ -6,7 +6,11 @@ class Provider::QuestradeAdapter < Provider::Base
   Provider::Factory.register("QuestradeAccount", self)
   declares_connection key: "questrade", name: "Questrade", panel: true,
                       metadata: { region: "CA", kinds: %w[Investment], maturity: :beta, logo_text: "QT", logo_color: "#0d9488", domain: "questrade.com" },
-                      lists: { settings_page: ->(items) { items.active.ordered.select(:id) }, settings_panel: %i[active ordered] }
+                      lists: {
+                        settings_page: ->(items) { items.active.ordered.select(:id) },
+                        settings_panel: %i[active ordered],
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider) }
+                      }
 
   # Define which account types this provider supports
   def self.supported_account_types

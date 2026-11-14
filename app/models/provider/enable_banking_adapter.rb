@@ -6,7 +6,7 @@ class Provider::EnableBankingAdapter < Provider::Base
   Provider::Factory.register("EnableBankingAccount", self)
   declares_connection key: "enable_banking", name: "Enable Banking", panel: true,
                       metadata: { region: "EU", kinds: %w[Bank], maturity: :beta, logo_text: "EB", logo_color: "#9333ea", domain: "enablebanking.com" },
-                      lists: { settings_page: %i[ordered] }
+                      lists: { settings_page: %i[ordered], accounts_index: %i[ordered with_attached_logo] }
 
   # Define which account types this provider supports
   def self.supported_account_types

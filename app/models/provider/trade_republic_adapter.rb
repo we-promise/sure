@@ -7,7 +7,8 @@ class Provider::TradeRepublicAdapter < Provider::Base
                       metadata: { region: "EU", kinds: %w[Bank Investment], maturity: :beta, logo_text: "TR", logo_color: nil, domain: "traderepublic.com" },
                       lists: {
                         settings_page: ->(items) { items.active.ordered.includes(:trade_republic_accounts) },
-                        settings_panel: ->(items) { items.active.ordered.includes(:trade_republic_accounts) }
+                        settings_panel: ->(items) { items.active.ordered.includes(:trade_republic_accounts) },
+                        accounts_index: ->(items) { items.ordered.includes(trade_republic_accounts: { account_provider: :account }) }
                       }
 
   def self.supported_account_types

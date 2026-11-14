@@ -7,7 +7,11 @@ class Provider::CoinspotAdapter < Provider::Base
   Provider::Factory.register("CoinspotAccount", self)
   declares_connection key: "coinspot", name: "CoinSpot", panel: true,
                       metadata: { region: "AU", kinds: %w[Crypto], maturity: :beta, logo_text: "CS", logo_color: "#111827", domain: "coinspot.com.au" },
-                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: %i[active ordered],
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts) }
+                      }
 
   # CoinSpot only supplies read-only exchange balances, so it can only back
   # the combined Crypto account type.

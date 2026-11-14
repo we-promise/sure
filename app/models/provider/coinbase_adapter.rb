@@ -6,7 +6,10 @@ class Provider::CoinbaseAdapter < Provider::Base
   Provider::Factory.register("CoinbaseAccount", self)
   declares_connection key: "coinbase", name: "Coinbase", panel: true,
                       metadata: { region: "Global", kinds: %w[Crypto], maturity: :beta, logo_text: "CB", logo_color: "#3b82f6", domain: "coinbase.com" },
-                      lists: { settings_page: %i[ordered] }
+                      lists: {
+                        settings_page: %i[ordered],
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:coinbase_accounts, :accounts) }
+                      }
 
   # Define which account types this provider supports
   def self.supported_account_types

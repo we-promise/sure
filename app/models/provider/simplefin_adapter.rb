@@ -6,7 +6,10 @@ class Provider::SimplefinAdapter < Provider::Base
   Provider::Factory.register("SimplefinAccount", self)
   declares_connection key: "simplefin", name: "SimpleFIN", panel: true,
                       metadata: { region: "US", kinds: %w[Bank Investment], maturity: :stable, logo_text: "SF", logo_color: "#2563eb", domain: "simplefin.org" },
-                      lists: { settings_page: ->(items) { items.where.not(access_url: [ nil, "" ]).ordered.select(:id) } }
+                      lists: {
+                        settings_page: ->(items) { items.where.not(access_url: [ nil, "" ]).ordered.select(:id) },
+                        accounts_index: %i[ordered with_attached_logo]
+                      }
 
   # Define which account types this provider supports
   def self.supported_account_types

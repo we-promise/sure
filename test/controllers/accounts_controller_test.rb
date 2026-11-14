@@ -17,6 +17,53 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  # Every provider but FinanceKit, which lists its accounts on its own, shows its
+  # connections here through the query its adapter declares.
+  test "index loads each provider's connections with its declared query" do
+    listed = Provider::Factory.connection_declarations.select { |declaration| declaration[:lists][:accounts_index] }
+    assert_equal Provider::Factory.connection_declarations.map { |declaration| declaration[:key] } - %w[financekit],
+                 listed.map { |declaration| declaration[:key] }
+
+    get accounts_url
+    assert_response :success
+
+    listed.each do |declaration|
+      expected = declaration[:lists][:accounts_index].call(@user.family.public_send(declaration[:association])).to_a
+      assert_equal expected.map(&:id), @controller.view_assigns["#{declaration[:key]}_items"].map(&:id), declaration[:key]
+    end
+  end
+
+  # `ordered` lists the newest connection first; /accounts shows Trading 212 and
+  # Sharesight connections oldest first.
+  test "index lists Trading 212 connections oldest first" do
+    family = @user.family
+    family.trading212_items.destroy_all
+    older = family.trading212_items.create!(name: "Older", api_key: "k1", api_secret: "s1", created_at: 2.days.ago)
+    newer = family.trading212_items.create!(name: "Newer", api_key: "k2", api_secret: "s2", created_at: 1.day.ago)
+    assert_equal [ newer.id, older.id ], family.trading212_items.ordered.ids
+
+    get accounts_url
+
+    assert_equal [ older.id, newer.id ], @controller.view_assigns["trading212_items"].map(&:id)
+  end
+
+  test "the index sync preload covers every provider's connections" do
+    keys = Provider::Factory.connection_declarations.filter_map { |declaration| declaration[:key] if declaration[:lists][:accounts_index] }
+    assert_equal Provider::Factory.connection_declarations.map { |declaration| declaration[:key] } - %w[financekit], keys
+
+    controller = AccountsController.new
+    controller.instance_variable_set(:@manual_accounts, [])
+    controller.instance_variable_set(:@financekit_accounts, [])
+    keys.each { |key| controller.instance_variable_set(:"@#{key}_items", [ key ]) }
+    controller.instance_variable_set(:@financekit_items, [ "financekit" ])
+
+    Sync.expects(:latest_by_syncable).with { |syncables| syncables.sort == keys.sort }.returns({})
+    Sync.stubs(:latest_completed_by_syncable).returns({})
+    Sync.stubs(:syncing_by_syncable).returns({})
+
+    controller.send(:preload_latest_sync_metadata_for_index!)
+  end
+
   test "account reconciliation indicators only render when manual reconciliation is enabled" do
     get accounts_url
 

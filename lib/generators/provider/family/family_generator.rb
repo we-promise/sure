@@ -340,39 +340,12 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     warn_unless_panel_declared
   end
 
+  # /accounts loads the provider's connections through its adapter's declaration
+  # (the accounts_index list), so only the sync stats map is added here.
   def update_accounts_controller
     controller_path = "app/controllers/accounts_controller.rb"
     return unless File.exist?(controller_path)
 
-    content = File.read(controller_path)
-    items_var = "@#{file_name}_items"
-
-    # Check if already added
-    if content.include?(items_var)
-      say "Accounts controller already has #{items_var}", :skip
-      return
-    end
-
-    # Add to index action - find the last @*_items line and insert after it
-    lines = content.lines
-    last_items_index = nil
-    lines.each_with_index do |line, index|
-      if line =~ /@\w+_items = family\.\w+_items\.ordered/
-        last_items_index = index
-      end
-    end
-
-    if last_items_index
-      indentation = lines[last_items_index][/^\s*/]
-      new_line = "#{indentation}#{items_var} = family.#{file_name}_items.ordered.includes(:syncs, :#{file_name}_accounts)\n"
-      lines.insert(last_items_index + 1, new_line)
-      write_file(controller_path, lines.join)
-      say "Added #{items_var} to accounts controller index", :green
-    else
-      say "Could not find @*_items assignments in accounts controller", :yellow
-    end
-
-    # Add sync stats map
     add_accounts_controller_sync_stats_map(controller_path)
   end
 

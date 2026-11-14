@@ -8,7 +8,10 @@ class Provider::CoinstatsAdapter < Provider::Base
   Provider::Factory.register("CoinstatsAccount", self)
   declares_connection key: "coinstats", name: "CoinStats", panel: true,
                       metadata: { region: "Global", kinds: %w[Crypto], maturity: :beta, logo_text: "CS", logo_color: "#db2777", domain: "coinstats.app" },
-                      lists: { settings_page: %i[ordered] }
+                      lists: {
+                        settings_page: %i[ordered],
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:coinstats_accounts, :accounts) }
+                      }
 
   # @return [Array<String>] Account types supported by this provider
   def self.supported_account_types

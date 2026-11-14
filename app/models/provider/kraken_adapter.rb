@@ -7,7 +7,11 @@ class Provider::KrakenAdapter < Provider::Base
   Provider::Factory.register("KrakenAccount", self)
   declares_connection key: "kraken", name: "Kraken", panel: true,
                       metadata: { region: "Global", kinds: %w[Crypto], maturity: :beta, logo_text: "KR", logo_color: "#7c3aed", domain: "kraken.com" },
-                      lists: { settings_page: %i[active ordered], settings_panel: %i[active ordered] }
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: %i[active ordered],
+                        accounts_index: ->(items) { items.ordered.with_attached_logo.includes(:kraken_accounts, :accounts) }
+                      }
 
   def self.supported_account_types
     %w[Crypto]
