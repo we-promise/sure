@@ -57,7 +57,9 @@ class Api::V1::TradesController < Api::V1::BaseController
     model = ApplicationRecord.transaction do
       created_model = Trade::CreateForm.new(create_params).create
       created_trade = trade_from_created_model(created_model)
-      created_trade.update!(create_options) if created_model.persisted? && created_trade && create_options.any?
+      if created_model.persisted? && created_trade && create_options.any?
+        created_trade.save_and_lock_attributes { created_trade.update!(create_options) }
+      end
       created_model
     end
 
@@ -67,8 +69,6 @@ class Api::V1::TradesController < Api::V1::BaseController
     end
 
     if model.is_a?(Entry)
-      model.lock_saved_attributes!
-      model.mark_user_modified!
       model.sync_account_later
 
       if model.entryable.is_a?(Transaction)
@@ -103,12 +103,18 @@ class Api::V1::TradesController < Api::V1::BaseController
     # TransactionsController#update: if one fails, a retry still finds the
     # change to make.
     Entry.transaction do
-      if @entry.update(updatable.except(:nature))
-        # Read before the follow-up writes below reset saved_changes. A request
-        # that changes nothing must not mark the entry user-modified, which would
-        # stop provider imports from updating it.
-        if @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
-          @entry.lock_saved_attributes!
+      changed = false
+      saved = @entry.save_and_lock_attributes do
+        next false unless @entry.update(updatable.except(:nature))
+
+        # A request that changes nothing must not mark the entry user-modified,
+        # which would stop provider imports from updating it.
+        changed = @entry.saved_changes.any? || @entry.entryable.saved_changes.any?
+        true
+      end
+
+      if saved
+        if changed
           @entry.mark_user_modified!
           @entry.sync_account_later
         end

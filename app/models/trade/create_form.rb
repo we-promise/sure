@@ -84,10 +84,8 @@ class Trade::CreateForm
         )
       )
 
-      if trade_entry.save
-        trade_entry.lock_saved_attributes!
-        account.sync_later
-      end
+      # Mark manually created entries as user-modified to protect from sync
+      account.sync_later if trade_entry.save_and_lock_attributes(user_modified: true) { trade_entry.save }
 
       trade_entry
     end
@@ -144,10 +142,7 @@ class Trade::CreateForm
         )
       )
 
-      if entry.save
-        entry.lock_saved_attributes!
-        account.sync_later
-      end
+      account.sync_later if entry.save_and_lock_attributes(user_modified: true) { entry.save }
 
       entry
     end
@@ -191,10 +186,7 @@ class Trade::CreateForm
         entryable: Transaction.new
       )
 
-      if entry.save
-        entry.lock_saved_attributes!
-        account.sync_later
-      end
+      account.sync_later if entry.save_and_lock_attributes(user_modified: true) { entry.save }
 
       entry
     end
