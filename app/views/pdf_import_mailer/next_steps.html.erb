@@ -10,6 +10,9 @@
 
 <% if @pdf_import.document_type.in?(%w[bank_statement credit_card_statement investment_statement]) %>
   <p><%= t(".transactions_note") %></p>
+<% if @pdf_import.extraction_flagged? %>
+  <p><%= t(".review_flag_note") %></p>
+<% end %>
 <% else %>
   <p><%= t(".document_stored_note") %></p>
 <% end %>

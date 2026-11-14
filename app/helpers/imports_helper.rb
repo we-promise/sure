@@ -1,4 +1,20 @@
 module ImportsHelper
+  # "Read as" options for a PDF upload: a way the family's route can't do is
+  # greyed out with the reason.
+  def pdf_read_as_options(selected: nil)
+    reasons = Ai::PdfReading.route_reasons(family: Current.family, user: Current.user)
+    options = PdfImport::READ_AS.map do |way|
+      label = t("imports.pdf_import.read_as.options.#{way}")
+      reason = reasons[way.to_sym]
+      next [ label, way ] unless reason
+
+      [ t("imports.pdf_import.read_as.unavailable", option: label,
+                                                   reason: t("imports.pdf_import.read_as.reasons.#{reason}", default: reason.to_s.humanize.downcase)),
+        way, { disabled: true } ]
+    end
+    options_for_select(options, selected || "auto")
+  end
+
   def mapping_label(mapping_class)
     {
       "Import::AccountTypeMapping" => I18n.t("imports.mapping_labels.account_type"),

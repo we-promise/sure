@@ -4,9 +4,7 @@ pt-BR:
     ai_prompts:
       show:
         page_title: Prompts de IA
-        openai_label: OpenAI
         disable_ai: Desativar Assistente de IA
-        prompt_instructions: Instruções do Prompt
         main_system_prompt:
           title: Prompt de Sistema Principal
           subtitle: Instruções centrais que definem como o assistente de IA se comporta em todas as conversas

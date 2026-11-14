@@ -174,4 +174,49 @@ RSpec.describe 'API V1 Rule Runs', type: :request do
       end
     end
   end
+
+  path '/api/v1/rule_runs/{rule_run_id}/progress' do
+    parameter name: :rule_run_id, in: :path, required: true, description: 'Rule run ID',
+              schema: { type: :string, format: :uuid }
+
+    get 'Retrieve a rule run\'s progress' do
+      description 'Poll a rule run while its AI actions work: transactions_awaiting_ai counts down to 0 ' \
+                  'as each batch is applied, and finished turns true when the run ends.'
+      tags 'Rule Runs'
+      security [ { apiKeyAuth: [] } ]
+      produces 'application/json'
+
+      let(:rule_run_id) { rule_run.id }
+
+      response '200', 'progress retrieved' do
+        schema '$ref' => '#/components/schemas/RuleRunProgress'
+
+        run_test!
+      end
+
+      response '401', 'unauthorized' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { nil }
+
+        run_test!
+      end
+
+      response '403', 'insufficient scope' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:'X-Api-Key') { api_key_without_read_scope.plain_key }
+
+        run_test!
+      end
+
+      response '404', 'rule run not found' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:rule_run_id) { SecureRandom.uuid }
+
+        run_test!
+      end
+    end
+  end
 end

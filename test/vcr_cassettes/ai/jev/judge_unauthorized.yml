@@ -1,0 +1,50 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: https://opencode.ai/zen/v1/systemone
+    body:
+      encoding: UTF-8
+      string: '{"model":"jev-1.13-free","state":{"description":"STARBUCKS","classification":"expense","amount":4.5},"questions":{"category":{"type":"choice","instructions":"Which
+        spending category best fits this bank transaction? Pick `__uncategorized__`
+        only if no category is a reasonable fit.","criteria":{"Coffee Shops":null,"__uncategorized__":"No
+        listed category is a reasonable fit"}}}}'
+    headers:
+      User-Agent:
+      - Faraday v2.14.3
+      Authorization:
+      - Bearer not-a-real-key
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 401
+      message: Unauthorized
+    headers:
+      Date:
+      - Tue, 10 Nov 2026 00:00:07 GMT
+      Content-Type:
+      - application/json
+      Content-Length:
+      - '72'
+      Connection:
+      - keep-alive
+      Cf-Placement:
+      - remote-IAD
+      Server-Timing:
+      - gateway;dur=36, total;dur=36
+      X-Opencode-Log-Id:
+      - 01a1c2c1-414c-73d9-af4a-674c3f34b343
+      Server:
+      - cloudflare
+      Cf-Ray:
+      - a580c66e1d04f0d6-MEL
+    body:
+      encoding: UTF-8
+      string: '{"error":{"type":"authentication_error","message":"Invalid credential"}}'
+  recorded_at: Tue, 10 Nov 2026 00:00:07 GMT
+recorded_with: VCR 6.3.1

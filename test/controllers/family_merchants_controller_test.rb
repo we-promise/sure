@@ -189,10 +189,37 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "enhance enqueues job and redirects" do
-    assert_enqueued_with(job: EnhanceProviderMerchantsJob) do
+    use_ai_routes
+
+    assert_enqueued_with(job: Ai::GenerationJob, args: [ :enhance_merchants, { family_id: @user.family.id } ]) do
       post enhance_family_merchants_path
     end
 
     assert_redirected_to family_merchants_path
+  end
+
+  test "enhance is refused with the reason when no model can enhance merchants" do
+    use_no_ai
+
+    assert_no_enqueued_jobs(only: Ai::GenerationJob) do
+      post enhance_family_merchants_path
+    end
+
+    assert_redirected_to root_path
+    assert flash[:alert].present?
+  end
+
+  test "the Enhance button shows whenever enhance_merchants has a model, Anthropic included" do
+    merchant = ProviderMerchant.create!(name: "Enhanceable Shop", source: "plaid")
+    transactions(:one).update_columns(merchant_id: merchant.id)
+
+    with_env_overrides("ANTHROPIC_API_KEY" => "test-key", "LLM_PROVIDER" => "anthropic", "OPENAI_ACCESS_TOKEN" => nil) do
+      get family_merchants_path
+    end
+    assert_includes response.body, enhance_family_merchants_path
+
+    use_no_ai
+    get family_merchants_path
+    assert_not_includes response.body, enhance_family_merchants_path
   end
 end

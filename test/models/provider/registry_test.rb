@@ -135,34 +135,34 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     end
   end
 
-  test "preferred_llm_provider returns openai by default" do
+  test "Assistant.builtin_provider returns openai by default" do
     openai = mock("openai")
     Provider::Registry.stubs(:openai).returns(openai)
     Provider::Registry.stubs(:anthropic).returns(mock("anthropic"))
     Setting.stubs(:llm_provider).returns("openai")
 
-    assert_same openai, Provider::Registry.preferred_llm_provider
+    assert_same openai, Assistant.builtin_provider
   end
 
-  test "preferred_llm_provider returns anthropic when selected" do
+  test "Assistant.builtin_provider returns anthropic when selected" do
     anthropic = mock("anthropic")
     Provider::Registry.stubs(:openai).returns(mock("openai"))
     Provider::Registry.stubs(:anthropic).returns(anthropic)
     Setting.stubs(:llm_provider).returns("anthropic")
 
-    assert_same anthropic, Provider::Registry.preferred_llm_provider
+    assert_same anthropic, Assistant.builtin_provider
   end
 
-  test "preferred_llm_provider falls back to the configured provider when the selected one is unconfigured" do
+  test "Assistant.builtin_provider falls back to the configured provider when the selected one is unconfigured" do
     openai = mock("openai")
     Provider::Registry.stubs(:openai).returns(openai)
     Provider::Registry.stubs(:anthropic).returns(nil)
     Setting.stubs(:llm_provider).returns("anthropic")
 
-    assert_same openai, Provider::Registry.preferred_llm_provider
+    assert_same openai, Assistant.builtin_provider
   end
 
-  test "preferred_llm_provider follows LLM_PROVIDER over a stored choice" do
+  test "Assistant.builtin_provider follows LLM_PROVIDER over a stored choice" do
     original = Setting.raw_llm_provider
     Setting.llm_provider = "openai"
     anthropic = mock("anthropic")
@@ -170,17 +170,17 @@ class Provider::RegistryTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:anthropic).returns(anthropic)
 
     with_env_overrides("LLM_PROVIDER" => "anthropic") do
-      assert_same anthropic, Provider::Registry.preferred_llm_provider
+      assert_same anthropic, Assistant.builtin_provider
     end
   ensure
     Setting.llm_provider = original
   end
 
-  test "preferred_llm_provider returns nil when no provider is configured" do
+  test "Assistant.builtin_provider returns nil when no provider is configured" do
     Provider::Registry.stubs(:openai).returns(nil)
     Provider::Registry.stubs(:anthropic).returns(nil)
     Setting.stubs(:llm_provider).returns("openai")
 
-    assert_nil Provider::Registry.preferred_llm_provider
+    assert_nil Assistant.builtin_provider
   end
 end

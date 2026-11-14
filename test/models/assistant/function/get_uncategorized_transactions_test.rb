@@ -255,6 +255,28 @@ class Assistant::Function::GetUncategorizedTransactionsTest < ActiveSupport::Tes
     assert_equal "active", enrichment[:auto_detect_merchants_rule]
   end
 
+  test "the enrichment note reports each action's route, not a provider count" do
+    @family.rules.destroy_all
+    use_ai_routes(detect_merchants: [])
+
+    enrichment = @fn.call[:enrichment]
+
+    assert_equal({ categorize: true, detect_merchants: false }, enrichment[:llm_routes])
+    assert_match(/No LLM route is available for merchant detection, so it would be a no-op even if a rule existed/, enrichment[:note])
+    assert_no_match(/auto-categorization or merchant detection/, enrichment[:note])
+  end
+
+  test "the enrichment note names both actions when no route is available" do
+    @family.rules.destroy_all
+    use_no_ai
+
+    enrichment = @fn.call[:enrichment]
+
+    assert_equal({ categorize: false, detect_merchants: false }, enrichment[:llm_routes])
+    assert_match(/No LLM route is available for auto-categorization or merchant detection, so both would be no-ops/, enrichment[:note])
+    assert_match(/its admin can fix it under Settings -> Self-Hosting/, enrichment[:note])
+  end
+
   test "flags truncation instead of silently dropping payees" do
     3.times { |i| create_uncategorized(name: "PRLV SEPA PAYEE#{i}", amount: 10 + i) }
 

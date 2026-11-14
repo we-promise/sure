@@ -39,12 +39,11 @@ module BillsHelper
     date == Date.current ? t("bills.row_today") : bills_upcoming_date(date)
   end
 
-  # One-shot AI features (smart-fill, smart-configure) need both the user's
-  # consent AND a resolvable LLM provider -- an unconfigured self-hosted
-  # install renders no AI affordances at all, following the Rules registry's
-  # conditional-executor precedent.
-  def bills_one_shot_ai_available?
-    Current.user&.ai_enabled? && Provider::Registry.preferred_llm_provider.present?
+  # The bills buttons that start a chat (the AI review, the prompt chips) use
+  # chat's own check, since chat doesn't go through the router. Smart-fill and
+  # smart-configure ask the router for `bill_setup` (ai_feature_available?).
+  def bills_ai_chat_available?
+    Current.user&.ai_enabled? && Assistant.builtin_provider.present?
   end
 
   # Pay-period markers keyed by the id of the FIRST occurrence inside each

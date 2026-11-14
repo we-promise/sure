@@ -1,199 +1,139 @@
 require "test_helper"
 
 class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
-  include EntriesTestHelper, ProviderTestHelper, ActiveJob::TestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
     @account = @family.accounts.create!(name: "Enhancer test", balance: 100, currency: "USD", accountable: Depository.new)
-    @llm_provider = mock
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
     Setting.stubs(:brand_fetch_client_id).returns("test_client_id")
     Setting.stubs(:brand_fetch_logo_size).returns(40)
+    use_ai_routes
   end
 
-  test "batches holds one LLM call's worth of merchants each" do
-    3.times do |i|
-      merchant = ProviderMerchant.create!(source: "lunchflow", name: "Shop #{i}", provider_merchant_id: "lf_shop_#{i}")
-      create_transaction(account: @account, name: "Shop #{i}", merchant: merchant)
-    end
-    unenhanced = @family.assigned_merchants.where(type: "ProviderMerchant", website_url: [ nil, "" ]).pluck(:id)
-
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "2") do
-      batches = ProviderMerchant::Enhancer.new(@family).batches
-
-      assert_equal (unenhanced.size / 2.0).ceil, batches.size
-      assert batches.all? { |ids| ids.size <= 2 }
-      assert_equal unenhanced.sort, batches.flatten.sort
+  def provider_merchant(name, **attributes)
+    ProviderMerchant.create!(source: "lunchflow", name:, provider_merchant_id: "lf_#{name.parameterize}", **attributes).tap do |merchant|
+      create_transaction(account: @account, name: "#{name} purchase", merchant:)
     end
   end
 
-  test "enhance with merchant_ids sends only those merchants" do
-    first, second = 2.times.map do |i|
-      ProviderMerchant.create!(source: "lunchflow", name: "Shop #{i}", provider_merchant_id: "lf_shop_#{i}").tap do |merchant|
-        create_transaction(account: @account, name: "Shop #{i}", merchant: merchant)
-      end
+  # Answers each request with a website per merchant name in `urls` (nil when not listed).
+  def stub_websites(urls)
+    stub_ai(:enhance_merchants) do |request|
+      ids = request.schema.dig(:properties, :merchants, :items, :properties, :merchant_id, :enum)
+      { merchants: ids.map { |id| { merchant_id: id, business_url: urls[ProviderMerchant.find(id).name] } } }
     end
-
-    @llm_provider.expects(:enhance_provider_merchants).with do |*_args, **kwargs|
-      kwargs[:merchants].map { |m| m[:id] } == [ first.id ]
-    end.returns(provider_success_response([])).once
-
-    ProviderMerchant::Enhancer.new(@family, merchant_ids: [ first.id ]).enhance
-    assert_nil second.reload.website_url
   end
 
-  test "enhances provider merchants with website and logo" do
-    merchant = ProviderMerchant.create!(source: "lunchflow", name: "Walmart", provider_merchant_id: "lf_walmart")
-    create_transaction(account: @account, name: "Walmart purchase", merchant: merchant)
+  def enhance = perform_enqueued_jobs { ProviderMerchant::Enhancer.enhance_later(@family) }
 
-    provider_response = provider_success_response([
-      EnhancedMerchant.new(merchant_id: merchant.id, business_url: "walmart.com")
-    ])
+  test "enhances provider merchants with their website and a logo" do
+    merchant = provider_merchant("Walmart")
+    requests = stub_websites("Walmart" => "walmart.com")
 
-    @llm_provider.expects(:enhance_provider_merchants).returns(provider_response).once
+    enhance
 
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 1, result[:enhanced]
     assert_equal "walmart.com", merchant.reload.website_url
     assert_equal "https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/40/h/40?c=test_client_id", merchant.logo_url
+    assert_includes requests.first.input, "Walmart"
   end
 
-  test "skips merchants when LLM returns null" do
-    merchant = ProviderMerchant.create!(source: "lunchflow", name: "Local Diner", provider_merchant_id: "lf_local")
-    create_transaction(account: @account, name: "Local diner", merchant: merchant)
+  test "sends one batch per job, sized by the model" do
+    3.times { |i| provider_merchant("Shop #{i}") }
+    requests = nil
 
-    provider_response = provider_success_response([
-      EnhancedMerchant.new(merchant_id: merchant.id, business_url: nil)
-    ])
+    use_ai_model_settings(batch_size: 2)
+    requests = stub_websites({})
+    enhance
 
-    @llm_provider.expects(:enhance_provider_merchants).returns(provider_response).once
+    assert_equal [ 2, 1 ], requests.map { _1.schema.dig(:properties, :merchants, :items, :properties, :merchant_id, :enum).size }
+  end
 
-    result = ProviderMerchant::Enhancer.new(@family).enhance
+  test "leaves merchants the model returns null for" do
+    merchant = provider_merchant("Local Diner")
+    stub_websites({})
 
-    assert_equal 0, result[:enhanced]
+    enhance
+
     assert_nil merchant.reload.website_url
   end
 
-  test "deduplicates merchants by website_url" do
-    lunchflow_merchant = ProviderMerchant.create!(source: "lunchflow", name: "Walmart", provider_merchant_id: "lf_walmart")
+  test "deduplicates merchants by website" do
+    lunchflow = provider_merchant("Walmart")
     ai_merchant = ProviderMerchant.create!(source: "ai", name: "Walmart", website_url: "walmart.com",
       logo_url: "https://cdn.brandfetch.io/walmart.com/icon/fallback/lettermark/w/40/h/40?c=test_client_id")
+    duplicate = create_transaction(account: @account, name: "Walmart purchase 2", merchant: ai_merchant).transaction
+    stub_websites("Walmart" => "walmart.com")
 
-    txn1 = create_transaction(account: @account, name: "Walmart purchase 1", merchant: lunchflow_merchant).transaction
-    txn2 = create_transaction(account: @account, name: "Walmart purchase 2", merchant: ai_merchant).transaction
+    enhance
 
-    provider_response = provider_success_response([
-      EnhancedMerchant.new(merchant_id: lunchflow_merchant.id, business_url: "walmart.com")
-    ])
-
-    @llm_provider.expects(:enhance_provider_merchants).returns(provider_response).once
-
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 1, result[:enhanced]
-    assert_equal 1, result[:deduplicated]
-    assert_equal "walmart.com", lunchflow_merchant.reload.website_url
-
-    # AI merchant's transactions should be reassigned to the lunchflow merchant
-    assert_equal lunchflow_merchant.id, txn2.reload.merchant_id
-    assert_equal lunchflow_merchant.id, txn1.reload.merchant_id
+    assert_equal "walmart.com", lunchflow.reload.website_url
+    assert_equal lunchflow.id, duplicate.reload.merchant_id
   end
 
-  test "returns zero counts when no LLM provider" do
-    # No provider configured: preferred_llm_provider checks both before nil.
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(nil)
-    Provider::Registry.stubs(:get_provider).with(:anthropic).returns(nil)
+  test "a second run isn't queued while one holds the lock" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
 
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 0, result[:enhanced]
-    assert_equal 0, result[:deduplicated]
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
+      assert ProviderMerchant::Enhancer.enhance_later(@family)
+      assert_not ProviderMerchant::Enhancer.enhance_later(@family)
+    end
   end
 
-  test "returns zero counts when no unenhanced merchants" do
-    result = ProviderMerchant::Enhancer.new(@family).enhance
+  test "makes no call when nothing needs a website, and releases the lock" do
+    provider_merchant("Amazon", website_url: "amazon.com")
+    Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
+    requests = stub_websites({})
 
-    assert_equal 0, result[:enhanced]
-    assert_equal 0, result[:deduplicated]
+    enhance
+
+    assert_empty requests
+    assert_not cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
   end
 
-  test "skips merchants that already have website_url" do
-    merchant = ProviderMerchant.create!(source: "lunchflow", name: "Amazon", provider_merchant_id: "lf_amazon", website_url: "amazon.com")
-    create_transaction(account: @account, name: "Amazon order", merchant: merchant)
-
-    # Should not call LLM because no merchants need enhancement
-    @llm_provider.expects(:enhance_provider_merchants).never
-
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 0, result[:enhanced]
-  end
-
-  # Issue #2925: a website that arrived before Brandfetch was configured left the
-  # merchant without a logo, and the enhancer never selected it again.
-  test "backfills logos for merchants that already have a website without calling the LLM" do
-    merchant = ProviderMerchant.create!(source: "akahu", name: "Amazon", provider_merchant_id: "ak_amazon", website_url: "amazon.com")
+  # Issue #2925: a website that arrived before Brandfetch was configured left the merchant
+  # without a logo, and the enhancer never selected it again.
+  test "backfills logos for merchants that already have a website, without calling the model" do
+    merchant = provider_merchant("Amazon", website_url: "amazon.com")
     merchant.update_column(:logo_url, nil)
-    create_transaction(account: @account, name: "Amazon order", merchant: merchant)
+    requests = stub_websites({})
 
-    @llm_provider.expects(:enhance_provider_merchants).never
+    enhance
 
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 1, result[:logos]
+    assert_empty requests
     assert_equal "https://cdn.brandfetch.io/amazon.com/icon/fallback/lettermark/w/40/h/40?c=test_client_id", merchant.reload.logo_url
   end
 
-  test "backfills logos without an LLM provider" do
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(nil)
-    Provider::Registry.stubs(:get_provider).with(:anthropic).returns(nil)
-    merchant = ProviderMerchant.create!(source: "ai", name: "Amazon", website_url: "amazon.com")
-    merchant.update_column(:logo_url, nil)
-    create_transaction(account: @account, name: "Amazon order", merchant: merchant)
-
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 1, result[:logos]
-    assert merchant.reload.logo_url.present?
-  end
-
-  # A logo backfill failure is cosmetic and must not abort the enhance run —
-  # otherwise it would skip LLM enhancement and deduplication for the family.
+  # A logo backfill failure is cosmetic and must not abort the run.
   test "a logo backfill failure does not prevent enhancement" do
-    merchant = ProviderMerchant.create!(source: "lunchflow", name: "Walmart", provider_merchant_id: "lf_walmart")
-    create_transaction(account: @account, name: "Walmart purchase", merchant: merchant)
+    merchant = provider_merchant("Walmart")
     ProviderMerchant.stubs(:backfill_logos).raises(StandardError, "boom")
+    stub_websites("Walmart" => "walmart.com")
 
-    provider_response = provider_success_response([
-      EnhancedMerchant.new(merchant_id: merchant.id, business_url: "walmart.com")
-    ])
-    @llm_provider.expects(:enhance_provider_merchants).returns(provider_response).once
+    enhance
 
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 0, result[:logos]
-    assert_equal 1, result[:enhanced]
     assert_equal "walmart.com", merchant.reload.website_url
   end
 
   test "keeps a provider-supplied logo when adding the website" do
-    merchant = ProviderMerchant.create!(source: "coinstats", name: "Binance", provider_merchant_id: "cs_binance", logo_url: "https://coinstats.app/binance.png")
-    create_transaction(account: @account, name: "Binance transfer", merchant: merchant)
+    merchant = provider_merchant("Binance", logo_url: "https://coinstats.app/binance.png")
+    stub_websites("Binance" => "binance.com")
 
-    provider_response = provider_success_response([
-      EnhancedMerchant.new(merchant_id: merchant.id, business_url: "binance.com")
-    ])
-    @llm_provider.expects(:enhance_provider_merchants).returns(provider_response).once
+    enhance
 
-    result = ProviderMerchant::Enhancer.new(@family).enhance
-
-    assert_equal 1, result[:enhanced]
     assert_equal "binance.com", merchant.reload.website_url
     assert_equal "https://coinstats.app/binance.png", merchant.logo_url
   end
 
-  private
-    EnhancedMerchant = Provider::LlmConcept::EnhancedMerchant
+  # Drift bug 3: a failed batch used to be skipped without a word.
+  test "a failure is logged and releases the lock" do
+    provider_merchant("Walmart")
+    Rails.stubs(:cache).returns(cache = ActiveSupport::Cache::MemoryStore.new)
+    stub_ai(:enhance_merchants, raises: Ai::Error::Refused.new("bad", status: 400))
+
+    assert_difference -> { DebugLogEntry.where(category: "merchant_enhancement", level: "error").count }, 1 do
+      enhance
+    end
+    assert_not cache.exist?(ProviderMerchant::Enhancer.lock_key(@family))
+  end
 end

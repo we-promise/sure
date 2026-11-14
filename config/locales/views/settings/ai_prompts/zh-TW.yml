@@ -4,9 +4,7 @@ zh-TW:
     ai_prompts:
       show:
         page_title: AI 提示詞
-        openai_label: OpenAI
         disable_ai: 停用 AI 助手
-        prompt_instructions: 提示詞指令
         main_system_prompt:
           title: 主系統提示詞 (System Prompt)
           subtitle: 核心指令，決定 AI 助手在每一段對話中的行為

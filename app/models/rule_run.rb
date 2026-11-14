@@ -8,9 +8,11 @@ class RuleRun < ApplicationRecord
   validates :transactions_processed, numericality: { greater_than_or_equal_to: 0 }
   validates :transactions_modified, numericality: { greater_than_or_equal_to: 0 }
   validates :pending_jobs_count, numericality: { greater_than_or_equal_to: 0 }
+  validates :transactions_awaiting_ai, numericality: { greater_than_or_equal_to: 0 }
 
   scope :recent, -> { order(executed_at: :desc) }
   scope :for_rule, ->(rule) { where(rule: rule) }
+  scope :for_family, ->(family) { joins(:rule).where(rules: { family_id: family.id }) }
   scope :successful, -> { where(status: "success") }
   scope :failed, -> { where(status: "failed") }
   scope :pending, -> { where(status: "pending") }
@@ -27,8 +29,26 @@ class RuleRun < ApplicationRecord
     status == "failed"
   end
 
+  def finished? = !pending?
+
   def transactions_blocked
     [ transactions_processed - transactions_modified, 0 ].max
+  end
+
+  # Before an AI job is queued: `count` more transactions wait for an answer. Atomic, so it holds
+  # however soon the job starts.
+  def await_ai!(count) = self.class.update_counters(id, transactions_awaiting_ai: count)
+
+  # An AI job is done with `handled` of its transactions (applied, skipped or given up on), and
+  # `modified` of them changed. Called per batch, so a client can watch the run count down.
+  def ai_handled!(handled:, modified: 0)
+    return if handled.zero? && modified.zero?
+
+    with_lock do
+      self.transactions_modified += modified
+      self.transactions_awaiting_ai = [ transactions_awaiting_ai - handled, 0 ].max
+      save!
+    end
   end
 
   # Thread-safe method to complete a job and update the run

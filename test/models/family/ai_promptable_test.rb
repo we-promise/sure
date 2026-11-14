@@ -12,82 +12,59 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     end
   end
 
-  # The riskiest part of this feature is a mistyped key at one of the four
-  # provider resolution sites, which would silently keep serving the default.
-  test "each provider override reaches its instructions method" do
-    @family.update!(
-      ai_prompt_categorizer_openai: "CAT OPENAI",
-      ai_prompt_categorizer_anthropic: "CAT ANTHROPIC",
-      ai_prompt_merchant_openai: "MERCHANT OPENAI",
-      ai_prompt_merchant_anthropic: "MERCHANT ANTHROPIC"
-    )
+  # One override per feature reaches whichever prompt the route sends, on every provider.
+  test "each feature's override reaches the prompt its route sends" do
+    @family.update!(ai_prompt_categorize_transactions: "CATEGORIZE", ai_prompt_detect_merchants: "MERCHANTS")
 
-    assert_equal "CAT OPENAI",
-      Provider::Openai::AutoCategorizer.new(nil, family: @family).instructions
-    assert_equal "CAT ANTHROPIC",
-      Provider::Anthropic::AutoCategorizer.new(nil, model: "", family: @family).instructions
-    assert_equal "MERCHANT OPENAI",
-      Provider::Openai::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], family: @family).instructions
-    assert_equal "MERCHANT ANTHROPIC",
-      Provider::Anthropic::AutoMerchantDetector.new(nil, model: "", transactions: [], user_merchants: [], family: @family).instructions
+    assert_equal "CATEGORIZE", instructions(:categorize, "categorize_transactions", :compatible)
+    assert_equal "CATEGORIZE", instructions(:categorize, "categorize_transactions_simple", :compatible)
+    assert_equal "CATEGORIZE", instructions(:categorize, "categorize_transactions_anthropic", :anthropic)
+    assert_equal "MERCHANTS", instructions(:detect_merchants, "detect_merchants_simple", :compatible)
+    assert_equal "MERCHANTS", instructions(:detect_merchants, "detect_merchants_anthropic", :anthropic)
   end
 
-  test "an override wins over the custom_provider variant, not just the detailed one" do
-    @family.update!(ai_prompt_categorizer_openai: "CAT OPENAI")
-
-    categorizer = Provider::Openai::AutoCategorizer.new(nil, custom_provider: true, family: @family)
-
-    assert_equal "CAT OPENAI", categorizer.instructions
-  end
-
-  # One override key feeds both OpenAI variants, so the editor has to pre-fill
-  # the one this deployment sends. Getting it backwards hands a small local
+  # The editor pre-fills the prompt this install sends. Getting it wrong hands a small local
   # model a prompt written for GPT-4, with no error to trace it back to.
-  test "openai defaults follow the deployment's provider mode" do
-    Family::AiPromptable.stubs(:custom_openai_provider?).returns(true)
-
-    assert_includes @family.ai_prompt_default(:categorizer_openai), '{"categorizations":'
-    assert_includes @family.ai_prompt_default(:merchant_openai), '{"merchants":'
-
-    Family::AiPromptable.stubs(:custom_openai_provider?).returns(false)
-
-    assert_not_includes @family.ai_prompt_default(:categorizer_openai), '{"categorizations":'
-    assert_not_includes @family.ai_prompt_default(:merchant_openai), '{"merchants":'
+  test "a generation key's default is the prompt the family's route sends" do
+    with_ai_route_prompts("categorize_transactions_simple", "detect_merchants_simple") do
+      assert_includes @family.ai_prompt_default(:categorize_transactions), '{"categorizations":'
+      assert_includes @family.ai_prompt_default(:detect_merchants), '{"merchants":'
+    end
+    with_ai_route_prompts("categorize_transactions", "detect_merchants") do
+      assert_not_includes @family.ai_prompt_default(:categorize_transactions), '{"categorizations":'
+      assert_not_includes @family.ai_prompt_default(:detect_merchants), '{"merchants":'
+    end
+    use_no_ai
+    assert_equal RubyLLM.render_prompt("categorize_transactions/instructions"), @family.ai_prompt_default(:categorize_transactions)
   end
 
-  test "a regional OpenAI host counts as native OpenAI for prompt defaults" do
-    ClimateControl.modify("OPENAI_URI_BASE" => "https://us.api.openai.com") do
-      assert_not Family::AiPromptable.custom_openai_provider?
+  # Advisory only. It has to stay quiet for the pre-filled default, and on prompts that get their
+  # shape from the schema, or admins learn to ignore it.
+  test "flags only an override of the simplified prompt that dropped the wrapper key" do
+    with_ai_route_prompts("categorize_transactions_simple", "detect_merchants_simple") do
+      assert_not @family.ai_prompt_format_risk?(:categorize_transactions), "no override should not warn"
+
+      @family.update!(ai_prompt_categorize_transactions: "Categorise them. Be conservative.")
+      assert @family.ai_prompt_format_risk?(:categorize_transactions)
+
+      @family.update!(ai_prompt_categorize_transactions: 'Be conservative. {"categorizations": [...]}')
+      assert_not @family.ai_prompt_format_risk?(:categorize_transactions)
     end
 
-    ClimateControl.modify("OPENAI_URI_BASE" => "https://llm.example.com/v1") do
-      assert Family::AiPromptable.custom_openai_provider?
+    with_ai_route_prompts("categorize_transactions", "detect_merchants") do
+      @family.update!(ai_prompt_categorize_transactions: "Categorise them. Be conservative.")
+      assert_not @family.ai_prompt_format_risk?(:categorize_transactions)
     end
   end
 
-  # Advisory only. It has to stay quiet for the pre-filled default (which now
-  # carries the key on custom providers), or admins learn to ignore it.
-  test "flags only an openai override that dropped the wrapper key" do
-    Family::AiPromptable.stubs(:custom_openai_provider?).returns(true)
+  test "the key collapse's dropped overrides are listed until cleared" do
+    DebugLogEntry.create!(category: Family::AiPromptable::DROPPED_CATEGORY, level: "warn", message: "dropped", source: "test",
+                          family: @family, metadata: { key: "categorize_transactions", text: "My Anthropic prompt" })
 
-    assert_not @family.ai_prompt_format_risk?(:categorizer_openai), "no override should not warn"
+    assert_equal [ { key: "categorize_transactions", text: "My Anthropic prompt" } ], @family.dropped_ai_prompt_overrides
 
-    @family.update!(ai_prompt_categorizer_openai: "Categorise them. Be conservative.")
-    assert @family.ai_prompt_format_risk?(:categorizer_openai)
-
-    @family.update!(ai_prompt_categorizer_openai: 'Be conservative. {"categorizations": [...]}')
-    assert_not @family.ai_prompt_format_risk?(:categorizer_openai)
-
-    # Anthropic's wrapper key comes from the tool schema, so wording can't drop it.
-    @family.update!(ai_prompt_categorizer_anthropic: "No wrapper key in here.")
-    assert_not @family.ai_prompt_format_risk?(:categorizer_anthropic)
-  end
-
-  test "does not flag a dropped wrapper key on native openai" do
-    Family::AiPromptable.stubs(:custom_openai_provider?).returns(false)
-    @family.update!(ai_prompt_categorizer_openai: "Categorise them. Be conservative.")
-
-    assert_not @family.ai_prompt_format_risk?(:categorizer_openai)
+    @family.clear_dropped_ai_prompt_overrides
+    assert_empty @family.dropped_ai_prompt_overrides
   end
 
   test "a blank value resets the key rather than storing an empty prompt" do
@@ -136,4 +113,20 @@ class Family::AiPromptableTest < ActiveSupport::TestCase
     assert_not @family.valid?
     assert_includes @family.errors.attribute_names, :ai_prompt_chat_system
   end
+
+  private
+    def with_ai_route_prompts(categorize, detect, &block)
+      config = AiTestHelper.test_config
+      routes = { categorize:, detect_merchants: detect }.to_h do |feature, prompt|
+        [ feature, [ config.routes_for(feature).first.with(prompt:) ] ]
+      end
+      Ai::Config.with(Ai::Config.new(endpoints: config.endpoints, models: config.models, routes: config.routes.merge(routes)), &block)
+    end
+
+    def instructions(feature, prompt, protocol)
+      endpoint = Ai::Config::Endpoint.new(name: protocol, protocol:, api_key: "test-key")
+      route = Ai::Route.new(feature:, model: Ai::Config::Model.new(endpoint:, name: "m"), prompt:)
+      locals = { transactions: [], categories: [], merchants: [] }
+      Ai::Prompt.for(feature, default: prompt, route:, family: @family, locale: nil, locals:).instructions
+    end
 end

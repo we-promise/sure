@@ -3,10 +3,7 @@ nl:
   settings:
     ai_prompts:
       prompt_field:
-        provider_label: "Provider"
-        prompt_label: "Prompt"
         provider_openai: "OpenAI"
-        provider_anthropic: "Anthropic"
         reset: "Standaard herstellen"
         reset_confirm_title: "Standaardprompt herstellen?"
         reset_confirm_body: "Hiermee wordt uw aangepaste prompt verwijderd en worden de ingebouwde standaardinstructies hersteld."
@@ -37,8 +34,6 @@ nl:
           title: "Inzicht verdiepen"
           subtitle: "Eerste chatbericht wanneer u met AI dieper op een inzicht ingaat"
           label: "Verdiepingsbericht"
-        openai_label: "OpenAI"
-        prompt_instructions: "Prompt Instructies"
       update:
         success: "AI-prompts bijgewerkt"
         multiple_errors: "Meerdere prompts zijn te lang (maximaal %{count} tekens)"
