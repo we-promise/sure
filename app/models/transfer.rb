@@ -20,6 +20,11 @@ class Transfer < ApplicationRecord
   # (or its entry) is deleted, so the surviving leg never keeps a transfer kind
   # without a transfer.
   before_destroy :release_transactions
+  # Confirming or removing a confirmed transfer moves the balance of accounts
+  # that count transfers. Runs after commit, so callers that confirm inside
+  # their own transaction never lock an account row while holding theirs.
+  after_save :note_status_change
+  after_commit :sync_transfer_counting_accounts_later, if: :moved_transfer_counting_balances?
 
   class << self
     # The outflow leg's kind for a transfer into this account. Transfer::Creator,
@@ -213,6 +218,42 @@ class Transfer < ApplicationRecord
     inflow_transaction&.entry&.sync_account_later
     outflow_transaction&.entry&.sync_account_later
     fee_transactions.each { |t| t.entry&.sync_account_later }
+  end
+
+  # Accounts that change when this transfer goes away with one of its legs:
+  # the fee transactions are deleted, and a counterpart that counts transfers
+  # moves its balance.
+  def accounts_changed_by_removal
+    (Account.where(id: fee_transactions.joins(:entry).select("entries.account_id")).to_a + transfer_counting_accounts).uniq
+  end
+
+  # Accounts whose balance moves if this transfer goes away.
+  def transfer_counting_accounts
+    return [] unless confirmed?
+
+    [ from_account, to_account ].compact.select(&:balance_counts_transfers?)
+  end
+
+  # Checked after commit, when a later save in the same transaction (notes,
+  # fees) would already have cleared saved_change_to_status?.
+  def moved_transfer_counting_balances?
+    changed = @status_changed_in_transaction
+    @status_changed_in_transaction = false
+    confirmed? && (destroyed? || changed)
+  end
+
+  def note_status_change
+    @status_changed_in_transaction = true if saved_change_to_status?
+  end
+
+  # Other accounts keep their balance when a transfer is confirmed or removed.
+  def sync_transfer_counting_accounts_later
+    [ inflow_transaction, outflow_transaction ].each do |transaction|
+      entry = transaction&.entry
+      next unless entry&.account&.balance_counts_transfers? && Entry.exists?(entry.id)
+
+      entry.sync_account_later
+    end
   end
 
   def to_account

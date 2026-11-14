@@ -499,4 +499,17 @@ class Api::V1::SplitsControllerTest < ActionDispatch::IntegrationTest
     get api_v1_transaction_split_url("not-a-uuid"), headers: api_headers(@api_key)
     assert_response :not_found
   end
+
+  test "unsplitting is refused when a child is a transfer leg into an account the user can't write" do
+    other_liability = accounts(:other_liability).tap { |account| account.update!(owner: users(:family_member)) }
+    parent = create_transaction(account: accounts(:depository), amount: 250)
+    child = parent.split!([ { name: "Payment", amount: 200 }, { name: "Groceries", amount: 50 } ]).first
+    inflow = create_transaction(account: other_liability, amount: -200, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: child.transaction, inflow_transaction: inflow.transaction, status: "confirmed")
+
+    assert_no_difference [ -> { Transfer.count }, -> { Entry.count } ] do
+      delete api_v1_transaction_split_url(parent.transaction), headers: api_headers(@api_key), as: :json
+    end
+    assert_response :forbidden
+  end
 end

@@ -227,6 +227,60 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "standard", transfer.inflow_transaction.reload.kind
   end
 
+  test "confirming or removing a transfer resyncs an account that counts transfers, and only that one" do
+    liability = accounts(:other_liability)
+    checking = accounts(:depository)
+    Sync.where(syncable: [ liability, checking ]).delete_all
+
+    transfer = create_pending_transfer(from: checking, to: liability)
+
+    assert_difference -> { liability.syncs.count }, 1 do
+      assert_no_difference -> { checking.syncs.count } do
+        transfer.confirm!
+      end
+    end
+
+    Sync.where(syncable: liability).delete_all
+    assert_difference -> { liability.syncs.count }, 1 do
+      transfer.destroy!
+    end
+  end
+
+  test "confirming resyncs even when the transfer is saved again in the same transaction" do
+    liability = accounts(:other_liability)
+    transfer = create_pending_transfer(from: accounts(:depository), to: liability)
+    Sync.where(syncable: liability).delete_all
+
+    assert_difference -> { liability.syncs.count }, 1 do
+      Transfer.transaction do
+        transfer.confirm!
+        transfer.update!(notes: "Paid back")
+      end
+    end
+  end
+
+  test "rejecting a pending match does not resync an account that counts transfers" do
+    liability = accounts(:other_liability)
+    transfer = create_pending_transfer(from: accounts(:depository), to: liability)
+    Sync.where(syncable: liability).delete_all
+
+    assert_no_difference -> { liability.syncs.count } do
+      transfer.reject!
+    end
+  end
+
+  test "deleting the other leg resyncs the account that counts transfers" do
+    liability = accounts(:other_liability)
+    transfer = create_pending_transfer(from: accounts(:depository), to: liability)
+    transfer.confirm!
+    Sync.where(syncable: liability).delete_all
+
+    assert_difference -> { liability.syncs.count }, 1 do
+      transfer.outflow_transaction.entry.destroy!
+    end
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
   test "update_investment_contribution! turns a contribution into a plain transfer and back" do
     transfer = create_pending_transfer(from: accounts(:depository), to: accounts(:investment))
     transfer.confirm!

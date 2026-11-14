@@ -604,6 +604,12 @@ class Entry < ApplicationRecord
     parent_entry_id.present?
   end
 
+  # Other accounts that change when this entry and its split children are
+  # deleted: removing a transfer leg removes the transfer with its fees.
+  def accounts_changed_by_transfer_removal
+    [ self, *child_entries ].flat_map { |entry| entry.entryable.try(:transfer)&.accounts_changed_by_removal || [] }.uniq
+  end
+
   # Splits this entry into child entries. Marks parent as excluded.
   #
   # @param splits [Array<Hash>] array of { name:, amount:, category_id:, merchant_id:, tag_ids:, excluded: } hashes.
