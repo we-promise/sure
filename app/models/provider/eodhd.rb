@@ -13,9 +13,10 @@ class Provider::Eodhd < Provider
   # Maximum API calls per day (EODHD free/basic plans are very restrictive)
   MAX_REQUESTS_PER_DAY = 20
 
-  # EODHD free tier provides ~1 year of EOD data
+  # The free tier provides ~1 year of EOD data; paid plans go back 30+ years.
+  # Raising EODHD_MAX_REQUESTS_PER_DAY above the free cap signals a paid key.
   def max_history_days
-    365
+    365 if max_requests_per_day <= MAX_REQUESTS_PER_DAY
   end
 
   # EODHD uses {SYMBOL}.{EXCHANGE} ticker format with its own exchange codes
@@ -163,18 +164,27 @@ class Provider::Eodhd < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
+      ticker = eodhd_symbol(symbol, exchange_operating_mic)
+      # Fundamentals cost 10 API calls and fail on plans without them, so don't
+      # retry a permanently failed lookup (no plan access, unknown ticker) on every sync.
+      failed_key = "eodhd:fundamentals_failed:#{Digest::SHA256.hexdigest(api_key.to_s)[0, 8]}:#{ticker}"
+      raise Error, "Fundamentals for #{ticker} failed recently; retrying later" if Rails.cache.read(failed_key)
+
       enforce_daily_limit!
       throttle_request
 
-      ticker = eodhd_symbol(symbol, exchange_operating_mic)
+      begin
+        response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
+          req.params["api_token"] = api_key
+          req.params["fmt"] = "json"
+        end
 
-      response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
-        req.params["api_token"] = api_key
-        req.params["fmt"] = "json"
+        parsed = JSON.parse(response.body)
+        check_api_error!(parsed)
+      rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error
+        Rails.cache.write(failed_key, true, expires_in: 7.days)
+        raise
       end
-
-      parsed = JSON.parse(response.body)
-      check_api_error!(parsed)
 
       general = parsed.dig("General") || {}
 

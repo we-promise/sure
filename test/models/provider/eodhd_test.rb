@@ -195,4 +195,42 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert result.success?
     assert_equal "USD", result.data.first.currency
   end
+
+  test "clamps history to one year at the free-tier request cap" do
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      assert_equal 365, @provider.max_history_days
+    end
+  end
+
+  test "does not clamp history when the request cap is raised for a paid plan" do
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100000") do
+      assert_nil @provider.max_history_days
+    end
+  end
+
+  test "fetch_security_info does not retry a failed fundamentals lookup" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).once.raises(Faraday::ForbiddenError.new("403"))
+
+    2.times do
+      result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
+      assert_not result.success?
+    end
+    assert_equal 1, Rails.cache.read("eodhd:daily:#{Date.current}")
+  end
+
+  test "fetch_security_info retries after a transient failure" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    ok = mock
+    ok.stubs(:body).returns({ "General" => { "Name" => "Apple Inc" } }.to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).times(3).raises(Faraday::ServerError.new("502"))
+      .then.raises(Faraday::TimeoutError.new("timeout")).then.returns(ok)
+
+    2.times { assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success? }
+    assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+  end
 end
