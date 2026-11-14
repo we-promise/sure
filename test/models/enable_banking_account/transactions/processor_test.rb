@@ -777,16 +777,35 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
                  @account.entries.where(source: "enable_banking").pluck(:external_id, :currency).sort
   end
 
-  test "a legacy plain entry with a locked currency prefers its currency on an amount and date tie" do
+  [ [ "the original row first", false ], [ "the sibling first", true ] ].each do |order, sibling_first|
+    test "a legacy plain entry with a locked, changed currency keeps its original row on the same date, #{order}" do
+      legacy = create_transaction(
+        account: @account, name: "Laundromat", date: 2.days.ago.to_date, amount: 7, currency: "GBP",
+        external_id: "enable_banking_tid-x", source: "enable_banking"
+      )
+      legacy.update!(currency: "EUR")
+      legacy.lock_saved_attributes!
+      rows = [ raw_shared_tid_transaction(entry_reference: "r-g", amount: "7.00").deep_merge(transaction_amount: { currency: "GBP" }),
+               raw_shared_tid_transaction(entry_reference: "r-e", amount: "7.00") ]
+      rows.reverse! if sibling_first
+      2.times { sync_shared(*rows) }
+
+      assert_equal [ [ "enable_banking_tid-x", "EUR" ], [ sibling_id("r-e"), "EUR" ] ].sort,
+                   @account.entries.where(source: "enable_banking").pluck(:external_id, :currency).sort
+    end
+  end
+
+  test "a legacy plain entry with a locked currency gives a tie to the row not in that currency" do
     legacy = create_transaction(
       account: @account, name: "Laundromat", date: 2.days.ago.to_date, amount: 7, currency: "EUR",
       external_id: "enable_banking_tid-x", source: "enable_banking"
     )
-    legacy.lock_attr!(:currency)
+    legacy.update!(currency: "USD")
+    legacy.lock_saved_attributes!
     usd = raw_shared_tid_transaction(entry_reference: "r-u", amount: "7.00").deep_merge(transaction_amount: { currency: "USD" })
     2.times { sync_shared(usd, raw_shared_tid_transaction(entry_reference: "r-e", amount: "7.00")) }
 
-    assert_equal [ [ "enable_banking_tid-x", "EUR" ], [ sibling_id("r-u"), "USD" ] ],
+    assert_equal [ [ "enable_banking_tid-x", "USD" ], [ sibling_id("r-u"), "USD" ] ],
                  @account.entries.where(source: "enable_banking").order(:external_id).pluck(:external_id, :currency)
   end
 end
