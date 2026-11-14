@@ -932,14 +932,16 @@ class EnableBankingItem::Importer
           end
         end
 
-        existing_ids = existing_transactions.map { |tx|
-          EnableBankingEntry::Processor.compute_external_id(tx)
-        }.compact.to_set
+        # Ids are computed over stored + fetched rows together so a fetched row
+        # sharing a stored row's transaction_id, but not its entry_reference, is
+        # recognised as new (see EnableBankingEntry::Processor.external_ids_for).
+        ids = EnableBankingEntry::Processor.external_ids_for(existing_transactions + all_transactions)
+        existing_ids = ids.first(existing_transactions.size).compact.to_set
 
-        new_transactions = all_transactions.select do |tx|
-          ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
+        new_transactions = all_transactions.each_with_index.select { |_tx, index|
+          ext_id = ids[existing_transactions.size + index]
           ext_id.present? && !existing_ids.include?(ext_id)
-        end
+        }.map(&:first)
 
         if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)

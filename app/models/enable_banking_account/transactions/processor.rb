@@ -101,9 +101,9 @@ class EnableBankingAccount::Transactions::Processor
       Set.new
     end
 
-    enable_banking_account.raw_transactions_payload.each_with_index do |transaction_data, index|
+    rows_in_import_order.each do |transaction_data, index|
       begin
-        ext_id = EnableBankingEntry::Processor.compute_external_id(transaction_data)
+        ext_id = external_ids[index]
 
         if ext_id && excluded_ids.include?(ext_id)
           Rails.logger.info("EnableBankingAccount::Transactions::Processor - Skipping re-import of manually merged pending transaction: #{ext_id}")
@@ -117,7 +117,8 @@ class EnableBankingAccount::Transactions::Processor
           import_adapter: shared_adapter,
           known_merchant_names: shared_known_merchant_names,
           identifierless_external_ids: shared_identifierless_external_ids,
-          excluded_external_ids: excluded_ids
+          excluded_external_ids: excluded_ids,
+          external_id: ext_id
         ).process
 
         if result.nil?
@@ -169,4 +170,20 @@ class EnableBankingAccount::Transactions::Processor
 
     result
   end
+
+  private
+
+    def external_ids
+      @external_ids ||= EnableBankingEntry::Processor.external_ids_for(
+        enable_banking_account.raw_transactions_payload, account: enable_banking_account.current_account
+      )
+    end
+
+    # Rows keeping their plain id go first, so a pending entry under a shared
+    # transaction_id settles into the row that keeps that id, not a same-amount sibling.
+    def rows_in_import_order
+      enable_banking_account.raw_transactions_payload.each_with_index.sort_by do |data, index|
+        [ external_ids[index] == EnableBankingEntry::Processor.compute_external_id(data) ? 0 : 1, index ]
+      end
+    end
 end
