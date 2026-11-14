@@ -8,6 +8,7 @@ es:
     form:
       amount: Importe
       bank_charges: Comisiones bancarias
+      category: Categoría
       outgoing_fee: Comisión de transferencia saliente
       incoming_fee: Comisión de transferencia entrante
       date: Fecha
@@ -22,6 +23,7 @@ es:
       submit: Crear transferencia
       to: Hacia
       transfer: Transferencia
+      uncategorized: Sin categorizar
     new:
       title: Nueva transferencia
     show:

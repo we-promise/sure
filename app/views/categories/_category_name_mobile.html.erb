@@ -1,6 +1,6 @@
 <span id="category_name_mobile_<%= transaction.id %>" class="text-secondary lg:hidden min-w-0 truncate">
   <% if transaction.category_editable? %>
-    <%= transaction.category&.display_name || Category.uncategorized.display_name %>
+    <%= display_category_for(transaction).display_name %>
   <% else %>
     <%= read_only_category(transaction).display_name %>
   <% end %>

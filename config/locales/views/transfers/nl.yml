@@ -11,6 +11,7 @@ nl:
     form:
       amount: "Bedrag"
       bank_charges: "Bankkosten"
+      category: "Categorie"
       outgoing_fee: "Kosten uitgaande overboeking"
       incoming_fee: "Kosten inkomende overboeking"
       date: "Datum"
@@ -25,6 +26,7 @@ nl:
       submit: "Maak overboeking aan"
       to: "Naar"
       transfer: "Overboeking"
+      uncategorized: "Niet gecategoriseerd"
     new:
       title: "Nieuwe overboeking"
     show:
