@@ -197,6 +197,10 @@ class Provider::Eodhd < Provider
         # under-counting a refused call is safer than refusing the day's prices.
         refund_daily_requests(FUNDAMENTALS_REQUEST_COST - 1) if e.is_a?(Faraday::ForbiddenError)
         raise
+      rescue Faraday::ClientError => e
+        # EODHD answers 402 when the day's calls are used up and does not bill it
+        refund_daily_requests(FUNDAMENTALS_REQUEST_COST) if e.response_status == 402
+        raise
       end
 
       general = parsed.dig("General") || {}

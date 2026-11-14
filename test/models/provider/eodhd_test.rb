@@ -344,4 +344,17 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     end
     assert_equal 0, store.read(key).to_i
   end
+
+  test "a fundamentals call refused with 402 for lack of calls is not counted" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    Rails.cache.write("eodhd:daily:#{Date.current}", 10)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).once.raises(Faraday::ClientError.new("402", { status: 402 }))
+
+    with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
+      assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+    end
+    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+  end
 end
