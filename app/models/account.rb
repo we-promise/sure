@@ -70,6 +70,7 @@ class Account < ApplicationRecord
 
   def reload(*)
     @scheduled_entry_flows = nil
+    @current_holdings_total = nil
     super
   end
 
@@ -820,6 +821,10 @@ class Account < ApplicationRecord
 
     assign_attributes(restored)
     clear_attribute_changes(restored.keys)
+  end
+
+  def current_holdings_total
+    @current_holdings_total ||= current_holdings.sum(&:amount_in_account_currency)
   end
 
   def current_holdings
