@@ -172,13 +172,14 @@ class PlaidAccount::Processor
       report_exception(e)
     end
 
-    # Plaid dates each holding with the institution's price date, which for a
-    # sync run before the close is the previous session's; the total it reports
-    # alongside is as of that same date. Anchoring that total on today would
-    # set it against holdings later repriced for today, and the difference
-    # would read as cash on every day in between -- the shift #3815 removed
-    # from IBKR. The anchor goes on the newest date the holdings carry; a
-    # snapshot with no dated holdings is today's.
+    # Plaid prices each holding as of the institution's price date
+    # (institution_price_as_of), which for a sync run before the close is the
+    # previous session's; the total it reports alongside is as of that same
+    # date. Anchoring that total on today would set it against holdings later
+    # repriced for today, and the difference would read as cash on every day
+    # in between -- the shift #3815 removed from IBKR. The anchor goes on the
+    # newest price date the holdings carry; a snapshot with no dated holdings
+    # is today's. (The holdings themselves are dated by the sync day.)
     def balance_date
       return Date.current unless plaid_account.plaid_type == "investment"
 
