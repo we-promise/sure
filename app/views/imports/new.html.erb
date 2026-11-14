@@ -159,6 +159,12 @@
                     <%= icon("chevron-right") %>
                     <%= form.file_field :import_file, accept: @document_upload_extensions.join(","), class: "hidden", onchange: "this.form.requestSubmit()" %>
                   </label>
+                  <% if @document_upload_extensions.include?(".pdf") && ai_feature_available?(:extract_pdf) %>
+                    <%# Read as, per upload: chosen before the file, which submits the form. %>
+                    <div class="px-4 pb-3">
+                      <%= form.select :read_as, pdf_read_as_options, { label: t("imports.pdf_import.read_as.label") } %>
+                    </div>
+                  <% end %>
                 <% end %>
 
                 <%= render "shared/ruler" %>

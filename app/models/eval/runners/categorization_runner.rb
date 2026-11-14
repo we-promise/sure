@@ -3,7 +3,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
 
     def process_samples
       all_samples = samples.to_a
-      batch_size = Provider::LlmConcept.max_items_per_call
+      batch_size = Ai::Config.current.batch_size_for(:categorize)
       log_progress("Processing #{all_samples.size} samples in batches of #{batch_size}")
 
       all_samples.each_slice(batch_size).with_index do |batch, batch_idx|
@@ -33,7 +33,7 @@ class Eval::Runners::CategorizationRunner < Eval::Runners::Base
       end
 
       # Get categories from first sample's context (should be shared)
-      # Symbolize keys since Provider::Openai::AutoCategorizer expects symbol keys
+      # The generation builds its prompt and schema from symbol-keyed hashes.
       categories = batch_samples.first.categories_context.map(&:deep_symbolize_keys)
 
       # Determine effective JSON mode for this batch

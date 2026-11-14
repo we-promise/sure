@@ -581,9 +581,6 @@ zh-CN:
       unknown_state_description: 此导入处于未知状态。请刷新页面或查看日志。
       processing_failed_with_message: "%{message}"
       processing_failed_generic: 处理失败：%{error}
-      errors:
-        provider_not_configured: AI 提供商尚未配置
-        provider_no_pdf_support: AI 提供商不支持 PDF 处理
       ready_for_review_title: 可供审核
       ready_for_review_description:
         one: "对账单中有 %{count} 笔交易尚未进入此账户。请审核并发布以添加它们。"

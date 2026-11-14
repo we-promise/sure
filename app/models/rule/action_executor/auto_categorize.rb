@@ -3,7 +3,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     base_label = "Auto-categorize transactions with AI"
 
     if rule.family.self_hoster?
-      selected_model = rule.family.categorization_model_name
+      selected_model = Ai.plan(:categorize, family: rule.family)&.model&.name
 
       if selected_model.present?
         # Estimate cost for typical batch of 20 transactions
@@ -52,24 +52,15 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       return 0
     end
 
-    batch_size = Provider::LlmConcept.max_items_per_call
-    jobs_count = 0
+    # One job for every transaction: Ai::GenerationJob sends one batch, sized for the model, and
+    # queues the rest behind other families' work. The run reports back once, through
+    # RuleRun#complete_job!, and counts transactions_awaiting_ai down as each batch is applied.
+    count = enrichable_transactions.count
+    Rails.logger.info("Scheduling auto-categorization for #{count} transactions")
+    rule_run&.await_ai!(count)
+    rule.family.auto_categorize_transactions_later(enrichable_transactions, rule_run_id: rule_run&.id)
 
-    enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
-      Rails.logger.info("Scheduling auto-categorization for batch #{idx + 1} of #{enrichable_transactions.count}")
-      rule.family.auto_categorize_transactions_later(transactions, rule_run_id: rule_run&.id)
-      jobs_count += 1
-    end
-
-    # Return metadata about async jobs
-    # Note: modified_count is set to queued_count here because we don't know
-    # the actual modified count until the async jobs complete
-    # The actual modified count will be reported back via rule_run.complete_job!
-    {
-      async: true,
-      modified_count: enrichable_transactions.count,
-      jobs_count: jobs_count
-    }
+    { async: true, modified_count: count, jobs_count: 1 }
   end
 
   private

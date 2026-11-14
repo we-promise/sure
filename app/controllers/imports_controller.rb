@@ -1,12 +1,15 @@
 class ImportsController < ApplicationController
+  include AiFeatureGuard
   include SettingsHelper
 
-  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
-  before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
+  before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary reread]
+  before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel reread]
   before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
   before_action :reject_guest_family_config_import!, except: %i[index new show summary]
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
   before_action :reject_guest_new_categories_or_tags!, only: :publish
+
+  requires_ai :extract_pdf, only: :reread
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -55,6 +58,17 @@ class ImportsController < ApplicationController
   # found".
   def summary
     raise ActiveRecord::RecordNotFound unless @import.is_a?(PdfImport)
+  end
+
+  # "Read again as…" on a PDF import: reads the statement another way, before
+  # anything is published.
+  def reread
+    read_as = params.dig(:import, :read_as).to_s
+    if @import.is_a?(PdfImport) && PdfImport::READ_AS.include?(read_as) && @import.reread!(read_as)
+      redirect_to import_path(@import), notice: t("imports.pdf_import.reread.success")
+    else
+      redirect_to import_path(@import), alert: t("imports.pdf_import.reread.not_allowed")
+    end
   end
 
   def cancel
@@ -192,7 +206,7 @@ class ImportsController < ApplicationController
     end
 
     def import_params
-      params.require(:import).permit(:import_file)
+      params.require(:import).permit(:import_file, :read_as)
     end
 
     def reject_guest_family_config_import!
@@ -251,7 +265,8 @@ class ImportsController < ApplicationController
       return redirect_to new_import_path, alert: t("accounts.not_authorized") unless AccountStatement.statement_manager?(Current.user)
       return redirect_to new_import_path, alert: t("imports.create.pdf_too_large", max_size: Import::MAX_PDF_SIZE / 1.megabyte) if file.size > Import::MAX_PDF_SIZE
 
-      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user)
+      pdf_import = PdfImport.create_from_upload!(family: Current.family, file: file, user: Current.user,
+                                                 read_as: import_params[:read_as])
       pdf_import.process_with_ai_later
       redirect_to import_path(pdf_import), notice: t("imports.create.pdf_processing")
     rescue AccountStatement::DuplicateUploadError
@@ -261,6 +276,12 @@ class ImportsController < ApplicationController
     end
 
     def create_document_import(file)
+      availability = Ai.availability(:embed, family: Current.family, user: Current.user)
+      unless availability.available?
+        redirect_to new_import_path, alert: availability.message_for(Current.user)
+        return
+      end
+
       adapter = VectorStore.adapter
       unless adapter
         redirect_to new_import_path, alert: t("imports.create.document_provider_not_configured")
@@ -304,10 +325,15 @@ class ImportsController < ApplicationController
     end
 
     def document_upload_supported_extensions
-      adapter = VectorStore.adapter
+      adapter = document_store
       return [] unless adapter
 
       adapter.supported_extensions.map(&:downcase).uniq.sort
+    end
+
+    # Nil when `embed` isn't available, or when its store can't be built (pgvector without its extension).
+    def document_store
+      VectorStore.adapter if Ai.available?(:embed, family: Current.family, user: Current.user)
     end
 
     def document_upload_request?

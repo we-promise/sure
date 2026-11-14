@@ -22,22 +22,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
         assert_instance_of Provider::Openai, provider
         assert provider.supports_responses_endpoint?
-        assert provider.supports_pdf_processing?(model: model)
-      end
-    end
-
-    test "#{model} PDF processing reserves only an explicitly configured output limit" do
-      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
-        Setting.stubs(:llm_max_response_tokens).returns(nil)
-        expect_pdf_response_limit(@openai, model: model, limit: nil)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
-      end
-    end
-
-    test "#{model} PDF processing honors an explicit output limit" do
-      with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
-        expect_pdf_response_limit(@openai, model: model, limit: 8192)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
       end
     end
   end
@@ -72,23 +56,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
-  test "native o-series PDF processing reserves only an explicitly configured output limit" do
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
-      Setting.stubs(:llm_max_response_tokens).returns(nil)
-      %w[o1 o3].each do |model|
-        expect_pdf_response_limit(@openai, model: model, limit: nil)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
-      end
-    end
-
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => "8192") do
-      %w[o1 o3].each do |model|
-        expect_pdf_response_limit(@openai, model: model, limit: 8192)
-        assert @openai.process_pdf(pdf_content: "synthetic PDF", model: model).success?
-      end
-    end
-  end
-
   # The registry and the settings form both stop a custom base URL without a
   # model before it gets here; this is the provider's own guard behind them.
   test "a custom base URL without a model is refused" do
@@ -108,7 +75,7 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
   end
 
   # Some keys only work on a regional host, so setting one must not turn off
-  # the OpenAI-only paths like the Responses API and max_completion_tokens.
+  # the OpenAI-only paths like the Responses API.
   test "an OpenAI regional host is hosted OpenAI, not a custom provider" do
     with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
       regional = Provider::Openai.new("test-token", uri_base: "https://us.api.openai.com")
@@ -116,7 +83,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_not regional.custom_provider?
       assert regional.supports_responses_endpoint?
       assert_equal "OpenAI", regional.provider_name
-      assert Provider::Openai.native_pdf_completion_limit?(model: "gpt-6-luna", custom_provider: regional.custom_provider?)
     end
   end
 
@@ -128,21 +94,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     [ "http://us.api.openai.com", "https://evil-api.openai.com", "https://api.openai.com.example.com",
       "https://us.api.openai.com/proxy", "https://us.api.openai.com:8443", "https://custom.example/v1", "not a url" ].each do |url|
       assert_not Provider::Openai.hosted_endpoint?(url), url
-    end
-  end
-
-  test "legacy and custom PDF processing preserve the fallback output limit" do
-    with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
-      Setting.stubs(:llm_max_response_tokens).returns(nil)
-      expect_pdf_response_limit(@openai, model: "gpt-4.1", limit: 512)
-      assert @openai.process_pdf(pdf_content: "synthetic PDF", model: "gpt-4.1").success?
-
-      custom = Provider::Openai.new("test-token", uri_base: "https://custom.example/v1", model: "gpt-6-sol")
-      expect_pdf_response_limit(custom, model: "gpt-6-sol", limit: 512)
-      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "gpt-6-sol").success?
-
-      expect_pdf_response_limit(custom, model: "o3", limit: 512)
-      assert custom.process_pdf(pdf_content: "synthetic PDF", model: "o3").success?
     end
   end
 
@@ -367,103 +318,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
 
       assert_not response.success?
       assert_kind_of Provider::Openai::Error, response.error
-    end
-  end
-
-  test "auto categorizes transactions by various attributes" do
-    VCR.use_cassette("openai/auto_categorize") do
-      input_transactions = [
-        { id: "1", name: "McDonalds", amount: 20, classification: "expense", merchant: "McDonalds", hint: "Fast Food" },
-        { id: "2", name: "Amazon purchase", amount: 100, classification: "expense", merchant: "Amazon" },
-        { id: "3", name: "Netflix subscription", amount: 10, classification: "expense", merchant: "Netflix", hint: "Subscriptions" },
-        { id: "4", name: "paycheck", amount: 3000, classification: "income" },
-        { id: "5", name: "Italian dinner with friends", amount: 100, classification: "expense" },
-        { id: "6", name: "1212XXXBCaaa charge", amount: 2.99, classification: "expense" }
-      ]
-
-      response = @subject.auto_categorize(
-        transactions: input_transactions,
-        user_categories: [
-          { id: "shopping_id", name: "Shopping", is_subcategory: false, parent_id: nil, classification: "expense" },
-          { id: "subscriptions_id", name: "Subscriptions", is_subcategory: true, parent_id: nil, classification: "expense" },
-          { id: "restaurants_id", name: "Restaurants", is_subcategory: false, parent_id: nil, classification: "expense" },
-          { id: "fast_food_id", name: "Fast Food", is_subcategory: true, parent_id: "restaurants_id", classification: "expense" },
-          { id: "income_id", name: "Income", is_subcategory: false, parent_id: nil, classification: "income" }
-        ]
-      )
-
-      assert response.success?
-      assert_equal input_transactions.size, response.data.size
-
-      txn1 = response.data.find { |c| c.transaction_id == "1" }
-      txn2 = response.data.find { |c| c.transaction_id == "2" }
-      txn3 = response.data.find { |c| c.transaction_id == "3" }
-      txn4 = response.data.find { |c| c.transaction_id == "4" }
-      txn5 = response.data.find { |c| c.transaction_id == "5" }
-      txn6 = response.data.find { |c| c.transaction_id == "6" }
-
-      assert_equal "Fast Food", txn1.category_name
-      assert_equal "Shopping", txn2.category_name
-      assert_equal "Subscriptions", txn3.category_name
-      assert_equal "Income", txn4.category_name
-      assert_equal "Restaurants", txn5.category_name
-      assert_nil txn6.category_name
-    end
-  end
-
-  test "auto detects merchants" do
-    VCR.use_cassette("openai/auto_detect_merchants") do
-      input_transactions = [
-        { id: "1", name: "McDonalds", amount: 20, classification: "expense" },
-        { id: "2", name: "local pub", amount: 20, classification: "expense" },
-        { id: "3", name: "WMT purchases", amount: 20, classification: "expense" },
-        { id: "4", name: "amzn 123 abc", amount: 20, classification: "expense" },
-        { id: "5", name: "chaseX1231", amount: 2000, classification: "income" },
-        { id: "6", name: "check deposit 022", amount: 200, classification: "income" },
-        { id: "7", name: "shooters bar and grill", amount: 200, classification: "expense" },
-        { id: "8", name: "Microsoft Office subscription", amount: 200, classification: "expense" }
-      ]
-
-      response = @subject.auto_detect_merchants(
-        transactions: input_transactions,
-        user_merchants: [ { name: "Shooters" } ]
-      )
-
-      assert response.success?
-      assert_equal input_transactions.size, response.data.size
-
-      txn1 = response.data.find { |c| c.transaction_id == "1" }
-      txn2 = response.data.find { |c| c.transaction_id == "2" }
-      txn3 = response.data.find { |c| c.transaction_id == "3" }
-      txn4 = response.data.find { |c| c.transaction_id == "4" }
-      txn5 = response.data.find { |c| c.transaction_id == "5" }
-      txn6 = response.data.find { |c| c.transaction_id == "6" }
-      txn7 = response.data.find { |c| c.transaction_id == "7" }
-      txn8 = response.data.find { |c| c.transaction_id == "8" }
-
-      assert_equal "McDonald's", txn1.business_name
-      assert_equal "mcdonalds.com", txn1.business_url
-
-      assert_nil txn2.business_name
-      assert_nil txn2.business_url
-
-      assert_equal "Walmart", txn3.business_name
-      assert_equal "walmart.com", txn3.business_url
-
-      assert_equal "Amazon", txn4.business_name
-      assert_equal "amazon.com", txn4.business_url
-
-      assert_nil txn5.business_name
-      assert_nil txn5.business_url
-
-      assert_nil txn6.business_name
-      assert_nil txn6.business_url
-
-      assert_equal "Shooters", txn7.business_name
-      assert_nil txn7.business_url
-
-      assert_equal "Microsoft", txn8.business_name
-      assert_equal "microsoft.com", txn8.business_url
     end
   end
 
@@ -721,7 +575,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 512, subject.max_response_tokens
       assert_equal 256, subject.system_prompt_reserve
       assert_equal 2048 - 512 - 256, subject.max_history_tokens
-      assert_equal 2048 - 512 - 256, subject.max_input_tokens
     end
   end
 
@@ -738,7 +591,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
       assert_equal 1024, subject.max_response_tokens
       assert_equal 512, subject.system_prompt_reserve
       assert_equal 4096, subject.max_history_tokens  # explicit overrides derived
-      assert_equal 8192 - 1024 - 512, subject.max_input_tokens
     end
   end
 
@@ -825,29 +677,6 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   ensure
     Setting.llm_context_window = nil
-  end
-
-  test "auto_categorize sends a batch that fits the context window as one call" do
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "10", "LLM_CONTEXT_WINDOW" => "100000") do
-      subject = Provider::Openai.new("test-token")
-      transactions = Array.new(25) { |i| { id: i.to_s, name: "txn#{i}", amount: 10, classification: "expense" } }
-      user_categories = [ { id: "cat1", name: "Groceries", is_subcategory: false, parent_id: nil, classification: "expense" } ]
-
-      # Capture the batch size passed to each AutoCategorizer. `.new` is called
-      # once per sub-batch; we record each invocation's transactions count.
-      seen_sizes = []
-      fake_instance = mock
-      fake_instance.stubs(:auto_categorize).returns([])
-      Provider::Openai::AutoCategorizer.stubs(:new).with do |*_args, **kwargs|
-        seen_sizes << kwargs[:transactions].size
-        true
-      end.returns(fake_instance)
-
-      response = subject.auto_categorize(transactions: transactions, user_categories: user_categories)
-
-      assert response.success?
-      assert_equal [ 25 ], seen_sizes
-    end
   end
 
   test "streaming surfaces a useful error when the stream ends with response.failed and no completion" do
@@ -1136,19 +965,13 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
   end
 
-  private
-    # Verify the response budget at the provider-to-processor boundary.
-    # @param limit [Integer, nil] expected explicit cap or omitted cap
-    def expect_pdf_response_limit(provider, model:, limit:)
-      result = Provider::LlmConcept::PdfProcessingResult.new(
-        summary: "Synthetic PDF", document_type: "other", extracted_data: {}
-      )
-      processor = mock
-      processor.expects(:process).returns(result)
-      Provider::Openai::PdfProcessor.expects(:new).with do |*args|
-        params = args.last
-        params[:model] == model && params[:max_response_tokens] == limit &&
-          params[:custom_provider] == provider.custom_provider?
-      end.returns(processor)
+  test "the client takes its proxy from Ai::Transport::Http, never proxying loopback" do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy.internal:8888", HTTP_PROXY: nil, NO_PROXY: nil, no_proxy: nil) do
+      cloud = Faraday.new.tap { Provider::Openai.new("token").send(:client).faraday_middleware.call(_1) }
+      local = Faraday.new.tap { Provider::Openai.new("token", uri_base: "http://127.0.0.1:8080/v1", model: "qwen3").send(:client).faraday_middleware.call(_1) }
+
+      assert_equal URI("http://proxy.internal:8888"), cloud.proxy.uri
+      assert_nil local.proxy
     end
+  end
 end

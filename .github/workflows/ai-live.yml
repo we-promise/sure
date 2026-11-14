@@ -1,0 +1,106 @@
+name: AI live
+
+# What a maintainer runs by adding the `ai-live` label, with keys from repository secrets:
+# - the eval datasets against live models, with the accuracy posted as a PR comment: the gate
+#   for prompt changes;
+# - the transport tests' live mode (AI_LIVE=1), required before merging a transport change or a
+#   bump of an LLM client gem. A preset with no secret is skipped and listed.
+#
+# Triggered by pull_request, not pull_request_target, so a fork's code never runs with the
+# secrets: on a fork PR they're empty and every live step skips.
+on:
+  pull_request:
+    types: [ labeled, synchronize ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  RAILS_ENV: test
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432 # pipelock:ignore
+  REDIS_URL: redis://localhost:6379
+  PLAID_CLIENT_ID: foo
+  PLAID_SECRET: bar
+  HAS_OPENAI_KEY: ${{ secrets.OPENAI_ACCESS_TOKEN != '' }}
+
+jobs:
+  live:
+    name: Live evals and transport tests
+    if: contains(github.event.pull_request.labels.*.name, 'ai-live')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: --health-cmd="pg_isready" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7.2
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@97ecb7b512899eb71ab1bf2310a624c6f1589ac6 # v1.308.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Prepare database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
+      - name: Transport tests, live
+        env:
+          AI_LIVE: "1"
+          OPENAI_ACCESS_TOKEN: ${{ secrets.OPENAI_ACCESS_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_LIVE_API_KEY: ${{ secrets.OPENROUTER_LIVE_API_KEY }}   # unset => those routes skip
+          JEV_LIVE_API_KEY: public   # OpenCode Zen's anonymous key for its free Jev, not a secret
+        run: bin/rails test test/models/ai/live
+
+      - name: Evals, live
+        id: evals
+        if: env.HAS_OPENAI_KEY == 'true'
+        env:
+          OPENAI_ACCESS_TOKEN: ${{ secrets.OPENAI_ACCESS_TOKEN }}
+          EVAL_MODEL: gpt-4.1-mini
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > tmp/ai-live-evals.md
+          failed=0
+          for dataset in categorization_golden_v1_light merchant_detection_golden_v1; do
+            bundle exec rake "evals:import_dataset[db/eval_data/${dataset}.yml]"
+            echo "### ${dataset}" >> tmp/ai-live-evals.md
+            EVAL_DATASET="${dataset}" bundle exec rake evals:ci_regression | tee -a tmp/ai-live-evals.md || failed=1
+          done
+          echo "failed=${failed}" >> "$GITHUB_OUTPUT"
+
+      - name: Post the results
+        if: steps.evals.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          { echo "## AI live evals"; echo; echo '```'; cat tmp/ai-live-evals.md; echo '```'; } > tmp/ai-live-comment.md
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file tmp/ai-live-comment.md
+
+      # After the comment, so the results are posted either way.
+      - name: Fail on an eval below its threshold
+        if: steps.evals.outputs.failed == '1'
+        run: exit 1

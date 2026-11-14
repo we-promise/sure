@@ -9,6 +9,14 @@ class PdfImportTest < ActiveSupport::TestCase
     @import_with_rows = imports(:pdf_with_rows)
   end
 
+  test "processing without a model that can read statements is unavailable with the router's reason" do
+    use_ai_routes(extract_pdf: %w[embed/nomic-embed-text])
+
+    error = assert_raises(Ai::Error::Unavailable) { @import.process_with_ai }
+
+    assert_equal :capability_missing, error.reason
+  end
+
   test "pdf_uploaded? returns false when no file attached" do
     assert_not @import.pdf_uploaded?
   end

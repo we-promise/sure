@@ -1,11 +1,11 @@
 # Inherits RecurringTransactionsController so the re-rendered "new" template
 # resolves its relative partials ("form") against recurring_transactions/.
 class RecurringTransactions::SmartFillsController < RecurringTransactionsController
-  include BillsHelper
+  include AiFeatureGuard
   include RecurringFeatureGuardable
 
-  guard_feature unless: -> { bills_one_shot_ai_available? }
   before_action :ensure_recurring_enabled
+  requires_ai :bill_setup
 
   # Smart-fill re-renders the add-bill dialog with AI-proposed values. It only
   # exists on the entry-prefilled variant: the picked transaction anchors the

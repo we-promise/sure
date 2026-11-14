@@ -109,6 +109,9 @@ gem "after_commit_everywhere", "~> 1.0"
 # AI
 gem "ruby-openai"
 gem "anthropic", "~> 1.0"
+# AI transports (app/models/ai/transport). RubyLLM's API changes between minor releases, so
+# Gemfile.lock holds the version the AI tests run against; a contract test checks the API Sure uses.
+gem "ruby_llm", "~> 2.2"
 gem "opentelemetry-sdk", "~> 1.13"
 gem "opentelemetry-exporter-otlp", "~> 0.36"
 

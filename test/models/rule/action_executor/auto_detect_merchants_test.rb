@@ -1,7 +1,7 @@
 require "test_helper"
 
 class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
-  include EntriesTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:empty)
@@ -15,12 +15,19 @@ class Rule::ActionExecutor::AutoDetectMerchantsTest < ActiveSupport::TestCase
     @executor = Rule::ActionExecutor::AutoDetectMerchants.new(@rule)
   end
 
-  test "queues one job per LLM call, sized by LLM_MAX_ITEMS_PER_CALL" do
-    5.times { |i| create_transaction(account: @account, name: "Coffee #{i}") }
-    Family.any_instance.expects(:auto_detect_transaction_merchants_later).times(3)
+  test "queues one job with every enrichable transaction; the job batches them" do
+    use_ai_model_settings(batch_size: 2)
+    ids = 5.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
 
-    with_env_overrides("LLM_MAX_ITEMS_PER_CALL" => "2") do
-      assert_equal 3, @executor.execute(@account.transactions)[:jobs_count]
+    rule_run = RuleRun.create!(rule: @rule, execution_type: "manual", status: "pending", transactions_queued: 5, executed_at: Time.current)
+
+    result = nil
+    assert_enqueued_jobs 1, only: Ai::GenerationJob do
+      result = @executor.execute(@account.transactions, rule_run:)
     end
+
+    assert_equal ids.sort, enqueued_jobs.last["arguments"].second["ids"].sort
+    assert_equal({ async: true, modified_count: 5, jobs_count: 1 }, result)
+    assert_equal 5, rule_run.reload.transactions_awaiting_ai
   end
 end

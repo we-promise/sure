@@ -85,7 +85,7 @@ class Eval::Langfuse::ExperimentRunner
     def process_items(items)
       results = []
 
-      batch_size = Provider::LlmConcept.max_items_per_call
+      batch_size = Ai::Config.current.batch_size_for(:categorize)
       items.each_slice(batch_size).with_index do |batch, batch_idx|
         Rails.logger.info("[Langfuse Experiment] Processing batch #{batch_idx + 1}/#{(items.size.to_f / batch_size).ceil}")
 

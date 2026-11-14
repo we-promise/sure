@@ -20,6 +20,8 @@ behavioral tests or factories. RSpec/rswag is the explicit exception for
 - Use VCR for external API calls and existing cassettes in `test/vcr_cassettes/`.
   Keep credentials out of recordings; filters and shared setup live in
   [`test/test_helper.rb`](../../test/test_helper.rb).
+- `test/e2e/ai/` holds live end-to-end AI tests, skipped unless `AI_E2E=1`; see the
+  [AI pipeline guide](ai-pipeline.md). They run on release tags, not in the PR suite.
 
 For example, when testing an orchestrator, set the command expectation before
 calling the subject, then check the subject's returned result:

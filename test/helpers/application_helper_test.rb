@@ -34,6 +34,19 @@ class ApplicationHelperTest < ActionView::TestCase
     singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
   end
 
+  test "#ai_feature_available? asks the router for the current family and user" do
+    user = users(:family_admin)
+    user.update!(ai_enabled: true)
+    Current.session = user.sessions.create!
+    use_ai_routes(chat: %w[openai/gpt-4.1-mini])
+
+    assert ai_feature_available?(:chat)
+    use_no_ai
+    assert_not ai_feature_available?(:chat)
+  ensure
+    Current.session = nil
+  end
+
   test "#title(page_title)" do
     title("Test Title")
     assert_equal "Test Title", content_for(:title)

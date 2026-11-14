@@ -443,9 +443,6 @@ tr:
       unknown_state_description: Bu içe aktarma beklenmeyen bir durumda. Lütfen içe
         aktarmalara geri dönün.
       unknown_state_title: Bilinmeyen durum
-      errors:
-        provider_not_configured: Yapay zeka sağlayıcısı yapılandırılmamış
-        provider_no_pdf_support: Yapay zeka sağlayıcısı PDF işlemeyi desteklemiyor
       view_summary: İçe aktarma özetini görüntüle
       already_recorded_note:
         one: '%{count} işlem zaten bu hesaptaydı ve ekstreyle eşleştirildi.'

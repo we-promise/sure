@@ -1,0 +1,65 @@
+---
+http_interactions:
+- request:
+    method: post
+    uri: http://10.72.200.61:8180/v1/chat/completions
+    body:
+      encoding: UTF-8
+      string: '{"model":"qwen3.6-35b-a3b-mtp","messages":[{"role":"system","content":"You
+        configure recurring-bill records for a personal finance app. Given the dated\ncharge
+        history for one obligation, propose the bill''s configuration as JSON only.\n\nRules:\n-
+        Infer the cadence from the gaps between the dates, never from the row count.\n  frequency
+        is one of: monthly, weekly, biweekly, semimonthly, quarterly, semiannual,
+        annual.\n- amount is the typical recent charge as a positive number; when
+        amounts drift,\n  prefer the most recent ones.\n- day_of_month is the modal
+        charge day (monthly-style cadences only); weekday\n  (0=Sunday) only for weekly/biweekly;
+        month_of_year only for annual.\n- category_name must EXACTLY match one of
+        the provided categories, or null.\n- bill_type: \"subscription\" for digital
+        services and memberships, \"installment\"\n  for finite payment plans, otherwise
+        \"bill\".\n- autopay true only when the history shows automatic-payment markers
+        (ACH, AUTOPAY).\n- Set any field the history cannot support to null. Never
+        guess.\n- confidence is 0 to 1 for the proposal overall; rationale is one
+        short sentence.\n\nOutput JSON only, exactly this shape (no markdown, no explanation):\n{\"name\":
+        ..., \"amount\": ..., \"frequency\": ..., \"day_of_month\": ..., \"weekday\":
+        ...,\n \"month_of_year\": ..., \"category_name\": ..., \"bill_type\": ...,
+        \"autopay\": ...,\n \"confidence\": ..., \"rationale\": ...}\n"},{"role":"user","content":"CHARGE
+        HISTORY (date amount description):\n- 2026-09-03 15.49 NETFLIX.COM\n- 2026-10-03
+        15.49 NETFLIX.COM\n\nAVAILABLE CATEGORIES: Entertainment"}],"stream":false,"max_completion_tokens":1024,"response_format":{"type":"json_schema","json_schema":{"name":"bill_setup_suggestion","schema":{"type":"object","properties":{"name":{"type":["string","null"]},"amount":{"type":["number","null"]},"frequency":{"type":["string","null"],"enum":["monthly","weekly","biweekly","semimonthly","quarterly","semiannual","annual",null]},"day_of_month":{"type":["integer","null"],"minimum":1,"maximum":31},"weekday":{"type":["integer","null"],"minimum":0,"maximum":6},"month_of_year":{"type":["integer","null"],"minimum":1,"maximum":12},"category_name":{"type":["string","null"]},"bill_type":{"type":["string","null"],"enum":["bill","subscription","installment",null]},"autopay":{"type":["boolean","null"]},"confidence":{"type":["number","null"]},"rationale":{"type":["string","null"]}},"required":["name","amount","frequency","day_of_month","weekday","month_of_year","category_name","bill_type","autopay","confidence","rationale"],"additionalProperties":false},"strict":true}}}'
+    headers:
+      User-Agent:
+      - Faraday v2.14.3
+      Authorization:
+      - Bearer <LLAMA_CPP_API_KEY>
+      Content-Type:
+      - application/json
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Access-Control-Allow-Origin:
+      - ''
+      Content-Length:
+      - '1070'
+      Content-Type:
+      - application/json; charset=utf-8
+      Server:
+      - llama.cpp
+      Via:
+      - 1.1 Caddy
+      Date:
+      - Fri, 06 Nov 2026 23:55:41 GMT
+    body:
+      encoding: UTF-8
+      string: '{"choices":[{"finish_reason":"stop","index":0,"message":{"role":"assistant","content":"{\n  \"name\":
+        \"Netflix\",\n  \"amount\": 15.49,\n  \"frequency\": \"monthly\",\n  \"day_of_month\":
+        3,\n  \"weekday\": null,\n  \"month_of_year\": null,\n  \"category_name\":
+        \"Entertainment\",\n  \"bill_type\": \"subscription\",\n  \"autopay\": false,\n  \"confidence\":
+        0.95,\n  \"rationale\": \"Consistent monthly charges on the 3rd for a streaming
+        service indicate a standard subscription.\"\n}"}}],"created":1794009341,"model":"qwen3.6-35b-a3b-mtp","system_fingerprint":"b1-d812350","object":"chat.completion","usage":{"completion_tokens":121,"prompt_tokens":393,"total_tokens":514,"prompt_tokens_details":{"cached_tokens":0}},"id":"chatcmpl-iMuNPXeDbNcnPIkEzWgqAYa3dROHz0i5","timings":{"cache_n":0,"prompt_n":393,"prompt_ms":6987.382,"prompt_per_token_ms":17.77959796437659,"prompt_per_second":56.244241405436256,"predicted_n":121,"predicted_ms":9396.53,"predicted_per_token_ms":78.30441666666667,"predicted_per_second":12.770671726690598,"draft_n":62,"draft_n_accepted":58}}'
+  recorded_at: Fri, 06 Nov 2026 23:55:41 GMT
+recorded_with: VCR 6.3.1

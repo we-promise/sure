@@ -12,9 +12,7 @@ ru:
         merchant_detector:
           subtitle: AI идентифицирует и обогащает данные операций информацией о продавцах
           title: Определитель продавцов
-        openai_label: OpenAI
         page_title: Запросы ИИ
-        prompt_instructions: Инструкции по запросу
         transaction_categorizer:
           subtitle: AI автоматически категоризирует ваши операции на основе заданных
             категорий
@@ -27,10 +25,7 @@ ru:
           cancel: Отмена
           confirm: Подтвердить
       prompt_field:
-        provider_label: Провайдер
-        prompt_label: Запрос
         provider_openai: OpenAI
-        provider_anthropic: Anthropic
         reset: Сбросить к стандартному
         reset_confirm_title: Вернуть стандартный запрос?
         reset_confirm_body: Ваш собственный запрос будет удалён, а встроенные инструкции по умолчанию — восстановлены.

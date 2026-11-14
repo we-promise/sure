@@ -1,10 +1,11 @@
 require "test_helper"
 
 class VectorStoreTest < ActiveSupport::TestCase
+  # The embedding settings apply to pgvector and Qdrant, which embed through an embedding server.
   EMBEDDING_ENVIRONMENT = %w[
     EMBEDDING_MODEL EMBEDDING_DIMENSIONS EMBEDDING_URI_BASE
     EMBEDDING_ACCESS_TOKEN OPENAI_URI_BASE OPENAI_ACCESS_TOKEN
-  ].index_with(nil).freeze
+  ].index_with(nil).merge("VECTOR_STORE_PROVIDER" => "pgvector").freeze
 
   test "embedding defaults use a matching model and vector width" do
     ClimateControl.modify(EMBEDDING_ENVIRONMENT) do
@@ -29,6 +30,17 @@ class VectorStoreTest < ActiveSupport::TestCase
 
     ClimateControl.modify(EMBEDDING_ENVIRONMENT) do
       assert_nil VectorStore.embedding_access_token
+    end
+  end
+
+  # The fallbacks include the OpenAI values saved in Settings.
+  test "embedding credentials fall back to the OpenAI settings" do
+    Setting.openai_access_token = "setting-token"
+    Setting.openai_uri_base = "http://llama.local:8080/v1"
+
+    ClimateControl.modify(EMBEDDING_ENVIRONMENT) do
+      assert_equal "setting-token", VectorStore.embedding_access_token
+      assert_equal "http://llama.local:8080/v1", VectorStore.embedding_uri_base
     end
   end
 end

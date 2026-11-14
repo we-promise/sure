@@ -151,9 +151,10 @@ zh-CN:
         invalid_llm_budget: "%{field} 必须是大于等于 %{minimum} 的整数。"
         invalid_anthropic_base_url: Anthropic Base URL 无效。
         anthropic_model_required_for_base_url: 设置 Anthropic Base URL 时必须填写模型。
-        invalid_jev_endpoint: Jev 端点必须是 https URL。仅 localhost 接受普通 http。
+        invalid_jev_endpoint: Jev 端点必须是 http 或 https URL。仅对您自己网络中的服务器使用 http。
         invalid_categorization_rate: "%{field} 必须是 0 到 1 之间的数字。"
         scheduler_sync_failed: 设置已保存，但同步计划更新失败。请重试或检查服务器日志。
+        unsupported_jev_endpoint: Jev 端点必须是 http 或 https URL，且以 /v1/systemone（TypeSafe 或兼容其协议的服务器）或 /alpha/decisions（通过 OpenRouter 使用 Jev）结尾。
       yahoo_finance_settings:
         title: Yahoo Finance 设置
         description: Yahoo Finance 提供免费的股票价格、汇率和金融数据访问，无需 API 密钥。
@@ -232,7 +233,7 @@ zh-CN:
       categorization_provider_selector:
         title: 交易分类
         preview_pill: 预览
-        description: 选择由哪个提供商对交易进行分类。这与上方负责对话和 PDF 处理的 AI 提供商是分开的。
+        description: 选择在此实例上为每个家庭分类交易的提供商。这与上方负责对话和 PDF 处理的 AI 提供商是分开的。
         env_notice: 已通过环境变量设置为 %{type}。
         provider_label: 分类提供商
         provider_llm: AI 提供商（OpenAI 或 Anthropic）
@@ -242,13 +243,14 @@ zh-CN:
         jev_not_configured: 已选择 Jev，但尚未配置 API 密钥。在下方添加密钥之前，分类将继续使用 AI 提供商。
         data_retention_heading: 数据共享
         data_retention_direct: 交易描述、金额和您的分类名称将发送到 TypeSafe 进行分类。在真实数据上启用此功能之前，请查看其数据保留政策。
-        data_retention_proxied: "交易描述、金额和您的分类名称将发送到 %{host}，然后由其转发给 TypeSafe。在真实数据上启用此功能之前，请查看两个提供商的数据保留政策。"
+        data_retention_proxied: "交易描述、金额和您的分类名称将发送到 %{host}。是否转发以及转发到何处，取决于该运营方——在真实数据上启用此功能之前，请查看该运营方的数据保留政策。"
         confidence_threshold_label: 最低置信度（0–1）
         confidence_threshold_help: 低于此置信度时将不应用分类，交易保持未分类状态，以便后续运行再次尝试。不会丢弃任何内容。设置为 0 则应用所有结果。
         confidence_threshold_env_notice: 已由 CATEGORIZATION_CONFIDENCE_THRESHOLD 环境变量锁定。
         shadow_rate_label: 影子对比采样率（0–1）
         shadow_rate_help: 在运行您选择的提供商的同时，同步运行您未选择的提供商，记录它们存在分歧的地方，而不更改任何分类。这会使采样的每次分类运行的 API 费用增加一倍。设置为 0 可关闭此功能。
         shadow_rate_env_notice: 已由 CATEGORIZATION_SHADOW_RATE 环境变量锁定。
+        unsupported_env_endpoint: 此 Jev 端点不受支持，将被忽略（必须以 /v1/systemone 或 /alpha/decisions 结尾）。修复前，分类将继续使用 AI 提供商。
       categorization_shadow_results:
         shadow_results_heading: 影子对比
         shadow_results_empty: 暂无对比记录。将影子对比采样率设置为大于 0 并运行分类以收集数据。
@@ -266,7 +268,7 @@ zh-CN:
         endpoint_placeholder: https://api.typesafe.ai/v1/systemone（默认）
         model_label: 模型（可选）
         model_placeholder: jev-latest（默认）
-        model_help: 默认直接连接 TypeSafe。若要通过 OpenRouter 连接 Jev，请将端点设置为 https://openrouter.ai/api/alpha/decisions，模型设置为 ~typesafe/jev-latest。
+        model_help: 默认直接连接 TypeSafe。自托管服务器也可以，只要其 URL 以 /v1/systemone 结尾。通过 OpenRouter 使用 Jev 时，把您的 OpenRouter 密钥填入 JEV_API_KEY，URL 填 https://openrouter.ai/api/alpha/decisions。
       tiingo_settings:
         title: Tiingo
         description: 使用 Tiingo 同步证券价格。

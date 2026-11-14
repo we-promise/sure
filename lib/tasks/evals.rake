@@ -245,7 +245,7 @@ namespace :evals do
       puts
       puts "Produce the runs first, all on the same split:"
       puts "  PROVIDER=bayes SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,naive-bayes]'"
-      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,~typesafe/jev-latest]'"
+      puts "  PROVIDER=jev SPLIT_ROLE=test rake 'evals:run[categorization_golden_v2,jev-latest]'"
       exit 1
     end
 
@@ -305,40 +305,63 @@ namespace :evals do
     puts
   end
 
-  desc "Quick smoke test to verify provider configuration"
+  desc "Quick smoke test to verify the categorize route works"
   task smoke_test: :environment do
     puts "Running smoke test..."
 
-    provider = Provider::Registry.get_provider(:openai)
-
-    unless provider
-      puts "FAIL: OpenAI provider not configured"
-      puts "Set OPENAI_ACCESS_TOKEN environment variable or configure in settings"
+    route = Ai::Config.current.routes_for(:categorize).find { !_1.judge? }
+    unless route
+      puts "FAIL: no model is configured for categorization"
+      puts "Set OPENAI_ACCESS_TOKEN or ANTHROPIC_API_KEY, or configure a provider in settings"
       exit 1
     end
 
-    puts "  Provider: #{provider.provider_name}"
-    puts "  Model: #{provider.instance_variable_get(:@default_model)}"
+    puts "  Endpoint: #{route.endpoint.name}"
+    puts "  Model: #{route.model.name}"
 
-    # Test with a single categorization sample
-    result = provider.auto_categorize(
-      transactions: [
-        { id: "test", amount: 10, classification: "expense", description: "McDonalds" }
-      ],
-      user_categories: [
-        { id: "1", name: "Food & Drink", classification: "expense" }
-      ]
+    # One categorization sample through the production generation and prompt.
+    generation = Ai::Generations::CategorizeTransactions.new(
+      transactions: [ { id: "test", amount: 10, classification: "expense", description: "McDonalds" } ],
+      categories: [ { id: "1", name: "Food & Drink", is_subcategory: false, parent_id: nil } ],
+      family: nil
     )
+    result = generation.call(plan: Ai::Plan.new(feature: :categorize, lane: :background, routes: [ route ]))
 
     if result.success?
-      category = result.data.first&.category_name
+      category = result.value[:categorizations].first&.dig(:category_name)
       puts "  Test result: #{category || 'null'}"
       puts
       puts "PASS: Provider is working correctly"
     else
-      puts "FAIL: #{result.error.message}"
+      puts "FAIL: #{result.error&.message || result.availability&.reason}"
       exit 1
     end
+  end
+
+  # EVAL_RECORDED=1: replay the model's answers from test/vcr_cassettes/ai/evals/ instead of
+  # calling it (the free gate on every AI change: parsing, coercion and mapping, not prompt
+  # quality, since a changed prompt was never shown to the model). With RECORD_CASSETTES=1 too,
+  # record them. A missing cassette skips the check, saying so.
+  def with_recorded_responses(dataset_name, model, &block)
+    return block.call unless ENV["EVAL_RECORDED"] == "1"
+
+    require "vcr"
+    require "webmock"
+    name = "ai/evals/#{dataset_name}_#{model.parameterize}"
+    recording = ENV["RECORD_CASSETTES"] == "1"
+    path = Rails.root.join("test/vcr_cassettes/#{name}.yml")
+    unless recording || path.exist?
+      puts "No recorded responses at #{path.relative_path_from(Rails.root)}; skipping. Record them with RECORD_CASSETTES=1."
+      return nil
+    end
+
+    WebMock.enable!
+    VCR.configure do |config|
+      config.cassette_library_dir = Rails.root.join("test/vcr_cassettes").to_s
+      config.hook_into :webmock
+      %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY].each { |key| config.filter_sensitive_data("<#{key}>") { ENV[key].presence } }
+    end
+    VCR.use_cassette(name, record: recording ? :all : :none, match_requests_on: %i[method uri], &block)
   end
 
   desc "Run CI regression test"
@@ -367,7 +390,8 @@ namespace :evals do
     )
 
     runner = dataset.runner_class.new(eval_run)
-    result = runner.run
+    result = with_recorded_responses(dataset_name, model) { runner.run }
+    next if result.nil?
 
     current_accuracy = result.metrics["accuracy"] || 0
 
