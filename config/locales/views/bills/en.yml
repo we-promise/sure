@@ -67,6 +67,13 @@ en:
       cancelled_chip: "Cancelled %{date}"
       price_changes: Price changes
       price_change_line: "%{from} → %{to}"
+      average_received: Average received
+      ytd_income: Received this year
+      annualized_income: Expected a year
+      received_per_year: Received
+      avg_per_payday: Avg per payday
+      rules_income: How this income is matched
+      received_status: Received
     month_pulse:
       bill_count:
         one: 1 bill
@@ -89,13 +96,17 @@ en:
     summary:
       remaining: "%{amount} remaining"
       paid_headline: "%{amount} paid"
+      received_headline: "%{amount} received"
+      expected_headline: "%{amount} expected"
     add_bill: Add bill
     manage: View
     find_payment: Find payment
+    find_income: Find income
     add_payment: Add payment
     review_match: Review match
     resolve: Resolve
     manage_payments: Manage payments
+    manage_income: Manage income
     match:
       same_merchant: Same merchant
       name_matches: Name matches
@@ -134,6 +145,8 @@ en:
         other: "Overdue by %{count} days, was due %{date}"
       today: "Due today"
       settled: "Was due %{date}"
+      received: "Received %{date}"
+      expected: "Was expected %{date}"
       due_since: "Due %{date}"
       snoozed: "Snoozed until %{date}"
       upcoming:
@@ -149,6 +162,18 @@ en:
       # promising the earnings reporting that Reports already owns.
       paycheck: Income plan
       all: All bills
+    payday:
+      title: "Income · %{source}"
+      # Both states read as "Received" under the amount, the way a bill reads
+      # "Paid". Which one it was stays in the detail, not the row.
+      matched: Received
+      received: Received
+      unmatched: Not matched yet
+      expected: Expected
+      due_before: "%{amount} due before %{date}"
+      due_before_next: "%{amount} due before your next payday"
+      skipped: Skipped
+      missed: Missed
     pay_period:
       paycheck_on: "Paycheck %{date}"
       before_next_paycheck: Before your next paycheck
@@ -267,6 +292,7 @@ en:
         other: Other
     show:
       edit: Edit bill
+      edit_income: Edit income
     index:
       left_to_pay: left to pay
       paid_so_far: Paid so far
