@@ -63,6 +63,18 @@ class Provider::IbkrFlexTest < ActiveSupport::TestCase
     assert_operator sleeps.sum, :>=, 60, "12 requests in #{sleeps.sum}s"
   end
 
+  test "a network retry is spaced to IBKR's per-token limit too" do
+    sleeps = []
+    @provider.stubs(:sleep).with { |seconds| sleeps << seconds }
+    stub_request(:get, "#{BASE_URL}/SendRequest").with(query: hash_including("q" => "QUERY123"))
+      .to_raise(EOFError).then.to_return(body: SUCCESS)
+
+    assert_equal STATEMENT, @provider.download_statement
+
+    assert_requested :get, /FlexWebService/, times: 3
+    assert_operator sleeps.sum, :>=, 2 * Provider::IbkrFlex::REQUEST_INTERVAL - 1, "3 requests in #{sleeps.sum}s"
+  end
+
   test "gives up on throttling after a bounded number of retries" do
     stub_request(:get, "#{BASE_URL}/SendRequest")
       .with(query: hash_including("q" => "QUERY123"))

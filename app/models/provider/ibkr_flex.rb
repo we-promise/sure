@@ -95,22 +95,28 @@ class Provider::IbkrFlex
       end
     end
 
-    # Every call is spaced REQUEST_INTERVAL from the previous one, which also
-    # paces the polling, and retried a few times while IBKR is throttling.
+    # Every call, network retries included, is spaced REQUEST_INTERVAL from
+    # the previous one, which also paces the polling, and retried a few times
+    # while IBKR is throttling.
     def flex_get(operation, query)
       throttled = 0
       loop do
-        wait = @last_request_at && @last_request_at + REQUEST_INTERVAL - Process.clock_gettime(Process::CLOCK_MONOTONIC)
-        sleep(wait) if wait&.positive?
-        @last_request_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-
-        response = with_retries(operation) { self.class.get("/#{operation}", query: query) }
+        response = with_retries(operation) do
+          wait_for_request_slot
+          self.class.get("/#{operation}", query: query)
+        end
         xml = parse_xml(response.body)
         return [ response, xml ] unless THROTTLED_ERROR_CODES.include?(xml.at_xpath("//ErrorCode")&.text.to_s.strip) && throttled < MAX_THROTTLE_RETRIES
 
         throttled += 1
         sleep(THROTTLE_RETRY_DELAY)
       end
+    end
+
+    def wait_for_request_slot
+      wait = @last_request_at && @last_request_at + REQUEST_INTERVAL - Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      sleep(wait) if wait&.positive?
+      @last_request_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
 
     def response_error(xml, response)
