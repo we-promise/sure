@@ -1,5 +1,6 @@
 class TransactionsController < ApplicationController
   include EntryableResource
+  include FilterClearable
   include PairedTransferCategoryStreams
 
   before_action :set_entry_for_unlock, only: :unlock
@@ -107,24 +108,10 @@ class TransactionsController < ApplicationController
 
   def clear_filter
     updated_params = {
-      "q" => search_params,
+      "q" => without_cleared_filter(search_params),
       "page" => params[:page],
       "per_page" => params[:per_page]
     }
-
-    q_params = updated_params["q"] || {}
-
-    param_key = params[:param_key]
-    param_value = params[:param_value]
-
-    if q_params[param_key].is_a?(Array)
-      q_params[param_key].delete(param_value)
-      q_params.delete(param_key) if q_params[param_key].empty?
-    else
-      q_params.delete(param_key)
-    end
-
-    updated_params["q"] = q_params.presence
 
     # Add flag to indicate filters were explicitly cleared
     updated_params["filter_cleared"] = "1" if updated_params["q"].blank?

@@ -4,9 +4,17 @@ import { buildCategoryTransactionsUrl } from "utils/transactions_filter_url";
 
 // Connects to data-controller="donut-chart"
 export default class extends Controller {
-  static targets = ["chartContainer", "contentContainer", "defaultContent", "amount"];
+  static targets = [
+    "chartContainer",
+    "contentContainer",
+    "defaultContent",
+    "amount",
+  ];
   static values = {
     segments: { type: Array, default: [] },
+    // Concentric rings, outermost first. When present, `segments` is ignored.
+    rings: { type: Array, default: [] },
+    ringGap: { type: Number, default: 1.5 },
     unusedSegmentId: { type: String, default: "unused" },
     overageSegmentId: { type: String, default: "overage" },
     segmentHeight: { type: Number, default: 3 },
@@ -16,6 +24,10 @@ export default class extends Controller {
     enableClick: { type: Boolean, default: false },
     startDate: String,
     endDate: String,
+    accountIds: { type: Array, default: [] },
+    // e.g. ["confirmed"] when the segment amounts exclude pending entries,
+    // so the drill-down lists only what the arc counted.
+    statuses: { type: Array, default: [] },
   };
 
   #viewBoxSize = 100;
@@ -37,7 +49,10 @@ export default class extends Controller {
     this.#fitAmountTargets();
     document.addEventListener("turbo:load", this.#redraw);
     this.element.addEventListener("mouseleave", this.#clearSegmentHover);
-    this.contentContainerTarget.addEventListener("mouseleave", this.#clearSegmentHover);
+    this.contentContainerTarget.addEventListener(
+      "mouseleave",
+      this.#clearSegmentHover,
+    );
 
     if (typeof ResizeObserver !== "undefined" && this.hasChartContainerTarget) {
       this.#resizeObserver = new ResizeObserver(() => this.#fitAmountTargets());
@@ -49,7 +64,10 @@ export default class extends Controller {
     this.#teardown();
     document.removeEventListener("turbo:load", this.#redraw);
     this.element.removeEventListener("mouseleave", this.#clearSegmentHover);
-    this.contentContainerTarget.removeEventListener("mouseleave", this.#clearSegmentHover);
+    this.contentContainerTarget.removeEventListener(
+      "mouseleave",
+      this.#clearSegmentHover,
+    );
 
     if (this.#resizeObserver) {
       this.#resizeObserver.disconnect();
@@ -57,21 +75,55 @@ export default class extends Controller {
     }
   }
 
-  get #data() {
-    const totalPieValue = this.segmentsValue.reduce(
+  get #rings() {
+    const rings = this.ringsValue.length
+      ? this.ringsValue
+      : [this.segmentsValue];
+    return rings.map((segments) => this.#ringData(segments));
+  }
+
+  get #ringCount() {
+    return this.ringsValue.length || 1;
+  }
+
+  // Radial depth taken up by every ring plus the gaps between them.
+  get #ringDepth() {
+    return (
+      this.#ringCount * this.segmentHeightValue +
+      (this.#ringCount - 1) * this.ringGapValue
+    );
+  }
+
+  #ringData(segments) {
+    const totalPieValue = segments.reduce(
       (acc, s) => acc + Number(s.amount),
       0,
     );
+    const minAmount = totalPieValue * (this.#minSegmentAngle / (2 * Math.PI));
+    const visible = segments.filter((s) => s.amount > 0);
+
+    // Tiny segments are widened so they stay visible. With several rings on
+    // one scale the other segments shrink to absorb that widening, so every
+    // ring still closes at its real total and the rings stay comparable.
+    const widenedCount = visible.filter(
+      (s) => Number(s.amount) < minAmount,
+    ).length;
+    const keptTotal = visible.reduce(
+      (acc, s) => acc + (Number(s.amount) < minAmount ? 0 : Number(s.amount)),
+      0,
+    );
+    const absorbedTotal = totalPieValue - widenedCount * minAmount;
+    const shrink =
+      this.ringsValue.length && keptTotal > 0 && absorbedTotal > 0
+        ? absorbedTotal / keptTotal
+        : 1;
 
     // Overage is always first segment, unused is always last segment
-    return this.segmentsValue
-      .filter((s) => s.amount > 0)
+    return visible
       .map((s) => ({
         ...s,
-        amount: Math.max(
-          Number(s.amount),
-          totalPieValue * (this.#minSegmentAngle / (2 * Math.PI)),
-        ),
+        amount:
+          Number(s.amount) < minAmount ? minAmount : Number(s.amount) * shrink,
       }))
       .sort((a, b) => {
         if (a.id === this.overageSegmentIdValue) return -1;
@@ -109,13 +161,6 @@ export default class extends Controller {
       .sortValues(null) // Preserve order of segments
       .value((d) => d.amount);
 
-    const mainArc = d3
-      .arc()
-      .innerRadius(this.#viewBoxSize / 2 - this.segmentHeightValue)
-      .outerRadius(this.#viewBoxSize / 2)
-      .cornerRadius(this.segmentHeightValue)
-      .padAngle(this.#padAngle);
-
     const g = svg
       .append("g")
       .attr(
@@ -123,47 +168,81 @@ export default class extends Controller {
         `translate(${this.#viewBoxSize / 2}, ${this.#viewBoxSize / 2})`,
       );
 
-    const segmentGroups = g
-      .selectAll("arc")
-      .data(pie(this.#data))
-      .enter()
-      .append("g")
-      .attr("class", "arc pointer-events-auto");
+    const rings = this.#rings;
+    const ringStep = this.segmentHeightValue + this.ringGapValue;
+    // Hover areas between rings share the gap so neither ring claims the other's pointer events.
+    const betweenRingsExtension = Math.min(
+      this.hoverExtensionValue,
+      this.ringGapValue / 2,
+    );
 
-    // Add invisible hover paths with extended area if enabled
-    if (this.extendedHoverValue) {
-      const hoverArc = d3
+    rings.forEach((data, ringIndex) => {
+      const outerRadius = this.#viewBoxSize / 2 - ringIndex * ringStep;
+      const innerRadius = outerRadius - this.segmentHeightValue;
+
+      const mainArc = d3
         .arc()
-        .innerRadius(this.#viewBoxSize / 2 - this.segmentHeightValue - this.hoverExtensionValue)
-        .outerRadius(this.#viewBoxSize / 2 + this.hoverExtensionValue)
+        .innerRadius(innerRadius)
+        .outerRadius(outerRadius)
+        .cornerRadius(this.segmentHeightValue)
         .padAngle(this.#padAngle);
 
-      segmentGroups
+      const segmentGroups = g
+        .append("g")
+        .attr("class", "ring")
+        .selectAll("arc")
+        .data(pie(data))
+        .enter()
+        .append("g")
+        .attr("class", "arc pointer-events-auto");
+
+      // Add invisible hover paths with extended area if enabled
+      if (this.extendedHoverValue) {
+        const outerExtension =
+          ringIndex === 0 ? this.hoverExtensionValue : betweenRingsExtension;
+        const innerExtension =
+          ringIndex === rings.length - 1
+            ? this.hoverExtensionValue
+            : betweenRingsExtension;
+        const hoverArc = d3
+          .arc()
+          .innerRadius(innerRadius - innerExtension)
+          .outerRadius(outerRadius + outerExtension)
+          .padAngle(this.#padAngle);
+
+        segmentGroups
+          .append("path")
+          .attr("class", "hover-path")
+          .attr("d", hoverArc)
+          .attr("fill", "transparent")
+          .attr("data-segment-id", (d) => d.data.id)
+          .style("pointer-events", "all");
+      }
+
+      // Add visible paths
+      const segmentArcs = segmentGroups
         .append("path")
-        .attr("class", "hover-path")
-        .attr("d", hoverArc)
-        .attr("fill", "transparent")
+        .attr("class", "visible-path")
         .attr("data-segment-id", (d) => d.data.id)
-        .style("pointer-events", "all");
-    }
+        .attr("data-original-color", this.#transformRingColor)
+        .attr("fill", this.#transformRingColor)
+        .attr("d", mainArc);
 
-    // Add visible paths
-    const segmentArcs = segmentGroups
-      .append("path")
-      .attr("class", "visible-path")
-      .attr("data-segment-id", (d) => d.data.id)
-      .attr("data-original-color", this.#transformRingColor)
-      .attr("fill", this.#transformRingColor)
-      .attr("d", mainArc);
+      // Disable pointer events on visible paths if extended hover is enabled
+      if (this.extendedHoverValue) {
+        segmentArcs.style("pointer-events", "none");
+      }
 
-    // Disable pointer events on visible paths if extended hover is enabled
-    if (this.extendedHoverValue) {
-      segmentArcs.style("pointer-events", "none");
-    }
+      this.#bindSegmentEvents(segmentGroups);
+    });
 
     // Cache the visible paths selection for performance
-    this.#visiblePaths = d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+    this.#visiblePaths = d3
+      .select(this.chartContainerTarget)
+      .selectAll("path.visible-path");
+  }
 
+  #bindSegmentEvents(segmentGroups) {
     // Ensures that user can click on default content without triggering hover on a segment if that is their intent
     let hoverTimeout = null;
 
@@ -177,7 +256,10 @@ export default class extends Controller {
       .on("mouseleave", (event, d) => {
         clearTimeout(hoverTimeout);
         const leavingUnused = d.data.id === this.unusedSegmentIdValue;
-        if (leavingUnused || !this.contentContainerTarget.contains(event.relatedTarget)) {
+        if (
+          leavingUnused ||
+          !this.contentContainerTarget.contains(event.relatedTarget)
+        ) {
           this.#clearSegmentHover();
         }
       })
@@ -194,6 +276,9 @@ export default class extends Controller {
     }
 
     const reducedOpacityColor = d3.color(color);
+    // CSS variables can't be parsed, so they reach the fill as written.
+    if (!reducedOpacityColor) return color;
+
     reducedOpacityColor.opacity = this.segmentOpacityValue;
     return reducedOpacityColor;
   };
@@ -207,7 +292,9 @@ export default class extends Controller {
     if (!template) return;
 
     // Use cached selection if available for better performance
-    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+    const paths =
+      this.#visiblePaths ||
+      d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
     paths.attr("fill", function () {
       if (this.dataset.segmentId === segmentId) {
@@ -234,7 +321,9 @@ export default class extends Controller {
     this.defaultContentTarget.classList.remove("hidden");
 
     // Use cached selection if available for better performance
-    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+    const paths =
+      this.#visiblePaths ||
+      d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
     paths
       .attr("fill", function () {
@@ -258,6 +347,8 @@ export default class extends Controller {
         filterValue: segment.filter_value,
         startDate: this.startDateValue,
         endDate: this.endDateValue,
+        accountIds: this.accountIdsValue,
+        statuses: this.statusesValue,
       }),
     );
   }
@@ -267,16 +358,20 @@ export default class extends Controller {
     const segmentId = event.currentTarget.dataset.categoryId;
 
     // Use cached selection if available for better performance
-    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+    const paths =
+      this.#visiblePaths ||
+      d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
-    paths.style("opacity", function() {
+    paths.style("opacity", function () {
       return this.dataset.segmentId === segmentId ? 1 : 0.3;
     });
   }
 
   unhighlightSegment() {
     // Use cached selection if available for better performance
-    const paths = this.#visiblePaths || d3.select(this.chartContainerTarget).selectAll("path.visible-path");
+    const paths =
+      this.#visiblePaths ||
+      d3.select(this.chartContainerTarget).selectAll("path.visible-path");
 
     paths.style("opacity", null); // Clear inline opacity style
   }
@@ -298,8 +393,9 @@ export default class extends Controller {
     if (containerSize <= 0) return;
 
     const innerDiameterRatio =
-      (this.#viewBoxSize - 2 * this.segmentHeightValue) / this.#viewBoxSize;
-    const availableWidth = containerSize * innerDiameterRatio * this.#innerRingTextWidthRatio;
+      (this.#viewBoxSize - 2 * this.#ringDepth) / this.#viewBoxSize;
+    const availableWidth =
+      containerSize * innerDiameterRatio * this.#innerRingTextWidthRatio;
     if (availableWidth <= 0) return;
 
     const targets = scope

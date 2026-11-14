@@ -17,6 +17,7 @@ class PagesController < ApplicationController
     "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
     "spending_trend"     => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
+    "cashflow_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
@@ -30,7 +31,7 @@ class PagesController < ApplicationController
   # anywhere. Customize mode, the period picker and each widget's own month
   # links and filter forms carry them along, so changing one control doesn't
   # jump the other widgets back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, :cashflow_month, { money_flow_account_ids: [], spending_category_ids: [], cashflow_account_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -226,6 +227,24 @@ class PagesController < ApplicationController
             layout: section_layout("outflows_donut"),
             locals: { outflows_data: outflows_data, period: @period },
             visible: @accounts.any? && outflows_data[:categories].present?,
+            collapsible: true
+          }
+        },
+        "cashflow_donut" => -> {
+          accounts = dashboard_income_statement.eligible_accounts
+          {
+            key: "cashflow_donut",
+            title: "pages.dashboard.cashflow_donut.title",
+            partial: "pages/dashboard/cashflow_donut",
+            layout: section_layout("cashflow_donut"),
+            locals: {
+              cashflow_data: build_cashflow_donut_data(dashboard_month_param(:cashflow_month), dashboard_account_ids_param(:cashflow_account_ids, accounts), accounts),
+              accounts: accounts,
+              accessible_account_ids: Current.user.accessible_accounts.pluck(:id).map(&:to_s),
+              view_params: @dashboard_view_params
+            },
+            # Stays visible with no data so the month picker can lead back out.
+            visible: @accounts.any?,
             collapsible: true
           }
         },
@@ -575,6 +594,105 @@ class PagesController < ApplicationController
         end
 
       { categories: categories, total: total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
+    end
+
+    # Two rings on one scale, read like a budget gauge with income as the
+    # budget: unspent income is a muted track on the outflows ring, spending
+    # beyond income is an "over" slice on the inflows ring. Either way both
+    # rings close and the gap between them is the difference.
+    #
+    # Like money_flow, the widget has its own month (capped at today while in
+    # progress) and account filter, independent of the dashboard period.
+    # nil account_ids means every eligible account.
+    def build_cashflow_donut_data(month, account_ids, eligible_accounts)
+      period = Period.custom(start_date: month, end_date: [ month.end_of_month, Date.current ].min)
+      statement = account_ids ? Current.family.income_statement(accounts: eligible_accounts.where(id: account_ids)) : dashboard_income_statement
+      net_totals = statement.net_category_totals(period: period)
+
+      total_income = net_totals.total_net_income
+      total_expense = net_totals.total_net_expense
+      net = total_income - total_expense
+      ring_total = [ total_income, total_expense ].max
+
+      inflows = cashflow_donut_segments(net_totals.net_income_categories, "income", ring_total)
+      outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense", ring_total)
+      has_categories = inflows.any? || outflows.any?
+
+      # "unused"/"overage" are the donut controller's special segment ids:
+      # colours pass through untouched, unused sorts last and overage first.
+      if net.positive?
+        outflows << cashflow_donut_balance_segment("unused", t("pages.dashboard.cashflow_donut.left"), net, ring_total, "var(--budget-unused-fill)", "piggy-bank", net_totals.currency)
+      elsif net.negative?
+        inflows << cashflow_donut_balance_segment("overage", t("pages.dashboard.cashflow_donut.over"), net.abs, ring_total, "var(--color-destructive)", "trending-down", net_totals.currency)
+      end
+
+      {
+        inflows: inflows,
+        outflows: outflows,
+        has_categories: has_categories,
+        total_income: total_income.to_f.round(2),
+        total_expense: total_expense.to_f.round(2),
+        net: net.to_f.round(2),
+        currency: net_totals.currency,
+        month: month,
+        period: period,
+        account_ids: account_ids
+      }
+    end
+
+    # A widget's own month param, clamped to the current month: a future
+    # month would end before it starts once capped at Date.current, which
+    # Period.custom rejects.
+    def dashboard_month_param(key)
+      current_month = Date.current.beginning_of_month
+      month = Date.strptime(params[key], "%Y-%m-%d").beginning_of_month
+      month > current_month ? current_month : month
+    rescue ArgumentError, TypeError
+      current_month
+    end
+
+    # nil means all of the widget's eligible accounts (its unfiltered state)
+    def dashboard_account_ids_param(key, eligible_accounts)
+      ids = Array(params[key]).reject(&:blank?)
+      ids &= eligible_accounts.map { |a| a.id.to_s }
+      ids.presence
+    end
+
+    # Percentages are shares of the ring (the larger of income and spending),
+    # so they match the arc each segment draws and sum to 100 with the
+    # unused/overage segment.
+    def cashflow_donut_segments(category_totals, id_prefix, ring_total)
+      category_totals
+        .reject { |ct| ct.total.zero? }
+        .sort_by { |ct| -ct.total }
+        .map do |ct|
+          clickable = !ct.category.other_investments?
+          {
+            id: "#{id_prefix}_#{IncomeStatement::CategoryNetting.key(ct.category)}",
+            name: ct.category.name,
+            filter_value: clickable ? ct.category.filter_value : nil,
+            amount: ct.total.to_f.round(2),
+            currency: ct.currency,
+            percentage: ring_total.zero? ? 0 : (ct.total.to_f / ring_total.to_f * 100).round(1),
+            color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
+            icon: ct.category.lucide_icon,
+            clickable: clickable
+          }
+        end
+    end
+
+    def cashflow_donut_balance_segment(id, name, amount, ring_total, color, icon, currency)
+      {
+        id: id,
+        name: name,
+        filter_value: nil,
+        amount: amount.to_f.round(2),
+        currency: currency,
+        percentage: ring_total.zero? ? 0 : (amount.to_f / ring_total.to_f * 100).round(1),
+        color: color,
+        icon: icon,
+        clickable: false
+      }
     end
 
     def money_flow_month_param

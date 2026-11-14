@@ -27,6 +27,7 @@ de:
       create_merchant: Erstellen
       create_merchant_error: Händler konnte nicht erstellt werden
       merchant_search_placeholder: Händler suchen oder erstellen
+      no_matching_categories: Keine passenden Kategorien
       submit: Transaktion hinzufügen
       tag_search_placeholder: Tag suchen oder erstellen
       tags_label: Tags
@@ -84,6 +85,9 @@ de:
       applied_to_detail: "%{amount} für die am %{date} fällige Rechnung"
       applied_to_unreviewed: Prüfung erforderlich
       memo: Memo
+      original_description: Ursprüngliche Beschreibung
+      payment_channel: Zahlungskanal
+      transaction_code: Transaktionscode
       merge_duplicate: Ja, zusammenführen
       open_matcher: Zuordnung öffnen
       payee: Empfänger
@@ -93,6 +97,22 @@ de:
       potential_duplicate_description: Diese offene Transaktion ist womöglich dieselbe wie die gebuchte darunter. Führ sie in dem Fall zusammen, damit nichts doppelt zählt.
       potential_duplicate_title: Mögliches Duplikat erkannt
       provider_extras: Anbieterdaten
+      plaid_payment_meta_label: "Zahlungsdetails · %{name}"
+      plaid_counterparty_label: "Gegenpartei %{index}"
+      provider_extra_fields:
+        by_order_of: Im Auftrag von
+        confidence_level: Verlässlichkeit
+        entity_id: Entitäts-ID
+        logo_url: Logo-URL
+        name: Name
+        payee: Zahlungsempfänger
+        payer: Zahler
+        phone_number: Telefonnummer
+        ppd_id: PPD-ID
+        reason: Grund
+        reference_number: Referenznummer
+        type: Typ
+        website: Website
       transfer: Überweisung
       transfer_matcher_description: Verknüpf diese Transaktion mit ihrem Gegenstück in einem anderen Konto.
       transfer_or_debt_payment: Überweisung oder Schuldentilgung?
@@ -125,8 +145,14 @@ de:
       potential_duplicate_tooltip: Dies könnte ein Duplikat einer anderen Transaktion sein
       review_recommended: Prüfen
       review_recommended_tooltip: Große Betragsabweichung — Prüfung empfohlen, ob es sich um ein Duplikat handelt
+      scheduled: Geplant
+      scheduled_tooltip: In der Zukunft datiert – wirkt sich erst dann auf deinen Kontostand aus
       split: Geteilt
       split_child_tooltip: Teil einer geteilten Transaktion
+      transfer_hint: Überweisung?
+      transfer_hint_dismiss: Keine Überweisung
+      transfer_hint_tooltip: Eine passende Transaktion in einem anderen Konto sieht wie die Gegenseite einer Überweisung aus – klicken, um beide zuzuordnen
+      view_merchant: Händler anzeigen
       split_tooltip: Diese Transaktion wurde in mehrere Einträge geteilt
     merge_duplicate:
       success: Transaktionen erfolgreich zusammengeführt
@@ -137,6 +163,7 @@ de:
     reconcile:
       success: Als %{status} markiert
       failure: Abgleichsstatus konnte nicht aktualisiert werden
+      unavailable: Der Abgleich ist für diese Familie nicht aktiviert
       not_manual_account: Der Abgleichsstatus gilt nur für manuell erfasste Konten (kein Bank-Sync)
       statuses:
         unreconciled: Nicht abgeglichen
@@ -184,6 +211,8 @@ de:
         category: Kategorie
         tag: Tag
         merchant: Händler
+        ai: KI
+        attachment: Anhang
     convert_to_trade:
       title: In Wertpapier-Trade umwandeln
       description: Diese Transaktion in einen Trade mit Wertpapierdetails umwandeln
@@ -241,6 +270,18 @@ de:
           transfer: Überweisung
           confirmed: Bestätigt
           pending: Ausstehend
+          ai_current: KI
+          ai_history: KI-Verlauf
+          attachment_with: Mit Anhang
+          attachment_without: Ohne Anhang
+        attachment_filter:
+          with: Mit Anhang
+          without: Ohne Anhang
+        ai_filter:
+          current: KI
+          current_description: Die Kategorie ist noch die automatisch zugewiesene (KI oder Bayes).
+          history: KI-Verlauf
+          history_description: Wurde automatisch kategorisiert, die Kategorie wurde seitdem aber geändert.
         type_filter:
           expense: Ausgabe
           income: Einnahme
@@ -374,9 +415,14 @@ de:
       inflow: Zufluss
       outflow: Abfluss
       total_transactions: Transaktionen gesamt
+      scheduled_count:
+        one: "davon %{count} geplant"
+        other: "davon %{count} geplant"
     transfer_match:
       auto_matched: Automatisch zugeordnet
       auto_matched_short: Auto
+      auto_matched_tooltip_html: "%{amount} in %{account} am %{date}. Zum Prüfen klicken."
+      auto_matched_tooltip_hidden: Eine Transaktion in einem Konto, das du nicht sehen kannst.
       confirm_match: Zuordnung bestätigen
       payment_confirmed: Zahlung bestätigt
       reject_match: Zuordnung ablehnen

@@ -51,8 +51,10 @@ module BillsHelper
   # period, so the section template can drop a marker between groups without
   # pre-bucketing the rows. Each marker carries its period and the summed
   # obligations due inside it. Dated like the rail, so a snoozed row counts
-  # toward the period it sits in.
-  def bills_pay_period_markers(occurrences, pay_periods)
+  # toward the period it sits in. A period can run past the rows' month, so
+  # the total sums `counted`, which reaches beyond it. A bill with no rate into
+  # `currency` is left out; the month pulse already counts it as unconvertible.
+  def bills_pay_period_markers(occurrences, pay_periods, currency:, counted: occurrences)
     return {} if pay_periods.blank?
 
     seen = Set.new
@@ -63,8 +65,12 @@ module BillsHelper
       period = pay_periods[index]
       markers[occurrence.id] = {
         period: period,
-        due_total: occurrences.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
-                              .sum { |o| o.resolved_expected_amount.abs }
+        due_total: counted.select { |o| o.effective_due_on.between?(period.starts_on, period.ends_on) }
+                          .sum do |o|
+                            o.resolved_expected_amount_money.exchange_to(currency).amount.abs
+                          rescue Money::ConversionError
+                            0
+                          end
       }
     end
   end

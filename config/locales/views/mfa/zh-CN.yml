@@ -1,6 +1,7 @@
 ---
 zh-CN:
   mfa:
+    local_password_required: 双重认证需要本地密码。您的密码由您的身份提供商管理。
     backup_codes:
       backup_codes_description: 每个代码只能使用一次。请妥善保管这些代码。
       backup_codes_title: 您的备用代码
@@ -11,9 +12,11 @@ zh-CN:
     create:
       code_already_used: 该验证码已被使用。请输入验证器应用中的下一个验证码。
       invalid_code: 验证码无效。请重试。
+      invalid_password: 密码不正确。请重试。
       setup_failed: 启用双重认证时出错,请重试。
     disable:
       failure: 禁用双重认证时出错,请重试。
+      invalid_password: 密码不正确。请重试。
       success: 双重认证已禁用
     new:
       code_label: 验证码
@@ -28,6 +31,8 @@ zh-CN:
       verify_button: 验证并启用 2FA
       verify_description: 输入您身份验证器应用中的 6 位验证码
       verify_title: 2. 输入验证码
+      password_label: 使用密码确认
+      password_placeholder: 输入您的密码
     verify:
       description: 输入您身份验证器应用中的验证码以继续
       or: 或

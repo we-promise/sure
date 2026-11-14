@@ -1,6 +1,9 @@
 class MerchantsController < ApplicationController
+  include FilterClearable
+
   def show
     @merchant = find_merchant
+    @q = search_params
 
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
@@ -10,8 +13,10 @@ class MerchantsController < ApplicationController
 
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id)
     @search = merchant_search
-    @expense_totals = merchant_search(types: [ "expense" ]).totals
-    @average_expense_money = @expense_totals.expense_money / @expense_totals.count if @expense_totals.count.positive?
+    if @q[:types].blank? || @q[:types].include?("expense")
+      @expense_totals = merchant_search(types: [ "expense" ]).totals
+      @average_expense_money = @expense_totals.expense_money / @expense_totals.count if @expense_totals.count.positive?
+    end
     @first_date, @last_date = @search.transactions_scope.pick(Arel.sql("MIN(entries.date)"), Arel.sql("MAX(entries.date)"))
 
     @pagy, @transactions = pagy(
@@ -27,7 +32,10 @@ class MerchantsController < ApplicationController
     @split_parents = load_split_parents
     @split_parent_entry_ids = Entry.split_parent_ids_among(@transactions.map { |t| t.entry.id })
     @projected_recurring = []
-    @q = {}
+  end
+
+  def clear_filter
+    redirect_to merchant_path(find_merchant, q: without_cleared_filter(search_params), page: params[:page], per_page: params[:per_page])
   end
 
   private
@@ -38,9 +46,18 @@ class MerchantsController < ApplicationController
     def merchant_search(**filters)
       Transaction::Search.new(
         Current.family,
-        filters: { merchants: [ @merchant.name ], **filters },
+        filters: { **@q.symbolize_keys, merchants: [ @merchant.name ], **filters },
         accessible_account_ids: @accessible_account_ids
       )
+    end
+
+    def search_params
+      q = params.fetch(:q, {}).permit(
+        :search, :start_date, :end_date, :amount, :amount_operator,
+        accounts: [], categories: [], tags: [], types: [], status: []
+      ).to_h.compact_blank
+      q.delete("amount_operator") unless q["amount"].present?
+      q
     end
 
     def load_split_parents

@@ -144,13 +144,16 @@
 
   <%# Settled cycles with what paid them: "did I pay it that month" and "which
       transaction paid it" in one list, rather than a cycle list and a payment
-      list that mostly repeat each other. %>
+      list that mostly repeat each other. Every row opens its cycle's payment
+      drawer, which is the only place a payment can be unlinked. %>
   <% if history.any? %>
     <%= render DS::Disclosure.new(title: t("bills.detail.history")) do %>
       <div class="bg-container-inset rounded-lg divide-y divide-subdued">
         <% history.each do |occurrence| %>
           <% payments = occurrence.allocations.select(&:allocation_confirmed?) %>
-          <div class="flex items-center justify-between gap-3 px-3 py-2">
+          <%= link_to recurring_occurrence_path(occurrence),
+                data: { turbo_frame: :drawer, turbo_prefetch: false },
+                class: "flex items-center justify-between gap-3 px-3 py-2 hover:bg-surface-hover focus-ring -outline-offset-2" do %>
             <div class="min-w-0">
               <p class="text-sm text-primary"><%= l(occurrence.due_on, format: :long) %></p>
               <p class="text-xs text-secondary truncate">
@@ -162,10 +165,13 @@
                 <% end %>
               </p>
             </div>
-            <p class="text-sm text-primary privacy-sensitive shrink-0">
-              <%= format_money(occurrence.confirmed_allocated_money) %>
-            </p>
-          </div>
+            <span class="flex items-center gap-1.5 shrink-0">
+              <span class="text-sm text-primary privacy-sensitive">
+                <%= format_money(occurrence.confirmed_allocated_money) %>
+              </span>
+              <%= icon("chevron-right", size: "sm", class: "text-subdued") %>
+            </span>
+          <% end %>
         <% end %>
       </div>
     <% end %>

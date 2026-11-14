@@ -9,7 +9,32 @@ zh-CN:
       title: 加入 %{family}
     create:
       failure: 无法发送邀请
+      own_email: 不能邀请您自己。
       success: 邀请已成功发送
+    bulk_new:
+      emails_label: 邮箱地址
+      emails_placeholder: 输入邮箱地址，使用逗号或换行分隔
+      role_guest: 访客
+      role_label: 角色
+      role_member: 成员
+      submit: 发送邀请
+      subtitle: 邀请多位用户加入您在 %{product_name} 上的 %{moniker} 账户
+      title: 邀请多位用户
+    bulk_create:
+      download: 下载报告
+      errors:
+        email_not_queued: 邀请已保存，但邮件未能加入发送队列。请移除后重试。
+        processing_failed: 无法处理该邀请。请在重试前检查是否已有待处理的邀请。
+      invalid_role: 批量邀请只能发送给成员和访客。
+      invite_more: 继续邀请
+      no_emails: 请至少输入一个邮箱地址。
+      status:
+        invalid: 无法邀请
+        link_only: 可分享链接
+        sent: 邀请已发送
+      summary: "已发送 %{sent} 份，可分享链接 %{link_only} 份，失败 %{invalid} 份。"
+      title: 邀请结果
+      too_many: 每次最多只能邀请 %{max} 位用户，请减少人数后重试。
     destroy:
       failure: 移除邀请时出现问题。
       not_authorized: 您无权管理邀请。

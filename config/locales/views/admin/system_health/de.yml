@@ -107,7 +107,7 @@ de:
         queued: Die Worker-Prüfung wurde in die Warteschlange gestellt. Das Ergebnis erscheint unten, sobald ein Worker-Prozess die Prüfung übernimmt – normalerweise innerhalb weniger Sekunden.
       optional_services:
         title: Optionale Dienste
-        description: "Optionale Betreiber-Integrationen. Nicht konfigurierte Dienste sind Hinweise. Diese Prüfungen lesen nur Einstellungen; sie testen keine Verbindungen, senden keine Testereignisse und ändern keine Analytics-Einwilligung. Öffnen Sie einen Dienst für Einrichtungshinweise."
+        description: "Optionale Betreiber-Integrationen. Nicht konfigurierte Dienste sind Hinweise. Diese Prüfungen lesen nur Einstellungen; sie testen keine Verbindungen, senden keine Testereignisse und ändern keine Analytics-Einwilligung. Öffne einen Dienst für Einrichtungshinweise."
         missing_settings: "Fehlende Einstellungen: %{settings}"
         statuses:
           configured: Konfiguriert
@@ -127,27 +127,27 @@ de:
           langfuse:
             title: Langfuse
             description: "Optionales KI-Tracing und Evaluierungsberichte. Diese Prüfung sendet keine Traces oder Evaluierungsanfragen."
-            guidance: "Setzen Sie LANGFUSE_PUBLIC_KEY und LANGFUSE_SECRET_KEY gemeinsam. LANGFUSE_HOST ist optional. Starten Sie betroffene Dienste nach Änderungen neu."
+            guidance: "Setz LANGFUSE_PUBLIC_KEY und LANGFUSE_SECRET_KEY gemeinsam. LANGFUSE_HOST ist optional. Starte betroffene Dienste nach Änderungen neu."
           sentry:
             title: Sentry
             description: "Optionale Fehler- und Leistungsberichte. Der aktuelle Initializer aktiviert Berichte nur in Produktion."
-            guidance: "Setzen Sie SENTRY_DSN und starten Sie betroffene Dienste neu. Die geladene SDK-Konfiguration wird geprüft, ohne Fehler zu erfassen oder Ereignisse zu senden."
+            guidance: "Setz SENTRY_DSN und starte betroffene Dienste neu. Die geladene SDK-Konfiguration wird geprüft, ohne Fehler zu erfassen oder Ereignisse zu senden."
           skylight:
             title: Skylight
             description: "Optionale Instrumentierung der Anwendungsleistung. Vorhandene Einstellungen bestätigen nicht, dass der Agent läuft oder Berichte sendet."
-            guidance: "Setzen Sie SKYLIGHT_AUTHENTICATION und stellen Sie sicher, dass Skylight in der vorgesehenen Rails-Umgebung geladen ist. SKYLIGHT_ENABLED=false deaktiviert die Instrumentierung; das Flag allein lädt das Gem nicht. Starten Sie nach Änderungen neu."
+            guidance: "Setz SKYLIGHT_AUTHENTICATION und stell sicher, dass Skylight in der vorgesehenen Rails-Umgebung geladen ist. SKYLIGHT_ENABLED=false deaktiviert die Instrumentierung; das Flag allein lädt das Gem nicht. Starte nach Änderungen neu."
           stripe:
             title: Stripe
             description: "Optionale Abonnementabrechnung und Zahlungs-Webhooks. Diese Prüfung erstellt keinen Stripe-Client, validiert keine Zugangsdaten und stellt keine Zahlungsanfragen."
-            guidance: "Setzen Sie STRIPE_SECRET_KEY und STRIPE_WEBHOOK_SECRET gemeinsam. Der verwaltete Abonnement-Checkout benötigt zusätzlich STRIPE_MONTHLY_PRICE_ID und STRIPE_ANNUAL_PRICE_ID."
+            guidance: "Setz STRIPE_SECRET_KEY und STRIPE_WEBHOOK_SECRET gemeinsam. Der verwaltete Abonnement-Checkout benötigt zusätzlich STRIPE_MONTHLY_PRICE_ID und STRIPE_ANNUAL_PRICE_ID."
           posthog:
             title: PostHog
             description: "Optionale betreibereigene Analytics mit der beim Start geladenen Konfiguration. Konfiguriert bedeutet nicht, dass ein Benutzer Analytics zugestimmt hat."
-            guidance: "Setzen Sie POSTHOG_KEY und einen nicht leeren POSTHOG_HOST oder lassen Sie den Host für den Standardwert ungesetzt. Browser-Analytics benötigen Produktion oder POSTHOG_DEVELOPMENT_ENABLED in Entwicklung. POSTHOG_FEEDBACK_ENABLED steuert separates Self-Hosting-Feedback, nicht Betreiber-Analytics."
+            guidance: "Setz POSTHOG_KEY und einen nicht leeren POSTHOG_HOST oder lass den Host für den Standardwert ungesetzt. Browser-Analytics benötigen Produktion oder POSTHOG_DEVELOPMENT_ENABLED in Entwicklung. POSTHOG_FEEDBACK_ENABLED steuert separates Self-Hosting-Feedback, nicht Betreiber-Analytics."
           logtail:
             title: Logtail
             description: "Optionale Weiterleitung von Produktionslogs. Ohne Konfiguration protokolliert die Anwendung weiterhin über die Standardausgabe."
-            guidance: "Setzen Sie LOGTAIL_API_KEY und LOGTAIL_INGESTING_HOST gemeinsam und starten Sie betroffene Dienste neu. Diese Prüfung erzeugt keinen Test-Logeintrag."
+            guidance: "Setz LOGTAIL_API_KEY und LOGTAIL_INGESTING_HOST gemeinsam und starte betroffene Dienste neu. Diese Prüfung erzeugt keinen Test-Logeintrag."
       configuration:
         description: "Die für diesen Web-Prozess sichtbare Konfiguration. Diese Prüfungen versenden keine E-Mails, kontaktieren keine Anbieter und laden keine Dateien hoch oder herunter. Konfiguriert bedeutet, dass Einstellungen vorhanden sind. Zustellung, Anbieterzugriff und Speicherzugriff wurden damit nicht überprüft."
         statuses:
@@ -181,7 +181,7 @@ de:
               incomplete: "Einige E-Mail-Einstellungen fehlen oder sind unvollständig. System-E-Mails oder darin enthaltene Links funktionieren möglicherweise nicht."
               disabled: "Der E-Mail-Versand ist in der laufenden Mailer-Konfiguration deaktiviert."
               not_checked: "Dieser Prozess verwendet eine andere Versandmethode als SMTP, beispielsweise eine Entwicklungsvorschau. Der SMTP-Versand wird nicht beurteilt."
-            guidance: "SMTP kann nicht in der Verwaltungsoberfläche konfiguriert werden. Setzen Sie die E-Mail-Umgebungsvariablen für den Web- und den Worker-Dienst und starten Sie beide neu. Für ein Relay ohne Authentifizierung können SMTP_USERNAME und SMTP_PASSWORD beide entfallen."
+            guidance: "SMTP kann nicht in der Verwaltungsoberfläche konfiguriert werden. Setz die E-Mail-Umgebungsvariablen für den Web- und den Worker-Dienst und starte beide neu. Für ein Relay ohne Authentifizierung können SMTP_USERNAME und SMTP_PASSWORD beide entfallen."
             issues:
               address: SMTP_ADDRESS
               port: SMTP_PORT (eine Zahl von 1 bis 65535)
@@ -195,13 +195,13 @@ de:
               not_configured: "Bei den aktivierten Marktpreisanbietern fehlen die API-Schlüssel. Automatische Wertpapiersuchen und Preisabfragen sind über diese Anbieter nicht verfügbar."
               incomplete: "Bei mindestens einem aktivierten Marktpreisanbieter fehlt die Konfiguration oder die Auswahl ist ungültig. Zugeordnete Wertpapiere erhalten möglicherweise keine Preisaktualisierungen."
               disabled: "Kein Marktpreisanbieter ist aktiviert. Automatische Wertpapiersuchen und Preisabfragen sind nicht verfügbar."
-            guidance: "Wählen Sie Anbieter und ergänzen Sie erforderliche API-Schlüssel in den Self-Hosting-Einstellungen oder in der Bereitstellungsumgebung. Umgebungsvariablen haben Vorrang. Öffentliche Anbieter benötigen keinen API-Schlüssel."
+            guidance: "Wähle Anbieter und ergänze erforderliche API-Schlüssel in den Self-Hosting-Einstellungen oder in der Bereitstellungsumgebung. Umgebungsvariablen haben Vorrang. Öffentliche Anbieter benötigen keinen API-Schlüssel."
           exchange_rates:
             title: Wechselkurse
             statuses:
               configured: "Der ausgewählte Wechselkursanbieter ist konfiguriert."
               not_configured: "Kein nutzbarer Wechselkursanbieter ist konfiguriert. Automatische Währungsumrechnung ist möglicherweise nicht verfügbar, wenn ein gespeicherter Kurs fehlt."
-            guidance: "Wählen Sie einen Wechselkursanbieter und ergänzen Sie bei Bedarf dessen API-Schlüssel in den Self-Hosting-Einstellungen oder in der Bereitstellungsumgebung. EXCHANGE_RATE_PROVIDER und Umgebungsvariablen für API-Schlüssel haben Vorrang."
+            guidance: "Wähle einen Wechselkursanbieter und ergänze bei Bedarf dessen API-Schlüssel in den Self-Hosting-Einstellungen oder in der Bereitstellungsumgebung. EXCHANGE_RATE_PROVIDER und Umgebungsvariablen für API-Schlüssel haben Vorrang."
             issues:
               invalid_provider: "Der ausgewählte Wechselkursanbieter wird nicht erkannt. Automatische Kursabfragen schlagen fehl, bis ein unterstützter Anbieter ausgewählt wird."
           storage:
@@ -211,7 +211,7 @@ de:
               not_configured: "Für den ausgewählten Speicher ist keine passende Konfiguration vorhanden. Datei-Uploads sind möglicherweise nicht verfügbar."
               incomplete: "Erforderliche Speichereinstellungen fehlen oder sind unvollständig. Datei-Uploads oder Abrufe funktionieren möglicherweise nicht."
               not_checked: "Dieser Speicher verwendet eine externe Zugangsdatenquelle oder eine benutzerdefinierte Konfiguration. Der Zugriff lässt sich allein anhand dieser Einstellungen nicht beurteilen."
-            guidance: "Prüfen Sie ACTIVE_STORAGE_SERVICE und die Bereitstellungseinstellungen des gewählten Speichers. Lokaler Speicher muss dauerhaft und für Web- und Worker-Dienst gemeinsam verfügbar sein. Ein Speicherwechsel verschiebt bestehende Dateien nicht; planen Sie eine Migration gesondert."
+            guidance: "Prüf ACTIVE_STORAGE_SERVICE und die Bereitstellungseinstellungen des gewählten Speichers. Lokaler Speicher muss dauerhaft und für Web- und Worker-Dienst gemeinsam verfügbar sein. Ein Speicherwechsel verschiebt bestehende Dateien nicht; plane eine Migration gesondert."
             issues:
               root: Stammverzeichnis des lokalen Speichers
               bucket: Speicher-Bucket

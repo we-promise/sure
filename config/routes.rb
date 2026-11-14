@@ -542,7 +542,9 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :merchants, only: :show
+  resources :merchants, only: :show do
+    delete :clear_filter, on: :member
+  end
 
   resources :family_merchants, only: %i[index new create edit update destroy] do
     collection do

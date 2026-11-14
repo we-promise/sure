@@ -1,5 +1,13 @@
 ---
 zh-CN:
+  activerecord:
+    errors:
+      models:
+        family_merchant:
+          attributes:
+            logo:
+              invalid_content_type: 必须是 JPEG、PNG 或 WebP 图片
+              invalid_file_size: 文件大小必须小于 %{max_megabytes}MB
   models:
     merchant:
       no_merchant: 无商户
