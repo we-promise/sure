@@ -121,6 +121,25 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
   # as decreasing. It submits an empty string, which must clear the type rather
   # than fail validation (and the column's check constraint, which admits NULL
   # but not '').
+  # A loan carries no currency of its own: its principal and down payment are
+  # read in the account's currency. A currency picker on those two fields was
+  # submitted but never stored, so the form reverted to the family currency
+  # on the next edit.
+  test "the edit form shows the loan's amounts in the account currency with no picker of their own" do
+    @account.update!(currency: "EUR")
+    @account.loan.update!(initial_balance: 200_000, down_payment: 40_000)
+
+    get edit_loan_path(@account)
+    assert_response :success
+
+    assert_select "select[name='account[accountable_attributes][currency]']", count: 0
+    assert_select "input[name='account[accountable_attributes][initial_balance]']", count: 1
+    %w[initial_balance down_payment].each do |field|
+      assert_select "[data-controller='money-field']:has(input[name='account[accountable_attributes][#{field}]']) [data-money-field-target='symbol']",
+                    text: /€/
+    end
+  end
+
   test "the insurance type's blank option clears a recorded type" do
     @account.loan.update!(insurance_rate: 0.36, insurance_rate_type: "level_term")
 
