@@ -94,19 +94,39 @@ class Property::CostTagTest < ActiveSupport::TestCase
     assert_equal 1, @property.cost_entries_for(member).count
   end
 
-  test "measures the gain after costs in the family currency for a foreign-currency property" do
+  test "a foreign-currency property's costs in other currencies use only the rates sync stores" do
     @family.update!(currency: "EUR")
     eur_account = @family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @admin, accountable: Depository.new)
+    pyg_account = @family.accounts.create!(name: "Guarani bank", balance: 0, currency: "PYG", owner: @admin, accountable: Depository.new)
     create_transaction(account: eur_account, amount: 10_000, currency: "EUR", date: @purchase_date, tags: [ @tag ])
-    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: @purchase_date, rate: 1.0)
-    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    create_transaction(account: pyg_account, amount: 8_000_000, currency: "PYG", date: @purchase_date, tags: [ @tag ])
+    create_transaction(account: accounts(:depository), amount: 1_000, currency: "USD", date: @purchase_date, tags: [ @tag ])
+    # Sync stores each account's currency into the family currency and the
+    # inverse, never a pair between two other currencies (PYG->USD).
+    [ [ "USD", @purchase_date, 0.92 ], [ "USD", Date.current, 0.9 ], [ "PYG", @purchase_date, 0.000125 ] ].each do |currency, date, rate|
+      ExchangeRate.create!(from_currency: currency, to_currency: "EUR", date: date, rate: rate)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: currency, date: date, rate: 1 / rate.to_d)
+    end
+    ExchangeRate.expects(:provider).never
 
-    trend = @property.family_currency_cost_adjusted_trend_for(@admin)
+    # 10,000 EUR, 8,000,000 PYG at 0.000125 and 1,000 USD at 0.92, each on its date.
+    assert_equal Money.new(11_920, "EUR"), @property.purchase_costs_for(@admin)
+    # 500,000 USD at 0.92 on the purchase date, plus the costs.
+    assert_equal Money.new(471_920, "EUR"), @property.cost_basis_for(@admin)
 
-    # 550,000 USD at 0.9 is 495,000 EUR, against 500,000 + 10,000 EUR.
-    assert_equal Money.new(510_000, "EUR"), trend.previous
+    trend = @property.cost_adjusted_trend_for(@admin)
+    # 550,000 USD at today's 0.9.
     assert_equal Money.new(495_000, "EUR"), trend.current
-    # The EUR cost has no stored rate to USD, so the property-currency figure is unavailable.
+    assert_equal Money.new(471_920, "EUR"), trend.previous
+  end
+
+  test "the cost basis is unavailable without a stored rate for the property's currency" do
+    @family.update!(currency: "EUR")
+    ExchangeRate.create!(from_currency: "GBP", to_currency: "EUR", date: Date.current, rate: 1.2)
+    ExchangeRate.expects(:provider).never
+
+    assert_equal Money.new(0, "EUR"), @property.purchase_costs_for(@admin)
+    assert_nil @property.cost_basis_for(@admin)
     assert_nil @property.cost_adjusted_trend_for(@admin)
   end
 
@@ -139,15 +159,15 @@ class Property::CostTagTest < ActiveSupport::TestCase
     assert_equal 1, @property.cost_entries_for(@admin).count
   end
 
-  test "costs and their rates are looked up once across the overview's figures" do
+  test "costs and their rates take the same few queries however many cost dates, once across the overview's figures" do
     @family.update!(currency: "EUR")
     eur = @family.accounts.create!(name: "EUR", balance: 0, currency: "EUR", owner: @admin, accountable: Depository.new)
     20.times do |i|
       date = @purchase_date + i
       create_transaction(account: eur, amount: 10, currency: "EUR", date: date, tags: [ @tag ])
-      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.1)
+      create_transaction(account: accounts(:depository), amount: 10, currency: "USD", date: date, tags: [ @tag ])
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 0.9)
     end
-    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: @purchase_date, rate: 0.9)
     ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
     @property.reload
 
@@ -160,14 +180,13 @@ class Property::CostTagTest < ActiveSupport::TestCase
           @property.cost_basis_for(@admin)
           @property.cost_adjusted_trend_for(@admin)
           @property.family_currency_trend
-          @property.family_currency_cost_adjusted_trend_for(@admin)
         end
       end
     end
 
-    # 20 EUR->USD cost dates, and USD->EUR on the purchase date and today.
-    assert_equal 22, rate_queries
-    assert_in_delta 550_000 * 0.9 - (500_000 * 0.9 + 200), @property.family_currency_cost_adjusted_trend_for(@admin).value.amount, 0.01
+    # The costs in one query, and USD->EUR on the purchase date and today.
+    assert_equal 3, rate_queries
+    assert_in_delta 550_000 * 0.9 - (500_000 * 0.9 + 200 + 180), @property.cost_adjusted_trend_for(@admin).value.amount, 0.01
   end
 
   test "the cost tag must belong to the property's family" do

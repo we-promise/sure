@@ -35,9 +35,11 @@
   <% end %>
 
   <% if (cost_tag = account.property.cost_tag) %>
+    <%# The costs are summed in the family currency, the currency stored rates convert into. %>
+    <% foreign = account.currency != account.family.currency %>
     <div class="contents" data-testid="purchase-costs">
       <% costs = account.property.purchase_costs_for(Current.user) %>
-      <%= summary_card title: t(".purchase_costs") do %>
+      <%= summary_card title: t(foreign ? ".purchase_costs_in_currency" : ".purchase_costs", currency: account.family.currency) do %>
         <%= costs ? format_money(costs) : t(".rate_unavailable") %>
         <%= link_to t(".cost_transactions", count: account.property.cost_entries_for(Current.user).count, tag: cost_tag.name),
                     transactions_path(q: { tags: [ cost_tag.name ] }),
@@ -45,20 +47,14 @@
                     data: { turbo_frame: "_top" } %>
       <% end %>
 
-      <%= summary_card title: t(".cost_basis") do %>
+      <%= summary_card title: t(foreign ? ".cost_basis_in_currency" : ".cost_basis", currency: account.family.currency) do %>
         <% cost_basis = account.property.cost_basis_for(Current.user) %>
         <%= cost_basis ? format_money(cost_basis) : t(".rate_unavailable") %>
       <% end %>
 
       <%= render "properties/cost_adjusted_trend_card",
-                 title: t(".gain_after_costs"),
+                 title: t(foreign ? ".gain_after_costs_in_currency" : ".gain_after_costs", currency: account.family.currency),
                  trend: account.property.cost_adjusted_trend_for(Current.user) %>
-
-      <% if account.property.family_currency_trend_applicable? %>
-        <%= render "properties/cost_adjusted_trend_card",
-                   title: t(".gain_after_costs_in_currency", currency: account.family.currency),
-                   trend: account.property.family_currency_cost_adjusted_trend_for(Current.user) %>
-      <% end %>
     </div>
   <% end %>
 

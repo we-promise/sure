@@ -970,6 +970,35 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-testid='purchase-costs'] h4", text: "Gain after costs"
   end
 
+  test "overview shows the costs of a foreign-currency property in the family currency" do
+    purchase_date = 1.year.ago.to_date
+    tag = cost_tagged_property
+    @account.family.update!(currency: "EUR")
+    eur_account = @account.family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @user, accountable: Depository.new)
+    pyg_account = @account.family.accounts.create!(name: "Guarani bank", balance: 0, currency: "PYG", owner: @user, accountable: Depository.new)
+    create_cost(eur_account, 9_000, tag, currency: "EUR")
+    create_cost(pyg_account, 8_000_000, tag, currency: "PYG")
+    # The pairs sync stores: each account's currency into the family's, and the inverse.
+    [ [ "USD", purchase_date, 1.0 ], [ "USD", Date.current, 0.9 ], [ "PYG", purchase_date, 0.000125 ] ].each do |currency, date, rate|
+      ExchangeRate.create!(from_currency: currency, to_currency: "EUR", date: date, rate: rate)
+      ExchangeRate.create!(from_currency: "EUR", to_currency: currency, date: date, rate: 1 / rate.to_d)
+    end
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='purchase-costs']" do
+      assert_select "h4", text: "Purchase costs in EUR"
+      assert_select "h4", text: "Cost basis in EUR"
+      assert_select "h4", text: "Gain after costs in EUR"
+      assert_select "*", text: /€10[.,]000/
+      assert_select "*", text: /€510[.,]000/
+      assert_select "span", text: /-€15[.,]000/
+      assert_select "*", text: /Exchange rate unavailable/, count: 0
+    end
+  end
+
   test "overview has no purchase costs without a cost tag" do
     get account_path(@account, tab: "overview")
 

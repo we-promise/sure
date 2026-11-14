@@ -123,45 +123,45 @@ class Property < ApplicationRecord
            .excluding_split_parents
   end
 
-  # The sum of the linked costs in +currency+: outflows add and refunds
-  # subtract. Each transaction is converted at the stored rate on its own
-  # date; nil when a rate is missing. The overview reads it for several
-  # figures, so it is computed once per viewer, currency and cost tag.
-  def purchase_costs_for(user, currency: account.currency)
+  # The sum of the linked costs in the family currency: outflows add and
+  # refunds subtract. Each transaction is converted into the family currency
+  # at the stored rate on its own date (ExchangeRate.rate_sql), the pair
+  # account syncs import for every currency in use. Nil when a cost's
+  # currency has no stored rate at all. One query, run once per viewer,
+  # currency and cost tag, as the overview reads it for several figures.
+  def purchase_costs_for(user)
+    currency = account.family.currency
     @purchase_costs ||= {}
     key = [ user.id, currency, cost_tag_id ]
     return @purchase_costs[key] if @purchase_costs.key?(key)
 
-    totals = cost_entries_for(user).group("entries.currency", "entries.date").sum("entries.amount")
-    converted = totals.map { |(from_currency, date), amount| convert_with_stored_rate(Money.new(amount, from_currency), currency, date) }
+    rate = ExchangeRate.rate_sql(from: "entries.currency", to: ":currency", on: "entries.date")
+    totals = Entry.sanitize_sql_array([
+      "COALESCE(SUM(entries.amount * #{rate}), 0), COUNT(*) FILTER (WHERE (#{rate}) IS NULL)",
+      { currency: currency }
+    ])
+    total, unconverted = cost_entries_for(user).pick(Arel.sql(totals)) || [ 0, 0 ]
 
-    @purchase_costs[key] = converted.any?(&:nil?) ? nil : converted.sum(Money.new(0, currency))
+    @purchase_costs[key] = unconverted.zero? ? Money.new(total, currency) : nil
   end
 
-  # The purchase price plus the linked costs, in +currency+; nil when a rate
-  # is missing.
-  def cost_basis_for(user, currency: account.currency)
+  # The purchase price, converted at the rate on its own date, plus the
+  # linked costs, in the family currency; nil when a rate is missing.
+  def cost_basis_for(user)
+    currency = account.family.currency
     purchase = first_valuation_entry
     purchase_value = convert_with_stored_rate(first_valuation_amount, currency, purchase&.date || Date.current)
-    costs = purchase_costs_for(user, currency: currency)
+    costs = purchase_costs_for(user)
     return nil if purchase_value.nil? || costs.nil?
 
     purchase_value + costs
   end
 
-  # The current value against the cost basis, in the property's currency.
+  # The current value, at today's rate, against the cost basis, in the
+  # family currency; nil when a rate is missing.
   def cost_adjusted_trend_for(user)
     basis = cost_basis_for(user)
-    Trend.new(current: account.balance_money, previous: basis) if basis
-  end
-
-  # The same in the family currency, for a property valued in another one.
-  def family_currency_cost_adjusted_trend_for(user)
-    return nil unless family_currency_trend_applicable?
-
-    family_currency = account.family.currency
-    basis = cost_basis_for(user, currency: family_currency)
-    current = convert_with_stored_rate(account.balance_money, family_currency, Date.current)
+    current = convert_with_stored_rate(account.balance_money, account.family.currency, Date.current)
     Trend.new(current: current, previous: basis) if basis && current
   end
 
