@@ -1,8 +1,10 @@
+require "base64"
 require "json"
 require "net/http"
 require "openssl"
 require "socket"
 require "timeout"
+require "uri"
 require "websocket/driver"
 
 class Provider::TradeRepublicWebsocket
@@ -17,8 +19,11 @@ class Provider::TradeRepublicWebsocket
     @driver = nil
   end
 
+  # Opens the TLS WebSocket connection, tunneling through the configured HTTP
+  # proxy when one applies to the Trade Republic host.
   def connect
-    tcp = Socket.tcp(HOST, 443, connect_timeout: @timeout)
+    tcp = open_tunnel
+    @socket = tcp
     context = OpenSSL::SSL::SSLContext.new
     context.set_params
     @socket = OpenSSL::SSL::SSLSocket.new(tcp, context)
@@ -73,6 +78,80 @@ class Provider::TradeRepublicWebsocket
   end
 
   private
+
+    PROXY_RESPONSE_LIMIT = 16_384
+
+    # Connects directly, or establishes a CONNECT tunnel to HOST:443 through
+    # the resolved proxy.
+    def open_tunnel
+      proxy = proxy_uri
+      return Socket.tcp(HOST, 443, connect_timeout: @timeout, resolv_timeout: @timeout) unless proxy
+
+      socket = Socket.tcp(proxy.hostname, proxy.port, connect_timeout: @timeout, resolv_timeout: @timeout)
+      begin
+        Timeout.timeout(@timeout, Timeout::Error) { socket.write(connect_request(proxy)) }
+        read_proxy_response(socket)
+        socket
+      rescue StandardError
+        socket.close
+        raise
+      end
+    end
+
+    # Builds the CONNECT request, adding Basic proxy authentication when the
+    # proxy URL carries credentials.
+    def connect_request(proxy)
+      request = +"CONNECT #{HOST}:443 HTTP/1.1\r\nHost: #{HOST}:443\r\n"
+      if proxy.user
+        credentials = "#{URI.decode_uri_component(proxy.user)}:#{URI.decode_uri_component(proxy.password.to_s)}"
+        request << "Proxy-Authorization: Basic #{Base64.strict_encode64(credentials)}\r\n"
+      end
+      request << "\r\n"
+    end
+
+    # Resolves the proxy for the WSS endpoint, preferring HTTPS_PROXY and
+    # falling back to HTTP_PROXY for deployments that only configure the latter.
+    def proxy_uri
+      proxy = HttpProxy.resolve(scheme: "https", host: HOST, fallback: true)
+      return unless proxy
+
+      unless proxy.scheme == "http"
+        raise Provider::TradeRepublicClient::ProviderUnavailable,
+              "Unsupported Trade Republic WebSocket proxy scheme"
+      end
+
+      if proxy.hostname.blank?
+        raise Provider::TradeRepublicClient::ProviderUnavailable,
+              "Invalid Trade Republic WebSocket proxy configuration"
+      end
+
+      proxy
+    rescue URI::Error
+      raise Provider::TradeRepublicClient::ProviderUnavailable,
+            "Invalid Trade Republic WebSocket proxy configuration"
+    end
+
+    # Reads and validates the proxy's CONNECT response, bounding its size and
+    # requiring a 2xx status before the tunnel is used.
+    def read_proxy_response(socket)
+      response = +""
+      Timeout.timeout(@timeout, Timeout::Error) do
+        while response.bytesize < PROXY_RESPONSE_LIMIT
+          response << socket.readpartial(1024)
+          break if response.include?("\r\n\r\n")
+        end
+      end
+
+      if response.bytesize >= PROXY_RESPONSE_LIMIT || !response.match?(/\AHTTP\/1\.[01] 2\d\d\b/)
+        raise Provider::TradeRepublicClient::TransientProviderError,
+              "Trade Republic WebSocket proxy rejected CONNECT"
+      end
+
+      response
+    rescue EOFError, IOError => e
+      raise Provider::TradeRepublicClient::TransientProviderError,
+            "Trade Republic WebSocket proxy closed during CONNECT: #{e.class}"
+    end
 
     def read_until
       deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + @timeout
