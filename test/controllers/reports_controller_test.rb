@@ -147,6 +147,102 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/\$40\.00/, line, "$40.00 is the GBP figure converted at parity")
   end
 
+  # No JPY->USD rate for the day of a disposal in a JPY account. The gain is
+  # ¥100,000 and there is nothing to convert it with: converted at 1 it read
+  # as $100,000.00 (#3640). It is left out of the total, its own line shows no
+  # figure, and the card says a gain is missing.
+  test "a disposal with no rate into family currency is left out and the card says so" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPX#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+    create_trade(security, account: account, qty: -2, date: date, price: 150_000, currency: "JPY")
+
+    get reports_path
+    assert_response :ok
+
+    line = css_select("[data-testid='realized-gain-line']").map(&:text)
+                                                           .find { |text| text.include?(security.ticker) }
+
+    assert line, "the disposal must be listed at all, or this proves nothing"
+    assert_no_match(/\$100,000\.00/, line, "$100,000.00 is the yen figure converted at parity")
+    assert_select "[data-testid='unconverted-gains-note']", text: /no exchange rate to USD/
+    assert_no_match(/\$100,000\.00/, response.body, "nor is it in any total")
+  end
+
+  # A sale priced in EUR from a USD position, with no EUR->USD rate on any
+  # date: Trade has no figure for it. The card used to skip it as though it
+  # had no cost basis, so its total was partial without saying so.
+  test "a sale with no rate between its own currencies is counted as left out" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage USD", balance: 10_000,
+                                       currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
+    ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                             amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR")
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
+  end
+
+  # The same for an open position: a JPY holding showing a ¥250,000 gain with
+  # no JPY->USD rate is not $250,000 of unrealised gain. At parity the gains
+  # card and the Total Return card both read $250,010.00, the yen figure plus
+  # the fixtures' $10, and Portfolio Value read $1,020,000.00.
+  test "a holding with no rate into family currency is left out of unrealised gains" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPX#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: Date.current, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+
+    get reports_path
+    assert_response :ok
+
+    assert_no_match(/\$250,0\d\d\.\d\d/, response.body, "the yen gain is in a total, converted at parity")
+    assert_no_match(/\$1,020,000\.00/, response.body, "the yen account is in Portfolio Value, converted at parity")
+    assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from JPY to USD is stored yet, so some totals may leave out amounts in JPY/
+  end
+
+  # Each holding's line under the card is the same arithmetic as the card's
+  # total: converted into family currency, or "no data" without a rate. It
+  # used to re-label the yen figure as dollars.
+  test "a holding's gain line is converted, or shows no data without a rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPL#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    get reports_path
+    line = css_select("div.pl-2").find { |div| div.text.include?(security.ticker) }
+    assert line, "the holding is listed"
+    assert_match(/#{Regexp.escape(I18n.t("reports.investment_performance.no_data"))}/, line.text)
+    assert_no_match(/\$250,000\.00/, line.text, "the yen gain re-labelled as dollars")
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0.0067)
+    get reports_path
+    line = css_select("div.pl-2").find { |div| div.text.include?(security.ticker) }
+    assert_match(/\$1,675\.00/, line.text, "250,000 JPY at 0.0067")
+  end
+
   # The rates a page of disposals needs come from one query, not one per
   # foreign disposal. The conversion itself is covered in TradeTest, which
   # counts the queries directly; what has to hold HERE is that the card asks
@@ -739,6 +835,50 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
     assert_match(/#{Regexp.escape(I18n.t("reports.transactions_breakdown.table.entries", count: 1))}/, other_investments_rows.first.text)
     assert_match(/\$100\.00/, other_investments_rows.first.text)
+  end
+
+  # The summary leaves out an amount in a currency with no rate; the
+  # breakdown under it and the CSV export must leave it out too, not count
+  # ₩130,000 as $130,000.
+  test "the activity breakdown leaves out an expense in a currency with no rate" do
+    category = @family.categories.create!(name: "Won Rent", color: "#111111")
+    krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, name: "Rent", amount: 130_000, currency: "KRW", category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-#{category.id}']", count: 0
+    assert_no_match(/130,000/, @response.body)
+  end
+
+  test "the export leaves out an expense in a currency with no rate" do
+    category = @family.categories.create!(name: "Won Export Rent", color: "#111111")
+    krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, name: "Rent", amount: 130_000, currency: "KRW", category: category)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly,
+                                         start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    assert_response :ok
+
+    assert_no_match(/Won Export Rent/, @response.body)
+    assert_no_match(/130000/, @response.body)
+  end
+
+  # The summary uses the latest stored rate however old; the breakdown used
+  # Money#exchange_to, which looks back five days and then converts at 1.
+  test "the activity breakdown converts at a stored rate older than five days" do
+    category = @family.categories.create!(name: "Yen Rent", color: "#111111")
+    jpy = @family.accounts.create!(owner: @user, name: "Tokyo", balance: 0, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 30.days.ago.to_date, rate: 0.0067)
+    create_transaction(account: jpy, name: "Rent", amount: 10_000, currency: "JPY", category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    row = css_select("tr[data-category='category-#{category.id}']").first
+    assert row, "the converted expense is listed"
+    assert_match(/\$67\.00/, row.text)
   end
 
   test "monthly period navigation shows previous month link" do
