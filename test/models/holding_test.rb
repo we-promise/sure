@@ -251,6 +251,55 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal own, batched, "the batch disagrees with #avg_cost"
   end
 
+  # A fifo position holds its open lots, so with no stored cost its fallback
+  # is their mean, as #calculate_avg_cost gives it: 20 here, where the
+  # average method would say 15. The batch reads every fifo holding's lots together, so a page of them
+  # costs the same few queries however many there are.
+  test "the batch answers a fifo holding from its open lots, in a fixed number of queries" do
+    @account.update!(cost_basis_method: "fifo")
+    queries_for = ->(count) do
+      holdings = Array.new(count) do |i|
+        security = create_security("FIFO#{count}#{i}", prices: (0..3).map { |d| { date: d.days.ago.to_date, price: 30 } })
+        create_trade(security, account: @account, qty: 10, price: 10, date: 3.days.ago.to_date)
+        create_trade(security, account: @account, qty: 10, price: 20, date: 2.days.ago.to_date)
+        create_trade(security, account: @account, qty: -10, price: 30, date: 1.day.ago.to_date)
+        security
+      end
+      Holding::Materializer.new(@account.reload, strategy: :forward).materialize_holdings
+      # The fallback is for a position with no stored cost, as a provider's
+      # often is; the materializer stores one, so take it away.
+      batch = holdings.map { |security| @account.holdings.where(security: security).order(:date).last }
+      Holding.where(id: batch.map(&:id)).update_all(cost_basis: nil)
+      batch.each(&:reload)
+
+      queries = capture_sql_queries { Holding.preload_avg_costs(batch) }
+      batch.each do |holding|
+        assert_equal BigDecimal("20"), holding.avg_cost&.amount, "the batch's figure for #{holding.ticker}"
+        assert_equal BigDecimal("20"), Holding.find(holding.id).avg_cost&.amount, "#avg_cost for #{holding.ticker}"
+      end
+      queries.size
+    end
+
+    assert_equal queries_for.(1), queries_for.(3)
+  end
+
+  # The account decides fifo, not the trades joined up to the holding's date:
+  # a provider's row can predate the trade behind lots it already holds.
+  test "the batch answers a fifo holding whose row predates its trades" do
+    @account.update!(cost_basis_method: "fifo")
+    security = create_security("FIFOE", prices: [ { date: Date.current, price: 30 } ])
+    buy = create_trade(security, account: @account, qty: 10, price: 20, date: Date.current)
+    HoldingLot.create!(account: @account, security: security, source_entry: buy, qty: 10, unit_cost: 20,
+                       currency: "USD", acquired_on: Date.current)
+    holding = @account.holdings.create!(security: security, date: 1.day.ago.to_date, qty: 10, price: 30, amount: 300, currency: "USD")
+
+    batch = [ Holding.find(holding.id) ]
+    Holding.preload_avg_costs(batch)
+
+    assert_equal BigDecimal("20"), Holding.find(holding.id).avg_cost&.amount, "#avg_cost"
+    assert_equal BigDecimal("20"), batch.first.avg_cost&.amount, "the batch's figure"
+  end
+
   test "the batch leaves a stored cost basis alone and does not query for it" do
     @amzn.update!(cost_basis: 100)
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: Date.current)

@@ -21,6 +21,11 @@ class HoldingLotDisposal < ApplicationRecord
       end
 
       transaction do
+        # READ COMMITTED would let a request-initiated restate and a background
+        # sync of the same account both delete, then both insert: duplicate
+        # disposals whose cost sums exceed the sale. The account row lock
+        # serialises the replace, as the family advisory lock does elsewhere.
+        account.lock!
         scope.delete_all
         insert_all(rows) if rows.any?
       end

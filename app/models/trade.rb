@@ -6,6 +6,9 @@ class Trade < ApplicationRecord
 
   belongs_to :security
   belongs_to :category, optional: true
+  # The acquisition a sale says it sold from. Set by the user, never by a
+  # provider, so it stays editable on a linked sale.
+  belongs_to :lot_source_entry, class_name: "Entry", optional: true
 
   # Use the same activity labels as Transaction
   ACTIVITY_LABELS = Transaction::ACTIVITY_LABELS.dup.freeze
@@ -54,6 +57,7 @@ class Trade < ApplicationRecord
   end
 
   validate :exchange_rate_must_be_valid
+  validate :lot_source_entry_must_be_a_lot_choice, if: -> { lot_source_entry_id_changed? && lot_source_entry_id }
 
   # Trade types for categorization
   def buy?
@@ -68,6 +72,27 @@ class Trade < ApplicationRecord
   # like a sale — same sign, same shape — and only the label tells them apart.
   def internal_movement?
     INTERNAL_MOVEMENT_LABELS.include?(investment_activity_label)
+  end
+
+  # The acquisitions this sale can name as the lot it sold from: buys and
+  # transfers-in of its security, in its account, that the replay applies
+  # before it (an earlier date, or the same date and entered no later: a
+  # purchase stamped with the sale's own created_at replays first, see
+  # Holding::PortfolioCache#trades), leaving out a lot sales dated before it had already
+  # emptied. Only a sale in an account that sells by fifo has any, since under
+  # average a sale relieves every lot pro rata. The choice the sale already
+  # holds is always among them, so an edit keeps it, and is replayed only
+  # while it names a lot that is still open; a new choice must be open by then.
+  def lot_choices
+    return Entry.none unless sell? && !internal_movement? && entry&.account&.cost_basis_fifo?
+
+    acquisitions = entry.account.entries
+      .where(entryable_type: "Trade", entryable_id: Trade.where(security_id: security_id).where("qty > 0").select(:id))
+    before_sale = acquisitions
+      .where("(entries.date, entries.created_at) <= (:date, :created_at)",
+             date: entry.date, created_at: entry.created_at || Time.current)
+      .where.not(id: lots_emptied_before_sale)
+    before_sale.or(acquisitions.where(id: attribute_in_database(:lot_source_entry_id))).chronological
   end
 
   class << self
@@ -181,6 +206,42 @@ class Trade < ApplicationRecord
 
   private
 
+    # Acquisitions whose lot is now empty and was emptied before this sale:
+    # no sale dated on or after it took anything from the lot.
+    #
+    # A transfer out consumes lots without recording a disposal, so once one
+    # replays at or after this sale an empty lot no longer says when it was
+    # emptied. Nothing is excluded then: a lot that turns out to be empty
+    # falls back to the account's method when the sale replays.
+    def lots_emptied_before_sale
+      later_transfers_out = on_or_after_sale(
+        entry.account.entries.where(entryable_type: "Trade",
+          entryable_id: Trade.where(security_id: security_id, investment_activity_label: INTERNAL_MOVEMENT_LABELS)
+                             .where("qty < 0").select(:id))
+      )
+      return HoldingLot.none.select(:source_entry_id) if later_transfers_out.exists?
+
+      later_disposals = on_or_after_sale(
+        HoldingLotDisposal.joins(:sale_entry).where(account_id: entry.account_id).where.not(lot_source_entry_id: nil)
+      )
+      HoldingLot.derived.where(account_id: entry.account_id, qty: 0)
+        .where.not(source_entry_id: later_disposals.select(:lot_source_entry_id))
+        .select(:source_entry_id)
+    end
+
+    # Entries replay by date, then in the order they were entered (see
+    # Holding::PortfolioCache#trades), so a same-day entry made earlier has
+    # already run by the time this sale does. `scope` must expose `entries`.
+    def on_or_after_sale(scope)
+      if entry.persisted?
+        scope.where("(entries.date, entries.created_at, entries.id) >= (:date, :created_at, :id)",
+                    date: entry.date, created_at: entry.created_at, id: entry.id)
+      else
+        scope.where("(entries.date, entries.created_at) >= (:date, :created_at)",
+                    date: entry.date, created_at: Time.current)
+      end
+    end
+
     def exchange_rate_must_be_valid
       if extra&.dig("exchange_rate_invalid")
         errors.add(:exchange_rate, "must be a number")
@@ -190,6 +251,10 @@ class Trade < ApplicationRecord
           errors.add(:exchange_rate, "must be greater than 0")
         end
       end
+    end
+
+    def lot_source_entry_must_be_a_lot_choice
+      errors.add(:lot_source_entry, :invalid) unless lot_choices.exists?(id: lot_source_entry_id)
     end
 
     # The position the disposal is measured against: the latest snapshot for

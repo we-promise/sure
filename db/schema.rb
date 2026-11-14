@@ -2858,12 +2858,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.decimal "fee", precision: 19, scale: 4, default: "0.0", null: false
     t.string "investment_activity_label"
     t.jsonb "locked_attributes", default: {}
+    t.uuid "lot_source_entry_id"
     t.decimal "price", precision: 19, scale: 10
     t.decimal "qty", precision: 34, scale: 18
     t.uuid "security_id", null: false
     t.datetime "updated_at", null: false
     t.index ["extra"], name: "index_trades_on_extra", using: :gin
     t.index ["investment_activity_label"], name: "index_trades_on_investment_activity_label"
+    t.index ["lot_source_entry_id"], name: "index_trades_on_lot_source_entry_id"
     t.index ["security_id"], name: "index_trades_on_security_id"
   end
 
@@ -3331,6 +3333,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
   add_foreign_key "tool_calls", "messages"
   add_foreign_key "trade_republic_accounts", "trade_republic_items"
   add_foreign_key "trade_republic_items", "families"
+  add_foreign_key "trades", "entries", column: "lot_source_entry_id", on_delete: :nullify
   add_foreign_key "trades", "securities"
   add_foreign_key "trading212_accounts", "trading212_items"
   add_foreign_key "trading212_items", "families"

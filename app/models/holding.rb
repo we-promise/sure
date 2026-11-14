@@ -75,6 +75,35 @@ class Holding < ApplicationRecord
     calculate_avg_cost
   end
 
+  # The avg-cost fallback for holdings in accounts that sell by fifo, by
+  # holding id.
+  # What a fifo position holds is its open lots, not a share of every
+  # purchase, so the figure is their mean, as Holding::LotBook#average_cost
+  # gives it; the opening lot stays out, as it does there. The stored lots
+  # are the position as it stands, so they answer only for its latest row,
+  # and only while they add up to it (HoldingLot.in_partition). Any other
+  # row, or an open lot with no cost, is unknown: the trades' pooled average
+  # is the average method's figure, not this one.
+  def self.fifo_avg_costs(holdings)
+    return {} if holdings.empty?
+
+    account_ids = holdings.map(&:account_id).uniq
+    security_ids = holdings.map(&:security_id).uniq
+    readable = HoldingLot.in_partition(account_ids, security_ids)
+    latest = Holding.where(account_id: account_ids, security_id: security_ids).group(:account_id, :security_id).maximum(:date)
+    lots = HoldingLot.derived.where(account_id: account_ids, security_id: security_ids).where("qty > 0")
+      .group_by { |lot| [ lot.account_id, lot.security_id ] }
+
+    holdings.to_h do |holding|
+      key = [ holding.account_id, holding.security_id ]
+      open = lots.fetch(key, [])
+      value = if readable.include?(key) && latest[key] == holding.date && open.any? && open.none? { |lot| lot.unit_cost.nil? }
+        Money.new(open.sum { |lot| lot.qty * lot.unit_cost } / open.sum(&:qty), holding.currency)
+      end
+      [ holding.id, value ]
+    end
+  end
+
   # The rate a trade carries itself (extra["exchange_rate"], e.g. IBKR's
   # fx_rate_to_base) comes before the table's, as in the calculators and
   # Balance::SyncCache; a trade in the account's own currency converts at 1.
@@ -96,9 +125,11 @@ class Holding < ApplicationRecord
 
   # #calculate_avg_cost for every holding given, in one query: the same
   # trades, rates, fees, internal-movement and lot rules (a user-costed lot
-  # counts at its cost; a clamped position has none), read through the same SQL
-  # (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals), so
-  # the batch cannot answer differently from the holding on its own. Holdings
+  # counts at its cost; a clamped position has none), read through the same
+  # SQL (.avg_cost_rates_join, .avg_cost_totals_sql, .avg_cost_from_totals),
+  # so the batch cannot answer differently from the holding on its own.
+  # Holdings in accounts that sell by fifo read their open lots instead, all
+  # of them together through .fifo_avg_costs, in a few more queries. Holdings
   # with a stored cost basis are skipped, since #avg_cost never reaches the
   # fallback for them. So are holdings with unsaved changes, unsaved ones
   # included: the query reads the stored row, which is not what they hold.
@@ -134,13 +165,27 @@ class Holding < ApplicationRecord
               AND clamped_lots.clamped
           ))
         SQL
+        Arel.sql("BOOL_OR(accounts.cost_basis_method = 'fifo')"),
         *avg_cost_totals_sql(lots: true)
       )
       .index_by(&:first)
 
+    # The account decides fifo. A holding with no row (no buy dated on or
+    # before it, as with a provider row that predates its trade) still reads
+    # its lots, so its account is looked up; nothing extra runs otherwise.
+    unrowed = pending.reject { |holding| rows.key?(holding.id) }
+    fifo_account_ids = unrowed.any? ? Account.where(id: unrowed.map(&:account_id).uniq, cost_basis_method: "fifo").pluck(:id).to_set : Set.new
+    lot_costs = fifo_avg_costs(pending.select { |holding| rows.key?(holding.id) ? rows[holding.id][3] : fifo_account_ids.include?(holding.account_id) })
+
     pending.each do |holding|
-      _id, internal_movement, clamped, total_cost, total_qty, rate_missing = rows[holding.id]
-      value = avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency) unless internal_movement || clamped
+      _id, internal_movement, clamped, _fifo, total_cost, total_qty, rate_missing = rows[holding.id]
+      value = if clamped
+        nil
+      elsif lot_costs.key?(holding.id)
+        lot_costs[holding.id]
+      elsif !internal_movement
+        avg_cost_from_totals(total_cost, total_qty, rate_missing, holding.currency)
+      end
       holding.preload_avg_cost(value)
     end
   end
@@ -467,6 +512,7 @@ class Holding < ApplicationRecord
       # Fewer units than the trades bought (see Holding::ReverseCalculator), so
       # no figure drawn from those trades is the position's.
       return nil if HoldingLot.where(account_id: account_id, security_id: security_id, clamped: true).exists?
+      return self.class.fifo_avg_costs([ self ])[id] if account.cost_basis_fifo?
 
       trades = account.trades
         .with_entry
