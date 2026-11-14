@@ -37,6 +37,16 @@ class EnableBankingItem::ImporterFullHistoryTest < ActiveSupport::TestCase
     assert_equal Date.new(2020, 1, 1), @requests.first[:date_from]
   end
 
+  test "a future sync_start_date does not push the first fetch past today" do
+    @enable_banking_item.update_columns(sync_start_date: 1.day.from_now.to_date)
+    link!
+
+    build_importer.import
+
+    assert_equal "longest", @requests.first[:strategy]
+    assert_equal Date.current, @requests.first[:date_from]
+  end
+
   test "first fetch without sync_start_date sends no date_from and keeps all rows" do
     link!
 

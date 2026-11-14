@@ -1223,8 +1223,9 @@ class EnableBankingItem::Importer
     def determine_sync_start_date(enable_banking_account)
       if first_transactions_fetch?(enable_banking_account)
         # The first fetch asks for strategy=longest. The user's start date, when
-        # set, is the lower bound; without one the ASPSP returns all it allows.
-        enable_banking_item.sync_start_date
+        # set, is the lower bound (never after today); without one the ASPSP
+        # returns all it allows.
+        [ enable_banking_item.sync_start_date, Date.current ].min if enable_banking_item.sync_start_date
       else
         incremental_sync_start_date(enable_banking_account)
       end
