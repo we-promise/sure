@@ -36,8 +36,8 @@ class HoldingTest < ActiveSupport::TestCase
     assert_in_delta 0.75, foreign_holding.weight, 0.001
   end
 
-  # Issue #3277: a missing deposit leaves the account's cash negative, so its
-  # balance is below the holdings value and weights used to exceed 100%.
+  # A missing deposit leaves the account's cash negative, so its
+  # balance is below the holdings value. Weights must still stay at or below 100%.
   test "weight does not exceed 100 percent when account cash is negative" do
     @account.update!(balance: 3000, cash_balance: 3000 - (3240 + 3720))
 
