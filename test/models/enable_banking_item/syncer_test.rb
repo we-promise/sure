@@ -7,7 +7,7 @@ class EnableBankingItem::SyncerTest < ActiveSupport::TestCase
       name: "Test",
       country_code: "DE",
       application_id: "app",
-      client_certificate: "cert",
+      client_certificate: "cert", sync_start_date: 3.months.ago.to_date,
       session_id: "sess",
       session_expires_at: 1.day.ago, # expired
       status: :good
