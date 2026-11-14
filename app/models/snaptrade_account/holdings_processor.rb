@@ -60,6 +60,8 @@ class SnaptradeAccount::HoldingsProcessor
         next if account.holdings.where(security: security, date: Date.current, currency: h.currency)
           .where.not(account_provider_id: [ nil, provider_id ]).exists?
 
+        # The materializer may have written today's row on the user's remapped security.
+        account.holdings.where(security: h.security, date: Date.current, currency: h.currency, account_provider_id: nil).delete_all
         import_adapter.import_holding(security: security, quantity: 0, amount: 0, currency: h.currency,
           date: Date.current, price: h.price, account_provider_id: provider_id, source: "snaptrade", delete_future_holdings: false)
       end

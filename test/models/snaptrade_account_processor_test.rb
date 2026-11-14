@@ -343,6 +343,47 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_empty current_tickers
   end
 
+  test "clearing a remapped position does not collide with today's calculated row" do
+    travel_to(Date.new(2026, 12, 17)) do
+      sync_positions!([ stock_position ])
+      @account.holdings.find_by!(security: securities(:aapl)).remap_security!(securities(:msft))
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 9)) do
+      sync_positions!([], total: 2500)
+      Holding::Materializer.new(@account.reload, strategy: :reverse).materialize_holdings
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 15)) do
+      assert_nothing_raised { sync_positions!([], total: 1000) }
+      assert_empty current_tickers
+    end
+  end
+
+  test "clearing a position keeps the user's cost-basis lock" do
+    travel_to(Date.new(2026, 12, 17)) do
+      sync_positions!([ stock_position ])
+      @account.holdings.find_by!(security: securities(:aapl)).update!(cost_basis: 42, cost_basis_source: "manual", cost_basis_locked: true)
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 9)) do
+      sync_positions!([], total: 2500)
+      Holding::Materializer.new(@account.reload, strategy: :reverse).materialize_holdings
+    end
+    travel_to(Time.zone.local(2026, 12, 18, 15)) do
+      sync_positions!([], total: 1000)
+      row = @account.holdings.find_by!(security: securities(:aapl), date: Date.current)
+      assert row.cost_basis_locked
+      assert_equal 42, row.cost_basis
+    end
+  end
+
+  test "an empty list from a holdings_unavailable account is not logged" do
+    travel_to(Date.new(2026, 12, 17)) { sync_positions!([ stock_position ]) }
+    Rails.logger.stubs(:warn)
+    Rails.logger.expects(:warn).with(regexp_matches(/kept positions/)).never
+    travel_to(Date.new(2026, 12, 18)) do
+      sync_positions!([], institution_metadata: { "sync_status" => { "holdings" => { "holdings_unavailable" => true } } })
+    end
+  end
+
   # === ActivitiesProcessor Tests ===
 
   test "activities processor maps BUY type to Buy label" do
