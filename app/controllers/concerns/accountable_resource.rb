@@ -84,7 +84,13 @@ module AccountableResource
     # Assigning a balance can fail before the normal update path assigns the
     # other submitted fields. Keep them available for the 422 form without
     # persisting them.
-    update_params = account_params.except(:return_to, :balance, :opening_balance_date)
+    update_params = account_params.except(
+      :return_to,
+      :balance,
+      :opening_balance_date,
+      :provider_balance_adjustment,
+      :provider_balance_adjustment_reason
+    )
     # An uploaded logo is meant to be seen, so it takes over from Brandfetch.
     update_params[:logo_selection] = "automatic" if account_params[:logo].present?
     @account.logo_chosen = logo_chosen?
@@ -98,6 +104,18 @@ module AccountableResource
       # Handle balance update if the value actually changed
       if account_params[:balance].present? && account_params[:balance].to_d != @account.balance
         result = @account.set_current_balance(account_params[:balance].to_d)
+        unless result.success?
+          @account.assign_attributes(update_params)
+          @error_message = result.error
+          raise ActiveRecord::Rollback
+        end
+      end
+
+      if account_params.key?(:provider_balance_adjustment)
+        result = @account.set_provider_balance_adjustment(
+          amount: account_params[:provider_balance_adjustment],
+          reason: account_params[:provider_balance_adjustment_reason]
+        )
         unless result.success?
           @account.assign_attributes(update_params)
           @error_message = result.error
@@ -200,6 +218,7 @@ module AccountableResource
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes, :exclude_from_reports,
+        :provider_balance_adjustment, :provider_balance_adjustment_reason,
         :enable_category_matcher, :logo,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
