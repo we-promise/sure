@@ -85,6 +85,9 @@ en:
       square_feet: "Square Feet"
       square_meters: "Square Meters"
       area_unit_label: "Area Unit"
+      cost_tag_label: "Cost tag (optional)"
+      cost_tag_prompt: "None"
+      cost_tag_hint: "Transactions with this tag, such as notary fees and taxes, count towards the property's cost basis."
     overview:
       living_area: Living Area
       market_value: Market Value
@@ -100,6 +103,13 @@ en:
         trend: Trend
         trend_in_currency: "Trend in %{currency}"
         rate_unavailable: "Exchange rate unavailable"
+        purchase_costs: Purchase costs
+        cost_transactions:
+          one: "1 transaction tagged %{tag}"
+          other: "%{count} transactions tagged %{tag}"
+        cost_basis: Cost basis
+        gain_after_costs: Gain after costs
+        gain_after_costs_in_currency: "Gain after costs in %{currency}"
         unknown: Unknown
         year_built: Year Built
         edit_account_details: "Edit account details"

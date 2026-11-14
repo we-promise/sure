@@ -550,6 +550,34 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Tag::COLORS.first, tag.color
   end
 
+  test "round trips a property's cost tag through full export" do
+    source_family = Family.create!(name: "Source Cost Tag Family", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+    tag = source_family.tags.create!(name: "Round Trip Land Costs")
+    source_family.accounts.create!(name: "Round Trip Plot", balance: 30_000, currency: "USD", accountable: Property.new(cost_tag: tag))
+
+    ndjson = nil
+    Zip::File.open_buffer(Family::DataExporter.new(source_family).generate_export) do |zip|
+      ndjson = zip.read("all.ndjson")
+    end
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    imported_tag = @family.tags.find_by!(name: "Round Trip Land Costs")
+    assert_not_equal tag.id, imported_tag.id
+    assert_equal imported_tag.id, @family.accounts.find_by!(name: "Round Trip Plot").property.cost_tag_id
+  end
+
+  test "a property whose cost tag is not in the import is left unlinked" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-plot", name: "Orphan Plot", balance: "100", currency: "USD",
+                                 accountable_type: "Property", accountable: { cost_tag_id: "missing-tag" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    assert_nil @family.accounts.find_by!(name: "Orphan Plot").property.cost_tag_id
+  end
+
   test "imports merchants" do
     ndjson = build_ndjson([
       {

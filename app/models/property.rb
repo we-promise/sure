@@ -15,6 +15,9 @@ class Property < ApplicationRecord
   }.freeze
 
   has_one :address, as: :addressable, dependent: :destroy
+  # Transactions with this tag count as the property's purchase costs. The
+  # tag must be the family's own (checked on Account, which knows the family).
+  belongs_to :cost_tag, class_name: "Tag", optional: true
 
   accepts_nested_attributes_for :address
 
@@ -90,6 +93,61 @@ class Property < ApplicationRecord
   def reload(*)
     remove_instance_variable(:@first_valuation_entry) if defined?(@first_valuation_entry)
     super
+  end
+
+  # The transactions carrying the cost tag, in any of the family's accounts,
+  # that +user+ can see. Excluded, pending and split-parent entries are left
+  # out, as in spending totals.
+  def cost_entries_for(user)
+    return Entry.none if cost_tag_id.nil?
+
+    account.family.entries
+           .where(account_id: user.accessible_accounts.visible.select(:id))
+           .where(entryable_type: "Transaction", entryable_id: Tagging.where(tag_id: cost_tag_id, taggable_type: "Transaction").select(:taggable_id))
+           .where(excluded: false)
+           .excluding_pending
+           .excluding_split_parents
+  end
+
+  # The sum of the linked costs in +currency+: outflows add and refunds
+  # subtract. Each transaction is converted at the stored rate on its own
+  # date; nil when a rate is missing.
+  def purchase_costs_for(user, currency: account.currency)
+    totals = cost_entries_for(user).group("entries.currency", "entries.date").sum("entries.amount")
+
+    totals.sum(Money.new(0, currency)) do |(from_currency, date), amount|
+      converted = convert_with_stored_rate(Money.new(amount, from_currency), currency, date)
+      return nil if converted.nil?
+
+      converted
+    end
+  end
+
+  # The purchase price plus the linked costs, in +currency+; nil when a rate
+  # is missing.
+  def cost_basis_for(user, currency: account.currency)
+    purchase = first_valuation_entry
+    purchase_value = convert_with_stored_rate(first_valuation_amount, currency, purchase&.date || Date.current)
+    costs = purchase_costs_for(user, currency: currency)
+    return nil if purchase_value.nil? || costs.nil?
+
+    purchase_value + costs
+  end
+
+  # The current value against the cost basis, in the property's currency.
+  def cost_adjusted_trend_for(user)
+    basis = cost_basis_for(user)
+    Trend.new(current: account.balance_money, previous: basis) if basis
+  end
+
+  # The same in the family currency, for a property valued in another one.
+  def family_currency_cost_adjusted_trend_for(user)
+    return nil unless family_currency_trend_applicable?
+
+    family_currency = account.family.currency
+    basis = cost_basis_for(user, currency: family_currency)
+    current = convert_with_stored_rate(account.balance_money, family_currency, Date.current)
+    Trend.new(current: current, previous: basis) if basis && current
   end
 
   def balance_display_name

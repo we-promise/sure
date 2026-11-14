@@ -34,6 +34,34 @@
     </div>
   <% end %>
 
+  <% if (cost_tag = account.property.cost_tag) %>
+    <div class="contents" data-testid="purchase-costs">
+      <% costs = account.property.purchase_costs_for(Current.user) %>
+      <%= summary_card title: t(".purchase_costs") do %>
+        <%= costs ? format_money(costs) : t(".rate_unavailable") %>
+        <%= link_to t(".cost_transactions", count: account.property.cost_entries_for(Current.user).count, tag: cost_tag.name),
+                    transactions_path(q: { tags: [ cost_tag.name ] }),
+                    class: "block text-sm font-normal text-secondary hover:underline",
+                    data: { turbo_frame: "_top" } %>
+      <% end %>
+
+      <%= summary_card title: t(".cost_basis") do %>
+        <% cost_basis = account.property.cost_basis_for(Current.user) %>
+        <%= cost_basis ? format_money(cost_basis) : t(".rate_unavailable") %>
+      <% end %>
+
+      <%= render "properties/cost_adjusted_trend_card",
+                 title: t(".gain_after_costs"),
+                 trend: account.property.cost_adjusted_trend_for(Current.user) %>
+
+      <% if account.property.family_currency_trend_applicable? %>
+        <%= render "properties/cost_adjusted_trend_card",
+                   title: t(".gain_after_costs_in_currency", currency: account.family.currency),
+                   trend: account.property.family_currency_cost_adjusted_trend_for(Current.user) %>
+      <% end %>
+    </div>
+  <% end %>
+
   <%= summary_card title: t(".year_built") do %>
     <%= account.property.year_built || t(".unknown") %>
   <% end %>

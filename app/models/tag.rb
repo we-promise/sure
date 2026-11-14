@@ -61,6 +61,8 @@ class Tag < ApplicationRecord
 
       if replacement
         taggings.update_all tag_id: replacement.id
+        # Properties counting this tag's transactions as costs follow them.
+        Property.where(cost_tag_id: id).update_all cost_tag_id: replacement.id
       end
 
       destroy!

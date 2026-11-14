@@ -117,6 +117,7 @@ class Family::DataImporter
       import_balances(records["Balance"] || [])
       import_categories(records["Category"] || [])
       import_tags(records["Tag"] || [])
+      link_property_cost_tags(records["Account"] || [])
       import_merchants(records["Merchant"] || [])
       import_provider_merchants(records["ProviderMerchant"] || [])
       import_recurring_transactions(records["RecurringTransaction"] || [])
@@ -478,6 +479,23 @@ class Family::DataImporter
         tag.save!
         map_source!(:tags, old_id, tag)
         increment_summary("Tag", created ? :created : :updated)
+      end
+    end
+
+    # A property's cost tag is imported after the accounts, so the link is
+    # restored once both have their new ids. A tag the import does not carry
+    # leaves the property unlinked.
+    def link_property_cost_tags(records)
+      records.each do |record|
+        data = record["data"] || {}
+        old_tag_id = data.dig("accountable", "cost_tag_id")
+        next unless data["accountable_type"] == "Property" && old_tag_id.present?
+
+        account = mapped_record(:accounts, data["id"], @family.accounts, record_type: "Account")
+        tag_id = mapped_id(:tags, old_tag_id, record_type: "Account", required: false)
+        next unless account&.property? && tag_id
+
+        account.property.update!(cost_tag_id: tag_id)
       end
     end
 
