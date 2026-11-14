@@ -114,6 +114,37 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert @account.entries.exists?(external_id: "binance_futures_BTCUSDT_1")
   end
 
+  test "records a buy as cash out and a sell as cash in" do
+    @family.update!(currency: "USD")
+    @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] })
+
+    provider = mock
+    @item.stubs(:binance_provider).returns(provider)
+    @ba.stubs(:binance_item).returns(@item)
+    provider.stubs(:get_spot_trades).returns([])
+    provider.stubs(:get_spot_price).returns("50000.0")
+    provider.stubs(:get_all_p2p_trades).returns([])
+    provider.stubs(:get_futures_trades).returns(
+      [
+        { "id" => 1, "time" => 1610000000000, "qty" => "0.1", "price" => "40000.0", "quoteQty" => "4000.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => true },
+        { "id" => 2, "time" => 1610000060000, "qty" => "0.05", "price" => "42000.0", "quoteQty" => "2100.0", "commission" => "0.0", "commissionAsset" => "USDT", "buyer" => false }
+      ],
+      []
+    )
+
+    Security.create!(ticker: "CRYPTO:BTC", name: "Bitcoin", price_provider: "binance_public")
+
+    BinanceAccount::Processor.new(@ba).process
+
+    buy = @account.entries.find_by!(external_id: "binance_futures_BTCUSDT_1")
+    assert_equal 4000.to_d, buy.amount
+    assert_equal 0.1.to_d, buy.trade.qty
+
+    sell = @account.entries.find_by!(external_id: "binance_futures_BTCUSDT_2")
+    assert_equal(-2100.to_d, sell.amount)
+    assert_equal(-0.05.to_d, sell.trade.qty)
+  end
+
   test "initial futures sync walks multiple 7-day windows from sync_start_date" do
     @family.update!(currency: "USD")
     @item.update!(sync_start_date: 20.days.ago)
