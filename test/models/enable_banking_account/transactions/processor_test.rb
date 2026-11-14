@@ -708,4 +708,17 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal [ [ sibling_id("r-b"), BigDecimal("7.00") ] ],
                  @account.entries.where(source: "enable_banking", excluded: false).pluck(:external_id, :amount)
   end
+
+  test "the plain id goes to the row in the stored entry's currency" do
+    collapsed = create_transaction(
+      account: @account, name: "Laundromat", date: 2.days.ago.to_date, amount: 7, currency: "EUR",
+      external_id: "enable_banking_tid-x", source: "enable_banking"
+    )
+    collapsed.mark_user_modified!
+    usd = raw_shared_tid_transaction(entry_reference: "r-u", amount: "7.00").deep_merge(transaction_amount: { currency: "usd" })
+    sync_shared(usd, raw_shared_tid_transaction(entry_reference: "r-e", amount: "7.00"))
+
+    assert_equal [ [ "enable_banking_tid-x", "EUR" ], [ sibling_id("r-u"), "USD" ] ],
+                 @account.entries.where(source: "enable_banking").order(:external_id).pluck(:external_id, :currency)
+  end
 end

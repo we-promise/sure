@@ -2,6 +2,7 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  extend CurrencyNormalizable
   include CardAuthorizationHold
 
   # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
@@ -88,7 +89,7 @@ class EnableBankingEntry::Processor
 
     groups.each do |legacy_id, indexes|
       free = indexes.reject { |i| stored.key?(suffixed[i]) }
-      score = ->(i) { movement_match(stored[legacy_id], rows[i], account&.family&.timezone) }
+      score = ->(i) { movement_match(stored[legacy_id], rows[i], account) }
       # Rows that already have a suffixed entry never take the plain id; if all do, nobody does (no duplicate).
       owner = free.each_with_index.max_by { |i, pos| [ score[i], -pos ] }&.first
       # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
@@ -106,15 +107,16 @@ class EnableBankingEntry::Processor
     ids
   end
 
-  # 2: same signed amount and date as the entry; 1: same signed amount; 0: neither.
-  def self.movement_match(entry, data, timezone)
+  # 2: same signed amount, currency and date as the entry; 1: same signed amount and currency; 0: neither.
+  def self.movement_match(entry, data, account)
     amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
     return 0 if entry.nil? || amount.blank?
 
     signed = BigDecimal(amount.to_s).abs * (data[:credit_debit_indicator] == "CRDT" ? -1 : 1)
-    return 0 unless entry.amount == signed
+    currency = parse_currency(data.dig(:transaction_amount, :currency)) || parse_currency(data[:currency]) || account.currency
+    return 0 unless entry.amount == signed && entry.currency == currency
 
-    entry.date == transaction_date(data, timezone) ? 2 : 1
+    entry.date == transaction_date(data, account.family&.timezone) ? 2 : 1
   rescue ArgumentError, TypeError
     0
   end
