@@ -767,12 +767,22 @@ class PagesController < ApplicationController
       selected_period = nil
       selected_totals = nil
 
+      # One query for the whole window instead of one per bar. The window ends
+      # at the selected month (never in the future, see money_flow_month_param),
+      # capped at today so an in-progress month doesn't report totals for its
+      # not-yet-arrived days.
+      window_end = [ selected_month.end_of_month, Date.current ].min
+      monthly_totals = income_statement.monthly_totals_for(
+        Period.custom(start_date: months.first, end_date: window_end),
+        account_ids: account_ids
+      )
+
       bars = months.map do |month_start|
         # Cap at today so an in-progress month (most commonly the current one)
         # doesn't report totals for its not-yet-arrived days.
         end_date = [ month_start.end_of_month, Date.current ].min
         period = Period.custom(start_date: month_start, end_date: end_date)
-        totals = income_statement.totals_for(period, account_ids: account_ids)
+        totals = monthly_totals.fetch(month_start)
 
         if month_start == selected_month
           selected_period = period
