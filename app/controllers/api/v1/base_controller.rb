@@ -5,6 +5,14 @@ class Api::V1::BaseController < ApplicationController
 
   InvalidFilterError = Class.new(StandardError)
 
+  # Spellings the strict boolean filters accept (?excluded=true).
+  BOOLEAN_FILTER_VALUES = {
+    "true" => true,
+    "1" => true,
+    "false" => false,
+    "0" => false
+  }.freeze
+
   class << self
     def valid_uuid?(value)
       UuidFormat.valid?(value)
@@ -294,6 +302,13 @@ class Api::V1::BaseController < ApplicationController
       Date.iso8601(params[key].to_s)
     rescue ArgumentError
       raise InvalidFilterError, "#{key} must be an ISO 8601 date"
+    end
+
+    # true or false for an accepted spelling (case and surrounding spaces
+    # ignored), nil for anything else, blank included, so each caller raises
+    # its own filter error.
+    def strict_boolean_filter_value(value)
+      BOOLEAN_FILTER_VALUES[value.to_s.strip.downcase]
     end
 
     # Log API access for monitoring and debugging
