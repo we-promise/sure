@@ -8,7 +8,7 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
       name: "Test EB",
       country_code: "FR",
       application_id: "app_id",
-      client_certificate: "cert"
+      client_certificate: "cert", sync_start_date: 3.months.ago.to_date
     )
     @account = EnableBankingAccount.create!(
       enable_banking_item: @item,

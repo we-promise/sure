@@ -11,8 +11,26 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
       name: "Test Connection",
       country_code: "DE",
       application_id: "test_app_id",
-      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem
+      client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem, sync_start_date: 3.months.ago.to_date
     )
+  end
+
+  test "create succeeds without sync_start_date, which is collected later during account setup" do
+    assert_difference "EnableBankingItem.count", 1 do
+      post enable_banking_items_url, params: {
+        enable_banking_item: {
+          name: "New Connection",
+          country_code: "AT",
+          application_id: "new_app_id",
+          client_certificate: OpenSSL::PKey::RSA.new(2048).to_pem
+        }
+      }
+    end
+
+    assert_redirected_to settings_providers_path
+    item = @family.enable_banking_items.order(:created_at).last
+    assert_nil item.sync_start_date
+    assert item.date?
   end
 
   test "select_bank exposes ASPSP BIC in the searchable data attribute" do
