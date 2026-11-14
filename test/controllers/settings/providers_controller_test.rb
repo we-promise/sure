@@ -664,6 +664,28 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     assert_match(/Sync started/i, response.body)
   end
 
+  test "every family panel syncs its provider's own connection model" do
+    types = Settings::ProvidersController::PANEL_SYNCABLE_TYPES
+
+    assert_equal Settings::ProvidersController::FAMILY_PANEL_KEYS.sort, types.keys.sort
+    types.each do |key, type|
+      model = type.constantize
+      assert_includes model.included_modules, Syncable, "#{key} syncs a model that cannot sync"
+      assert_equal "#{key}_items", model.table_name, "#{key} syncs another provider's model"
+    end
+  end
+
+  test "POST sync for a provider without a family panel schedules nothing" do
+    Sync.where(syncable_type: "PlaidItem").delete_all
+
+    assert_no_enqueued_jobs only: SyncJob do
+      post sync_provider_settings_providers_path(provider_key: "plaid")
+    end
+
+    assert_redirected_to settings_providers_path
+    assert_nil flash[:notice]
+  end
+
   test "GET show includes Interactive Brokers in bank sync providers" do
     get settings_providers_url
 

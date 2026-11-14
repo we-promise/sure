@@ -309,33 +309,32 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_nil Provider::FamilyGenerator.append_provider_summary_case("module Foo\nend\n", key: "gocardless")
   end
 
-  # The row's sync status reads both maps, and its Sync button posts a key that
-  # Settings::ProvidersController#sync looks up in PANEL_SYNCABLE_TYPES.
-  test "adds the provider to the sync maps of the real providers controller" do
+  # The row's sync status reads family_panel_items. Its Sync button posts a key that
+  # Settings::ProvidersController#sync looks up in PANEL_SYNCABLE_TYPES, which is
+  # derived from the adapter's declaration, so it is not patched here.
+  test "adds the provider to the sync items of the real providers controller" do
     source = Rails.root.join("app/controllers/settings/providers_controller.rb").read
-    result = Provider::FamilyGenerator.append_panel_syncable_type(source, key: "gocardless", class_name: "Gocardless")
-    result = Provider::FamilyGenerator.append_family_panel_item(result, key: "gocardless")
+    result = Provider::FamilyGenerator.append_family_panel_item(source, key: "gocardless")
 
     assert_parses result
-    syncable = result[/PANEL_SYNCABLE_TYPES = \{\n(.*?)\n\s*\}\.freeze/m, 1].lines(chomp: true)
     items = result[/def family_panel_items\n\s*\{\n(.*?)\n\s*\}\n/m, 1].lines(chomp: true)
 
-    assert_equal %("gocardless" => "GocardlessItem"), syncable.last.squish
     assert_equal %("gocardless" => @gocardless_items), items.last.squish
     # The arrows line up with the entry above, however long the longest key is.
-    assert_equal syncable[-2].index("=>"), syncable.last.index("=>")
     assert_equal items[-2].index("=>"), items.last.index("=>")
   end
 
   test "keeps a space before the arrow when the new key is longer than the column" do
-    result = Provider::FamilyGenerator.append_panel_syncable_type(<<~RUBY, key: "gocardless_bank_data", class_name: "GocardlessBankData")
-      PANEL_SYNCABLE_TYPES = {
-        "up" => "UpItem"
-      }.freeze
+    result = Provider::FamilyGenerator.append_family_panel_item(<<~RUBY, key: "gocardless_bank_data")
+      def family_panel_items
+        {
+          "up" => @up_items
+        }
+      end
     RUBY
 
     assert_parses result
-    assert_includes result, %(  "up" => "UpItem",\n  "gocardless_bank_data" => "GocardlessBankDataItem"\n}.freeze)
+    assert_includes result, %(    "up" => @up_items,\n    "gocardless_bank_data" => @gocardless_bank_data_items\n  }\n)
   end
 
   test "reserved item columns exclude family but include family_id" do
