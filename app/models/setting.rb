@@ -1,6 +1,9 @@
 # Dynamic settings the user can change within the app (helpful for self-hosting)
 class Setting < RailsSettings::Base
   class ValidationError < StandardError; end
+  class SecretError < StandardError; end
+
+  self.filter_attributes += [ :value ]
 
   cache_prefix { "v1" }
 
@@ -324,7 +327,7 @@ class Setting < RailsSettings::Base
         public_send(key_str)
       else
         # Fall back to individual dynamic entry lookup
-        find_by(var: dynamic_key_name(key_str))&.value
+        DynamicSecret.decrypt(key_str, find_by(var: dynamic_key_name(key_str))&.value)
       end
     end
 
@@ -342,7 +345,10 @@ class Setting < RailsSettings::Base
           clear_cache
         else
           # Use upsert for atomic insert/update to avoid race conditions
-          upsert({ var: dynamic_key, value: value.to_yaml }, unique_by: :var)
+          stored_value = DynamicSecret.encrypt(key_str, value)
+          # Upsert SQL embeds serialized values rather than filtered bind names.
+          write = proc { upsert({ var: dynamic_key, value: stored_value.to_yaml }, unique_by: :var) }
+          logger ? logger.silence(&write) : write.call
           clear_cache
         end
       end
@@ -363,7 +369,11 @@ class Setting < RailsSettings::Base
       return nil if respond_to?(key_str) # Can't delete declared fields
 
       dynamic_key = dynamic_key_name(key_str)
-      value = self[key_str]
+      value = begin
+        self[key_str]
+      rescue SecretError
+        nil # Explicit deletion must also work when the original key is unavailable.
+      end
       where(var: dynamic_key).destroy_all
       clear_cache
       value

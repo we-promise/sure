@@ -140,6 +140,22 @@ module SettingsHelper
     else
       { status: :off }
     end
+  rescue Setting::SecretError
+    { status: :err, meta: t("settings.providers.meta.unreadable_secret") }
+  end
+
+  def provider_field_presentation(field)
+    setting_value = Setting[field.setting_key]
+    env_value = ENV[field.env_key] if field.env_key
+    current_value = setting_value.presence || env_value
+
+    {
+      value: field.secret && current_value.present? ? "********" : current_value,
+      unreadable: false
+    }
+  rescue Setting::SecretError
+    # Keep recovery local to the UI; provider reads must still fail closed.
+    { value: nil, unreadable: true }
   end
 
   def financekit_provider_summary(connections)

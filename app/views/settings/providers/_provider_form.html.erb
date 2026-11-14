@@ -48,25 +48,30 @@
     <div class="space-y-4">
       <% configuration.fields.each do |field| %>
         <%
-          env_value = ENV[field.env_key] if field.env_key
-          setting_value = Setting[field.setting_key]
-          current_value = setting_value.presence || env_value
-
-          display_value = if field.secret && current_value.present?
-            "********"
-          else
-            current_value
-          end
-
+          presentation = provider_field_presentation(field)
           input_type = field.secret ? "password" : "text"
         %>
 
         <div class="space-y-1">
+          <% if presentation[:unreadable] %>
+            <%= render DS::Alert.new(
+                  variant: :error,
+                  title: t(".unreadable_secret_title", field: field.label),
+                  message: t(".unreadable_secret_message")
+                ) %>
+          <% end %>
           <%= form.text_field field.setting_key,
                               label: field.label,
                               type: input_type,
                               placeholder: field.default || (field.required ? "" : "Optional"),
-                              value: display_value %>
+                              value: presentation[:value] %>
+          <% if presentation[:unreadable] %>
+            <%= hidden_field_tag "setting[unreadable_secrets][]", field.setting_key %>
+            <%= form.label "clear_#{field.setting_key}", class: "flex items-center gap-2 text-sm text-primary" do %>
+              <%= check_box_tag "setting[clear_secrets][]", field.setting_key, false, id: "setting_clear_#{field.setting_key}", class: "checkbox checkbox--light" %>
+              <%= t(".clear_unreadable_secret") %>
+            <% end %>
+          <% end %>
           <% if field.description.present? %>
             <p class="text-xs text-secondary px-1"><%= field.description %></p>
           <% end %>

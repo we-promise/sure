@@ -72,5 +72,7 @@ class Provider::PlaidEuAdapter
     else
       Rails.application.config.plaid_eu = nil
     end
+  rescue Setting::SecretError
+    Rails.application.config.plaid_eu = nil
   end
 end

@@ -6,6 +6,32 @@ class SettingsHelperTest < ActionView::TestCase
   # Views get every helper; the Trade Republic summary uses its expiry helper.
   include TradeRepublicHelper
 
+  test "provider field presentation masks readable secrets and preserves ordinary values" do
+    Provider::Factory.ensure_adapters_loaded
+    config = Provider::PlaidAdapter.configuration
+    Setting[:plaid_secret] = "synthetic-secret"
+    Setting[:plaid_client_id] = "synthetic-client-id"
+
+    assert_equal({ value: "********", unreadable: false }, provider_field_presentation(config.fields.find(&:secret)))
+    assert_equal({ value: "synthetic-client-id", unreadable: false }, provider_field_presentation(config.fields.find { |field| field.name == :client_id }))
+  end
+
+  test "provider field presentation permits ENV fallback only when the stored secret is readable or absent" do
+    Provider::Factory.ensure_adapters_loaded
+    field = Provider::PlaidAdapter.configuration.fields.find(&:secret)
+    Setting[:plaid_secret] = nil
+
+    with_env_overrides("PLAID_SECRET" => "synthetic-env-secret") do
+      assert_equal({ value: "********", unreadable: false }, provider_field_presentation(field))
+
+      Setting[:plaid_secret] = "synthetic-secret"
+      Setting.stubs(:setting_encryptor).returns(ActiveSupport::MessageEncryptor.new("x" * 32))
+
+      assert_equal({ value: nil, unreadable: true }, provider_field_presentation(field))
+      assert_raises(Setting::SecretError) { Provider::PlaidAdapter.config_value(:secret) }
+    end
+  end
+
   test "provider_summary for snaptrade is off when family has no snaptrade items" do
     @snaptrade_items = []
 

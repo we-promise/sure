@@ -42,7 +42,7 @@ class Provider::Factory
 
     # Ensures all provider adapters are loaded and registered
     # Uses Rails autoloading to discover adapters dynamically
-    def ensure_adapters_loaded
+    def ensure_adapters_loaded(strict: false)
       # Eager load all adapter files to trigger their registration
       adapter_files.each do |adapter_name|
         adapter_class_name = "Provider::#{adapter_name}"
@@ -51,6 +51,11 @@ class Provider::Factory
         begin
           adapter_class_name.constantize
         rescue NameError => e
+          if strict
+            Rails.logger.error("Provider secret metadata unavailable: adapter=#{adapter_class_name} error=#{e.class}")
+            raise
+          end
+
           Rails.logger.warn("Failed to load adapter: #{adapter_class_name} - #{e.message}")
         end
       end

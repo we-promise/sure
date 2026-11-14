@@ -143,6 +143,10 @@ class Provider::PlaidAdapter < Provider::Base
     else
       Rails.application.config.plaid = nil
     end
+  rescue Setting::SecretError
+    # Discovery must leave manual accounts and unrelated providers available.
+    # Direct credential reads still raise, without an ENV fallback.
+    Rails.application.config.plaid = nil
   end
 
   def sync_path

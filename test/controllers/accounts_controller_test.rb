@@ -17,6 +17,45 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "p.ml-auto.privacy-sensitive"
   end
 
+  test "unreadable Plaid credentials do not block account discovery" do
+    original_us = Rails.application.config.plaid
+    original_eu = Rails.application.config.plaid_eu
+    @user.family.update!(country: "DE")
+
+    %w[plaid plaid_eu].each do |provider_key|
+      %w[plaid plaid_eu].each do |key|
+        Setting["#{key}_client_id"] = "synthetic-client"
+        Setting["#{key}_secret"] = "synthetic-secret"
+      end
+      envelope = { Setting::DynamicSecret::MARKER => 1, "ciphertext" => "broken" }
+      Setting.upsert({ var: "dynamic:#{provider_key}_secret", value: envelope.to_yaml }, unique_by: :var)
+      Rails.application.config.plaid = nil
+      Rails.application.config.plaid_eu = nil
+
+      with_env_overrides("#{provider_key.upcase}_SECRET" => "synthetic-env-secret") do
+        [ users(:family_admin), users(:family_member) ].each do |user|
+          sign_in user
+          get new_account_url
+          assert_response :success
+          keys = @controller.view_assigns["provider_configs"].map { |config| config[:key] }
+          refute_includes keys, provider_key == "plaid" ? "plaid_us" : "plaid_eu"
+          assert_includes keys, provider_key == "plaid" ? "plaid_eu" : "plaid_us"
+
+          get new_depository_url
+          assert_response :success
+        end
+
+        sign_in @user
+        get select_provider_account_url(@account)
+        assert_response :success
+        assert_raises(Setting::SecretError) { Setting["#{provider_key}_secret"] }
+      end
+    end
+  ensure
+    Rails.application.config.plaid = original_us
+    Rails.application.config.plaid_eu = original_eu
+  end
+
   test "account reconciliation indicators only render when manual reconciliation is enabled" do
     get accounts_url
 

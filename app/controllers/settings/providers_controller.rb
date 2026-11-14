@@ -18,6 +18,8 @@ class Settings::ProvidersController < ApplicationController
   end
 
   def update
+    modifying_secret = false
+
     # Build index of valid configurable fields with their metadata
     Provider::Factory.ensure_adapters_loaded
     valid_fields = {}
@@ -40,10 +42,20 @@ class Settings::ProvidersController < ApplicationController
         value = param_value.to_s.strip
         value = nil if value.empty?
 
+        if field.secret && Array(params.dig(:setting, :clear_secrets)).include?(param_key.to_s)
+          value = nil
+        elsif field.secret && value.nil? &&
+            (Array(params.dig(:setting, :unreadable_secrets)).include?(param_key.to_s) || unreadable_secret?(field.setting_key))
+          # A repair form may predate another administrator's replacement.
+          next
+        end
+
         # For secret fields only, skip placeholder values to prevent accidental overwrite
         if field.secret && value == "********"
           next
         end
+
+        modifying_secret ||= field.secret
 
         key_str = field.setting_key.to_s
 
@@ -73,7 +85,11 @@ class Settings::ProvidersController < ApplicationController
       redirect_to settings_providers_path, notice: t(".no_changes")
     end
   rescue => error
-    Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")
+    if modifying_secret
+      Rails.logger.error("Failed to update provider settings: #{error.class}")
+    else
+      Rails.logger.error("Failed to update provider settings: #{error.class} - #{error.message}")
+    end
     flash.now[:alert] = "Failed to update provider settings. Please try again."
     prepare_show_context
     render :show, status: :unprocessable_entity
@@ -141,6 +157,13 @@ class Settings::ProvidersController < ApplicationController
   end
 
   private
+    def unreadable_secret?(key)
+      Setting[key]
+      false
+    rescue Setting::SecretError
+      true
+    end
+
     def provider_params
       # Dynamically permit all provider configuration fields
       Provider::Factory.ensure_adapters_loaded

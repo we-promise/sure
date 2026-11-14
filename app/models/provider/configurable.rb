@@ -134,7 +134,7 @@ module Provider::Configurable
     # @param name [Symbol] The field name
     # @param label [String] Human-readable label
     # @param required [Boolean] Whether this field is required
-    # @param secret [Boolean] Whether this field contains sensitive data (will be masked in UI)
+    # @param secret [Boolean] Mask in the UI and encrypt dynamic Setting persistence
     # @param env_key [String] The ENV variable key for this field
     # @param default [String] Default value if none provided
     # @param description [String] Optional help text
@@ -266,42 +266,6 @@ module Provider::Configurable
         return nil if val.nil?
         normalized = val.to_s.strip
         normalized.empty? ? nil : normalized
-      end
-  end
-end
-
-# Registry to store all provider configurations
-module Provider::ConfigurationRegistry
-  class << self
-    def register(provider_key, configuration, adapter_class = nil)
-      registry[provider_key] = configuration
-      adapter_registry[provider_key] = adapter_class if adapter_class
-    end
-
-    def get(provider_key)
-      registry[provider_key]
-    end
-
-    def all
-      registry.values
-    end
-
-    def providers
-      registry.keys
-    end
-
-    # Get the adapter class for a provider key
-    def get_adapter_class(provider_key)
-      adapter_registry[provider_key]
-    end
-
-    private
-      def registry
-        @registry ||= {}
-      end
-
-      def adapter_registry
-        @adapter_registry ||= {}
       end
   end
 end
