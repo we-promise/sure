@@ -1,4 +1,8 @@
 import { Controller } from "@hotwired/stimulus";
+import {
+  parseGroupedWholeNumber,
+  precisionFromStep,
+} from "utils/evaluate_amount_expression";
 
 // Tells the user what each funding account still has room for, as they type.
 //
@@ -72,10 +76,17 @@ export default class extends Controller {
       );
     }
 
-    if (!this.constructor.ALLOCATION_PATTERN.test(raw))
-      return this.#hide(warning);
-
-    const entered = Number.parseFloat(raw.replace(",", "."));
+    // In a whole-number currency (PYG, JPY) a dot or comma is grouping, as
+    // the field itself reads it: "1.500" is 1500, not 1.5.
+    let entered;
+    if (precisionFromStep(input.step) === 0 && /[.,]/.test(raw)) {
+      entered = parseGroupedWholeNumber(raw);
+      if (entered === null) return this.#hide(warning);
+    } else {
+      if (!this.constructor.ALLOCATION_PATTERN.test(raw))
+        return this.#hide(warning);
+      entered = Number.parseFloat(raw.replace(",", "."));
+    }
     if (Number.isNaN(entered)) return this.#hide(warning);
 
     const total = others + entered;

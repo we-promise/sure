@@ -278,6 +278,11 @@ describe("parseAmountPaste", () => {
       assert.equal(parseAmountPaste("$1,234.56", jpy), null)
     })
 
+    it("accepts a zero cents part on a whole amount", () => {
+      assert.equal(parseAmountPaste("₲ 150.000.000,00", pyg), 150000000)
+      assert.equal(parseAmountPaste("¥1,000.00", jpy), 1000)
+    })
+
     it("still parses plain and space-grouped integers", () => {
       assert.equal(parseAmountPaste("1500000", pyg), 1500000)
       assert.equal(parseAmountPaste("1 500 000", pyg), 1500000)

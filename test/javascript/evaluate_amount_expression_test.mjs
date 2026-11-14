@@ -433,6 +433,14 @@ describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
     assert.equal(evaluateAmountExpression("1.000+1000*1.5", whole), 2500)
   })
 
+  it("accepts a zero cents part on a whole amount", () => {
+    assert.equal(evaluateAmountExpression("1.500.000,00", whole), 1500000)
+    assert.equal(evaluateAmountExpression("1500.00", whole), 1500)
+    assert.equal(evaluateAmountExpression("1,000.00", whole), 1000)
+    assert.equal(evaluateAmountExpression("1.000.00", whole), null)
+    assert.equal(evaluateAmountExpression("1.50", whole), null)
+  })
+
   it("rejects a separator that is not a three-digit group instead of rounding it", () => {
     assert.equal(evaluateAmountExpression("150.5", whole), null)
     assert.equal(evaluateAmountExpression("150.000000", whole), null)
