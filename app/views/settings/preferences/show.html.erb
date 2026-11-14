@@ -87,10 +87,10 @@
         <% if Current.user.admin? && preview_features_enabled? %>
           <div class="flex items-center justify-between">
             <div class="space-y-1">
-              <p class="text-sm flex items-center gap-1.5">
-                <%= t(".personal_budgets") %>
+              <div class="flex items-center gap-1.5">
+                <p class="text-sm"><%= t(".personal_budgets") %></p>
                 <%= render DS::Pill.new(label: t("shared.preview"), size: :sm) %>
-              </p>
+              </div>
               <p class="text-secondary text-sm"><%= t(".personal_budgets_hint") %></p>
             </div>
             <%= family_form.toggle :personal_budgets,
