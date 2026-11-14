@@ -815,6 +815,81 @@ class FamilyTest < ActiveSupport::TestCase
     assert_raises(ArgumentError) { family.resolved_categorization_provider }
   end
 
+  # The currencies whose amounts every converted total leaves out (#3640).
+  test "currencies_without_exchange_rate names used currencies with no rate on any date" do
+    family = families(:empty)
+    family.accounts.create!(name: "JPY", balance: 1, currency: "JPY", accountable: Depository.new)
+    family.accounts.create!(name: "KRW", balance: 1, currency: "KRW", accountable: Depository.new)
+    family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 400.days.ago.to_date, rate: 0.009)
+
+    assert_equal %w[KRW], family.currencies_without_exchange_rate
+  end
+
+  test "stale_exchange_rate_dates names used currencies whose newest rate is out of date" do
+    family = families(:empty)
+    family.accounts.create!(name: "JPY", balance: 1, currency: "JPY", accountable: Depository.new)
+    family.accounts.create!(name: "CAD", balance: 1, currency: "CAD", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: family.currency, date: Date.current, rate: 0.73)
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
+  end
+
+  # The stale note says today's totals use the old rate, so it names only
+  # currencies today's totals convert: account balances and current holdings.
+  # A trip's yen spending from long ago still has an old newest rate, but
+  # nothing converts it today.
+  test "stale_exchange_rate_dates ignores a currency only old entries use" do
+    family = families(:empty)
+    home = family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    home.entries.create!(name: "Tokyo dinner", date: 400.days.ago.to_date, amount: 5_000, currency: "JPY",
+                         entryable: Transaction.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 400.days.ago.to_date, rate: 0.0067)
+
+    assert_empty family.stale_exchange_rate_dates
+  end
+
+  test "stale_exchange_rate_dates names the currency of a current holding" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "JPH#{SecureRandom.hex(2)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 1_000, amount: 1_000, currency: "JPY")
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
+  end
+
+  # A trade can be priced in a currency neither its entry nor its account
+  # uses, and holding cost converts that currency.
+  test "currencies_without_exchange_rate includes currencies only a trade uses" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "SEK#{SecureRandom.hex(2)}", name: "Stockholm Listed")
+    account.entries.create!(name: "Buy", date: Date.current, amount: 100, currency: family.currency,
+                            entryable: Trade.new(security: security, qty: 1, price: 1000, currency: "SEK"))
+
+    assert_equal %w[SEK], family.currencies_without_exchange_rate
+  end
+
+  test "a disabled account's currency is not named" do
+    family = families(:empty)
+    family.accounts.create!(name: "Old KRW", balance: 1, currency: "KRW", accountable: Depository.new, status: "disabled")
+
+    assert_empty family.currencies_without_exchange_rate
+  end
+
+  # The pages pass the viewer's accounts, so a member is not told about an
+  # account they cannot see, and the note matches the totals they get.
+  test "currencies_without_exchange_rate names only the given accounts' currencies" do
+    family = families(:empty)
+    home = family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    family.accounts.create!(name: "KRW", balance: 1, currency: "KRW", accountable: Depository.new)
+
+    assert_equal %w[KRW], family.currencies_without_exchange_rate
+    assert_empty family.currencies_without_exchange_rate(accounts: family.accounts.where(id: home.id))
+  end
+
   test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
     family = families(:empty)
     account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
