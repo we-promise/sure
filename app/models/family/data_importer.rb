@@ -483,8 +483,8 @@ class Family::DataImporter
     end
 
     # A property's cost tag is imported after the accounts, so the link is
-    # restored once both have their new ids. A tag the import does not carry
-    # leaves the property unlinked.
+    # restored once both have their new ids. A tag the import does not carry,
+    # or a session mapping to a tag since deleted, leaves the property unlinked.
     def link_property_cost_tags(records)
       records.each do |record|
         data = record["data"] || {}
@@ -493,7 +493,7 @@ class Family::DataImporter
 
         account = mapped_record(:accounts, data["id"], @family.accounts, record_type: "Account")
         tag_id = mapped_id(:tags, old_tag_id, record_type: "Account", required: false)
-        next unless account&.property? && tag_id
+        next unless account&.property? && tag_id && @family.tags.exists?(id: tag_id)
 
         account.property.update!(cost_tag_id: tag_id)
       end

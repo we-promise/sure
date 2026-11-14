@@ -92,18 +92,24 @@ class Property < ApplicationRecord
 
   def reload(*)
     remove_instance_variable(:@first_valuation_entry) if defined?(@first_valuation_entry)
+    @purchase_costs = nil
+    @stored_rates = nil
     super
   end
 
-  # The transactions carrying the cost tag, in any of the family's accounts,
-  # that +user+ can see. Excluded, pending and split-parent entries are left
-  # out, as in spending totals.
+  # The transactions carrying the cost tag, in any of the family's accounts
+  # that +user+ can see, closed ones included (the costs stay part of the
+  # purchase). Excluded, pending and split-parent entries and transfers
+  # (Transaction::TRANSFER_KINDS, loan payments among them) are left out, as
+  # in spending totals.
   def cost_entries_for(user)
     return Entry.none if cost_tag_id.nil?
 
+    tagged = Tagging.where(tag_id: cost_tag_id, taggable_type: "Transaction").select(:taggable_id)
+
     account.family.entries
-           .where(account_id: user.accessible_accounts.visible.select(:id))
-           .where(entryable_type: "Transaction", entryable_id: Tagging.where(tag_id: cost_tag_id, taggable_type: "Transaction").select(:taggable_id))
+           .where(account_id: user.accessible_accounts.historical.select(:id))
+           .where(entryable_type: "Transaction", entryable_id: Transaction.where(id: tagged).where.not(kind: Transaction::TRANSFER_KINDS).select(:id))
            .where(excluded: false)
            .excluding_pending
            .excluding_split_parents
@@ -111,16 +117,17 @@ class Property < ApplicationRecord
 
   # The sum of the linked costs in +currency+: outflows add and refunds
   # subtract. Each transaction is converted at the stored rate on its own
-  # date; nil when a rate is missing.
+  # date; nil when a rate is missing. The overview reads it for several
+  # figures, so it is computed once per viewer and currency.
   def purchase_costs_for(user, currency: account.currency)
+    @purchase_costs ||= {}
+    key = [ user.id, currency ]
+    return @purchase_costs[key] if @purchase_costs.key?(key)
+
     totals = cost_entries_for(user).group("entries.currency", "entries.date").sum("entries.amount")
+    converted = totals.map { |(from_currency, date), amount| convert_with_stored_rate(Money.new(amount, from_currency), currency, date) }
 
-    totals.sum(Money.new(0, currency)) do |(from_currency, date), amount|
-      converted = convert_with_stored_rate(Money.new(amount, from_currency), currency, date)
-      return nil if converted.nil?
-
-      converted
-    end
+    @purchase_costs[key] = converted.any?(&:nil?) ? nil : converted.sum(Money.new(0, currency))
   end
 
   # The purchase price plus the linked costs, in +currency+; nil when a rate
@@ -241,9 +248,17 @@ class Property < ApplicationRecord
     def convert_with_stored_rate(money, to_currency, date)
       return money if money.currency.iso_code == to_currency
 
-      rate = ExchangeRate.find_stored_rate(from: money.currency.iso_code, to: to_currency, date: date)
+      rate = stored_rate(money.currency.iso_code, to_currency, date)
       return nil unless rate
 
       money.exchange_to(to_currency, custom_rate: rate.rate)
+    end
+
+    def stored_rate(from, to, date)
+      @stored_rates ||= {}
+      key = [ from, to, date ]
+      return @stored_rates[key] if @stored_rates.key?(key)
+
+      @stored_rates[key] = ExchangeRate.find_stored_rate(from: from, to: to, date: date)
     end
 end

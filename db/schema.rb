@@ -735,6 +735,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_150000) do
     t.index ["account_id", "date"], name: "index_entries_on_account_id_and_date"
     t.index ["account_id", "idempotency_key"], name: "index_entries_on_account_and_idempotency_key", unique: true, where: "(idempotency_key IS NOT NULL)"
     t.index ["account_id", "reconciled_at"], name: "index_entries_on_account_and_reconciled_at", where: "(reconciled_at IS NOT NULL)"
+    t.index ["account_id", "reconciled_status"], name: "index_entries_on_account_id_and_reconciled_status"
     t.index ["account_id", "source", "external_id"], name: "index_entries_on_account_source_and_external_id", unique: true, where: "((external_id IS NOT NULL) AND (source IS NOT NULL))"
     t.index ["account_id"], name: "index_entries_on_account_id"
     t.index ["currency", "amount", "date", "account_id"], name: "index_entries_on_transfer_match_lookup", where: "(((entryable_type)::text = 'Transaction'::text) AND (excluded = false))"
@@ -743,11 +744,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_150000) do
     t.index ["import_id"], name: "index_entries_on_import_id"
     t.index ["import_locked"], name: "index_entries_on_import_locked_true", where: "(import_locked = true)"
     t.index ["parent_entry_id"], name: "index_entries_on_parent_entry_id"
-    t.index ["account_id", "reconciled_status"], name: "index_entries_on_account_id_and_reconciled_status"
-    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying, 'cleared'::character varying, 'reconciled'::character varying]::text[])", name: "chk_entries_reconciled_status"
     t.index ["reconciled_by_statement_id"], name: "index_entries_on_reconciled_by_statement", where: "(reconciled_by_statement_id IS NOT NULL)"
     t.index ["user_modified"], name: "index_entries_on_user_modified_true", where: "(user_modified = true)"
     t.check_constraint "reconciled_by_statement_id IS NULL OR reconciled_at IS NOT NULL", name: "chk_entries_reconciled_at_present_when_statement_set"
+    t.check_constraint "reconciled_status::text = ANY (ARRAY['unreconciled'::character varying::text, 'cleared'::character varying::text, 'reconciled'::character varying::text])", name: "chk_entries_reconciled_status"
   end
 
   create_table "eval_datasets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1631,7 +1631,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_150000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
-    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying, 'actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
+    t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying::text, 'actual_365'::character varying::text, 'actual_actual'::character varying::text])", name: "chk_loans_day_count_convention"
     t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
     t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
     t.check_constraint "insurance_rate_type IS NULL OR (insurance_rate_type::text = ANY (ARRAY['level_term'::character varying::text, 'decreasing_life'::character varying::text]))", name: "chk_loans_insurance_rate_type"
@@ -2002,7 +2002,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_150000) do
     t.uuid "cost_tag_id"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
     t.index ["cost_tag_id"], name: "index_properties_on_cost_tag_id"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying::text, 'realie'::character varying::text, 'chimnie'::character varying::text]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

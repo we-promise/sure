@@ -578,6 +578,22 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_nil @family.accounts.find_by!(name: "Orphan Plot").property.cost_tag_id
   end
 
+  test "a session mapping to a since-deleted cost tag leaves the property unlinked" do
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    tag = @family.tags.create!(name: "Gone Land Costs")
+    session.source_mappings.create!(family: @family, source_type: "Tag", source_id: "tag-gone", target: tag)
+    tag.delete
+
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-plot", name: "Replayed Plot", balance: "100", currency: "USD",
+                                 accountable_type: "Property", accountable: { cost_tag_id: "tag-gone" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_nil @family.accounts.find_by!(name: "Replayed Plot").property.cost_tag_id
+  end
+
   test "imports merchants" do
     ndjson = build_ndjson([
       {

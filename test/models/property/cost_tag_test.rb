@@ -96,6 +96,66 @@ class Property::CostTagTest < ActiveSupport::TestCase
     assert_nil @property.cost_adjusted_trend_for(@admin)
   end
 
+  test "costs paid from an account later closed still count" do
+    old_bank = @family.accounts.create!(name: "Old bank", balance: 0, currency: "USD", owner: @admin, accountable: Depository.new)
+    create_transaction(account: old_bank, amount: 8_000, date: @purchase_date, tags: [ @tag ])
+
+    old_bank.disable!
+
+    assert_equal Money.new(8_000, "USD"), @property.purchase_costs_for(@admin)
+    assert_equal 1, @property.cost_entries_for(@admin).count
+  end
+
+  test "costs paid from an account being deleted do not count" do
+    old_bank = @family.accounts.create!(name: "Old bank", balance: 0, currency: "USD", owner: @admin, accountable: Depository.new)
+    create_transaction(account: old_bank, amount: 8_000, date: @purchase_date, tags: [ @tag ])
+
+    old_bank.update!(status: "pending_deletion")
+
+    assert_equal Money.new(0, "USD"), @property.purchase_costs_for(@admin)
+  end
+
+  test "tagged transfers and loan payments are not purchase costs" do
+    Transaction::TRANSFER_KINDS.each do |kind|
+      create_transaction(account: accounts(:depository), amount: 1_500, date: @purchase_date, tags: [ @tag ], kind: kind)
+    end
+    create_transaction(account: accounts(:depository), amount: 700, date: @purchase_date, tags: [ @tag ])
+
+    assert_equal Money.new(700, "USD"), @property.purchase_costs_for(@admin)
+    assert_equal 1, @property.cost_entries_for(@admin).count
+  end
+
+  test "costs and their rates are looked up once across the overview's figures" do
+    @family.update!(currency: "EUR")
+    eur = @family.accounts.create!(name: "EUR", balance: 0, currency: "EUR", owner: @admin, accountable: Depository.new)
+    20.times do |i|
+      date = @purchase_date + i
+      create_transaction(account: eur, amount: 10, currency: "EUR", date: date, tags: [ @tag ])
+      ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: date, rate: 1.1)
+    end
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: @purchase_date, rate: 0.9)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+    @property.reload
+
+    rate_queries = 0
+    count_rates = ->(*, payload) { rate_queries += 1 if payload[:sql].include?("exchange_rates") && !payload[:cached] }
+    ActiveRecord::Base.uncached do
+      ActiveSupport::Notifications.subscribed(count_rates, "sql.active_record") do
+        2.times do
+          @property.purchase_costs_for(@admin)
+          @property.cost_basis_for(@admin)
+          @property.cost_adjusted_trend_for(@admin)
+          @property.family_currency_trend
+          @property.family_currency_cost_adjusted_trend_for(@admin)
+        end
+      end
+    end
+
+    # 20 EUR->USD cost dates, and USD->EUR on the purchase date and today.
+    assert_equal 22, rate_queries
+    assert_in_delta 550_000 * 0.9 - (500_000 * 0.9 + 200), @property.family_currency_cost_adjusted_trend_for(@admin).value.amount, 0.01
+  end
+
   test "the cost tag must belong to the property's family" do
     other_tag = families(:empty).tags.create!(name: "Someone else's")
 
