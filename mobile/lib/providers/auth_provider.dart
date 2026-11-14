@@ -6,8 +6,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/user.dart';
 import '../models/auth_tokens.dart';
 import '../models/sso_provider.dart';
+import '../models/amount_format.dart';
 import '../services/auth_service.dart';
 import '../services/device_service.dart';
+import '../services/user_service.dart';
 import '../services/api_config.dart';
 import '../services/log_service.dart';
 import '../services/telemetry_service.dart';
@@ -36,6 +38,7 @@ class AuthProvider with ChangeNotifier {
   bool _ssoHasPendingInvitation = false;
 
   User? get user => _user;
+  AmountFormat get amountFormat => _user?.amountFormat ?? const AmountFormat();
   bool get isIntroLayout => _user?.isIntroLayout ?? false;
   bool get aiEnabled => _user?.aiEnabled ?? false;
   AuthTokens? get tokens => _tokens;
@@ -67,6 +70,26 @@ class AuthProvider with ChangeNotifier {
       'AuthProvider',
       '$operation failed with ${error.runtimeType}',
     );
+  }
+
+  /// Refreshes the signed-in user from the API, including the resolved amount
+  /// format, and persists it for the next cold start.
+  ///
+  /// Failures are ignored on purpose: a stale cached user must never interrupt
+  /// an existing session.
+  Future<void> refreshCurrentUser() async {
+    final accessToken = _tokens?.accessToken;
+    if (accessToken == null || accessToken.isEmpty || _isApiKeyAuth) return;
+
+    try {
+      final payload = await UserService.fetchCurrentUser(accessToken);
+      final refreshed = User.fromJson(payload);
+      _user = refreshed;
+      await _authService.saveUser(refreshed);
+      notifyListeners();
+    } catch (e) {
+      _logAuthException('refreshCurrentUser', e);
+    }
   }
 
   Future<void> _loadStoredAuth() async {
@@ -101,6 +124,10 @@ class AuthProvider with ChangeNotifier {
           } else {
             await logout();
           }
+        }
+
+        if (_tokens != null && !_tokens!.isExpired && _user != null) {
+          unawaited(refreshCurrentUser());
         }
       }
       _updateTelemetryUser(_user);
