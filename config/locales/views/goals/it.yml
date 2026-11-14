@@ -115,6 +115,7 @@ it:
       notes: Note
       funding_last_30d: ultimi 30gg
       funding_last_90d: ultimi 90gg
+      milestone: "%{percent}% · %{date}"
       status_callout:
         behind: "risparmia %{amount}/mese in più per recuperare"
         behind_covered: "gli impegni in sospeso colmano il divario"

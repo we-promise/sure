@@ -1284,6 +1284,141 @@ class GoalTest < ActiveSupport::TestCase
     assert_not goal.any_consumption?
   end
 
+  # --- Milestones ---------------------------------------------------------------
+
+  # Target 1,000, 400 saved, 50 a month: 25% (250) is passed; 50% (500) is
+  # ceil(100 / 50) = 2 months out, 75% (750) ceil(350 / 50) = 7.
+  def milestone_goal(pace: 50)
+    goal = @family.goals.create!(name: "Milestones", target_amount: 1_000, currency: "USD") do |g|
+      g.goal_accounts.build(account: Account.create!(family: @family, accountable: Depository.new,
+                                                     name: "Milestone pot", currency: "USD", balance: 400))
+    end
+    goal.stubs(:current_balance).returns(BigDecimal("400"))
+    goal.stubs(:pace).returns(BigDecimal(pace.to_s))
+    goal
+  end
+
+  test "a milestone already saved past is reached, with no date" do
+    m = milestone_goal.milestones(as_of: Date.new(2026, 3, 15)).first
+
+    assert_equal [ 25, true, nil ], m.values_at(:percent, :reached, :date)
+  end
+
+  test "each milestone ahead is dated by the whole months it takes at the current pace" do
+    list = milestone_goal.milestones(as_of: Date.new(2026, 3, 15))
+
+    assert_equal [ [ 50, false, "2026-05-15" ], [ 75, false, "2026-10-15" ] ],
+                 list.drop(1).map { |m| m.values_at(:percent, :reached, :date) }
+    assert_equal [ 250.0, 500.0, 750.0 ], list.map { |m| m[:amount] }
+  end
+
+  test "a part month counts as a whole one, and the label names the month" do
+    # At 60 a month, 50% is 100 / 60 = 1.67 months out and 75% is 5.83: both round up.
+    list = milestone_goal(pace: 60).milestones(as_of: Date.new(2026, 3, 15))
+
+    assert_equal [ "2026-05-15", "2026-09-15" ], list.drop(1).map { |m| m[:date] }
+    assert_equal "50% · May 2026", list[1][:label]
+    assert_nil list[0][:label]
+  end
+
+  test "a balance exactly on a milestone has reached it" do
+    goal = milestone_goal
+    goal.stubs(:current_balance).returns(BigDecimal("500"))
+
+    assert goal.milestones(as_of: Date.new(2026, 3, 15))[1][:reached]
+  end
+
+  test "without a positive pace no milestone ahead has a date" do
+    list = milestone_goal(pace: 0).milestones(as_of: Date.new(2026, 3, 15))
+
+    assert_equal [ nil, nil ], list.drop(1).map { |m| m[:date] }
+  end
+
+  # A slow pace would otherwise date a milestone centuries out. The chart
+  # never draws past the target date, so the payload stops there too.
+  test "a milestone the pace would reach only after the target date has no date" do
+    goal = milestone_goal
+    goal.stubs(:target_date).returns(Date.new(2026, 6, 15))
+
+    list = goal.milestones(as_of: Date.new(2026, 3, 15))
+
+    # 50% falls on 2026-05-15, inside the target date; 75% on 2026-10-15, after it.
+    assert_equal [ [ "2026-05-15", false ], [ nil, false ] ], list.drop(1).map { |m| m.values_at(:date, :reached) }
+    assert_nil list[2][:label]
+  end
+
+  # Without a target date nothing caps the date, so a tiny pace dated a
+  # milestone in a year like 106192. Fifty years out is the bound, with or
+  # without a target date.
+  test "a milestone a tiny pace would reach only in the distant future has no date" do
+    goal = milestone_goal(pace: BigDecimal("0.01"))
+    assert_nil goal.target_date, "the cap must not come from a target date, or this asserts nothing"
+
+    list = goal.milestones(as_of: Date.new(2026, 3, 15))
+
+    assert_equal [ [ nil, false, nil ], [ nil, false, nil ] ], list.drop(1).map { |m| m.values_at(:date, :reached, :label) }
+  end
+
+  test "a milestone exactly fifty years out keeps its date and one a month later has none" do
+    # At 0.10 a month: 50% is 60 away from 440, so 600 months; from 439.90
+    # it is 60.10 away, so 601.
+    goal = milestone_goal(pace: BigDecimal("0.1"))
+    goal.stubs(:current_balance).returns(BigDecimal("440"))
+    assert_equal "2076-03-15", goal.milestones(as_of: Date.new(2026, 3, 15))[1][:date]
+
+    goal.stubs(:current_balance).returns(BigDecimal("439.9"))
+    assert_nil goal.milestones(as_of: Date.new(2026, 3, 15))[1][:date]
+  end
+
+  test "a milestone on the target date itself keeps its date" do
+    goal = milestone_goal
+    goal.stubs(:target_date).returns(Date.new(2026, 10, 15))
+
+    assert_equal "2026-10-15", goal.milestones(as_of: Date.new(2026, 3, 15))[2][:date]
+  end
+
+  test "a goal without a target has no milestones" do
+    goal = milestone_goal
+    goal.stubs(:target_amount).returns(0)
+
+    assert_empty goal.milestones(as_of: Date.new(2026, 3, 15))
+  end
+
+  # A clock that moves on every read: the payload's `today` and the milestones
+  # agree only if the payload reads it once and hands the same date down.
+  test "the projection payload dates its milestones from its own today" do
+    goal = milestone_goal
+    base = Date.new(2026, 3, 15)
+    Date.stubs(:current).returns(*(0..200).map { |i| base + i })
+
+    payload = goal.projection_payload
+    today = Date.parse(payload[:today])
+
+    assert_equal goal.milestones(as_of: today).map { |m| m[:date] }, payload[:milestones].map { |m| m[:date] }
+  end
+
+  # The projection's end value used to read the clock for itself, so on a
+  # clock that moves it was measured from a later day than the payload's
+  # `today`.
+  test "the projection end value is measured from the payload's own today" do
+    goal = milestone_goal
+    base = Date.new(2026, 3, 15)
+    goal.stubs(:target_date).returns(base + 3044)
+    Date.stubs(:current).returns(*(0..200).map { |i| base + i * 30 })
+
+    payload = goal.projection_payload
+    months = (goal.target_date - Date.parse(payload[:today])).to_f / 30.44
+
+    # 400 saved plus 50 a month for the months from `today` to the target date.
+    assert_in_delta 400 + 50 * months, payload[:projection_end_value], 0.001
+  end
+
+  test "a negative pace dates no milestone ahead" do
+    list = milestone_goal(pace: -50).milestones(as_of: Date.new(2026, 3, 15))
+
+    assert_equal [ nil, nil ], list.drop(1).map { |m| m[:date] }
+  end
+
   # The ring's saved segment goes through d3.color, which cannot parse a CSS
   # variable; a goal with no colour must still hand it a real colour (#4030).
   test "a goal without a colour gives its ring a real colour" do

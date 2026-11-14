@@ -237,6 +237,7 @@ tr:
       funding_accounts_heading: Kaynak hesaplar
       funding_last_30d: son 30 gün
       funding_last_90d: son 90 gün
+      milestone: "%{percent}% · %{date}"
       header:
         target: Hedef %{amount}
         target_by: Hedef %{amount}, %{date} tarihine kadar

@@ -115,6 +115,7 @@ zh-TW:
       notes: 備註
       funding_last_30d: 近 30 天
       funding_last_90d: 近 90 天
+      milestone: "%{percent}% · %{date}"
       status_callout:
         behind: 每月多存 %{amount} 就能追上
         behind_covered: 待確認投入補上了這個缺口
