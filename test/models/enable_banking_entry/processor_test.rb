@@ -1140,6 +1140,48 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "ACME SHOP", name
   end
 
+  test "prefers the remittance merchant over a generic transaction type description" do
+    # SEB sends no counterparty for card purchases; the merchant is only in the remittance
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "RACKSTA KROG" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "RACKSTA KROG", name
+  end
+
+  test "prefers the remittance payee over a generic direct debit description" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Direct debit" }
+    )
+
+    assert_equal "TELIA SVERIGE", name
+  end
+
+  test "keeps the transaction type description when the remittance is only a reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "52220151204 092408560500" ],
+      bank_transaction_code: { description: "Credit transfer" }
+    )
+
+    assert_equal "Credit transfer", name
+  end
+
+  test "keeps the transaction type description when the remittance is the account holder" do
+    name = build_name_with_family(
+      credit_debit_indicator: "CRDT",
+      creditor: { name: "JANE DOE" },
+      remittance_information: [ "Jane Doe" ],
+      bank_transaction_code: { description: "Transfer" }
+    )
+
+    assert_equal "Transfer", name
+  end
+
   test "uses counterparty when it is human readable" do
     name = build_name(
       credit_debit_indicator: "CRDT",
