@@ -325,6 +325,51 @@ class PlaidAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal 50, account.cash_balance
   end
 
+  # The sync day can still fall behind the anchor, e.g. when the family's
+  # time zone moves west across midnight between two syncs.
+  test "an investment snapshot dated behind the anchor is recorded on its own date and leaves the anchor alone" do
+    PlaidAccount::Investments::TransactionsProcessor.any_instance.stubs(:process)
+    PlaidAccount::Investments::HoldingsProcessor.any_instance.stubs(:process)
+    PlaidAccount::Transactions::Processor.any_instance.stubs(:process)
+    expect_no_liability_processor_calls
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(1000)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(100)
+
+    sync_day = Date.new(2026, 12, 18)
+    @plaid_account.update!(
+      plaid_type: "investment",
+      raw_holdings_payload: { "holdings" => [ { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "100", "institution_price_as_of" => sync_day.to_s } ] }
+    )
+    travel_to(sync_day.in_time_zone.change(hour: 12)) { PlaidAccount::Processor.new(@plaid_account).process }
+    account = @plaid_account.current_account
+    anchor = account.valuations.current_anchor.first
+
+    # The next sync runs on the day before, with an older total and a
+    # different currency.
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:balance).returns(900)
+    PlaidAccount::Investments::BalanceCalculator.any_instance.stubs(:cash_balance).returns(50)
+    @plaid_account.update!(
+      currency: "EUR",
+      raw_holdings_payload: { "holdings" => [ { "security_id" => "sec_1", "quantity" => "10", "institution_price" => "90", "institution_price_as_of" => (sync_day - 1).to_s } ] }
+    )
+
+    travel_to((sync_day - 1).in_time_zone.change(hour: 12)) do
+      assert_difference "account.valuations.reconciliation.count", 1 do
+        PlaidAccount::Processor.new(@plaid_account).process
+      end
+    end
+
+    anchor.reload
+    account.reload
+    assert_equal sync_day, anchor.entry.date
+    assert_equal 1000, anchor.entry.amount, "the anchor still describes the later day"
+    assert_equal 1000, account.balance
+    assert_equal 100, account.cash_balance
+    assert_equal "USD", account.currency, "the cached figures keep the denomination they were written in"
+    historical = account.valuations.reconciliation.joins(:entry).find_by(entries: { date: sync_day - 1 })
+    assert_equal 900, historical.entry.amount
+  end
+
   # A fund whose NAV is a session behind: each sync reports the previous
   # close. The holdings are dated by the sync day, so Plaid's total has to be
   # anchored on that day too, or the reverse calculator values the holdings on
