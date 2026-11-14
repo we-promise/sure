@@ -404,7 +404,8 @@ class ReportsController < ApplicationController
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
-        .where(qty: 0) # buys/sells move value between cash and holdings; keep cash income and fees
+        # Buys/sells move value between cash and holdings; keep cash income and fees, decided by label as Portfolio::FlowClassifier does
+        .where("trades.qty = 0 OR trades.investment_activity_label IN (?)", Portfolio::FlowClassifier::INCOME_LABELS + Portfolio::FlowClassifier::FEE_LABELS)
         .where(entries: { entryable_type: "Trade", excluded: false, date: @period.date_range })
         .includes(entry: :account, category: :parent)
       trades = exclude_tax_advantaged_accounts(trades)

@@ -787,6 +787,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     [ "$55.54", "$7.77" ].each { |amount| assert_includes rows, amount }
   end
 
+  # The activity-label editor relabels a trade without changing its quantity.
+  test "activity breakdown keeps a trade relabelled as a dividend" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    brokerage = @family.accounts.create!(owner: @user, name: "Reports Brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new(subtype: "brokerage"))
+    create_transaction(account: accounts(:depository), name: "Coffee", amount: 3)
+    create_trade(securities(:aapl), account: brokerage, qty: -1, date: Date.current, price: 42.17)
+      .trade.update!(investment_activity_label: "Dividend")
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_includes css_select("tr[data-category='category-other_investments']").map(&:text).join, "$42.17"
+  end
+
   test "monthly period navigation shows previous month link" do
     get reports_path(period_type: :monthly)
     assert_response :ok
