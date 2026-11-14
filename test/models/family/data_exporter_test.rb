@@ -1327,9 +1327,10 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
-  # A trade's exchange_rate converts from currency (the trade's), and the
-  # entry's currency can differ from it, so each record names the amount's
-  # currency too.
+  # The cost basis applies a trade's stored rate from currency (the trade's)
+  # and the cash balance from the entry's currency, which an edit can make
+  # differ. The rate is exported when either path applies it, with both
+  # currencies named.
   test "exports the amount's currency next to the rate on trades and transactions" do
     investment_account = @family.accounts.create!(
       name: "Amount Currency Account",
@@ -1338,13 +1339,23 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       currency: "USD"
     )
     security = Security.create!(ticker: "AMC#{SecureRandom.hex(3).upcase}", name: "Amount Currency Security")
-    trade_entry = investment_account.entries.create!(
+    # Only the cost basis applies the rate: the entry is in the account's currency.
+    cost_basis_entry = investment_account.entries.create!(
       date: Date.parse("2024-05-20"),
       amount: 100,
       name: "Buy",
-      currency: "GBP",
+      currency: "USD",
       entryable: Trade.new(security: security, qty: 1, price: 100, currency: "EUR", investment_activity_label: "Buy",
         extra: { "exchange_rate" => 1.1 })
+    )
+    # Only the cash balance applies it: the trade is in the account's currency.
+    cash_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: -5,
+      name: "Dividend",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 0, price: 0, currency: "USD", investment_activity_label: "Dividend",
+        extra: { "exchange_rate" => 1.2 })
     )
     transaction_entry = investment_account.entries.create!(
       date: Date.parse("2024-05-21"),
@@ -1356,12 +1367,19 @@ class Family::DataExporterTest < ActiveSupport::TestCase
 
     Zip::File.open_buffer(@exporter.generate_export) do |zip|
       records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
-      trade_data = records.find { |record| record["type"] == "Trade" && record.dig("data", "id") == trade_entry.entryable.id }["data"]
-      transaction_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == transaction_entry.entryable.id }["data"]
+      data_for = ->(type, entry) { records.find { |record| record["type"] == type && record.dig("data", "id") == entry.entryable.id }["data"] }
 
-      assert_equal "GBP", trade_data["amount_currency"]
-      assert_equal "EUR", trade_data["currency"]
-      assert_equal 1.1, trade_data["exchange_rate"]
+      cost_basis_data = data_for.call("Trade", cost_basis_entry)
+      assert_equal 1.1, cost_basis_data["exchange_rate"]
+      assert_equal "EUR", cost_basis_data["currency"]
+      assert_equal "USD", cost_basis_data["amount_currency"]
+
+      cash_data = data_for.call("Trade", cash_entry)
+      assert_equal 1.2, cash_data["exchange_rate"]
+      assert_equal "USD", cash_data["currency"]
+      assert_equal "EUR", cash_data["amount_currency"]
+
+      transaction_data = data_for.call("Transaction", transaction_entry)
       assert_equal "EUR", transaction_data["amount_currency"]
       assert_equal 1.1, transaction_data["exchange_rate"]
     end

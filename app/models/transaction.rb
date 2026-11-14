@@ -46,7 +46,10 @@ class Transaction < ApplicationRecord
 
     value = extra["exchange_rate"]
     return nil unless value.is_a?(Numeric) || value.is_a?(String)
-    return nil if entry&.currency.blank? || entry&.currency == entry&.account&.currency
+
+    entry_currency = entry&.currency.to_s.upcase
+    account_currency = entry&.account&.currency.to_s.upcase
+    return nil if entry_currency.blank? || account_currency.blank? || entry_currency == account_currency
 
     rate = value.to_d.to_f
     rate if rate.finite? && rate.positive?

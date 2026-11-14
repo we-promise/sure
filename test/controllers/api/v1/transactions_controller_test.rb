@@ -1562,6 +1562,16 @@ end
     end
   end
 
+  test "exchange rate compares currency codes regardless of case" do
+    entry = create_transaction(account: @account, name: "Lower case row", currency: "EUR", entryable: Transaction.new)
+    entry.update_column(:currency, @account.currency.downcase)
+    entry.entryable.update_column(:extra, { "exchange_rate" => 1.1 })
+
+    get api_v1_transaction_url(entry.entryable), headers: api_headers(@read_only_api_key)
+    assert_response :success
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
   test "exchange rate is read the way the app converts it and only where it applies" do
     entry = create_transaction(account: @account, name: "Rate row", currency: "EUR", entryable: Transaction.new)
     transaction = entry.entryable

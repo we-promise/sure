@@ -1066,7 +1066,7 @@ RSpec.configure do |config|
               },
               amount_currency: {
                 type: :string,
-                description: 'Currency exchange_rate converts from: the currency of the amount, the same as currency on a transaction.'
+                description: 'Currency of the amount, always the same as currency on a transaction.'
               },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
@@ -1782,11 +1782,11 @@ RSpec.configure do |config|
               exchange_rate: {
                 type: :number,
                 nullable: true,
-                description: "Rate from currency (the trade's, which price and fee are in) to the account's currency stored on the trade, such as one reported by the provider. The cost basis converts with it. Null when none is stored or the trade is in the account's currency."
+                description: "Rate to the account's currency stored on the trade, such as one reported by the provider. The cost basis applies it to price and fee, from currency; the cash balance applies it to amount, from amount_currency. The two match unless an edit changed only the amount's currency. Null when none is stored or both currencies are the account's."
               },
               amount_currency: {
                 type: :string,
-                description: "Currency of the trade's amount (the entry's). It can differ from currency, the trade's own, which exchange_rate converts from."
+                description: "Currency of the trade's amount (the entry's), which the cash balance converts from with exchange_rate. It can differ from currency, the trade's own."
               },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {

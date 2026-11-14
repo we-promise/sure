@@ -38,24 +38,29 @@ class Trade < ApplicationRecord
     extra&.dig("exchange_rate")
   end
 
-  # The stored exchange rate, from the trade's currency to the account's, as a
-  # number, read the way Money#exchange_to reads it (to_d). The cost basis
-  # (Holding::TradeCalculatorHelpers, Holding.avg_cost_rates_join) converts
-  # price and fee from trade.currency with it, and the web form and
-  # PATCH /api/v1/trades/:id change only entry.currency, so trade.currency is
-  # the currency the rate was given for. nil when the app would not use it:
-  # none is stored, it is not a positive number that survives the conversion
-  # to Float, or the trade is already in the account's currency. The API and
-  # the data export read this, so a malformed value written straight into
-  # extra, or an extra that is not a hash, cannot break them.
+  # The stored exchange rate as a number, read the way Money#exchange_to reads
+  # it (to_d), or nil when the app would not use it. The app applies it on two
+  # paths: the cost basis (Holding::TradeCalculatorHelpers) converts price and
+  # fee from trade.currency, and the cash balance (Balance::SyncCache) converts
+  # entry.amount_money from entry.currency. The two currencies are the same
+  # unless the web form or PATCH /api/v1/trades/:id changed entry.currency,
+  # which leaves trade.currency as it was. So the rate is returned when either
+  # currency differs from the account's, and is nil when none is stored, it is
+  # not a positive number that survives the conversion to Float, or both are
+  # the account's currency. The API and the data export read this, so a
+  # malformed value written straight into extra, or an extra that is not a
+  # hash, cannot break them.
   def numeric_exchange_rate
     return nil unless extra.is_a?(Hash)
 
     value = extra["exchange_rate"]
     return nil unless value.is_a?(Numeric) || value.is_a?(String)
 
-    account_currency = entry&.account&.currency
-    return nil if currency.blank? || account_currency.blank? || currency == account_currency
+    account_currency = entry&.account&.currency.to_s.upcase
+    return nil if account_currency.blank?
+
+    foreign = [ currency, entry&.currency ].compact_blank.map(&:upcase)
+    return nil unless foreign.any? { |code| code != account_currency }
 
     rate = value.to_d.to_f
     rate if rate.finite? && rate.positive?

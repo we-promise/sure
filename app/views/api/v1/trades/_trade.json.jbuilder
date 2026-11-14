@@ -13,13 +13,13 @@ json.investment_activity_label trade.investment_activity_label
 # locale-independent decimal string (the stored value).
 json.fee trade.fee_money.format
 json.fee_decimal trade.fee.to_s("F")
-# The rate from `currency` (the trade's, which price and fee are in) to the
-# account's currency stored on the trade, for example by a provider that
-# reports its own rate. The cost basis converts with it. Null when the trade
-# carries none, in which case market rates are used, and when the trade is in
-# the account's currency. amount_currency is the currency of `amount` (the
-# entry's), which can differ from `currency`: the web form and PATCH change the
-# entry's currency without touching the trade's.
+# The rate to the account's currency stored on the trade, for example by a
+# provider that reports its own rate. The cost basis applies it to price and
+# fee, from `currency` (the trade's); the cash balance applies it to `amount`,
+# from amount_currency (the entry's). The two are the same unless the web form
+# or PATCH changed the entry's currency, which leaves the trade's as it was.
+# Null when the trade carries none, in which case market rates are used, and
+# when both currencies are the account's.
 json.exchange_rate trade.numeric_exchange_rate
 json.amount_currency trade.entry.currency
 

@@ -1202,7 +1202,9 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
   # The cost basis converts price and fee from trade.currency with the stored
   # rate (Holding::TradeCalculatorHelpers), and the web form and
   # PATCH /api/v1/trades/:id change entry.currency without touching
-  # trade.currency, so the rate stays tied to the trade's currency.
+  # trade.currency, so the rate stays tied to the trade's currency there. The
+  # cash balance (Balance::SyncCache) converts the amount from the entry's
+  # currency with the same rate.
   test "exchange rate stays tied to the trade's currency when the entry's currency changes" do
     security = Security.create!(ticker: "TAXC", name: "Currency Mismatch Security", country_code: "US")
     entry = @investment_account.entries.create!(
@@ -1242,11 +1244,39 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
     assert_equal 1.1, JSON.parse(response.body)["exchange_rate"]
 
-    # A trade in the account's own currency never converts with the rate,
-    # whatever the entry's currency is.
+    # The other way round, the cost basis never applies the rate but the cash
+    # balance converts the amount from the entry's currency with it.
     entry.update_columns(currency: "EUR")
     trade.update_columns(currency: @investment_account.currency)
+    assert_equal 110, entry.reload.amount_money.exchange_to("USD", custom_rate: trade.reload.exchange_rate).amount,
+      "the cash balance converts from the entry's currency with the stored rate"
     get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    body = JSON.parse(response.body)
+    assert_equal 1.1, body["exchange_rate"]
+    assert_equal "USD", body["currency"]
+    assert_equal "EUR", body["amount_currency"]
+
+    # With both in the account's currency, neither path applies it.
+    entry.update_columns(currency: @investment_account.currency)
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_nil JSON.parse(response.body)["exchange_rate"]
+  end
+
+  test "exchange rate compares currency codes regardless of case" do
+    security = Security.create!(ticker: "TAXL", name: "Lower Case Currency Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 100,
+      name: "Buy TAXL",
+      currency: "usd",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "usd", investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 1.1 })
+    )
+    assert_equal 100, entry.amount_money.exchange_to("USD", custom_rate: entry.entryable.exchange_rate).amount,
+      "the app treats usd as the account's currency"
+
+    get api_v1_trade_url(entry.entryable), headers: api_headers(read_only_api_key)
+    assert_response :success
     assert_nil JSON.parse(response.body)["exchange_rate"]
   end
 
