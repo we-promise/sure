@@ -290,6 +290,45 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_not @plaid_account.current_account.holdings.exists?(security: securities(:msft))
   end
 
+  test "stores Plaid's total cost basis as a per-share cost basis" do
+    @plaid_account.update!(raw_holdings_payload: {
+      holdings: [
+        {
+          "security_id" => "123",
+          "quantity" => 4,
+          "institution_price" => 150,
+          "cost_basis" => 500,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => Date.current
+        },
+        {
+          "security_id" => "456",
+          "quantity" => 10,
+          "institution_price" => 20,
+          "cost_basis" => nil,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => Date.current
+        }
+      ]
+    })
+
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "123")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "456")
+                      .returns(OpenStruct.new(security: securities(:msft)))
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    holdings = Holding.where(account: @plaid_account.current_account, date: Date.current)
+
+    aapl = holdings.find_by!(security: securities(:aapl))
+    assert_equal BigDecimal("125"), aapl.cost_basis
+    assert_equal "provider", aapl.cost_basis_source
+
+    msft = holdings.find_by!(security: securities(:msft))
+    assert_nil msft.cost_basis
+  end
+
   test "uses account currency as fallback when Plaid omits iso_currency_code" do
     account = @plaid_account.current_account
 

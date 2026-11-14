@@ -32,6 +32,7 @@ class PlaidAccount::Investments::HoldingsProcessor
         currency: plaid_holding["iso_currency_code"] || account.currency,
         date: holding_date,
         price: price_bd,
+        cost_basis: per_share_cost_basis(plaid_holding, quantity_bd),
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
         delete_future_holdings: false  # Plaid doesn't allow holdings deletion
@@ -52,6 +53,12 @@ class PlaidAccount::Investments::HoldingsProcessor
 
     def holdings
       plaid_account.raw_holdings_payload&.[]("holdings") || []
+    end
+
+    # Plaid reports cost_basis as the total for the position; holdings store it per share
+    def per_share_cost_basis(plaid_holding, quantity)
+      total_cost = parse_decimal(plaid_holding["cost_basis"])
+      total_cost / quantity if total_cost && quantity.nonzero?
     end
 
     def parse_decimal(value)
