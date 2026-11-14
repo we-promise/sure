@@ -21,14 +21,9 @@ class SnaptradeAccount::Processor
     holdings_count = snaptrade_account.raw_holdings_payload&.size || 0
     Rails.logger.info "SnaptradeAccount::Processor - Holdings payload has #{holdings_count} items"
 
-    # Run the holdings processor when there are security holdings OR
-    # non-primary-currency cash to surface as synthetic cash holdings (#1809).
-    if snaptrade_account.raw_holdings_payload.present? || snaptrade_account.non_primary_cash_entries.any?
-      Rails.logger.info "SnaptradeAccount::Processor - Processing holdings..."
-      SnaptradeAccount::HoldingsProcessor.new(snaptrade_account).process
-    else
-      Rails.logger.warn "SnaptradeAccount::Processor - No holdings payload to process"
-    end
+    # Always run: an empty payload can clear sold positions, and non-primary
+    # cash is surfaced as synthetic cash holdings (#1809).
+    SnaptradeAccount::HoldingsProcessor.new(snaptrade_account).process
 
     # Process activities (trades, dividends, etc.)
     activities_count = snaptrade_account.raw_activities_payload&.size || 0
@@ -156,7 +151,7 @@ class SnaptradeAccount::Processor
         data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
         units = parse_decimal(data[:units]) || 0
         price = parse_decimal(data[:price]) || 0
-        units * price
+        units * price * contract_multiplier(extract_symbol_data(data))
       end
     end
 
