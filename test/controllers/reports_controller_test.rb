@@ -840,6 +840,18 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", reports_path(period_type: :ytd, start_date: prev_start, end_date: prev_end)
   end
 
+  test "the category filter lists the category's transactions and leaves trades out" do
+    category = @family.categories.create!(name: "Filtered", color: "#123456")
+    create_transaction(account: accounts(:depository), name: "Filtered spend", amount: 42, category: category)
+    create_trade(securities(:aapl), account: accounts(:investment), qty: 1, date: Date.current, price: 100)
+
+    get reports_path(period_type: :monthly, filter_category_id: category.id)
+
+    assert_response :ok
+    assert_select "tr[data-category='category-#{category.id}']", text: /\$42\.00/
+    assert_select "tr[data-category='category-other_investments']", count: 0
+  end
+
   test "ytd period navigation disables next arrow on current year" do
     get reports_path(period_type: :ytd)
     assert_response :ok
