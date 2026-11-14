@@ -1,0 +1,8 @@
+---
+id:
+  password_mailer:
+    password_reset:
+      cta: Atur ulang kata sandi Anda
+      ignore_if_not_requested: Jika Anda tidak mengajukan permintaan ini, Anda dapat mengabaikan email ini.
+      request_made: Permintaan dibuat untuk mengatur ulang kata sandi %{product_name} Anda. Klik tautan berikut untuk mengaturnya ulang.
+      subject: '%{product_name}: Atur ulang kata sandi Anda'

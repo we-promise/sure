@@ -1,0 +1,21 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        monarch_import:
+          missing_columns: "File %{file} tidak memiliki kolom %{columns}. Apakah ini file ekspor Monarch yang benar?"
+          malformed_csv: "File %{file} bukan CSV yang dapat dibaca: %{error}"
+          invalid_number: "%{value} bukan angka"
+          invalid_date: "%{value} bukan tanggal dalam format 2024-01-31"
+          date_out_of_range: "%{value} berada di luar rentang tanggal yang diimpor Sure (%{from} hingga %{to})"
+          blank_account: "Ada baris yang tidak memiliki nama rekening. Pastikan file tersebut adalah ekspor Monarch."
+          blank_transaction_id: "Ada transaksi yang tidak memiliki ID. Pastikan file tersebut adalah ekspor transaksi Monarch."
+          opening_balance_changed: "Saldo awal %{account} berubah saat mengimpor. Tinjau impor dan terbitkan kembali."
+          target_not_supported: "Sure tidak dapat lagi mengimpor ke %{accounts}. Tujuan harus berupa rekening manual tanpa kepemilikan atau perdagangan. Pilih tujuan lain dan terbitkan kembali."
+          no_accounts: "File ekspor tidak berisi rekening apa pun. Pastikan Anda mengekspor file yang benar dari Monarch."
+          files:
+            balances: saldo
+            transactions: transaksi
+        import/monarch_account_mapping:
+          target_taken: "%{account} sudah menjadi tujuan untuk rekening Monarch lainnya. Pilih rekening lain untuk %{monarch}, atau impor sebagai rekening baru."

@@ -1,0 +1,9 @@
+---
+id:
+  sure_import:
+    preflight:
+      missing_reference: "Baris %{line} %{type} merujuk ke %{field} %{value} yang tidak ada."
+      skipped_missing_reference: "Baris %{line} %{type} merujuk ke %{field} %{value} yang tidak ada. Baris ini akan dilewati saat impor."
+      skipped_missing_merchant_reference: "Baris %{line} %{type} merujuk ke merchant (%{value}) yang tidak disertakan dalam ekspor ini. Ini dapat terjadi pada ekspor yang dibuat sebelum merchant yang ditetapkan penyedia ditambahkan ke ekspor Sure. Data akan diimpor tanpa merchant tersebut."
+      skipped_unnamed_recurring: "Baris %{line} %{type} tidak memiliki nama dan merujuk ke merchant (%{value}) yang tidak disertakan dalam ekspor ini. Baris ini akan dilewati saat impor."
+      provider_merchant_diff: "Baris %{line} ProviderMerchant %{name} sudah ada dengan %{fields} yang berbeda. Merchant yang sudah ada akan dipertahankan."
