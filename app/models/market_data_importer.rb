@@ -75,15 +75,7 @@ class MarketDataImporter
 
       accounts_with_securities.find_each do |account|
         Security::Price::ImportWindows.new(account, today: end_date).to_h.each do |security_id, window|
-          previous = windows[security_id]
-          windows[security_id] = if previous
-            Security::Price::ImportWindows::Window.new(
-              start_date: [ previous.start_date, window.start_date ].min,
-              end_date: [ previous.end_date, window.end_date ].max
-            )
-          else
-            window
-          end
+          windows[security_id] = window.merge(windows[security_id])
         end
       end
 

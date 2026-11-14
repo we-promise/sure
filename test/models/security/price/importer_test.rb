@@ -377,6 +377,40 @@ class Security::Price::ImporterTest < ActiveSupport::TestCase
     assert_equal [ 150, 155, 160 ], db_prices.map(&:price)
   end
 
+  test "clear_cache keeps stored prices from before the provider's first price" do
+    Security::Price.delete_all
+
+    Security::Price.create!(security: @security, date: 10.days.ago.to_date, price: 90, currency: "USD")
+    Security::Price.create!(security: @security, date: 9.days.ago.to_date, price: 95, currency: "USD")
+    Security::Price.create!(security: @security, date: 1.day.ago.to_date, price: 100, currency: "USD")
+
+    # The provider's history starts later than the stored history
+    provider_response = provider_success_response([
+      OpenStruct.new(security: @security, date: 1.day.ago.to_date, price: 155, currency: "USD"),
+      OpenStruct.new(security: @security, date: Date.current, price: 160, currency: "USD")
+    ])
+
+    @provider.expects(:fetch_security_prices)
+             .with(symbol: @security.ticker, exchange_operating_mic: @security.exchange_operating_mic,
+                   start_date: get_provider_fetch_start_date(10.days.ago.to_date), end_date: Date.current)
+             .returns(provider_response)
+
+    Security::Price::Importer.new(
+      security: @security,
+      security_provider: @provider,
+      start_date: 10.days.ago.to_date,
+      end_date: Date.current,
+      clear_cache: true
+    ).import_provider_prices
+
+    prices = Security::Price.where(security: @security).order(:date).pluck(:date, :price).to_h
+    assert_equal 90, prices[10.days.ago.to_date]
+    assert_equal 95, prices[9.days.ago.to_date]
+    assert_equal 95, prices[8.days.ago.to_date]
+    assert_equal 155, prices[1.day.ago.to_date]
+    assert_equal 160, prices[Date.current]
+  end
+
   test "clamps end_date to today when future date is provided" do
     Security::Price.delete_all
 

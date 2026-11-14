@@ -25,10 +25,12 @@ vi:
         title: Tự lưu trữ
         danger_zone: Vùng nguy hiểm
         clear_cache: Xóa bộ nhớ đệm dữ liệu
-        clear_cache_warning: Xóa bộ nhớ đệm dữ liệu sẽ xóa tất cả tỷ giá hối đoái, giá chứng khoán, số dư tài khoản và dữ liệu khác. Thao tác này sẽ không xóa tài khoản, giao dịch, danh mục hoặc dữ liệu người dùng khác.
+        clear_cache_warning: "Xóa bộ nhớ đệm dữ liệu sẽ tính lại số dư và vị thế của các tài khoản trong gia đình bạn, đồng thời tải lại tỷ giá hối đoái và giá chứng khoán mà chúng sử dụng. Chỉ số dư và vị thế của gia đình bạn bị xóa; tỷ giá hối đoái và giá chứng khoán được dùng chung với các gia đình khác trên phiên bản này và cũng được cập nhật cho họ. Thao tác này sẽ không xóa tài khoản, giao dịch, danh mục hoặc dữ liệu người dùng khác."
+        clear_cache_warning_without_provider: "Xóa bộ nhớ đệm dữ liệu sẽ tính lại số dư và vị thế của các tài khoản trong gia đình bạn. Chưa cấu hình nhà cung cấp tỷ giá hối đoái hoặc giá chứng khoán, nên tỷ giá và giá đã lưu được giữ nguyên. Thao tác này sẽ không xóa tài khoản, giao dịch, danh mục hoặc dữ liệu người dùng khác."
         confirm_clear_cache:
           title: Xóa bộ nhớ đệm dữ liệu?
-          body: Bạn có chắc chắn muốn xóa bộ nhớ đệm dữ liệu? Thao tác này sẽ xóa tất cả tỷ giá hối đoái, giá chứng khoán, số dư tài khoản và dữ liệu khác. Hành động này không thể hoàn tác.
+          body: "Bạn có chắc chắn muốn xóa bộ nhớ đệm dữ liệu? Số dư và vị thế của các tài khoản trong gia đình bạn sẽ được tính lại, đồng thời tỷ giá hối đoái và giá chứng khoán mà chúng sử dụng sẽ được tải lại. Chỉ số dư và vị thế của gia đình bạn bị xóa; tỷ giá hối đoái và giá chứng khoán được dùng chung với các gia đình khác trên phiên bản này và cũng được cập nhật cho họ. Hành động này không thể hoàn tác."
+          body_without_provider: "Bạn có chắc chắn muốn xóa bộ nhớ đệm dữ liệu? Số dư và vị thế của các tài khoản trong gia đình bạn sẽ được tính lại. Chưa cấu hình nhà cung cấp tỷ giá hối đoái hoặc giá chứng khoán, nên tỷ giá và giá đã lưu được giữ nguyên. Hành động này không thể hoàn tác."
       provider_selection:
         exchange_rate_title: Nhà cung cấp tỷ giá hối đoái
         exchange_rate_description: Chọn một nhà cung cấp để lấy tỷ giá hối đoái tiền tệ.
