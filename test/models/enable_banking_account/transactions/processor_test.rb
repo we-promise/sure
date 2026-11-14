@@ -687,4 +687,13 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
 
     assert_equal [ 20, 30, 50 ], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_i).sort
   end
+  test "an unchanged payload does not re-import a sibling onto a pending hold a rule excluded" do
+    sync_shared(raw_shared_tid_transaction(entry_reference: nil, amount: "50.00").merge(status: "PDNG", _pending: true))
+    @account.entries.find_by!(external_id: "enable_banking_tid-x").enrich_attribute(:excluded, true, source: "rule")
+    rows = [ raw_shared_tid_transaction(entry_reference: "r-a", amount: "57.00"),
+             raw_shared_tid_transaction(entry_reference: "r-b", amount: "20.00").merge(booking_date: 3.days.ago.to_date.to_s) ]
+    2.times { sync_shared(*rows) }
+
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
 end

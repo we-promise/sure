@@ -100,7 +100,7 @@ class EnableBankingEntry::Processor
       # The entry's date is not the bank's when the user locked it or a settled hold froze it: an amount match is then exact.
       own_date = legacy && (legacy.locked?(:date) || legacy.entryable.try(:extra)&.key?("auto_claimed_pending_ids"))
       owner = nil if kept && indexes.none? { |i| ref[i] == kept } && owner && score[owner] < (own_date ? 1 : 2)
-      owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.user_modified? && !legacy.locked?(:amount)
+      owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.protected_from_sync? && !legacy.locked?(:amount)
       indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
     end
     ids
