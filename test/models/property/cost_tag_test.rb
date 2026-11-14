@@ -130,6 +130,38 @@ class Property::CostTagTest < ActiveSupport::TestCase
     assert_nil @property.cost_adjusted_trend_for(@admin)
   end
 
+  test "split parents are not counted next to their parts" do
+    parent = create_transaction(account: accounts(:depository), amount: 1_000, date: @purchase_date, tags: [ @tag ])
+    parent.split!([
+      { name: "Notary", amount: 600, tag_ids: [ @tag.id ] },
+      { name: "Lunch", amount: 400 }
+    ])
+    # Counted once through its tagged part, even with the parent's excluded
+    # flag cleared.
+    parent.update_column(:excluded, false)
+
+    assert_equal Money.new(600, "USD"), @property.purchase_costs_for(@admin)
+    assert_equal 1, @property.cost_entries_for(@admin).count
+  end
+
+  test "pending transactions are not purchase costs" do
+    create_transaction(account: accounts(:depository), amount: 2_000, date: @purchase_date, tags: [ @tag ])
+    pending = create_transaction(account: accounts(:depository), amount: 900, date: @purchase_date, tags: [ @tag ])
+    pending.entryable.update!(extra: { "simplefin" => { "pending" => true } })
+
+    assert_equal Money.new(2_000, "USD"), @property.purchase_costs_for(@admin)
+  end
+
+  test "reload recomputes the costs" do
+    create_transaction(account: accounts(:depository), amount: 100, date: @purchase_date, tags: [ @tag ])
+    assert_equal Money.new(100, "USD"), @property.purchase_costs_for(@admin)
+
+    create_transaction(account: accounts(:depository), amount: 50, date: @purchase_date, tags: [ @tag ])
+    assert_equal Money.new(100, "USD"), @property.purchase_costs_for(@admin)
+
+    assert_equal Money.new(150, "USD"), @property.reload.purchase_costs_for(@admin)
+  end
+
   test "costs paid from an account later closed still count" do
     old_bank = @family.accounts.create!(name: "Old bank", balance: 0, currency: "USD", owner: @admin, accountable: Depository.new)
     create_transaction(account: old_bank, amount: 8_000, date: @purchase_date, tags: [ @tag ])
