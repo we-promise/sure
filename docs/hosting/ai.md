@@ -37,7 +37,7 @@ Background jobs that classify transactions and detect merchants. These use the L
 
 If you use an external agent for chat, you still need an LLM provider configured (`OPENAI_ACCESS_TOKEN` or `ANTHROPIC_API_KEY`) for auto-categorization and merchant detection to work. The two systems are fully independent.
 
-With `mcp_only`, Sure also skips the features that need a user's AI consent: the bills AI shortcuts (review, smart fill, smart configuration). Insights never use AI: their text comes from templates.
+With `mcp_only`, the buttons that start a chat go too, including the bills AI review. Smart fill and smart configuration don't start a chat, so they follow each member's own AI switch, like the other AI features. Insights never use AI: their text comes from templates.
 
 ### Where AI jobs run (Sidekiq lanes)
 
@@ -519,6 +519,21 @@ For self-hosted deployments, you can configure AI settings through the web inter
 5. Optionally set **Chat Response Timeout** — how long the chat waits for a whole turn before showing a "no response" error (default 90s). Raise it for slow local models; see [Chat Errors While the Model Is Still Generating](#chat-errors-while-the-model-is-still-generating).
 
 **Note:** Environment variables take precedence over UI settings. When an env var is set, the corresponding UI field is disabled.
+
+**Give the `web` and `worker` containers the same AI variables.** Each process reads its own
+environment: the web container decides which AI buttons and actions are offered, and the worker
+runs the AI jobs. When their AI variables differ, a feature can be offered that the worker can't
+run, or hidden although it would work. Settings saved in the UI are shared by both.
+
+**Which AI features are available** is decided in one place for every feature except chat, from
+the same settings: a button, rule action or MCP tool appears only when a configured model can do
+the work. For example, **Enhance merchants** appears on an install with only an Anthropic key, as
+merchant enhancement runs on Anthropic too.
+
+Chat, and the buttons that open it (the Bills AI review and prompt chips, **Review with AI** and
+**Dig in with AI**), keep their own check: the user's AI switch and a configured provider. They can
+appear when a custom endpoint has no model, or when chat doesn't accept the configured model, and
+then every chat turn fails with an error.
 
 ## External AI Assistant
 
@@ -1710,9 +1725,13 @@ VECTOR_STORE_PROVIDER=pgvector
 # Embedding model configuration
 EMBEDDING_MODEL=mxbai-embed-large         # Default: mxbai-embed-large
 EMBEDDING_DIMENSIONS=1024                 # Default: 1024 (must match your model)
-EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to OPENAI_URI_BASE if not set
-EMBEDDING_ACCESS_TOKEN=                   # Falls back to OPENAI_ACCESS_TOKEN if not set
+EMBEDDING_URI_BASE=http://ollama:11434/v1 # Falls back to the OpenAI API Base URL (ENV or Settings) if not set
+EMBEDDING_ACCESS_TOKEN=                   # Falls back to the OpenAI Access Token (ENV or Settings) if not set
 ```
+
+The fallbacks include values saved in **Settings** → **Self-Hosting**. Before this release they
+read only `OPENAI_URI_BASE` and `OPENAI_ACCESS_TOKEN` from the environment, so an install that set
+its OpenAI endpoint in Settings sent embeddings to `https://api.openai.com/v1/` without a key.
 
 Sure enables the `vector` extension when it first provisions the chunks table,
 provided the database user has permission. If the AI status page reports that

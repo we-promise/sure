@@ -172,8 +172,7 @@ class AiHealth
         credential: access_token,
         dimensions: dimensions
       ) do
-        probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token, extra_headers: {},
-                                         exact_base_url: true)
+        probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token, exact_base_url: true)
         returned = transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), :embedding, timeout:)
         raise Failure, :dimensions_mismatch unless returned == dimensions
       end
@@ -247,18 +246,29 @@ class AiHealth
         result
       end
 
-      # The endpoint value the transports take, built from what AiHealth resolved.
-      # OpenAI-compatible LLM endpoints send the static OPENAI_EXTRA_HEADERS, as
-      # Provider::Openai does; the embedding endpoint sends none, as
-      # VectorStore::Embeddable doesn't.
-      def config_endpoint(provider:, base_url:, api_key:, responses_api: false, extra_headers: nil, exact_base_url: false)
-        protocol = provider.to_sym == :anthropic ? :anthropic : :compatible
-        extra_headers ||= protocol == :compatible ? Provider::Openai.extra_headers : {}
+      # The endpoint the feature's own calls use, from Ai::Config, with the URL and key AiHealth
+      # resolved and the probe's timeout. Only a probe of a server Ai::Config doesn't know (an
+      # admin's ad-hoc check, or a test) builds one from those values alone.
+      # The endpoint's own API choice stands unless the caller picks one (the tool-call probe).
+      def config_endpoint(provider:, base_url:, api_key:, responses_api: nil, extra_headers: nil, exact_base_url: nil)
+        configured = configured_endpoint(provider.to_sym)
+        overrides = { base_url:, api_key:, timeout_seconds: timeout, max_retries: 0 }
+        overrides[:responses_api] = responses_api unless responses_api.nil?
+        overrides[:extra_headers] = extra_headers if extra_headers
+        overrides[:exact_base_url] = exact_base_url unless exact_base_url.nil?
+        return configured.with(**overrides) if configured
 
-        Ai::Config::Endpoint.new(
-          name: provider.to_s, protocol:, base_url:, api_key:, extra_headers:,
-          timeout_seconds: timeout, max_retries: 0, responses_api:, exact_base_url:
-        )
+        protocol = provider.to_sym == :anthropic ? :anthropic : :compatible
+        Ai::Config::Endpoint.new(name: provider.to_s, protocol:, extra_headers: {}, **overrides)
+      end
+
+      def configured_endpoint(provider)
+        config = Ai::Config.current
+        case provider
+        when :anthropic then config.endpoint(:anthropic)
+        when :openai then config.endpoint(:openai) || config.endpoint(:openai_compatible)
+        when :openai_compatible then config.embedding_model&.endpoint
+        end
       end
 
       def config_model(endpoint, name) = Ai::Config::Model.new(endpoint:, name:)
@@ -296,9 +306,12 @@ class AiHealth
         status.between?(400, 499) && !status.in?(TRANSIENT_HTTP_STATUSES)
       end
 
+      # The configured endpoint's static headers count too, so a changed gateway credential
+      # header isn't answered from the cache.
       def cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
+        headers = configured_endpoint(provider_key.to_s.to_sym)&.extra_headers.to_h.sort.to_json
         fingerprint = Digest::SHA256.hexdigest(
-          [ component, provider_key, endpoint, model, credential, dimensions, verification ].join("\0")
+          [ component, provider_key, endpoint, model, credential, dimensions, verification, headers ].join("\0")
         )
         "#{CACHE_NAMESPACE}/#{fingerprint}"
       end

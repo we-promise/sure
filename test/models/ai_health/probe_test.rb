@@ -129,15 +129,18 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_not_requested chat
   end
 
-  test "LLM probe sends OPENAI_EXTRA_HEADERS, as production calls do" do
+  test "LLM probe sends the configured endpoint's static headers, as production calls do" do
     request = stub_request(:get, "https://llm.example.test/v1/models")
               .with(headers: { "X-Team" => "home" })
               .to_return(status: 200, headers: { "Content-Type" => "application/json" }, body: { data: [ { id: "qwen3" } ] }.to_json)
 
-    ClimateControl.modify(OPENAI_EXTRA_HEADERS: { "X-Team" => "home" }.to_json) do
+    headers = { "X-Team" => "home", "X-Session" => "{session_id}" }.to_json
+    ClimateControl.modify(OPENAI_ACCESS_TOKEN: "t", OPENAI_URI_BASE: "https://llm.example.test/v1", OPENAI_MODEL: "qwen3",
+                          OPENAI_EXTRA_HEADERS: headers) do
       assert @probe.llm(provider: :openai, endpoint: "https://llm.example.test/v1", access_token: "t", model: "qwen3").passing?
     end
     assert_requested request
+    assert_not_requested(:get, "https://llm.example.test/v1/models", headers: { "X-Session" => "{session_id}" })
   end
 
   test "LLM probe reports a spent balance and a wrong key by name" do
@@ -428,6 +431,24 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
       )
       assert result.passing?
     end
+  end
+
+  test "a probe keeps the configured endpoint's API choice unless the caller picks one" do
+    @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", responses_api: true, probe_check: :chat))
+    build = ->(**choice) { @probe.send(:config_endpoint, provider: :openai, base_url: "https://llm.example.test/v1", api_key: "t", **choice) }
+
+    assert build.().responses_api, "the endpoint's Responses API stands"
+    assert_not build.(responses_api: false).responses_api, "the tool-call probe picks Chat Completions"
+  end
+
+  test "a changed static header isn't answered from the cache" do
+    key = lambda do |headers|
+      @probe.stubs(:configured_endpoint).returns(ai_endpoint(name: "openai", extra_headers: headers))
+      @probe.send(:cache_key, component: "llm", provider_key: :openai, endpoint: "https://llm.example.test/v1", model: "m",
+                              credential: "t", dimensions: nil, verification: :models)
+    end
+
+    assert_not_equal key.({ "X-Gateway-Key" => "old" }), key.({ "X-Gateway-Key" => "new" })
   end
 
   test "forced probe bypasses the cached result" do

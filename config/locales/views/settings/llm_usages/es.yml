@@ -8,6 +8,9 @@ es:
         start_date: Fecha de inicio
         end_date: Fecha de fin
         filter: Filtrar
+        total_calls: "Llamadas totales"
+        avg_cost_per_call: "Coste medio/llamada"
+        based_on_calls: "Basado en %{with_cost} de %{total} llamadas con datos de coste"
         total_tokens: Tokens totales
         prompt: prompt
         completion: respuesta
