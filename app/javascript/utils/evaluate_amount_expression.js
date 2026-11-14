@@ -57,8 +57,7 @@ const MAX_AMOUNT = 99999999999999
 // the same rule (parse_amount_paste.js), so a value means the same typed or
 // pasted. It applies to the terms that are added or subtracted only: a factor
 // of * or / keeps the decimal reading, so "1000*1.1" (10% tax) still works,
-// except that a factor shaped like one thousands group ("150.000*12") is
-// rejected, since it reads both ways.
+// as long as it is a plain decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR).
 //
 // A pasted amount may also be grouped with spaces ("1 234,00", as pl or nb
 // write it) or in the Indian style ("1,00,000", which lib/money/formatting.rb
@@ -70,11 +69,14 @@ const MAX_AMOUNT = 99999999999999
 const WHOLE_NUMBER_GROUPED = /^[1-9]\d{0,2}(?:([.,\u0020\u00a0\u202f])\d{3})(?:\1\d{3})*$/
 const WHOLE_NUMBER_INDIAN_GROUPED = /^[1-9]\d?(?:,\d{2})+,\d{3}$/
 
-// A factor of * or / that reads both ways in a whole-number field: one
-// separator after a 1-3 digit lead, then three digits ("150.000", "1,500").
-// As grouping it is 150000, as a decimal 150, so "150.000*12" could mean
-// 1800000 or 1800. It is rejected instead of guessed.
-const AMBIGUOUS_WHOLE_NUMBER_FACTOR = /^[1-9]\d{0,2}[.,]\d{3}$/
+// In a whole-number field a factor of * or / with a separator must be a plain
+// decimal multiplier: 0 and some decimals ("0.125"), or a whole part with no
+// leading zero and one or two decimals ("1.1", "1.25"). The decimals cannot
+// all be zero. Anything else is rejected instead of guessed, because the same
+// text as an amount reads as grouping or is rejected as a likely typo:
+// "150.000*12" could mean 1800000 or 1800, and "150.00*12" is probably a
+// mistyped "150.000*12".
+const WHOLE_NUMBER_DECIMAL_FACTOR = /^(?:0[.,](?!0+$)\d+|[1-9]\d*[.,](?!0{1,2}$)\d{1,2})$/
 
 // Reads an unsigned digit string with a dot or comma in it as a grouped
 // whole number, or returns null when it is not exactly that shape.
@@ -184,16 +186,14 @@ export default function evaluateAmountExpression(value, options = {}) {
   if (numberTokens.some((t) => !NUMBER.test(t.trim()))) return null
 
   // A factor of * or / is a multiplier, not an amount, so it is never read as
-  // whole-number grouping. One that would also read as a grouped amount is
-  // rejected (AMBIGUOUS_WHOLE_NUMBER_FACTOR).
+  // whole-number grouping. In a whole-number field it must then be a plain
+  // decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR) when it has a separator.
   const isFactor = (i) => /[*/]/.test(`${tokens[2 * i - 1] ?? ""}${tokens[2 * i + 1] ?? ""}`)
-  if (
-    options.precision === 0 &&
-    numberTokens.some(
-      (t, i) => isFactor(i) && AMBIGUOUS_WHOLE_NUMBER_FACTOR.test(t.trim().replace(/^[+-]/, "")),
-    )
-  )
-    return null
+  const isUnclearFactor = (t, i) => {
+    const unsigned = t.trim().replace(/^[+-]/, "")
+    return isFactor(i) && /[.,]/.test(unsigned) && !WHOLE_NUMBER_DECIMAL_FACTOR.test(unsigned)
+  }
+  if (options.precision === 0 && numberTokens.some(isUnclearFactor)) return null
   const numbers = numberTokens.map((t, i) =>
     parseTypedNumber(t.trim(), isFactor(i) ? { ...options, precision: undefined } : options),
   )

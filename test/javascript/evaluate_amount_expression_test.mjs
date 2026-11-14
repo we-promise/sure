@@ -448,6 +448,28 @@ describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
     assert.equal(evaluateAmountExpression("1.500*2", { precision: 2 }), 3)
   })
 
+  it("accepts only a plain decimal multiplier as a factor", () => {
+    // The same text as an amount is a likely typo, so it is not a multiplier.
+    assert.equal(evaluateAmountExpression("150.00*12", whole), null)
+    assert.equal(evaluateAmountExpression("150,00*12", whole), null)
+    assert.equal(evaluateAmountExpression("10.00*12", whole), null)
+    assert.equal(evaluateAmountExpression("150.000+150.00*12", whole), null)
+    assert.equal(evaluateAmountExpression("05.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("00.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("1500.000*2", whole), null)
+    assert.equal(evaluateAmountExpression("1500,000*2", whole), null)
+    assert.equal(evaluateAmountExpression("150.0000*12", whole), null)
+    assert.equal(evaluateAmountExpression("1000*1.125", whole), null)
+    assert.equal(evaluateAmountExpression("1000*1.0", whole), null)
+    // Plain decimal multipliers.
+    assert.equal(evaluateAmountExpression("1000*1.10", whole), 1100)
+    assert.equal(evaluateAmountExpression("1000*0.5", whole), 500)
+    assert.equal(evaluateAmountExpression("1000*0,125", whole), 125)
+    assert.equal(evaluateAmountExpression("2*1500", whole), 3000)
+    // Fields with decimals are unaffected.
+    assert.equal(evaluateAmountExpression("150.00*12", { precision: 2 }), 1800)
+  })
+
   it("rejects a leading zero group instead of reading it as grouping", () => {
     assert.equal(evaluateAmountExpression("0.500", whole), null)
     assert.equal(evaluateAmountExpression("05.000", whole), null)
