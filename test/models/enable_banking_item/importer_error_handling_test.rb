@@ -96,6 +96,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
 
   test "fetch_and_store_transactions succeeds and skips pending when ASPSP rejects PDNG transaction_status" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!)
     @importer.stubs(:determine_sync_start_date).returns(Date.today)
     @importer.stubs(:include_pending?).returns(true)
 
@@ -116,6 +117,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   # with a plain 400 (:bad_request) instead of the 422 (:validation_error) other ASPSPs use.
   test "fetch_and_store_transactions succeeds and skips pending when ASPSP rejects PDNG with a bad_request error" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!)
     @importer.stubs(:determine_sync_start_date).returns(Date.today)
     @importer.stubs(:include_pending?).returns(true)
 
@@ -144,6 +146,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
   # The sync must still succeed and import booked transactions.
   test "fetch_and_store_transactions succeeds when ASPSP rejects PDNG with WRONG_REQUEST_PARAMETERS" do
     enable_banking_account = EnableBankingAccount.new(uid: "test_uid")
+    enable_banking_account.stubs(:upsert_enable_banking_transactions_snapshot!)
     @importer.stubs(:determine_sync_start_date).returns(Date.today)
     @importer.stubs(:include_pending?).returns(true)
 

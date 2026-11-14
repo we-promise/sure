@@ -186,7 +186,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
     assert result[:success]
-    assert_nil @enable_banking_account.raw_transactions_payload
+    assert_equal [], @enable_banking_account.raw_transactions_payload
   end
 
   test "fetch_and_store_transactions tags unidentified hold with BOOK status as pending when include_pending is true" do
@@ -233,7 +233,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
     assert result[:success]
-    assert_nil @enable_banking_account.raw_transactions_payload
+    assert_equal [], @enable_banking_account.raw_transactions_payload
   end
 
   test "fetch_and_store_transactions prunes cached unidentified holds from existing transactions when include_pending is false" do
