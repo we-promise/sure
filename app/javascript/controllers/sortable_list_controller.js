@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import DragAutoscroll from "utils/drag_autoscroll";
 
 // Reorderable list with mouse, touch (hold on the handle) and keyboard
 // (Enter/Space to grab, arrow keys to move, release to save). Each item needs
@@ -63,6 +64,13 @@ export default class extends Controller {
     this.holdActivated = false;
     // What the server has; a save that cannot reach it puts this back.
     this.savedOrder = this.currentOrder();
+    // A held item near the top or bottom of the scrolling box scrolls it, so
+    // it can go past the rows on screen; the drop position follows the rows.
+    this.autoscroll = new DragAutoscroll({
+      onScroll: (x, y) => {
+        if (this.draggedElement) this.showDropPosition(x, y);
+      },
+    });
 
     if (connectedLists.size === 0) {
       document.addEventListener("touchstart", cancelOnSecondFinger, {
@@ -91,6 +99,7 @@ export default class extends Controller {
       });
     }
     document.removeEventListener("turbo:morph", this.refreshSavedOrder);
+    this.stopAutoscroll();
     this.cancelHold();
   }
 
@@ -125,9 +134,23 @@ export default class extends Controller {
       "application/x-sortable-list-id",
       this.draggedElement.dataset.sortableListId ?? "",
     );
+    // Anywhere on the page, not only over the list: the pointer may be held
+    // above or below it, over the page's header or footer.
+    document.addEventListener("dragover", this.followDrag);
+  }
+
+  followDrag = (event) => {
+    if (this.draggedElement)
+      this.autoscroll.update(this.element, event.clientX, event.clientY);
+  };
+
+  stopAutoscroll() {
+    document.removeEventListener("dragover", this.followDrag);
+    this.autoscroll?.stop();
   }
 
   dragEnd(event) {
+    this.stopAutoscroll();
     event.currentTarget.classList.remove("opacity-50");
     event.currentTarget.setAttribute("aria-grabbed", "false");
     this.clearPlaceholders();
@@ -197,6 +220,13 @@ export default class extends Controller {
     this.holdActivated = true;
     this.isTouching = true;
     this.draggedElement = this.pendingSection;
+    // A finger held still near an edge sends no touchmove: start from where
+    // it rests.
+    this.autoscroll.update(
+      this.element,
+      this.currentTouchX,
+      this.currentTouchY,
+    );
     this.draggedElement.classList.add("opacity-50", "scale-[1.02]");
     this.draggedElement.setAttribute("aria-grabbed", "true");
 
@@ -219,6 +249,9 @@ export default class extends Controller {
       if (dx * dx + dy * dy > 100) {
         this.cancelHold();
       }
+      // Where the finger rests now: the hold starts autoscrolling from there.
+      this.currentTouchX = touchX;
+      this.currentTouchY = touchY;
       return;
     }
 
@@ -229,9 +262,11 @@ export default class extends Controller {
     this.currentTouchY = touchY;
 
     this.showDropPosition(this.currentTouchX, this.currentTouchY);
+    this.autoscroll.update(this.element, touchX, touchY);
   }
 
   touchEnd(event) {
+    this.stopAutoscroll();
     this.cancelHold();
     // Letting go of a hold is not a tap: keep the browser from clicking what
     // is under the finger, such as a header that opens and closes the item.
@@ -255,6 +290,7 @@ export default class extends Controller {
   }
 
   touchCancel() {
+    this.stopAutoscroll();
     this.cancelHold();
 
     if (this.draggedElement) {
