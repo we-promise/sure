@@ -1136,6 +1136,16 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
   end
 
+  test "the client takes its proxy from Ai::Transport::Http, never proxying loopback" do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy.internal:8888", HTTP_PROXY: nil, NO_PROXY: nil, no_proxy: nil) do
+      cloud = Faraday.new.tap { Provider::Openai.new("token").send(:client).faraday_middleware.call(_1) }
+      local = Faraday.new.tap { Provider::Openai.new("token", uri_base: "http://127.0.0.1:8080/v1", model: "qwen3").send(:client).faraday_middleware.call(_1) }
+
+      assert_equal URI("http://proxy.internal:8888"), cloud.proxy.uri
+      assert_nil local.proxy
+    end
+  end
+
   private
     # Verify the response budget at the provider-to-processor boundary.
     # @param limit [Integer, nil] expected explicit cap or omitted cap

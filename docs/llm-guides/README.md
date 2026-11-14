@@ -14,6 +14,7 @@ being changed. These guides hold the detailed conventions and procedures.
 | Change provider imports, pending/FX metadata or diagnostics | [Provider sync guidance](providers.md) |
 | Add a securities price provider | [Provider walkthrough](adding-a-securities-provider.md) |
 | Add a typed classification provider (Jev/TypeSafe) | [Classification provider walkthrough](adding-a-classification-provider.md) |
+| Change AI transports, AI HTTP clients, AI usage or tracing | [AI pipeline](ai-pipeline.md) |
 | Add a preview survey or usage event | [Feedback surveys](feedback-surveys.md) |
 | Gate or release a preview feature | [Preview-feature gating](gating-a-preview-feature.md) |
 | Change goals, pledges or reconciliation | [Goals](goals.md) |

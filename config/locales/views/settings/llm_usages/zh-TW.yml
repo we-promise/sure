@@ -8,13 +8,10 @@ zh-TW:
         start_date: 開始日期
         end_date: 結束日期
         filter: 篩選
-        total_requests: 總請求數
         total_tokens: Token 總數
         prompt: 提示 Token
         completion: 輸出 Token
         total_cost: 總費用
-        avg_cost_per_request: 平均每次請求費用
-        based_on_requests: 根據 %{total} 次請求中有費用資料的 %{with_cost} 次計算
         cost_by_operation: 各作業費用
         cost_by_model: 各模型費用
         recent_usage: 近期使用量

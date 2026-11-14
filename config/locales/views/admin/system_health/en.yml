@@ -402,6 +402,9 @@ en:
             table_not_found: The vector_store_chunks table was not found
             render_missing_binary: The pdftoppm renderer (poppler-utils) is not available in this container
             timeout: The service did not respond before the probe timeout
+            no_credit: The service refused the request because the key's balance is spent
+            unauthorized: The service rejected the API key
+            unreachable: The service could not be reached
             request_failed: The service request failed
             unsupported_provider: The provider does not support this check
           worker:

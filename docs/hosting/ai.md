@@ -1075,6 +1075,49 @@ All LLM operations will now be logged to Langfuse, including:
 
 **For maximum privacy:** Self-host Langfuse on your own infrastructure.
 
+### Tracing modes: content or metadata
+
+AI calls made through Sure's AI transports are traced in one of two modes, never both. Health
+probes aren't traced in either: they carry no family data and run each time an admin opens the
+health page. The mode follows the variables you already set:
+
+| You set | Mode | What leaves the server |
+|---|---|---|
+| `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` | `content` | Prompts, outputs, token usage, the model and endpoint, and Sure's error class |
+| Only `OTLP_ENDPOINT` (and `OTLP_HEADERS` for authentication) | `metadata` | Model, settings, finish reason, token counts and latency, as OpenTelemetry spans to any OTLP backend (Langfuse, Tempo, Jaeger, OpenObserve). No prompts, tool results or answers |
+| Both | `content`, with a warning in the log | As `content` |
+| Neither | off | Nothing |
+
+```bash
+# metadata mode: cost and latency without sending financial data to a tracing backend
+OTLP_ENDPOINT=https://otel.example.com/v1/traces
+OTLP_HEADERS=Authorization=Basic%20${OTLP_BASIC_AUTH}
+```
+
+`OTLP_HEADERS` uses the OpenTelemetry form, `key=value` pairs separated by commas, with values
+URL-encoded. In `metadata` mode traces lose the endpoint name, Sure's error class and errors
+raised before a request is sent. Health probes are never traced: they carry no family data.
+
+### Usage: one row per request, shown per call
+
+The LLM usage page shows one row per AI call. A call that took several requests (a retried
+`429` or `503`, for example) opens to show each request with its status, tokens, cost and error,
+and the totals count calls. If you query the `llm_usages` table yourself, group by
+`COALESCE(call_id, id)` to count calls: rows written before this change, and rows from features
+not yet moved onto the transports, have no `call_id` and are calls of one request.
+
+### Outbound proxy
+
+Sure resolves the proxy once for its AI clients: `HTTPS_PROXY`, then `HTTP_PROXY`, whatever the
+scheme of the server it calls, honouring `NO_PROXY` (CIDR blocks such as `10.0.0.0/8` included).
+Loopback addresses (`127.0.0.0/8`, `::1`, `localhost`) never go through the proxy. `NO_PROXY`
+matches a host exactly as written: `127.0.0.1` doesn't cover `localhost`.
+
+This covers the OpenAI and OpenAI-compatible clients, the external assistant, and the AI health
+probes. Anthropic's client library takes no proxy setting, so native Anthropic calls go direct
+until they move onto the new transports, unless `HTTP_PROXY` is set (the only variable that
+library reads).
+
 ## Testing and Evaluation
 
 ### Manual Testing
@@ -1725,7 +1768,10 @@ endpoint**.
 
 Results are cached for 60 seconds by default. **Run checks again** bypasses the
 cache. Set `AI_HEALTH_PROBE_TIMEOUT` to change the default five-second request
-timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Failed
+timeout and `AI_HEALTH_PROBE_CACHE_TTL` to change the cache duration. Five
+seconds is too short for a model running on CPU, such as llama.cpp without a GPU:
+the function-calling check can take 20 seconds there and shows as a timeout, so
+set `AI_HEALTH_PROBE_TIMEOUT=60` or more. Failed
 checks are written as system-wide entries in **Settings → Debug logs** and to
 `Rails.logger`; endpoints are redacted and credentials are never included.
 
