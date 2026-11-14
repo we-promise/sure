@@ -67,6 +67,9 @@ export function parseGroupedWholeNumber(digits) {
   const zeroCents = digits.match(/^(.+)([.,])0{1,2}$/)
   if (zeroCents && !zeroCents[1].includes(zeroCents[2])) {
     digits = zeroCents[1]
+    // An ungrouped lead of up to three digits ("150.00") is more likely a
+    // mistyped group ("150.000") than zero cents, so it is rejected.
+    if (/^\d{1,3}$/.test(digits)) return null
     if (/^\d+$/.test(digits)) {
       const plain = Number.parseInt(digits, 10)
       return plain <= MAX_AMOUNT ? plain : null

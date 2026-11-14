@@ -439,6 +439,9 @@ describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
     assert.equal(evaluateAmountExpression("1,000.00", whole), 1000)
     assert.equal(evaluateAmountExpression("1.000.00", whole), null)
     assert.equal(evaluateAmountExpression("1.50", whole), null)
+    // Up to three ungrouped digits could be a mistyped group ("150.000").
+    assert.equal(evaluateAmountExpression("150.00", whole), null)
+    assert.equal(evaluateAmountExpression("150,00", whole), null)
   })
 
   it("rejects a separator that is not a three-digit group instead of rounding it", () => {
