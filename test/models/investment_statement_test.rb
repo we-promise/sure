@@ -972,6 +972,78 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.withdrawals
   end
 
+  # A security moved in from another account is internal to a scope holding
+  # both legs. Two opposite legs in two other accounts still make one
+  # counterpart: the lookup is grouped, so the moved-in leg is read once and
+  # neither the buys nor the trade count grow.
+  #
+  # Withdrawals is not asserted: it reads 0 here although ten shares left the
+  # scope net. The classifier asks whether an opposite leg exists, not how
+  # many legs pair up, so the second source leg is internal too. That is a
+  # known limit of the classifier, not the intended answer.
+  test "a security transfer with two opposite legs in scope is read once" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    target = create_investment_account(balance: 1000)
+    source_a = create_investment_account(balance: 1000)
+    source_b = create_investment_account(balance: 1000)
+    security = create_portfolio_security
+    date = period.start_date
+
+    create_portfolio_trade(account: target, security: security, qty: 10, price: 50, label: "Transfer", date: date)
+    create_portfolio_trade(account: source_a, security: security, qty: -10, price: 50, label: "Transfer", date: date)
+    create_portfolio_trade(account: source_b, security: security, qty: -10, price: 50, label: "Transfer", date: date)
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(500, "USD"), totals.buys
+    assert_equal Money.new(1000, "USD"), totals.sells
+    assert_equal 3, totals.trades_count
+  end
+
+  # Totals used to turn JIT off with SET LOCAL inside a savepoint. RELEASE
+  # does not undo SET LOCAL, so a caller already in a transaction ran the
+  # rest of it with JIT off.
+  test "totals leave the jit setting of the caller's transaction as it was" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    create_labelled_transaction(account: account, label: "Contribution", amount: -100, date: period.start_date)
+    connection = ActiveRecord::Base.connection
+
+    ActiveRecord::Base.transaction do
+      before = connection.select_value("SHOW jit")
+      assert_equal Money.new(100, "USD"), @statement.totals(period: period).contributions
+      assert_equal before, connection.select_value("SHOW jit")
+    end
+  end
+
+  # The classifier's security-transfer check used to be a correlated EXISTS
+  # the planner priced per row against every other row, so its estimate grew
+  # with the square of the entries: these 4,500 trades put it near 300,000,
+  # past jit_above_cost, and JIT compilation then took longer than the
+  # query. The grouped join keeps it in the low thousands.
+  test "the totals query is planned below jit_above_cost" do
+    accounts = Array.new(3) { create_investment_account(balance: 1000) }
+    security = create_portfolio_security
+    now = Time.current
+    trades = Array.new(4500) do |n|
+      { id: SecureRandom.uuid, security_id: security.id, qty: n.even? ? 2 : -1, price: 10, currency: "USD",
+        investment_activity_label: n % 3 == 0 ? "Transfer" : "Buy", created_at: now, updated_at: now }
+    end
+    Trade.insert_all!(trades)
+    Entry.insert_all!(trades.each_with_index.map do |trade, n|
+      { account_id: accounts[n % 3].id, entryable_type: "Trade", entryable_id: trade[:id], amount: trade[:qty] * 10,
+        currency: "USD", date: Date.current - (n / 3) % 360, name: "Trade", created_at: now, updated_at: now }
+    end)
+    connection = ActiveRecord::Base.connection
+    connection.execute("ANALYZE entries, trades, transactions, transfers")
+
+    sql = InvestmentStatement::Totals.new(@family, account_ids: accounts.map(&:id), date_range: 1.year.ago.to_date..Date.current).send(:query_sql)
+    cost = JSON.parse(connection.select_value("EXPLAIN (FORMAT JSON) #{sql}")).first.dig("Plan", "Total Cost")
+
+    assert_operator cost, :<, connection.select_value("SHOW jit_above_cost").to_f
+  end
+
   test "current_holdings memoizes so repeated dashboard-style calls issue a single query" do
     account = create_investment_account(balance: 2100, currency: "USD")
     security = Security.create!(ticker: "AAPL", name: "Apple")
