@@ -354,6 +354,22 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal "https://invest-brands.cdn-tinkoff.ru/SBERx160.png", sec.display_logo_url
   end
 
+  test "display_logo_url rewrites a stored Brandfetch logo to the current client id" do
+    Setting.stubs(:brand_fetch_client_id).returns("new-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    sec = Security.new(
+      ticker: "AAPL",
+      exchange_operating_mic: "XNAS",
+      logo_url: "https://cdn.brandfetch.io/AAPL/icon/fallback/lettermark/w/40/h/40?c=old-client-id"
+    )
+
+    assert_equal(
+      "https://cdn.brandfetch.io/AAPL/icon/fallback/lettermark/w/120/h/120?c=new-client-id",
+      sec.display_logo_url
+    )
+  end
+
   test "before_save writes the /crypto/{base} URL to logo_url for new crypto securities" do
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
     Setting.stubs(:brand_fetch_logo_size).returns(120)

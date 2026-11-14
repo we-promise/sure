@@ -154,13 +154,15 @@ class Security < ApplicationRecord
   # - With no domain, a stored provider logo (e.g. T-Invest's CDN for MOEX
   #   instruments) is authoritative and beats the ticker-only Brandfetch
   #   lettermark placeholder.
+  # A stored Brandfetch logo_url is rewritten to the current size and client
+  # id, since holdings and the API render this value without transforming it.
   def display_logo_url
     if crypto?
-      self.class.brandfetch_crypto_url(crypto_base_asset).presence || logo_url.presence
+      self.class.brandfetch_crypto_url(crypto_base_asset).presence || stored_logo_url
     elsif website_url.present?
-      brandfetch_icon_url.presence || logo_url.presence
+      brandfetch_icon_url.presence || stored_logo_url
     else
-      logo_url.presence || brandfetch_icon_url.presence
+      stored_logo_url || brandfetch_icon_url.presence
     end
   end
 
@@ -288,6 +290,10 @@ class Security < ApplicationRecord
   end
 
   private
+
+    def stored_logo_url
+      Setting.transform_brand_fetch_url(logo_url).presence
+    end
 
     def extract_domain(url)
       uri = URI.parse(url)
