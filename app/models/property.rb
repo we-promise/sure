@@ -118,10 +118,10 @@ class Property < ApplicationRecord
   # The sum of the linked costs in +currency+: outflows add and refunds
   # subtract. Each transaction is converted at the stored rate on its own
   # date; nil when a rate is missing. The overview reads it for several
-  # figures, so it is computed once per viewer and currency.
+  # figures, so it is computed once per viewer, currency and cost tag.
   def purchase_costs_for(user, currency: account.currency)
     @purchase_costs ||= {}
-    key = [ user.id, currency ]
+    key = [ user.id, currency, cost_tag_id ]
     return @purchase_costs[key] if @purchase_costs.key?(key)
 
     totals = cost_entries_for(user).group("entries.currency", "entries.date").sum("entries.amount")

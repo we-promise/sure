@@ -47,6 +47,18 @@ class Property::CostTagTest < ActiveSupport::TestCase
     assert_equal Money.new(500_000, "USD"), @property.cost_basis_for(@admin)
   end
 
+  test "changing the cost tag recomputes the costs" do
+    other = @family.tags.create!(name: "Plot costs")
+    create_transaction(account: accounts(:depository), amount: 100, date: @purchase_date, tags: [ @tag ])
+    create_transaction(account: accounts(:depository), amount: 300, date: @purchase_date, tags: [ other ])
+
+    assert_equal Money.new(100, "USD"), @property.purchase_costs_for(@admin)
+
+    @property.update!(cost_tag: other)
+
+    assert_equal Money.new(300, "USD"), @property.purchase_costs_for(@admin)
+  end
+
   test "converts a cost in another currency at the stored rate on its own date" do
     eur_account = @family.accounts.create!(name: "Euro bank", balance: 0, currency: "EUR", owner: @admin, accountable: Depository.new)
     create_transaction(account: eur_account, amount: 1_000, currency: "EUR", date: @purchase_date, tags: [ @tag ])
