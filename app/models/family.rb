@@ -960,7 +960,7 @@ class Family < ApplicationRecord
         Transaction.where(id: batch).update_all([ "locked_attributes = locked_attributes - ?, updated_at = ?", attribute, Time.current ])
         # Without the flag, a lock the user sets later counts as confirming it.
         DataEnrichment.where(enrichable_type: "Transaction", enrichable_id: batch, attribute_name: attribute, source: source)
-                      .update_all([ "metadata = metadata - ?", flag ])
+                      .drop_metadata_flag!(flag)
         Entry.where(entryable_type: "Transaction", entryable_id: batch).touch_all
       end
       ids.size

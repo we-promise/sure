@@ -154,6 +154,22 @@ class Family::BayesCategorizerTest < ActiveSupport::TestCase
     assert_nil txn.transaction.reload.category
   end
 
+  # A sync or confirmation makes the leg a plain transfer after it was
+  # selected (here, while it is classified): Bayes's category must not land
+  # on it.
+  test "a leg that became a plain transfer after it was selected stays uncategorized" do
+    train_two_categories
+    categorizer = Family::BayesCategorizer.new(@family)
+    leg = create_transaction(account: @account, name: "Starbucks Coffee").transaction
+    categorizer.stubs(:classify).with { |transaction| Transaction.where(id: transaction.id).update_all(kind: "funds_movement") }.returns([ @coffee.id, 0.99 ])
+
+    result = categorizer.classify_and_apply([ leg.id ])
+
+    assert_equal [ [], 0 ], [ result.categorized_ids, result.modified_count ]
+    assert_nil leg.reload.category
+    assert_not leg.locked?(:category_id)
+  end
+
   test "novel merchant below threshold is left alone" do
     train_two_categories
     categorizer = Family::BayesCategorizer.new(@family)

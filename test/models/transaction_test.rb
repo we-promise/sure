@@ -676,6 +676,152 @@ class TransactionTest < ActiveSupport::TestCase
     assert transaction.reload.locked?(:category_id)
   end
 
+  test "a leg that becomes a plain transfer loses the Investment Contributions category" do
+    transaction = contribution_leg(accounts(:depository))
+
+    transaction.update!(kind: "funds_movement")
+
+    assert_nil transaction.reload.category
+  end
+
+  # A rule of the user's set it before the leg became a plain transfer; the
+  # same rule run afterwards would set it again, so it stays.
+  test "a leg that becomes a plain transfer keeps the Investment Contributions category a rule set" do
+    transaction = contribution_leg(accounts(:depository))
+    transaction.update_columns(category_id: nil)
+    transaction.reload.enrich_attribute(:category_id, accounts(:depository).family.investment_contributions_category.id, source: "rule")
+
+    transaction.update!(kind: "funds_movement")
+
+    assert_equal accounts(:depository).family.investment_contributions_category, transaction.reload.category
+  end
+
+  test "a plain transfer leg keeps a category the user locked, set in the same save, or another category" do
+    family = families(:dylan_family)
+    locked = contribution_leg(accounts(:depository))
+    locked.lock_attr!(:category_id)
+    same_save = contribution_leg(accounts(:depository))
+    same_save.update_columns(category_id: categories(:income).id)
+    other = contribution_leg(accounts(:depository))
+    other.update!(category: categories(:income))
+
+    locked.update!(kind: "funds_movement")
+    same_save.update!(kind: "funds_movement", category: family.investment_contributions_category)
+    other.update!(kind: "funds_movement")
+
+    assert_equal family.investment_contributions_category, locked.reload.category
+    assert_equal family.investment_contributions_category, same_save.reload.category
+    assert_equal categories(:income), other.reload.category
+  end
+
+  # A sync or confirmation holding an older copy of the leg must not clear a
+  # category the user set on it in the meantime.
+  test "a leg becoming a plain transfer keeps a category set after its copy was loaded" do
+    transaction = contribution_leg(accounts(:depository))
+    stale_copy = Transaction.find(transaction.id)
+    stale_copy.category
+    transaction.update!(category: categories(:income))
+
+    stale_copy.update!(kind: "funds_movement")
+
+    assert_equal categories(:income), transaction.reload.category
+    assert_equal "funds_movement", transaction.kind
+  end
+
+  test "drop_stale_contribution_categories! clears unlocked stale legs and touches their entries" do
+    stale = contribution_leg(accounts(:depository))
+    stale.update_columns(kind: "funds_movement")
+    locked = contribution_leg(accounts(:depository))
+    locked.update_columns(kind: "funds_movement")
+    locked.lock_attr!(:category_id)
+    stale.entry.update_columns(updated_at: 1.day.ago)
+    locked.entry.update_columns(updated_at: 1.day.ago)
+
+    assert_equal 1, Transaction.drop_stale_contribution_categories!
+
+    assert_nil stale.reload.category_id
+    assert_in_delta Time.current, stale.entry.reload.updated_at, 5.seconds
+    assert_not_nil locked.reload.category_id
+    assert_operator locked.entry.reload.updated_at, :<, 1.hour.ago
+  end
+
+  # The AI locks every category it assigns, and Bayes does with lock_results;
+  # neither lock is the user's choice. A category the user chose after the AI
+  # is theirs, lock and all.
+  test "a leg that becomes a plain transfer loses an Investment Contributions category an automatic categorizer locked" do
+    category = families(:dylan_family).investment_contributions_category
+    by_ai = auto_locked_leg(accounts(:depository), category, "ai")
+    by_bayes = auto_locked_leg(accounts(:depository), category, "bayes", metadata: { locked_by_bayes: true })
+    by_user = auto_locked_leg(accounts(:depository), categories(:income), "ai")
+    by_user.update!(category: category)
+    by_user.lock_attr!(:category_id)
+
+    [ by_ai, by_bayes, by_user ].each { |leg| leg.reload.update!(kind: "funds_movement") }
+
+    assert_nil by_ai.reload.category_id
+    assert_nil by_bayes.reload.category_id
+    assert_equal category, by_user.reload.category
+  end
+
+  test "clearing an automatic categorizer's category drops its lock and claim with it" do
+    category = families(:dylan_family).investment_contributions_category
+    by_ai = auto_locked_leg(accounts(:depository), category, "ai")
+    by_bayes = auto_locked_leg(accounts(:depository), category, "bayes", metadata: { locked_by_bayes: true })
+
+    [ by_ai, by_bayes ].each { |leg| leg.reload.update!(kind: "funds_movement") }
+
+    [ by_ai, by_bayes ].each do |leg|
+      leg.reload
+      assert_nil leg.category_id
+      assert_not leg.locked?(:category_id), "categorizers would skip the leg if it became a plain transaction again"
+    end
+    assert_not by_ai.data_enrichments.exists?(attribute_name: "category_id", source: "ai")
+    assert_not by_bayes.data_enrichments.find_by!(attribute_name: "category_id", source: "bayes").metadata.key?("locked_by_bayes")
+  end
+
+  test "a copy loaded before a categorizer set the category still has it cleared" do
+    leg = accounts(:depository).entries.create!(
+      name: "To broker", amount: 100, date: Date.current, currency: "USD",
+      entryable: Transaction.new(kind: "investment_contribution")
+    ).transaction
+    loaded_earlier = Transaction.find(leg.id)
+    leg.enrich_attribute(:category_id, families(:dylan_family).investment_contributions_category.id, source: "ai")
+    leg.lock_attr!(:category_id)
+
+    loaded_earlier.update!(kind: "funds_movement")
+
+    assert_nil leg.reload.category_id
+    assert_nil loaded_earlier.category_id
+    assert_not loaded_earlier.locked?(:category_id)
+  end
+
+  test "with_stale_contribution_category counts an automatic categorizer's lock as no lock" do
+    category = families(:dylan_family).investment_contributions_category
+    by_ai = auto_locked_leg(accounts(:depository), category, "ai")
+    by_user = contribution_leg(accounts(:depository))
+    by_user.lock_attr!(:category_id)
+    [ by_ai, by_user ].each { |leg| leg.update_columns(kind: "funds_movement") }
+
+    found = Transaction.where(id: [ by_ai.id, by_user.id ]).with_stale_contribution_category
+
+    assert_equal [ by_ai.id ], found.pluck(:id)
+  end
+
+  test "with_stale_contribution_category finds unlocked plain transfer legs with the category" do
+    stale = contribution_leg(accounts(:depository))
+    stale.update_columns(kind: "funds_movement")
+    locked = contribution_leg(accounts(:depository))
+    locked.update_columns(kind: "funds_movement")
+    locked.lock_attr!(:category_id)
+    contribution = contribution_leg(accounts(:depository))
+
+    found = Transaction.with_stale_contribution_category
+
+    assert_includes found, stale
+    assert_not_includes found, locked
+    assert_not_includes found, contribution
+  end
+
   private
     # Whether each SQL form of "is this transaction pending?" says it is.
     def sql_pending_answers(transaction)
@@ -693,5 +839,24 @@ class TransactionTest < ActiveSupport::TestCase
         "Entry.excluding_pending (pending_check_sql)" => !Entry.excluding_pending.exists?(entry_id),
         "Transaction.pending_providers_sql" => posted_row.nil?
       }
+    end
+
+    # A contribution leg whose category an automatic categorizer assigned and
+    # locked, as Family::AutoCategorizer and Bayes with lock_results do.
+    def auto_locked_leg(account, category, source, metadata: {})
+      leg = account.entries.create!(
+        name: "To broker", amount: 100, date: Date.current, currency: "USD",
+        entryable: Transaction.new(kind: "investment_contribution")
+      ).transaction
+      leg.enrich_attribute(:category_id, category.id, source: source, metadata: metadata)
+      leg.lock_attr!(:category_id)
+      leg
+    end
+
+    def contribution_leg(account)
+      account.entries.create!(
+        name: "To broker", amount: 100, date: Date.current, currency: "USD",
+        entryable: Transaction.new(kind: "investment_contribution", category: account.family.investment_contributions_category)
+      ).transaction
     end
 end

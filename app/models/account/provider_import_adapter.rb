@@ -285,7 +285,9 @@ class Account::ProviderImportAdapter
           entry.transaction.assign_attributes(kind: transfer ? transfer.kind_for_leg(entry.transaction) : auto_kind)
         end
 
-        if auto_category.present? && entry.transaction.category_id.blank?
+        # Only while the leg is a contribution: a matched transfer can make it
+        # a plain transfer above, which carries no category.
+        if auto_category.present? && entry.transaction.category_id.blank? && entry.transaction.kind == "investment_contribution"
           entry.transaction.assign_attributes(category: auto_category)
         end
       end
