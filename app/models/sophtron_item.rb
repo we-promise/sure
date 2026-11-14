@@ -159,13 +159,7 @@ class SophtronItem < ApplicationRecord
   end
 
   def start_initial_load_later
-    active_sync = syncs.visible.ordered.first
-
     sync_later(window_start_date: initial_load_window_start_date)
-
-    return unless active_sync&.reload&.syncing?
-
-    SophtronInitialLoadJob.set(wait: SophtronInitialLoadJob::RETRY_DELAY).perform_later(self)
   end
 
   def initial_load_window_start_date

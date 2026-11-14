@@ -468,9 +468,10 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     active_sync = @snaptrade_item.syncs.create!
     active_sync.start!
 
-    assert_enqueued_with job: SnaptradeFollowUpSyncJob do
+    assert_difference "@snaptrade_item.syncs.count", 1 do
       get oauth_callback_snaptrade_items_url(code: "c0de", state: oauth_session["state"])
     end
+    assert @snaptrade_item.syncs.pending.where.not(id: active_sync.id).exists?
   ensure
     Rails.configuration.x.snaptrade.oauth_client_id = nil
     Rails.configuration.x.snaptrade.oauth_client_secret = nil

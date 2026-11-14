@@ -70,7 +70,7 @@ class SnaptradeItemsController < ApplicationController
     snaptrade_item = Current.family.snaptrade_items.find_by(id: params[:item_id])
 
     if snaptrade_item
-      snaptrade_item.sync_later_with_follow_up
+      snaptrade_item.sync_later
 
       if params[:return_to].presence == "setup_accounts"
         redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: params[:accountable_type].presence), notice: t(".success")
@@ -259,7 +259,7 @@ class SnaptradeItemsController < ApplicationController
       code_verifier: oauth_session[:code_verifier]
     )
 
-    snaptrade_item.sync_later_with_follow_up
+    snaptrade_item.sync_later
 
     if oauth_session[:return_to] == "setup_accounts"
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item, accountable_type: oauth_session[:accountable_type].presence), notice: t(".success")
@@ -333,7 +333,7 @@ class SnaptradeItemsController < ApplicationController
 
     @snaptrade_item.complete_oauth_device_flow!(device_code: device_flow[:device_code])
     session.delete(:snaptrade_device_flow)
-    @snaptrade_item.sync_later_with_follow_up
+    @snaptrade_item.sync_later
 
     destination = if @return_to == "setup_accounts"
       setup_accounts_snaptrade_item_path(@snaptrade_item, accountable_type: @accountable_type.presence)
@@ -429,7 +429,7 @@ class SnaptradeItemsController < ApplicationController
     end
 
     if snaptrade_item.oauth_configured?
-      snaptrade_item.sync_later_with_follow_up
+      snaptrade_item.sync_later
       redirect_to setup_accounts_snaptrade_item_path(snaptrade_item)
     else
       redirect_to helpers.snaptrade_authorize_path(item_id: snaptrade_item.id)
@@ -487,7 +487,7 @@ class SnaptradeItemsController < ApplicationController
         end
 
         # Trigger sync to process the linked account
-        snaptrade_item.sync_later_with_follow_up
+        snaptrade_item.sync_later
 
         redirect_to account_path(account), notice: t(".success", default: "Successfully linked to SnapTrade account.")
       rescue => e
