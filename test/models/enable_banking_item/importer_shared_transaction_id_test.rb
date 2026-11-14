@@ -92,6 +92,13 @@ class EnableBankingItem::ImporterSharedTransactionIdTest < ActiveSupport::TestCa
     assert_equal pending_entry.id, entry!("enable_banking_tid-x").id
   end
 
+  test "two booked rows returned together with identical content and distinct references import as two entries" do
+    sync(booked: [ row("r-a", "7.00"), row("r-b", "7.00") ])
+
+    assert_equal [ "r-a", "r-b" ], stored_refs
+    assert_equal({ "enable_banking_tid-x" => BigDecimal("7.00"), sibling_id("r-b") => BigDecimal("7.00") }, amounts_by_id)
+  end
+
   private
 
     # date: inside the 30-day incremental window determine_sync_start_date uses.
