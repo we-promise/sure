@@ -14,7 +14,7 @@ class ExchangeRate::Importer
   end
 
   def import_provider_rates
-    if !clear_cache && all_rates_exist?
+    if rates_up_to_date?
       Rails.logger.info("No new rates to sync for #{from} to #{to} between #{start_date} and #{end_date}, skipping")
       backfill_inverse_rates_if_needed
       return
@@ -106,6 +106,10 @@ class ExchangeRate::Importer
         provider_name: current_provider_name
       )
     end
+  end
+
+  def rates_up_to_date?
+    !clear_cache && all_rates_exist?
   end
 
   private
