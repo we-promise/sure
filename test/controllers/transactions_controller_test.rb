@@ -1072,6 +1072,7 @@ end
     totals = OpenStruct.new(
       count: 1,
       excluded_scheduled_count: 0,
+      transfer_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
@@ -1097,6 +1098,7 @@ end
     totals = OpenStruct.new(
       count: 1,
       excluded_scheduled_count: 0,
+      transfer_count: 0,
       expense_money: Money.new(10000, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(0, "USD"),
@@ -1121,6 +1123,7 @@ end
     totals = OpenStruct.new(
       count: 2,
       excluded_scheduled_count: 0,
+      transfer_count: 2,
       expense_money: Money.new(0, "USD"),
       income_money: Money.new(0, "USD"),
       transfer_inflow_money: Money.new(5000, "USD"),
@@ -1134,6 +1137,50 @@ end
     assert_response :success
     assert_select "#total-income", text: totals.transfer_inflow_money.format
     assert_select "#total-expense", text: totals.transfer_outflow_money.format
+  end
+
+  test "keeps inflow/outflow labels when every matching transfer is excluded" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account, amount: -100, kind: "funds_movement", excluded: true)
+
+    get transactions_url(q: { types: [ "transfer" ] })
+
+    assert_response :success
+    assert_select "#total-transactions", text: "1"
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.inflow")
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.outflow")
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.income"), count: 0
+    assert_select "#total-income", text: Money.new(0, "USD").format
+  end
+
+  test "keeps income/expenses labels when the only non-transfer entry is excluded" do
+    family = families(:empty)
+    sign_in users(:empty)
+    account = family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+    create_transaction(account: account, amount: 80, kind: "standard", excluded: true)
+    create_transaction(account: account, amount: -100, kind: "funds_movement")
+
+    get transactions_url
+
+    assert_response :success
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.income")
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.expenses")
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.inflow"), count: 0
+  end
+
+  test "keeps income/expenses labels when the search matches nothing" do
+    family = families(:empty)
+    sign_in users(:empty)
+    family.accounts.create! name: "Test", balance: 0, currency: "USD", accountable: Depository.new
+
+    get transactions_url(q: { types: [ "transfer" ] })
+
+    assert_response :success
+    assert_select "#total-transactions", text: "0"
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.income")
+    assert_select "p.text-secondary", text: I18n.t("transactions.summary.inflow"), count: 0
   end
 
   test "mark_as_recurring creates a manual recurring transaction" do
