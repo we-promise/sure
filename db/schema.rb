@@ -2330,6 +2330,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
 
   create_table "rules", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.boolean "active", default: false, null: false
+    t.boolean "apply_immediately", default: false, null: false
     t.datetime "created_at", null: false
     t.date "effective_date"
     t.uuid "family_id", null: false
