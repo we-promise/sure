@@ -3,8 +3,9 @@ class RecurringTransaction
   # upsert keyed on (series, original_due_on), so re-running only adds missing
   # rows and never duplicates or touches existing ones.
   #
-  # Only scheduled, allocation-free, not-yet-due rows are ever deleted. Anything
-  # closed or carrying a payment is immutable history.
+  # Only scheduled, allocation-free rows are ever deleted, and only ones that
+  # are not yet due — except the date a one-payment plan was moved off.
+  # Anything closed or carrying a payment is immutable history.
   class OccurrenceGenerator
     HORIZON_DAYS = 90
 
@@ -28,6 +29,12 @@ class RecurringTransaction
       # cycle start, since their history predates the row.
       from = [ from, series.anchor_date ].compact.max if series.manual?
 
+      # A one-payment plan's only date can already be past. The clamp above
+      # refuses to look behind today, which would drop that only occurrence.
+      if single_payment? && series.anchor_date
+        from = [ from, series.anchor_date ].min
+      end
+
       through ||= default_horizon(schedule)
 
       upsert_window(from, through)
@@ -36,11 +43,13 @@ class RecurringTransaction
     # After a schedule edit: drop the re-generatable future and rebuild it under
     # the new rules. Rows with payments or closed state are kept as they were.
     def regenerate_future!(through: nil)
-      series.recurring_occurrences
-            .open_status
-            .where("due_on >= ?", Date.current)
-            .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
-            .delete_all
+      removable = series.recurring_occurrences
+                        .open_status
+                        .where.not(id: RecurringAllocation.select(:recurring_occurrence_id))
+      doomed = removable.where("due_on >= ?", Date.current)
+      doomed = doomed.or(removable.where(original_due_on: single_payment_moved_from)) if single_payment_moved_from
+
+      doomed.delete_all
 
       generate!(through: through)
     end
@@ -54,6 +63,24 @@ class RecurringTransaction
     end
 
     private
+      def single_payment?
+        series.ends_after_count? && series.end_after_count == 1
+      end
+
+      # The date a one-payment plan was just moved off, whose row the new date
+      # replaces even when it is past. Every other past row is an obligation
+      # from an earlier schedule, which a one-date schedule cannot recreate, so
+      # it stays. Converting a repeating bill to Once is not a move: the cap is
+      # already stored by the time regeneration runs, so the values from before
+      # the save say whether it was a single payment already.
+      def single_payment_moved_from
+        return unless single_payment? && series.saved_change_to_anchor_date?
+        return unless series.attribute_before_last_save("end_mode") == "after_count" &&
+                      series.attribute_before_last_save("end_after_count") == 1
+
+        series.attribute_before_last_save("anchor_date")
+      end
+
       def default_horizon(schedule)
         horizon = Date.current + HORIZON_DAYS
         next_due = schedule.first_occurrence_after(Date.current)
@@ -107,6 +134,13 @@ class RecurringTransaction
       # beyond the window, so a kept row's nearest occurrence just outside it
       # is not mistaken for a farther one inside.
       def stood_in_for(schedule, from, through)
+        # A Once bill is a date the user chose. Rows kept from an earlier
+        # schedule are other obligations, not stand-ins for it, and a yearly
+        # half cycle would let one swallow the new date. A one-payment
+        # installment has no such date to protect, so its kept row still
+        # stands in for the occurrence it was.
+        return Set.new if single_payment? && !series.typed_installment?
+
         reach = half_cycle(schedule)
         nearby = schedule.occurrence_pairs_between(from - reach, through + reach)
         current = nearby.map(&:original_due_on).to_set

@@ -204,6 +204,114 @@ class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
     assert_equal 8, @recurring.recurrence_rules.reload.sole.interval, "a leading zero is not octal"
   end
 
+  test "once is a single occurrence on the chosen date and not a monthly rate" do
+    due = Date.new(2026, 12, 1)
+
+    assert Preset.apply(@recurring, preset: "once", once_on: due)
+    @recurring.save!
+
+    rule = @recurring.recurrence_rules.reload.sole
+    assert_equal [ "yearly", 1, 1, 12 ], [ rule.frequency, rule.interval, rule.day_of_month, rule.month_of_year ]
+    assert @recurring.ends_after_count?
+    assert_equal 1, @recurring.end_after_count
+    assert_equal due, @recurring.anchor_date
+    assert_equal due, @recurring.next_expected_date
+    assert @recurring.one_off?
+    assert_equal 0, @recurring.monthly_equivalent_amount.amount
+
+    found = Preset.detect(@recurring)
+    assert_equal [ "once", due ], [ found.key, found.once_on ]
+    assert_equal I18n.t("recurring_transactions.frequency.once_on", date: I18n.l(due, format: :long)),
+                 Preset.label(@recurring)
+
+    assert_equal [ due ], @recurring.schedule.occurrences_between(due, due + 400)
+    assert_not Preset.apply(@recurring, preset: "once", once_on: due.iso8601),
+               "reapplying the same date must change nothing"
+  end
+
+  test "once rejects a date that was typed but cannot be parsed" do
+    assert_not Preset.apply(@recurring, preset: "once", once_on: "2026-13-40")
+    assert_includes @recurring.errors.full_messages,
+                    I18n.t("recurring_transactions.create.due_date_required")
+    assert_empty @recurring.recurrence_rules
+  end
+
+  test "moving a paid one-off is refused and leaves the schedule untouched" do
+    due = Date.new(2026, 12, 1)
+    Preset.apply(@recurring, preset: "once", once_on: due)
+    @recurring.save!
+    RecurringTransaction::Allocator.new(@recurring.recurring_occurrences.find_by!(due_on: due)).mark_paid!
+
+    assert_not Preset.apply(@recurring, preset: "once", once_on: due + 10)
+    assert_includes @recurring.errors.full_messages,
+                    I18n.t("recurring_transactions.update.once_date_locked")
+    assert_equal due, @recurring.reload.anchor_date
+    assert_equal "once", Preset.detect(@recurring).key
+  end
+
+  test "changing a paid one-off to an installment does not unlock its date" do
+    due = Date.new(2026, 12, 1)
+    Preset.apply(@recurring, preset: "once", once_on: due)
+    @recurring.save!
+    RecurringTransaction::Allocator.new(@recurring.recurring_occurrences.find_by!(due_on: due)).mark_paid!
+
+    @recurring.bill_type = "installment"
+
+    assert_not Preset.apply(@recurring, preset: "once", once_on: due + 10)
+    assert_includes @recurring.errors.full_messages,
+                    I18n.t("recurring_transactions.update.once_date_locked")
+    assert_equal due, @recurring.reload.anchor_date
+  end
+
+  test "an earlier paid occurrence does not lock a one-off's date" do
+    travel_to Date.new(2026, 11, 13) do
+      RecurringTransaction::OccurrenceGenerator.new(@recurring).generate!
+      earlier = @recurring.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 11, 5))
+      RecurringTransaction::Allocator.new(earlier).mark_paid!
+
+      Preset.apply(@recurring, preset: "once", once_on: Date.new(2026, 12, 1))
+      @recurring.save!
+
+      assert Preset.apply(@recurring, preset: "once", once_on: Date.new(2026, 12, 20))
+      assert_empty @recurring.errors
+    end
+  end
+
+  test "once without a date is due on the bill's current due date, not its first" do
+    stale = Date.new(2026, 1, 5)
+    @recurring.update_columns(anchor_date: stale)
+    due = @recurring.next_due_date
+
+    assert Preset.apply(@recurring, preset: "once")
+
+    assert_equal due, @recurring.anchor_date
+    assert_equal due, @recurring.next_expected_date
+  end
+
+  test "leaving once drops the one-payment cap" do
+    due = Date.new(2026, 12, 1)
+    Preset.apply(@recurring, preset: "once", once_on: due)
+    @recurring.save!
+
+    assert Preset.apply(@recurring, preset: "monthly", day_of_month: due.day.to_s)
+    @recurring.save!
+    @recurring.reload
+
+    assert @recurring.ends_never?
+    assert_nil @recurring.end_after_count
+    assert_equal "monthly", Preset.detect(@recurring).key
+    assert_operator @recurring.schedule.occurrences_between(due, due + 70).size, :>, 1
+  end
+
+  test "a one-payment installment stays an installment, not a one-off" do
+    @recurring.update!(bill_type: "installment", end_mode: "after_count", end_after_count: 1,
+                       anchor_date: Date.new(2026, 12, 1))
+    @recurring.recurrence_rules.create!(frequency: "yearly", day_of_month: 1, month_of_year: 12)
+
+    assert_equal "annual", Preset.detect(@recurring.reload).key
+    assert_not @recurring.one_off?
+  end
+
   test "apply interval rejects an out-of-range, fractional or malformed count or an unknown unit" do
     [ [ "0", "weekly" ], [ "", "monthly" ], [ (Preset::MAX_INTERVAL + 1).to_s, "monthly" ], [ "2", "daily" ],
       [ "2.5", "monthly" ], [ "3abc", "weekly" ] ].each do |interval, unit|

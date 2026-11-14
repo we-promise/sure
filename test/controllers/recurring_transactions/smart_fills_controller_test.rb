@@ -27,6 +27,20 @@ class RecurringTransactions::SmartFillsControllerTest < ActionDispatch::Integrat
     assert_select "input[name=?][value=?]", "recurring_transaction[amount]", "42.00"
   end
 
+  test "a one-off suggestion keeps the date of the charge it was read from" do
+    charged_on = 20.days.ago.to_date
+    entry = accounts(:depository).entries.create!(
+      date: charged_on, amount: 320, currency: "USD", name: "CAR REGISTRATION", entryable: Transaction.new
+    )
+    stub_provider(raw(name: "Car registration", amount: 320.0, frequency: "once", confidence: 0.8))
+
+    post smart_fill_recurring_transactions_url(entry_id: entry.id),
+         headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_select "input[name=?][value=?]", "recurring_transaction[first_due_on]", charged_on.iso8601
+  end
+
   # Smart fill starts from the same prefill as the plain dialog, so the
   # transaction's category reaches the form here too.
   test "keeps the category of the transaction it starts from" do

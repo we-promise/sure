@@ -11,6 +11,7 @@ en:
       other: "Expected in %{count} days"
     day_of_month: Day %{day} of month
     frequency_presets:
+      once: Once
       monthly: Monthly
       weekly: Weekly
       biweekly: Every 2 weeks
@@ -32,6 +33,8 @@ en:
       quarterly: "Quarterly on the %{day}"
       semiannual: "Every 6 months on the %{day}"
       annual: "Yearly on %{month} %{day}"
+      once: Once
+      once_on: "Once on %{date}"
       every_n_weeks: "Every %{interval} weeks on %{weekday}"
       every_n_months: "Every %{interval} months on the %{day}"
       every_n_years: "Every %{interval} years on %{month} %{day}"
@@ -147,6 +150,12 @@ en:
       frequency_new_hint: The day details come from the due date above. You can refine the schedule after saving.
       frequency_label: How often
       frequency_hint: How often this bill comes due. Pick the day details to match your statement.
+      once_on_label: Due on
+      income_once_on_label: On
+      once_hint: Due once, on this date. It will not repeat.
+      income_once_hint: Arrives once, on this date. It will not repeat.
+      once_new_hint: Due once, on the date above. It will not repeat.
+      income_once_new_hint: Arrives once, on the date above. It will not repeat.
       frequency_day_label: On day
       frequency_interval_label: Repeats every
       frequency_interval_unit_label: Unit
@@ -155,6 +164,7 @@ en:
       frequency_month_label: "In"
     update:
       success: Bill updated
+      once_date_locked: This payment is already recorded, so its date can't be moved.
       success_with_siblings:
         one: "Bill updated, and the payment link was copied to 1 other bill"
         other: "Bill updated, and the payment link was copied to %{count} other bills"

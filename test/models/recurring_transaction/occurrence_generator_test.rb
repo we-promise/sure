@@ -56,6 +56,93 @@ class RecurringTransaction::OccurrenceGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  test "converting a repeating bill to once keeps unpaid past occurrences and adds the one date" do
+    travel_to Date.new(2026, 11, 13) do
+      Generator.new(@series).generate!
+      past = @series.recurring_occurrences.create!(
+        family: @family, original_due_on: Date.new(2026, 9, 5), due_on: Date.new(2026, 9, 5),
+        currency: "USD", status: "scheduled"
+      )
+
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: Date.new(2026, 12, 1))
+      @series.save!
+
+      dues = @series.recurring_occurrences.reload.pluck(:due_on)
+      assert_includes dues, past.due_on, "an earlier unpaid bill is still owed"
+      assert_includes dues, Date.new(2026, 11, 5), "the overdue occurrence from the old schedule stays"
+      assert_includes dues, Date.new(2026, 12, 1), "the one date is scheduled beside those"
+      assert_not_includes dues, Date.new(2026, 12, 5), "later repeating dates are rebuilt away"
+    end
+  end
+
+  test "moving an unpaid one-off still replaces its past date" do
+    travel_to Date.new(2026, 11, 13) do
+      due = Date.new(2026, 11, 1)
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: due)
+      @series.save!
+      assert_equal [ due ], @series.recurring_occurrences.reload.pluck(:due_on)
+
+      moved = Date.new(2026, 12, 1)
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: moved)
+      @series.save!
+
+      assert_equal [ moved ], @series.recurring_occurrences.reload.pluck(:due_on)
+    end
+  end
+
+  test "moving a one-off drops only its own date and keeps overdue rows from the repeating schedule" do
+    travel_to Date.new(2026, 11, 13) do
+      Generator.new(@series).generate!
+      overdue = @series.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 11, 5))
+
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: Date.new(2026, 12, 1))
+      @series.save!
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: Date.new(2026, 12, 20))
+      @series.save!
+
+      dues = @series.recurring_occurrences.reload.pluck(:due_on)
+      assert_includes dues, overdue.due_on, "the earlier unpaid bill is still owed"
+      assert_includes dues, Date.new(2026, 12, 20), "an old row nearby must not stand in for the new date"
+      assert_not_includes dues, Date.new(2026, 12, 1), "the date it moved off is replaced"
+    end
+  end
+
+  test "a one-payment installment moved by a day keeps its paid row standing in for the payment" do
+    travel_to Date.new(2026, 8, 13) do
+      installment = @family.recurring_transactions.create!(
+        name: "Sofa plan", amount: 120, currency: "USD", bill_type: "installment",
+        account: accounts(:depository), anchor_date: Date.new(2026, 8, 20), expected_day_of_month: 20,
+        last_occurrence_date: Date.new(2026, 8, 20), next_expected_date: Date.new(2026, 8, 20),
+        status: "active", manual: true, end_mode: "after_count", end_after_count: 1,
+        dedup_scope: "sofa-plan"
+      )
+      installment.recurrence_rules.create!(frequency: "monthly", interval: 1, day_of_month: 20)
+      Generator.new(installment).generate!
+      paid = installment.recurring_occurrences.reload.find_by!(due_on: Date.new(2026, 8, 20))
+      RecurringTransaction::Allocator.new(paid).mark_paid!
+
+      RecurringTransaction::FrequencyPreset.apply(installment, preset: "monthly", day_of_month: "21")
+      installment.save!
+
+      # Generate from a fresh read of the series, as the nightly sweep does.
+      Generator.new(RecurringTransaction.find(installment.id)).generate!
+      open_dues = installment.recurring_occurrences.reload.open_status.pluck(:due_on)
+      assert_empty open_dues, "the paid payment stands in for the moved one; no second obligation appears"
+    end
+  end
+
+  test "pausing an overdue one-off keeps its row" do
+    travel_to Date.new(2026, 11, 13) do
+      due = Date.new(2026, 11, 1)
+      RecurringTransaction::FrequencyPreset.apply(@series, preset: "once", once_on: due)
+      @series.save!
+
+      @series.update!(status: "paused")
+
+      assert_equal [ due ], @series.recurring_occurrences.reload.pluck(:due_on)
+    end
+  end
+
   test "pausing prunes the re-generatable future and resuming rebuilds it" do
     travel_to Date.new(2026, 8, 13) do
       Generator.new(@series).generate!
