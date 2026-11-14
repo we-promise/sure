@@ -217,7 +217,7 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # A panel missing from family_panel_items reports :ok forever, however badly its
+  # A panel whose items don't reach family_panel_items reports :ok forever, however badly its
   # connection is doing: compute_provider_sync_health skips any key whose items are
   # absent, so no error badge ever reaches the page.
   test "a failed monobank sync surfaces as an error on the providers page" do
@@ -694,6 +694,27 @@ class Settings::ProvidersControllerTest < ActionDispatch::IntegrationTest
       assert_includes model.included_modules, Syncable, "#{key} syncs a model that cannot sync"
       assert_equal "#{key}_items", model.table_name, "#{key} syncs another provider's model"
     end
+  end
+
+  # The sync health of a panel's connection row reads its items through
+  # family_panel_items, so a newly declared panel gets a sync status of its own.
+  test "family_panel_items hands each declared panel its own loaded items" do
+    controller = Settings::ProvidersController.new
+    keys = Settings::ProvidersController::FAMILY_PANEL_KEYS + [ "gocardless" ]
+    keys.each { |key| controller.instance_variable_set(:"@#{key}_items", [ key ]) }
+    controller.instance_variable_set(:@financekit_items, [ "financekit" ])
+
+    items = stub_const(Settings::ProvidersController, :FAMILY_PANEL_KEYS, keys) do
+      controller.send(:family_panel_items)
+    end
+
+    assert_equal keys.sort, items.keys.sort
+    items.each { |key, value| assert_equal [ key ], value, "#{key} reads another provider's items" }
+
+    without_brex = stub_const(Settings::ProvidersController, :FAMILY_PANEL_KEYS, keys - [ "brex" ]) do
+      controller.send(:family_panel_items)
+    end
+    assert_not_includes without_brex.keys, "brex"
   end
 
   test "POST sync for a provider without a family panel schedules nothing" do
