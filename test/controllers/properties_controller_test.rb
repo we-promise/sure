@@ -270,6 +270,19 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_not account.has_opening_anchor?
   end
 
+  test "value step rejects an unknown currency on a valid submission" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "XXX", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match "Choose a currency from the list.", response.body
+    assert_equal "EUR", account.reload.currency
+    assert_not account.has_opening_anchor?
+  end
+
   test "value step keeps the submitted price when the purchase date is rejected" do
     account = create_draft_property
     add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)
