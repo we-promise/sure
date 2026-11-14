@@ -1,9 +1,14 @@
 class SnaptradeAccount::ActivitiesProcessor
   include SnaptradeAccount::DataHelpers
 
+  # Two legs whose units differ by no more than this are taken to cancel:
+  # providers can report the same quantity with a float's rounding.
+  CANCELLING_QUANTITY_TOLERANCE = BigDecimal("0.000001")
+
   # Declarative configuration for SnapTrade activity types.
-  # Defines category (:trade, :unit_dependent, or :cash), investment activity label,
-  # quantity signing convention (:buy, :sell, or :preserve), and amount handling (:unconditional, :if_absent, or nil).
+  # Defines category (:trade, :unit_dependent, :share_movement, or :cash), investment activity label
+  # (trade_label, when given, labels a row imported as a trade instead), quantity signing convention
+  # (:buy, :sell, or :preserve), and amount handling (:unconditional, :if_absent, or nil).
   ACTIVITY_RULES = {
     # Buys
     "BUY" => { category: :trade, label: "Buy", sign: :buy },
@@ -47,14 +52,23 @@ class SnaptradeAccount::ActivitiesProcessor
     "MERGER" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
     "CORP_ACTION" => { category: :unit_dependent, label: "Other", sign: :preserve, zero_amount: :if_absent, cash_flow: :invert },
 
+    # Share-movement types (a journal, a transfer or an unclassified activity can move cash or shares):
+    # When units are present and non-zero and the row carries no cash, treated as shares moving
+    # in or out, such as a stock plan depositing vested shares: a zero-cash trade with signed units,
+    # labelled Transfer because the shares were neither bought nor sold.
+    # Otherwise treated as a cash activity, since beside cash what the units mean is unknown
+    # (a 401(k) payroll contribution arrives as a TRANSFER with units and its cash amount).
+    "JOURNAL" => { category: :share_movement, label: "Other", trade_label: "Transfer", sign: :preserve, zero_amount: :unconditional },
+    "OTHER" => { category: :share_movement, label: "Other", trade_label: "Transfer", sign: :preserve, zero_amount: :unconditional },
+    "TRANSFER" => { category: :share_movement, label: "Transfer", sign: :preserve, zero_amount: :unconditional, cash_flow: :invert },
+    "TRANSFER_IN" => { category: :share_movement, label: "Transfer", sign: :buy, zero_amount: :unconditional, cash_flow: :inflow },
+    "TRANSFER_OUT" => { category: :share_movement, label: "Transfer", sign: :sell, zero_amount: :unconditional, cash_flow: :outflow },
+
     # Cash activities
     "DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "DIV" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "CONTRIBUTION" => { category: :cash, label: "Contribution", cash_flow: :inflow },
     "WITHDRAWAL" => { category: :cash, label: "Withdrawal", cash_flow: :outflow },
-    "TRANSFER" => { category: :cash, label: "Transfer", cash_flow: :invert },
-    "TRANSFER_IN" => { category: :cash, label: "Transfer", cash_flow: :inflow },
-    "TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
     "INTERNAL_CASH_TRANSFER_IN" => { category: :cash, label: "Transfer", cash_flow: :inflow },
     "INTERNAL_CASH_TRANSFER_OUT" => { category: :cash, label: "Transfer", cash_flow: :outflow },
     "INTEREST" => { category: :cash, label: "Interest", cash_flow: :inflow },
@@ -64,9 +78,7 @@ class SnaptradeAccount::ActivitiesProcessor
     "REBATE" => { category: :cash, label: "Other", cash_flow: :inflow },
     "RETURN_OF_CAPITAL" => { category: :cash, label: "Dividend", cash_flow: :inflow },
     "DISTRIBUTION" => { category: :cash, label: "Dividend", cash_flow: :inflow },
-    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow },
-    "JOURNAL" => { category: :cash, label: "Other" },
-    "OTHER" => { category: :cash, label: "Other" }
+    "SUBSTITUTE_DIVIDEND" => { category: :cash, label: "Dividend", cash_flow: :inflow }
   }.freeze
 
   SNAPTRADE_TYPE_TO_LABEL = ACTIVITY_RULES.transform_values { |r| r[:label] }.freeze
@@ -83,6 +95,7 @@ class SnaptradeAccount::ActivitiesProcessor
 
     @trades_count = 0
     @transactions_count = 0
+    @cancelled_movement_ids = cancelled_share_movement_ids(activities_data)
 
     activities_data.each do |activity_data|
       process_activity(activity_data.with_indifferent_access)
@@ -149,7 +162,9 @@ class SnaptradeAccount::ActivitiesProcessor
       Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Processing activity: type=#{activity_type}, id=#{external_id}"
 
       # Determine if this is a trade or cash activity
-      if trade_activity?(activity_type, data)
+      if @cancelled_movement_ids.include?(external_id)
+        remove_cancelled_movement(external_id)
+      elsif trade_activity?(activity_type, data)
         process_trade(data, activity_type, external_id)
       else
         process_cash_activity(data, activity_type, external_id)
@@ -164,18 +179,116 @@ class SnaptradeAccount::ActivitiesProcessor
       when :trade
         true
       when :unit_dependent
-        units = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
-                parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
-        units&.nonzero? ? true : false
+        nonzero_units?(data)
+      when :share_movement
+        # Only rows that name no cash at all, which the cash path skips
+        nonzero_units?(data) && !carries_cash?(data)
       else
         false
       end
     end
 
-    def process_trade(data, activity_type, external_id)
-      # Check `option_symbol` first: if present, this is an option contract trade.
-      # Prioritizing `option_symbol` prevents brokerages like Robinhood (which populate
-      # plain `symbol` with the underlying equity) from importing options as common stock.
+    def units(data)
+      parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
+        parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
+    end
+
+    def nonzero_units?(data)
+      units(data)&.nonzero? ? true : false
+    end
+
+    def carries_cash?(data)
+      !cash_amount(data).nil?
+    end
+
+    def signed_quantity(quantity, rule)
+      case rule[:sign]
+      when :preserve
+        quantity
+      when :sell
+        -quantity.abs
+      else
+        quantity.abs
+      end
+    end
+
+    # Trades are dated by settlement. A share movement has no settlement cycle
+    # of its own, and a brokerage can date a deposit after the sale of the very
+    # shares it delivered, which would leave the history short of them in
+    # between. Shares coming in take the earlier of the two dates and shares
+    # going out the later, so a trade dated between the two falls after a
+    # deposit and before a withdrawal, never the other way round.
+    def activity_date_for(data, rule, quantity)
+      settlement_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"])
+      trade_date = parse_date(data[:trade_date]) || parse_date(data["trade_date"])
+
+      date = if rule[:category] == :share_movement
+        dates = [ settlement_date, trade_date ].compact
+        quantity.negative? ? dates.max : dates.min
+      else
+        settlement_date || trade_date
+      end
+
+      date || Date.current
+    end
+
+    # Share movements that undo each other: two legs moving the same number of
+    # shares of one security in opposite directions on the same day, such as a
+    # journal between two parts of the account. Together they move nothing,
+    # and imported, the inbound leg would still leave the position's cost basis
+    # unknown until it is sold out, so neither is imported. Only pairs are
+    # matched: three legs that net to nothing are all imported.
+    #
+    # A leg whose stored trade is protected from sync stays, so it is left out
+    # of the matching and its counterpart is imported too: together they still
+    # move nothing. A protected cash entry holds no shares, and its leg is
+    # matched as usual.
+    def cancelled_share_movement_ids(activities_data)
+      legs = activities_data.filter_map do |activity_data|
+        next unless activity_data.is_a?(Hash)
+
+        data = activity_data.with_indifferent_access
+        activity_type = data[:type].to_s.upcase
+        rule = ACTIVITY_RULES[activity_type]
+        next unless rule && rule[:category] == :share_movement && trade_activity?(activity_type, data)
+
+        # Matched on the ticker the trade would be booked on, as two rows of
+        # one security can carry its symbol in different shapes
+        ticker, = trade_ticker_and_symbol_data(data)
+        next if ticker.blank? || data[:id].blank?
+
+        qty = signed_quantity(units(data), rule)
+        # The legs of a journal carry the same dates, but a leg out is booked on
+        # the later of them, so legs are matched on the date a leg in would take
+        { id: data[:id].to_s, day: [ ticker.to_s.upcase, activity_date_for(data, rule, qty.abs) ], qty: qty }
+      rescue => e
+        # A row the matching cannot read is left to the import below, which
+        # skips and logs it, rather than failing every other row with it
+        Rails.logger.warn("SnaptradeAccount::ActivitiesProcessor - Not matching activity #{activity_data.try(:[], "id")} as a share movement: #{e.class}")
+        nil
+      end
+
+      kept_ids = protected_trade_ids(legs.map { |leg| leg[:id] })
+      legs = legs.reject { |leg| kept_ids.include?(leg[:id]) }
+
+      legs.group_by { |leg| leg[:day] }.each_value.with_object(Set.new) do |day_legs, ids|
+        inbound, outbound = day_legs.partition { |leg| leg[:qty].positive? }
+
+        outbound.each do |out_leg|
+          in_leg = inbound.find { |leg| (leg[:qty] + out_leg[:qty]).abs <= CANCELLING_QUANTITY_TOLERANCE }
+          next unless in_leg
+
+          inbound.delete(in_leg)
+          ids << in_leg[:id] << out_leg[:id]
+        end
+      end
+    end
+
+    # The ticker an activity trades, the symbol data to resolve it with and
+    # the option contract's data: the contract's ticker when the row names
+    # one, else the symbol's, whose shape differs between activities and
+    # holdings.
+    def trade_ticker_and_symbol_data(data)
       ticker, option_data = option_ticker_and_data(data)
 
       # Extract and normalize symbol data
@@ -213,6 +326,34 @@ class SnaptradeAccount::ActivitiesProcessor
         symbol_data = underlying_symbol_data
       end
 
+      [ ticker, symbol_data, option_data ]
+    end
+
+    # The ids of the stored trades among these that a sync must leave in place
+    def protected_trade_ids(external_ids)
+      return Set.new if external_ids.empty?
+
+      account.entries.trades.where(source: "snaptrade", external_id: external_ids)
+        .select(&:protected_from_sync?).to_set(&:external_id)
+    end
+
+    # A leg imported before the one that cancels it arrived would otherwise
+    # stay behind: a trade moving shares on its own, or, stored as cash while
+    # the row carried some, cash the row no longer reports.
+    def remove_cancelled_movement(external_id)
+      entry = account.entries.find_by(external_id: external_id, source: "snaptrade")
+      return if entry.nil? || entry.protected_from_sync?
+
+      Rails.logger.info("SnaptradeAccount::ActivitiesProcessor - Removing share movement #{external_id}, cancelled by its counterpart")
+      entry.destroy!
+    end
+
+    def process_trade(data, activity_type, external_id)
+      # Check `option_symbol` first: if present, this is an option contract trade.
+      # Prioritizing `option_symbol` prevents brokerages like Robinhood (which populate
+      # plain `symbol` with the underlying equity) from importing options as common stock.
+      ticker, symbol_data, option_data = trade_ticker_and_symbol_data(data)
+
       # Must have a symbol for trades
       if ticker.blank?
         capture_skipped_trade("missing_symbol", "no symbol", external_id: external_id, activity_type: activity_type)
@@ -228,8 +369,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       # Parse trade values
-      quantity = parse_decimal(data[:units]) || parse_decimal(data["units"]) ||
-                 parse_decimal(data[:quantity]) || parse_decimal(data["quantity"])
+      quantity = units(data)
       price = parse_decimal(data[:price]) || parse_decimal(data["price"])
       amount = parse_decimal(data[:amount]) || parse_decimal(data["amount"]) ||
                parse_decimal(data[:trade_value]) || parse_decimal(data["trade_value"])
@@ -244,14 +384,7 @@ class SnaptradeAccount::ActivitiesProcessor
       rule = ACTIVITY_RULES[activity_type] || {}
 
       # Determine sign based on activity type (sell-side should be negative)
-      quantity = case rule[:sign]
-      when :preserve
-        quantity
-      when :sell
-        -quantity.abs
-      else
-        quantity.abs
-      end
+      quantity = signed_quantity(quantity, rule)
 
       # SnapTrade reports option `units` in contracts while quoting `price` per
       # underlying share. Normalize `price` to per-contract so `qty * price`
@@ -305,8 +438,7 @@ class SnaptradeAccount::ActivitiesProcessor
       end
 
       # Get the activity date
-      activity_date = parse_date(data[:settlement_date]) || parse_date(data["settlement_date"]) ||
-                      parse_date(data[:trade_date]) || parse_date(data["trade_date"]) || Date.current
+      activity_date = activity_date_for(data, rule, quantity)
 
       # Extract currency - handle both nested object and string
       currency_data = data[:currency] || data["currency"] || symbol_data[:currency] || symbol_data["currency"]
@@ -335,14 +467,23 @@ class SnaptradeAccount::ActivitiesProcessor
         date: activity_date,
         name: description,
         source: "snaptrade",
-        activity_label: label_from_type(activity_type)
+        activity_label: rule[:trade_label] || label_from_type(activity_type)
       )
       @trades_count += 1 if result
+
+      # Recorded once, on first import: for these types the units are the only
+      # sign that the row moves shares, so support can see which rows were read that way
+      if rule[:category] == :share_movement && result&.previously_new_record?
+        capture_debug_log(
+          level: "info",
+          message: "Imported #{activity_type} activity #{external_id} as a share movement of #{quantity.to_s('F')} #{ticker}",
+          metadata: { activity_id: external_id, activity_type: activity_type, ticker: ticker, quantity: quantity.to_s("F"), reason: "share_movement" }
+        )
+      end
     end
 
     def process_cash_activity(data, activity_type, external_id)
-      amount = parse_decimal(data[:amount]) || parse_decimal(data["amount"]) ||
-               parse_decimal(data[:net_amount]) || parse_decimal(data["net_amount"])
+      amount = cash_amount(data)
       return if amount.nil? || amount.zero?
 
       # Get the activity date
@@ -384,6 +525,14 @@ class SnaptradeAccount::ActivitiesProcessor
         investment_activity_label: label_from_type(activity_type)
       )
       @transactions_count += 1 if result
+    end
+
+    # The cash a row names: its amount, or its net amount when the amount is
+    # missing or zero. Nil when it names none.
+    def cash_amount(data)
+      [ data[:amount], data["amount"], data[:net_amount], data["net_amount"] ]
+        .map { |value| parse_decimal(value) }
+        .find { |amount| amount&.nonzero? }
     end
 
     def reclassify_entry_if_needed(external_id, expected_type)
