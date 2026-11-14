@@ -384,6 +384,19 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "clearing a remapped position leaves another provider's row on the user's security" do
+    travel_to(1.day.ago) do
+      sync_positions!([ stock_position ])
+      @account.holdings.find_by!(security: securities(:aapl)).remap_security!(securities(:msft))
+    end
+    plaid = AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    other = @account.holdings.create!(security: securities(:msft), date: Date.current, currency: "USD", qty: 5, price: 1, amount: 5,
+                                      account_provider_id: plaid.id)
+
+    assert_nothing_raised { sync_positions!([]) }
+    assert_equal 5, other.reload.qty
+  end
+
   # === ActivitiesProcessor Tests ===
 
   test "activities processor maps BUY type to Buy label" do

@@ -57,7 +57,7 @@ class SnaptradeAccount::HoldingsProcessor
         # The adapter matches a row without external_id by security, date and
         # currency alone, so never zero another provider's row for today. Rows without a
         # provider are Sure's own materialized ones, which the sync rewrites anyway.
-        next if account.holdings.where(security: security, date: Date.current, currency: h.currency)
+        next if account.holdings.where(security: [ security, h.security ], date: Date.current, currency: h.currency)
           .where.not(account_provider_id: [ nil, provider_id ]).exists?
 
         # The materializer may have written today's row on the user's remapped security.
