@@ -235,6 +235,25 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "DECOUPLED", @item.reload.aspsp_auth_approach
   end
 
+  test "reauthorize without a stored bank redirects with an alert instead of raising" do
+    assert_nil @item.aspsp_name
+
+    post reauthorize_enable_banking_item_url(@item)
+
+    assert_redirected_to settings_providers_url
+    assert_equal I18n.t("enable_banking_items.reauthorize.bank_required"), flash[:alert]
+  end
+
+  test "reauthorize redirects with an alert on unexpected errors" do
+    @item.update!(aspsp_name: "Test Bank")
+    EnableBankingItem.any_instance.stubs(:begin_authorization!).raises(StandardError, "boom")
+
+    post reauthorize_enable_banking_item_url(@item)
+
+    assert_redirected_to settings_providers_url
+    assert_equal I18n.t("enable_banking_items.reauthorize.unexpected_error"), flash[:alert]
+  end
+
   test "authorize sends a random state instead of the item id" do
     stub_authorization_start
 
