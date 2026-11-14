@@ -43,6 +43,8 @@ class EnableBankingItem::Syncer
       raise StandardError.new(error_msg.presence || "Import failed")
     end
 
+    collect_truncated_history_warning(sync, import_result[:transactions_truncated].to_i)
+
     # Phase 2: Check account setup status and collect sync statistics
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: enable_banking_item.enable_banking_accounts.includes(:account_provider, :account))
@@ -88,4 +90,20 @@ class EnableBankingItem::Syncer
   def perform_post_sync
     # no-op
   end
+
+  private
+
+    # A full-history fetch that stopped early keeps its rows and the sync
+    # completes, so the sync summary shows that older history may be missing.
+    def collect_truncated_history_warning(sync, count)
+      return unless count.positive?
+
+      collect_data_quality_stats(sync,
+        warnings: count,
+        details: [ {
+          message: I18n.t("provider_warnings.enable_banking_history_truncated", count: count),
+          severity: "warning"
+        } ]
+      )
+    end
 end

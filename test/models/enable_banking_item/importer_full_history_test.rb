@@ -172,6 +172,19 @@ class EnableBankingItem::ImporterFullHistoryTest < ActiveSupport::TestCase
     assert warnings.any? { |msg| msg.include?("may be incomplete") }, "no truncation warning logged"
   end
 
+  test "a longest fetch cut at the page cap is captured as a debug log entry" do
+    link!
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "enable_banking", category: "provider_sync_error").count }, 1 do
+      build_paging_importer(pages: nil).import
+    end
+
+    entry = DebugLogEntry.last
+    assert_equal @family, entry.family
+    assert_equal @enable_banking_account.account_provider, entry.account_provider
+    assert_equal EnableBankingItem::Importer::MAX_LONGEST_PAGINATION_PAGES, entry.metadata["transactions_kept"]
+  end
+
   test "a longest fetch cut short by a mid-pagination validation error is reported as truncated" do
     link!
     provider = Object.new

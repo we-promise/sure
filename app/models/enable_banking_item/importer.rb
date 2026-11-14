@@ -755,6 +755,28 @@ class EnableBankingItem::Importer
       )
     end
 
+    # A strategy=longest fetch that stops at the page cap or on a repeated
+    # continuation key keeps its rows and is not retried, so the missing
+    # history is surfaced here.
+    def capture_longest_truncation_debug_log(enable_banking_account, transactions_kept:, reason:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Enable Banking strategy=longest transaction fetch stopped early; kept partial history",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          transactions_kept: transactions_kept,
+          reason: reason
+        }
+      )
+    end
+
     # Surfaces "ASPSP doesn't support PDNG" as a support-visible diagnostic, same
     # rationale as capture_pagination_truncation_debug_log: this is a partial
     # degradation (booked transactions still sync, pending transactions are
@@ -1136,6 +1158,9 @@ class EnableBankingItem::Importer
       # This ensures accounts with huge history don't lose all synced data.
       Rails.logger.warn(e.message)
       @pagination_truncated = true
+      if strategy.present?
+        capture_longest_truncation_debug_log(enable_banking_account, transactions_kept: all_transactions.count, reason: e.message)
+      end
       all_transactions
     end
 
