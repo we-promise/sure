@@ -1385,6 +1385,30 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  # numeric_exchange_rate reads each split line's account, which the export
+  # preloads, so more split parents do not mean more account queries.
+  test "split lines do not query accounts once per line" do
+    make_split = lambda do
+      parent = @account.entries.create!(date: Date.parse("2024-05-23"), amount: -10, name: "Split", currency: "EUR",
+        entryable: Transaction.new)
+      parent.split!([ { name: "A", amount: -6 }, { name: "B", amount: -4 } ]).each do |child|
+        child.entryable.update_columns(extra: { "exchange_rate" => 1.08 })
+      end
+    end
+    count_account_queries = lambda do
+      count = 0
+      callback = ->(*, payload) { count += 1 if payload[:sql].match?(/FROM "accounts"/) }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record") { @exporter.generate_export }
+      count
+    end
+
+    make_split.call
+    baseline = count_account_queries.call
+    3.times { make_split.call }
+
+    assert_equal baseline, count_account_queries.call
+  end
+
   test "exports the activity label and safe provider fields on split lines" do
     security = Security.create!(ticker: "SPL#{SecureRandom.hex(3).upcase}", name: "Split Line Security")
     parent = @account.entries.create!(
