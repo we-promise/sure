@@ -17,25 +17,50 @@ class RecurringTransaction
       @family = family
     end
 
+    RECENT_LIMIT = 2
+
     def detect!
       changes = 0
 
-      family.recurring_transactions.active.where("amount > 0").find_each do |series|
-        changes += 1 if detect_for(series)
+      # Load each batch's recent paid occurrences (and their allocations) in
+      # one query instead of one per series, which was an N+1.
+      family.recurring_transactions.active.where("amount > 0").find_in_batches do |batch|
+        recent_by_series = recent_paid_occurrences_for(batch.map(&:id))
+
+        batch.each do |series|
+          changes += 1 if detect_for(series, recent_by_series.fetch(series.id, []))
+        end
       end
 
       changes
     end
 
     private
-      def detect_for(series)
-        recent = series.recurring_occurrences
-                       .paid
-                       .order(due_on: :desc)
-                       .limit(2)
-                       .includes(:allocations)
-                       .to_a
-        return false unless recent.size == 2
+      # The latest RECENT_LIMIT paid occurrences per series, newest first,
+      # grouped by series id. `id DESC` breaks same-day ties deterministically.
+      def recent_paid_occurrences_for(series_ids)
+        return {} if series_ids.empty?
+
+        ranked = RecurringOccurrence
+                   .paid
+                   .where(recurring_transaction_id: series_ids)
+                   .select(
+                     "recurring_occurrences.*",
+                     "ROW_NUMBER() OVER (PARTITION BY recurring_occurrences.recurring_transaction_id " \
+                     "ORDER BY recurring_occurrences.due_on DESC, recurring_occurrences.id DESC) AS recency_rank"
+                   )
+
+        RecurringOccurrence
+          .from(ranked, :recurring_occurrences)
+          .where("recurring_occurrences.recency_rank <= ?", RECENT_LIMIT)
+          .order(:recurring_transaction_id, due_on: :desc, id: :desc)
+          .includes(:allocations)
+          .to_a
+          .group_by(&:recurring_transaction_id)
+      end
+
+      def detect_for(series, recent)
+        return false unless recent.size == RECENT_LIMIT
 
         settlements = recent.map do |occurrence|
           confirmed = occurrence.allocations.select(&:allocation_confirmed?)
