@@ -111,6 +111,7 @@ class Category < ApplicationRecord
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
   INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
+  FEES_NAME_KEY = "models.category.defaults.fees"
   DEFAULT_CATEGORY_TRANSLATION_KEYS = %w[
     income
     food_and_drink
@@ -285,6 +286,19 @@ class Category < ApplicationRecord
       LanguagesHelper::SUPPORTED_LOCALES.map do |locale|
         I18n.t(INVESTMENT_CONTRIBUTIONS_NAME_KEY, locale: locale)
       end.uniq
+    end
+
+    # Transfer fees go to the default Fees category. Its stored name is in the
+    # locale that was active when it was created, so look for the name in every
+    # supported locale before creating one; otherwise switching language would
+    # split fees across two categories. Call on a family's categories.
+    def find_or_create_fees!
+      current_name = I18n.t(FEES_NAME_KEY)
+      names = LanguagesHelper::SUPPORTED_LOCALES.map { |locale| I18n.t(FEES_NAME_KEY, locale: locale) }
+      matches = where(name: names.push(current_name).uniq).order(:created_at).to_a
+
+      matches.find { |category| category.name == current_name } || matches.first ||
+        find_or_create_by!(name: current_name)
     end
 
     def localized_default_name_for(name)
