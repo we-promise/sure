@@ -233,6 +233,23 @@ class Balance::SyncCacheTest < ActiveSupport::TestCase
     assert_equal [ "EUR->USD", "GBP->USD" ], log.metadata["missing_rate_pairs"].sort
   end
 
+  test "does not record a debug log entry when reporting is disabled" do
+    @account.entries.create!(
+      date: Date.current,
+      name: "EUR Transaction",
+      amount: 100,
+      currency: "EUR",
+      entryable: Transaction.new(extra: {})
+    )
+
+    assert_no_difference "DebugLogEntry.count" do
+      sync_cache = Balance::SyncCache.new(@account, report_missing_rates: false)
+      sync_cache.entries
+
+      assert_equal 1, sync_cache.unconvertible_entry_count
+    end
+  end
+
   test "records no debug log entry when every entry converts" do
     @account.entries.create!(
       date: Date.current,

@@ -28,7 +28,14 @@ class SplitsTest < ApplicationSystemTestCase
     visit edit_transaction_split_path(@entry)
 
     within "dialog" do
-      within all("[data-split-transaction-target='row']", minimum: 2).first do
+      # child_entries has no ORDER BY, so find the named row instead of relying
+      # on the database's row order.
+      groceries_row = all("[data-split-transaction-target='row']", minimum: 2).to_a.find do |row|
+        row.find("[data-split-transaction-target='nameInput']").value == "Groceries"
+      end
+      assert groceries_row, "expected a Groceries split row"
+
+      within groceries_row do
         find("[data-merchant-select-target='button']").click
         find("[role='option'][data-merchant-name='#{merchant.name}']").click
         find("[data-tag-select-target='button']").click
