@@ -440,12 +440,13 @@ class Provider::Snaptrade
       raise incomplete_activities_error(account_id, "SnapTrade activities page at offset #{activities.size} was empty, total #{known_total}") if rows.empty? && more && page.positive?
       return first_response.merge("data" => activities) if rows.empty? || !more
 
+      # Every page so far was full and distinct, so rows are still missing with or without a total.
       if page == MAX_ACTIVITY_PAGES - 1
-        message = "SnapTrade activities for account #{account_id} hit the page cap " \
+        raise incomplete_activities_error(
+          account_id,
+          "SnapTrade activities for account #{account_id} hit the page cap " \
           "(#{MAX_ACTIVITY_PAGES} pages, #{activities.size} rows, total #{known_total.inspect})"
-        raise incomplete_activities_error(account_id, message) if known_total
-        Rails.logger.warn("Provider::Snaptrade - #{message}; remaining rows not fetched")
-        capture_activities_log(account_id, "#{message}; remaining rows not fetched", level: :warn)
+        )
       end
     end
 

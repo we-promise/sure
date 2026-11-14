@@ -76,4 +76,20 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
     assert_equal [ "SnaptradeItem::Importer", "provider_sync", family, @snaptrade_account.account_provider, @snaptrade_account.id ],
                  [ entry.source, entry.category, entry.family, entry.account_provider, entry.metadata["snaptrade_account_id"] ]
   end
+
+  # An incomplete fetch (the provider's page cap or a missing page) raises, so
+  # the stored history and its sync cursor stay as they were.
+  test "a fetch that raises keeps the stored activities and the sync cursor" do
+    synced_at = 2.days.ago.change(usec: 0)
+    stored = Array.new(SnaptradeItem::Importer::MINIMUM_HISTORY_FOR_INCREMENTAL) { |i| { "id" => "a#{i}" } }
+    @snaptrade_account.update!(raw_activities_payload: stored, last_activities_sync: synced_at)
+    snaptrade_items(:configured_item).update!(last_synced_at: synced_at)
+    @provider.stubs(:get_account_activities).raises(Provider::Snaptrade::ApiError.new("hit the page cap"))
+
+    @importer.send(:import_activities, @snaptrade_account)
+
+    @snaptrade_account.reload
+    assert_equal stored, @snaptrade_account.raw_activities_payload
+    assert_equal synced_at, @snaptrade_account.last_activities_sync
+  end
 end

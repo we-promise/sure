@@ -366,7 +366,10 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     assert_equal 3, requests.size
   end
 
-  test "get_account_activities without a total stops at the page cap and logs it" do
+  # Reaching the cap needs every page to be full and distinct, so rows are
+  # almost certainly still missing; returning them would move the importer's
+  # sync cursor past the rest.
+  test "get_account_activities raises at the page cap without a total" do
     configure_oauth!
     provider = Provider::Snaptrade.new(fake_item)
 
@@ -374,19 +377,31 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
       { data: Array.new(2) { |i| { "id" => "p#{page}-#{i}" } } }
     end
     requests = stub_activity_pages(provider, pages)
-    Rails.logger.expects(:warn).with(regexp_matches(/page cap/))
 
-    response = nil
-    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "warn").count }, 1 do
-      response = stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
-        stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
-          provider.get_account_activities(account_id: "acct-1")
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "error").count }, 1 do
+      assert_raises(Provider::Snaptrade::ApiError) do
+        stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
+          stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
+            provider.get_account_activities(account_id: "acct-1")
+          end
         end
       end
     end
-
     assert_equal 3, requests.size
-    assert_equal 6, response["data"].size
+  end
+
+  # An empty first page is how a new connection looks while SnapTrade is still
+  # importing it. Raising would end SnaptradeActivitiesFetchJob's polling.
+  test "get_account_activities returns an empty first page even when the total is positive" do
+    configure_oauth!
+    provider = Provider::Snaptrade.new(fake_item)
+
+    requests = stub_activity_pages(provider, [ { data: [], pagination: { offset: 0, limit: 1000, total: 50 } } ])
+
+    assert_no_difference -> { DebugLogEntry.count } do
+      assert_equal [], provider.get_account_activities(account_id: "acct-1")["data"]
+    end
+    assert_equal 1, requests.size
   end
 
   test "get_positions filters out instrument kinds the holdings pipeline cannot model" do
