@@ -174,6 +174,205 @@ class PdfImportReconciliationTest < ActiveSupport::TestCase
     assert_equal "2007", @statement.account_last4_hint
   end
 
+  test "extract_transactions ignores inverted dates while syncing valid balances and hints" do
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-11-06", end_date: "2026-10-09" },
+          opening_balance: 100.0,
+          closing_balance: 200.0,
+          bank_name: "Chase",
+          account_number: "1234",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+    initial_start = @statement.period_start_on
+    initial_end = @statement.period_end_on
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal initial_start, @statement.period_start_on
+    assert_equal initial_end, @statement.period_end_on
+    assert_equal 100.0, @statement.opening_balance
+    assert_equal 200.0, @statement.closing_balance
+    assert_equal "Chase", @statement.institution_name_hint
+    assert_equal "1234", @statement.account_last4_hint
+  end
+
+  test "extract_transactions handles unparseable date independently without dropping balances" do
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-02-30", end_date: "2026-11-06" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          bank_name: "Wells Fargo",
+          account_number: "5678",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal 50.0, @statement.opening_balance
+    assert_equal 150.0, @statement.closing_balance
+    assert_equal "Wells Fargo", @statement.institution_name_hint
+    assert_equal "5678", @statement.account_last4_hint
+  end
+
+  test "extract_transactions rejects dates outside Import.reasonable_date_range" do
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "1950-01-01", end_date: "2026-11-06" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+  end
+
+  test "extract_transactions drops balances when extracted currency conflicts with statement currency" do
+    @statement.update!(currency: "USD", opening_balance: 10.0)
+
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          currency: "EUR",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal 10.0, @statement.opening_balance
+    assert_nil @statement.closing_balance
+  end
+
+  test "extract_transactions honors currency mismatch detected during earlier processing" do
+    @statement.update!(currency: "USD", opening_balance: 10.0, sanitized_parser_output: { "extracted_currency" => "EUR" })
+
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+          opening_balance: 50.0,
+          closing_balance: 150.0,
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.extract_transactions
+    end
+
+    @statement.reload
+    assert_equal 10.0, @statement.opening_balance
+    assert_nil @statement.closing_balance
+  end
+
+  test "apply_statement_metadata_updates bounds institution_name_hint to 200 characters" do
+    long_name = "A" * 300
+    @import.send(
+      :apply_statement_metadata_updates,
+      start_date: "2026-10-01",
+      end_date: "2026-10-31",
+      opening_balance: 100,
+      closing_balance: 200,
+      institution_name: long_name,
+      account_last4: "1234"
+    )
+
+    @statement.reload
+    assert_equal ("A" * 200), @statement.institution_name_hint
+    assert_equal 200, @statement.institution_name_hint.length
+  end
+
+  test "apply_statement_metadata_updates preserves existing hints when already populated" do
+    @statement.update!(institution_name_hint: "Existing Bank", account_last4_hint: "9999")
+
+    provider = mock("llm_provider")
+    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
+    provider.stubs(:extract_bank_statement).returns(
+      OpenStruct.new(
+        success?: true,
+        data: {
+          period: { start_date: "2026-10-01", end_date: "2026-10-31" },
+          opening_balance: 10.0,
+          closing_balance: 20.0,
+          bank_name: "New Bank",
+          account_number: "1111",
+          transactions: []
+        }
+      )
+    )
+    @import.stubs(:pdf_file_content).returns("fake-pdf")
+
+    @import.extract_transactions
+
+    @statement.reload
+    assert_equal "Existing Bank", @statement.institution_name_hint
+    assert_equal "9999", @statement.account_last4_hint
+  end
+
+  test "apply_statement_metadata_updates captures debug log entry when update fails validation" do
+    @statement.stubs(:update).returns(false)
+    @statement.errors.add(:base, "Simulated validation failure")
+
+    assert_difference -> { DebugLogEntry.where(category: "import", level: "warn").count }, 1 do
+      @import.send(
+        :apply_statement_metadata_updates,
+        start_date: "2026-10-01",
+        end_date: "2026-10-31",
+        opening_balance: 100,
+        closing_balance: 200,
+        institution_name: "Bank",
+        account_last4: "1234"
+      )
+    end
+  end
+
   test "publishing does not re-match a row against an entry row generation already consumed" do
     create_transaction(account: @account, date: @date, amount: 50, name: "Coffee")
 

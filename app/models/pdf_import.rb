@@ -605,6 +605,7 @@ class PdfImport < Import
       closing_bal = data["closing_balance"]
       bank_name = data["bank_name"].presence
       last4 = data["account_number"].presence&.to_s&.last(4)
+      currency = data["currency"].presence || account_statement.sanitized_parser_output&.dig("extracted_currency").presence
 
       apply_statement_metadata_updates(
         start_date: start_date,
@@ -612,7 +613,8 @@ class PdfImport < Import
         opening_balance: opening_bal,
         closing_balance: closing_bal,
         institution_name: bank_name,
-        account_last4: last4
+        account_last4: last4,
+        currency: currency
       )
     end
 
@@ -626,6 +628,7 @@ class PdfImport < Import
       opening_bal = data["opening_balance"]
       closing_bal = data["closing_balance"]
       institution = data["institution_name"].presence
+      currency = data["currency"].presence || account_statement.sanitized_parser_output&.dig("extracted_currency").presence
 
       apply_statement_metadata_updates(
         start_date: start_date,
@@ -633,29 +636,137 @@ class PdfImport < Import
         opening_balance: opening_bal,
         closing_balance: closing_bal,
         institution_name: institution,
-        account_last4: nil
+        account_last4: nil,
+        currency: currency
       )
     end
 
-    def apply_statement_metadata_updates(start_date:, end_date:, opening_balance:, closing_balance:, institution_name:, account_last4:)
+    def apply_statement_metadata_updates(start_date:, end_date:, opening_balance:, closing_balance:, institution_name:, account_last4:, currency: nil)
       updates = {}
-      updates[:period_start_on] = Date.parse(start_date) if start_date
-      updates[:period_end_on] = Date.parse(end_date) if end_date
-      updates[:opening_balance] = opening_balance if opening_balance.present?
-      updates[:closing_balance] = closing_balance if closing_balance.present?
-      updates[:institution_name_hint] = institution_name if institution_name && account_statement.institution_name_hint.blank?
-      updates[:account_last4_hint] = account_last4 if account_last4 && account_statement.account_last4_hint.blank?
 
-      if updates[:period_start_on] && updates[:period_end_on] && updates[:period_start_on] > updates[:period_end_on]
-        updates.delete(:period_start_on)
-      elsif updates[:period_start_on] && account_statement.period_end_on && updates[:period_start_on] > account_statement.period_end_on
-        updates.delete(:period_start_on)
-      elsif updates[:period_end_on] && account_statement.period_start_on && account_statement.period_start_on > updates[:period_end_on]
-        updates[:period_start_on] = updates[:period_end_on].beginning_of_month
+      if currency.present?
+        if account_statement.currency.blank? && account_statement.account_id.blank?
+          updates[:currency] = currency.to_s.upcase
+        end
+        parser_output = (account_statement.sanitized_parser_output || {}).dup
+        if parser_output["extracted_currency"] != currency.to_s.upcase
+          parser_output["extracted_currency"] = currency.to_s.upcase
+          updates[:sanitized_parser_output] = parser_output
+        end
       end
 
-      account_statement.update(updates) if updates.any?
+      # Only sync balances when currency is compatible with the statement's currency,
+      # matching AccountStatement::MetadataDetector#detect_from_pdf behavior.
+      target_currency = updates[:currency] || account_statement.statement_currency
+      currency_compatible = currency.blank? || target_currency.blank? || currency.to_s.casecmp?(target_currency)
+
+      if currency_compatible
+        updates[:opening_balance] = opening_balance if opening_balance.present?
+        updates[:closing_balance] = closing_balance if closing_balance.present?
+      else
+        DebugLogEntry.capture(
+          category: "import",
+          level: "warn",
+          message: "PdfImport: extracted balance currency '#{currency}' does not match statement currency '#{target_currency}'",
+          source: "pdf_import",
+          family: family,
+          account: account,
+          metadata: {
+            import_id: id,
+            account_statement_id: account_statement.id,
+            extracted_currency: currency,
+            statement_currency: target_currency
+          }
+        )
+      end
+
+      bounded_institution = institution_name.presence&.to_s&.strip&.first(200)&.presence
+      updates[:institution_name_hint] = bounded_institution if bounded_institution && account_statement.institution_name_hint.blank?
+      updates[:account_last4_hint] = account_last4 if account_last4.present? && account_statement.account_last4_hint.blank?
+
+      parsed_start = parse_statement_date(start_date)
+      parsed_end = parse_statement_date(end_date)
+
+      proposed_start = parsed_start || account_statement.period_start_on
+      proposed_end = parsed_end || account_statement.period_end_on
+
+      if proposed_start && proposed_end && proposed_start > proposed_end
+        DebugLogEntry.capture(
+          category: "import",
+          level: "warn",
+          message: "PdfImport: extracted statement period is inverted or conflicts with existing period",
+          source: "pdf_import",
+          family: family,
+          account: account,
+          metadata: {
+            import_id: id,
+            account_statement_id: account_statement.id,
+            parsed_start: parsed_start&.iso8601,
+            parsed_end: parsed_end&.iso8601,
+            existing_start: account_statement.period_start_on&.iso8601,
+            existing_end: account_statement.period_end_on&.iso8601
+          }
+        )
+      else
+        updates[:period_start_on] = parsed_start if parsed_start
+        updates[:period_end_on] = parsed_end if parsed_end
+      end
+
+      return if updates.empty?
+
+      unless account_statement.update(updates)
+        DebugLogEntry.capture(
+          category: "import",
+          level: "warn",
+          message: "PdfImport: failed to sync statement metadata (#{account_statement.errors.full_messages.to_sentence})",
+          source: "pdf_import",
+          family: family,
+          account: account,
+          metadata: {
+            import_id: id,
+            account_statement_id: account_statement.id,
+            updates: updates,
+            errors: account_statement.errors.messages
+          }
+        )
+      end
+    end
+
+    def parse_statement_date(date_str)
+      return nil if date_str.blank?
+
+      date = date_str.is_a?(Date) ? date_str : Date.parse(date_str.to_s)
+      return date if Import.reasonable_date_range.cover?(date)
+
+      DebugLogEntry.capture(
+        category: "import",
+        level: "warn",
+        message: "PdfImport: statement date '#{date_str}' falls outside reasonable date range",
+        source: "pdf_import",
+        family: family,
+        account: account,
+        metadata: {
+          import_id: id,
+          account_statement_id: account_statement&.id,
+          raw_date: date_str,
+          parsed_date: date.iso8601
+        }
+      )
+      nil
     rescue Date::Error, ArgumentError => e
-      Rails.logger.warn("Failed to parse statement dates from extracted data: #{e.message}")
+      DebugLogEntry.capture(
+        category: "import",
+        level: "warn",
+        message: "PdfImport: failed to parse statement date '#{date_str}' (#{e.message})",
+        source: "pdf_import",
+        family: family,
+        account: account,
+        metadata: {
+          import_id: id,
+          account_statement_id: account_statement&.id,
+          raw_date: date_str
+        }
+      )
+      nil
     end
 end
