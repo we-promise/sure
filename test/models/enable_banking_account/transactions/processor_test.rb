@@ -661,4 +661,37 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
 
     assert_equal 2, @account.entries.where(source: "enable_banking").count
   end
+  def sync_shared(*rows)
+    @enable_banking_account.update!(raw_transactions_payload: rows)
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+  end
+
+  test "a relink with a re-issued reference does not duplicate an entry settled from a hold or date-edited" do
+    other = raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00").merge(booking_date: 3.days.ago.to_date.to_s)
+    hold = raw_shared_tid_transaction(entry_reference: nil, amount: "9.00")
+      .merge(transaction_id: nil, booking_date: nil, value_date: 4.days.ago.to_date.to_s, status: "PDNG", _pending: true)
+    sync_shared(hold)
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"), other)
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a2", amount: "9.00"), other)
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+
+    plain = @account.entries.find_by!(external_id: "enable_banking_tid-x")
+    plain.update!(date: 6.days.ago.to_date)
+    plain.lock_saved_attributes!
+    plain.mark_user_modified!
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a3", amount: "9.00"), other)
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
+
+  test "a sibling booking alone before a categorised hold's own row does not keep the hold" do
+    sync_shared(raw_shared_tid_transaction(entry_reference: nil, amount: "50.00").merge(status: "PDNG", _pending: true))
+    @account.entries.find_by!(external_id: "enable_banking_tid-x").mark_user_modified!
+    other = raw_shared_tid_transaction(entry_reference: "r-b", amount: "20.00").merge(booking_date: 3.days.ago.to_date.to_s)
+    sync_shared(other)
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a", amount: "50.00"), other)
+
+    assert_equal [ 20, 50 ], @account.entries.where(source: "enable_banking").pluck(:amount).map(&:to_i).sort
+  end
 end

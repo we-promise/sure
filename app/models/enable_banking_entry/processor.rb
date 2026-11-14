@@ -97,7 +97,9 @@ class EnableBankingEntry::Processor
       kept = legacy&.entryable.try(:extra)&.dig("enable_banking", "entry_reference")&.to_s if indexes.size > 1
       owner = free.find { |i| ref[i] == kept } if kept && indexes.any? { |i| ref[i] == kept }
       # A stored reference missing from the payload (re-issued, or aged out): keep the entry only on an exact match.
-      owner = nil if kept && indexes.none? { |i| ref[i] == kept } && owner && score[owner] < 2
+      # The entry's date is not the bank's when the user locked it or a settled hold froze it: an amount match is then exact.
+      own_date = legacy && (legacy.locked?(:date) || legacy.entryable.try(:extra)&.key?("auto_claimed_pending_ids"))
+      owner = nil if kept && indexes.none? { |i| ref[i] == kept } && owner && score[owner] < (own_date ? 1 : 2)
       owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.user_modified? && !legacy.locked?(:amount)
       indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
     end
@@ -279,8 +281,9 @@ class EnableBankingEntry::Processor
   # external_id: this row's id from external_ids_for over the whole payload,
   # which can differ from compute_external_id when rows share a transaction_id.
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
-                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil)
+                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil, shared_transaction_id: false)
     @enable_banking_transaction = enable_banking_transaction
+    @shared_transaction_id = shared_transaction_id
     @external_id = external_id
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
@@ -336,7 +339,7 @@ class EnableBankingEntry::Processor
     # The adapter skips a protected entry, so record which row owns its transaction_id here (only ever adds the key).
     ref = extra&.dig(:enable_banking, :entry_reference)
     txn = entry&.entryable
-    txn.update_column(:extra, txn.extra.deep_merge("enable_banking" => { "entry_reference" => ref })) if ref && txn.is_a?(Transaction) && txn.extra.dig("enable_banking", "entry_reference").nil?
+    txn.update_column(:extra, txn.extra.deep_merge("enable_banking" => { "entry_reference" => ref })) if @shared_transaction_id && ref && txn.is_a?(Transaction) && txn.extra.dig("enable_banking", "entry_reference").nil?
 
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
 

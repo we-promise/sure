@@ -118,7 +118,8 @@ class EnableBankingAccount::Transactions::Processor
           known_merchant_names: shared_known_merchant_names,
           identifierless_external_ids: shared_identifierless_external_ids,
           excluded_external_ids: excluded_ids,
-          external_id: ext_id
+          external_id: ext_id,
+          shared_transaction_id: shared_transaction_ids.include?(transaction_data.with_indifferent_access[:transaction_id])
         ).process
 
         if result.nil?
@@ -177,6 +178,13 @@ class EnableBankingAccount::Transactions::Processor
       @external_ids ||= EnableBankingEntry::Processor.external_ids_for(
         enable_banking_account.raw_transactions_payload, account: enable_banking_account.current_account
       )
+    end
+
+    # Booked transaction_ids more than one row shares: only there does a protected entry need its owner recorded.
+    def shared_transaction_ids
+      @shared_transaction_ids ||= enable_banking_account.raw_transactions_payload.map(&:with_indifferent_access)
+        .reject { |data| EnableBankingEntry::Processor.pending_payload?(data) }.filter_map { |data| data[:transaction_id].presence }
+        .tally.select { |_, count| count > 1 }.keys.to_set
     end
 
     # Rows keeping their plain id go first, so a pending entry under a shared
