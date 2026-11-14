@@ -3,13 +3,13 @@
   data = spending_trend_data
   period = data[:current_period]
   pill_button_class = "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0 whitespace-nowrap"
-  has_data = data[:current].any? { |p| p[:value].positive? } || data[:previous].any? { |p| p[:value].positive? }
+  has_data = [ data[:current], *data[:comparisons].map { |c| c[:series] } ].any? { |series| series.any? { |p| p[:value].positive? } }
   chart_data = {
     days: data[:days],
     current_days: data[:current_days],
     axis_labels: data[:axis_labels],
     current: data[:current],
-    previous: data[:previous]
+    comparisons: data[:comparisons]
   }
   previous_label = data[:previous_label]
   previous_comparison_day = data[:previous_comparison_day]
@@ -47,6 +47,24 @@
                href: root_path(other_view_params.merge(spending_month: month.iso8601, spending_category_ids: data[:category_ids]).compact),
                frame: "dashboard_sections",
                selected: month == data[:month],
+               data: { turbo_action: "advance" }
+             ) %>
+        <% end %>
+      <% end %>
+
+      <%= render DS::Menu.new(variant: :button, placement: "bottom-end") do |menu| %>
+        <% menu.with_button(type: "button", class: pill_button_class, aria: { label: t(".compare_picker_aria_label") }) do %>
+          <span><%= t(".compare_months", count: data[:compare_months]) %></span>
+          <%= icon("chevron-down", size: "sm") %>
+        <% end %>
+
+        <% PagesController::SPENDING_COMPARE_MONTHS.each do |months| %>
+          <% menu.with_item(
+               variant: :link,
+               text: t(".compare_months", count: months),
+               href: root_path(other_view_params.merge(spending_month: data[:month].iso8601, spending_compare_months: (months if months > PagesController::SPENDING_COMPARE_MONTHS.min), spending_category_ids: data[:category_ids]).compact),
+               frame: "dashboard_sections",
+               selected: months == data[:compare_months],
                data: { turbo_action: "advance" }
              ) %>
         <% end %>
@@ -122,8 +140,7 @@
       data-controller="spending-chart"
       data-spending-chart-data-value="<%= chart_data.to_json %>"
       data-spending-chart-currency-value="<%= Current.family.currency %>"
-      data-spending-chart-current-label-value="<%= I18n.l(data[:month], format: :month_year).capitalize %>"
-      data-spending-chart-previous-label-value="<%= previous_label %>">
+      data-spending-chart-current-label-value="<%= I18n.l(data[:month], format: :month_year).capitalize %>">
     </div>
   <% else %>
     <div class="w-full h-52 flex items-center justify-center">

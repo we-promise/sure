@@ -4,19 +4,26 @@ import { CHART_TOOLTIP_CLASSES } from "utils/chart_tooltip";
 
 // Cumulative spending chart for the dashboard "spending" widget: the selected
 // month's running total (green, ending today while the month is in progress)
-// overlaid on the previous month's complete curve (gray), sharing one
+// overlaid on the complete curves of the months it's compared with (the
+// previous month in gray, older ones in their own colors), sharing one
 // day-of-month axis. Lifecycle mirrors bar_chart/time_series_chart
 // (install/teardown, ResizeObserver, turbo:load reinstall, page-relative
 // tooltip positioning).
 const CURRENT_COLOR = "var(--color-success)";
-const PREVIOUS_COLOR = "var(--color-gray-400)";
+// Compared months, newest first; the server offers at most this many.
+const COMPARISON_COLORS = [
+  "var(--color-gray-400)",
+  "var(--color-blue-500)",
+  "var(--color-violet-500)",
+  "var(--color-orange-500)",
+  "var(--color-pink-500)",
+];
 
 export default class extends Controller {
   static values = {
     data: Object,
     currency: { type: String, default: "USD" },
     currentLabel: { type: String, default: "Current" },
-    previousLabel: { type: String, default: "Previous" },
   };
 
   _resizeObserver = null;
@@ -44,24 +51,40 @@ export default class extends Controller {
   }
 
   _install() {
-    const width = this.element.clientWidth;
-    const height = this.element.clientHeight;
     const {
       days = 30,
       current_days: currentDays = days,
       axis_labels: axisLabels = [],
       current = [],
-      previous = [],
+      comparisons: rawComparisons = [],
     } = this.dataValue || {};
+    const comparisons = rawComparisons.map((comparison, i) => ({
+      ...comparison,
+      color: COMPARISON_COLORS[i % COMPARISON_COLORS.length],
+    }));
+    const comparisonPoints = comparisons.flatMap((c) => c.series);
 
-    if (width < 50 || height < 50) return;
-    if (current.length === 0 && previous.length === 0) return;
+    const maxValue =
+      d3.max([...current, ...comparisonPoints], (d) => d.value) || 0;
+    if (maxValue <= 0) return;
+
+    // With one compared month the header already names both lines.
+    if (comparisons.length > 1) this._drawLegend(comparisons);
+
+    const width = this.element.clientWidth;
+    const height = this.element.clientHeight - this._legendHeight();
 
     // Room on the right for the axis labels ($0, $1.5K, …), like the
     // reference design; the curves run to the axis, not the card edge.
     const margin = { top: 8, right: 48, bottom: 20, left: 4 };
     const innerWidth = width - margin.left - margin.right;
     const innerHeight = height - margin.top - margin.bottom;
+
+    // The legend must be in the DOM to be measured
+    if (width < 50 || height < 50 || innerWidth <= 0 || innerHeight <= 0) {
+      this._teardown();
+      return;
+    }
 
     const svg = d3
       .select(this.element)
@@ -73,9 +96,6 @@ export default class extends Controller {
     const group = svg
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
-
-    const maxValue = d3.max([...current, ...previous], (d) => d.value) || 0;
-    if (maxValue <= 0) return;
 
     const x = d3.scaleLinear().domain([1, days]).range([0, innerWidth]);
     const y = d3
@@ -93,13 +113,15 @@ export default class extends Controller {
       .y((d) => y(d.value))
       .curve(d3.curveMonotoneX);
 
-    // Previous month first so the current month always draws on top.
-    if (previous.length > 0) {
+    // Oldest month first so newer months, and the current month above all,
+    // draw on top.
+    for (const comparison of [...comparisons].reverse()) {
+      if (comparison.series.length === 0) continue;
       group
         .append("path")
-        .datum(previous)
+        .datum(comparison.series)
         .attr("fill", "none")
-        .attr("stroke", PREVIOUS_COLOR)
+        .attr("stroke", comparison.color)
         .attr("stroke-width", 1.5)
         .attr("stroke-linejoin", "round")
         .attr("stroke-linecap", "round")
@@ -132,10 +154,38 @@ export default class extends Controller {
       x,
       y,
       current,
-      previous,
+      comparisons,
       innerWidth,
       innerHeight,
     );
+  }
+
+  _drawLegend(comparisons) {
+    const legend = d3
+      .select(this.element)
+      .append("div")
+      .attr(
+        "class",
+        "legend flex flex-wrap gap-x-3 gap-y-1 pb-2 text-xs text-secondary",
+      );
+
+    for (const { label, color } of [
+      { label: this.currentLabelValue, color: CURRENT_COLOR },
+      ...comparisons,
+    ]) {
+      const item = legend
+        .append("span")
+        .attr("class", "inline-flex items-center gap-1.5");
+      item
+        .append("span")
+        .attr("class", "inline-block w-2 h-2 rounded-full")
+        .style("background-color", color);
+      item.append("span").text(label);
+    }
+  }
+
+  _legendHeight() {
+    return this.element.querySelector(".legend")?.offsetHeight ?? 0;
   }
 
   _drawGridlines(group, y, innerWidth, innerHeight) {
@@ -201,16 +251,19 @@ export default class extends Controller {
       );
   }
 
-  _installTooltip(group, x, y, current, previous, innerWidth, innerHeight) {
+  _installTooltip(group, x, y, current, comparisons, innerWidth, innerHeight) {
     const tooltip = d3
       .select(this.element)
       .append("div")
       .attr("class", `${CHART_TOOLTIP_CLASSES} opacity-0 top-0`);
 
-    const currentByDay = new Map(current.map((d) => [d.day, d]));
-    const previousByDay = new Map(previous.map((d) => [d.day, d]));
+    const byDay = (series) => new Map(series.map((d) => [d.day, d]));
+    const lines = [
+      { label: this.currentLabelValue, color: CURRENT_COLOR, series: current },
+      ...comparisons,
+    ].map((line) => ({ ...line, pointsByDay: byDay(line.series) }));
     const hoverDays = [
-      ...new Set([...currentByDay.keys(), ...previousByDay.keys()]),
+      ...new Set(lines.flatMap((line) => [...line.pointsByDay.keys()])),
     ].sort((a, b) => a - b);
 
     const bisectDay = d3.bisector((d) => d).center;
@@ -227,9 +280,9 @@ export default class extends Controller {
         const i = bisectDay(hoverDays, dayFloat);
         const day = hoverDays[Math.max(0, Math.min(i, hoverDays.length - 1))];
 
-        const currentPoint = currentByDay.get(day);
-        const previousPoint = previousByDay.get(day);
-        const labelPoint = currentPoint || previousPoint;
+        const rows = lines
+          .map((line) => ({ ...line, point: line.pointsByDay.get(day) }))
+          .filter((row) => row.point);
 
         const estimatedTooltipWidth = 220;
         const pageWidth = document.body.clientWidth;
@@ -251,11 +304,7 @@ export default class extends Controller {
           .attr("stroke", "currentColor")
           .attr("stroke-dasharray", "4, 4");
 
-        for (const [point, color] of [
-          [currentPoint, CURRENT_COLOR],
-          [previousPoint, PREVIOUS_COLOR],
-        ]) {
-          if (!point) continue;
+        for (const { point, color } of rows) {
           group
             .append("circle")
             .attr("class", "data-point-circle")
@@ -267,7 +316,7 @@ export default class extends Controller {
         }
 
         tooltip
-          .html(this._tooltipTemplate(labelPoint, currentPoint, previousPoint))
+          .html(this._tooltipTemplate(rows))
           .style("opacity", 1)
           .style("left", `${adjustedX}px`)
           .style("top", `${event.pageY - 10}px`);
@@ -284,22 +333,18 @@ export default class extends Controller {
       });
   }
 
-  _tooltipTemplate(labelPoint, currentPoint, previousPoint) {
-    const row = (point, color, label) => {
-      if (!point) return "";
-      return `
-        <div class="flex items-center gap-1.5 text-primary font-medium tabular-nums">
-          <span class="inline-block w-2 h-2 rounded-full" style="background-color: ${color};"></span>
-          ${label}: ${this._formatCurrency(point.value)}
-        </div>
-      `;
-    };
+  _tooltipTemplate(rows) {
+    const row = ({ point, color, label }) => `
+      <div class="flex items-center gap-1.5 text-primary font-medium tabular-nums">
+        <span class="inline-block w-2 h-2 rounded-full" style="background-color: ${color};"></span>
+        ${label}: ${this._formatCurrency(point.value)}
+      </div>
+    `;
 
     return `
-      <div class="text-xs text-secondary mb-1">${labelPoint.date_formatted}</div>
+      <div class="text-xs text-secondary mb-1">${rows[0].point.date_formatted}</div>
       <div class="space-y-1">
-        ${row(currentPoint, CURRENT_COLOR, this.currentLabelValue)}
-        ${row(previousPoint, PREVIOUS_COLOR, this.previousLabelValue)}
+        ${rows.map(row).join("")}
       </div>
     `;
   }
