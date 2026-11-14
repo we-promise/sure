@@ -2,7 +2,9 @@
 //
 // Kept free of any DOM access so the clamping logic can be unit-tested in
 // isolation. Must be kept in sync with
-// test/javascript/utils/sidebar_resize_test.mjs.
+// test/javascript/utils/sidebar_resize_test.mjs, and with the inline script in
+// app/views/layouts/shared/_head.html.erb, which repeats these bounds to apply
+// the stored widths before the first paint.
 
 // Width of the always-visible icon navbar to the left of the sidebars.
 export const SIDEBAR_NAVBAR_WIDTH = 84;

@@ -31,6 +31,14 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
   end
 
+  # Opening the account groups makes the list scroll; reserving the scrollbar's
+  # space keeps the sidebar from shifting sideways when it appears.
+  test "the sidebar keeps room for its scrollbar" do
+    get root_url
+
+    assert_select "#sidebar-scroll[class*='[scrollbar-gutter:stable]']"
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
