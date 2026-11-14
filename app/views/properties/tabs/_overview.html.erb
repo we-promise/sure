@@ -21,16 +21,9 @@
 
   <% if account.property.family_currency_trend_applicable? %>
     <div data-testid="family-currency-trend">
-      <%= summary_card title: t(".trend_in_currency", currency: account.family.currency) do %>
-        <% if (family_trend = account.property.family_currency_trend) %>
-          <span class="flex items-center gap-1" style="color: <%= family_trend.color %>">
-            <span><%= family_trend.value %></span>
-            <span class="text-base font-normal">(<%= family_trend.percent_formatted %>)</span>
-          </span>
-        <% else %>
-          <span class="text-sm font-normal text-secondary"><%= t(".rate_unavailable") %></span>
-        <% end %>
-      <% end %>
+      <%= render "properties/currency_trend_card",
+                 title: t(".trend_in_currency", currency: account.family.currency),
+                 trend: account.property.family_currency_trend %>
     </div>
   <% end %>
 
@@ -52,7 +45,7 @@
         <%= cost_basis ? format_money(cost_basis) : t(".rate_unavailable") %>
       <% end %>
 
-      <%= render "properties/cost_adjusted_trend_card",
+      <%= render "properties/currency_trend_card",
                  title: t(foreign ? ".gain_after_costs_in_currency" : ".gain_after_costs", currency: account.family.currency),
                  trend: account.property.cost_adjusted_trend_for(Current.user) %>
     </div>
