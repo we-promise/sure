@@ -192,5 +192,6 @@ de:
       default_label: Vorschau
     popover:
       avatar_default_label: Menü öffnen
+      frame_error: Konnte nicht geladen werden. Zum erneuten Versuch schließen und wieder öffnen.
     tooltip:
       trigger_label: Mehr Infos

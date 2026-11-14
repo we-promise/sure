@@ -582,6 +582,7 @@ Rails.application.routes.draw do
 
   resources :holdings, only: %i[index new show update destroy] do
     member do
+      get :cost_basis_editor
       post :unlock_cost_basis
       patch :remap_security
       post :reset_security
