@@ -376,9 +376,12 @@ class Provider::SnaptradeOauthTest < ActiveSupport::TestCase
     requests = stub_activity_pages(provider, pages)
     Rails.logger.expects(:warn).with(regexp_matches(/page cap/))
 
-    response = stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
-      stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
-        provider.get_account_activities(account_id: "acct-1")
+    response = nil
+    assert_difference -> { DebugLogEntry.where(provider_key: "snaptrade", level: "warn").count }, 1 do
+      response = stub_const(Provider::Snaptrade, :ACTIVITIES_PAGE_SIZE, 2) do
+        stub_const(Provider::Snaptrade, :MAX_ACTIVITY_PAGES, 3) do
+          provider.get_account_activities(account_id: "acct-1")
+        end
       end
     end
 

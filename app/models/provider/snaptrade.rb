@@ -445,6 +445,7 @@ class Provider::Snaptrade
           "(#{MAX_ACTIVITY_PAGES} pages, #{activities.size} rows, total #{known_total.inspect})"
         raise incomplete_activities_error(account_id, message) if known_total
         Rails.logger.warn("Provider::Snaptrade - #{message}; remaining rows not fetched")
+        capture_activities_log(account_id, "#{message}; remaining rows not fetched", level: :warn)
       end
     end
 
@@ -580,16 +581,20 @@ class Provider::Snaptrade
     # Captured for support: the importer keeps the stored history and cursor
     # when the fetch fails, but would otherwise only log why.
     def incomplete_activities_error(account_id, message)
+      capture_activities_log(account_id, message, level: :error)
+      ApiError.new(message)
+    end
+
+    def capture_activities_log(account_id, message, level:)
       DebugLogEntry.capture(
         category: "provider_sync",
-        level: :error,
+        level: level,
         message: message,
         source: "Provider::Snaptrade",
         provider_key: "snaptrade",
         family: snaptrade_item.try(:family),
         metadata: { snaptrade_item_id: snaptrade_item.try(:id), snaptrade_account_id: account_id }
       )
-      ApiError.new(message)
     end
 
     def mark_requires_update!
