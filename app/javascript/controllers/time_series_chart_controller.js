@@ -11,6 +11,12 @@ export default class extends Controller {
     useLabels: { type: Boolean, default: true },
     useTooltip: { type: Boolean, default: true },
     selectable: { type: Boolean, default: false },
+    // [startParam, endParam] pairs a drag-selected range also sets, for a page
+    // whose other content filters by dates of its own and follows the chart.
+    linkedRangeParams: { type: Array, default: [] },
+    // Params a drag-selected range drops, such as the page of a list it now
+    // filters.
+    resetParams: { type: Array, default: [] },
   };
 
   _d3SvgMemo = null;
@@ -432,10 +438,19 @@ export default class extends Controller {
   _navigateToDateRange(startDate, endDate) {
     const formatDate = d3.timeFormat("%Y-%m-%d");
     const url = new URL(window.location.href);
+    const start = formatDate(startDate);
+    const end = formatDate(endDate);
 
     url.searchParams.delete("period");
-    url.searchParams.set("start_date", formatDate(startDate));
-    url.searchParams.set("end_date", formatDate(endDate));
+    for (const param of this.resetParamsValue) url.searchParams.delete(param);
+
+    for (const [startParam, endParam] of [
+      ["start_date", "end_date"],
+      ...this.linkedRangeParamsValue,
+    ]) {
+      url.searchParams.set(startParam, start);
+      url.searchParams.set(endParam, end);
+    }
 
     Turbo.visit(url.toString());
   }

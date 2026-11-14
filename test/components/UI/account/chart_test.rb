@@ -331,7 +331,71 @@ class UI::Account::ChartTest < ViewComponent::TestCase
     assert_equal family_oldest, component.period.start_date
   end
 
+  test "a range dragged on the chart also sets the activity feed's dates and drops its page" do
+    render_inline(UI::Account::Chart.new(account: accounts(:depository)))
+
+    chart = page.find("#lineChart")
+    assert_equal [ %w[q[start_date] q[end_date]] ], JSON.parse(chart["data-time-series-chart-linked-range-params-value"])
+    assert_equal %w[page], JSON.parse(chart["data-time-series-chart-reset-params-value"])
+  end
+
+  test "preset links drop activity dates a drag set and keep the other activity filters" do
+    range = Period.custom(start_date: Date.new(2026, 1, 5), end_date: Date.new(2026, 2, 10))
+
+    links = period_links(range, "start_date" => "2026-01-05", "end_date" => "2026-02-10", "search" => "coffee")
+
+    links[:presets].each do |q|
+      assert_equal({ "search" => "coffee" }, q)
+    end
+    assert_equal({ "start_date" => "2026-01-05", "end_date" => "2026-02-10", "search" => "coffee" }, links[:custom])
+  end
+
+  test "preset links keep activity dates set to something other than the dragged range" do
+    range = Period.custom(start_date: Date.new(2026, 1, 5), end_date: Date.new(2026, 2, 10))
+
+    links = period_links(range, "start_date" => "2026-01-05", "end_date" => "2026-01-31")
+
+    links[:presets].each do |q|
+      assert_equal({ "end_date" => "2026-01-31" }, q)
+    end
+  end
+
+  test "period links keep array activity filters from the permitted params" do
+    range = Period.custom(start_date: Date.new(2026, 1, 5), end_date: Date.new(2026, 2, 10))
+    filters = ActionController::Parameters.new(start_date: "2026-01-05", end_date: "2026-02-10", categories: %w[Food Rent])
+      .permit(:start_date, :end_date, categories: [])
+
+    links = period_links(range, filters)
+
+    links[:presets].each do |q|
+      assert_equal({ "categories" => %w[Food Rent] }, q)
+    end
+    assert_equal %w[Food Rent], links[:custom]["categories"]
+  end
+
+  test "preset links keep activity dates while a preset is shown" do
+    links = period_links(Period.last_30_days, "start_date" => 30.days.ago.to_date.iso8601, "end_date" => Date.current.iso8601)
+
+    assert_nil links[:custom]
+    links[:presets].each do |q|
+      assert_equal({ "start_date" => 30.days.ago.to_date.iso8601, "end_date" => Date.current.iso8601 }, q)
+    end
+  end
+
   private
+    # The activity `q` each period link carries: one per preset, and the
+    # custom row's when a custom range is shown.
+    def period_links(period, activity_filters)
+      account = accounts(:depository)
+      render_inline(UI::Account::Chart.new(account: account, period: period, activity_filters: activity_filters))
+
+      queries = page.all("a[role='menuitemradio']").map do |link|
+        Rack::Utils.parse_nested_query(URI.parse(link[:href]).query)
+      end
+      custom = queries.find { |query| query.key?("start_date") }
+      { presets: (queries - [ custom ]).map { |query| query["q"] || {} }, custom: custom&.dig("q") }
+    end
+
     # 10 shares at $100 market price; gain = 1000 - cost_basis * 10
     def create_holding(cost_basis:)
       Holding.create!(

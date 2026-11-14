@@ -28,6 +28,9 @@
     <div class="flex items-center gap-2">
       <% if account.supports_trades? %>
         <%= form_with url: account_path(account), method: :get, data: { controller: "auto-submit-form" } do |form| %>
+          <% chart_view_hidden_fields.each do |name, value| %>
+            <%= hidden_field_tag name, value, id: nil %>
+          <% end %>
           <%= form.select :chart_view,
             [[t("UI.account.chart.views.total_value"), "balance"], [t("UI.account.chart.views.holdings"), "holdings_balance"], [t("UI.account.chart.views.cash"), "cash_balance"], [t("UI.account.chart.views.gains"), "gains"]],
             { selected: view },
@@ -41,6 +44,7 @@
         selected: period_picker_selected,
         url: account_path(account),
         extra_params: period_picker_extra_params,
+        custom_extra_params: period_picker_custom_extra_params,
         options: period_picker_options
       ) %>
     </div>
@@ -112,6 +116,8 @@
           class="w-full h-full privacy-sensitive"
           data-controller="time-series-chart"
           data-time-series-chart-selectable-value="true"
+          data-time-series-chart-linked-range-params-value="<%= ACTIVITY_RANGE_PARAMS.to_json %>"
+          data-time-series-chart-reset-params-value="<%= ACTIVITY_RESET_PARAMS.to_json %>"
           data-time-series-chart-data-value="<%= series.to_json %>"></div>
         <% else %>
           <div class="w-full h-full flex items-center justify-center">
