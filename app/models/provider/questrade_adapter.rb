@@ -4,7 +4,8 @@ class Provider::QuestradeAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("QuestradeAccount", self)
-  declares_connection key: "questrade", panel: { title: "Questrade" }
+  declares_connection key: "questrade", name: "Questrade", panel: true,
+                      metadata: { region: "CA", kinds: %w[Investment], maturity: :beta, logo_text: "QT", logo_color: "#0d9488", domain: "questrade.com" }
 
   # Define which account types this provider supports
   def self.supported_account_types

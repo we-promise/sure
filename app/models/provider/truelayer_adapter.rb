@@ -3,7 +3,8 @@ class Provider::TruelayerAdapter < Provider::Base
   include Provider::InstitutionMetadata
 
   Provider::Factory.register("TruelayerAccount", self)
-  declares_connection key: "truelayer", panel: { title: "TrueLayer" }
+  declares_connection key: "truelayer", name: "TrueLayer", panel: true,
+                      metadata: { region: "UK", kinds: %w[Bank], maturity: :alpha, logo_text: "TL", logo_color: "#0f172a", domain: "truelayer.com" }
 
   def self.supported_account_types
     %w[Depository CreditCard Loan]

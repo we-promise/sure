@@ -58,6 +58,17 @@ class Provider::ConnectionDeclarationTest < ActiveSupport::TestCase
     assert_equal keys.sort, keys
   end
 
+  test "a provider names itself once, outside its metadata" do
+    adapter = Class.new(Provider::Base)
+
+    error = assert_raises(ArgumentError) do
+      adapter.declares_connection key: "gocardless", name: "GoCardless", metadata: { name: "Other", kinds: %w[Bank] }
+    end
+    assert_match "gocardless", error.message
+    assert_raises(ArgumentError) { adapter.declares_connection key: "gocardless", name: "GoCardless", metadata: { key: "x" } }
+    assert_nil adapter.metadata_declaration
+  end
+
   test "family connections are listed alphabetically by provider" do
     providers = ProviderConnectionStatus.for_family(families(:dylan_family)).map { |connection| connection[:provider] }
 

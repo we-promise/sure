@@ -84,11 +84,11 @@ This single command generates:
 - ✅ Simple manual panel view for provider settings
 - ✅ Controller with CRUD actions and Turbo Stream support
 - ✅ Routes
-- ✅ Bank sync wiring: the adapter's `declares_connection` (with its `panel:`), the settings controller's `family_panel_items` entry, and a `provider_summary` case
+- ✅ Bank sync wiring: the adapter's `declares_connection` (with its `name:` and `panel:`), the settings controller's `family_panel_items` entry, and a `provider_summary` case
 
 The generated item partial renders the provider's logo with `ProviderLogo`. That reads the
-provider's `Provider::Metadata::REGISTRY` entry, which the generator does not create, so add
-one in `app/models/provider/metadata.rb`. See
+provider's `Provider::Metadata::REGISTRY` entry, which comes from the adapter's
+`declares_connection metadata:`. The generator does not write one, so add it there. See
 [provider logos](../llm-guides/providers.md#provider-logos) for the fields it reads
 (`domain`, `logo_text`, `logo_color`, `logo_icon`) and which are used when Brandfetch has no
 icon or is not configured.
@@ -341,6 +341,7 @@ class Provider::MyBankAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("MyBankAccount", self)
+  declares_connection key: "my_bank", name: "My Bank", panel: true
 
   def provider_name
     "my_bank"
@@ -553,7 +554,7 @@ end
 
 **File:** `app/controllers/settings/providers_controller.rb` (updated)
 - Adds `@my_bank_items` instance variable
-- `FAMILY_PANELS` lists My Bank because the adapter declares `panel: { title: "My Bank" }`,
+- `FAMILY_PANELS` lists My Bank because the adapter declares `name: "My Bank", panel: true`,
   so Bank sync shows it and opens its panel in the drawer. `FAMILY_PANEL_KEYS` also keeps
   it out of the global provider forms.
 - Adds `my_bank` to `family_panel_items`, which with the adapter's `declares_connection`
@@ -787,7 +788,7 @@ end
 
 1. Check that the adapter declares its panel, which puts it in `FAMILY_PANELS`:
    ```ruby
-   declares_connection key: "my_bank", panel: { title: "My Bank" }
+   declares_connection key: "my_bank", name: "My Bank", panel: true
    ```
    The generator writes this line only into an adapter it creates. When the adapter
    already existed or `--skip-adapter` was passed, it prints the line to add instead.

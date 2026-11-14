@@ -301,7 +301,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
       adapter = render_adapter(skip_view: skip_view)
 
       assert_parses adapter
-      assert_includes adapter, %(declares_connection key: "gocardless", panel: { title: "Gocardless" }\n), "skip_view: #{skip_view}"
+      assert_includes adapter, %(declares_connection key: "gocardless", name: "Gocardless", panel: true\n), "skip_view: #{skip_view}"
     end
   end
 
@@ -338,7 +338,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert Provider::FamilyGenerator.panel_declared?(render_adapter(skip_view: false), key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless"\n), key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?("class Provider::GocardlessAdapter < Provider::Base\nend\n", key: "gocardless")
-    assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", panel: { title: "X" }\n), key: "gocardless")
+    assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", name: "X", panel: true\n), key: "gocardless")
   end
 
   test "returns nil when there is no provider_summary to update" do

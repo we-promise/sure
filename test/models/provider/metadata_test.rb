@@ -25,6 +25,29 @@ class Provider::MetadataTest < ActiveSupport::TestCase
     end
   end
 
+  test "each account provider's display name is both its panel title and its metadata name" do
+    Settings::ProvidersController::FAMILY_PANELS.each do |panel|
+      assert_equal panel[:title], Provider::Metadata.for(panel[:key])[:name], "#{panel[:key]} names itself twice"
+    end
+    assert_equal "Apple Wallet", Provider::Metadata.for(:financekit)[:name]
+    assert_equal "Plaid", Provider::Metadata.for(:plaid)[:name]
+  end
+
+  test "every declared account provider has metadata from its declaration" do
+    Provider::Factory.connection_declarations.each do |declaration|
+      metadata = Provider::Metadata::REGISTRY.fetch(declaration[:key].to_sym)
+      assert metadata.slice(:region, :kinds, :maturity, :logo_text).values.all?(&:present?), "#{declaration[:key]} metadata is incomplete"
+    end
+    assert_equal Provider::Factory.metadata_declarations.map { |metadata| metadata[:key] }.sort,
+                 Provider::Factory.connection_declarations.map { |declaration| declaration[:key] }.sort
+  end
+
+  test "providers without a connection of their own keep hand-written metadata" do
+    assert_equal "Plaid EU", Provider::Metadata.for(:plaid_eu)[:name]
+    assert_equal %w[Property], Provider::Metadata.for(:rentcast)[:kinds]
+    assert_equal %i[chimnie realie rentcast], Provider::Metadata::REGISTRY.select { |_key, metadata| metadata[:kinds] == %w[Property] }.keys.sort
+  end
+
   test "logo_url builds a Brandfetch URL from the provider domain" do
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
     Setting.stubs(:brand_fetch_logo_size).returns(40)

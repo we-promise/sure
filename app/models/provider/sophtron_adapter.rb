@@ -4,7 +4,8 @@ class Provider::SophtronAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("SophtronAccount", self)
-  declares_connection key: "sophtron", panel: { title: "Sophtron" }
+  declares_connection key: "sophtron", name: "Sophtron", panel: true,
+                      metadata: { region: "US", kinds: %w[Bank Investment], maturity: :alpha, logo_text: "SO", logo_color: "#0d9488", domain: "sophtron.com" }
 
   # Define which account types this provider supports
   def self.supported_account_types

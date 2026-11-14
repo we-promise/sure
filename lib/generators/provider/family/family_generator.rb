@@ -701,7 +701,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       return if self.class.panel_declared?(source, key: file_name)
 
       say "Bank sync will not list #{file_name} until #{adapter_path} declares " \
-          "`declares_connection key: \"#{file_name}\", panel: { title: \"#{class_name.titleize}\" }`", :yellow
+          "`declares_connection key: \"#{file_name}\", name: \"#{class_name.titleize}\", panel: true`", :yellow
     end
 
     def add_bank_sync_entry(path, name, marker)
