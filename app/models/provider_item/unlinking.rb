@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-module BrexItem::Unlinking
-  # Concern that encapsulates unlinking logic for a Brex item.
+module ProviderItem::Unlinking
   extend ActiveSupport::Concern
 
-  # Idempotently remove all connections between this Brex item and local accounts.
-  # - Detaches any AccountProvider links for each BrexAccount
+  # Idempotently remove all connections between this provider item and local accounts.
+  # - Detaches any AccountProvider links for each provider account
   # - Detaches Holdings that point at the AccountProvider links
   # Returns a per-account result payload for observability
   def unlink_all!(dry_run: false)
     results = []
+    provider_type = provider_accounts.klass.polymorphic_name
 
-    brex_accounts.find_each do |provider_account|
+    provider_accounts.find_each do |provider_account|
       result = {
         provider_account_id: provider_account.id,
         name: provider_account.name,
@@ -20,7 +20,7 @@ module BrexItem::Unlinking
       results << result
 
       if dry_run
-        result[:provider_link_ids] = AccountProvider.where(provider_type: "BrexAccount", provider_id: provider_account.id).ids
+        result[:provider_link_ids] = AccountProvider.where(provider_type: provider_type, provider_id: provider_account.id).ids
         next
       end
 
@@ -28,7 +28,7 @@ module BrexItem::Unlinking
 
       begin
         ActiveRecord::Base.transaction do
-          links = AccountProvider.where(provider_type: "BrexAccount", provider_id: provider_account.id).to_a
+          links = AccountProvider.where(provider_type: provider_type, provider_id: provider_account.id).to_a
           link_ids = links.map(&:id)
           result[:provider_link_ids] = link_ids
 
@@ -44,7 +44,7 @@ module BrexItem::Unlinking
         end
       rescue StandardError => e
         Rails.logger.warn(
-          "BrexItem Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
+          "#{self.class.name} Unlinker: failed to fully unlink provider account ##{provider_account.id} (links=#{link_ids.inspect}): #{e.class} - #{e.message}"
         )
         # Record error for observability; continue with other accounts
         result[:error] = e.message
