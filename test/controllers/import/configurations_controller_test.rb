@@ -60,6 +60,18 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
     assert_select "h3", text: "Importvorlage gefunden", count: 0
   end
 
+  test "amount type strategy options use translated labels" do
+    ensure_tailwind_build
+    @import.update!(raw_file_str: "Date,Name,Amount\n2026-01-02,Synthetic Sample,12.34\n", col_sep: ",")
+
+    get import_configuration_url(@import)
+
+    assert_response :success
+    assert_select "select#import_amount_type_strategy option[value=signed_amount]", text: "Signed amount"
+    assert_select "select#import_amount_type_strategy option[value=custom_column]", text: "Custom column"
+    assert_select "select#import_amount_type_strategy option[value=debit_credit_columns]", text: "Separate debit and credit columns"
+  end
+
   test "show renders the YNAB configuration partial" do
     ynab = @user.family.imports.create!(
       type: "YnabImport",
@@ -70,6 +82,28 @@ class Import::ConfigurationsControllerTest < ActionDispatch::IntegrationTest
     get import_configuration_url(ynab)
 
     assert_response :success
+  end
+
+  test "updating a configuration saves separate debit and credit columns" do
+    TransactionImport.any_instance.expects(:generate_rows_from_csv).once
+
+    patch import_configuration_url(@import), params: {
+      import: {
+        date_col_label: "Date",
+        date_format: "%Y-%m-%d",
+        amount_type_strategy: "debit_credit_columns",
+        debit_col_label: "Debit",
+        credit_col_label: "Credit",
+        number_format: "1,234.56"
+      }
+    }
+
+    assert_redirected_to import_clean_url(@import)
+
+    @import.reload
+    assert_equal "debit_credit_columns", @import.amount_type_strategy
+    assert_equal "Debit", @import.debit_col_label
+    assert_equal "Credit", @import.credit_col_label
   end
 
   test "updating a valid configuration regenerates rows" do

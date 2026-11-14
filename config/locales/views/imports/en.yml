@@ -98,6 +98,11 @@ en:
         format_label: Format
         amount_type_strategy_label: Amount type strategy
         select_strategy: Select strategy
+        signed_amount_strategy: Signed amount
+        custom_column_strategy: Custom column
+        debit_credit_columns_strategy: Separate debit and credit columns
+        debit_label: Debit column (money out)
+        credit_label: Credit column (money in)
         set: Set
         as_amount_type_column: as amount type column
         select_value: Select value
@@ -589,6 +594,8 @@ en:
       provider_merchant_diff_row: "%{field}: keeping %{kept}, file has %{imported}"
     errors:
       custom_column_requires_inflow: "Custom column imports require an inflow column to be selected"
+      debit_credit_columns_require_both: "Debit and credit column imports require both a debit column and a credit column"
+      debit_credit_columns_must_differ: "The debit column and the credit column must be two different columns"
       interrupted: "The background worker was interrupted before this finished. Imported data was rolled back — you can safely try again."
       presumed_lost: "Marked as failed after the background job was presumed lost. The imported data was rolled back — you can safely try again."
     document_types:

@@ -76,7 +76,7 @@ class Import < ApplicationRecord
     MAX_CSV_SIZE
   end
 
-  AMOUNT_TYPE_STRATEGIES = %w[signed_amount custom_column].freeze
+  AMOUNT_TYPE_STRATEGIES = %w[signed_amount custom_column debit_credit_columns].freeze
 
   belongs_to :family
   belongs_to :account, optional: true
@@ -109,6 +109,7 @@ class Import < ApplicationRecord
   validates :client_chunk_id, length: { maximum: 255 }, allow_blank: true
   validates :checksum, length: { is: 64 }, allow_blank: true
   validate :custom_column_import_requires_identifier
+  validate :debit_credit_columns_import_requires_both
   validates :rows_to_skip, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
   validate :account_belongs_to_family
   validate :import_session_belongs_to_family
@@ -401,7 +402,7 @@ class Import < ApplicationRecord
         ticker: csv_value(row, ticker_col_label, "ticker").to_s,
         exchange_operating_mic: csv_value(row, exchange_operating_mic_col_label, "exchange_operating_mic").to_s,
         price: sanitize_number(csv_value(row, price_col_label, "price")).to_s,
-        amount: sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s,
+        amount: row_amount(row),
         currency: (csv_value(row, currency_col_label, "currency") || default_currency).to_s,
         name: (csv_value(row, name_col_label, "name") || default_row_name).to_s,
         category: csv_value(row, category_col_label, "category").to_s,
@@ -561,7 +562,7 @@ class Import < ApplicationRecord
       "date_format", "signage_convention", "number_format",
       "exchange_operating_mic_col_label",
       "rows_to_skip"
-    )
+    ).merge(debit_credit_template_attributes(import_template))
   end
 
   # Returns date formats that can successfully parse the file's date samples,
@@ -768,6 +769,52 @@ class Import < ApplicationRecord
       if amount_type_inflow_value.blank?
         errors.add(:base, I18n.t("imports.errors.custom_column_requires_inflow"))
       end
+    end
+
+    def debit_credit_columns?
+      amount_type_strategy == "debit_credit_columns"
+    end
+
+    def debit_credit_columns_import_requires_both
+      return unless debit_credit_columns?
+
+      if debit_col_label.blank? || credit_col_label.blank?
+        errors.add(:base, I18n.t("imports.errors.debit_credit_columns_require_both"))
+      elsif normalize_header(debit_col_label) == normalize_header(credit_col_label)
+        errors.add(:base, I18n.t("imports.errors.debit_credit_columns_must_differ"))
+      end
+    end
+
+    # A template only changes how the amount is read when it used separate
+    # debit and credit columns; the other strategies keep the import's own.
+    def debit_credit_template_attributes(import_template)
+      return {} unless import_template.amount_type_strategy == "debit_credit_columns"
+
+      import_template.attributes.slice("amount_type_strategy", "debit_col_label", "credit_col_label")
+    end
+
+    def row_amount(row)
+      return debit_credit_amount(row) if debit_credit_columns?
+
+      sanitize_number(csv_value(row, amount_col_label, "amount", "balance")).to_s
+    end
+
+    # Banks that export separate debit and credit columns fill one of them per
+    # row. Each is read as a magnitude, whatever sign the bank prints, and the
+    # row amount is credit minus debit: positive for money in. A row with
+    # neither stays blank so the clean step flags it, and so does a row where
+    # a filled cell is not a number: counting that cell as zero would hide it.
+    def debit_credit_amount(row)
+      raw_debit = csv_value(row, debit_col_label)
+      raw_credit = csv_value(row, credit_col_label)
+      debit = sanitize_number(raw_debit)
+      credit = sanitize_number(raw_credit)
+
+      return "" if debit.blank? && credit.blank?
+      return "" if raw_debit.present? && debit.blank?
+      return "" if raw_credit.present? && credit.blank?
+
+      (credit.to_d.abs - debit.to_d.abs).to_s("F")
     end
 
     # Common encodings to try when UTF-8 detection fails
