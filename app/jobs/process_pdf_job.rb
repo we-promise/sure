@@ -65,13 +65,39 @@ class ProcessPdfJob < ApplicationJob
       end
     end
 
+    # The statement id is the idempotency key shared with AccountStatement's own
+    # indexing job. The key alone is not enough: the two jobs run on different
+    # queues in no fixed order, so a bare existence check is check-then-write and
+    # two workers that both read "not indexed" both upload, leaving two documents
+    # for one statement. The statement row lock is what actually serializes them,
+    # and it is taken on both sides.
     def upload_to_vector_store(pdf_import, document_type:)
-      file_content = pdf_import.pdf_file_content
+      statement = pdf_import.account_statement
+
+      return upload_document(pdf_import, document_type, nil) if statement.nil?
+
+      statement.with_lock { upload_document(pdf_import, document_type, statement) }
+    end
+
+    def upload_document(pdf_import, document_type, statement)
+      statement_id = statement&.id
+
+      if statement_id.present? &&
+         pdf_import.family.family_documents.where("metadata->>'account_statement_id' = ?", statement_id).exists?
+        return
+      end
 
       family_document = pdf_import.family.upload_document(
-        file_content: file_content,
+        file_content: pdf_import.pdf_file_content,
         filename: pdf_import.pdf_filename,
-        metadata: { "type" => document_type }
+        # account_id carried so the document lands with an owning account and is
+        # filtered out of another member's search. This path predates the vault
+        # bridge and was the one leak that outlived it.
+        metadata: {
+          "type" => document_type,
+          "account_statement_id" => statement_id,
+          "account_id" => statement&.account_id || pdf_import.account_id
+        }.compact
       )
 
       return if family_document
