@@ -498,6 +498,18 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_requested request
   end
 
+  test "embedding probe posts to the base URL as given, as VectorStore::Embeddable does" do
+    request = stub_request(:post, "http://gateway.example.test/api/embeddings").to_return(
+      status: 200, headers: { "Content-Type" => "application/json" },
+      body: { data: [ { embedding: [ 0.1, 0.2, 0.3 ] } ], model: "nomic-embed-text", usage: { prompt_tokens: 4, total_tokens: 4 } }.to_json
+    )
+
+    result = @probe.embedding(endpoint: "http://gateway.example.test/api", access_token: nil, model: "nomic-embed-text", dimensions: 3)
+
+    assert result.passing?
+    assert_requested request
+  end
+
   test "embedding probe fails on a vector with a component that isn't a finite number" do
     stub_request(:post, "http://ollama:11434/v1/embeddings").to_return(
       status: 200, headers: { "Content-Type" => "application/json" },
@@ -541,6 +553,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
                 body["model"] == "tools-model" &&
                   body.dig("messages", 0, "content") == Ai::Transport::Base::PROBE_TOOL_PROMPT &&
                   tool["name"] == Ai::Transport::Base::PROBE_TOOL_NAME &&
+                  tool["strict"] == true &&
                   tool["parameters"] == Ai::Transport::Base::PROBE_TOOL_SCHEMA.deep_stringify_keys
               }
               .to_return(
@@ -672,7 +685,7 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
               .with { |req|
                 tool = JSON.parse(req.body).dig("tools", 0)
 
-                tool["type"] == "function" && tool["name"] == Ai::Transport::Base::PROBE_TOOL_NAME
+                tool["type"] == "function" && tool["name"] == Ai::Transport::Base::PROBE_TOOL_NAME && tool["strict"] == true
               }
               .to_return(
                 status: 200,

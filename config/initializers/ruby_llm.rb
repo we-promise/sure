@@ -13,6 +13,16 @@
 #
 # Don't add `ruby_llm-monitoring`: it rewrites app-wide inflections, after which Zeitwerk
 # expects `LLMUsage` instead of `LlmUsage`.
+#
+# RubyLLM logs to Rails' logger, but never at debug: at debug it logs response bodies and raw
+# exceptions through Faraday, before Ai::Instrumentation::Redactor sees them, and a gateway can
+# quote a key back in an error. Its info and warn lines carry no request or response content.
+class RubyLlmLogger < SimpleDelegator
+  def debug(*) = true
+  def debug? = false
+  def level = [ __getobj__.level, Logger::INFO ].max
+end
+
 RubyLLM.configure do |config|
-  config.logger = Rails.logger
+  config.logger = RubyLlmLogger.new(Rails.logger)
 end

@@ -18,6 +18,8 @@ module Ai::Transport::Http
     # whatever the target's scheme, so a setup that sets only one still covers every call.
     # Loopback is never proxied, as Ruby's own lookup does; NO_PROXY matches a host exactly as
     # written, so `127.0.0.1` doesn't cover `localhost`, and `*` means every host, as curl reads it.
+    # A leading dot is dropped, as curl and the external assistant's old matcher do, so
+    # `.agents.example.com` covers `agents.example.com` itself as well as its subdomains.
     def proxy_for(url, env: ENV)
       uri = parse(url)
       return if uri&.host.blank? || loopback?(uri.host)
@@ -26,6 +28,7 @@ module Ai::Transport::Http
       return if proxy.nil?
 
       no_proxy = env["NO_PROXY"].presence || env["no_proxy"].presence
+      no_proxy &&= no_proxy.split(",").map { _1.strip.delete_prefix(".") }.join(",")
       return if no_proxy && (no_proxy.strip == "*" || !URI::Generic.use_proxy?(uri.host, address(uri.host, no_proxy), uri.port, no_proxy))
 
       proxy

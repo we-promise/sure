@@ -66,6 +66,8 @@ class Ai::Transport::Compatible < Ai::Transport::Base
 
     # An OpenRouter endpoint without a URL is OpenRouter's, as for ruby-openai's client.
     def ruby_llm_api_base
+      return endpoint.base_url.chomp("/") if endpoint.exact_base_url && endpoint.base_url
+
       base = endpoint.base_url.presence || (Ai::Transport::Http::OPENROUTER_BASE if ruby_llm_provider == :openrouter)
       Ai::Transport::Http.compatible_base(base)
     end

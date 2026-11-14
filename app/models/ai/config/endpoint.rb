@@ -2,16 +2,20 @@
 # values and never read ENV, Setting or ActiveRecord themselves; AiHealth's probes build them
 # from the current settings.
 class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :api_key, :extra_headers,
-                                         :timeout_seconds, :max_retries, :responses_api, :probe_check)
+                                         :timeout_seconds, :max_retries, :responses_api, :probe_check,
+                                         :exact_base_url)
   PROTOCOLS = %i[compatible anthropic].freeze
   # What a health probe checks:
   # :models lists the server's models and makes no chat call; :chat sends a tiny chat request,
   # which also catches a spent balance and a server that answers for a model it hasn't loaded.
   # :models is the default, so a probe makes no chat call unless its endpoint asks for one.
   PROBE_CHECKS = %i[models chat].freeze
+  # exact_base_url: the base URL is used as written, without the `/v1` Ai::Transport::Http.compatible_base
+  # adds, as VectorStore::Embeddable posts `embeddings` straight onto EMBEDDING_URI_BASE.
 
   def initialize(name:, protocol:, preset: nil, base_url: nil, api_key: nil, extra_headers: {},
-                 timeout_seconds: 60, max_retries: 0, responses_api: false, probe_check: :models)
+                 timeout_seconds: 60, max_retries: 0, responses_api: false, probe_check: :models,
+                 exact_base_url: false)
     protocol = protocol.to_sym
     probe_check = probe_check.to_sym
     raise ArgumentError, "unknown protocol #{protocol.inspect}" unless PROTOCOLS.include?(protocol)
@@ -19,7 +23,8 @@ class Ai::Config::Endpoint < Data.define(:name, :protocol, :preset, :base_url, :
 
     super(name: name.to_s, protocol:, preset: preset&.to_sym, base_url: base_url.presence, api_key: api_key.presence,
           extra_headers: extra_headers.to_h.transform_keys(&:to_s).freeze, timeout_seconds: Integer(timeout_seconds),
-          max_retries: Integer(max_retries), responses_api: responses_api ? true : false, probe_check:)
+          max_retries: Integer(max_retries), responses_api: responses_api ? true : false, probe_check:,
+          exact_base_url: exact_base_url ? true : false)
   end
 
   # What scrubbing removes from any text about this endpoint: the key, and every static header

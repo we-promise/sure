@@ -6,6 +6,12 @@ module Ai::Transport::RubyLlmAdapter
   OPENROUTER_APP_URL = "https://sure.am".freeze
   RUBY_LLM_PATH = Gem.loaded_specs.fetch("ruby_llm").full_gem_path.freeze
   ARITY_ERROR = /wrong number of arguments|(?:missing|unknown) keywords?/
+  # The assistant declares its tools strict in both OpenAI protocols (Assistant::Function#strict_mode?),
+  # so the probe does too: a gateway that refuses strict tools fails the check, not the chat.
+  STRICT_TOOL_OPTIONS = {
+    chat_completions: { function: { strict: true } },
+    responses: { strict: true }
+  }.freeze
 
   private
     # Settings RubyLLM would otherwise choose:
@@ -44,7 +50,7 @@ module Ai::Transport::RubyLlmAdapter
     def probe_tools(model, timeout: endpoint.timeout_seconds)
       chat = ruby_llm_chat(model, timeout:)
                .with_max_output_tokens(Ai::Transport::Base::PROBE_TOOL_MAX_OUTPUT_TOKENS)
-               .with_tools(ProbeTool.new)
+               .with_tools(ProbeTool.new(provider_options: STRICT_TOOL_OPTIONS.fetch(ruby_llm_protocol, {})))
       chat.add_message(role: :user, content: Ai::Transport::Base::PROBE_TOOL_PROMPT)
       message = mapping_errors { chat.generate }
       check_answering_model!(model.name, message.model)
@@ -143,6 +149,12 @@ module Ai::Transport::RubyLlmAdapter
     class ProbeTool < RubyLLM::Tool
       description "Records the result of a Sure health check. Always call this tool."
       parameters Ai::Transport::Base::PROBE_TOOL_SCHEMA
+
+      attr_reader :provider_options
+
+      def initialize(provider_options: {})
+        @provider_options = provider_options
+      end
 
       def name = Ai::Transport::Base::PROBE_TOOL_NAME
       def execute(status:) = raise(Ai::Error::Refused, "the health check tool is never run (#{status})")

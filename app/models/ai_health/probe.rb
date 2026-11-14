@@ -172,7 +172,8 @@ class AiHealth
         credential: access_token,
         dimensions: dimensions
       ) do
-        probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token, extra_headers: {})
+        probe_endpoint = config_endpoint(provider: :openai_compatible, base_url: endpoint, api_key: access_token, extra_headers: {},
+                                         exact_base_url: true)
         returned = transport_for(probe_endpoint).probe(config_model(probe_endpoint, model), :embedding, timeout:)
         raise Failure, :dimensions_mismatch unless returned == dimensions
       end
@@ -250,13 +251,13 @@ class AiHealth
       # OpenAI-compatible LLM endpoints send the static OPENAI_EXTRA_HEADERS, as
       # Provider::Openai does; the embedding endpoint sends none, as
       # VectorStore::Embeddable doesn't.
-      def config_endpoint(provider:, base_url:, api_key:, responses_api: false, extra_headers: nil)
+      def config_endpoint(provider:, base_url:, api_key:, responses_api: false, extra_headers: nil, exact_base_url: false)
         protocol = provider.to_sym == :anthropic ? :anthropic : :compatible
         extra_headers ||= protocol == :compatible ? Provider::Openai.extra_headers : {}
 
         Ai::Config::Endpoint.new(
           name: provider.to_s, protocol:, base_url:, api_key:, extra_headers:,
-          timeout_seconds: timeout, max_retries: 0, responses_api:
+          timeout_seconds: timeout, max_retries: 0, responses_api:, exact_base_url:
         )
       end
 

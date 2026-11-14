@@ -43,6 +43,14 @@ class Ai::Transport::HttpTest < ActiveSupport::TestCase
     assert_nil Http.proxy_for("http://llm.lan:8080", env: { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "llm.lan" })
   end
 
+  test "a NO_PROXY entry with a leading dot covers the domain itself and its subdomains" do
+    env = { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "other.test, .agents.example.com" }
+
+    assert_nil Http.proxy_for("https://agents.example.com", env:)
+    assert_nil Http.proxy_for("https://eu.agents.example.com", env:)
+    assert_equal PROXY, Http.proxy_for("https://badagents.example.com", env:)
+  end
+
   test "NO_PROXY=* sends every host direct" do
     assert_nil Http.proxy_for("https://api.openai.com", env: { "HTTPS_PROXY" => PROXY, "NO_PROXY" => "*" })
     assert_nil Http.proxy_for("http://llm.lan:8080", env: { "HTTP_PROXY" => PROXY, "no_proxy" => " * " })
