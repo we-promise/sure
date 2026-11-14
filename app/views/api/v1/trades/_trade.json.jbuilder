@@ -18,6 +18,8 @@ json.fee_decimal trade.fee.to_s("F")
 # fee, from `currency` (the trade's); the cash balance applies it to `amount`,
 # from amount_currency (the entry's). The two are the same unless the web form
 # or PATCH changed the entry's currency, which leaves the trade's as it was.
+# The rate was recorded for `currency`; the cash balance then reuses it
+# unchanged for amount_currency.
 # Null when the trade carries none, in which case market rates are used, and
 # when both currencies are the account's.
 json.exchange_rate trade.numeric_exchange_rate

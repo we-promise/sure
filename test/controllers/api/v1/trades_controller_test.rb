@@ -1273,7 +1273,7 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
         extra: { "exchange_rate" => 1.1 })
     )
     assert_equal 100, entry.amount_money.exchange_to("USD", custom_rate: entry.entryable.exchange_rate).amount,
-      "the app treats usd as the account's currency"
+      "Money treats usd as the account's currency"
 
     get api_v1_trade_url(entry.entryable), headers: api_headers(read_only_api_key)
     assert_response :success

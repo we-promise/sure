@@ -1782,7 +1782,7 @@ RSpec.configure do |config|
               exchange_rate: {
                 type: :number,
                 nullable: true,
-                description: "Rate to the account's currency stored on the trade, such as one reported by the provider. The cost basis applies it to price and fee, from currency; the cash balance applies it to amount, from amount_currency. The two match unless an edit changed only the amount's currency. Null when none is stored or both currencies are the account's."
+                description: "Rate to the account's currency stored on the trade, such as one reported by the provider. The cost basis applies it to price and fee, from currency; the cash balance applies it to amount, from amount_currency. The two match unless an edit changed only the amount's currency. It was recorded for currency; when amount_currency differs, the cash balance reuses it unchanged. Null when none is stored or both currencies are the account's."
               },
               amount_currency: {
                 type: :string,
