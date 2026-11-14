@@ -4,9 +4,7 @@ de:
     ai_prompts:
       show:
         page_title: KI-Eingabeaufforderungen
-        openai_label: OpenAI
         disable_ai: KI-Assistent deaktivieren
-        prompt_instructions: Prompt-Anweisungen
         main_system_prompt:
           title: Hauptsystem-Prompt
           subtitle: Zentrale Anweisungen, die definieren, wie sich der KI-Assistent in allen Chat-Gesprächen verhält

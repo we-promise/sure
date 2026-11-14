@@ -723,62 +723,39 @@ class FamilyTest < ActiveSupport::TestCase
     "JEV_ENDPOINT" => "http://internal-gateway.example.com/v1/systemone"
   }.freeze
 
-  test "resolved_categorization_provider builds Jev when the endpoint is allowed" do
+  test "the categorize plan names the Jev model when Jev will categorize" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
 
-    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_ENDPOINT" => "https://api.typesafe.ai/v1/systemone") do
-      assert_instance_of Provider::Jev, family.resolved_categorization_provider
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_MODEL" => "~typesafe/jev-latest", "OPENAI_ACCESS_TOKEN" => "sk-test") do
+      assert_equal "~typesafe/jev-latest", Ai.plan(:categorize, family:).model.name
     end
   end
 
-  test "categorization_model_name names the Jev model when Jev will categorize" do
+  test "the categorize plan names the Anthropic model when Anthropic will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
-    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
 
-    assert_equal "~typesafe/jev-latest", family.categorization_model_name
-  end
-
-  test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
-    family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
-    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
-
-    assert_equal "claude-sonnet-test", family.categorization_model_name
-  end
-
-  test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-    llm = Provider::Openai.allocate
-    Provider::Registry.stubs(:preferred_llm_provider).returns(llm)
-
-    with_env_overrides(REJECTED_JEV_ENV) do
-      assert_same llm, family.resolved_categorization_provider
+    with_env_overrides("ANTHROPIC_API_KEY" => "test-key", "ANTHROPIC_MODEL" => "claude-sonnet-test", "LLM_PROVIDER" => "anthropic") do
+      assert_equal "claude-sonnet-test", Ai.plan(:categorize, family:).model.name
     end
   end
 
-  test "resolved_categorization_provider does not write diagnostics from view-time callers" do
+  test "the categorize plan falls back to the LLM when the Jev endpoint is rejected" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    with_env_overrides(REJECTED_JEV_ENV.merge("OPENAI_ACCESS_TOKEN" => "sk-test")) do
+      assert_equal "openai", Ai.plan(:categorize, family:).route.endpoint.name
+    end
+  end
+
+  test "the categorize plan leaves out a rejected Jev endpoint and writes no diagnostics" do
+    family = families(:dylan_family)
+    family.update!(categorization_provider: "jev")
 
     assert_no_difference "DebugLogEntry.count" do
       with_env_overrides(REJECTED_JEV_ENV) do
-        assert_nil family.resolved_categorization_provider
-      end
-    end
-  end
-
-  test "categorization_model_name does not write diagnostics from view-time callers" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
-
-    assert_no_difference "DebugLogEntry.count" do
-      with_env_overrides(REJECTED_JEV_ENV) do
-        assert_nil family.categorization_model_name
+        assert_nil Ai.plan(:categorize, family:)
       end
     end
   end
@@ -792,29 +769,8 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "resolved_categorization_provider hands the construction error to a caller that asks" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
-    errors = []
-
-    with_env_overrides(REJECTED_JEV_ENV) do
-      assert_nil family.resolved_categorization_provider { |error| errors << error }
-    end
-
-    assert_equal [ Provider::Jev::Error ], errors.map(&:class)
-  end
-
   # The rescue is deliberately narrow, so a registry bug still surfaces rather
   # than being reported to the operator as a Jev misconfiguration.
-  test "resolved_categorization_provider does not swallow non-provider errors" do
-    family = families(:dylan_family)
-    family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
-
-    assert_raises(ArgumentError) { family.resolved_categorization_provider }
-  end
-
   test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
     family = families(:empty)
     account = family.accounts.create!(name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)

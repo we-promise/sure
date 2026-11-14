@@ -20,34 +20,23 @@ class Provider::Openai::Concerns::JsonModeTest < ActiveSupport::TestCase
     assert_equal %w[strict json_object none auto], Provider::Openai::Concerns::JsonMode::VALID_JSON_MODES
   end
 
-  test "an explicit env mode wins over the stored setting" do
-    Setting.openai_json_mode = "strict"
+  test "reads the OpenAI endpoint's JSON mode from Ai::Config" do
+    endpoint = ai_endpoint(name: "openai_compatible", json_mode: :json_object)
+    config = AiTestHelper.build_ai_config([ ai_model(endpoint:) ], {})
 
-    with_env_overrides("LLM_JSON_MODE" => "none") do
-      assert_equal "none", @subject.default_json_mode
-    end
+    Ai::Config.with(config) { assert_equal "json_object", @subject.default_json_mode }
   end
 
-  test "falls back to the stored setting when the env var is unset" do
-    Setting.openai_json_mode = "json_object"
-
-    with_env_overrides("LLM_JSON_MODE" => nil) do
-      assert_equal "json_object", @subject.default_json_mode
-    end
+  test "defaults to auto when no OpenAI endpoint is configured" do
+    use_no_ai
+    assert_equal "auto", @subject.default_json_mode
   end
 
-  test "ignores an unrecognized env value and keeps looking" do
+  test "without an OpenAI endpoint, the operator's mode still applies" do
     Setting.openai_json_mode = "none"
 
-    with_env_overrides("LLM_JSON_MODE" => "banana") do
-      assert_equal "none", @subject.default_json_mode
-    end
-  end
-
-  test "defaults to auto when nothing is configured" do
-    with_env_overrides("LLM_JSON_MODE" => nil) do
-      assert_equal "auto", @subject.default_json_mode
-    end
+    use_no_ai
+    assert_equal "none", @subject.default_json_mode
   end
 
   test "none omits response_format so strict runtimes are not rejected" do

@@ -510,7 +510,6 @@ nl:
       processing_failed_with_message: "%{message}"
       processing_failed_generic: "Verwerking mislukt: %{error}"
       errors:
-        provider_not_configured: "AI-provider niet geconfigureerd"
         provider_no_pdf_support: "AI-provider ondersteunt geen PDF-verwerking"
       ready_for_review_title: "Klaar voor controle"
       ready_for_review_description:

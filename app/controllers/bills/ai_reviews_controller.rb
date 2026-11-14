@@ -2,7 +2,7 @@ class Bills::AiReviewsController < ApplicationController
   include BillsHelper
   include RecurringFeatureGuardable
 
-  guard_feature unless: -> { bills_one_shot_ai_available? }
+  guard_feature unless: -> { bills_ai_chat_available? }
   before_action :ensure_recurring_enabled
 
   # Server-owned on purpose: the button must not become a vector for

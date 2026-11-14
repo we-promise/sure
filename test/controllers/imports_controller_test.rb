@@ -22,6 +22,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     get new_import_url
 
@@ -181,6 +182,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     family_document = family_documents(:tax_return)
     Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
@@ -219,6 +221,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     @user.family.expects(:upload_document).never
 
@@ -461,10 +464,34 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "a document upload is refused with the router's reason when embed isn't available" do
+    use_no_ai
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal Ai::Availability.unavailable(:embed, :not_configured).message_for(@user), flash[:alert]
+  end
+
+  test "a document upload says no store is configured when the embed route is set but the store can't be built" do
+    VectorStore::Registry.stubs(:adapter).returns(nil)
+    use_ai_routes
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.document_provider_not_configured"), flash[:alert]
+  end
+
   test "rejects unsupported document type for DocumentImport option" do
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     assert_no_difference "Import.count" do
       post imports_url, params: {

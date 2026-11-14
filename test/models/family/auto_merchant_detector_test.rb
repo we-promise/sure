@@ -1,13 +1,12 @@
 require "test_helper"
 
 class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
-  include EntriesTestHelper, ProviderTestHelper
+  include EntriesTestHelper, ActiveJob::TestHelper
 
   setup do
     @family = families(:dylan_family)
     @account = @family.accounts.create!(name: "Rule test", balance: 100, currency: "USD", accountable: Depository.new)
-    @llm_provider = mock
-    Provider::Registry.stubs(:get_provider).with(:openai).returns(@llm_provider)
+    use_ai_routes
     Setting.stubs(:brand_fetch_client_id).returns("123")
     Setting.stubs(:brand_fetch_logo_size).returns(40)
   end
@@ -17,16 +16,16 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     txn2 = create_transaction(account: @account, name: "Chipotle").transaction
     txn3 = create_transaction(account: @account, name: "generic").transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn1.id, business_name: "McDonalds", business_url: "mcdonalds.com"),
-      AutoDetectedMerchant.new(transaction_id: txn2.id, business_name: "Chipotle", business_url: "chipotle.com"),
-      AutoDetectedMerchant.new(transaction_id: txn3.id, business_name: nil, business_url: nil)
-    ])
+    provider_response = { merchants: [
+      { transaction_id: txn1.id, business_name: "McDonalds", business_url: "mcdonalds.com" },
+      { transaction_id: txn2.id, business_name: "Chipotle", business_url: "chipotle.com" },
+      { transaction_id: txn3.id, business_name: nil, business_url: nil }
+    ] }
 
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    stub_ai(:detect_merchants, returns: provider_response)
 
     assert_difference "DataEnrichment.count", 2 do
-      Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn1.id, txn2.id, txn3.id ]).auto_detect
+      detect(@family, [ txn1.id, txn2.id, txn3.id ])
     end
 
     assert_equal "McDonalds", txn1.reload.merchant.name
@@ -44,13 +43,13 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     invalid_txn = create_transaction(account: @account, name: "Weird").transaction
     valid_txn = create_transaction(account: @account, name: "Chipotle").transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: invalid_txn.id, business_name: Merchant::NO_MERCHANT_FILTER_VALUE, business_url: nil),
-      AutoDetectedMerchant.new(transaction_id: valid_txn.id, business_name: "Chipotle", business_url: "chipotle.com")
-    ])
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    provider_response = { merchants: [
+      { transaction_id: invalid_txn.id, business_name: Merchant::NO_MERCHANT_FILTER_VALUE, business_url: nil },
+      { transaction_id: valid_txn.id, business_name: "Chipotle", business_url: "chipotle.com" }
+    ] }
+    stub_ai(:detect_merchants, returns: provider_response)
 
-    Family::AutoMerchantDetector.new(@family, transaction_ids: [ invalid_txn.id, valid_txn.id ]).auto_detect
+    detect(@family, [ invalid_txn.id, valid_txn.id ])
 
     assert_nil invalid_txn.reload.merchant
     assert_equal "Chipotle", valid_txn.reload.merchant.name
@@ -62,13 +61,13 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
   test "creates a family-scoped merchant instead of a shared ProviderMerchant" do
     txn = create_transaction(account: @account, name: "Sushi Place").transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Sushi Place", business_url: "sushiplace.example")
-    ])
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    provider_response = { merchants: [
+      { transaction_id: txn.id, business_name: "Sushi Place", business_url: "sushiplace.example" }
+    ] }
+    stub_ai(:detect_merchants, returns: provider_response)
 
     assert_no_difference "ProviderMerchant.count" do
-      Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+      detect(@family, [ txn.id ])
     end
 
     merchant = txn.reload.merchant
@@ -81,17 +80,17 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     txn = create_transaction(account: @account, name: "Sushi Place").transaction
     merchant = @family.merchants.create!(name: "Sushi Place")
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Sushi Place", business_url: "sushiplace.example")
-    ])
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    provider_response = { merchants: [
+      { transaction_id: txn.id, business_name: "Sushi Place", business_url: "sushiplace.example" }
+    ] }
+    stub_ai(:detect_merchants, returns: provider_response)
     Family::AutoMerchantDetector.any_instance.stubs(:find_matching_user_merchant).returns(nil)
     FamilyMerchant.expects(:find_or_create_with_name)
                   .with(@family, "Sushi Place", website_url: "sushiplace.example")
                   .returns([ merchant, false ])
                   .once
 
-    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+    detect(@family, [ txn.id ])
 
     assert_equal merchant, txn.reload.merchant
   end
@@ -103,17 +102,17 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     txn1 = create_transaction(account: @account, name: "Shared Name Co").transaction
     txn2 = create_transaction(account: other_account, name: "Shared Name Co").transaction
 
-    response1 = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn1.id, business_name: "Shared Name Co", business_url: "sharedname.example")
-    ])
-    response2 = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn2.id, business_name: "Shared Name Co", business_url: "sharedname.example")
-    ])
-    @llm_provider.expects(:auto_detect_merchants).returns(response1).once
-    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn1.id ]).auto_detect
+    response1 = { merchants: [
+      { transaction_id: txn1.id, business_name: "Shared Name Co", business_url: "sharedname.example" }
+    ] }
+    response2 = { merchants: [
+      { transaction_id: txn2.id, business_name: "Shared Name Co", business_url: "sharedname.example" }
+    ] }
+    stub_ai(:detect_merchants, returns: response1)
+    detect(@family, [ txn1.id ])
 
-    @llm_provider.expects(:auto_detect_merchants).returns(response2).once
-    Family::AutoMerchantDetector.new(other_family, transaction_ids: [ txn2.id ]).auto_detect
+    stub_ai(:detect_merchants, returns: response2)
+    detect(other_family, [ txn2.id ])
 
     merchant1 = txn1.reload.merchant
     merchant2 = txn2.reload.merchant
@@ -131,12 +130,12 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     legacy = ProviderMerchant.create!(name: "Crafted Co", source: "ai", website_url: "crafted.example")
     txn = create_transaction(account: @account, name: "Crafted Co purchase").transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Crafted Co", business_url: "crafted.example")
-    ])
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    provider_response = { merchants: [
+      { transaction_id: txn.id, business_name: "Crafted Co", business_url: "crafted.example" }
+    ] }
+    stub_ai(:detect_merchants, returns: provider_response)
 
-    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+    detect(@family, [ txn.id ])
 
     merchant = txn.reload.merchant
     assert_instance_of FamilyMerchant, merchant
@@ -149,13 +148,13 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     used.update!(merchant: mine)
     txn = create_transaction(account: @account, name: "Mine Co purchase").transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Mine Co", business_url: "mine.example")
-    ])
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    provider_response = { merchants: [
+      { transaction_id: txn.id, business_name: "Mine Co", business_url: "mine.example" }
+    ] }
+    stub_ai(:detect_merchants, returns: provider_response)
 
     assert_no_difference [ "ProviderMerchant.count", "FamilyMerchant.count" ] do
-      Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+      detect(@family, [ txn.id ])
     end
 
     assert_equal mine.id, txn.reload.merchant.id
@@ -165,13 +164,13 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     known = ProviderMerchant.create!(name: "Known Co", source: "plaid", website_url: "known.example")
     txn = create_transaction(account: @account, name: "Known Co purchase").transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Known Co", business_url: "known.example")
-    ])
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    provider_response = { merchants: [
+      { transaction_id: txn.id, business_name: "Known Co", business_url: "known.example" }
+    ] }
+    stub_ai(:detect_merchants, returns: provider_response)
 
     assert_no_difference [ "ProviderMerchant.count", "FamilyMerchant.count" ] do
-      Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+      detect(@family, [ txn.id ])
     end
 
     assert_equal known.id, txn.reload.merchant.id
@@ -182,13 +181,13 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     merchant = ProviderMerchant.create!(source: "plaid", name: "Coffee Shop", logo_url: provider_logo)
     txn = create_transaction(account: @account, name: "COFFEE SHOP 123", merchant: merchant).transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Coffee Shop", business_url: "https://www.coffeeshop.com")
-    ])
+    provider_response = { merchants: [
+      { transaction_id: txn.id, business_name: "Coffee Shop", business_url: "https://www.coffeeshop.com" }
+    ] }
 
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    stub_ai(:detect_merchants, returns: provider_response)
 
-    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+    detect(@family, [ txn.id ])
 
     merchant.reload
     assert_equal "https://www.coffeeshop.com", merchant.website_url
@@ -199,17 +198,78 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     merchant = ProviderMerchant.create!(source: "plaid", name: "Book Store")
     txn = create_transaction(account: @account, name: "BOOK STORE 42", merchant: merchant).transaction
 
-    provider_response = provider_success_response([
-      AutoDetectedMerchant.new(transaction_id: txn.id, business_name: "Book Store", business_url: "https://www.bookstore.com")
-    ])
+    provider_response = { merchants: [
+      { transaction_id: txn.id, business_name: "Book Store", business_url: "https://www.bookstore.com" }
+    ] }
 
-    @llm_provider.expects(:auto_detect_merchants).returns(provider_response).once
+    stub_ai(:detect_merchants, returns: provider_response)
 
-    Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ]).auto_detect
+    detect(@family, [ txn.id ])
 
     assert_equal "https://cdn.brandfetch.io/bookstore.com/icon/fallback/lettermark/w/40/h/40?c=123", merchant.reload.logo_url
   end
 
+  test "sends the transactions and the family's merchants through the detect_merchants prompt" do
+    @family.merchants.create!(name: "Known Diner")
+    txn = create_transaction(account: @account, name: "KNOWN DINER 12").transaction
+    requests = stub_ai(:detect_merchants, returns: { merchants: [] })
+
+    detect(@family, [ txn.id ])
+
+    assert_includes requests.first.input, txn.id
+    assert_includes requests.first.input, "Known Diner"
+    assert_includes requests.first.instructions, "auto-detecting business names and website URLs"
+  end
+
+  # Drift bug 3: a provider failure used to return 0 without a trace.
+  test "a failure fails the rule run's job and is logged" do
+    txn = create_transaction(account: @account, name: "Chipotle").transaction
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 1, executed_at: Time.current)
+    stub_ai(:detect_merchants, raises: Ai::Error::Refused.new("bad request", status: 400))
+
+    assert_difference -> { DebugLogEntry.where(category: "merchant_detection", level: "error").count }, 1 do
+      Ai::GenerationJob.perform_now(:detect_merchants, { ids: [ txn.id ], family_id: @family.id, rule_run_id: rule_run.id })
+    end
+    assert_equal "failed", rule_run.reload.status
+  end
+
+  test "a rule run counts its transactions down per batch and completes once" do
+    use_ai_model_settings(batch_size: 2)
+    ids = 5.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 5, executed_at: Time.current)
+    rule_run.await_ai!(5)
+    stub_ai(:detect_merchants) do |request|
+      batch = request.schema.dig(:properties, :merchants, :items, :properties, :transaction_id, :enum)
+      { merchants: batch.map { { transaction_id: _1, business_name: "Shop", business_url: "shop.example" } } }
+    end
+
+    Ai::GenerationJob.perform_later(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+    progress = []
+    until enqueued_jobs.empty?
+      ActiveJob::Base.execute(enqueued_jobs.shift.stringify_keys)
+      progress << rule_run.reload.slice(:transactions_awaiting_ai, :transactions_modified, :status).values
+    end
+
+    assert_equal [ [ 3, 2, "pending" ], [ 1, 4, "pending" ], [ 0, 5, "success" ] ], progress
+    assert_equal 0, rule_run.pending_jobs_count
+  end
+
+  test "a run that gives up stops waiting for its transactions" do
+    ids = 2.times.map { |i| create_transaction(account: @account, name: "Shop #{i}").transaction.id }
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 2, executed_at: Time.current)
+    rule_run.await_ai!(2)
+    stub_ai(:detect_merchants, raises: Ai::Error::Unauthorized.new("bad key"))
+
+    Ai::GenerationJob.perform_now(:detect_merchants, { ids:, family_id: @family.id, rule_run_id: rule_run.id })
+
+    assert_equal [ 0, "failed" ], rule_run.reload.slice(:transactions_awaiting_ai, :status).values
+  end
+
   private
-    AutoDetectedMerchant = Provider::LlmConcept::AutoDetectedMerchant
+    def detect(family, transaction_ids)
+      Ai::GenerationJob.perform_now(:detect_merchants, { ids: transaction_ids, family_id: family.id })
+    end
 end

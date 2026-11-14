@@ -840,7 +840,9 @@ Rails.application.routes.draw do
       resources :categories, only: [ :index, :show, :create ]
       resources :merchants, only: [ :index, :show, :create ]
       resources :rules, only: [ :index, :show ]
-      resources :rule_runs, only: [ :index, :show ]
+      resources :rule_runs, only: [ :index, :show ] do
+        resource :progress, only: :show, module: :rule_runs
+      end
       resources :securities, only: [ :index, :show ]
       resources :security_prices, only: [ :index, :show, :create ]
       resources :tags, only: [ :index, :show, :create, :update, :destroy ]

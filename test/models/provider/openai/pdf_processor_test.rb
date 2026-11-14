@@ -295,13 +295,13 @@ class Provider::Openai::PdfProcessorTest < ActiveSupport::TestCase
     assert_equal "Synthetic PDF", processor.process.summary
   end
 
-  test "text extraction resolves json_mode from LLM_JSON_MODE" do
+  test "text extraction resolves json_mode from the OpenAI endpoint (LLM_JSON_MODE)" do
     client = mock
     client.expects(:chat).with do |request|
       !request[:parameters].key?(:response_format)
     end.returns(pdf_chat_response)
 
-    with_env_overrides("LLM_JSON_MODE" => "none") do
+    with_env_overrides("LLM_JSON_MODE" => "none", "OPENAI_ACCESS_TOKEN" => "sk-test") do
       processor = build_processor_for(client)
       processor.stubs(:extract_text_from_pdf).returns("Statement text")
       processor.process
