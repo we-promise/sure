@@ -419,6 +419,7 @@ class Family::DataExporter
           provider_type: transaction.provider_type,
           security_id: transaction.serializable_security_id,
           exchange_rate: transaction.numeric_exchange_rate,
+          amount_currency: transaction.entry.currency,
           created_at: transaction.created_at,
           updated_at: transaction.updated_at
         }
@@ -481,6 +482,9 @@ class Family::DataExporter
             fee: trade.fee,
             investment_activity_label: trade.investment_activity_label,
             exchange_rate: trade.numeric_exchange_rate,
+            # The currency exchange_rate converts from: the entry's, which
+            # can differ from trade.currency above.
+            amount_currency: trade.entry.currency,
             created_at: trade.created_at,
             updated_at: trade.updated_at
           }

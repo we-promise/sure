@@ -17,7 +17,11 @@ json.fee_decimal trade.fee.to_s("F")
 # account's currency stored on the trade, for example by a provider that
 # reports its own rate. Null when the trade carries none, in which case market
 # rates are used, and when the amount is in the account's currency.
+# amount_currency names the currency the rate converts from, which can differ
+# from `currency` (trade.currency): the web form and PATCH change the entry's
+# currency without touching the trade's.
 json.exchange_rate trade.numeric_exchange_rate
+json.amount_currency trade.entry.currency
 
 json.account do
   json.id trade.entry.account.id

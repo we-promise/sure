@@ -1229,6 +1229,33 @@ class Api::V1::TradesControllerTest < ActionDispatch::IntegrationTest
     assert_nil JSON.parse(response.body)["exchange_rate"]
   end
 
+  # exchange_rate converts from the amount's currency, which is the entry's
+  # and can differ from trade.currency, so the payload names it.
+  test "amount_currency names the currency exchange_rate converts from" do
+    security = Security.create!(ticker: "TAXA", name: "Amount Currency Security", country_code: "US")
+    entry = @investment_account.entries.create!(
+      date: Date.current,
+      amount: 100,
+      name: "Buy TAXA",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 1.1 })
+    )
+    trade = entry.entryable
+
+    get api_v1_trade_url(trade), headers: api_headers(read_only_api_key)
+    assert_response :success
+    body = JSON.parse(response.body)
+    assert_equal "EUR", body["amount_currency"]
+    assert_equal "USD", body["currency"]
+    assert_equal 1.1, body["exchange_rate"]
+
+    get api_v1_trades_url, params: { account_id: @investment_account.id, per_page: 100 }, headers: api_headers(read_only_api_key)
+    assert_response :success
+    trade_json = JSON.parse(response.body)["trades"].find { |row| row["id"] == trade.id }
+    assert_equal "EUR", trade_json["amount_currency"]
+  end
+
   private
 
     def category_ids_from_every_source

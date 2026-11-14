@@ -1327,6 +1327,45 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  # A trade's exchange_rate converts from its entry's currency, which can
+  # differ from trade.currency, so each record names the amount's currency.
+  test "exports the currency exchange_rate converts from on trades and transactions" do
+    investment_account = @family.accounts.create!(
+      name: "Amount Currency Account",
+      accountable: Investment.new,
+      balance: 10_000,
+      currency: "USD"
+    )
+    security = Security.create!(ticker: "AMC#{SecureRandom.hex(3).upcase}", name: "Amount Currency Security")
+    trade_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-20"),
+      amount: 100,
+      name: "Buy",
+      currency: "EUR",
+      entryable: Trade.new(security: security, qty: 1, price: 100, currency: "USD", investment_activity_label: "Buy",
+        extra: { "exchange_rate" => 1.1 })
+    )
+    transaction_entry = investment_account.entries.create!(
+      date: Date.parse("2024-05-21"),
+      amount: -5,
+      name: "Dividend",
+      currency: "EUR",
+      entryable: Transaction.new(investment_activity_label: "Dividend", extra: { "exchange_rate" => 1.1 })
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      records = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }
+      trade_data = records.find { |record| record["type"] == "Trade" && record.dig("data", "id") == trade_entry.entryable.id }["data"]
+      transaction_data = records.find { |record| record["type"] == "Transaction" && record.dig("data", "id") == transaction_entry.entryable.id }["data"]
+
+      assert_equal "EUR", trade_data["amount_currency"]
+      assert_equal "USD", trade_data["currency"]
+      assert_equal 1.1, trade_data["exchange_rate"]
+      assert_equal "EUR", transaction_data["amount_currency"]
+      assert_equal 1.1, transaction_data["exchange_rate"]
+    end
+  end
+
   test "export reads a non-hash extra on a trade or transaction as null tax fields" do
     investment_account = @family.accounts.create!(
       name: "Malformed Extra Investment Account",

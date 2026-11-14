@@ -1478,6 +1478,7 @@ end
     assert_equal "Withholding Tax", body["provider_type"]
     assert_equal security.id, body["security_id"]
     assert_equal 0.9215, body["exchange_rate"]
+    assert_equal "EUR", body["amount_currency"]
     assert_not body.key?("extra")
     assert_not_includes response.body, "CONID-SECRET-1"
     assert_not_includes response.body, "U7654321"

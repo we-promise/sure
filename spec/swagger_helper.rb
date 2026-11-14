@@ -1064,6 +1064,10 @@ RSpec.configure do |config|
                 nullable: true,
                 description: "Rate from the transaction's currency to the account's currency stored on it. Null when none is stored or the transaction is in the account's currency."
               },
+              amount_currency: {
+                type: :string,
+                description: 'Currency exchange_rate converts from: the currency of the amount, the same as currency on a transaction.'
+              },
               account: { '$ref' => '#/components/schemas/Account' },
               category: { '$ref' => '#/components/schemas/Category', nullable: true },
               merchant: { '$ref' => '#/components/schemas/Merchant', nullable: true },
@@ -1778,7 +1782,11 @@ RSpec.configure do |config|
               exchange_rate: {
                 type: :number,
                 nullable: true,
-                description: "Rate from the currency of the trade's amount to the account's currency stored on the trade, such as one reported by the provider. Null when none is stored or the amount is in the account's currency."
+                description: "Rate from amount_currency (the currency of the trade's amount) to the account's currency stored on the trade, such as one reported by the provider. Null when none is stored or the amount is in the account's currency."
+              },
+              amount_currency: {
+                type: :string,
+                description: "Currency of the trade's amount, which exchange_rate converts from. It can differ from currency, the trade's own."
               },
               account: { '$ref' => '#/components/schemas/Account' },
               security: {
