@@ -27,6 +27,11 @@ zh-CN:
         other: 已导入 %{count} 个账户
       none_selected: 未选择账户
       no_accounts: 没有可导入的账户
+      invalid_sync_start_date: 同步开始日期必须是过去的某一天。
+    select_accounts:
+      connection_unavailable: 该 Binance 连接不可用。请在提供商设置中选择一个连接。
+      no_credentials_configured: 请先在提供商设置中连接 Binance，然后再添加其账户。
+      select_connection: 请在提供商设置中选择一个 Binance 连接。
     binance_item:
       provider_name: Binance
       syncing: 正在同步...
