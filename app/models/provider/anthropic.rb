@@ -53,15 +53,20 @@ class Provider::Anthropic < Provider
   def self.configured?
     ENV["ANTHROPIC_ACCESS_TOKEN"].present? ||
       ENV["ANTHROPIC_API_KEY"].present? ||
-      Setting.anthropic_access_token.present?
+      Setting.anthropic_access_token.present? ||
+      ClaudeCodeClient.configured?
   end
 
-  def initialize(access_token, base_url: nil, model: nil)
-    client_options = { api_key: access_token }
-    client_options[:base_url] = base_url if base_url.present?
-    client_options[:timeout] = ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
+  # `client` swaps the HTTP client for one with the same `messages` interface,
+  # such as ClaudeCodeClient.
+  def initialize(access_token, base_url: nil, model: nil, client: nil)
+    @client = client || begin
+      client_options = { api_key: access_token }
+      client_options[:base_url] = base_url if base_url.present?
+      client_options[:timeout] = self.class.request_timeout
 
-    @client = ::Anthropic::Client.new(**client_options)
+      ::Anthropic::Client.new(**client_options)
+    end
     @base_url = base_url
 
     if custom_endpoint? && model.blank?
@@ -81,7 +86,17 @@ class Provider::Anthropic < Provider
     DEFAULT_ANTHROPIC_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }
   end
 
+  def self.request_timeout
+    ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
+  end
+
+  def claude_code?
+    client.is_a?(ClaudeCodeClient)
+  end
+
   def provider_name
+    return "Anthropic (Claude Code subscription)" if claude_code?
+
     custom_endpoint? ? "Custom Anthropic-compatible (#{@base_url})" : "Anthropic"
   end
 
@@ -212,6 +227,7 @@ class Provider::Anthropic < Provider
   end
 
   def supports_pdf_processing?(model: @default_model)
+    return false if claude_code?
     return true if custom_endpoint?
 
     VISION_CAPABLE_MODEL_PREFIXES.any? { |prefix| model.to_s.start_with?(prefix) }

@@ -23,9 +23,11 @@ module Provider::Anthropic::Concerns::StructuredOutput
       retry_response
     end
 
+    # The HTTP API honours a forced tool_choice; the Claude Code CLI answers
+    # through structured output, which can still come back as text.
     def retry_for_missing_tool?(response, tool_choice)
       tool_choice.is_a?(Hash) &&
-        tool_choice[:type] == "auto" &&
+        (tool_choice[:type] == "auto" || (tool_choice[:type] == "tool" && client.is_a?(Provider::Anthropic::ClaudeCodeClient))) &&
         response.respond_to?(:stop_reason) &&
         response.stop_reason.to_s == "end_turn" &&
         Array(response.content).none? { |block| structured_block_type(block) == :tool_use }

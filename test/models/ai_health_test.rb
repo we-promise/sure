@@ -5,7 +5,7 @@ class AiHealthTest < ActiveSupport::TestCase
     OPENAI_ACCESS_TOKEN OPENAI_URI_BASE OPENAI_MODEL
     ANTHROPIC_ACCESS_TOKEN ANTHROPIC_API_KEY VECTOR_STORE_PROVIDER
     OPENAI_SUPPORTS_RESPONSES_ENDPOINT EMBEDDING_URI_BASE EMBEDDING_MODEL
-    EMBEDDING_DIMENSIONS EMBEDDING_ACCESS_TOKEN
+    EMBEDDING_DIMENSIONS EMBEDDING_ACCESS_TOKEN CLAUDE_CODE_OAUTH_TOKEN
   ].index_with(nil).freeze
 
   setup do
@@ -146,6 +146,17 @@ class AiHealthTest < ActiveSupport::TestCase
 
     assert_equal :failing, health.vector_store_status
     assert_equal :pgvector_probe_failed, health.vector_store_failure_kind
+  end
+
+  test "a subscription install leaves the API-key probes unchecked" do
+    Setting.stubs(:llm_provider).returns("anthropic")
+    AiHealth::Probe.any_instance.expects(:llm).never
+    AiHealth::Probe.any_instance.expects(:function_calling).never
+
+    health = ClimateControl.modify(AI_ENVIRONMENT.merge("CLAUDE_CODE_OAUTH_TOKEN" => "test-token")) { AiHealth.new }
+
+    assert_equal :not_checked, health.llm_status
+    assert_equal :not_checked, health.function_calling_status
   end
 
   private

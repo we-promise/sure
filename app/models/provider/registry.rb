@@ -100,10 +100,17 @@ class Provider::Registry
                        ENV["ANTHROPIC_API_KEY"].presence ||
                        Setting.anthropic_access_token
 
-        return nil unless access_token.present?
+        model = ENV["ANTHROPIC_MODEL"].presence || Setting.anthropic_model
+
+        # An API key wins; the subscription token is the fallback.
+        if access_token.blank?
+          return nil unless Provider::Anthropic::ClaudeCodeClient.configured?
+
+          return Provider::Anthropic.new(nil, model: model,
+            client: Provider::Anthropic::ClaudeCodeClient.new(timeout: Provider::Anthropic.request_timeout))
+        end
 
         base_url = ENV["ANTHROPIC_BASE_URL"].presence || Setting.anthropic_base_url
-        model = ENV["ANTHROPIC_MODEL"].presence || Setting.anthropic_model
 
         Provider::Anthropic.new(access_token, base_url: base_url, model: model)
       end
