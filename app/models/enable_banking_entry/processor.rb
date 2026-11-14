@@ -89,6 +89,7 @@ class EnableBankingEntry::Processor
     groups.each do |legacy_id, indexes|
       free = indexes.reject { |i| stored.key?(suffixed[i]) }
       score = ->(i) { movement_match(stored[legacy_id], rows[i], account&.family&.timezone) }
+      # Rows that already have a suffixed entry never take the plain id; if all do, nobody does (no duplicate).
       owner = free.each_with_index.max_by { |i, pos| [ score[i], -pos ] }&.first
       # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
       # own entry, so the plain one is another row's unless its amount matches or was edited.
