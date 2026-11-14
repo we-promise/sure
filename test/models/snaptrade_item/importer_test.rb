@@ -92,4 +92,16 @@ class SnaptradeItem::ImporterTest < ActiveSupport::TestCase
     assert_equal stored, @snaptrade_account.raw_activities_payload
     assert_equal synced_at, @snaptrade_account.last_activities_sync
   end
+
+  # A failed fetch is not SnapTrade still syncing: the job would repeat the
+  # whole fetch (up to the page cap) only to fail the same way.
+  test "a fresh account whose fetch raises is not flagged and queues no background fetch" do
+    @provider.stubs(:get_account_activities).raises(Provider::Snaptrade::ApiError.new("hit the page cap"))
+
+    assert_no_enqueued_jobs(only: SnaptradeActivitiesFetchJob) do
+      @importer.send(:import_activities, @snaptrade_account)
+    end
+
+    assert_not @snaptrade_account.reload.activities_fetch_pending?
+  end
 end
