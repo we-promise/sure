@@ -501,7 +501,7 @@ module Security::Provided
     return nil if weights[:leveraged_or_inverse]
 
     classes = weights[:asset_class] || {}
-    return nil if classes.values.any? { |percent| percent.negative? || percent > 100 }
+    return nil if classes.values.any? { |percent| percent < -10 || percent > 110 }
 
     weights[:category_asset_class].presence || dominant_fund_weight(classes.except("liquidity"))
   end
