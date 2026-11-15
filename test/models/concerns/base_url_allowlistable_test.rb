@@ -55,6 +55,11 @@ class BaseUrlAllowlistableTest < ActiveSupport::TestCase
       "http://api.example.com/v1",
       "https://169.254.169.254/v1",
       "https://localhost/v1",
+      "https://api.example.com./v1",
+      "https://xn--pi-ula.example.com/v1",
+      "https://äpi.example.com/v1",
+      "https://[::ffff:169.254.169.254]/v1",
+      "https:/v1",
       "not a url",
       "//api.example.com/v1"
     ].each do |value|
@@ -74,5 +79,13 @@ class BaseUrlAllowlistableTest < ActiveSupport::TestCase
     ].each do |value|
       assert_nil Subject.normalize_base_url(value), "#{value.inspect} must be refused"
     end
+  end
+
+  # canonicalize also reduces the declared entries, so it must refuse what it
+  # cannot name a host for, and give a declared entry the form inputs get.
+  test "canonicalize refuses a URL without a host and normalises a declared entry" do
+    assert_nil BaseUrlAllowlistable.canonicalize("https:///v1")
+    assert_nil BaseUrlAllowlistable.canonicalize("https:/v1")
+    assert_equal "https://api.example.com/v1", BaseUrlAllowlistable.canonicalize("HTTPS://API.example.com/v1/")
   end
 end
