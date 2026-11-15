@@ -618,7 +618,7 @@ class Portfolio::DailyReturns
           -- #journal_value_sql). Any price, zero included: a position the
           -- balance carried at nothing left at nothing.
           LEFT JOIN LATERAL (
-            SELECT h.price, h.currency
+            SELECT h.date, h.price, h.currency
             FROM holdings h
             WHERE entries.entryable_type = 'Trade'
               AND h.account_id = entries.account_id
@@ -630,6 +630,11 @@ class Portfolio::DailyReturns
           LEFT JOIN LATERAL (
             SELECT #{rate_lookup('journal_prior.currency', 'entries.date - 1')} AS rate
           ) journal_prior_fx ON TRUE
+          -- The splits between that row and the journal, which the prior
+          -- price predates and the journal's quantity does not.
+          LEFT JOIN LATERAL (
+            #{split_product_sql('journal_prior.date', to: 'entries.date')}
+          ) journal_prior_splits ON TRUE
           WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
             -- Never after today: Balance::SyncCache applies nothing dated after
             -- it, so a scheduled entry has not moved the balance yet.
@@ -910,7 +915,10 @@ class Portfolio::DailyReturns
     # journal trade's zero, so the forward calculator writes the day's row at
     # price 0, and the balance drops by what it carried the units at the day
     # before; that drop is in net_market_flows. Valued at the zero price instead, the departing value
-    # stayed in `market` as a loss. NULL when there is no earlier row, and the
+    # stayed in `market` as a loss. That row's price is scaled through any
+    # split going ex after it and on or before the journal, which applied at
+    # the open of its ex-date, so the journal's quantity is in post-split
+    # shares. NULL when there is no earlier row, and the
     # day is then suppressed (journal_unpriced). A journal in on such a day is
     # carried to its first priced day instead, and what either leaves at the
     # zero price is settled there (carried_journals).
@@ -918,22 +926,23 @@ class Portfolio::DailyReturns
       <<~SQL.squish
         CASE
           WHEN journal_holdings.price > 0 THEN trades.qty * journal_holdings.price * journal_fx.rate
-          WHEN #{journal_out_unpriced_sql} THEN trades.qty * journal_prior.price * journal_prior_fx.rate
+          WHEN #{journal_out_unpriced_sql}
+            THEN trades.qty * journal_prior_splits.denominator / journal_prior_splits.numerator * journal_prior.price * journal_prior_fx.rate
         END
       SQL
     end
 
     # The product of the ratios of a security's splits going ex after `from`
-    # and on or before the first priced row, as an exact numerator and
-    # denominator (1 and 1 when there are none). For carried_journals.
-    def split_product_sql(from_expression)
+    # and on or before `to` (the first priced row, for carried_journals), as an
+    # exact numerator and denominator (1 and 1 when there are none).
+    def split_product_sql(from_expression, to: "first_priced.date")
       <<~SQL.squish
         SELECT COALESCE(ROUND(EXP(SUM(LN(s.numerator::numeric)))), 1) AS numerator,
                COALESCE(ROUND(EXP(SUM(LN(s.denominator::numeric)))), 1) AS denominator
         FROM security_splits s
         WHERE s.security_id = trades.security_id
           AND s.ex_date > #{from_expression}
-          AND s.ex_date <= first_priced.date
+          AND s.ex_date <= #{to}
       SQL
     end
 

@@ -1189,6 +1189,25 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
   end
 
+  # A split going ex on the journal's date applies before the journal, so the
+  # quantity is in post-split shares while the earlier row's price is not.
+  # Unscaled, 10 shares at the pre-split 100 left as 1,000 when the balance
+  # dropped by 500, and the 500 difference read as a +100% day.
+  test "an unpriced journal out on a split's ex date is valued at the split adjusted price" do
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    Security::Split.create!(security: security_under_test, ex_date: @day_two, numerator: 2, denominator: 1, source: "manual")
+    security_journal account: @account, date: @day_two, qty: -10, price: 0
+
+    returns = daily_returns
+    second = returns.rows.last
+
+    assert_equal BigDecimal("-500"), second.external_flow
+    assert_equal BigDecimal("0"), second.market
+    assert_in_delta 0.0, returns.returns.last.last.to_f, 0.000001
+  end
+
   # Part of a position journalled out on an unpriced day: the units that left
   # are valued the same way, but the units that stayed sit at the journal's
   # zero price until a price arrives, so the day is still suppressed.
