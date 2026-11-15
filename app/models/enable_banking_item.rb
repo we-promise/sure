@@ -182,9 +182,17 @@ class EnableBankingItem < ApplicationRecord
     # EnableBankingItem::Importer#fetch_unlinked_accounts_after_authorization).
     # One transaction with the account import, so a sync never sees the
     # request before the session's accounts exist, and no imported account is
-    # left without it.
+    # left without it. The request's time is read only under a row lock that
+    # conflicts with sync_later's (FOR UPDATE): a sync created before the lock
+    # is older than the request, and one created after it waits for this
+    # commit and reads the request (see
+    # EnableBankingItem::Syncer#perform_post_sync). FOR NO KEY UPDATE, the
+    # lock the UPDATE takes anyway, because each account insert's foreign key
+    # check holds KEY SHARE on this row: two authorizations could not both
+    # upgrade from that to FOR UPDATE.
     transaction do
       import_accounts_from_session(result[:accounts] || [])
+      lock!("FOR NO KEY UPDATE")
       update!(full_history_fetch_requested_at: Time.current)
     end
 

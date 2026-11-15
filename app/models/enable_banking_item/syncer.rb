@@ -93,11 +93,41 @@ class EnableBankingItem::Syncer
     raise
   end
 
+  # An authorization that completes while a sync runs reuses that sync
+  # through sync_later. While a full-history request newer than the latest
+  # sync is open, run one more sync while the bank still serves full history.
+  # That covers a request that arrived after the sync's last read of it, and
+  # one the sync read but whose early fetch failed (one retry). Read from the
+  # database, since the callback writes it from another process.
+  #
+  # Post-sync runs inside the sync's finalization transaction, which holds the
+  # sync row lock. The check runs once that transaction has committed: then
+  # sync_later doesn't take the item row lock while the sync row is locked (a
+  # deadlock with a sync that holds the item lock and waits for the sync row),
+  # and a callback whose sync_later still reused this sync has committed its
+  # request before the read. A later callback finds no running sync and
+  # starts its own.
+  #
+  # The block runs outside Sync#perform_post_sync's rescue, so it handles its
+  # own errors: one that escaped would skip finalizing the parent sync.
   def perform_post_sync
-    # no-op
+    ActiveRecord.after_all_transactions_commit do
+      queue_sync_for_late_full_history_request
+    rescue => e
+      Rails.logger.error("Error queueing the follow-up sync for EnableBankingItem (#{enable_banking_item.id}): #{e.message}")
+      Sentry.capture_exception(e)
+    end
   end
 
   private
+
+    def queue_sync_for_late_full_history_request
+      requested_at = EnableBankingItem.where(id: enable_banking_item.id).pick(:full_history_fetch_requested_at)
+      return unless requested_at && requested_at > EnableBankingItem::Importer::FULL_HISTORY_REQUEST_WINDOW.ago
+
+      latest_sync = enable_banking_item.syncs.ordered.first
+      enable_banking_item.sync_later if latest_sync.nil? || requested_at > latest_sync.created_at
+    end
 
     # A full-history fetch that stopped early keeps its rows and the sync
     # completes, so the sync summary shows that older history may be missing.
