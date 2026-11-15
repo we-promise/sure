@@ -246,6 +246,14 @@ zh-CN:
       description: 请选择您要用来连接 %{account_name} 的提供商
       already_linked: 该账户已连接到提供商
       no_providers: 当前没有可用的提供商
+    reconciliation_indicator:
+      matched: 所有交易已核对
+      needs_attention: 有交易需要核对
+    scheduled_balance_tooltip:
+      description: 所有已计划交易入账后的余额
+      current: 当前余额
+      scheduled: 已计划
+      projected: 预计余额
   email_confirmations:
     new:
       invalid_token: 确认链接无效或已过期。

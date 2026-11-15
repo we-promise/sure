@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_12_105619) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -844,7 +844,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_105619) do
     t.datetime "updated_at", null: false
     t.index ["from_currency", "to_currency", "date"], name: "index_exchange_rates_on_base_converted_date_unique", unique: true
     t.index ["from_currency"], name: "index_exchange_rates_on_from_currency"
-    t.index ["to_currency"], name: "index_exchange_rates_on_to_currency"
+    t.index ["to_currency", "updated_at"], name: "index_exchange_rates_on_to_currency_and_updated_at"
+    t.index ["updated_at"], name: "index_exchange_rates_on_updated_at"
     t.check_constraint "rate > 0::numeric AND rate <> 'NaN'::numeric AND rate::text <> 'Infinity'::text", name: "chk_exchange_rates_rate_positive"
   end
 
@@ -1188,6 +1189,26 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_105619) do
     t.check_constraint "state::text = ANY (ARRAY['active'::character varying::text, 'paused'::character varying::text, 'completed'::character varying::text, 'archived'::character varying::text])", name: "chk_savings_goals_state_enum"
     t.check_constraint "target_amount > 0::numeric", name: "chk_savings_goals_target_amount_positive"
     t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying::text, 'months_of_expenses'::character varying::text])", name: "chk_goals_target_mode_enum"
+  end
+
+  create_table "holding_lots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.date "acquired_on"
+    t.boolean "clamped", default: false, null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.uuid "origin_security_id"
+    t.decimal "qty", precision: 34, scale: 18, null: false
+    t.uuid "security_id", null: false
+    t.uuid "source_entry_id"
+    t.decimal "unit_cost", precision: 25, scale: 10
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "security_id"], name: "index_holding_lots_one_opening_lot_per_position", unique: true, where: "(source_entry_id IS NULL)"
+    t.index ["account_id", "source_entry_id"], name: "index_holding_lots_on_account_id_and_source_entry_id", unique: true
+    t.index ["origin_security_id"], name: "index_holding_lots_on_origin_security_id"
+    t.index ["security_id"], name: "index_holding_lots_on_security_id"
+    t.index ["source_entry_id"], name: "index_holding_lots_on_source_entry_id"
+    t.check_constraint "qty >= 0::numeric", name: "holding_lots_qty_non_negative"
   end
 
   create_table "holdings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1605,6 +1626,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_105619) do
     t.string "insurance_rate_type"
     t.decimal "interest_rate", precision: 10, scale: 3
     t.jsonb "locked_attributes", default: {}
+    t.boolean "principal_only_transfers", default: false, null: false
     t.string "rate_type"
     t.date "start_date"
     t.string "subtype"
@@ -2719,6 +2741,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_105619) do
     t.jsonb "data"
     t.string "error"
     t.datetime "failed_at"
+    t.boolean "full_resync_requested", default: false, null: false
     t.uuid "parent_id"
     t.datetime "pending_at"
     t.string "status", default: "pending"
@@ -3187,6 +3210,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_12_105619) do
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "holding_lots", "accounts", on_delete: :cascade
+  add_foreign_key "holding_lots", "entries", column: "source_entry_id", on_delete: :cascade
+  add_foreign_key "holding_lots", "securities", column: "origin_security_id", on_delete: :nullify
+  add_foreign_key "holding_lots", "securities", on_delete: :cascade
   add_foreign_key "holdings", "account_providers"
   add_foreign_key "holdings", "accounts", on_delete: :cascade
   add_foreign_key "holdings", "securities"
