@@ -175,7 +175,7 @@ All 458 commit summaries in `v2.1.1..main` (2026-10-12 to 2026-11-06) were read.
 unreleased, and v2.1.1 is still the newest tag. The commits below touch this work. 2a is built
 to survive them, and this table is the upgrade checklist for PR 5.
 
-| Commit | Change in 2.2 | Effect | Where |
+| RubyLLM PR / commit | Change in 2.2 | Effect | Where |
 |---|---|---|---|
 | #1333 `4303c8b1` | `OpenTelemetry.enable(content: true)` puts prompts, outputs and tool arguments on spans (off by default) | `metadata` mode's privacy now rests on a setting, not on missing code. Call `enable(content: false)` explicitly on 2.2, and keep the test that no span carries content | 2a step 7; PR 5 |
 | #1407 `f800fa5b` | Timeouts, refused or dropped connections and TLS failures raise `RubyLLM::ConnectionError` (with `timeout?`), not Faraday errors | The mapping handles both: Faraday errors on 2.1.1; on 2.2, `ConnectionError#timeout?` → `Timeout`, otherwise `Unreachable` | 2a steps 2, 6, 13 |
@@ -270,10 +270,10 @@ Nothing here blocks 2a on 2.1.1.
      - `:models`: the model is listed, through `Http`'s clients;
      - `:chat`: text plus the returned model name, or `ModelMissing`;
      - `:tools`: one forced or auto tool call, true or false, with `tool_calls` read as a Hash
-       (2.1.1) or a collection (2.2, #1380);
+       (2.1.1) or a collection (2.2, crmne/ruby_llm#1380);
      - `:embedding` (Compatible only): the dimensions, and one vector per text.
    - Each probe emits `probe.ai` with `feature: :probe` and no owner, so it writes no usage row.
-   - Probes send only options every protocol carries (#1379, #1382).
+   - Probes send only options every protocol carries (crmne/ruby_llm#1379, #1382).
 7. **Instrumentation** (`config/initializers/ai_instrumentation.rb`, `app/models/ai/instrumentation/*`).
    - `UsageSubscriber` (`usage.ruby_llm`) writes a row only when the owner is a `Family`:
      - `provider` = the endpoint name, `operation` = the feature, both from

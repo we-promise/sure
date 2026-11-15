@@ -463,8 +463,9 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 - **Raised, not blocking:** #4628 (read-only MCP): keep "writes" and "data exposed" as separate
   attributes, so document access is a scope decision (also suggested on #3580).
 - **Use this PR's pattern once built:** #4641 (receipt upload; see #4425).
-- **Run in `ProcessPdfJob`, with the new stop button:** #1279 (brokerage PDFs), #1378 and #1379
-  (the same issue, filed twice).
+- **Run in `ProcessPdfJob`, with the new stop button:** #1279 (brokerage PDFs).
+- **Done elsewhere:** #1378 and #1379 (the same issue, filed twice) by #3105, which matches each
+  extracted row against the account's existing entries; 2e's `reconciles` check adds the balances.
 - **Configuration, PR 7:** #4245, #4560, #4791.
 - **Chat, PR 6 and PR 8:** #4864.
 - **None:** #3003, #3140, #3682, #4472, #4725, #4926, #4398.

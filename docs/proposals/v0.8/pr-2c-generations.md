@@ -292,7 +292,7 @@ flowchart LR
 
 **RubyLLM 2.2 items that touch 2c** (from the 2a plan's table):
 
-| Commit | Change | In 2c |
+| RubyLLM PR / commit | Change | In 2c |
 |---|---|---|
 | #1379, #1382, #1410 | Options a protocol can't carry raise `ArgumentError` | Effort goes only to protocols that carry it. `ArgumentError` maps to `Refused` (2a), so it never feeds the 400 fallback |
 | #1405 | `<think>` split on Chat Completions when asked | Sure's parser stays on 2.1.1. PR 5 checks whether turning it on can replace the parser |
