@@ -1,0 +1,15 @@
+---
+id:
+  demo_family_refresh_mailer:
+    completed:
+      subject: Pembaruan keluarga demo selesai
+      activity_heading: Aktivitas selama periode ini
+      sessions_label: Sesi login unik untuk keluarga demo sebelumnya
+      families_label: Akun keluarga baru yang dibuat
+      period_heading: Periode pelaporan (UTC)
+      from_label: "Dari:"
+      to_label: "Hingga:"
+      time_format: "%-d %b %Y pukul %H:%M:%S UTC"
+      family_heading: Keluarga demo sebelumnya
+      family_not_found: Tidak ditemukan
+      id_label: "ID:"
