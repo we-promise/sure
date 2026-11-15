@@ -341,7 +341,9 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   end
 
   # /accounts loads the provider's connections through its adapter's declaration
-  # (the accounts_index list), so only the sync stats map is added here.
+  # (the accounts_index list), so only the sync stats map is added here. An adapter
+  # without the declaration leaves @<key>_items unset, so the added code reads it
+  # nil-safe, here and in the index section.
   def update_accounts_controller
     controller_path = "app/controllers/accounts_controller.rb"
     return unless File.exist?(controller_path)
@@ -370,7 +372,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     # Add provider section before manual_accounts
     section = <<~ERB
 
-    <% if #{items_var}.any? %>
+    <% if #{items_var}&.any? %>
       <% #{items_var}.sort_by(&:created_at).each do |item| %>
         <%= render item, visible_accounts: visible_card_accounts(item) %>
       <% end %>
@@ -629,7 +631,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
 
       # #{class_name} sync stats
       #{stats_var} = {}
-      @#{file_name}_items.each do |item|
+      @#{file_name}_items&.each do |item|
         latest_sync = item.syncs.ordered.first
         #{stats_var}[item.id] = latest_sync&.sync_stats || {}
       end
