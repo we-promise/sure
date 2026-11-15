@@ -21,7 +21,7 @@ class ToolCall::Function < ToolCall
     def serialize_arguments(args)
       return "{}" if args.nil? || (args.is_a?(String) && args.blank?)
 
-      args.is_a?(String) ? args : args.to_json
+      args.is_a?(String) ? args : canonicalize(args).to_json
     end
 
     # The tool message body sent to the model. Object keys are sorted because

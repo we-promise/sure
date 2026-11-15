@@ -54,6 +54,28 @@ class ToolCall::FunctionTest < ActiveSupport::TestCase
     assert_equal({ "currency" => "USD" }, tool_call.to_result[:arguments])
   end
 
+  test "to_tool_call sorts object argument keys so replayed bytes match the in-flight ones" do
+    in_flight = ToolCall::Function.new(
+      provider_id: "resp_1",
+      provider_call_id: "call_1",
+      function_name: "get_transactions",
+      function_arguments: { "bb" => 1, "a" => { "y" => 2, "x" => 3 } },
+      function_result: { "page" => 1 }
+    )
+    stored = ToolCall::Function.create!(
+      message: messages(:chat1_assistant_response),
+      provider_id: "resp_1",
+      provider_call_id: "call_1",
+      function_name: "get_transactions",
+      function_arguments: { "bb" => 1, "a" => { "y" => 2, "x" => 3 } },
+      function_result: { "page" => 1 }
+    )
+
+    expected = '{"a":{"x":3,"y":2},"bb":1}'
+    assert_equal expected, in_flight.to_tool_call.dig(:function, :arguments)
+    assert_equal expected, ToolCall::Function.find(stored.id).to_tool_call.dig(:function, :arguments)
+  end
+
   test "from_function_request preserves extra_content and includes it in to_result and to_tool_call" do
     extra = { "google" => { "thought_signature" => "sig_123" } }
     request = Provider::LlmConcept::ChatFunctionRequest.new(
