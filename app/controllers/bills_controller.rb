@@ -542,6 +542,11 @@ class BillsController < ApplicationController
                        .scheduled
                        .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} >= ?", from)
         bills = bills.where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} < ?", until_on) if until_on
+        # Only rows through the materialization horizon are stored, so a window
+        # that reaches past it cannot be totaled. Withhold its total instead of
+        # showing one that leaves out the bills due after the horizon.
+        next [] if until_on && until_on - 1 > Date.current + RecurringTransaction::OccurrenceGenerator::HORIZON_DAYS
+
         bills = bills.to_a
         preload_allocation_sums(bills)
 
