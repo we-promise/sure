@@ -15,6 +15,7 @@ class Family < ApplicationRecord
   include QuestradeConnectable
   include RedbarkConnectable
   include OnchainWalletConnectable
+  include SharesightConnectable
   include AiPromptable
 
   DATE_FORMATS = [
@@ -258,7 +259,16 @@ class Family < ApplicationRecord
   validates :household_budget_enabled, inclusion: { in: [ true, false ] }
   validates :auto_generate_transaction_names, inclusion: { in: [ true, false ] }
   validates :investment_contributions_as_spending, inclusion: { in: [ true, false ] }
+  validates :manual_reconciliation, inclusion: { in: [ true, false ] }
   validates :categories_locked, inclusion: { in: [ true, false ] }
+  # The searchable timezone select submits "" while no zone is saved yet;
+  # store nil so provider date parsing keeps its default instead of raising.
+  # Rails' friendly names (e.g. "Pacific Time (US & Canada)") are stored as
+  # their IANA identifier, the value the timezone select offers.
+  normalizes :timezone, with: ->(timezone) {
+    timezone = timezone.strip
+    ActiveSupport::TimeZone::MAPPING[timezone] || timezone.presence
+  }
   validate :timezone_must_be_a_known_zone, if: :timezone_changed?
   validate :currency_must_be_known, if: :currency_changed?
 
@@ -378,8 +388,8 @@ class Family < ApplicationRecord
   #
   # This is the single entry point for "a member just joined, give them the
   # accounts the family shares by default." It self-guards on the sharing policy
-  # and family membership so every membership path (invitation accept, SSO JIT
-  # sign-up, token registration, mobile SSO) can call it without reintroducing
+  # and family membership so every membership path (SSO JIT sign-up, token
+  # registration, mobile SSO) can call it without reintroducing
   # the "member joined but sees nothing" bug. No-op when sharing is disabled or
   # there is nothing to share, and idempotent on re-run.
   def auto_share_existing_accounts_with(user)
@@ -477,6 +487,17 @@ class Family < ApplicationRecord
       .distinct
       .pluck(:merchant_id)
     Merchant.where(id: merchant_ids)
+  end
+
+  # Merchants a rule can set on transactions: the family's own plus the
+  # provider merchants already on transactions the user can see. Unlike
+  # available_merchants_for, recently unlinked merchants are left out, since a
+  # rule that set one again would undo the unlink.
+  def assignable_merchants_for(user)
+    assigned_ids = Transaction.joins(:entry)
+      .where(entries: { account_id: accounts.accessible_by(user).select(:id) })
+      .select(:merchant_id)
+    Merchant.where(id: merchants.select(:id)).or(Merchant.where(type: "ProviderMerchant", id: assigned_ids))
   end
 
   def available_merchants_for(user)
@@ -730,6 +751,28 @@ class Family < ApplicationRecord
     (requires_exchange_rates_data_provider? && ExchangeRate.provider.nil?)
   end
 
+  # Currencies the family's accounts, entries or holdings use that have no
+  # stored exchange rate into the family currency on any date. Totals built on
+  # #rate_sql leave amounts in them out rather than counting them at 1;
+  # totals built on #rates_for include them only if the provider supplies a
+  # rate, which is then stored. The pages that show those totals say so.
+  #
+  # Pass the viewer's accounts so the note covers the totals they see: only
+  # visible accounts count, and a member is not told about the currency of an
+  # account shared with someone else.
+  def currencies_without_exchange_rate(accounts: self.accounts)
+    ExchangeRate.currencies_without_rate(currencies_in_use(accounts), to: currency)
+  end
+
+  # Currencies today's totals convert whose newest rate into the family
+  # currency is too old to count as today's, mapped to that rate's date. Today's
+  # totals use it, and the same pages say so. Only balances and current holdings
+  # count: a currency only old entries use is converted at its own date's rate,
+  # so an old newest rate is not out of date for it.
+  def stale_exchange_rate_dates(accounts: self.accounts)
+    ExchangeRate.stale_rate_dates(currencies_held_now(accounts), to: currency)
+  end
+
   # Returns securities with plan restrictions for a specific provider
   # @param provider [String] The provider name (e.g., "TwelveData")
   # @return [Array<Hash>] Array of hashes with ticker, name, required_plan, provider
@@ -875,7 +918,78 @@ class Family < ApplicationRecord
     Rails.application.message_verifier("bills-user-feed")
   end
 
+  # The family's timezone, validated and with a safe fallback -- used both by
+  # `Localize#switch_timezone` (request path) and `Sync#perform` (background
+  # path), so a scheduled entry's "has it arrived yet?" check (Entry#scheduled?)
+  # agrees with the family's own clock in both places instead of silently
+  # defaulting to the app's zone (UTC) only in the background.
+  #
+  # `timezone` is a free-text IANA name (e.g. from an older DB dump, or a zone
+  # the tzdata maintainers later renamed, like the historical "Europe/Kiev" ->
+  # "Europe/Kyiv" switch), so this re-validates rather than trusting the
+  # column -- see `timezone_must_be_a_known_zone` below.
+  def resolved_time_zone
+    return Time.zone if timezone.blank?
+
+    zone = ActiveSupport::TimeZone[timezone]
+    return zone if zone.present?
+
+    log_invalid_timezone_once
+    Time.zone
+  end
+
+  # How often to write a DebugLogEntry for the same (family, bad value)
+  # pair. `resolved_time_zone` runs on every request and every sync, so
+  # without this an affected family would write one row per call forever.
+  INVALID_TIMEZONE_LOG_INTERVAL = 1.day
+  private_constant :INVALID_TIMEZONE_LOG_INTERVAL
+
   private
+    # Currencies of the given visible accounts' balances, and of each
+    # account's holdings on its latest holding date.
+    def currencies_held_now(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
+      latest = Holding.where(account_id: account_ids).group(:account_id).select("account_id, MAX(date) AS date")
+      (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Holding.joins("JOIN (#{latest.to_sql}) latest ON latest.account_id = holdings.account_id AND latest.date = holdings.date")
+            .distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
+    # Currencies used by the given accounts that are visible, by their entries,
+    # their trades and their holdings. Memoised per scope, so repeated reads in
+    # one render share one set of queries.
+    def currencies_in_use(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort
+      @currencies_in_use ||= {}
+      @currencies_in_use[account_ids] ||= (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Entry.where(account_id: account_ids).distinct.pluck(:currency) +
+          Trade.joins(:entry).where(entries: { account_id: account_ids }).distinct.pluck("trades.currency") +
+          Holding.where(account_id: account_ids).distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
+    def log_invalid_timezone_once
+      cache_key = [ "invalid_family_timezone", id, timezone ]
+
+      # `fetch` is read-then-write, not atomic -- two concurrent
+      # requests/jobs could both see a miss and both log. `write(unless_exist:
+      # true)` maps to Redis's atomic SET NX in production, so only one ever
+      # wins the lease and logs.
+      lease_acquired = Rails.cache.write(cache_key, true, expires_in: INVALID_TIMEZONE_LOG_INTERVAL, unless_exist: true)
+      return unless lease_acquired
+
+      DebugLogEntry.capture(
+        category: "other",
+        level: "warn",
+        message: "Invalid family timezone #{timezone.inspect}, falling back to #{Time.zone.name}",
+        source: "Family#resolved_time_zone",
+        family: self
+      )
+    end
+
     # Bayes first, so the matcher lands above it.
     def add_classifier_rules
       CLASSIFIER_ACTION_TYPES.reverse_each { |action_type| add_classifier_rule!(action_type) }

@@ -64,7 +64,6 @@ fr:
       subtitle: Aperçus complets de votre santé financière
       title: Rapports
       today: Aujourd'hui
-      toggle_section: Basculer la visibilité de la section
     invalid_date_range: La date de fin ne peut pas être antérieure à la date de début.
       Les dates ont été inversées.
     investment_flows:

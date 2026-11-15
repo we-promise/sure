@@ -42,6 +42,47 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal 1, auto_rule.actions.count
   end
 
+  test "reuses a provider merchant on the family's transactions instead of creating a family merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Coffee", source: "plaid")
+    account = @family.accounts.first
+    account.entries.create!(name: "Coffee", date: Date.current, amount: 4, currency: "USD", entryable: Transaction.new(merchant: provider_merchant))
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Coffee","transaction",true,,"[{\"condition_type\":\"transaction_merchant\",\"operator\":\"=\",\"value\":\"Synced Coffee\"}]","[{\"action_type\":\"set_transaction_merchant\",\"value\":\"Synced Coffee\"}]"
+    CSV
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_no_difference -> { @family.merchants.count } do
+      import.send(:import!)
+    end
+
+    rule = Rule.find_by!(family: @family, name: "Coffee")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
+  end
+
+  test "creates a family merchant for a provider merchant name that is ambiguous or used in a split" do
+    account = @family.accounts.first
+    [ [ "Shared Name", "plaid" ], [ "Shared Name", "simplefin" ], [ "Split Shop", "plaid" ] ].each do |name, source|
+      merchant = ProviderMerchant.create!(name: name, source: source)
+      account.entries.create!(name: name, date: Date.current, amount: 4, currency: "USD", entryable: Transaction.new(merchant: merchant))
+    end
+    split = { splits: [ { type: "percentage", name: "Shop", share: "60", merchant: "Split Shop" }, { type: "percentage", name: "Rest", share: "40" } ] }.to_json
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [ "Ambiguous", "transaction", "true", "", '[{"condition_type":"transaction_name","operator":"like","value":"x"}]', '[{"action_type":"set_transaction_merchant","value":"Shared Name"}]' ]
+      rows << [ "Split", "transaction", "true", "", '[{"condition_type":"transaction_name","operator":"like","value":"y"}]', [ { action_type: "split_transaction", value: JSON.parse(split) } ].to_json ]
+    end
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_equal @family.merchants.find_by!(name: "Shared Name").id, Rule.find_by!(family: @family, name: "Ambiguous").actions.sole.value
+    split_merchant_id = JSON.parse(Rule.find_by!(family: @family, name: "Split").actions.sole.value)["splits"].first["merchant_id"]
+    assert_equal @family.merchants.find_by!(name: "Split Shop").id, split_merchant_id
+  end
+
   test "imports rule conditions correctly" do
     import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
     import.generate_rows_from_csv

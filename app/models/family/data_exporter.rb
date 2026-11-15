@@ -3,6 +3,7 @@ require "csv"
 
 class Family::DataExporter
   EXPORT_VERSION = 2
+  TRANSACTIONS_CSV_HEADERS = [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ].freeze
 
   def initialize(family)
     @family = family
@@ -81,7 +82,7 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        csv << TRANSACTIONS_CSV_HEADERS
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
@@ -803,7 +804,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
-        return rule_operand(condition.value, type: "Merchant", relation: :merchants)
+        return rule_operand(condition.value, type: "Merchant", relation: :available_merchants)
       end
 
       # Map tag UUIDs to names for portability
@@ -824,7 +825,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant"
-        return rule_operand(action.value, type: "Merchant", relation: :merchants, fallback_to_name: true)
+        return rule_operand(action.value, type: "Merchant", relation: :available_merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability. Stored as a comma-separated

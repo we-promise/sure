@@ -39,6 +39,11 @@ en:
         confirm_clear_cache:
           title: Clear data cache?
           body: Are you sure you want to clear the data cache? This will remove all exchange rates, security prices, account balances, and other data. This action cannot be undone.
+        reset_market_data: Reset market data for all families
+        reset_market_data_warning: Deletes the exchange rates and security prices your providers can load again, re-imports them, and then syncs every account. Foreign-currency totals may show unconverted until the import finishes.
+        confirm_reset_market_data:
+          title: Reset market data for all families?
+          body: This deletes the exchange rates and security prices your providers can load again, for every family on this instance, and re-imports them. Until the import finishes, foreign-currency amounts may be shown unconverted. This action cannot be undone.
       provider_selection:
         exchange_rate_title: Exchange Rate Provider
         exchange_rate_description: Select a single provider for fetching currency exchange rates.
@@ -279,7 +284,7 @@ en:
         step_1_html: 'Visit <a href="https://eodhd.com/register" target="_blank" rel="noopener noreferrer" class="underline">eodhd.com</a> and create a free account.'
         step_2_html: 'Go to your <a href="https://eodhd.com/cp/dashboard" target="_blank" rel="noopener noreferrer" class="underline">Dashboard</a> to find your API token.'
         step_3: Copy your API token and paste it below.
-        rate_limit_warning: "EODHD free tier is limited to 20 API calls per day. Best used as a supplementary provider for EU ETFs not available from other providers."
+        rate_limit_warning: "EODHD free tier is limited to 20 API calls per day and 1 year of history. Paid plan only: set EODHD_MAX_REQUESTS_PER_DAY to your plan's daily limit; this also lifts the history limit."
       mansa_settings:
         title: Mansa
         description: Enter the API key from Mansa API. Supports 20 African stock exchanges, including NGX (Nigerian Exchange), JSE, NSE (Kenya), GSE (Ghana) and BRVM -- several of which no other provider here covers.
@@ -334,6 +339,10 @@ en:
         external_assistant_disconnected: External assistant disconnected
       clear_cache:
         cache_cleared: Data cache has been cleared. This may take a few moments to complete.
+      reset_market_data:
+        market_data_reset: Market data reset queued. Rates and prices will be re-imported, then all accounts will sync.
+        market_data_reset_already_queued: A market data reset is already queued or running.
+        market_data_reset_failed: The market data reset could not be queued. Nothing was deleted; please try again.
       not_authorized: You are not authorized to perform this action
       ensure_admin:
         not_authorized: You are not authorized to perform this action

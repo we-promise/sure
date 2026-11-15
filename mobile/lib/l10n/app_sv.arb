@@ -215,6 +215,7 @@
   "chatListDeleteMultiContent": "{count, plural, one{Radera {count} chatt? Det går inte att ångra.} other{Radera {count} chattar? Det går inte att ångra.}}",
   "chatListDeletedSuccess": "Chattarna har raderats",
   "chatListDeleteFailed": "Det gick inte att radera chattarna",
+  "chatListIncomplete": "Vissa chattar kan saknas. Listan lästes inte in helt.",
   "chatListError": "Det gick inte att läsa in chattar",
   "chatListJustNow": "Nyss",
   "chatListDeleteSingleContent": "Vill du verkligen radera \"{title}\"?",
