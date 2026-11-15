@@ -229,7 +229,96 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     refute drivers_with_residual(BigDecimal("0.015")).reconciles?
   end
 
+  # A commission recorded on a trade (`trades.fee`) and folded into its entry
+  # amount -- the manual trade form, SnapTrade and IBKR all write it so -- is
+  # booked by Balance::BaseCalculator as a market loss. It is a fee, so it
+  # moves from `market` to `fees`; the period's change does not move.
+  test "a commission folded into a buy's amount is a fee, not a market loss" do
+    commission_ledger(trades: [ { date: @day_two, qty: 100, price: 50, fee: 5 } ])
+
+    drivers = drivers_for
+
+    assert_equal BigDecimal("5"), drivers.fees
+    assert_equal BigDecimal("0"), drivers.market, "the price never moved, so the market did not"
+    assert_equal BigDecimal("-5"), drivers.change
+    assert drivers.reconciles?
+  end
+
+  test "a commission folded into a sell's amount is a fee too" do
+    commission_ledger(trades: [ { date: @day_one, qty: 100, price: 50, fee: 0 },
+                                { date: @day_two, qty: -40, price: 50, fee: 3 } ])
+
+    drivers = drivers_for
+
+    assert_equal BigDecimal("3"), drivers.fees
+    assert_equal BigDecimal("0"), drivers.market
+    assert drivers.reconciles?
+  end
+
+  # A writer that keeps the amount free of the fee never charged it to the
+  # balance, so there is nothing in `market` to move.
+  test "a fee kept out of the trade's amount stays where the balance put it" do
+    commission_ledger(trades: [ { date: @day_two, qty: 100, price: 50, fee: 5, fee_in_amount: false } ])
+
+    drivers = drivers_for
+
+    assert_equal BigDecimal("0"), drivers.fees
+    assert_equal BigDecimal("0"), drivers.market
+    assert_equal BigDecimal("0"), drivers.change
+  end
+
+  test "a trade with no fee moves nothing between market and fees" do
+    commission_ledger(trades: [ { date: @day_two, qty: 100, price: 50, fee: 0 } ])
+
+    drivers = drivers_for
+
+    assert_equal BigDecimal("0"), drivers.fees
+    assert_equal BigDecimal("0"), drivers.market
+  end
+
+  # Converted as the trade's own amount is: into the account's currency, then
+  # into the family's at the previous day's rate, so what leaves `market` is
+  # exactly what the balance row put there.
+  test "a foreign trade's commission converts at the trade's rate" do
+    @account = create_portfolio_account(family: @family, currency: "EUR")
+    set_rate from: "EUR", to: "USD", date: @day_one - 2.days, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_one - 1.day, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.2
+    commission_ledger(currency: "EUR", trades: [ { date: @day_two, qty: 100, price: 50, fee: 5 } ])
+
+    drivers = drivers_for
+
+    assert_equal BigDecimal("5.5"), drivers.fees, "5 EUR at the previous day's 1.1"
+    assert_equal BigDecimal("0"), drivers.market
+    assert drivers.reconciles?
+  end
+
   private
+    # 10,000 cash from the day before the period, the security priced flat at
+    # the trades' price, and the given trades, through the real calculator.
+    def commission_ledger(trades:, currency: "USD")
+      @account.entries.create!(
+        name: "Opening balance", date: @day_one - 1.day, amount: 10_000, currency: currency,
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      [ @day_one - 1.day, @day_one, @day_two ].each do |date|
+        Security::Price.create!(security: security_under_test, date: date, price: trades.first[:price], currency: currency)
+      end
+      trades.each do |trade|
+        qty = BigDecimal(trade[:qty].to_s)
+        price = BigDecimal(trade[:price].to_s)
+        fee = BigDecimal(trade[:fee].to_s)
+        @account.entries.create!(
+          name: qty.negative? ? "Sell" : "Buy", date: trade[:date], currency: currency,
+          amount: qty * price + (trade.fetch(:fee_in_amount, true) ? fee : 0),
+          entryable: Trade.new(security: security_under_test, qty: qty, price: price, fee: fee, currency: currency,
+                               investment_activity_label: qty.negative? ? "Sell" : "Buy")
+        )
+      end
+      Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+    end
+
     def drivers_for(account_ids: [ @account.id ])
       Portfolio::Drivers.new(
         Portfolio::DailyReturns.new(

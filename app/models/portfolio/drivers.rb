@@ -67,17 +67,14 @@ class Portfolio::Drivers
   # Reported as a positive magnitude; it reduces the change. Returns are net
   # of fees, because a fee already lowered the balance it was charged from.
   #
-  # A known limit: this is the fee ENTRIES only (a Fee-labelled trade or
-  # transaction, or a transfer's fee leg). A commission folded into a buy's
-  # or sell's own entry amount -- as the manual trade form and several
-  # provider importers write it -- is not one. For a buy,
-  # Balance::BaseCalculator#market_value_change_on_date books the holding's
-  # change less the whole entry amount, so the commission lands in `market`
-  # as a negative and `fees` reads zero. The decomposition still reconciles
-  # and returns are unaffected; only the split between the two drivers is
-  # off. Writers do not agree on where the fee goes (some record
-  # `trades.fee` beside a fee-free amount), so moving it needs a common
-  # contract first.
+  # Fees include commissions recorded on trades. Besides the fee entries (a
+  # Fee-labelled trade or transaction, or a transfer's fee leg), a buy's or
+  # sell's `trades.fee` counts when its entry amount includes it -- amount =
+  # qty x price + fee, as the trade form, SnapTrade and IBKR write it.
+  # Balance::BaseCalculator books that commission as a market loss, so
+  # Portfolio::DailyReturns moves it from `market` to here; the change and
+  # the returns are the same either way. A writer that keeps the fee out of
+  # the amount never charged it to the balance, so it is not counted.
   def fees
     @fees ||= sum(:fees)
   end

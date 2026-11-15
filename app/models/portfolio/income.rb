@@ -42,6 +42,7 @@ class Portfolio::Income
   # :fee with a negative amount (Portfolio::FlowClassifier), so a period whose
   # rebates exceed its charges sums negative. A fee is not negative income:
   # folding it into a bar would hide what a payout cost inside the payout.
+  # Fees include commissions recorded on trades (see Portfolio::Drivers#fees).
   def fees
     @fees ||= rows.sum(BigDecimal(0), &:fees)
   end

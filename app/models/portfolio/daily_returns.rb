@@ -474,6 +474,19 @@ class Portfolio::DailyReturns
                               THEN -entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS income,
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'fee'
                               THEN  entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS fees,
+            -- A commission recorded on a buy or sell (`trades.fee`) and folded
+            -- into its entry amount, as the trade form, SnapTrade and IBKR write
+            -- it: amount = qty x price + fee. Balance::BaseCalculator books it
+            -- as a market loss, so the final SELECT moves it from `market` to
+            -- `fees`, converted as the trade's own amount is. An amount nearer
+            -- qty x price than qty x price + fee left the fee out, so the
+            -- balance never charged it and there is nothing to move.
+            COALESCE(SUM(CASE WHEN entries.entryable_type = 'Trade'
+                              AND #{fragment(:flow_class_sql)} = 'internal'
+                              AND trades.fee > 0
+                              AND trades.currency = entries.currency
+                              AND ABS(entries.amount - (trades.qty * trades.price + trades.fee)) < trades.fee / 2
+                              THEN trades.fee * entry_fx.rate * fx.rate ELSE 0 END), 0) AS trade_fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
             -- currency with no rate is flagged, never converted at parity. So is
             -- an internal entry, which is no flow: Balance::SyncCache drops an
@@ -828,7 +841,9 @@ class Portfolio::DailyReturns
           -- The journal is now an external flow, so it must stop being a
           -- market move. Same value, same row, taken out of the driver that
           -- double-counted it.
-          b.market - COALESCE(f.journal_flow, 0) - COALESCE(cj.carried_flow, 0) AS market,
+          -- A commission on a trade is a fee, not a market loss: added back
+          -- here and counted in `fees` below, so the identity is unchanged.
+          b.market - COALESCE(f.journal_flow, 0) - COALESCE(cj.carried_flow, 0) + COALESCE(f.trade_fees, 0) AS market,
           b.revaluations,
           b.fx_effect,
           (b.rate_missing OR COALESCE(f.flow_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)) AS rate_missing,
@@ -843,7 +858,7 @@ class Portfolio::DailyReturns
            OR COALESCE(cj.carry_rate_missing, false)) AS journal_unpriced,
           COALESCE(f.external_flow, 0) + COALESCE(cj.carried_flow, 0) AS external_flow,
           COALESCE(f.income, 0) AS income,
-          COALESCE(f.fees, 0) AS fees
+          COALESCE(f.fees, 0) + COALESCE(f.trade_fees, 0) AS fees
         FROM balances_by_date b
         LEFT JOIN flows_by_date f ON f.date = b.date
         LEFT JOIN carried_journals_by_date cj ON cj.date = b.date
