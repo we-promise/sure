@@ -389,6 +389,20 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 100.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
   end
 
+  test "a month with nothing convertible between measurable months is left out of the category average" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    krw_account = @family.accounts.create! name: "KRW Checking", currency: "KRW", balance: 0, accountable: Depository.new
+    this_month = Date.current.beginning_of_month
+
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: this_month.prev_month(2))
+    create_transaction(account: krw_account, amount: 130_000, currency: "KRW", category: @groceries_category, date: this_month.prev_month)
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: this_month)
+
+    income_statement = IncomeStatement.new(@family)
+    assert_equal 100.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
+    assert_equal 100.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+  end
+
   test "calculates category-specific median expense" do
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
