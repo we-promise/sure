@@ -57,7 +57,8 @@
       <%= render "bills/summary",
             series: @series,
             current_occurrence: @current_occurrence,
-            suggestion: @drawer_suggestion %>
+            suggestion: @drawer_suggestion,
+            settled_occurrence: @latest_paid_occurrence %>
 
       <%# The collapsible sections: Overview, Coming up, History and Notes.
           Lazy, so opening a bill costs no more than its summary;

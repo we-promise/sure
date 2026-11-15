@@ -2,7 +2,12 @@
   <%= render "imports/nav", import: @import %>
 <% end %>
 
-<%= content_for :previous_path, @import.is_a?(PdfImport) ? imports_path : import_confirm_path(@import) %>
+<% previous_path = case @import
+  when PdfImport then imports_path
+  when MonarchImport then import_configuration_path(@import)
+  else import_confirm_path(@import)
+end %>
+<%= content_for :previous_path, previous_path %>
 
 <% if @import.is_a?(PdfImport) %>
   <%= render "imports/pdf_import", import: @import %>
