@@ -848,7 +848,9 @@ class InvestmentStatement
         return Totals.new(family, account_ids: account_ids, date_range: date_range).call
       end
 
-      account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
+      # Which of those accounts settle trades changes what Totals counts
+      # (see Totals#recorded_flow_sql), so it is part of the key too.
+      account_ids_hash = Digest::MD5.hexdigest("#{account_ids.sort.join(",")}|#{settlement_account_ids.sort.join(",")}")
 
       Rails.cache.fetch([
         "investment_statement", "totals_query/v3", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,

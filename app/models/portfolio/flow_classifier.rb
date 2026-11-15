@@ -152,12 +152,14 @@ class Portfolio::FlowClassifier
   # between them without excluding either: flow_sign_transfers is the
   # transfer on the side the amount allows (the outflow while it is
   # positive, else the inflow), flow_other_transfers the one on the other
-  # side, and flow_transfers takes the first that exists. A leg whose sign
+  # side, joined only when there is no flow_sign_transfers row, and
+  # flow_transfers takes whichever was found. A leg whose sign
   # flipped on its own transfer, with no second transfer, keeps that link, as
   # do both legs of a pair whose amounts were negated together.
   # #confirmed_transfer_for picks the same transfer in Ruby.
   #
-  # Two transfers on the same side are still both joined. The uniqueness
+  # Two transfers on the preferred side, or on the other side when the
+  # preferred one is missing, are still both joined. The uniqueness
   # validations rule that out only for writers that run them one at a time:
   # two racing writers, or rows written around the validations (insert_all),
   # can create it, since the table has a unique index on the pair only.
@@ -166,7 +168,7 @@ class Portfolio::FlowClassifier
   # index on each, and checks the side on top of it. Choosing the transfer
   # in a LATERAL ... ORDER BY ... LIMIT 1 instead gave one row in every case
   # but took the query out of its parallel plan and priced it past the JIT
-  # inlining threshold; over five years it ran about 4.5 times slower.
+  # inlining threshold; over five years it ran three to four times slower.
   #
   # The counterpart entry is only looked up among the scope's accounts, which
   # is all #transfer_resolution_sql asks of it: entries has no index on
@@ -194,6 +196,7 @@ class Portfolio::FlowClassifier
         AND CASE WHEN entries.amount > 0 THEN flow_sign_transfers.outflow_transaction_id ELSE flow_sign_transfers.inflow_transaction_id END = transactions.id
       LEFT JOIN transfers flow_other_transfers
         ON entries.entryable_type = 'Transaction'
+        AND flow_sign_transfers.id IS NULL
         AND flow_other_transfers.status = 'confirmed'
         AND (flow_other_transfers.inflow_transaction_id = transactions.id OR flow_other_transfers.outflow_transaction_id = transactions.id)
         AND CASE WHEN entries.amount > 0 THEN flow_other_transfers.inflow_transaction_id ELSE flow_other_transfers.outflow_transaction_id END = transactions.id
@@ -310,9 +313,9 @@ class Portfolio::FlowClassifier
     # on the side its sign allows (the outflow while its amount is positive,
     # else the inflow), else the confirmed one on the other side.
     def confirmed_transfer_for(entry, transaction)
-      sides = [ transaction.transfer_as_inflow, transaction.transfer_as_outflow ]
+      sides = %i[inflow_transaction_id outflow_transaction_id]
       sides.reverse! if entry.amount.positive?
-      sides.find { |transfer| transfer&.confirmed? }
+      sides.lazy.map { |side| Transfer.confirmed.find_by(side => transaction.id) }.find(&:itself)
     end
 
     # A security moved between accounts has no Transfer row; its other leg is

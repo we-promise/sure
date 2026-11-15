@@ -221,6 +221,35 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal({ inflow.id => :external_outflow }, @brokerage_scope.classify_ids([ inflow.id ]))
   end
 
+  # Rows written around Transfer's validations can put one transaction on
+  # several transfers. The other side is read only when the sign's side has
+  # no transfer, so extra transfers there do not multiply the entry's row,
+  # and a pending transfer on a side never hides a confirmed one there.
+  test "extra transfers written around the validations do not change a transaction's link" do
+    first = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 100)
+    leg = first.inflow_transaction.entry
+    ira_leg = create_labelled_transaction(account: @ira, label: nil, amount: -100, kind: "funds_movement")
+    savings = @family.accounts.create!(name: "Savings", balance: 5000, currency: "USD", accountable: Depository.new)
+    savings_leg = create_labelled_transaction(account: savings, label: nil, amount: -100, kind: "funds_movement")
+    now = Time.current
+    Transfer.insert_all([ ira_leg, savings_leg ].map { |inflow| { inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: leg.entryable_id, status: "confirmed", created_at: now, updated_at: now } })
+
+    assert_equal 1, Entry.where(id: leg.id).joins(@family_scope.sql_joins).count, "one row per entry"
+    assert_equal :external_inflow, @family_scope.classify(leg.reload)
+    assert_equal({ leg.id => :external_inflow }, @family_scope.classify_ids([ leg.id ]))
+
+    # The sign's side now holds a pending transfer next to the confirmed one.
+    pending_leg = create_labelled_transaction(account: @ira, label: nil, amount: 100, kind: "funds_movement")
+    Transfer.insert_all([ { inflow_transaction_id: leg.entryable_id, outflow_transaction_id: pending_leg.entryable_id, status: "pending", created_at: now - 1.day, updated_at: now } ])
+    # Written again after the pending one, so an unordered lookup meets the pending one first.
+    first_attrs = first.attributes.slice("inflow_transaction_id", "outflow_transaction_id", "status", "amount", "created_at", "updated_at")
+    Transfer.where(id: first.id).delete_all
+    Transfer.insert_all([ first_attrs ])
+
+    assert_equal :external_inflow, @family_scope.classify(leg.reload)
+    assert_equal({ leg.id => :external_inflow }, @family_scope.classify_ids([ leg.id ]))
+  end
+
   test "an investment contribution from outside the scope is an external inflow" do
     transfer = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 1000)
     inflow = transfer.inflow_transaction.entry
