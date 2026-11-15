@@ -138,12 +138,21 @@ class Portfolio::FlowClassifier
   # The joins #sql_case relies on. The caller's query must select FROM
   # `entries` and place this fragment before its WHERE clause.
   #
-  # One row per entry, which an aggregate embedding this relies on: the
-  # transfers join cannot fan out because Transfer validates
-  # inflow_transaction_id and outflow_transaction_id as unique and requires
-  # opposite amounts, so a transaction is a leg of at most one transfer. A
-  # writer that bypasses validations (insert_all) could break that, and a SUM
-  # over this join would then count the entry twice.
+  # One row per entry, which an aggregate embedding this relies on. A
+  # transaction is joined to a transfer only on the side its sign allows: as
+  # the inflow while its amount is negative, as the outflow while it is
+  # positive. Transfer requires exactly that when it is saved
+  # (transfer_has_opposite_amounts) and validates each side as unique, so at
+  # most one transfer matches. The sign has to be checked here as well
+  # because a leg's amount can change after its transfer was saved (a
+  # provider re-sync writes the amount again): a leg that was a transfer's
+  # inflow and is now positive can become another transfer's outflow, and
+  # without this condition the join would return both and a SUM would count
+  # the entry twice. A writer that bypasses validations (insert_all) can still
+  # give one side two transfers. The sign is checked on top of the OR rather
+  # than inside it: written as (inflow AND amount < 0) OR (outflow AND
+  # amount > 0), the condition kept the same index probe but the planner
+  # priced it about nine times higher and chose a plan four times slower.
   #
   # The counterpart entry is only looked up among the scope's accounts, which
   # is all #transfer_resolution_sql asks of it: entries has no index on
@@ -168,6 +177,10 @@ class Portfolio::FlowClassifier
         ON entries.entryable_type = 'Transaction'
         AND flow_transfers.status = 'confirmed'
         AND (flow_transfers.inflow_transaction_id = transactions.id OR flow_transfers.outflow_transaction_id = transactions.id)
+        AND CASE
+          WHEN entries.amount < 0 THEN flow_transfers.inflow_transaction_id
+          WHEN entries.amount > 0 THEN flow_transfers.outflow_transaction_id
+        END = transactions.id
       LEFT JOIN entries flow_counterpart_entries
         ON flow_counterpart_entries.entryable_type = 'Transaction'
         AND flow_counterpart_entries.account_id = ANY(#{scope_ids_sql})
@@ -252,7 +265,7 @@ class Portfolio::FlowClassifier
     end
 
     def transfer_resolution(entry, transaction)
-      counterpart_account_id = transfer_counterpart_account_id(transaction)
+      counterpart_account_id = transfer_counterpart_account_id(entry, transaction)
       if counterpart_account_id && scope_account_ids.include?(counterpart_account_id)
         :internal
       else
@@ -263,9 +276,15 @@ class Portfolio::FlowClassifier
     # The account on the other leg of a confirmed Transfer, by id only; the
     # counterpart account itself is never loaded, so a scope check cannot
     # leak an account the user is not allowed to see. A pending auto-match
-    # links nothing yet (see #sql_joins).
-    def transfer_counterpart_account_id(transaction)
-      transfer = transaction.transfer_as_inflow || transaction.transfer_as_outflow
+    # links nothing yet, and a leg is read as a transfer's inflow only while
+    # its amount is negative and as its outflow only while it is positive
+    # (see #sql_joins).
+    def transfer_counterpart_account_id(entry, transaction)
+      transfer = if entry.amount.negative?
+        transaction.transfer_as_inflow
+      elsif entry.amount.positive?
+        transaction.transfer_as_outflow
+      end
       return nil unless transfer&.confirmed?
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id

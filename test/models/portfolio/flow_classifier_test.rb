@@ -182,6 +182,24 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :internal, @family_scope.classify_ids([ outflow.id ])[outflow.id]
   end
 
+  # Transfer checks the signs only when it is saved. A leg whose amount
+  # changes sign afterwards (a provider re-sync writes the amount again) can
+  # become another transfer's leg on the other side, and the transfers join
+  # would then match both. Each form reads a leg as an inflow only while it
+  # is negative and as an outflow only while it is positive.
+  test "a transaction is linked only on the side its sign allows" do
+    first = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 100)
+    leg = first.inflow_transaction.entry
+    leg.update!(amount: 100)
+    ira_leg = create_labelled_transaction(account: @ira, label: nil, amount: -100, kind: "funds_movement")
+    Transfer.create!(outflow_transaction: leg.entryable, inflow_transaction: ira_leg.entryable, status: "confirmed")
+
+    assert_equal [ first.id ], Transfer.where(inflow_transaction_id: leg.entryable_id).pluck(:id), "precondition: still the first transfer's inflow"
+    assert_equal :internal, @family_scope.classify(leg.reload)
+    assert_equal({ leg.id => :internal }, @family_scope.classify_ids([ leg.id ]))
+    assert_equal 1, Entry.where(id: leg.id).joins(@family_scope.sql_joins).count, "one row per entry"
+  end
+
   test "an investment contribution from outside the scope is an external inflow" do
     transfer = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 1000)
     inflow = transfer.inflow_transaction.entry

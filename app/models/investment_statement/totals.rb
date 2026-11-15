@@ -96,8 +96,9 @@ class InvestmentStatement::Totals
     # jit_above_cost.
     #
     # account_ids is already scoped to the family's visible (draft/active)
-    # investment accounts, so the query trusts that input and skips a join back
-    # to accounts for family/status filtering.
+    # investment accounts and the cash accounts that settle their trades
+    # (InvestmentStatement#totals_account_ids), so the query trusts that input
+    # and skips a join back to accounts for family/status filtering.
     # COALESCE keeps an unlabeled trade (NULL) out of the set.
     def income_label_sql
       "COALESCE(trades.investment_activity_label, '') IN ('Dividend', 'Interest')"

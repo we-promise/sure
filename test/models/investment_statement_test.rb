@@ -1001,6 +1001,95 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal 3, totals.trades_count
   end
 
+  # With its Cash account linked, Trade Republic books each trade's cash on
+  # that account and links it to the Portfolio account as a confirmed
+  # transfer. The Cash account is part of the broker, so these are trade
+  # settlements, not money added or taken out.
+  test "Trade Republic buys and sales settled on its Cash account are neither contributions nor withdrawals" do
+    portfolio, cash = create_split_trade_republic_connection
+    sync_trade_republic(portfolio, [
+      trade_republic_order(id: "evt_buy", quantity: "2.0", signed_amount: -1024.92, date: "2026-07-15"),
+      trade_republic_order(id: "evt_sell", quantity: "-1.0", signed_amount: 529.0, date: "2026-07-20")
+    ])
+    sync_trade_republic(cash, [])
+    assert_equal 2, Transfer.confirmed.count, "precondition: both settlements are linked to the portfolio"
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(0, "EUR"), totals.contributions
+    assert_equal Money.new(0, "EUR"), totals.withdrawals
+    assert_equal 2, totals.trades_count
+    assert_equal Money.new(1024.92, "EUR"), totals.buys
+  end
+
+  # The money enters the broker once, when it reaches the Cash account from
+  # the user's bank. The buy it then funds moves it within the broker. Income
+  # Trade Republic books on the Cash account is the portfolio's income, and
+  # spending from it is not read as a withdrawal, as on any other cash row.
+  test "a bank deposit into Trade Republic Cash counts once, not again when it buys shares" do
+    portfolio, cash = create_split_trade_republic_connection
+    bank = @family.accounts.create!(name: "Bank", balance: 5000, currency: "EUR", accountable: Depository.new)
+    bank_leg = create_labelled_transaction(account: bank, label: nil, amount: 2000, date: Date.new(2026, 7, 10))
+
+    sync_trade_republic(portfolio, [ trade_republic_order(id: "evt_buy", quantity: "2.0", signed_amount: -800, date: "2026-07-15") ])
+    sync_trade_republic(cash, [
+      { id: "evt_deposit", timestamp: "2026-07-10T10:00:00Z", category: "PAYMENT_RECEIVED", detail: { amount: "2000.00", currency: "EUR" } },
+      { id: "evt_dividend", timestamp: "2026-07-18T10:00:00Z", category: "DIVIDEND", detail: { amount: "12.50", currency: "EUR" } },
+      { id: "evt_card", timestamp: "2026-07-19T10:00:00Z", category: "POC_CREATED", eventType: "CARD_TRANSACTION", title: "Bakery", detail: { amount: "4.20", currency: "EUR" } }
+    ])
+    cash_account = cash.current_account
+    deposit = cash_account.entries.find_by!(external_id: "trade_republic_event_evt_deposit")
+    # As auto-matching suggests it and the user then confirms it.
+    Transfer.create!(inflow_transaction: deposit.entryable, outflow_transaction: bank_leg.entryable).confirm!
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(2000, "EUR"), totals.contributions
+    assert_equal Money.new(0, "EUR"), totals.withdrawals
+    assert_equal Money.new(800, "EUR"), totals.buys
+    assert_equal Money.new(12.5, "EUR"), totals.dividends
+  end
+
+  # Only a broker that settles trades on a cash account of its own is read
+  # with it. A bank connection holding both a checking and a brokerage
+  # account keeps them apart, so a deposit from that checking account is
+  # still a contribution.
+  test "a checking account on the same connection as a brokerage account stays off the card" do
+    item = PlaidItem.create!(family: @family, plaid_id: "item_#{SecureRandom.hex(4)}", access_token: "token", name: "Bank")
+    brokerage = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+    { brokerage => "investment", checking => "depository" }.each do |account, type|
+      plaid_account = item.plaid_accounts.create!(name: account.name, plaid_id: SecureRandom.hex(4), plaid_type: type, currency: "USD", current_balance: account.balance)
+      AccountProvider.create!(account: account, provider: plaid_account)
+    end
+    create_linked_transfer(family: @family, from: checking, to: brokerage, amount: 500, date: Date.current)
+
+    totals = @statement.totals(period: Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month))
+
+    assert_equal Money.new(500, "USD"), totals.contributions
+  end
+
+  # Transfer checks the signs of its legs only when it is saved, so a leg
+  # whose amount later changes sign (a provider re-sync writes it again) can
+  # become another transfer's leg on the other side. The leg is still one
+  # withdrawal.
+  test "a transaction that became another transfer's leg after a sign change counts once" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    checking = @family.accounts.create!(name: "Checking", balance: 5000, currency: "USD", accountable: Depository.new)
+    savings = @family.accounts.create!(name: "Savings", balance: 5000, currency: "USD", accountable: Depository.new)
+
+    leg = create_linked_transfer(family: @family, from: checking, to: account, amount: 100, date: period.start_date).inflow_transaction.entry
+    leg.update!(amount: 100)
+    savings_leg = create_labelled_transaction(account: savings, label: nil, amount: -100, kind: "funds_movement", date: period.start_date)
+    Transfer.create!(outflow_transaction: leg.entryable, inflow_transaction: savings_leg.entryable, status: "confirmed")
+
+    totals = @statement.totals(period: period)
+
+    assert_equal Money.new(100, "USD"), totals.withdrawals
+    assert_equal Money.new(0, "USD"), totals.contributions
+  end
+
   # Totals used to turn JIT off with SET LOCAL inside a savepoint. RELEASE
   # does not undo SET LOCAL, so a caller already in a transaction ran the
   # rest of it with JIT off.
@@ -2199,6 +2288,44 @@ class InvestmentStatementTest < ActiveSupport::TestCase
         amount: amount,
         source_fee_amount: source_fee_amount
       ).create
+    end
+
+    def july_2026
+      Period.custom(start_date: Date.new(2026, 7, 1), end_date: Date.new(2026, 7, 31))
+    end
+
+    # A Trade Republic connection with its Portfolio and Cash accounts both
+    # linked, as account setup creates them. Returns the provider accounts.
+    def create_split_trade_republic_connection
+      @family.update!(currency: "EUR")
+      item = TradeRepublicItem.create!(family: @family, name: "Trade Republic", currency: "EUR", phone_number: "+4917000#{rand(10**6)}")
+      %w[portfolio cash].map do |kind|
+        provider_account = item.trade_republic_accounts.create!(
+          name: kind, kind: kind, trade_republic_account_id: "#{kind}:DESTMT", currency: "EUR", raw_timeline_payload: []
+        )
+        provider_account.ensure_account_provider!(Account.create_from_trade_republic_account(provider_account))
+        provider_account.reload
+      end
+    end
+
+    # The Cash account also reads the Portfolio's order executions, to book
+    # their settlements, so the Portfolio syncs first.
+    def sync_trade_republic(provider_account, events)
+      provider_account.update!(raw_timeline_payload: events)
+      TradeRepublicAccount::ActivitiesProcessor.new(provider_account.reload).process
+    end
+
+    def trade_republic_order(id:, quantity:, signed_amount:, date:)
+      {
+        id: id,
+        timestamp: "#{date}T09:30:00Z",
+        category: "orderExecution",
+        title: "Core S&P 500 USD (Acc)",
+        detail: {
+          isin: "IE00B5BMR087", name: "Core S&P 500 USD (Acc)", quantity: quantity,
+          amount: signed_amount.abs.to_s, signed_amount: signed_amount, currency: "EUR"
+        }
+      }
     end
 
     def create_trade(account:, qty:, amount:, date:)

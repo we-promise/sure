@@ -14,7 +14,7 @@ class InvestmentStatement
 
   # Get totals for a specific period
   def totals(period: Period.current_month)
-    account_ids = investment_account_ids
+    account_ids = totals_account_ids
 
     result = totals_query(account_ids: account_ids, date_range: period.date_range)
 
@@ -389,11 +389,7 @@ class InvestmentStatement
 
   # Investment accounts
   def investment_accounts
-    @investment_accounts ||= begin
-      scope = family.accounts.visible.included_in_reports.where(accountable_type: %w[Investment Crypto])
-      scope = scope.included_in_finances_for(user) if user
-      scope
-    end
+    @investment_accounts ||= report_accounts.where(accountable_type: %w[Investment Crypto])
   end
 
   private
@@ -804,6 +800,42 @@ class InvestmentStatement
 
     def investment_account_ids
       @investment_account_ids ||= investment_accounts.pluck(:id)
+    end
+
+    def report_accounts
+      scope = family.accounts.visible.included_in_reports
+      user ? scope.included_in_finances_for(user) : scope
+    end
+
+    # The accounts #totals reads: the investment accounts, plus the cash
+    # account a broker settles their trades on when it keeps the cash in an
+    # account of its own. Trade Republic does: its Cash account is a
+    # depository account, and each trade's settlement there is linked to the
+    # Portfolio or Crypto account as a confirmed transfer
+    # (TradeRepublicAccount.settlement_account_ids_for). Taken as one scope,
+    # those settlements are internal, like a buy paid from an investment
+    # account's own cash, and money is counted where it enters or leaves the
+    # broker: a transfer between the Cash account and the user's bank. As on
+    # every account the totals read, a cash row counts only when it records
+    # a flow (Totals#recorded_flow_sql), so card payments and other unlinked
+    # rows on the Cash account are neither. Income the broker books there
+    # (dividends, interest) is read with it. The Cash account passes the same
+    # report and visibility filters as the investment accounts.
+    #
+    # Only a provider that books trade settlements this way is followed, not
+    # every account of the same connection: a bank connection with a checking
+    # and a brokerage account would otherwise make every deposit from that
+    # checking account internal, and it would never be counted.
+    def totals_account_ids
+      @totals_account_ids ||= begin
+        settlement_ids = if investment_account_ids.empty?
+          []
+        else
+          report_accounts.where(id: TradeRepublicAccount.settlement_account_ids_for(investment_account_ids)).pluck(:id)
+        end
+
+        (investment_account_ids + settlement_ids).uniq
+      end
     end
 
     def totals_query(account_ids:, date_range:)
