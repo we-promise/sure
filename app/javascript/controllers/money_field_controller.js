@@ -170,7 +170,8 @@ export default class extends Controller {
 
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
-        const parsedAmount = this.#isUnreadAfterCurrencySwitch()
+        const wasUnread = this.#isUnreadAfterCurrencySwitch();
+        const parsedAmount = wasUnread
           ? null
           : evaluateAmountExpression(rawValue, {
               precision: typedPrecision,
@@ -180,9 +181,11 @@ export default class extends Controller {
         // flagged until it is edited. Read with the new currency's rules it
         // would become valid with another meaning: "150.000*12" is rejected
         // in PYG but would be 1800 in USD. Text that was only invalid
-        // ("25.50" typed before picking USD) is read by the new rules.
+        // ("25.50" typed before picking USD) is read by the new rules. A
+        // flagged text keeps its flag through further switches.
         this.unreadText =
-          parsedAmount === null && typedPrecision === 0 && hasWholeNumberGrouping(rawValue)
+          wasUnread ||
+          (parsedAmount === null && typedPrecision === 0 && hasWholeNumberGrouping(rawValue))
             ? this.amountTarget.value
             : undefined;
         if (parsedAmount !== null) {

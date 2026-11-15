@@ -45,6 +45,20 @@ class MoneyFieldWholeNumberTest < ApplicationSystemTestCase
     assert_equal "", validation_message
   end
 
+  test "grouped text PYG rejects stays flagged through a second switch" do
+    type_amount "150.000*12"
+    choose_currency "USD"
+    assert_selector "[data-money-field-target='symbol']", text: "$"
+
+    choose_currency "EUR"
+    assert_selector "[data-money-field-target='symbol']", text: "€"
+    assert_not_equal "", validation_message
+
+    amount_field.click
+    amount_field.send_keys(:tab)
+    assert_equal "150.000*12", amount_field.value
+  end
+
   test "an amount PYG rejects without a grouping reading is read as USD after the switch" do
     type_amount "25.50"
     assert_not_equal "", validation_message

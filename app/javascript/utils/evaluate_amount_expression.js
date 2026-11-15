@@ -112,13 +112,15 @@ export function parseGroupedWholeNumber(input) {
 // whole-number field ("150.000" in "150.000*12"). Such text means something
 // else in a currency with decimals, so a currency switch must not silently
 // take the new reading. Text that is merely invalid ("25.50") has no other
-// reading and is not flagged.
+// reading and is not flagged, nor is a zero cents part alone ("1500,00"),
+// which means 1500 either way.
 export function hasWholeNumberGrouping(value) {
   if (typeof value !== "string") return false
 
   return value.split(OPERATOR).some((token) => {
     const unsigned = token.trim().replace(/^[+-]/, "")
-    return /[.,]/.test(unsigned) && parseGroupedWholeNumber(unsigned) !== null
+    const lead = unsigned.replace(/[.,]0{1,2}$/, "")
+    return /[.,]/.test(lead) && parseGroupedWholeNumber(unsigned) !== null
   })
 }
 

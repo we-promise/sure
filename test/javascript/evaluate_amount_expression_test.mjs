@@ -661,12 +661,15 @@ describe("hasWholeNumberGrouping", () => {
     assert.equal(hasWholeNumberGrouping("150.000*12"), true)
     assert.equal(hasWholeNumberGrouping("12*-1.500"), true)
     assert.equal(hasWholeNumberGrouping("1,500/3"), true)
+    assert.equal(hasWholeNumberGrouping("1.500,00*2"), true)
   })
 
   it("is false for text that is only invalid", () => {
     assert.equal(hasWholeNumberGrouping("25.50"), false)
     assert.equal(hasWholeNumberGrouping("1000*1.1"), false)
     assert.equal(hasWholeNumberGrouping("150.00*12"), false)
+    // A zero cents part alone is 1500 in either currency.
+    assert.equal(hasWholeNumberGrouping("1500,00*12"), false)
     assert.equal(hasWholeNumberGrouping("abc"), false)
     assert.equal(hasWholeNumberGrouping(null), false)
   })
