@@ -25,8 +25,9 @@ module Transactions::LocaleAwareCategoryMatching
     #
     # NOTE: this is narrower than Category#any_locale_display_name_matches?, which checks
     # every LanguagesHelper::SUPPORTED_LOCALES. Defaults bootstrapped under a member's
-    # non-family locale can therefore be missed here. Tracked separately so the fix lands
-    # for every provider matcher at once.
+    # non-family locale (CategoriesController#bootstrap uses Current.user.locale) can
+    # therefore be missed here. Tracked in #5097 so the fix lands for every provider
+    # matcher at once.
     def default_category_names(key)
       return [] if key.blank?
 
