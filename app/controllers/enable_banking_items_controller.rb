@@ -122,15 +122,15 @@ class EnableBankingItemsController < ApplicationController
       # begin_authorization! re-fetches ASPSP metadata and auto-selects the best
       # auth method (REDIRECT > DECOUPLED > EMBEDDED). Decoupled/MFA banks proceed
       # through Enable Banking's hosted SCA page rather than being blocked.
-      state = issue_oauth_state_for(target_item)
-      redirect_url = target_item.begin_authorization!(
-        aspsp_name: aspsp_name,
-        redirect_url: enable_banking_callback_url,
-        state: state,
-        psu_type: psu_type,
-        language: language
-      )
-      supersede_oauth_states_for(target_item, keep: state) if pending_connection
+      redirect_url = with_oauth_state_for(target_item, supersede: pending_connection.present?) do |state|
+        target_item.begin_authorization!(
+          aspsp_name: aspsp_name,
+          redirect_url: enable_banking_callback_url,
+          state: state,
+          psu_type: psu_type,
+          language: language
+        )
+      end
 
       safe_redirect_to_provider(
         redirect_url,
@@ -216,11 +216,13 @@ class EnableBankingItemsController < ApplicationController
 
       # Route through the shared path so reauthorization re-selects the same auth
       # method (decoupled banks included) instead of falling back to a default.
-      redirect_url = @enable_banking_item.begin_authorization!(
-        redirect_url: enable_banking_callback_url,
-        state: issue_oauth_state_for(@enable_banking_item),
-        language: language
-      )
+      redirect_url = with_oauth_state_for(@enable_banking_item, supersede: false) do |state|
+        @enable_banking_item.begin_authorization!(
+          redirect_url: enable_banking_callback_url,
+          state: state,
+          language: language
+        )
+      end
 
       safe_redirect_to_provider(
         redirect_url,
@@ -561,18 +563,28 @@ class EnableBankingItemsController < ApplicationController
 
     # Pending states map state => item id, so parallel flows (two tabs) each
     # keep their own entry. Only the newest few are kept.
-    def issue_oauth_state_for(item)
+    #
+    # Yields a new state to the block that starts the flow, and records it only
+    # once the flow got a trusted provider URL. A reused pending connection
+    # (supersede) then keeps only that newest flow: two logins finishing on one
+    # connection would leave the first one's accounts attached to the second
+    # one's session. Its older states go before the cap applies, so they never
+    # push out another login still open. A start that fails, or returns an
+    # untrusted URL, leaves the map as it was, so the login still open can
+    # complete; only a connection with no state yet gets this one, so a retry
+    # finds it for reuse.
+    def with_oauth_state_for(item, supersede:)
       state = SecureRandom.urlsafe_base64(32)
-      write_pending_oauth_states(pending_oauth_states.merge(state => item.id))
-      state
-    end
-
-    # A reused pending connection keeps only its newest flow, once that flow
-    # has reached the bank: two logins finishing on one connection would leave
-    # the first one's accounts attached to the second one's session, and a
-    # retry that fails to start must not cancel the login still open.
-    def supersede_oauth_states_for(item, keep:)
-      write_pending_oauth_states(pending_oauth_states.reject { |state, item_id| item_id == item.id && state != keep })
+      pending = pending_oauth_states
+      started = false
+      redirect_url = yield(state)
+      started = trusted_provider_url?(redirect_url, TRUSTED_ENABLE_BANKING_HOSTS)
+      redirect_url
+    ensure
+      if started || !pending.value?(item.id)
+        pending = pending.reject { |_, item_id| item_id == item.id } if started && supersede
+        write_pending_oauth_states(pending.merge(state => item.id))
+      end
     end
 
     def write_pending_oauth_states(pending)

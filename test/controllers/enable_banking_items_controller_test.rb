@@ -363,6 +363,68 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  # Each failed retry used to add a dead state, so enough of them pushed the
+  # earlier login's state out of the capped map.
+  test "repeated retries that fail to start leave the earlier login able to complete" do
+    stub_authorization_start
+    start_new_connection
+    first_state = @sent_state
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .raises(Provider::EnableBanking::EnableBankingError.new("ASPSP unavailable"))
+    EnableBankingItemsController::MAX_PENDING_OAUTH_STATES.times { start_new_connection }
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "first")
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
+    assert_redirected_to accounts_path
+  end
+
+  test "a retry the provider sends to an untrusted host leaves the earlier login able to complete" do
+    stub_authorization_start
+    start_new_connection
+    first_state = @sent_state
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .returns(url: "https://api.enablebanking.com.evil.test/auth", authorization_id: "auth_2")
+    start_new_connection
+    assert_redirected_to settings_providers_path
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "first")
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
+    assert_redirected_to accounts_path
+  end
+
+  # The retry's older state is dropped before the cap applies, so it never
+  # evicts another bank's login that is still open.
+  test "retrying one login keeps the other logins open when the limit is reached" do
+    banks = [ "Bank B", "Bank A", "Bank C", "Bank D", "Bank E" ]
+    assert_equal EnableBankingItemsController::MAX_PENDING_OAUTH_STATES, banks.size
+    stub_authorization_start(banks: banks)
+    start_new_connection(bank: "Bank B")
+    bank_b_state = @sent_state
+    banks.drop(1).each { |bank| start_new_connection(bank: bank) }
+    start_new_connection(bank: "Bank A")
+    assert_redirected_to "https://api.enablebanking.com/auth/redirect/abc"
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "bank b")
+    get callback_enable_banking_items_url, params: { code: "bank b", state: bank_b_state }
+    assert_redirected_to accounts_path
+  end
+
+  test "reauthorize issues a state the callback accepts" do
+    stub_authorization_start
+    @item.update!(aspsp_name: "Test Bank")
+
+    post reauthorize_enable_banking_item_url(@item)
+    assert_redirected_to "https://api.enablebanking.com/auth/redirect/abc"
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "reauth")
+    get callback_enable_banking_items_url, params: { code: "reauth", state: @sent_state }
+    assert_redirected_to accounts_path
+  end
+
   test "callback completes authorization when the state matches this session" do
     stub_authorization_start
     post authorize_enable_banking_item_url(@item), params: { aspsp_name: "Test Bank", psu_type: "personal" }
