@@ -73,6 +73,11 @@ vi:
           holdings: Danh mục
           total_value: Tổng giá trị
         vs_available_history: so với lịch sử hiện có
+        net_contributions:
+          difference: Chênh lệch
+          incomplete: "Khoản góp ròng có thể chưa đầy đủ: không thể định giá một khoản nạp hoặc rút."
+          label: Khoản góp ròng
+          legend: Chuỗi dữ liệu biểu đồ
       activity_date:
         balance_tooltip: "Số dư cuối ngày, sau tất cả giao dịch và điều chỉnh"
         no_balance_data: "Không có dữ liệu số dư cho ngày này"
