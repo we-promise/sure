@@ -301,7 +301,8 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "balances update handles validation errors" do
-    Account.any_instance.stubs(:set_current_balance).returns(OpenStruct.new(success?: false, error_message: "Invalid balance"))
+    Account.any_instance.stubs(:set_current_balance)
+      .returns(Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "Invalid balance"))
 
     patch update_balances_property_path(@account), params: {
       account: {
@@ -311,6 +312,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     }
 
     assert_response :unprocessable_entity
+    assert_match "Invalid balance", response.body
   end
 
   test "address update handles validation errors" do

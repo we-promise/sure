@@ -81,7 +81,7 @@ class PropertiesController < ApplicationController
         redirect_to address_property_path(@account)
       end
     else
-      render_balances_error(result.respond_to?(:error_message) ? result.error_message : result&.error)
+      render_balances_error(result&.error)
     end
   end
 
