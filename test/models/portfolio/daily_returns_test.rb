@@ -548,6 +548,29 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
            "so does an adjustment, with no market move beside it"
   end
 
+  # Balance::SyncCache drops an entry it cannot convert, but the holdings
+  # calculator still applies a trade's units, so an unconvertible buy leaves
+  # the units in the balance with no cash paid for them, and the day reads as
+  # a market gain of the whole purchase. An internal entry is no flow, yet its
+  # missing rate breaks the day all the same. A pending one was never applied,
+  # so it is not short of anything.
+  test "an internal trade the balance could not convert flags a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 10_000, closing: 10_000
+    lay_balance account: @account, date: @day_two, opening: 10_000, closing: 10_000
+    @account.entries.create!(
+      name: "Pending", date: @day_two, amount: 40, currency: "EUR",
+      entryable: Transaction.new(kind: "standard", extra: { "simplefin" => { "pending" => true } })
+    )
+
+    buy_trade account: @account, date: @day_one, qty: 10, price: 50
+
+    refute daily_returns.rate_missing?, "a convertible buy, and a pending entry in the same currency, are not flagged"
+
+    buy_trade account: @account, date: @day_two, qty: 100, price: 50, currency: "EUR"
+
+    assert daily_returns.rate_missing?
+  end
+
   # Balance::SyncCache applies nothing dated after today, so a scheduled
   # deposit has not moved the balance the series carries forward. Counted as a
   # flow it joined the denominator alone, and a flat day read as a loss.

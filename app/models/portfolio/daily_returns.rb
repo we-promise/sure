@@ -426,13 +426,17 @@ class Portfolio::DailyReturns
             COALESCE(SUM(CASE WHEN #{fragment(:flow_class_sql)} = 'fee'
                               THEN  entries.amount * entry_fx.rate * fx.rate ELSE 0 END), 0) AS fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
-            -- currency with no rate is flagged, never converted at parity. Only the
-            -- classes that feed a figure count; an internal trade in an
-            -- unconvertible currency moves nothing we sum. A zero amount
-            -- converts to zero at any rate, so it cannot be short of one.
+            -- currency with no rate is flagged, never converted at parity. So is
+            -- an internal entry, which is no flow: Balance::SyncCache drops an
+            -- entry it cannot convert, while the holdings calculator still
+            -- applies a trade's units, so the day's balance is wrong either way.
+            -- An entry with no class is pending, which SyncCache never applies,
+            -- or a valuation, which is written in the account's own currency. A
+            -- zero amount converts to zero at any rate, so it cannot be short of
+            -- one.
             COALESCE(BOOL_OR((entry_fx.rate IS NULL OR fx.rate IS NULL)
                              AND entries.amount <> 0
-                             AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow', 'income', 'fee')), false) AS flow_rate_missing
+                             AND #{fragment(:flow_class_sql)} IS NOT NULL), false) AS flow_rate_missing
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
