@@ -13,7 +13,7 @@ class Portfolio::IncomeTest < ActiveSupport::TestCase
 
   # The reason the series is built on
   # the daily rows rather than on either storage shape: a Trade-shaped dividend
-  # (qty 0, since #1311) and a Transaction-shaped one (Trading212,
+  # (qty 0) and a Transaction-shaped one (Trading212,
   # SimpleFIN) in the SAME month have to land in the same bucket.
   test "a trade-shaped and a transaction-shaped dividend both reach the month's total" do
     income_trade account: @account, date: @mar, amount: 30
@@ -146,6 +146,30 @@ class Portfolio::IncomeTest < ActiveSupport::TestCase
     expected_average = (BigDecimal(1_000) + 990 + 3_010) / 3
     assert_equal expected_average, income.average_value
     assert_in_delta 10 / expected_average, income.fee_ratio, BigDecimal("1e-12")
+  end
+
+  # The LIMITATION on #average_value: a day before the portfolio's first
+  # balance row is a zero in the mean, not left out of it. The period opens a
+  # day early, so the mean is (0 + 990 + 990) / 3 = 660 and the ratio 10 / 660.
+  # Averaging only the valued days would read 990 and 10 / 990; every other
+  # ratio test has value on every day, so it cannot tell the two apart.
+  test "a day before the portfolio's first balance counts as zero in the fee ratio" do
+    fee_entry account: @account, date: @feb + 1, amount: 10
+    lay_balance account: @account, date: @feb + 1, opening: 1_000, closing: 990, cash_flow: -10
+    lay_balance account: @account, date: @feb + 2, opening: 990, closing: 990
+
+    income = Portfolio::Income.new(
+      Portfolio::DailyReturns.new(
+        account_ids: [ @account.id ], currency: @family.currency,
+        period: Period.custom(start_date: @feb, end_date: @feb + 2)
+      )
+    )
+
+    assert_equal [ BigDecimal(0), BigDecimal(990), BigDecimal(990) ],
+                 income.daily_returns.rows.map(&:value_close),
+                 "the period's first day has no balance row and closes at zero"
+    assert_equal BigDecimal(660), income.average_value
+    assert_in_delta 10 / BigDecimal(660), income.fee_ratio, BigDecimal("1e-12")
   end
 
   # A "Fee" rebate is a :fee with a negative amount, so it nets the period's

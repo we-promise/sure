@@ -3,8 +3,8 @@
 #
 # This is a REGROUPING of rows that already exist, not a new measurement. The
 # daily rows carry `income` and `fees` already classified by
-# Portfolio::FlowClassifier -- Trade-shaped (qty 0, since #1311)
-# and Transaction-shaped (Trading212, SimpleFIN) alike -- and already converted
+# Portfolio::FlowClassifier -- Trade-shaped (qty 0) and
+# Transaction-shaped (Trading212, SimpleFIN) alike -- and already converted
 # at the day each was paid. Portfolio::Drivers sums the same fields over the
 # whole period; this groups them by calendar month. The two therefore agree by
 # construction, and the drivers' reconciliation is untouched because nothing here
