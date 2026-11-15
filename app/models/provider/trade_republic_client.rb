@@ -1681,6 +1681,7 @@ class Provider::TradeRepublicClient
       end
 
       enriched_by_id = {}
+      backfilled_transfer_ids = Set.new
       detail_backfill_count = 0
       details_fetched = 0
 
@@ -1729,6 +1730,7 @@ class Provider::TradeRepublicClient
           end
         end
         enriched_by_id[item["id"].to_s] = fetched if fetched
+        backfilled_transfer_ids << item["id"].to_s if kind == :backfill && CASH_NOTE_EVENT_TYPES.include?(item["eventType"].to_s)
       end
 
       # Once per sync, when a transfer was left without the comparison.
@@ -1736,10 +1738,15 @@ class Provider::TradeRepublicClient
         warnings << NO_REFERENCE_ACCOUNTS_WARNING
       end
 
+      # A transfer on this sync's pages read from its stored copy (its
+      # counterparty check) takes only the detail from that copy: the page's
+      # status, title and lifecycle flags are newer.
       merged_events = events.map do |event|
         id = event["id"].to_s
         enriched = enriched_by_id.delete(id)
-        enriched ? prefer_richer_event(event, enriched) : event
+        next event unless enriched
+
+        backfilled_transfer_ids.include?(id) ? prefer_richer_event(enriched, event) : prefer_richer_event(event, enriched)
       end
       # Backfilled stored events that were not on this sync's timeline pages.
       merged_events = merge_enriched_events(merged_events, enriched_by_id.values)
