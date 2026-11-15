@@ -12,6 +12,7 @@ const {
   default: evaluateAmountExpression,
   amountBoundViolation,
   formatAmountForDisplay,
+  hasWholeNumberGrouping,
   precisionFromStep,
 } = await import(MODULE_URL)
 
@@ -650,5 +651,23 @@ describe("amountBoundViolation", () => {
 
   it("checks the unrounded amount when the field has no precision", () => {
     assert.equal(amountBoundViolation(-0.001, { min: 0, precision: null }), "min")
+  })
+})
+
+describe("hasWholeNumberGrouping", () => {
+  // Decides whether text a whole-number currency rejected still has a
+  // grouping reading that a switch to a currency with decimals would change.
+  it("is true when a number reads as thousands grouping", () => {
+    assert.equal(hasWholeNumberGrouping("150.000*12"), true)
+    assert.equal(hasWholeNumberGrouping("12*-1.500"), true)
+    assert.equal(hasWholeNumberGrouping("1,500/3"), true)
+  })
+
+  it("is false for text that is only invalid", () => {
+    assert.equal(hasWholeNumberGrouping("25.50"), false)
+    assert.equal(hasWholeNumberGrouping("1000*1.1"), false)
+    assert.equal(hasWholeNumberGrouping("150.00*12"), false)
+    assert.equal(hasWholeNumberGrouping("abc"), false)
+    assert.equal(hasWholeNumberGrouping(null), false)
   })
 })

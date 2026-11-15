@@ -57,7 +57,9 @@ const MAX_AMOUNT = 99999999999999
 // the same rule (parse_amount_paste.js), so a value means the same typed or
 // pasted. It applies to the terms that are added or subtracted only: a factor
 // of * or / keeps the decimal reading, so "1000*1.1" (10% tax) still works,
-// as long as it is a plain decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR).
+// as long as it is a plain decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR)
+// whose decimal point is not the currency's thousands delimiter (in PYG,
+// CLP, VND or ISK it is typed "1000*1,1").
 //
 // A pasted amount may also be grouped with spaces ("1 234,00", as pl or nb
 // write it) or in the Indian style ("1,00,000", which lib/money/formatting.rb
@@ -104,6 +106,20 @@ export function parseGroupedWholeNumber(input) {
   if (!WHOLE_NUMBER_GROUPED.test(digits) && !WHOLE_NUMBER_INDIAN_GROUPED.test(digits)) return null
   const value = Number.parseInt(digits.replace(/[^\d]/g, ""), 10)
   return Number.isFinite(value) && value <= MAX_AMOUNT ? value : null
+}
+
+// True when a number in the text reads as thousands grouping in a
+// whole-number field ("150.000" in "150.000*12"). Such text means something
+// else in a currency with decimals, so a currency switch must not silently
+// take the new reading. Text that is merely invalid ("25.50") has no other
+// reading and is not flagged.
+export function hasWholeNumberGrouping(value) {
+  if (typeof value !== "string") return false
+
+  return value.split(OPERATOR).some((token) => {
+    const unsigned = token.trim().replace(/^[+-]/, "")
+    return /[.,]/.test(unsigned) && parseGroupedWholeNumber(unsigned) !== null
+  })
 }
 
 function parseTypedNumber(token, { separator, precision } = {}) {

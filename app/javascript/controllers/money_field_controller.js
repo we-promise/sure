@@ -5,6 +5,7 @@ import evaluateAmountExpression, {
   amountBoundViolation,
   formatAmountForDisplay,
   formatUnroundedAmount,
+  hasWholeNumberGrouping,
   precisionFromStep,
 } from "utils/evaluate_amount_expression";
 
@@ -175,11 +176,15 @@ export default class extends Controller {
               precision: typedPrecision,
               delimiter: this.delimiterValue,
             });
-        // Text that is not an amount in the currency it was typed for stays
+        // Text a whole-number currency rejected but read as grouping stays
         // flagged until it is edited. Read with the new currency's rules it
-        // can become valid with another meaning: "150.000*12" is rejected in
-        // PYG but would be 1800 in USD.
-        this.unreadText = parsedAmount === null ? this.amountTarget.value : undefined;
+        // would become valid with another meaning: "150.000*12" is rejected
+        // in PYG but would be 1800 in USD. Text that was only invalid
+        // ("25.50" typed before picking USD) is read by the new rules.
+        this.unreadText =
+          parsedAmount === null && typedPrecision === 0 && hasWholeNumberGrouping(rawValue)
+            ? this.amountTarget.value
+            : undefined;
         if (parsedAmount !== null) {
           const precision =
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)

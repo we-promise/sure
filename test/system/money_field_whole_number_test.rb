@@ -2,7 +2,7 @@ require "application_system_test_case"
 
 # A whole-number currency (PYG) has no decimal point to type, so the money
 # field reads a dot as thousands grouping, and a factor's decimal point must be
-# PYG's own (a comma). Text the previous currency could not read stays flagged
+# PYG's own (a comma). Text PYG read as grouping but rejected stays flagged
 # after a currency switch instead of taking the new currency's reading.
 class MoneyFieldWholeNumberTest < ApplicationSystemTestCase
   AMOUNT = "entry[amount]".freeze
@@ -28,7 +28,7 @@ class MoneyFieldWholeNumberTest < ApplicationSystemTestCase
     assert_not_equal "", validation_message
   end
 
-  test "text PYG cannot read stays flagged after switching to USD until it is edited" do
+  test "grouped text PYG rejects stays flagged after switching to USD until it is edited" do
     type_amount "150.000*12"
     assert_not_equal "", validation_message
 
@@ -42,6 +42,15 @@ class MoneyFieldWholeNumberTest < ApplicationSystemTestCase
     assert_equal "150.000*12", amount_field.value, "leaving the field does not rewrite it as 1800"
 
     amount_field.send_keys(:end, :backspace, "3")
+    assert_equal "", validation_message
+  end
+
+  test "an amount PYG rejects without a grouping reading is read as USD after the switch" do
+    type_amount "25.50"
+    assert_not_equal "", validation_message
+
+    choose_currency "USD"
+    assert_selector "[data-money-field-target='symbol']", text: "$"
     assert_equal "", validation_message
   end
 
