@@ -322,7 +322,7 @@ class IncomeStatement
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
+        "income_statement", "category_stats", CategoryStats::CACHE_VERSION, ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
