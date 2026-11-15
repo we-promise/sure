@@ -1,7 +1,7 @@
 # AI pipeline
 
-Sure's AI calls go through thin transports over RubyLLM. The design is in
-`docs/proposals/v0.8/ai-plumbing-redesign.md`.
+Sure's AI calls go through thin transports over RubyLLM. The design is in the v0.8 AI plumbing
+proposal (#4440, `docs/proposals/v0.8/ai-plumbing-redesign.md` on that branch).
 
 ## Transports and instrumentation
 

@@ -1096,15 +1096,15 @@ OTLP_HEADERS=Authorization=Basic%20${OTLP_BASIC_AUTH}
 
 `OTLP_HEADERS` uses the OpenTelemetry form, `key=value` pairs separated by commas, with values
 URL-encoded. In `metadata` mode traces lose the endpoint name, Sure's error class and errors
-raised before a request is sent. Health probes are never traced: they carry no family data.
+raised before a request is sent.
 
 ### Usage: one row per request, shown per call
 
 The LLM usage page shows one row per AI call. A call that took several requests (a retried
 `429` or `503`, for example) opens to show each request with its status, tokens, cost and error,
 and the totals count calls. If you query the `llm_usages` table yourself, group by
-`COALESCE(call_id, id)` to count calls: rows written before this change, and rows from features
-not yet moved onto the transports, have no `call_id` and are calls of one request.
+`COALESCE(call_id, id)` to count calls: older rows, and rows from features that don't use the
+transports, have no `call_id` and are calls of one request.
 
 ### Outbound proxy
 
@@ -1114,9 +1114,8 @@ Loopback addresses (`127.0.0.0/8`, `::1`, `localhost`) never go through the prox
 matches a host exactly as written: `127.0.0.1` doesn't cover `localhost`.
 
 This covers the OpenAI and OpenAI-compatible clients, the external assistant, and the AI health
-probes. Anthropic's client library takes no proxy setting, so native Anthropic calls go direct
-until they move onto the new transports, unless `HTTP_PROXY` is set (the only variable that
-library reads).
+probes. Anthropic's client library takes no proxy setting, so native Anthropic calls that don't
+use the transports go direct, unless `HTTP_PROXY` is set (the only variable that library reads).
 
 ## Testing and Evaluation
 
