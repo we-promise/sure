@@ -916,6 +916,27 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "tr[data-category='category-other_investments']", count: 0
   end
 
+  # A cash-only trade relabelled as a movement (e.g. through the API) is not
+  # income either; an unlabelled or "Other" one stays as before.
+  test "activity breakdown leaves out qty-0 trades labelled as movements" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    brokerage = @family.accounts.create!(owner: @user, name: "Reports Brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new(subtype: "brokerage"))
+    create_transaction(account: accounts(:depository), name: "Coffee", amount: 3)
+    [ "Transfer", "Sweep In", "Contribution", "Withdrawal", "Buy" ].each do |label|
+      create_income_trade(account: brokerage, label: "Dividend", amount: -100).trade.update!(investment_activity_label: label)
+    end
+    create_income_trade(account: brokerage, label: "Dividend", amount: -12.34).trade.update!(investment_activity_label: "Other")
+    create_income_trade(account: brokerage, label: "Dividend", amount: -10).trade.update!(investment_activity_label: nil)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    rows = css_select("tr[data-category='category-other_investments']").map(&:text).join
+    assert_includes rows, "$22.34"
+    assert_not_includes rows, "$522.34"
+  end
+
   # The summary leaves out an amount in a currency with no rate; the
   # breakdown under it and the CSV export must leave it out too, not count
   # ₩130,000 as $130,000.
