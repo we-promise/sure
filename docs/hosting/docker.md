@@ -98,9 +98,10 @@ To encrypt sensitive data such as bank credentials with your own keys, set them 
 
 #### Restricting who can reach your instance
 
-Two optional variables tighten things once your instance is reachable from the
-internet. Both are off by default, so leaving them unset keeps the behaviour you
-have today.
+These optional variables tighten things once your instance is reachable from
+the internet. All are unset by default, and leaving them unset keeps the app
+answering to any `Host`. Cross-origin browser requests are refused unless an
+origin is listed.
 
 | Variable | Purpose |
 |---|---|
@@ -123,6 +124,11 @@ passing.
 
 With neither set, the app answers to any `Host` and logs a `[SECURITY]` warning
 at boot.
+
+Like the SMTP settings below, these reach the app only when `compose.yml` lists
+them in the `x-rails-env` anchor, for example `ALLOWED_HOSTS: ${ALLOWED_HOSTS}`.
+Setting them in `.env` alone does nothing; see **Passing the settings to the
+containers** under [Sending email (SMTP)](#sending-email-smtp).
 
 #### Using HTTPS
 
@@ -164,7 +170,7 @@ Invitations are never emailed on a self-hosted instance, even with SMTP set up. 
 | `SMTP_TLS_SKIP_VERIFY` | `true` turns off verification of the SMTP server's certificate. | Off (the certificate is verified) |
 | `SSL_CA_FILE` | Path inside the container to a CA certificate (PEM) for verifying a server with a self-signed or internal certificate. The file must be mounted into the containers; see **Using a custom CA certificate** below. | None |
 | `EMAIL_SENDER` | Address that emails are sent from, for example `sure@example.com`. | `sender@sure.local` |
-| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. | None |
+| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. Setting it also turns on the `Host` check described in [Restricting who can reach your instance](#restricting-who-can-reach-your-instance). | None |
 
 A few things to watch:
 
