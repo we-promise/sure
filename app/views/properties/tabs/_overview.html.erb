@@ -33,7 +33,7 @@
     <div class="contents" data-testid="purchase-costs">
       <% costs = account.property.purchase_costs_for(Current.user) %>
       <% cost_link = link_to t(".cost_transactions", count: account.property.cost_entries_for(Current.user).count, tag: cost_tag.name),
-                             transactions_path(q: { tags: [ cost_tag.name ] }),
+                             transactions_path(q: { tags: [ cost_tag.name ], active_accounts_only: false }),
                              class: "block text-sm text-secondary hover:underline",
                              data: { turbo_frame: "_top" } %>
       <%= summary_card title: t(foreign ? ".purchase_costs_in_currency" : ".purchase_costs", currency: account.family.currency), footer: cost_link do %>
