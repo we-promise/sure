@@ -457,6 +457,19 @@ class Budget < ApplicationRecord
     (actual_spending / budgeted_spending.to_f) * 100
   end
 
+  # The part of actual_spending that paid bills, line by line: a line's
+  # refunds can bring its spending below its bills, and actual_spending only
+  # counts what is left.
+  def bills_paid
+    budget_categories.reject(&:subcategory?).sum { |bc| [ bc.bills_paid, bc.actual_spending ].min }
+  end
+
+  # The rule each line follows (BudgetCategory#near_limit?), for the whole budget.
+  def near_limit?
+    !available_to_spend.negative? && percent_of_budget_spent >= BudgetCategory::NEAR_LIMIT_PERCENT &&
+      BudgetCategory.near_limit_outside_bills?(spent: actual_spending, bills_paid: bills_paid, available: available_to_spend)
+  end
+
   def overage_percent
     return 0 unless available_to_spend.negative?
 

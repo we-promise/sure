@@ -69,6 +69,20 @@ class InsightsHelperTest < ActionView::TestCase
     assert_equal "Savings rate · June", insight_meta_line(insight)
   end
 
+  # The savings-rate window covers whole months. Read on the 1st, its range
+  # ends yesterday and used to come out as "Last 91 days".
+  test "meta line names a range of whole months by its first and last month" do
+    travel_to Date.new(2026, 11, 1) do
+      insight = build_insight(
+        "savings_rate_change",
+        period_start: Date.new(2026, 8, 1),
+        period_end: Date.new(2026, 10, 31)
+      )
+
+      assert_equal "Savings rate · August to October", insight_meta_line(insight)
+    end
+  end
+
   test "meta line labels a forward-looking window as next N days" do
     travel_to Date.new(2026, 8, 1) do
       insight = build_insight(

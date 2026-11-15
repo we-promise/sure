@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BudgetTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:empty)
   end
@@ -223,6 +225,45 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 0, budget.budget_category_actual_spending(
       budget.budget_categories.find_by(category: category)
     )
+  end
+
+  # The whole budget follows the rule its lines do: bills that fill it are
+  # not a reason to warn. Three months back keeps the fixture entries out.
+  test "near_limit? counts only spending outside bills" do
+    today = (Date.current - 3.months).change(day: 15)
+    category = @family.categories.create!(name: "Near limit budget", color: "#101010", lucide_icon: "circle")
+    account = @family.accounts.create!(name: "Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = @family.budgets.create!(start_date: today.beginning_of_month, end_date: today.end_of_month,
+                                     budgeted_spending: 1_000, expected_income: 2_000, currency: "USD")
+    budget.budget_categories.create!(category: category, budgeted_spending: 1_000, currency: "USD")
+
+    travel_to today do
+      pay_bill(create_bill(category: category, amount: 950, name: "Rent", account: account), date: today.change(day: 3))
+      assert_operator budget.percent_of_budget_spent, :>=, 90
+      assert_not budget.near_limit?
+
+      create_transaction(category: category, account: account, amount: 45, date: today.change(day: 4))
+      assert Budget.find(budget.id).near_limit?
+    end
+  end
+
+  # A refund in the bill's category brings that line's spending to 50, so only
+  # 50 of the budget's spending is bills; the 860 elsewhere fills what is left.
+  test "near_limit? counts no more bills than a line's spending after refunds" do
+    today = (Date.current - 3.months).change(day: 15)
+    home, food = %w[Home Food].map { |name| @family.categories.create!(name: "Refund #{name}", color: "#101010", lucide_icon: "circle") }
+    account = @family.accounts.create!(name: "Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = @family.budgets.create!(start_date: today.beginning_of_month, end_date: today.end_of_month,
+                                     budgeted_spending: 1_000, expected_income: 2_000, currency: "USD")
+    [ home, food ].each { |category| budget.budget_categories.create!(category: category, budgeted_spending: 500, currency: "USD") }
+
+    travel_to today do
+      pay_bill(create_bill(category: home, amount: 950, name: "Insurance", account: account), date: today.change(day: 3))
+      create_transaction(category: home, account: account, amount: -900, date: today.change(day: 4), name: "Insurance refund")
+      create_transaction(category: food, account: account, amount: 860, date: today.change(day: 5))
+
+      assert Budget.find(budget.id).near_limit?
+    end
   end
 
   test "to_donut_segments_json only includes top-level budget categories" do

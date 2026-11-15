@@ -49,6 +49,13 @@ class BudgetCategory < ApplicationRecord
   end
 
   class << self
+    # The near-limit test on spending outside bills, shared with
+    # Budget#near_limit? so a budget and its lines warn alike.
+    def near_limit_outside_bills?(spent:, bills_paid:, available:)
+      unplanned = spent - bills_paid
+      unplanned.positive? && unplanned / (available + unplanned) * 100 >= NEAR_LIMIT_PERCENT
+    end
+
     def uncategorized
       new(
         id: Digest::UUID.uuid_v5(Digest::UUID::URL_NAMESPACE, "uncategorized"),
@@ -376,22 +383,18 @@ class BudgetCategory < ApplicationRecord
     actual_spending.to_d.positive?
   end
 
+  # Close to the limit for spending outside bills. Fixed charges that land
+  # early fill the envelope without using anything up: a line whose gym fee
+  # and medical plan are its whole budget sits at 100% on day 5 with nothing
+  # left to watch. So the spending outside bills is measured against what the
+  # bills paid so far leave of the envelope. Without bills that is the plain
+  # share of the envelope spent. The percent check comes first only to skip
+  # the bills query for lines nowhere near the limit. For a subcategory
+  # sharing its parent's budget, available_to_spend is the shared pool, so the
+  # measure is approximate there.
   def near_limit?
-    !over_budget? && percent_of_budget_spent >= NEAR_LIMIT_PERCENT
-  end
-
-  # near_limit? measures everything spent against the whole envelope. Fixed
-  # charges that land early fill it without using anything up: a line whose
-  # gym fee and medical plan are its whole budget sits at 100% on day 5 with
-  # nothing left to watch. This measures only the spending outside bills,
-  # against what the bills paid so far leave of the envelope.
-  def near_limit_outside_bills?
-    return false unless near_limit?
-
-    unplanned = actual_spending - bills_paid
-    return false unless unplanned.positive?
-
-    unplanned / (available_to_spend + unplanned) * 100 >= NEAR_LIMIT_PERCENT
+    !over_budget? && percent_of_budget_spent >= NEAR_LIMIT_PERCENT &&
+      self.class.near_limit_outside_bills?(spent: actual_spending, bills_paid: bills_paid, available: available_to_spend)
   end
 
   # Returns hash with suggested daily spending info or nil if not applicable

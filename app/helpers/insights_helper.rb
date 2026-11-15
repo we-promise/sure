@@ -209,8 +209,9 @@ module InsightsHelper
       elsif rolling_period_insight?(insight) && end_date >= Date.current - 1
         t("insights.meta.last_n_days", count: days)
       elsif start_date == start_date.beginning_of_month && end_date == start_date.end_of_month
-        format = start_date.year == Date.current.year ? "%B" : "%B %Y"
-        I18n.l(start_date, format: format)
+        insight_month_name(start_date)
+      elsif start_date == start_date.beginning_of_month && end_date == end_date.end_of_month
+        t("insights.meta.date_range", from: insight_month_name(start_date), to: insight_month_name(end_date))
       elsif start_date >= Date.current - 1
         t("insights.meta.next_n_days", count: days)
       elsif end_date >= Date.current - 1
@@ -218,6 +219,10 @@ module InsightsHelper
       else
         t("insights.meta.date_range", from: I18n.l(start_date, format: :short), to: I18n.l(end_date, format: :short))
       end
+    end
+
+    def insight_month_name(date)
+      I18n.l(date, format: date.year == Date.current.year ? "%B" : "%B %Y")
     end
 
     def rolling_period_insight?(insight)

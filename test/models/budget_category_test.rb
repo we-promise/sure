@@ -169,6 +169,29 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     end
   end
 
+  # Fixed charges that land early fill the envelope without using anything
+  # up, so near_limit? only counts spending outside bills.
+  test "near_limit? ignores a line filled by bills already paid" do
+    pay_bill(create_bill(category: @parent_category, amount: 950, name: "Rent"), date: Date.current)
+
+    assert_operator @parent_budget_category.percent_of_budget_spent, :>=, BudgetCategory::NEAR_LIMIT_PERCENT
+    assert_not @parent_budget_category.near_limit?
+  end
+
+  # Rent takes 950 of 1,000; 45 of other spending uses 90% of the 50 it leaves.
+  test "near_limit? warns when spending outside bills uses up what bills leave" do
+    pay_bill(create_bill(category: @parent_category, amount: 950, name: "Rent"), date: Date.current)
+    create_transaction(category: @parent_category, amount: 45, date: Date.current)
+
+    assert @parent_budget_category.near_limit?
+  end
+
+  test "near_limit? warns about a line near its limit when it has no bills" do
+    create_transaction(category: @parent_category, amount: 950, date: Date.current)
+
+    assert @parent_budget_category.near_limit?
+  end
+
   test "subcategory with zero budget inherits from parent" do
     assert @subcategory_inheriting_bc.inherits_parent_budget?
     refute @subcategory_with_limit_bc.inherits_parent_budget?

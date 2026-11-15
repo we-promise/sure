@@ -71,7 +71,7 @@ zh-CN:
       cash_flow_warning: 查看循环交易
       net_worth_milestone: 查看净资产报告
       subscription_audit: 查看循环交易
-      savings_rate_change: 查看该月份交易
+      savings_rate_change: 查看这几个月份的交易
       idle_cash: 前往账户
       budget: 查看预算
       maintained_goal_depleted: 查看储备金
@@ -86,8 +86,8 @@ zh-CN:
       maintained_goal_depleted: "%{goal} 已跌破设定水平"
       subscription_audit: "%{name} 仍在订阅中吗？"
       savings_rate_change:
-        up: "您在 %{month} 的储蓄率有所提高"
-        down: "您在 %{month} 的储蓄率有所下降"
+        up: 您近三个月的储蓄率有所提高
+        down: 您近三个月的储蓄率有所下降
       idle_cash: "%{account} 中有闲置现金"
       budget_at_risk:
         one: 预算中有一个分类需要注意
@@ -104,9 +104,9 @@ zh-CN:
       maintained_goal_depleted: "%{goal} 目前持有 %{saved}，低于预定目标 %{target}，尚缺 %{missing}。"
       subscription_audit: "%{name}（%{amount}）自预期的 %{expected_on} 后未再出现。可能已被取消，或扣款日期有所变动。"
       savings_rate_change:
-        up: "您在 %{month} 存下了收入的 %{current_rate}%，比前一个月的 %{previous_rate}% 提高了 %{change_pp} 个百分点。"
-        down: "您在 %{month} 存下了收入的 %{current_rate}%，比前一个月的 %{previous_rate}% 降低了 %{change_pp} 个百分点。"
-        down_negative: "您在 %{month} 的支出超过了收入：储蓄率从前一个月的 %{previous_rate}% 降至 %{current_rate}%。"
+        up: "%{from_month}至%{to_month}，您存下了收入的 %{current_rate}%，比之前三个月的 %{previous_rate}% 提高了 %{change_pp} 个百分点。"
+        down: "%{from_month}至%{to_month}，您存下了收入的 %{current_rate}%，比之前三个月的 %{previous_rate}% 降低了 %{change_pp} 个百分点。"
+        down_negative: "%{from_month}至%{to_month}，您的支出超过了收入：储蓄率从之前三个月的 %{previous_rate}% 降至 %{current_rate}%。"
       idle_cash: "%{account} 拥有 %{balance}，且在过去 %{idle_days} 天内没有任何交易活动。"
       budget_at_risk:
         over: "%{categories} 本月已超出预算。您目前已使用总预算的 %{budget_spent_pct}%。"

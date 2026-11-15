@@ -58,7 +58,7 @@ it:
       cash_flow_warning: Controlla le transazioni ricorrenti
       net_worth_milestone: Vedi il report sul patrimonio netto
       subscription_audit: Controlla le transazioni ricorrenti
-      savings_rate_change: Vedi le transazioni di quel mese
+      savings_rate_change: Vedi le transazioni di quei mesi
       idle_cash: Vai al conto
       budget: Vedi il budget
     titles:
@@ -71,8 +71,8 @@ it:
       net_worth_milestone: "Traguardo del patrimonio netto: %{milestone}"
       subscription_audit: "%{name} è ancora attivo?"
       savings_rate_change:
-        up: Il tuo tasso di risparmio è migliorato in %{month}
-        down: Il tuo tasso di risparmio è diminuito in %{month}
+        up: Il tuo tasso di risparmio è migliorato negli ultimi tre mesi
+        down: Il tuo tasso di risparmio è diminuito negli ultimi tre mesi
       idle_cash: Liquidità inutilizzata in %{account}
       budget_at_risk:
         one: Una categoria del tuo budget richiede attenzione
@@ -88,9 +88,9 @@ it:
       net_worth_milestone: "Il tuo patrimonio netto ha superato %{milestone} e ora è pari a %{net_worth}."
       subscription_audit: "%{name} (%{amount}) non è comparso dalla data prevista, %{expected_on}. Potrebbe essere stato annullato oppure l'addebito potrebbe essere stato spostato."
       savings_rate_change:
-        up: "In %{month} hai risparmiato il %{current_rate}% delle tue entrate, %{change_pp} punti percentuali in più rispetto al %{previous_rate}% del mese precedente."
-        down: "In %{month} hai risparmiato il %{current_rate}% delle tue entrate, %{change_pp} punti percentuali in meno rispetto al %{previous_rate}% del mese precedente."
-        down_negative: "In %{month} hai speso più di quanto hai guadagnato: il tuo tasso di risparmio è sceso al %{current_rate}%, dal %{previous_rate}% del mese precedente."
+        up: Da %{from_month} a %{to_month} hai risparmiato il %{current_rate}% delle tue entrate, %{change_pp} punti percentuali in più rispetto al %{previous_rate}% dei tre mesi precedenti.
+        down: Da %{from_month} a %{to_month} hai risparmiato il %{current_rate}% delle tue entrate, %{change_pp} punti percentuali in meno rispetto al %{previous_rate}% dei tre mesi precedenti.
+        down_negative: "Da %{from_month} a %{to_month} hai speso più di quanto hai guadagnato: il tuo tasso di risparmio è sceso al %{current_rate}%, dal %{previous_rate}% dei tre mesi precedenti."
       idle_cash: "%{account} contiene %{balance} senza attività negli ultimi %{idle_days} giorni."
       budget_at_risk:
         over: "%{categories} hanno superato il budget questo mese. Finora hai usato il %{budget_spent_pct}% del budget totale."

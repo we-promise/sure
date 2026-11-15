@@ -1,9 +1,7 @@
 # Reads the family's current budget (if they've set one up) and produces
 # either a warning — categories over or near their limit — or, once the month
 # is at least half over, a quiet positive signal that everything is on track.
-# Reuses BudgetCategory's own health checks rather than re-deriving pace math;
-# a line counts as near its limit only for spending outside bills, so fixed
-# charges that land early in the month don't raise a warning on their own.
+# Reuses BudgetCategory's own health checks rather than re-deriving pace math.
 class Insight::Generators::BudgetInsightGenerator < Insight::Generator
   produces "budget_at_risk", "budget_on_track"
 
@@ -17,7 +15,7 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
 
     parent_categories = budget.budget_categories.reject(&:subcategory?)
     over = parent_categories.select(&:over_budget_with_budget?)
-    near = parent_categories.select { |bc| bc.budgeted? && bc.near_limit_outside_bills? }
+    near = parent_categories.select { |bc| bc.budgeted? && bc.near_limit? }
 
     if over.any? || near.any?
       [ at_risk_insight(budget, over, near) ]
