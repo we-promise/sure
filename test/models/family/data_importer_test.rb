@@ -53,7 +53,10 @@ class Family::DataImporterTest < ActiveSupport::TestCase
         principal_only_transfers: true,
         variable_rate_schedule: { "2026-01-01" => "6.5" }
       )
-    )
+    ).loan.update!(term_change_rows: [
+      { effective_date: "2025-06-10", extra_repayment: "2500.50", payment: "210" },
+      { effective_date: "2025-09-01", balance: "16000" }
+    ])
 
     Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
 
@@ -70,6 +73,10 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "actual_365", loan.day_count_convention
     assert loan.principal_only_transfers
     assert_equal [ [ Date.new(2026, 1, 1), BigDecimal("6.5") ] ], loan.variable_rates
+    assert_equal [
+      [ Date.new(2025, 6, 10), BigDecimal("2500.5"), nil, BigDecimal("210") ],
+      [ Date.new(2025, 9, 1), nil, BigDecimal("16000"), nil ]
+    ], loan.active_term_changes.map { |change| [ change.effective_date, change.extra_repayment, change.balance, change.payment ] }
   end
 
   test "round trips credit card details through full export" do
@@ -154,6 +161,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal Loan::DEFAULT_DAY_COUNT_CONVENTION, loan.day_count_convention
     assert_not loan.principal_only_transfers
     assert_equal({}, loan.variable_rate_schedule)
+    assert_empty loan.term_changes
 
     card = @family.accounts.find_by!(name: "Old Card").accountable
     assert_nil card.apr
@@ -217,6 +225,44 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
     assert_not @family.accounts.exists?(name: "Bad Schedule Loan")
+  end
+
+  test "rejects a loan term change that cannot be read" do
+    [
+      { effective_date: "not a date", payment: "200" },
+      { effective_date: "2025-06-10", extra_repayment: "100", balance: "100" },
+      { effective_date: "2025-06-10", payment: "not a number" }
+    ].each do |term_change|
+      ndjson = build_ndjson([
+        {
+          type: "Account",
+          data: {
+            id: "old-loan", name: "Bad Term Change Loan", balance: "1000", currency: "USD", accountable_type: "Loan",
+            accountable: { rate_type: "fixed", interest_rate: "5", term_changes: [ term_change ] }
+          }
+        }
+      ])
+
+      assert_raises(ActiveRecord::RecordInvalid, term_change.inspect) { Family::DataImporter.new(@family, ndjson).import! }
+      assert_not @family.accounts.exists?(name: "Bad Term Change Loan")
+    end
+  end
+
+  test "skips loan term changes that are not rows" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan", name: "Odd Term Change Loan", balance: "1000", currency: "USD", accountable_type: "Loan",
+          accountable: { rate_type: "fixed", interest_rate: "5", term_changes: [ 5, "x", nil, [ 1 ], { effective_date: "2025-06-10", payment: "200" } ] }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    loan = @family.accounts.find_by!(name: "Odd Term Change Loan").accountable
+    assert_equal [ Date.new(2025, 6, 10) ], loan.term_changes.map(&:effective_date)
   end
 
   test "imports into existing accounts given as account targets" do

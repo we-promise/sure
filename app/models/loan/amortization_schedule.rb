@@ -30,7 +30,8 @@ class Loan::AmortizationSchedule
         start_date: loan.origination_date,
         currency: loan.account.currency,
         rate_resolver: (Loan::RateResolver.for(loan) if loan.variable_rate_type?),
-        day_count_convention: loan.day_count_convention
+        day_count_convention: loan.day_count_convention,
+        term_changes: loan.active_term_changes.map(&:to_schedule_change)
       )
     end
   end
@@ -38,8 +39,12 @@ class Loan::AmortizationSchedule
   # `rate_resolver` is how a variable loan's recorded rate changes reach the
   # simulator. Omitted, the schedule runs at one rate for its whole life, which
   # is what a fixed loan does.
+  #
+  # `term_changes` are the recorded changes to the contract, in the shape the
+  # simulator takes. The schedule follows them, so it stays the lender's own
+  # table after an extra repayment or a new instalment.
   def initialize(principal:, annual_rate:, term_months:, start_date:, currency:, rate_resolver: nil,
-                 day_count_convention: Loan::Simulator::DEFAULT_DAY_COUNT_CONVENTION)
+                 day_count_convention: Loan::Simulator::DEFAULT_DAY_COUNT_CONVENTION, term_changes: [])
     @currency = currency
     # Rounded to the currency at the door. A balance carrying more fractional
     # units than the currency has -- `first_valuation_amount` is decimal(19,4)
@@ -53,6 +58,7 @@ class Loan::AmortizationSchedule
     @start_date = start_date
     @rate_resolver = rate_resolver
     @day_count_convention = day_count_convention
+    @term_changes = term_changes
   end
 
   # True when this schedule re-amortises part-way through, i.e. the repayment
@@ -61,11 +67,20 @@ class Loan::AmortizationSchedule
   # than of the recorded changes: a change to the same rate, or one effective
   # on the first payment, is an event that moves nothing in-term, and a
   # constant payment must not be labelled an opening one.
+  #
+  # A term change counts when it moves the payment: an extra repayment the
+  # lender answered with a lower instalment does, one the borrower keeps paying
+  # the old instalment through does not. The last row is left out of that
+  # comparison, because it settles whatever is left.
   def re_amortising?
-    return false unless @rate_resolver
     return false unless schedulable?
 
-    simulation.payments.each_cons(2).any? { |previous, current| previous[:sizing_rate] != current[:sizing_rate] }
+    rows = simulation.payments
+    rate_moved = @rate_resolver.present? &&
+      rows.each_cons(2).any? { |previous, current| previous[:sizing_rate] != current[:sizing_rate] }
+
+    rate_moved || (@term_changes.any? &&
+      rows[0...-1].each_cons(2).any? { |previous, current| previous[:payment_amount] != current[:payment_amount] })
   end
 
   # Every scheduled payment, oldest first. Empty when there is nothing to
@@ -103,14 +118,56 @@ class Loan::AmortizationSchedule
     money(simulation.total_interest)
   end
 
-  # Principal plus total_interest -- everything the borrower pays.
+  # Principal plus total_interest -- everything the borrower pays. What a term
+  # change took off the balance (an extra repayment, or a confirmed balance
+  # below the schedule's) was paid outside the instalments, so it is added
+  # here. A confirmed balance above the schedule's is not a payment and is
+  # left out; the instalments after it repay it.
   def total_paid
-    money(payments.sum(BigDecimal("0")) { |payment| payment.payment.amount })
+    repaid_outside_payments = balance_adjustments.values.sum(BigDecimal("0")) do |adjustment|
+      [ -adjustment.amount, BigDecimal("0") ].max
+    end
+
+    money(payments.sum(BigDecimal("0")) { |payment| payment.payment.amount } + repaid_outside_payments)
   end
 
-  # The date of the final payment, or nil when there's nothing to amortise.
+  # What recorded term changes moved the balance by on a payment's row, on top
+  # of the principal the payment repaid: negative for an extra repayment,
+  # either sign for a balance the lender confirmed. Nil for a row they left
+  # alone.
+  def balance_adjustment_for(payment)
+    balance_adjustments[payment.number]
+  end
+
+  # The part of a row's extra repayments made after the period's interest was
+  # charged: later than the grace days, or on the payment date. In the ledger
+  # replay such a transfer pays that interest first. Nil for a row without
+  # one.
+  def repaid_after_charge_for(payment)
+    row_figures(:repaid_after_charge)[payment.number]
+  end
+
+  # Whether a payment the lender set falls short of the interest of a period
+  # it is in force for. Only those rows are read: on a long loan at a high
+  # rate under an actual day count, the level payment itself can fall a little
+  # short in a 31-day period.
+  def lender_payment_below_interest?
+    simulation.payments.any? { |row| row[:lender_payment] && row[:principal_payment].negative? }
+  end
+
+  # The share of its balance the period of a payment charged as interest,
+  # when a term change is dated in that period. It carries the rate, the day
+  # count and, after a confirmed balance part-way through, the shorter
+  # period. Nil for a period without a term change.
+  def interest_factor_for(payment)
+    simulation.payments[payment.number - 1]&.dig(:accrual_factor)
+  end
+
+  # The date of the final payment. Nil when there's nothing to amortise, or
+  # when a balance the lender confirmed for the last payment date leaves the
+  # loan owing.
   def payoff_date
-    payments.last&.date
+    simulation.payoff_date
   end
 
   # The scheduled payment falling in the same calendar month as `date`, if any.
@@ -135,6 +192,18 @@ class Loan::AmortizationSchedule
       @payment_schedule ||= (1..term_months).map { |number| start_date >> number }
     end
 
+    def balance_adjustments
+      row_figures(:balance_adjustment)
+    end
+
+    # A figure only the rows a term change touched carry, by payment number.
+    def row_figures(key)
+      @row_figures ||= {}
+      @row_figures[key] ||= simulation.payments.each_with_object({}) do |row, figures|
+        figures[row[:payment_number]] = money(row[key]) if row.key?(key)
+      end
+    end
+
     # The simulator refuses an empty schedule rather than inventing a
     # degenerate run, so a loan with nothing to amortise is answered here.
     def simulation
@@ -146,7 +215,11 @@ class Loan::AmortizationSchedule
           accrual_rate_for: @rate_resolver ? @rate_resolver.method(:accrual_rate_for) : ->(_date) { annual_rate },
           re_amortisation_events: @rate_resolver&.method(:re_amortisation_events),
           currency_precision: currency_precision,
-          day_count_convention: @day_count_convention
+          day_count_convention: @day_count_convention,
+          term_changes: @term_changes,
+          # The replay's window, so the schedule and the replay agree on which
+          # period an extra repayment a few days after a due date belongs to.
+          payment_grace_days: Loan::PrincipalPayments::PAYMENT_GRACE_DAYS
         ).run
       else
         Loan::SimulationResult.new(payments: [], currency_precision: currency_precision)

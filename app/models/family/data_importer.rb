@@ -42,7 +42,8 @@ class Family::DataImporter
   }.freeze
 
   # What the loan and credit card forms edit, restored on import. The loan's
-  # rate schedule is restored separately (see assign_liability_details).
+  # rate schedule and term changes are restored separately (see
+  # assign_liability_details).
   LOAN_DETAIL_ATTRIBUTES = %w[
     interest_rate rate_type term_months start_date down_payment initial_balance
     insurance_rate insurance_rate_type day_count_convention principal_only_transfers
@@ -326,6 +327,11 @@ class Family::DataImporter
       if accountable.is_a?(Loan) && schedule.is_a?(Hash)
         accountable.rate_changes = schedule.map { |date, rate| { "effective_date" => date, "rate" => rate } }
       end
+
+      # The same for term changes: a row the loan would refuse from its form
+      # is refused here.
+      term_changes = accountable_data["term_changes"]
+      accountable.term_change_rows = term_changes if accountable.is_a?(Loan) && term_changes.is_a?(Array)
     end
 
     def import_accounts(records)
