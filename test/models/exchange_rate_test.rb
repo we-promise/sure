@@ -35,7 +35,7 @@ class ExchangeRateTest < ActiveSupport::TestCase
     keyless_fallback(signed_in: true) do
       stub_request(:get, %r{/rate/SEK/JPY}).to_timeout
       10.times { assert_raises(Money::ConversionError) { Money.new(100, "SEK").exchange_to("JPY") } }
-      5.times { |i| assert_equal({ "SEK" => 1 }, ExchangeRate.rates_for(%w[SEK], to: "JPY", date: Date.current - (i * 10).days)) }
+      5.times { |i| assert_equal({}, ExchangeRate.rates_for(%w[SEK], to: "JPY", date: Date.current - (i * 10).days)) }
       assert_requested :get, %r{/rate/SEK/JPY}, times: 1
 
       travel 61.seconds
