@@ -1,6 +1,15 @@
 require "test_helper"
 
 class PagesControllerTest < ActionDispatch::IntegrationTest
+  test "the user's locale sets the document language" do
+    @user.update!(locale: "fr")
+
+    get root_path
+
+    assert_response :ok
+    assert_select "html[lang=fr]"
+  end
+
   include EntriesTestHelper
 
   setup do

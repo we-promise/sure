@@ -230,7 +230,7 @@ class Transfer::Creator
     end
 
     def find_or_create_fees_category(family)
-      family.categories.find_or_create_by!(name: I18n.t("models.category.defaults.fees"))
+      family.categories.find_or_create_fees!
     end
 
     def inflow_converted_amount
