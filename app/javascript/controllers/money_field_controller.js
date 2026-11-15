@@ -21,6 +21,7 @@ export default class extends Controller {
     minMessage: String,
     maxMessage: String,
     separator: String,
+    delimiter: String,
     separatorCurrency: String,
     currencySource: String,
   };
@@ -85,9 +86,9 @@ export default class extends Controller {
       return;
     }
 
-    const result = evaluateAmountExpression(raw, {
-      precision: this.#fieldPrecision(),
-    });
+    const result = this.#isUnreadAfterCurrencySwitch()
+      ? null
+      : evaluateAmountExpression(raw, this.#readOptions());
     if (result === null) {
       this.amountTarget.setCustomValidity(
         this.invalidMessageValue || "Enter a valid amount or expression.",
@@ -168,9 +169,17 @@ export default class extends Controller {
 
       const rawValue = this.amountTarget.value.trim();
       if (rawValue !== "") {
-        const parsedAmount = evaluateAmountExpression(rawValue, {
-          precision: typedPrecision,
-        });
+        const parsedAmount = this.#isUnreadAfterCurrencySwitch()
+          ? null
+          : evaluateAmountExpression(rawValue, {
+              precision: typedPrecision,
+              delimiter: this.delimiterValue,
+            });
+        // Text that is not an amount in the currency it was typed for stays
+        // flagged until it is edited. Read with the new currency's rules it
+        // can become valid with another meaning: "150.000*12" is rejected in
+        // PYG but would be 1800 in USD.
+        this.unreadText = parsedAmount === null ? this.amountTarget.value : undefined;
         if (parsedAmount !== null) {
           const precision =
             this.hasPrecisionValue && Number.isInteger(this.precisionValue)
@@ -186,6 +195,7 @@ export default class extends Controller {
 
       this.symbolTarget.innerText = currencyData.symbol;
       this.separatorValue = currencyData.separator;
+      this.delimiterValue = currencyData.delimiter ?? "";
       this.separatorCurrencyValue = currency;
       // The new currency's step can change the rounding the bounds are
       // checked against, and assigning .value above fires no "input".
@@ -235,8 +245,10 @@ export default class extends Controller {
     const raw = this.amountTarget.value;
     if (typeof raw !== "string" || raw.trim() === "") return;
 
+    if (this.#isUnreadAfterCurrencySwitch()) return;
+
     const precision = this.#fieldPrecision();
-    const result = evaluateAmountExpression(raw, { precision });
+    const result = evaluateAmountExpression(raw, this.#readOptions());
     if (result === null) return;
 
     this.amountTarget.value = formatAmountForDisplay(result, precision, raw);
@@ -287,8 +299,10 @@ export default class extends Controller {
     const raw = this.amountTarget.value;
     if (typeof raw !== "string" || raw.trim() === "") return;
 
+    if (this.#isUnreadAfterCurrencySwitch()) return;
+
     const precision = this.#fieldPrecision();
-    const result = evaluateAmountExpression(raw, { precision });
+    const result = evaluateAmountExpression(raw, this.#readOptions());
     if (result === null) return;
 
     const canonical =
@@ -309,6 +323,23 @@ export default class extends Controller {
     }
 
     return this.separatorValue;
+  }
+
+  // How typed text is read: the field's precision and its currency's
+  // thousands delimiter, which a decimal factor in a whole-number field
+  // cannot use (see evaluateAmountExpression).
+  #readOptions() {
+    return { precision: this.#fieldPrecision(), delimiter: this.delimiterValue };
+  }
+
+  // True while the field still holds the text a currency switch could not
+  // read (see updateAmount). Any edit clears it.
+  #isUnreadAfterCurrencySwitch() {
+    if (this.unreadText === undefined) return false;
+    if (this.amountTarget.value === this.unreadText) return true;
+
+    this.unreadText = undefined;
+    return false;
   }
 
   #currencySourceElement() {

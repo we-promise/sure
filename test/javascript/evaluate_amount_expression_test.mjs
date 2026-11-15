@@ -470,6 +470,29 @@ describe("whole-number fields (precision 0, e.g. PYG, CLP, JPY)", () => {
     assert.equal(evaluateAmountExpression("150.00*12", { precision: 2 }), 1800)
   })
 
+  it("rejects a factor whose decimal point is the currency's thousands delimiter", () => {
+    // PYG writes a hundred and fifty thousand as 150.000, so a dot is never
+    // its decimal point. Without the delimiter, "150.50*12" was 1806.
+    const pyg = { precision: 0, delimiter: "." }
+    assert.equal(evaluateAmountExpression("150.50*12", pyg), null)
+    assert.equal(evaluateAmountExpression("1000*1.1", pyg), null)
+    assert.equal(evaluateAmountExpression("150,50*12", pyg), 1806)
+    assert.equal(Math.round(evaluateAmountExpression("1000*1,1", pyg)), 1100)
+    assert.equal(evaluateAmountExpression("150.000.000", pyg), 150000000)
+    assert.equal(evaluateAmountExpression("150.000*12", pyg), null)
+    // JPY groups with a comma, so a dot stays a decimal there.
+    const jpy = { precision: 0, delimiter: "," }
+    assert.equal(evaluateAmountExpression("165.5*40", jpy), 6620)
+    assert.equal(evaluateAmountExpression("165,5*40", jpy), null)
+    assert.equal(Math.round(evaluateAmountExpression("1000*1.1", jpy)), 1100)
+    // HUF groups with a space, so neither character is ruled out.
+    const huf = { precision: 0, delimiter: " " }
+    assert.equal(evaluateAmountExpression("165.5*40", huf), 6620)
+    assert.equal(evaluateAmountExpression("165,5*40", huf), 6620)
+    // Fields with decimals are unaffected.
+    assert.equal(evaluateAmountExpression("165.5*40", { precision: 2, delimiter: "." }), 6620)
+  })
+
   it("rejects a leading zero group instead of reading it as grouping", () => {
     assert.equal(evaluateAmountExpression("0.500", whole), null)
     assert.equal(evaluateAmountExpression("05.000", whole), null)

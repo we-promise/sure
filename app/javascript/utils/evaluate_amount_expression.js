@@ -76,6 +76,12 @@ const WHOLE_NUMBER_INDIAN_GROUPED = /^[1-9]\d?(?:,\d{2})+,\d{3}$/
 // text as an amount reads as grouping or is rejected as a likely typo:
 // "150.000*12" could mean 1800000 or 1800, and "150.00*12" is probably a
 // mistyped "150.000*12".
+//
+// When the field knows its currency's thousands delimiter (`delimiter`, from
+// config/currencies.yml), a factor's decimal point cannot be that character
+// either: PYG writes 150.000 for a hundred and fifty thousand, so "150.50*12"
+// in a PYG field is rejected, while "150,50*12" is 150.5 × 12. JPY's
+// delimiter is a comma, so "165.5*40" stays a decimal there.
 const WHOLE_NUMBER_DECIMAL_FACTOR = /^(?:0[.,](?!0+$)\d+|[1-9]\d*[.,](?!0{1,2}$)\d{1,2})$/
 
 // Reads an unsigned digit string with a dot or comma in it as a grouped
@@ -187,11 +193,14 @@ export default function evaluateAmountExpression(value, options = {}) {
 
   // A factor of * or / is a multiplier, not an amount, so it is never read as
   // whole-number grouping. In a whole-number field it must then be a plain
-  // decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR) when it has a separator.
+  // decimal multiplier (WHOLE_NUMBER_DECIMAL_FACTOR) when it has a separator,
+  // and that separator cannot be the currency's thousands delimiter.
   const isFactor = (i) => /[*/]/.test(`${tokens[2 * i - 1] ?? ""}${tokens[2 * i + 1] ?? ""}`)
   const isUnclearFactor = (t, i) => {
     const unsigned = t.trim().replace(/^[+-]/, "")
-    return isFactor(i) && /[.,]/.test(unsigned) && !WHOLE_NUMBER_DECIMAL_FACTOR.test(unsigned)
+    if (!isFactor(i) || !/[.,]/.test(unsigned)) return false
+    if (/^[.,]$/.test(options.delimiter ?? "") && unsigned.includes(options.delimiter)) return true
+    return !WHOLE_NUMBER_DECIMAL_FACTOR.test(unsigned)
   }
   if (options.precision === 0 && numberTokens.some(isUnclearFactor)) return null
   const numbers = numberTokens.map((t, i) =>
