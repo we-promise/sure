@@ -1,0 +1,54 @@
+---
+it:
+  settings:
+    profiles:
+      destroy:
+        cannot_remove_self: Non puoi rimuovere te stesso dall'account.
+        member_owns_other_family_data: Questo membro possiede ancora conti in un altro nucleo familiare e non può essere rimosso. Trasferisci o rimuovi prima quei conti.
+        member_removal_failed: Si è verificato un problema durante la rimozione del membro.
+        member_removed: Il membro è stato rimosso con successo.
+        not_authorized: Non sei autorizzato a rimuovere membri.
+      show:
+        confirm_delete:
+          body: Sei sicuro di voler eliminare definitivamente il tuo account? Questa azione è irreversibile.
+          title: Eliminare l'account?
+        confirm_reset:
+          body: Sei sicuro di voler ripristinare il tuo account? Verranno eliminati tutti i tuoi conti, categorie, esercenti, etichette e altri dati. Questa azione non può essere annullata.
+          title: Ripristinare l'account?
+        confirm_reset_with_sample_data:
+          body: Sei sicuro di voler ripristinare il tuo account e caricare dati di esempio? Verranno eliminati i tuoi dati esistenti e sostituiti con dati demo per esplorare Sure in sicurezza.
+          title: Ripristinare l'account e caricare dati di esempio?
+        confirm_remove_invitation:
+          body: Sei sicuro di voler rimuovere l'invito per %{email}?
+          title: Rimuovi invito
+        confirm_remove_member:
+          body: Sei sicuro di voler rimuovere %{name} dal tuo account?
+          title: Rimuovi membro
+        danger_zone_title: Zona pericolo
+        delete_account: Elimina account
+        delete_account_warning: L'eliminazione del tuo account rimuoverà permanentemente tutti i tuoi dati e non può essere annullata.
+        reset_account: Ripristina account
+        reset_account_warning: Il ripristino del tuo account eliminerà tutti i tuoi conti, categorie, esercenti, etichette e altri dati, mantenendo intatto il tuo account utente.
+        reset_account_with_sample_data: Ripristina e precarica
+        reset_account_with_sample_data_warning: Elimina tutti i tuoi dati esistenti e poi carica dati di esempio freschi per esplorare con un ambiente precompilato.
+        email: Email
+        first_name: Nome
+        group_form_input_placeholder: Inserisci nome del gruppo
+        group_form_label: Nome del gruppo
+        group_title: Membri del gruppo
+        household_form_input_placeholder: Inserisci nome del nucleo familiare
+        household_form_label: Nome del nucleo familiare
+        household_subtitle: Gli invitati possono accedere al tuo account %{moniker} e alle risorse condivise.
+        household_title: Nucleo familiare
+        invitation_link: Link di invito
+        invite_member: Aggiungi membro
+        last_name: Cognome
+        page_title: Informazioni profilo
+        pending: In sospeso
+        profile_subtitle: Personalizza come appari su %{product_name}
+        profile_title: Personale
+        remove_invitation: Rimuovi invito
+        remove_member: Rimuovi membro
+        resend_confirmation_link: richiedi una nuova email di conferma
+        save: Salva
+        unconfirmed_email_notice_html: Hai richiesto di cambiare la tua email in %{email}. Vai alla tua email e conferma affinché la modifica abbia effetto. Se non hai ricevuto l'email, controlla la cartella spam, o %{resend_link}.
