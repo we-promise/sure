@@ -1031,6 +1031,21 @@ end
     says so and how to find them (call by @josh-sanders during development of PR #4440).
   - **Not decided yet:** whether turning Documents off deletes the copies already in a cloud
     store, and whether catching up skips statements whose uploader has the switch off.
+- **A changed `embed` route never moves or deletes documents silently** (call by @josh-sanders
+  during development of PR #4440, committed on #4791). When a family's `embed` route moves to
+  another endpoint or model (PR 7), or between the instance's key and the family's own key
+  (PR 9), the copies already indexed stay in the old store. Sure doesn't copy them into the new
+  store, which may belong to another provider account, and doesn't delete the old store. Either
+  happens only when a family admin confirms it on the AI features page, which names where the
+  documents would go. *Not decided yet:* whether search keeps reading the old store until then,
+  and how the page shows documents still indexed under the old route.
+- **Transaction attachments (#1204, #4999), if they go ahead** (recommended on #4791): an opt-in
+  switch next to Documents on the AI features page, off by default, PDF and `.txt` only, as the
+  maintainers agreed on #1204. PR 7's catch-up indexing then covers stored attachments as well as
+  statements. Indexing hooks on the model or the attachment commit, not a controller, so
+  attachments added when a transaction is created (#1346) are covered too, and keys on the blob,
+  not the transaction, because `Transaction#carry_over_user_additions` moves attachments from a
+  pending transaction to the posted one with `update_all`, which skips callbacks.
 
 ### 5.6 The external assistant
 
@@ -2945,7 +2960,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    statements not yet indexed (section 5.5). Each embedding model carries its search score
    threshold, for the OpenAI store and pgvector alike (default 0.3), and PR 7 resolves an
    embedding model whose dimensions don't match the chunks table, where 2e fails with
-   `InvalidOutput` (calls by @josh-sanders during development of PR #4440). Presets carry their
+   `InvalidOutput` (calls by @josh-sanders during development of PR #4440). Changing a family's
+   `embed` route leaves the old store's copies in place until a family admin confirms
+   re-indexing or deleting them (section 5.5). Presets carry their
    provider's JSON-schema dialect, so Sure drops what a provider's strict mode refuses (Cohere
    refuses nullable objects and integer `minimum`; 2c's `auto` then falls to `none`), rather than
    2c's fallback changing (call by @josh-sanders during development of PR #4440, after 2e's live
@@ -2982,7 +2999,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    `ai_endpoint_credentials` and `users.ai_allowed`; the AI features page gains its endpoints
    section, with the allow checkbox, the "use our own key" field with a probe on save and the
    key's monthly cost cap, and its members section. The router gains its endpoint and key lines
-   (section 5.3), with `:endpoint_not_allowed`, `:key_missing` and `:cost_cap_reached`, and `Ai::Consent` gains `:blocked_by_admin`. Adds
+   (section 5.3), with `:endpoint_not_allowed`, `:key_missing` and `:cost_cap_reached`, and `Ai::Consent` gains `:blocked_by_admin`. Switching `embed`
+   between the instance's key and the family's own follows section 5.5's rule: no document is
+   copied into the other account, or deleted, without a family admin's confirmation. Adds
    `llm_usages.family_key` and the family key test, and extends the consent test with the member
    cases. Needs PR 7.
 
