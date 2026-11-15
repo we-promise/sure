@@ -1,5 +1,6 @@
 class AccountsController < ApplicationController
   include StreamExtensions
+  include FilterClearable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
@@ -225,21 +226,7 @@ class AccountsController < ApplicationController
   # activity feed has no cross-request stored filters to update, so this only
   # needs to redirect with one param removed from the current query string.
   def clear_filter
-    q_params = activity_search_params.to_h
-
-    param_key = params[:param_key]
-    param_value = params[:param_value]
-
-    if q_params[param_key].is_a?(Array)
-      q_params[param_key].delete(param_value)
-      q_params.delete(param_key) if q_params[param_key].empty?
-    else
-      q_params.delete(param_key)
-    end
-
-    q_params.delete("amount_operator") unless q_params["amount"].present?
-
-    redirect_to account_path(@account, q: q_params.presence, tab: "activity", page: params[:page], per_page: params[:per_page])
+    redirect_to account_path(@account, q: without_cleared_filter(activity_search_params.to_h), tab: "activity", page: params[:page], per_page: params[:per_page])
   end
 
   def sparkline
