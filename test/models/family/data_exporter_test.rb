@@ -1315,6 +1315,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       name: "=SUM(B1)", notes: "-1.5x leverage",
       entryable: Transaction.new(category: category)
     )
+    @family.merchants.create!(name: "-2+3", color: "#123456")
     @family.rules.create!(
       name: "@rule",
       resource_type: "transaction",
@@ -1340,6 +1341,9 @@ class Family::DataExporterTest < ActiveSupport::TestCase
       row = transactions.find { |r| r["name"] == "'=SUM(B1)" }
       assert row, "transaction name must be escaped"
       assert_equal "'-1.5x leverage", row["notes"], "transaction notes must be escaped"
+
+      merchants = CSV.parse(zip.read("merchants.csv"), headers: true)
+      assert merchants.any? { |r| r["name"] == "'-2+3" }, "merchant name must be escaped"
 
       rules = CSV.parse(zip.read("rules.csv"), headers: true)
       assert rules.any? { |r| r["name"] == "'@rule" }, "rule name must be escaped"

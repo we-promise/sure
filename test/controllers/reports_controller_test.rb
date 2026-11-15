@@ -1030,16 +1030,19 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   # is the export the app points at Google Sheets.
   test "transactions export escapes formula-triggering category names" do
     malicious = "=SUM(A1)"
-    category = @family.categories.create!(name: malicious, color: "#123456")
+    malicious_income = "@income"
     account = @family.accounts.first
 
-    account.entries.create!(
-      name: "Payee",
-      date: Date.current.beginning_of_month + 3.days,
-      amount: 42.00,
-      currency: "USD",
-      entryable: Transaction.new(category: category, kind: "standard")
-    )
+    # One expense and one income, so both sections of the export are covered.
+    { malicious => 42.00, malicious_income => -500.00 }.each do |name, amount|
+      account.entries.create!(
+        name: "Payee",
+        date: Date.current.beginning_of_month + 3.days,
+        amount: amount,
+        currency: "USD",
+        entryable: Transaction.new(category: @family.categories.create!(name: name, color: "#123456"), kind: "standard")
+      )
+    end
 
     get export_transactions_reports_path(
       format: :csv,
@@ -1050,8 +1053,10 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :ok
     rows = CSV.parse(@response.body)
-    assert rows.any? { |r| r.first == "'#{malicious}" }, "the category cell must be escaped"
-    assert_not rows.any? { |r| r.first == malicious }, "a raw formula must not lead a row"
+    [ malicious, malicious_income ].each do |name|
+      assert rows.any? { |r| r.first == "'#{name}" }, "the #{name} category cell must be escaped"
+      assert_not rows.any? { |r| r.first == name }, "a raw #{name} must not lead a row"
+    end
   end
 
   # The card was gated on `investment_accounts`, which is visible accounts
