@@ -81,6 +81,11 @@ tr:
           total_value: Toplam değer
           gains: Kazanç / ROI
         vs_available_history: mevcut geçmişe göre
+        net_contributions:
+          difference: Fark
+          incomplete: "Net katkılar eksik olabilir: bir para yatırma veya çekme işlemi değerlenemedi."
+          label: Net katkılar
+          legend: Grafik serileri
     period_picker:
       aria_label: 'Zaman aralığı: %{period}'
   ds:

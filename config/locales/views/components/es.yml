@@ -75,6 +75,11 @@ es:
           holdings: Posiciones
           total_value: Valor total
         vs_available_history: vs. historial disponible
+        net_contributions:
+          difference: Diferencia
+          incomplete: "Las aportaciones netas pueden estar incompletas: no se pudo valorar un depósito o una retirada."
+          label: Aportaciones netas
+          legend: Series del gráfico
       activity_date:
         balance_tooltip: El saldo al final del día, tras todas las transacciones y ajustes
         no_balance_data: No hay datos de saldo disponibles para esta fecha

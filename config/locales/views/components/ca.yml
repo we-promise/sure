@@ -82,6 +82,11 @@ ca:
           total_value: Valor total
           gains: Guanys / ROI
         vs_available_history: vs. historial disponible
+        net_contributions:
+          difference: Diferència
+          incomplete: "Les aportacions netes poden estar incompletes: no s'ha pogut valorar un dipòsit o una retirada."
+          label: Aportacions netes
+          legend: Sèries del gràfic
     period_picker:
       aria_label: 'Període: %{period}'
   ds:
