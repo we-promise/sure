@@ -1945,6 +1945,70 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "cash account transfers with a reference account are funds movements and other transfers stay standard" do
+    cash_account, cash_sure = create_linked_cash_account!
+    reference = { counterparty: "reference_account" }
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_own_in", eventType: "INCOMING_TRANSFER", title: "Account holder", detail: deposit_event[:detail].merge(reference)),
+      deposit_event.merge(id: "evt_own_bank", eventType: "BANK_TRANSACTION_INCOMING", title: "Account holder", detail: deposit_event[:detail].merge(reference)),
+      deposit_event.merge(id: "evt_salary", eventType: "BANK_TRANSACTION_INCOMING", title: "Employer"),
+      deposit_event.merge(id: "evt_own_out", eventType: "OUTGOING_TRANSFER", category: "POC_CREATED", title: "Account holder",
+        detail: deposit_event[:detail].merge(reference)),
+      deposit_event.merge(id: "evt_rent", eventType: "OUTGOING_TRANSFER", category: "POC_CREATED", title: "Landlord")
+    ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    kinds = cash_sure.entries.where(source: "trade_republic").to_h { |entry| [ entry.external_id.delete_prefix("trade_republic_event_"), entry.transaction.kind ] }
+    assert_equal({ "evt_own_in" => "funds_movement", "evt_own_bank" => "funds_movement", "evt_salary" => "standard",
+                   "evt_own_out" => "funds_movement", "evt_rent" => "standard" }, kinds)
+
+    own_in = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_own_in")
+    assert_equal BigDecimal("-500.00"), own_in.amount
+    assert_nil own_in.transaction.investment_activity_label
+    assert_nil own_in.transaction.category_id
+    assert_equal "reference_account", own_in.transaction.extra.dig("trade_republic", "provider_detail", "counterparty")
+    assert_equal BigDecimal("500.00"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_own_out").amount
+  end
+
+  test "a deposit imported before its counterparty was known becomes a funds movement, unless the user edited it" do
+    cash_account, cash_sure = create_linked_cash_account!
+    plain = deposit_event.merge(id: "evt_backfilled", eventType: "INCOMING_TRANSFER", title: "Account holder")
+    edited = plain.merge(id: "evt_edited")
+    cash_account.update!(raw_timeline_payload: [ plain, edited ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+    edited_entry = cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_edited")
+    edited_entry.update!(user_modified: true)
+
+    reference = { counterparty: "reference_account" }
+    cash_account.update!(raw_timeline_payload: [ plain, edited ].map { |event| event.merge(detail: event[:detail].merge(reference)) })
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal "funds_movement", cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_backfilled").transaction.kind
+    assert_equal "standard", edited_entry.reload.transaction.kind
+  end
+
+  test "a reference account deposit that earlier syncs stored as a funds movement keeps that kind" do
+    cash_account, cash_sure = create_linked_cash_account!
+    legacy = Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_legacy_own", amount: BigDecimal("-500.00"), currency: "EUR",
+      date: Date.parse("2026-08-01"), name: "Account holder", source: "trade_republic", kind: "funds_movement"
+    )
+    other = Account::ProviderImportAdapter.new(cash_sure).import_transaction(
+      external_id: "trade_republic_event_evt_legacy_other", amount: BigDecimal("-500.00"), currency: "EUR",
+      date: Date.parse("2026-08-01"), name: "Someone else", source: "trade_republic", kind: "funds_movement"
+    )
+
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_legacy_own", eventType: "INCOMING_TRANSFER", detail: deposit_event[:detail].merge(counterparty: "reference_account")),
+      deposit_event.merge(id: "evt_legacy_other", eventType: "INCOMING_TRANSFER")
+    ])
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    assert_equal "funds_movement", legacy.transaction.reload.kind
+    assert_equal "standard", other.transaction.reload.kind
+  end
+
   test "Google Pay inbound deposits import as standard deposits" do
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ {
