@@ -378,6 +378,47 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 1, holdings.find_by!(security: securities(:msft)).qty, "the holdings after it are still imported"
   end
 
+  test "a short priced above the long that leaves shares held values them at the long's price" do
+    @plaid_account.update!(raw_holdings_payload: { "holdings" => [
+      { "security_id" => "aapl_short", "quantity" => -5, "institution_price" => 200, "iso_currency_code" => "USD" },
+      { "security_id" => "aapl_long", "quantity" => 10, "institution_price" => 50, "iso_currency_code" => "USD" },
+      { "security_id" => "msft", "quantity" => 1, "institution_price" => 50, "iso_currency_code" => "USD" }
+    ] })
+    aapl = OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false)
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "aapl_long").returns(aapl)
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "aapl_short").returns(aapl)
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "msft")
+      .returns(OpenStruct.new(security: securities(:msft), cash_equivalent?: false, brokerage_cash?: false))
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    holdings = @plaid_account.current_account.holdings.where(date: Date.current)
+    aapl_row = holdings.find_by!(security: securities(:aapl))
+    assert_equal 5, aapl_row.qty
+    assert_equal 50, aapl_row.price
+    assert_equal 250, aapl_row.amount
+    assert_equal 1, holdings.find_by!(security: securities(:msft)).qty, "the holdings after it are still imported"
+  end
+
+  test "a net short is left out without stopping the rest of the snapshot" do
+    @plaid_account.update!(raw_holdings_payload: { "holdings" => [
+      { "security_id" => "aapl_long", "quantity" => 5, "institution_price" => 100, "iso_currency_code" => "USD" },
+      { "security_id" => "aapl_short", "quantity" => -10, "institution_price" => 100, "iso_currency_code" => "USD" },
+      { "security_id" => "msft", "quantity" => 1, "institution_price" => 50, "iso_currency_code" => "USD" }
+    ] })
+    aapl = OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false)
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "aapl_long").returns(aapl)
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "aapl_short").returns(aapl)
+    @security_resolver.stubs(:resolve).with(plaid_security_id: "msft")
+      .returns(OpenStruct.new(security: securities(:msft), cash_equivalent?: false, brokerage_cash?: false))
+
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    holdings = @plaid_account.current_account.holdings.where(date: Date.current)
+    assert_not holdings.exists?(security: securities(:aapl))
+    assert_equal 1, holdings.find_by!(security: securities(:msft)).qty, "the holdings after it are still imported"
+  end
+
   test "dates every holding by the sync date it is given" do
     @plaid_account.update!(raw_holdings_payload: { "holdings" => [
       { "security_id" => "aapl", "quantity" => 10, "institution_price" => 100, "iso_currency_code" => "USD" }

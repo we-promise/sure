@@ -9,14 +9,17 @@ class PlaidAccount::Investments::HoldingsProcessor
 
   def process
     positions.each_value do |position|
+      # A holding can't be negative. A net short only counts in Plaid's
+      # account total, as SnaptradeAccount::HoldingsProcessor treats one.
+      next if position[:quantity].negative?
+
       import_adapter.import_holding(
         security: position[:security],
         quantity: position[:quantity],
-        # Holdings that net to zero are a closed position: no value either.
-        amount: position[:quantity].zero? ? 0 : position[:amount],
+        amount: position_amount(position),
         currency: position[:currency],
         date: as_of,
-        price: position[:price],
+        price: position_price(position),
         account_provider_id: plaid_account.account_provider&.id,
         source: "plaid",
         delete_future_holdings: false  # Plaid doesn't allow holdings deletion
@@ -52,14 +55,35 @@ class PlaidAccount::Investments::HoldingsProcessor
         # Compute amount using BigDecimal arithmetic to avoid floating point drift
         amount_bd = quantity_bd * price_bd
 
-        if (position = positions[[ security.id, currency ]])
-          position[:quantity] += quantity_bd
-          position[:amount] += amount_bd
-          position[:price] = position[:amount] / position[:quantity] unless position[:quantity].zero?
-        else
-          positions[[ security.id, currency ]] = { security: security, currency: currency, quantity: quantity_bd, amount: amount_bd, price: price_bd }
-        end
+        position = positions[[ security.id, currency ]] ||=
+          { security: security, currency: currency, quantity: 0, price: price_bd, long_quantity: 0, long_amount: 0, long_lots: 0 }
+        position[:quantity] += quantity_bd
+        next unless quantity_bd.positive?
+
+        position[:price] = price_bd if position[:long_lots].zero?
+        position[:long_quantity] += quantity_bd
+        position[:long_amount] += amount_bd
+        position[:long_lots] += 1
       end
+    end
+
+    # One long holding keeps Plaid's exact price (with none, the first
+    # holding's price stands). Several are priced at their quantity-weighted
+    # average. A short holding's price is left out: netted against a long
+    # priced differently it would make the per-share price, and so the value,
+    # negative even when shares are still held.
+    def position_price(position)
+      return position[:price] if position[:long_lots] < 2
+
+      position[:long_amount] / position[:long_quantity]
+    end
+
+    # The net quantity at that price, so value and price always agree. With
+    # no short holding it is the exact sum of the long holdings' values.
+    def position_amount(position)
+      return position[:long_amount] if position[:quantity] == position[:long_quantity]
+
+      position[:quantity] * position_price(position)
     end
 
     def import_adapter
