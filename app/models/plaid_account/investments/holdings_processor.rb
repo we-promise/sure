@@ -14,7 +14,7 @@ class PlaidAccount::Investments::HoldingsProcessor
       # an earlier sync stored for this date, while the position was long, is
       # closed to zero so the snapshot no longer shows those shares.
       closed_short = position[:quantity].negative?
-      next if closed_short && !account.holdings.exists?(security: position[:security], date: as_of, currency: position[:currency])
+      next if closed_short && !stored_row?(position)
 
       import_adapter.import_holding(
         security: position[:security],
@@ -87,6 +87,16 @@ class PlaidAccount::Investments::HoldingsProcessor
       return position[:long_amount] if position[:quantity] == position[:long_quantity]
 
       position[:quantity] * position_price(position)
+    end
+
+    # Whether the adapter would update a row for this position on the sync
+    # date: one remapped from this security (matched by provider_security, as
+    # the adapter does first), or one on the security itself.
+    def stored_row?(position)
+      remapped = { provider_security: position[:security], date: as_of, currency: position[:currency] }
+      remapped[:account_provider_id] = plaid_account.account_provider.id if plaid_account.account_provider
+      account.holdings.exists?(remapped) ||
+        account.holdings.exists?(security: position[:security], date: as_of, currency: position[:currency])
     end
 
     def import_adapter

@@ -441,6 +441,29 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     assert_equal 0, holding.amount
   end
 
+  test "a position that turns net short the same day closes a long row the user remapped" do
+    @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl), cash_equivalent?: false, brokerage_cash?: false))
+    @plaid_account.update!(raw_holdings_payload: { "holdings" => [
+      { "security_id" => "aapl_long", "quantity" => 5, "institution_price" => 100, "iso_currency_code" => "USD" }
+    ] })
+    PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    row = @plaid_account.current_account.holdings.find_by!(security: securities(:aapl), date: Date.current)
+    row.remap_security!(securities(:msft))
+
+    @plaid_account.update!(raw_holdings_payload: { "holdings" => [
+      { "security_id" => "aapl_long", "quantity" => 5, "institution_price" => 100, "iso_currency_code" => "USD" },
+      { "security_id" => "aapl_short", "quantity" => -10, "institution_price" => 100, "iso_currency_code" => "USD" }
+    ] })
+    assert_no_difference "Holding.count" do
+      PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    end
+
+    row.reload
+    assert_equal securities(:msft), row.security
+    assert_equal 0, row.qty
+    assert_equal 0, row.amount
+  end
+
   test "dates every holding by the sync date it is given" do
     @plaid_account.update!(raw_holdings_payload: { "holdings" => [
       { "security_id" => "aapl", "quantity" => 10, "institution_price" => 100, "iso_currency_code" => "USD" }
