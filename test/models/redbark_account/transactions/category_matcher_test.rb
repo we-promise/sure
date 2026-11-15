@@ -14,6 +14,7 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
       "FOOD_AND_DRINK"   => "Food & Drink",
       "HOME_IMPROVEMENT" => "Home Improvement",
       "INCOME"           => "Income",
+      "LOAN_PAYMENTS"    => "Loan Payments",
       "MEDICAL"          => "Healthcare",
       "PERSONAL_CARE"    => "Personal Care",
       "SERVICES"         => "Services",
@@ -34,7 +35,7 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
   end
 
   test "leaves ambiguous or money-movement codes uncategorised" do
-    %w[LOAN_PAYMENTS MERCHANDISE RENT_AND_UTILITIES GOVERNMENT_AND_NON_PROFIT TRANSFER_IN TRANSFER_OUT].each do |code|
+    %w[MERCHANDISE RENT_AND_UTILITIES GOVERNMENT_AND_NON_PROFIT TRANSFER_IN TRANSFER_OUT].each do |code|
       assert_nil @matcher.match(code), "expected '#{code}' to have no confident match"
     end
   end
@@ -93,11 +94,14 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     assert_nil matcher.match("ENTERTAINMENT", 5411)
   end
 
-  # Redbark sends credit-card repayments as LOAN_PAYMENTS with no MCC. Those are money
-  # movement between the user's own accounts, so they must not be categorised as spending.
-  test "leaves credit-card repayments uncategorised" do
-    assert_nil @matcher.match("LOAN_PAYMENTS")
-    assert_nil @matcher.match("LOAN_PAYMENTS", nil)
+  # Redbark sends credit-card repayments as LOAN_PAYMENTS with no MCC, so this matcher
+  # cannot tell one from a mortgage or personal-loan repayment. It categorises both, and
+  # that is safe for the card case: when the card is linked, transfer detection classifies
+  # the payment as a cc_payment, which Transaction::BUDGET_EXCLUDED_KINDS keeps out of
+  # budget analytics regardless of the category sitting on it.
+  test "categorises loan and credit-card repayments" do
+    assert_equal "Loan Payments", @matcher.match("LOAN_PAYMENTS")&.name
+    assert_equal "Loan Payments", @matcher.match("LOAN_PAYMENTS", nil)&.name
   end
 
   test "refines a recognized category with a more specific MCC in the same domain" do

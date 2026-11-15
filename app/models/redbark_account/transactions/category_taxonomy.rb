@@ -22,17 +22,20 @@
 #
 # * TRANSFER_IN / TRANSFER_OUT -- money movement, not spending; Sure's transfer matcher
 #   pairs these up instead.
-# * LOAN_PAYMENTS -- confirmed against real Redbark data to cover credit-card repayments
-#   (sent with no MCC), which are money movement between the user's own accounts for the
-#   same reason TRANSFER_IN/OUT are. Categorising them as spending would double-count
-#   against the purchases already categorised on the card account. When both sides are
-#   linked, Sure's transfer matcher pairs them instead.
 # * MERCHANDISE -- too coarse to trust: it covers everything from groceries to electronics,
 #   and guessing "Shopping" for all of it would misclassify routine grocery runs.
 # * RENT_AND_UTILITIES -- Sure keeps "Mortgage / Rent" and "Utilities" as separate
 #   defaults; Redbark's single code can't be split between them with any confidence.
 # * GOVERNMENT_AND_NON_PROFIT -- lumps tax/government payments together with charitable
 #   donations, two categories with nothing in common.
+#
+# LOAN_PAYMENTS is mapped, deliberately, even though real Redbark data shows credit-card
+# repayments arriving under it with no MCC. The code cannot distinguish a card payoff from
+# a mortgage or personal-loan repayment, and the card case is already handled downstream:
+# when the card is linked, transfer detection classifies the payment as a cc_payment, and
+# Transaction::BUDGET_EXCLUDED_KINDS keeps those out of budget analytics whatever category
+# sits on them. Excluding the code would instead lose a useful category on every repayment
+# to a loan or card Sure does not hold.
 #
 # A wrong auto-category is worse than none: the import adapter applies matches via
 # enrich_attribute, so anything left unmapped simply stays uncategorised for the user's own
@@ -53,6 +56,7 @@ module RedbarkAccount::Transactions::CategoryTaxonomy
     "FOOD_AND_DRINK"   => { key: :food_and_drink,    aliases: [ "food and drink", "dining", "restaurants" ] },
     "HOME_IMPROVEMENT" => { key: :home_improvement,  aliases: [ "home improvement" ] },
     "INCOME"           => { key: :income,            aliases: [ "income" ] },
+    "LOAN_PAYMENTS"    => { key: :loan_payments,     aliases: [ "loan payments" ] },
     "MEDICAL"          => { key: :healthcare,        aliases: [ "healthcare", "health", "medical" ] },
     "PERSONAL_CARE"    => { key: :personal_care,     aliases: [ "personal care" ] },
     "SERVICES"         => { key: :services,          aliases: [ "services" ] },
