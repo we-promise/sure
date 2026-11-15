@@ -1,6 +1,8 @@
 require "test_helper"
 
 class BudgetCategoryTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   setup do
     @family = families(:dylan_family)
     @budget = budgets(:one)
@@ -139,6 +141,32 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     reserved = budget_categories.to_h { |bc| [ bc.category_id, bc.bills_reserved.amount ] }
     assert_equal 120, reserved[@subcategory_with_limit.id]
     assert_equal 0, reserved[@parent_category.id]
+  end
+
+  # Compared against actual_spending, which counts a parent's subcategories,
+  # so a parent's figure includes theirs too. Payments outside the budget
+  # period belong to another month.
+  test "bills_paid sums the period's bill payments, subcategories included" do
+    rent = create_bill(category: @parent_category, amount: 30, name: "Parent bill")
+    dinner_club = create_bill(category: @subcategory_with_limit, amount: 120, name: "Dinner club")
+    pay_bill(rent, date: @budget.start_date)
+    pay_bill(rent, date: @budget.start_date - 1.month)
+    pay_bill(dinner_club, date: @budget.start_date + 1)
+
+    assert_equal 150, @parent_budget_category.bills_paid
+    assert_equal 120, @subcategory_with_limit_bc.bills_paid
+    assert_equal 0, @subcategory_inheriting_bc.bills_paid
+  end
+
+  test "bills_paid loads the budget's payments once for all its categories" do
+    pay_bill(create_bill(category: @subcategory_with_limit, amount: 120), date: @budget.start_date)
+
+    first, *rest = Budget.find(@budget.id).budget_categories.to_a
+    first.bills_paid
+
+    assert_queries_count(0) do
+      rest.each(&:bills_paid)
+    end
   end
 
   test "subcategory with zero budget inherits from parent" do

@@ -6,6 +6,10 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
 
   THRESHOLD_PP = 5
   HIGH_PRIORITY_PP = 10
+  # A month that spent more than twice what it earned is, almost always, one
+  # whose pay landed in the month next to it. A swing measured from such a
+  # rate says when the money arrived, not how the family saved.
+  MIN_COMPARABLE_RATE = -100
 
   def generate
     last_month = Period.last_month_for(family)
@@ -15,6 +19,7 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
     current_rate = savings_rate(last_month)
     previous_rate = savings_rate(prior_month)
     return [] unless current_rate && previous_rate
+    return [] if [ current_rate, previous_rate ].min < MIN_COMPARABLE_RATE
 
     delta = current_rate - previous_rate
     return [] if delta.abs < THRESHOLD_PP

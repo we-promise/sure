@@ -44,6 +44,26 @@ class IncomeStatement
     @expense_totals_by_period[key] = build_period_total(classification: "expense", period: period)
   end
 
+  # The part of expense_totals that paid the family's bills: the same
+  # filters, currency conversion and roll-up into parent categories, so the
+  # two subtract cleanly. A payment counts once at its entry's amount, however
+  # many occurrences it settles.
+  def bill_expense_totals(period: Period.current_month)
+    key = period_cache_key(period)
+    @bill_expense_totals_by_period ||= {}
+    return @bill_expense_totals_by_period[key] if @bill_expense_totals_by_period.key?(key)
+
+    paying_bills = Entry.where(entryable_type: "Transaction")
+                        .where(id: RecurringAllocation.to_family_bills(family).select(:entry_id))
+                        .select(:entryable_id)
+    rows = totals_query(
+      transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled)
+                                .in_period(period).where(id: paying_bills),
+      date_range: period.date_range
+    )
+    @bill_expense_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
+  end
+
   def income_totals(period: Period.current_month)
     key = period_cache_key(period)
     @income_totals_by_period ||= {}
@@ -208,9 +228,9 @@ class IncomeStatement
       [ period.start_date, period.end_date ]
     end
 
-    def build_period_total(classification:, period:)
+    def build_period_total(classification:, period:, rows: totals_for_period(period))
       # Exclude pending transactions from budget calculations
-      totals = totals_for_period(period).select { |t| t.classification == classification }
+      totals = rows.select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized

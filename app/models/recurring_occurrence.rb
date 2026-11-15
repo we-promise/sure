@@ -34,6 +34,25 @@ class RecurringOccurrence < ApplicationRecord
   scope :closed, -> { where.not(status: :scheduled) }
   scope :due_between, ->(from, to) { where(due_on: from..to) }
 
+  # The family's open bill occurrences due within `dates`, with their confirmed
+  # allocation sums loaded in one grouped query so remaining_amount on each
+  # row issues none.
+  def self.open_bills_due(family_id, dates)
+    occurrences = open_status
+                    .joins(:recurring_transaction)
+                    .merge(RecurringTransaction.bills)
+                    .where(recurring_transactions: { family_id: family_id })
+                    .where(due_on: dates)
+                    .includes(:recurring_transaction)
+                    .to_a
+
+    sums = RecurringAllocation.confirmed
+                              .where(recurring_occurrence_id: occurrences.map(&:id))
+                              .group(:recurring_occurrence_id)
+                              .sum(:allocated_amount)
+    occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+  end
+
   # The amount this occurrence expects, resolving NULL through the series'
   # amount strategy, which is what lets a price edit update every open
   # occurrence with no sweep. `series_amount` overrides what the series says it

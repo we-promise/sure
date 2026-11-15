@@ -422,31 +422,21 @@ class Budget < ApplicationRecord
     [ expense - refund, 0 ].max
   end
 
+  # The part of budget_category_actual_spending that paid bills. Gross of
+  # refunds, which actual spending nets: a refund lowers the spending outside
+  # bills, which errs towards fewer warnings.
+  def budget_category_bills_paid(budget_category)
+    @bill_expense_totals_by_category ||= income_statement.bill_expense_totals(period: period)
+                                                         .category_totals.index_by { |ct| ct.category.id }
+    @bill_expense_totals_by_category[budget_category.category_id]&.total || 0
+  end
+
   # Open bill occurrences due in this period, by category id, loaded once so
   # each BudgetCategory#bills_reserved reads its slice instead of querying.
   def open_bill_occurrences_by_category_id
-    @open_bill_occurrences_by_category_id ||= begin
-      occurrences = RecurringOccurrence
-                      .open_status
-                      .joins(:recurring_transaction)
-                      .where(recurring_transactions: {
-                               family_id: family_id,
-                               status: :active,
-                               destination_account_id: nil
-                             })
-                      .where("recurring_transactions.amount > 0")
-                      .where(due_on: start_date..end_date)
-                      .includes(:recurring_transaction)
-                      .to_a
-
-      sums = RecurringAllocation.confirmed
-                                .where(recurring_occurrence_id: occurrences.map(&:id))
-                                .group(:recurring_occurrence_id)
-                                .sum(:allocated_amount)
-      occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
-
-      occurrences.group_by { |occurrence| occurrence.recurring_transaction.category_id }
-    end
+    @open_bill_occurrences_by_category_id ||= RecurringOccurrence
+      .open_bills_due(family_id, start_date..end_date)
+      .group_by { |occurrence| occurrence.recurring_transaction.category_id }
   end
 
   def category_median_monthly_expense(category)

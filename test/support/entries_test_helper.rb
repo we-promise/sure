@@ -108,4 +108,36 @@ module EntriesTestHelper
 
     transfer
   end
+
+  # A manual bill in `category` with no occurrences: creating a series
+  # generates its own, which tests clear so they assert against exactly the
+  # ones they add with pay_bill and expect_bill.
+  def create_bill(category:, amount:, name: "Bill", day: 1, account: accounts(:depository))
+    bill = category.family.recurring_transactions.create!(
+      name: name, account: account, amount: amount, currency: "USD", bill_type: "bill",
+      category_id: category.id, expected_day_of_month: day, anchor_date: Date.current,
+      last_occurrence_date: Date.current, next_expected_date: Date.current,
+      status: "active", manual: true
+    )
+    bill.recurring_occurrences.destroy_all
+    bill
+  end
+
+  # The entry that pays `bill` on `date`, and the paid occurrence it settles.
+  def pay_bill(bill, date:, amount: bill.amount)
+    entry = create_transaction(category: bill.category, account: bill.account, amount: amount, date: date, name: "#{bill.name} #{date}")
+    occurrence = bill.recurring_occurrences.create!(
+      family: bill.family, original_due_on: date, due_on: date, currency: bill.currency,
+      expected_amount: amount, status: "paid", closed_at: Time.current, closed_source: "auto"
+    )
+    occurrence.allocations.create!(entry: entry, allocated_amount: amount, currency: bill.currency, source: "auto_matched")
+    entry
+  end
+
+  # An occurrence of `bill` still waiting to be paid.
+  def expect_bill(bill, due_on:, amount: bill.amount)
+    bill.recurring_occurrences.create!(
+      family: bill.family, original_due_on: due_on, due_on: due_on, currency: bill.currency, expected_amount: amount
+    )
+  end
 end

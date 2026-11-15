@@ -52,6 +52,15 @@ class Insight::Generator
       @balance_sheet ||= BalanceSheet.new(family)
     end
 
+    def current_budget
+      return @current_budget if defined?(@current_budget)
+
+      @current_budget = family.budgets
+        .includes(budget_categories: :category)
+        .where("start_date <= ? AND end_date >= ?", Date.current, Date.current)
+        .first
+    end
+
     def build_insight(insight_type:, priority:, title:, template_key:, facts:, dedup_key:, metadata:, period: nil)
       GeneratedInsight.new(
         insight_type: insight_type,

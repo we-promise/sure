@@ -1143,6 +1143,50 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 1, totals_query_calls
   end
 
+  test "bill_expense_totals counts only the spending that paid bills, rolled into parents" do
+    pay_bill(groceries_bill, date: Date.current)
+
+    totals = bill_totals
+
+    assert_equal 50, totals[@groceries_category.id]
+    assert_equal 50, totals[@food_category.id]
+    assert_equal 900 + 50, IncomeStatement.new(@family).expense_totals(period: Period.current_month)
+                                                       .category_totals.find { |ct| ct.category == @food_category }.total
+  end
+
+  test "bill_expense_totals counts a payment once however many occurrences it settles" do
+    bill = groceries_bill
+    entry = pay_bill(bill, date: Date.current)
+    expect_bill(bill, due_on: Date.current + 1.day, amount: 10).allocations.create!(
+      entry: entry, allocated_amount: 10, currency: "USD", source: "auto_matched"
+    )
+
+    assert_equal 50, bill_totals[@food_category.id]
+  end
+
+  # The Allocator lets an entry be matched again once its bill was deleted or
+  # dismissed; the tombstone must not count it a second time, or at all.
+  test "bill_expense_totals ignores payments of ended bills" do
+    bill = groceries_bill
+    pay_bill(bill, date: Date.current)
+    bill.update_columns(status: "ended")
+
+    assert_equal 0, bill_totals[@food_category.id]
+  end
+
+  # Mid-month, so the future-dated payment still falls inside the period.
+  test "bill_expense_totals leaves out what expense_totals leaves out" do
+    travel_to Date.current.beginning_of_month + 14.days do
+      pay_bill(groceries_bill, date: Date.current).update!(excluded: true)
+      pay_bill(create_bill(category: @groceries_category, amount: 60, name: "Future", account: @checking_account), date: Date.current + 1.day)
+      hidden = @family.accounts.create!(name: "Hidden", currency: @family.currency, balance: 0,
+                                        accountable: Depository.new, exclude_from_reports: true)
+      pay_bill(create_bill(category: @groceries_category, amount: 70, name: "Hidden", account: hidden), date: Date.current)
+
+      assert_equal 0, bill_totals[@food_category.id]
+    end
+  end
+
   private
     # Adds a 250 grocery expense whose pending flag is +flag+ and asserts every
     # figure is the one without it: totals (Transaction.excluding_pending), the
@@ -1161,5 +1205,14 @@ class IncomeStatementTest < ActiveSupport::TestCase
       assert_equal 900.0, income_statement.median_expense(interval: "month")
       assert_equal 900.0, income_statement.avg_expense(interval: "month")
       assert_equal 900.0, income_statement.median_expense(interval: "month", category: @groceries_category)
+    end
+
+    def groceries_bill
+      create_bill(category: @groceries_category, amount: 50, name: "Veg box", account: @checking_account)
+    end
+
+    def bill_totals
+      IncomeStatement.new(@family).bill_expense_totals(period: Period.current_month)
+                     .category_totals.to_h { |ct| [ ct.category.id, ct.total ] }
     end
 end
