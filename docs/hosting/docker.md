@@ -586,7 +586,16 @@ Each backup is a folder under `backups/<version>/<date>-<manual|scheduled>/` wit
 | `restore.sh` | Restores the backup into a new folder (see below) |
 | `SHA256SUMS` | Checksums, verified before every restore |
 
-`db.dump` is written with the PostgreSQL tools in the Sure image (version 17), which older tools can't read. Restore it with `sure-backup` (`restore`, `recover` or `restore.sh`), not with `pg_restore` from the `db` container.
+`db.dump` is written with the PostgreSQL tools in the Sure image (version 18), which older tools can't read. Restore it with `sure-backup` (`restore`, `recover` or `restore.sh`), not with `pg_restore` from the `db` container.
+
+Backups carry across PostgreSQL versions:
+
+| Backup taken on | Restores into |
+|---|---|
+| PostgreSQL 16 (any Sure version) | PostgreSQL 16 and 18 |
+| PostgreSQL 18 | PostgreSQL 18. Into 16 it usually works, but PostgreSQL does not guarantee moving data to an older version |
+
+A restore loads into a scratch database first and replaces the live one only when the load succeeds, so a failed restore leaves your database as it was.
 
 Uploaded files are backed up from the `app-storage` volume. If you store them in S3, Cloudflare R2, Google Cloud Storage or another bucket (`ACTIVE_STORAGE_SERVICE`), they are not in the backup; use your provider's versioning or replication for those.
 
@@ -678,6 +687,76 @@ Sure v0.7.5 shipped a `backup` service that ran `bin/db-backup.sh` and uploaded 
 Off-site backups now go to `<BACKUP_DESTINATION>/<INSTANCE_ID>/<version>/<date>-<trigger>/` and include `.env`, so use an encrypted remote. Earlier `backup_*.sql.gz` files are left in place and are no longer pruned; delete them once you no longer need them. To restore one of them, stop `web` and `worker` and load it with `gunzip -c backup_<timestamp>.sql.gz | docker compose exec -T db psql -U <POSTGRES_USER> -d <POSTGRES_DB>` into an empty database.
 
 If you download the new `bin/db-backup.sh` without updating the compose file, the backup service stops with an error that points here.
+
+## PostgreSQL major version upgrades
+
+`compose.example.yml` runs PostgreSQL 18. Earlier versions of it ran PostgreSQL 16, and PostgreSQL 18 cannot read a PostgreSQL 16 data directory. Nothing changes for you until you change the `db` service in your own `compose.yml`:
+
+- **Keep running PostgreSQL 16:** leave your `db` service as it is. Updating Sure (`docker compose pull`) does not touch it, and backups keep working: the Sure image's PostgreSQL tools back up and restore older servers too.
+- **Move to PostgreSQL 18:** change the `db` service as below, then run the upgrade command.
+
+Two lines of the `db` service change, and the `db-version-check` service is new. Copy all of it from the current [`compose.example.yml`](https://github.com/we-promise/sure/blob/main/compose.example.yml), or re-download the file:
+
+```yaml
+  db:
+    image: postgres:18                          # was postgres:16
+    volumes:
+      - postgres-data:/var/lib/postgresql       # was /var/lib/postgresql/data
+```
+
+If you start Sure at this point, `db-version-check` stops it with a message rather than letting PostgreSQL 18 start on (or beside) the old data. Your data is untouched. Run the upgrade from the folder with your `compose.yml`:
+
+```bash
+curl --fail --location --silent --show-error --output sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
+sh sure-backup upgrade-postgres
+```
+
+It asks you to confirm that this PostgreSQL server is used only for Sure, then:
+
+1. stops Sure and takes a full backup (kept under `backups/`, marked `pre-upgrade`, never pruned); if the backup fails, it stops and nothing is changed;
+2. sets the PostgreSQL 16 data aside inside the same volume, in a `pg16-old` folder; nothing is deleted;
+3. starts PostgreSQL 18, restores the backup into it and starts Sure.
+
+Only Sure's database is carried over. If the server holds other databases, the command refuses and changes nothing; move those yourself (for example with `pg_dumpall` while still on the old version) or give Sure its own database server. `--yes` skips the confirmation for scripts, and `--old-image` names the image that ran the old version if it can't be worked out (it handles `postgres` and `pgvector/pgvector` images).
+
+It needs a Sure version whose image ships the PostgreSQL 18 tools. If yours is older, the command says so; set `SURE_IMAGE_TAG` to a newer release first.
+
+Once you are happy with the result, free the space:
+
+```bash
+docker run --rm -v <volume>:/v alpine rm -rf /v/pg16-old   # the command prints the volume name; or see: docker volume ls
+```
+
+### Going back to PostgreSQL 16
+
+While `pg16-old` is still there, you can put the old database back. Anything written since the upgrade is not in it; for that, restore a backup afterwards (see the table under [What a backup contains](#what-a-backup-contains)).
+
+```bash
+docker compose stop
+docker run --rm -v <volume>:/v alpine sh -c 'rm -rf /v/18 && mv /v/pg16-old/* /v/pg16-old/.[!.]* /v/ 2>/dev/null; rmdir /v/pg16-old'
+# In compose.yml set the db image back to postgres:16 AND the mount back to /var/lib/postgresql/data
+docker compose up -d
+```
+
+> [!WARNING]
+> Change the image and the mount together. PostgreSQL 16 with the new mount, or PostgreSQL 18 with the old one, finds no database where it looks and starts an empty one.
+
+### Upgrading by hand
+
+`upgrade-postgres` is a backup and restore. To do the same by hand, or to carry other databases and roles as well, dump everything while still on the old image and mount, switch the `db` service, start with a fresh volume and load the dump:
+
+```bash
+docker compose exec db pg_dumpall -U <POSTGRES_USER> > all-databases.sql   # still on PostgreSQL 16
+docker compose down
+# Change the db image and mount in compose.yml, and move the old data aside as upgrade-postgres does, or use a new volume.
+docker compose up -d db
+docker compose exec -T db psql -U <POSTGRES_USER> -d postgres < all-databases.sql
+docker compose up -d
+```
+
+The restore reports that your role and database already exist; that is expected. Keep the old volume until you have checked the result.
+
+The Helm chart is not affected: there the PostgreSQL version comes from the CloudNativePG operator.
 
 ## Encrypting sensitive data
 
@@ -823,54 +902,6 @@ docker volume rm sure_postgres-data # this is the name of the volume the DB is m
 docker compose up
 docker compose exec db psql -U sure_user -d sure_development -c "SELECT 1;" # This will verify that the issue is fixed
 ```
-
-### PostgreSQL major version mismatch (`db-version-check`)
-
-The compose files run a one-shot `db-version-check` service before Postgres starts. If your `postgres-data` volume was created by a different PostgreSQL major version than the pinned image (for example, a PostgreSQL 16 volume under the PostgreSQL 18 image), startup stops with an actionable error instead of crash-looping.
-
-Note that PostgreSQL 18's official image changed the on-disk layout: the volume now mounts at `/var/lib/postgresql` and the cluster lives in a versioned subdirectory (`18/docker`). A pre-18 volume still holds its cluster at `data/` inside that volume. Either way, your existing data is NOT gone - pick one of the migration paths below.
-
-#### Option A: dump and restore (simplest, works between any versions)
-
-Run the dump **before** switching to the new image, while the old PostgreSQL is still running:
-
-```bash
-# Still on the OLD image (e.g. Postgres 16):
-docker compose exec db pg_dumpall -U sure_user -f /tmp/sure-backup.sql
-docker compose cp db:/tmp/sure-backup.sql ./sure-backup.sql
-
-docker compose down
-docker volume rm sure_postgres-data # destroys the old cluster - the dump is now your only copy
-
-# Switch the db image to the new major version (compose.yml), then:
-docker compose up -d db
-docker compose cp ./sure-backup.sql db:/tmp/sure-backup.sql
-docker compose exec db psql -U sure_user -d postgres -f /tmp/sure-backup.sql # -d postgres: restore through the always-present maintenance DB
-docker compose up
-```
-
-#### Option B: `pg_upgrade` (fast, in-place)
-
-Because both the old and new clusters can live side by side in the same volume, an in-place upgrade is possible with a dual-version helper image such as [`tianon/postgres-upgrade`](https://github.com/tianon/docker-postgres-upgrade). The helper expects the layout `<major>/docker` under `/var/lib/postgresql`, so the legacy cluster first moves from `data/` to `16/docker`:
-
-```bash
-docker compose down
-
-# Move the legacy cluster into the layout the helper expects:
-docker run --rm -v sure_postgres-data:/var/lib/postgresql alpine:3.23 \
-  sh -c 'mkdir -p /var/lib/postgresql/16 && mv /var/lib/postgresql/data /var/lib/postgresql/16/docker'
-
-# Run the in-place upgrade (16 -> 18), hard-linking files:
-docker run --rm -v sure_postgres-data:/var/lib/postgresql tianon/postgres-upgrade:16-to-18 --link
-
-docker compose up
-```
-
-As with any major-version upgrade, take a `pg_dumpall` backup (Option A, first two commands) before running it.
-
-#### Starting over instead
-
-If you do not need the existing data, the error message spells it out: `docker compose down`, `docker volume rm sure_postgres-data`, `docker compose up`.
 
 ### Slow `.csv` import (processing rows taking longer than expected)
 
