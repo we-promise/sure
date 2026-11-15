@@ -88,9 +88,12 @@ class Assistant::Function::GetHoldings < Assistant::Function
 
     # A provider snapshot can be in another currency than the account, and the
     # family's accounts can differ too, so amounts are converted to the family
-    # currency before they are ordered and totaled. A currency with no rate
-    # counts as 0, as in InvestmentStatement, rather than 1:1.
-    rates = ExchangeRate.rates_for(holdings.map(&:currency), to: family.currency)
+    # currency before they are ordered and totaled. They convert at today's
+    # rate, as InvestmentStatement and the balance sheet do for family totals,
+    # even when a provider snapshot is dated earlier. (Account#current_holdings_total
+    # uses each holding's own date, but converts into the account currency for
+    # the weights.) A currency with no rate counts as 0 rather than 1:1.
+    rates = ExchangeRate.rates_for(holdings.map(&:currency), to: family.currency, date: Date.current)
     family_amounts = holdings.index_with { |holding| holding.amount * (rates[holding.currency] || 0) }
 
     ordered_holdings = holdings.sort_by { |holding| [ -family_amounts[holding], holding.id ] }
