@@ -614,13 +614,16 @@ class BillsController < ApplicationController
     end
 
     def preload_allocation_sums(occurrences)
-      sums = RecurringAllocation.confirmed
-                                .where(recurring_occurrence_id: occurrences.map(&:id))
-                                .group(:recurring_occurrence_id)
-                                .sum(:allocated_amount)
+      ids = occurrences.map(&:id)
+      confirmed = RecurringAllocation.confirmed.where(recurring_occurrence_id: ids)
+      sums = confirmed.group(:recurring_occurrence_id).sum(:allocated_amount)
+      matched = confirmed.where.not(entry_id: nil).distinct.pluck(:recurring_occurrence_id).to_set
+      latest = confirmed.group(:recurring_occurrence_id).maximum(:paid_on)
 
       occurrences.each do |occurrence|
         occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+        occurrence.cached_matched_entry = matched.include?(occurrence.id)
+        occurrence.cached_received_on = latest[occurrence.id]
       end
     end
 
