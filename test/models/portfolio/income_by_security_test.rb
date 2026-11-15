@@ -77,6 +77,23 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_equal BigDecimal(0), by_security.unattributed
   end
 
+  # The uuid type reads a hyphen-less spelling as the same id, so the lookup
+  # finds the security under its canonical spelling. The amounts have to be
+  # keyed the same way, or the row raised KeyError, and beside a canonical
+  # spelling the compact one fell into the remainder.
+  test "a hyphen-less id is the same security" do
+    income_trade account: @account, date: @mar, amount: 30, security: @aapl
+    income_transaction account: @account, date: @mar + 1, amount: 5, extra: { "security_id" => @aapl.id.delete("-") }
+    lay_flat_balances cash_by_date: { @mar => 30, @mar + 1 => 5 }
+
+    by_security = income_by_security
+
+    assert_equal [ @aapl ], by_security.rows.map(&:security)
+    assert_equal BigDecimal(35), by_security.amount_for(@aapl.id)
+    assert_equal BigDecimal(35), by_security.amount_for(@aapl.id.delete("-"))
+    assert_equal BigDecimal(0), by_security.unattributed
+  end
+
   # A provider can record an id this install has no Security for. It cannot be
   # named, so it is unattributed -- not a row with a missing security.
   test "an id that matches no security is unattributed" do

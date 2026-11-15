@@ -19,9 +19,21 @@ class Portfolio::IncomeBySecurity
   attr_reader :amounts, :total
 
   # `amounts` is { "security-uuid" => BigDecimal }; `total` the period's income.
+  #
+  # Keyed by the id as Security's uuid type casts it, the spelling the row
+  # lookup reads back: a hyphen-less or braced id is the same security, and two
+  # spellings of one id are summed. An id that is not a uuid has no key; its
+  # amount stays in #unattributed through `total`.
   def initialize(amounts:, total:)
-    @amounts = (amounts || {}).transform_keys(&:to_s)
+    @amounts = (amounts || {}).each_with_object({}) do |(id, amount), keyed|
+      key = self.class.canonical_id(id)
+      keyed[key] = keyed.fetch(key, BigDecimal(0)) + amount if key
+    end
     @total = total
+  end
+
+  def self.canonical_id(id)
+    Security.type_for_attribute(:id).cast(id.to_s)
   end
 
   # One row per security this install knows, largest first and then by ticker
@@ -38,7 +50,7 @@ class Portfolio::IncomeBySecurity
   # read by its id: its to_s is not the id, and the key would match nothing.
   def amount_for(security_or_id)
     id = security_or_id.respond_to?(:id) ? security_or_id.id : security_or_id
-    amounts.fetch(id.to_s, BigDecimal(0))
+    amounts.fetch(self.class.canonical_id(id), BigDecimal(0))
   end
 
   def attributed
@@ -59,7 +71,6 @@ class Portfolio::IncomeBySecurity
     def securities
       return [] if amounts.empty?
 
-      # Ids that are not UUIDs are dropped by the cast and simply find nothing.
       # Not scoped to a family because securities are global; the ids come
       # from this family's own entries. A per-family securities table would
       # need a scope here.
