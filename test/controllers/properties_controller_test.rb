@@ -349,6 +349,12 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
     assert_select "input[name='account[balance]'][value='260000.00']"
 
+    patch update_balances_property_path(account),
+          params: { account: { balance: 270_000, currency: "EUR", purchase_date: false } }.to_json,
+          headers: { "CONTENT_TYPE" => "application/json" }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='270000.00']"
+
     assert_not account.reload.has_opening_anchor?
   end
 

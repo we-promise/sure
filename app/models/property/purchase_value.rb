@@ -5,7 +5,8 @@
 class Property::PurchaseValue
   attr_reader :account, :submitted_date
 
-  # +date+ is the submitted purchase date; blank means the default.
+  # +date+ is the submitted purchase date; nil or a blank string means the
+  # default.
   def initialize(account, date: nil)
     @account = account
     @submitted_date = date
@@ -15,8 +16,10 @@ class Property::PurchaseValue
   # can send a number or a boolean, and the parser rejects a string over 128
   # characters with a plain ArgumentError; both count as unparseable.
   def date
-    return default_date if @submitted_date.blank?
+    return default_date if @submitted_date.nil?
+    # Checked before blank?, which counts false, [] and {} as blank too.
     raise Date::Error, "invalid date" unless @submitted_date.is_a?(String)
+    return default_date if @submitted_date.blank?
 
     begin
       @submitted_date.to_date

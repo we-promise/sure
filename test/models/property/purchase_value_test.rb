@@ -33,8 +33,14 @@ class Property::PurchaseValueTest < ActiveSupport::TestCase
   test "rejects a submitted date that is not a string the parser accepts" do
     # A JSON body can send a number or a boolean, and the date parser rejects
     # strings over 128 characters with a plain ArgumentError.
-    [ 20200301, 1.5, true, "2020-03-01#{" " * 119}" ].each do |submitted|
+    [ 20200301, 1.5, true, false, [], {}, "2020-03-01#{" " * 119}" ].each do |submitted|
       assert_not Property::PurchaseValue.new(@account, date: submitted).valid_date?, submitted.inspect
+    end
+  end
+
+  test "nil or a blank string uses the default date" do
+    [ nil, "", "  " ].each do |submitted|
+      assert_equal Date.current, Property::PurchaseValue.new(@account, date: submitted).date, submitted.inspect
     end
   end
 
