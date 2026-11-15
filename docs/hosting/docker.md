@@ -106,8 +106,8 @@ origin is listed.
 | Variable | Purpose |
 |---|---|
 | `ALLOWED_ORIGINS` | Comma-separated list of browser origins allowed to call the app cross-origin, including the scheme, for example `https://app.example.com,https://staging.example.com`. Without it the app answers cross-origin requests the way any site does by default: it does not. Native mobile clients are unaffected, since they send no `Origin` header. |
-| `APP_DOMAIN` | The single host your instance is served on. Used as the fallback for `ALLOWED_ORIGINS`, and as part of the `Host` allow-list below. |
-| `ALLOWED_HOSTS` | Comma-separated extra hostnames the app answers to. Unioned with `APP_DOMAIN`. One host per entry: a leading dot is refused rather than read as a wildcard, and IPv6 goes in brackets, `[::1]`. |
+| `APP_DOMAIN` | The single host your instance is served on. Used as the fallback for `ALLOWED_ORIGINS`, and added to the `Host` allow-list once `ALLOWED_HOSTS` is set. On its own it does not turn the `Host` check on. |
+| `ALLOWED_HOSTS` | Comma-separated hostnames the app answers to. Setting it turns the `Host` check on, with `APP_DOMAIN` added to the list. One host per entry: a leading dot is refused rather than read as a wildcard, and IPv6 goes in brackets, `[::1]`. |
 
 Prefer `ALLOWED_ORIGINS` when a reverse proxy terminates TLS for you. The
 `APP_DOMAIN` fallback has to guess the scheme from `RAILS_FORCE_SSL` and
@@ -115,17 +115,17 @@ Prefer `ALLOWED_ORIGINS` when a reverse proxy terminates TLS for you. The
 a Cloudflare Tunnel, it builds an `http://` origin while the browser sends
 `https://` and the request is refused.
 
-Setting `APP_DOMAIN` or `ALLOWED_HOSTS` turns on DNS-rebinding protection: any
-request whose `Host` header is not on the list is refused with a 403. If you set
-`APP_DOMAIN` for outgoing mail but also reach the app over a LAN address, a
-Tailscale name or `localhost`, add those to `ALLOWED_HOSTS` or they will stop
-working. The `/up` health endpoint is always exempt, so container probes keep
-passing. With `compose.example.ai.yml`, Pipelock forwards MCP requests to the
-app with the `Host` header `web:3000`, so add `web` to `ALLOWED_HOSTS` or every
-MCP call through it is refused.
+Setting `ALLOWED_HOSTS` turns on DNS-rebinding protection: any request whose
+`Host` header is neither in `ALLOWED_HOSTS` nor `APP_DOMAIN` is refused with a
+403. List every name you reach the app by, such as a LAN address, a Tailscale
+name or `localhost`, or those requests stop working. The `/up` health endpoint
+is always exempt, so container probes keep passing. With
+`compose.example.ai.yml`, Pipelock forwards MCP requests to the app with the
+`Host` header `web:3000`, so add `web` to `ALLOWED_HOSTS` or every MCP call
+through it is refused.
 
-With neither set, the app answers to any `Host` and logs a `[SECURITY]` warning
-at boot.
+Without `ALLOWED_HOSTS`, the app answers to any `Host`, whether or not
+`APP_DOMAIN` is set, and logs a `[SECURITY]` warning at boot.
 
 Like the SMTP settings below, these reach the app only when `compose.yml` lists
 them in the `x-rails-env` anchor, for example `ALLOWED_HOSTS: ${ALLOWED_HOSTS}`.
@@ -172,7 +172,7 @@ Invitations are never emailed on a self-hosted instance, even with SMTP set up. 
 | `SMTP_TLS_SKIP_VERIFY` | `true` turns off verification of the SMTP server's certificate. | Off (the certificate is verified) |
 | `SSL_CA_FILE` | Path inside the container to a CA certificate (PEM) for verifying a server with a self-signed or internal certificate. The file must be mounted into the containers; see **Using a custom CA certificate** below. | None |
 | `EMAIL_SENDER` | Address that emails are sent from, for example `sure@example.com`. | `sender@sure.local` |
-| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. Setting it also turns on the `Host` check described in [Restricting who can reach your instance](#restricting-who-can-reach-your-instance). | None |
+| `APP_DOMAIN` | Host name your instance is reached at, for example `sure.example.com`. Used to build links in emails. It does not restrict which `Host` the app answers to unless `ALLOWED_HOSTS` is also set; see [Restricting who can reach your instance](#restricting-who-can-reach-your-instance). | None |
 
 A few things to watch:
 

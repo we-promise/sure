@@ -101,14 +101,14 @@ Rails.application.configure do
   # Do not dump schema after migrations.
   config.active_record.dump_schema_after_migration = false
 
-  # DNS rebinding protection. Set APP_DOMAIN or ALLOWED_HOSTS to turn it on;
-  # AllowedHosts unions the two. Left unset the app answers to any Host, which
-  # is how it behaved before, so an upgrade cannot lock an operator out of an
-  # instance they reach by LAN address or Tailscale name.
+  # DNS rebinding protection. Set ALLOWED_HOSTS to turn it on; APP_DOMAIN then
+  # joins the list. APP_DOMAIN alone does not turn it on, since operators set it
+  # for mail. Left off, the app answers to any Host, which is how it behaved
+  # before, so an upgrade cannot lock an operator out of an instance they reach
+  # by LAN address, Tailscale name, tunnel or Pipelock.
   #
-  # Turning it on returns 403 for any Host outside the list, so an operator who
-  # sets APP_DOMAIN for mail and reaches the app another way needs that address
-  # in ALLOWED_HOSTS too.
+  # Turned on, any Host outside the list gets a 403, so every name the app is
+  # reached by belongs in ALLOWED_HOSTS.
   # Required explicitly: this file is evaluated while the environment is being
   # configured, before the autoloader is set up, so a bare constant reference
   # here raises NameError and the app never boots.
@@ -129,7 +129,7 @@ Rails.application.configure do
     # Deferred: this block runs while the environment is still being configured
     # and Rails.logger is not final yet, so a warning emitted here goes nowhere.
     config.after_initialize do
-      Rails.logger.warn("[SECURITY] Neither APP_DOMAIN nor ALLOWED_HOSTS is set, so DNS rebinding protection is off")
+      Rails.logger.warn("[SECURITY] ALLOWED_HOSTS lists no usable host, so DNS rebinding protection is off")
     end
   end
 

@@ -3,13 +3,14 @@
 # The Host header values this instance answers to, for Rails' DNS-rebinding
 # protection.
 #
-# APP_DOMAIN and ALLOWED_HOSTS are unioned rather than ordered by precedence.
-# APP_DOMAIN is already set by many operators for outgoing mail, and those same
-# instances are often reached over a LAN address, a Tailscale name or localhost,
-# none of which match it. Letting APP_DOMAIN alone define the list turned every
-# one of those into a 403.
+# Only ALLOWED_HOSTS turns the check on. Once it lists a usable host,
+# APP_DOMAIN joins the list, so the public name does not have to be written
+# twice. APP_DOMAIN alone turns nothing on: the SMTP guide and the Helm chart
+# set it for mail, and those same instances are often reached over a LAN
+# address, a Tailscale name, a tunnel or Pipelock, none of which match it.
+# Letting it switch the check on would turn all of those into 403s on upgrade.
 #
-# An empty union leaves config.hosts unset, which means Rails accepts any Host.
+# An empty list leaves config.hosts unset, which means Rails accepts any Host.
 # That is the pre-existing behaviour, kept so an upgrade cannot lock an operator
 # out of their own instance; the boot warning points at the fix.
 module AllowedHosts
@@ -33,21 +34,25 @@ module AllowedHosts
   end
 
   def parse
+    allowed, rejected = partition(ENV["ALLOWED_HOSTS"].to_s.split(","))
+    return { allowed: [], rejected: rejected } if allowed.empty?
+
+    app_allowed, app_rejected = partition([ ENV["APP_DOMAIN"] ])
+    { allowed: (app_allowed + allowed).uniq, rejected: (app_rejected + rejected).uniq }
+  end
+
+  # Splits raw entries into usable hosts and the entries that were refused,
+  # skipping blanks.
+  def partition(entries)
     allowed = []
     rejected = []
 
-    raw_entries.each do |entry|
+    entries.map { |entry| entry.to_s.strip }.reject(&:empty?).each do |entry|
       host = normalize(entry)
       host ? allowed << host : rejected << entry
     end
 
-    { allowed: allowed.uniq, rejected: rejected.uniq }
-  end
-
-  def raw_entries
-    [ ENV["APP_DOMAIN"], *ENV["ALLOWED_HOSTS"].to_s.split(",") ]
-      .map { |entry| entry.to_s.strip }
-      .reject(&:empty?)
+    [ allowed.uniq, rejected.uniq ]
   end
 
   # A Host header is a bare hostname, so drop anything an operator may have

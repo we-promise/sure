@@ -1,7 +1,7 @@
 require "test_helper"
 
 class AllowedHostsTest < ActiveSupport::TestCase
-  test "unions APP_DOMAIN with ALLOWED_HOSTS instead of choosing between them" do
+  test "adds APP_DOMAIN to ALLOWED_HOSTS once ALLOWED_HOSTS is set" do
     with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: "10.0.0.5, box.tailnet.ts.net") do
       assert_equal [ "app.example.com", "10.0.0.5", "box.tailnet.ts.net" ], AllowedHosts.list
     end
@@ -10,6 +10,22 @@ class AllowedHostsTest < ActiveSupport::TestCase
   test "drops blanks and duplicates" do
     with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: " , app.example.com , ,10.0.0.5") do
       assert_equal [ "app.example.com", "10.0.0.5" ], AllowedHosts.list
+    end
+  end
+
+  # Main's SMTP guide and the Helm chart set APP_DOMAIN for mail. If it turned
+  # the check on, every instance also reached by LAN address, Tailscale name,
+  # tunnel or Pipelock would start answering 403 after an upgrade.
+  test "APP_DOMAIN alone leaves the list empty, so the check stays off" do
+    with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: nil) do
+      assert_empty AllowedHosts.list
+    end
+  end
+
+  test "ALLOWED_HOSTS with no usable host leaves the check off even with APP_DOMAIN" do
+    with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: " , .example.com") do
+      assert_empty AllowedHosts.list
+      assert_equal [ ".example.com" ], AllowedHosts.rejected
     end
   end
 
@@ -85,9 +101,16 @@ class AllowedHostsTest < ActiveSupport::TestCase
     end
   end
 
+  test "APP_DOMAIN alone lets every Host through" do
+    with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: nil) do
+      assert_equal 200, status_for("192.168.1.10:3000")
+      assert_equal 200, status_for("web:3000")
+    end
+  end
+
   # Probes reach /up over the pod IP or localhost, which no list contains.
   test "/up answers on any Host so container probes keep passing" do
-    with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: nil) do
+    with_env_overrides(APP_DOMAIN: nil, ALLOWED_HOSTS: "app.example.com") do
       assert_equal 200, status_for("10.1.2.3:3000", path: "/up")
       assert_equal 403, status_for("10.1.2.3:3000", path: "/")
     end
