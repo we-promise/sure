@@ -621,6 +621,68 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  test "unlink and forward sync: a fully consumed opening lot preserves unknown realized gain" do
+    travel_to TODAY do
+      build_reverse_fixture(pre_history: 2)
+      materialize(:reverse)
+      assert_nil Trade.find(@sale.entryable_id).realized_gain_loss
+      opening_lot = HoldingLot.where(account: @account, security: @security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 2, opening_lot.original_quantity
+
+      @account_provider.destroy!
+      materialize(:forward)
+
+      trade = Trade.find(@sale.entryable_id)
+      assert_nil trade.realized_gain_loss, "must not produce false gain of 800"
+      assert_equal [ [ nil, 2 ], [ @first.id, 2 ] ],
+        HoldingLotDisposal.where(sale_entry: @sale).map { |d| [ d.lot_source_entry_id, d.qty ] }.sort_by { |id, _| id.to_s }
+    end
+  end
+
+  test "unlink and forward sync: a partially consumed opening lot preserves unknown realized gain" do
+    travel_to TODAY do
+      build_reverse_fixture(pre_history: 6)
+      materialize(:reverse)
+      assert_nil Trade.find(@sale.entryable_id).realized_gain_loss
+      opening_lot = HoldingLot.where(account: @account, security: @security).opening.sole
+      assert_equal 2, opening_lot.qty
+      assert_equal 6, opening_lot.original_quantity
+
+      @account_provider.destroy!
+      materialize(:forward)
+
+      trade = Trade.find(@sale.entryable_id)
+      assert_nil trade.realized_gain_loss
+    end
+  end
+
+  test "unlink and forward sync: a split across a fully consumed opening lot scales original_quantity" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      link_account
+      security = priced_security("FIFS", 30)
+      first = trade(security, 10, 100, 2)
+      sale = trade(security, -4, 300, 3)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 2, denominator: 1, source: "manual")
+      @account.holdings.create!(security: security, date: d(10), qty: 16, price: 30, amount: 480, currency: "USD",
+        account_provider: @account_provider)
+
+      materialize(:reverse)
+      opening_lot = HoldingLot.where(account: @account, security: security).opening.sole
+      assert_equal 0, opening_lot.qty
+      assert_equal 4, opening_lot.original_quantity, "2 pre-split opening units scaled 2:1 to 4"
+
+      @account_provider.destroy!
+      materialize(:forward)
+
+      trade = Trade.find(sale.entryable_id)
+      assert_nil trade.realized_gain_loss
+      assert_equal [ [ nil, 2 ], [ first.id, 2 ] ],
+        HoldingLotDisposal.where(sale_entry: sale).map { |d| [ d.lot_source_entry_id, d.qty ] }.sort_by { |id, _| id.to_s }
+    end
+  end
+
   test "a materialization scoped to one security restates only that security's disposals" do
     travel_to TODAY do
       setup_account(method: "fifo")

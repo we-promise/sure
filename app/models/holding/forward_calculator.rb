@@ -14,6 +14,7 @@ class Holding::ForwardCalculator
     # acquired at a price nothing here knows, and averaging the purchases alone
     # would apply their price to units that never cost it.
     @transferred_security_ids = Set.new
+    seed_opening_lots
   end
 
   # Every lot of each security, once #calculate has run.
@@ -160,5 +161,20 @@ class Holding::ForwardCalculator
       return @lot_books[security_id].unknown_cost? if account.cost_basis_fifo?
 
       @transferred_security_ids.include?(security_id) || @lot_books[security_id].unpriced?
+    end
+
+    def opening_lots
+      scope = account.holding_lots.opening.where.not(clamped: true)
+      scope = scope.where(security_id: @security_ids) if @security_ids
+      scope.where("COALESCE(original_quantity, qty) > 0")
+    end
+
+    def seed_opening_lots
+      opening_lots.each do |lot|
+        factor = portfolio_cache.split_factor_between(lot.security_id, account.start_date, Date.current)
+        orig_qty = lot.original_quantity || lot.qty
+        initial_qty = factor == 1 ? orig_qty : Security::Split.unscale(orig_qty, factor)
+        @lot_books[lot.security_id].add_unknown(initial_qty, original_qty: initial_qty)
+      end
     end
 end

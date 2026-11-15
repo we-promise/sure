@@ -35,7 +35,11 @@
 # and the rest oldest first. A name that matches no open lot is ignored, and
 # under average there is no per-lot consumption to direct.
 class Holding::LotBook
-  Lot = Data.define(:source_id, :acquired_on, :qty, :unit_cost)
+  class Lot < Data.define(:source_id, :acquired_on, :qty, :unit_cost, :original_qty)
+    def initialize(source_id:, acquired_on:, qty:, unit_cost:, original_qty: nil)
+      super(source_id: source_id, acquired_on: acquired_on, qty: qty, unit_cost: unit_cost, original_qty: original_qty || qty)
+    end
+  end
   # `lot_source_id` and `unit_cost` are nil for the opening lot and for units
   # sold beyond what was held.
   Disposal = Data.define(:sale_id, :lot_source_id, :qty, :unit_cost)
@@ -80,11 +84,11 @@ class Holding::LotBook
   end
 
   # Units that arrived by internal movement, at a cost nothing here knows.
-  def add_unknown(qty, source_id: nil, acquired_on: nil)
+  def add_unknown(qty, source_id: nil, acquired_on: nil, original_qty: nil)
     qty = qty&.to_d
     return if qty.nil? || !qty.positive?
 
-    add_lot(source_id, acquired_on, qty, nil)
+    add_lot(source_id, acquired_on, qty, nil, original_qty: original_qty)
   end
 
   # A sale with no `sale_id` (a transfer out) consumes lots without recording
@@ -109,15 +113,19 @@ class Holding::LotBook
 
   # A split changes the share count and not the money invested, so total cost
   # stays and the per-share average moves by the inverse of the ratio. Each lot
-  # is restated the same way.
+  # is restated the same way, keeping its original quantity in post-split shares.
   def split(ratio)
     @total_qty = Security::Split.scale(@total_qty, ratio)
     @shortfall = Security::Split.scale(@shortfall, ratio)
     rescale_lots(Security::Split.scale(open_qty, ratio)) do |lot|
       lot.with(
         qty: Security::Split.scale(lot.qty, ratio),
+        original_qty: Security::Split.scale(lot.original_qty, ratio),
         unit_cost: lot.unit_cost && lot.unit_cost * ratio.denominator / ratio.numerator
       )
+    end
+    @closed = @closed.map do |lot|
+      lot.with(original_qty: Security::Split.scale(lot.original_qty, ratio))
     end
   end
 
@@ -155,7 +163,10 @@ class Holding::LotBook
     index = @lots.index { |lot| lot.source_id.nil? } || (@lots.size - 1)
     return if index.negative? || (@lots[index].qty + drift) <= 0
 
-    @lots[index] = @lots[index].with(qty: @lots[index].qty + drift)
+    @lots[index] = @lots[index].with(
+      qty: @lots[index].qty + drift,
+      original_qty: @lots[index].original_qty + drift
+    )
   end
 
   def open_qty
@@ -174,10 +185,11 @@ class Holding::LotBook
       @unknown = false
     end
 
-    def add_lot(source_id, acquired_on, qty, unit_cost)
+    def add_lot(source_id, acquired_on, qty, unit_cost, original_qty: nil)
       filled = [ qty, @shortfall ].min
       @shortfall -= filled
-      lot = Lot.new(source_id: source_id, acquired_on: acquired_on, qty: qty - filled, unit_cost: unit_cost)
+      orig = original_qty || qty
+      lot = Lot.new(source_id: source_id, acquired_on: acquired_on, qty: qty - filled, unit_cost: unit_cost, original_qty: orig)
       lot.qty.positive? ? @lots << lot : @closed << lot
     end
 

@@ -16,6 +16,7 @@ class HoldingLot < ApplicationRecord
   scope :opening, -> { where(source_entry_id: nil) }
 
   validates :manual_total_cost, numericality: { greater_than_or_equal_to: 0, less_than: BigDecimal("1e15") }, allow_nil: true
+  validates :original_quantity, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validate :manual_unit_cost_fits, if: :manual_total_cost
 
   def opening?
@@ -66,9 +67,9 @@ class HoldingLot < ApplicationRecord
           upsert_all(derived_rows, unique_by: %i[account_id source_entry_id],
             update_only: %i[security_id acquired_on qty unit_cost currency])
         end
-        if opening_rows.any?
+        if openings && opening_rows.any?
           upsert_all(opening_rows, unique_by: :index_holding_lots_one_opening_lot_per_position,
-            update_only: %i[origin_security_id qty unit_cost currency clamped])
+            update_only: %i[origin_security_id qty original_quantity unit_cost currency clamped])
         end
       end
     end
@@ -102,14 +103,21 @@ class HoldingLot < ApplicationRecord
       derived.update_all(security_id: to.id, updated_at: Time.current)
       opening.find_each do |lot|
         target = where(account_id: lot.account_id, security_id: to.id).opening.first
-        if target && lot.qty.zero?
+        if target && lot.clamped?
           lot.delete
-        elsif target&.qty&.zero?
-          target.update_columns(qty: lot.qty, unit_cost: lot.unit_cost, currency: lot.currency, clamped: false, updated_at: Time.current)
+        elsif target&.clamped?
+          target.update_columns(qty: lot.qty, original_quantity: lot.original_quantity, unit_cost: lot.unit_cost, currency: lot.currency, clamped: false, updated_at: Time.current)
+          lot.delete
+        elsif target && lot.qty.zero? && (lot.original_quantity.nil? || lot.original_quantity.zero?)
+          lot.delete
+        elsif target&.qty&.zero? && (target.original_quantity.nil? || target.original_quantity.zero?)
+          target.update_columns(qty: lot.qty, original_quantity: lot.original_quantity, unit_cost: lot.unit_cost, currency: lot.currency, clamped: false, updated_at: Time.current)
           lot.delete
         elsif target
           unit_cost = target.unit_cost if lot.unit_cost && lot.unit_cost == target.unit_cost && lot.currency == target.currency
-          target.update_columns(qty: target.qty + lot.qty, unit_cost: unit_cost, updated_at: Time.current)
+          target_orig = target.original_quantity || target.qty
+          lot_orig = lot.original_quantity || lot.qty
+          target.update_columns(qty: target.qty + lot.qty, original_quantity: target_orig + lot_orig, unit_cost: unit_cost, updated_at: Time.current)
           lot.delete
         else
           lot.update_columns(security_id: to.id, updated_at: Time.current)

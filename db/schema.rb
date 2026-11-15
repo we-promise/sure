@@ -1214,6 +1214,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.string "currency", null: false
     t.decimal "manual_total_cost", precision: 19, scale: 4
     t.uuid "origin_security_id"
+    t.decimal "original_quantity", precision: 34, scale: 18
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
     t.uuid "source_entry_id"
@@ -1225,6 +1226,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_11_080000) do
     t.index ["security_id"], name: "index_holding_lots_on_security_id"
     t.index ["source_entry_id"], name: "index_holding_lots_on_source_entry_id"
     t.check_constraint "manual_total_cost >= 0::numeric", name: "holding_lots_manual_total_cost_non_negative"
+    t.check_constraint "original_quantity >= 0::numeric", name: "holding_lots_original_quantity_non_negative"
     t.check_constraint "qty >= 0::numeric", name: "holding_lots_qty_non_negative"
   end
 
