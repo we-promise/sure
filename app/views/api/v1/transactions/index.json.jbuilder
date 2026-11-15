@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 json.transactions @transactions do |transaction|
-  json.partial! "transaction", transaction: transaction
+  json.partial! "transaction", transaction: transaction, split_parent_ids: @split_parent_entry_ids
 end
 
 json.pagination do

@@ -63,7 +63,8 @@ class Account::MarketDataImporterTest < ActiveSupport::TestCase
   end
 
   test "imports account exchange rates into the primary currency when the family currency is blank" do
-    family = Family.create!(name: "Smith", currency: "")
+    family = Family.create!(name: "Smith", currency: "USD")
+    family.update_column(:currency, "")
 
     account = family.accounts.create!(
       name: "Chequing",

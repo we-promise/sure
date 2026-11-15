@@ -11,6 +11,8 @@ class RulePositionConcurrencyTest < ActiveSupport::TestCase
 
   setup do
     @family = Family.create!(name: "Rule Position Race", currency: "USD")
+    # Without the matcher and Bayes rules a new family starts with.
+    @family.rules.destroy_all
   end
 
   teardown do

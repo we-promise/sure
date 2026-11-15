@@ -1,26 +1,65 @@
 ---
 nl:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis is nu correct geconfigureerd! U kunt nu uw Sure-applicatie instellen."
   shared:
+    preview: "Preview"
     dot_separator: "·"
+    sync_toast:
+      message: "Nieuwe gegevens beschikbaar"
+      refresh: "Vernieuwen"
     confirm_modal:
-      accept: Bevestigen
+      accept: "Bevestigen"
       body_html: "<p>U kunt deze beslissing niet ongedaan maken</p>"
-      cancel: Annuleren
-      title: Weet u het zeker?
+      cancel: "Annuleren"
+      title: "Weet u het zeker?"
     money_field:
-      label: Bedrag
+      above_max: "Voer een bedrag in van maximaal %{max}."
+      below_min: "Voer een bedrag in van minimaal %{min}."
+      invalid_amount: "Voer een geldig bedrag of geldige berekening in."
+      label: "Bedrag"
+      operator_add: "Optellen"
+      operator_subtract: "Aftrekken"
+      operator_multiply: "Vermenigvuldigen"
+      operator_divide: "Delen"
     exchange_rate_tabs:
-      calculate_rate_tab: FX-tarief berekenen
-      convert_tab: Converteren met FX-tarief
-      destination_amount: Doelbedrag
-      exchange_rate: Wisselkoers
-      exchange_rate_help: Kies hoe u het bedrag wilt invoeren.
+      calculate_rate_tab: "Wisselkoers berekenen"
+      convert_tab: "Omrekenen met wisselkoers"
+      destination_amount: "Doelbedrag"
+      exchange_rate: "Wisselkoers"
+      exchange_rate_help: "Kies hoe u het bedrag wilt invoeren."
     syncing_notice:
-      syncing: Accountsgegevens synchroniseren...
+      syncing: "Accountgegevens synchroniseren..."
+    require_admin: "Alleen beheerders kunnen deze actie uitvoeren"
+    require_non_guest: "Gasten kunnen deze actie niet uitvoeren"
+    require_connector_owner: "U kunt alleen koppelingen beheren die u zelf heeft toegevoegd"
+    custom_confirm:
+      default_title: "Weet u het zeker?"
+      default_body: "Dit kan niet ongedaan worden gemaakt."
+      default_btn_text: "Bevestigen"
+      resource_deletion_title: "%{resource} verwijderen?"
+      resource_deletion_body: "Weet u zeker dat u %{resource} wilt verwijderen? Dit kan niet ongedaan worden gemaakt."
+      resource_deletion_btn_text: "%{resource} verwijderen"
     family_moniker:
-      group_plural: Groepen
-      group_singular: Groep
-      plural: Families
-      singular: Familie
+      group_plural: "Groepen"
+      group_singular: "Groep"
+      plural: "Huishoudens"
+      singular: "Huishouden"
     trend_change:
       no_change: "geen verandering"
+    cancel: "Annuleren"
+    transaction_tabs:
+      expense: "Uitgave"
+      income: "Inkomsten"
+      transfer: "Overboeking"
+    sidekiq_health_banner:
+      title: "Sommige gegevens zijn mogelijk verouderd"
+      body: "Achtergrondtaken worden niet verwerkt, waardoor saldi, netto vermogen en accountsynchronisaties verouderd kunnen zijn of ontbreken."
+      cta: "Systeemstatus bekijken"
+      reasons:
+        redis_unreachable: "De app kan Redis niet bereiken. Controleer uw REDIS_URL en of Redis draait."
+        no_worker_processes: "Er is geen Sidekiq-workerproces verbonden. Start de workercontainer of systemd-unit."
+        stale_heartbeat: "De Sidekiq-worker heeft recent geen heartbeat gemeld. Mogelijk is hij vastgelopen of gecrasht."
+        ai_queues_not_polled: "Geen enkele worker verwerkt de AI-wachtrijen (chat, handelaarsdetectie, categorisering). Controleer of de worker config/sidekiq.yml laadt."
+        queue_backed_up: "De oudste taak in de wachtrij wacht al langer dan het latentiebudget. De worker draait wel, maar loopt achter."

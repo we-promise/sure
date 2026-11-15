@@ -200,6 +200,132 @@ class Rule::ActionTest < ActiveSupport::TestCase
     end
   end
 
+  test "set_transaction_merchant assigns a provider merchant already on the family's transactions" do
+    provider_merchant = ProviderMerchant.create!(name: "Rule test provider merchant", source: "plaid")
+    @txn1.update!(merchant: provider_merchant)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_merchant",
+      value: provider_merchant.id
+    )
+
+    assert action.reserves_claimed_attributes?
+    action.apply(@rule_scope)
+
+    [ @txn2, @txn3 ].each do |transaction|
+      assert_equal provider_merchant.id, transaction.reload.merchant_id
+    end
+  end
+
+  test "set_transaction_merchant ignores a provider merchant the family's transactions don't carry" do
+    provider_merchant = ProviderMerchant.create!(name: "Other family's provider merchant", source: "plaid")
+    other_account = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    create_transaction(account: other_account, merchant: provider_merchant)
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "set_transaction_merchant",
+      value: provider_merchant.id
+    )
+
+    assert_not action.reserves_claimed_attributes?
+    assert_equal 0, action.apply(@rule_scope)
+    assert_nil @txn2.reload.merchant_id
+  end
+
+  test "set_transaction_merchant offers family merchants and provider merchants on the user's transactions" do
+    assigned = ProviderMerchant.create!(name: "Assigned provider merchant", source: "plaid")
+    unlinked = ProviderMerchant.create!(name: "Unlinked provider merchant", source: "plaid")
+    foreign = ProviderMerchant.create!(name: "Foreign provider merchant", source: "plaid")
+    @txn1.update!(merchant: assigned)
+    FamilyMerchantAssociation.create!(family: @family, merchant: unlinked, unlinked_at: 1.day.ago)
+    other_account = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    create_transaction(account: other_account, merchant: foreign)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant")
+    Current.stubs(:user).returns(users(:family_admin))
+    option_ids = action.options.map(&:last)
+
+    assert_includes option_ids, assigned.id
+    assert_includes option_ids, @whole_foods_merchant.id
+    assert_not_includes option_ids, unlinked.id
+    assert_not_includes option_ids, foreign.id
+  end
+
+  test "set_transaction_merchant keeps a saved merchant the current user can't see in the options" do
+    hidden = ProviderMerchant.create!(name: "Hidden provider merchant", source: "plaid")
+    @txn1.update!(merchant: hidden)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: hidden.id)
+    Current.stubs(:user).returns(users(:family_member))
+
+    assert_not_includes action.executor.options.map(&:last), hidden.id
+    assert_includes action.options.map(&:last), hidden.id
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.not_accessible"), action.value_display
+  end
+
+  test "set_transaction_merchant keeps an unlinked provider merchant in the options, marked as no longer assigned" do
+    unlinked = ProviderMerchant.create!(name: "Unlinked provider merchant", source: "plaid")
+    @txn1.update!(merchant: unlinked)
+    unlinked.unlink_from_family(@family)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: unlinked.id)
+    Current.stubs(:user).returns(users(:family_admin))
+
+    assert_not action.reserves_claimed_attributes?
+    assert_includes action.options.map(&:last), unlinked.id
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.unassigned", name: "Unlinked provider merchant"), action.value_display
+  end
+
+  test "set_transaction_merchant keeps a saved merchant the family no longer knows without revealing its name" do
+    foreign = ProviderMerchant.create!(name: "Foreign provider merchant", source: "plaid")
+    other_account = families(:empty).accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+    create_transaction(account: other_account, merchant: foreign)
+
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: foreign.id)
+    Current.stubs(:user).returns(users(:family_admin))
+
+    assert_includes action.options.map(&:last), foreign.id
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.unavailable"), action.value_display
+  end
+
+  test "set_transaction_merchant rejects a merchant the user picks but can't access, and keeps a saved one" do
+    hidden = ProviderMerchant.create!(name: "Hidden provider merchant", source: "plaid")
+    @txn1.update!(merchant: hidden)
+    Current.stubs(:user).returns(users(:family_member))
+    assert_not @transaction_rule.family.assignable_merchants_for(users(:family_member)).exists?(id: hidden.id), "precondition"
+
+    action = @transaction_rule.actions.build(action_type: "set_transaction_merchant", value: hidden.id)
+    assert_not action.valid?
+    assert action.errors[:value].any?
+
+    action.value = @whole_foods_merchant.id
+    assert action.valid?
+
+    Current.stubs(:user).returns(nil)
+    saved = @transaction_rule.actions.create!(action_type: "set_transaction_merchant", value: hidden.id)
+    Current.stubs(:user).returns(users(:family_member))
+    assert saved.reload.valid?, "a merchant another member saved stays valid while unchanged"
+
+    other = @transaction_rule.actions.create!(action_type: "set_transaction_name", value: hidden.id)
+    other.action_type = "set_transaction_merchant"
+    assert_not other.valid?, "switching an action to set the merchant checks the value too"
+
+    malformed = @transaction_rule.actions.build(action_type: "set_transaction_merchant", value: "not-a-uuid")
+    assert_not malformed.valid?
+    assert_not Rule::ActionExecutor::SetTransactionMerchant.new(@transaction_rule).actionable?("not-a-uuid")
+  end
+
+  test "set_transaction_merchant marks an unknown saved id like another family's merchant" do
+    unknown = SecureRandom.uuid
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "set_transaction_merchant", value: unknown)
+    Current.stubs(:user).returns(users(:family_admin))
+
+    assert_includes action.options.map(&:last), unknown
+    assert_equal I18n.t("rule.actions.set_transaction_merchant.unavailable"), action.value_display
+  end
+
   test "set_transaction_name" do
     new_name = "Renamed Transaction"
 
@@ -291,5 +417,332 @@ class Rule::ActionTest < ActiveSupport::TestCase
 
     assert_equal 0, result
     assert_nil @txn1.reload.investment_activity_label
+  end
+
+  # The executor's key is derived from its class name, so a rename would leave
+  # the constant pointing at an action type nothing executes.
+  test "the email action type is the email executor's key" do
+    assert_equal Rule::ActionExecutor::SendEmailNotification.new(@transaction_rule).key, Rule::Action::EMAIL_NOTIFICATION
+  end
+
+  test "email_notifications selects only the email actions" do
+    assert_empty @transaction_rule.actions.email_notifications
+
+    email = @transaction_rule.actions.create!(action_type: Rule::Action::EMAIL_NOTIFICATION)
+
+    assert_equal [ email.id ], @transaction_rule.actions.email_notifications.pluck(:id)
+    assert_operator @transaction_rule.actions.count, :>, 1, "the rule's other action should be left out"
+  end
+
+  test "split_transaction builds value from split_rows form fields" do
+    tag = @family.tags.create!(name: "Split test tag")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      split_rows: {
+        "0" => { type: "percentage", name: "Groceries", share: "70", category_id: @grocery_category.id, merchant_id: @whole_foods_merchant.id, tag_ids: [ tag.id, "" ] },
+        "1" => { type: "percentage", name: "Household", share: "30", category_id: "", merchant_id: "", tag_ids: [ "" ] }
+      }
+    )
+
+    assert action.valid?, action.errors.full_messages.to_sentence
+
+    parsed = JSON.parse(action.value)
+    assert_equal [ "Groceries", "Household" ], parsed["splits"].map { |s| s["name"] }
+    assert_equal [ "percentage", "percentage" ], parsed["splits"].map { |s| s["type"] }
+    assert_equal @grocery_category.id, parsed["splits"].first["category_id"]
+    assert_nil parsed["splits"].last["category_id"]
+    assert_equal @whole_foods_merchant.id, parsed["splits"].first["merchant_id"]
+    assert_nil parsed["splits"].last["merchant_id"]
+    assert_equal [ tag.id ], parsed["splits"].first["tag_ids"]
+    assert_equal [], parsed["splits"].last["tag_ids"]
+  end
+
+  test "split_transaction rejects malformed JSON" do
+    action = Rule::Action.new(rule: @transaction_rule, action_type: "split_transaction", value: "not json")
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "must be a valid split configuration"
+  end
+
+  test "split_transaction rejects fewer than two splits" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: { splits: [ { type: "fixed", name: "Only one", share: "10" } ] }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "must have between 2 and 20 splits"
+  end
+
+  test "split_transaction rejects an invalid split type" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [ { type: "bogus", name: "A", share: "50" }, { type: "percentage", name: "B", share: "50" } ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 type must be fixed or percentage"
+  end
+
+  test "split_transaction rejects percentages that don't add up to 100" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [ { type: "percentage", name: "A", share: "50" }, { type: "percentage", name: "B", share: "40" } ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "percentages must add up to 100 (got 90)"
+  end
+
+  test "split_transaction rejects a non-positive share" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [ { type: "fixed", name: "A", share: "0" }, { type: "fixed", name: "B", share: "10" } ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 share must be a positive number"
+  end
+
+  test "split_transaction rejects a fixed share with more decimals than amounts store" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [ { type: "fixed", name: "A", share: "10.12345" }, { type: "percentage", name: "B", share: "100" } ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 share must be a positive number"
+  end
+
+  test "split_transaction rejects a split name that the database cannot store" do
+    # A NUL byte, and a lone surrogate escape that JSON.parse turns into broken UTF-8.
+    [ "Bad\\u0000Name", "Bad\\udc00Name" ].each do |name|
+      action = Rule::Action.new(
+        rule: @transaction_rule,
+        action_type: "split_transaction",
+        value: %({"splits":[{"type":"percentage","name":"#{name}","share":"50"},{"type":"percentage","name":"B","share":"50"}]})
+      )
+
+      assert_not action.valid?, name.inspect
+      assert_includes action.errors[:value], "split #1 name contains invalid characters"
+    end
+  end
+
+  test "split_transaction rejects rows that are not objects without raising" do
+    [ [ nil, nil ], [ "A", "B" ], [ { type: "percentage", name: "A", share: "100" }, 42 ] ].each do |rows|
+      action = Rule::Action.new(
+        rule: @transaction_rule,
+        action_type: "split_transaction",
+        value: { splits: rows }.to_json
+      )
+
+      assert_not action.valid?, "expected #{rows.inspect} to be invalid"
+      assert_includes action.errors[:value], "must be a valid split configuration"
+    end
+  end
+
+  test "split_transaction rejects non-finite shares" do
+    [ "NaN", "Infinity", "-Infinity" ].each do |share|
+      action = Rule::Action.new(
+        rule: @transaction_rule,
+        action_type: "split_transaction",
+        value: {
+          splits: [ { type: "fixed", name: "A", share: share }, { type: "percentage", name: "B", share: "100" } ]
+        }.to_json
+      )
+
+      assert_not action.valid?, "expected share #{share} to be invalid"
+      assert_includes action.errors[:value], "split #1 share must be a positive number"
+    end
+  end
+
+  test "split_transaction rejects a category from another family" do
+    other_category = families(:empty).categories.create!(name: "Foreign category")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "A", share: "10", category_id: other_category.id },
+          { type: "fixed", name: "B", share: "10" }
+        ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 category does not belong to this family"
+  end
+
+  test "split_transaction rejects a merchant from another family" do
+    other_merchant = families(:empty).merchants.create!(name: "Foreign merchant", type: "FamilyMerchant")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "A", share: "10", merchant_id: other_merchant.id },
+          { type: "fixed", name: "B", share: "10" }
+        ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 merchant does not belong to this family"
+  end
+
+  test "split_transaction rejects a tag from another family" do
+    other_tag = families(:empty).tags.create!(name: "Foreign tag")
+
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "A", share: "10", tag_ids: [ other_tag.id ] },
+          { type: "fixed", name: "B", share: "10" }
+        ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value], "split #1 has a tag that does not belong to this family"
+  end
+
+  test "split_transaction accepts a valid percentage config" do
+    action = Rule::Action.new(
+      rule: @transaction_rule,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "percentage", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "percentage", name: "Household", share: "30" }
+        ]
+      }.to_json
+    )
+
+    assert action.valid?
+  end
+
+  test "split_transaction with only fixed splits requires an exact amount condition on the rule" do
+    rule_without_amount_condition = Rule.new(family: @family, resource_type: "transaction")
+
+    action = Rule::Action.new(
+      rule: rule_without_amount_condition,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "30" }
+        ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value],
+      "fixed-amount splits require a rule condition that matches an exact transaction amount (e.g. Amount = 42.00), otherwise the shares can't reliably sum to every matching transaction's total"
+  end
+
+  test "split_transaction with only fixed splits is valid with an exact amount condition on the rule" do
+    rule_with_amount_condition = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: 100) ]
+    )
+
+    action = Rule::Action.new(
+      rule: rule_with_amount_condition,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "30" }
+        ]
+      }.to_json
+    )
+
+    assert action.valid?
+  end
+
+  test "split_transaction with only fixed splits requires shares to sum to the exact amount condition's value" do
+    rule_with_amount_condition = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      conditions: [ Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: 100) ]
+    )
+
+    action = Rule::Action.new(
+      rule: rule_with_amount_condition,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "20" }
+        ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+    assert_includes action.errors[:value],
+      "split shares must add up to 100.0, the exact amount required by this rule's condition"
+  end
+
+  test "split_transaction with only fixed splits is not satisfied by an exact amount condition inside an OR group" do
+    rule_with_or_amount_condition = Rule.new(
+      family: @family,
+      resource_type: "transaction",
+      conditions: [
+        Rule::Condition.new(condition_type: "compound", operator: "any", sub_conditions: [
+          Rule::Condition.new(condition_type: "transaction_amount", operator: "=", value: 100),
+          Rule::Condition.new(condition_type: "transaction_name", operator: "=", value: "Foo")
+        ])
+      ]
+    )
+
+    action = Rule::Action.new(
+      rule: rule_with_or_amount_condition,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "Groceries", share: "70", category_id: @grocery_category.id },
+          { type: "fixed", name: "Household", share: "30" }
+        ]
+      }.to_json
+    )
+
+    assert_not action.valid?
+  end
+
+  test "split_transaction with a percentage split does not require an exact amount condition" do
+    rule_without_amount_condition = Rule.new(family: @family, resource_type: "transaction")
+
+    action = Rule::Action.new(
+      rule: rule_without_amount_condition,
+      action_type: "split_transaction",
+      value: {
+        splits: [
+          { type: "fixed", name: "Fee", share: "5" },
+          { type: "percentage", name: "Rest", share: "100" }
+        ]
+      }.to_json
+    )
+
+    assert action.valid?, action.errors.full_messages.to_sentence
   end
 end

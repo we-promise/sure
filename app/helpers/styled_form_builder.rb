@@ -86,6 +86,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
         label: options[:label],
         container_class: options[:container_class],
         label_tooltip: options[:label_tooltip],
+        scoped_ids: options.fetch(:scoped_ids, false),
         html_options: html_options
       )
     )
@@ -187,7 +188,7 @@ class StyledFormBuilder < ActionView::Helpers::FormBuilder
       if options[:required]
         label_text = @template.safe_join([
           label_text == true ? method.to_s.humanize : label_text,
-          @template.tag.span("*", class: "text-red-500 ml-0.5")
+          @template.tag.span("*", class: "text-destructive ml-0.5")
         ])
       end
 

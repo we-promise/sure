@@ -10,6 +10,17 @@
         <% end %>
       </ul>
       <p><%= t(".encryption_warning.generate") %></p>
+      <%= render "settings/encryption_migration_guide" %>
+    <% end %>
+  </div>
+<% end %>
+
+<% if @encryption_using_compromised_secret %>
+  <div class="mb-4">
+    <%= render DS::Alert.new(variant: :warning, title: t(".compromised_secret_warning.title")) do %>
+      <p><%= t(".compromised_secret_warning.intro") %></p>
+      <p><%= t(".compromised_secret_warning.generate") %></p>
+      <p><%= t(".compromised_secret_warning.settings_secrets") %></p>
     <% end %>
   </div>
 <% end %>

@@ -31,6 +31,7 @@ class Category::CacheInvalidationConcurrencyTest < ActiveSupport::TestCase
     Category.where(family_id: @family.id).delete_all if @family
     Account.where(id: @account.id).delete_all if @account
     Depository.where(id: @account.accountable_id).delete_all if @account
+    Rule.where(family_id: @family.id).destroy_all if @family
     Family.where(id: @family.id).delete_all if @family
   end
 

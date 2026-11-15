@@ -31,15 +31,39 @@ module Transaction::Transferable
       family_matches_scope(date_window: date_window, exchange_rate_tolerance: exchange_rate_tolerance, outflow_transaction_id: self.id)
     end
 
-    candidates_scope.map do |match|
+    candidates = candidates_scope.map do |match|
       Transfer.new(
         inflow_transaction_id: match.inflow_transaction_id,
         outflow_transaction_id: match.outflow_transaction_id,
       )
     end
+
+    likeliest_first(candidates)
   end
 
   private
+    # A pair the user already rejected goes last, and a counterpart in this
+    # transaction's category goes first (and is preselected in the dialog), so
+    # the dialog a list hint opens defaults to the kind of pair the hint found;
+    # otherwise the query's order (exact amounts, then nearest date) stays.
+    def likeliest_first(candidates)
+      counterpart_id = ->(candidate) { candidate.inflow_transaction_id == id ? candidate.outflow_transaction_id : candidate.inflow_transaction_id }
+      category_ids = Transaction.where(id: candidates.map(&counterpart_id)).pluck(:id, :category_id).to_h
+      rejected_counterpart_ids = RejectedTransfer.where(inflow_transaction_id: id).pluck(:outflow_transaction_id) +
+        RejectedTransfer.where(outflow_transaction_id: id).pluck(:inflow_transaction_id)
+
+      candidates.each_with_index
+                .sort_by do |candidate, index|
+                  counterpart = counterpart_id.call(candidate)
+                  [
+                    rejected_counterpart_ids.include?(counterpart) ? 1 : 0,
+                    category_ids[counterpart] == category_id ? 0 : 1,
+                    index
+                  ]
+                end
+                .map(&:first)
+    end
+
     def family_matches_scope(date_window:, **filters)
       self.entry.account.family.transfer_match_candidates(date_window: date_window, **filters)
     end
