@@ -16,10 +16,10 @@ id:
     super_admin_bar:
       super_admin: Super Admin
       jobs: Pekerjaan
-      impersonating: Meniru
+      impersonating: Menyamar
       leave: Keluar
       terminate: Akhiri
       join_a_session: Gabung ke sesi
       join: Gabung
       uuid_placeholder: UUID
-      request_impersonation: Minta Peniruan
+      request_impersonation: Minta Penyamaran

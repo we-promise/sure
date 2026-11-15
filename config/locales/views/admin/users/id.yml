@@ -72,7 +72,7 @@ id:
           guest: "Pengalaman berbasis asisten dengan izin yang sengaja dibatasi untuk alur pengenalan."
           member: "Akses pengguna dasar. Dapat mengelola rekening, transaksi, dan pengaturannya sendiri."
           admin: "Administrator keluarga. Dapat mengakses pengaturan lanjutan seperti kunci API, impor, dan prompt AI."
-          super_admin: "Administrator instans. Dapat mengelola penyedia SSO, peran pengguna, dan meniru pengguna untuk dukungan."
+          super_admin: "Administrator instans. Dapat mengelola penyedia SSO, peran pengguna, dan menyamar sebagai pengguna untuk dukungan."
         invitations:
           pending_label: "Diundang (tertunda)"
           expires: "Kedaluwarsa %{date}"
