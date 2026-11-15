@@ -80,17 +80,57 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
     assert_empty gains.excluded_trades
   end
 
-  # No parity fallback: a gain that cannot be converted is reported, never
-  # counted at 1:1. Here it would read 100 at parity.
-  test "a gain with no exchange rate for its trade date is excluded and counted" do
+  # A sale on a day with no stored rate (a weekend, or before that day's rates
+  # sync) converts at the nearest earlier rate, as ExchangeRate.find_or_fetch_rate
+  # reuses one. The older of the two earlier rates would read 200, not 150.
+  test "a gain on a day with no rate converts at the nearest earlier one" do
     account = create_account(currency: "EUR")
     holding_snapshot account: account, date: @march, cost_basis: 100
     sell_trade account: account, date: @march, qty: 2, price: 150
+    set_rate from: "EUR", to: "USD", date: @march - 3, rate: 2.0
     set_rate from: "EUR", to: "USD", date: @march - 1, rate: 1.5
 
     gains = build_gains(account)
 
-    assert_empty gains.buckets, "the previous day's rate is not the trade date's"
+    assert_equal BigDecimal(150), gains.net, "100 EUR of gain at the previous day's 1.5"
+    assert_empty gains.excluded_trades
+  end
+
+  # The lookback stops where find_or_fetch_rate's does, so both sides of it:
+  # a rate exactly that many days before the sale converts, one a day older
+  # does not.
+  test "the nearest earlier rate is used only within the lookback window" do
+    lookback = ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
+    inside = create_account(currency: "EUR")
+    holding_snapshot account: inside, date: @march, cost_basis: 100
+    sell_trade account: inside, date: @march, qty: 2, price: 150
+    set_rate from: "EUR", to: "USD", date: @march - lookback, rate: 1.5
+
+    assert_equal BigDecimal(150), build_gains(inside).net
+
+    outside = create_account(currency: "GBP")
+    holding_snapshot account: outside, date: @march, cost_basis: 100
+    sell_trade account: outside, date: @march, qty: 2, price: 150
+    set_rate from: "GBP", to: "USD", date: @march - lookback - 1, rate: 1.5
+
+    gains = build_gains(outside)
+
+    assert_empty gains.buckets, "a rate older than the lookback is not carried forward"
+    assert_equal({ missing_exchange_rate: 1 }, gains.excluded_trades)
+  end
+
+  # No parity fallback, and no borrowing from the future: a gain with no rate on
+  # or before its sale date is reported, never counted at 1:1 (which would read
+  # 100) or at a later day's rate.
+  test "a gain with no exchange rate on or before its trade date is excluded and counted" do
+    account = create_account(currency: "EUR")
+    holding_snapshot account: account, date: @march, cost_basis: 100
+    sell_trade account: account, date: @march, qty: 2, price: 150
+    set_rate from: "EUR", to: "USD", date: @march + 1, rate: 1.5
+
+    gains = build_gains(account)
+
+    assert_empty gains.buckets, "the next day's rate is not carried back"
     assert_equal({ missing_exchange_rate: 1 }, gains.excluded_trades)
     assert_equal 1, gains.excluded_trade_count
   end
@@ -223,6 +263,29 @@ class Portfolio::RealizedGainsTest < ActiveSupport::TestCase
 
     assert_equal 0, realized.trade_count, "an unmeasurable disposal must not count, or this proves nothing"
     assert_equal few, many, "2 disposals with no rate and 6 must cost the same number of queries"
+  end
+
+  # Each foreign gain finds its rate in one query, whichever day before the
+  # sale that rate is on.
+  test "the query count does not grow with gains converted at an earlier day's rate" do
+    account = create_account(currency: "EUR")
+    seed = lambda do |count|
+      count.times do
+        security = create_security
+        date = @march + (@seeded_foreign = (@seeded_foreign || 0) + 1) * 7
+        holding_snapshot account: account, date: @march, cost_basis: 100, security: security
+        sell_trade account: account, date: date, qty: 1, price: 150, security: security
+        set_rate from: "EUR", to: "USD", date: date - 2, rate: 1.5
+      end
+    end
+
+    seed.call(2)
+    few = capture_sql_queries { measure_fully(build_gains(account)) }.size
+    seed.call(4)
+    many = capture_sql_queries { measure_fully(build_gains(account)) }.size
+
+    assert_equal 6, build_gains(account).trade_count, "every gain must convert, or this proves nothing"
+    assert_equal few, many, "2 gains and 6 must cost the same number of queries"
   end
 
   # A disabled account stops contributing on its cut-off date.

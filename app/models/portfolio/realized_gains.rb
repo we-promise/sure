@@ -14,14 +14,18 @@
 #    dispose of an appreciated asset, so it stays in.
 #
 # 2. A realised gain is fixed on the day of the sale, so it converts into the
-#    target currency at THAT day's rate, never today's. Marking an old disposal
-#    to today's rate restates a figure the user may already have reported.
+#    target currency at that day's rate (see below), never today's. Marking an
+#    old disposal to today's rate restates a figure the user may already have
+#    reported.
+#    The figure is the gain in the holding's own currency, converted at the
+#    sale date's rate: the foreign-exchange move on the cost while the
+#    position was held is not part of it, so it is not a home-currency cost
+#    basis gain and can differ from a tax figure computed that way.
 #
 # 3. A missing rate is not a rate of 1. ExchangeRate.rates_for ends in
 #    `rate&.rate || 1`, so it hands back parity for a pair it could not find
 #    and the caller cannot tell the two apart. Rates are read directly here,
-#    by exact date as Trade#converted_to_basis_currency reads them, and a
-#    disposal that cannot be converted is reported in #excluded_trades.
+#    and a disposal that cannot be converted is reported in #excluded_trades.
 #
 # 4. A disposal with no measurable gain is not a zero gain.
 #    Trade#realized_gain_loss returns nil when the cost basis is unknown or
@@ -35,10 +39,11 @@
 # Trade#realized_gain_loss gives, against the holding's average cost at the
 # time of the sale, not a FIFO or specific-lot basis.
 #
-# Rates are read for the exact sale date (rule 3), with no carry-forward: a
-# disposal on a day with no stored rate (a weekend, if the rate import skips
-# them) is reported in #excluded_trades rather than valued at a neighbouring
-# day's.
+# A sale's rate is the one stored for its date, else the nearest earlier one
+# up to ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS before it, the
+# window ExchangeRate.find_or_fetch_rate reuses a stored rate from. Never a
+# later day's, and never older than that window: a disposal with no rate
+# inside it is reported in #excluded_trades.
 class Portfolio::RealizedGains
   # One calendar month of realised activity. `losses` is a positive
   # magnitude; `net` carries the sign.
@@ -52,8 +57,8 @@ class Portfolio::RealizedGains
   #
   # - gain_unknown: Trade#realized_gain_loss returned nil -- no cost basis at
   #   or before the sale, or no rate to convert the proceeds into the basis.
-  # - missing_exchange_rate: the gain is known, but there is no rate for the
-  #   sale date to convert it into the target currency.
+  # - missing_exchange_rate: the gain is known, but there is no rate on or
+  #   shortly before the sale date to convert it into the target currency.
   EXCLUSION_REASONS = %i[gain_unknown missing_exchange_rate].freeze
 
   attr_reader :accounts, :period, :currency, :active_until_dates
@@ -217,8 +222,8 @@ class Portfolio::RealizedGains
       Trade.preload_exchange_rates(trades)
     end
 
-    # Rules 2 and 3: the rate on the sale date, and nil -- never 1 -- when it
-    # is not held. (A stored rate is always positive: exchange_rates carries a
+    # Rules 2 and 3: the sale date's rate, and nil -- never 1 -- when there is
+    # none. (A stored rate is always positive: exchange_rates carries a
     # check constraint for it.)
     def converted(money, date, rates)
       from = money.currency.iso_code
@@ -230,10 +235,9 @@ class Portfolio::RealizedGains
       money.amount * rate
     end
 
-    # `{ [from_currency, date] => rate }` for every foreign gain, in one query.
-    #
-    # Exact date only, no nearest-rate lookback: a disposal happened on one
-    # known day, and the absence of that day's rate is a fact to report.
+    # `{ [from_currency, date] => rate }` for every foreign gain, in one query:
+    # the rate on the sale date, else the nearest earlier one inside the
+    # lookback window. A pair with none is absent.
     def target_rates(gains)
       wanted = gains.filter_map do |trade, gain|
         next if gain.nil?
@@ -244,9 +248,17 @@ class Portfolio::RealizedGains
 
       return {} if wanted.empty?
 
-      ExchangeRate
-        .where(from_currency: wanted.map(&:first).uniq, to_currency: currency, date: wanted.map(&:last).uniq)
-        .to_h { |rate| [ [ rate.from_currency, rate.date ], rate.rate ] }
+      lookback = ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
+      windows = wanted.map(&:last).uniq.map { |date| (date - lookback)..date }
+      stored = ExchangeRate
+        .where(from_currency: wanted.map(&:first).uniq, to_currency: currency, date: windows)
+        .order(date: :desc)
+        .group_by(&:from_currency)
+
+      wanted.each_with_object({}) do |(from, date), rates|
+        nearest = stored[from]&.find { |rate| rate.date <= date && rate.date >= date - lookback }
+        rates[[ from, date ]] = nearest.rate if nearest
+      end
     end
 
     def account_ids
