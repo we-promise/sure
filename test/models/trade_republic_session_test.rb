@@ -11,9 +11,23 @@ class TradeRepublicSessionTest < ActiveSupport::TestCase
     assert_equal "Chrome", payload.fetch("browser")
     expected_browser_version = Provider::TradeRepublicSession::USER_AGENT[/Chrome\/([\d.]+)/, 1]
     assert_equal expected_browser_version, payload.fetch("browserVersion")
-    assert_equal "Desktop", payload.fetch("device")
-    assert_equal "desktop", payload.fetch("deviceType")
     assert payload.fetch("stableDeviceId").match?(/\A[0-9a-f]{128}\z/)
+  end
+
+  test "names the device with the web app's model key instead of device and deviceType" do
+    payload = device_payload(Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234"))
+
+    assert_equal "Sure", payload.fetch("model")
+    assert_not payload.key?("device")
+    assert_not payload.key?("deviceType")
+  end
+
+  test "takes the device model from the environment" do
+    with_env_overrides("TRADE_REPUBLIC_DEVICE_MODEL" => "Home Server") do
+      payload = device_payload(Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234"))
+
+      assert_equal "Home Server", payload.fetch("model")
+    end
   end
 
   test "keeps the device identity stable across session instances" do
@@ -49,4 +63,10 @@ class TradeRepublicSessionTest < ActiveSupport::TestCase
     assert_nil Provider::TradeRepublicSession.expires_at(JSON.generate("tr_refresh" => "not-a-jwt"))
     assert_nil Provider::TradeRepublicSession.expires_at(JSON.generate("tr_refresh" => "a.#{Base64.urlsafe_encode64("[]")}.c"))
   end
+
+  private
+
+    def device_payload(session)
+      JSON.parse(Base64.strict_decode64(session.login_headers.fetch("X-TR-Device-Info")))
+    end
 end
