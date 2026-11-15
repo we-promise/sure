@@ -45,14 +45,7 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
   end
 
   test "get_holdings reports the same average cost as the holdings page on a provider-linked account" do
-    account = @user.family.accounts.create!(
-      name: "Linked Brokerage", balance: 20000, cash_balance: 4000, currency: "USD",
-      accountable: Investment.new, owner: @user
-    )
-    # Any provider works; it only makes the holding a provider row.
-    provider_item = @user.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
-    provider_account = provider_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
-    account_provider = AccountProvider.create!(account: account, provider: provider_account)
+    account, account_provider = linked_account
 
     security = Security.create!(ticker: "REPRO", name: "Repro Security")
     (5.days.ago.to_date..Date.current).each do |date|
@@ -77,7 +70,41 @@ class Assistant::Function::GetHoldingsTest < ActiveSupport::TestCase
     assert_equal page_holding.date, tool_holding[:date]
   end
 
+  test "get_holdings converts other currencies to the family currency before ordering and totaling" do
+    account, account_provider = linked_account
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+    euro_security = Security.create!(ticker: "EURX", name: "Euro Security")
+    dollar_security = Security.create!(ticker: "USDX", name: "Dollar Security")
+
+    # A USD account whose provider snapshot holds one position in EUR.
+    account.holdings.create!(
+      security: euro_security, date: 1.day.ago.to_date, qty: 10, price: 100, amount: 1000, currency: "EUR",
+      account_provider: account_provider
+    )
+    account.holdings.create!(
+      security: dollar_security, date: 1.day.ago.to_date, qty: 10, price: 120, amount: 1200, currency: "USD",
+      account_provider: account_provider
+    )
+
+    result = @fn.call("page" => 1, "accounts" => [ account.name ])
+
+    assert_equal [ "EURX", "USDX" ], result[:holdings].map { |holding| holding[:ticker] }
+    assert_equal Money.new(2700, "USD").format, result[:total_value]
+  end
+
   private
+
+    # An investment account linked to a provider; any provider works, it
+    # only makes the holdings provider rows.
+    def linked_account
+      account = @user.family.accounts.create!(
+        name: "Linked Brokerage", balance: 20000, cash_balance: 4000, currency: "USD",
+        accountable: Investment.new, owner: @user
+      )
+      provider_item = @user.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      provider_account = provider_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+      [ account, AccountProvider.create!(account: account, provider: provider_account) ]
+    end
 
     def tickers(params)
       @fn.call({ "page" => 1 }.merge(params))[:holdings].map { |row| row[:ticker] }.uniq.sort
