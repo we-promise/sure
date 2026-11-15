@@ -9,6 +9,23 @@
 module CorsOrigins
   module_function
 
+  LOOPBACK_HOSTS = %w[localhost 127.0.0.1 ::1].freeze
+
+  # The match is exact: an origin is a scheme, host and port, and prefix
+  # matching is how "https://app.example.com.evil.test" gets let in.
+  #
+  # Development also accepts loopback origins on any port. Clients served by a
+  # local dev server, such as `flutter run -d chrome`, pick a port at random,
+  # and those relied on the wildcard this list replaced.
+  def allowed?(origin)
+    list.include?(origin) || (Rails.env.development? && loopback?(origin))
+  end
+
+  def loopback?(origin)
+    uri = parse(origin)
+    !uri.nil? && %w[http https].include?(uri.scheme) && LOOPBACK_HOSTS.include?(uri.hostname)
+  end
+
   def list
     explicit_origins.presence || app_domain_origin
   end
@@ -44,17 +61,17 @@ module CorsOrigins
   # browser's address bar, so normalize what they give us instead of failing
   # the comparison silently.
   def normalize(origin)
-    value = origin.to_s.strip
-    return nil if value.empty?
-
-    uri = begin
-      URI.parse(value)
-    rescue URI::InvalidURIError
-      nil
-    end
+    uri = parse(origin)
     return nil if uri.nil? || uri.scheme.nil? || uri.host.nil?
 
     port = uri.port && uri.port != uri.default_port ? ":#{uri.port}" : ""
     "#{uri.scheme.downcase}://#{uri.host.downcase}#{port}"
+  end
+
+  def parse(origin)
+    value = origin.to_s.strip
+    URI.parse(value) unless value.empty?
+  rescue URI::InvalidURIError
+    nil
   end
 end

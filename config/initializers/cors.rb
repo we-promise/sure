@@ -12,12 +12,8 @@
 Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
     # Consulted per request rather than expanded once at boot, so the allow-list
-    # follows the environment instead of the moment the process started. The
-    # match is exact: an origin is a scheme, host and port, and prefix matching
-    # here is how "https://app.example.com.evil.test" gets let in.
-    origins do |source, _env|
-      CorsOrigins.list.include?(source)
-    end
+    # follows the environment instead of the moment the process started.
+    origins { |source, _env| CorsOrigins.allowed?(source) }
 
     # API endpoints for mobile client and third-party integrations
     resource "/api/*",

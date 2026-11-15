@@ -106,4 +106,12 @@ class CorsTest < ActionDispatch::IntegrationTest
     assert_equal "https://app.example.com", response.headers["Access-Control-Allow-Origin"]
     assert_includes response.headers["Access-Control-Allow-Methods"], "POST"
   end
+
+  test "a loopback origin is granted in development" do
+    Rails.stubs(:env).returns(ActiveSupport::EnvironmentInquirer.new("development"))
+
+    get "/api/v1/usage", headers: { "Origin" => "http://localhost:52731" }
+
+    assert_equal "http://localhost:52731", response.headers["Access-Control-Allow-Origin"]
+  end
 end
