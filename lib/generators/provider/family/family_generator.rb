@@ -478,7 +478,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "     - test/models/#{file_name}_account/processor_test.rb"
     say "  🛣️  Routes: Updated config/routes.rb"
     say "  🌐 Locale: config/locales/views/#{file_name}_items/en.yml"
-    say "  ⚙️  Settings: Updated controllers and Family model"
+    say "  ⚙️  Settings: Updated the accounts controller and Family model"
 
     if parsed_fields.any?
       say "\nCredential fields:", :cyan
