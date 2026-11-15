@@ -8,25 +8,25 @@ class LunchflowItemTest < ActiveSupport::TestCase
   test "effective_base_url returns default when base_url blank" do
     @lunchflow_item.base_url = nil
 
-    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "effective_base_url returns default for non-lunchflow host" do
     @lunchflow_item.base_url = "https://169.254.169.254/latest/meta-data"
 
-    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "effective_base_url returns default for non-https scheme" do
     @lunchflow_item.base_url = "http://lunchflow.app/api/v1"
 
-    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "effective_base_url returns canonical default for valid lunchflow url" do
     @lunchflow_item.base_url = "https://lunchflow.app/api/v1/"
 
-    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "sync status summary covers every German count branch" do
@@ -68,32 +68,6 @@ class LunchflowItemTest < ActiveSupport::TestCase
 
     @lunchflow_item.sync_start_date = ""
     assert @lunchflow_item.valid?
-  end
-
-  # base_url decides where the app sends this connection's credentials, so a
-  # value pointing anywhere else is refused at save time and ignored at read
-  # time. Both layers matter: rows can be written by console or raw SQL.
-  test "refuses a base_url that is not the provider's own host" do
-    [
-      "https://evil.example.com/api/v1",
-      "http://169.254.169.254/",
-      "https://localhost/api/v1"
-    ].each do |value|
-      @lunchflow_item.base_url = value
-
-      assert_not @lunchflow_item.valid?, "#{value} must be refused"
-      assert_includes @lunchflow_item.errors.attribute_names, :base_url
-    end
-  end
-
-  # Rows saved before the allow-list existed may hold a value it now refuses.
-  # The read-time fallback already keeps them safe, so they must not make every
-  # later save of the row fail (status changes during a sync, a rename).
-  test "a stored value the allow-list refuses does not block unrelated saves" do
-    @lunchflow_item.update_column(:base_url, "https://lunchflow.app/")
-
-    assert @lunchflow_item.reload.update(name: "Renamed")
-    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   private

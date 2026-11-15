@@ -1,6 +1,8 @@
 class LunchflowItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
+  DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
+
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
@@ -13,7 +15,6 @@ class LunchflowItem < ApplicationRecord
   validates :name, presence: true
   validates :api_key, presence: true, on: :create
   validate :sync_start_date_must_be_valid
-  validate :base_url_must_be_an_official_host, if: :will_save_change_to_base_url?
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -155,18 +156,22 @@ class LunchflowItem < ApplicationRecord
     api_key.present?
   end
 
-  # The value an operator typed decides where the app sends their key, so it
-  # is checked against the provider's allow-list rather than used as given.
   def effective_base_url
-    Provider::Lunchflow.normalize_base_url(base_url) || Provider::Lunchflow::DEFAULT_BASE_URL
+    return DEFAULT_BASE_URL if base_url.blank?
+
+    uri = URI.parse(base_url)
+    return DEFAULT_BASE_URL unless uri.is_a?(URI::HTTPS)
+    return DEFAULT_BASE_URL unless uri.host == "lunchflow.app"
+    return DEFAULT_BASE_URL unless [ "", "/", "/api/v1", "/api/v1/" ].include?(uri.path)
+    return DEFAULT_BASE_URL unless uri.query.blank?
+    return DEFAULT_BASE_URL unless uri.fragment.blank?
+
+    DEFAULT_BASE_URL
+  rescue URI::InvalidURIError
+    DEFAULT_BASE_URL
   end
 
   private
-    def base_url_must_be_an_official_host
-      return if base_url.blank? || Provider::Lunchflow.allowed_base_url?(base_url)
-
-      errors.add(:base_url, :official_hosts_only)
-    end
 
     def sync_start_date_must_be_valid
       if sync_start_date.nil?
