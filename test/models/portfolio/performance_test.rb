@@ -314,6 +314,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
 
     result = performance(account_ids: [ @account.id, arriving.id ], end_date: day_three)
 
+    assert_not_nil result.twr
     assert_in_delta 0.0, result.twr.to_f, 0.000001, "money arriving in the scope is not a return"
     assert_not_nil result.mwr, "both accounts are trade-tracked, so the figure is supported"
     assert_in_delta 0.0, result.mwr.to_f, 0.000001
@@ -336,6 +337,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
       active_until_dates: { leaving.id => @day_two }
     )
 
+    assert_not_nil result.twr
     assert_in_delta 0.0, result.twr.to_f, 0.000001
     assert_not_nil result.mwr, "both accounts are trade-tracked, so the figure is supported"
     assert_in_delta 0.0, result.mwr.to_f, 0.000001, "money leaving the scope is not an investor loss"
@@ -742,6 +744,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
 
     assert_equal [ @account.id.to_s ], result.account_ids
     assert_equal BigDecimal("1000"), result.drivers[:value_close]
+    assert_not_nil result.twr
     assert_in_delta 0.0, result.twr.to_f, 0.000001
     assert_equal performance.cache_key, result.cache_key
   end
@@ -791,7 +794,9 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
 
     result = performance
 
+    assert_not_nil result.mwr
     assert_in_delta 0.0, result.mwr.to_f, 0.000001
+    assert_not_nil result.twr
     assert_in_delta 0.0, result.twr.to_f, 0.000001
   end
 
@@ -814,6 +819,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
       active_until_dates: { closed.id => @day_two }
     )
 
+    assert_not_nil result.twr
     assert_in_delta 0.0, result.twr.to_f, 0.000001
   end
 
