@@ -873,6 +873,28 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     TradeRepublicItem::Importer.new(@item, provider: provider).import
   end
 
+  test "transfers waiting only for their counterparty check do not crowd out a transfer whose note was never read" do
+    waiting = Array.new(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS) do |index|
+      {
+        "id" => "transfer-waiting-#{index}", "timestamp" => "2024-01-01T10:00:00Z", "eventType" => "INCOMING_TRANSFER",
+        "category" => "PAYMENT_RECEIVED", "detail" => { "amount" => 5.0, "note_checked_at" => "2024-01-02T10:00:00Z" }
+      }
+    end
+    unread = {
+      "id" => "transfer-unread", "timestamp" => "2026-10-01T10:00:00Z", "eventType" => "INCOMING_TRANSFER",
+      "category" => "PAYMENT_RECEIVED", "detail" => { "amount" => 5.0 }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-WAITING", currency: "EUR",
+      raw_timeline_payload: waiting + [ unread ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock).send(:events_needing_detail_enrichment).map { |event| event["id"] }
+
+    assert_equal Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS, enrich_ids.size
+    assert_equal "transfer-unread", enrich_ids.first
+  end
+
   test "a transfer kept only in the cash payload is backfilled and a read one is passed on" do
     transfer = {
       "id" => "transfer-cash-only",
