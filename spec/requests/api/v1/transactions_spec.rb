@@ -36,6 +36,7 @@ RSpec.describe 'API V1 Transactions', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Checking Account',
       balance: 1000,
       currency: 'USD',
@@ -71,6 +72,30 @@ RSpec.describe 'API V1 Transactions', type: :request do
       )
     )
     entry.transaction.tags << tag
+    entry.transaction
+  end
+
+  # An imported EUR dividend in the USD account, so the documented
+  # investment_activity_label, provider_type, security_id, exchange_rate and
+  # amount_currency fields are populated.
+  let!(:dividend_transaction) do
+    security = Security.create!(ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', country_code: 'US')
+    entry = account.entries.create!(
+      name: 'Dividend VTI',
+      date: Date.current - 2.days,
+      amount: -12.40,
+      currency: 'EUR',
+      source: 'ibkr',
+      external_id: 'ibkr_cash_docs_1',
+      entryable: Transaction.new(
+        investment_activity_label: 'Dividend',
+        extra: {
+          'exchange_rate' => 1.08,
+          'security_id' => security.id,
+          'ibkr' => { 'type' => 'Dividends' }
+        }
+      )
+    )
     entry.transaction
   end
 
