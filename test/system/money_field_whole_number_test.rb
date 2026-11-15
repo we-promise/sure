@@ -59,6 +59,42 @@ class MoneyFieldWholeNumberTest < ApplicationSystemTestCase
     assert_equal "150.000*12", amount_field.value
   end
 
+  test "grouped text PYG rejects stays flagged on a restored copy of the page" do
+    type_amount "150.000*12"
+    choose_currency "USD"
+    assert_selector "[data-money-field-target='symbol']", text: "$"
+
+    # Turbo restores a cached copy of the page on back navigation: a clone of
+    # the form, with its typed values and its select's choice, and a new
+    # controller.
+    page.execute_script(<<~JS)
+      const form = document.querySelector("[name='#{AMOUNT}']").closest("form");
+      const copy = form.cloneNode(true);
+      form.querySelectorAll("select").forEach((select, i) => { copy.querySelectorAll("select")[i].value = select.value; });
+      form.replaceWith(copy);
+    JS
+
+    assert_equal "150.000*12", amount_field.value
+    assert_selector "[name='#{AMOUNT}']:invalid"
+  end
+
+  test "flagged text replaced by the same text is read with the new currency" do
+    type_amount "150.000*12"
+    choose_currency "USD"
+    assert_selector "[data-money-field-target='symbol']", text: "$"
+    assert_selector "[name='#{AMOUNT}']:invalid"
+
+    # Select all and paste the same expression: the paste handler leaves an
+    # expression to the browser, whose input event carries the same value.
+    page.execute_script(<<~JS)
+      const field = document.querySelector("[name='#{AMOUNT}']");
+      field.value = "150.000*12";
+      field.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
+    JS
+
+    assert_selector "[name='#{AMOUNT}']:valid"
+  end
+
   test "an amount PYG rejects without a grouping reading is read as USD after the switch" do
     type_amount "25.50"
     assert_not_equal "", validation_message

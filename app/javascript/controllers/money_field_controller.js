@@ -80,7 +80,12 @@ export default class extends Controller {
   // a trade's price and fee (min: 0) would otherwise accept "-10". Since
   // auto_submit_form submits via requestSubmit(), which runs constraint
   // validation, an out-of-range value is blocked there too.
-  updateValidity() {
+  updateValidity(event) {
+    // An input event is an edit, even one that leaves the same text (select
+    // all and paste it again): the text is then the user's for the selected
+    // currency.
+    if (event?.type === "input") this.unreadText = undefined;
+
     const raw = this.amountTarget.value.trim();
     if (raw === "") {
       this.amountTarget.setCustomValidity("");
@@ -338,6 +343,21 @@ export default class extends Controller {
   // cannot use (see evaluateAmountExpression).
   #readOptions() {
     return { precision: this.#fieldPrecision(), delimiter: this.delimiterValue };
+  }
+
+  // The text a currency switch could not read (see updateAmount), kept on the
+  // amount input so a restored copy of the page (Turbo's cache on back
+  // navigation, with a new controller) keeps it.
+  get unreadText() {
+    return this.amountTarget.dataset.unreadText;
+  }
+
+  set unreadText(text) {
+    if (text === undefined) {
+      delete this.amountTarget.dataset.unreadText;
+    } else {
+      this.amountTarget.dataset.unreadText = text;
+    }
   }
 
   // True while the field still holds the text a currency switch could not
