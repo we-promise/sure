@@ -750,6 +750,28 @@ class Family < ApplicationRecord
     (requires_exchange_rates_data_provider? && ExchangeRate.provider.nil?)
   end
 
+  # Currencies the family's accounts, entries or holdings use that have no
+  # stored exchange rate into the family currency on any date. Totals built on
+  # #rate_sql leave amounts in them out rather than counting them at 1;
+  # totals built on #rates_for include them only if the provider supplies a
+  # rate, which is then stored. The pages that show those totals say so.
+  #
+  # Pass the viewer's accounts so the note covers the totals they see: only
+  # visible accounts count, and a member is not told about the currency of an
+  # account shared with someone else.
+  def currencies_without_exchange_rate(accounts: self.accounts)
+    ExchangeRate.currencies_without_rate(currencies_in_use(accounts), to: currency)
+  end
+
+  # Currencies today's totals convert whose newest rate into the family
+  # currency is too old to count as today's, mapped to that rate's date. Today's
+  # totals use it, and the same pages say so. Only balances and current holdings
+  # count: a currency only old entries use is converted at its own date's rate,
+  # so an old newest rate is not out of date for it.
+  def stale_exchange_rate_dates(accounts: self.accounts)
+    ExchangeRate.stale_rate_dates(currencies_held_now(accounts), to: currency)
+  end
+
   # Returns securities with plan restrictions for a specific provider
   # @param provider [String] The provider name (e.g., "TwelveData")
   # @return [Array<Hash>] Array of hashes with ticker, name, required_plan, provider
@@ -922,6 +944,31 @@ class Family < ApplicationRecord
   private_constant :INVALID_TIMEZONE_LOG_INTERVAL
 
   private
+    # Currencies of the given visible accounts' balances, and of each
+    # account's holdings on its latest holding date.
+    def currencies_held_now(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).select(:id)
+      latest = Holding.where(account_id: account_ids).group(:account_id).select("account_id, MAX(date) AS date")
+      (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Holding.joins("JOIN (#{latest.to_sql}) latest ON latest.account_id = holdings.account_id AND latest.date = holdings.date")
+            .distinct.pluck(:currency)
+      ).compact.uniq
+    end
+
+    # Currencies used by the given accounts that are visible, by their entries,
+    # their trades and their holdings. Memoised per scope, so repeated reads in
+    # one render share one set of queries.
+    def currencies_in_use(scope)
+      account_ids = self.accounts.visible.where(id: scope.select(:id)).pluck(:id).sort
+      @currencies_in_use ||= {}
+      @currencies_in_use[account_ids] ||= (
+        Account.where(id: account_ids).distinct.pluck(:currency) +
+          Entry.where(account_id: account_ids).distinct.pluck(:currency) +
+          Trade.joins(:entry).where(entries: { account_id: account_ids }).distinct.pluck("trades.currency") +
+          Holding.where(account_id: account_ids).distinct.pluck(:currency)
+      ).compact.uniq
+    end
 
     def log_invalid_timezone_once
       cache_key = [ "invalid_family_timezone", id, timezone ]
