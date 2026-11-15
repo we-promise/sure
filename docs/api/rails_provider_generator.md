@@ -88,7 +88,8 @@ This single command generates:
 
 The generated item partial renders the provider's logo with `ProviderLogo`. That reads the
 provider's `Provider::Metadata::REGISTRY` entry, which comes from the adapter's
-`declares_connection metadata:`. The generator does not write one, so add it there. See
+`declares_connection metadata:`. The generator writes placeholder metadata (region
+"Global", maturity `:alpha`, and a two-letter `logo_text`); set the real values there. See
 [provider logos](../llm-guides/providers.md#provider-logos) for the fields it reads
 (`domain`, `logo_text`, `logo_color`, `logo_icon`) and which are used when Brandfetch has no
 icon or is not configured.
@@ -341,7 +342,9 @@ class Provider::MyBankAdapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("MyBankAccount", self)
-  declares_connection key: "my_bank", name: "My Bank", panel: true
+  # TODO: Set the region and maturity Bank sync shows for this provider.
+  declares_connection key: "my_bank", name: "My Bank", panel: true,
+                      metadata: { region: "Global", kinds: %w[Bank], maturity: :alpha, logo_text: "MY" }
 
   def provider_name
     "my_bank"
@@ -788,10 +791,11 @@ end
 
 1. Check that the adapter declares its panel, which puts it in `FAMILY_PANELS`:
    ```ruby
-   declares_connection key: "my_bank", name: "My Bank", panel: true
+   declares_connection key: "my_bank", name: "My Bank", panel: true,
+                       metadata: { region: "Global", kinds: %w[Bank], maturity: :alpha, logo_text: "MY" }
    ```
-   The generator writes this line only into an adapter it creates. When the adapter
-   already existed or `--skip-adapter` was passed, it prints the line to add instead.
+   The generator writes this declaration only into an adapter it creates. When the adapter
+   already existed or `--skip-adapter` was passed, it prints the declaration to add instead.
 
 2. Check that the instance variable is set:
    ```ruby

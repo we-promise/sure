@@ -36,7 +36,9 @@ class Provider::MetadataTest < ActiveSupport::TestCase
   test "every declared account provider has metadata from its declaration" do
     Provider::Factory.connection_declarations.each do |declaration|
       metadata = Provider::Metadata::REGISTRY.fetch(declaration[:key].to_sym)
-      assert metadata.slice(:region, :kinds, :maturity, :logo_text).values.all?(&:present?), "#{declaration[:key]} metadata is incomplete"
+      %i[region kinds maturity logo_text].each do |field|
+        assert metadata[field].present?, "#{declaration[:key]} metadata has no #{field}"
+      end
     end
     assert_equal Provider::Factory.metadata_declarations.map { |metadata| metadata[:key] }.sort,
                  Provider::Factory.connection_declarations.map { |declaration| declaration[:key] }.sort
