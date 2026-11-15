@@ -6,7 +6,7 @@ whole design), §12 (the gate's cancel point), §17 (`ai_gate_test`, `ai_lane_te
 "Prompt cache and prompt reads on one slot" in [`rubyllm-spike-report.md`](rubyllm-spike-report.md),
 and [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md), which is built at the same time.
 **Base:** PR 3's step 1 commit on `feat/ai-3-off-web-thread`, which sits on `feat/ai-2f-review` @
-`d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0). Step 1 gives PR 4 the `ApplicationJob` hook,
+`d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0; 2f's head now pins 2.2.2). Step 1 gives PR 4 the `ApplicationJob` hook,
 `Ai::Capsule`'s queue list and `Ai::SharedState` without a copy of its own.
 **Branch:** `feat/ai-4-sequencer`, worktree `~/src/sure-ai-4`, started from that commit, then built in
 parallel with the rest of PR 3 (calls by @josh-sanders, 2026-11-13). Rebased onto PR 3 once that merges.

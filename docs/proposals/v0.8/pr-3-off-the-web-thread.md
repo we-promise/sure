@@ -3,7 +3,7 @@
 **Companion to:** [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) §19 (PR 3), §7 (transports
 run only inside the AI capsules), §11 ("No LLM call on a web thread"), §12, §13, §14, §15 and §17,
 and [`pr-4-sequencer.md`](pr-4-sequencer.md), which is built at the same time.
-**Base:** `feat/ai-2f-review` @ `d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0).
+**Base:** `feat/ai-2f-review` @ `d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0). 2f's head now pins ruby_llm 2.2.2; rebase onto it before building.
 **Branch:** `feat/ai-3-off-web-thread`, worktree `~/src/sure-ai-3`. Step 1 is built first; PR 4's
 branch `feat/ai-4-sequencer` starts from that commit, and the rest of both PRs proceeds in parallel
 (calls by @josh-sanders, 2026-11-13).
