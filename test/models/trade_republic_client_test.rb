@@ -1932,9 +1932,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       "category" => "DIVIDEND", "status" => "EXECUTED", "detail" => { "amount" => 4.3 }
     }
 
-    ordered = [ note_only, dividend ].sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
+    counterparty_only = transfer_item(id: "transfer-note-read").merge(
+      "timestamp" => "2019-01-01T10:00:00Z", "detail" => { Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2019-01-02T10:00:00Z" }
+    )
 
-    assert_equal %w[dividend-1 transfer-old], ordered.map { |event| event["id"] }
+    ordered = [ counterparty_only, note_only, dividend ].sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
+
+    assert_equal %w[dividend-1 transfer-old transfer-note-read], ordered.map { |event| event["id"] }
   end
 
   test "only transfers and direct debits are checked for a note" do

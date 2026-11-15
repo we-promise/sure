@@ -664,12 +664,19 @@ class Provider::TradeRepublicClient
     # first, oldest first, then the least recently attempted, so events that
     # stay incomplete can't hold the budget on every sync. Price backfills
     # carry no detail attempt; trade_detail_needs_price_backfill? paces them.
-    # Transfers waiting only for their note come after everything else.
+    # Transfers waiting only for their note come after everything else, and
+    # transfers whose note was read and that wait only for the counterparty
+    # check come last. A sync without reference accounts skips those, so
+    # they must not take the places of transfers that still need their note.
     def detail_backfill_sort_key(event)
       return [ 0, 0, "" ] unless event.is_a?(Hash)
 
-      note_only = cash_note_pending?(event) ? 1 : 0
-      [ note_only, detail_time(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY).to_i, (event["timestamp"] || event[:timestamp]).to_s ]
+      tier =
+        if cash_note_pending?(event, check_counterparty: false) then 1
+        elsif cash_note_pending?(event) then 2
+        else 0
+        end
+      [ tier, detail_time(event, DETAIL_BACKFILL_ATTEMPTED_AT_KEY).to_i, (event["timestamp"] || event[:timestamp]).to_s ]
     end
 
     # Stored trades whose ISIN found no usable exchange symbol are retried at
