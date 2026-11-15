@@ -1444,6 +1444,28 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_nil property.address
   end
 
+  test "an explicit null property detail keeps the default" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-property-2",
+          name: "Null Unit Land",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Property",
+          accountable: { subtype: "plot", area_value: 50, area_unit: nil }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Null Unit Land").accountable
+    assert_equal 50, property.area_value
+    assert_equal "sqft", property.area_unit
+  end
+
   test "round trips raw balance history through full export" do
     source_family = Family.create!(
       name: "Source Balance Family",
