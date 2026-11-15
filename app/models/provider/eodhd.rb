@@ -195,6 +195,8 @@ class Provider::Eodhd < Provider
         # full price, but not whether a request the plan does not include (403, e.g.
         # fundamentals on the free plan) is. Count it as one request rather than ten:
         # under-counting a refused call is safer than refusing the day's prices.
+        # An error in a 200 answer (Error, from check_api_error!) was served, and
+        # EODHD bills failed lookups, so it keeps its full price.
         refund_daily_requests(FUNDAMENTALS_REQUEST_COST - 1, key: counted_on) if e.is_a?(Faraday::ForbiddenError)
         raise
       rescue Faraday::ClientError => e

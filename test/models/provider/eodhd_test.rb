@@ -326,6 +326,18 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
   end
 
+  test "a fundamentals answer that carries an error still counts as ten requests" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:throttle_request)
+    answered = mock
+    answered.stubs(:body).returns({ "error" => "Ticker not found" }.to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.expects(:get).once.returns(answered)
+
+    assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
+    assert_equal 10, Rails.cache.read("eodhd:daily:#{Date.current}")
+  end
+
   test "taking a refused request back off the count never makes it negative" do
     store = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(store)
