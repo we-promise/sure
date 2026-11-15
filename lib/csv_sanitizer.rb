@@ -7,17 +7,23 @@
 # bypass by mainstream parsers today; extend the character class if that
 # changes.
 #
+# A plain signed number such as "-42.5" is left alone: it cannot run anything,
+# and escaping it would turn every negative amount into text.
+#
 # CSV only. Never apply this to JSON or NDJSON output: it would mutate the
 # user's data and break the export/import round-trip.
 module CsvSanitizer
+  FORMULA_TRIGGER = /\A[=+\-@\t\r\n]/
+  PLAIN_NUMBER = /\A[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?\z/
+
   module_function
 
   # Prefixes formula-triggering strings with a single quote so spreadsheets
   # render them as literal text. Non-string values pass through unchanged.
   def sanitize(value)
-    return value unless value.is_a?(String)
+    return value unless value.is_a?(String) && value.match?(FORMULA_TRIGGER)
 
-    value.match?(/\A[=+\-@\t\r\n]/) ? "'#{value}" : value
+    value.match?(PLAIN_NUMBER) ? value : "'#{value}"
   end
 
   # Sanitizes a whole row. Prefer this over sanitizing chosen columns: picking
@@ -34,6 +40,6 @@ module CsvSanitizer
   def unescape(value)
     return value unless value.is_a?(String)
 
-    value.match?(/\A'[=+\-@\t\r\n]/) ? value[1..] : value
+    value.start_with?("'") && value[1..].match?(FORMULA_TRIGGER) ? value[1..] : value
   end
 end

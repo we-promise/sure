@@ -21,6 +21,23 @@ class CsvSanitizerTest < ActiveSupport::TestCase
     end
   end
 
+  test "leaves plain numbers alone, signed ones included" do
+    [ "-42.5", "-1200.0", "+3", "-0.0001", "-1e3", "-7" ].each do |number|
+      assert_equal number, CsvSanitizer.sanitize(number), "failed for #{number.inspect}"
+    end
+  end
+
+  test "still escapes a value that only starts like a number" do
+    {
+      "-1+1" => "'-1+1",
+      "-2*cmd|' /C calc'!A0" => "'-2*cmd|' /C calc'!A0",
+      "+1)" => "'+1)",
+      "-42.5\n=1" => "'-42.5\n=1"
+    }.each do |input, expected|
+      assert_equal expected, CsvSanitizer.sanitize(input), "failed for #{input.inspect}"
+    end
+  end
+
   test "passes non-string values through untouched" do
     assert_nil CsvSanitizer.sanitize(nil)
     assert_equal 42, CsvSanitizer.sanitize(42)

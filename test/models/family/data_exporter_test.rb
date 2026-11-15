@@ -1346,6 +1346,33 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  # A bare number cannot run anything, and escaping it would turn every income
+  # amount, negative balance and sale quantity into text in the spreadsheet.
+  test "CSV export leaves negative numbers as numbers" do
+    account = @family.accounts.create!(name: "Overdrawn", accountable: Depository.new, balance: -250.5, currency: "USD")
+    account.entries.create!(
+      date: Date.parse("2024-05-19"), amount: -1200, currency: "USD", name: "Salary",
+      entryable: Transaction.new
+    )
+    security = Security.create!(ticker: "SELLME", name: "Sold Security", exchange_operating_mic: "XNAS")
+    account.entries.create!(
+      date: Date.parse("2024-05-20"), amount: -300, name: "Sell", currency: "USD",
+      entryable: Trade.new(security: security, qty: -2, price: 150, currency: "USD")
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = CSV.parse(zip.read("accounts.csv"), headers: true)
+      assert_equal "-250.5", accounts.find { |r| r["name"] == "Overdrawn" }["balance"]
+
+      transactions = CSV.parse(zip.read("transactions.csv"), headers: true)
+      assert_equal "-1200.0", transactions.find { |r| r["name"] == "Salary" }["amount"]
+
+      trade = CSV.parse(zip.read("trades.csv"), headers: true).find { |r| r["ticker"] == "SELLME" }
+      assert_equal "-2.0", trade["quantity"]
+      assert_equal "-300.0", trade["amount"]
+    end
+  end
+
   test "NDJSON keeps formula-prefixed values verbatim so export and import round-trip" do
     name  = "=SUM(A1)"
     notes = "-1.5x leverage"
