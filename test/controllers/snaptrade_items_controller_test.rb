@@ -602,9 +602,11 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
   test "personal_key creates the family's item when it has none" do
     @user.family.snaptrade_items.update_all(scheduled_for_deletion: true)
 
-    assert_difference "@user.family.snaptrade_items.active.count", 1 do
-      post personal_key_snaptrade_items_url,
-           params: { snaptrade_item: { client_id: "PERSONAL-CLIENT", consumer_key: "personal-key" } }
+    with_snaptrade_oauth(nil, nil) do
+      assert_difference "@user.family.snaptrade_items.active.count", 1 do
+        post personal_key_snaptrade_items_url,
+             params: { snaptrade_item: { client_id: "PERSONAL-CLIENT", consumer_key: "personal-key" } }
+      end
     end
 
     assert_redirected_to settings_providers_path
@@ -615,10 +617,12 @@ class SnaptradeItemsControllerTest < ActionDispatch::IntegrationTest
     sign_out
     sign_in @user = users(:empty)
 
-    assert_no_difference "Sync.count" do
-      post personal_key_snaptrade_items_url,
-           params: { snaptrade_item: { client_id: "PERSONAL-CLIENT", consumer_key: "" } },
-           as: :turbo_stream
+    with_snaptrade_oauth(nil, nil) do
+      assert_no_difference "Sync.count" do
+        post personal_key_snaptrade_items_url,
+             params: { snaptrade_item: { client_id: "PERSONAL-CLIENT", consumer_key: "" } },
+             as: :turbo_stream
+      end
     end
 
     assert_response :unprocessable_entity
