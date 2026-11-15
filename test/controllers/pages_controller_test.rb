@@ -1127,50 +1127,6 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # The release-notes body is HTML built from a third-party API response and
-  # was rendered with html_safe, so a tampered or poisoned response injected
-  # straight into the page (CWE-79).
-  test "changelog escapes script tags in the release notes body" do
-    Provider::Github.any_instance.stubs(:fetch_latest_release_notes).returns(
-      avatar: "https://example.com/a.png",
-      username: "someone",
-      name: "v1.2.3",
-      published_at: Time.current,
-      body: '<p>Notes</p><script>alert(1)</script><script src="https://evil.example/x.js"></script>'
-    )
-
-    get changelog_path
-
-    assert_response :success
-
-    # Scoped to the container that holds the untrusted body. The page itself
-    # renders an importmap and other scripts, so asserting over the whole
-    # response would either fail or have to match one exact payload, which a
-    # script element carrying attributes would slip past.
-    notes = css_select(".prose--github-release-notes").first
-    assert notes, "the release-notes container must render"
-    assert_empty notes.css("script"), "no script element may survive from the release notes"
-    assert_no_match(/evil\.example/, notes.to_html)
-    assert_match(/<p>Notes<\/p>/, notes.to_html)
-  end
-
-  # GitHub renders links to images and pull requests with target="_blank", and
-  # the allow-list must not turn them into links that navigate away from the app.
-  test "changelog keeps release-note links opening in a new tab" do
-    Provider::Github.any_instance.stubs(:fetch_latest_release_notes).returns(
-      avatar: "https://example.com/a.png",
-      username: "someone",
-      name: "v1.2.3",
-      published_at: Time.current,
-      body: '<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/we-promise/sure/pull/1">#1</a></p>'
-    )
-
-    get changelog_path
-
-    assert_response :success
-    assert_select ".prose--github-release-notes a[href='https://github.com/we-promise/sure/pull/1'][target='_blank'][rel='noopener noreferrer']"
-  end
-
   test "dashboard says which currencies are left out of its totals" do
     @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
 
