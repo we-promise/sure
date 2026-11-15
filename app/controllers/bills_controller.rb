@@ -526,7 +526,10 @@ class BillsController < ApplicationController
       derived = income_records.filter_map do |series|
         skipped = skipped_dates.fetch(series.id, Set.new)
         taken = ->(date) { skipped.include?(date) || scheduled_dates.include?([ series.id, date ]) }
-        candidate = series.schedule.next_occurrence_after(last_payday)
+        # Schedules repeat before the income starts, so the successor cannot
+        # fall before the series' anchor date. The occurrence generator applies
+        # the same limit when it creates the stored rows.
+        candidate = series.schedule.next_occurrence_after([ last_payday, series.anchor_date&.prev_day ].compact.max)
         # Step past every taken date. Each step moves later and taken is finite.
         candidate = series.schedule.next_occurrence_after(candidate) while candidate && taken.call(candidate)
         candidate
