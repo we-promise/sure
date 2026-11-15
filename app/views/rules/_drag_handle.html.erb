@@ -1,0 +1,13 @@
+<%# locals: (label:, list: "sortable-list") %>
+<%= render DS::Button.new(
+  variant: :icon,
+  icon: "grip-vertical",
+  size: :sm,
+  class: "ml-2 shrink-0 cursor-grab active:cursor-grabbing",
+  aria_label: label,
+  data: {
+    rules_filter_target: "handle",
+    action: %w[touchstart->touchStart touchmove->touchMove touchend->touchEnd touchcancel->touchCancel contextmenu->suppressContextMenu keydown->handleKeyDown]
+      .map { |binding| binding.sub("->", "->#{list}#") }.join(" ")
+  }
+) %>

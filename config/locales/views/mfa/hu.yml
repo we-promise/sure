@@ -11,7 +11,9 @@ hu:
     create:
       code_already_used: Ezt a kódot már felhasználtad. Kérjük, add meg a hitelesítő alkalmazás következő kódját.
       invalid_code: Érvénytelen ellenőrzőkód. Kérjük, próbáld újra.
+      setup_failed: Hiba történt a kétlépéses hitelesítés bekapcsolása közben. Kérjük, próbáld újra.
     disable:
+      failure: Hiba történt a kétlépéses hitelesítés kikapcsolása közben. Kérjük, próbáld újra.
       success: A kétlépéses hitelesítés le lett tiltva
     new:
       code_label: Ellenőrzőkód

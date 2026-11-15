@@ -13,6 +13,16 @@ class StyledFormBuilderTest < ActionView::TestCase
     assert_includes field.at("input[type=file]")["class"].split, "file:bg-container-inset"
   end
 
+  # text-destructive inverts in dark mode; a raw palette class does not.
+  test "a required field marks its label with the destructive token" do
+    field = Nokogiri::HTML.fragment(@builder.text_field(:name, label: "Name", required: true))
+    marker = field.at("label.form-field__label span")
+
+    assert marker, "expected a required marker in the label"
+    assert_equal "*", marker.text
+    assert_includes marker["class"].split, "text-destructive"
+  end
+
   # The dropzones pass `hidden` and draw their own target: no wrapper, and
   # their classes merged in rather than replaced.
   test "an unlabelled file field comes back bare and keeps the caller's classes" do
