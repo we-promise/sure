@@ -28,7 +28,6 @@ class Provider::Brex
     raise ArgumentError, "Brex base URL must be blank or one of: #{ALLOWED_BASE_URLS.join(', ')}" unless @base_url.present?
   end
 
-
   def get_accounts
     cash_accounts = get_cash_accounts
     card_accounts = get_card_accounts
