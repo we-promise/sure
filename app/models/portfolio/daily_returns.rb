@@ -677,8 +677,18 @@ class Portfolio::DailyReturns
         -- The carried units are capped at that, shared by every journal
         -- waiting for the same row (carried_journals_by_date). A journal whose
         -- day wrote no zero-priced row leaves nothing to read that from; its
-        -- carry is capped at what the first priced row holds, and settles
-        -- nothing else.
+        -- carry is capped at what the first priced row holds. With no earlier
+        -- row at all, in any currency, every unit that row holds appeared from
+        -- nothing, so any of them not journalled in from outside leaves the
+        -- carry incomplete -- a unit bought on that day included, which
+        -- suppresses a day that could have been valued rather than guess.
+        --
+        -- Units journalled out on or after the first external arrival are
+        -- netted against it: they may be the arrivals leaving again, and a
+        -- later arrival from another selected account must not take their
+        -- place. Out of order on the same day, or out of units held before,
+        -- the netting carries too little, so a netted carry is incomplete
+        -- whenever there is no zero-priced row to measure the shortfall by.
         --
         -- Both quantities are scaled through the splits between them and the
         -- first priced row. The calculators apply a split at the open of its
@@ -700,11 +710,19 @@ class Portfolio::DailyReturns
             first_priced.price,
             first_priced.qty AS held_qty,
             carry_fx.rate,
-            CASE WHEN trades.qty > 0 AND #{fragment(:flow_class_sql)} = 'external_inflow'
+            CASE WHEN trades.qty < 0 OR (trades.qty > 0 AND #{fragment(:flow_class_sql)} = 'external_inflow')
                  THEN ROUND(trades.qty * carry_splits.numerator / carry_splits.denominator, #{Security::Split::QTY_SCALE})
                  ELSE 0 END AS qty,
+            entries.date AS journal_date,
+            MIN(CASE WHEN trades.qty > 0 AND #{fragment(:flow_class_sql)} = 'external_inflow' THEN entries.date END)
+              OVER (PARTITION BY entries.account_id, trades.security_id, first_priced.date, first_priced.currency) AS first_in_date,
             CASE WHEN before_priced.price <= 0
                  THEN ROUND(before_priced.qty * zero_splits.numerator / zero_splits.denominator, #{Security::Split::QTY_SCALE})
+                 WHEN NOT EXISTS (SELECT 1 FROM holdings h
+                                  WHERE h.account_id = entries.account_id
+                                    AND h.security_id = trades.security_id
+                                    AND h.date < first_priced.date)
+                 THEN first_priced.qty
                  END AS zero_qty
           FROM entries
           #{fragment(:flow_class_joins)}
@@ -777,14 +795,17 @@ class Portfolio::DailyReturns
             per_row.date,
             COALESCE(SUM(per_row.carried_qty * per_row.price * per_row.rate), 0) AS carried_flow,
             BOOL_OR(per_row.rate IS NULL AND per_row.carried_qty > 0) AS carry_rate_missing,
-            COALESCE(BOOL_OR(per_row.zero_qty > per_row.carried_qty), false) AS carry_incomplete
+            COALESCE(BOOL_OR(per_row.zero_qty > per_row.carried_qty
+                             OR (per_row.zero_qty IS NULL AND per_row.netted)), false) AS carry_incomplete
           FROM (
             SELECT
               cj.date,
               cj.price,
               cj.rate,
               cj.zero_qty,
-              LEAST(SUM(cj.qty), COALESCE(cj.zero_qty, cj.held_qty)) AS carried_qty
+              BOOL_OR(cj.qty < 0 AND cj.journal_date >= cj.first_in_date) AS netted,
+              GREATEST(LEAST(COALESCE(SUM(cj.qty) FILTER (WHERE cj.qty > 0 OR cj.journal_date >= cj.first_in_date), 0),
+                             COALESCE(cj.zero_qty, cj.held_qty)), 0) AS carried_qty
             FROM carried_journals cj
             GROUP BY cj.account_id, cj.security_id, cj.date, cj.currency, cj.price, cj.held_qty, cj.rate, cj.zero_qty
           ) per_row

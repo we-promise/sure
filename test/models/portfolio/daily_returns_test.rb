@@ -1687,6 +1687,111 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_not third.suppressed
   end
 
+  # With no earlier row at all, every unit the first priced row holds appeared
+  # from nothing. Units moved in from another selected account are no flow, so
+  # nothing takes them out of `market`, and the day has to be suppressed or
+  # the arrival reads as a gain.
+  test "an internal journal with no earlier holding row suppresses its first priced day" do
+    day_three = @day_two + 1.day
+    source = create_portfolio_account(family: @family)
+    holding_snapshot account: source, date: @day_one, qty: 5, price: 10, cost_basis: 10
+    lay_balance account: source, date: @day_one, opening: 50, closing: 50
+    lay_balance account: source, date: @day_two, opening: 50, closing: 0, market_flow: -50
+    lay_balance account: source, date: day_three, opening: 0, closing: 0
+    security_journal account: source, date: @day_two, qty: -5, price: 10
+
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    third = daily_returns(account_ids: [ @account.id, source.id ], end_date: day_three).rows.last
+
+    assert_equal BigDecimal("0"), third.external_flow, "an internal move is no flow"
+    assert third.suppressed, "the arriving units are in market, so the day cannot be a return"
+  end
+
+  # Units journalled in from outside and journalled out again before any price
+  # are gone; units arriving later from another selected account are not them.
+  # Counting the first journal's gross quantity carried the internal arrival
+  # as a 500 contribution and left the day unsuppressed.
+  test "external units that left before pricing do not cover a later internal arrival" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    day_five = day_four + 1.day
+    source = create_portfolio_account(family: @family)
+    holding_snapshot account: source, date: day_three, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: source, date: @day_one, opening: 500, closing: 500
+    lay_balance account: source, date: @day_two, opening: 500, closing: 500
+    lay_balance account: source, date: day_three, opening: 500, closing: 500
+    lay_balance account: source, date: day_four, opening: 500, closing: 0, market_flow: -500
+    lay_balance account: source, date: day_five, opening: 0, closing: 0
+    security_journal account: source, date: day_four, qty: -5, price: 0
+
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_five, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: 5, price: 0
+    security_journal account: @account, date: day_three, qty: -5, price: 0
+    security_journal account: @account, date: day_four, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_five, qty: 5, price: 100,
+                              amount: 500, currency: @account.currency)
+
+    fifth = daily_returns(account_ids: [ @account.id, source.id ], end_date: day_five).rows.last
+
+    assert_equal BigDecimal("0"), fifth.external_flow, "the units that arrived from outside had already left"
+    assert fifth.suppressed, "the internal units repriced from zero are not a return"
+  end
+
+  # An out before the first external arrival cannot be those units leaving,
+  # so it is not netted: the position was emptied, then refilled from
+  # outside, and the refill is the flow on the first priced day.
+  test "a journal out before the external arrival is not netted against it" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_500, closing: 1_500
+    lay_balance account: @account, date: @day_two, opening: 1_500, closing: 1_000, market_flow: -500
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_500, market_flow: 500
+    security_journal account: @account, date: @day_two, qty: -5, price: 0
+    security_journal account: @account, date: day_three, qty: 5, price: 0
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 5, price: 100,
+                              amount: 500, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("500"), fourth.external_flow
+    assert_not fourth.suppressed
+  end
+
+  # The out may have taken units held before the arrival rather than the
+  # arrival itself, and with the last earlier row priced there is no
+  # zero-priced row to measure what is missing. Netted to nothing and left
+  # unsuppressed, the arrival's units read as market movement.
+  test "a netted carry with no zero priced row to measure it by suppresses the day" do
+    day_three = @day_two + 1.day
+    day_four = day_three + 1.day
+    holding_snapshot account: @account, date: @day_one, qty: 10, price: 100, cost_basis: 100
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_four, opening: 1_000, closing: 1_000
+    security_journal account: @account, date: @day_two, qty: 5
+    security_journal account: @account, date: day_three, qty: -5
+    @account.holdings.create!(security: security_under_test, date: day_four, qty: 10, price: 100,
+                              amount: 1_000, currency: @account.currency)
+
+    fourth = daily_returns(end_date: day_four).rows.last
+
+    assert_equal BigDecimal("0"), fourth.external_flow
+    assert fourth.suppressed, "which units left cannot be told, so the day is not a return"
+  end
+
   test "an unpriced journal dated before the period is carried to its first priced day in the period" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_050, market_flow: 50
