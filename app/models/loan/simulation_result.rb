@@ -9,8 +9,9 @@ class Loan
   # sizes its own payment, but a caller can impose one it did not choose -- a
   # projection holds the CONTRACTED repayment against today's balance -- and
   # against a balance that has grown, the contracted repayment may not be
-  # enough. That leaves a balloon, and #payoff_date refuses to give a date for
-  # a loan that was never paid off.
+  # enough. A balance the lender confirmed for the last payment date leaves
+  # the loan owing too. That leaves a balloon, and #payoff_date refuses to
+  # give a date for a loan that was never paid off.
   class SimulationResult
     attr_reader :payments, :balloon_amount, :total_interest
 

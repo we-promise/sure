@@ -554,8 +554,166 @@ class Loan::PrincipalPaymentsTest < ActiveSupport::TestCase
     assert_nil Loan::PrincipalPayments.for(account.loan, entries: Balance::SyncCache.new(account).entries)
   end
 
+  # A term change says what the lender did; the ledger says what the borrower
+  # paid. Recorded both ways, the replay lands on the schedule's balance on
+  # every due date.
+  test "an extra repayment part-way through a period matches the changed schedule" do
+    account = loan_with_term_changes([ { effective_date: "2026-03-15", extra_repayment: "2000" } ])
+    pay_schedule(account)
+    create_linked_loan_payment(account, 2_000, Date.new(2026, 3, 15))
+
+    assert_replay_matches_schedule account
+  end
+
+  test "an extra repayment inside the grace window matches the changed schedule" do
+    account = loan_with_term_changes([ { effective_date: "2026-03-03", extra_repayment: "2000" } ])
+    pay_schedule(account)
+    create_linked_loan_payment(account, 2_000, Date.new(2026, 3, 3))
+
+    assert_replay_matches_schedule account
+  end
+
+  test "an extra repayment on a due date matches the changed schedule" do
+    account = loan_with_term_changes([ { effective_date: "2026-04-01", extra_repayment: "2000" } ])
+    pay_schedule(account)
+    create_linked_loan_payment(account, 2_000, Date.new(2026, 4, 1))
+
+    assert_replay_matches_schedule account
+  end
+
+  test "an extra repayment with the old payment matches the shortened schedule" do
+    account = loan_with_term_changes([
+      { effective_date: "2026-03-15", extra_repayment: "2000", payment: "1066.19" }
+    ])
+    pay_schedule(account)
+    create_linked_loan_payment(account, 2_000, Date.new(2026, 3, 15))
+
+    assert_equal 10, account.loan.amortization_schedule.payments.size
+    assert_replay_matches_schedule account
+  end
+
+  test "principal-only transfers and an extra repayment match the changed schedule" do
+    [ "2026-03-15", "2026-03-03", "2026-04-01" ].each do |effective_date|
+      account = loan_with_term_changes(
+        [ { effective_date: effective_date, extra_repayment: "2000" } ], principal_only_transfers: true
+      )
+      account.loan.amortization_schedule.payments.each do |instalment|
+        create_linked_loan_payment(account, instalment.principal.amount, instalment.date)
+      end
+      create_linked_loan_payment(account, 2_000, Date.iso8601(effective_date))
+
+      assert_replay_matches_schedule account, "extra repayment on #{effective_date}"
+    end
+  end
+
+  test "an extra repayment on a variable loan matches the changed schedule" do
+    account = loan_with_term_changes(
+      [ { effective_date: "2026-03-15", extra_repayment: "2000" }, { effective_date: "2026-08-04", extra_repayment: "500" } ],
+      rate_type: "variable", variable_rate_schedule: { "2026-05-20" => "9", "2026-09-01" => "7.5" }
+    )
+    pay_schedule(account)
+    create_linked_loan_payment(account, 2_000, Date.new(2026, 3, 15))
+    create_linked_loan_payment(account, 500, Date.new(2026, 8, 4))
+
+    assert_replay_matches_schedule account
+  end
+
+  test "term changes under an actual day count match the changed schedule" do
+    %w[actual_365 actual_actual].each do |convention|
+      account = loan_with_term_changes(
+        [ { effective_date: "2026-03-15", extra_repayment: "2000" }, { effective_date: "2026-07-16", balance: "5000" } ],
+        day_count_convention: convention
+      )
+      pay_schedule(account)
+      create_linked_loan_payment(account, 2_000, Date.new(2026, 3, 15))
+      account.entries.create!(name: "Balance update", date: Date.new(2026, 7, 16), amount: 5_000,
+                              currency: account.currency, entryable: Valuation.new(kind: "reconciliation"))
+
+      assert_replay_matches_schedule account, convention
+    end
+  end
+
+  # The extra transfer pays the instalment's premium and the instalment then
+  # has none left to pay, so after the grace days the principal is where the
+  # schedule has it.
+  test "an extra repayment on an insured loan matches the changed schedule" do
+    account = loan_with_term_changes(
+      [ { effective_date: "2026-03-15", extra_repayment: "2000" } ],
+      insurance_rate: 1.2, insurance_rate_type: "level_term"
+    )
+    insurance = account.loan.insurance
+    account.loan.amortization_schedule.payments.each do |instalment|
+      account.entries.create!(name: "Payment", date: instalment.date,
+                              amount: -(instalment.payment.amount + insurance.premium_for(instalment.number).amount.amount),
+                              currency: account.currency, entryable: Transaction.new)
+    end
+    create_linked_loan_payment(account, 2_000, Date.new(2026, 3, 15))
+
+    assert_replay_matches_schedule account
+  end
+
+  test "a confirmed balance part-way through a period matches a balance update on that date" do
+    account = loan_with_term_changes([ { effective_date: "2026-03-16", balance: "9000" } ])
+    pay_schedule(account)
+    account.entries.create!(name: "Balance update", date: Date.new(2026, 3, 16), amount: 9_000,
+                            currency: account.currency, entryable: Valuation.new(kind: "reconciliation"))
+
+    assert_replay_matches_schedule account
+  end
+
+  test "a confirmed balance on a due date matches a balance update on that date" do
+    account = loan_with_term_changes([ { effective_date: "2026-03-01", balance: "10000" } ])
+    pay_schedule(account)
+    account.entries.create!(name: "Balance update", date: Date.new(2026, 3, 1), amount: 10_000,
+                            currency: account.currency, entryable: Valuation.new(kind: "reconciliation"))
+
+    assert_replay_matches_schedule account
+  end
+
   private
     def principal_payments(account)
       Loan::PrincipalPayments.for(account.loan, entries: Balance::SyncCache.new(account).entries)
+    end
+
+    # 12,000 at 12% over twelve months, with the given term changes recorded.
+    def loan_with_term_changes(rows, **loan_attrs)
+      # Term changes cannot be dated in the future, and the replay leaves
+      # future entries out.
+      travel_to Date.new(2027, 6, 1)
+
+      account = create_loan_account(term_months: 12, initial_balance: 12_000, entries: [
+        { type: "opening_anchor", date: OPENING_DATE, balance: 12_000 }
+      ], **loan_attrs)
+      account.loan.update!(term_change_rows: rows)
+      account.reload
+    end
+
+    def pay_schedule(account)
+      account.loan.amortization_schedule.payments.each do |instalment|
+        account.entries.create!(name: "Payment", date: instalment.date, amount: -instalment.payment.amount,
+                                currency: account.currency, entryable: Transaction.new)
+      end
+    end
+
+    def assert_replay_matches_schedule(account, message = nil)
+      account.reload
+      schedule = account.loan.amortization_schedule
+      changes = principal_payments(account).changes
+      valuations = account.entries.where(entryable_type: "Valuation").order(:date).to_a
+
+      schedule.payments.each do |instalment|
+        # The replayed balance on a date: the last balance recorded, then every
+        # change after it. A payment on the day of a balance update is behind it.
+        reset = valuations.select { |valuation| valuation.date <= instalment.date }.last
+        replayed = reset.amount + changes
+          .select { |date, _change| date > reset.date && date <= instalment.date }
+          .values.sum(BigDecimal("0"), &:net)
+
+        assert_equal instalment.ending_balance.amount, replayed,
+                     [ message, "balance after payment #{instalment.number} on #{instalment.date}" ].compact.join(": ")
+      end
+
+      assert_equal schedule.total_interest.amount, changes.values.sum(BigDecimal("0"), &:interest_paid),
+                   [ message, "interest paid" ].compact.join(": ")
     end
 end

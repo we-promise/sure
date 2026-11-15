@@ -1,8 +1,21 @@
 ---
 nl:
   activerecord:
+    attributes:
+      loan/term_change:
+        balance: "Bevestigd saldo"
+        effective_date: "Ingangsdatum"
+        extra_repayment: "Extra aflossing"
+        payment: "Betaling"
     errors:
       models:
         loan:
           invalid_rate_change: "Rijen met rentewijzigingen hebben zowel een ingangsdatum als een rentepercentage nodig."
+          invalid_term_change: "Rijen met wijzigingen in de voorwaarden hebben een ingangsdatum nodig en bedragen die getallen zijn."
           rate_change_before_origination: "Een rentewijziging kan niet ingaan vóór de startdatum van de lening."
+          term_change_not_after_origination: "Een wijziging in de voorwaarden moet ingaan na de startdatum van de lening."
+          term_change_payment_below_interest: "De betaling van een wijziging in de voorwaarden moet minstens de rente van de periode dekken."
+        loan/term_change:
+          no_amount: "Een wijziging in de voorwaarden heeft een extra aflossing, een bevestigd saldo of een betaling nodig."
+          in_the_future: "Een wijziging in de voorwaarden kan niet in de toekomst ingaan."
+          two_balance_changes: "Een wijziging in de voorwaarden heeft een extra aflossing of een bevestigd saldo, niet allebei."

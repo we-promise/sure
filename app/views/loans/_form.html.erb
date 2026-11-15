@@ -150,6 +150,47 @@
                                     disabled: rate_changes_disabled, data: { action: "loan-rate-changes#add" }) %>
         <% end %>
       </div>
+
+      <%# What the lender changed after origination: an extra repayment, a
+          confirmed balance, a new instalment. Offered for every rate type,
+          because a fixed loan gets these too. %>
+      <%# Open when the form comes back after a rejected save, so the row the
+          error is about is in view. %>
+      <div data-controller="loan-term-changes">
+        <%= render DS::Disclosure.new(variant: :inline, open: account.loan.unsaved_term_changes?,
+                                      body_class: "space-y-2 mt-2 pl-4 border-l border-primary") do |disclosure| %>
+          <% disclosure.with_summary_content do %>
+            <span class="text-sm text-secondary hover:text-primary flex items-center gap-1 py-2">
+              <%= icon "chevron-right", size: "sm", class: "group-open:rotate-90 transition-transform" %>
+              <%= t("loans.form.term_changes") %>
+            </span>
+          <% end %>
+
+          <p class="text-xs text-secondary"><%= t("loans.form.term_changes_hint") %></p>
+
+          <%# Always submitted, so removing the last row still sends the key
+              and the rows are cleared. %>
+          <input type="hidden" name="account[accountable_attributes][term_change_rows][]" value="">
+
+          <div data-loan-term-changes-target="rows" class="space-y-2">
+            <% account.loan.term_change_rows.each do |row| %>
+              <%= render "loans/term_change_row", row: row, currency: account.currency %>
+            <% end %>
+          </div>
+
+          <p data-loan-term-changes-target="empty" class="text-xs text-subdued"
+             <%= "hidden" if account.loan.term_change_rows.any? %>>
+            <%= t("loans.form.term_changes_empty") %>
+          </p>
+
+          <template data-loan-term-changes-target="template">
+            <%= render "loans/term_change_row", row: {}, currency: account.currency %>
+          </template>
+
+          <%= render DS::Button.new(text: t("loans.form.term_change_add"), icon: "plus", variant: "ghost", type: "button",
+                                    data: { action: "loan-term-changes#add", loan_term_changes_target: "add" }) %>
+        <% end %>
+      </div>
     </div>
   <% end %>
 <% end %>

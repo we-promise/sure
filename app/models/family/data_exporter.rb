@@ -281,6 +281,12 @@ class Family::DataExporter
           data["accountable"]["address"] = address.as_json(only: Family::DataImporter::PROPERTY_ADDRESS_ATTRIBUTES)
         end
 
+        # A loan's term changes are rows of their own, so they travel inside
+        # the loan they belong to.
+        if account.accountable.is_a?(Loan)
+          data["accountable"]["term_changes"] = serialize_loan_term_changes_for_export(account.accountable)
+        end
+
         lines << {
           type: "Account",
           data: data
@@ -764,6 +770,17 @@ class Family::DataExporter
         match_signals: allocation.match_signals,
         paid_on: allocation.paid_on
       }
+    end
+
+    def serialize_loan_term_changes_for_export(loan)
+      loan.active_term_changes.map do |change|
+        {
+          effective_date: change.effective_date,
+          extra_repayment: change.extra_repayment,
+          balance: change.balance,
+          payment: change.payment
+        }
+      end
     end
 
     def serialize_recurring_price_change_for_export(change)
