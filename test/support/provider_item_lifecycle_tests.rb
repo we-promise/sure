@@ -72,6 +72,9 @@ module ProviderItemLifecycleTests
     test "lifecycle: the account flow is the shared flow and keeps its old constants" do
       assert_operator account_flow_class, :<, ProviderItem::AccountFlow
       assert_same ProviderItem::AccountFlow::NoApiTokenError, account_flow_class::NoApiTokenError
+      %i[AccountNotFoundError InvalidAccountNameError AccountAlreadyLinkedError NavigationResult LinkAccountsResult].each do |constant|
+        assert_same ProviderItem::AccountFlow.const_get(constant), account_flow_class.const_get(constant)
+      end
       assert_equal provider_item.class, account_flow_class.item_class
     end
 
@@ -128,6 +131,58 @@ module ProviderItemLifecycleTests
 
         account_flow_class.any_instance.stubs(:fetch_accounts).returns([])
         assert_equal false, account_flow_class.new(family: provider_item.family, item: second_item).preload_payload[:has_accounts]
+      end
+    end
+
+    test "lifecycle: linking new accounts creates one linked account per selected provider account" do
+      provider_item.class.any_instance.expects(:sync_later).once
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "linked-new-1" ]))
+
+      with_memory_cache do
+        navigation = assert_difference([ "Account.count", "AccountProvider.count" ], 1) do
+          account_flow.link_new_accounts_result(account_ids: [ "linked-new-1" ], accountable_type: selectable_accountable_type)
+        end
+        assert_equal I18n.t("#{provider_item.provider_key}_items.link_accounts.success", count: 1), navigation.message
+        provider_account = provider_item.provider_accounts.find_by!(account_id: "linked-new-1")
+        assert_equal selectable_accountable_type, provider_account.account.accountable_type
+
+        result = assert_no_difference([ "Account.count", "AccountProvider.count" ]) do
+          account_flow.link_new_accounts!(account_ids: [ "linked-new-1" ], accountable_type: selectable_accountable_type)
+        end
+        assert_kind_of ProviderItem::AccountFlow::LinkAccountsResult, result
+        assert_equal 1, result.already_linked_count
+      end
+    end
+
+    test "lifecycle: linking skips an account the provider cannot name" do
+      provider_item.class.any_instance.expects(:sync_later).never
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "unnamed-1" ]))
+      provider_item.provider_accounts.klass.stubs(:name_for).returns("")
+
+      with_memory_cache do
+        result = assert_no_difference([ "Account.count", "AccountProvider.count" ]) do
+          account_flow.link_new_accounts!(account_ids: [ "unnamed-1" ], accountable_type: selectable_accountable_type)
+        end
+        assert_equal [ "unnamed-1" ], result.invalid_account_ids
+      end
+    end
+
+    test "lifecycle: linking an existing account attaches it once" do
+      provider_item.class.any_instance.stubs(:sync_later)
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "linked-existing-1" ]))
+      account = provider_item.family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+
+      with_memory_cache do
+        provider_account = assert_difference("AccountProvider.count", 1) do
+          account_flow.link_existing_account!(account: account, provider_account_id: "linked-existing-1")
+        end
+        assert_equal account, provider_account.reload.account
+        assert_equal provider_account.class.name, provider_account.account_provider.provider_type
+
+        other = provider_item.family.accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+        assert_raises(ProviderItem::AccountFlow::AccountAlreadyLinkedError) do
+          account_flow.link_existing_account!(account: other, provider_account_id: "linked-existing-1")
+        end
       end
     end
   end
