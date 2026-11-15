@@ -294,6 +294,46 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     assert drivers.reconciles?
   end
 
+  # A commission is converted as its trade's amount is, so a trade in a
+  # currency with no rate to the account's has a commission that converts to
+  # nothing. The account's own balance needs no rate, so only the commission
+  # can say the fees are short of one.
+  test "a commission on a trade with no rate flags a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 10_000, closing: 10_000
+    lay_balance account: @account, date: @day_two, opening: 10_000, closing: 10_000
+    @account.entries.create!(
+      name: "Buy", date: @day_two, currency: "EUR", amount: 5_005,
+      entryable: Trade.new(security: security_under_test, qty: 100, price: 50, fee: 5, currency: "EUR",
+                           investment_activity_label: "Buy")
+    )
+
+    returns = Portfolio::DailyReturns.new(
+      account_ids: [ @account.id ], currency: @family.currency,
+      period: Period.custom(start_date: @day_one, end_date: @day_two)
+    )
+
+    assert returns.rate_missing?, "a commission that could not be converted leaves the fees short"
+  end
+
+  # Both balance calculators book an investment account's market movement on
+  # a valuation day as on any other, so a commission there is in `market`,
+  # not in the revaluation, and moving it to `fees` leaves a flat price flat.
+  test "a commission on a valuation day is a fee, not a market gain" do
+    commission_ledger(trades: [ { date: @day_two, qty: 100, price: 50, fee: 5 } ]) do
+      @account.entries.create!(
+        name: "Valuation", date: @day_two, amount: 9_995, currency: @account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
+      )
+    end
+
+    drivers = drivers_for
+
+    assert_equal BigDecimal("5"), drivers.fees
+    assert_equal BigDecimal("0"), drivers.market, "the price never moved"
+    assert_equal BigDecimal("0"), drivers.revaluations, "the valuation agreed with the ledger"
+    assert drivers.reconciles?
+  end
+
   private
     # 10,000 cash from the day before the period, the security priced flat at
     # the trades' price, and the given trades, through the real calculator.
@@ -316,6 +356,7 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
                                investment_activity_label: qty.negative? ? "Sell" : "Buy")
         )
       end
+      yield if block_given?
       Balance::Materializer.new(@account, strategy: :forward).materialize_balances
     end
 
