@@ -19,7 +19,7 @@
             <% if @account.draft? %>
               <%= form.date_field :purchase_date,
                   label: t(".purchase_date_label"),
-                  value: purchase_value.submitted_date.presence || purchase_value.default_date,
+                  value: purchase_value.field_date,
                   min: Entry.min_supported_date + 1,
                   max: Date.current %>
             <% end %>

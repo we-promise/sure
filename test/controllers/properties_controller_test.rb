@@ -334,6 +334,24 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[balance]'][value='260000.00']"
   end
 
+  test "value step rejects an oversized or non-string purchase date and keeps the submitted price" do
+    account = create_draft_property
+
+    patch update_balances_property_path(account), params: {
+      account: { balance: 250_000, currency: "EUR", purchase_date: "2020-03-01#{" " * 119}" }
+    }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='250000.00']"
+
+    patch update_balances_property_path(account),
+          params: { account: { balance: 260_000, currency: "EUR", purchase_date: 20200301 } }.to_json,
+          headers: { "CONTENT_TYPE" => "application/json" }
+    assert_response :unprocessable_entity
+    assert_select "input[name='account[balance]'][value='260000.00']"
+
+    assert_not account.reload.has_opening_anchor?
+  end
+
   test "balances update handles validation errors" do
     Account.any_instance.stubs(:set_current_balance)
       .returns(Account::CurrentBalanceManager::Result.new(success?: false, changes_made?: false, error: "Invalid balance"))

@@ -30,6 +30,14 @@ class Property::PurchaseValueTest < ActiveSupport::TestCase
     assert_not Property::PurchaseValue.new(@account, date: "not a date").valid_date?
   end
 
+  test "rejects a submitted date that is not a string the parser accepts" do
+    # A JSON body can send a number or a boolean, and the date parser rejects
+    # strings over 128 characters with a plain ArgumentError.
+    [ 20200301, 1.5, true, "2020-03-01#{" " * 119}" ].each do |submitted|
+      assert_not Property::PurchaseValue.new(@account, date: submitted).valid_date?, submitted.inspect
+    end
+  end
+
   test "saving dates the purchase valuation and sets the balance" do
     @account.update!(currency: "PYG")
 

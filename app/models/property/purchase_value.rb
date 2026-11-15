@@ -11,9 +11,26 @@ class Property::PurchaseValue
     @submitted_date = date
   end
 
-  # Raises Date::Error when the submitted date can't be parsed.
+  # Raises Date::Error when the submitted date can't be parsed. A JSON body
+  # can send a number or a boolean, and the parser rejects a string over 128
+  # characters with a plain ArgumentError; both count as unparseable.
   def date
-    @submitted_date.presence&.to_date || default_date
+    return default_date if @submitted_date.blank?
+    raise Date::Error, "invalid date" unless @submitted_date.is_a?(String)
+
+    begin
+      @submitted_date.to_date
+    rescue ArgumentError
+      raise Date::Error, "invalid date"
+    end
+  end
+
+  # What the date field shows: the text submitted, or the default. A
+  # non-string submission is not shown back, since the field can only format
+  # text or a date.
+  def field_date
+    submitted = @submitted_date if @submitted_date.is_a?(String)
+    submitted.presence || default_date
   end
 
   # Not in the future, and after the oldest date an entry may have.
