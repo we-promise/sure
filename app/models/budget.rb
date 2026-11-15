@@ -422,6 +422,33 @@ class Budget < ApplicationRecord
     [ expense - refund, 0 ].max
   end
 
+  # Open bill occurrences due in this period, by category id, loaded once so
+  # each BudgetCategory#bills_reserved reads its slice instead of querying.
+  def open_bill_occurrences_by_category_id
+    @open_bill_occurrences_by_category_id ||= begin
+      occurrences = RecurringOccurrence
+                      .open_status
+                      .joins(:recurring_transaction)
+                      .where(recurring_transactions: {
+                               family_id: family_id,
+                               status: :active,
+                               destination_account_id: nil
+                             })
+                      .where("recurring_transactions.amount > 0")
+                      .where(due_on: start_date..end_date)
+                      .includes(:recurring_transaction)
+                      .to_a
+
+      sums = RecurringAllocation.confirmed
+                                .where(recurring_occurrence_id: occurrences.map(&:id))
+                                .group(:recurring_occurrence_id)
+                                .sum(:allocated_amount)
+      occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+
+      occurrences.group_by { |occurrence| occurrence.recurring_transaction.category_id }
+    end
+  end
+
   def category_median_monthly_expense(category)
     income_statement.median_expense(category: category)
   end

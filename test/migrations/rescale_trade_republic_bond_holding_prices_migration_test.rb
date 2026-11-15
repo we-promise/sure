@@ -30,6 +30,25 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     @tr_account.reload
   end
 
+  teardown { Account.reset_column_information }
+
+  test "rescales holdings before the account logo selection column exists" do
+    holding = create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
+
+    # This later column is absent on upgrades, but present in CI's schema dump.
+    # PostgreSQL restores it when the test transaction rolls back.
+    Account.connection.remove_column(:accounts, :logo_selection)
+    Account.reset_column_information
+
+    assert_difference -> { @item.syncs.count }, 1 do
+      run_migration
+    end
+
+    assert_equal BigDecimal("0.8404"), holding.reload.price
+    assert_equal BigDecimal("2250.5492"), holding.amount
+    assert_equal "0.8404", @tr_account.reload.raw_positions_payload.first["price"]
+  end
+
   test "rescales bond snapshots stored at percent of par" do
     older = create_snapshot(BOND_ISIN, 3.days.ago.to_date, qty: "2677.95", price: "83.10", cost_basis: "0.93")
     latest = create_snapshot(BOND_ISIN, Date.current, qty: "2677.95", price: "84.04", cost_basis: "0.93")
@@ -86,6 +105,16 @@ class RescaleTradeRepublicBondHoldingPricesMigrationTest < ActiveSupport::TestCa
     assert_equal "0.8404", prices[BOND_ISIN]
     assert_equal "183.94", prices[STOCK_ISIN]
     assert_equal "101.20", prices[INTEREST_ISIN]
+  end
+
+  test "leaves unlinked portfolio payloads alone" do
+    @tr_account.account_provider.destroy!
+
+    assert_no_difference -> { @item.syncs.count } do
+      run_migration
+    end
+
+    assert_equal "84.04", @tr_account.reload.raw_positions_payload.first["price"]
   end
 
   test "schedules a sync only for items with rescaled holdings" do

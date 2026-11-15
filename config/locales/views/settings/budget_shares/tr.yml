@@ -1,0 +1,6 @@
+---
+tr:
+  settings:
+    budget_shares:
+      update:
+        success: Bütçe paylaşım ayarları güncellendi

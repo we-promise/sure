@@ -1,11 +1,11 @@
 # Inherits RecurringTransactionsController so the re-rendered "new" template
 # resolves its relative partials ("form") against recurring_transactions/.
 class RecurringTransactions::SmartFillsController < RecurringTransactionsController
-  include BillsHelper
+  include AiFeatureGuard
   include RecurringFeatureGuardable
 
-  guard_feature unless: -> { bills_one_shot_ai_available? }
   before_action :ensure_recurring_enabled
+  requires_ai :bill_setup
 
   # Smart-fill re-renders the add-bill dialog with AI-proposed values. It only
   # exists on the entry-prefilled variant: the picked transaction anchors the
@@ -47,7 +47,13 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
   private
     # The picked entry's own history: same account, same sign, same name
     # shape. Recency-ordered so drifting amounts weight toward the present.
+    # Skipped entirely for a generic name (e.g. the auto-generated "Unknown
+    # transaction" fallback) -- an ILIKE on that text would pull in every
+    # other unrelated transaction that happens to share the same generic
+    # label, corrupting the evidence fed to the AI suggester.
     def evidence_entries(entry, income:)
+      return [ entry ] if entry.generic_name?
+
       pattern = "%#{ActiveRecord::Base.sanitize_sql_like(entry.name.to_s)}%"
 
       entry.account.entries

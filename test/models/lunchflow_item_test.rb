@@ -45,6 +45,31 @@ class LunchflowItemTest < ActiveSupport::TestCase
     assert_sync_status(:en, total: 3, linked: 1, unlinked: 2, expected: "1 synced, 2 need setup")
   end
 
+  test "rejects a sync start date in the future" do
+    @lunchflow_item.sync_start_date = Date.current + 1.day
+
+    assert_not @lunchflow_item.valid?
+    assert @lunchflow_item.errors.added?(:sync_start_date, :invalid)
+  end
+
+  test "rejects a sync start date that isn't a date" do
+    @lunchflow_item.sync_start_date = "not-a-date"
+
+    assert_not @lunchflow_item.valid?
+    assert @lunchflow_item.errors.added?(:sync_start_date, :invalid)
+  end
+
+  test "accepts today or a blank sync start date" do
+    @lunchflow_item.sync_start_date = Date.current
+    assert @lunchflow_item.valid?
+
+    @lunchflow_item.sync_start_date = nil
+    assert @lunchflow_item.valid?
+
+    @lunchflow_item.sync_start_date = ""
+    assert @lunchflow_item.valid?
+  end
+
   private
     def assert_sync_status(locale, total:, linked:, unlinked:, expected:)
       @lunchflow_item.stubs(:total_accounts_count).returns(total)

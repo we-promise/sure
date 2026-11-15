@@ -156,6 +156,7 @@ ca:
       date: Data
       description: Descripció
       description_placeholder: Descriu la transacció
+      description_placeholder_optional: "Deixa-ho en blanc per usar el nom de la categoria/comerç, o selecciona'n un primer"
       details: Detalls
       expense: Despesa
       income: Ingrés

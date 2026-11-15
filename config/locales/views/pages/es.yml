@@ -42,7 +42,6 @@ es:
       subtitle: Esto es lo que está pasando con tus finanzas
       new: Nuevo
       sections_aria_label: Secciones del panel
-      drag_to_reorder: Arrastra para reordenar la sección
       toggle_section: Alternar visibilidad de la sección
       widget_size:
         label: Ajustar tamaño
