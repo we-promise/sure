@@ -20,6 +20,8 @@
       <p class="text-2xl font-medium text-primary privacy-sensitive">
         <% if current_occurrence.paid? %>
           <%= t(series.typed_income? ? "bills.summary.received_headline" : "bills.summary.paid_headline", amount: format_money(paid)) %>
+        <% elsif series.typed_income? && (current_occurrence.skipped? || current_occurrence.missed?) %>
+          <%= t("bills.payday.#{current_occurrence.payday_state}") %>
         <% elsif series.typed_income? %>
           <%= t("bills.summary.expected_headline", amount: format_money(current_occurrence.remaining_amount_money)) %>
         <% else %>
