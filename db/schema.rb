@@ -1999,12 +1999,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_15_130000) do
     t.string "avm_external_id"
     t.date "avm_last_synced_on"
     t.string "avm_provider"
+    t.uuid "cost_tag_id"
     t.datetime "created_at", null: false
     t.jsonb "locked_attributes", default: {}
     t.string "subtype"
     t.datetime "updated_at", null: false
     t.integer "year_built"
-    t.uuid "cost_tag_id"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
     t.index ["cost_tag_id"], name: "index_properties_on_cost_tag_id"
     t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
