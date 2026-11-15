@@ -574,17 +574,7 @@ class Settings::HostingsController < ApplicationController
     # balances converted at 1:1 until then. The settings apply to every family,
     # so every account is rebuilt.
     def refresh_market_data_later
-      MarketDataRefreshJob.perform_later
-    rescue StandardError => error
-      DebugLogEntry.capture(
-        category: "background_jobs",
-        level: "error",
-        message: "Failed to queue market data refresh after a provider setting changed",
-        source: self.class.name,
-        family: Current.family,
-        user: Current.user,
-        metadata: { error_class: error.class.name, error_message: error.message }
-      )
+      MarketDataRefreshJob.refresh_later(source: self.class.name, family: Current.family, user: Current.user)
     end
 
     def update_encrypted_setting(param_key)
