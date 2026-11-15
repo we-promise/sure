@@ -1,4 +1,7 @@
 class IncomeStatement::CategoryStats
+  # Bump when the query's result changes, so cached stats are recomputed.
+  CACHE_VERSION = 2
+
   include IncomeStatement::ScopedTransactionsQuery
 
   def initialize(family, interval: "month", account_ids: nil)
