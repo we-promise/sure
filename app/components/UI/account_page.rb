@@ -113,6 +113,9 @@ class UI::AccountPage < ApplicationComponent
       # reference date, like the Schedule tab does.
       locals = { account: account }
       locals[:as_of] = as_of if %w[Loan CreditCard].include?(account.accountable_type)
+      # The loan's Overview quotes the projection the chart and the Schedule
+      # tab read, so it is handed the same one.
+      locals[:projection] = loan_projection if account.accountable_type == "Loan"
       render "#{accountable_view_folder}/tabs/#{tab}", **locals
     when :holdings
       # Accountable is responsible for implementing the partial in the correct folder

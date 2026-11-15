@@ -32,12 +32,14 @@ en:
       rate_change_add: Add rate change
       rate_change_remove: Remove
       term_changes: Term changes
-      term_changes_hint: "Record what your lender changed after the loan started: an extra repayment, a balance they confirmed or a new payment. Leave the payment blank to spread the new balance over the remaining term, or enter your lender's figure. The schedule follows these rows; the loan's balance does not. Also record an extra repayment as a transfer to the loan, and a confirmed balance as a balance update. Each date takes one row."
+      term_changes_hint: "Record what your lender changed or announced: an extra repayment, a balance they confirmed or a new payment. Leave the payment blank to spread the new balance over the remaining term, or enter your lender's figure. The schedule follows these rows; the loan's balance does not. Also record an extra repayment as a transfer to the loan, and a confirmed balance as a balance update. A payment your lender has announced can be dated ahead. Each date takes one row."
+      term_changes_fixed_until_hint: "Fixed until is the day a fixed-rate period ends. For the period the loan opened with, add a row dated on the origination date with only that field."
       term_changes_empty: No term changes recorded. The schedule runs on the original terms.
       term_change_effective_date: Effective date
       term_change_extra_repayment: Extra repayment
       term_change_balance: Confirmed balance
       term_change_payment: New payment
+      term_change_term_end_date: Fixed until
       term_change_add: Add term change
       term_change_remove: Remove
       start_date: Origination date
@@ -156,6 +158,8 @@ en:
         original_principal: Original Loan Amount
         remaining_principal: Remaining Loan Amount
         scheduled_payoff_date: Scheduled Payoff Date
+        balance_at_term_end: Balance at End of Fixed Period
+        balance_at_term_end_estimate: Projected for %{date}
         total_cost: Total Cost
         total_cost_with_insurance: Total Cost incl. Insurance
         total_insurance: Insurance

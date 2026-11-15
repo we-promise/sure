@@ -152,6 +152,8 @@ de:
           scheduled: "Ursprünglicher Tilgungsplan"
           since_start: "seit Kreditbeginn"
           today: "Heute"
+          term_end: "Ende der Zinsbindung"
+          aria_term_end: "Die Zinsbindung endet am %{date}, mit einem voraussichtlichen Saldo von %{balance}."
         no_data_available: Keine Daten vorhanden
         title:
           balance: Saldo

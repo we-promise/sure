@@ -65,6 +65,8 @@ nl:
           scheduled: "Oorspronkelijk schema"
           projected: "Prognose vanaf vandaag"
           today: "Vandaag"
+          term_end: "Einde vaste periode"
+          aria_term_end: "De vaste periode eindigt op %{date}, met een verwacht saldo van %{balance}."
           interactive_chart: "interactieve grafiek"
           no_payoff: "niet bij de huidige aflossing"
           aria_description: "Grafiek van het leningsaldo. Geregistreerd saldo %{current_balance}. Oorspronkelijk geplande afbetaling %{scheduled_payoff_date}. Verwachte afbetaling vanaf het saldo van vandaag %{projected_payoff_date}."

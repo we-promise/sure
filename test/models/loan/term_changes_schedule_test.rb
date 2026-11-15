@@ -15,7 +15,7 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
   MATURITY = Date.new(2027, 1, 1)
 
   setup do
-    # Term changes cannot be dated in the future.
+    # An extra repayment or a confirmed balance cannot be dated in the future.
     travel_to Date.new(2027, 6, 1)
   end
 
@@ -743,6 +743,81 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     projection = account.reload.loan.payoff_projection(as_of: Date.new(2026, 3, 20))
 
     assert_equal BigDecimal("50"), projection.payments.first[:interest_payment]
+  end
+
+  test "a payment the lender announced holds from its date" do
+    travel_to Date.new(2026, 2, 15)
+    schedule = loan_with([ { effective_date: "2026-03-15", payment: "1200" } ]).amortization_schedule
+
+    assert_equal BigDecimal("1066.19"), schedule.payment_in_force(Date.current).amount
+    assert_equal BigDecimal("1066.19"), schedule.payment_for(MARCH).payment.amount
+    assert_equal BigDecimal("1200"), schedule.payment_for(APRIL).payment.amount
+  end
+
+  test "the projection pays a payment the lender announced" do
+    travel_to Date.new(2026, 2, 15)
+    account = loan_account_with([ { effective_date: "2026-03-15", payment: "1200" } ])
+    account.update!(balance: BigDecimal("11053.81"))
+
+    projection = account.reload.loan.payoff_projection(as_of: Date.current)
+
+    assert_equal [ BigDecimal("1066.19"), BigDecimal("1200") ], projection.payments.first(2).map { |payment| payment[:payment_amount] }
+    assert projection.converged?
+    assert_equal account.loan.amortization_schedule.payoff_date, projection.payoff_date
+    assert_equal BigDecimal("0"), projection.interest_saved.amount
+  end
+
+  test "an extra repayment or a balance dated ahead is refused" do
+    travel_to Date.new(2026, 2, 15)
+    loan = loan_with([])
+
+    [ { effective_date: "2026-03-15", extra_repayment: "2000" }, { effective_date: "2026-03-15", balance: "9000" } ].each do |row|
+      loan.term_change_rows = [ row ]
+
+      assert_not loan.valid?, row.inspect
+      assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan/term_change.balance_change_in_the_future")
+    end
+  end
+
+  test "a row that records only a fixed-until date leaves the schedule as it is" do
+    unchanged = loan_with([]).amortization_schedule
+    loan = loan_with([ { effective_date: "2026-01-01", term_end_date: "2026-07-01" } ])
+    schedule = loan.amortization_schedule
+
+    assert_equal unchanged.payments, schedule.payments
+    assert_equal unchanged.total_paid, schedule.total_paid
+    assert_not schedule.re_amortising?
+    assert_equal BigDecimal("1066.19"), loan.monthly_payment.amount
+  end
+
+  test "the balance at the end of the fixed period is the schedule's for a borrower on contract" do
+    travel_to Date.new(2026, 2, 15)
+    account = loan_account_with([ { effective_date: "2026-01-01", term_end_date: "2026-04-10" } ])
+    account.update!(balance: BigDecimal("11053.81"))
+
+    term_end = account.reload.loan.current_term_end
+
+    assert_equal Date.new(2026, 4, 10), term_end.date
+    assert_equal BigDecimal("9132.95"), term_end.balance.amount, "the balance after the payment of 1 April"
+  end
+
+  test "the balance at the end of the fixed period starts from what is owed today" do
+    travel_to Date.new(2026, 2, 15)
+    account = loan_account_with([ { effective_date: "2026-01-01", term_end_date: "2026-04-10" } ])
+    account.update!(balance: BigDecimal("9053.81"))
+
+    term_end = account.reload.loan.current_term_end
+
+    # 9,053.81 -> 1 March: 90.54 interest, 8,078.16 -> 1 April: 80.78 interest.
+    assert_equal BigDecimal("7092.75"), term_end.balance.amount
+  end
+
+  test "a fixed period that ends before the next payment leaves today's balance" do
+    travel_to Date.new(2026, 2, 15)
+    account = loan_account_with([ { effective_date: "2026-01-01", term_end_date: "2026-02-20" } ])
+    account.update!(balance: BigDecimal("11053.81"))
+
+    assert_equal BigDecimal("11053.81"), account.reload.loan.current_term_end.balance.amount
   end
 
   test "the payoff projection pays the changed contract" do

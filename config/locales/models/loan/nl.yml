@@ -7,19 +7,23 @@ nl:
         effective_date: "Ingangsdatum"
         extra_repayment: "Extra aflossing"
         payment: "Betaling"
+        term_end_date: "Vast tot"
     errors:
       models:
         loan:
           duplicate_term_change_date: "Twee rijen met wijzigingen in de voorwaarden hebben dezelfde datum. Voeg ze samen tot één rij; een rij kan een extra aflossing en een nieuwe betaling samen bevatten."
           invalid_rate_change: "Rijen met rentewijzigingen hebben zowel een ingangsdatum als een rentepercentage nodig."
-          invalid_term_change: "Rijen met wijzigingen in de voorwaarden hebben een ingangsdatum nodig en bedragen die getallen zijn."
+          invalid_term_change: "Rijen met wijzigingen in de voorwaarden hebben een ingangsdatum nodig, bedragen die getallen zijn en, als die is ingevuld, een geldige datum bij Vast tot."
           rate_change_before_origination: "Een rentewijziging kan niet ingaan vóór de startdatum van de lening."
           term_change_after_last_payment: "Een wijziging in de voorwaarden kan niet na de laatste betaling van het schema liggen. Zet de datum op of vóór die betaling."
           term_change_balance_after_last_payment: "Een bevestigd saldo op de laatste betaling van de looptijd moet nul zijn, omdat er geen betalingen meer volgen om het af te lossen. Verleng de looptijd van de lening om het vast te leggen."
-          term_change_not_after_origination: "Een wijziging in de voorwaarden moet ingaan na de startdatum van de lening."
+          term_change_before_origination: "Een wijziging in de voorwaarden kan niet ingaan vóór de startdatum van de lening."
+          term_change_fixed_past_maturity: "De datum bij Vast tot van een wijziging in de voorwaarden kan niet na het einde van de looptijd van de lening liggen."
+          term_change_not_after_origination: "Een wijziging in de voorwaarden die het saldo of de betaling wijzigt, moet ingaan na de startdatum van de lening."
           term_change_payment_below_interest: "De betaling van een wijziging in de voorwaarden moet minstens de rente van de periode dekken."
           term_change_repayment_after_payoff: "Een extra aflossing ligt na het moment waarop de lening is afgelost, door de laatste betaling of door een saldo van nul. Zet de datum eerder, of verwijder de rij."
         loan/term_change:
-          no_amount: "Een wijziging in de voorwaarden heeft een extra aflossing, een bevestigd saldo of een betaling nodig."
-          in_the_future: "Een wijziging in de voorwaarden kan niet in de toekomst ingaan."
+          records_nothing: "Een wijziging in de voorwaarden heeft een extra aflossing, een bevestigd saldo, een betaling of een datum bij Vast tot nodig."
+          balance_change_in_the_future: "Een extra aflossing of een bevestigd saldo kan geen datum in de toekomst hebben."
+          term_ends_before_it_starts: "De datum bij Vast tot moet na de ingangsdatum liggen."
           two_balance_changes: "Een wijziging in de voorwaarden heeft een extra aflossing of een bevestigd saldo, niet allebei."

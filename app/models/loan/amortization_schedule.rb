@@ -31,7 +31,7 @@ class Loan::AmortizationSchedule
         currency: loan.account.currency,
         rate_resolver: (Loan::RateResolver.for(loan) if loan.variable_rate_type?),
         day_count_convention: loan.day_count_convention,
-        term_changes: loan.active_term_changes.map(&:to_schedule_change)
+        term_changes: loan.schedule_term_changes.map(&:to_schedule_change)
       )
     end
   end

@@ -778,7 +778,8 @@ class Family::DataExporter
           effective_date: change.effective_date,
           extra_repayment: change.extra_repayment,
           balance: change.balance,
-          payment: change.payment
+          payment: change.payment,
+          term_end_date: change.term_end_date
         }
       end
     end

@@ -29,6 +29,10 @@ class Assistant::Function::GetAccounts < Assistant::Function
         repayment, a confirmed balance or a new payment) reports its
         `monthly_payment` the same way as a variable-rate loan.
 
+        `fixed_until` is the recorded day a loan's current terms stop being
+        fixed, such as the end of a fixed-rate period. It is absent when the
+        user has not recorded one or that day has passed.
+
         Note on `terms.available_credit`: providers disagree on its meaning
         (some report the credit limit, others the remaining credit), so confirm
         with the user before reasoning about headroom on a linked card.
@@ -143,6 +147,7 @@ class Assistant::Function::GetAccounts < Assistant::Function
         base_interest_rate: (loan.interest_rate if loan.interest_rate != interest_rate),
         rate_type: loan.rate_type,
         term_months: loan.term_months,
+        fixed_until: loan.current_term_end_date(as_of: as_of_date),
         monthly_payment: monthly_payment&.amount,
         monthly_payment_formatted: monthly_payment&.format,
         original_balance: original_balance&.amount,
