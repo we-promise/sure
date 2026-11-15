@@ -189,7 +189,10 @@ class Portfolio::Performance
             daily_returns.active_until_dates.map { |id, date| "#{id}:#{date}" }.sort.join(",")
           ].join("|")
         ),
-        period.start_date, period.end_date
+        period.start_date, period.end_date,
+        # A rate stored or corrected changes every converted figure, and the
+        # rate importers touch no family timestamp.
+        ExchangeRate.maximum(:updated_at)&.to_i
       ].compact.join("_"),
       invalidate_on_data_updates: true
     )

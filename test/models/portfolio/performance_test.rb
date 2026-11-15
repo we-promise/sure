@@ -205,6 +205,20 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     ).cache_key, "figures converted into USD must not be served to an EUR family"
   end
 
+  # A rate stored or corrected changes every converted figure, and the rate
+  # importers touch no family timestamp, so the key has to read the rates'
+  # own freshness, as the other FX-converted caches do.
+  test "cache key changes when an exchange rate is stored" do
+    build_textbook_case
+    before_key = performance.cache_key
+
+    travel 1.minute do
+      set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.1
+    end
+
+    refute_equal before_key, performance.cache_key
+  end
+
   # The flow scope is the accounts themselves (see Portfolio::DailyReturns),
   # so there is no second set to pass, and none to key the cache on.
   test "the flow scope cannot be widened beyond the accounts measured" do
