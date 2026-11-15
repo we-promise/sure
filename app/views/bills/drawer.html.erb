@@ -22,7 +22,7 @@
                icon: "pencil",
                href: edit_recurring_transaction_path(@series),
                data: { turbo_frame: :modal }) %>
-          <% if bills_one_shot_ai_available? %>
+          <% if ai_feature_available?(:bill_setup) %>
             <% menu.with_item(
                  variant: "link",
                  text: t("bills.smart_configurations.show.trigger"),
