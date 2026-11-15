@@ -454,6 +454,9 @@ class AccountsController < ApplicationController
         :search, :start_date, :end_date, :amount, :amount_operator,
         categories: [], tags: [], merchants: [], types: [], status: [], reconcile_status: []
       )
+      # Manual reconciliation only applies to accounts without a live sync.
+      # Ignore a stale or crafted filter on a synced account page.
+      q.delete(:reconcile_status) unless @account&.manual?
       q.delete(:amount_operator) unless q[:amount].present?
       q
     end

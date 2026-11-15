@@ -727,7 +727,40 @@ class Entry < ApplicationRecord
       rescheduled_ids = []
 
       transaction do
-        all.includes(:account).each do |entry|
+        # Lock in the same order as Transfer::Matcher (transactions, then
+        # entries). A concurrent match cannot then turn a selected entry into a
+        # matched leg between the membership read and the update. Lock only
+        # entry rows: `all` may join accounts, and a plain FOR UPDATE would
+        # lock them too.
+        selected_entry_ids = all.except(:includes).pluck(:id)
+        transaction_ids = Entry.unscoped.where(id: selected_entry_ids, entryable_type: "Transaction").distinct.pluck(:entryable_id)
+        Transaction.where(id: transaction_ids).order(:id).lock.pluck(:id)
+        locked_entries = Entry.unscoped.where(id: selected_entry_ids).reorder(:id).lock("FOR UPDATE OF entries").to_a
+        ActiveRecord::Associations::Preloader.new(
+          records: locked_entries,
+          associations: [ :account, :entryable ]
+        ).call
+
+        # Resolve the matched-transfer set inside the transaction, after the
+        # locks, so it reflects a match that committed before the lock.
+        transfer_leg_entry_ids =
+          if bulk_attributes[:date].present? || bulk_attributes[:entryable_attributes].present?
+            Entry.unscoped.where(id: locked_entries.map(&:id), entryable_type: "Transaction")
+              .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
+              .where(<<~SQL.squish)
+                EXISTS (
+                  SELECT 1 FROM transfers
+                  WHERE transfers.inflow_transaction_id = transactions.id
+                     OR transfers.outflow_transaction_id = transactions.id
+                )
+              SQL
+              .pluck("entries.id")
+              .to_set
+          else
+            Set.new
+          end
+
+        locked_entries.each do |entry|
           changed = false
           # Whether this row's changes should lock saved attributes / mark
           # user-modified. Reconciling is a verification action, not an
@@ -745,7 +778,28 @@ class Entry < ApplicationRecord
             attrs.delete(:entryable_attributes) unless entry.transaction?
             # reconciled_status is a manual-accounts-only concept — synced accounts
             # already have duplicate-matching + statement-level reconciliation.
-            attrs.delete(:reconciled_status) unless entry.account.manual?
+            # It is also a transaction concept: valuations and trades have no
+            # badge and the reconciliation indicator never counts them.
+            attrs.delete(:reconciled_status) unless entry.transaction? && entry.account.manual?
+
+            # A matched transfer leg keeps its date, and only the outflow of a
+            # categorizable transfer owns a category. Never apply a merchant
+            # to a transfer. This also preserves the categorize wizard, which
+            # intentionally includes loan_payment and investment_contribution
+            # outflows.
+            if transfer_leg_entry_ids.include?(entry.id)
+              attrs.delete(:date)
+
+              if attrs[:entryable_attributes].present?
+                category_id = attrs[:entryable_attributes][:category_id]
+
+                if category_id.present? && entry.transaction.category_editable?
+                  attrs[:entryable_attributes] = { category_id: category_id }
+                else
+                  attrs.delete(:entryable_attributes)
+                end
+              end
+            end
 
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
@@ -785,7 +839,7 @@ class Entry < ApplicationRecord
       # Moving a date changes balances (and may make an entry scheduled), so
       # mirror Entry#sync_account_later -- once per account, not per entry.
       sync_windows.each { |account, window_start| account.sync_later(window_start_date: window_start) }
-      EntryScheduledSyncJob.schedule_for_entries(Entry.where(id: rescheduled_ids)) if rescheduled_ids.any?
+      EntryScheduledSyncJob.schedule_for_entries(Entry.unscoped.where(id: rescheduled_ids)) if rescheduled_ids.any?
 
       updated_count
     end

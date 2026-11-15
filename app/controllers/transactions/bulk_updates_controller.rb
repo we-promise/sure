@@ -1,5 +1,12 @@
 class Transactions::BulkUpdatesController < ApplicationController
   def new
+    # The selection bar sends these flags so the drawer can hide fields that
+    # do not apply to the selected entries. They control display only; the
+    # server still enforces the same rules in Entry.bulk_update!.
+    @has_transaction_entry = params[:has_transaction_entry] != "false"
+    @has_transfer_entry = params[:has_transfer_entry] == "true"
+    @has_category_editable_entry = params[:has_category_editable_entry] != "false"
+    @has_normal_transaction_entry = params[:has_normal_transaction_entry] != "false"
   end
 
   def create

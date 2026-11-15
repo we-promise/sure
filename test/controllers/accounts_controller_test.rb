@@ -578,6 +578,32 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_select "##{dom_id(valuation)}", count: 0
   end
 
+  test "show filters activity by reconciliation status on a manual account" do
+    @user.family.update!(manual_reconciliation: true)
+    cleared = create_transaction(name: "Cleared", amount: 50, account: @account)
+    cleared.update!(reconciled_status: "cleared")
+    unreconciled = create_transaction(name: "Unreconciled", amount: 60, account: @account)
+
+    get account_url(@account), params: { q: { reconcile_status: [ "cleared" ] } }
+
+    assert_response :success
+    assert_select "##{dom_id(cleared)}"
+    assert_select "##{dom_id(unreconciled)}", count: 0
+    assert_select "#transaction-filters-menu button[data-id=?]", "reconcile_status_filter"
+  end
+
+  test "show hides the reconciliation filter on a synced account and drops the param" do
+    @user.family.update!(manual_reconciliation: true)
+    synced_account = accounts(:connected)
+    entry = create_transaction(name: "Synced entry", amount: 50, account: synced_account)
+
+    get account_url(synced_account), params: { q: { reconcile_status: [ "unreconciled" ] } }
+
+    assert_response :success
+    assert_select "#transaction-filters-menu button[data-id=?]", "reconcile_status_filter", count: 0
+    assert_select "##{dom_id(entry)}"
+  end
+
   test "show renders a badge for each active filter" do
     get account_url(@account), params: { q: { categories: [ "Food & Drink" ], search: "grocery" } }
 
