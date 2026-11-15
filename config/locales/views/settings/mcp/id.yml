@@ -1,0 +1,23 @@
+---
+id:
+  settings:
+    mcp:
+      show:
+        page_title: "Server MCP"
+        connect_title: "Hubungkan asisten AI"
+        connect_subtitle: "Tempel URL ini ke Claude.ai (atau klien apa pun yang kompatibel dengan MCP) untuk menghubungkannya ke akun Sure Anda."
+        copy_url: "Salin"
+        copied: "Tersalin!"
+        how_to_connect_title: "Cara menghubungkan Claude"
+        step_1: "Buka Claude.ai lalu masuk ke Settings → Customize → Connectors."
+        step_2: "Klik \"Add connector\" lalu tempel URL server MCP di atas."
+        step_3: "Klik Connect — Anda akan diarahkan ke Sure untuk masuk dan mengizinkan akses."
+        step_4: "Setelah diizinkan, Claude dapat membaca data rekening, transaksi, dan saldo Anda."
+        connected_title: "Klien yang terhubung"
+        connected_subtitle: "Aplikasi berikut saat ini memiliki akses ke data Sure Anda. Cabut akses yang tidak lagi Anda gunakan."
+        unknown_client: "Klien tidak dikenal"
+        connected_ago: "Terhubung %{time} yang lalu"
+        revoke: "Cabut"
+        revoke_confirm: "Cabut akses untuk klien ini?"
+      revoke:
+        revoked: "Koneksi dicabut."

@@ -18,7 +18,7 @@ module Family::AiPromptable
   # it swaps a small local model's terse rules for a prompt written for GPT-4.
   # Mirrors how Provider::Registry picks the endpoint.
   def self.custom_openai_provider?
-    (ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base).present?
+    Provider::Openai.custom_endpoint?(ENV["OPENAI_URI_BASE"].presence || Setting.openai_uri_base)
   end
 
   # Each key's stock text, lazily. Constructing a provider class with

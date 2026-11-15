@@ -101,6 +101,8 @@ en:
         market_value: Market Value
         purchase_price: Purchase Price
         trend: Trend
+        trend_in_currency: "Trend in %{currency}"
+        rate_unavailable: "Exchange rate unavailable"
         unknown: Unknown
         year_built: Year Built
         edit_account_details: "Edit account details"

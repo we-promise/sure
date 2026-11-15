@@ -21,6 +21,8 @@ class Import::UploadsController < ApplicationController
       handle_qif_upload
     elsif @import.is_a?(SureImport)
       update_sure_import_upload
+    elsif @import.is_a?(MonarchImport)
+      update_monarch_import_upload
     elsif csv_valid?(csv_str)
       @import.account = import_account_id.present? ? accessible_accounts.find(import_account_id) : nil
       @import.assign_attributes(raw_file_str: csv_str, col_sep: upload_params[:col_sep])
@@ -64,6 +66,32 @@ class Import::UploadsController < ApplicationController
 
         render :show, status: :unprocessable_entity
       end
+    end
+
+    def update_monarch_import_upload
+      files = params.fetch(:import, {}).permit(:balances_file, :transactions_file)
+      balances, transactions = files[:balances_file], files[:transactions_file]
+
+      error = if balances.blank?
+        t("import.uploads.update.monarch_balances_required")
+      elsif [ balances, transactions ].compact.any? { |file| file.size > Import::MAX_CSV_SIZE }
+        t("imports.create.file_too_large", max_size: Import::MAX_CSV_SIZE / 1.megabyte)
+      elsif [ balances, transactions ].compact.any? { |file| !Import::ALLOWED_CSV_MIME_TYPES.include?(file.content_type) }
+        t("imports.create.invalid_file_type")
+      end
+
+      unless error
+        begin
+          @import.attach_exports!(balances_csv: balances.read, transactions_csv: transactions&.read)
+          redirect_to import_configuration_path(@import), notice: t("import.uploads.update.monarch_uploaded")
+          return
+        rescue MonarchImport::Exports::Error => e
+          error = e.message
+        end
+      end
+
+      flash.now[:alert] = error
+      render :show, status: :unprocessable_entity
     end
 
     def set_import

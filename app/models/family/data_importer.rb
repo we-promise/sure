@@ -38,6 +38,14 @@ class Family::DataImporter
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
 
+  # What the loan and credit card forms edit, restored on import. The loan's
+  # rate schedule is restored separately (see assign_liability_details).
+  LOAN_DETAIL_ATTRIBUTES = %w[
+    interest_rate rate_type term_months start_date down_payment initial_balance
+    insurance_rate insurance_rate_type day_count_convention principal_only_transfers
+  ].freeze
+  CREDIT_CARD_DETAIL_ATTRIBUTES = %w[apr annual_fee minimum_payment available_credit due_day statement_close_day expiration_date].freeze
+
   def self.accountable_class_for(type)
     ACCOUNTABLE_TYPE_CLASSES[type.to_s]
   end
@@ -78,7 +86,9 @@ class Family::DataImporter
     "Rule" => "rules"
   }.freeze
 
-  def initialize(family, ndjson_content, import_session: nil, import: nil)
+  # account_targets maps source account IDs to existing accounts that the
+  # import's records go into instead of accounts it creates.
+  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {})
     @family = family
     @ndjson_content = ndjson_content
     @import_session = import_session
@@ -96,6 +106,7 @@ class Family::DataImporter
       securities: {},
       rules: {}
     }
+    account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
     @created_accounts = []
@@ -282,6 +293,25 @@ class Family::DataImporter
       account.entries.find_by(source: session_entry_source, external_id: external_id)
     end
 
+    # A missing or null value keeps the column's default, so older exports,
+    # which carry none of these, still import.
+    def assign_liability_details(accountable, accountable_data)
+      attributes = case accountable
+      when Loan then LOAN_DETAIL_ATTRIBUTES
+      when CreditCard then CREDIT_CARD_DETAIL_ATTRIBUTES
+      end
+      return unless attributes
+
+      accountable.assign_attributes(accountable_data.slice(*attributes).compact)
+
+      # Through the form's own parser, so a schedule the loan could not read
+      # back is rejected instead of stored.
+      schedule = accountable_data["variable_rate_schedule"]
+      if accountable.is_a?(Loan) && schedule.is_a?(Hash)
+        accountable.rate_changes = schedule.map { |date, rate| { "effective_date" => date, "rate" => rate } }
+      end
+    end
+
     def import_accounts(records)
       records.each do |record|
         data = record["data"]
@@ -307,6 +337,7 @@ class Family::DataImporter
           # Build accountable
           accountable = accountable_class.new
           accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+          assign_liability_details(accountable, accountable_data)
 
           # Copy any other accountable attributes
           safe_accountable_attrs = %w[subtype locked_attributes]
@@ -934,6 +965,10 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
+        # Source-system metadata, such as the ID that lets a later import from
+        # that system recognise the transaction, kept out of external_id so
+        # provider sync can still claim the entry.
+        transaction.extra = transaction.extra.merge(data["extra"]) if data["extra"].is_a?(Hash)
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -949,6 +984,9 @@ class Family::DataImporter
           entry.external_id = session_entry_external_id("Transaction", old_id)
           entry.source = session_entry_source
         end
+        # Records from another system may lock the entry against provider sync
+        # overwrites, as the CSV importer does.
+        entry.import_locked = true if truthy?(data["import_locked"])
 
         entry.save!
 
