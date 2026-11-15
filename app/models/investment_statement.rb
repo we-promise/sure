@@ -347,9 +347,20 @@ class InvestmentStatement
     )
   end
 
+  # How many investment accounts #period_return_trend leaves out of the
+  # period because a balance it reads has no rate into the family currency.
+  # Zero when everything converts, which is the ordinary case.
+  def period_return_unconvertible_count(period: Period.current_month)
+    period_return_unconvertible_account_ids(period).length
+  end
+
+  # An account with a balance in a currency that has no rate into the family
+  # currency is left out of both legs, so the start value and the flows cover
+  # the same accounts. #period_return_unconvertible_count says how many were
+  # left out, so a caller can show the figure as partial.
   def period_return_trend(period: Period.current_month)
     currency = family.currency
-    account_ids = investment_account_ids
+    account_ids = investment_account_ids - period_return_unconvertible_account_ids(period)
     return nil if account_ids.empty?
 
     absolute_return = ActiveRecord::Base.connection.select_value(
@@ -1067,6 +1078,31 @@ class InvestmentStatement
 
     def investment_account_ids
       @investment_account_ids ||= investment_accounts.pluck(:id)
+    end
+
+    # Accounts with a balance #period_return_trend reads -- one in the period,
+    # or the last one before it -- in a currency with no rate into the family
+    # currency. ExchangeRate.rate_sql already leaves such a row out, but row
+    # by row: the two legs read different rows, so the start value could stay
+    # while the flows measured against it go, or the other way round.
+    def period_return_unconvertible_account_ids(period)
+      @period_return_unconvertible_account_ids ||= {}
+      @period_return_unconvertible_account_ids[period.date_range] ||= begin
+        rows = Balance
+          .where(account_id: investment_account_ids)
+          .where(<<~SQL.squish, start_date: period.date_range.begin, end_date: period.date_range.end)
+            balances.date BETWEEN :start_date AND :end_date
+            OR balances.date = (
+              SELECT MAX(b2.date) FROM balances b2
+              WHERE b2.account_id = balances.account_id AND b2.date < :start_date
+            )
+          SQL
+          .distinct
+          .pluck(:account_id, :currency)
+
+        missing = ExchangeRate.currencies_without_rate(rows.map(&:last), to: family.currency)
+        rows.select { |_, currency| missing.include?(currency) }.map(&:first).uniq
+      end
     end
 
     def report_accounts
