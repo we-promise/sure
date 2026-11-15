@@ -115,11 +115,20 @@ class User < ApplicationRecord
   # unknown emails. The legacy lookup runs first on every login (one indexed
   # query) so that legacy and encrypted rows cost the same single password
   # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  # A user without a local password (SSO only) still costs one hash, so
+  # response time does not reveal such accounts. A non-String password (a
+  # JSON number) is checked as text instead of raising.
   def self.authenticate_by_email(email:, password:)
-    return nil if password.nil? || password.empty?
+    return nil if password.nil? || password.to_s.empty?
 
+    password = password.to_s
     normalized = email.to_s.strip.downcase
     legacy_user = find_by_legacy_plaintext_email(normalized)
+    user = legacy_user || find_by(email: normalized)
+    if user && user.password_digest.blank?
+      new(password: password)
+      return nil
+    end
     return authenticate_by(email: normalized, password: password) unless legacy_user
 
     legacy_user if legacy_user.authenticate(password)

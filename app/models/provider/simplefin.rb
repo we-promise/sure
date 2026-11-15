@@ -123,29 +123,31 @@ class Provider::Simplefin
     # Use retry logic with exponential backoff for transient network failures
     # Use self.class.get to inherit class-level SSL and timeout defaults
     # The stored access URL came from the bridge; re-check it on every request.
-    response = with_retries("GET /accounts") do |attempt|
-      self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
-    end
+    # Response handling happens inside the retry block so transient 5xx
+    # responses are re-attempted, not just network-layer failures.
+    with_retries("GET /accounts") do |attempt|
+      response = self.class.get(accounts_url, **guarded_request_options(access_url, attempt: attempt))
 
-    case response.code
-    when 200
-      JSON.parse(response.body, symbolize_names: true)
-    when 400
-      Rails.logger.error "SimpleFin API: Bad request - #{response.body}"
-      raise SimplefinError.new("Bad request to SimpleFin API", :bad_request)
-    when 403
-      raise SimplefinError.new("Access URL is no longer valid", :access_forbidden)
-    when 402
-      raise SimplefinError.new("Payment required to access this account", :payment_required)
-    when 429
-      Rails.logger.warn "SimpleFin API: Rate limited - #{response.body}"
-      raise SimplefinError.new("SimpleFin rate limit exceeded. Please try again later.", :rate_limited)
-    when 500..599
-      Rails.logger.error "SimpleFin API: Server error - Code: #{response.code}, Body: #{response.body}"
-      raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
-    else
-      Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
-      raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}", :fetch_failed)
+      case response.code
+      when 200
+        JSON.parse(response.body, symbolize_names: true)
+      when 400
+        Rails.logger.error "SimpleFin API: Bad request - #{response.body}"
+        raise SimplefinError.new("Bad request to SimpleFin API", :bad_request)
+      when 403
+        raise SimplefinError.new("Access URL is no longer valid", :access_forbidden)
+      when 402
+        raise SimplefinError.new("Payment required to access this account", :payment_required)
+      when 429
+        Rails.logger.warn "SimpleFin API: Rate limited - #{response.body}"
+        raise SimplefinError.new("SimpleFin rate limit exceeded. Please try again later.", :rate_limited)
+      when 500..599
+        Rails.logger.error "SimpleFin API: Server error - Code: #{response.code}, Body: #{response.body}"
+        raise SimplefinError.new("SimpleFin server error (#{response.code}). Please try again later.", :server_error)
+      else
+        Rails.logger.error "SimpleFin API: Unexpected response - Code: #{response.code}, Body: #{response.body}"
+        raise SimplefinError.new("Failed to fetch accounts: #{response.code} #{response.message}", :fetch_failed)
+      end
     end
   end
 
@@ -257,9 +259,21 @@ class Provider::Simplefin
     # manual sync (with user retry) succeeds.
     def with_retries(operation_name, max_retries: MAX_RETRIES, backoff: true)
       retries = 0
+      server_error_count = 0
+      last_server_error = nil
 
       begin
-        yield retries
+        result = yield retries
+        # A success after server-error retries is a recovered incident — record
+        # it so support can inspect it in the debug log, not just process logs.
+        if server_error_count > 0
+          capture_server_error(
+            operation_name,
+            level: "warn",
+            message: "recovered after #{server_error_count} server-error retries (last: #{last_server_error})"
+          )
+        end
+        result
       rescue *RETRYABLE_ERRORS => e
         retries += 1
 
@@ -282,6 +296,34 @@ class Provider::Simplefin
           )
         end
       rescue SimplefinError => e
+        # Retry transient server errors (HTTP 5xx): the bridge returns 503 while
+        # upstream bank connections are temporarily unavailable ("Please try
+        # again later"). Without a retry here, one flaky response fails the whole
+        # sync and loses that import window until the next scheduled run.
+        if e.error_type == :server_error
+          retries += 1
+          server_error_count += 1
+          last_server_error = e.message
+          if retries <= max_retries
+            # Same 0-25% jitter as calculate_retry_delay so concurrent syncs
+            # don't hammer a recovering bridge in lockstep.
+            base_delay = 30 * (2 ** (retries - 1))
+            delay = [ base_delay + base_delay * rand * 0.25, 180 ].min
+            Rails.logger.warn(
+              "SimpleFin API: #{operation_name} got '#{e.message}' (attempt #{retries}/#{max_retries}). Retrying in #{delay}s..."
+            )
+            sleep(delay) if backoff && delay.to_f.positive?
+            retry
+          end
+          Rails.logger.error(
+            "SimpleFin API: #{operation_name} still failing after #{max_retries} retries: #{e.message}"
+          )
+          capture_server_error(
+            operation_name,
+            level: "error",
+            message: "still failing after #{max_retries} server-error retries: #{e.message}"
+          )
+        end
         # Preserve original error type and message.
         raise
       rescue => e
@@ -289,6 +331,21 @@ class Provider::Simplefin
         Rails.logger.error "SimpleFin API: #{operation_name} failed with non-retryable error: #{e.class}: #{e.message}"
         raise SimplefinError.new("Exception during #{operation_name}: #{e.message}", :request_failed)
       end
+    end
+
+    # Record server-error incidents in the debug log so support can inspect
+    # them (AGENTS.md: DebugLogEntry.capture for support-relevant failures and
+    # partial responses). Family/account context is not available at the HTTP
+    # client layer; the importer records that on the failure path.
+    def capture_server_error(operation_name, level:, message:)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: level,
+        message: "SimpleFin #{operation_name}: #{message}",
+        source: self.class.name,
+        provider_key: "simplefin",
+        metadata: { operation: operation_name }
+      )
     end
 
     # Calculate delay with exponential backoff and jitter

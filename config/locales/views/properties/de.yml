@@ -27,6 +27,14 @@ de:
       avm_description: Gib der Immobilie einen Namen und trag ihre Adresse ein. %{provider} sucht die Objektdaten und den geschätzten Marktwert für dich heraus.
       avm_option: Über %{provider} hinzufügen
       avm_preview_back: Zurück
+      avm_preview_uprn: UPRN
+      avm_preview_range: Schätzspanne
+      avm_preview_confidence: Verlässlichkeit
+      avm_confidence:
+        high: Hoch
+        medium: Mittel
+        low: Niedrig
+      avm_attribution_chimnie: Bewertungsdaten von Chimnie. Enthält OS-Daten © Crown copyright and database right, Daten von Royal Mail © Royal Mail copyright and database right sowie Daten von HM Land Registry © Crown copyright and database right, lizenziert unter der Open Government Licence v3.0.
       avm_preview_confirm: Immobilie anlegen
       avm_preview_description: Das hat %{provider} gefunden. Prüf die Angaben, bevor du die Immobilie anlegst – bisher wurde nichts gespeichert.
       avm_preview_no_record: "%{provider} hat unter dieser Adresse keinen Eintrag gefunden. Der gezeigte Wert ist deshalb eine Schätzung anhand der Umgebung. Prüf die Adresse, bevor du fortfährst."
@@ -34,6 +42,13 @@ de:
       avm_submit: Immobilie suchen
       avm_title: Immobilie über %{provider} hinzufügen
       avm_us_only: "%{provider} unterstützt nur Immobilien in den USA."
+      avm_uk_only: "%{provider} unterstützt nur Wohnimmobilien im Vereinigten Königreich."
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: "100023336956"
+      avm_uprn_help: "Die Unique Property Reference Number (bis zu 12 Ziffern) kennzeichnet jede Adresse im Vereinigten Königreich. Du findest sie bei GeoPlace auf findmyaddress.co.uk oder bekommst sie beim zuständigen Council. %{provider} bewertet die Immobilie damit kostenlos."
+      avm_county_label: Grafschaft (optional)
+      avm_town_label: Stadt oder Gemeinde
+      avm_postcode_label: Postleitzahl
       next: Weiter
     overview:
       living_area: Wohnfläche
@@ -61,6 +76,7 @@ de:
       title: Immobilie manuell erfassen
     avm_providers:
       realie: Realie
+      chimnie: Chimnie
       rentcast: RentCast
     balances:
       market_value_label: Geschätzter Marktwert
@@ -99,9 +115,21 @@ de:
     tabs:
       overview:
         edit_account_details: Kontodaten bearbeiten
+        refresh_valuation: Bewertung aktualisieren
+        valuation_source: "Bewertet von %{provider}, zuletzt aktualisiert am %{date}"
+        link_valuation: "Wert automatisch über %{provider} aktualisieren"
+        link_valuation_description: Der Wert dieser Immobilie wird nur manuell aktualisiert.
         living_area: Wohnfläche
         market_value: Marktwert
         purchase_price: Kaufpreis
         trend: Entwicklung
         unknown: Unbekannt
         year_built: Baujahr
+    refresh_valuation:
+      queued: Die Bewertung wird aktualisiert. Der neue Wert erscheint in Kürze.
+      not_linked: Diese Immobilie ist mit keinem Bewertungsanbieter verknüpft.
+      not_configured: "%{provider} ist nicht eingerichtet. Hinterlege den API-Schlüssel unter Einstellungen → Self-Hosting, um diese Bewertung zu aktualisieren."
+    link_valuation:
+      linked: "Mit %{provider} verknüpft und den Wert der Immobilie aktualisiert."
+      link_failed: "%{provider} konnte diese Immobilie nicht bewerten, daher wurde sie nicht verknüpft. Prüf, ob die Adresse stimmt, und versuch es dann noch einmal."
+      not_linkable: Diese Immobilie lässt sich nicht mit diesem Anbieter verknüpfen. Prüf, ob ihre Adresse vollständig ist und in einem unterstützten Land liegt und ob die Kontowährung zum Anbieter passt.
