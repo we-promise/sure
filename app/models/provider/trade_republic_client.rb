@@ -172,12 +172,14 @@ class Provider::TradeRepublicClient
   # /api/v2/auth/account lists for the login, the accounts the user deposits
   # from and pays out to. Only the result is kept, as COUNTERPARTY_KEY =>
   # REFERENCE_ACCOUNT_COUNTERPARTY; neither IBAN is stored. Set once the
-  # detail was read for it, so transfers read before this check are read
-  # again once, from the backlog.
+  # detail was compared with at least one reference account, so transfers
+  # read before this check, or while the account response listed none, are
+  # read again from the backlog.
   COUNTERPARTY_CHECKED_AT_KEY = "counterparty_checked_at"
   COUNTERPARTY_KEY = "counterparty"
   REFERENCE_ACCOUNT_COUNTERPARTY = "reference_account"
   IBAN_ROW_TITLE = "iban"
+  NO_REFERENCE_ACCOUNTS_WARNING = "account response listed no reference accounts; transfer counterparties were not checked"
   IBAN_PATTERN = /\A[A-Z]{2}\d{2}[A-Z0-9]{11,30}\z/
   RETRY_MARKER_KEYS = [
     PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY,
@@ -626,7 +628,7 @@ class Provider::TradeRepublicClient
     end
 
     def normalize_iban(value)
-      iban = value.to_s.gsub(/\s+/, "").upcase
+      iban = value.to_s.gsub(/[[:space:]]+/, "").upcase
       iban if iban.match?(IBAN_PATTERN)
     end
 
@@ -1659,6 +1661,7 @@ class Provider::TradeRepublicClient
       end
 
       enriched_by_id = {}
+      counterparty_unchecked = false
       detail_backfill_count = 0
       details_fetched = 0
 
@@ -1679,10 +1682,17 @@ class Provider::TradeRepublicClient
           # A transfer's imported amount stays the timeline amount; only the
           # note and whether the other party is a reference account come
           # from the detail.
+          # Without a reference account to compare with, the counterparty
+          # stays unchecked, so a later sync that lists one reads it again.
           if self.class.cash_note_pending?(item)
             checked_at = Time.current.iso8601
-            detail = (detail || {}).slice("note").merge(NOTE_CHECKED_AT_KEY => checked_at, COUNTERPARTY_CHECKED_AT_KEY => checked_at)
-            detail[COUNTERPARTY_KEY] = REFERENCE_ACCOUNT_COUNTERPARTY if reference_account_counterparty?(raw_detail, reference_ibans)
+            detail = (detail || {}).slice("note").merge(NOTE_CHECKED_AT_KEY => checked_at)
+            if reference_ibans.present?
+              detail[COUNTERPARTY_CHECKED_AT_KEY] = checked_at
+              detail[COUNTERPARTY_KEY] = REFERENCE_ACCOUNT_COUNTERPARTY if reference_account_counterparty?(raw_detail, reference_ibans)
+            else
+              counterparty_unchecked = true
+            end
           end
           fetched = build_normalized_event(item, category: category, detail: detail)
         rescue TransientProviderError, Timeout, RateLimited
@@ -1703,6 +1713,8 @@ class Provider::TradeRepublicClient
         end
         enriched_by_id[item["id"].to_s] = fetched if fetched
       end
+
+      warnings << NO_REFERENCE_ACCOUNTS_WARNING if counterparty_unchecked
 
       merged_events = events.map do |event|
         id = event["id"].to_s
@@ -1859,7 +1871,9 @@ class Provider::TradeRepublicClient
       return false if reference_ibans.blank?
 
       ibans = section_rows(collect_sections(raw)).filter_map do |row|
-        self.class.normalize_iban(row.dig("detail", "text")) if row["title"].to_s.strip.casecmp?(IBAN_ROW_TITLE)
+        next unless row["title"].to_s.strip.casecmp?(IBAN_ROW_TITLE) && row["detail"].is_a?(Hash)
+
+        self.class.normalize_iban(row["detail"]["text"])
       end.uniq
       ibans.one? && reference_ibans.include?(ibans.first)
     end
