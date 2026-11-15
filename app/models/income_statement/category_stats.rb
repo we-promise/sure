@@ -72,10 +72,12 @@ class IncomeStatement::CategoryStats
           -- Average over every period from the category's first one to end_p,
           -- at most 12 periods, so periods without spending count as zero. The
           -- unfinished current period counts only once it has spending.
-          ABS(COALESCE(SUM(total) FILTER (WHERE period > end_p - CAST('12 ' || :interval AS interval)), 0) / (
+          -- A NULL total means transactions exist but none can be converted.
+          -- Exclude those periods, not genuinely empty periods, from the divisor.
+          COALESCE(ABS(COALESCE(SUM(total) FILTER (WHERE period > end_p - CAST('12 ' || :interval AS interval)), 0) / NULLIF((
             SELECT COUNT(*) FROM generate_series(GREATEST(MIN(period), MAX(end_p) - CAST('11 ' || :interval AS interval)),
               MAX(end_p), CAST('1 ' || :interval AS interval))
-          )) as avg
+          ) - COUNT(*) FILTER (WHERE total IS NULL AND period > end_p - CAST('12 ' || :interval AS interval)), 0)), 0) as avg
         FROM windowed
         GROUP BY category_id, classification;
       SQL

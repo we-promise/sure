@@ -389,6 +389,53 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 100.0, income_statement.avg_expense(interval: "month", category: @groceries_category)
   end
 
+  test "category average skips unknown months but counts genuinely empty months" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    krw_account = @family.accounts.create! name: "KRW Checking", currency: "KRW", balance: 0, accountable: Depository.new
+    month = Date.current.beginning_of_month
+
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: month - 3.months)
+    create_transaction(account: krw_account, amount: 130_000, currency: "KRW", category: @groceries_category, date: month - 2.months)
+    # Last month has no spending; unlike the KRW-only month, it counts as zero.
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: month)
+
+    statement = IncomeStatement.new(@family)
+    assert_equal 100, statement.avg_expense(interval: "month", category: @groceries_category)
+    assert_equal 150, statement.median_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average handles a window with no convertible spending" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    krw_account = @family.accounts.create! name: "KRW Checking", currency: "KRW", balance: 0, accountable: Depository.new
+    create_transaction(account: krw_account, amount: 130_000, currency: "KRW", category: @groceries_category,
+                       date: Date.current.beginning_of_month)
+
+    assert_equal 0, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average retains a month with some convertible spending" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    krw_account = @family.accounts.create! name: "KRW Checking", currency: "KRW", balance: 0, accountable: Depository.new
+    month = Date.current.beginning_of_month
+    create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: month.prev_month)
+    create_transaction(account: krw_account, amount: 130_000, currency: "KRW", category: @groceries_category, date: month.prev_month)
+    create_transaction(account: @checking_account, amount: 200, category: @groceries_category, date: month)
+
+    assert_equal 150, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
+  test "category average does not subtract unknown months outside its window" do
+    Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
+    krw_account = @family.accounts.create! name: "KRW Checking", currency: "KRW", balance: 0, accountable: Depository.new
+    month = Date.current.beginning_of_month
+    create_transaction(account: krw_account, amount: 130_000, currency: "KRW", category: @groceries_category, date: month - 12.months)
+    12.times do |offset|
+      create_transaction(account: @checking_account, amount: 100, category: @groceries_category, date: month - offset.months)
+    end
+
+    assert_equal 100, IncomeStatement.new(@family).avg_expense(interval: "month", category: @groceries_category)
+  end
+
   test "calculates category-specific median expense" do
     # Clear existing transactions by deleting entries
     Entry.joins(:account).where(accounts: { family_id: @family.id }).destroy_all
