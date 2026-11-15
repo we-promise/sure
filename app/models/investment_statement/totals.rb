@@ -1,7 +1,14 @@
 class InvestmentStatement::Totals
-  def initialize(family, account_ids:, date_range:)
+  # Transaction kinds a liability payment carries (Transfer.kind_for_account).
+  LIABILITY_PAYMENT_KINDS = %w[cc_payment loan_payment].freeze
+
+  # settlement_account_ids are the accounts among account_ids that a broker
+  # settles trades on but that the user may also run as a current account
+  # (InvestmentStatement#totals_account_ids); see #recorded_flow_sql.
+  def initialize(family, account_ids:, date_range:, settlement_account_ids: [])
     @family = family
     @account_ids = account_ids
+    @settlement_account_ids = Array(settlement_account_ids) & Array(account_ids)
     @date_range = date_range
   end
 
@@ -128,16 +135,38 @@ class InvestmentStatement::Totals
     # and interest, "Other". Counting those by sign would bring back the
     # trades-as-contributions reading this card replaced. A manual deposit
     # counts once it is labelled Contribution.
+    #
+    # On a settlement account (Trade Republic's Cash account, which has an
+    # IBAN and a card) a credit card or loan payment is not counted either,
+    # unless it carries one of the labels above. That account is often the
+    # user's current account: their card spending there is already not a
+    # flow, and their salary is not one, so a card bill or a loan instalment
+    # paid from it is spending too, not money taken out of the broker.
+    # Counted, every month's bill would lower net contributions while the
+    # income that paid it never raised them. A transfer to the user's other
+    # accounts (funds_movement) still counts as a withdrawal.
     def recorded_flow_sql
       labels = (Portfolio::FlowClassifier::EXTERNAL_LABELS + [ Portfolio::FlowClassifier::TRANSFER_LABEL ])
 
       <<~SQL.squish
         (
           COALESCE(trades.investment_activity_label, transactions.investment_activity_label) IN (#{quote_list(labels)})
-          OR transactions.kind IN (#{quote_list(Transaction::TRANSFER_KINDS)})
-          OR (flow_transfers.inflow_transaction_id IS NOT NULL AND flow_counterpart_entries.account_id IS NULL)
+          OR (
+            (
+              transactions.kind IN (#{quote_list(Transaction::TRANSFER_KINDS)})
+              OR (flow_transfers.inflow_transaction_id IS NOT NULL AND flow_counterpart_entries.account_id IS NULL)
+            )
+            #{settlement_payment_exclusion_sql}
+          )
         )
       SQL
+    end
+
+    def settlement_payment_exclusion_sql
+      return "" if @settlement_account_ids.empty?
+
+      ids = ActiveRecord::Base.sanitize_sql_array([ "ARRAY[:ids]::uuid[]", { ids: @settlement_account_ids } ])
+      "AND NOT (entries.account_id = ANY(#{ids}) AND transactions.kind IN (#{quote_list(LIABILITY_PAYMENT_KINDS)}))"
     end
 
     def quote_list(values)

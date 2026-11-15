@@ -1126,6 +1126,47 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "EUR"), totals.withdrawals
   end
 
+  # Trade Republic Cash has an IBAN and a card, and many users run it as
+  # their current account. A card bill or a loan instalment paid from it is
+  # spending, as the card purchases on it are; a transfer to the user's bank
+  # still takes money out of the broker.
+  test "credit card and loan payments from Trade Republic Cash are not withdrawals" do
+    portfolio, cash = create_split_trade_republic_connection
+    sync_trade_republic(portfolio, [])
+    sync_trade_republic(cash, [])
+    cash_account = cash.current_account
+    card = @family.accounts.create!(name: "Card", balance: 1000, currency: "EUR", accountable: CreditCard.new)
+    loan = @family.accounts.create!(name: "Loan", balance: 10000, currency: "EUR", accountable: Loan.new)
+    bank = @family.accounts.create!(name: "Bank", balance: 1000, currency: "EUR", accountable: Depository.new)
+    date = Date.new(2026, 7, 20)
+    create_linked_transfer(family: @family, from: cash_account, to: card, amount: 800, date: date)
+    create_linked_transfer(family: @family, from: cash_account, to: loan, amount: 400, date: date)
+    create_linked_transfer(family: @family, from: cash_account, to: bank, amount: 300, date: date)
+    assert_equal %w[cc_payment funds_movement loan_payment],
+      cash_account.entries.where(entryable_type: "Transaction").map { |entry| entry.entryable.kind }.sort, "precondition: the kinds Transfer::Creator gives"
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(300, "EUR"), totals.withdrawals
+    assert_equal Money.new(0, "EUR"), totals.contributions
+
+    # A label the user sets still decides.
+    cash_account.entries.joins("JOIN transactions ON transactions.id = entries.entryable_id")
+      .find_by!(transactions: { kind: "cc_payment" }).entryable.update!(investment_activity_label: "Withdrawal")
+    assert_equal Money.new(1100, "EUR"), InvestmentStatement.new(@family.reload).totals(period: july_2026).withdrawals
+  end
+
+  # Only the settlement account is read as a current account. A credit card
+  # paid from a brokerage account still takes money out of it.
+  test "a credit card payment from an investment account is a withdrawal" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    account = create_investment_account(balance: 1000)
+    card = @family.accounts.create!(name: "Card", balance: 1000, currency: "USD", accountable: CreditCard.new)
+    create_linked_transfer(family: @family, from: account, to: card, amount: 250, date: period.start_date)
+
+    assert_equal Money.new(250, "USD"), @statement.totals(period: period).withdrawals
+  end
+
   # Totals used to turn JIT off with SET LOCAL inside a savepoint. RELEASE
   # does not undo SET LOCAL, so a caller already in a transaction ran the
   # rest of it with JIT off.

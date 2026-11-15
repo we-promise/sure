@@ -818,23 +818,28 @@ class InvestmentStatement
     # broker: a transfer between the Cash account and the user's bank. As on
     # every account the totals read, a cash row counts only when it records
     # a flow (Totals#recorded_flow_sql), so card payments and other unlinked
-    # rows on the Cash account are neither. Income the broker books there
-    # (dividends, interest) is read with it. The Cash account passes the same
-    # report and visibility filters as the investment accounts.
+    # rows on the Cash account are neither. Nor is a credit card or loan
+    # payment made from it: Totals is told which accounts settle trades, and
+    # leaves those payments out there (see Totals#recorded_flow_sql). Income
+    # the broker books there (dividends, interest) is read with it. The Cash
+    # account passes the same report and visibility filters as the investment
+    # accounts. A user who does not have it in their finances therefore gets
+    # the investment accounts alone, on which each settlement counts as a
+    # contribution or a withdrawal again.
     #
     # Only a provider that books trade settlements this way is followed, not
     # every account of the same connection: a bank connection with a checking
     # and a brokerage account would otherwise make every deposit from that
     # checking account internal, and it would never be counted.
     def totals_account_ids
-      @totals_account_ids ||= begin
-        settlement_ids = if investment_account_ids.empty?
-          []
-        else
-          report_accounts.where(id: TradeRepublicAccount.settlement_account_ids_for(investment_account_ids)).pluck(:id)
-        end
+      @totals_account_ids ||= (investment_account_ids + settlement_account_ids).uniq
+    end
 
-        (investment_account_ids + settlement_ids).uniq
+    def settlement_account_ids
+      @settlement_account_ids ||= if investment_account_ids.empty?
+        []
+      else
+        report_accounts.where(id: TradeRepublicAccount.settlement_account_ids_for(investment_account_ids)).pluck(:id)
       end
     end
 
@@ -851,7 +856,7 @@ class InvestmentStatement
         # A rate stored later can complete totals that left an amount out.
         ExchangeRate.maximum(:updated_at)&.to_i,
         transfers_version(account_ids)
-      ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
+      ]) { Totals.new(family, account_ids: account_ids, settlement_account_ids: settlement_account_ids, date_range: date_range).call }
     end
 
     # Contributions and withdrawals depend on which transactions a confirmed
