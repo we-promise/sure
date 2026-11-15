@@ -963,11 +963,15 @@ end
   at the message level, and `thought_signature` on the tool call — Sure keeps no `provider_state`
   column of its own. Today only Gemini's tool-call signatures have a home, in `tool_calls.extra_content`
   (they move into `ruby_llm_tool_calls` with PR 6). `Ai::Conversation::History` sends that
-  state only to the same endpoint and model, and drops it otherwise. RubyLLM can't do this for
-  Sure: it strips another provider's content only when a message carries its own usage record of
-  who produced it, and messages rebuilt from Sure's tables don't. Without the rule, a local
-  model's reasoning, which can quote the family's data, goes to a cloud provider on the next
-  turn (spike: "Switching providers partway through a chat").
+  state only to the same endpoint and model, and drops it otherwise. On the persisted chat
+  RubyLLM does most of this itself: each message carries its `ruby_llm_usages` rows, so
+  `Protocol::NativeContent` strips reasoning, raw content and thought signatures whenever the
+  provider or the model differs. It compares the provider slug and model id, not the endpoint,
+  so Sure's rule still covers one case: two endpoints under the same slug serving the same model
+  id (a local llama.cpp and a cloud compatible host both running gpt-oss). Without the rule, a
+  local model's reasoning, which can quote the family's data, goes to a cloud provider on the
+  next turn (spike: "Switching providers partway through a chat"). Where the rule plugs in is
+  open: see "Open for PR 6's spike" in section 8.4.
 - **Gemini and other models' tool calls.** Gemini refuses a tool round another model started
   (400, missing `thought_signature`). On a Gemini route, `History` gives such a call Google's
   documented placeholder signature, `skip_thought_signature_validator`, as RubyLLM's native
@@ -1713,7 +1717,7 @@ has three parts, and they're owned in different places:
 
 | Part | What it does | Who owns it |
 |---|---|---|
-| The driver | Round cap, last round without tools, turn deadline, cancel, failover only before the first chunk, sending an interrupted round again | Sure: `Ai::Conversation`, stepping the agent one move at a time |
+| The driver | Round cap, last round without tools, turn deadline, cancel, failover only before the first chunk, sending an interrupted round again | Sure: `Ai::Conversation`, through `complete` or `step` on the persisted chat (open for PR 6's spike, below) |
 | Tool execution | Runs the model's tool calls, in parallel threads, pausing for approval, resuming a turn whose tool calls have no results | RubyLLM: `Agent#step` runs `run_tools` when calls are pending |
 | The definition | Tools and tool options | `RubyLLM::Agent`, with the route supplying model, context and prompt each turn |
 
@@ -1739,12 +1743,14 @@ class Ai::Conversation
     # 2. Ai::Sequencer.run(plan) on the interactive lane; failover only here, before the first chunk.
     # 3. The agent for the route: ChatAgent on the endpoint's RubyLLM context (which carries the
     #    host's gate, section 11), the route's model, instructions from Ai::Prompt.for (section 8.3),
-    #    @tools wrapped as SureTool, and History::for(@chat, route:) as its messages.
-    # 4. Drive: agent.step { |chunk| message.append_text!(chunk.content) } until the agent is
-    #    complete or waiting for an approval; at most Setting.ai_max_tool_rounds model calls (the
-    #    last with tool_choice: none), Setting.ai_response_timeout for the whole turn, and
-    #    `cancelled`, checked while streaming and before each tool (before_tool_call). A round
-    #    interrupted at the gate is stepped again (section 11).
+    #    @tools wrapped as SureTool. The persisted chat loads its own messages from the
+    #    database; where History's rules apply is open (below).
+    # 4. Drive until the chat is complete or waiting for an approval: at most
+    #    Setting.ai_max_tool_rounds rounds (the last with tool_choice: none),
+    #    Setting.ai_response_timeout for the whole turn, and `cancelled`, checked while streaming
+    #    and before each tool (before_tool_call). A round interrupted at the gate runs again
+    #    (section 11). Whether this is `complete` with `with_tool_options(rounds:)` or a loop of
+    #    `step` is open (below).
     # 5. Instrument converse.ai per round and store the serving route on the message.
   end
 end
@@ -1816,9 +1822,11 @@ What happens to today's chat classes in PR 6:
   alternative is to keep the lane in fiber storage (`Fiber[]`), which threads inherit: RubyLLM
   keeps its usage owner there, and in the spike both that owner and a lane kept there reached the
   tool threads, so `SureTool` would need no lane code.
-- **Why RubyLLM runs the tools, and the evidence against.** RubyLLM's `ask` has no round cap (12
-  rounds in the spike until its guard), so Sure keeps the driver; stepping the agent keeps every
-  bound. Running the tools brings approvals, parallel tools and resuming after a dead worker,
+- **Why RubyLLM runs the tools, and the evidence against.** On 2.1.1, RubyLLM's `ask` had no
+  round cap (12 rounds in the spike until its guard), so Sure kept the driver. 2.2.0 added one
+  (`with_tool_options(rounds:)`, crmne/ruby_llm#1602): `complete` raises `ToolRoundLimitError`
+  once the last round's results are saved, and `step` isn't limited. Sure still owns the last
+  round without tools, the turn deadline and failover. Running the tools brings approvals, parallel tools and resuming after a dead worker,
   working, for about 40 lines more than Sure's own 47-line loop; the plan needs approvals for
   writes anyway. Behind the gate, a background agent interrupted mid-answer was stepped again
   without running a tool twice: `generate` adds a reply to the history only when it's complete
@@ -1839,8 +1847,26 @@ What happens to today's chat classes in PR 6:
   holds. PR 6 ports #5078's prefix test: it rebuilds each request of a two-round turn and the
   next turn's first, and asserts each is a byte prefix of the next, with tool output whose keys
   aren't sorted. Sure adds no key ordering of its own on top of the gem's.
+- **Open for PR 6's spike.** The chat-storage spike tested the gem's claims through `complete`,
+  with a stubbed provider and one model. Two parts of this section were written against 2.1.1
+  and Sure's own tables, and don't yet fit the persisted chat on 2.2.2:
+  - **The claim covers one move, not a turn.** Each `step` on the persisted chat takes and
+    releases the run claim, and the method that holds it (`exclusively`) is private, so a Sure
+    loop of `step` calls isn't claimed for the turn. Two jobs on one chat could both drive it:
+    each tool row is still claimed on its own, so no tool should run twice, but each process
+    counts its own rounds and deadline. `complete` holds the claim for its whole loop. The
+    candidate is `complete` with `with_tool_options(rounds: Setting.ai_max_tool_rounds)`; on
+    `ToolRoundLimitError`, `choice: :none` and one more `complete` for the answer; the deadline
+    through `cancel`. That hands the claim over once, before the last round. If Sure must step,
+    a public way to hold the claim across steps is an upstream request.
+  - **History has no hook.** The persisted chat builds its messages from the database
+    (`sync_messages`); nothing found in 2.2.2 lets Sure filter or trim them before a request.
+    `with_context_budget` shortens tool results in steps that keep the prompt cache, and
+    `compact` summarizes; neither drops old messages as `HistoryTrimmer` does. So the
+    same-slug drop rule (section 5.5), Gemini's placeholder signature on the compatible
+    transport, and trimming to the budget each need a home: the gem's options where they fit,
+    or a narrow seam asked of upstream.
 - **What isn't used, and why.**
-  - `ask` and `complete`: no round cap; Sure steps.
   - `fallbacks`: they switch model through the first endpoint's context and gate, fall back
     after chunks have streamed, and hide the switch from Sure; failover stays Sure's, the one
     layer (section 5.4; call by @josh-sanders during development of PR #4440). In the spike, with them, Sure recorded the first
@@ -1850,9 +1876,11 @@ What happens to today's chat classes in PR 6:
   - The agent's own instructions convention (`app/prompts/<agent>/instructions.txt.erb`): Sure
     chooses the prompt (family override, route entry, locale; section 8.3), so the instructions
     are the string `Ai::Prompt.for` renders, through the same `render_prompt`.
-  - `chat_model` (RubyLLM's Rails persistence): Sure keeps its own chat tables (section 20). If it
-    were adopted, an interrupt would use `Agent#cancel`, whose error RubyLLM's persistence cleans
-    up after; Sure's `Preempted` leaves a blank assistant row until the next step.
+
+  RubyLLM's Rails persistence is used (`acts_as_chat` on `chats`, `ChatAgent.chat_class Chat`;
+  `chat_model` is 2.2's deprecated name for it). When a request fails, the persisted chat
+  deletes the empty assistant row and closes the round's unfinished tool calls; whether Sure's
+  `Preempted` from the gate counts as such a failure is one of the spike cases in section 19.
 
 ## 9. `Ai::Result` and `Ai::Error`
 
@@ -2873,6 +2901,35 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    `Assistant::*` classes listed in section 8.4, and empties the agreement test's allowlist. Adds
    the conversation bounds and chat mode tests, and the replay prefix test ported from #5078
    (section 8.4).
+
+   **Before building the driver, PR 6 re-runs the chat-storage spike on its own base (2.2.2 or
+   later)** with `bin/rails test test/spike`, adding the raising-tool case for crmne/ruby_llm#1664
+   the spike report asks for, and these cases for the questions left open in section 8.4:
+   1. **Two drivers, one turn.** Two processes drive one chat through Sure's driver shape, once as a
+      loop of `step` and once as `complete`. Count model calls, tool runs and rounds against
+      `Setting.ai_max_tool_rounds`; the `step` loop is expected to let both drive.
+   2. **The round cap through `complete`.** `with_tool_options(rounds:)` raises
+      `ToolRoundLimitError` after the last round's results are saved; a further `complete` with
+      `choice: :none` answers without tools. Check what another process can do while the claim
+      is handed over between the two.
+   3. **The turn deadline.** `cancel` from a timer stops a streamed turn at the next chunk, and a
+      tool that's running finishes and keeps its result.
+   4. **The gate's interrupt.** `Ai::Error::Preempted` raised mid-stream (section 11): the empty or
+      partly streamed assistant row is cleaned up or kept, and the next attempt sends the same
+      round with no tool run twice.
+   5. **A model switch between turns.** Through `with_model` on the record: a different provider
+      and a different model of the same provider each get no reasoning or signatures from the
+      earlier turn; the same model id on two endpoints under the same slug does get them, which is
+      the case Sure's own rule must cover (section 5.5).
+   6. **History.** Whether Sure can filter or trim what the persisted chat sends: the same-slug
+      drop rule, Gemini's placeholder signature on the compatible transport, and trimming to the
+      model's budget. Try `with_context_budget` and `compact` first; if neither fits, write down
+      the seam to ask upstream for.
+   7. **The replay prefix test** (section 8.4) on the persisted chat, through a reload between
+      turns.
+
+   The results rewrite section 8.4's driver and `History`. A case that needs an upstream change
+   goes to crmne/ruby_llm as an issue before PR 6 builds around it.
 7. **Configuration in the database.** The tables (`ai_endpoints`, `ai_models`, `ai_routes`),
    presets, `Ai::ConfigFile` and `AI_CONFIG`, `ai:export_config`, the data migration of
    UI-stored settings, the version stamp, and the source rule. `Ai::Config` now reads the tables,

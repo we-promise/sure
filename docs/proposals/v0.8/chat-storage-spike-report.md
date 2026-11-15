@@ -77,7 +77,7 @@ Per-case additions Sure would have to build and maintain itself: the approval re
 - **Mid-stream cancel.** The unstarted-turn abort is tested deterministically; a stop requested during a real streamed response lands at the next chunk boundary (the gem polls, at one-second intervals, while streaming) — untested here because there is no stream to interrupt.
 - **The `interrupted` scope** is read from source, not run end-to-end; a reaper job for Sure-owned tables has no Sure-side precedent yet.
 - **The registry path** is exercised only through the stub (`assume_model_exists` not needed: the seeded row resolves). A misconfigured `Ai::Model` → silent `resolve_model` fallback semantics (`assume_model_exists`) are out of scope.
-- **Re-run before PR 6:** this ran on the 2f stack at `ad71c5e4a`. PR 6 should re-run against the merged chain (`main` → … → 2f) with the same command.
+- **Re-run before PR 6:** this ran on the 2f stack at `ad71c5e4a`. PR 6 should re-run against the merged chain (`main` → … → 2f) with the same command, adding the cases listed under PR 6 in [the plan's section 19](ai-plumbing-redesign.md#19-delivery): Sure's driver shape (`step` versus `complete`) under two processes, the round cap, the deadline, the gate's interrupt, a model switch between turns, where `History`'s rules fit, and the replay prefix test.
 
 ## Recommendation
 
