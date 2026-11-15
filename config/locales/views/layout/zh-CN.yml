@@ -16,6 +16,7 @@ zh-CN:
         budgets: 预算
         home: 主页
         plan: 规划
+        portfolio: 投资组合
         reports: 报表
         goals: 目标
         transactions: 交易
@@ -36,6 +37,7 @@ zh-CN:
         download_complete: 下载完成
         download_failed: 下载失败。请重试。
         download_location: 文件保存在您的“下载”文件夹中。
+        order_save_failed: 无法确认新排序是否已保存。请检查网络连接并刷新页面以查看已保存的排序。
     trial:
       open_demo: 打开演示
       data_deleted_in_days: 数据将在 %{days} 天后删除
