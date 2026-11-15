@@ -28,6 +28,15 @@ module ExchangeRate::Provided
     # Maximum number of days to look back for a cached rate before calling the provider.
     NEAREST_RATE_LOOKBACK_DAYS = 5
 
+    # The rate #rate_sql would use, without the provider: the stored rate on
+    # or before the date, however old, else the earliest stored one after it.
+    # Rates of zero or below are skipped (see #usable_rates). Never calls the
+    # provider, so it is safe to use while rendering a page; nil when no
+    # usable rate is stored at all.
+    def find_stored_rate(from:, to:, date: Date.current)
+      any_stored_rates([ from ], to: to, date: date)[from]
+    end
+
     # A stored rate of zero or below is skipped, as everywhere else (see
     # #usable_rates), so the provider is still asked; its answer replaces the
     # unusable row rather than leaving it to be skipped on every request.

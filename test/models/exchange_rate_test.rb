@@ -318,6 +318,17 @@ class ExchangeRateTest < ActiveSupport::TestCase
     end
   end
 
+  # Cache keys read the newest stored rate on every dashboard, report and
+  # transactions render; that read must not scan the table every family shares.
+  test "the newest stored rate is read from an index" do
+    assert_index_lookup ExchangeRate.select("MAX(updated_at)"), "index_exchange_rates_on_updated_at"
+  end
+
+  test "the newest stored rate into a currency is read from an index" do
+    assert_index_lookup ExchangeRate.where(to_currency: "USD").select("MAX(updated_at)"),
+      "index_exchange_rates_on_to_currency_and_updated_at"
+  end
+
   private
     def keyless_fallback(signed_in:, &block)
       ExchangeRate.unstub(:provider)
@@ -327,5 +338,15 @@ class ExchangeRateTest < ActiveSupport::TestCase
       Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
       Current.session = sessions(:one) if signed_in
       with_env_overrides("EXCHANGE_RATE_PROVIDER" => nil, "TWELVE_DATA_API_KEY" => nil, &block)
+    end
+
+    # With sequential scans priced out, the planner uses an index whenever one
+    # can answer the query; without one it still falls back to a sequential scan.
+    def assert_index_lookup(relation, index_name)
+      plan = ExchangeRate.transaction do
+        ExchangeRate.connection.execute("SET LOCAL enable_seqscan = off")
+        ExchangeRate.connection.select_values("EXPLAIN #{relation.to_sql}").join("\n")
+      end
+      assert_includes plan, index_name, "expected the query to use #{index_name}:\n#{plan}"
     end
 end
