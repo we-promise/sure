@@ -80,6 +80,39 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert Portfolio::ReturnScope.resolve_all(accounts: [ @account ], period: @period).fetch(@account.id).trade_tracked?
   end
 
+  # A cash-only contribution written as a trade (qty 0) is a known external
+  # flow: the classifier calls it one on both of its paths. It moved no
+  # quantity, so the trade check skips it, and it is not a Transaction, so the
+  # flow check has to read trades too or the account loses its money-weighted
+  # return for want of a record it has.
+  test "an account whose only flow is a cash-only contribution trade is trade tracked" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500
+    income_trade(account: @account, date: @day_two, amount: 500, label: "Contribution")
+
+    direct = Portfolio::ReturnScope.new(account: @account, period: @period)
+    batch = Portfolio::ReturnScope.resolve_all(accounts: [ @account ], period: @period).fetch(@account.id)
+
+    assert direct.trade_tracked?, "a recorded contribution is a known flow"
+    assert batch.trade_tracked?, "and the batch path reads it the same way"
+  end
+
+  # The other side: a zero-quantity trade that moved no cash either records
+  # nothing paid in, labelled Contribution or not, and an unlabelled one is
+  # internal to the classifier. Neither earns a money-weighted return.
+  test "a zero-quantity trade that moved no cash does not make an account trade tracked" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, revaluation: 100
+    income_trade(account: @account, date: @day_two, amount: 0, label: "Contribution")
+    income_trade(account: @account, date: @day_two, amount: 50, label: "Other")
+
+    direct = Portfolio::ReturnScope.new(account: @account, period: @period)
+    batch = Portfolio::ReturnScope.resolve_all(accounts: [ @account ], period: @period).fetch(@account.id)
+
+    assert direct.valuation_tracked?
+    assert batch.valuation_tracked?
+  end
+
   test "an account whose only records are external transfers is trade tracked" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_500, cash_flow: 500

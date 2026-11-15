@@ -9,8 +9,8 @@
 # a suppression rule applied at the view layer is one refactor away from being
 # forgotten.
 class Portfolio::ReturnScope
-  # The account records buys, sells or transfers, so its external flows are
-  # known and every method is available.
+  # The account records buys, sells, transfers or other external flows, so
+  # its flows are known and every method is available.
   TRADE_TRACKED = :trade_tracked
 
   # The account's value is asserted by valuations. Its change over time is a
@@ -22,12 +22,18 @@ class Portfolio::ReturnScope
 
   KINDS = [ TRADE_TRACKED, VALUATION_TRACKED, INSUFFICIENT ].freeze
 
-  # Only a trade that moved a quantity is a record of the flows.
-  # Trade::CreateForm writes a dividend, interest or a fee as a zero-quantity
+  # Only a trade that moved a quantity is a record of the position; one that
+  # moved only cash counts when the classifier calls it an external flow (see
+  # #external_transactions?). Trade::CreateForm writes a dividend, interest or a fee as a zero-quantity
   # trade, which is income or a cost on a manually valued account and says
   # nothing about what was paid in; Balance::BaseCalculator#flows_for_date
   # makes the same split. Shared by both paths so they cannot drift.
   QUANTITY_TRADES_JOIN = "JOIN trades ON trades.id = entries.entryable_id AND trades.qty <> 0".freeze
+
+  # The entries the external-flow check reads: transactions, and trades that
+  # moved cash. A trade with neither a quantity nor an amount records nothing
+  # paid in or out, whatever its label says.
+  CASH_FLOW_ENTRY_SQL = "(entries.entryable_type = 'Transaction' OR entries.amount <> 0)".freeze
 
   attr_reader :account, :period, :active_until_date
 
@@ -177,7 +183,7 @@ class Portfolio::ReturnScope
           FROM entries
           #{classifier.sql_joins}
           WHERE entries.account_id = #{quoted_id}
-            AND entries.entryable_type = 'Transaction'
+            AND #{CASH_FLOW_ENTRY_SQL}
             AND entries.date <= #{quoted_end_date}
             AND COALESCE(entries.excluded, false) = false
             AND #{classifier.sql_case} IN ('external_inflow', 'external_outflow')
@@ -263,7 +269,12 @@ class Portfolio::ReturnScope
         .exists?
     end
 
-    # A transfer in or out is as good as a trade for knowing the flows.
+    # A transfer in or out is as good as a trade for knowing the flows, and so
+    # is any other entry the classifier calls an external flow: a deposit, or
+    # a cash-only Contribution or Withdrawal written as a trade, which moved no
+    # quantity and so is not one of #trades? (CASH_FLOW_ENTRY_SQL). Dividends,
+    # interest and fees classify as income or fees, and an unlabelled trade as
+    # internal, so they still do not count.
     #
     # One query through the classifier's SQL form rather than the Ruby form per
     # entry: the Ruby form looks up transfers and counterparts row by row, which
@@ -283,7 +294,7 @@ class Portfolio::ReturnScope
       # on one. Arel.sql marks it as already sanitized; the classifier binds
       # its own scope.
       @external_transactions = live_entries_through_history_end
-        .where(entryable_type: "Transaction")
+        .where(CASH_FLOW_ENTRY_SQL)
         .joins(classifier.sql_joins)
         .where(Arel.sql("#{classifier.sql_case} IN ('external_inflow', 'external_outflow')"))
         .exists?
