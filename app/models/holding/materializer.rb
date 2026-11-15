@@ -60,10 +60,11 @@ class Holding::Materializer
         explained = lots.any?(&:source_id)
         lots.map do |lot|
           unit_cost, currency = (lot.source_id || explained) ? [ lot.unit_cost, account.currency ] : provider_unit_cost(security_id)
-          lot_row(security_id, lot.source_id, qty: lot.qty, acquired_on: lot.acquired_on, unit_cost: unit_cost, currency: currency)
+          orig_qty = lot.original_qty if lot.source_id.nil?
+          lot_row(security_id, lot.source_id, qty: lot.qty, original_quantity: orig_qty, acquired_on: lot.acquired_on, unit_cost: unit_cost, currency: currency)
         end
       end
-      rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, clamped: true) }
+      rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, original_quantity: 0, clamped: true) }
 
       # Only the reverse walk knows the units held before the trades.
       HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse)
@@ -86,11 +87,11 @@ class Holding::Materializer
       HoldingLotDisposal.store!(account, rows, security_ids: security_ids)
     end
 
-    def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
+    def lot_row(security_id, source_entry_id, qty:, original_quantity: nil, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
       {
         account_id: account.id, security_id: security_id, source_entry_id: source_entry_id,
         origin_security_id: source_entry_id ? nil : opening_origin(security_id), acquired_on: acquired_on,
-        qty: qty, unit_cost: unit_cost, currency: currency, clamped: clamped
+        qty: qty, original_quantity: original_quantity, unit_cost: unit_cost, currency: currency, clamped: clamped
       }
     end
 

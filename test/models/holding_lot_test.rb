@@ -310,8 +310,22 @@ class HoldingLotTest < ActiveSupport::TestCase
 
       clamped = HoldingLot.opening.find_by!(security: @gapped)
       assert_equal [ 0, true ], [ clamped.qty, clamped.clamped ]
+      assert_equal 0, clamped.original_quantity, "clamped position records 0 original quantity"
       assert_equal [ @gapped.id ], HoldingLot.where(clamped: true).pluck(:security_id), "nothing flagged on the controls"
     end
+  end
+
+  test "opening lot original_quantity validates non-negative" do
+    setup_account
+    lot = HoldingLot.new(account: @account, security: priced_security("FIFN", 10), qty: 0, original_quantity: -1, currency: "USD")
+    assert_not lot.valid?
+    assert_includes lot.errors[:original_quantity], "must be greater than or equal to 0"
+
+    lot.original_quantity = 0
+    assert lot.valid?
+
+    lot.original_quantity = BigDecimal("2.5")
+    assert lot.valid?
   end
 
   # One share through a 1-for-3 split is stored as 0.333...3 to 18 places, and
