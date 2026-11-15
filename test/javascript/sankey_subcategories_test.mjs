@@ -58,6 +58,19 @@ describe("withoutSankeySubcategories", () => {
     assert.ok(result.nodes.some((n) => n.id === "expense_sub_6"))
   })
 
+  it("drops a parent's own-share node with its subcategories, so the parent becomes a leaf", () => {
+    const withOwnShare = {
+      nodes: [...data.nodes, { id: "expense_sub_3_own", name: "Other Taxes", value: 20 }],
+      links: [...data.links, { source: 0, target: 3, value: 20 }, { source: 3, target: 7, value: 20 }],
+    }
+
+    const result = withoutSankeySubcategories(withOwnShare)
+
+    assert.ok(!result.nodes.some((n) => n.id === "expense_sub_3_own"))
+    const taxes = result.nodes.findIndex((n) => n.id === "expense_3")
+    assert.ok(!result.links.some((l) => l.source === taxes))
+  })
+
   it("accepts links whose endpoints are node objects, as d3 rewrites them", () => {
     const linked = {
       ...data,

@@ -316,9 +316,7 @@ class PagesController < ApplicationController
 
     def cashflow_sankey_data
       build_cashflow_sankey_data(
-        dashboard_net_totals,
-        dashboard_income_statement.income_totals(period: @period),
-        dashboard_income_statement.expense_totals(period: @period),
+        IncomeStatement::CategoryNetting.new(dashboard_income_statement, period: @period).groups,
         Current.family.currency,
         invested_total: dashboard_income_statement.invested_total(period: @period)
       )
@@ -389,7 +387,7 @@ class PagesController < ApplicationController
       Provider::Registry.get_provider(:github)
     end
 
-    def build_cashflow_sankey_data(net_totals, income_totals, expense_totals, currency, invested_total: nil)
+    def build_cashflow_sankey_data(groups, currency, invested_total: nil)
       nodes = []
       links = []
       node_indices = {}
@@ -400,176 +398,95 @@ class PagesController < ApplicationController
           nodes.size - 1
         end
       }
+      add_link = ->(source, target, value, color, percentage) {
+        links << { source: source, target: target, value: value.to_f, color: color, percentage: percentage.to_f }
+      }
+      # Income runs toward Cash Flow and spending away from it; inner is the
+      # end nearer Cash Flow.
+      add_flow = ->(side, inner, outer, value, color, percentage) {
+        source, target = side == :income ? [ outer, inner ] : [ inner, outer ]
+        add_link.call(source, target, value, color, percentage)
+      }
+      share = ->(value, total) { total.zero? ? 0 : (value / total * 100).round(1) }
 
-      total_income = net_totals.total_net_income.to_f.round(2)
-      total_expense = net_totals.total_net_expense.to_f.round(2)
-      total_invested = invested_total&.amount.to_f.round(2)
+      flows = groups.flat_map { |group| cashflow_sankey_flows(group) }
+      total_income = flows.select { |flow| flow[:side] == :income }.sum(0.to_d) { |flow| flow[:value] }
+      total_expense = flows.select { |flow| flow[:side] == :expense }.sum(0.to_d) { |flow| flow[:value] }
+      total_invested = (invested_total&.amount || 0).to_d.round(2)
 
       # Central Cash Flow node, sized to whichever side is larger so a deficit
       # (outflows above income) still balances, as IncomeStatement::Sankey does
-      capacity = [ total_income, (total_expense + total_invested).round(2) ].max
+      capacity = [ total_income, total_expense + total_invested ].max
       cash_flow_idx = add_node.call("cash_flow_node", "Cash Flow", capacity, 100.0, "var(--color-success)")
 
-      # Build netted subcategory data from raw totals
-      net_subcategories_by_parent = build_net_subcategories(expense_totals, income_totals)
+      flows.each do |flow|
+        percentage = share.call(flow[:value], flow[:side] == :income ? total_income : total_expense)
+        category = flow[:category]
+        color = category.color.presence || Category::UNCATEGORIZED_COLOR
+        idx = add_node.call(flow[:id], flow[:name], flow[:value], percentage, color, category.filter_value)
+        add_flow.call(flow[:side], cash_flow_idx, idx, flow[:value], color, percentage)
 
-      # Process net income categories (flow: subcategory -> parent -> cash_flow)
-      process_net_category_nodes(
-        categories: net_totals.net_income_categories,
-        total: total_income,
-        prefix: "income",
-        net_subcategories_by_parent: net_subcategories_by_parent,
-        add_node: add_node,
-        links: links,
-        cash_flow_idx: cash_flow_idx,
-        flow_direction: :inbound
-      )
-
-      # Process net expense categories (flow: cash_flow -> parent -> subcategory)
-      process_net_category_nodes(
-        categories: net_totals.net_expense_categories,
-        total: total_expense,
-        prefix: "expense",
-        net_subcategories_by_parent: net_subcategories_by_parent,
-        add_node: add_node,
-        links: links,
-        cash_flow_idx: cash_flow_idx,
-        flow_direction: :outbound
-      )
+        flow[:branches].each do |branch|
+          branch_pct = share.call(branch[:amount], flow[:value])
+          branch_color = branch[:category].color.presence || color
+          branch_idx = add_node.call(IncomeStatement::CategoryNetting.branch_id(flow[:side], branch), IncomeStatement::CategoryNetting.branch_name(branch),
+            branch[:amount], branch_pct, branch_color, branch[:category].filter_value)
+          add_flow.call(flow[:side], idx, branch_idx, branch[:amount], branch_color, branch_pct)
+        end
+      end
 
       # Money moved into investments, for a family that does not count it as spending
       if total_invested.positive?
-        percentage = capacity.zero? ? 0 : (total_invested / capacity * 100).round(1)
+        percentage = share.call(total_invested, capacity)
         idx = add_node.call("invested_node", t("pages.dashboard.cashflow_preview.node_labels.invested"), total_invested, percentage, IncomeStatement::Sankey::INVESTED_COLOR)
-        links << { source: cash_flow_idx, target: idx, value: total_invested, color: IncomeStatement::Sankey::INVESTED_COLOR, percentage: percentage }
+        add_link.call(cash_flow_idx, idx, total_invested, IncomeStatement::Sankey::INVESTED_COLOR, percentage)
       end
 
       # Surplus/Deficit
-      net = (total_income - total_expense - total_invested).round(2)
+      net = total_income - total_expense - total_invested
       if net.positive?
-        percentage = total_income.zero? ? 0 : (net / total_income * 100).round(1)
+        percentage = share.call(net, total_income)
         idx = add_node.call("surplus_node", "Surplus", net, percentage, "var(--color-success)")
-        links << { source: cash_flow_idx, target: idx, value: net, color: "var(--color-success)", percentage: percentage }
+        add_link.call(cash_flow_idx, idx, net, "var(--color-success)", percentage)
       elsif net.negative?
         deficit = net.abs
-        percentage = capacity.zero? ? 0 : (deficit / capacity * 100).round(1)
+        percentage = share.call(deficit, capacity)
         idx = add_node.call("deficit_node", t("pages.dashboard.cashflow_preview.node_labels.deficit"), deficit, percentage, "var(--color-destructive)")
-        links << { source: idx, target: cash_flow_idx, value: deficit, color: "var(--color-destructive)", percentage: percentage }
+        add_link.call(idx, cash_flow_idx, deficit, "var(--color-destructive)", percentage)
       end
 
       { nodes: nodes, links: links, currency_symbol: Money::Currency.new(currency).symbol }
     end
 
-    # Nets subcategory expense and income totals, grouped by parent_id.
-    # Returns { parent_id => [ { category:, total: net_amount }, ... ] }
-    # Only includes subcategories with positive net (same direction as parent).
-    def build_net_subcategories(expense_totals, income_totals)
-      expense_subs = expense_totals.category_totals
-        .select { |ct| ct.category.parent_id.present? }
-        .index_by { |ct| ct.category.id }
+    # The nodes one category group (IncomeStatement::CategoryNetting#groups)
+    # adds beside Cash Flow. The category sits on the side its net amount
+    # falls, with its subcategories on that side, and its own share beside
+    # them, branching off it. Anything running the other way (a subcategory
+    # refunded more than was spent, a refund on the category itself) is its
+    # own node on the other side, linked to Cash Flow directly. Amounts are
+    # rounded to cents before they are summed, so every node passes on
+    # exactly what it takes in and Cash Flow's two sides balance.
+    def cashflow_sankey_flows(group)
+      netting = IncomeStatement::CategoryNetting
+      category = group[:category]
+      net = group[:direct] + group[:children].sum { |child| child[:net] }
+      side = net.negative? ? :income : :expense
+      other_side = side == :income ? :expense : :income
+      node_key = category.id || category.name
 
-      income_subs = income_totals.category_totals
-        .select { |ct| ct.category.parent_id.present? }
-        .index_by { |ct| ct.category.id }
+      cents = ->(children) { children.map { |child| child.merge(amount: child[:amount].round(2)) }.reject { |child| child[:amount].zero? } }
+      children = cents.call(netting.side_children(group, side))
+      own = netting.side_amount(group[:direct], side).round(2)
+      flows = [ { side: side, id: "#{side}_#{node_key}", name: category.name, category: category,
+                  value: own + children.sum(0.to_d) { |child| child[:amount] }, branches: netting.branches(category, own: own, children: children) } ]
 
-      all_sub_ids = (expense_subs.keys + income_subs.keys).uniq
-      result = {}
-
-      all_sub_ids.each do |sub_id|
-        exp_ct = expense_subs[sub_id]
-        inc_ct = income_subs[sub_id]
-        exp_total = exp_ct&.total || 0
-        inc_total = inc_ct&.total || 0
-        net = exp_total - inc_total
-        category = exp_ct&.category || inc_ct&.category
-
-        next if net.zero?
-
-        parent_id = category.parent_id
-        result[parent_id] ||= []
-        result[parent_id] << { category: category, total: net.abs, net_direction: net > 0 ? :expense : :income }
+      cents.call(netting.side_children(group, other_side)).each do |child|
+        flows << { side: other_side, id: netting.branch_id(other_side, child), name: child[:category].name, category: child[:category], value: child[:amount], branches: [] }
       end
+      own_other_side = netting.side_amount(group[:direct], other_side).round(2)
+      flows << { side: other_side, id: "#{other_side}_#{node_key}", name: category.name, category: category, value: own_other_side, branches: [] }
 
-      result
-    end
-
-    # Builds sankey nodes/links for net categories with subcategory hierarchy.
-    # Subcategories matching the parent's flow direction are shown as children.
-    # Subcategories with opposite net direction appear on the OTHER side of the
-    # sankey (handled when the other side calls this method).
-    #
-    # flow_direction: :inbound  (subcategory -> parent -> cash_flow) for income
-    #                 :outbound (cash_flow -> parent -> subcategory) for expenses
-    def process_net_category_nodes(categories:, total:, prefix:, net_subcategories_by_parent:, add_node:, links:, cash_flow_idx:, flow_direction:)
-      matching_direction = flow_direction == :inbound ? :income : :expense
-
-      categories.each do |ct|
-        val = ct.total.to_f.round(2)
-        next if val.zero?
-
-        percentage = total.zero? ? 0 : (val / total * 100).round(1)
-        color = ct.category.color.presence || Category::UNCATEGORIZED_COLOR
-        node_key = "#{prefix}_#{ct.category.id || ct.category.name}"
-
-        all_subs = ct.category.id ? (net_subcategories_by_parent[ct.category.id] || []) : []
-        same_side_subs = all_subs.select { |s| s[:net_direction] == matching_direction }
-
-        # Also check if any subcategory has opposite direction — those will be
-        # rendered by the OTHER side's call to this method, linked to cash_flow
-        # directly (they appear as independent nodes on the opposite side).
-        opposite_subs = all_subs.select { |s| s[:net_direction] != matching_direction }
-
-        if same_side_subs.any?
-          parent_idx = add_node.call(node_key, ct.category.name, val, percentage, color, ct.category.filter_value)
-
-          if flow_direction == :inbound
-            links << { source: parent_idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
-          else
-            links << { source: cash_flow_idx, target: parent_idx, value: val, color: color, percentage: percentage }
-          end
-
-          same_side_subs.each do |sub|
-            sub_val = sub[:total].to_f.round(2)
-            sub_pct = val.zero? ? 0 : (sub_val / val * 100).round(1)
-            sub_color = sub[:category].color.presence || color
-            sub_key = "#{prefix}_sub_#{sub[:category].id}"
-            sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, sub[:category].filter_value)
-
-            if flow_direction == :inbound
-              links << { source: sub_idx, target: parent_idx, value: sub_val, color: sub_color, percentage: sub_pct }
-            else
-              links << { source: parent_idx, target: sub_idx, value: sub_val, color: sub_color, percentage: sub_pct }
-            end
-          end
-        else
-          idx = add_node.call(node_key, ct.category.name, val, percentage, color, ct.category.filter_value)
-
-          if flow_direction == :inbound
-            links << { source: idx, target: cash_flow_idx, value: val, color: color, percentage: percentage }
-          else
-            links << { source: cash_flow_idx, target: idx, value: val, color: color, percentage: percentage }
-          end
-        end
-
-        # Render opposite-direction subcategories as standalone nodes on this side,
-        # linked directly to cash_flow. They represent subcategory surplus/deficit
-        # that goes against the parent's overall direction.
-        opposite_prefix = flow_direction == :inbound ? "expense" : "income"
-        opposite_subs.each do |sub|
-          sub_val = sub[:total].to_f.round(2)
-          sub_pct = total.zero? ? 0 : (sub_val / total * 100).round(1)
-          sub_color = sub[:category].color.presence || color
-          sub_key = "#{opposite_prefix}_sub_#{sub[:category].id}"
-          sub_idx = add_node.call(sub_key, sub[:category].name, sub_val, sub_pct, sub_color, sub[:category].filter_value)
-
-          # Opposite direction: if parent is outbound (expense), this sub is inbound (income)
-          if flow_direction == :inbound
-            links << { source: cash_flow_idx, target: sub_idx, value: sub_val, color: sub_color, percentage: sub_pct }
-          else
-            links << { source: sub_idx, target: cash_flow_idx, value: sub_val, color: sub_color, percentage: sub_pct }
-          end
-        end
-      end
+      flows.reject { |flow| flow[:value].zero? }
     end
 
     def build_outflows_donut_data(net_totals)

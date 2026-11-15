@@ -341,6 +341,53 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :ok
     assert_select "[data-controller='sankey-chart']"
+
+    # The parent's own 100 needs a node of its own beside the subcategory, or
+    # the parent takes in 150 and passes on only 50.
+    data = dashboard_sankey_data
+    parent = sankey_node(data, "expense_#{parent_category.id}")
+    own = sankey_node(data, "expense_sub_#{parent_category.id}_own")
+    assert_equal 150.0, parent.fetch("value")
+    assert_equal 100.0, own.fetch("value")
+    assert_equal I18n.t("models.category.own_share", category: parent_category.name), own.fetch("name")
+    assert_equal parent_category.filter_value, own.fetch("filter_value")
+    assert_equal 50.0, sankey_node(data, "expense_sub_#{subcategory.id}").fetch("value")
+    assert_sankey_balanced data
+  end
+
+  test "dashboard sankey draws a refund on a parent category on the income side" do
+    parent_category = @family.categories.create!(name: "Housing", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "HOA", parent: parent_category, color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Housing refund", amount: -40, category: parent_category)
+    create_transaction(account: @family.accounts.first, name: "HOA dues", amount: 200, category: subcategory)
+
+    get root_path
+    assert_response :ok
+
+    data = dashboard_sankey_data
+    assert_equal 200.0, sankey_node(data, "expense_#{parent_category.id}").fetch("value")
+    assert_equal 200.0, sankey_node(data, "expense_sub_#{subcategory.id}").fetch("value")
+    assert_nil sankey_node(data, "expense_sub_#{parent_category.id}_own")
+    refund = sankey_node(data, "income_#{parent_category.id}")
+    assert_equal 40.0, refund.fetch("value")
+    assert_equal parent_category.filter_value, refund.fetch("filter_value")
+    assert_sankey_balanced data
+  end
+
+  test "dashboard sankey balances to the cent when amounts round" do
+    parent_category = @family.categories.create!(name: "Housing", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "HOA", parent: parent_category, color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Housing", amount: "1000.005".to_d, category: parent_category)
+    create_transaction(account: @family.accounts.first, name: "HOA dues", amount: "200.005".to_d, category: subcategory)
+
+    get root_path
+    assert_response :ok
+
+    data = dashboard_sankey_data
+    parent = sankey_node(data, "expense_#{parent_category.id}").fetch("value")
+    children = [ "expense_sub_#{subcategory.id}", "expense_sub_#{parent_category.id}_own" ].sum { |id| sankey_node(data, id).fetch("value") }
+    assert_equal parent.round(2), children.round(2)
+    assert_sankey_balanced data
   end
 
   test "dashboard renders the cash flow rings with unspent income as a muted track on the outflows ring" do
@@ -448,6 +495,26 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ account.id ], link["cashflow_account_ids"]
   end
 
+  def dashboard_sankey_data
+    JSON.parse(css_select("[data-controller='sankey-chart']").first["data-sankey-chart-data-value"])
+  end
+
+  def sankey_node(data, id)
+    data.fetch("nodes").find { |node| node.fetch("id") == id }
+  end
+
+  # Every node passes on what flows into it, Cash Flow included, and is drawn
+  # at that size; d3 sizes a node by its larger side, so any gap shows.
+  def assert_sankey_balanced(data)
+    links = data.fetch("links")
+    data.fetch("nodes").each_with_index do |node, index|
+      incoming = links.select { |link| link.fetch("target") == index }.sum { |link| link.fetch("value").to_d }
+      outgoing = links.select { |link| link.fetch("source") == index }.sum { |link| link.fetch("value").to_d }
+      assert_equal incoming, outgoing, "#{node.fetch("id")} must pass on what flows into it" if incoming.positive? && outgoing.positive?
+      assert_equal [ incoming, outgoing ].max, node.fetch("value").to_d, "#{node.fetch("id")} must match its links"
+    end
+  end
+
   def cashflow_donut_rings
     chart = css_select("#cashflow-donut-section [data-controller='donut-chart']").first
     JSON.parse(chart["data-donut-chart-rings-value"])
@@ -544,6 +611,12 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
 
     parent_node = nodes.find { |node| node.fetch("id") == "expense_#{parent_category.id}" }
     assert_equal parent_category.name, parent_node["filter_value"]
+
+    # The refunded subcategory is drawn on the income side, so the parent is
+    # its 100 of spending and Cash Flow counts the 30 among its inflows.
+    assert_equal 100.0, parent_node.fetch("value")
+    assert_equal 30.0, opposite_node.fetch("value")
+    assert_sankey_balanced sankey_data
   end
 
   test "dashboard renders money flow widget" do
