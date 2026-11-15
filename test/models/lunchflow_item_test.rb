@@ -92,6 +92,16 @@ class LunchflowItemTest < ActiveSupport::TestCase
     assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.reload.effective_base_url
   end
 
+  # Rows saved before the allow-list existed may hold a value it now refuses.
+  # The read-time fallback already keeps them safe, so they must not make every
+  # later save of the row fail (status changes during a sync, a rename).
+  test "a stored value the allow-list refuses does not block unrelated saves" do
+    @lunchflow_item.update_column(:base_url, "https://lunchflow.app/")
+
+    assert @lunchflow_item.reload.update(name: "Renamed")
+    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+  end
+
   private
     def assert_sync_status(locale, total:, linked:, unlinked:, expected:)
       @lunchflow_item.stubs(:total_accounts_count).returns(total)

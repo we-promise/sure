@@ -12,7 +12,7 @@ class MercuryItem < ApplicationRecord
 
   validates :name, presence: true
   validates :token, presence: true, on: :create
-  validate :base_url_must_be_an_official_host
+  validate :base_url_must_be_an_official_host, if: :will_save_change_to_base_url?
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later

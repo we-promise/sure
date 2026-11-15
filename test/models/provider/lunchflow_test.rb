@@ -7,6 +7,12 @@ class Provider::LunchflowTest < ActiveSupport::TestCase
     @provider = Provider::Lunchflow.new("test_key", base_url: Provider::Lunchflow::DEFAULT_BASE_URL)
   end
 
+  test "refuses a base_url off the allow-list instead of sending the key there" do
+    [ "https://evil.example.com/api/v1", "https://169.254.169.254/api/v1", "http://lunchflow.app/api/v1" ].each do |base_url|
+      assert_raises(ArgumentError, base_url) { Provider::Lunchflow.new("test_key", base_url: base_url) }
+    end
+  end
+
   # HTTParty resends caller-supplied headers on a redirect; its host-change
   # protection only covers basic_auth. The credential lives in a custom header
   # here, so a redirect off the allow-listed host would carry it along.

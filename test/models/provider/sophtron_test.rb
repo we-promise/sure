@@ -34,6 +34,26 @@ class Provider::SophtronTest < ActiveSupport::TestCase
     assert_not_requested leak
   end
 
+  # The shapes the provider tolerates are rebuilt before the allow-list
+  # decides, so the rebuilding must not turn a foreign value into an accepted one.
+  test "tolerates shapes of its own URL but nothing that leaves its host" do
+    [ "https://api.sophtron.com", "https://API.sophtron.com/api/", "https://api.sophtron.com/api/v2" ].each do |value|
+      assert_equal Provider::Sophtron::DEFAULT_BASE_URL, Provider::Sophtron.normalize_base_url(value), value
+    end
+
+    [
+      "https://evil.example.com",
+      "https://api.sophtron.com.evil.test",
+      "https://api.sophtron.com@evil.test",
+      "https://api.sophtron.com?x=1",
+      "https://api.sophtron.com/other",
+      "http://api.sophtron.com/api"
+    ].each do |value|
+      assert_nil Provider::Sophtron.normalize_base_url(value), "#{value} must be refused"
+      assert_equal Provider::Sophtron::DEFAULT_BASE_URL, Provider::Sophtron.new("u", "a2V5", base_url: value).base_url
+    end
+  end
+
   test "lists v2 customers" do
     stub_request(:get, "https://api.sophtron.com/api/v2/customers")
       .to_return(status: 200, body: [ { CustomerID: "cust-1", CustomerName: "Sure family 1" } ].to_json)

@@ -29,12 +29,27 @@ class Provider::Sophtron < Provider
     end
   end
 
+  # Accepts the shapes operators have historically pasted (a bare host, a
+  # trailing slash, the /v2 suffix) and reduces them to the API root before
+  # the allow-list decides. The allow-list is what makes the value safe; this
+  # only stops a well-meaning operator from being refused over a slash.
+  def self.normalize_base_url(value)
+    url = value.to_s.strip.chomp("/")
+    return super if url.blank?
+
+    url = url.delete_suffix("/v2")
+    url = "#{url}/api" unless URI.parse(url).path.to_s.chomp("/").end_with?("/api")
+    super(url)
+  rescue URI::InvalidURIError
+    nil
+  end
+
   attr_reader :user_id, :access_key, :base_url
 
   def initialize(user_id, access_key, base_url: DEFAULT_BASE_URL)
     @user_id = user_id
     @access_key = access_key
-    @base_url = normalize_base_url(base_url)
+    @base_url = self.class.normalize_base_url(base_url) || DEFAULT_BASE_URL
     super()
   end
 
@@ -385,22 +400,6 @@ class Provider::Sophtron < Provider
       JSON.parse(body, symbolize_names: true)
     rescue JSON::ParserError
       body
-    end
-
-    # Accepts the shapes operators have historically pasted (a bare host, a
-    # trailing slash, the /v2 suffix) and reduces them to the API root before
-    # the allow-list decides. The allow-list is what makes the value safe; this
-    # only stops a well-meaning operator from being refused over a slash.
-    def normalize_base_url(value)
-      url = value.to_s.strip.chomp("/")
-      return DEFAULT_BASE_URL if url.blank?
-
-      url = url.delete_suffix("/v2") if url.end_with?("/v2")
-      url = "#{url}/api" unless URI.parse(url).path.to_s.chomp("/").end_with?("/api")
-
-      self.class.normalize_base_url(url) || DEFAULT_BASE_URL
-    rescue URI::InvalidURIError
-      DEFAULT_BASE_URL
     end
 
     def normalize_account(account, user_institution_id:)

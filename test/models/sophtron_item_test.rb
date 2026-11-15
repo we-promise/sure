@@ -249,4 +249,30 @@ class SophtronItemTest < ActiveSupport::TestCase
 
     assert_equal Provider::Sophtron::DEFAULT_BASE_URL, @item.reload.effective_base_url
   end
+
+  # Rows saved before the allow-list existed may hold a value it now refuses.
+  # The read-time fallback already keeps them safe, so they must not make every
+  # later save of the row fail (status changes during a sync, a rename).
+  test "a stored value the allow-list refuses does not block unrelated saves" do
+    @item.update_column(:base_url, "https://evil.example.com/api")
+
+    assert @item.reload.update(name: "Renamed")
+    assert_equal Provider::Sophtron::DEFAULT_BASE_URL, @item.effective_base_url
+  end
+
+  # The provider has always accepted these shapes of its own URL. The form has
+  # to accept the same ones, or an operator is refused a value that works.
+  test "accepts the shapes of Sophtron's URL that the provider accepts" do
+    [
+      "https://api.sophtron.com",
+      "https://api.sophtron.com/",
+      "https://api.sophtron.com/api/",
+      "https://api.sophtron.com/api/v2"
+    ].each do |value|
+      @item.base_url = value
+
+      assert @item.valid?, "#{value} must be accepted"
+      assert_equal Provider::Sophtron::DEFAULT_BASE_URL, @item.effective_base_url
+    end
+  end
 end

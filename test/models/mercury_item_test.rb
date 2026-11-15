@@ -119,6 +119,16 @@ class MercuryItemTest < ActiveSupport::TestCase
     assert_equal Provider::Mercury::DEFAULT_BASE_URL, @mercury_item.reload.effective_base_url
   end
 
+  # Rows saved before the allow-list existed may hold a value it now refuses.
+  # The read-time fallback already keeps them safe, so they must not make every
+  # later save of the row fail (status changes during a sync, a rename).
+  test "a stored value the allow-list refuses does not block unrelated saves" do
+    @mercury_item.update_column(:base_url, "https://evil.example.com/api/v1")
+
+    assert @mercury_item.reload.update(name: "Renamed")
+    assert_equal Provider::Mercury::DEFAULT_BASE_URL, @mercury_item.effective_base_url
+  end
+
   test "an allowed alternative host is kept" do
     @mercury_item.base_url = "https://api-sandbox.mercury.com/api/v1"
 
