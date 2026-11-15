@@ -14,13 +14,11 @@ module Authentication
     end
   end
 
-  # Rails session keys that survive the sign-in rotation. An invitation the
-  # user followed before signing in must still be accepted afterwards.
-  SESSION_KEYS_KEPT_ON_SIGN_IN = %i[pending_invitation_token].freeze
-  # Stored by the OIDC callback for RP-initiated logout. Kept only when the
-  # session being minted comes from that same OIDC sign-in.
+  # Stored by the OIDC callback for RP-initiated logout. The only Rails session
+  # keys that survive the sign-in rotation, and only when the session being
+  # minted comes from that same OIDC sign-in.
   SESSION_KEYS_OIDC_HANDOFF = %i[id_token_hint sso_login_provider].freeze
-  private_constant :SESSION_KEYS_KEPT_ON_SIGN_IN, :SESSION_KEYS_OIDC_HANDOFF
+  private_constant :SESSION_KEYS_OIDC_HANDOFF
 
   private
     def authenticate_user!
@@ -73,9 +71,7 @@ module Authentication
     end
 
     def rotate_rails_session(preserve_oidc_handoff:)
-      keys = SESSION_KEYS_KEPT_ON_SIGN_IN
-      keys += SESSION_KEYS_OIDC_HANDOFF if preserve_oidc_handoff
-      kept = keys.index_with { |key| session[key] }.compact_blank
+      kept = preserve_oidc_handoff ? SESSION_KEYS_OIDC_HANDOFF.index_with { |key| session[key] }.compact_blank : {}
 
       reset_session
       kept.each { |key, value| session[key] = value }
