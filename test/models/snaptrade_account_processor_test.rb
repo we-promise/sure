@@ -275,6 +275,30 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("800"), @account.reload.balance
   end
 
+  test "a short option next to an unpriced long keeps the API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("20900.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [
+        { "instrument" => { "kind" => "stock", "symbol" => securities(:aapl).ticker }, "units" => "100", "price" => nil, "currency" => "USD" },
+        option_position("AAPL  261218C00240000", "CALL", units: "-1", price: "1.00")
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    assert_equal BigDecimal("20900"), @account.reload.balance
+  end
+
+  test "a cash-equivalent option is subtracted from cash at contract value" do
+    @snaptrade_account.update!(
+      raw_holdings_payload: [ option_position("AAPL  261218C00240000", "CALL", units: "2", price: "5.00").merge("cash_equivalent" => true) ]
+    )
+
+    assert_equal BigDecimal("1000"), @snaptrade_account.cash_equivalent_position_value("USD")
+  end
+
   test "option positions use the contract multiplier and position currency" do
     @snaptrade_account.update!(
       raw_holdings_payload: [ option_position("XYZ   261218C00050000", "CALL", units: "3", price: "1.50", multiplier: "10", currency: "CAD") ]

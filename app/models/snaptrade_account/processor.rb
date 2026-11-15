@@ -81,8 +81,10 @@ class SnaptradeAccount::Processor
       calculated_total = holdings_value + cash_value
 
       # Use calculated total if we have holdings, otherwise trust API value.
-      # Net short positions (a short option on its own) make it negative.
-      if holdings_value.nonzero?
+      # Net short positions (a short option on its own) make it negative; then
+      # only when every position has a price, since an unpriced long counts
+      # as 0 and would leave just the short.
+      if holdings_value.positive? || (holdings_value.negative? && positions_priced?)
         Rails.logger.debug "SnaptradeAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
         calculated_total
       elsif snaptrade_account.current_balance.present?
@@ -153,6 +155,12 @@ class SnaptradeAccount::Processor
         units = parse_decimal(data[:units]) || 0
         price = parse_decimal(data[:price]) || 0
         units * price * contract_multiplier(extract_symbol_data(data))
+      end
+    end
+
+    def positions_priced?
+      Array(snaptrade_account.raw_holdings_payload).all? do |holding|
+        holding.is_a?(Hash) && parse_decimal(holding.with_indifferent_access[:price]).present?
       end
     end
 
