@@ -25,6 +25,13 @@ module AllowedHosts
     parse.fetch(:rejected)
   end
 
+  # Probes hit /up over the pod IP or localhost, neither of which matches a
+  # configured host, so without this exclusion every liveness and readiness
+  # check starts failing with a 403 the moment the list is set.
+  def host_authorization
+    { exclude: ->(request) { request.path == "/up" } }
+  end
+
   def parse
     allowed = []
     rejected = []

@@ -124,11 +124,7 @@ Rails.application.configure do
 
   if allowed_hosts.any?
     config.hosts = allowed_hosts
-
-    # Probes hit /up over the pod IP or localhost, neither of which matches a
-    # configured host, so without this exclusion every liveness and readiness
-    # check starts failing with a 403 the moment the list is set.
-    config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+    config.host_authorization = AllowedHosts.host_authorization
   else
     # Deferred: this block runs while the environment is still being configured
     # and Rails.logger is not final yet, so a warning emitted here goes nowhere.

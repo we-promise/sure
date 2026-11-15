@@ -65,4 +65,38 @@ class AllowedHostsTest < ActiveSupport::TestCase
       assert_empty AllowedHosts.rejected
     end
   end
+
+  # The tests above check the list; these run it through Rails' own
+  # HostAuthorization middleware, configured the way production.rb configures
+  # it, so they fail if the list stops meaning what Rails reads it as.
+  test "lets the listed hosts through on any port and refuses any other Host" do
+    with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: "10.0.0.5,[::1]:3000") do
+      assert_equal 200, status_for("app.example.com")
+      assert_equal 200, status_for("app.example.com:8443")
+      assert_equal 200, status_for("10.0.0.5:3000")
+      assert_equal 200, status_for("[::1]:3000")
+      assert_equal 403, status_for("rebound.attacker.test")
+    end
+  end
+
+  test "a refused leading-dot entry does not let subdomains in" do
+    with_env_overrides(APP_DOMAIN: nil, ALLOWED_HOSTS: ".example.com,app.example.com") do
+      assert_equal 403, status_for("evil.example.com")
+    end
+  end
+
+  # Probes reach /up over the pod IP or localhost, which no list contains.
+  test "/up answers on any Host so container probes keep passing" do
+    with_env_overrides(APP_DOMAIN: "app.example.com", ALLOWED_HOSTS: nil) do
+      assert_equal 200, status_for("10.1.2.3:3000", path: "/up")
+      assert_equal 403, status_for("10.1.2.3:3000", path: "/")
+    end
+  end
+
+  private
+    def status_for(host, path: "/")
+      app = ->(_env) { [ 200, {}, [ "ok" ] ] }
+      middleware = ActionDispatch::HostAuthorization.new(app, AllowedHosts.list, **AllowedHosts.host_authorization)
+      middleware.call(Rack::MockRequest.env_for("http://placeholder#{path}", "HTTP_HOST" => host)).first
+    end
 end
