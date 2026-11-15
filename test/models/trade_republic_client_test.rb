@@ -1969,6 +1969,8 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     assert_equal %w[DE00222222222222222222 FR0033333333333333333333333].to_set,
       Provider::TradeRepublicClient.reference_ibans(account)
+    assert_equal Set["DE00222222222222222222"],
+      Provider::TradeRepublicClient.reference_ibans({ "referenceAccountList" => { "iban" => "DE00222222222222222222" } })
     assert_empty Provider::TradeRepublicClient.reference_ibans({ "securitiesAccountNumber" => "0000000000" })
     assert_empty Provider::TradeRepublicClient.reference_ibans(nil)
   end

@@ -622,7 +622,7 @@ class Provider::TradeRepublicClient
       return Set.new unless account.is_a?(Hash)
 
       account = account.stringify_keys
-      listed = Array(account["referenceAccountList"]) + [ account["referenceAccountV2"], account["referenceAccount"] ]
+      listed = Array.wrap(account["referenceAccountList"]) + [ account["referenceAccountV2"], account["referenceAccount"] ]
       own = normalize_iban(account["cashAccount"].is_a?(Hash) ? account["cashAccount"]["iban"] : nil)
       listed.filter_map { |entry| normalize_iban(entry["iban"]) if entry.is_a?(Hash) }.to_set - [ own ].compact
     end
