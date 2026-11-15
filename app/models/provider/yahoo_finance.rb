@@ -1230,6 +1230,8 @@ class Provider::YahooFinance < Provider
         "XTSX" # TSX Venture Exchange
       when "LSE", "LON"
         "XLON" # London Stock Exchange
+      when "GER"
+        "XETR" # Xetra
       when "FRA"
         "XFRA" # Frankfurt Stock Exchange
       when "PAR"

@@ -8,6 +8,7 @@ zh-CN:
     api_keys:
       create:
         success: 您的 API 密钥已成功创建
+        creation_failed: "无法创建 API 密钥，请重试。"
       destroy:
         revoked_successfully: API 密钥已成功撤销
         revoke_failed: 撤销 API 密钥失败

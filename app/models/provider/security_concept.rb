@@ -24,10 +24,20 @@ module Provider::SecurityConcept
   # assets. Nil for anything that is not a fund, which is most securities, and
   # nil rather than `[]` so "not a fund" and "a fund we could not read" are the
   # same answer to the caller: neither is worth asking about again.
+  #
+  # `fund_weights` is what a fund or ETF holds, keyed in this application's
+  # vocabulary so the provider owns the mapping of its own labels:
+  #   { asset_class: { "equity" => 99.1, ... },       # % of the fund
+  #     equity_region: { "north_america" => 62.0 },   # % of its equity sleeve
+  #     equity_sector: { "Technology" => 24.5 },      # % of its equity sleeve
+  #     category_asset_class: "commodity",            # from the fund's category
+  #     leveraged_or_inverse: true }
+  # Every key is optional. Nil for anything that is not a fund, or when the
+  # provider has no breakdown.
   SecurityInfo = Data.define(:symbol, :name, :links, :logo_url, :description, :kind, :exchange_operating_mic,
-                             :sector, :industry, :constituents) do
+                             :sector, :industry, :constituents, :fund_weights) do
     def initialize(symbol:, name:, links:, logo_url:, description:, kind:, exchange_operating_mic:,
-                   sector: nil, industry: nil, constituents: nil)
+                   sector: nil, industry: nil, constituents: nil, fund_weights: nil)
       super
     end
   end

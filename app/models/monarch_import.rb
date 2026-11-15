@@ -149,6 +149,12 @@ class MonarchImport < Import
     super || changed_existing_accounts?
   end
 
+  # Once data has committed, a retry only finishes publishing, so changed
+  # exports or choices would be ignored. Undoing the import unlocks them.
+  def configuration_locked?
+    data_committed?
+  end
+
   # A lost job may have died after its transaction committed. Then the import
   # is done, as Import.clean decides, and failing it would let a retry import
   # everything again.
@@ -167,10 +173,9 @@ class MonarchImport < Import
   # Existing accounts the publisher must be able to write to: the ones it
   # imports into, and the ones it has already changed.
   def preexisting_target_account_ids
-    included = account_mappings.includes(:mappable).select { |mapping| mapping.target && mapping.to_converter_choice.include }
     changed = Array(summary["moved_opening_balances"]).map { |moved| moved["account_id"] } +
       Array(summary["status_changes"]).map { |change| change["account_id"] }
-    (included.map { |mapping| mapping.target.id } + changed.compact).uniq
+    (included_target_mappings.map { |mapping| mapping.target.id } + changed.compact).uniq
   end
 
   # Existing accounts whose status follows the Monarch account's: Closed
@@ -232,14 +237,19 @@ class MonarchImport < Import
   end
 
   def import!
+    # A retry after the data committed, when a later publishing step failed,
+    # only has to finish publishing. Importing again would replace the saved
+    # values that undoing the import restores.
+    return if data_committed?
+
     result = conversion
 
     transaction do
+      check_targets_still_supported!
       move_opening_balances!(result.opening_balance_moves)
 
       change_target_statuses!
-      included_targets = account_mappings.includes(:mappable).select { |mapping| mapping.target && mapping.to_converter_choice.include }
-      targets = included_targets.to_h { |mapping| [ MonarchImport::Converter.source_id(mapping.key), mapping.target ] }
+      targets = included_target_mappings.to_h { |mapping| [ MonarchImport::Converter.source_id(mapping.key), mapping.target ] }
       imported = Family::DataImporter.new(family, ndjson(result.records), import: self, account_targets: targets).import!
 
       Account.where(id: imported[:accounts].map(&:id)).update_all(import_id: id)
@@ -249,6 +259,28 @@ class MonarchImport < Import
   end
 
   private
+    def included_target_mappings
+      account_mappings.includes(:mappable).select { |mapping| mapping.target && mapping.to_converter_choice.include }
+    end
+
+    # The destinations were checked when the choices were saved, but one may
+    # have gained holdings or trades before the job ran. The lock holds off
+    # status changes; creating a trade doesn't lock the account, so one made
+    # in the same moment can still get past this check.
+    def check_targets_still_supported!
+      ids = included_target_mappings.map { |mapping| mapping.target.id }
+      return if ids.empty?
+
+      Account.where(id: ids).order(:id).lock.pluck(:id)
+      # Not family.accounts: an account moved to another family must fail too.
+      unsupported = Account.where(id: ids)
+        .where.not(id: Import::MonarchAccountMapping.target_accounts_for(self).select(:id))
+      return if unsupported.none?
+
+      raise I18n.t("activerecord.errors.models.monarch_import.target_not_supported",
+        accounts: unsupported.order(:name).pluck(:name).to_sentence)
+    end
+
     def ndjson(records)
       records.map { |record| record.to_json }.join("\n")
     end

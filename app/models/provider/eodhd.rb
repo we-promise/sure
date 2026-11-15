@@ -27,14 +27,20 @@ class Provider::Eodhd < Provider
     true
   end
 
-  # EODHD free tier provides ~1 year of EOD data
+  # The free tier provides ~1 year of EOD data; paid plans go back 30+ years.
+  # Raising EODHD_MAX_REQUESTS_PER_DAY above the free cap signals a paid key.
   def max_history_days
-    365
+    365 if max_requests_per_day <= MAX_REQUESTS_PER_DAY
   end
 
   # EODHD uses {SYMBOL}.{EXCHANGE} ticker format with its own exchange codes
   MIC_TO_EODHD_EXCHANGE = {
     "XNYS" => "US", "XNAS" => "US", "XASE" => "US",
+    # Other US venues (NASDAQ segments, NYSE Arca, Cboe, IEX, MEMX, regionals, OTC tiers)
+    # also trade under EODHD's composite US code
+    "ARCX" => "US", "BATS" => "US", "OTCM" => "US", "XNGS" => "US", "XNMS" => "US", "XNCM" => "US", "XARC" => "US",
+    "XOTC" => "US", "PINX" => "US", "OTCQ" => "US", "OTCB" => "US", "PSGM" => "US", "XCHI" => "US", "XCIS" => "US",
+    "EDGX" => "US", "IEXG" => "US", "MEMX" => "US",
     "XLON" => "LSE",
     "XETR" => "XETRA",
     "XTSE" => "TO",
@@ -177,18 +183,27 @@ class Provider::Eodhd < Provider
 
   def fetch_security_info(symbol:, exchange_operating_mic:)
     with_provider_response do
+      ticker = eodhd_symbol(symbol, exchange_operating_mic)
+      # Fundamentals cost 10 API calls and fail on plans without them, so don't
+      # retry a permanently failed lookup (no plan access, unknown ticker) on every sync.
+      failed_key = "eodhd:fundamentals_failed:#{Digest::SHA256.hexdigest(api_key.to_s)[0, 8]}:#{ticker}"
+      raise Error, "Fundamentals for #{ticker} failed recently; retrying later" if Rails.cache.read(failed_key)
+
       enforce_daily_limit!
       throttle_request
 
-      ticker = eodhd_symbol(symbol, exchange_operating_mic)
+      begin
+        response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
+          req.params["api_token"] = api_key
+          req.params["fmt"] = "json"
+        end
 
-      response = client.get("#{base_url}/api/fundamentals/#{CGI.escape(ticker)}") do |req|
-        req.params["api_token"] = api_key
-        req.params["fmt"] = "json"
+        parsed = JSON.parse(response.body)
+        check_api_error!(parsed)
+      rescue Faraday::ForbiddenError, Faraday::ResourceNotFound, Error
+        Rails.cache.write(failed_key, true, expires_in: 7.days)
+        raise
       end
-
-      parsed = JSON.parse(response.body)
-      check_api_error!(parsed)
 
       general = parsed.dig("General") || {}
 
@@ -202,7 +217,8 @@ class Provider::Eodhd < Provider
         exchange_operating_mic: exchange_operating_mic,
         sector: general.dig("Sector"),
         industry: general.dig("Industry"),
-        constituents: etf_constituents(parsed)
+        constituents: etf_constituents(parsed),
+        fund_weights: fund_weights_from(parsed["ETF_Data"] || parsed["MutualFund_Data"], category: fund_category(parsed))
       )
     end
   end
@@ -349,6 +365,116 @@ class Provider::Eodhd < Provider
       cache_keys.lazy.map { |key| Rails.cache.read(key) }.find(&:present?) ||
         EXCHANGE_CURRENCY[eodhd_exchange] ||
         EXCHANGE_CURRENCY[exchange_operating_mic]
+    end
+
+    # EODHD's fund breakdown labels, mapped to Security::ASSET_CLASSES and
+    # Security::REGION_KEYS. ETF_Data and MutualFund_Data use different labels
+    # for the same buckets. "Other", "NotClassified", "Preferred" and
+    # "Convertible" map to nothing: they count towards the fund but not
+    # towards any class.
+    FUND_ASSET_CLASSES = {
+      "Stock US" => "equity", "Stock non-US" => "equity", "US Stocks" => "equity", "Non US Stocks" => "equity",
+      "Bond" => "fixed_income", "Bonds" => "fixed_income",
+      "Cash" => "liquidity"
+    }.freeze
+
+    # A fund's category (Morningstar-style: "Large Blend", "Commodities Broad
+    # Basket", "Trading--Inverse Equity", "Money Market-Taxable") says what it
+    # is for when its holdings cannot: a commodity-futures ETF holds mostly
+    # T-bills as collateral, and an inverse ETF holds a short position plus
+    # cash. First match wins, so an inverse commodity fund is inverse.
+    FUND_WEIGHT_TOLERANCE = 10
+
+    FUND_CATEGORIES = [
+      [ /leverag|inverse/i, :leveraged_or_inverse ],
+      [ /equity/i, nil ], # "Equity Precious Metals" (GDX) holds miners, not metal
+      [ /commodit|precious metal/i, "commodity" ],
+      [ /money market/i, "liquidity" ]
+    ].freeze
+
+    FUND_REGIONS = {
+      "North America" => "north_america",
+      "Latin America" => "latin_america",
+      "United Kingdom" => "europe", "Europe Developed" => "europe", "Europe Emerging" => "europe",
+      "Africa/Middle East" => "middle_east_africa",
+      "Japan" => "asia_pacific", "Australasia" => "asia_pacific",
+      "Asia Developed" => "asia_pacific", "Asia Emerging" => "asia_pacific"
+    }.freeze
+
+    # ETF_Data keys its breakdowns by label:
+    #   "Asset_Allocation" => { "Stock US" => { "Net_Assets_%" => "60.1" } }
+    #   "World_Regions"    => { "North America" => { "Equity_%" => "61.2" } }
+    #   "Sector_Weights"   => { "Technology" => { "Equity_%" => "24.5" } }
+    # MutualFund_Data groups regions and sectors into lists:
+    #   "Asset_Allocation" => { "US Stocks" => { "Net_%" => "60.1" } }
+    #   "World_Regions"    => { "Americas" => [ { "Name" => "North America", "Stocks_%" => "61.2" } ] }
+    #   "Sector_Weights"   => { "Cyclical" => [ { "Type" => "Basic Materials", "Amount_%" => "2.5" } ] }
+    #
+    # World_Regions and Sector_Weights are percentages of the fund's EQUITY
+    # sleeve (Equity_%, Stocks_%), not of the whole fund.
+    #
+    # A negative net allocation (a short position) marks the fund as
+    # leveraged or inverse, the same as a category that says so.
+    def fund_weights_from(fund_data, category: nil)
+      return nil unless fund_data.is_a?(Hash)
+
+      category_answer = FUND_CATEGORIES.find { |pattern, _| category.to_s.match?(pattern) }&.last
+      net_keys = %w[Net_Assets_% Net_%]
+      # Settlement and TBA rolls leave long-only funds a few percent short on cash.
+      short = fund_net_allocations(fund_data["Asset_Allocation"], net_keys).any? { |percent| percent < -FUND_WEIGHT_TOLERANCE }
+
+      weights = {
+        asset_class: sum_fund_weights(fund_data["Asset_Allocation"], FUND_ASSET_CLASSES, net_keys),
+        equity_region: sum_fund_weights(fund_data["World_Regions"], FUND_REGIONS, %w[Equity_% Stocks_%]),
+        equity_sector: sum_fund_weights(fund_data["Sector_Weights"], nil, %w[Equity_% Amount_%]),
+        category_asset_class: category_answer.is_a?(String) ? category_answer : nil,
+        leveraged_or_inverse: (short || category_answer == :leveraged_or_inverse) || nil
+      }.compact_blank
+
+      weights.presence
+    end
+
+    def fund_category(parsed)
+      fund_data = parsed["ETF_Data"] || parsed["MutualFund_Data"]
+      fund_data = {} unless fund_data.is_a?(Hash)
+      general = parsed["General"].is_a?(Hash) ? parsed["General"] : {}
+
+      [ general["Category"], fund_data["Category"], fund_data["Fund_Category"] ].find { |value| value.is_a?(String) && value.present? }
+    end
+
+    # Every net percentage in the allocation, mapped or not ("Other" counts too).
+    def fund_net_allocations(section, value_keys)
+      return [] unless section.is_a?(Hash)
+
+      section.values.filter_map do |row|
+        next unless row.is_a?(Hash)
+
+        value_keys.lazy.map { |key| row[key] }.find(&:present?)&.to_f
+      end
+    end
+
+    # Sums each entry's percentage into its mapped bucket. With no mapping the
+    # provider's own label is the bucket (sectors are free text).
+    def sum_fund_weights(section, mapping, value_keys)
+      entries =
+        case section
+        when Hash
+          section.flat_map do |label, value|
+            value.is_a?(Array) ? value.filter_map { |row| [ row["Name"] || row["Type"], row ] if row.is_a?(Hash) } : [ [ label, value ] ]
+          end
+        else
+          []
+        end
+
+      entries.each_with_object(Hash.new(0.0)) do |(label, row), totals|
+        next unless row.is_a?(Hash)
+
+        bucket = mapping ? mapping[label] : label.presence
+        percent = value_keys.lazy.map { |key| row[key] }.find(&:present?)
+        next if bucket.nil? || percent.nil?
+
+        totals[bucket] += percent.to_f
+      end.to_h
     end
 
     # Cache key for tracking daily API usage

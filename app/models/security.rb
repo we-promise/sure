@@ -12,7 +12,8 @@ class Security < ApplicationRecord
   # Legacy non-ISO values previously persisted as exchange_operating_mic
   # (e.g. raw EODHD exchange codes) mapped to their ISO MIC.
   MIC_ALIASES = {
-    "WAR" => "XWAR"
+    "WAR" => "XWAR",
+    "GER" => "XETR" # Yahoo search code for Xetra, stored before it was mapped
   }.freeze
 
   KINDS = %w[standard cash].freeze
@@ -191,13 +192,15 @@ class Security < ApplicationRecord
   # - With no domain, a stored provider logo (e.g. T-Invest's CDN for MOEX
   #   instruments) is authoritative and beats the ticker-only Brandfetch
   #   lettermark placeholder.
+  # A stored Brandfetch logo_url is rewritten to the current size and client
+  # id, since holdings and the API render this value without transforming it.
   def display_logo_url
     if crypto?
-      self.class.brandfetch_crypto_url(crypto_base_asset).presence || logo_url.presence
+      self.class.brandfetch_crypto_url(crypto_base_asset).presence || stored_logo_url
     elsif website_url.present?
-      brandfetch_icon_url.presence || logo_url.presence
+      brandfetch_icon_url.presence || stored_logo_url
     else
-      logo_url.presence || brandfetch_icon_url.presence
+      stored_logo_url || brandfetch_icon_url.presence
     end
   end
 
@@ -337,6 +340,10 @@ class Security < ApplicationRecord
 
   private
 
+    def stored_logo_url
+      Setting.transform_brand_fetch_url(logo_url).presence
+    end
+
     def extract_domain(url)
       uri = URI.parse(url)
       host = uri.host || url
@@ -406,6 +413,10 @@ class Security < ApplicationRecord
       # `match.country_code`, which is the listing country, and those do
       # classify.
       return if offline?
+      # A fund's listing country says nothing about what it holds, so its
+      # region comes from the provider's breakdown of its holdings, or not
+      # at all.
+      return if asset_sub_class.in?(%w[etf mutual_fund])
 
       derived = REGIONS.dig(country_code.to_s.upcase, "region")
 
@@ -436,7 +447,12 @@ class Security < ApplicationRecord
 
     def upcase_symbols
       self.ticker = ticker.upcase
-      self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic) if exchange_operating_mic.present?
+      # Only canonicalize a MIC being written. A stored legacy alias is upgraded by
+      # find_by_ticker_and_exchange, which checks for a canonical twin first;
+      # rewriting it on an unrelated save would collide with that twin.
+      if exchange_operating_mic.present? && will_save_change_to_exchange_operating_mic?
+        self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic)
+      end
     end
 
     def should_generate_logo?
