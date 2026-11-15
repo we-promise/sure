@@ -52,10 +52,9 @@ fr:
     category_rule_cta:
       close: Fermer
       create_rule: Créer une règle
-      description: Vous pouvez créer une règle pour catégoriser automatiquement les transactions comme celle-ci
-      dont_show_again: Ne plus afficher
-      hide_for_today: Masquer pour aujourd'hui
-      hide_for_today_hint: Masquer pour aujourd'hui suspend ces suggestions pendant 24 heures.
+      description: "Toujours catégoriser les transactions similaires ?"
+      not_today: "Pas aujourd'hui"
+      turn_off_suggestions: "Désactiver les suggestions de règles"
       message: Catégorie changée en %{category_name}
     classifier_rules:
       category_classifier: Classifieur de catégories

@@ -85,6 +85,17 @@ module Family::AutoTransferMatchable
     end
   end
 
+  # Both sides of every pair the "Transfer?" hint offers for any of
+  # `transactions`: rows that show the hint once these transactions are free
+  # to pair, such as after a match between them was rejected.
+  #
+  # @return [Set<String>] transaction ids, including ones outside `transactions`
+  def transfer_hint_pair_ids(transactions, user:)
+    transfer_hint_candidates(transactions, user:).each_with_object(Set.new) do |candidate, ids|
+      ids << candidate.inflow_transaction_id << candidate.outflow_transaction_id
+    end
+  end
+
   # "Not a transfer" on a hint: rejects every pair the hint offered for this
   # transaction, the same record a rejected auto-match leaves behind, so neither
   # the hint nor the automatic matcher suggests them again. The manual dialog
@@ -128,6 +139,7 @@ module Family::AutoTransferMatchable
 
     # Track which transactions we've already matched to avoid duplicates
     used_transaction_ids = Set.new
+    created_transfers = []
 
     Transfer.transaction do
       candidates_scope.each do |match|
@@ -138,15 +150,36 @@ module Family::AutoTransferMatchable
         # (a concurrent sync claimed one of the transactions for a different pairing).
         # A created transfer stays pending and leaves the transaction kinds untouched
         # until the user confirms it (Transfer#confirm!).
-        next unless find_or_create_transfer!(match)
+        transfer = find_or_create_transfer!(match)
+        next unless transfer
 
+        created_transfers << transfer if transfer.previously_new_record?
         used_transaction_ids << match.inflow_transaction_id
         used_transaction_ids << match.outflow_transaction_id
       end
     end
+
+    sync_principal_only_loan_accounts(created_transfers)
   end
 
   private
+    # A principal-only loan replays a linked transfer as principal. The balance
+    # was materialized before this match existed, so re-sync from the transfer's
+    # entry dates.
+    def sync_principal_only_loan_accounts(transfers)
+      transfers.each do |transfer|
+        next unless principal_only_loan_transfer?(transfer)
+
+        transfer.sync_account_later
+      end
+    end
+
+    def principal_only_loan_transfer?(transfer)
+      [ transfer.from_account, transfer.to_account ].compact.any? do |account|
+        account.loan? && account.loan.amortizable? && account.loan.principal_only_transfers?
+      end
+    end
+
     # The hint's candidate pairs for `transactions`: the narrower hint window and
     # tolerance, no rejected pairs, both legs in the same category (or both
     # uncategorized, since a categorized purchase against an income is not a

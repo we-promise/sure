@@ -13,6 +13,7 @@ zh-TW:
     api_keys:
       create:
         success: 您的 API 金鑰已成功建立
+        creation_failed: "無法建立您的 API 金鑰，請再試一次。"
       destroy:
         revoked_successfully: API 金鑰已成功撤銷
         revoke_failed: 撤銷 API 金鑰失敗

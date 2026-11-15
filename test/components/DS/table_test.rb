@@ -86,6 +86,18 @@ class DS::TableTest < ViewComponent::TestCase
     assert_selector "div.rounded-xl.bg-container-inset.p-1 > div.table-scroll.rounded-lg"
   end
 
+  test "gives an inset table's header the frame's background, sticky or not" do
+    render_table
+    assert_no_selector "thead th.bg-container-inset"
+
+    render_table(inset: true)
+    assert_selector "thead th.bg-container-inset", count: 2
+
+    render_table(inset: true, sticky_header: true)
+    assert_selector "thead th.sticky.bg-container-inset", count: 2
+    assert_no_selector "thead th.bg-container"
+  end
+
   test "caps the height and makes the header cells sticky" do
     render_table(sticky_header: true)
 

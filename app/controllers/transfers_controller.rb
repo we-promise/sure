@@ -1,6 +1,10 @@
 class TransfersController < ApplicationController
   include StreamExtensions
 
+  # Most rows besides the two legs a rejection redraws in place; past this the
+  # page reloads instead, as the stream would carry rows the page may not show.
+  MAX_REDRAWN_PAIRED_ROWS = 10
+
   before_action :set_transfer, only: %i[show destroy update update_tags mark_as_recurring]
   before_action :set_accounts, only: %i[new create]
 
@@ -102,6 +106,7 @@ class TransfersController < ApplicationController
       update_investment_contribution
     end
 
+    @view_ctx = view_ctx_from_referer
     respond_to do |format|
       format.html { redirect_back_or_to transactions_url, notice: t(".success") }
       format.turbo_stream do
@@ -238,12 +243,82 @@ class TransfersController < ApplicationController
     def reject_transfer
       return unless require_account_permission!(unlink_permission_account, redirect_path: transactions_url)
 
-      @transfer.reject!
+      @view_ctx = view_ctx_from_referer
+      # Locked, so a confirmation landing meanwhile cannot change what the
+      # rejection undoes after the response was chosen.
+      in_place = @transfer.with_lock do
+        rejection_redraws_in_place?.tap { @transfer.reject! }
+      end
 
       respond_to do |format|
         format.html { redirect_back_or_to transactions_url, notice: t(".success") }
-        format.turbo_stream
+        format.turbo_stream do
+          @redrawn_entries = in_place ? redrawn_entries : []
+          if @redrawn_entries.any?
+            render :reject
+          else
+            stream_redirect_to(request.referer.presence || transactions_url)
+          end
+        end
       end
+    end
+
+    # The rows a rejection changes: both legs, and any other transaction the
+    # "Transfer?" hint now pairs with one of them (a pair touching a transfer
+    # is never offered, so destroying it can free one), each drawn with that
+    # hint as the list would. Empty, and the page reloads, when the user can
+    # no longer see either leg, when a freed row sits inside a split group
+    # (it needs the group's context), or when more rows than
+    # MAX_REDRAWN_PAIRED_ROWS were freed.
+    def redrawn_entries
+      leg_ids = [ @transfer.inflow_transaction_id, @transfer.outflow_transaction_id ]
+      legs = accessible_transaction_entries(leg_ids)
+      return [] if legs.empty?
+
+      @transfer_hint_transaction_ids = Current.family.transfer_hint_pair_ids(legs.map(&:entryable), user: Current.user)
+      others = accessible_transaction_entries(@transfer_hint_transaction_ids.to_a - leg_ids)
+      return [] if others.size > MAX_REDRAWN_PAIRED_ROWS || others.any? { |entry| entry.parent_entry_id.present? }
+
+      legs + others
+    end
+
+    def accessible_transaction_entries(transaction_ids)
+      return [] if transaction_ids.empty?
+
+      Current.accessible_entries.where(entryable_type: "Transaction", entryable_id: transaction_ids).includes(:entryable).to_a
+    end
+
+    # Whether rejecting changes nothing on the page but the two legs' rows, so
+    # those rows can be redrawn in place. Not when the transfer was confirmed
+    # (its legs go back to income and spending, moving the page's totals), has
+    # fees (rejecting deletes them), or has a leg drawn inside a split group
+    # (its row needs the group's context). Nor when both legs are on a list
+    # outside an account page: such a list draws a transfer once, by its
+    # outflow (EntriesHelper#entries_by_date), so the inflow has no row to
+    # redraw and its date group's count would be off.
+    def rejection_redraws_in_place?
+      legs = Entry.where(entryable_type: "Transaction", entryable_id: [ @transfer.inflow_transaction_id, @transfer.outflow_transaction_id ])
+
+      @transfer.pending? &&
+        @transfer.fee_transactions.none? &&
+        !legs.where.not(parent_entry_id: nil).exists? &&
+        (@view_ctx == "account" || legs.merge(Current.accessible_entries).count < 2)
+    end
+
+    # Rows are drawn the way the page that asked draws them: an account page
+    # signs each leg for its own account, every other list shows a transfer as
+    # +/-. Taken from the page the request came from, the account page of one
+    # of the legs, rather than from a client flag, so a stale link or a row
+    # another response redrew cannot claim a view the page does not have.
+    # Without a Referer it is the global list, which reloads after a rejection.
+    def view_ctx_from_referer
+      path = URI.parse(request.referer.to_s).path
+      return "global" if path.blank?
+
+      leg_account_ids = Entry.where(entryable_type: "Transaction", entryable_id: [ @transfer.inflow_transaction_id, @transfer.outflow_transaction_id ]).pluck(:account_id)
+      leg_account_ids.any? { |id| path == account_path(id) } ? "account" : "global"
+    rescue URI::InvalidURIError
+      "global"
     end
 
     # Unlinking (reject/destroy) needs write access to one endpoint, plus every
