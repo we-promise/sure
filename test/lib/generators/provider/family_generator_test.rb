@@ -294,23 +294,49 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   end
 
   # Bank sync lists a provider through FAMILY_PANELS, which reads the adapter's
-  # panel: declaration, so the generated adapter must declare one unless the view
-  # (and with it the panel partial) is skipped.
-  test "the generated adapter declares its connection and panel unless the view is skipped" do
-    with_view = render_adapter(skip_view: false)
-    without_view = render_adapter(skip_view: true)
+  # panel: declaration, and every account provider has a panel, so the generated
+  # adapter declares one even when the item views are skipped.
+  test "the generated adapter declares its connection and panel, with or without the item views" do
+    [ false, true ].each do |skip_view|
+      adapter = render_adapter(skip_view: skip_view)
 
-    assert_parses with_view
-    assert_parses without_view
-    assert_includes with_view, %(declares_connection key: "gocardless", panel: { title: "Gocardless" }\n)
-    assert_includes without_view, %(declares_connection key: "gocardless"\n)
+      assert_parses adapter
+      assert_includes adapter, %(declares_connection key: "gocardless", panel: { title: "Gocardless" }\n), "skip_view: #{skip_view}"
+    end
+  end
+
+  # The declared panel renders <key>_panel, so the partial is written even with
+  # --skip-view, which skips only the item views.
+  test "writes the panel partial with or without the item views" do
+    [ false, true ].each do |skip_view|
+      Dir.mktmpdir do |dir|
+        generator = Provider::FamilyGenerator.new([ "gocardless" ], { skip_view: skip_view }, destination_root: dir)
+        capture_io { generator.create_panel_view }
+
+        assert File.exist?(File.join(dir, "app/views/settings/providers/_gocardless_panel.html.erb")), "skip_view: #{skip_view}"
+      end
+    end
+  end
+
+  # The Bank sync wiring runs with --skip-view too: with no adapter declaring the
+  # panel (an empty directory), both runs say what to add.
+  test "wires Bank sync with or without the item views" do
+    [ false, true ].each do |skip_view|
+      Dir.mktmpdir do |dir|
+        output = Dir.chdir(dir) do
+          capture_io { Provider::FamilyGenerator.new([ "gocardless" ], skip_view: skip_view).add_bank_sync_entries }.first
+        end
+
+        assert_includes output, "Bank sync will not list gocardless", "skip_view: #{skip_view}"
+      end
+    end
   end
 
   # An adapter the generator did not write (it existed, or --skip-adapter) lacks the
   # template's declaration, so the generator has to say what to add.
   test "recognises an adapter that declares its panel" do
     assert Provider::FamilyGenerator.panel_declared?(render_adapter(skip_view: false), key: "gocardless")
-    assert_not Provider::FamilyGenerator.panel_declared?(render_adapter(skip_view: true), key: "gocardless")
+    assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless"\n), key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?("class Provider::GocardlessAdapter < Provider::Base\nend\n", key: "gocardless")
     assert_not Provider::FamilyGenerator.panel_declared?(%(  declares_connection key: "gocardless_bank", panel: { title: "X" }\n), key: "gocardless")
   end

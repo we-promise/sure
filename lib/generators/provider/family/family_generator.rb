@@ -58,7 +58,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
 
   class_option :skip_migration, type: :boolean, default: false, desc: "Skip generating migration"
   class_option :skip_routes, type: :boolean, default: false, desc: "Skip adding routes"
-  class_option :skip_view, type: :boolean, default: false, desc: "Skip generating view"
+  class_option :skip_view, type: :boolean, default: false, desc: "Skip generating the item views (the settings panel is always generated)"
   class_option :skip_controller, type: :boolean, default: false, desc: "Skip generating controller"
   class_option :skip_adapter, type: :boolean, default: false, desc: "Skip generating adapter"
   class_option :type, type: :string, default: "investment",
@@ -247,10 +247,9 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     end
   end
 
+  # Every account provider has a settings panel, so the partial its declared panel
+  # renders is written even with --skip-view.
   def create_panel_view
-    return if options[:skip_view]
-
-    # Create a simple manual panel view
     template "panel.html.erb.tt",
              "app/views/settings/providers/_#{file_name}_panel.html.erb"
   end
@@ -368,13 +367,10 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
   end
 
   # Bank sync renders a provider's connection row and drawer from FAMILY_PANELS, which
-  # the adapter's declares_connection panel: feeds (the adapter template writes it
-  # unless --skip-view). A connected provider moves under Your connections through its
-  # provider_summary case, and the row's sync status and Sync button read
-  # family_panel_items. The row renders the panel partial, so --skip-view skips both.
+  # the adapter's declares_connection panel: feeds (the adapter template always writes
+  # it). A connected provider moves under Your connections through its provider_summary
+  # case, and the row's sync status and Sync button read family_panel_items.
   def add_bank_sync_entries
-    return if options[:skip_view]
-
     controller_path = "app/controllers/settings/providers_controller.rb"
     add_bank_sync_entry(controller_path, "family_panel_items", "=> @#{file_name}_items") do |content|
       self.class.append_family_panel_item(content, key: file_name)
