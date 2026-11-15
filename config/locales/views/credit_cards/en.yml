@@ -61,9 +61,18 @@ en:
         estimated_interest_label: Estimated interest
         monthly_rate_label: Monthly rate
         per_month: "%{amount}/month"
-        closes_on: Next statement closes %{date}
+        closes_on_days:
+          zero: Statement closes %{date} (today)
+          one: Statement closes %{date} (1 day)
+          other: Statement closes %{date} (%{count} days)
+        due_overdue_days:
+          one: Due %{date} (1 day overdue)
+          other: Due %{date} (%{count} days overdue)
+        due_on_days:
+          zero: Due %{date} (today)
+          one: Due %{date} (1 day)
+          other: Due %{date} (%{count} days)
         credit_toward_next: Credit toward the next statement
-        due_on: "Due %{date}"
         edit_card_details: Edit card details
         payments_applied: Payments applied
         scheduled_payment: Scheduled payment %{amount} on %{date}

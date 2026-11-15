@@ -22,11 +22,13 @@
         <%= summary.remaining ? format_money(summary.remaining) : t(".unknown") %>
         <span class="mt-2 block space-y-1 text-sm text-secondary">
           <% if summary.due_date && due_for_last_balance %>
-            <span class="block">
-              <%= t(".due_on", date: l(summary.due_date, format: :long)) %>
-            </span>
+            <% days_to_due = (summary.due_date - today).to_i %>
             <span class="block <%= summary.status == :overdue ? "text-destructive" : "" %>">
-              <%= credit_card_due_countdown((summary.due_date - today).to_i) %>
+              <% if days_to_due.negative? %>
+                <%= t(".due_overdue_days", date: l(summary.due_date, format: :long), count: days_to_due.abs) %>
+              <% else %>
+                <%= t(".due_on_days", date: l(summary.due_date, format: :long), count: days_to_due) %>
+              <% end %>
             </span>
           <% end %>
           <% if summary.status == :paid %>
@@ -59,13 +61,17 @@
         <span class="mt-2 block space-y-1 text-sm text-secondary">
           <% if summary.accrued&.negative? %>
             <span class="block"><%= t(".credit_toward_next") %></span>
-          <% elsif summary.due_date && !due_for_last_balance %>
-            <span class="block">
-              <%= t(".due_on", date: l(summary.due_date, format: :long)) %>
-            </span>
-            <span class="block"><%= credit_card_due_countdown((summary.due_date - today).to_i) %></span>
-          <% elsif summary.next_close %>
-            <span class="block"><%= t(".closes_on", date: l(summary.next_close, format: :long)) %></span>
+          <% else %>
+            <% if summary.due_date && !due_for_last_balance %>
+              <span class="block">
+                <%= t(".due_on_days", date: l(summary.due_date, format: :long), count: (summary.due_date - today).to_i) %>
+              </span>
+            <% end %>
+            <% if summary.next_close %>
+              <span class="block">
+                <%= t(".closes_on_days", date: l(summary.next_close, format: :long), count: (summary.next_close - today).to_i) %>
+              </span>
+            <% end %>
           <% end %>
           <% if summary.charges && summary.payments_applied %>
             <span class="flex items-center justify-between gap-4">

@@ -1005,7 +1005,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       assert_match I18n.t("credit_cards.tabs.overview.payments_applied"), response.body
       assert_match Money.new(100, "USD").format, response.body
       assert_match Money.new(40, "USD").format, response.body
-      assert_match I18n.t("credit_cards.tabs.overview.closes_on", date: I18n.l(Date.new(2026, 11, 10), format: :long)), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.closes_on_days", date: I18n.l(Date.new(2026, 11, 10), format: :long), count: 25), response.body
     end
   end
 
@@ -1079,7 +1079,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
       get account_url(account, tab: "overview")
 
       assert_response :success
-      assert_select "span.text-destructive", text: I18n.t("credit_cards.due.overdue", count: 9)
+      assert_select "span.text-destructive", text: I18n.t("credit_cards.tabs.overview.due_overdue_days", date: I18n.l(Date.new(2026, 10, 21), format: :long), count: 9)
     end
   end
 
@@ -1097,7 +1097,7 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
       assert_response :success
       assert_match I18n.l(Date.new(2026, 10, 26), format: :long), response.body
-      assert_match I18n.t("credit_cards.due.in_days", count: 10), response.body
+      assert_match I18n.t("credit_cards.tabs.overview.due_on_days", date: I18n.l(Date.new(2026, 10, 26), format: :long), count: 10), response.body
     end
   end
 
