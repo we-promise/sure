@@ -41,5 +41,34 @@ class IncomeStatement::CategoryNetting
     def side_total(group, side)
       side_amount(group[:direct], side) + group[:children].sum { |child| side_amount(child[:net], side) }
     end
+
+    # The subcategories of a group with an amount on one side, as
+    # { category:, amount: }.
+    def side_children(group, side)
+      group[:children].filter_map do |child|
+        amount = side_amount(child[:net], side)
+        { category: child[:category], amount: amount } unless amount.zero?
+      end
+    end
+
+    # What a category node on one side flows on to: its subcategories and, when
+    # it has any, its own share beside them, so the node passes on everything
+    # it takes in. A category without subcategories on that side is a leaf.
+    def branches(category, own:, children:)
+      return children if children.empty? || own.zero?
+      children + [ { category: category, amount: own, own: true } ]
+    end
+
+    def side_branches(group, side)
+      branches(group[:category], own: side_amount(group[:direct], side), children: side_children(group, side))
+    end
+
+    def branch_id(side, branch)
+      "#{side}_sub_#{branch[:category].id}#{"_own" if branch[:own]}"
+    end
+
+    def branch_name(branch)
+      branch[:own] ? I18n.t("models.category.own_share", category: branch[:category].name) : branch[:category].name
+    end
   end
 end

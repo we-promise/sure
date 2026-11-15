@@ -41,7 +41,6 @@ class IncomeStatement::Sankey
 
   private
     def category_key(category) = IncomeStatement::CategoryNetting.key(category)
-    def side_amount(net, side) = IncomeStatement::CategoryNetting.side_amount(net, side)
     def side_total(group, side) = IncomeStatement::CategoryNetting.side_total(group, side)
 
     def add_group(group, side, total, center)
@@ -52,12 +51,11 @@ class IncomeStatement::Sankey
       root = add_node("#{side}_#{category_key(category)}", category.name, side, amount, pct, category)
       source, target = side == :income ? [ root, center ] : [ center, root ]
       add_link(source, target, amount, pct)
-      group[:children].each do |child|
-        value = side_amount(child[:net], side)
-        next if value.zero?
-        category = child[:category]
+      IncomeStatement::CategoryNetting.side_branches(group, side).each do |branch|
+        value = branch[:amount]
         pct = percentage(value, amount)
-        index = add_node("#{side}_sub_#{category.id}", category.name, side, value, pct, category)
+        index = add_node(IncomeStatement::CategoryNetting.branch_id(side, branch), IncomeStatement::CategoryNetting.branch_name(branch),
+          side, value, pct, branch[:category])
         source, target = side == :income ? [ index, root ] : [ root, index ]
         add_link(source, target, value, pct)
       end

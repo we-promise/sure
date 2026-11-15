@@ -26,11 +26,11 @@ class IncomeStatement::AccountSankey
     invested = flows.sum { |flow| flow[:invested] }.to_d
     capacity = [ income, spending + invested ].max
     unless capacity.zero?
-      subcategory_flows = Hash.new(0.to_d)
+      branch_flows = {}
       funding = transfer_funding(flows)
-      flows.each { |flow| add_account(flow, income, spending, capacity, subcategory_flows, funding) }
+      flows.each { |flow| add_account(flow, income, spending, capacity, branch_flows, funding) }
       add_transfers(funding, capacity)
-      add_subcategories(subcategory_flows)
+      add_branches(branch_flows)
     end
     { basis: "net_by_account", income: decimal(income), spending: decimal(spending), invested: decimal(invested),
       net_savings: decimal(income - spending), nodes: @nodes.map { |node| serialize(node) }, links: @links }
@@ -53,7 +53,7 @@ class IncomeStatement::AccountSankey
       end
     end
 
-    def add_account(flow, income, spending, capacity, subcategory_flows, funding)
+    def add_account(flow, income, spending, capacity, branch_flows, funding)
       account = flow[:account]
       size = [ flow[:income], flow[:spending] + flow[:invested] ].max
       center = node("account_#{account.id}", account.name, :account, color: ACCOUNT_COLOR)
@@ -70,9 +70,10 @@ class IncomeStatement::AccountSankey
           root[:value] += amount
           root[:percentage] = percentage(root[:value], side_total)
           link(*(side == :income ? [ root, center ] : [ center, root ]), amount, percentage(amount, side_total))
-          group[:children].each do |child|
-            value = side_amount(child[:net], side)
-            subcategory_flows[[ side, root[:id], child[:category] ]] += value unless value.zero?
+          branches = branch_flows[[ side, root[:id] ]] ||= { category: category, own: 0.to_d, children: Hash.new(0.to_d) }
+          branches[:own] += side_amount(group[:direct], side)
+          IncomeStatement::CategoryNetting.side_children(group, side).each do |child|
+            branches[:children][child[:category]] += child[:amount]
           end
         end
       end
@@ -159,14 +160,21 @@ class IncomeStatement::AccountSankey
       end
     end
 
-    # Subcategories are summed across accounts, then hang off their parent.
-    def add_subcategories(subcategory_flows)
-      subcategory_flows.each do |(side, root_id, category), value|
+    # Subcategories and a parent's own share are summed across accounts, then
+    # hang off their parent: the parent may have subcategories in one account
+    # and only its own transactions in another.
+    def add_branches(branch_flows)
+      branch_flows.each do |(side, root_id), flow|
         root = @node_index.fetch(root_id)
-        child = node("#{side}_sub_#{category.id}", category.name, side, category: category)
-        child[:value] += value
-        child[:percentage] = percentage(child[:value], root[:value])
-        link(*(side == :income ? [ child, root ] : [ root, child ]), value, percentage(value, root[:value]))
+        children = flow[:children].map { |category, amount| { category: category, amount: amount } }
+        IncomeStatement::CategoryNetting.branches(flow[:category], own: flow[:own], children: children).each do |branch|
+          value = branch[:amount]
+          child = node(IncomeStatement::CategoryNetting.branch_id(side, branch), IncomeStatement::CategoryNetting.branch_name(branch),
+            side, category: branch[:category])
+          child[:value] += value
+          child[:percentage] = percentage(child[:value], root[:value])
+          link(*(side == :income ? [ child, root ] : [ root, child ]), value, percentage(value, root[:value]))
+        end
       end
     end
 
