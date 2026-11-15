@@ -2,7 +2,8 @@
 # include children: subtract those children before partitioning by direction, so
 # a refund in a child cannot be counted again in its parent's net amount.
 #
-# Shared by the category and account Sankeys, so both net a statement the same way.
+# Shared by the dashboard, category and account Sankeys, so all of them net a
+# statement the same way and branch a category node the same way.
 class IncomeStatement::CategoryNetting
   def initialize(statement, period:)
     @statement, @period = statement, period
@@ -11,8 +12,9 @@ class IncomeStatement::CategoryNetting
   # One group per top-level category: its own net (`direct`) and its
   # subcategories' nets (`children`), positive meaning spending.
   #
-  # Keep this hierarchy-aware netting separate from IncomeStatement#net_category_totals
-  # while the original dashboard Sankey remains available for preview comparisons.
+  # Unlike IncomeStatement#net_category_totals, which nets a parent together
+  # with its subcategories, this keeps each subcategory's direction, so a
+  # refunded subcategory can be drawn on the other side of a Sankey.
   def groups
     expense = @statement.expense_totals(period: @period).category_totals.index_by { |ct| self.class.key(ct.category) }
     income = @statement.income_totals(period: @period).category_totals.index_by { |ct| self.class.key(ct.category) }
@@ -42,33 +44,33 @@ class IncomeStatement::CategoryNetting
       side_amount(group[:direct], side) + group[:children].sum { |child| side_amount(child[:net], side) }
     end
 
-    # The subcategories of a group with an amount on one side, as
-    # { category:, amount: }.
+    # A flow a category node passes on, ready to draw: a subcategory, or
+    # (own: true) the parent's own share beside its subcategories, which
+    # shares the parent's category and so its filter.
+    def branch(side, category, amount, own: false)
+      { category: category, amount: amount, own: own,
+        id: "#{side}_sub_#{category.id}#{"_own" if own}",
+        name: own ? I18n.t("models.category.own_share", category: category.name) : category.name }
+    end
+
+    # The subcategories of a group with an amount on one side, as branches.
     def side_children(group, side)
       group[:children].filter_map do |child|
         amount = side_amount(child[:net], side)
-        { category: child[:category], amount: amount } unless amount.zero?
+        branch(side, child[:category], amount) unless amount.zero?
       end
     end
 
     # What a category node on one side flows on to: its subcategories and, when
     # it has any, its own share beside them, so the node passes on everything
     # it takes in. A category without subcategories on that side is a leaf.
-    def branches(category, own:, children:)
+    def branches(side, category, own:, children:)
       return children if children.empty? || own.zero?
-      children + [ { category: category, amount: own, own: true } ]
+      children + [ branch(side, category, own, own: true) ]
     end
 
     def side_branches(group, side)
-      branches(group[:category], own: side_amount(group[:direct], side), children: side_children(group, side))
-    end
-
-    def branch_id(side, branch)
-      "#{side}_sub_#{branch[:category].id}#{"_own" if branch[:own]}"
-    end
-
-    def branch_name(branch)
-      branch[:own] ? I18n.t("models.category.own_share", category: branch[:category].name) : branch[:category].name
+      branches(side, group[:category], own: side_amount(group[:direct], side), children: side_children(group, side))
     end
   end
 end

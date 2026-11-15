@@ -54,8 +54,7 @@ class IncomeStatement::Sankey
       IncomeStatement::CategoryNetting.side_branches(group, side).each do |branch|
         value = branch[:amount]
         pct = percentage(value, amount)
-        index = add_node(IncomeStatement::CategoryNetting.branch_id(side, branch), IncomeStatement::CategoryNetting.branch_name(branch),
-          side, value, pct, branch[:category])
+        index = add_node(branch[:id], branch[:name], side, value, pct, branch[:category])
         source, target = side == :income ? [ index, root ] : [ root, index ]
         add_link(source, target, value, pct)
       end

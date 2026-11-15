@@ -390,6 +390,42 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_sankey_balanced data
   end
 
+  test "dashboard sankey hangs an income subcategory off its income parent" do
+    parent_category = @family.categories.create!(name: "Side work", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "Tutoring", parent: parent_category, color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Side job", amount: -300, category: parent_category)
+    create_transaction(account: @family.accounts.first, name: "Lesson", amount: -200, category: subcategory)
+
+    get root_path
+    assert_response :ok
+
+    data = dashboard_sankey_data
+    assert_equal 500.0, sankey_node(data, "income_#{parent_category.id}").fetch("value")
+    assert_sankey_link data, "income_sub_#{subcategory.id}", "income_#{parent_category.id}", 200.0
+    assert_sankey_link data, "income_sub_#{parent_category.id}_own", "income_#{parent_category.id}", 300.0
+    assert_sankey_link data, "income_#{parent_category.id}", "cash_flow_node", 500.0
+    assert_nil sankey_node(data, "expense_#{parent_category.id}")
+    assert_sankey_balanced data
+  end
+
+  test "dashboard sankey draws a category that nets to zero on both sides" do
+    parent_category = @family.categories.create!(name: "Housing", color: "#FF5733")
+    subcategory = @family.categories.create!(name: "HOA", parent: parent_category, color: "#33FF57")
+    create_transaction(account: @family.accounts.first, name: "Housing", amount: 100, category: parent_category)
+    create_transaction(account: @family.accounts.first, name: "HOA refund", amount: -100, category: subcategory)
+
+    get root_path
+    assert_response :ok
+
+    # Spending sits with the category and the refund is drawn against it on
+    # the income side, so neither hides the other.
+    data = dashboard_sankey_data
+    assert_sankey_link data, "cash_flow_node", "expense_#{parent_category.id}", 100.0
+    assert_sankey_link data, "income_sub_#{subcategory.id}", "cash_flow_node", 100.0
+    assert_nil sankey_node(data, "income_#{parent_category.id}")
+    assert_sankey_balanced data
+  end
+
   test "dashboard renders the cash flow rings with unspent income as a muted track on the outflows ring" do
     create_transaction(account: @family.accounts.first, name: "Salary", amount: -100_000, category: categories(:income))
     create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
@@ -503,6 +539,13 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     data.fetch("nodes").find { |node| node.fetch("id") == id }
   end
 
+  def assert_sankey_link(data, source_id, target_id, value)
+    ids = data.fetch("nodes").map { |node| node.fetch("id") }
+    link = data.fetch("links").find { |l| l.fetch("source") == ids.index(source_id) && l.fetch("target") == ids.index(target_id) }
+    assert link, "expected a link #{source_id} -> #{target_id}"
+    assert_equal value, link.fetch("value")
+  end
+
   # Every node passes on what flows into it, Cash Flow included, and is drawn
   # at that size; d3 sizes a node by its larger side, so any gap shows.
   def assert_sankey_balanced(data)
@@ -511,6 +554,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       incoming = links.select { |link| link.fetch("target") == index }.sum { |link| link.fetch("value").to_d }
       outgoing = links.select { |link| link.fetch("source") == index }.sum { |link| link.fetch("value").to_d }
       assert_equal incoming, outgoing, "#{node.fetch("id")} must pass on what flows into it" if incoming.positive? && outgoing.positive?
+      assert_operator node.fetch("value").to_d, :>, 0, "#{node.fetch("id")} must carry an amount"
       assert_equal [ incoming, outgoing ].max, node.fetch("value").to_d, "#{node.fetch("id")} must match its links"
     end
   end
@@ -594,7 +638,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     subcategory = @family.categories.create!(name: "Rebate Program", parent: parent_category, color: "#33FF57")
 
     # Parent nets as an expense; the subcategory nets as income (more refunded than spent),
-    # which routes it into the "opposite_subs" branch as its own standalone node.
+    # so it is its own node on the income side, linked to Cash Flow directly.
     create_transaction(account: @family.accounts.first, name: "Shopping trip", amount: 100, category: parent_category)
     create_transaction(account: @family.accounts.first, name: "Rebate refund", amount: -30, category: subcategory)
 

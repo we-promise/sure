@@ -166,11 +166,10 @@ class IncomeStatement::AccountSankey
     def add_branches(branch_flows)
       branch_flows.each do |(side, root_id), flow|
         root = @node_index.fetch(root_id)
-        children = flow[:children].map { |category, amount| { category: category, amount: amount } }
-        IncomeStatement::CategoryNetting.branches(flow[:category], own: flow[:own], children: children).each do |branch|
+        children = flow[:children].map { |category, amount| IncomeStatement::CategoryNetting.branch(side, category, amount) }
+        IncomeStatement::CategoryNetting.branches(side, flow[:category], own: flow[:own], children: children).each do |branch|
           value = branch[:amount]
-          child = node(IncomeStatement::CategoryNetting.branch_id(side, branch), IncomeStatement::CategoryNetting.branch_name(branch),
-            side, category: branch[:category])
+          child = node(branch[:id], branch[:name], side, category: branch[:category])
           child[:value] += value
           child[:percentage] = percentage(child[:value], root[:value])
           link(*(side == :income ? [ child, root ] : [ root, child ]), value, percentage(value, root[:value]))
