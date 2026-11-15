@@ -2,13 +2,18 @@
 
 # The shared flow for linking a connection's provider accounts: which connection
 # is selected, the accounts it reports (cached per connection), which of them
-# are still free, and linking them to new or existing accounts. Each provider
+# are still free, linking them to new or existing accounts, and setting up the
+# imported ones (Setup). Each provider
 # subclasses it as `<Key>Item::AccountFlow` and implements the hooks below. The
 # connection model needs `active`, `with_credentials` and `ordered` scopes and
 # `credentials_configured?`; its provider account class stores the provider's
 # id in `account_id` and answers `name_for`, `currency_for` and
 # `default_accountable_attributes` for a payload.
 class ProviderItem::AccountFlow
+  require_dependency "provider_item/account_flow/setup"
+
+  include Setup
+
   CACHE_TTL = 5.minutes
 
   class NoApiTokenError < StandardError; end
@@ -29,6 +34,14 @@ class ProviderItem::AccountFlow
     def created_count = created_accounts.count
     def already_linked_count = already_linked_names.count
     def invalid_count = invalid_account_ids.count
+  end
+
+  SetupResult = Data.define(:created_accounts, :skipped_count, :failed_count) do
+    def created_count = created_accounts.count
+  end
+
+  SetupCompletion = Data.define(:success, :message) do
+    def success? = success
   end
 
   attr_reader :family, :item_id, :item, :credentialed_items
@@ -252,6 +265,11 @@ class ProviderItem::AccountFlow
     # Creates or refreshes the item's provider account for this payload.
     def upsert_provider_account!(_account_id, _account_data)
       raise NotImplementedError, "#{self.class.name} must define #upsert_provider_account!"
+    end
+
+    # Whether the payload differs from what the provider account last stored.
+    def provider_account_snapshot_changed?(_provider_account, _account_data)
+      raise NotImplementedError, "#{self.class.name} must define #provider_account_snapshot_changed?"
     end
 
     def provider_key
