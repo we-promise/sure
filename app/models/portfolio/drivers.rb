@@ -38,6 +38,9 @@ class Portfolio::Drivers
     daily_returns.rows
   end
 
+  # The rows are oldest first: Portfolio::DailyReturns builds each row's
+  # opening value from the row before it, so the first row opens the period
+  # and the last one closes it.
   def value_open
     @value_open ||= rows.first&.value_open || BigDecimal(0)
   end
