@@ -4,7 +4,7 @@ class PropertiesController < ApplicationController
   before_action :set_property, only: [ :balances, :address, :update_balances, :update_address, :refresh_valuation, :link_valuation ]
   before_action :require_property_write_permission!, only: [ :update_balances, :update_address, :refresh_valuation, :link_valuation ]
 
-  helper_method :avm_provider_class, :default_purchase_date
+  helper_method :avm_provider_class, :purchase_value
 
   def new
     @account = Current.family.accounts.build(accountable: Property.new)
@@ -57,15 +57,15 @@ class PropertiesController < ApplicationController
       return render_balances_error(t(".invalid_currency"))
     end
 
-    if @account.draft? && (date_error = purchase_date_error)
-      return render_balances_error(date_error)
+    if @account.draft? && !purchase_value.valid_date?
+      return render_balances_error(t(".invalid_purchase_date"))
     end
 
     result = nil
     Account.transaction do
       @account.update!(currency: balance_params[:currency]) if balance_params[:currency].present?
       result = if @account.draft?
-        set_purchase_value(balance_params[:balance].to_d, purchase_date)
+        purchase_value.save(balance_params[:balance].to_d)
       else
         @account.set_current_balance(balance_params[:balance].to_d)
       end
@@ -290,20 +290,8 @@ class PropertiesController < ApplicationController
       params.require(:account).permit(:balance, :currency, :purchase_date)
     end
 
-    # The setup wizard's value is what the property was bought for, so it is
-    # the opening anchor ("Original purchase price") on the purchase date,
-    # as the generic account form does with its opening balance date.
-    # Resubmitting the step moves that one valuation rather than adding one.
-    def set_purchase_value(balance, date)
-      result = Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: balance, date: date)
-      return result unless result.success?
-
-      # The amount was typed in the currency just saved, which a resubmitted
-      # step may have changed.
-      @account.valuations.opening_anchor.first.entry.update!(currency: @account.currency)
-      @account.update!(balance: balance)
-      @account.sync_later
-      result
+    def purchase_value
+      @purchase_value ||= Property::PurchaseValue.new(@account, date: (balance_params[:purchase_date] if params.key?(:account)))
     end
 
     # Re-renders the value step with what the user typed, not the saved value.
@@ -318,28 +306,6 @@ class PropertiesController < ApplicationController
 
     def known_currency?(code)
       Money::Currency.all.key?(code.to_s.downcase)
-    end
-
-    def purchase_date
-      balance_params[:purchase_date].presence&.to_date || default_purchase_date
-    end
-
-    # The purchase valuation must come before any other value the draft
-    # already has, so the default is the latest date that allows it, kept
-    # within the range the field accepts.
-    def default_purchase_date
-      return @account.opening_anchor_date if @account.has_opening_anchor?
-
-      oldest = Account::OpeningBalanceManager.new(@account).oldest_entry_date
-      latest = oldest ? [ oldest.prev_day, Date.current ].min : Date.current
-      [ latest, Entry.min_supported_date + 1 ].max
-    end
-
-    def purchase_date_error
-      date = purchase_date
-      t("properties.update_balances.invalid_purchase_date") unless date > Entry.min_supported_date && date <= Date.current
-    rescue Date::Error
-      t("properties.update_balances.invalid_purchase_date")
     end
 
     def address_params
