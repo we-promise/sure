@@ -1090,6 +1090,42 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(0, "USD"), totals.contributions
   end
 
+  # A leg whose sign flips with no second transfer to take its place keeps
+  # its link: the sign only chooses between transfers, it never drops one.
+  test "a transfer between two investment accounts stays internal when a leg changes sign" do
+    period = Period.custom(start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    from = create_investment_account(balance: 1000)
+    to = create_investment_account(balance: 1000)
+    transfer = create_linked_transfer(family: @family, from: from, to: to, amount: 200, date: period.start_date)
+
+    transfer.inflow_transaction.entry.update!(amount: 200)
+    totals = @statement.totals(period: period)
+    assert_equal Money.new(0, "USD"), totals.contributions
+    assert_equal Money.new(0, "USD"), totals.withdrawals, "one leg flipped"
+
+    # A provider whose sign convention inverts both legs.
+    transfer.outflow_transaction.entry.update!(amount: -200)
+    totals = @statement.totals(period: period)
+    assert_equal Money.new(0, "USD"), totals.contributions, "both legs flipped"
+    assert_equal Money.new(0, "USD"), totals.withdrawals, "both legs flipped"
+  end
+
+  # A re-sync that inverts a settlement's sign writes the Cash leg and its
+  # Portfolio counterpart (always the Cash leg's negation) together, and
+  # #link_settlement_counterpart! leaves an existing link as it is.
+  test "a Trade Republic settlement whose amounts were negated together is still internal" do
+    portfolio, cash = create_split_trade_republic_connection
+    sync_trade_republic(portfolio, [ trade_republic_order(id: "evt_buy", quantity: "2.0", signed_amount: -500, date: "2026-07-15") ])
+    sync_trade_republic(cash, [])
+    transfer = Transfer.confirmed.sole
+    [ transfer.inflow_transaction.entry, transfer.outflow_transaction.entry ].each { |entry| entry.update!(amount: -entry.amount) }
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(0, "EUR"), totals.contributions
+    assert_equal Money.new(0, "EUR"), totals.withdrawals
+  end
+
   # Totals used to turn JIT off with SET LOCAL inside a savepoint. RELEASE
   # does not undo SET LOCAL, so a caller already in a transaction ran the
   # rest of it with JIT off.

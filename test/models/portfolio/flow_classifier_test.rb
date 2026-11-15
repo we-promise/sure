@@ -185,9 +185,10 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
   # Transfer checks the signs only when it is saved. A leg whose amount
   # changes sign afterwards (a provider re-sync writes the amount again) can
   # become another transfer's leg on the other side, and the transfers join
-  # would then match both. Each form reads a leg as an inflow only while it
-  # is negative and as an outflow only while it is positive.
-  test "a transaction is linked only on the side its sign allows" do
+  # would then match both. Each form takes the transfer on the side the
+  # leg's sign allows: the inflow while it is negative, the outflow while it
+  # is positive.
+  test "a transaction on two transfers is linked on the side its sign allows" do
     first = create_linked_transfer(family: @family, from: @checking, to: @brokerage, amount: 100)
     leg = first.inflow_transaction.entry
     leg.update!(amount: 100)
@@ -198,6 +199,26 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :internal, @family_scope.classify(leg.reload)
     assert_equal({ leg.id => :internal }, @family_scope.classify_ids([ leg.id ]))
     assert_equal 1, Entry.where(id: leg.id).joins(@family_scope.sql_joins).count, "one row per entry"
+  end
+
+  # The sign only chooses between transfers. With no transfer on the side a
+  # flipped leg's sign allows, its own transfer still links it, in both forms.
+  test "a transfer leg whose sign changed keeps its link when it has no other transfer" do
+    transfer = create_linked_transfer(family: @family, from: @ira, to: @brokerage, amount: 200)
+    inflow = transfer.inflow_transaction.entry
+    outflow = transfer.outflow_transaction.entry
+    inflow.update!(amount: 200)
+
+    assert_equal :internal, @family_scope.classify(inflow.reload)
+    assert_equal({ inflow.id => :internal, outflow.id => :internal }, @family_scope.classify_ids([ inflow.id, outflow.id ]))
+
+    outflow.update!(amount: -200)
+
+    assert_equal :internal, @family_scope.classify(outflow.reload)
+    assert_equal({ inflow.id => :internal, outflow.id => :internal }, @family_scope.classify_ids([ inflow.id, outflow.id ]))
+    # Each leg's counterpart still decides: from the brokerage alone, the IRA is outside.
+    assert_equal :external_outflow, @brokerage_scope.classify(inflow.reload)
+    assert_equal({ inflow.id => :external_outflow }, @brokerage_scope.classify_ids([ inflow.id ]))
   end
 
   test "an investment contribution from outside the scope is an external inflow" do

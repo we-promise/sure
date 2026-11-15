@@ -138,21 +138,35 @@ class Portfolio::FlowClassifier
   # The joins #sql_case relies on. The caller's query must select FROM
   # `entries` and place this fragment before its WHERE clause.
   #
-  # One row per entry, which an aggregate embedding this relies on. A
-  # transaction is joined to a transfer only on the side its sign allows: as
-  # the inflow while its amount is negative, as the outflow while it is
-  # positive. Transfer requires exactly that when it is saved
-  # (transfer_has_opposite_amounts) and validates each side as unique, so at
-  # most one transfer matches. The sign has to be checked here as well
-  # because a leg's amount can change after its transfer was saved (a
-  # provider re-sync writes the amount again): a leg that was a transfer's
-  # inflow and is now positive can become another transfer's outflow, and
-  # without this condition the join would return both and a SUM would count
-  # the entry twice. A writer that bypasses validations (insert_all) can still
-  # give one side two transfers. The sign is checked on top of the OR rather
-  # than inside it: written as (inflow AND amount < 0) OR (outflow AND
-  # amount > 0), the condition kept the same index probe but the planner
-  # priced it about nine times higher and chose a plan four times slower.
+  # One row per entry, which an aggregate embedding this relies on.
+  # Transfer#transfer_has_opposite_amounts makes a leg a transfer's inflow
+  # while its amount is negative and its outflow while it is positive, and
+  # Transfer validates each side as unique, so a transaction normally has one
+  # transfer. Those checks run only when a transfer is saved. A leg's amount
+  # can change sign afterwards (a provider re-sync writes it again), and such
+  # a leg can then become another transfer's leg on the other side. One join
+  # on either side would return both transfers, and a SUM would count the
+  # entry twice.
+  #
+  # So the transfers are joined twice, once per side, and the sign chooses
+  # between them without excluding either: flow_sign_transfers is the
+  # transfer on the side the amount allows (the outflow while it is
+  # positive, else the inflow), flow_other_transfers the one on the other
+  # side, and flow_transfers takes the first that exists. A leg whose sign
+  # flipped on its own transfer, with no second transfer, keeps that link, as
+  # do both legs of a pair whose amounts were negated together.
+  # #confirmed_transfer_for picks the same transfer in Ruby.
+  #
+  # Two transfers on the same side are still both joined. The uniqueness
+  # validations rule that out only for writers that run them one at a time:
+  # two racing writers, or rows written around the validations (insert_all),
+  # can create it, since the table has a unique index on the pair only.
+  #
+  # Each join keeps the OR probe on both transfer columns, which uses the
+  # index on each, and checks the side on top of it. Choosing the transfer
+  # in a LATERAL ... ORDER BY ... LIMIT 1 instead gave one row in every case
+  # but took the query out of its parallel plan and priced it past the JIT
+  # inlining threshold; over five years it ran about 4.5 times slower.
   #
   # The counterpart entry is only looked up among the scope's accounts, which
   # is all #transfer_resolution_sql asks of it: entries has no index on
@@ -173,14 +187,21 @@ class Portfolio::FlowClassifier
     <<~SQL.squish
       LEFT JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
       LEFT JOIN transactions ON entries.entryable_type = 'Transaction' AND transactions.id = entries.entryable_id
-      LEFT JOIN transfers flow_transfers
+      LEFT JOIN transfers flow_sign_transfers
         ON entries.entryable_type = 'Transaction'
-        AND flow_transfers.status = 'confirmed'
-        AND (flow_transfers.inflow_transaction_id = transactions.id OR flow_transfers.outflow_transaction_id = transactions.id)
-        AND CASE
-          WHEN entries.amount < 0 THEN flow_transfers.inflow_transaction_id
-          WHEN entries.amount > 0 THEN flow_transfers.outflow_transaction_id
-        END = transactions.id
+        AND flow_sign_transfers.status = 'confirmed'
+        AND (flow_sign_transfers.inflow_transaction_id = transactions.id OR flow_sign_transfers.outflow_transaction_id = transactions.id)
+        AND CASE WHEN entries.amount > 0 THEN flow_sign_transfers.outflow_transaction_id ELSE flow_sign_transfers.inflow_transaction_id END = transactions.id
+      LEFT JOIN transfers flow_other_transfers
+        ON entries.entryable_type = 'Transaction'
+        AND flow_other_transfers.status = 'confirmed'
+        AND (flow_other_transfers.inflow_transaction_id = transactions.id OR flow_other_transfers.outflow_transaction_id = transactions.id)
+        AND CASE WHEN entries.amount > 0 THEN flow_other_transfers.inflow_transaction_id ELSE flow_other_transfers.outflow_transaction_id END = transactions.id
+      CROSS JOIN LATERAL (
+        SELECT
+          COALESCE(flow_sign_transfers.inflow_transaction_id, flow_other_transfers.inflow_transaction_id) AS inflow_transaction_id,
+          COALESCE(flow_sign_transfers.outflow_transaction_id, flow_other_transfers.outflow_transaction_id) AS outflow_transaction_id
+      ) flow_transfers
       LEFT JOIN entries flow_counterpart_entries
         ON flow_counterpart_entries.entryable_type = 'Transaction'
         AND flow_counterpart_entries.account_id = ANY(#{scope_ids_sql})
@@ -276,19 +297,22 @@ class Portfolio::FlowClassifier
     # The account on the other leg of a confirmed Transfer, by id only; the
     # counterpart account itself is never loaded, so a scope check cannot
     # leak an account the user is not allowed to see. A pending auto-match
-    # links nothing yet, and a leg is read as a transfer's inflow only while
-    # its amount is negative and as its outflow only while it is positive
-    # (see #sql_joins).
+    # links nothing yet.
     def transfer_counterpart_account_id(entry, transaction)
-      transfer = if entry.amount.negative?
-        transaction.transfer_as_inflow
-      elsif entry.amount.positive?
-        transaction.transfer_as_outflow
-      end
-      return nil unless transfer&.confirmed?
+      transfer = confirmed_transfer_for(entry, transaction)
+      return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
       Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id)&.to_s
+    end
+
+    # The transfer #sql_joins picks for this transaction: the confirmed one
+    # on the side its sign allows (the outflow while its amount is positive,
+    # else the inflow), else the confirmed one on the other side.
+    def confirmed_transfer_for(entry, transaction)
+      sides = [ transaction.transfer_as_inflow, transaction.transfer_as_outflow ]
+      sides.reverse! if entry.amount.positive?
+      sides.find { |transfer| transfer&.confirmed? }
     end
 
     # A security moved between accounts has no Transfer row; its other leg is
