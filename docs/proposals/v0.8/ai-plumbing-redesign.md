@@ -1826,6 +1826,19 @@ What happens to today's chat classes in PR 6:
   semantics (its denial message, its unknown-tool error that lists every tool name), which change
   with its releases; and the spike adapted only the compatible transport, so PR 6 also adapts
   Anthropic's.
+- **A reloaded chat sends the same bytes.** A turn's first request should repeat the previous
+  turn's requests exactly, so the provider's prompt cache (and llama.cpp's, section 11) serves
+  the history instead of reading it again. Today's chat doesn't: a finished multi-round turn is
+  replayed as one assistant message with every tool call merged, and `jsonb` returns tool
+  output with its keys in a different order (#4121; #5078 fixed both on today's classes). With
+  RubyLLM's persistence each round is its own message row, tool results are stored as the
+  string that was sent, and since 2.1.0 `RubyLLM::ToolCall` orders argument keys the way
+  `jsonb` stores them (crmne/ruby_llm#1040), so the gem keeps the bytes. What can still change
+  them is `History`: the drop-on-switch rule, Gemini's placeholder signature and trimming to
+  the budget each rewrite the history on purpose, and must do so only when their condition
+  holds. PR 6 ports #5078's prefix test: it rebuilds each request of a two-round turn and the
+  next turn's first, and asserts each is a byte prefix of the next, with tool output whose keys
+  aren't sorted. Sure adds no key ordering of its own on top of the gem's.
 - **What isn't used, and why.**
   - `ask` and `complete`: no round cap; Sure steps.
   - `fallbacks`: they switch model through the first endpoint's context and gate, fall back
@@ -2858,7 +2871,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    and #3442 if it merged first). Deletes what remains of `Provider::Openai` and
    `Provider::Anthropic`, `Chat.default_model`, `Assistant::Provided#get_model_provider` and the
    `Assistant::*` classes listed in section 8.4, and empties the agreement test's allowlist. Adds
-   the conversation bounds and chat mode tests.
+   the conversation bounds and chat mode tests, and the replay prefix test ported from #5078
+   (section 8.4).
 7. **Configuration in the database.** The tables (`ai_endpoints`, `ai_models`, `ai_routes`),
    presets, `Ai::ConfigFile` and `AI_CONFIG`, `ai:export_config`, the data migration of
    UI-stored settings, the version stamp, and the source rule. `Ai::Config` now reads the tables,
