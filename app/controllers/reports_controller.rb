@@ -932,8 +932,8 @@ class ReportsController < ApplicationController
 
       # Category names are user-supplied and this is the export the app points
       # at Google Sheets, so the cells that carry them are escaped against
-      # formula injection (CWE-1236). The PDF export below is left alone: it
-      # never evaluates a cell.
+      # formula injection (CWE-1236). Only that column: the amount cells are
+      # formatted money such as "-$42.00", which the escape would turn to text.
       CSV.generate do |csv|
         # Build header row: Category + Month columns + Total
         month_headers = @export_data[:months].map { |m| m.strftime("%b %Y") }
@@ -1021,7 +1021,7 @@ class ReportsController < ApplicationController
           sheet.add_row [ "INCOME" ] + Array.new(month_headers.length + 1, ""), style: bold_style
 
           @export_data[:income].each do |category_data|
-            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
+            row = [ category_data[:category] ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
@@ -1053,7 +1053,7 @@ class ReportsController < ApplicationController
           sheet.add_row [ "EXPENSES" ] + Array.new(month_headers.length + 1, ""), style: bold_style
 
           @export_data[:expenses].each do |category_data|
-            row = [ CsvSanitizer.sanitize(category_data[:category]) ]
+            row = [ category_data[:category] ]
 
             # Add amounts for each month
             @export_data[:months].each do |month|
