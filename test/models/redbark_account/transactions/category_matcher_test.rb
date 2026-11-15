@@ -14,7 +14,6 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
       "FOOD_AND_DRINK"   => "Food & Drink",
       "HOME_IMPROVEMENT" => "Home Improvement",
       "INCOME"           => "Income",
-      "LOAN_PAYMENTS"    => "Loan Payments",
       "MEDICAL"          => "Healthcare",
       "PERSONAL_CARE"    => "Personal Care",
       "SERVICES"         => "Services",
@@ -35,7 +34,7 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
   end
 
   test "leaves ambiguous or money-movement codes uncategorised" do
-    %w[MERCHANDISE RENT_AND_UTILITIES GOVERNMENT_AND_NON_PROFIT TRANSFER_IN TRANSFER_OUT].each do |code|
+    %w[LOAN_PAYMENTS MERCHANDISE RENT_AND_UTILITIES GOVERNMENT_AND_NON_PROFIT TRANSFER_IN TRANSFER_OUT].each do |code|
       assert_nil @matcher.match(code), "expected '#{code}' to have no confident match"
     end
   end
@@ -99,5 +98,12 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     # the 3000-3299 airline range, i.e. Travel instead of Shopping.
     assert_equal "Groceries", @matcher.match("MERCHANDISE", "05411")&.name
     assert_equal "Shopping", @matcher.match("MERCHANDISE", "05712")&.name
+  end
+
+  # Redbark sends credit-card repayments as LOAN_PAYMENTS with no MCC. Those are money
+  # movement between the user's own accounts, so they must not be categorised as spending.
+  test "leaves credit-card repayments uncategorised" do
+    assert_nil @matcher.match("LOAN_PAYMENTS")
+    assert_nil @matcher.match("LOAN_PAYMENTS", nil)
   end
 end

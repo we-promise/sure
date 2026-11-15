@@ -16,6 +16,11 @@
 #
 # * TRANSFER_IN / TRANSFER_OUT -- money movement, not spending; Sure's transfer matcher
 #   pairs these up instead.
+# * LOAN_PAYMENTS -- confirmed against real Redbark data to cover credit-card repayments
+#   (sent with no MCC), which are money movement between the user's own accounts for the
+#   same reason TRANSFER_IN/OUT are. Categorising them as spending would double-count
+#   against the purchases already categorised on the card account. When both sides are
+#   linked, Sure's transfer matcher pairs them instead.
 # * MERCHANDISE -- too coarse to trust: it covers everything from groceries to electronics,
 #   and guessing "Shopping" for all of it would misclassify routine grocery runs.
 # * RENT_AND_UTILITIES -- Sure keeps "Mortgage / Rent" and "Utilities" as separate
@@ -42,7 +47,6 @@ module RedbarkAccount::Transactions::CategoryTaxonomy
     "FOOD_AND_DRINK"   => { key: :food_and_drink,    aliases: [ "food and drink", "dining", "restaurants" ] },
     "HOME_IMPROVEMENT" => { key: :home_improvement,  aliases: [ "home improvement" ] },
     "INCOME"           => { key: :income,            aliases: [ "income" ] },
-    "LOAN_PAYMENTS"    => { key: :loan_payments,     aliases: [ "loan payments" ] },
     "MEDICAL"          => { key: :healthcare,        aliases: [ "healthcare", "health", "medical" ] },
     "PERSONAL_CARE"    => { key: :personal_care,     aliases: [ "personal care" ] },
     "SERVICES"         => { key: :services,          aliases: [ "services" ] },
