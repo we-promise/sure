@@ -40,9 +40,9 @@ class Provider::Anthropic::MessageFormatter
   end
 
   private
-    # One assistant tool_use turn plus its user tool_result turn per round, then
-    # the final answer as its own assistant turn, mirroring what #build sends
-    # mid-turn so a replayed turn is a prefix of its own requests.
+    # One assistant tool_use turn and one user tool_result turn per round, then
+    # the final answer as its own assistant turn. #build sends the same shape
+    # mid-turn, so a replayed turn is a prefix of its own requests.
     def assistant_history_blocks(assistant_message)
       result = []
 
@@ -77,7 +77,7 @@ class Provider::Anthropic::MessageFormatter
       {
         type: "tool_result",
         tool_use_id: tool_call_id(tool_call),
-        content: serialize_output(tool_call.function_result)
+        content: ToolCall::Function.serialize_output(tool_call.function_result)
       }
     end
 
@@ -94,7 +94,7 @@ class Provider::Anthropic::MessageFormatter
       {
         type: "tool_result",
         tool_use_id: function_result[:call_id],
-        content: serialize_output(function_result[:output])
+        content: ToolCall::Function.serialize_output(function_result[:output])
       }
     end
 
@@ -115,9 +115,5 @@ class Provider::Anthropic::MessageFormatter
       parsed.is_a?(Hash) ? parsed : {}
     rescue JSON::ParserError
       {}
-    end
-
-    def serialize_output(output)
-      ToolCall::Function.serialize_output(output)
     end
 end
