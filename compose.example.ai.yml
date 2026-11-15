@@ -381,14 +381,41 @@ services:
       - sure_net
 
   db-version-check:
-    image: alpine:3.23
+    # Runs before `db`. If the data volume was created by another PostgreSQL
+    # major version it stops here with instructions, rather than letting the
+    # server crash-loop or start empty. See docs/hosting/docker.md
+    # "PostgreSQL major version upgrades".
+    image: pgvector/pgvector:pg18-trixie
     restart: "no"
+    user: "0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        want=18
+        legacy=""
+        if [ -f /pgdata/PG_VERSION ]; then legacy=$$(cat /pgdata/PG_VERSION)
+        elif [ -f /pgdata/data/PG_VERSION ]; then legacy=$$(cat /pgdata/data/PG_VERSION)
+        fi
+        have=""
+        other=""
+        for f in /pgdata/*/docker/PG_VERSION; do
+          [ -f "$$f" ] || continue
+          if [ "$$(cat "$$f")" = "$$want" ]; then have=1; else other=$$(cat "$$f"); fi
+        done
+        if [ -z "$$legacy" ] && { [ -n "$$have" ] || [ -z "$$other" ]; }; then
+          echo "db-version-check: OK"
+          exit 0
+        fi
+        echo "ERROR: the database volume holds PostgreSQL $${legacy:-$$other} data, but this setup runs PostgreSQL $$want."
+        echo "Nothing was changed and your data is safe. To upgrade it (a backup is taken first),"
+        echo "run this from the folder with your compose file:"
+        echo "  curl -fsSL -o sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup"
+        echo "  sh sure-backup upgrade-postgres"
+        echo "To stay on PostgreSQL $${legacy:-$$other} instead, set the db image AND its volume mount back."
+        echo "Details: https://github.com/we-promise/sure/blob/main/docs/hosting/docker.md#postgresql-major-version-upgrades"
+        exit 1
     volumes:
       - postgres-data:/pgdata:ro
-      - ./bin/db-version-check.sh:/db-version-check.sh:ro
-    command: sh /db-version-check.sh /pgdata 18
-    networks:
-      - sure_net
 
   db:
     image: pgvector/pgvector:pg18-trixie

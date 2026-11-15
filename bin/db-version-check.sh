@@ -1,73 +1,57 @@
 #!/bin/sh
-# Guard against starting Postgres on a data directory created by an
-# incompatible major version. Without this, the postgres container just
-# crash-loops on FATAL: database files are incompatible with server.
+# Guard against starting Postgres on a data directory created by another
+# major version. Used by the devcontainer; compose.example.yml and
+# compose.example.ai.yml carry the same check inline, because self-hosters
+# only download the compose file.
 #
-# Usage: db-version-check.sh <data-dir> <expected-major>
-# A data dir with no PG_VERSION file (fresh install) passes.
+# Usage: db-version-check.sh <volume-dir> <expected-major>
 #
-# PostgreSQL 18+ official images keep the cluster in a version-specific
-# subdirectory of the volume (/var/lib/postgresql/<major>/docker), while
-# PostgreSQL 16 and earlier wrote directly into the mounted directory
-# (/var/lib/postgresql/data). A volume can hold several clusters after a
-# pg_upgrade (e.g. 16/docker AND 18/docker), so the expected major's
-# cluster wins when present - that is the one the server will use.
+# PostgreSQL 18+ official images keep the cluster in <major>/docker under the
+# volume, mounted at /var/lib/postgresql. Earlier versions wrote straight into
+# the mounted directory (the volume root, or data/ under it). A cluster in the
+# old place is never read by the new image, which would start empty beside
+# it, so it always blocks. Only <expected-major>/docker counts as a match;
+# other <major>/docker clusters may remain after a pg_upgrade.
 set -u
 
-DATA_DIR="${1:?usage: db-version-check.sh <data-dir> <expected-major>}"
-EXPECTED_MAJOR="${2:?usage: db-version-check.sh <data-dir> <expected-major>}"
+DATA_DIR="${1:?usage: db-version-check.sh <volume-dir> <expected-major>}"
+EXPECTED_MAJOR="${2:?usage: db-version-check.sh <volume-dir> <expected-major>}"
 
-VERSION_FILE=""
-
-# 1. The cluster the server will actually use: <expected-major>/docker.
-if [ -f "${DATA_DIR}/${EXPECTED_MAJOR}/docker/PG_VERSION" ]; then
-  VERSION_FILE="${DATA_DIR}/${EXPECTED_MAJOR}/docker/PG_VERSION"
-else
-  # 2. Any other layout: other versioned dirs, legacy data/, direct mount.
-  for candidate in \
-    "${DATA_DIR}"/*/docker/PG_VERSION \
-    "${DATA_DIR}/data/PG_VERSION" \
-    "${DATA_DIR}/PG_VERSION"
-  do
-    if [ -f "${candidate}" ]; then
-      VERSION_FILE="${candidate}"
-      break
-    fi
-  done
+legacy=""
+if [ -f "${DATA_DIR}/PG_VERSION" ]; then
+  legacy=$(cat "${DATA_DIR}/PG_VERSION")
+elif [ -f "${DATA_DIR}/data/PG_VERSION" ]; then
+  legacy=$(cat "${DATA_DIR}/data/PG_VERSION")
 fi
 
-if [ -z "${VERSION_FILE}" ]; then
-  echo "db-version-check: no PG_VERSION under ${DATA_DIR} (fresh install) - OK"
-  exit 0
-fi
+have=""
+other=""
+for f in "${DATA_DIR}"/*/docker/PG_VERSION; do
+  [ -f "$f" ] || continue
+  if [ "$(cat "$f")" = "${EXPECTED_MAJOR}" ]; then have=1; else other=$(cat "$f"); fi
+done
 
-ACTUAL_MAJOR="$(cat "${VERSION_FILE}")"
-if [ "${ACTUAL_MAJOR}" = "${EXPECTED_MAJOR}" ]; then
-  echo "db-version-check: data directory is PostgreSQL ${ACTUAL_MAJOR} (${VERSION_FILE}), matches the image - OK"
+if [ -z "${legacy}" ] && { [ -n "${have}" ] || [ -z "${other}" ]; }; then
+  echo "db-version-check: OK"
   exit 0
 fi
 
 cat >&2 <<MSG
 
 ======================================================================
-ERROR: PostgreSQL major version mismatch
+ERROR: the database volume holds PostgreSQL ${legacy:-$other} data, but
+this setup runs PostgreSQL ${EXPECTED_MAJOR}. Nothing was changed and your
+data is safe.
 
-The database data directory was created by PostgreSQL ${ACTUAL_MAJOR}
-(found: ${VERSION_FILE}), but this setup now runs PostgreSQL
-${EXPECTED_MAJOR}. PostgreSQL ${EXPECTED_MAJOR} cannot read
-${ACTUAL_MAJOR} data files, so the database container would crash-loop
-or silently start an empty database. Startup has been stopped on
-purpose.
+In the devcontainer, the quickest fix is a fresh development database:
+  docker volume rm <project>_postgres-data   # see: docker volume ls
+then rebuild the container and run bin/setup.
 
-To KEEP your data, migrate it first with one of:
-  * pg_dump from the old version, pg_restore into the new one, or
-  * pg_upgrade (fast, in-place).
-See docs/hosting/docker.md for details.
+For a self-hosted install, upgrade the data instead (a backup is taken
+first), from the folder with your compose file:
+  sh sure-backup upgrade-postgres
 
-To start over with an EMPTY database (destroys existing data):
-  docker compose down
-  docker volume rm <project>_postgres-data
-  docker compose up
+Details: docs/hosting/docker.md, "PostgreSQL major version upgrades".
 ======================================================================
 MSG
 exit 1
