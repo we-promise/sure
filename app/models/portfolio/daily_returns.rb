@@ -238,6 +238,7 @@ class Portfolio::DailyReturns
         target_currency: currency,
         start_date: period.start_date,
         end_date: period.end_date,
+        today: Date.current,
         active_until_json: active_until_dates.to_json
       }
     end
@@ -464,7 +465,9 @@ class Portfolio::DailyReturns
             SELECT #{rate_lookup('entry_accounts.currency', 'entries.date - 1')} AS rate
           ) fx ON TRUE
           WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
-            AND entries.date BETWEEN :start_date AND :end_date
+            -- Never after today: Balance::SyncCache applies nothing dated after
+            -- it, so a scheduled entry has not moved the balance yet.
+            AND entries.date BETWEEN :start_date AND LEAST(DATE :end_date, DATE :today)
             AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
             -- Excluded entries count: excluding one hides it from budgets, but
             -- Balance::SyncCache still applies it, so it moved the balance and

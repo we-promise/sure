@@ -548,6 +548,26 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
            "so does an adjustment, with no market move beside it"
   end
 
+  # Balance::SyncCache applies nothing dated after today, so a scheduled
+  # deposit has not moved the balance the series carries forward. Counted as a
+  # flow it joined the denominator alone, and a flat day read as a loss.
+  test "a scheduled entry after today is not a flow" do
+    travel_to @day_one do
+      lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_100, cash_flow: 100
+      deposit account: @account, date: @day_one, amount: 100
+      deposit account: @account, date: @day_two, amount: 100
+
+      series = daily_returns
+      first, second = series.rows
+
+      assert_equal BigDecimal("100"), first.external_flow, "an entry dated today is applied, so it is a flow"
+      assert_equal @day_two, second.date
+      assert_equal BigDecimal("1100"), second.value_close, "precondition: the balance carries forward unchanged"
+      assert_equal BigDecimal("0"), second.external_flow
+      assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001
+    end
+  end
+
   # Regression: components used to be read from the carried-forward balance row,
   # so a day with no row of its own re-reported the previous day's market flow.
   # Over a gap that multiplied the market driver by the gap's length.
