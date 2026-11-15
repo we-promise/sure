@@ -27,12 +27,13 @@ class IbkrAccount::ActivitiesProcessor
   end
 
   def process
-    return { trades: 0, transactions: 0 } unless account.present?
+    return { trades: 0, transactions: 0, failed_rows: [] } unless account.present?
 
     activities = (@ibkr_account.raw_activities_payload || {}).with_indifferent_access
     trades = Array(activities[:trades])
     cash_transactions = Array(activities[:cash_transactions])
 
+    @failed_rows = []
     trade_results = trades.map { |trade| process_trade(trade.with_indifferent_access) }
     trades_count = trade_results.count { |r| r[:imported] }
     fee_count    = trade_results.sum   { |r| r[:fees] }
@@ -42,7 +43,7 @@ class IbkrAccount::ActivitiesProcessor
     cash_count = @cash_transactions.sum { |t| process_cash_transaction(t) ? 1 : 0 }
     capture_skipped_cash_types
 
-    { trades: trades_count, transactions: cash_count + fee_count }
+    { trades: trades_count, transactions: cash_count + fee_count, failed_rows: @failed_rows }
   end
 
   private
@@ -112,6 +113,7 @@ class IbkrAccount::ActivitiesProcessor
       fees = separate && import_commission_transaction(row, security, date) ? 1 : 0
       { imported: true, fees: fees }
     rescue => e
+      @failed_rows << "trade #{row[:trade_id]}"
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process trade #{row[:trade_id]}: #{e.message}")
       { imported: false, fees: 0 }
     end
@@ -152,6 +154,7 @@ class IbkrAccount::ActivitiesProcessor
 
       true
     rescue => e
+      @failed_rows << "cash #{row[:transaction_id]}"
       Rails.logger.error("IbkrAccount::ActivitiesProcessor - Failed to process cash transaction #{row[:transaction_id]}: #{e.message}")
       false
     end
