@@ -50,6 +50,19 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     }
   end
 
+  test "stored rows before sync_start_date are kept raw but not imported" do
+    @enable_banking_item.update!(sync_start_date: 10.days.ago.to_date)
+    old_row = raw_identifierless_transaction(amount: "40.00").merge(transaction_id: "old", booking_date: 30.days.ago.to_date.to_s)
+    new_row = raw_identifierless_transaction(amount: "41.00").merge(transaction_id: "new")
+
+    @enable_banking_account.update!(raw_transactions_payload: [ old_row, new_row ])
+    result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal 1, result[:skipped]
+    assert_equal 1, @account.entries.where(source: "enable_banking").count
+    assert @account.entries.exists?(external_id: EnableBankingEntry::Processor.compute_external_id(new_row))
+  end
+
   test "a movement identified later in the same batch does not import twice" do
     identifierless = raw_identifierless_transaction
     settled = identifierless.merge(entry_reference: "2026-02-02.1")

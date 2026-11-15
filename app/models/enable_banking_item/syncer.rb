@@ -8,6 +8,11 @@ class EnableBankingItem::Syncer
   end
 
   def perform_sync(sync)
+    # Local only and needs no session, so it also runs when the session has
+    # expired or the bank rejects it. Runs before the import's early fetch, so
+    # a payload fetched in this sync is never deleted.
+    EnableBankingItem::Importer.new(enable_banking_item, enable_banking_provider: nil).purge_stale_unlinked_transactions
+
     # An expired/missing session is an expected state that needs user action, not a
     # hard failure. Mark the connection requires_update and finish the sync
     # gracefully so the UI surfaces the "Reconnect" CTA instead of a red sync error.

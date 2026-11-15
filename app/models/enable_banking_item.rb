@@ -177,8 +177,16 @@ class EnableBankingItem < ApplicationRecord
       status: :good
     )
 
-    # Import the accounts from the session
-    import_accounts_from_session(result[:accounts] || [])
+    # A fresh SCA: the next sync also fetches the accounts that are not linked
+    # yet, while the bank still serves full history (see
+    # EnableBankingItem::Importer#fetch_unlinked_accounts_after_authorization).
+    # One transaction with the account import, so a sync never sees the
+    # request before the session's accounts exist, and no imported account is
+    # left without it.
+    transaction do
+      import_accounts_from_session(result[:accounts] || [])
+      update!(full_history_fetch_requested_at: Time.current)
+    end
 
     result
   end

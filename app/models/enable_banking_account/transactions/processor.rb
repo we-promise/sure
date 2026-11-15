@@ -6,6 +6,12 @@ class EnableBankingAccount::Transactions::Processor
   end
 
   def process
+    # Once the account is linked, rows stored by an early fetch are kept even
+    # if it is unlinked later (see EnableBankingItem::Importer).
+    if enable_banking_account.early_fetched_at && enable_banking_account.current_account.present?
+      enable_banking_account.update_columns(early_fetched_at: nil)
+    end
+
     unless enable_banking_account.raw_transactions_payload.present?
       Rails.logger.info "EnableBankingAccount::Transactions::Processor - No transactions in raw_transactions_payload for enable_banking_account #{enable_banking_account.id}"
       return { success: true, total: 0, imported: 0, failed: 0, errors: [] }
@@ -18,6 +24,14 @@ class EnableBankingAccount::Transactions::Processor
     skipped_count = 0
     failed_count = 0
     errors = []
+
+    # The first fetch can store more history than the user asked for (it runs with
+    # strategy=longest, possibly before the setup modal sets sync_start_date), so
+    # rows before sync_start_date are kept raw but not imported. Read from the
+    # database: the setup modal can set the date while a sync that loaded the
+    # item earlier is still running.
+    sync_start_date = EnableBankingItem.where(id: enable_banking_account.enable_banking_item_id).pick(:sync_start_date)
+    timezone = enable_banking_account.current_account&.family&.timezone
 
     shared_adapter = if enable_banking_account.current_account.present?
       Account::ProviderImportAdapter.new(enable_banking_account.current_account)
@@ -107,6 +121,11 @@ class EnableBankingAccount::Transactions::Processor
 
         if ext_id && excluded_ids.include?(ext_id)
           Rails.logger.info("EnableBankingAccount::Transactions::Processor - Skipping re-import of manually merged pending transaction: #{ext_id}")
+          skipped_count += 1
+          next
+        end
+
+        if sync_start_date && EnableBankingEntry::Processor.transaction_date(transaction_data, timezone) < sync_start_date
           skipped_count += 1
           next
         end
