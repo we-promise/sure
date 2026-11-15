@@ -2083,6 +2083,29 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "Savings", enriched.sole.dig("detail", "note")
   end
 
+  test "a transfer on a catch-up page checked from its stored copy keeps the page's newer status and title" do
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: "Savings") }
+    stored = transfer_item(id: "transfer-page", event_type: "OUTGOING_TRANSFER").merge(
+      "status" => "PENDING", "subtitle" => "Pending",
+      "detail" => { "amount" => 50.0, "note" => "Savings", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+    )
+    fresh = transfer_item(id: "transfer-page", event_type: "OUTGOING_TRANSFER").merge("status" => "CANCELED", "subtitle" => "Canceled", "title" => "Renamed")
+    page = [ @client.send(:build_skeleton_event, fresh, warnings: []) ]
+
+    enriched, = @client.send(
+      :enrich_timeline_details, Object.new, page, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ],
+      reference_ibans: Set["DE00000000000000000000"]
+    )
+
+    event = enriched.sole
+    assert_equal [ "CANCELED", "Canceled", "Renamed" ], event.values_at("status", "subtitle", "title")
+    assert_not Provider::TradeRepublicTimelineEvent.importable?(event)
+    assert_equal "reference_account", event.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_equal "Savings", event.dig("detail", "note")
+    assert event.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY).present?
+  end
+
   test "a direct debit from the reference account is marked as one" do
     helper = self
     @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: nil) }
