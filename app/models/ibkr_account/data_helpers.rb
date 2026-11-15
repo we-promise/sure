@@ -1,6 +1,22 @@
 module IbkrAccount::DataHelpers
   extend ActiveSupport::Concern
 
+  # IBKR quotes a bond as a percentage of its face value, and a bond's position
+  # or trade quantity is that face value; its multiplier (0.01) relates the two.
+  # Sure counts a bond in units of 100 face, the unit its price is quoted per,
+  # so the price reads as IBKR quotes it and quantity x price is its value. A
+  # Flex Query without the Multiplier field gets IBKR's bond multiplier.
+  BOND_MULTIPLIER = BigDecimal("0.01")
+
+  # A bond is tracked under this prefix and its IBKR symbol (Trades carry no
+  # ISIN), which keeps it off a listed security that shares the symbol, and
+  # off that security's prices.
+  BOND_TICKER_PREFIX = "BOND:"
+
+  # No price provider quotes a bond per 100 face, so a bond is offline and
+  # valued at IBKR's mark and trade prices. The reason says which flow set it.
+  BOND_OFFLINE_REASON = "ibkr_bond"
+
   private
 
     def parse_decimal(value)
@@ -50,6 +66,8 @@ module IbkrAccount::DataHelpers
 
     def resolve_security(row)
       data = row.with_indifferent_access
+      return resolve_bond_security(data) if bond?(data)
+
       ticker = data[:symbol].to_s.strip.upcase
       return nil if ticker.blank?
 
@@ -77,5 +95,37 @@ module IbkrAccount::DataHelpers
 
     def create_security_from_row(ticker)
       Security.create!(ticker: ticker, name: ticker)
+    end
+
+    def bond?(row)
+      row.with_indifferent_access[:asset_category].to_s.strip.upcase == "BOND"
+    end
+
+    # What one unit of the row's quantity counts as in Sure: a bond's face
+    # value times its multiplier, anything else as IBKR reports it.
+    def quantity_multiplier(row)
+      return BigDecimal("1") unless bond?(row)
+
+      multiplier = parse_decimal(row.with_indifferent_access[:multiplier])
+      multiplier&.positive? ? multiplier : BOND_MULTIPLIER
+    end
+
+    # Securities are global, so an existing row is reused as it stands. The
+    # savepoint keeps a lost create race from aborting the import around it.
+    def resolve_bond_security(data)
+      symbol = data[:symbol].to_s.strip.upcase
+      return nil if symbol.blank?
+
+      ticker = "#{BOND_TICKER_PREFIX}#{symbol}"
+      Security.find_by(ticker: ticker) || Security.transaction(requires_new: true) do
+        Security.create!(
+          ticker: ticker,
+          name: data[:description].to_s.strip.presence || symbol,
+          offline: true,
+          offline_reason: BOND_OFFLINE_REASON
+        )
+      end
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      Security.find_by(ticker: ticker)
     end
 end

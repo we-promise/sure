@@ -1,6 +1,11 @@
 class IbkrAccount::HoldingsProcessor
   include IbkrAccount::DataHelpers
 
+  # Stocks and ETFs (STK), mutual funds (FUND) and bonds (BOND), held long.
+  # Anything else is left out and reported (see capture_skipped_positions):
+  # Sure has no model for a short position or for a derivative's contract.
+  SUPPORTED_ASSET_CATEGORIES = %w[STK FUND BOND].freeze
+
   def initialize(ibkr_account)
     @ibkr_account = ibkr_account
   end
@@ -8,9 +13,11 @@ class IbkrAccount::HoldingsProcessor
   def process
     return unless account.present?
 
+    @skipped_positions = Hash.new(0)
     grouped_positions.each do |(_, _, report_date), group|
       process_group(group, report_date)
     end
+    capture_skipped_positions
   end
 
   private
@@ -26,6 +33,7 @@ class IbkrAccount::HoldingsProcessor
     def grouped_positions
       Array(@ibkr_account.raw_holdings_payload).each_with_object({}) do |position, groups|
         data = position.with_indifferent_access
+        next if unsupported_kind?(data)
         next unless supported_position?(data)
 
         # conid is guaranteed present by supported_position?, so no fallbacks needed
@@ -90,8 +98,9 @@ class IbkrAccount::HoldingsProcessor
           next
         end
 
-        total_quantity += row_quantity.abs
-        total_cost     += row_quantity.abs * row_cost_basis
+        units = row_quantity.abs * quantity_multiplier(row)
+        total_quantity += units
+        total_cost     += units * row_cost_basis
       end
 
       return nil if total_quantity.zero?
@@ -99,10 +108,40 @@ class IbkrAccount::HoldingsProcessor
       { quantity: total_quantity, cost_basis: total_cost / total_quantity }
     end
 
+    # A position of a category or side Sure does not import, counted so the
+    # sync can report it.
+    def unsupported_kind?(row)
+      category = row[:asset_category].to_s.strip.upcase
+      kind = if !SUPPORTED_ASSET_CATEGORIES.include?(category)
+        category.presence || "unknown"
+      elsif row[:side].to_s != "Long"
+        "#{category} #{row[:side].to_s.strip.presence || "unknown"}"
+      end
+      return false unless kind
+
+      @skipped_positions[kind] += 1
+      true
+    end
+
+    # The holdings leave a skipped position out, while the balance is IBKR's
+    # figure, so whatever value it includes for one shows as cash.
+    def capture_skipped_positions
+      return if @skipped_positions.empty?
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: "Skipped IBKR positions of unsupported types",
+        source: self.class.name,
+        provider_key: "ibkr",
+        account_provider: @ibkr_account.account_provider,
+        family: @ibkr_account.ibkr_item&.family,
+        metadata: { ibkr_account_id: @ibkr_account.id, skipped_position_types: @skipped_positions }
+      )
+    end
+
     def supported_position?(row)
-      row[:asset_category].to_s == "STK" &&
-        row[:side].to_s == "Long" &&
-        row[:conid].present? &&
+      row[:conid].present? &&
         row[:security_id].present? &&
         row[:security_id_type].present? &&
         row[:symbol].present? &&

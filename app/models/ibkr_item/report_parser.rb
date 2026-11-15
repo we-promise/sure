@@ -129,12 +129,16 @@ class IbkrItem::ReportParser
       parse_decimal(row&.fetch("ending_cash", nil)) || BigDecimal("0")
     end
 
+    # IBKR reports a row per asset category, so the positions are worth the sum
+    # of those rows, in base currency when it gives one. A row with no category
+    # is already the total of them.
     def extract_current_balance(position_values, account_currency)
-      base_summary = position_values.find { |row| row["currency"] == "BASE_SUMMARY" }
-      account_row = position_values.find { |row| row["currency"] == account_currency }
-      row = base_summary || account_row
+      rows = position_values.select { |row| row["currency"] == "BASE_SUMMARY" }
+      rows = position_values.select { |row| row["currency"] == account_currency } if rows.empty?
+      total_row = rows.find { |row| row["asset_category"].blank? }
+      rows = [ total_row ] if total_row
 
-      parse_decimal(row&.fetch("end_of_period_value", nil)) || BigDecimal("0")
+      rows.sum(BigDecimal("0")) { |row| parse_decimal(row["end_of_period_value"]) || BigDecimal("0") }
     end
 
     def extract_total_balance(position_values, cash_rows, account_currency)
