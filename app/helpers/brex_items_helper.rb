@@ -46,6 +46,12 @@ module BrexItemsHelper
     parts.join(t("brex_items.account_metadata.separator"))
   end
 
+  def brex_account_setup_defaults(brex_accounts)
+    brex_accounts.to_h do |brex_account|
+      [ brex_account.id, { account_type: brex_account.card? ? "CreditCard" : "Depository", depository_subtype: default_brex_depository_subtype(brex_account.name) } ]
+    end
+  end
+
   def default_brex_depository_subtype(account_name)
     normalized_name = account_name.to_s.downcase
 
