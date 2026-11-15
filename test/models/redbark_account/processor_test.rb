@@ -302,30 +302,6 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Groceries", entry.transaction.category&.name
   end
 
-  test "transactions processor narrows a supermarket purchase to Groceries" do
-    @family.categories.bootstrap!
-    account, ra = link(Depository, provider: "fiskil", balance: "100")
-
-    ra.update!(raw_transactions_payload: [
-      {
-        "id" => "tx_cat_refine",
-        "status" => "posted",
-        "date" => Date.current.to_s,
-        "description" => "WOOLWORTHS 1144 LIVERPOOL NS",
-        "amount" => "-45.00",
-        "direction" => "debit",
-        "merchant" => "Woolworths 1144 Liverpool NS",
-        "category" => "FOOD_AND_DRINK",
-        "merchantCategoryCode" => "5411" # supermarkets -> narrows Food & Drink to Groceries
-      }
-    ])
-
-    RedbarkAccount::Transactions::Processor.new(ra).process
-
-    entry = account.entries.find_by(external_id: "redbark_tx_cat_refine", source: "redbark")
-    assert_equal "Groceries", entry.transaction.category&.name
-  end
-
   # The PR claims a category the user set or locked survives a re-import. enrich_attribute
   # respects locked_attributes, so a re-sync of the same transaction must leave it alone.
   test "transactions processor does not overwrite a locked category on re-import" do

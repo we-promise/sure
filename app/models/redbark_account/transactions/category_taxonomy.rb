@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # Maps Redbark's fixed bank-category codes (GET /v1/categories, the `category` field on a
-# transaction) onto the family's existing Sure categories. The MCC fallback and refinement
-# table is the shared Transactions::MccTaxonomy.
+# transaction) onto the family's existing Sure categories. The MCC fallback table is the
+# shared Transactions::MccTaxonomy.
 #
 # Redbark assigns one of 16 fixed, CDR-enriched codes to every transaction. Unlike a
 # Merchant Category Code, these already describe spending *purpose* rather than merchant
@@ -64,19 +64,6 @@ module RedbarkAccount::Transactions::CategoryTaxonomy
     "TRAVEL"           => { key: :travel,            aliases: [ "travel" ] }
   }.freeze
 
-  # MCC groups allowed to *refine* a recognised category code, keyed by that code.
-  #
-  # This is not the fallback path and does not weaken it: the MCC may only narrow a code
-  # to a more specific category inside the same domain, never move the transaction
-  # somewhere unrelated. Redbark reports supermarket purchases as FOOD_AND_DRINK with MCC
-  # 5411 (a Woolworths grocery shop is the common case), so without this a weekly grocery
-  # run lands in "Food & Drink" while the identical purchase arriving as MERCHANDISE +
-  # 5411 lands in "Groceries". Both signals agree the spend is food; the MCC is simply
-  # sharper about which kind.
-  CATEGORY_MCC_REFINEMENTS = {
-    "FOOD_AND_DRINK" => [ :groceries ]
-  }.freeze
-
   # The taxonomy group for a Redbark category code, or nil when the code is unknown or has
   # no confident mapping.
   #
@@ -85,20 +72,5 @@ module RedbarkAccount::Transactions::CategoryTaxonomy
     return nil if category.blank?
 
     RedbarkAccount::Transactions::CategoryTaxonomy::CATEGORY_GROUPS[category.to_s.upcase]
-  end
-
-  # The MCC group that refines this category code, or nil when the MCC adds nothing (no
-  # MCC, no mapping for it, or a mapping outside what this code permits).
-  #
-  # @param category [String, nil] the transaction's `category` field
-  # @param mcc [Integer, String, nil] the transaction's `merchant_category_code` field
-  def category_refinement_group(category, mcc)
-    return nil if category.blank?
-
-    permitted = RedbarkAccount::Transactions::CategoryTaxonomy::CATEGORY_MCC_REFINEMENTS[category.to_s.upcase]
-    return nil if permitted.blank?
-
-    group = mcc_group(mcc)
-    group if group && permitted.include?(group[:key])
   end
 end

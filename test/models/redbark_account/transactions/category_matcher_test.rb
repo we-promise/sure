@@ -75,6 +75,9 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
   test "prefers category over merchant_category_code when both are confident" do
     # 5541 (service stations) maps to Transportation via MCC, but the category code wins.
     assert_equal "Entertainment", @matcher.match("ENTERTAINMENT", 5541)&.name
+    # Redbark sends a supermarket shop as FOOD_AND_DRINK + 5411. The category code still
+    # decides; splitting groceries out is left to a user rule on the stored MCC.
+    assert_equal "Food & Drink", @matcher.match("FOOD_AND_DRINK", 5411)&.name
   end
 
   test "returns nil when neither category nor merchant_category_code has a confident mapping" do
@@ -102,31 +105,6 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
   test "categorises loan and credit-card repayments" do
     assert_equal "Loan Payments", @matcher.match("LOAN_PAYMENTS")&.name
     assert_equal "Loan Payments", @matcher.match("LOAN_PAYMENTS", nil)&.name
-  end
-
-  test "refines a recognized category with a more specific MCC in the same domain" do
-    # Redbark reports a supermarket shop as FOOD_AND_DRINK + 5411. The MCC is sharper
-    # about the same spend, so it narrows Food & Drink to Groceries.
-    assert_equal "Groceries", @matcher.match("FOOD_AND_DRINK", 5411)&.name
-    assert_equal "Groceries", @matcher.match("FOOD_AND_DRINK", "5411")&.name
-  end
-
-  test "keeps the category when a permitted refinement has no local equivalent" do
-    bare_family = families(:dylan_family)
-    bare_family.categories.destroy_all
-    bare_family.categories.create!(name: "Food & Drink")
-    matcher = RedbarkAccount::Transactions::CategoryMatcher.new(bare_family.categories.reload.to_a)
-
-    # No Groceries category to narrow to, so the broader category code still applies.
-    assert_equal "Food & Drink", matcher.match("FOOD_AND_DRINK", 5411)&.name
-  end
-
-  test "does not refine a recognized category with an unrelated MCC" do
-    # 7011 (lodging) maps to Travel, which is not a permitted refinement of FOOD_AND_DRINK,
-    # so the category code decides and the MCC is ignored.
-    assert_equal "Food & Drink", @matcher.match("FOOD_AND_DRINK", 7011)&.name
-    # 5811 (caterers) maps to Food & Drink itself -- also not a narrowing, so no change.
-    assert_equal "Food & Drink", @matcher.match("FOOD_AND_DRINK", 5811)&.name
   end
 
   test "falls back to merchant_category_code for an unrecognized category code" do
