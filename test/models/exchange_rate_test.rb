@@ -54,6 +54,29 @@ class ExchangeRateTest < ActiveSupport::TestCase
     end
   end
 
+  test "keyless fallback keeps checking other pairs after an invalid rate for one" do
+    keyless_fallback(signed_in: true) do
+      stub_request(:get, %r{/rate/SEK/JPY}).to_return(status: 200, body: { date: Date.current.to_s, base: "SEK", quote: "JPY", rate: 0 }.to_json)
+      stub_request(:get, %r{/rate/DKK/JPY}).to_return(status: 200, body: { date: Date.current.to_s, base: "DKK", quote: "JPY", rate: nil }.to_json)
+      stub_request(:get, %r{/rate/NOK/JPY}).to_return(status: 200, body: { date: Date.current.to_s, base: "NOK", quote: "JPY", rate: 13.9 }.to_json)
+
+      assert_nil ExchangeRate.find_or_fetch_rate(from: "SEK", to: "JPY", date: Date.current)
+      assert_nil ExchangeRate.find_or_fetch_rate(from: "DKK", to: "JPY", date: Date.current)
+      assert_equal 13.9, ExchangeRate.find_or_fetch_rate(from: "NOK", to: "JPY", date: Date.current).rate
+    end
+  end
+
+  test "keyless fallback skips Frankfurter for a minute after a refused connection" do
+    keyless_fallback(signed_in: true) do
+      stub_request(:get, %r{/rate/SEK/JPY}).to_raise(Faraday::ConnectionFailed.new("connection refused"))
+      stub_request(:get, %r{/rate/NOK/JPY}).to_return(status: 200, body: { date: Date.current.to_s, base: "NOK", quote: "JPY", rate: 13.9 }.to_json)
+
+      assert_nil ExchangeRate.find_or_fetch_rate(from: "SEK", to: "JPY", date: Date.current)
+      assert_nil ExchangeRate.find_or_fetch_rate(from: "NOK", to: "JPY", date: Date.current)
+      assert_not_requested :get, %r{/rate/NOK/JPY}
+    end
+  end
+
   test "keyless fallback outside a request, as in a sync job, keeps the retries" do
     keyless_fallback(signed_in: false) do
       stub_request(:get, %r{/rate/SEK/JPY}).to_timeout
@@ -332,7 +355,7 @@ class ExchangeRateTest < ActiveSupport::TestCase
   private
     def keyless_fallback(signed_in:, &block)
       ExchangeRate.unstub(:provider)
-      ExchangeRate.where(from_currency: %w[SEK XAG], to_currency: "JPY").delete_all
+      ExchangeRate.where(from_currency: %w[SEK XAG NOK DKK], to_currency: "JPY").delete_all
       Setting.stubs(:exchange_rate_provider).returns("twelve_data")
       Setting.stubs(:twelve_data_api_key).returns(nil)
       Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)

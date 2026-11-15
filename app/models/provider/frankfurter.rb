@@ -126,6 +126,14 @@ class Provider::Frankfurter < Provider
       end
     end
 
+    # A request that got no HTTP response at all (timeout, refused connection) is tagged
+    # :unreachable, so a caller can tell Frankfurter being down from a bad answer for one pair.
+    def default_error_transformer(error)
+      return super unless error.is_a?(Faraday::Error) && error.response.nil?
+
+      Error.new(error.message, failure_code: :unreachable)
+    end
+
     def generate_same_currency_rates(from, to, start_date, end_date)
       (start_date..end_date).map do |date|
         Rate.new(date: date, from: from, to: to, rate: 1.0)

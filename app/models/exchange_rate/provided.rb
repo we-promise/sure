@@ -59,13 +59,14 @@ module ExchangeRate::Provided
       return nil unless fx_provider.present? # No provider configured (some self-hosted apps)
 
       # Keyless fallback on a signed-in request (e.g. reports): one short try, then skip Frankfurter for a
-      # minute after a timeout or connection error (no error body), so loops can't each wait. Jobs keep retries.
+      # minute after a timeout or connection error (no HTTP response), so loops can't each wait. A lookup that
+      # got a response (an HTTP error, an invalid rate) skips nothing else. Jobs keep retries.
       fail_fast = Current.session.present? && fallback_provider?
       return nil if fail_fast && Rails.cache.read(FALLBACK_DOWN_KEY)
       fx_provider = Provider::Frankfurter.new(timeout: 3, max_retries: 0) if fail_fast
 
       response = fx_provider.fetch_exchange_rate(from: from, to: to, date: date)
-      Rails.cache.write(FALLBACK_DOWN_KEY, true, expires_in: 1.minute) if fail_fast && !response.success? && response.error.details.nil?
+      Rails.cache.write(FALLBACK_DOWN_KEY, true, expires_in: 1.minute) if fail_fast && !response.success? && response.error.failure_code == :unreachable
       return nil unless response.success? # Provider error
 
       rate = response.data
