@@ -250,6 +250,30 @@ class EnableBankingItem::ImporterFullHistoryTest < ActiveSupport::TestCase
     assert_equal 1, @enable_banking_account.reload.raw_transactions_payload.size
   end
 
+  test "a pending fetch cut short is not reported as a truncated history" do
+    Setting.stubs(:syncs_include_pending).returns(true)
+    link!
+    provider = Object.new
+    provider.define_singleton_method(:get_account_balances) { |**| { balances: [] } }
+    provider.define_singleton_method(:get_account_transactions) do |**params|
+      if params[:transaction_status] == "PDNG"
+        raise Provider::EnableBanking::EnableBankingError.new("Bad request", :bad_request) if params[:continuation_key]
+
+        next { transactions: [], continuation_key: "p1" }
+      end
+
+      { transactions: [ { transaction_id: "a", booking_date: 300.days.ago.to_date.iso8601, status: "BOOK",
+                          transaction_amount: { amount: "1.00", currency: "EUR" }, credit_debit_indicator: "DBIT" } ] }
+    end
+    importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: provider)
+    importer.stubs(:fetch_session_data).returns(accounts: [])
+
+    result = importer.import
+
+    assert result[:success]
+    assert_equal 0, result[:transactions_truncated], "the booked history was fetched in full"
+  end
+
   test "a complete fetch is not reported as truncated" do
     link!
 

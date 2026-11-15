@@ -158,8 +158,8 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
       status: "PDNG"
     }
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ tx ])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([ tx ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ tx ], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([ [ tx ], false ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
@@ -181,7 +181,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
       status: "PDNG"
     }
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ tx ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ tx ], false ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
@@ -203,8 +203,8 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
       status: "BOOK"
     }
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ hold_tx ])
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ hold_tx ], false ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([ [], false ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
@@ -228,7 +228,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
       status: "BOOK"
     }
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ hold_tx ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ hold_tx ], false ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
@@ -260,7 +260,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
 
     @enable_banking_account.upsert_enable_banking_transactions_snapshot!([ cached_hold, cached_settled ])
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [], false ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 

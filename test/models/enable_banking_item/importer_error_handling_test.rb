@@ -105,7 +105,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       :validation_error
     )
 
-    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [], false ])
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(pdng_error)
 
     result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
@@ -127,7 +127,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       response_data: { error: "WRONG_REQUEST_PARAMETERS" }
     )
 
-    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [], false ])
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(trade_republic_pdng_error)
 
     result = nil
@@ -156,7 +156,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       response_data: { error: "WRONG_REQUEST_PARAMETERS" }
     )
 
-    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [], false ])
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(imagin_error)
 
     result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
@@ -174,7 +174,7 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
       :rate_limited
     )
 
-    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([])
+    @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [], false ])
     @importer.stubs(:fetch_paginated_transactions).with(enable_banking_account, has_entries(transaction_status: "PDNG")).raises(rate_limit_error)
 
     result = @importer.send(:fetch_and_store_transactions, enable_banking_account)
@@ -200,14 +200,15 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
     @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
 
     assert_difference "DebugLogEntry.count", 1 do
-      result = @importer.send(
+      transactions, truncated = @importer.send(
         :fetch_paginated_transactions,
         enable_banking_account,
         start_date: Date.today,
         transaction_status: "BOOK"
       )
 
-      assert_equal [ page1_tx ], result
+      assert_equal [ page1_tx ], transactions
+      assert truncated
     end
 
     debug_log = DebugLogEntry.last
@@ -238,14 +239,15 @@ class EnableBankingItem::ImporterErrorHandlingTest < ActiveSupport::TestCase
 
     @mock_provider.expects(:get_account_transactions).twice.returns(page1_response).then.raises(error)
 
-    result = @importer.send(
+    transactions, truncated = @importer.send(
       :fetch_paginated_transactions,
       enable_banking_account,
       start_date: Date.today,
       transaction_status: "PDNG"
     )
 
-    assert_equal [ page1_tx ], result
+    assert_equal [ page1_tx ], transactions
+    assert truncated
   end
 
   # A validation error on the very first page has no prior page to fall back on, so it

@@ -847,15 +847,14 @@ class EnableBankingItem::Importer
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
-      @pagination_truncated = false
-      all_transactions = fetch_paginated_transactions(
+      all_transactions, book_truncated = fetch_paginated_transactions(
         enable_banking_account,
         start_date: start_date,
         transaction_status: "BOOK",
         psu_headers: enable_banking_item.build_psu_headers,
         strategy: first_fetch ? "longest" : nil
       )
-      truncated = first_fetch && @pagination_truncated
+      truncated = first_fetch && book_truncated
       if truncated
         Rails.logger.warn "EnableBankingItem::Importer - strategy=longest fetch for account #{enable_banking_account.uid} was cut short; the stored history may be incomplete"
       end
@@ -889,7 +888,7 @@ class EnableBankingItem::Importer
         begin
           # Pending rows are only a few days old, so a first fetch without a
           # start date still sends a short, explicit window here.
-          pending_transactions = fetch_paginated_transactions(
+          pending_transactions, _pending_truncated = fetch_paginated_transactions(
             enable_banking_account,
             start_date: start_date || 30.days.ago.to_date,
             transaction_status: "PDNG",
@@ -1080,8 +1079,11 @@ class EnableBankingItem::Importer
 
     class PaginationTruncatedError < StandardError; end
 
+    # Returns the rows fetched and whether the fetch stopped before the last
+    # page (page cap, repeated continuation key, or a 400/422 on a later page).
     def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {}, strategy: nil)
       all_transactions = []
+      truncated = false
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
@@ -1134,7 +1136,7 @@ class EnableBankingItem::Importer
             transactions_kept: all_transactions.count,
             error: e
           )
-          @pagination_truncated = true
+          truncated = true
           break
         end
 
@@ -1152,16 +1154,15 @@ class EnableBankingItem::Importer
         break if continuation_key.blank?
       end
 
-      all_transactions
+      [ all_transactions, truncated ]
     rescue PaginationTruncatedError => e
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
       Rails.logger.warn(e.message)
-      @pagination_truncated = true
       if strategy.present?
         capture_longest_truncation_debug_log(enable_banking_account, transactions_kept: all_transactions.count, reason: e.message)
       end
-      all_transactions
+      [ all_transactions, true ]
     end
 
     def filter_transactions_by_date(transactions, start_date)
