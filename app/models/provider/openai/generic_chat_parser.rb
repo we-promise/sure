@@ -53,7 +53,8 @@ class Provider::Openai::GenericChatParser
           id: tool_call.dig("id"),
           call_id: tool_call.dig("id"),
           function_name: tool_call.dig("function", "name"),
-          function_args: tool_call.dig("function", "arguments")
+          function_args: tool_call.dig("function", "arguments"),
+          extra_content: tool_call.dig("extra_content")
         )
       end
     end

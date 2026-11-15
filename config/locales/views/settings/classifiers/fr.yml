@@ -1,0 +1,156 @@
+---
+fr:
+  settings:
+    classifiers:
+      account:
+        account_field: Inclure le compte comme un seul jeton
+        account_field_hint: 'Le compte d''une transaction sert d''indice. Il ne décide jamais seul : une transaction a besoin d''un mot ou d''un marchand connu.'
+      add_rule:
+        success: La règle %{name} a été ajoutée en tête de vos règles.
+      amount:
+        amount_by_direction: Inclure le sens, entrée ou sortie d'argent
+        amount_by_direction_hint: Chaque catégorie apprend dans quel sens circule son argent, et les remboursements et achats dans un même magasin restent distincts.
+        amount_field: Inclure le montant
+        amount_field_hint: Compare le montant aux montants habituels de chaque catégorie dans la même devise, sur une échelle logarithmique.
+      category_training:
+        apply: Appliquer
+        categories: Catégories
+        categories_all: Toutes les catégories
+        categories_hint: 'Les catégories décochées, avec leurs sous-catégories, sont exclues de l''entraînement : Bayes ne les choisit donc jamais.'
+        categories_some: "%{count} catégories sur %{total}"
+        exclude_transfers: Exclure les transferts
+        exclude_transfers_hint: Transferts et paiements entre vos comptes.
+        search_categories: Rechercher des catégories
+        skip_self_labels: Ne pas apprendre des suppositions de Bayes tant qu'elles ne sont pas confirmées ou n'ont pas atteint ce nombre de jours
+        skip_self_labels_hint: Confirmée signifie que vous l'avez modifiée ou verrouillée. Une mauvaise supposition n'est pas réinjectée ni renforcée ; une supposition laissée telle quelle aussi longtemps est considérée comme acceptée.
+      classifier:
+        apply: Appliquer
+        lock_results: Verrouiller les catégories définies par le classifieur
+        lock_results_hint: Empêche les règles de modifier les choix de Bayes, sauf si vous cliquez sur Appliquer dans une règle. L'IA ne modifie jamais les choix de Bayes, verrouillés ou non.
+        rule: Catégoriser avec le classifieur
+        rule_hint: 'Correspond à la règle Classifieur de catégories : l''activer ou la désactiver ici le fait aussi dans Règles. Elle catégorise les transactions non catégorisées dans l''ordre de vos règles, après chaque synchronisation ; ce dont elle n''est pas sûre est laissé à une règle d''auto-catégorisation.'
+        threshold: Seuil
+        threshold_hint: Score minimal à partir duquel Bayes agit (de 0,05 à 0,99). Plus il est bas, plus il catégorise, avec davantage d'erreurs.
+      clear_locks:
+        success: Les verrous de Bayes sont en cours de suppression. Cela peut prendre quelques instants.
+      evaluation:
+        apply_best: Appliquer ces réglages
+        best: Meilleur résultat
+        best_changes: 'Meilleur résultat, différences avec vos réglages :'
+        best_no_changes: Aucun réglage n'a obtenu un meilleur score que les vôtres.
+        buttons_hint: Tester mes réglages évalue vos réglages actuels. Trouver les meilleurs réglages explore les %{tuning} mois qui précèdent ceux affichés, si bien que ce qu'il trouve est évalué sur des mois qu'il n'a pas vus. Il juge selon le ROC-AUC, c'est-à-dire la capacité des scores à classer les transactions de chaque catégorie au-dessus des autres, quel que soit le seuil, et ne garde un changement que s'il est meilleur dans l'ensemble et sur chacun de ces %{tuning} mois sauf un. Il choisit d'abord les entrées (chaque combinaison du jeton marchand, du montant et du compte ; puis l'évaluation séparée du marchand et du compte ; puis le nom du marchand et les notes en tant que mots), essaie ensuite un changement à la fois sur les autres réglages, et termine par le calcul du score. Les valeurs par défaut sont celles du classifieur d'origine, avec votre choix de catégories ; Rétablir les valeurs par défaut les applique et les teste.
+        categories_heading: Classifieur de catégories
+        change: "%{setting} : %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: 'Erreurs les plus fréquentes : %{column} à %{threshold}'
+        current: Mes réglages
+        defaults: Valeurs par défaut
+        description: Chaque colonne est évaluée sur les %{months} derniers mois comme s'il s'agissait de nouvelles transactions, chaque mois étant entraîné sur l'historique qui le précède, puis comparée à vos catégories. Le test ne modifie la catégorie d'aucune transaction, et les réglages du classifieur ne changent que si vous les appliquez ou les réinitialisez.
+        find_best: Trouver les meilleurs réglages
+        matcher_confusions: 'Erreurs de marchand les plus fréquentes : %{column} à %{similarity}'
+        matcher_description: 'Marchands remplis par le rapprochement sur les mêmes %{months} mois : %{count} transactions avec un marchand, chacune rapprochée de l''historique antérieur à son mois, son marchand étant masqué ; le résultat est juste s''il retrouve son marchand. Chaque coupure et chaque nombre de marchands sont évalués ; Meilleur résultat correspond à la meilleure cellule compte tenu du coût d''une erreur, et c''est ce qu''Appliquer définit. Le test ne remplit aucun marchand.'
+        merchants_heading: Rapprochement des marchands
+        no_confusions: Aucune erreur à ce seuil.
+        no_matcher_confusions: Aucune erreur de marchand à cette similarité.
+        no_uncategorized: Plus aucune transaction non catégorisée à ce seuil.
+        no_unfilled: Plus aucune transaction sans marchand à cette similarité.
+        none: Pas encore testé.
+        'off': désactivé
+        'on': activé
+        ran_at: Évalué il y a %{time} sur %{count} transactions (%{months}).
+        reset: Rétablir les valeurs par défaut
+        reset_confirm: Rétablir la valeur par défaut de chaque réglage du classifieur, puis les tester ?
+        right_wrong: Chaque cellule indique juste / faux.
+        run: Tester mes réglages
+        running: Test en cours… cette section se mettra à jour une fois terminé.
+        short_history: 'Pas encore assez d''historique pour régler le classifieur de catégories. Il faut environ %{months} mois de transactions catégorisées : Appliquer laisse donc ses réglages inchangés pour l''instant.'
+        similarity: Similarité
+        stale: Les réglages ont changé depuis ce test.
+        threshold: Seuil
+        trying: 'Essai : %{changes}…'
+        uncategorized: 'Non catégorisées les plus fréquentes : %{column} à %{threshold}'
+        unfilled: 'Sans marchand les plus fréquentes : %{column} à %{similarity}'
+        weight: Une erreur coûte
+        weight_hint: 'Détermine ce qu''Appliquer définit : les cellules en gras, là où les bonnes réponses moins ce nombre par erreur donnent le meilleur total. Le seuil du meilleur résultat pour les catégories ; la coupure, la similarité et le nombre de marchands pour le rapprochement.'
+        weight_option:
+          one: 1 bonne réponse
+          other: "%{count} bonnes réponses"
+      matcher:
+        lock_similar_merchants: Verrouiller les marchands définis par le rapprochement
+        lock_similar_merchants_hint: Empêche les règles, l'IA et les synchronisations de les modifier, sauf si vous cliquez sur Appliquer dans une règle. Ses propres verrous ne comptent pas comme des confirmations (Réglage du rapprochement des marchands).
+        rule: Remplir les marchands manquants à partir des quasi-doublons
+        rule_hint: 'Correspond à la règle Rapprochement des marchands : l''activer ou la désactiver ici le fait aussi dans Règles. Dans l''ordre de vos règles, une transaction sans marchand reçoit celui que partagent tous ses quasi-doublons, comme « NETFLIX.COM 8812 » et « Netflix com ». Les transferts sont exclus.'
+        similar_threshold: Similarité
+        similar_threshold_hint: Similarité minimale des libellés, sans tenir compte des nombres ni des codes de référence (de 0,5 à 0,99). Plus elle est basse, plus il remplit, avec davantage d'erreurs. Appliquer, dans le réglage automatique, la définit aussi.
+      matcher_tuning:
+        similar_common_share: Coupure
+        similar_common_share_hint: 'Un mot ou un fragment de 3 lettres présent dans une part des transactions sources supérieure à cette valeur (de 0,01 à 1), et dans au moins 50 d''entre elles, est trop courant pour les distinguer, comme « carte » ou « paiement » : il est donc ignoré. Plus elle est haute, plus il en garde. Appliquer, dans le réglage automatique, la définit aussi.'
+        similar_min_neighbours: Marchands concordants
+        similar_min_neighbours_hint: Nombre de quasi-doublons qui doivent avoir ce marchand, sans qu'aucun n'en ait un autre. Avec 1, une seule transaction est copiée, erreurs comprises.
+        similar_min_neighbours_option:
+          one: 1 marchand
+          other: "%{count} marchands"
+        similar_skip_self: Ne pas copier les marchands définis par le rapprochement tant qu'ils ne sont pas confirmés ou n'ont pas atteint ce nombre de jours
+        similar_skip_self_hint: Confirmé signifie que vous l'avez modifié ou verrouillé. Une mauvaise copie n'est pas propagée ; un marchand laissé tel quel aussi longtemps est considéré comme accepté.
+      merchant:
+        merchant_field: Inclure le marchand comme un seul jeton, s'il est défini
+        merchant_field_hint: 'Le marchand est compté par identité : un marchand renommé conserve donc son historique.'
+        merchant_name_words: Inclure le nom du marchand en tant que mots
+        merchant_name_words_hint: Lu comme le libellé, ainsi que le fait l'original, pour que des noms proches partagent leurs indices. Recoupe le jeton ci-dessous.
+      run:
+        success: Bayes catégorise les transactions non catégorisées. Cela peut prendre quelques instants.
+      scoring:
+        complement: Utiliser le Bayes naïf complémentaire
+        complement_hint: Évalue chaque catégorie selon à quel point la transaction correspond mal aux autres, ce qui gère mieux des catégories de tailles très différentes. Désactivé, c'est le modèle multinomial d'origine.
+        prior: Tenir compte de la fréquence d'utilisation de chaque catégorie
+        prior_hint: Favorise les catégories que vous utilisez le plus. Désactivé, toutes les catégories sont traitées de la même façon, comme dans l'original.
+        separate_fields: Évaluer le marchand et le compte séparément des mots
+        separate_fields_hint: Chacun a sa propre distribution, pour qu'un long libellé ne les écrase pas. Nécessite d'inclure le marchand ou le compte ; le montant est toujours évalué séparément.
+        smoothing: Lissage
+        smoothing_hint: Ajouté à chaque décompte pour qu'un mot jamais vu n'exclue pas une catégorie (de 0,001 à 10). 1 est la valeur d'origine ; plus il est bas, plus ce qui a déjà été vu compte.
+      show:
+        account: Réglage du compte
+        add_rule_body: 'Vos règles ne contiennent pas de règle %{name} : il n''y a donc rien à activer. L''ajouter en tête de vos règles ?'
+        add_rule_cancel: Non
+        add_rule_confirm: Ajouter la règle
+        add_rule_title: Ajouter la règle %{name} ?
+        amount: Réglage du montant
+        auto_tune: Réglage automatique
+        category_training: Réglage du classifieur de catégories
+        clear_locks: Supprimer les verrous de Bayes
+        clear_locks_confirm_body: Déverrouille les catégories verrouillées par Bayes et les marchands verrouillés par le rapprochement qui ont toujours la valeur qu'ils ont définie, pour que les règles et l'IA puissent de nouveau les modifier. Les catégories et les marchands restent en place.
+        clear_locks_confirm_button: Supprimer les verrous
+        clear_locks_confirm_title: Supprimer les verrous de Bayes ?
+        description: Le classifieur bayésien de catégories apprend de vos transactions catégorisées et catégorise les nouvelles avant tout fournisseur d'IA. Les modifications de ces réglages s'appliquent à partir de la prochaine catégorisation ; les transactions déjà catégorisées conservent leur catégorie.
+        matcher: Rapprochement
+        matcher_description: Remplit les marchands manquants à partir des quasi-doublons, via la règle Rapprochement des marchands (après chaque synchronisation) et avec Lancer. Les marchands enregistrés sont modifiés.
+        matcher_tuning: Réglage du rapprochement des marchands
+        merchant: Réglage du marchand
+        run: Lancer
+        scoring: Calcul du score
+        title: Classifieur
+        training: Entraînement
+        words: Réglage des transactions
+      training:
+        max_training_transactions: Transactions d'entraînement
+        max_training_transactions_hint: 'Nombre de transactions les plus récentes à utiliser (de 100 à 20 000) : les transactions catégorisées dont le classifieur apprend, et celles avec un marchand que le rapprochement copie.'
+      words:
+        bigrams: Inclure les paires de mots
+        bigrams_hint: Les mots voisins comptent aussi ensemble, comme « paiement carte ».
+        binary: Exclure les mots répétés
+        binary_hint: Chaque mot ne compte qu'une fois par transaction.
+        drop_codes: Exclure les codes de référence
+        drop_codes_hint: Mots mêlant des lettres et au moins 2 chiffres, comme 2k4l19.
+        drop_numbers: Exclure les nombres
+        drop_numbers_hint: Numéros de magasin, dates et montants présents dans le libellé.
+        include_notes: Inclure les notes
+        include_notes_hint: Lit les notes en plus du nom.
+        keep_single_chars: Inclure les mots d'un seul caractère
+        keep_single_chars_hint: Lettres et chiffres isolés restant après le découpage, comme le « s » de mcdonald's.
+        spread_filter: Exclure les mots que toutes les catégories utilisent de la même façon
+        spread_filter_hint: Ils n'apprennent rien sur la catégorie. Le nombre indique de combien l'utilisation par une catégorie doit dépasser une répartition égale.
+        word_split: Les mots sont composés de
+        word_split_ascii: a–z et 0–9
+        word_split_hint: Tout autre caractère sépare les mots. Avec les lettres de tout alphabet, des mots comme Geschäft ou Кофейня restent entiers ; avec les symboles internes, des lettres reliées par un seul symbole forment aussi un seul mot, comme mcdonald's, s/o et m&s (un symbole à l'une des extrémités, comme dans *netflix, est toujours supprimé).
+        word_split_symbols: Lettres, chiffres, symboles internes
+        word_split_unicode: Lettres et chiffres, tout alphabet

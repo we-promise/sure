@@ -63,8 +63,7 @@ class Transfer::Creator
       apply_tags!(transfer) if tag_ids.any?
     end
 
-    source_account.sync_later
-    destination_account.sync_later
+    transfer.sync_account_later
 
     transfer
   rescue ActiveRecord::RecordNotUnique
@@ -244,23 +243,7 @@ class Transfer::Creator
     end
 
     def outflow_transaction_kind
-      if destination_account.loan?
-        "loan_payment"
-      elsif destination_account.liability?
-        "cc_payment"
-      elsif destination_is_investment? && !source_is_investment?
-        "investment_contribution"
-      else
-        "funds_movement"
-      end
-    end
-
-    def destination_is_investment?
-      destination_account.investment? || destination_account.crypto?
-    end
-
-    def source_is_investment?
-      source_account.investment? || source_account.crypto?
+      Transfer.kind_for_account(destination_account, from_account: source_account)
     end
 
     def name_prefix

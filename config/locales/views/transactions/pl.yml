@@ -164,12 +164,16 @@ pl:
       category_search_placeholder: Szukaj kategorii
       create_category: Utwórz "%{name}"
       create_category_error: Nie udało się utworzyć kategorii
+      create_as_subcategory: Dodaj jako podkategorię…
+      choose_parent: 'Utwórz "%{name}" w:'
+      back_to_categories: Wstecz
       create_merchant: Utwórz
       create_merchant_error: Nie udało się utworzyć kontrahenta
       create_tag: Utwórz
       date: Data
       description: Opis
       description_placeholder: Opisz transakcję
+      description_placeholder_optional: "Pozostaw puste, aby użyć nazwy kategorii/kontrahenta, lub najpierw wybierz jedno z nich"
       details: Szczegóły
       expense: Wydatek
       income: Przychód

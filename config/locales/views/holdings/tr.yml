@@ -5,13 +5,12 @@ tr:
       brokerage_cash: Aracı kurum nakiti
     cost_basis_cell:
       cancel: İptal
-      or_per_share_label: 'Veya hisse başına girin:'
+      per_share_label: "Hisse başına"
       overwrite_confirm_body: Bu işlem, mevcut %{current} maliyet bazını değiştirecektir.
       overwrite_confirm_title: Maliyet bazının üzerine yazılsın mı?
-      per_share: hisse başına
       save: Kaydet
       set: Ayarla
-      set_cost_basis_header: "%{ticker} için maliyet bazını ayarla (%{qty} hisse)"
+      set_cost_basis_header: "%{ticker} için maliyet bazını ayarla"
       total_cost_basis_label: Toplam maliyet bazı
       unknown: "--"
     cost_basis_sources:
@@ -20,7 +19,7 @@ tr:
       provider: Sağlayıcıdan
     destroy:
       cannot_delete: Bu varlığı silemezsiniz
-      success: Holding silindi
+      success: Varlık silindi
     errors:
       security_collision: 'Yeniden eşlenemedi: %{ticker} için zaten %{date} tarihinde
         bir varlığınız var.'

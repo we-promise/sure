@@ -86,6 +86,26 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", enable_crypto_prices_onchain_wallet_items_path
   end
 
+  # The one-click fix is a form of its own. Rendered inside the token review
+  # form, it closed that form early and left "Track selected assets" submitting
+  # nothing at all.
+  test "the one-click fix does not swallow the token review form" do
+    Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
+    stub_wallet_with_token
+
+    post preview_wallet_onchain_wallet_items_url, params: {
+      address: OnchainTestHelper::FAKE_ADDRESS,
+      chain: OnchainTestHelper::FAKE_CHAIN
+    }
+
+    assert_response :success
+    assert_select "form[action=?]", enable_crypto_prices_onchain_wallet_items_path
+    assert_select "form[action=?]", link_wallet_onchain_wallet_items_path do
+      assert_select "input[name='assets[]']", 2
+      assert_select "button[type=submit]", 1
+    end
+  end
+
   test "enable_crypto_prices adds the crypto provider without disabling the others" do
     Rails.configuration.stubs(:app_mode).returns(ActiveSupport::StringInquirer.new("self_hosted"))
     Setting.securities_providers = "twelve_data"
@@ -396,6 +416,20 @@ class OnchainWalletItemsControllerTest < ActionDispatch::IntegrationTest
 
     patch onchain_wallet_item_url(item), params: { onchain_wallet_item: { sync_start_date: "2026-01-15" } }
 
+    assert_equal Date.new(2026, 1, 15), item.reload.sync_start_date.to_date
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row. The panel
+  # root carries the id, so it is replaced rather than nested inside itself.
+  test "update from the page re-renders the panel in place" do
+    item = create_onchain_wallet_item(family: @family)
+
+    patch onchain_wallet_item_url(item),
+          params: { onchain_wallet_item: { sync_start_date: "2026-01-15" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "onchain_wallet-providers-panel"
+    assert_includes response.body, %(id="onchain_wallet-providers-panel")
     assert_equal Date.new(2026, 1, 15), item.reload.sync_start_date.to_date
   end
 

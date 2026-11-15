@@ -58,6 +58,10 @@ class RecurringOccurrence < ApplicationRecord
     Money.new(resolved_expected_amount, currency)
   end
 
+  # effective_due_on as SQL, for queries that select by it. GREATEST skips a
+  # NULL snoozed_until the way compact does below.
+  EFFECTIVE_DUE_ON_SQL = "GREATEST(recurring_occurrences.due_on, recurring_occurrences.snoozed_until)".freeze
+
   # Snoozing postpones the presentation-level due date without rewriting the
   # schedule.
   def effective_due_on
@@ -110,8 +114,16 @@ class RecurringOccurrence < ApplicationRecord
     end
   end
 
+  # Nobody is paying a bill that isn't active, so its leftover is neither late
+  # nor due, whatever the dates say. derived_state stays the raw schedule
+  # state: the matcher reads it to keep a late payment able to settle the
+  # leftover.
   def overdue?
-    derived_state == :overdue
+    recurring_transaction.active? && derived_state == :overdue
+  end
+
+  def due?
+    recurring_transaction.active? && derived_state == :due
   end
 
   # --- Lifecycle actions. Closing freezes the resolved amount so the row is

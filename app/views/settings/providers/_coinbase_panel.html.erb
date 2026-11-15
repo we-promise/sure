@@ -16,7 +16,7 @@
   <% if items.any? %>
     <div class="space-y-3">
       <% items.each do |item| %>
-        <div class="flex items-center justify-between p-3 bg-container-inset rounded-lg border border-primary">
+        <div class="flex flex-wrap items-center justify-between gap-3 p-3 bg-container-inset rounded-lg border border-primary">
           <div class="flex items-center gap-3">
             <%= render ProviderLogo.new(provider_key: :coinbase, class_name: "w-10 h-10 rounded-full") %>
             <div>
@@ -30,20 +30,25 @@
               </p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <%= button_to sync_coinbase_item_path(item),
-                          method: :post,
-                          class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-secondary hover:text-primary border border-secondary rounded-lg hover:border-primary",
-                          disabled: item.syncing? do %>
-              <%= icon "refresh-cw", size: "sm" %>
-              <%= t("settings.providers.coinbase_panel.sync") %>
-            <% end %>
-            <%= button_to coinbase_item_path(item),
-                          method: :delete,
-                          class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg",
-                          data: { turbo_confirm: t("settings.providers.coinbase_panel.disconnect_confirm") } do %>
-              <%= icon "trash-2", size: "sm" %>
-            <% end %>
+          <div class="flex flex-wrap items-center gap-2">
+            <%= render DS::Button.new(
+              text: t("settings.providers.coinbase_panel.sync"),
+              icon: "refresh-cw",
+              variant: :outline,
+              size: :sm,
+              href: sync_coinbase_item_path(item, source: "panel"),
+              method: :post,
+              disabled: item.syncing?
+            ) %>
+            <%= render DS::Button.new(
+              text: t("settings.providers.coinbase_panel.disconnect"),
+              icon: "trash-2",
+              variant: :outline_destructive,
+              size: :sm,
+              href: coinbase_item_path(item),
+              method: :delete,
+              data: { turbo_confirm: t("settings.providers.coinbase_panel.disconnect_confirm") }
+            ) %>
           </div>
         </div>
       <% end %>

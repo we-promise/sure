@@ -30,22 +30,16 @@ en:
 
     # Panel (settings view)
     panel:
-      setup_instructions: "Setup instructions:"
       step_1: "Create an API key at app.redbark.com under Settings"
       step_2: "Enter your API key below and click the Save button"
       step_3: "After a successful connection, go to the Accounts tab to set up new accounts"
-      field_descriptions: "Field descriptions:"
       optional: "(Optional)"
-      required: "(required)"
       optional_with_default: "(optional, defaults to %{default_value})"
       save_button: "Save Configuration"
       update_button: "Update Configuration"
-      status_configured_html: "Configured and ready to use. Visit the <a href=\"%{accounts_path}\" class=\"link\">Accounts</a> tab to manage and set up accounts."
-      status_not_configured: "Not configured"
       fields:
         api_key:
           label: "API Key"
-          description: "Your Redbark API key (starts with rbk_live_)"
           placeholder_new: "rbk_live_..."
           placeholder_update: "Enter new API key to update"
 

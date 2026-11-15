@@ -38,20 +38,14 @@ fr:
       loading_message: Chargement des comptes Redbark...
       loading_title: Chargement
     panel:
-      field_descriptions: 'Description des champs :'
       fields:
         api_key:
-          description: Votre clé d'API Redbark (commence par rbk_live_)
           label: Clé d'API
           placeholder_new: rbk_live_...
           placeholder_update: Saisissez la nouvelle clé d'API pour la mettre à jour
       optional: "(facultatif)"
       optional_with_default: "(facultatif, %{default_value} par défaut)"
-      required: "(requis)"
       save_button: Enregistrer la configuration
-      setup_instructions: 'Instructions de configuration :'
-      status_configured_html: Configuré et prêt à l'emploi. Rendez-vous dans l'onglet <a href="%{accounts_path}" class="link">Comptes</a> pour gérer et configurer les comptes.
-      status_not_configured: Non configuré
       step_1: Créez une clé d'API sur app.redbark.com, dans les paramètres
       step_2: Saisissez votre clé d'API ci-dessous et cliquez sur Enregistrer
       step_3: Une fois la connexion établie, ouvrez l'onglet Comptes pour configurer de nouveaux comptes

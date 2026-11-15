@@ -78,6 +78,18 @@ class Api::V1::CashFlowsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the sankey view can be grouped by account" do
+    get "/api/v1/cash_flow", params: { view: "sankey", group_by: "account" }, headers: api_headers(@auth)
+    assert_response :success
+    assert_equal "net_by_account", response.parsed_body.dig("sankey", "basis")
+
+    [ { view: "sankey", group_by: "merchant" }, { group_by: "account" }, { include: "sankey", group_by: "account" } ].each do |query|
+      get "/api/v1/cash_flow", params: query, headers: api_headers(@auth)
+      assert_response :unprocessable_entity
+      assert_equal "invalid_group_by", response.parsed_body["error"]
+    end
+  end
+
   test "rejects conflicting graph modes" do
     [ {}, { month: "2024-01-01" }, { start_date: "2024-01-01", end_date: "2024-01-02" } ].each do |period|
       get "/api/v1/cash_flow", params: period.merge(include: "sankey", view: "sankey"), headers: api_headers(@auth)

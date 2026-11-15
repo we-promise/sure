@@ -22,8 +22,12 @@ class Rule::ConditionFilter::TransactionTag < Rule::ConditionFilter
     case operator
     when "="
       scope.where(tagging_exists(tag_id: value))
+    when "!="
+      scope.where(Arel::Nodes::Not.new(tagging_exists(tag_id: value)))
     when "is_null"
       scope.where(Arel::Nodes::Not.new(tagging_exists))
+    when "is_not_null"
+      scope.where(tagging_exists)
     else
       raise UnsupportedOperatorError, "Unsupported operator: #{operator} for type: #{type}"
     end
@@ -31,8 +35,8 @@ class Rule::ConditionFilter::TransactionTag < Rule::ConditionFilter
 
   private
     # Builds an Arel EXISTS node correlating taggings to the outer transactions
-    # row. When +tag_id+ is given it matches that specific tag; otherwise it
-    # matches any tag (negated for the "is_null" / has-no-tags operator).
+    # row. When +tag_id+ is given it matches that specific tag (negated for "!=");
+    # otherwise it matches any tag (negated for the "is_null" / has-no-tags operator).
     def tagging_exists(tag_id: nil)
       taggings = Tagging
         .where(Tagging.arel_table[:taggable_id].eq(Transaction.arel_table[:id]))

@@ -34,6 +34,26 @@ class RedbarkItemsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "invalid create from the page shows the error in the panel" do
+    post redbark_items_url,
+         params: { redbark_item: { api_key: "" } },
+         as: :turbo_stream
+
+    assert_turbo_stream status: :unprocessable_entity, action: "replace", target: "redbark-providers-panel"
+    assert_includes response.body, ERB::Util.html_escape("Api key can't be blank")
+  end
+
+  # Redirecting back to Bank sync collapses the open connection row.
+  test "update from the page re-renders the panel in place" do
+    patch redbark_item_url(@redbark_item),
+          params: { redbark_item: { name: "Renamed Redbark" } },
+          as: :turbo_stream
+
+    assert_turbo_stream action: "replace", target: "redbark-providers-panel"
+    assert_includes response.body, %(id="redbark-providers-panel")
+    assert_equal "Renamed Redbark", @redbark_item.reload.name
+  end
+
   test "update rotates the api key and clears requires_update" do
     @redbark_item.update!(status: :requires_update)
 
@@ -93,5 +113,47 @@ class RedbarkItemsControllerTest < ActionDispatch::IntegrationTest
 
     assert @redbark_account.reload.ignored?
     assert_not @redbark_item.reload.unlinked_redbark_accounts.exists?(id: @redbark_account.id)
+  end
+
+  test "complete_account_setup persists the chosen sync_start_date on the account" do
+    start_date = 6.months.ago.to_date
+
+    assert_difference "Account.count", 1 do
+      post complete_account_setup_redbark_item_url(@redbark_item), params: {
+        accounts: { @redbark_account.id => { account_type: "depository", sync_start_date: start_date.to_s } }
+      }
+    end
+
+    assert_equal start_date, @redbark_account.reload.sync_start_date
+  end
+
+  test "complete_account_setup without a sync_start_date leaves it blank" do
+    post complete_account_setup_redbark_item_url(@redbark_item), params: {
+      accounts: { @redbark_account.id => { account_type: "depository" } }
+    }
+
+    assert_nil @redbark_account.reload.sync_start_date
+  end
+
+  test "complete_account_setup rejects an out-of-range sync_start_date" do
+    out_of_range_date = 8.years.ago.to_date
+
+    assert_no_difference "Account.count" do
+      post complete_account_setup_redbark_item_url(@redbark_item), params: {
+        accounts: { @redbark_account.id => { account_type: "depository", sync_start_date: out_of_range_date.to_s } }
+      }
+    end
+
+    assert_not @redbark_account.reload.account_provider.present?
+    assert_nil @redbark_account.sync_start_date
+  end
+
+  test "setup_accounts pre-fills the stored sync_start_date instead of resetting it" do
+    stored_date = 6.months.ago.to_date
+    @redbark_account.update!(sync_start_date: stored_date)
+
+    get setup_accounts_redbark_item_url(@redbark_item)
+
+    assert_select "input#sync_start_date_#{@redbark_account.id}[value='#{stored_date}']"
   end
 end

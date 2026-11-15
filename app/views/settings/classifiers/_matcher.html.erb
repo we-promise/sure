@@ -1,0 +1,14 @@
+<%# locals: (settings:, active:) %>
+<%# The matcher: its rule's switch (filling in missing merchants from
+    near-duplicates, in the rule order), how alike they must be (also set by
+    Auto-tune's Apply), and whether it locks them. %>
+<div class="space-y-4">
+  <%= render "settings/classifiers/rule_toggle", action_type: "fill_similar_merchants", active: active,
+        label: t(".rule"), hint: t(".rule_hint") %>
+  <%= classifier_section_form do %>
+    <%= render "settings/classifiers/number", key: :similar_threshold, settings: settings,
+          attrs: { step: 0.01 },
+          label: t(".similar_threshold"), hint: t(".similar_threshold_hint") %>
+    <%= render "settings/classifiers/toggle", key: :lock_similar_merchants, settings: settings, label: t(".lock_similar_merchants"), hint: t(".lock_similar_merchants_hint") %>
+  <% end %>
+</div>

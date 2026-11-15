@@ -7,6 +7,9 @@ fr:
     balance_desc:
       label: Solde (haut à bas)
       label_short: Solde ↓
+    manual:
+      label: Manuel (glisser pour réorganiser)
+      label_short: Manuel
     name_asc:
       label: Nom (A-Z)
       label_short: Nom ↑

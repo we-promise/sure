@@ -1,0 +1,47 @@
+<% items.each do |item| %>
+  <%= render TradeRepublic::ConnectionCardComponent.new(
+        item: item,
+        open: open?(item),
+        qr_active: qr_login_active?(item),
+        qr_code_svg: qr_code_svg_for(item)
+      ) %>
+<% end %>
+
+<% if items.any? %>
+  <h3 class="flex items-center gap-2 text-sm font-medium text-primary mt-4">
+    <%= helpers.icon "plus", size: "sm" %>
+    <%= translation("add_account") %>
+  </h3>
+<% end %>
+
+<%= helpers.styled_form_with model: new_item,
+                     url: helpers.trade_republic_items_path,
+                     scope: :trade_republic_item,
+                     method: :post,
+                     data: { turbo: true },
+                     class: "space-y-3" do |form| %>
+  <%= form.text_field :phone_number,
+                      label: translation("phone_number_label"),
+                      placeholder: translation("phone_number_placeholder_new"),
+                      type: :tel,
+                      value: new_item.phone_number %>
+
+  <%= form.text_field :pin,
+                      label: translation("pin_label"),
+                      placeholder: translation("pin_placeholder_new"),
+                      type: :password,
+                      value: nil %>
+
+  <div class="flex flex-wrap justify-end gap-2">
+    <%= form.submit(translation("save_configuration")) %>
+    <%= render DS::Button.new(
+          text: translation("qr_login"),
+          variant: :outline,
+          size: :sm,
+          icon: "qr-code",
+          type: "submit",
+          name: "login_method",
+          value: "qr"
+        ) %>
+  </div>
+<% end %>

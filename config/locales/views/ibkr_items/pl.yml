@@ -98,6 +98,8 @@ pl:
       success: Zaktualizowano konfigurację Interactive Brokers.
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Połącz konta z zapytania Flex %{name}"
       connection_description: Połącz raport Flex Web Service od Interactive Brokers
       institution_name: Interactive Brokers
       name: Interactive Brokers

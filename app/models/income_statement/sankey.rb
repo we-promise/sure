@@ -1,24 +1,33 @@
-# Nets refunds within each category before arranging flows. Parent totals already
-# include children: subtract those children before partitioning by direction, so
-# a refund in a child cannot be counted again in its parent's net amount.
+# Cash-flow Sankey by category: income categories -> Cash Flow -> expense
+# categories. Netting is IncomeStatement::CategoryNetting's.
 class IncomeStatement::Sankey
+  # The default colour of the Investment Contributions category.
+  INVESTED_COLOR = "#0d9488".freeze
+
   def initialize(statement, period:)
     @statement, @period = statement, period
   end
 
   def as_json(*)
     @nodes, @links = [], []
-    groups = category_groups
+    groups = IncomeStatement::CategoryNetting.new(@statement, period: @period).groups
     income = groups.sum { |group| side_total(group, :income) }.to_d
     spending = groups.sum { |group| side_total(group, :expense) }.to_d
-    capacity = [ income, spending ].max
+    # Non-zero only for a family that does not count investing as spending:
+    # it leaves the centre as its own outflow, next to spending.
+    invested = @statement.invested_total(period: @period).amount.to_d
+    capacity = [ income, spending + invested ].max
     unless capacity.zero?
       center = add_node("cash_flow_node", "Cash Flow", :cash_flow, capacity, 100)
       groups.each do |group|
         add_group(group, :income, income, center)
         add_group(group, :expense, spending, center)
       end
-      net = income - spending
+      unless invested.zero?
+        index = add_node("invested_node", "Invested", :invested, invested, percentage(invested, capacity), color: INVESTED_COLOR)
+        add_link(center, index, invested, percentage(invested, capacity))
+      end
+      net = income - spending - invested
       unless net.zero?
         kind = net.positive? ? :surplus : :deficit
         index = add_node("#{kind}_node", kind.to_s.capitalize, kind, net.abs, percentage(net.abs, capacity))
@@ -26,40 +35,14 @@ class IncomeStatement::Sankey
         add_link(source, target, net.abs, percentage(net.abs, capacity))
       end
     end
-    { basis: "net_by_category", income: decimal(income), spending: decimal(spending),
+    { basis: "net_by_category", income: decimal(income), spending: decimal(spending), invested: decimal(invested),
       net_savings: decimal(income - spending), nodes: @nodes, links: @links }
   end
 
   private
-    # Keep this hierarchy-aware netting separate from IncomeStatement#net_category_totals
-    # while the original dashboard Sankey remains available for preview comparisons.
-    def category_groups
-      expense = @statement.expense_totals(period: @period).category_totals.index_by { |ct| category_key(ct.category) }
-      income = @statement.income_totals(period: @period).category_totals.index_by { |ct| category_key(ct.category) }
-      entries = (expense.keys | income.keys).sort.map do |key|
-        category = (expense[key] || income[key]).category
-        { category: category, net: (expense[key]&.total || 0).to_d - (income[key]&.total || 0).to_d }
-      end
-      children = entries.select { |entry| entry[:category].subcategory? }.group_by { |entry| entry[:category].parent_id }
-      entries.reject { |entry| entry[:category].subcategory? }.map do |root|
-        subs = children.fetch(root[:category].id, [])
-        { category: root[:category], direct: root[:net] - subs.sum { |sub| sub[:net] }, children: subs }
-      end
-    end
-
-    def category_key(category)
-      return "uncategorized" if category.uncategorized?
-      return "other_investments" if category.other_investments?
-      category.id
-    end
-
-    def side_amount(net, side)
-      [ side == :expense ? net : -net, 0 ].max
-    end
-
-    def side_total(group, side)
-      side_amount(group[:direct], side) + group[:children].sum { |child| side_amount(child[:net], side) }
-    end
+    def category_key(category) = IncomeStatement::CategoryNetting.key(category)
+    def side_amount(net, side) = IncomeStatement::CategoryNetting.side_amount(net, side)
+    def side_total(group, side) = IncomeStatement::CategoryNetting.side_total(group, side)
 
     def add_group(group, side, total, center)
       amount = side_total(group, side)
@@ -80,10 +63,10 @@ class IncomeStatement::Sankey
       end
     end
 
-    def add_node(id, name, kind, value, percentage, category = nil)
+    def add_node(id, name, kind, value, percentage, category = nil, color: category&.color)
       @nodes << { id: id, name: name, kind: kind.to_s, value: decimal(value), percentage: decimal(percentage),
         category_id: category&.id, filter_value: category && !category.other_investments? ? category.filter_value : nil,
-        color: category&.color }
+        color: color }
       @nodes.size - 1
     end
 

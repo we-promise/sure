@@ -1,4 +1,4 @@
-<%# locals: (ibkr_item:) %>
+<%# locals: (ibkr_item:, visible_accounts:) %>
 
 <%= tag.div id: dom_id(ibkr_item) do %>
   <% unlinked_count = ibkr_item.unlinked_accounts_count %>
@@ -13,7 +13,7 @@
 
           <div class="pl-1 text-sm">
             <div class="flex items-center gap-2">
-              <%= tag.p ibkr_item.institution_display_name, class: "font-medium text-primary" %>
+              <%= tag.p ibkr_item.name, class: "font-medium text-primary" %>
               <% if ibkr_item.scheduled_for_deletion? %>
                 <p class="text-destructive text-sm animate-pulse"><%= t(".deletion_in_progress") %></p>
               <% end %>
@@ -56,6 +56,7 @@
             ) %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, ibkr_item) %>
               <% if unlinked_count > 0 %>
                 <% menu.with_item(
                   variant: "link",
@@ -71,7 +72,7 @@
                 icon: "trash-2",
                 href: ibkr_item_path(ibkr_item),
                 method: :delete,
-                confirm: CustomConfirm.for_resource_deletion(ibkr_item.institution_display_name, high_severity: true)
+                confirm: CustomConfirm.for_resource_deletion(ibkr_item.name, high_severity: true)
               ) %>
             <% end %>
           </div>
@@ -81,12 +82,12 @@
 
     <% unless ibkr_item.scheduled_for_deletion? %>
       <div class="space-y-4 mt-4">
-        <% if ibkr_item.accounts.any? %>
-          <%= render "accounts/index/account_groups", accounts: ibkr_item.accounts %>
+        <% if visible_accounts.any? %>
+          <%= render "accounts/index/account_groups", accounts: visible_accounts %>
         <% end %>
 
         <% stats = ibkr_item.syncs.ordered.first&.sync_stats || {} %>
-        <%= render ProviderSyncSummary.new(stats: stats, provider_item: ibkr_item) %>
+        <%= render ProviderSyncSummary.new(stats: stats, provider_item: ibkr_item, show_account_details: visible_accounts.size == ibkr_item.accounts.size) %>
 
         <% if Current.user&.admin? %>
           <% if unlinked_count > 0 && ibkr_item.accounts.empty? %>

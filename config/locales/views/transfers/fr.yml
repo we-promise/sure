@@ -54,5 +54,7 @@ fr:
       total: Total
       transfer_amount: Montant du transfert
       uncategorized: Non classé
+      investment_contribution_subtitle: Compter ce transfert comme une dépense dans les budgets et les rapports. Désactivez cette option lorsque le compte de courtage ou crypto ne fait que convertir l'argent dans une autre devise.
+      investment_contribution_title: Versement d'investissement
     update:
       success: Transfert mis à jour

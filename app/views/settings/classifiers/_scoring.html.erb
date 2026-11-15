@@ -1,0 +1,11 @@
+<%# locals: (settings:) %>
+<%# Most important first: the method and its smoothing, then how the fields
+    and the categories' sizes weigh in. %>
+<%= classifier_section_form do %>
+  <%= render "settings/classifiers/option", key: :complement, settings: settings, label: t(".complement"), hint: t(".complement_hint") %>
+  <%= render "settings/classifiers/number", key: :smoothing, settings: settings,
+        attrs: { step: "any" }, label: t(".smoothing"), hint: t(".smoothing_hint") %>
+  <%= render "settings/classifiers/option", key: :separate_fields, settings: settings, disabled: !(settings.merchant_field || settings.account_field),
+        label: t(".separate_fields"), hint: t(".separate_fields_hint") %>
+  <%= render "settings/classifiers/option", key: :prior, settings: settings, label: t(".prior"), hint: t(".prior_hint") %>
+<% end %>

@@ -127,4 +127,21 @@ class ProviderConnectionStatusTest < ActiveSupport::TestCase
     assert_equal true, status[:pending_account_setup]
     assert_equal "17 synced, 1 need setup", status.dig(:sync, :status_summary)
   end
+
+  test "trade republic provider status requires an update once its session ended" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(status: "good", session_expires_at: 1.minute.ago)
+    provider = ProviderConnectionStatus::PROVIDERS.find { |entry| entry[:association] == :trade_republic_items }
+
+    status = ProviderConnectionStatus.new(provider, item, syncing: false).to_h
+
+    assert_equal "requires_update", status[:status]
+    assert_equal true, status[:requires_update]
+
+    item.update_columns(session_expires_at: 1.hour.from_now)
+    status = ProviderConnectionStatus.new(provider, item.reload, syncing: false).to_h
+
+    assert_equal "good", status[:status]
+    assert_equal false, status[:requires_update]
+  end
 end

@@ -5,6 +5,21 @@ import '../models/message.dart';
 import 'api_config.dart';
 
 class ChatService {
+  ChatService({http.Client? client})
+      : _client = client ?? http.Client(),
+        _ownsClient = client == null;
+
+  final http.Client _client;
+
+  /// Whether this service created [_client] itself. Injected clients stay the
+  /// caller's responsibility and must not be closed here.
+  final bool _ownsClient;
+
+  /// Closes the underlying HTTP client, but only when this service created it.
+  void close() {
+    if (_ownsClient) _client.close();
+  }
+
   /// Get list of chats with pagination
   Future<Map<String, dynamic>> getChats({
     required String accessToken,
@@ -16,7 +31,7 @@ class ChatService {
         '${ApiConfig.baseUrl}/api/v1/chats?page=$page&per_page=$perPage',
       );
 
-      final response = await http.get(
+      final response = await _client.get(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
@@ -73,7 +88,7 @@ class ChatService {
         '${ApiConfig.baseUrl}/api/v1/chats/$chatId?page=$page&per_page=$perPage',
       );
 
-      final response = await http.get(
+      final response = await _client.get(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
@@ -85,6 +100,10 @@ class ChatService {
         return {
           'success': true,
           'chat': chat,
+          // Expose pagination so callers can fetch the remaining pages.
+          // The API orders messages oldest-first and paginates them, so a
+          // single request only returns one page of a long conversation.
+          'pagination': responseData['pagination'],
         };
       } else if (response.statusCode == 401) {
         return {
@@ -132,7 +151,7 @@ class ChatService {
         body['message'] = initialMessage;
       }
 
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -186,7 +205,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId/messages');
 
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -241,7 +260,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId');
 
-      final response = await http.patch(
+      final response = await _client.patch(
         url,
         headers: {
           ...ApiConfig.getAuthHeaders(accessToken),
@@ -295,7 +314,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId');
 
-      final response = await http.delete(
+      final response = await _client.delete(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));
@@ -367,7 +386,7 @@ class ChatService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/api/v1/chats/$chatId/messages/retry');
 
-      final response = await http.post(
+      final response = await _client.post(
         url,
         headers: ApiConfig.getAuthHeaders(accessToken),
       ).timeout(const Duration(seconds: 30));

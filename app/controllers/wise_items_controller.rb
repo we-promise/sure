@@ -125,6 +125,7 @@ class WiseItemsController < ApplicationController
 
   def sync
     @wise_item.sync_later unless @wise_item.syncing?
+    return render_provider_panel("wise", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -163,7 +164,7 @@ class WiseItemsController < ApplicationController
       provider: wise_account
     )
 
-    @wise_item.sync_later unless @wise_item.syncing?
+    @wise_item.sync_linked_account_later(wise_account)
 
     redirect_to accounts_path, notice: t(".success")
   rescue => e
@@ -179,7 +180,7 @@ class WiseItemsController < ApplicationController
     @wise_item = resolve_wise_item_for_selection
 
     unless @wise_item
-      redirect_to settings_providers_path, alert: t("wise_items.select_accounts.no_connection") and return
+      frame_redirect_to settings_providers_path, alert: t("wise_items.select_accounts.no_connection") and return
     end
 
     @available_accounts = @wise_item.wise_accounts.unlinked
@@ -196,7 +197,7 @@ class WiseItemsController < ApplicationController
 
     account = Account.create_from_wise_account(wise_account)
     AccountProvider.create!(account: account, provider: wise_account)
-    wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
+    wise_account.wise_item.sync_linked_account_later(wise_account)
 
     redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_accounts.success")
   rescue => e
@@ -213,7 +214,9 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.select_existing_account.not_found") and return
     end
 
-    @available_accounts = @wise_item.wise_accounts.unlinked
+    # Only a balance in the account's currency can be linked to it
+    # (#existing_account_link_refusal).
+    @available_accounts = @wise_item.wise_accounts.unlinked.where(currency: @account.currency)
 
     render layout: false
   end
@@ -226,8 +229,12 @@ class WiseItemsController < ApplicationController
       redirect_to accounts_path, alert: t("wise_items.link_existing_account.not_found") and return
     end
 
+    if (refusal = existing_account_link_refusal(account, wise_account))
+      redirect_to safe_return_to_path || accounts_path, alert: refusal and return
+    end
+
     AccountProvider.create!(account: account, provider: wise_account)
-    wise_account.wise_item.sync_later unless wise_account.wise_item.syncing?
+    wise_account.wise_item.sync_linked_account_later(wise_account)
 
     redirect_to safe_return_to_path || accounts_path, notice: t("wise_items.link_existing_account.success", account_name: account.name)
   rescue => e
@@ -270,6 +277,20 @@ class WiseItemsController < ApplicationController
                  .find_by(id: wise_account_id)
     end
 
+    # A Wise balance is cash in one currency, and every sync writes its balance
+    # and currency onto the linked account, so only an unlinked cash account in
+    # that currency can take it.
+    def existing_account_link_refusal(account, wise_account)
+      if account.linked?
+        t("wise_items.link_existing_account.account_already_linked")
+      elsif Provider::WiseAdapter.supported_account_types.exclude?(account.accountable_type)
+        t("wise_items.link_existing_account.unsupported_account_type")
+      elsif account.currency != wise_account.currency
+        t("wise_items.link_existing_account.currency_mismatch",
+          account_currency: account.currency, balance_currency: wise_account.currency)
+      end
+    end
+
     def profile_display_name(profile)
       type_key = profile["type"] == "business" ? :business : :personal
       type_label = I18n.t("wise_items.profile_types.#{type_key}")
@@ -281,30 +302,12 @@ class WiseItemsController < ApplicationController
     end
 
     def render_provider_panel_success(message)
-      return redirect_to accounts_path, notice: message, status: :see_other unless turbo_frame_request?
-
-      flash.now[:notice] = message
-      @wise_items = Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts)
-      render_wise_provider_panel(locals: { wise_items: @wise_items }, include_flash: true)
+      render_provider_panel("wise", notice: message, fallback_path: accounts_path,
+                            wise_items: Current.family.wise_items.active.ordered.includes(:syncs, :wise_accounts))
     end
 
     def render_provider_panel_error
-      @error_message = @wise_item.errors.full_messages.join(", ")
-      return redirect_to settings_providers_path, alert: @error_message, status: :see_other unless turbo_frame_request?
-
-      render_wise_provider_panel(locals: { error_message: @error_message }, status: :unprocessable_entity)
-    end
-
-    def render_wise_provider_panel(locals:, status: :ok, include_flash: false)
-      streams = [
-        turbo_stream.replace(
-          "wise-providers-panel",
-          partial: "settings/providers/wise_panel",
-          locals: locals
-        )
-      ]
-      streams += flash_notification_stream_items if include_flash
-      render turbo_stream: streams, status: status
+      render_provider_panel("wise", alert: @wise_item.errors.full_messages.join(", "))
     end
 
     def encrypt_pending_token(token)

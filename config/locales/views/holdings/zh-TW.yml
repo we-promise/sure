@@ -29,10 +29,9 @@ zh-TW:
     cost_basis_cell:
       unknown: --
       set: 設定
-      set_cost_basis_header: 設定 %{ticker} 的成本基礎（%{qty} 股）
+      set_cost_basis_header: 設定 %{ticker} 的成本基礎
       total_cost_basis_label: 總成本基礎
-      or_per_share_label: 或輸入每股金額：
-      per_share: /股
+      per_share_label: "每股"
       cancel: 取消
       save: 儲存
       overwrite_confirm_title: 要覆蓋成本基礎嗎？

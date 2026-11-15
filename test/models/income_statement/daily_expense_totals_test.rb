@@ -59,12 +59,23 @@ class IncomeStatement::DailyExpenseTotalsTest < ActiveSupport::TestCase
     assert_equal 200, daily_series.first.total
   end
 
-  test "falls back to no conversion when the day's rate is missing" do
+  test "uses the latest earlier rate when the day's rate is missing" do
     eur_account = @family.accounts.create! name: "EUR Checking", currency: "EUR", balance: 1000, accountable: Depository.new
+    ExchangeRate.create! from_currency: "EUR", to_currency: @family.currency, date: 30.days.ago.to_date, rate: 2
 
     create_transaction(account: eur_account, amount: 100, currency: "EUR", date: Date.current)
 
-    assert_equal 100, daily_series.first.total
+    assert_equal 200, daily_series.first.total
+  end
+
+  # Counted at 1 it read as 100 (#3640).
+  test "leaves out an expense in a currency with no rate at all" do
+    eur_account = @family.accounts.create! name: "EUR Checking", currency: "EUR", balance: 1000, accountable: Depository.new
+
+    create_transaction(account: eur_account, amount: 100, currency: "EUR", date: Date.current)
+    create_transaction(account: @checking, amount: 10, date: Date.current)
+
+    assert_equal 10, daily_series.first.total
   end
 
   test "returns days in chronological order" do
@@ -72,6 +83,24 @@ class IncomeStatement::DailyExpenseTotalsTest < ActiveSupport::TestCase
     create_transaction(account: @checking, amount: 20, date: 3.days.ago.to_date)
 
     assert_equal [ 3.days.ago.to_date, Date.current ], daily_series.map(&:date)
+  end
+
+  test "splits each day's expense total by category when asked" do
+    food = @family.categories.create! name: "Food"
+    create_transaction(account: @checking, amount: 100, date: Date.current, category: food)
+    create_transaction(account: @checking, amount: 50, date: Date.current, category: food)
+    create_transaction(account: @checking, amount: 25, date: Date.current)
+    create_transaction(account: @checking, amount: -500, date: Date.current, category: food) # income
+
+    rows = IncomeStatement::DailyExpenseTotals.new(
+      @family,
+      transactions_scope: @family.transactions.visible.excluding_pending.in_period(@period),
+      date_range: @period.date_range,
+      by_category: true
+    ).call
+
+    assert_equal({ food.id => 150, nil => 25 }, rows.to_h { |row| [ row.category_id, row.total ] })
+    assert_equal daily_series.sum(&:total), rows.sum(&:total)
   end
 
   private

@@ -22,13 +22,33 @@ class OnchainWalletAccount::Processor
 
     security = resolve_security
     backfill_prices(security) if security
-    price = security ? price_on(security, Date.current) : nil
-    amount = price ? (quantity * price).round(4) : 0.to_d
+    price = price_today(security)
+    amount = price ? value_at(price) : 0.to_d
 
-    import_holding(security, price, amount) if security
-    update_balances(amount)
+    write_valuation(security, price, amount)
     materialize_movements(security) if security
     report_zero_valuation(security) if security && price.nil?
+  end
+
+  # Revalues an asset that did not move on chain at the latest stored price.
+  # @return [Boolean] whether the value changed
+  def revalue
+    return false unless account
+
+    security = resolve_security
+    price = price_today(security)
+    return false if price.nil?
+
+    amount = value_at(price)
+    return false if amount == account.balance && currency == account.currency
+
+    # Rolls the write back if the sync cannot be queued; the job itself is
+    # enqueued after commit (see ApplicationJob).
+    Account.transaction do
+      write_valuation(security, price, amount)
+      account.sync_later
+    end
+    true
   end
 
   # Converts movements that were recorded as display-only into trades, once a
@@ -42,19 +62,27 @@ class OnchainWalletAccount::Processor
   #
   # Reads prices from the database only — no network — so this can run for every
   # linked asset on every sync.
-  # @return [Integer] number of entries upgraded
+  # @return [Integer] number of entries upgraded or normalized
   def repair_display_only_movements
     return 0 unless account
 
-    relabelled = relabel_legacy_trades
+    normalized, amount_changed = normalize_legacy_transfers
+
+    # Scheduled as soon as the amount is corrected, before the upgrade pass —
+    # which can raise (a failed trade write `upgrade_to_trade` is allowed to
+    # throw), and the syncer's per-account rescue would otherwise skip this and
+    # leave the chart with phantom cash until some unrelated sync ran. Zeroing a
+    # legacy amount rewrites history, but only an account sync persists the
+    # recalculated balances, and an idle wallet may schedule none of its own.
+    account.sync_later if amount_changed
 
     candidates = display_only_entries
-    return relabelled if candidates.empty?
+    upgraded = 0
+    if candidates.any? && (security = resolve_security)
+      upgraded = candidates.count { |entry| upgrade_to_trade(entry, security) }
+    end
 
-    security = resolve_security
-    return relabelled if security.nil?
-
-    relabelled + candidates.count { |entry| upgrade_to_trade(entry, security) }
+    normalized + upgraded
   end
 
   private
@@ -68,6 +96,19 @@ class OnchainWalletAccount::Processor
 
     def quantity
       onchain_wallet_account.quantity.to_d
+    end
+
+    def price_today(security)
+      security ? price_on(security, Date.current) : nil
+    end
+
+    def value_at(price)
+      (quantity * price).round(4)
+    end
+
+    def write_valuation(security, price, amount)
+      import_holding(security, price, amount) if security
+      update_balances(amount)
     end
 
     def resolve_security
@@ -242,8 +283,15 @@ class OnchainWalletAccount::Processor
           security: security,
           quantity: quantity,
           price: price,
-          # Sure's convention for trades: money leaves the account on a buy.
-          amount: -(quantity * price).round(4),
+          # A transfer moves no cash. A self-custody wallet has no cash side for
+          # this leg, so booking one fabricates a balance the account never
+          # held: the reverse balance calculator then carries a phantom cash
+          # figure across every gap between transfers (a wallet reads negative
+          # before its first deposit, a sold-out position stays negative through
+          # its zero-holding gap, and a live position's line is roughly double).
+          # The value lives in qty/price -- and therefore cost basis -- which is
+          # all a transfer needs.
+          amount: 0,
           currency: currency,
           date: date,
           # Named here because the shared helper says "Buy 0.5 shares of
@@ -291,36 +339,54 @@ class OnchainWalletAccount::Processor
     end
 
     # The zero-amount, excluded entries this processor writes for unpriced
-    # movements, identified by the external_id prefix it gave them.
+    # movements, identified by the external_id prefix it gave them. Also brings
+    # already-written transfers back in line with the current ledger shape.
+    #
     # Movements imported before transfers were called transfers still carry a
-    # `Buy` or `Sell` label and a "Buy 0.5 shares of CRYPTO:BTC" name. Nothing
-    # rewrites them on an ordinary sync: `perform_sync` returns early when no
-    # address changed on chain, and the repair above only ever looked at
-    # display-only `Transaction` rows. Left alone they would keep the old
-    # wording for as long as the wallet sits still — which for a cold address
-    # is the whole point of it.
+    # `Buy` or `Sell` label and a "Buy 0.5 shares of CRYPTO:BTC" name, and
+    # transfers written before they became cash-neutral still carry the old
+    # signed cash amount. Nothing rewrites them on an ordinary sync: `perform_sync`
+    # returns early when no address changed on chain, and the upgrade above only
+    # ever looked at display-only `Transaction` rows. Left alone they would keep
+    # the old wording (and the phantom cash) for as long as the wallet sits still
+    # — which for a cold address is the whole point of it.
     #
     # Scoped to this processor's own external_id prefix and to `source:
     # SOURCE`, so a trade the user entered by hand is never touched.
-    def relabel_legacy_trades
+    # @return [Array(Integer, Boolean)] entries normalized, and whether any
+    #   amount changed — the part that needs a balance recalculation
+    def normalize_legacy_transfers
       entries = account.entries
                        .where(source: SOURCE, entryable_type: "Trade")
                        .where("external_id LIKE ?", "#{holding_external_id}_%")
                        .includes(:entryable)
                        .to_a
-      return 0 if entries.empty?
+      return [ 0, false ] if entries.empty?
 
-      entries.count do |entry|
+      # Computed independently of the per-entry predicate below, so the
+      # `account.sync_later` trigger can't silently stop firing if that
+      # predicate is ever relaxed.
+      amount_changed = entries.any? { |entry| !entry.amount.zero? }
+
+      count = entries.count do |entry|
         trade = entry.entryable
         expected_name = movement_name(trade.qty.to_d)
-        next false if trade.investment_activity_label == TRANSFER_LABEL && entry.name == expected_name
+        already_normalized = trade.investment_activity_label == TRANSFER_LABEL &&
+                             entry.name == expected_name &&
+                             entry.amount.zero?
+        next false if already_normalized
 
         Entry.transaction do
           trade.update!(investment_activity_label: TRANSFER_LABEL)
-          entry.update!(name: expected_name)
+          # One write for both entry columns — the name wording and the
+          # cash-neutral amount (a pre-fix signed value here is what leaves the
+          # phantom cash on a wallet that never moves again).
+          entry.update!(name: expected_name, amount: 0)
         end
         true
       end
+
+      [ count, amount_changed ]
     end
 
     def display_only_entries

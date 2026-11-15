@@ -21,12 +21,3 @@ pt-PT:
       treat_balance_as_available_credit_label: O saldo é crédito disponível
     new:
       title: Introduza os detalhes do cartão de crédito
-    overview:
-      amount_owed: Montante em dívida
-      annual_fee: Taxa Anual
-      apr: TAE
-      available_credit: Crédito Disponível
-      edit_account_details: Editar os detalhes da conta
-      expiration_date: Data de Validade
-      minimum_payment: Pagamento Mínimo
-      unknown: Desconhecido

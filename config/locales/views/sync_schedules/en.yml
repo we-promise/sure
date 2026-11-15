@@ -1,0 +1,19 @@
+---
+en:
+  sync_schedules:
+    menu_item: Sync frequency
+    intervals:
+      minutes: Every %{count} minutes
+      hours:
+        one: Every hour
+        other: Every %{count} hours
+    edit:
+      title: Sync frequency
+      description: Every connection syncs with the family sync, once a day for most providers. Pick an interval to also sync %{name} on its own through the day.
+      interval_label: Sync
+      no_schedule: Usual sync only
+      hint: Frequent syncs count against the provider's rate limits, and some providers bill per request.
+      save: Save
+    update:
+      updated: Sync frequency saved.
+      cleared: Sync frequency removed. The connection is back to its usual sync.

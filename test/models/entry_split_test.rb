@@ -27,6 +27,59 @@ class EntrySplitTest < ActiveSupport::TestCase
     assert @entry.split_parent?
   end
 
+  test "split! locks only the fields a split sets when asked to" do
+    merchant = @entry.account.family.merchants.create!(name: "Lock merchant", type: "FamilyMerchant")
+    splits = [
+      { name: "Groceries", amount: 70, category_id: categories(:food_and_drink).id, merchant_id: merchant.id },
+      { name: "Household", amount: 30, category_id: nil }
+    ]
+
+    locked, unlocked = @entry.split!(splits, lock_attributes: true).map(&:transaction)
+
+    assert_equal %w[category_id merchant_id], locked.locked_attributes.keys.sort
+    assert_empty unlocked.locked_attributes
+  end
+
+  test "split! locks nothing by default" do
+    children = @entry.split!([
+      { name: "Groceries", amount: 70, category_id: categories(:food_and_drink).id },
+      { name: "Household", amount: 30, category_id: nil }
+    ])
+
+    assert children.all? { |child| child.transaction.locked_attributes.empty? }
+  end
+
+  test "split! supports a per-split merchant override, falling back to the parent's merchant" do
+    parent_merchant = @entry.account.family.merchants.create!(name: "Parent merchant", type: "FamilyMerchant")
+    split_merchant = @entry.account.family.merchants.create!(name: "Split merchant", type: "FamilyMerchant")
+    @entry.transaction.update!(merchant: parent_merchant)
+
+    splits = [
+      { name: "Groceries", amount: 70, merchant_id: split_merchant.id },
+      { name: "Household", amount: 30 }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert_equal split_merchant.id, children.first.transaction.merchant_id
+    assert_equal parent_merchant.id, children.last.transaction.merchant_id
+  end
+
+  test "split! supports per-split tags" do
+    tag_one = @entry.account.family.tags.create!(name: "Tag one")
+    tag_two = @entry.account.family.tags.create!(name: "Tag two")
+
+    splits = [
+      { name: "Groceries", amount: 70, tag_ids: [ tag_one.id, tag_two.id ] },
+      { name: "Household", amount: 30 }
+    ]
+
+    children = @entry.split!(splits)
+
+    assert_equal [ tag_one, tag_two ].sort_by(&:id), children.first.transaction.tags.sort_by(&:id)
+    assert_equal [], children.last.transaction.tags
+  end
+
   test "split! rejects when amounts don't sum to parent" do
     splits = [
       { name: "Part 1", amount: 60, category_id: nil },
@@ -220,5 +273,71 @@ class EntrySplitTest < ActiveSupport::TestCase
     visible_entries = Entry.where(id: @entry.child_entries.map(&:id)).where(excluded: false)
     assert_includes visible_entries.pluck(:id), non_excluded_child.id
     refute_includes visible_entries.pluck(:id), excluded_child.id
+  end
+
+  test "split_once! splits an entry that is not yet split" do
+    assert @entry.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_equal 2, @entry.reload.child_entries.count
+  end
+
+  test "split_once! skips an entry another caller split in the meantime" do
+    stale = Entry.find(@entry.id)
+    @entry.split!([ { name: "First", amount: 50 }, { name: "Run", amount: 50 } ])
+
+    assert_not stale.split_once!([ { name: "Second", amount: 100 } ])
+    assert_equal %w[First Run], @entry.reload.child_entries.order(:name).pluck(:name)
+  end
+
+  test "split_once! skips an entry excluded in the meantime" do
+    stale = Entry.find(@entry.id)
+    Entry.where(id: @entry.id).update_all(excluded: true)
+
+    assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "split_once! skips a transaction that became pending in the meantime" do
+    stale = Entry.find(@entry.id)
+    Transaction.where(id: @entry.entryable_id).update_all(extra: { "plaid" => { "pending" => true } })
+    assert Transaction.find(@entry.entryable_id).pending?, "fixture must read as pending"
+
+    assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "split_once! skips a transaction that became a transfer in the meantime" do
+    stale = Entry.find(@entry.id)
+    Transaction.where(id: @entry.entryable_id).update_all(kind: "funds_movement")
+    assert Transaction.find(@entry.entryable_id).transfer?, "fixture must read as a transfer"
+
+    assert_not stale.split_once!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    assert_not @entry.reload.split_parent?
+  end
+
+  test "resplit! replaces the children of a split" do
+    @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+
+    assert @entry.resplit!([ { name: "C", amount: 30 }, { name: "D", amount: 70 } ])
+    assert_equal %w[C D], @entry.reload.child_entries.order(:name).pluck(:name)
+    assert @entry.excluded?
+  end
+
+  test "resplit! does not resurrect a split another caller removed" do
+    @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    stale = Entry.find(@entry.id)
+    @entry.unsplit!
+
+    assert_not stale.resplit!([ { name: "C", amount: 30 }, { name: "D", amount: 70 } ])
+    assert_not @entry.reload.split_parent?
+    assert_not @entry.excluded?
+  end
+
+  test "unsplit_once! unsplits once and then reports nothing to do" do
+    @entry.split!([ { name: "A", amount: 60 }, { name: "B", amount: 40 } ])
+    stale = Entry.find(@entry.id)
+
+    assert @entry.unsplit_once!
+    assert_not stale.unsplit_once!
+    assert_not @entry.reload.split_parent?
   end
 end

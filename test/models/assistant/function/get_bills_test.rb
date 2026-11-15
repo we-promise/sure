@@ -22,6 +22,22 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
     assert_not_includes names, "Paused bill"
   end
 
+  # The tools' frequency enum is FrequencyPreset::PRESETS, which has no
+  # interval. update_bill would pass an "interval" it read here straight back
+  # to FrequencyPreset.apply without a count or unit, and report success on an
+  # unchanged schedule.
+  test "an every-N cadence is reported as custom, never as a value outside the enum" do
+    series = create_series(name: "Water", amount: 60, anchor_date: Date.current)
+    RecurringTransaction::FrequencyPreset.apply(series, preset: "interval", interval: 2, interval_unit: "monthly",
+                                                         day_of_month: Date.current.day)
+    series.save!
+
+    row = call_tool[:bills].find { |bill| bill[:name] == "Water" }
+
+    assert_equal "interval", RecurringTransaction::FrequencyPreset.detect(series).key
+    assert_equal "custom", row[:frequency]
+  end
+
   test "the paused filter speaks the UI vocabulary over the stored value" do
     create_series(name: "Paused bill", amount: 30, status: "inactive")
 
@@ -53,6 +69,37 @@ class Assistant::Function::GetBillsTest < ActiveSupport::TestCase
 
       assert_equal [ "Late bill" ], result[:bills].map { |bill| bill[:name] }
     end
+  end
+
+  # Nobody is paying a paused bill, so its leftover is neither overdue nor
+  # due, and the occurrence names the pause the way the series does.
+  test "a paused bill's leftover is not overdue or due, and reads paused" do
+    late_day = 10.days.ago.to_date
+    late = create_series(name: "Paused late", amount: 75, expected_day_of_month: late_day.day,
+                         anchor_date: late_day, last_occurrence_date: 2.months.ago.to_date,
+                         next_expected_date: late_day)
+    grace_day = 2.days.ago.to_date
+    in_grace = create_series(name: "Paused grace", amount: 76, expected_day_of_month: grace_day.day,
+                             anchor_date: grace_day, last_occurrence_date: 2.months.ago.to_date,
+                             next_expected_date: grace_day)
+    assert_equal [ "Paused late" ], call_tool("payment_state" => "overdue")[:bills].map { |bill| bill[:name] }
+    assert_equal [ "Paused grace" ], call_tool("payment_state" => "due")[:bills].map { |bill| bill[:name] }
+    future_day = Date.current + 20
+    future = create_series(name: "Paused future", amount: 77, expected_day_of_month: future_day.day,
+                           anchor_date: future_day, last_occurrence_date: future_day - 1.month,
+                           next_expected_date: future_day)
+    # Pausing drops future rows, except one already carrying a payment.
+    RecurringTransaction::Allocator.new(future.current_occurrence).allocate!(amount: "10")
+    assert_equal [ "Paused future" ], call_tool("payment_state" => "upcoming")[:bills].map { |bill| bill[:name] }
+    [ late, in_grace, future ].each(&:mark_inactive!)
+
+    assert_empty call_tool("status" => "all", "payment_state" => "overdue")[:bills]
+    assert_empty call_tool("status" => "paused", "payment_state" => "due")[:bills]
+    assert_empty call_tool("status" => "paused", "payment_state" => "upcoming")[:bills]
+
+    result = call_tool("status" => "all")
+    assert_equal 0, result[:totals][:overdue_count]
+    assert_equal %w[paused paused paused], result[:bills].map { |bill| bill.dig(:current_occurrence, :state) }
   end
 
   test "search matches the merchant behind a nameless series" do

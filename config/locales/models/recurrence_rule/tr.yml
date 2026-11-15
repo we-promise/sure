@@ -1,0 +1,35 @@
+---
+tr:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: Sıklık
+        interval: Aralık
+        day_of_month: Ayın günü
+        weekday: Haftanın günü
+        weekday_ordinal: Ayın haftası
+        month_of_year: Ay
+      recurring_transaction/recurrence_rules:
+        base: 'Tekrarlama kuralı:'
+        frequency: Sıklık
+        interval: Aralık
+        day_of_month: Ayın günü
+        weekday: Haftanın günü
+        weekday_ordinal: Ayın haftası
+        month_of_year: Ay
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: Ayın bir gününü veya haftanın bir gününü seçin (yalnızca birini)
+          attributes:
+            weekday:
+              required_for_weekly: haftalık bir kural için zorunludur
+            weekday_ordinal:
+              not_allowed_for_weekly: haftalık bir kurala uygulanmaz
+              required_with_weekday: haftanın günü belirlendiğinde zorunludur
+              not_allowed_without_weekday: yalnızca haftanın günü belirlendiğinde geçerlidir
+            day_of_month:
+              not_allowed_for_weekly: haftalık bir kurala uygulanmaz
+            month_of_year:
+              required_for_yearly: yıllık bir kural için zorunludur
+              not_allowed: yalnızca yıllık bir kurala uygulanır
