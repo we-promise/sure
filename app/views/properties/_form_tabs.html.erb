@@ -1,9 +1,36 @@
 <%# locals: (account:, active_tab:) %>
 
-<%# A row of tabs above the form on small screens, a sidebar from md up.
-    The form column needs the full dialog width on a phone. %>
-<div class="flex flex-wrap md:flex-col gap-0.5 md:w-[156px] shrink-0">
-  <%= render "properties/form_tab", label: t(".overview"), href: account.new_record? ? nil : edit_property_path(@account), active: active_tab == "overview" %>
-  <%= render "properties/form_tab", label: t(".value"), href: account.new_record? ? nil : balances_property_path(@account), active: active_tab == "value" %>
-  <%= render "properties/form_tab", label: t(".address"), href: account.new_record? ? nil : address_property_path(@account), active: active_tab == "address" %>
+<%# A segmented control above the form on small screens, a sidebar from md up.
+    Only one of the two is displayed at a time, so assistive tech and the tab
+    order see a single set of tabs. A new property has no saved record to
+    link to yet, so its steps are shown but can't be selected. %>
+<% tabs = [
+     { key: "overview", label: t(".overview"), href: account.new_record? ? nil : edit_property_path(account) },
+     { key: "value", label: t(".value"), href: account.new_record? ? nil : balances_property_path(account) },
+     { key: "address", label: t(".address"), href: account.new_record? ? nil : address_property_path(account) }
+   ] %>
+
+<%= render DS::SegmentedControl.new(full_width: true, aria_label: t(".aria_label"), class: "md:hidden") do |sc| %>
+  <% tabs.each do |tab| %>
+    <% if tab[:href] %>
+      <% sc.with_segment(
+           tag.span(tab[:label], class: "truncate"),
+           active: active_tab == tab[:key],
+           href: tab[:href],
+           class: "min-w-0",
+           data: { turbo_frame: :modal }) %>
+    <% else %>
+      <% sc.with_segment(
+           tag.span(tab[:label], class: "truncate"),
+           active: active_tab == tab[:key],
+           disabled: true,
+           class: class_names("min-w-0 cursor-default", "hover:bg-transparent" => active_tab != tab[:key])) %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="hidden md:flex md:flex-col gap-0.5 md:w-[156px] shrink-0">
+  <% tabs.each do |tab| %>
+    <%= render "properties/form_tab", label: tab[:label], href: tab[:href], active: active_tab == tab[:key] %>
+  <% end %>
 </div>

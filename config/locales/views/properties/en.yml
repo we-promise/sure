@@ -133,5 +133,6 @@ en:
         long: Agricultural Land
     form_tabs:
       address: Address
+      aria_label: Property details
       overview: Overview
       value: Value
