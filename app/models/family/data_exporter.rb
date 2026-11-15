@@ -3,6 +3,7 @@ require "csv"
 
 class Family::DataExporter
   EXPORT_VERSION = 2
+  TRANSACTIONS_CSV_HEADERS = [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ].freeze
 
   def initialize(family)
     @family = family
@@ -81,7 +82,7 @@ class Family::DataExporter
 
     def generate_transactions_csv
       CSV.generate do |csv|
-        csv << [ "date", "account_name", "amount", "name", "category", "tags", "notes", "currency" ]
+        csv << TRANSACTIONS_CSV_HEADERS
 
         # Only export transactions from accounts belonging to this family
         # Exclude split parents (export children instead)
@@ -161,18 +162,19 @@ class Family::DataExporter
 
     def generate_rules_csv
       CSV.generate do |csv|
-        csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions" ]
+        csv << [ "name", "resource_type", "active", "effective_date", "conditions", "actions", "group" ]
 
         # Only export rules belonging to this family, in run order so an
         # import recreates them in the same order
-        @family.rules.includes(conditions: :sub_conditions, actions: []).ordered.each do |rule|
+        @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
           csv << [
             rule.name,
             rule.resource_type,
             rule.active,
             rule.effective_date&.iso8601,
             serialize_conditions_for_csv(rule.conditions),
-            serialize_actions_for_csv(rule.actions)
+            serialize_actions_for_csv(rule.actions),
+            rule.rule_group&.name
           ]
         end
       end
@@ -541,7 +543,7 @@ class Family::DataExporter
       end
 
       # Export rules with versioned schema, in run order
-      @family.rules.includes(conditions: :sub_conditions, actions: []).ordered.each do |rule|
+      @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
         lines << {
           type: "Rule",
           version: 1,
@@ -757,6 +759,7 @@ class Family::DataExporter
         effective_date: rule.effective_date&.iso8601,
         position: rule.position,
         stop_processing: rule.stop_processing,
+        group: rule.rule_group&.name,
         conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },
         actions: rule.actions.map { |action| serialize_action(action) }
       }
@@ -801,7 +804,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
-        return rule_operand(condition.value, type: "Merchant", relation: :merchants)
+        return rule_operand(condition.value, type: "Merchant", relation: :available_merchants)
       end
 
       # Map tag UUIDs to names for portability
@@ -822,7 +825,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant"
-        return rule_operand(action.value, type: "Merchant", relation: :merchants, fallback_to_name: true)
+        return rule_operand(action.value, type: "Merchant", relation: :available_merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability. Stored as a comma-separated

@@ -60,6 +60,41 @@ class Rule::Registry::TransactionResourceTest < ActiveSupport::TestCase
     assert_includes keys, "bayes_categorize"
   end
 
+  test "get_executor! refuses an auto action that is not offered" do
+    rule = build_rule(action_type: "exclude_transaction")
+    @family.stubs(:resolved_categorization_provider).returns(nil)
+    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
+
+    assert_raises(Rule::Registry::UnsupportedActionError) { rule.registry.get_executor!("auto_categorize") }
+    assert_raises(Rule::Registry::UnsupportedActionError) { rule.registry.get_executor!("unknown") }
+    assert_instance_of Rule::ActionExecutor::ExcludeTransaction, rule.registry.get_executor!("exclude_transaction")
+  end
+
+  test "get_filter! builds only the requested filter and reuses it" do
+    rule = build_rule(action_type: "exclude_transaction")
+
+    filter = rule.registry.get_filter!("transaction_merchant")
+
+    assert_instance_of Rule::ConditionFilter::TransactionMerchant, filter
+    assert_same filter, rule.registry.get_filter!("transaction_merchant")
+    assert_raises(Rule::Registry::UnsupportedConditionError) { rule.registry.get_filter!("unknown") }
+  end
+
+  test "looking up an ordinary action does not check the AI providers" do
+    rule = build_rule(action_type: "exclude_transaction")
+    @family.expects(:resolved_categorization_provider).never
+    Provider::Registry.expects(:preferred_llm_provider).never
+
+    assert_instance_of Rule::ActionExecutor::ExcludeTransaction, rule.actions.first.executor
+  end
+
+  test "an existing auto action is looked up without checking the providers" do
+    rule = build_rule(action_type: "auto_categorize")
+    @family.expects(:resolved_categorization_provider).never
+
+    assert_instance_of Rule::ActionExecutor::AutoCategorize, rule.actions.first.executor
+  end
+
   private
     def build_rule(action_type:)
       @family.rules.create!(

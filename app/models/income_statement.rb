@@ -20,7 +20,7 @@ class IncomeStatement
   def totals(transactions_scope: nil, date_range:)
     # Default to excluding pending transactions from budget/analytics calculations
     # Pending transactions shouldn't affect budget totals until they post
-    transactions_scope ||= family.transactions.visible.excluding_pending
+    transactions_scope ||= family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled)
 
     result = totals_query(transactions_scope: transactions_scope, date_range: date_range)
 
@@ -143,25 +143,6 @@ class IncomeStatement
       .map { |date, rows| DailyExpenseTotals::DailyTotal.new(date: date, total: rows.sum { |row| row.total.to_d }) }
   end
 
-  # An average month of spending over `period`, to compare one month's
-  # cumulative spend against: for each day of the month, the average spend
-  # on the period's dates that fall on that day, accumulated across the
-  # month. A day of the month the period never reaches has a nil total, so
-  # a one-month period gives that month's own cumulative curve and a short
-  # one (a week, say) covers only its own days. `category_ids` filters as in
-  # daily_expense_series.
-  def average_month_expense_series(period:, category_ids: nil)
-    daily = daily_expense_series(period: period, category_ids: category_ids).index_by(&:date)
-    dates_by_day = period.date_range.group_by(&:day)
-    cumulative = 0.to_d
-
-    (1..dates_by_day.keys.max).map do |day|
-      dates = dates_by_day[day]
-      cumulative += dates.sum { |date| daily[date] ? daily[date].total.to_d : 0 } / dates.size if dates
-      AverageMonthDay.new(day: day, total: dates && cumulative)
-    end
-  end
-
   # Categories with spending in the period's daily series, nil standing for
   # uncategorized spending. These are the categories a filter on that series
   # can usefully offer.
@@ -170,7 +151,7 @@ class IncomeStatement
   end
 
   def totals_for(period, account_ids: nil)
-    scope = family.transactions.visible.excluding_pending.in_period(period)
+    scope = family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period)
     scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
 
     totals(transactions_scope: scope, date_range: period.date_range)
@@ -214,7 +195,6 @@ class IncomeStatement
 
   private
     ScopeTotals = Data.define(:transactions_count, :income_money, :expense_money, :invested_money)
-    AverageMonthDay = Data.define(:day, :total)
     PeriodTotal = Data.define(:classification, :total, :currency, :category_totals)
     CategoryTotal = Data.define(:category, :total, :currency, :weight)
     NetCategoryTotals = Data.define(:net_expense_categories, :net_income_categories, :total_net_expense, :total_net_income, :currency)
@@ -277,20 +257,20 @@ class IncomeStatement
       @totals_for_period ||= {}
       @totals_for_period[period_cache_key(period)] ||=
         totals_query(
-          transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+          transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
           date_range: period.date_range
         )
     end
 
     def unfiltered_daily_expense_series(period)
       Rails.cache.fetch([
-        "income_statement", "daily_expense_series", family.id, user&.id,
+        "income_statement", "daily_expense_series", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id,
         included_account_ids_hash, period.start_date, period.end_date,
         *cache_freshness_key
       ]) do
         DailyExpenseTotals.new(
           family,
-          transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+          transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
           date_range: period.date_range,
           included_account_ids: included_account_ids
         ).call
@@ -304,13 +284,13 @@ class IncomeStatement
     def daily_expense_by_category(period)
       @daily_expense_by_category ||= {}
       @daily_expense_by_category[period_cache_key(period)] ||= Rails.cache.fetch([
-        "income_statement", "daily_expense_by_category", family.id, user&.id,
+        "income_statement", "daily_expense_by_category", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id,
         included_account_ids_hash, period.start_date, period.end_date,
         *cache_freshness_key
       ]) do
         DailyExpenseTotals.new(
           family,
-          transactions_scope: family.transactions.visible.excluding_pending.in_period(period),
+          transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
           date_range: period.date_range,
           included_account_ids: included_account_ids,
           by_category: true
@@ -335,14 +315,14 @@ class IncomeStatement
     def family_stats(interval: "month")
       @family_stats ||= {}
       @family_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "family_stats", family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
+        "income_statement", "family_stats", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { FamilyStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
     def category_stats(interval: "month")
       @category_stats ||= {}
       @category_stats[interval] ||= Rails.cache.fetch([
-        "income_statement", "category_stats", family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
+        "income_statement", "category_stats", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, interval, included_account_ids_hash, *cache_freshness_key
       ]) { CategoryStats.new(family, interval:, account_ids: included_account_ids).call }
     end
 
@@ -361,9 +341,11 @@ class IncomeStatement
     # An IncomeStatement is a request-scoped reporting snapshot, like its memoized
     # period totals. Share these aggregate reads across totals and daily series.
     # Rates, target currency and whether investing counts as spending can
-    # change without touching entries or accounts.
+    # change without touching entries or accounts. Scheduled entries are
+    # excluded as of "today", so the key also rolls over daily.
     def cache_freshness_key
       @cache_freshness_key ||= [
+        Date.current,
         family.entries_cache_version,
         family.accounts_status_version,
         family.currency,
@@ -376,7 +358,7 @@ class IncomeStatement
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
+        "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 

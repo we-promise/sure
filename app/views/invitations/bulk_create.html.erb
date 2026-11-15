@@ -1,0 +1,53 @@
+<%
+  status_tones = {
+    sent: :success,
+    link_only: :success,
+    invalid: :error
+  }
+%>
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) %>
+
+  <% dialog.with_body do %>
+    <div class="space-y-4">
+      <p class="text-primary text-sm">
+        <%= t(".summary", sent: @bulk.sent, link_only: @bulk.link_only, invalid: @bulk.invalid) %>
+      </p>
+
+      <% if @bulk.results.any? %>
+        <div class="space-y-2 max-h-72 overflow-y-auto">
+          <% @bulk.results.each do |result| %>
+            <div class="flex items-center justify-between gap-2 bg-container p-3 shadow-border-xs rounded-lg">
+              <p class="text-primary text-sm truncate"><%= result.email %></p>
+              <%= render DS::Pill.new(
+                label: t(".status.#{result.status}"),
+                tone: status_tones.fetch(result.status, :neutral),
+                marker: false,
+                size: :sm
+              ) %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <div class="flex items-center gap-2" data-controller="text-download" data-text-download-filename-value="invitation-report.txt">
+        <span data-text-download-target="source" class="hidden"><%= @report_text %></span>
+
+        <%= render DS::Button.new(
+          text: t(".download"),
+          variant: :secondary,
+          class: "flex-1 justify-center",
+          data: { action: "text-download#download" }
+        ) %>
+
+        <%= render DS::Link.new(
+          text: t(".invite_more"),
+          href: bulk_new_invitations_path,
+          variant: :primary,
+          frame: :modal,
+          class: "flex-1 justify-center"
+        ) %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

@@ -1,5 +1,5 @@
 <%# locals: (form:, exclude: [], clear_href: transactions_path(clear_filters: true), filtered: @q.present?) %>
-<% filters = transaction_search_filters.reject { |f| exclude.include?(f[:key]) } %>
+<% filters = transaction_search_filters(exclude: exclude) %>
 
 <%= render DS::Tabs.new(
   variant: :unstyled,

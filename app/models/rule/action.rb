@@ -1,7 +1,14 @@
 class Rule::Action < ApplicationRecord
+  # The action_type of the "Send email notification" action: the key of
+  # Rule::ActionExecutor::SendEmailNotification, which is derived from its class
+  # name. Rule::ActionTest checks the two agree.
+  EMAIL_NOTIFICATION = "send_email_notification"
+
   belongs_to :rule, touch: true
 
   SUPPORTED_ACTION_TYPES = Rule::Registry::TransactionResource.action_executor_keys.freeze
+
+  scope :email_notifications, -> { where(action_type: EMAIL_NOTIFICATION) }
 
   # Virtual attribute for the split_transaction form: `value` is a single string column, so the
   # split builder UI posts real, individually-named fields here instead of driving a JSON blob
@@ -25,23 +32,39 @@ class Rule::Action < ApplicationRecord
   validates_with DatabaseTextValidator, attributes: %i[action_type value]
   before_validation :build_split_value, if: -> { action_type == "split_transaction" && split_rows.present? }
   validate :split_config_valid, if: -> { action_type == "split_transaction" }
+  # The rule runs for the whole family, so the merchant a user picks must be one
+  # they can see. Checked only when a user sets the value; a merchant another
+  # member saved stays as it is (see #options).
+  validate :merchant_assignable_by_user, if: -> {
+    action_type == "set_transaction_merchant" && Current.user && value.present? &&
+      (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
+  }
 
-  # Pre-seed (watermark): when a send_email_notification action is created — on a
+  # Pre-seed (watermark): when an EMAIL_NOTIFICATION action is created — on a
   # new rule OR added to an existing one — record all currently-matching
   # transactions as already-delivered WITHOUT sending, so the rule only ever
   # emails about transactions that appear AFTER the action exists.
   #
-  # Uses after_create_commit (not after_create): nested children persist before
-  # the parent rule commits, and the pre-seed reads the rule's conditions, which
+  # Uses after_commit (not after_save): nested children persist before the
+  # parent rule commits, and the pre-seed reads the rule's conditions, which
   # must be committed first.
   #
-  # after_update_commit covers the edit flow: the action_type select is editable
+  # The update event covers the edit flow: the action_type select is editable
   # for persisted actions (see rules_controller#rule_params), so an existing
-  # action can be CHANGED to send_email_notification. Without re-seeding, the
+  # action can be CHANGED to EMAIL_NOTIFICATION. Without re-seeding, the
   # next apply/sync would email every historical match. Guard on the type change
-  # so we only watermark when an action actually becomes email-notify.
-  after_create_commit :seed_notification_baseline
-  after_update_commit :seed_notification_baseline, if: :saved_change_to_action_type?
+  # so we only watermark when an action actually becomes email-notify; on create
+  # the type changes from nil, so the same guard admits every new action.
+  #
+  # One callback for both events: after_create_commit and after_update_commit
+  # naming the same method would leave only the last one registered.
+  after_commit :seed_notification_baseline, on: %i[create update], if: :saved_change_to_action_type?
+
+  # Set by the importers and the assistant's update_rule on an email action that
+  # replaces one the rule already had. The rule's baseline is still recorded
+  # under its id, so taking it again would mark a match still waiting for the
+  # next run as delivered.
+  attr_accessor :keep_notification_baseline
 
   # Accepts an Array (e.g. from a multi-select tag input) and stores it as a
   # comma-separated string in the existing `value` column, so multi-value
@@ -78,7 +101,14 @@ class Rule::Action < ApplicationRecord
   end
 
   def options
-    executor.options
+    executor_options = rule.option_list([ :action, action_type ]) { executor.options }
+    return executor_options if executor_options.nil? || value.blank?
+    return executor_options if executor_options.any? { |_label, id| id.to_s == value.to_s }
+
+    # Shared across the rules of a page (see Rule.share_option_lists), so a
+    # saved value outside the options is looked up once per request.
+    saved_option = rule.option_list([ :saved_action_option, action_type, value.to_s ]) { executor.option_for(value) }
+    saved_option ? executor_options + [ saved_option ] : executor_options
   end
 
   def claimed_attributes
@@ -106,7 +136,17 @@ class Rule::Action < ApplicationRecord
     rule.registry.get_executor!(action_type)
   end
 
+  def email_notification?
+    action_type == EMAIL_NOTIFICATION
+  end
+
   private
+    def merchant_assignable_by_user
+      return if UuidFormat.valid?(value) && rule&.family&.assignable_merchants_for(Current.user)&.exists?(id: value)
+
+      errors.add(:value, :invalid)
+    end
+
     def execution_value
       executor.type == "multi_select" ? value.to_s.split(",") : value
     end
@@ -182,7 +222,8 @@ class Rule::Action < ApplicationRecord
     end
 
     def seed_notification_baseline
-      return unless action_type == "send_email_notification"
+      return unless email_notification?
+      return if keep_notification_baseline
       return if rule.notification_baseline_taken_in_this_save?
 
       NotificationDelivery.record_for(

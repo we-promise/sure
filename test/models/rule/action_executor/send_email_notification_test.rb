@@ -75,21 +75,16 @@ class Rule::ActionExecutor::SendEmailNotificationTest < ActiveSupport::TestCase
   end
 
   test "pre-seed watermark records existing matches without sending so history never emails" do
-    # after_create_commit does not fire under transactional tests (the wrapping
-    # transaction never commits), so invoke the seeding path directly to verify
-    # the watermark behavior the callback performs in production.
-    rule = @family.rules.create!(
-      resource_type: "transaction",
-      active: true,
-      actions_attributes: [ { action_type: "send_email_notification" } ]
-    )
-    seed_action = rule.actions.first
-
+    rule = nil
     assert_no_enqueued_jobs only: RuleEmailNotificationJob do
-      seed_action.send(:seed_notification_baseline)
+      rule = @family.rules.create!(
+        resource_type: "transaction",
+        active: true,
+        actions_attributes: [ { action_type: "send_email_notification" } ]
+      )
     end
 
-    # Pre-existing @txn1 is now watermarked, so a subsequent run sends nothing.
+    # Creating the action watermarked the pre-existing @txn1, so a run sends nothing.
     result = nil
     assert_no_enqueued_jobs only: RuleEmailNotificationJob do
       result = Rule::Action.new(rule: rule, action_type: "send_email_notification").apply(@scope)

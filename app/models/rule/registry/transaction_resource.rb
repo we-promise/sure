@@ -52,13 +52,34 @@ class Rule::Registry::TransactionResource < Rule::Registry
     end
   end
 
+  # Single lookups build only the class asked for, once per registry: listing
+  # every filter or executor checks the AI providers on each call, and a rule
+  # list looks up each condition and action several times.
+  def get_filter!(key)
+    @filters_by_key ||= {}
+    @filters_by_key[key] ||= begin
+      filter_class = CONDITION_FILTER_CLASSES.find { |klass| klass.key == key }
+      raise UnsupportedConditionError, "Unsupported condition type: #{key}" unless filter_class
+      filter_class.new(rule)
+    end
+  end
+
+  def get_executor!(key)
+    @executors_by_key ||= {}
+    @executors_by_key[key] ||= begin
+      executor_class = ACTION_EXECUTOR_CLASSES.find { |klass| klass.key == key }
+      raise UnsupportedActionError, "Unsupported action type: #{key}" unless executor_class && offered?(executor_class)
+      executor_class.new(rule)
+    end
+  end
+
   private
     def offered?(executor_class)
       case executor_class.key
       when "auto_categorize"
-        auto_categorization_enabled? || existing_action?("auto_categorize")
+        existing_action?("auto_categorize") || auto_categorization_enabled?
       when "auto_detect_merchants"
-        auto_merchant_detection_enabled? || existing_action?("auto_detect_merchants")
+        existing_action?("auto_detect_merchants") || auto_merchant_detection_enabled?
       else
         true
       end

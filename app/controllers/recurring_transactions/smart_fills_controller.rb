@@ -47,7 +47,13 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
   private
     # The picked entry's own history: same account, same sign, same name
     # shape. Recency-ordered so drifting amounts weight toward the present.
+    # Skipped entirely for a generic name (e.g. the auto-generated "Unknown
+    # transaction" fallback) -- an ILIKE on that text would pull in every
+    # other unrelated transaction that happens to share the same generic
+    # label, corrupting the evidence fed to the AI suggester.
     def evidence_entries(entry, income:)
+      return [ entry ] if entry.generic_name?
+
       pattern = "%#{ActiveRecord::Base.sanitize_sql_like(entry.name.to_s)}%"
 
       entry.account.entries
@@ -60,8 +66,9 @@ class RecurringTransactions::SmartFillsController < RecurringTransactionsControl
            .presence || [ entry ]
     end
 
-    # Only fields the add form actually carries; anything else the suggestion
-    # knows (category, kind) has no field to land in here and is dropped.
+    # Only fields the add form actually carries; the kind has no field to land
+    # in here and is dropped. The suggested category is dropped too: the form
+    # keeps the transaction's own category from the prefill.
     # The due date follows the cadence's own anchor: weekday for weekly-style
     # presets, month for annual, day-of-month for the monthly-style rest.
     def apply_suggestion(suggestion)

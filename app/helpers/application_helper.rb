@@ -65,7 +65,7 @@ module ApplicationHelper
 
   # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
   def disclosure_chevron
-    icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90"
+    icon "chevron-right", size: "sm", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
   end
 
   # Convert alpha (0-1) to 8-digit hex (00-FF)
@@ -144,6 +144,24 @@ module ApplicationHelper
         active: page_active?(budgets_path)
       }
     end
+  end
+
+  # The family-wide investment hub. Preview-gated (hidden entirely without the
+  # flag) and desktop-only: the bottom bar already carries five entries at the
+  # width it has, and the hub is a wide, multi-section page. `desktop_only`
+  # is filtered out of the mobile bar in the layout, the mirror of the
+  # `mobile_only` flag the Assistant entry uses.
+  def portfolio_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.portfolio"),
+        path: portfolio_path,
+        icon: "briefcase",
+        icon_custom: false,
+        active: page_active?(portfolio_path),
+        desktop_only: true
+      }
+    )
   end
 
   # Wrapper around I18n.l to support custom date formats
@@ -257,6 +275,13 @@ module ApplicationHelper
     return callback_enable_banking_items_url if Rails.env.production?
 
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
+  end
+
+  # The redirect URI registered on the TrueLayer app. TRUELAYER_REDIRECT_URI
+  # overrides it for instances behind a proxy that doesn't forward the
+  # public host; it must exactly match one registered on the TrueLayer app.
+  def truelayer_callback_url
+    ENV["TRUELAYER_REDIRECT_URI"].presence || callback_truelayer_items_url
   end
 
   # Formats a holding quantity with adaptive precision based on the value size.

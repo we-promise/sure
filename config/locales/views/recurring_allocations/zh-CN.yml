@@ -1,0 +1,16 @@
+---
+zh-CN:
+  recurring_allocations:
+    over_allocation: 分配金额不能超过交易金额
+    missing_rate: 无可用汇率；请明确输入金额
+    already_allocated: 该交易已应用于此账单
+    entry_exhausted: 该交易的全部金额已应用于其他应付款项
+    invalid: 无法记录此笔付款
+    create:
+      success: 付款已应用
+    destroy:
+      success: 付款已取消关联
+    confirm:
+      success: 付款已应用于账单
+    reject:
+      success: "已忽略。系统不会再针对此账单推荐该交易。"

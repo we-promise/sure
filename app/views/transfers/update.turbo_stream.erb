@@ -7,7 +7,11 @@
             locals: { entry: leg[:entry], view_ctx: @view_ctx || "global", is_filtered: @is_filtered, in_split_group: leg[:in_split_group], running_balance: leg[:running_balance], hide_balance: leg[:hide_balance], flat: leg[:flat] }
           ) %>
     <% else %>
-      <%= turbo_stream.replace leg[:entry] %>
+      <%= turbo_stream.replace(
+            leg[:entry],
+            partial: "entries/entry",
+            locals: { entry: leg[:entry], view_ctx: @view_ctx || "global", is_filtered: @is_filtered, in_split_group: leg[:in_split_group] }
+          ) %>
     <% end %>
   <% end %>
 

@@ -16,13 +16,15 @@ import { floatingStrategy } from "utils/floating_strategy";
  * "collapsed" as the panel opens / closes.
  */
 export default class extends Controller {
-  static targets = ["button", "content"];
+  static targets = ["button", "content", "frame"];
 
   static values = {
     show: Boolean,
     placement: { type: String, default: "bottom-end" },
     offset: { type: Number, default: 6 },
     mobileFullwidth: { type: Boolean, default: true },
+    frameId: String,
+    frameSrc: String,
   };
 
   connect() {
@@ -86,6 +88,7 @@ export default class extends Controller {
     this.contentTarget.classList.toggle("hidden", !nextShow);
     this.buttonTarget.setAttribute("aria-expanded", nextShow.toString());
     if (nextShow) {
+      this.mountFrame();
       // Resolve the positioning mode once, as the panel opens. The layout
       // around the trigger is stable for the life of the open panel.
       this.positionStrategy = floatingStrategy(this.element);
@@ -93,6 +96,26 @@ export default class extends Controller {
       this.focusFirstElement();
     }
   };
+
+  // Lazy panels (frameSrc value) get their <turbo-frame> on first open only;
+  // connecting it with a src makes Turbo fetch it. Until then the panel is an
+  // empty slot, so a page with hundreds of popovers ships no frame markup
+  // for the ones never opened. Turbo marks the frame aria-busy while loading.
+  mountFrame() {
+    if (!this.hasFrameTarget || !this.frameSrcValue) return;
+    if (this.frameTarget.childElementCount > 0) return;
+
+    const frame = document.createElement("turbo-frame");
+    frame.id = this.frameIdValue;
+    frame.setAttribute("src", this.frameSrcValue);
+    const placeholder = document.createElement("div");
+    placeholder.className = "p-6 flex items-center justify-center";
+    const skeleton = document.createElement("div");
+    skeleton.className = "h-4 w-24 rounded-md bg-container-inset animate-pulse";
+    placeholder.append(skeleton);
+    frame.append(placeholder);
+    this.frameTarget.replaceChildren(frame);
+  }
 
   // Used as an action (a Cancel button in the panel), close() returns focus
   // to the trigger like Escape does, instead of dropping it to <body>.

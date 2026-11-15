@@ -280,7 +280,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
       page.current_window.resize_to(width, 1200)
 
       [ [ transactions_url, "#transaction-filters-button" ],
-        [ account_url(accounts(:depository), tab: "activity"), "#activity-status-filter-button" ] ].each do |url, selector|
+        [ account_url(accounts(:depository), tab: "activity"), "#activity-filters-button" ] ].each do |url, selector|
         visit url
         find(selector).click
         assert_selector "[data-DS--popover-target='content']:not(.hidden)"
@@ -312,7 +312,7 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
 
   test "account filter popover reuses the shared menu without the account tab" do
     visit account_url(accounts(:depository), tab: "activity")
-    find("#activity-status-filter-button").click
+    find("#activity-filters-button").click
 
     within "#transaction-filters-menu" do
       assert_selector "[role='tab'], button", text: I18n.t("transactions.search.filters.date")
@@ -431,6 +431,8 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
           gaps = measure_control_gaps(url, form_selector)
 
           if compact
+            assert_equal [ "12px", width < 1024 ? "8px" : "12px", "12px", width < 1024 ? "8px" : "12px" ], gaps["padding"],
+              "compact card padding (#{width}px, #{url})"
             assert_not gaps["ulPresent"], "no badge wrapper without filters (#{context}, #{width}px, #{url})"
             assert_in_delta 8, gaps["headerTop"] - gaps["rowBottom"], 2, "search-to-header gap (#{context}, #{width}px, #{url})"
             assert_in_delta 8, gaps["rowsTop"] - gaps["headerBottom"], 2, "header-to-rows gap (#{context}, #{width}px, #{url})"
@@ -438,16 +440,10 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
               assert_in_delta 8, gaps["rowTop"] - gaps["newRowBottom"], 2, "new-row-to-search gap (#{context}, #{width}px, #{url})"
             end
           else
-            if url == transactions_url
-              # Standard Transactions retains the empty badge wrapper, and as
-              # a flex container its margins do not collapse: 16px stacks on
-              # the search row's own 16px.
-              assert gaps["ulPresent"], "empty badge wrapper retained in standard (#{context}, #{width}px)"
-              assert_in_delta 32, gaps["headerTop"] - gaps["rowBottom"], 2, "search-to-header gap with retained empty badge list (#{context}, #{width}px)"
-            else
-              assert_not gaps["ulPresent"], "account activity renders no badge list (#{context}, #{width}px)"
-              assert_in_delta 16, gaps["headerTop"] - gaps["rowBottom"], 2, "search-to-header gap (#{context}, #{width}px, #{url})"
-            end
+            # Main now supplies badge wrappers on both pages. Preserve their
+            # existing standard spacing, including the empty wrapper margin.
+            assert gaps["ulPresent"], "empty badge wrapper retained in standard (#{context}, #{width}px)"
+            assert_in_delta 32, gaps["headerTop"] - gaps["rowBottom"], 2, "search-to-header gap with retained empty badge list (#{context}, #{width}px)"
             assert_in_delta 16, gaps["rowsTop"] - gaps["headerBottom"], 2, "header-to-rows gap (#{context}, #{width}px, #{url})"
             if gaps["newRowBottom"]
               assert_in_delta 16, gaps["rowTop"] - gaps["newRowBottom"], 2, "new-row-to-search gap (#{context}, #{width}px, #{url})"
@@ -471,11 +467,15 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
       [ 1400, 375 ].each do |width|
         page.current_window.resize_to(width, 1200)
 
-        # Badge case (Transactions only; account activity renders no badges).
-        gaps = measure_control_gaps(transactions_url(q: { search: "Coffee" }), "#transactions-search")
-        assert gaps["ulTop"], "badge list renders with an active filter (#{context}, #{width}px)"
-        assert_in_delta expected, gaps["ulTop"] - gaps["rowBottom"], 2, "search-to-badges gap (#{context}, #{width}px)"
-        assert_in_delta expected, gaps["headerTop"] - gaps["ulBottom"], 2, "badges-to-header gap (#{context}, #{width}px)"
+        {
+          transactions_url(q: { search: "Coffee" }) => "#transactions-search",
+          account_url(accounts(:depository), tab: "activity", q: { search: "Coffee" }) => "#entries-search"
+        }.each do |url, selector|
+          gaps = measure_control_gaps(url, selector)
+          assert gaps["ulTop"], "badge list renders with an active filter (#{context}, #{width}px, #{url})"
+          assert_in_delta expected, gaps["ulTop"] - gaps["rowBottom"], 2, "search-to-badges gap (#{context}, #{width}px, #{url})"
+          assert_in_delta expected, gaps["headerTop"] - gaps["ulBottom"], 2, "badges-to-header gap (#{context}, #{width}px, #{url})"
+        end
       end
     end
   end
@@ -635,9 +635,13 @@ class CompactTransactionsMobileTest < ApplicationSystemTestCase
           const row = document.querySelector(`${formSelector} .flex.gap-2`);
           const rowRect = row.getBoundingClientRect();
           const out = { rowTop: rowRect.top, rowBottom: rowRect.bottom };
+          const form = document.querySelector(formSelector);
+          const card = formSelector === "#transactions-search" ? document.querySelector("#transactions") : form.closest('[data-controller="checkbox-toggle"]');
+          const style = getComputedStyle(card);
+          out.padding = [style.paddingTop, style.paddingRight, style.paddingBottom, style.paddingLeft];
           const newRow = document.querySelector("[data-testid='activity-menu']");
           if (newRow) out.newRowBottom = newRow.getBoundingClientRect().bottom;
-          const ul = document.querySelector("#transaction-search-filters");
+          const ul = document.querySelector("#transaction-search-filters, #account-activity-filters");
           out.ulPresent = !!ul;
           if (visible(ul)) {
             const u = ul.getBoundingClientRect();

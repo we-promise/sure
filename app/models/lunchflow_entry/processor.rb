@@ -26,9 +26,10 @@ class LunchflowEntry::Processor
 
   # lunchflow_transaction is the raw hash fetched from Lunchflow API and converted to JSONB
   # Transaction structure: { id, accountId, amount, currency, date, merchant, description, isPending }
-  def initialize(lunchflow_transaction, lunchflow_account:)
+  def initialize(lunchflow_transaction, lunchflow_account:, occurrence: 0)
     @lunchflow_transaction = lunchflow_transaction
     @lunchflow_account = lunchflow_account
+    @occurrence = occurrence
   end
 
   def process
@@ -86,7 +87,7 @@ class LunchflowEntry::Processor
   end
 
   private
-    attr_reader :lunchflow_transaction, :lunchflow_account
+    attr_reader :lunchflow_transaction, :lunchflow_account, :occurrence
 
     def import_adapter
       @import_adapter ||= Account::ProviderImportAdapter.new(account)
@@ -106,54 +107,12 @@ class LunchflowEntry::Processor
 
     def calculate_external_id
       id = data[:id].presence
+      return "lunchflow_#{id}" if id
 
-      # For pending transactions, Lunchflow may return blank/nil IDs
-      # Generate a stable temporary ID based on transaction attributes
-      if id.blank?
-        # Create a deterministic hash from key transaction attributes
-        # This ensures the same pending transaction gets the same ID across syncs
-        base_temp_id = content_hash_for_transaction(data)
-        temp_id_with_prefix = "lunchflow_pending_#{base_temp_id}"
-
-        # Check if entry with this external_id already exists
-        # If it does AND it's still pending, reuse the same ID for re-sync.
-        # The import adapter's skip logic will handle user edits correctly.
-        # We DON'T check if attributes match - user edits should not cause duplicates.
-        if entry_exists_with_external_id?(temp_id_with_prefix)
-          existing_entry = account.entries.find_by(external_id: temp_id_with_prefix, source: "lunchflow")
-          if existing_entry && existing_entry.entryable.is_a?(Transaction) && existing_entry.entryable.pending?
-            Rails.logger.debug "Lunchflow: Reusing ID #{temp_id_with_prefix} for re-synced pending transaction"
-            return temp_id_with_prefix
-          end
-        end
-
-        # Handle true collisions: multiple different transactions with same attributes
-        # (e.g., two Uber rides on the same day for the same amount within the same sync)
-        final_id = temp_id_with_prefix
-        counter = 1
-
-        while entry_exists_with_external_id?(final_id)
-          final_id = "#{temp_id_with_prefix}_#{counter}"
-          counter += 1
-        end
-
-        if counter > 1
-          Rails.logger.debug "Lunchflow: Collision detected, using #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
-        else
-          Rails.logger.debug "Lunchflow: Generated temporary ID #{final_id} for pending transaction: #{data[:merchant]} #{data[:amount]} #{data[:currency]}"
-        end
-
-        final_id
-      else
-        "lunchflow_#{id}"
-      end
-    end
-
-    def entry_exists_with_external_id?(external_id)
-      return false unless account.present?
-
-      # Check if an entry with this external_id already exists in the account
-      account.entries.exists?(external_id: external_id, source: "lunchflow")
+      # Blank IDs are keyed by content hash. Identical rows are told apart by their
+      # position among them in the stored list: the first gets no suffix, the next _1.
+      temp_id = "lunchflow_pending_#{content_hash_for_transaction(data)}"
+      occurrence.positive? ? "#{temp_id}_#{occurrence}" : temp_id
     end
 
     def name

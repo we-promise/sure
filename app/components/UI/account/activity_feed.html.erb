@@ -62,7 +62,7 @@
 
               <%= form.search_field :search,
                             placeholder: t("accounts.show.activity.search.placeholder"),
-                            value: search,
+                            value: q[:search],
                             class: "form-field__input placeholder:text-sm placeholder:text-secondary",
                             "data-auto-submit-form-target": "auto" %>
               <%= hidden_field_tag :tab, "activity" %>
@@ -71,7 +71,7 @@
 
           <%= render DS::Popover.new(variant: "button", no_padding: true) do |popover| %>
             <% popover.with_button(
-              id: "activity-status-filter-button",
+              id: "activity-filters-button",
               type: "button",
               text: t("accounts.show.activity.filter"),
               variant: "outline",
@@ -84,19 +84,6 @@
                 exclude: %w[account_filter],
                 clear_href: helpers.account_path(account, tab: "activity"),
                 filtered: filtered? %>
-              <div class="p-3 space-y-3 border-t border-secondary">
-                <p class="text-xs font-medium text-secondary uppercase"><%= t("accounts.show.activity.category") %></p>
-                <div class="flex items-center gap-3">
-                  <%= check_box_tag "q[uncategorized]",
-                                    "1",
-                                    params.dig(:q, :uncategorized) == "1",
-                                    id: "q_uncategorized",
-                                    class: "checkbox checkbox--light",
-                                    form: "entries-search",
-                                    onchange: "document.getElementById('entries-search').requestSubmit()" %>
-                  <%= label_tag "q_uncategorized", t("accounts.show.activity.uncategorized_only"), class: "text-sm text-primary" %>
-                </div>
-              </div>
             <% end %>
           <% end %>
       <% end %>
@@ -111,6 +98,33 @@
             <%= helpers.icon("list-todo") %>
         <% end %>
       </div>
+
+      <% renderable_badges = q.except("amount_operator").values.any? { |value| Array(value).any?(&:present?) } %>
+      <% if !compact? || renderable_badges %>
+      <ul id="account-activity-filters" class="flex items-center flex-wrap gap-2 <%= compact? ? "mb-2" : "mb-4" %>">
+        <% q.reject { |key| key == "amount_operator" }.each do |param_key, param_value| %>
+          <% unless param_value.blank? %>
+            <% if param_key == "amount" %>
+              <% amount_operator = helpers.transaction_amount_operator_label(q[:amount_operator]) %>
+              <%= render partial: "transactions/searches/filters/badge", locals: {
+                    param_key: "amount",
+                    param_value: "#{amount_operator} #{param_value}",
+                    clear_filter_path: helpers.clear_filter_account_path(account, param_key: "amount", param_value: param_value, **request.query_parameters)
+                  } %>
+            <% else %>
+              <% Array(param_value).each do |value| %>
+                <% next if compact? && value.blank? %>
+                <%= render partial: "transactions/searches/filters/badge", locals: {
+                      param_key: param_key,
+                      param_value: value,
+                      clear_filter_path: helpers.clear_filter_account_path(account, param_key: param_key, param_value: value, **request.query_parameters)
+                    } %>
+              <% end %>
+            <% end %>
+          <% end %>
+        <% end %>
+      </ul>
+      <% end %>
     </div>
 
     <% if activity_dates.empty? %>

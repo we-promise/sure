@@ -7,6 +7,7 @@ pt-PT:
     entries:
       default_name: Transação Wise
       fee_name: Comissão da Wise
+      refund_name: Reembolso da Wise
     activities:
       jar_deposit: Depósito no jar
       jar_withdrawal: Levantamento do jar
@@ -54,6 +55,9 @@ pt-PT:
       account_sync_failed:
         one: "%{count} sincronização de conta da Wise não pôde ser agendada."
         other: "%{count} sincronizações de contas da Wise não puderam ser agendadas."
+      fetch_failed:
+        one: "%{count} pedido à Wise falhou. A próxima sincronização volta a tentar."
+        other: "%{count} pedidos à Wise falharam. A próxima sincronização volta a tentar."
     provider_panel:
       add_connection: Adicionar ligação à Wise
       token_label: Token de API
@@ -64,7 +68,7 @@ pt-PT:
       sync_start_date_label: Importar transações a partir de
       sync_start_date_help: Os extratos da Wise são importados a partir desta data. Deixe o valor predefinido para até um ano de histórico.
       import_all_history_label: Importar o histórico completo de transações
-      import_all_history_help: Obter todos os extratos históricos da Wise em vez de apenas o último ano.
+      import_all_history_help: Importar todo o histórico da Wise (transferências, atividades e extratos) em vez de apenas o último ano. Cada saldo começa então em 0 no dia em que a Wise o abriu.
       connect: Ligar à Wise
       update_connection: Atualizar ligação
       setup_accounts: Configurar contas
@@ -72,7 +76,7 @@ pt-PT:
       disconnect: Desligar
       disconnect_label: "Desligar %{name}"
       disconnect_confirm: "Tem a certeza de que pretende desligar %{name}? Isto irá remover todos os dados de contas sincronizados."
-      sandbox_note_html: "Utilize o URL base <strong>sandbox</strong> (<code>https://api.sandbox.transferwise.tech</code>) para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente."
+      sandbox_note_html: "Utilize o URL base <strong>sandbox</strong> (<code>https://api.wise-sandbox.com</code>) para testes. Defina <code>WISE_BASE_URL</code> no seu ambiente."
       encryption_warning:
         title: A encriptação da base de dados não está configurada
         message: Configure as chaves de encriptação do Active Record antes de adicionar tokens da Wise em produção. Sem encriptação, os tokens são armazenados em texto simples.
@@ -142,6 +146,9 @@ pt-PT:
       failed: Falha ao associar o saldo da Wise. Tente novamente.
     link_existing_account:
       not_found: Conta ou saldo da Wise não encontrado.
+      account_already_linked: Esta conta já está associada a um serviço.
+      unsupported_account_type: Os saldos da Wise só podem ser associados a contas de dinheiro.
+      currency_mismatch: "Este saldo da Wise está em %{balance_currency}, mas a conta está em %{account_currency}. Escolha um saldo na moeda da conta."
       success: "%{account_name} associada com sucesso à Wise"
       failed: Falha ao associar a conta. Tente novamente.
     complete_account_setup:
