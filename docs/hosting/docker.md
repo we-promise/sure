@@ -120,7 +120,9 @@ request whose `Host` header is not on the list is refused with a 403. If you set
 `APP_DOMAIN` for outgoing mail but also reach the app over a LAN address, a
 Tailscale name or `localhost`, add those to `ALLOWED_HOSTS` or they will stop
 working. The `/up` health endpoint is always exempt, so container probes keep
-passing.
+passing. With `compose.example.ai.yml`, Pipelock forwards MCP requests to the
+app with the `Host` header `web:3000`, so add `web` to `ALLOWED_HOSTS` or every
+MCP call through it is refused.
 
 With neither set, the app answers to any `Host` and logs a `[SECURITY]` warning
 at boot.
