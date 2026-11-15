@@ -1,13 +1,14 @@
-# Shared controller for an account provider's connections: managing them, and
-# selecting and linking their accounts. Each provider routes `<key>_items` to a
+# Shared controller for an account provider's connections: managing them,
+# selecting and linking their accounts, and setting up the accounts they import. Each provider routes `<key>_items` to a
 # thin `<Key>ItemsController` subclass that names its permitted params in
 # #item_params. Views stay the provider's own (`<key>_items/...`) and read
 # `@<key>_item` and `@<key>_items`.
 class ProviderItemsController < ApplicationController
   ACCOUNT_FLOW_ACTIONS = %i[preload_accounts select_accounts link_accounts select_existing_account link_existing_account].freeze
+  SETUP_ACTIONS = %i[setup_accounts complete_account_setup].freeze
 
-  before_action :set_item, only: %i[show edit update destroy sync]
-  before_action :require_admin!, only: %i[new create edit update destroy sync] + ACCOUNT_FLOW_ACTIONS
+  before_action :set_item, only: %i[show edit update destroy sync] + SETUP_ACTIONS
+  before_action :require_admin!, only: %i[new create edit update destroy sync] + ACCOUNT_FLOW_ACTIONS + SETUP_ACTIONS
 
   def self.connection_declaration
     Provider::Factory.connection_declarations.find { |declaration| declaration[:association].to_s == controller_name } ||
@@ -123,6 +124,36 @@ class ProviderItemsController < ApplicationController
     redirect_with_navigation(result, return_to: safe_return_to_path)
   end
 
+  def setup_accounts
+    @api_error = account_flow.import_accounts_with_user_facing_error
+    instance_variable_set(:"@#{provider_key}_accounts", account_flow.unlinked_provider_accounts)
+    @account_type_options = account_flow.account_type_options
+    @displayable_account_type_options = account_flow.displayable_account_type_options
+    @subtype_options = account_flow.subtype_options
+
+    render "#{provider_key}_items/setup_accounts"
+  end
+
+  def complete_account_setup
+    result = account_flow.complete_setup_result(
+      account_types: sanitized_account_types,
+      account_subtypes: sanitized_account_subtypes
+    )
+
+    unless result.success?
+      redirect_to accounts_path, alert: result.message, status: :see_other
+      return
+    end
+
+    flash[:notice] = result.message
+
+    if turbo_frame_request?
+      render_accounts_update_after_setup
+    else
+      redirect_to accounts_path, status: :see_other
+    end
+  end
+
   private
 
     # The provider's permitted connection params.
@@ -160,7 +191,7 @@ class ProviderItemsController < ApplicationController
     end
 
     def account_flow
-      @account_flow ||= account_flow_class.new(family: Current.family, item_id: params[:"#{provider_key}_item_id"])
+      @account_flow ||= account_flow_class.new(family: Current.family, item_id: params[:"#{provider_key}_item_id"], item: @item)
     end
 
     def handle_selection_result(result, empty_path:, api_return_path:)
@@ -227,5 +258,71 @@ class ProviderItemsController < ApplicationController
       decoded == "/" || decoded == "\\"
     rescue ArgumentError
       false
+    end
+
+    def render_accounts_update_after_setup
+      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a }
+      self.items = family_items.ordered
+
+      manual_accounts_stream = if @manual_accounts.any?
+        turbo_stream.update(
+          "manual-accounts",
+          partial: "accounts/index/manual_accounts",
+          locals: { accounts: @manual_accounts }
+        )
+      else
+        turbo_stream.replace("manual-accounts", view_context.tag.div(id: "manual-accounts"))
+      end
+
+      render turbo_stream: [
+        manual_accounts_stream,
+        # Admin-only action (require_admin!), so the card lists every account.
+        turbo_stream.replace(
+          ActionView::RecordIdentifier.dom_id(@item),
+          partial: "#{provider_key}_items/#{provider_key}_item",
+          locals: { "#{provider_key}_item": @item, visible_accounts: @item.accounts }
+        )
+      ] + Array(flash_notification_stream_items)
+    end
+
+    def sanitized_account_types
+      supported_types = account_flow_class.adapter_class.supported_account_types
+
+      setup_param_hash(:account_types, allowed_account_ids).each_with_object({}) do |(account_id, selected_type), sanitized|
+        next unless allowed_account_ids.include?(account_id.to_s)
+
+        normalized_type = selected_type.to_s
+        sanitized[account_id.to_s] = supported_types.include?(normalized_type) ? normalized_type : "skip"
+      end
+    end
+
+    # Subtypes of the account types the provider supports.
+    def sanitized_account_subtypes
+      allowed_subtypes = account_flow_class.adapter_class.supported_account_types.flat_map { |type| type.constantize::SUBTYPES.keys }.map(&:to_s)
+
+      setup_param_hash(:account_subtypes, allowed_account_ids).each_with_object({}) do |(account_id, selected_subtype), sanitized|
+        next unless allowed_account_ids.include?(account_id.to_s)
+        next if selected_subtype.blank?
+        next unless allowed_subtypes.include?(selected_subtype.to_s)
+
+        sanitized[account_id.to_s] = selected_subtype.to_s
+      end
+    end
+
+    def setup_param_hash(key, allowed_keys)
+      raw_params = params.fetch(key, {})
+      return {} if raw_params.blank?
+
+      if raw_params.is_a?(ActionController::Parameters)
+        raw_params.permit(*allowed_keys).to_h
+      elsif raw_params.is_a?(Hash)
+        raw_params.slice(*allowed_keys)
+      else
+        {}
+      end
+    end
+
+    def allowed_account_ids
+      @allowed_account_ids ||= @item.provider_accounts.pluck(:id).map(&:to_s)
     end
 end
