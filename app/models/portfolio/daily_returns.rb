@@ -1092,7 +1092,8 @@ class Portfolio::DailyReturns
         #{fragment(:flow_class_joins)}
         #{entry_fx_joins}
         WHERE entries.account_id = ANY(array[:account_ids]::uuid[])
-          AND entries.date BETWEEN :start_date AND :end_date
+          -- The flows' window, so a scheduled dividend is in neither.
+          AND entries.date BETWEEN :start_date AND LEAST(DATE :end_date, DATE :today)
           AND (flow_windows.active_until_date IS NULL OR entries.date <= flow_windows.active_until_date)
           AND #{not_split_parent_sql}
           AND entry_fx.rate IS NOT NULL

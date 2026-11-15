@@ -169,6 +169,22 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     assert_equal BigDecimal(30), income_by_security.amount_for(@aapl.id)
   end
 
+  # A dividend scheduled after today has not reached the balance, so it is in
+  # neither the total nor the table, the same window the daily rows read.
+  test "income scheduled after today is not attributed" do
+    travel_to @mar do
+      income_trade account: @account, date: @mar, amount: 30, security: @aapl
+      income_trade account: @account, date: @mar + 1, amount: 99, security: @aapl
+      lay_flat_balances cash_by_date: { @mar => 30 }
+
+      by_security = income_by_security
+
+      assert_equal BigDecimal(30), by_security.total, "precondition: the daily rows leave the scheduled dividend out"
+      assert_equal BigDecimal(30), by_security.amount_for(@aapl.id)
+      assert_equal BigDecimal(0), by_security.unattributed
+    end
+  end
+
   # A disabled account stops contributing on its cut-off date, so a dividend
   # paid after it is in neither the total nor the table.
   test "income after an account's cut off date is not attributed" do
