@@ -133,9 +133,11 @@ class Portfolio::Performance
   # #drivers is, because it is cached and an object would not survive the round
   # trip.
   #
-  # `by_security` is a PERIOD total, not by month: its rows add up to the
-  # period's total, not to any one month's bucket, so it cannot be placed
-  # under a bar.
+  # `by_security` is a PERIOD figure, not by month, so it cannot be placed
+  # under a bar. It holds only income that names a security; the rest of the
+  # period's total is the unattributed remainder, which
+  # Portfolio::IncomeBySecurity#unattributed reports so the table still adds
+  # up to the total.
   #
   # Its OWN cache entry rather than part of #metrics, and computed only when
   # asked. The by-security figures cost a query, and a caller that builds a
