@@ -7,6 +7,7 @@ class Rule::Registry::TransactionResource < Rule::Registry
     Rule::ConditionFilter::TransactionCategory,
     Rule::ConditionFilter::TransactionTag,
     Rule::ConditionFilter::TransactionDetails,
+    Rule::ConditionFilter::TransactionAdditionalDetail,
     Rule::ConditionFilter::TransactionNotes,
     Rule::ConditionFilter::TransactionAccount
   ].freeze
