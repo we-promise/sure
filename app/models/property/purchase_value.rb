@@ -34,6 +34,12 @@ class Property::PurchaseValue
     [ latest, Entry.min_supported_date + 1 ].max
   end
 
+  # The account's balance is its latest value, which on a draft that already
+  # had a value can differ from the purchase price saved before.
+  def price
+    account.has_opening_anchor? ? account.opening_anchor_balance : account.balance
+  end
+
   # Returns the opening balance manager's result.
   def save(balance)
     result = Account::OpeningBalanceManager.new(account).set_opening_balance(balance: balance, date: date)

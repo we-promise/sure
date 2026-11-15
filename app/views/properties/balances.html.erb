@@ -13,6 +13,7 @@
             <%= form.money_field :balance,
                 label: @account.draft? ? t("vehicles.form.purchase_price") : t(".market_value_label"),
                 label_tooltip: (t(".market_value_tooltip") unless @account.draft?),
+                value: (purchase_value.price if @account.draft? && !params.key?(:account)),
                 placeholder: "0" %>
 
             <% if @account.draft? %>

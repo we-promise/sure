@@ -254,6 +254,18 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[purchase_date]'][value='#{(Entry.min_supported_date + 1).iso8601}']"
   end
 
+  test "value step shows the saved purchase price, not a later value" do
+    account = create_draft_property
+    add_reconciliation(account, date: Date.current, amount: 90_000)
+    patch update_balances_property_path(account), params: {
+      account: { balance: 100_000, currency: "EUR", purchase_date: 1.year.ago.to_date.iso8601 }
+    }
+    account.update!(balance: 90_000)
+
+    get balances_property_path(account)
+    assert_select "input[name='account[balance]'][value='100000.00']"
+  end
+
   test "value step rejects an unknown currency" do
     account = create_draft_property
     add_reconciliation(account, date: 1.year.ago.to_date, amount: 90_000)

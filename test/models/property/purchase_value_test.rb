@@ -53,6 +53,14 @@ class Property::PurchaseValueTest < ActiveSupport::TestCase
     assert_not @account.has_opening_anchor?
   end
 
+  test "the price is the saved purchase valuation, not the latest value" do
+    Property::PurchaseValue.new(@account, date: 2.years.ago.to_date.iso8601).save(100_000)
+    add_reconciliation(date: Date.current, amount: 250_000)
+    @account.update!(balance: 250_000)
+
+    assert_equal 100_000, Property::PurchaseValue.new(@account).price
+  end
+
   private
     def add_reconciliation(date:, amount:)
       @account.entries.create!(
