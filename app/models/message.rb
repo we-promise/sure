@@ -17,6 +17,16 @@ class Message < ApplicationRecord
 
   scope :ordered, -> { order(created_at: :asc) }
 
+  # Tool calls grouped by the round that produced them, in call order. Rows
+  # saved before rounds were recorded have no round and form a single group.
+  def tool_call_rounds
+    ordered = tool_calls.each_with_index.sort_by do |tool_call, index|
+      [ tool_call.round.to_i, tool_call.created_at || Time.zone.at(0), tool_call.id.to_s, index ]
+    end.map(&:first)
+
+    Assistant::Responder.group_by_round(ordered)
+  end
+
   private
     def broadcast?
       true

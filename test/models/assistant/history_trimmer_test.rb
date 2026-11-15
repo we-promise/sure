@@ -101,4 +101,32 @@ class Assistant::HistoryTrimmerTest < ActiveSupport::TestCase
 
     assert_equal [ messages.last ], result
   end
+
+  test "never orphans a tool round when a budget cuts between rounds of one turn" do
+    call = ->(id) { { id: id, type: "function", function: { name: "f", arguments: "{}" } } }
+    messages = [
+      { role: "user", content: "question" },
+      { role: "assistant", content: "", tool_calls: [ call.("a") ] },
+      { role: "tool", tool_call_id: "a", content: "x" * 200 },
+      { role: "assistant", content: "", tool_calls: [ call.("b1"), call.("b2") ] },
+      { role: "tool", tool_call_id: "b1", content: "x" * 200 },
+      { role: "tool", tool_call_id: "b2", content: "x" * 200 },
+      { role: "assistant", content: "final answer" }
+    ]
+
+    (1..400).step(10) do |budget|
+      kept = Assistant::HistoryTrimmer.new(messages, max_tokens: budget).call
+
+      assert_equal messages.last(kept.size), kept, "budget #{budget}: kept messages must be a suffix"
+
+      kept.each_with_index do |msg, i|
+        if msg[:tool_calls].present?
+          following = kept[(i + 1)..].take_while { |m| m[:role] == "tool" }.map { |m| m[:tool_call_id] }
+          assert_equal msg[:tool_calls].map { |c| c[:id] }, following, "budget #{budget}: results must follow their call"
+        elsif msg[:role] == "tool"
+          assert kept[0...i].any? { |m| m[:tool_calls]&.any? { |c| c[:id] == msg[:tool_call_id] } }, "budget #{budget}: orphaned tool result"
+        end
+      end
+    end
+  end
 end

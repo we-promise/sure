@@ -7,11 +7,11 @@ class Assistant::Responder
   # ASSISTANT_MAX_TOOL_CALL_ITERATIONS (low-resource hosts may want 2).
   DEFAULT_MAX_TOOL_CALL_ITERATIONS = 8
 
-  # Splits in-flight function results into tool rounds, in order. #respond
-  # tags each result with the :round that produced it; providers that rebuild
-  # the in-flight history replay one tool-call message plus its results per
+  # Splits function results (or persisted tool calls) into tool rounds, in
+  # order. #respond sets the :round on each call that round produced; providers
+  # that rebuild history replay one tool-call message plus its results per
   # round, so every follow-up request extends the previous one instead of
-  # rewriting it. Results without a :round tag form a single round.
+  # rewriting it. Entries without a :round form a single round.
   def self.group_by_round(function_results)
     function_results.chunk_while { |a, b| a[:round] == b[:round] }.to_a
   end
@@ -41,9 +41,9 @@ class Assistant::Responder
       end
 
       function_tool_calls = function_tool_caller.fulfill_requests(response.function_requests)
+      function_tool_calls.each { |tool_call| tool_call.round = iteration }
       function_results = function_tool_calls.map(&:to_result)
-      # Tag each result with its round; see .group_by_round.
-      in_flight_function_results.concat(function_results.map { |result| result.merge(round: iteration) })
+      in_flight_function_results.concat(function_results)
 
       emit(:response, {
         id: response.id,
@@ -196,34 +196,23 @@ class Assistant::Responder
     def openai_messages_payload
       messages = []
       complete_chat_messages.each do |chat_message|
-        if chat_message.tool_calls.any?
-          messages << {
-            role: chat_message.role,
-            content: chat_message.content || "",
-            tool_calls: chat_message.tool_calls.map(&:to_tool_call)
-          }
+        rounds = chat_message.tool_call_rounds
 
-          chat_message.tool_calls.map(&:to_result).each do |fn_result|
-            # Handle nil explicitly to avoid serializing to "null"
-            output = fn_result[:output]
-            content = if output.nil?
-              ""
-            elsif output.is_a?(String)
-              output
-            else
-              output.to_json
-            end
+        # Same shape Provider::Openai#build_generic_messages sends mid-turn, so
+        # a replayed turn is a byte-identical prefix of its own requests.
+        rounds.each do |round|
+          messages << { role: chat_message.role, content: "", tool_calls: round.map(&:to_tool_call) }
 
+          round.each do |tool_call|
             messages << {
               role: "tool",
-              tool_call_id: fn_result[:call_id],
-              content: content
+              tool_call_id: tool_call.provider_call_id,
+              content: ToolCall::Function.serialize_output(tool_call.function_result)
             }
           end
-
-        elsif !chat_message.content.blank?
-          messages << { role: chat_message.role, content: chat_message.content || "" }
         end
+
+        messages << { role: chat_message.role, content: chat_message.content } if chat_message.content.present?
       end
       messages
     end

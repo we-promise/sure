@@ -103,4 +103,36 @@ class ToolCall::FunctionTest < ActiveSupport::TestCase
     assert_equal extra, reloaded.to_tool_call[:extra_content]
     assert_equal extra, reloaded.to_result[:extra_content]
   end
+
+  test "serialize_output sorts object keys at every depth and leaves arrays in order" do
+    output = { "b" => 1, "a" => { "z" => 1, "y" => [ { "d" => 1, "c" => 2 }, 3 ] } }
+
+    assert_equal '{"a":{"y":[{"c":2,"d":1},3],"z":1},"b":1}', ToolCall::Function.serialize_output(output)
+  end
+
+  test "serialize_output passes strings through and renders nil as empty" do
+    assert_equal "plain", ToolCall::Function.serialize_output("plain")
+    assert_equal "", ToolCall::Function.serialize_output(nil)
+  end
+
+  test "serialize_output is identical before and after a jsonb reload" do
+    result = { "transactions" => [ { "name" => "Rent", "amount" => 100 } ], "total_results" => 1, "page" => 1 }
+    tool_call = ToolCall::Function.create!(
+      message: messages(:chat1_assistant_response),
+      provider_id: "call_1",
+      provider_call_id: "call_1",
+      function_name: "get_transactions",
+      function_arguments: "{}",
+      function_result: result,
+      round: 1
+    )
+
+    reloaded = ToolCall::Function.find(tool_call.id)
+
+    assert_equal(
+      ToolCall::Function.serialize_output(tool_call.function_result),
+      ToolCall::Function.serialize_output(reloaded.function_result)
+    )
+    assert_equal 1, reloaded.to_result[:round]
+  end
 end

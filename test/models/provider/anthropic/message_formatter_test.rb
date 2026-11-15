@@ -51,14 +51,50 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
     assert_equal "toolu_1", messages[1][:content].first[:id]
     assert_equal "get_net_worth", messages[1][:content].first[:name]
     assert_equal({ "currency" => "USD" }, messages[1][:content].first[:input])
-    assert_equal "text", messages[1][:content].last[:type]
+    assert_equal 1, messages[1][:content].size
 
     assert_equal "user", messages[2][:role]
     assert_equal "tool_result", messages[2][:content].first[:type]
     assert_equal "toolu_1", messages[2][:content].first[:tool_use_id]
     assert_equal({ "amount" => 12345, "currency" => "USD" }.to_json, messages[2][:content].first[:content])
 
-    assert_equal({ role: "user", content: "anything else?" }, messages[3])
+    assert_equal({ role: "assistant", content: [ { type: "text", text: "Your net worth is $12,345." } ] }, messages[3])
+    assert_equal({ role: "user", content: "anything else?" }, messages[4])
+  end
+
+  test "replays a finished multi-round turn as one pair per round then the final answer" do
+    tool_calls = [
+      stub_tool_call(id: "toolu_c", name: "get_tags", arguments: {}, result: { "tags" => [] }, round: 2),
+      stub_tool_call(id: "toolu_a", name: "get_accounts", arguments: {}, result: { "accounts" => [] }, round: 1),
+      stub_tool_call(id: "toolu_b", name: "get_categories", arguments: {}, result: { "categories" => [] }, round: 2)
+    ]
+    assistant = stub_assistant_message("All done.", tool_calls: tool_calls)
+
+    messages = Provider::Anthropic::MessageFormatter.new(
+      prompt: "next",
+      conversation_history: [ stub_user_message("q"), assistant ]
+    ).build
+
+    assert_equal %w[user assistant user assistant user assistant user], messages.map { |m| m[:role] }
+    assert_equal [ "toolu_a" ], messages[1][:content].map { |b| b[:id] }
+    assert_equal [ "toolu_a" ], messages[2][:content].map { |b| b[:tool_use_id] }
+    assert_equal %w[toolu_c toolu_b].sort, messages[3][:content].map { |b| b[:id] }.sort
+    assert_equal [ { type: "text", text: "All done." } ], messages[5][:content]
+  end
+
+  test "a replayed turn is a prefix of the requests sent mid-turn" do
+    result = { "b" => 1, "a" => 2 }
+    round_1 = stub_tool_call(id: "toolu_a", name: "get_accounts", arguments: "{}", result: result, round: 1)
+    assistant = stub_assistant_message("done", tool_calls: [ round_1 ])
+
+    in_flight = Provider::Anthropic::MessageFormatter.new(
+      prompt: "q", function_results: [ round_1.to_result ]
+    ).build
+    history = Provider::Anthropic::MessageFormatter.new(
+      prompt: "q2", conversation_history: [ stub_user_message("q"), assistant ]
+    ).build
+
+    assert_equal in_flight, history.first(in_flight.size)
   end
 
   test "renders in-flight function_results as assistant tool_use + user tool_result" do
@@ -249,11 +285,12 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
       msg
     end
 
-    def stub_tool_call(id:, name:, arguments:, result:)
+    def stub_tool_call(id:, name:, arguments:, result:, round: nil)
       tc = ToolCall::Function.new(
         function_name: name,
         function_arguments: arguments,
-        function_result: result
+        function_result: result,
+        round: round
       )
       tc.stubs(:provider_call_id).returns(id)
       tc.stubs(:provider_id).returns(id)

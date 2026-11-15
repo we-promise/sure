@@ -23,6 +23,25 @@ class ToolCall::Function < ToolCall
 
       args.is_a?(String) ? args : args.to_json
     end
+
+    # The tool message body sent to the model. Object keys are sorted because
+    # jsonb returns them in its own order after a reload, and the in-flight
+    # and replayed payloads must be byte-identical for prefix caching.
+    def serialize_output(output)
+      case output
+      when nil then ""
+      when String then output
+      else canonicalize(output).to_json
+      end
+    end
+
+    def canonicalize(value)
+      case value
+      when Hash then value.sort_by { |key, _| key.to_s }.to_h { |key, nested| [ key, canonicalize(nested) ] }
+      when Array then value.map { |item| canonicalize(item) }
+      else value
+      end
+    end
   end
 
   def to_result
@@ -31,7 +50,8 @@ class ToolCall::Function < ToolCall
       name: function_name,
       arguments: function_arguments,
       output: function_result,
-      extra_content: extra_content
+      extra_content: extra_content,
+      round: round
     }
   end
 
@@ -48,7 +68,7 @@ class ToolCall::Function < ToolCall
         arguments: arguments
       }
     }
-    call[:extra_content] = extra_content if extra_content.present?
+    call[:extra_content] = self.class.canonicalize(extra_content) if extra_content.present?
     call
   end
 end

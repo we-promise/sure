@@ -732,7 +732,7 @@ class Provider::Openai < Provider
               arguments: arguments_str
             }
           }
-          call[:extra_content] = fn_result[:extra_content] if fn_result[:extra_content].present?
+          call[:extra_content] = ToolCall::Function.canonicalize(fn_result[:extra_content]) if fn_result[:extra_content].present?
           call
         end
 
@@ -744,22 +744,10 @@ class Provider::Openai < Provider
 
         # Add function results as tool messages
         round_results.each do |fn_result|
-          # Convert output to JSON string if it's not already a string
-          # OpenAI API requires content to be either a string or array of objects
-          # Handle nil explicitly to avoid serializing to "null"
-          output = fn_result[:output]
-          content = if output.nil?
-            ""
-          elsif output.is_a?(String)
-            output
-          else
-            output.to_json
-          end
-
           payload << {
             role: "tool",
             tool_call_id: fn_result[:call_id],
-            content: content
+            content: ToolCall::Function.serialize_output(fn_result[:output])
           }
         end
       end

@@ -238,6 +238,41 @@ class AssistantTest < ActiveSupport::TestCase
                  response.tool_calls.map(&:function_name).sort
   end
 
+  test "each request in a multi-round turn extends the previous one byte for byte, including the next turn" do
+    # jsonb sorts keys by length, so replayed key order differs from the order sent in-flight.
+    Assistant::Function::GetAccounts.any_instance.stubs(:call).returns({ "b" => 1, "aa" => { "y" => 2, "x" => 3 } })
+    Assistant::Function::GetIncomeStatement.any_instance.stubs(:call).returns({ "net" => 4 })
+    @assistant.stubs(:get_model_provider).with("gpt-4.1").returns(@provider)
+
+    captured = []
+    stub_provider_rounds(
+      [ provider_response_chunk(id: "1", model: "gpt-4.1", messages: [], function_requests: [
+        provider_function_request(id: "1", call_id: "call_a", function_name: "get_accounts", function_args: "{}")
+      ]) ],
+      [ provider_response_chunk(id: "2", model: "gpt-4.1", messages: [], function_requests: [
+        provider_function_request(id: "2", call_id: "call_b", function_name: "get_income_statement", function_args: "{}")
+      ]) ],
+      [ provider_text_chunk("Final answer."), provider_response_chunk(id: "3", model: "gpt-4.1", messages: [ provider_message(id: "3", text: "Final answer.") ], function_requests: []) ],
+      [ provider_response_chunk(id: "4", model: "gpt-4.1", messages: [ provider_message(id: "4", text: "Ok.") ], function_requests: []) ],
+      captured: captured
+    )
+    @assistant.respond_to(@message)
+    first_turn_requests = captured.dup
+
+    second_turn_message = @chat.messages.create!(type: "UserMessage", content: "And my income?", ai_model: "gpt-4.1")
+    @assistant.respond_to(second_turn_message)
+    second_turn_requests = captured.drop(first_turn_requests.size)
+
+    first_turn_payloads = wire_payloads(first_turn_requests)
+    second_turn_payloads = wire_payloads(second_turn_requests)
+
+    assert_equal 3, first_turn_payloads.size
+    assert_equal 1, second_turn_payloads.size
+    assert_includes first_turn_payloads.last.map { |m| m[:role] }, "tool", "turn must include tool rounds to be meaningful"
+    first_turn_payloads.each_cons(2) { |previous, current| assert_extends(current, previous, "within turn") }
+    assert_extends(second_turn_payloads.first, first_turn_payloads.last, "across turns")
+  end
+
   test "keeps earlier text when the final tool follow-up is empty" do
     @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider).once
     Assistant::Function::GetAccounts.any_instance.stubs(:call).returns("accounts").once
@@ -667,7 +702,99 @@ class AssistantTest < ActiveSupport::TestCase
     assert_not tool_result_entry.key?(:name), "tool messages must not carry the deprecated `name` field"
   end
 
+  test "conversation_history replays each tool round as its own pair before the final answer" do
+    assistant_msg = AssistantMessage.create!(chat: @chat, content: "Final answer", ai_model: "gpt-4.1", status: "complete")
+    [ [ "call_a", 1 ], [ "call_b", 2 ], [ "call_c", 2 ] ].each do |call_id, round|
+      ToolCall::Function.create!(
+        message: assistant_msg,
+        provider_id: call_id,
+        provider_call_id: call_id,
+        function_name: "get_thing",
+        function_arguments: "{}",
+        function_result: { "b" => 1, "a" => call_id },
+        round: round
+      )
+    end
+
+    history = capture_history_for_next_turn
+    start = history.index { |m| m[:role] == "assistant" && m[:tool_calls].present? }
+    turn = history[start..]
+
+    assert_equal %w[assistant tool assistant tool tool assistant], turn.first(6).map { |m| m[:role] }
+    assert_equal [ "call_a" ], turn[0][:tool_calls].map { |c| c[:id] }
+    assert_equal [ "call_a" ], turn[1..1].map { |m| m[:tool_call_id] }
+    assert_equal [ "call_b", "call_c" ], turn[2][:tool_calls].map { |c| c[:id] }
+    assert_equal [ "call_b", "call_c" ], turn[3..4].map { |m| m[:tool_call_id] }
+    assert_equal({ role: "assistant", content: "Final answer" }, turn[5])
+    assert_equal '{"a":"call_a","b":1}', turn[1][:content]
+  end
+
+  test "conversation_history replays tool calls without a round as a single group" do
+    assistant_msg = AssistantMessage.create!(chat: @chat, content: "Final answer", ai_model: "gpt-4.1", status: "complete")
+    %w[call_a call_b].each do |call_id|
+      ToolCall::Function.create!(
+        message: assistant_msg,
+        provider_id: call_id,
+        provider_call_id: call_id,
+        function_name: "get_thing",
+        function_arguments: "{}",
+        function_result: { "ok" => true }
+      )
+    end
+
+    history = capture_history_for_next_turn
+    start = history.index { |m| m[:role] == "assistant" && m[:tool_calls].present? }
+
+    assert_equal [ "call_a", "call_b" ], history[start][:tool_calls].map { |c| c[:id] }
+    assert_equal %w[tool tool assistant], history[(start + 1)..].first(3).map { |m| m[:role] }
+  end
+
   private
+
+    def stub_provider_rounds(*rounds, captured:)
+      queued = rounds.dup
+      responses = rounds.map { |chunks| provider_success_response(chunks.find { |chunk| chunk.type == "response" }.data) }
+
+      @provider.expects(:chat_response).times(rounds.length).with do |_prompt, **options|
+        captured << options.slice(:messages, :function_results, :instructions)
+        queued.shift.each { |chunk| options[:streamer].call(chunk) }
+        true
+      end.returns(*responses)
+    end
+
+    def wire_payloads(requests)
+      provider = Provider::Openai.new("test-key")
+      requests.map do |request|
+        provider.send(:build_generic_messages,
+          prompt: nil,
+          instructions: request[:instructions],
+          function_results: request[:function_results],
+          messages: request[:messages])
+      end
+    end
+
+    def assert_extends(current, previous, label)
+      assert_operator current.size, :>=, previous.size, "#{label}: request shrank"
+      assert_equal previous.map(&:to_json), current.first(previous.size).map(&:to_json), "#{label}: not a byte prefix"
+    end
+
+    def capture_history_for_next_turn
+      @assistant.expects(:get_model_provider).with("gpt-4.1").returns(@provider)
+
+      captured_history = nil
+      @provider.expects(:chat_response).with do |_prompt, **options|
+        captured_history = options[:messages]
+        options[:streamer].call(
+          provider_response_chunk(id: "1", model: "gpt-4.1", messages: [ provider_message(id: "1", text: "ok") ], function_requests: [])
+        )
+        true
+      end.returns(provider_success_response(
+        provider_response_chunk(id: "1", model: "gpt-4.1", messages: [ provider_message(id: "1", text: "ok") ], function_requests: []).data
+      ))
+
+      @assistant.respond_to(@message)
+      captured_history
+    end
 
     def mock_external_sse_response(sse_body)
       capture = []
