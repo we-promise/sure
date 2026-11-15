@@ -80,8 +80,9 @@ class SnaptradeAccount::Processor
 
       calculated_total = holdings_value + cash_value
 
-      # Use calculated total if we have holdings, otherwise trust API value
-      if holdings_value > 0
+      # Use calculated total if we have holdings, otherwise trust API value.
+      # Net short positions (a short option on its own) make it negative.
+      if holdings_value.nonzero?
         Rails.logger.debug "SnaptradeAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
         calculated_total
       elsif snaptrade_account.current_balance.present?

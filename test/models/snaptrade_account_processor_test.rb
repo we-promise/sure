@@ -261,6 +261,20 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_nil Security.find_by(ticker: "AAPL  261218P00200000")
   end
 
+  test "a short option on its own reduces the total below a stale cash-only API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("1000.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [ option_position("AAPL  261218P00200000", "PUT", units: "-1", price: "2.00") ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    # 1000 cash - 1 x 200 short put
+    assert_equal BigDecimal("800"), @account.reload.balance
+  end
+
   test "option positions use the contract multiplier and position currency" do
     @snaptrade_account.update!(
       raw_holdings_payload: [ option_position("XYZ   261218C00050000", "CALL", units: "3", price: "1.50", multiplier: "10", currency: "CAD") ]
