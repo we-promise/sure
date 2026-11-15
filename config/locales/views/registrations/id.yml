@@ -1,0 +1,31 @@
+---
+id:
+  helpers:
+    label:
+      user:
+        invite_code: Kode Undangan
+    submit:
+      user:
+        create: Lanjutkan
+  registrations:
+    closed: Pendaftaran saat ini sedang ditutup.
+    create:
+      failure: Terjadi masalah saat mendaftar.
+      invalid_invite_code: Kode undangan tidak valid, silakan coba lagi.
+      success: Anda telah berhasil mendaftar.
+    new:
+      invitation_message: "%{inviter} telah mengundang Anda untuk bergabung sebagai %{role}"
+      join_family_title: Bergabung dengan %{moniker} %{family}
+      role_admin: administrator
+      role_guest: tamu
+      role_member: anggota
+      submit: Buat akun
+      title: Buat akun Anda
+      welcome_body: Untuk memulai, Anda harus mendaftar akun baru. Anda selanjutnya dapat mengonfigurasi pengaturan tambahan di dalam aplikasi.
+      welcome_title: Selamat datang di %{product_name} Self-Hosted!
+      password_placeholder: Masukkan kata sandi Anda
+      password_requirements:
+        length: Minimal 8 karakter
+        case: Huruf besar dan kecil
+        number: Angka (0-9)
+        special: "Karakter khusus (!, @, #, $, %, dll.)"

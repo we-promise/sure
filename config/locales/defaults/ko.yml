@@ -42,6 +42,7 @@ ko:
       default: "%Y-%m-%d"
       long: "%Y년 %m월 %d일"
       short: "%m월 %d일"
+      short_with_year: "%Y년 %m월 %d일"
     month_names:
     -
     - 1월

@@ -1,0 +1,145 @@
+---
+uk:
+  providers:
+    fio:
+      name: Fio banka
+      description: Синхронізуйте рахунок у Fio banka за допомогою API-токена лише для читання
+  family:
+    fio:
+      create_fio_item:
+        default_name: З'єднання Fio banka
+  fio_item:
+    errors:
+      account_processing_failed: Не вдалося синхронізувати рахунок Fio
+      account_mismatch: Цей токен належить іншому рахунку Fio, ніж той, який уже синхронізує це з'єднання. Додайте його як окреме з'єднання.
+      account_sync_schedule_failed: Не вдалося запланувати синхронізацію рахунку Fio
+      statement_too_large: Виписка містить більше транзакцій, ніж Fio віддає за один запит. Перенесіть дату початку синхронізації на пізнішу й синхронізуйте знову.
+      statement_fetch_failed: Не вдалося отримати виписку з Fio
+      history_locked: Fio відхилив запит на виписку за цей період. Відкрийте доступ до повної історії рахунку в інтернет-банкінгу в розділі «Налаштування → API», а потім синхронізуйте знову протягом 10 хвилин.
+      sync_failed: Не вдалося синхронізувати з'єднання Fio
+    sync:
+      status:
+        importing: Імпорт виписки з Fio...
+        checking_setup: Перевірка конфігурації рахунку...
+        needs_setup:
+          one: '%{count} рахунок потребує налаштування...'
+          few: '%{count} рахунки потребують налаштування...'
+          many: '%{count} рахунків потребують налаштування...'
+          other: '%{count} рахунків потребують налаштування...'
+        processing: Обробка транзакцій...
+        calculating: Розрахунок балансів...
+    sync_status:
+      no_accounts: Рахунок ще не знайдено
+      all_synced:
+        one: '%{count} рахунок синхронізовано'
+        few: '%{count} рахунки синхронізовано'
+        many: '%{count} рахунків синхронізовано'
+        other: '%{count} рахунків синхронізовано'
+      partial: 'Синхронізовано: %{linked}, потребують налаштування: %{unlinked}'
+  fio_items:
+    account_types:
+      depository: Поточний або ощадний рахунок
+      loan: Кредит, іпотека або овердрафт
+    provider_panel:
+      default_connection_name: З'єднання Fio banka
+      add_connection: Додати з'єднання Fio banka
+      update_connection: Оновити з'єднання
+      connection_name_label: Назва з'єднання
+      connection_name_placeholder: Мій рахунок Fio
+      token_label: API-токен (лише для читання)
+      token_placeholder: Вставте 64-символьний токен
+      keep_token_placeholder: Залиште порожнім, щоб зберегти наявний токен
+      sync_start_date_label: Імпортувати транзакції з
+      sync_start_date_hint: Fio надає дані за останні 90 днів без додаткової авторизації. Для давніших даних відкрийте доступ до повної історії рахунку в інтернет-банкінгу в розділі «Налаштування → API» (значок замка) — це відкриває 10-хвилинне вікно — і синхронізуйте протягом нього.
+      one_account_notice: Один токен дає доступ до одного рахунку Fio, тому додайте окреме з'єднання для кожного рахунку, який хочете відстежувати. Токен можна використовувати раз на 30 секунд; синхронізацію, запущену раніше, виконає наступна.
+      connected_account: Під'єднаний рахунок
+      no_account_yet: Рахунку ще немає — перша синхронізація знайде рахунок, до якого має доступ цей токен.
+      account_needs_setup: Ще не пов'язано з рахунком у Sure.
+      requires_update: Потрібен новий токен
+      requires_update_notice: Fio відхилив цей токен. Токени дійсні до 180 днів, якщо їх не продовжено автоматично під час кожного входу в банкінг, тож створіть новий токен лише для читання в розділі «Налаштування → API» і вставте його нижче.
+      last_synced: Синхронізовано %{timestamp} тому
+      never_synced: Ще не синхронізовано
+      syncing: Синхронізація...
+      sync: Синхронізувати
+      setup_accounts: Налаштувати рахунок
+      disconnect: Від'єднати
+      disconnect_confirm: Ви впевнені, що хочете від'єднати %{name}?
+    create:
+      success: З'єднання Fio banka збережено.
+      token_required: Вставте API-токен з інтернет-банкінгу Fio.
+    update:
+      success: З'єднання Fio banka оновлено.
+    destroy:
+      success: Заплановано видалення з'єднання Fio banka.
+      unlink_failed: Не вдалося від'єднати з'єднання Fio banka
+    select_accounts:
+      title: Пов'яжіть свій рахунок Fio
+      description: Цей токен дає доступ до одного рахунку. Виберіть, як відстежувати його в Sure.
+      account_type_label: Тип рахунку
+      awaiting_first_sync: Fio ще не передав рахунок для цього токена. Запустіть синхронізацію й поверніться сюди.
+      already_linked: Рахунок цього з'єднання вже пов'язано з рахунком у Sure.
+      sync_now: Синхронізувати зараз
+      no_credentials_configured: Спочатку налаштуйте Fio banka в налаштуваннях постачальника.
+      cancel: Скасувати
+      link_account: Пов'язати рахунок
+    link_accounts:
+      success: Ваш рахунок Fio пов'язано з %{account_name}.
+      no_account_found: Для цього з'єднання не знайдено непов'язаного рахунку Fio.
+      no_credentials_configured: Спочатку налаштуйте Fio banka в налаштуваннях постачальника.
+      unsupported_account_type: Fio не підтримує цей тип рахунку.
+      link_failed: Не вдалося пов'язати рахунок.
+    select_existing_account:
+      title: Пов'язати рахунок Fio з %{account_name}
+      description: Пов'яжіть рахунок, до якого має доступ цей токен, з вибраним рахунком.
+      awaiting_first_sync: Fio ще не передав рахунок для цього токена. Запустіть синхронізацію й поверніться сюди.
+      already_linked: Рахунок цього з'єднання вже пов'язано з рахунком у Sure.
+      sync_now: Синхронізувати зараз
+      no_credentials_configured: Спочатку налаштуйте Fio banka в налаштуваннях постачальника.
+      account_already_linked: Цей рахунок уже пов'язано з постачальником.
+      cancel: Скасувати
+      link_account: Пов'язати рахунок
+    link_existing_account:
+      success: Ваш рахунок Fio пов'язано з %{account_name}.
+      account_already_linked: Цей рахунок уже пов'язано з постачальником.
+      fio_account_already_linked: Цей рахунок Fio вже пов'язано.
+      no_account_selected: Немає доступного рахунку Fio для пов'язування.
+      unsupported_account_type: Fio може синхронізувати лише грошові та кредитні рахунки.
+    setup_accounts:
+      title: Пов'яжіть свій рахунок Fio
+      subtitle: Виберіть, як рахунок, до якого має доступ цей токен, відображатиметься в Sure.
+      choose_account_type: Виберіть тип рахунку
+      choose_account_type_description: Пропустіть, якщо не хочете відстежувати цей рахунок.
+      account_type_label: Тип рахунку
+      account_types:
+        skip: Пропустити
+      create_account: Створити рахунок
+      awaiting_first_sync: Рахунок ще не знайдено
+      awaiting_first_sync_description: Fio передає дані рахунку лише у виписці, тому він з'явиться після першої успішної синхронізації.
+      sync_now: Синхронізувати зараз
+      nothing_to_setup: Нічого налаштовувати
+      account_already_handled: Рахунок цього з'єднання вже пов'язано або пропущено.
+      close: Закрити
+      cancel: Скасувати
+    complete_account_setup:
+      success: Створено %{account_name}.
+      skipped: Рахунок Fio пропущено.
+      no_account: Немає рахунку Fio, який потребує налаштування.
+      unsupported_account_type: Fio не підтримує цей тип рахунку.
+      creation_failed: Не вдалося створити рахунок у Sure.
+    fio_item:
+      deletion_in_progress: Триває видалення
+      syncing: Синхронізація
+      requires_update: Потрібен новий токен
+      error: Помилка
+      status_with_summary: Синхронізовано %{timestamp} тому · %{summary}
+      status_never: Ще не синхронізовано
+      delete: Видалити
+      requires_update_title: Потрібен новий токен
+      requires_update_description: Fio відхилив токен для цього з'єднання. Створіть новий токен лише для читання в інтернет-банкінгу в розділі «Налаштування → API».
+      update_token: Оновити токен
+      setup_needed: Потрібно налаштувати рахунок
+      setup_description: Рахунок, до якого має доступ цей токен, ще не пов'язано з рахунком у Sure.
+      setup_action: Налаштувати рахунок
+      no_accounts_title: Рахунок ще не імпортовано
+      no_accounts_description: Fio передає дані рахунку лише у виписці, тому він з'явиться після першої успішної синхронізації.
+      sync_now: Синхронізувати зараз

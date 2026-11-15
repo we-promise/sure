@@ -1,0 +1,116 @@
+---
+ca:
+  providers:
+    up:
+      name: Up
+      description: Connecta comptes del banc australià Up amb un token d'accés personal
+  family:
+    up:
+      create_up_item:
+        default_name: Connexió Up
+  up_account:
+    fallback: Compte Up
+  up_item:
+    errors:
+      account_processing_failed: No s'ha pogut sincronitzar el compte Up
+      account_sync_schedule_failed: No s'ha pogut programar la sincronització del compte Up
+      transactions_failed: No s'han pogut obtenir les transaccions d'Up
+      sync_failed: No s'ha pogut sincronitzar la connexió Up
+    sync_status:
+      no_accounts: No s'han trobat comptes
+      all_synced:
+        one: '%{count} compte sincronitzat'
+        other: '%{count} comptes sincronitzats'
+      partial: '%{linked} sincronitzats, %{unlinked} pendents de configurar'
+    institution_summary:
+      none: No hi ha entitats connectades
+      one: 1 entitat
+      count:
+        one: '%{count} entitat'
+        other: '%{count} entitats'
+  up_items:
+    provider_panel:
+      default_connection_name: Connexió Up
+      add_connection: Afegeix connexió Up
+      update_connection: Actualitza la connexió
+      connection_name_label: Nom de la connexió
+      connection_name_placeholder: Up principal
+      access_token_label: Token d'accés personal
+      access_token_placeholder: Enganxa el teu token d'accés personal d'Up
+      keep_access_token_placeholder: Deixa-ho en blanc per mantenir el token actual
+      setup_accounts: Configura comptes
+      syncing: Sincronitzant...
+      sync: Sincronitza
+      disconnect: Desconnecta
+      disconnect_confirm: Vols desconnectar %{name}?
+    create:
+      success: S'ha desat la connexió Up.
+    update:
+      success: S'ha actualitzat la connexió Up.
+    destroy:
+      success: S'ha programat l'eliminació de la connexió Up.
+      unlink_failed: No s'ha pogut desconnectar la connexió Up
+    select_accounts:
+      title: Enllaça comptes Up
+      description: Tria els comptes Up que vols afegir.
+      no_accounts_found: No s'han trobat comptes Up sense enllaçar.
+      no_credentials_configured: Primer, configura Up a la configuració del proveïdor.
+      cancel: Cancel·la
+      link_accounts: Enllaça comptes
+    link_accounts:
+      success:
+        one: S'ha enllaçat %{count} compte Up.
+        other: S'han enllaçat %{count} comptes Up.
+      no_accounts_selected: Selecciona almenys un compte.
+      no_credentials_configured: Primer, configura Up a la configuració del proveïdor.
+      unsupported_account_type: Up no admet aquest tipus de compte.
+      link_failed: No s'ha enllaçat cap compte.
+    select_existing_account:
+      title: Enllaça un compte Up amb %{account_name}
+      description: Tria un compte Up sense enllaçar per connectar-lo amb aquest compte.
+      no_accounts_found: No s'han trobat comptes Up sense enllaçar.
+      no_credentials_configured: Primer, configura Up a la configuració del proveïdor.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      cancel: Cancel·la
+      link_account: Enllaça compte
+    link_existing_account:
+      success: S'ha enllaçat el compte Up amb %{account_name}.
+      account_already_linked: Aquest compte ja està enllaçat a un proveïdor.
+      up_account_already_linked: Aquest compte Up ja està enllaçat.
+      no_account_selected: Selecciona un compte Up per enllaçar.
+    setup_accounts:
+      title: Enllaça comptes Up
+      subtitle: Tria com vols que aparegui cada compte Up a Sure.
+      no_credentials: Primer, configura les credencials d'Up.
+      api_error: No s'han pogut obtenir els comptes Up.
+      fetch_failed: No s'han pogut obtenir els comptes
+      no_accounts_to_setup: No hi ha comptes per configurar
+      all_accounts_linked: Tots els comptes Up ja estan enllaçats.
+      choose_account_type: Tria un tipus de compte
+      choose_account_type_description: Omet els comptes que no vulguis seguir.
+      account_type_label: Tipus de compte
+      account_types:
+        skip: Omet
+        depository: Efectiu
+        loan: Préstec
+      create_accounts: Crea comptes
+      cancel: Cancel·la
+    complete_account_setup:
+      success:
+        one: S'ha creat %{count} compte Up.
+        other: S'han creat %{count} comptes Up.
+      all_skipped: No s'ha creat cap compte Up.
+      no_accounts: No s'ha seleccionat cap compte Up.
+      creation_failed: No s'han pogut crear els comptes Up.
+    up_item:
+      deletion_in_progress: Eliminació en curs
+      syncing: Sincronitzant
+      error: Error
+      status_with_summary: Sincronitzat fa %{timestamp} · %{summary}
+      status_never: Mai sincronitzat
+      delete: Elimina
+      setup_needed: Cal configurar els comptes
+      setup_description: '%{linked} de %{total} comptes enllaçats.'
+      setup_action: Configura comptes
+      no_accounts_title: Encara no s'ha importat cap compte
+      no_accounts_description: Obté els comptes Up i tria quins vols enllaçar.

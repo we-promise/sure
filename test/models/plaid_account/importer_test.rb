@@ -43,4 +43,28 @@ class PlaidAccount::ImporterTest < ActiveSupport::TestCase
 
     PlaidAccount::Importer.new(@plaid_account, account_snapshot: @mock_account_snapshot).import
   end
+
+  # A sync that fetched no liabilities would otherwise process the payload a
+  # previous sync stored, and a variable loan would record that old rate as a
+  # change dated to this sync.
+  test "a sync without liabilities data clears the stored liabilities payload" do
+    @plaid_account.update!(raw_liabilities_payload: { "mortgage" => { "interest_rate" => { "percentage" => 4.5 } } })
+    snapshot = OpenStruct.new(account_data: nil, transactions_data: nil, investments_data: nil, liabilities_data: nil)
+    @plaid_account.stubs(:upsert_plaid_snapshot!)
+
+    PlaidAccount::Importer.new(@plaid_account, account_snapshot: snapshot).import
+
+    assert_equal({}, @plaid_account.reload.raw_liabilities_payload)
+  end
+
+  test "a sync without liabilities data leaves an account that never had them unwritten" do
+    @plaid_account.update_columns(raw_liabilities_payload: nil)
+    snapshot = OpenStruct.new(account_data: nil, transactions_data: nil, investments_data: nil, liabilities_data: nil)
+    @plaid_account.stubs(:upsert_plaid_snapshot!)
+    @plaid_account.expects(:upsert_plaid_liabilities_snapshot!).never
+
+    PlaidAccount::Importer.new(@plaid_account, account_snapshot: snapshot).import
+
+    assert_nil @plaid_account.reload.raw_liabilities_payload
+  end
 end

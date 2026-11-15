@@ -10,18 +10,26 @@
 # aliases (`ae`, `a`). The including class must set `@family`.
 module IncomeStatement::ScopedTransactionsQuery
   private
-    # Contributions and loan payments are cash outflows recorded as negative
-    # amounts, so they always classify as expense; other negative amounts
-    # classify as income.
+    # Contributions and loan payments are cash outflows whatever their
+    # sign, so they classify as expense; other negative amounts classify as
+    # income. A family that does not count investing as spending gets its
+    # contributions classified as 'investment' instead, which keeps them out
+    # of income and expense totals while still letting callers sum them.
     def classification_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
+      contribution = @family.investment_contributions_as_spending? ? "expense" : "investment"
+      "CASE WHEN #{t}.kind = 'investment_contribution' THEN '#{contribution}' WHEN #{t}.kind = 'loan_payment' THEN 'expense' WHEN ae.amount < 0 THEN 'income' ELSE 'expense' END"
     end
 
-    # Entry amount converted to the family currency at the day's exchange
-    # rate. Contribution/loan-payment outflows are flipped positive so they
-    # add to expense totals.
+    # Entry amount converted to the family currency (see ExchangeRate.rate_sql).
+    # Contribution/loan-payment outflows are flipped positive so they add to
+    # expense totals. NULL for a currency with no rate at all, so the entry is
+    # left out of a SUM rather than counted at 1. Totals wrap their SUM
+    # in COALESCE so a group with nothing convertible reads 0; the stats leave
+    # it NULL, so a period with nothing convertible is skipped by the median
+    # and average rather than counted as a period with no spending.
     def converted_amount_sql(t)
-      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * COALESCE(er.rate, 1)) ELSE ae.amount * COALESCE(er.rate, 1) END"
+      rate = ExchangeRate.rate_sql(from: "ae.currency", to: ":target_currency", on: "ae.date")
+      "CASE WHEN #{t}.kind IN ('investment_contribution', 'loan_payment') THEN ABS(ae.amount * #{rate}) ELSE ae.amount * #{rate} END"
     end
 
     def entries_join_sql(t)
@@ -30,16 +38,6 @@ module IncomeStatement::ScopedTransactionsQuery
 
     def accounts_join_sql
       "JOIN accounts a ON a.id = ae.account_id"
-    end
-
-    def exchange_rates_join_sql
-      <<~SQL.chomp
-        LEFT JOIN exchange_rates er ON (
-          er.date = ae.date AND
-          er.from_currency = ae.currency AND
-          er.to_currency = :target_currency
-        )
-      SQL
     end
 
     # Investment activity rows that move money within a portfolio
@@ -59,6 +57,17 @@ module IncomeStatement::ScopedTransactionsQuery
 
     def pending_providers_sql(t = "t")
       Transaction.pending_providers_sql(t)
+    end
+
+    # Scheduled (future-dated) entries haven't happened yet, so "actual"
+    # reporting shouldn't count them -- see Entry#excluding_scheduled. Only
+    # needed by the queries here that build their own SQL directly against
+    # `transactions`/`entries` (FamilyStats, CategoryStats); Totals and
+    # DailyExpenseTotals instead select from a caller-supplied
+    # `transactions_scope`, which already carries this exclusion (see
+    # IncomeStatement#totals/#totals_for_period).
+    def excluding_scheduled_sql
+      "AND ae.date <= :today"
     end
 
     # Tax-advantaged accounts (401k, IRA, HSA, etc.) are retirement savings,
@@ -84,7 +93,7 @@ module IncomeStatement::ScopedTransactionsQuery
     # Bind params every income statement query needs; classes merge their
     # extras (date range, interval, account ids) on top.
     def base_sql_params(extra = {})
-      { target_currency: @family.currency, family_id: @family.id }.merge(extra).tap do |params|
+      { target_currency: @family.currency, family_id: @family.id, today: Date.current }.merge(extra).tap do |params|
         ids = @family.tax_advantaged_account_ids
         params[:tax_advantaged_account_ids] = ids if ids.present?
       end

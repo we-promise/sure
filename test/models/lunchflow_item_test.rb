@@ -45,6 +45,31 @@ class LunchflowItemTest < ActiveSupport::TestCase
     assert_sync_status(:en, total: 3, linked: 1, unlinked: 2, expected: "1 synced, 2 need setup")
   end
 
+  test "rejects a sync start date in the future" do
+    @lunchflow_item.sync_start_date = Date.current + 1.day
+
+    assert_not @lunchflow_item.valid?
+    assert @lunchflow_item.errors.added?(:sync_start_date, :invalid)
+  end
+
+  test "rejects a sync start date that isn't a date" do
+    @lunchflow_item.sync_start_date = "not-a-date"
+
+    assert_not @lunchflow_item.valid?
+    assert @lunchflow_item.errors.added?(:sync_start_date, :invalid)
+  end
+
+  test "accepts today or a blank sync start date" do
+    @lunchflow_item.sync_start_date = Date.current
+    assert @lunchflow_item.valid?
+
+    @lunchflow_item.sync_start_date = nil
+    assert @lunchflow_item.valid?
+
+    @lunchflow_item.sync_start_date = ""
+    assert @lunchflow_item.valid?
+  end
+
   # base_url decides where the app sends this connection's credentials, so a
   # value pointing anywhere else is refused at save time and ignored at read
   # time. Both layers matter: rows can be written by console or raw SQL.
@@ -66,7 +91,6 @@ class LunchflowItemTest < ActiveSupport::TestCase
 
     assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.reload.effective_base_url
   end
-end
 
   private
     def assert_sync_status(locale, total:, linked:, unlinked:, expected:)
@@ -78,3 +102,4 @@ end
         assert_equal expected, @lunchflow_item.sync_status_summary
       end
     end
+end

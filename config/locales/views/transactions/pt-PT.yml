@@ -35,9 +35,13 @@ pt-PT:
       category_search_placeholder: Procurar categorias
       create_category: 'Criar "%{name}"'
       create_category_error: Não foi possível criar a categoria
+      create_as_subcategory: Adicionar como subcategoria…
+      choose_parent: 'Criar "%{name}" em:'
+      back_to_categories: Voltar
       date: Data
       description: Descrição
       description_placeholder: Descreva a transação
+      description_placeholder_optional: "Deixe em branco para usar o nome da categoria/comerciante, ou selecione um deles primeiro"
       expense: Despesa
       income: Rendimento
       merchant_label: Comerciante

@@ -1,0 +1,10 @@
+---
+ru:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: Системный запрос чата
+        ai_prompt_categorizer_openai: Запрос категоризации операций (OpenAI)
+        ai_prompt_categorizer_anthropic: Запрос категоризации операций (Anthropic)
+        ai_prompt_merchant_openai: Запрос определения продавцов (OpenAI)
+        ai_prompt_merchant_anthropic: Запрос определения продавцов (Anthropic)

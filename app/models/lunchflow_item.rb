@@ -1,6 +1,4 @@
 class LunchflowItem < ApplicationRecord
-  validate :base_url_must_be_an_official_host
-
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
@@ -16,6 +14,8 @@ class LunchflowItem < ApplicationRecord
 
   validates :name, presence: true
   validates :api_key, presence: true, on: :create
+  validate :sync_start_date_must_be_valid
+  validate :base_url_must_be_an_official_host
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -169,5 +169,14 @@ class LunchflowItem < ApplicationRecord
       return if base_url.blank? || Provider::Lunchflow.allowed_base_url?(base_url)
 
       errors.add(:base_url, :official_hosts_only)
+    end
+
+    def sync_start_date_must_be_valid
+      if sync_start_date.nil?
+        # A value that isn't a date casts to nil; reject it instead of clearing the saved date.
+        errors.add(:sync_start_date, :invalid) if sync_start_date_before_type_cast.present?
+      elsif sync_start_date.to_date > Date.current
+        errors.add(:sync_start_date, :invalid)
+      end
     end
 end

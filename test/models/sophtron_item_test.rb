@@ -216,6 +216,18 @@ class SophtronItemTest < ActiveSupport::TestCase
     assert_equal [ first_account, second_account ], manual_item.manual_sync_sophtron_accounts.to_a
   end
 
+  test "declares credentials and raw payloads as encrypted" do
+    skip "Encryption not configured" unless SophtronItem.encryption_ready?
+
+    encrypted = Array(SophtronItem.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "user_id"
+    assert_includes encrypted, "access_key"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
+    assert_includes encrypted, "raw_customer_payload"
+    assert_includes encrypted, "raw_job_payload"
+  end
+
   # base_url decides where the app sends this connection's access key, so a
   # value pointing anywhere else is refused at save time and ignored at read
   # time. Both layers matter: rows can be written by console or raw SQL.

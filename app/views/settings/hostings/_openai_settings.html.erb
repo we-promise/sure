@@ -37,6 +37,7 @@
                       inputmode: "url",
                       disabled: ENV["OPENAI_URI_BASE"].present?,
                       data: { "auto-submit-form-target": "auto" } %>
+  <p class="text-xs text-secondary mt-1"><%= t(".uri_base_local_help") %></p>
 
   <%= form.text_field :openai_model,
                       label: t(".model_label"),
@@ -49,6 +50,7 @@
                       disabled: ENV["OPENAI_MODEL"].present?,
                       data: { "auto-submit-form-target": "auto" } %>
   <p class="text-xs text-secondary mt-1">
+    <%= t(".model_required_help") %>
     <%= t(".model_function_calling_help") %>
     <% if Current.user&.super_admin? %>
       <%= link_to t(".model_function_calling_link"), admin_system_health_path(tab: "ai"), class: "underline" %>
@@ -90,16 +92,7 @@
                           min: 64,
                           disabled: ENV["LLM_MAX_RESPONSE_TOKENS"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
-    <p class="text-xs text-secondary mt-1 mb-3"><%= t(".max_response_tokens_help") %></p>
-
-    <%= form.number_field :llm_max_items_per_call,
-                          label: t(".max_items_per_call_label"),
-                          placeholder: "25",
-                          value: Setting.llm_max_items_per_call,
-                          min: 1,
-                          disabled: ENV["LLM_MAX_ITEMS_PER_CALL"].present?,
-                          data: { "auto-submit-form-target": "auto" } %>
-    <p class="text-xs text-secondary mt-1"><%= t(".max_items_per_call_help") %></p>
+    <p class="text-xs text-secondary mt-1"><%= t(".max_response_tokens_help") %></p>
   </div>
 
   <div class="pt-4 border-t border-secondary">
@@ -122,7 +115,18 @@
                           min: Chat::MIN_RESPONSE_TIMEOUT.to_i,
                           disabled: ENV["AI_RESPONSE_TIMEOUT"].present?,
                           data: { "auto-submit-form-target": "auto" } %>
-    <p class="text-xs text-secondary mt-1"><%= t(".ai_response_timeout_help") %></p>
+    <p class="text-xs text-secondary mt-1 mb-3"><%= t(".ai_response_timeout_help") %></p>
+
+    <%# Probe.timeout ignores a non-positive env value, so only a positive one locks the field. %>
+    <% probe_timeout_from_env = ENV["AI_HEALTH_PROBE_TIMEOUT"].to_s.strip.to_i.positive? %>
+    <%= form.number_field :ai_health_probe_timeout,
+                          label: t(".ai_health_probe_timeout_label"),
+                          placeholder: AiHealth::Probe::DEFAULT_TIMEOUT.to_s,
+                          value: probe_timeout_from_env ? AiHealth::Probe.timeout : Setting.ai_health_probe_timeout,
+                          min: 1,
+                          disabled: probe_timeout_from_env,
+                          data: { "auto-submit-form-target": "auto" } %>
+    <p class="text-xs text-secondary mt-1"><%= t(".ai_health_probe_timeout_help") %></p>
   </div>
   <% end %>
 </div>

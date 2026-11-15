@@ -47,6 +47,10 @@ class Assistant::Function::CreateCategory < Assistant::Function
   end
 
   def call(params = {})
+    if family.categories_locked?
+      return error("categories_locked", "Categories are locked. Unlock them before creating a new category.")
+    end
+
     name = params["name"].to_s.strip
     return error("name_required", "Please provide a name for the category.") if name.blank?
 

@@ -1,10 +1,18 @@
+// Used when the server omits a node's colour. Invested keeps its own colour
+// (IncomeStatement::Sankey::INVESTED_COLOR) rather than reading as income.
+const FALLBACK_COLORS = {
+  expense: "var(--color-destructive)",
+  deficit: "var(--color-destructive)",
+  invested: "#0d9488",
+};
+
 // Decimal strings remain authoritative on the wire. Conversion to Number is
 // exclusively for D3 geometry and locale formatting, never financial totals.
 export function cashFlowChartData(body) {
   const graph = body.sankey;
   if (
     !/^[A-Z]{3,5}$/.test(body.currency) ||
-    graph?.basis !== "net_by_category" ||
+    !["net_by_category", "net_by_account"].includes(graph?.basis) ||
     !Array.isArray(graph.nodes) ||
     !Array.isArray(graph.links)
   ) {
@@ -26,18 +34,22 @@ export function cashFlowChartData(body) {
       typeof node.id !== "string" ||
       ids.has(node.id) ||
       typeof node.name !== "string" ||
-      !["income", "expense", "cash_flow", "surplus", "deficit"].includes(
-        node.kind,
-      )
+      ![
+        "income",
+        "expense",
+        "cash_flow",
+        "account",
+        "surplus",
+        "deficit",
+        "invested",
+      ].includes(node.kind)
     ) {
       throw new Error("Invalid cash flow node");
     }
     ids.add(node.id);
     const color = /^#[0-9a-f]{6}$/i.test(node.color)
       ? node.color
-      : ["expense", "deficit"].includes(node.kind)
-        ? "var(--color-destructive)"
-        : "var(--color-success)";
+      : (FALLBACK_COLORS[node.kind] ?? "var(--color-success)");
     const value = number(node.value),
       percentage = number(node.percentage);
     if (value <= 0 || percentage > 100)
@@ -75,7 +87,7 @@ export function cashFlowChartData(body) {
     });
   }
   if (queue.length !== nodes.length) throw new Error("Cyclic cash flow graph");
-  return { nodes, links };
+  return { basis: graph.basis, nodes, links };
 }
 
 // Sure also supports currencies (such as DOGE/USDC) outside Intl's three-letter

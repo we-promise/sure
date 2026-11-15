@@ -109,6 +109,10 @@ class Assistant::Function::UpdateBudget < Assistant::Function
     Budget.transaction do
       budget = Budget.find_or_bootstrap(family, start_date: start_date, user: user)
 
+      if attrs.key?(:budgeted_spending) && !attrs.key?(:expected_income) && budget.expected_income.nil?
+        attrs[:expected_income] = 0
+      end
+
       budget.update!(attrs) if attrs.any?
 
       changes = category_changes.map do |change|

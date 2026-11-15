@@ -92,14 +92,13 @@ vi:
       total: Tổng cộng
       unlinked: Chưa liên kết
     provider_panel:
-      accounts_link: Tài khoản
       add_connection: Thêm kết nối Brex
       base_url_label: URL cơ sở (tùy chọn)
       base_url_placeholder: https://api.brex.com
-      configured_html: "Đã cấu hình và sẵn sàng sử dụng. Truy cập tab %{accounts_link} để quản lý và thiết lập tài khoản."
       connection_name_label: Tên kết nối
       connection_name_placeholder: Tài khoản kinh doanh
       default_connection_name: Kết nối Brex
+      disconnect: Ngắt kết nối
       disconnect_label: "Ngắt kết nối %{name}"
       disconnect_confirm: "Ngắt kết nối %{name}?"
       encryption_warning:
@@ -111,10 +110,8 @@ vi:
         open_tokens: Đi đến cài đặt nhà phát triển/mã thông báo API Brex cho công ty bạn muốn kết nối
         sign_in_html: "Truy cập %{link} và đăng nhập vào tài khoản bạn muốn kết nối"
       keep_token_placeholder: Để trống để giữ mã thông báo hiện tại
-      not_configured: Chưa được cấu hình
       sandbox_note_html: "Sử dụng kết nối có tên riêng cho mỗi công ty Brex/mã thông báo API bạn muốn đồng bộ. Để trống URL cơ sở cho môi trường sản xuất. Môi trường staging chỉ dành cho kiểm thử được Brex phê duyệt và không hoạt động với mã thông báo khách hàng."
       setup_accounts: Thiết lập tài khoản
-      setup_title: "Hướng dẫn thiết lập:"
       sync: Đồng bộ
       token_label: Mã thông báo
       token_placeholder: Dán mã thông báo vào đây

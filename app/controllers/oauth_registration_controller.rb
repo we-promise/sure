@@ -4,6 +4,16 @@ class OauthRegistrationController < ApplicationController
   # or are not OAuth redirects.
   FORBIDDEN_SCHEMES = %w[javascript data file about blob ws wss ftp mailto tel sms intent].freeze
   SCHEME_PATTERN = /\A[a-z][a-z0-9+\-.]*\z/.freeze
+  # Client names containing the word "Sure" are reserved for first-party apps
+  # (e.g. "Sure Mobile"), so a registered client cannot pose as one on the
+  # consent screen or share the mobile app's name.
+  RESERVED_CLIENT_NAME_WORD = "sure"
+  # Lowercase Cyrillic, Greek and Armenian letters that look like the Latin
+  # letters of "sure mobile" (NFKC keeps them apart), e.g. "Ѕurе" with a
+  # Cyrillic Ѕ and е. Uppercase look-alikes such as М and В arrive here
+  # already downcased.
+  CONFUSABLE_LETTERS = "ѕսυуеοоіιӏмвг"
+  CONFUSABLE_LATIN = "suuueooiilmbr"
 
   skip_authentication
   skip_before_action :verify_authenticity_token
@@ -50,6 +60,25 @@ class OauthRegistrationController < ApplicationController
 
     client_name = body["client_name"].presence || "MCP Client"
 
+    # Bidi controls can make the consent screen show a name that differs from
+    # the stored text (e.g. U+202E "eruS" renders as "Sure"), so reject them
+    # instead of stripping them.
+    if client_name.to_s.match?(/\p{Bidi_Control}/)
+      render json: {
+        error: "invalid_client_metadata",
+        error_description: t("oauth.registration.invalid_client_name")
+      }, status: :bad_request
+      return
+    end
+
+    if reserved_client_name?(client_name)
+      render json: {
+        error: "invalid_client_metadata",
+        error_description: t("oauth.registration.reserved_client_name")
+      }, status: :bad_request
+      return
+    end
+
     app = Doorkeeper::Application.new(
       name: client_name,
       redirect_uri: redirect_uris.join("\n"),
@@ -82,6 +111,32 @@ class OauthRegistrationController < ApplicationController
   end
 
   private
+
+    # Matches "Sure" as a whole word, ignoring case, punctuation, invisible
+    # characters (format characters plus every default-ignorable code point,
+    # such as the combining grapheme joiner, variation selectors and Hangul
+    # fillers), combining marks NFKC cannot compose (e.g. U+0332 after "S"), full-width
+    # letters and common look-alike letters, plus words starting with
+    # "SureMobile". Consecutive words are joined too, so separators inside the
+    # word ("S u r e", "S.u.r.e", "S-u-r-e") do not get around the check.
+    # "Surefire" or "Measure Mobile" stay allowed.
+    def reserved_client_name?(name)
+      normalized = name.to_s.unicode_normalize(:nfkc).downcase.gsub(/[\p{Cf}\p{Mn}\p{Me}\p{Default_Ignorable_Code_Point}]/, "")
+        .tr(CONFUSABLE_LETTERS, CONFUSABLE_LATIN)
+      words = normalized.scan(/[[:alnum:]]+/)
+      reserved_prefix = "#{RESERVED_CLIENT_NAME_WORD}mobile"
+
+      words.each_index do |start|
+        joined = +""
+        words.drop(start).each do |word|
+          joined << word
+          return true if joined == RESERVED_CLIENT_NAME_WORD || joined.start_with?(reserved_prefix)
+          break unless reserved_prefix.start_with?(joined)
+        end
+      end
+
+      false
+    end
 
     # Returns true for https, loopback http, and RFC 8252 private-use schemes
     # (cursor://, vscode://). Rejects fragments, userinfo, handler schemes, and

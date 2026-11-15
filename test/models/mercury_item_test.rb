@@ -88,6 +88,15 @@ class MercuryItemTest < ActiveSupport::TestCase
     assert_instance_of MercuryItem::Syncer, syncer
   end
 
+  test "declares token and raw payloads as encrypted" do
+    skip "Encryption not configured" unless MercuryItem.encryption_ready?
+
+    encrypted = Array(MercuryItem.encrypted_attributes).map(&:to_s)
+    assert_includes encrypted, "token"
+    assert_includes encrypted, "raw_payload"
+    assert_includes encrypted, "raw_institution_payload"
+  end
+
   # base_url decides where the app sends this connection's credentials, so a
   # value pointing anywhere else is refused at save time and ignored at read
   # time. Both layers matter: rows can be written by console or raw SQL.

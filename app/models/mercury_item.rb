@@ -1,26 +1,18 @@
 class MercuryItem < ApplicationRecord
-  validate :base_url_must_be_an_official_host
-
-  include Syncable, Provided, Unlinking, DestroyableLater
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
-
-  # Helper to detect if ActiveRecord Encryption is configured for this app
-  def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
-  end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :token, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
   validates :token, presence: true, on: :create
+  validate :base_url_must_be_an_official_host
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later

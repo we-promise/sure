@@ -1,0 +1,108 @@
+---
+uk:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: Підключіть інвестиційний рахунок Trading 212 за допомогою ключа API
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: Триває видалення
+      environment_label_live: Реальний рахунок
+      environment_label_demo: Демо-рахунок
+      syncing: Синхронізація
+      requires_update: Ключ API потребує уваги
+      error: Помилка
+      synced: Синхронізовано %{time} тому. %{summary}.
+      never_synced: Ще не синхронізовано.
+      setup_accounts: Налаштувати рахунки
+      delete: Видалити
+      accounts_need_setup: Рахунок потребує налаштування
+      accounts_need_setup_description: Ваш рахунок Trading 212 потрібно пов’язати з рахунком Sure.
+      no_accounts_discovered: Рахунок Trading 212 ще не знайдено.
+      no_accounts_discovered_description: Після збереження ключа API запустіть синхронізацію, щоб знайти свій рахунок.
+    setup_accounts:
+      page_title: Налаштувати рахунок Trading 212
+      dialog_title: Налаштуйте свій рахунок Trading 212
+      subtitle: Пов’яжіть свій інвестиційний рахунок Trading 212.
+      info_box:
+        title: Імпорт через API Trading 212
+        items:
+          item_1: Поточні позиції з цінами та кількістю
+          item_2: Повна історія ордерів (купівлі та продажі)
+          item_3: Дивіденди та грошові операції
+      status:
+        fetching_accounts: Отримання рахунку з Trading 212...
+        no_accounts_found_title: Рахунок не знайдено.
+        no_accounts_found_description: Sure не вдалося знайти рахунок Trading 212. Перевірте, чи ваш ключ API дійсний.
+      available_accounts:
+        title: Доступний рахунок
+        account_type_investment: Інвестиції
+        account_summary: '%{account_type} • Баланс: %{balance}'
+        account_id: 'ID рахунку: %{account_id}'
+      link_existing:
+        description: Або пов’яжіть знайдений рахунок Trading 212 з наявним ручним інвестиційним рахунком.
+        manual_account_option: '%{name} (%{balance})'
+        select_prompt: Виберіть рахунок...
+      linked_accounts:
+        title: Уже пов’язано
+        linked_to_html: 'Пов’язано з: %{account}'
+      buttons:
+        refresh: Оновити
+        cancel: Скасувати
+        back_to_settings: Назад до налаштувань
+        create_selected_accounts: Створити вибрані рахунки
+        link: Пов’язати
+        done: Готово
+    sync:
+      status:
+        checking_credentials: Перевірка облікових даних Trading 212...
+        importing_account: Імпорт рахунку Trading 212...
+        checking_configuration: Перевірка конфігурації рахунку...
+        accounts_need_setup:
+          one: '%{count} рахунок Trading 212 потребує налаштування...'
+          few: '%{count} рахунки Trading 212 потребують налаштування...'
+          many: '%{count} рахунків Trading 212 потребують налаштування...'
+          other: '%{count} рахунку Trading 212 потребують налаштування...'
+        processing_activity: Обробка позицій і операцій...
+        calculating_balances: Обчислення балансів...
+    sync_status:
+      no_accounts: Рахунок Trading 212 ще не знайдено
+      all_linked:
+        one: '%{count} рахунок пов’язано'
+        few: '%{count} рахунки пов’язано'
+        many: '%{count} рахунків пов’язано'
+        other: '%{count} рахунку пов’язано'
+      partial: '%{linked} пов’язано, %{unlinked} потребує налаштування'
+    select_existing_account:
+      title: Пов’язати рахунок Trading 212
+      no_accounts_available: Непов’язаних рахунків Trading 212 ще немає.
+      run_sync_hint: Після збереження ключа API запустіть синхронізацію в Налаштування > Постачальники.
+      wait_for_sync: Дочекайтеся завершення синхронізації, яка шукає рахунки.
+      balance: Баланс
+      link: Пов’язати
+      cancel: Скасувати
+    create:
+      success: Trading 212 успішно налаштовано.
+    update:
+      success: Конфігурацію Trading 212 успішно оновлено.
+    destroy:
+      success: Заплановано видалення з’єднання Trading 212.
+    select_accounts:
+      not_configured: Trading 212 не налаштовано.
+    link_existing_account:
+      not_found: Рахунок або конфігурацію Trading 212 не знайдено.
+      only_manual_investment: З Trading 212 можна пов’язати лише ручні інвестиційні рахунки.
+      already_linked: Цей рахунок Trading 212 уже пов’язано.
+      success: Рахунок успішно пов’язано з Trading 212.
+      failed: Не вдалося пов’язати рахунок Trading 212.
+    complete_account_setup:
+      success:
+        one: Успішно створено %{count} рахунок Trading 212.
+        few: Успішно створено %{count} рахунки Trading 212.
+        many: Успішно створено %{count} рахунків Trading 212.
+        other: Успішно створено %{count} рахунку Trading 212.
+      none_selected: Не вибрано жодного рахунку.
+      none_created: Жодного рахунку не створено.

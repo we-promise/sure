@@ -20,8 +20,16 @@ ru:
         currency: Валюта
         family: "%{moniker}"
         family_id: "%{moniker}"
+        logo: Иконка
         name: Имя
         subtype: Подтип
+    errors:
+      models:
+        account:
+          attributes:
+            logo:
+              invalid_content_type: должна быть изображением PNG, JPEG, GIF, WebP или ICO
+              too_large: должна быть меньше %{max_size} МБ
     models:
       account: Счёт
       account/credit: Кредитная карта

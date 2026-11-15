@@ -1,0 +1,128 @@
+---
+id:
+  loans:
+    edit:
+      edit: Edit %{account}
+    form:
+      interest_rate: Suku bunga
+      interest_rate_placeholder: '5.25'
+      initial_balance: Saldo awal pinjaman
+      day_count_convention: Basis perhitungan bunga
+      day_count_convention_actual_365: Aktual/365
+      day_count_convention_actual_actual: Aktual/aktual
+      day_count_convention_hint: Cara pemberi pinjaman mengukur setiap periode terhadap
+        satu tahun. Aktual/365 mengenakan bunga berdasarkan jumlah hari dalam sebulan
+        dan merupakan standar hipotek di Inggris Raya dan Australia. 30/360 mengenakan
+        bunga satu per dua belas tetap, basis yang selalu digunakan Sure.
+      day_count_convention_thirty_360: 30/360 (satu per dua belas tetap)
+      rate_type: Jenis suku bunga
+      term_months: Jangka waktu (bulan)
+      term_months_placeholder: '360'
+      none: Tidak ada
+      subtype_prompt: Pilih jenis pinjaman
+      subtype_none: Tidak ada
+      rate_type_adjustable: Mengambang
+      rate_type_fixed: Tetap
+      rate_type_variable: Variabel
+      rate_changes: Perubahan suku bunga
+      rate_changes_hint: Setiap baris menentukan suku bunga yang berlaku dari tanggal berlakunya hingga tanggal berikutnya. Memasukkan kembali tanggal yang sama akan menggantikan baris tersebut alih-alih menambahkan baris baru.
+      rate_changes_empty: Tidak ada perubahan suku bunga yang dicatat. Pinjaman berjalan dengan suku bunga di atas.
+      rate_change_effective_date: Tanggal berlaku
+      rate_change_rate: Suku bunga
+      rate_change_add: Tambah perubahan suku bunga
+      rate_change_remove: Hapus
+      start_date: Tanggal pencairan
+      start_date_hint: Saat pinjaman dicairkan. Riwayat saldo pinjaman baru dimulai pada tanggal ini, bukan tanggal saldo pembukaan. Biarkan kosong untuk menggunakan tanggal saldo pembukaan.
+      down_payment: Uang muka
+      insurance_rate: Tarif asuransi
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_hint: Tarif tahunan, dikenakan setiap bulan bersamaan dengan cicilan. Asuransi berjangka tetap dikenakan pada saldo awal; asuransi menurun dikenakan pada sisa utang.
+      insurance_rate_type: Jenis asuransi
+      insurance_rate_type_decreasing_life: Menurun
+      insurance_rate_type_level_term: Berjangka tetap
+    new:
+      title: Masukkan detail pinjaman
+    overview:
+      interest_rate: Suku Bunga
+      monthly_payment: Cicilan Bulanan
+      not_applicable: T/A
+      original_payoff_date: Tanggal Pelunasan Asli
+      original_principal: Jumlah Pinjaman Awal
+      remaining_principal: Sisa Pokok Pinjaman
+      term: Jangka Waktu
+      type: Jenis
+      unknown: Tidak Diketahui
+    tabs:
+      extra_repayments:
+        amount_label: Pembayaran ekstra
+        amount_placeholder: "0.00"
+        apply: Terapkan
+        baseline_not_cleared: Dengan cicilan saat ini, pinjaman ini tidak akan lunas pada jatuh tempo awal, dan %{balloon} masih akan terutang, sehingga tidak ada tanggal lebih cepat atau penghematan bunga untuk dibandingkan. Dengan pembayaran ekstra ini, pinjaman akan lunas pada tanggal di atas.
+        clear: Bersihkan
+        comparison_basis: Dibandingkan dengan membayar cicilan saat ini tanpa tambahan ekstra, dari saldo hari ini.
+        dated_note: Pembayaran ekstra mingguan dan dua mingguan diperhitungkan pada cicilan berikutnya setelah dibayarkan, sehingga penghematan bunga yang ditampilkan mungkin lebih rendah dari sebenarnya.
+        extra_not_cleared: Bahkan dengan pembayaran ekstra ini, pinjaman tidak akan lunas pada jatuh tempo awal. Coba jumlah yang lebih besar.
+        frequencies:
+          fortnightly: Dua mingguan
+          monthly: Bulanan
+          weekly: Mingguan
+        frequency_label: Seberapa sering
+        interest_saved: Bunga yang dihemat
+        intro: Lihat seberapa lebih cepat pinjaman lunas, dan berapa banyak bunga yang Anda hemat, jika Anda membayar jumlah ekstra setiap minggu, dua minggu, atau bulan di atas cicilan rutin Anda.
+        invalid_amount: Masukkan jumlah nol atau lebih, dalam angka.
+        invalid_frequency: Pilih mingguan, dua mingguan, atau bulanan.
+        months_sooner:
+          zero: Lunas pada bulan yang sama
+          one: "%{count} bulan lebih cepat"
+          other: "%{count} bulan lebih cepat"
+        no_scheduled_repayments: Tidak ada jadwal cicilan tersisa untuk pinjaman ini, tetapi masih ada sisa saldo, sehingga tidak ada cicilan untuk ditambahkan pembayaran ekstra.
+        not_applicable: Tidak ada lagi yang harus dilunasi pada pinjaman ini, sehingga tidak ada simulasi pembayaran ekstra.
+        payoff_with_extra: Pelunasan dengan ekstra
+        total_cost: Total biaya mulai hari ini
+        total_cost_not_cleared: Tidak lunas pada jatuh tempo awal
+        total_cost_saved: "%{amount} lebih hemat daripada tanpa ekstra"
+        variable_rate_notice: Suku bunga pinjaman ini berubah seiring waktu. Angka-angka ini menerapkan perubahan suku bunga yang telah dicatat; perubahan yang belum dicatat akan memengaruhi angka-angka ini.
+      repayment_progress:
+        instalment: "Pembayaran %{number} · %{date}"
+        insurance: Asuransi
+        interest: Bunga
+        of_original: dari %{amount}
+        principal: Pokok
+        repaid: Dilunasi
+        total: Total
+      schedule:
+        date: Tanggal
+        description: "Diproyeksikan dari saldo awal, suku bunga, dan jangka waktu, mulai pada %{start_date}. Pembayaran ekstra tidak diperhitungkan."
+        variable_rate_notice: Suku bunga pinjaman ini berubah seiring waktu. Jadwal diamortisasi ulang pada setiap perubahan yang dicatat, mempertahankan tanggal pelunasan awal dan menyesuaikan cicilan; perubahan yang belum dicatat akan memengaruhi angka-angka ini.
+        opening_payment: Pembayaran Pembuka
+        forecasted_payoff_date: Perkiraan Tanggal Pelunasan
+        forecasted_payoff_not_converged: Tidak lunas dengan cicilan saat ini
+        interest: Bunga
+        monthly_payment: Cicilan Bulanan
+        not_applicable: T/A
+        number: "#"
+        payment: Pembayaran
+        principal: Pokok
+        remaining_balance: Sisa Saldo
+        total_cost: Total Biaya
+        total_interest: Total Bunga
+      overview:
+        insurance_rate_only: "%{rate} per tahun"
+        interest_rate: Suku Bunga
+        leverage: Leverage
+        leverage_band_conservative: Konservatif
+        leverage_band_high: Tinggi
+        leverage_band_moderate: Moderat
+        leverage_multiple: "%{ratio}x"
+        monthly_payment: Cicilan Bulanan
+        not_applicable: T/A
+        original_payoff_date: Tanggal Pelunasan Asli
+        original_principal: Jumlah Pinjaman Awal
+        remaining_principal: Sisa Pokok Pinjaman
+        total_cost: Total Biaya
+        total_cost_with_insurance: Total Biaya termasuk Asuransi
+        total_insurance: Asuransi
+        term: Jangka Waktu
+        type: Jenis
+        unknown: Tidak Diketahui
+        edit_loan_details: Edit detail pinjaman

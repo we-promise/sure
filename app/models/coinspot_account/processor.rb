@@ -47,6 +47,10 @@ class CoinspotAccount::Processor
     failures.concat(process_fiat_deposits)
     failures.concat(process_fiat_withdrawals)
 
+    # The account was created, and anchored, before any of this history
+    # existed. Now that it does, the anchor has to precede it.
+    account.ensure_opening_anchor_precedes_entries
+
     { success: failures.empty?, failures: failures }
   end
 
@@ -111,7 +115,7 @@ class CoinspotAccount::Processor
       date = parse_date!(order["solddate"] || order["created"], "order")
       type = order_type
       signed_quantity = type == "sell" ? -quantity.abs : quantity.abs
-      amount_aud = type == "sell" ? total_aud.abs : -total_aud.abs
+      amount_aud = type == "sell" ? -total_aud.abs : total_aud.abs
 
       amount, = convert_from_aud(amount_aud, date: date)
       price = trade_price(amount: amount, quantity: quantity, fallback_rate: rate, date: date)

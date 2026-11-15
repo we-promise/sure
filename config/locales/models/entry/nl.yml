@@ -7,4 +7,4 @@ nl:
           attributes:
             base:
               invalid_sell_quantity: kan niet %{sell_qty} aandelen van %{ticker} verkopen
-                omdat je slechts %{current_qty} aandelen bezit
+                omdat u slechts %{current_qty} aandelen bezit

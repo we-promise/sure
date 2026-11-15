@@ -8,19 +8,21 @@
     ) %>
   <% end %>
 
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <h2 class="text-lg font-semibold mb-1"><%= t("admin.system_health.show.status_section_title") %></h2>
-    <p class="text-sm text-secondary mb-4"><%= t("admin.system_health.show.status_section_description") %></p>
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.status_section_title") %></h2>
+      <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.status_section_description") %></p>
+    </div>
 
     <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
       <div>
         <dt class="text-secondary"><%= t("admin.system_health.show.labels.status") %></dt>
-        <dd class="text-primary font-medium">
-          <% if health.healthy? %>
-            <span class="text-success"><%= t("admin.system_health.show.values.healthy") %></span>
-          <% else %>
-            <span class="text-warning"><%= t("admin.system_health.show.values.unhealthy") %></span>
-          <% end %>
+        <dd>
+          <%= render DS::Pill.new(
+            label: t("admin.system_health.show.values.#{health.healthy? ? :healthy : :unhealthy}"),
+            tone: health.healthy? ? :success : :warning,
+            marker: false
+          ) %>
         </dd>
       </div>
       <div>
@@ -44,11 +46,13 @@
         </dd>
       </div>
     </dl>
-  </div>
+  <% end %>
 
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <h2 class="text-lg font-semibold mb-1"><%= t("admin.system_health.show.counters_section_title") %></h2>
-    <p class="text-sm text-secondary mb-4"><%= t("admin.system_health.show.counters_section_description") %></p>
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.counters_section_title") %></h2>
+      <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.counters_section_description") %></p>
+    </div>
 
     <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
       <div>
@@ -68,38 +72,27 @@
         <dd class="text-primary font-medium"><%= number_with_delimiter(health.processed_count) %></dd>
       </div>
     </dl>
-  </div>
+  <% end %>
 
-  <div class="bg-container rounded-xl shadow-border-xs p-4">
-    <h2 class="text-lg font-semibold mb-1"><%= t("admin.system_health.show.queues_section_title") %></h2>
-    <p class="text-sm text-secondary mb-4"><%= t("admin.system_health.show.queues_section_description") %></p>
+  <%= render DS::Card.new(class: "gap-4") do %>
+    <div>
+      <h2 class="text-lg font-semibold text-primary"><%= t("admin.system_health.show.queues_section_title") %></h2>
+      <p class="mt-1 text-sm text-secondary"><%= t("admin.system_health.show.queues_section_description") %></p>
+    </div>
 
     <% breakdown = health.queue_breakdown %>
     <% if breakdown.empty? %>
       <p class="text-sm text-secondary"><%= t("admin.system_health.show.values.no_queues") %></p>
     <% else %>
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left text-secondary border-b border-primary">
-            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.queue") %></th>
-            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.size") %></th>
-            <th class="py-2 font-medium"><%= t("admin.system_health.show.labels.latency") %></th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-primary">
-          <% breakdown.each do |name, size, latency| %>
-            <tr>
-              <td class="py-2 text-primary"><%= name %></td>
-              <td class="py-2 text-primary"><%= number_with_delimiter(size) %></td>
-              <td class="py-2 text-primary">
-                <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(latency, precision: 1)) %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
+      <%= render DS::Table.new(rows: breakdown, inset: true, label: t("admin.system_health.show.queues_section_title")) do |table| %>
+        <% table.with_column(t("admin.system_health.show.labels.queue")) { |(name)| name } %>
+        <% table.with_column(t("admin.system_health.show.labels.size"), numeric: true) { |(_name, size)| number_with_delimiter(size) } %>
+        <% table.with_column(t("admin.system_health.show.labels.latency"), numeric: true) do |(_name, _size, latency)| %>
+          <%= t("admin.system_health.show.values.seconds", seconds: number_with_precision(latency, precision: 1)) %>
+        <% end %>
+      <% end %>
     <% end %>
-  </div>
+  <% end %>
   <% if push_notification_test %>
     <%= render "push_notifications", disabled_reason: push_disabled_reason,
       latest_test: latest_push_test, results: push_test_results %>

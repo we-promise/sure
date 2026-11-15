@@ -5,7 +5,7 @@ uk:
       to_colon: "до:"
       total_account_value: Загальна вартість рахунку
       holdings_value: Вартість активів
-      brokerage_cash: Брокерські готівкові кошти
+      brokerage_cash: Вільні кошти на брокерському рахунку
       account_balance: баланс рахунку
       credit_card_balance: баланс кредитної картки
       loan_balance: баланс позики
@@ -20,6 +20,8 @@ uk:
       recalculate_notice: "Усі майбутні транзакції та баланси будуть перераховані на основі цієї %{change_or_update}."
       change: зміни
       update: оновлення
+      action_set: встановить
+      action_update: оновить
     create:
       account_updated: Рахунок оновлено
     update:
@@ -57,3 +59,9 @@ uk:
       settings: Налаштування
       opening_balance: "Початковий баланс"
       update_value: Оновити вартість
+    confirm_create:
+      confirm: Підтвердити
+      title: Підтвердьте новий баланс
+    confirm_update:
+      title: Оновити баланс
+      update: Оновити

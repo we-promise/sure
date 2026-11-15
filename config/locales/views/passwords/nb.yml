@@ -1,6 +1,7 @@
 ---
 nb:
   passwords:
+    disabled: "Endring av passord i Sure er deaktivert. Administrer passordet ditt via identitetsleverandøren din."
     edit:
       password: Nytt passord
       password_challenge: Gjeldende passord

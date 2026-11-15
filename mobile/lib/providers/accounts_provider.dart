@@ -95,8 +95,6 @@ class AccountsProvider with ChangeNotifier {
   /// Fetch accounts (offline-first approach)
   Future<bool> fetchAccounts({
     required String accessToken,
-    int page = 1,
-    int perPage = 25,
     bool forceSync = false,
   }) async {
     _isLoading = true;
@@ -112,13 +110,15 @@ class AccountsProvider with ChangeNotifier {
         notifyListeners();
       }
 
-      // If online and (force sync or no cached data), fetch from server
+      // If online and (force sync, no cached data, or a cache that may be the
+      // truncated first page older versions saved), fetch from server
       final isOnline = _connectivityService?.isOnline ?? false;
-      if (isOnline && (forceSync || cachedAccounts.isEmpty)) {
-        final result = await _accountsService.getAccounts(
+      final maybeTruncated =
+          cachedAccounts.length == AccountsService.legacyPageSize;
+      if (isOnline &&
+          (forceSync || cachedAccounts.isEmpty || maybeTruncated)) {
+        final result = await _accountsService.getAllAccounts(
           accessToken: accessToken,
-          page: page,
-          perPage: perPage,
         );
 
         if (result['success'] == true && result.containsKey('accounts')) {

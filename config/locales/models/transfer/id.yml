@@ -1,0 +1,22 @@
+---
+id:
+  activerecord:
+    errors:
+      models:
+        transfer:
+          attributes:
+            base:
+              inflow_cannot_be_in_multiple_transfers: Transaksi masuk tidak boleh menjadi bagian dari lebih dari satu transfer
+              must_be_from_different_accounts: Transfer harus berasal dari rekening yang berbeda
+              must_be_from_same_family: Transfer harus berasal dari keluarga yang sama
+              must_be_within_date_range: Tanggal transaksi transfer harus berjarak maksimal 4 hari satu sama lain
+              must_have_opposite_amounts: Transaksi transfer harus memiliki jumlah yang berlawanan
+              must_have_single_currency: Transfer harus menggunakan mata uang yang sama
+              outflow_cannot_be_in_multiple_transfers: Transaksi keluar tidak boleh menjadi bagian dari lebih dari satu transfer
+          different_accounts: "Harus berasal dari rekening yang berbeda"
+          same_family: "Harus berasal dari keluarga yang sama"
+          opposite_amounts: "Harus memiliki jumlah yang berlawanan"
+          within_days: "Harus berjarak maksimal %{count} hari"
+  transfer:
+    name: Transfer ke %{to_account}
+    payment_name: Pembayaran ke %{to_account}

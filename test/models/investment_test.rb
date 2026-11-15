@@ -144,10 +144,18 @@ class InvestmentTest < ActiveSupport::TestCase
   # India account types
 
   test "India pension subtypes have tax_advantaged treatment" do
-    %w[nps apy].each do |subtype|
+    %w[nps apy epf].each do |subtype|
       investment = Investment.new(subtype: subtype)
       assert_equal :tax_advantaged, investment.tax_treatment, "Expected #{subtype} to be tax_advantaged"
     end
+  end
+
+  test "EPF is an India subtype available to INR users" do
+    assert_equal "in", Investment::SUBTYPES.dig("epf", :region)
+    assert_equal "Employees' Provident Fund", Investment::SUBTYPES.dig("epf", :long)
+
+    india_group = Investment.subtypes_grouped_for_select(currency: "INR").first[1]
+    assert_includes india_group.map(&:last), "epf"
   end
 
   test "India equity subtypes are taxable" do

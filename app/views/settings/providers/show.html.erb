@@ -8,9 +8,16 @@
           message: t("settings.providers.encryption_error.message")
         ) %>
   <% else %>
+    <% if @provider_setup_compromised_secret_warning %>
+      <%= render DS::Alert.new(
+            variant: :warning,
+            title: t("settings.securities.show.compromised_secret_warning.title"),
+            message: t("settings.securities.show.compromised_secret_warning.intro")
+          ) %>
+    <% end %>
     <div class="flex items-center justify-between gap-4">
       <p class="text-secondary"><%= t("settings.providers.bank_sync.lede") %></p>
-      <% if @connected.any? || @needs_attention.any? %>
+      <% if @can_sync_all %>
         <% sync_all_disabled = Current.family.last_sync_all_attempted_at.present? && Current.family.last_sync_all_attempted_at > 30.seconds.ago %>
         <%= render DS::Button.new(
               text: t("settings.providers.sync_all"),
@@ -80,7 +87,8 @@
                   region:       meta[:region],
                   kinds:        meta[:kinds],
                   tier:         meta[:tier],
-                  maturity:     meta[:maturity] || :stable
+                  maturity:     meta[:maturity] || :stable,
+                  external_link: entry[:external_link]
                 ) %>
           <% end %>
         </div>
