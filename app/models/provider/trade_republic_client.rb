@@ -1734,7 +1734,11 @@ class Provider::TradeRepublicClient
       end
 
       # Once per sync, when a transfer was left without the comparison.
-      if !check_counterparty && (events + Array(enrich_events)).any? { |event| self.class.cash_note_pending?(event) }
+      # The page's own copy of a transfer whose note was read carries no
+      # markers, so only its stored copy (in enrich_events) says whether it
+      # still waits.
+      waiting = events.reject { |event| note_read_ids.include?(event["id"].to_s) } + Array(enrich_events)
+      if !check_counterparty && waiting.any? { |event| self.class.cash_note_pending?(event) }
         warnings << NO_REFERENCE_ACCOUNTS_WARNING
       end
 
