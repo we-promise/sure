@@ -16,6 +16,15 @@ class Holding::ForwardCalculator
     @transferred_security_ids = Set.new
   end
 
+  # Every lot of each security, once #calculate has run.
+  def lots_by_security
+    lots_from(@lot_books)
+  end
+
+  def clamped_security_ids
+    Set.new
+  end
+
   def calculate
     Rails.logger.tagged("Holding::ForwardCalculator") do
       current_portfolio = generate_starting_portfolio

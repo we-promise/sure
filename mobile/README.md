@@ -153,7 +153,7 @@ The app includes automated CI/CD via GitHub Actions (`.github/workflows/flutter-
 - **Quality Checks**: Code analysis and tests run before building
 - **TestFlight**: `mobile-release` (mobile tags) triggers `.github/workflows/ios-testflight.yml` for signed App Store Connect uploads as part of one release flow
 
-See [mobile/docs/iOS_TESTFLIGHT.md](mobile/docs/iOS_TESTFLIGHT.md) for required secrets and setup.
+See [docs/iOS_TESTFLIGHT.md](docs/iOS_TESTFLIGHT.md) for required secrets and setup.
 
 ### Downloading Build Artifacts
 

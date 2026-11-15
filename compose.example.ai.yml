@@ -74,10 +74,10 @@ x-rails-env: &rails_env
   # forge session cookies and, since ACTIVE_RECORD_ENCRYPTION_* below are
   # deterministically derived from it when unset, compute your encryption
   # keys too. Generate your own with: openssl rand -hex 64
-  # UPGRADING an existing install that ran on the old built-in default? Put
-  # that old value in .env first: a new value makes everything already
-  # encrypted under it unreadable. Rotate it later only as described in
-  # docs/hosting/docker.md ("Upgrading from the old built-in SECRET_KEY_BASE").
+  # Upgrading an existing install? Do NOT generate a new value: keep the one
+  # it already runs with (the old default if you never set one), or data
+  # already encrypted under keys derived from it becomes unreadable. See
+  # "Upgrading an install that is already running" in docs/hosting/docker.md.
   SECRET_KEY_BASE: "${SECRET_KEY_BASE:?Set SECRET_KEY_BASE in your .env file. Existing install: copy the value from your previous compose.yml, do not generate a new one. New install: openssl rand -hex 64}"
   # Optional but recommended: set these explicitly instead of relying on the
   # SECRET_KEY_BASE auto-derivation fallback. Generate with: bin/rails db:encryption:init
@@ -92,6 +92,8 @@ x-rails-env: &rails_env
   DB_HOST: db
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
+  # Seconds a missed scheduled job may run late (default 600); see docs/hosting/docker.md
+  SIDEKIQ_CRON_GRACE_PERIOD_SECONDS: ${SIDEKIQ_CRON_GRACE_PERIOD_SECONDS:-}
   # MCP server endpoint — enables /mcp for external AI assistants (e.g. Claude, GPT).
   # Set both values to activate. MCP_USER_EMAIL must match an existing user's email.
   # External AI clients should connect via Pipelock (port 8889) for scanning.
@@ -153,11 +155,13 @@ x-rails-env: &rails_env
 
 services:
   pipelock:
-    image: ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c
+    image: ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f
     user: "${PIPELOCK_UID:-1000}:${PIPELOCK_GID:-1000}"
     container_name: pipelock
     hostname: pipelock
     restart: unless-stopped
+    # Time to close the signed receipt chain on shutdown (Pipelock 3.7+).
+    stop_grace_period: 10m
     volumes:
       - ./pipelock.example.yaml:/etc/pipelock/pipelock.yaml:ro
       # Optional signed receipts (flight recorder). Off until you create the
@@ -169,12 +173,12 @@ services:
       #   mkdir -p ./pipelock-evidence ./pipelock-keys
       # Generate the receipt-signing key via the image (no host binary needed;
       # --out must be an absolute path inside the container):
-      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
+      #   docker run --rm -v "$PWD/pipelock-keys:/keys" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # The key is written 0600 owned by uid 1000 (Pipelock's default user). If
       # your host user is not uid 1000, use this variant instead:
       #   export PIPELOCK_UID="$(id -u)" PIPELOCK_GID="$(id -g)"
-      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/luckypipewrench/pipelock:3.4.0@sha256:2e6caa43967a5ef19cacbce00188d829c1b5de1eb0ad304a51d2085f32c5694c \
+      #   docker run --rm --user "$PIPELOCK_UID:$PIPELOCK_GID" -v "$PWD/pipelock-keys:/keys" ghcr.io/pipelab-org/pipelock:3.8.0@sha256:9ac2bdf26ca104a5b2f5dfe4e90f0396ec9feb554152d50aac42f75ec268197f \
       #     signing key generate --purpose receipt-signing --out /keys/flight-recorder-signing.key --id sure-compose
       # That makes the key and evidence directory readable/writable by the same
       # uid/gid the compose service uses.
@@ -190,11 +194,16 @@ services:
       - "0.0.0.0:8889"
       - "--mcp-upstream"
       - "http://web:3000/mcp"
+      # Pipelock needs a listener token or this flag; Sure's /mcp still requires
+      # its own token. To use a listener token, see docs/hosting/pipelock.md.
+      - "--mcp-allow-unauthenticated"
     ports:
       # MCP reverse proxy — external AI assistants connect here
       - "${MCP_PROXY_PORT:-8889}:8889"
-      # Uncomment to expose forward proxy endpoints (/health, /metrics, /stats):
+      # Uncomment to expose the forward proxy's /health endpoint:
       # - "8888:8888"
+      # /metrics and /stats need metrics_listen in pipelock.example.yaml, then:
+      # - "9091:9091"
     healthcheck:
       test: ["CMD", "/pipelock", "healthcheck", "--addr", "127.0.0.1:8888"]
       interval: 10s
