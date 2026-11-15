@@ -223,7 +223,9 @@ jobs:
         id: build
         with:
           context: .
-          build-args: BUILD_COMMIT_SHA=${{ needs.prepare.outputs.commit }}
+          build-args: |
+            BUILD_COMMIT_SHA=${{ needs.prepare.outputs.commit }}
+            INSTALL_CLAUDE_CODE=${{ vars.INSTALL_CLAUDE_CODE || 'false' }}
           platforms: 'linux/${{ matrix.platform }}'
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:cache-${{ matrix.platform }},mode=max

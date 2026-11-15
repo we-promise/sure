@@ -60,7 +60,7 @@ class AiHealth
   # is only ever blamed for a refusal the service actually made.
   def function_calling_status
     return :unavailable unless llm_configured?
-    return :not_checked unless run_probes?
+    return :not_checked unless run_probes? && !@llm_via_claude_code
     return :supported if function_calling_probe.passing?
     return :not_used if function_calling_probe.failure_code == :no_tool_call
     return :unsupported if function_calling_probe.failure_code == :tools_refused
@@ -159,6 +159,9 @@ class AiHealth
       @anthropic_credentials_configured = safely(false) { Provider::Anthropic.configured? }
       @llm_provider = safely(nil) { Provider::Registry.preferred_llm_provider }
       @effective_llm_protocol = protocol_name(@llm_provider)
+      # The probes call the Anthropic HTTP API with an API key, which a
+      # subscription install doesn't have, so they stay "not checked".
+      @llm_via_claude_code = safely(false) { @llm_provider.respond_to?(:claude_code?) && @llm_provider.claude_code? }
       @effective_llm_provider = effective_provider_name(@effective_llm_protocol)
 
       provider_for_details = @effective_llm_protocol || @selected_llm_protocol
@@ -206,7 +209,7 @@ class AiHealth
       return unless run_probes?
 
       probe = Probe.new(force: @force_probes, cache: @probe_cache)
-      if llm_configured?
+      if llm_configured? && !@llm_via_claude_code
         @llm_probe = probe.llm(
           provider: @effective_llm_protocol,
           endpoint: @llm_raw_endpoint,
