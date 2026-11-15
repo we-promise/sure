@@ -390,7 +390,7 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
   test "processes cash FEE and TAX as positive outflow and INTEREST as negative inflow" do
     process_activities(
       build_cash_activity(id: "fee_001", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),
-      build_cash_activity(id: "tax_001", type: "TAX", amount: 15.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "tax_001", type: "TAX", amount: -15.00, settlement_date: Date.current.to_s),
       build_cash_activity(id: "interest_001", type: "INTEREST", amount: 12.50, settlement_date: Date.current.to_s)
     )
 
@@ -410,6 +410,75 @@ class SnaptradeAccount::ActivitiesProcessorTest < ActiveSupport::TestCase
 
     assert_equal(-12.50, interest.amount.to_f)
     assert_equal "Interest", interest.entryable.investment_activity_label
+  end
+
+  # SnapTrade signs `amount` from the account's perspective: positive is money in,
+  # negative is money out. Income, fee and tax types keep that direction.
+  test "debit interest charged by the broker is money out labelled Interest" do
+    process_activities(
+      build_cash_activity(id: "debit_int", type: "INTEREST", amount: -6.08, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "credit_int", type: "INTEREST", amount: 0.69, settlement_date: Date.current.to_s)
+    )
+
+    debit = snaptrade_entry("debit_int")
+    credit = snaptrade_entry("credit_int")
+
+    assert_equal BigDecimal("6.08"), debit.amount
+    assert_equal "Interest", debit.entryable.investment_activity_label
+    assert_equal "expense", debit.classification
+    assert_equal BigDecimal("-0.69"), credit.amount
+    assert_equal "income", credit.classification
+
+    totals = InvestmentStatement::Totals.new(@family, account_ids: [ @account.id ], date_range: Date.current..Date.current).call
+    assert_equal BigDecimal("-5.39"), totals[:interest]
+  end
+
+  test "fee rebate and tax refund are money in, and normal fees and tax money out" do
+    process_activities(
+      build_cash_activity(id: "fee_charge", type: "FEE", amount: -25.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "fee_rebate", type: "FEE", amount: 200.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "tax_withheld", type: "TAX", amount: -15.00, settlement_date: Date.current.to_s),
+      build_cash_activity(id: "tax_refund", type: "TAX", amount: 4.50, settlement_date: Date.current.to_s)
+    )
+
+    assert_equal BigDecimal("25"), snaptrade_entry("fee_charge").amount
+    assert_equal BigDecimal("-200"), snaptrade_entry("fee_rebate").amount
+    assert_equal "Fee", snaptrade_entry("fee_rebate").entryable.investment_activity_label
+    assert_equal "income", snaptrade_entry("fee_rebate").classification
+    assert_equal BigDecimal("15"), snaptrade_entry("tax_withheld").amount
+    assert_equal BigDecimal("-4.5"), snaptrade_entry("tax_refund").amount
+    assert_equal "Fee", snaptrade_entry("tax_refund").entryable.investment_activity_label
+  end
+
+  test "dividend reversal is money out labelled Dividend and nets against dividend income" do
+    process_activities(
+      build_cash_activity(id: "div_paid", type: "DIVIDEND", amount: 25.50, settlement_date: Date.current.to_s, symbol: "VTI"),
+      build_cash_activity(id: "div_reversed", type: "DIVIDEND", amount: -25.50, settlement_date: Date.current.to_s, symbol: "VTI"),
+      build_cash_activity(id: "div_rebooked", type: "DIVIDEND", amount: 24.00, settlement_date: Date.current.to_s, symbol: "VTI")
+    )
+
+    reversal = snaptrade_entry("div_reversed")
+    assert_equal BigDecimal("25.5"), reversal.amount
+    assert_equal "Dividend", reversal.entryable.investment_activity_label
+    assert_equal BigDecimal("-25.5"), snaptrade_entry("div_paid").amount
+    assert_equal BigDecimal("-24"), snaptrade_entry("div_rebooked").amount
+
+    totals = InvestmentStatement::Totals.new(@family, account_ids: [ @account.id ], date_range: Date.current..Date.current).call
+    assert_equal BigDecimal("24"), totals[:dividends]
+  end
+
+  test "re-sync corrects the sign of an existing entry matched by external id" do
+    process_activities(
+      build_cash_activity(id: "debit_int_resync", type: "INTEREST", amount: -6.08, settlement_date: Date.current.to_s)
+    )
+    entry = snaptrade_entry("debit_int_resync")
+    # The sign an earlier import stored, when INTEREST was always money in.
+    entry.update_columns(amount: BigDecimal("-6.08"))
+
+    SnaptradeAccount::ActivitiesProcessor.new(@snaptrade_account).process
+
+    assert_equal 1, @account.entries.where(external_id: "debit_int_resync", source: "snaptrade").count
+    assert_equal BigDecimal("6.08"), entry.reload.amount
   end
 
   test "processes INTERNAL_CASH_TRANSFER_IN and OUT with correct signs" do
