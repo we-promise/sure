@@ -55,8 +55,7 @@ class Security::FundClassificationFromEodhdTest < ActiveSupport::TestCase
       "ETF_Data" => { "Asset_Allocation" => aa("Stock US" => 99.0, "Cash" => 1.0),
                       "World_Regions" => { "North America" => { "Equity_%" => "100" } },
                       "Sector_Weights" => { "Real Estate" => { "Equity_%" => "99" } } })
-    puts "\nPROBE VNQ #{r.inspect}"
-    assert_equal "equity", r[0]
+    assert_equal [ "equity", "etf", "north_america", "Real Estate" ], r
   end
 
   # Edge cases in real fund data
@@ -88,5 +87,6 @@ class Security::FundClassificationFromEodhdTest < ActiveSupport::TestCase
       "MutualFund_Data" => { "Asset_Allocation" => { "US Stocks" => { "Net_%" => "99" } },
                              "World_Regions" => { "Americas" => [ nil, { "Name" => "North America", "Stocks_%" => "99" } ] } })
     assert_equal "Vanguard 500 Admiral", s.name
+    assert_equal [ "equity", "mutual_fund", "north_america" ], [ s.asset_class, s.asset_sub_class, s.region ]
   end
 end
