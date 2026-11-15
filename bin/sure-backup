@@ -433,7 +433,10 @@ cmd_restore() {
 
   # Load into a scratch database and swap it in only once it has loaded, so a
   # failed restore leaves the current database as it was.
-  scratch_db="${POSTGRES_DB}_restore_$$"
+  # Not derived from POSTGRES_DB: PostgreSQL truncates names to 63 bytes, which
+  # could turn a suffixed name back into the live database's.
+  scratch_db="sure_restore_$$_$(date +%s)"
+  [ "$scratch_db" != "$POSTGRES_DB" ] || die "the database is named like a restore scratch database (${POSTGRES_DB}); rename it first"
   log "Restoring database..."
   PGOPTIONS="-c client_min_messages=warning" dropdb --maintenance-db=postgres --if-exists --force "$scratch_db"
   createdb --maintenance-db=postgres -O "$POSTGRES_USER" "$scratch_db"
@@ -933,8 +936,9 @@ upgrade_rollback_help() {
 [sure-backup] To go back to PostgreSQL ${old_major}:
 [sure-backup]   1. docker compose stop
 [sure-backup]   2. docker run --rm -v ${volume}:/v alpine sh -c 'rm -rf /v/${target_major} && ${restore_layout_cmd}'
-[sure-backup]   3. In your compose file, set the db image back to PostgreSQL ${old_major} AND its
-[sure-backup]      volume mount back to ${old_mount} (both, or the server starts empty).
+[sure-backup]   3. In your compose file, set the PostgreSQL image (x-db-image in compose.example.yml)
+[sure-backup]      back to version ${old_major} AND the db volume mount back to ${old_mount}
+[sure-backup]      (both, or the server starts empty).
 [sure-backup]   4. docker compose up -d
 [sure-backup] The backup taken before the upgrade is ${bundle_id:-in your backups folder}.
 EOF

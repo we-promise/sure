@@ -695,16 +695,18 @@ If you download the new `bin/db-backup.sh` without updating the compose file, th
 - **Keep running PostgreSQL 16:** leave your `db` service as it is. Updating Sure (`docker compose pull`) does not touch it, and backups keep working: the Sure image's PostgreSQL tools back up and restore older servers too.
 - **Move to PostgreSQL 18:** change the `db` service as below, then run the upgrade command.
 
-Two lines of the `db` service change, and the `db-version-check` service is new. Copy all of it from the current [`compose.example.yml`](https://github.com/we-promise/sure/blob/main/compose.example.yml), or re-download the file:
+The image and the volume mount of the `db` service change, and the `db-version-check` service is new. Copy them from the current [`compose.example.yml`](https://github.com/we-promise/sure/blob/main/compose.example.yml), or re-download the file. The image is set once, near the top, and used by both services:
 
 ```yaml
+x-db-image: &db_image postgres:18               # was postgres:16
+
   db:
-    image: postgres:18                          # was postgres:16
+    image: *db_image
     volumes:
       - postgres-data:/var/lib/postgresql       # was /var/lib/postgresql/data
 ```
 
-If you start Sure at this point, `db-version-check` stops it with a message rather than letting PostgreSQL 18 start on (or beside) the old data. Your data is untouched. Run the upgrade from the folder with your `compose.yml`:
+`db-version-check` runs before the database, from the same image, and checks that the data in the volume belongs to that PostgreSQL version. If you start Sure at this point, it stops with a message rather than letting PostgreSQL 18 start on (or beside) the old data. Your data is untouched. Run the upgrade from the folder with your `compose.yml`:
 
 ```bash
 curl --fail --location --silent --show-error --output sure-backup https://raw.githubusercontent.com/we-promise/sure/main/bin/sure-backup
@@ -734,7 +736,7 @@ While `pg16-old` is still there, you can put the old database back. Anything wri
 ```bash
 docker compose stop
 docker run --rm -v <volume>:/v alpine sh -c 'rm -rf /v/18 && mv /v/pg16-old/* /v/pg16-old/.[!.]* /v/ 2>/dev/null; rmdir /v/pg16-old'
-# In compose.yml set the db image back to postgres:16 AND the mount back to /var/lib/postgresql/data
+# In compose.yml set x-db-image back to postgres:16 AND the db mount back to /var/lib/postgresql/data
 docker compose up -d
 ```
 
