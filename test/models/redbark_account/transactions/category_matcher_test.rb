@@ -135,4 +135,26 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     mapped = RedbarkAccount::Transactions::CategoryTaxonomy::CATEGORY_GROUPS.keys
     assert_empty mapped - v1_codes, "CATEGORY_GROUPS must only contain documented v1 codes"
   end
+
+  # These exercise the shared Transactions::MccTaxonomy table, so they guard Monobank's
+  # matcher too. The schemes separate a telecom service from telecom hardware, and a
+  # sport the cardholder watches from one they take part in.
+  test "maps telephone equipment sales to Shopping, not Utilities" do
+    # 4812 is telecom equipment and telephone sales; the phone bill is 4814.
+    assert_equal "Shopping", @matcher.match("MERCHANDISE", 4812)&.name
+    assert_equal "Utilities", @matcher.match("MERCHANDISE", 4814)&.name
+  end
+
+  test "maps professional sports to Entertainment, not Sports & Fitness" do
+    # 7941 is commercial sports, professional clubs and promoters -- match tickets.
+    assert_equal "Entertainment", @matcher.match("MERCHANDISE", 7941)&.name
+    # 7997 is membership/athletic/country clubs, i.e. a gym subscription, which stays.
+    assert_equal "Sports & Fitness", @matcher.match("MERCHANDISE", 7997)&.name
+  end
+
+  test "leaves digital goods unmapped" do
+    # 5815 covers digital books, films and music, as often bought outright as subscribed
+    # to, so neither Subscriptions nor Shopping is an honest guess.
+    assert_nil @matcher.match("MERCHANDISE", 5815)
+  end
 end

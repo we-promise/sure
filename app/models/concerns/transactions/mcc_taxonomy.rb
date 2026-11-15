@@ -16,6 +16,14 @@
 # * 5921 / 5993 / 7995 -- alcohol, tobacco and gambling, which most people track under
 #   their own categories if at all.
 # * 8211 / 8220 -- education, which has no Sure default category.
+# * 5815 -- digital goods (books, films, music). These are as often one-off purchases as
+#   subscriptions, and the code cannot tell which, so neither "Subscriptions" nor
+#   "Shopping" is honest. It was the only code under :subscriptions, so that group is gone.
+#
+# Code meanings follow the card schemes' own definitions rather than folklore: Visa's
+# Merchant Data Standards Manual and Mastercard's Quick Reference Booklet. Where the two
+# split a service from its hardware (4814 telecom service vs 4812 telecom equipment) this
+# table follows that split.
 #
 # A wrong auto-category is worse than none: importers apply matches via enrich_attribute,
 # so anything left unmapped simply stays uncategorised for the user's own rules (or the AI
@@ -58,8 +66,9 @@ module Transactions::MccTaxonomy
     {
       key: :entertainment,
       aliases: [ "entertainment" ],
-      # Cinemas, theatres, attractions, amusement parks and recreation services.
-      mccs: [ 7832, 7911, 7922, 7929, 7991, 7993, 7994, 7996, 7998, 7999 ]
+      # Cinemas, theatres, attractions, amusement parks and recreation services, plus
+      # commercial/professional sports and sports promoters (7941) -- match tickets.
+      mccs: [ 7832, 7911, 7922, 7929, 7941, 7991, 7993, 7994, 7996, 7998, 7999 ]
     },
     {
       key: :healthcare,
@@ -76,16 +85,19 @@ module Transactions::MccTaxonomy
     {
       key: :sports_and_fitness,
       aliases: [ "sports and fitness", "fitness" ],
-      # Sporting goods, sports clubs and fields, membership (gym) clubs.
-      mccs: [ 5941, 7941, 7997 ]
+      # Sporting goods retail and membership (gym/athletic/country) clubs -- sport the
+      # cardholder takes part in. 7941 is commercial sports, professional clubs and sports
+      # promoters, which is sport they watch, so it sits under :entertainment.
+      mccs: [ 5941, 7997 ]
     },
     {
       key: :shopping,
       aliases: [ "shopping" ],
       # General merchandise, clothing and footwear, electronics, furniture, hobby and
-      # stationery retail.
+      # stationery retail. 4812 is telecom equipment and telephone sales -- a handset
+      # purchase, not the phone bill, which is 4814 under :utilities.
       mccs: [
-        5300, 5310, 5311, 5399, 5611, 5621, 5631, 5641, 5651, 5655, 5661, 5691, 5699,
+        4812, 5300, 5310, 5311, 5399, 5611, 5621, 5631, 5641, 5651, 5655, 5661, 5691, 5699,
         5712, 5713, 5714, 5719, 5722, 5732, 5733, 5734, 5735, 5931, 5942, 5943, 5945,
         5946, 5948, 5949, 5950, 5970, 5999
       ]
@@ -99,14 +111,10 @@ module Transactions::MccTaxonomy
     {
       key: :utilities,
       aliases: [ "utilities" ],
-      # Utilities, and telecom services (a mobile bill is the common case here).
-      mccs: [ 4812, 4813, 4814, 4900 ]
-    },
-    {
-      key: :subscriptions,
-      aliases: [ "subscriptions" ],
-      # Digital media (books, films, music) sold as downloads or subscriptions.
-      mccs: [ 5815 ]
+      # Utilities, and telecom *services* (a mobile bill is the common case here). The
+      # schemes separate the service from the hardware: 4812 is telecom equipment and
+      # telephone sales, so it sits under :shopping, not here.
+      mccs: [ 4813, 4814, 4900 ]
     },
     {
       key: :insurance,
