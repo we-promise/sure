@@ -302,6 +302,30 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Groceries", entry.transaction.category&.name
   end
 
+  test "transactions processor narrows a supermarket purchase to Groceries" do
+    @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+
+    ra.update!(raw_transactions_payload: [
+      {
+        "id" => "tx_cat_refine",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS 1144 LIVERPOOL NS",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchant" => "Woolworths 1144 Liverpool NS",
+        "category" => "FOOD_AND_DRINK",
+        "merchantCategoryCode" => "5411" # supermarkets -> narrows Food & Drink to Groceries
+      }
+    ])
+
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_refine", source: "redbark")
+    assert_equal "Groceries", entry.transaction.category&.name
+  end
+
   test "transactions processor skips category matching when the account has the matcher switched off" do
     @family.categories.bootstrap!
     account, ra = link(Depository, provider: "fiskil", balance: "100")

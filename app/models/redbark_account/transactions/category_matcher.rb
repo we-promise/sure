@@ -8,12 +8,17 @@
 # the shared Transactions::MccTaxonomy.
 #
 # `category` (Redbark's fixed bank-category code) is the primary signal: it already
-# describes spending purpose, not just merchant type. When it's blank, unrecognised, or one
-# of the codes intentionally left unmapped (too coarse/ambiguous to trust),
-# `merchant_category_code` (MCC) is tried as a fallback -- a noisier signal, but still
-# better than nothing. It never overrides a recognised code: a recognised code whose
-# category the family does not have stays uncategorised rather than being reassigned by
-# merchant type.
+# describes spending purpose, not just merchant type. `merchant_category_code` (MCC) is a
+# noisier signal and is used in only two ways:
+#
+# * as a *fallback*, when `category` is blank, unrecognised, or one of the codes
+#   intentionally left unmapped (too coarse/ambiguous to trust);
+# * as a *refinement*, when the code permits it in CATEGORY_MCC_REFINEMENTS -- narrowing a
+#   recognised code to a more specific category inside the same domain.
+#
+# It is never allowed to override a recognised code with something unrelated: a recognised
+# code whose category the family does not have stays uncategorised rather than being
+# reassigned by merchant type.
 #
 # Locale-aware like the Monobank matcher: a Redbark-linked family is not necessarily
 # English-speaking, so the family's own locale is tried before the English aliases.
@@ -34,7 +39,13 @@ class RedbarkAccount::Transactions::CategoryMatcher
   # Category, or nil when neither signal has an equivalent among the user's categories.
   def match(category, mcc = nil)
     group = category_group(category)
-    return match_group(group) if group
+
+    if group
+      refinement = category_refinement_group(category, mcc)
+      return match_group(refinement) || match_group(group) if refinement
+
+      return match_group(group)
+    end
 
     match_group(mcc_group(mcc))
   end

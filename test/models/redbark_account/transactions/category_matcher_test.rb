@@ -106,4 +106,29 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     assert_nil @matcher.match("LOAN_PAYMENTS")
     assert_nil @matcher.match("LOAN_PAYMENTS", nil)
   end
+
+  test "refines a recognized category with a more specific MCC in the same domain" do
+    # Redbark reports a supermarket shop as FOOD_AND_DRINK + 5411. The MCC is sharper
+    # about the same spend, so it narrows Food & Drink to Groceries.
+    assert_equal "Groceries", @matcher.match("FOOD_AND_DRINK", 5411)&.name
+    assert_equal "Groceries", @matcher.match("FOOD_AND_DRINK", "5411")&.name
+  end
+
+  test "keeps the category when a permitted refinement has no local equivalent" do
+    bare_family = families(:dylan_family)
+    bare_family.categories.destroy_all
+    bare_family.categories.create!(name: "Food & Drink")
+    matcher = RedbarkAccount::Transactions::CategoryMatcher.new(bare_family.categories.reload.to_a)
+
+    # No Groceries category to narrow to, so the broader category code still applies.
+    assert_equal "Food & Drink", matcher.match("FOOD_AND_DRINK", 5411)&.name
+  end
+
+  test "does not refine a recognized category with an unrelated MCC" do
+    # 7011 (lodging) maps to Travel, which is not a permitted refinement of FOOD_AND_DRINK,
+    # so the category code decides and the MCC is ignored.
+    assert_equal "Food & Drink", @matcher.match("FOOD_AND_DRINK", 7011)&.name
+    # 5811 (caterers) maps to Food & Drink itself -- also not a narrowing, so no change.
+    assert_equal "Food & Drink", @matcher.match("FOOD_AND_DRINK", 5811)&.name
+  end
 end
