@@ -101,9 +101,11 @@ class EnableBankingItemsController < ApplicationController
     end
 
     begin
+      pending_connection = pending_connection_for(aspsp_name) if params[:new_connection] == "true"
       target_item = if params[:new_connection] == "true"
-        Current.family.enable_banking_items.create!(
+        pending_connection || Current.family.enable_banking_items.create!(
           name: "Enable Banking Connection",
+          aspsp_name: aspsp_name,
           country_code: @enable_banking_item.country_code,
           application_id: @enable_banking_item.application_id,
           client_certificate: @enable_banking_item.client_certificate
@@ -123,7 +125,7 @@ class EnableBankingItemsController < ApplicationController
       redirect_url = target_item.begin_authorization!(
         aspsp_name: aspsp_name,
         redirect_url: enable_banking_callback_url,
-        state: issue_oauth_state_for(target_item),
+        state: issue_oauth_state_for(target_item, only_flow: pending_connection.present?),
         psu_type: psu_type,
         language: language
       )
@@ -533,11 +535,35 @@ class EnableBankingItemsController < ApplicationController
   end
 
   private
+    # The connection is created before the bank's page opens, so a later click
+    # on the same bank, a back-and-retry or a failed start would leave an empty
+    # connection behind. An earlier attempt at this bank with the same
+    # credentials that never came back from it (no session, no accounts) is
+    # reused instead. Other banks keep their own connection.
+    def pending_connection_for(aspsp_name)
+      Current.family.enable_banking_items.active
+        .where(
+          aspsp_name: aspsp_name,
+          session_id: nil,
+          application_id: @enable_banking_item.application_id,
+          country_code: @enable_banking_item.country_code,
+          client_certificate: @enable_banking_item.client_certificate
+        )
+        .where.missing(:enable_banking_accounts)
+        .ordered
+        .first
+    end
+
     # Pending states map state => item id, so parallel flows (two tabs) each
-    # keep their own entry. Only the newest few are kept.
-    def issue_oauth_state_for(item)
+    # keep their own entry. Only the newest few are kept. A reused pending
+    # connection (only_flow) keeps only its newest flow: two new logins to the
+    # same bank finishing on one connection would leave the first one's
+    # accounts attached to the second one's session.
+    def issue_oauth_state_for(item, only_flow: false)
       state = SecureRandom.urlsafe_base64(32)
-      pending = pending_oauth_states.merge(state => item.id)
+      pending = pending_oauth_states
+      pending = pending.reject { |_, item_id| item_id == item.id } if only_flow
+      pending = pending.merge(state => item.id)
       session[OAUTH_STATE_SESSION_KEY] = pending.to_a.last(MAX_PENDING_OAUTH_STATES).to_h
       state
     end

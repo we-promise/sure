@@ -245,6 +245,92 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert @sent_state.length >= 32
   end
 
+  # One N26 login used to leave five connections behind, four of them empty.
+  test "starting a new connection twice for the same bank reuses the pending one" do
+    stub_authorization_start
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      2.times do
+        post authorize_enable_banking_item_url(@item),
+             params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      end
+    end
+
+    assert_redirected_to "https://api.enablebanking.com/auth/redirect/abc"
+  end
+
+  test "a new connection to another bank still gets its own connection" do
+    stub_authorization_start(banks: [ "Test Bank", "Other Bank" ])
+
+    assert_difference -> { @family.enable_banking_items.count }, 2 do
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Other Bank", psu_type: "personal", new_connection: "true" }
+    end
+  end
+
+  test "a connection that already has a session is never reused for a new one" do
+    stub_authorization_start
+    @family.enable_banking_items.create!(
+      name: "Connected", country_code: "DE", application_id: "test_app_id",
+      client_certificate: @item.client_certificate, aspsp_name: "Test Bank", session_id: "live-session"
+    )
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+    end
+  end
+
+  test "a start that failed at the provider is reused on the next attempt" do
+    Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
+      aspsps: [ { name: "Test Bank", country: "DE", psu_types: [ "personal" ], auth_methods: [ { approach: "REDIRECT" } ] } ]
+    )
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .raises(Provider::EnableBanking::EnableBankingError.new("REDIRECT_URI_NOT_ALLOWED"))
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      3.times do
+        post authorize_enable_banking_item_url(@item),
+             params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      end
+    end
+  end
+
+  test "a connection scheduled for deletion is not reused" do
+    stub_authorization_start
+    @family.enable_banking_items.create!(
+      name: "Going away", country_code: "DE", application_id: "test_app_id",
+      client_certificate: @item.client_certificate, aspsp_name: "Test Bank", scheduled_for_deletion: true
+    )
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+    end
+  end
+
+  # Two new logins to the same bank now share the pending connection, so only
+  # the newest may finish: otherwise the first login's accounts would end up on
+  # the second login's session.
+  test "of two new logins to the same bank, only the newest can complete" do
+    stub_authorization_start
+    post authorize_enable_banking_item_url(@item),
+         params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+    first_state = @sent_state
+    post authorize_enable_banking_item_url(@item),
+         params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+    second_state = @sent_state
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).once
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
+    assert_redirected_to settings_providers_path
+    get callback_enable_banking_items_url, params: { code: "second", state: second_state }
+    assert_redirected_to accounts_path
+  end
+
   test "callback completes authorization when the state matches this session" do
     stub_authorization_start
     post authorize_enable_banking_item_url(@item), params: { aspsp_name: "Test Bank", psu_type: "personal" }
@@ -346,9 +432,9 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
 
   private
 
-    def stub_authorization_start
+    def stub_authorization_start(banks: [ "Test Bank" ])
       Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
-        aspsps: [ { name: "Test Bank", country: "DE", psu_types: [ "personal" ], auth_methods: [ { approach: "REDIRECT" } ] } ]
+        aspsps: banks.map { |name| { name: name, country: "DE", psu_types: [ "personal" ], auth_methods: [ { approach: "REDIRECT" } ] } }
       )
       test_case = self
       Provider::EnableBanking.any_instance.stubs(:start_authorization).with do |**kwargs|
