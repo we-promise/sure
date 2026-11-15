@@ -1914,7 +1914,9 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     @client.define_singleton_method(:subscribe) { |_websocket, **_payload| raise Provider::TradeRepublicClient::MalformedResponse, "bad detail" }
     stored = transfer_item.merge("detail" => { "amount" => 50.0 })
 
-    enriched, warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ stored ])
+    enriched, warnings, improved = @client.send(
+      :enrich_timeline_details, Object.new, [], enrich_events: [ stored ], reference_ibans: Set["DE00999999999999999999"]
+    )
 
     event = enriched.find { |candidate| candidate["id"] == "transfer-1" }
     assert_equal 0, improved
@@ -2018,6 +2020,63 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     _, warnings_with_reference, = @client.send(:enrich_timeline_details, Object.new, events, reference_ibans: Set["DE00999999999999999999"])
     assert_empty warnings_with_reference
+  end
+
+  test "a transfer read only for its note waits for the counterparty check until a sync lists a reference account" do
+    note_only = transfer_item(id: "transfer-note-only").merge(
+      "detail" => { "amount" => 50.0, "note" => "Savings", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+    )
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(note_only, check_counterparty: false)
+    assert Provider::TradeRepublicClient.cash_note_pending?(note_only, check_counterparty: true)
+    assert Provider::TradeRepublicClient.cash_note_read?(note_only, check_counterparty: false)
+    assert_not Provider::TradeRepublicClient.cash_note_read?(note_only, check_counterparty: true)
+
+    requested = []
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      helper.send(:transfer_detail, note: "Savings")
+    end
+
+    enriched, warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ note_only ], reference_ibans: Set.new)
+
+    assert_empty requested
+    assert_equal 0, improved
+    assert_equal [ Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING ], warnings
+    assert_empty enriched
+
+    enriched, warnings, improved = @client.send(
+      :enrich_timeline_details, Object.new, [], enrich_events: [ note_only ], reference_ibans: Set["DE00000000000000000000"]
+    )
+
+    assert_equal [ "transfer-note-only" ], requested
+    assert_equal 1, improved
+    assert_empty warnings
+    assert_equal "reference_account", enriched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+  end
+
+  test "a transfer on a catch-up page whose note was read is checked from its stored copy only when a reference account is listed" do
+    requested = []
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      helper.send(:transfer_detail, note: "Savings")
+    end
+    stored = transfer_item(id: "transfer-page").merge(
+      "detail" => { "amount" => 50.0, "note" => "Savings", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+    )
+    page = [ @client.send(:build_skeleton_event, transfer_item(id: "transfer-page"), warnings: []) ]
+
+    @client.send(:enrich_timeline_details, Object.new, page, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ], reference_ibans: Set.new)
+    assert_empty requested
+
+    enriched, = @client.send(
+      :enrich_timeline_details, Object.new, page, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ],
+      reference_ibans: Set["DE00000000000000000000"]
+    )
+    assert_equal [ "transfer-page" ], requested
+    assert_equal "reference_account", enriched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_equal "Savings", enriched.sole.dig("detail", "note")
   end
 
   test "a direct debit from the reference account is marked as one" do

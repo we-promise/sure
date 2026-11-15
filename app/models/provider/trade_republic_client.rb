@@ -594,25 +594,35 @@ class Provider::TradeRepublicClient
       !(detail.is_a?(Hash) && detail.stringify_keys["isin"].present?)
     end
 
-    # An importable transfer or direct debit whose detail was never read for
-    # its note.
-    def cash_note_pending?(event)
+    # An importable transfer or direct debit whose detail still has to be
+    # read: never read for its note, or, when check_counterparty, not yet
+    # compared with a reference account. A sync whose account response lists
+    # no reference account passes check_counterparty: false, so it reads no
+    # transfer again for the comparison it cannot make; a later sync that
+    # lists one picks them up from the backlog.
+    def cash_note_pending?(event, check_counterparty: true)
       return false unless event.is_a?(Hash)
       return false unless CASH_NOTE_EVENT_TYPES.include?(event.stringify_keys["eventType"].to_s)
 
-      Provider::TradeRepublicTimelineEvent.importable?(event.stringify_keys) && !cash_note_read?(event)
+      Provider::TradeRepublicTimelineEvent.importable?(event.stringify_keys) &&
+        !cash_note_read?(event, check_counterparty: check_counterparty)
     end
 
-    # A transfer or direct debit whose detail was read for its note and its
-    # counterparty, with or without a result. One read before the
-    # counterparty check (a note or NOTE_CHECKED_AT_KEY only) is read again.
-    def cash_note_read?(event)
+    # A transfer or direct debit whose detail was read for its note, with or
+    # without a result, and, when check_counterparty, compared with a
+    # reference account. One read before the counterparty check (a note or
+    # NOTE_CHECKED_AT_KEY only) counts as read only without that check.
+    def cash_note_read?(event, check_counterparty: true)
       return false unless event.is_a?(Hash)
 
       item = event.stringify_keys
       detail = item["detail"]
-      CASH_NOTE_EVENT_TYPES.include?(item["eventType"].to_s) &&
-        detail.is_a?(Hash) && detail.stringify_keys[COUNTERPARTY_CHECKED_AT_KEY].present?
+      return false unless CASH_NOTE_EVENT_TYPES.include?(item["eventType"].to_s) && detail.is_a?(Hash)
+
+      detail = detail.stringify_keys
+      return detail[COUNTERPARTY_CHECKED_AT_KEY].present? if check_counterparty
+
+      detail.values_at("note", NOTE_CHECKED_AT_KEY, COUNTERPARTY_CHECKED_AT_KEY).any?(&:present?)
     end
 
     # The login's reference accounts from /api/v2/auth/account, as
@@ -1617,13 +1627,14 @@ class Provider::TradeRepublicClient
     def enrich_timeline_details(websocket, events, enrich_events: [], note_read_event_ids: [], reference_ibans: Set.new)
       warnings = []
       events = Array(events)
+      check_counterparty = reference_ibans.present?
       # The page holding the known newest event is read again as skeletons
       # without markers; a transfer whose note was already read is not.
       note_read_ids = Array(note_read_event_ids).to_set(&:to_s)
       new_candidates = events.select do |event|
         event["id"].present? &&
           (self.class.incomplete_trade_detail_event?(event) || self.class.dividend_detail_missing?(event) ||
-            (self.class.cash_note_pending?(event) && !note_read_ids.include?(event["id"].to_s)))
+            (self.class.cash_note_pending?(event, check_counterparty:) && !note_read_ids.include?(event["id"].to_s)))
       end
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
       page_ids = events.filter_map { |event| event["id"].presence&.to_s }.to_set
@@ -1636,11 +1647,13 @@ class Provider::TradeRepublicClient
 
         # A dividend or transfer on this sync's pages is handled there: a new
         # one is fetched above, and one that already has its details needs
-        # nothing.
+        # nothing. A transfer whose note was read but whose counterparty was
+        # not is skipped on the page, so its stored copy is read here.
+        id = item["id"].to_s
         self.class.incomplete_trade_detail_event?(item) ||
           self.class.trade_detail_needs_price_backfill?(item) ||
-          ((self.class.dividend_detail_missing?(item) || self.class.cash_note_pending?(item)) &&
-            !page_ids.include?(item["id"].to_s))
+          (self.class.dividend_detail_missing?(item) && !page_ids.include?(id)) ||
+          (self.class.cash_note_pending?(item, check_counterparty:) && (!page_ids.include?(id) || note_read_ids.include?(id)))
       end
 
       budget = MAX_TIMELINE_DETAILS
@@ -1661,7 +1674,6 @@ class Provider::TradeRepublicClient
       end
 
       enriched_by_id = {}
-      counterparty_unchecked = false
       detail_backfill_count = 0
       details_fetched = 0
 
@@ -1684,14 +1696,12 @@ class Provider::TradeRepublicClient
           # from the detail.
           # Without a reference account to compare with, the counterparty
           # stays unchecked, so a later sync that lists one reads it again.
-          if self.class.cash_note_pending?(item)
+          if self.class.cash_note_pending?(item, check_counterparty:)
             checked_at = Time.current.iso8601
             detail = (detail || {}).slice("note").merge(NOTE_CHECKED_AT_KEY => checked_at)
-            if reference_ibans.present?
+            if check_counterparty
               detail[COUNTERPARTY_CHECKED_AT_KEY] = checked_at
               detail[COUNTERPARTY_KEY] = REFERENCE_ACCOUNT_COUNTERPARTY if reference_account_counterparty?(raw_detail, reference_ibans)
-            else
-              counterparty_unchecked = true
             end
           end
           fetched = build_normalized_event(item, category: category, detail: detail)
@@ -1703,18 +1713,21 @@ class Provider::TradeRepublicClient
 
         if kind == :backfill
           result = fetched ? prefer_richer_event(item, fetched) : item
-          detail_backfill_count += 1 if detail_backfill_improved?(item, result)
+          detail_backfill_count += 1 if detail_backfill_improved?(item, result, check_counterparty:)
           if self.class.trade_detail_price_unconfirmed?(result)
             fetched = with_price_backfill_attempt(result)
           elsif self.class.incomplete_trade_detail_event?(result) || self.class.dividend_detail_missing?(result) ||
-              self.class.cash_note_pending?(result)
+              self.class.cash_note_pending?(result, check_counterparty:)
             fetched = with_detail_backfill_attempt(result)
           end
         end
         enriched_by_id[item["id"].to_s] = fetched if fetched
       end
 
-      warnings << NO_REFERENCE_ACCOUNTS_WARNING if counterparty_unchecked
+      # Once per sync, when a transfer was left without the comparison.
+      if !check_counterparty && (events + Array(enrich_events)).any? { |event| self.class.cash_note_pending?(event) }
+        warnings << NO_REFERENCE_ACCOUNTS_WARNING
+      end
 
       merged_events = events.map do |event|
         id = event["id"].to_s
@@ -1727,8 +1740,10 @@ class Provider::TradeRepublicClient
       [ merged_events, warnings, detail_backfill_count ]
     end
 
-    def detail_backfill_improved?(before, after)
-      return !self.class.cash_note_pending?(after) if self.class.cash_note_pending?(before)
+    def detail_backfill_improved?(before, after, check_counterparty: true)
+      if self.class.cash_note_pending?(before, check_counterparty:)
+        return !self.class.cash_note_pending?(after, check_counterparty:)
+      end
       return self.class.trade_detail_complete?(after) if self.class.incomplete_trade_detail_event?(before)
 
       self.class.trade_detail_price_unconfirmed?(before) && !self.class.trade_detail_price_unconfirmed?(after)

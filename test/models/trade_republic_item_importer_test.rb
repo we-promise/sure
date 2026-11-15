@@ -855,6 +855,24 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a transfer read only for its note is passed as read and also offered for its counterparty check" do
+    note_only = {
+      "id" => "transfer-note-only", "timestamp" => "2026-06-17T10:00:00Z", "eventType" => "INCOMING_TRANSFER",
+      "category" => "PAYMENT_RECEIVED", "detail" => { "amount" => 50.0, "note_checked_at" => "2026-06-18T10:00:00Z" }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-NOTEONLY", currency: "EUR", raw_timeline_payload: [ note_only ]
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { |args|
+      Array(args[:enrich_events]).map { |event| event["id"] } == [ "transfer-note-only" ] &&
+        args[:note_read_event_ids] == [ "transfer-note-only" ]
+    }.returns(timeline_cursor_result({}))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+  end
+
   test "a transfer kept only in the cash payload is backfilled and a read one is passed on" do
     transfer = {
       "id" => "transfer-cash-only",

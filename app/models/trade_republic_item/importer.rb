@@ -255,10 +255,12 @@ class TradeRepublicItem::Importer
 
     # Transfers whose note was already read. A sync that catches up re-reads
     # the page holding the newest known event, so the client needs these to
-    # not fetch them again.
+    # not fetch them again. One still waiting for its counterparty check is
+    # passed in enrich_events too, and read from there when the sync can
+    # make that check.
     def note_read_event_ids
       stored_timeline_events
-        .select { |event| Provider::TradeRepublicClient.cash_note_read?(event) }
+        .select { |event| Provider::TradeRepublicClient.cash_note_read?(event, check_counterparty: false) }
         .filter_map { |event| event["id"].presence }
     end
 
