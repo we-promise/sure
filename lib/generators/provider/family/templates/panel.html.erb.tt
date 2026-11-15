@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div id="<%= file_name %>-providers-panel" class="space-y-4">
   <div class="prose prose-sm text-secondary">
     <p class="text-primary font-medium"><%= "<" + "%= t(\"#{file_name}_items.panel.setup_instructions\") %" + ">" %></p>
     <ol>

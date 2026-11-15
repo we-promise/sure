@@ -7,12 +7,16 @@ uk:
       synced:
         one: "%{count} рахунок синхронізовано"
         other: "%{count} рахунків синхронізовано"
+        few: '%{count} рахунки синхронізовано'
+        many: '%{count} рахунків синхронізовано'
       synced_with_setup: "%{linked} синхронізовано, %{unlinked} потребує налаштування"
     institution_summary:
       none: "Жодної установи не підключено"
       count:
         one: "%{count} установа"
         other: "%{count} установ"
+        few: '%{count} установи'
+        many: '%{count} установ'
     errors:
       provider_not_configured: "Постачальник Questrade не налаштовано"
 
@@ -20,7 +24,7 @@ uk:
     sync:
       status:
         importing: "Імпорт рахунків з Questrade..."
-        processing: "Обробка активів та діяльності..."
+        processing: "Обробка активів та операцій..."
         calculating: "Розрахунок балансів..."
         importing_data: "Імпорт даних рахунку..."
         checking_setup: "Перевірка налаштувань рахунку..."
@@ -53,6 +57,17 @@ uk:
           description: "Ваш сервер API Questrade"
           placeholder_new: "Вставте сервер API тут"
           placeholder_update: "Введіть новий сервер API для оновлення"
+      eyebrow: Налаштування · лише на комп'ютері
+      help_text: Документація API Questrade
+      disconnect: Відключити
+      disconnect_confirm: Відключити Questrade? Це видалить з'єднання та від'єднає синхронізовані рахунки.
+      steps:
+        s1_html: Увійдіть на <a href="https://my.questrade.com" target="_blank" rel="noopener noreferrer" class="text-primary font-medium underline">портал Questrade</a> у браузері на комп'ютері. Налаштування API недоступні в мобільному застосунку.
+        s2: Відкрийте Settings і в розділі General settings відредагуйте налаштування IQ API.
+        s3_html: У вікні доступу до API натисніть <strong>Manage</strong> у розділі <strong>My applications</strong>.
+        s4: Зареєструйте персональний застосунок із назвою та описом, потім збережіть.
+        s5: Додайте новий пристрій і згенеруйте токен.
+        s6: Вставте згенерований токен нижче та збережіть.
 
     # CRUD success messages
     create:
@@ -74,18 +89,24 @@ uk:
       all_already_linked:
         one: "Вибраний рахунок (%{names}) вже пов'язано"
         other: "Усі %{count} вибраних рахунків вже пов'язано: %{names}"
+        few: 'Усі %{count} вибрані рахунки вже пов''язано: %{names}'
+        many: 'Усі %{count} вибраних рахунків вже пов''язано: %{names}'
       api_error: "Помилка API: %{message}"
       invalid_account_names:
         one: "Неможливо пов'язати рахунок з порожньою назвою"
         other: "Неможливо пов'язати %{count} рахунків з порожніми назвами"
+        few: Неможливо пов'язати %{count} рахунки з порожніми назвами
+        many: Неможливо пов'язати %{count} рахунків з порожніми назвами
       link_failed: "Не вдалося пов'язати рахунки"
       no_accounts_selected: "Будь ласка, виберіть принаймні один рахунок"
       no_api_key: "Ключ API Questrade не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника."
-      partial_invalid: "Успішно пов'язано %{created_count} рахунок(и), %{already_linked_count} вже було пов'язано, %{invalid_count} рахунок(и) мав(ли) недійсні назви"
-      partial_success: "Успішно пов'язано %{created_count} рахунок(и). %{already_linked_count} рахунок(и) вже було пов'язано: %{already_linked_names}"
+      partial_invalid: "Прив'язано рахунків: %{created_count}; уже були прив'язані: %{already_linked_count}; з недійсними назвами: %{invalid_count}"
+      partial_success: "Прив'язано рахунків: %{created_count}. Уже були прив'язані (%{already_linked_count}): %{already_linked_names}"
       success:
         one: "Успішно пов'язано %{count} рахунок"
         other: "Успішно пов'язано %{count} рахунків"
+        few: Успішно пов'язано %{count} рахунки
+        many: Успішно пов'язано %{count} рахунків
 
     # Provider item display (used in _item partial)
     questrade_item:
@@ -95,8 +116,10 @@ uk:
       deletion_in_progress: "видалення триває..."
       error: "Помилка"
       more_accounts_available:
-        one: "%{count} ще один доступний рахунок"
-        other: "%{count} ще доступних рахунків"
+        one: "Доступний ще %{count} рахунок"
+        other: "Доступно ще %{count} рахунків"
+        few: Доступні ще %{count} рахунки
+        many: Доступно ще %{count} рахунків
       no_accounts_description: "Це з'єднання ще не має пов'язаних рахунків."
       no_accounts_title: "Немає рахунків"
       provider_name: "Questrade"
@@ -135,8 +158,8 @@ uk:
       cancel: "Скасувати"
       cancel_button: "Скасувати"
       configure_name_in_provider: "Неможливо імпортувати - будь ласка, налаштуйте назву рахунку в Questrade"
-      connect_hint: "Підключіть обліковий запис Questrade, щоб увімкнути автоматичну синхронізацію."
-      description: "Виберіть обліковий запис Questrade для пов'язування з цим обліковим записом. Транзакції будуть синхронізуватися та дедуплікуватися автоматично."
+      connect_hint: "Підключіть рахунок Questrade, щоб увімкнути автоматичну синхронізацію."
+      description: "Виберіть рахунок Questrade для пов'язування з цим рахунком. Транзакції будуть синхронізуватися та дедуплікуватися автоматично."
       header: "Пов'язати з Questrade"
       link_account: "Пов'язати рахунок"
       link_button: "Пов'язати цей рахунок"
@@ -148,16 +171,23 @@ uk:
       no_credentials_configured: "Будь ласка, спочатку налаштуйте свої облікові дані Questrade в налаштуваннях постачальника."
       no_name_placeholder: "(Без назви)"
       settings_link: "Перейти до налаштувань постачальника"
-      subtitle: "Виберіть обліковий запис Questrade"
+      subtitle: "Виберіть рахунок Questrade"
       title: "Пов'язати %{account_name} з Questrade"
+      page_title: Пов'язати рахунок Questrade
+      dialog_title: Пов'язати з рахунком Questrade
+      linking_label: Пов'язування
+      none_available: Немає доступних непов'язаних рахунків Questrade.
+      buttons:
+        cancel: Скасувати
+        link: Пов'язати
 
     # Link existing account
     link_existing_account:
       account_already_linked: "Цей рахунок вже пов'язано з постачальником"
       api_error: "Помилка API: %{message}"
       invalid_account_name: "Неможливо пов'язати рахунок з порожньою назвою"
-      provider_account_already_linked: "Цей обліковий запис Questrade вже пов'язано з іншим обліковим записом"
-      provider_account_not_found: "Обліковий запис Questrade не знайдено"
+      provider_account_already_linked: "Цей рахунок Questrade вже пов'язано з іншим рахунком"
+      provider_account_not_found: "Рахунок Questrade не знайдено"
       missing_parameters: "Відсутні обов'язкові параметри"
       no_api_key: "Ключ API Questrade не знайдено. Будь ласка, налаштуйте його в налаштуваннях постачальника."
       success: "Успішно пов'язано %{account_name} з Questrade"
@@ -168,6 +198,8 @@ uk:
       accounts_count:
         one: "%{count} доступний рахунок"
         other: "%{count} доступних рахунків"
+        few: '%{count} доступні рахунки'
+        many: '%{count} доступних рахунків'
       all_accounts_linked: "Усі ваші рахунки Questrade вже налаштовано."
       api_error: "Помилка API: %{message}"
       creating: "Створення рахунків..."
@@ -180,7 +212,7 @@ uk:
       select_all: "Вибрати все"
       account_types:
         skip: "Пропустити цей рахунок"
-        depository: "Розрахунковий або ощадний рахунок"
+        depository: "Поточний або ощадний рахунок"
         credit_card: "Кредитна картка"
         investment: "Інвестиційний рахунок"
         crypto: "Криптовалютний рахунок"
@@ -199,11 +231,11 @@ uk:
         crypto: "Криптовалютні рахунки будуть налаштовані для відстеження активів та транзакцій."
       subtypes:
         depository:
-          checking: "Розрахунковий"
+          checking: "Поточний"
           savings: "Ощадний"
           hsa: "Рахунок для заощаджень на здоров'я"
-          cd: "Депозитний сертифікат"
-          money_market: "Грошовий ринок"
+          cd: "Строковий депозит"
+          money_market: "Рахунок грошового ринку"
         investment:
           brokerage: "Брокерський"
           pension: "Пенсійний"
@@ -233,6 +265,18 @@ uk:
       sync_start_date_help: "Виберіть, наскільки далеко назад ви хочете синхронізувати історію транзакцій."
       sync_start_date_label: "Почати синхронізацію транзакцій з:"
       title: "Налаштуйте свої рахунки Questrade"
+      page_title: Налаштування рахунків Questrade
+      dialog_title: Налаштуйте свої рахунки Questrade
+      all_linked: Усі рахунки Questrade вже пов'язано.
+      import_as: Імпортувати як
+      buttons:
+        cancel: Скасувати
+        create: Створити рахунки
+        done: Готово
+      types:
+        investment: Інвестиційний
+        depository: Грошовий / депозитний
+        skip: Пропустити цей рахунок
 
     # Complete account setup
     setup_required:
@@ -244,7 +288,11 @@ uk:
       all_skipped: "Усі рахунки було пропущено. Жоден рахунок не було створено."
       creation_failed: "Не вдалося створити рахунки: %{error}"
       no_accounts: "Немає рахунків для налаштування."
-      success: "Успішно створено %{count} рахунок(и)."
+      success:
+        one: "Успішно створено %{count} рахунок."
+        few: "Успішно створено %{count} рахунки."
+        many: "Успішно створено %{count} рахунків."
+        other: "Успішно створено %{count} рахунку."
 
     # Preload accounts
     preload_accounts:

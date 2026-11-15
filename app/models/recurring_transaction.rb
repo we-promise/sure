@@ -74,13 +74,20 @@ class RecurringTransaction < ApplicationRecord
   attr_accessor :rules_rewritten
 
   after_commit :generate_occurrences, on: :create
+  # Ahead of regeneration: activation changes status, so both run, and with
+  # load_defaults 7.1+ these run in the order defined. An exception in one
+  # stops the rest, so a failed regeneration must not cost the bill its
+  # history; reconstruct_history! generates the upcoming rows itself.
+  after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
+  before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
   attr_accessor :frequency_preset, :frequency_day_of_month, :frequency_second_day_of_month,
-                :frequency_weekday, :frequency_month_of_year, :first_due_on, :is_income
+                :frequency_weekday, :frequency_month_of_year, :frequency_interval, :frequency_interval_unit,
+                :first_due_on, :is_income
 
   # A scheme, followed by either "//" or by something that is not a port number.
   # "example.com:8080" is a host and port, not a scheme, so it does not match.
@@ -110,6 +117,23 @@ class RecurringTransaction < ApplicationRecord
     false
   end
 
+  # Bill amounts and their payments are stored to the column's four decimal
+  # places: finer than most currencies, coarser than crypto's eight. An amount
+  # finer than that would be rounded on save, and a small enough one to zero,
+  # which leaves a bill that can never close. Digits past the finest currency's
+  # places are float noise, like 16.990000000000002 from an assistant's JSON
+  # number, and are still just rounded away.
+  def self.storable_amount?(amount)
+    finest = Money::Currency.all.each_value.map { |data| data["default_precision"].to_i }.max
+    amount.round(finest) == amount.round(columns_hash["amount"].scale)
+  end
+
+  # The step an amount input takes: the currency's own, but never finer than
+  # what the column keeps.
+  def self.amount_step(currency)
+    [ Money::Currency.new(currency).step, 10.0**-columns_hash["amount"].scale ].max
+  end
+
   def payment_url?
     payment_url.present?
   end
@@ -119,6 +143,26 @@ class RecurringTransaction < ApplicationRecord
   # keeps reading the merchant directly.
   def display_name
     name.presence || merchant&.name
+  end
+
+  # Every name this series answers to, normalised: its own, the name the
+  # detector matched on, and the bank texts it has learned. The one place a
+  # series' names are compared, so the matcher and the covering check below
+  # cannot drift apart.
+  def known_names
+    ([ name, matcher_name ] + Array(matcher_hints["name_aliases"]))
+      .compact.map { |known| RecurringTransaction::Matcher.normalize_name(known) }.to_set
+  end
+
+  # The name the detector matched on, kept apart from the user-facing name
+  # so renaming a bill does not orphan it from its bank transactions.
+  def matcher_name
+    matcher_hints.to_h["detected_name"].presence || name
+  end
+
+  # A bill first renamed without a stored detected name keeps its original name, so the detector can still claim it.
+  def preserve_detected_name
+    self.matcher_hints = matcher_hints.to_h.merge("detected_name" => name_was)
   end
 
   def merchant_or_name_present
@@ -158,6 +202,55 @@ class RecurringTransaction < ApplicationRecord
 
   def generate_occurrences
     OccurrenceGenerator.new(self).generate!
+  end
+
+  # Links what a bill already paid before it was a bill. Every route that
+  # confirms a detection -- the review strip, the pause toggle, the API and
+  # the assistant's update_bill -- lands here through the status change.
+  # Generation is scoped to this series; the matcher pass inside stays
+  # family-wide on purpose (exact-tier, idempotent, and scoping it would need
+  # a parallel Matcher entry point). Returns false only when another pipeline
+  # holds the family lock.
+  def reconstruct_history!
+    return true if family.recurring_transactions_disabled?
+
+    Pipeline.with_family_lock(family_id) do
+      series_scope = family.recurring_transactions.where(id: id)
+
+      # The current cycle and the upcoming occurrences first, as Pipeline#run!
+      # does, so the history pass can match an early payment to the occurrence
+      # it was paid ahead of. Idempotent, and it no longer relies on the
+      # activation's regeneration having run. Freshly loaded, like the
+      # backfiller's, so a pause that committed since this record was read
+      # is respected.
+      series_scope.find_each { |series| OccurrenceGenerator.new(series).generate! }
+      HistoryBackfiller.new(
+        family,
+        months: Pipeline::FIRST_RUN_BACKFILL_MONTHS,
+        series_scope: series_scope
+      ).run!
+    end
+  end
+
+  # Read from the saved change rather than the current status: update_bill
+  # assigns every field and saves once, so by now the series reads active
+  # whichever route it took.
+  def activated_from_suggestion?
+    saved_change_to_status?(from: "suggested", to: "active")
+  end
+
+  # Skipping under a held lock used to leave the bill without history for
+  # good, since the live matcher never looks behind the current cycle.
+  #
+  # The activation has committed by now, so a failure here must not fail the
+  # caller's own write (a toggle, an API update, the assistant's update_bill).
+  # It is reported and handed to the job, which retries; the backfill is
+  # re-runnable by construction.
+  def reconstruct_history_on_activation
+    BackfillRecurringHistoryJob.perform_later(id) unless reconstruct_history!
+  rescue StandardError => e
+    Rails.error.report(e, handled: true, context: { recurring_transaction_id: id })
+    BackfillRecurringHistoryJob.perform_later(id)
   end
 
   # Regenerating rebuilds only scheduled, allocation-free, not-yet-due rows;
@@ -462,6 +555,77 @@ class RecurringTransaction < ApplicationRecord
     candidate_amount.between?(low, high)
   end
 
+  # The series in this scope that an entry already belongs to, if any. Guards
+  # both ways of turning a transaction into a bill ("Create bill" and "Mark as
+  # recurring"), so it sees what the matcher sees: detected series as well as
+  # hand-made ones. A declared bill is keyed by name and a detected one by
+  # merchant, so the unique indexes never collide between the two.
+  #
+  # An entry with a confirmed allocation is covered by that series, whatever
+  # its identity. Otherwise a non-ended series covers it when it shares the
+  # currency and account (an accountless series takes any account), the
+  # merchant when the series has one, or else a name the series knows (the
+  # entry's own text, or its merchant's name, which is what "Create bill"
+  # names a bill after), and an amount inside the variance band, so a second
+  # price tier stays creatable. The band is signed, so an inflow never lands
+  # inside a bill's band, nor an outflow inside income's. A series the user
+  # rejected for this entry ("Not this one") is skipped, as the matcher skips
+  # it, so the rejected payment can still become a bill of its own.
+  #
+  # Identity covers ordinary charges only. The matcher never pays a bill with
+  # a transfer leg, and a recurring transfer is keyed by its account pair and
+  # has its own "mark as recurring" path, so a transfer leg is covered only
+  # through an allocation.
+  def self.covering(entry)
+    scope = where(family_id: entry.account.family_id).where.not(status: "ended")
+
+    allocated = scope.joins(recurring_occurrences: :allocations)
+                     .merge(RecurringAllocation.confirmed)
+                     .find_by(recurring_allocations: { entry_id: entry.id })
+    return allocated if allocated
+    return if entry.entryable.try(:transfer?)
+
+    merchant = entry.entryable.try(:merchant)
+    names = [ entry.name, merchant&.name ].compact_blank.map { |name| Matcher.normalize_name(name) }
+
+    scope.where(currency: entry.currency, account_id: [ entry.account_id, nil ], destination_account_id: nil)
+         .where.not(id: RecurringMatchRejection.where(entry_id: entry.id).select(:recurring_transaction_id))
+         .order(:created_at)
+         .find do |series|
+           next false unless amount_within_variance_band?(entry.amount, series.amount)
+
+           if series.merchant_id.present?
+             series.merchant_id == merchant&.id
+           else
+             series.known_names.intersect?(names)
+           end
+         end
+  end
+
+  # The row create_from_transaction would collide with, whatever its status.
+  # The partial unique indexes ignore status, so an ended series still holds
+  # its key after covering has stopped returning it. Mirrors the identity
+  # written below: merchant when the transaction has one (the merchant index
+  # ignores name), else the entry's name, with the amount as dedup_scope.
+  def self.identity_taken_by(transaction)
+    entry = transaction.entry
+    key = {
+      family_id: entry.account.family_id,
+      account_id: entry.account_id,
+      destination_account_id: nil,
+      amount: entry.amount,
+      currency: entry.currency,
+      dedup_scope: entry.amount.to_d.to_s("F")
+    }
+    key = if transaction.merchant_id.present?
+      key.merge(merchant_id: transaction.merchant_id)
+    else
+      key.merge(merchant_id: nil, name: entry.name)
+    end
+
+    find_by(key)
+  end
+
   # Create a manual recurring transaction from an existing transaction
   # Automatically calculates amount variance from past 6 months of matching transactions
   def self.create_from_transaction(transaction, date_variance: 2)
@@ -518,11 +682,14 @@ class RecurringTransaction < ApplicationRecord
       next_expected_date: next_expected,
       status: "active",
       bill_type: entry.amount.negative? ? "income" : "bill",
+      # Income stays uncategorised, as detection leaves it.
+      category_id: entry.amount.negative? ? nil : transaction.category_id,
       occurrence_count: matching_amounts.size,
       manual: true,
       expected_amount_min: expected_min,
       expected_amount_max: expected_max,
-      expected_amount_avg: expected_avg
+      expected_amount_avg: expected_avg,
+      matcher_hints: transaction.merchant_id.present? ? {} : { "detected_name" => entry.name }
     }
 
     create!(attributes)
@@ -608,7 +775,7 @@ class RecurringTransaction < ApplicationRecord
       end
     else
       # Match by entry name
-      entries.where(name: name)
+      entries.where(name: matcher_name)
     end
 
     schedule_matched(candidates)

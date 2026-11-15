@@ -1,0 +1,46 @@
+---
+id:
+  settings:
+    background_jobs:
+      show:
+        page_title: "Tugas latar belakang"
+        title: "Status worker"
+        subtitle: "Kondisi runtime Sidekiq langsung: proses worker, kedalaman antrean, serta set retry/dead."
+        redis_unreachable: "Status Sidekiq tidak tersedia (Redis tidak dapat dijangkau). Status aktif tidak diketahui, sehingga tindakan dinonaktifkan."
+        operations_title: "Operasi yang sedang berjalan"
+        operations_subtitle: "Sinkronisasi, impor, dan ekspor di seluruh keluarga yang belum mencapai status akhir. Operasi yang menganggur lebih dari 30 menit tanpa tugas yang terlihat dianggap terhenti dan dapat ditandai demikian."
+        empty: "Tidak ada operasi yang sedang berjalan."
+        missing_value: "-"
+        stats:
+          workers: "Worker"
+          busy: "Sibuk"
+          enqueued: "Dalam antrean"
+          retries: "Percobaan ulang"
+          scheduled: "Terjadwal"
+          dead: "Mati"
+          queue_label: "%{name}: %{size} · latensi %{latency} dtk"
+        table:
+          type: "Operasi"
+          family: "Keluarga"
+          status: "Status"
+          last_activity: "Aktivitas terakhir"
+          liveness: "Keaktifan"
+          action: "Tindakan"
+      operation:
+        ago: "%{time} yang lalu"
+        sync_label: "Sinkronisasi · %{type}"
+        running: "Berjalan"
+        queued: "Dalam antrean"
+        recent: "Terbaru"
+        unknown: "Tidak diketahui"
+        stuck: "Macet — dianggap terhenti"
+        confirm: "Tandai operasi ini sebagai terhenti? Catatan akan dipindahkan ke status akhir agar dapat dicoba ulang. Data terkait tidak diubah."
+        missing_value: "-"
+        actions:
+          mark_stale: "Tandai usang"
+          mark_failed: "Tandai gagal"
+          release_claim: "Lepaskan klaim"
+      cancel:
+        cancelled: "%{type} ditandai sebagai terhenti."
+        not_cancellable: "Operasi ini tidak dapat diubah saat ini — tugasnya mungkin masih dalam antrean atau sedang berjalan. Coba lagi setelah menganggur selama 30 menit."
+        cancelled_error: "Ditandai gagal oleh administrator — tugas latar belakang dianggap terhenti."

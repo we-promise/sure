@@ -86,6 +86,16 @@ class ApplicationHelperTest < ActionView::TestCase
     @account3 = Account.new(currency: "EUR", balance: -7)
   end
 
+  test "#styled_form_with keeps a field's help_text when the field has no label" do
+    html = styled_form_with(url: "/", scope: :account) do |form|
+      form.text_field :name, label: false, help_text: "Shown to everyone in the family"
+    end
+
+    fragment = Nokogiri::HTML.fragment(html)
+    assert_equal "Shown to everyone in the family", fragment.at("p#account_name_help_text")&.text
+    assert_equal "account_name_help_text", fragment.at("input[name='account[name]']")["aria-describedby"]
+  end
+
   test "#totals_by_currency(collection: collection, money_method: money_method)" do
     assert_equal "$3.00", totals_by_currency(collection: [ @account1, @account2 ], money_method: :balance_money)
     assert_equal "$3.00 | -€7.00", totals_by_currency(collection: [ @account1, @account2, @account3 ], money_method: :balance_money)
@@ -106,5 +116,36 @@ class ApplicationHelperTest < ActionView::TestCase
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])
 
     assert_equal [ "SGD", "USD", "EUR" ], currency_picker_options_for_family(family, extra: "EUR")
+  end
+
+  test "#mask_last4 masks all but the last 4 characters" do
+    assert_equal "•••7890", mask_last4("account-number-1234567890")
+    assert_equal "•••2345", mask_last4("12345")
+  end
+
+  test "#mask_last4 returns nil for blank input" do
+    assert_nil mask_last4(nil)
+    assert_nil mask_last4("")
+  end
+
+  test "#mask_last4 handles values shorter than 4 characters" do
+    assert_equal "•••12", mask_last4("12")
+  end
+
+  # `group-open:` matches any open ancestor `.group`, so a chevron inside a
+  # closed disclosure nested in an open one would show as open.
+  test "#disclosure_chevron follows its own details element" do
+    classes = nil
+    singleton_class.send(:define_method, :lucide_icon) do |_key, **opts|
+      classes = CGI.unescapeHTML(opts[:class].to_s)
+      "<svg></svg>".html_safe
+    end
+
+    disclosure_chevron
+
+    assert_includes classes, "[details[open]>summary_&]:rotate-90"
+    assert_not_includes classes, "group-open:"
+  ensure
+    singleton_class.send(:remove_method, :lucide_icon) if singleton_class.method_defined?(:lucide_icon)
   end
 end

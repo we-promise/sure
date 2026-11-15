@@ -8,16 +8,16 @@ nl:
       description: "Koppelen aan %{name}"
     create:
       default_name: Kraken
-      success: Succesvol verbonden met Kraken. Uw beursaccount wordt gesynchroniseerd.
+      success: Gekoppeld aan Kraken. Uw beursaccount wordt gesynchroniseerd.
     update:
-      success: Kraken-verbinding succesvol bijgewerkt.
+      success: Kraken-koppeling succesvol bijgewerkt.
     destroy:
-      success: Kraken-verbinding is in de wachtrij voor verwijdering geplaatst.
+      success: Kraken-koppeling ingepland voor verwijdering.
     select_accounts:
-      select_connection: Kies een Kraken-verbinding in de Provider-instellingen.
+      select_connection: Kies een Kraken-koppeling in de providerinstellingen.
       no_credentials_configured: Voeg Kraken-API-inloggegevens toe voordat u accounts instelt.
     link_accounts:
-      select_connection: Kies een Kraken-verbinding voordat u accounts koppelt.
+      select_connection: Kies een Kraken-koppeling voordat u accounts koppelt.
     select_existing_account:
       title: Kraken-account koppelen
       no_accounts_found: Geen Kraken-accounts gevonden.
@@ -26,8 +26,8 @@ nl:
       link: Koppelen
       cancel: Annuleren
     link_existing_account:
-      success: Succesvol gekoppeld aan Kraken-account
-      select_connection: Kies een Kraken-verbinding voordat u accounts koppelt.
+      success: Gekoppeld aan Kraken-account
+      select_connection: Kies een Kraken-koppeling voordat u accounts koppelt.
       errors:
         only_manual: Alleen handmatige crypto-beursaccounts zonder bestaande providerkoppeling kunnen aan Kraken worden gekoppeld
         invalid_kraken_account: Ongeldig Kraken-account
@@ -35,13 +35,13 @@ nl:
     setup_accounts:
       title: Kraken-account importeren
       subtitle: Selecteer het beursaccount dat u wilt volgen
-      instructions: Kraken importeert voor deze verbinding één gecombineerd crypto-beursaccount, met alleen posities en spot-transactie-uitvoeringen.
+      instructions: Kraken importeert voor deze koppeling één gecombineerd crypto-beursaccount, met alleen posities en spot-transactie-uitvoeringen.
       no_accounts: Alle Kraken-accounts zijn geïmporteerd.
       accounts_count:
         one: "%{count} account beschikbaar"
         other: "%{count} accounts beschikbaar"
       select_all: Alles selecteren
-      import_selected: Geselecteerde importeren
+      import_selected: "Selectie importeren"
       cancel: Annuleren
       creating: Importeren...
     complete_account_setup:
@@ -68,7 +68,7 @@ nl:
       no_accounts_title: Geen accounts gevonden
       no_accounts_message: Uw Kraken-beursaccount verschijnt hier na de synchronisatie.
       setup_needed: Account klaar om te importeren
-      setup_description: Importeer deze Kraken-verbinding als een crypto-beursaccount.
+      setup_description: Importeer deze Kraken-koppeling als een crypto-beursaccount.
       setup_action: Account importeren
       import_accounts_menu: Account importeren
       stale_rate_warning: "Het saldo is bij benadering omdat de exacte wisselkoers voor %{date} niet beschikbaar was. Wordt bijgewerkt bij de volgende synchronisatie."

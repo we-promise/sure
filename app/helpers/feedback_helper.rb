@@ -1,6 +1,6 @@
 module FeedbackHelper
   def posthog_enabled?
-    Rails.env.production? || (Rails.env.development? && Rails.configuration.x.posthog.development_enabled)
+    Rails.configuration.x.posthog.browser_enabled?
   end
 
   def feedback_config(feature)

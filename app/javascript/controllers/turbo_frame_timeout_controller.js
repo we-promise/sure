@@ -1,20 +1,42 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Connects to data-controller="turbo-frame-timeout"
+//
+// The countdown times a request, not the element. A frame with loading="lazy"
+// is only fetched once it scrolls into view, which can be long after this
+// controller connects, or never, so the frame declares when to start:
+//
+//   data-action="turbo:before-fetch-request->turbo-frame-timeout#startTimeout
+//                turbo:before-frame-render->turbo-frame-timeout#clearTimeout"
+//
+// It stops when Turbo is about to render a matching frame, not on
+// turbo:frame-load: Turbo inserts the new content several repaints before
+// frame-load fires, and a countdown expiring in that gap would overwrite the
+// rendered frame with the badge. Responses that bring no matching frame (an
+// error, or a sign-in page after a redirect) never render, so they keep
+// counting and still end in the badge.
 export default class extends Controller {
   static values = { timeout: { type: Number, default: 10000 } }
 
   connect() {
-    this.timeoutId = setTimeout(() => {
-      this.handleTimeout()
-    }, this.timeoutValue)
-
-    // Listen for successful frame loads to clear timeout
-    this.element.addEventListener("turbo:frame-load", this.clearTimeout.bind(this))
+    // Turbo keeps a frame busy for the length of its request. An eager frame
+    // can start fetching before Stimulus connects, and the attribute is what
+    // tells us the event has already been and gone.
+    if (this.element.hasAttribute("busy")) {
+      this.startTimeout()
+    }
   }
 
   disconnect() {
     this.clearTimeout()
+  }
+
+  startTimeout() {
+    this.clearTimeout()
+
+    this.timeoutId = setTimeout(() => {
+      this.handleTimeout()
+    }, this.timeoutValue)
   }
 
   clearTimeout() {
@@ -39,4 +61,4 @@ export default class extends Controller {
       </div>
     `
   }
-} 
+}

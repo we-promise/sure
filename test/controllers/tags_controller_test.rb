@@ -19,6 +19,26 @@ class TagsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "index offers the deletion dialog only for tags on transactions, without a query per tag" do
+    used = tags(:one)
+    unused = tags(:three)
+    assert used.transactions.any?
+    assert_not unused.transactions.any?
+
+    # Each capture follows a write, which clears the query cache tests keep
+    # across requests.
+    @user.family.tags.create!(name: "Unused A")
+    queries_with_few = capture_sql_queries { get tags_url }.size
+    3.times { |i| @user.family.tags.create!(name: "Unused #{i + 1}") }
+    queries_with_more = capture_sql_queries { get tags_url }.size
+
+    assert_response :success
+    assert_equal queries_with_few, queries_with_more
+    assert_select "##{dom_id(used)} a[href='#{new_tag_deletion_path(used)}']", count: 1
+    assert_select "##{dom_id(unused)} form[action='#{tag_path(unused)}']", count: 1
+    assert_select "##{dom_id(unused)} a[href='#{new_tag_deletion_path(unused)}']", count: 0
+  end
+
   test "should get new" do
     get new_tag_url
     assert_response :success
@@ -31,6 +51,37 @@ class TagsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to tags_url
     assert_equal "Tag created", flash[:notice]
+  end
+
+  test "guest cannot create tag" do
+    sign_in family_guest
+
+    assert_no_difference("Tag.count") do
+      post tags_url, params: { tag: { name: "Guest Tag" } }
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "guest cannot destroy tag" do
+    sign_in family_guest
+    tag = tags(:one)
+
+    assert_no_difference("Tag.count") do
+      delete tag_url(tag)
+    end
+
+    assert_redirected_to accounts_url
+  end
+
+  test "member can create tag" do
+    sign_in users(:family_member)
+
+    assert_difference("Tag.count") do
+      post tags_url, params: { tag: { name: "Member Tag" } }
+    end
+
+    assert_redirected_to tags_url
   end
 
   test "should create tag as json" do

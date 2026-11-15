@@ -3,51 +3,116 @@ zh-CN:
   admin:
     users:
       index:
-        title: 用户管理
-        description: 管理您实例中的用户角色。超级管理员可以访问 SSO 提供商设置和用户管理。
-        section_title: 家庭 / 组
-        you: （您）
-        trial_ends_at: 试用结束于
-        not_available: 不适用
-        no_users: 未找到用户。
-        unnamed_family: 未命名家庭/组
-        no_subscription: 无订阅
+        title: "用户管理"
+        description: "管理您实例中的用户角色、家庭/群组归属以及账户移除。超级管理员可以访问 SSO 提供商设置和用户管理。"
+        section_title: "家庭 / 群组"
+        you: "（您）"
+        trial_ends_at: "试用结束于"
+        not_available: "不适用"
+        no_users: "未找到用户。"
+        unnamed_family: "未命名家庭/群组"
+        no_subscription: "无订阅"
         family_summary: "%{members} 名成员 · %{accounts} 个账户 · %{transactions} 笔交易"
         filters:
-          role: 角色
-          role_all: 所有角色
-          trial_status: 试用状态
-          trial_all: 全部
-          trial_expiring_soon: 7 天内到期
-          trial_trialing: 试用中
-          submit: 筛选
-        summary:
-          trials_expiring_7_days: 未来 7 天内到期的试用
+          role: "角色"
+          role_all: "所有角色"
+          trial_status: "试用状态"
+          trial_all: "全部"
+          trial_expiring_soon: "7 天内到期"
+          trial_trialing: "试用中"
+          submit: "筛选"
         table:
-          user: 用户
-          trial_ends_at: 试用结束
-          family_accounts: 家庭账户
-          family_transactions: 家庭交易
-          last_login: 上次登录
-          session_count: 会话数
-          never: 从未
-          role: 角色
-        role_descriptions_title: 角色说明
+          user: "用户"
+          trial_ends_at: "试用结束"
+          family_accounts: "家庭账户"
+          family_transactions: "家庭交易"
+          last_login: "上次登录"
+          session_count: "会话数"
+          never: "从未"
+          role: "角色"
+          family: "家庭 / 群组"
+          keep_current_family: "保留当前家庭/群组"
+          create_new_family_option: "+ 创建新家庭/群组"
+          new_family_name: "新家庭/群组名称"
+          new_family_name_placeholder: "输入名称以创建新家庭/群组"
+          new_family_moniker: "新家庭/群组类型"
+          set_password: "设置新密码"
+          password_placeholder: "留空以保留当前密码"
+          actions: "操作"
+        family_monikers:
+          family: "家庭"
+          group: "群组"
+        actions:
+          manage_user: "管理用户"
+          update: "更新用户"
+          delete_user: "删除用户"
+          self_edit_warning: "更改您自己的角色将修改您的管理权限。"
+          self_update_confirm: "确定要更新您自己的账户角色或家庭吗？"
+          last_super_admin_role_locked: "无法更改角色，因为您是系统中最后一位超级管理员。"
+        delete_confirm: "确定要删除此用户吗？此操作无法撤销。"
+        delete_confirm_last_user: "确定要删除此用户吗？这是其家庭/群组中的最后一位用户，因此删除该用户还将同时删除整个家庭/群组及所有关联数据。此操作无法撤销。"
+        remove: "删除用户"
+        role_descriptions_title: "角色说明"
+        removed_sso_identities:
+          title: "已移除的 SSO 身份"
+          description: "这些身份无法创建或重新连接账户。仅在误删时才应再次允许该身份。"
+          allow_again: "再次允许"
+          confirm: "是否允许 %{email} 再次通过 SSO 登录或创建账户？"
         roles:
-          guest: 访客
-          member: 成员
-          admin: 管理员
-          super_admin: 超级管理员
+          guest: "访客"
+          member: "成员"
+          admin: "管理员"
+          super_admin: "超级管理员"
+        auth_types:
+          sso: "SSO"
+          local: "本地"
+          local_and_sso: "本地 + SSO"
+          sso_provider_tooltip: "SSO 提供商：%{providers}"
         role_descriptions:
-          guest: 以助手优先的体验为主，并为入门流程保留有意限制的权限。
-          member: 基本用户权限。可管理自己的账户、交易和设置。
-          admin: 家庭管理员。可访问 API 密钥、导入和 AI 提示词等高级设置。
-          super_admin: 实例管理员。可管理 SSO 提供商、用户角色，并可代为登录用户进行支持。
+          guest: "以助手优先的体验为主，并为入门流程保留有意限制的权限。"
+          member: "基本用户权限。可管理自己的账户、交易和设置。"
+          admin: "家庭管理员。可访问 API 密钥、导入和 AI 提示词等高级设置。"
+          super_admin: "实例管理员。可管理 SSO 提供商、用户角色，并可代为登录用户进行支持。"
         invitations:
-          pending_label: 已邀请（待处理）
-          expires: 于 %{date} 过期
-          delete: 删除
-          delete_all: 全部删除
+          pending_label: "已邀请（待处理）"
+          expires: "于 %{date} 过期"
+          delete: "删除"
+          delete_all: "全部删除"
+        unused_families:
+          title: "未使用的家庭 / 群组"
+          family_id: "家庭 ID：%{id}"
+          delete: "删除未使用的家庭"
+          delete_confirm: "确定要删除此未使用的家庭/群组吗？此操作无法撤销。"
+          empty: "未找到未使用的家庭/群组。"
       update:
-        success: 用户角色更新成功。
-        failure: 更新用户角色失败。
+        success_role: "用户角色更新成功。"
+        success_password: "用户密码更新成功。"
+        success_role_and_password: "用户角色和密码更新成功。"
+        success_family: "用户家庭/群组归属更新成功。"
+        failure: "更新用户详细信息（角色或家庭/群组归属）失败。"
+        family_required: "请选择一个现有家庭/群组，或输入新家庭/群组的名称。"
+        password_and_family_conflict: "密码和家庭/群组归属无法同时更新。"
+        password_disabled: "已禁用设置密码，因为用户只能通过 SSO 登录。"
+        password_too_short: "密码长度必须至少为 8 个字符。"
+        password_missing_case: "密码必须同时包含大写和小写字母。"
+        password_missing_number: "密码必须包含至少一个数字。"
+        password_missing_special: "密码必须包含至少一个特殊字符。"
+        last_super_admin_error: "无法将系统中最后一位超级管理员降级。"
+      destroy:
+        success: "已撤销用户访问权限并安排永久删除。"
+        failure: "移除用户失败。"
+        cannot_remove_self: "您无法在此处移除您自己的账户。"
+        cannot_remove_last_super_admin: "您无法移除最后一位活跃的超级管理员。"
+        confirmation_mismatch: "电子邮件地址不匹配。未移除该用户。"
+      deletion:
+        title: "永久移除用户"
+        warning: "这将立即撤销访问权限并安排永久删除该用户及其数据。此操作无法撤销。"
+        instruction: "输入 %{email} 以确认。"
+        email_label: "用户邮箱"
+        cancel: "取消"
+        submit: "永久移除用户"
+    families:
+      destroy:
+        family_has_active_subscription: "家庭/群组拥有有效订阅，在取消订阅之前无法删除。"
+        family_has_users: "家庭/群组仍包含用户，无法删除。"
+        success: "家庭/群组删除成功。"

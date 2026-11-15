@@ -1,0 +1,69 @@
+<%= content_for :page_title, t(".title") %>
+<%= content_for :page_actions do %>
+  <%= render DS::Menu.new do |menu| %>
+    <% menu.with_item(
+      variant: "button",
+      text: t(".clear_locks"),
+      href: clear_locks_settings_classifier_path,
+      icon: "unlock",
+      method: :post,
+      confirm: CustomConfirm.new(
+        title: t(".clear_locks_confirm_title"),
+        body: t(".clear_locks_confirm_body"),
+        btn_text: t(".clear_locks_confirm_button")
+      )) %>
+  <% end %>
+  <%= render DS::Button.new(
+    text: t(".run"),
+    variant: "secondary",
+    href: run_settings_classifier_path,
+    method: :post,
+    icon: "play"
+  ) %>
+<% end %>
+<%= settings_section title: t(".title"), subtitle: t(".description") do %>
+  <%= render "settings/classifiers/classifier", settings: @settings, active: @rules_active["bayes_categorize"] %>
+<% end %>
+<%= settings_section title: t(".matcher"), subtitle: t(".matcher_description") do %>
+  <%= render "settings/classifiers/matcher", settings: @settings, active: @rules_active["fill_similar_merchants"] %>
+<% end %>
+<%= settings_section title: t(".auto_tune") do %>
+  <%= render "settings/classifiers/evaluation", evaluation: @evaluation, settings: @settings, running: @evaluation_running, weight: @weight %>
+<% end %>
+<%= settings_section title: t(".training") do %>
+  <%= render "settings/classifiers/training", settings: @settings %>
+<% end %>
+<%= settings_section title: t(".category_training") do %>
+  <%= render "settings/classifiers/category_training", settings: @settings, categories: @categories %>
+<% end %>
+<%= settings_section title: t(".matcher_tuning") do %>
+  <%= render "settings/classifiers/matcher_tuning", settings: @settings %>
+<% end %>
+<%= settings_section title: t(".words") do %>
+  <%= render "settings/classifiers/words", settings: @settings %>
+<% end %>
+<%= settings_section title: t(".merchant") do %>
+  <%= render "settings/classifiers/merchant", settings: @settings %>
+<% end %>
+<%= settings_section title: t(".amount") do %>
+  <%= render "settings/classifiers/amount", settings: @settings %>
+<% end %>
+<%= settings_section title: t(".account") do %>
+  <%= render "settings/classifiers/account", settings: @settings %>
+<% end %>
+<%= settings_section title: t(".scoring") do %>
+  <%= render "settings/classifiers/scoring", settings: @settings %>
+<% end %>
+
+<% if @add_rule %>
+  <%# Turning on a switch whose rule was deleted (rule): add it again? %>
+  <% name = Family.classifier_rule_name(@add_rule) %>
+  <%= render DS::Dialog.new(disable_frame: true, width: "md") do |dialog| %>
+    <% dialog.with_header(title: t(".add_rule_title", name: name)) %>
+    <% dialog.with_body do %>
+      <p class="text-sm text-secondary"><%= t(".add_rule_body", name: name) %></p>
+    <% end %>
+    <% dialog.with_action(cancel_action: true, text: t(".add_rule_cancel"), variant: "outline") %>
+    <% dialog.with_action(text: t(".add_rule_confirm"), href: add_rule_settings_classifier_path, method: :post, params: { action_type: @add_rule }) %>
+  <% end %>
+<% end %>

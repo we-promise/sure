@@ -10,7 +10,7 @@ class KrakenAccount::HoldingsProcessor
   def process
     return unless account&.accountable_type == "Crypto"
 
-    raw_assets.each { |asset| process_asset(asset) }
+    positions.each { |asset| process_asset(asset) }
   rescue StandardError => e
     Rails.logger.error "KrakenAccount::HoldingsProcessor - error: #{e.message}"
     nil
@@ -32,6 +32,32 @@ class KrakenAccount::HoldingsProcessor
       kraken_account.raw_payload&.dig("assets") || []
     end
 
+    def positions
+      priced = raw_assets.select { |asset| (asset["price_usd"] || asset[:price_usd]).present? }
+
+      priced.group_by { |asset| KrakenAccount::SecurityResolver.canonical_asset(asset["symbol"] || asset[:symbol]) }.map do |canonical, assets|
+        next assets.first if assets.one?
+
+        balance = assets.sum { |asset| balance_of(asset) }
+        value = assets.sum { |asset| balance_of(asset) * price_of(asset) }
+
+        {
+          "symbol" => canonical,
+          "balance" => balance.to_s("F"),
+          "price_usd" => (balance.zero? ? price_of(assets.first) : value / balance).to_s("F"),
+          "source" => "spot"
+        }
+      end
+    end
+
+    def balance_of(asset)
+      (asset["balance"] || asset[:balance] || 0).to_d
+    end
+
+    def price_of(asset)
+      (asset["price_usd"] || asset[:price_usd]).to_d
+    end
+
     def process_asset(asset)
       symbol = asset["symbol"] || asset[:symbol]
       price_symbol = asset["price_symbol"] || asset[:price_symbol] || symbol
@@ -40,6 +66,13 @@ class KrakenAccount::HoldingsProcessor
       source = asset["source"] || asset[:source] || "spot"
 
       return if symbol.blank? || total.zero? || price_usd.blank?
+
+      # Fiat at the exchange is cash, not a position. Held as a holding it is
+      # valued twice -- once here and once as the cash the ledger already moved --
+      # and it can never be reversed into history, because no trade ever moves it.
+      return if KrakenAccount::FIAT_CURRENCIES.include?(
+        KrakenAccount::SecurityResolver.canonical_asset(symbol)
+      )
 
       security = resolve_security(symbol)
       return unless security
@@ -72,8 +105,7 @@ class KrakenAccount::HoldingsProcessor
     end
 
     def resolve_security(symbol)
-      ticker = symbol.to_s.include?(":") ? symbol.to_s : "CRYPTO:#{symbol}"
-      KrakenAccount::SecurityResolver.resolve(ticker, symbol)
+      KrakenAccount::SecurityResolver.resolve(symbol)
     end
 
     def log_stale_rate(symbol, field, rate_date)

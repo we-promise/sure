@@ -1,0 +1,28 @@
+---
+tr:
+  settings:
+    mcp:
+      revoke:
+        revoked: Bağlantı iptal edildi.
+      show:
+        connect_subtitle: Bu URL'yi Claude.ai'ye (veya herhangi bir MCP uyumlu istemciye)
+          yapıştırarak Sure hesabınıza bağlayın.
+        connect_title: Bir yapay zeka asistanı bağlayın
+        connected_ago: "%{time} önce bağlandı"
+        connected_subtitle: Bu uygulamalar şu anda Sure verilerinize erişebiliyor.
+          Artık kullanmadıklarınızın erişimini iptal edin.
+        connected_title: Bağlı istemciler
+        copied: Kopyalandı!
+        copy_url: Kopyala
+        how_to_connect_title: Claude nasıl bağlanır
+        page_title: MCP Sunucusu
+        revoke: İptal Et
+        revoke_confirm: Bu istemcinin erişimi iptal edilsin mi?
+        step_1: Claude.ai'yi açın ve Ayarlar → Özelleştir → Bağlayıcılar'a gidin.
+        step_2: '"Bağlayıcı ekle"ye tıklayın ve yukarıdaki MCP sunucu URL''sini
+          yapıştırın.'
+        step_3: Bağlan'a tıklayın — giriş yapmak ve erişimi yetkilendirmek için Sure'a
+          yönlendirileceksiniz.
+        step_4: Yetkilendirildikten sonra Claude, hesaplarınızı, işlemlerinizi ve
+          bakiye verilerinizi okuyabilir.
+        unknown_client: Bilinmeyen istemci

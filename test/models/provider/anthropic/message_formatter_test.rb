@@ -86,6 +86,31 @@ class Provider::Anthropic::MessageFormatterTest < ActiveSupport::TestCase
     assert_includes messages[2][:content].first[:content], "99"
   end
 
+  test "renders each in-flight tool round as its own tool_use + tool_result pair" do
+    round_1 = [
+      { call_id: "toolu_a", name: "get_accounts", arguments: "{}", output: { "accounts" => [] }, round: 1 }
+    ]
+    round_2 = [
+      { call_id: "toolu_b", name: "get_categories", arguments: "{}", output: { "categories" => [] }, round: 2 },
+      { call_id: "toolu_c", name: "get_tags", arguments: "{}", output: { "tags" => [] }, round: 2 }
+    ]
+
+    build = ->(function_results) do
+      Provider::Anthropic::MessageFormatter.new(prompt: "hi", function_results: function_results).build
+    end
+    second_request = build.call(round_1)
+    third_request = build.call(round_1 + round_2)
+
+    # Each follow-up request must extend the previous one so prompt caching stays valid.
+    assert_equal second_request, third_request.first(second_request.size)
+
+    assert_equal %w[user assistant user assistant user], third_request.map { |m| m[:role] }
+    assert_equal [ "toolu_a" ], third_request[1][:content].map { |b| b[:id] }
+    assert_equal [ "toolu_a" ], third_request[2][:content].map { |b| b[:tool_use_id] }
+    assert_equal [ "toolu_b", "toolu_c" ], third_request[3][:content].map { |b| b[:id] }
+    assert_equal [ "toolu_b", "toolu_c" ], third_request[4][:content].map { |b| b[:tool_use_id] }
+  end
+
   # Confirms the round-trip flagged in PR #1983 review: an Anthropic tool_use
   # block returned by the model → ChatFunctionRequest → ToolCall::Function
   # persisted on the AssistantMessage → MessageFormatter rebuild on the next

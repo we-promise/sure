@@ -25,6 +25,8 @@ fr:
         model_placeholder: claude-sonnet-4-6 (par défaut)
         title: Anthropic (Claude)
       assistant_settings:
+        agent_discovery_configure_first: Enregistrez une URL d'endpoint et un token API valides pour charger les agents disponibles.
+        agent_discovery_error: 'Impossible de charger les agents : %{error}'
         agent_id_help: Route vers un agent spécifique lorsque le fournisseur en héberge plusieurs. Laisser vide pour la valeur par défaut.
         agent_id_label: ID de l'agent (Optionnel)
         agent_id_placeholder: main (par défaut)
@@ -37,9 +39,20 @@ fr:
         disconnect_title: Connexion externe
         env_configured_external: Configuré avec succès via les variables d'environnement.
         env_notice: Le type d'assistant est verrouillé sur '%{type}' via la variable d'environnement ASSISTANT_TYPE.
+        external_agent_invalid: Sélectionnez un agent renvoyé par l'endpoint configuré.
+        external_agent_required: Sélectionnez un agent externe avant d'enregistrer.
+        external_agent_reselect: L'endpoint a changé et l'agent sélectionné précédemment n'y est pas disponible. Sélectionnez un agent du nouvel endpoint.
         external_configured: Configuré
+        external_info:
+          items:
+          - Saisissez l'URL complète de l'endpoint compatible OpenAI, se terminant par /v1/chat/completions.
+          - Sure découvre les agents disponibles via /v1/models une fois l'endpoint et le token enregistrés.
+          - Le service externe choisit le modèle derrière chaque agent ; Sure sélectionne uniquement la route de l'agent.
+          - Les erreurs d'authentification, d'endpoint ou d'agent sont renvoyées par le service externe. Consultez ses journaux lorsqu'une requête échoue.
+          title: Configuration de l'IA externe
         external_not_configured: Non configuré. Saisissez l'URL et le token ci-dessous, ou définissez les variables d'environnement EXTERNAL_ASSISTANT_URL et EXTERNAL_ASSISTANT_TOKEN.
         external_status: Endpoint de l'assistant externe
+        mcp_only_help: L'assistant intégré est désactivé pour tout le foyer. Les raccourcis IA des factures et les textes d'analyse rédigés par l'IA s'arrêtent aussi. MCP et la catégorisation en arrière-plan restent disponibles ; connectez des agents externes dans Paramètres > MCP.
         title: Assistant IA
         token_help: Le token d'authentification fourni par votre agent externe. Il est envoyé en tant que Bearer token avec chaque requête.
         token_label: Token API
@@ -47,6 +60,7 @@ fr:
         type_builtin: Intégré (LLM direct)
         type_external: Externe (agent distant)
         type_label: Type d'assistant
+        type_mcp_only: Aucun dans l'app (connectez votre propre agent via MCP)
         url_help: L'URL complète du endpoint de l'API de votre agent. Votre fournisseur d'agent vous la fournira.
         url_label: URL du endpoint
         url_placeholder: https://your-agent-host/v1/chat
@@ -62,8 +76,50 @@ fr:
         setup_step_3: Appuyez sur l'icône en forme d'œil sous la section « Votre ID client » pour révéler votre ID client et collez-le ci-dessous.
         show_details: "(afficher les détails)"
         title: Paramètres Brandfetch
+      categorization_provider_selector:
+        confidence_threshold_env_notice: Verrouillé par la variable d'environnement CATEGORIZATION_CONFIDENCE_THRESHOLD.
+        confidence_threshold_help: En dessous de ce niveau de confiance, la catégorie n'est pas appliquée et la transaction reste non catégorisée, pour qu'une exécution ultérieure puisse réessayer. Rien n'est supprimé. Indiquez 0 pour appliquer toutes les réponses.
+        confidence_threshold_label: Confiance minimale (0–1)
+        data_retention_direct: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à TypeSafe pour être catégorisés. Consultez sa politique de conservation avant d'activer cette option sur des données réelles.
+        data_retention_heading: Partage des données
+        data_retention_proxied: Les libellés et montants des transactions ainsi que les noms de vos catégories sont envoyés à %{host}, qui les transmet à TypeSafe. Consultez les politiques de conservation des deux fournisseurs avant d'activer cette option sur des données réelles.
+        description: Choisissez le fournisseur qui catégorise les transactions. Il est distinct du fournisseur d'IA ci-dessus, qui gère la discussion et le traitement des PDF.
+        env_notice: Défini sur %{type} via les variables d'environnement.
+        jev_configured: Clé API Jev configurée.
+        jev_not_configured: Jev est sélectionné mais aucune clé API n'est configurée. La catégorisation continue d'utiliser le fournisseur d'IA tant que vous n'en ajoutez pas une ci-dessous.
+        preview_pill: Aperçu
+        provider_help: Le fournisseur d'IA lit un lot de transactions et renvoie des noms de catégories. Jev choisit dans votre liste de catégories et renvoie un niveau de confiance calibré pour chaque transaction.
+        provider_jev: Jev (TypeSafe)
+        provider_label: Fournisseur de catégorisation
+        provider_llm: Fournisseur d'IA (OpenAI ou Anthropic)
+        shadow_rate_env_notice: Verrouillé par la variable d'environnement CATEGORIZATION_SHADOW_RATE.
+        shadow_rate_help: Exécute le fournisseur que vous n'avez PAS sélectionné en parallèle de celui que vous avez choisi, et enregistre leurs désaccords sans modifier aucune catégorie. Cela double les coûts d'API de chaque catégorisation échantillonnée. Indiquez 0 pour désactiver.
+        shadow_rate_label: Taux de comparaison en arrière-plan (0–1)
+        title: Catégorisation des transactions
+      categorization_shadow_results:
+        shadow_disagreement_confidence: "(confiance %{confidence})"
+        shadow_disagreement_row: "%{applied_provider} a choisi %{applied_category} ; %{shadow_provider} a choisi %{shadow_category}."
+        shadow_disagreements_heading: Désaccords les plus récents
+        shadow_no_category: aucune catégorie
+        shadow_no_disagreements: Les deux fournisseurs sont d'accord sur toutes les transactions échantillonnées.
+        shadow_results_empty: Aucune comparaison enregistrée pour l'instant. Définissez un taux de comparaison supérieur à 0 et lancez une catégorisation pour en collecter.
+        shadow_results_heading: Comparaison en arrière-plan
+        shadow_results_summary: "%{agreement} %% d'accord sur %{count} transactions échantillonnées."
+      chimnie_settings:
+        description: Saisissez votre clé API Chimnie pour estimer les biens résidentiels au Royaume-Uni à partir de leur UPRN. Créez une clé gratuite sur dashboard.chimnie.com (l'inscription exige une adresse e-mail professionnelle ou sur un domaine personnalisé ; Gmail, Outlook et les adresses similaires ne sont pas acceptées). Les estimations par UPRN sont gratuites et actualisées chaque mois ; Sure les limite à 1 000 requêtes par mois, ce que vous pouvez modifier avec la variable d'environnement CHIMNIE_MAX_REQUESTS_PER_MONTH.
+        env_configured_message: Configuré avec succès via la variable d'environnement CHIMNIE_API_KEY.
+        label: Clé API
+        placeholder: Saisissez votre clé API Chimnie ici
+        title: Chimnie
+        usage: "%{used} sur %{limit} requêtes mensuelles utilisées"
       clear_cache:
         cache_cleared: Le cache de données a été effacé. Cela peut prendre quelques instants.
+      demo_refresh_settings:
+        description: Actualise automatiquement uniquement la famille de démo sélectionnée. Toutes ses données et ses identifiants de connexion seront supprimés. Les autres familles ne sont pas touchées. Nécessite un worker actif avec au moins 2 Gio de RAM. Créez d'abord une famille de démo jetable avec le générateur de démo, puis sélectionnez-la ici. Ne choisissez pas la famille d'un vrai utilisateur.
+        enabled_label: Activer l'actualisation quotidienne de la famille de démo
+        family_label: Famille de démo jetable
+        none: Aucune famille de démo sélectionnée
+        save_family: Enregistrer la famille de démo
       disconnect_external_assistant:
         external_assistant_disconnected: Assistant externe déconnecté
       ensure_admin:
@@ -95,6 +151,15 @@ fr:
           invite_only: Sur invitation uniquement
           open: Ouvert
         title: Inscription des utilisateurs
+      jev_settings:
+        api_key_label: Clé API
+        api_key_placeholder: Saisissez votre clé API TypeSafe
+        endpoint_label: Endpoint (Optionnel)
+        endpoint_placeholder: https://api.typesafe.ai/v1/systemone (par défaut)
+        env_configured_message: Configuré avec succès via les variables d'environnement.
+        model_help: Utilise TypeSafe directement par défaut. Pour passer par OpenRouter, définissez l'endpoint sur https://openrouter.ai/api/alpha/decisions et le modèle sur ~typesafe/jev-latest.
+        model_label: Modèle (Optionnel)
+        model_placeholder: jev-latest (par défaut)
       llm_provider_selector:
         data_retention: Les entrées de l'API ne sont pas utilisées pour entraîner les modèles par défaut ; les API hébergées des fournisseurs conservent les données pendant environ 30 jours pour des raisons de confiance et de sécurité. Les terminaux personnalisés ou auto-hébergés suivent votre propre politique.
         data_retention_heading: Traitement des données
@@ -106,10 +171,24 @@ fr:
         provider_label: Fournisseur de LLM actif
         provider_openai: OpenAI
         title: Fournisseur d'IA
+        max_items_per_call_help: "Limite supérieure pour les lots d'auto-catégorisation / détection de marchand. Par défaut : 25. Avec les fournisseurs compatibles OpenAI, les lots plus grands sont automatiquement découpés pour tenir dans la fenêtre de contexte."
+        max_items_per_call_label: Nombre maximum d'éléments par lot (Optionnel)
+      mansa_settings:
+        description: Saisissez la clé API fournie par Mansa API. Couvre 20 bourses africaines, dont le NGX (Bourse du Nigeria), la JSE, la NSE (Kenya), la GSE (Ghana) et la BRVM, dont plusieurs ne sont prises en charge par aucun autre fournisseur proposé ici.
+        env_configured_message: Configuré avec succès via la variable d'environnement MANSA_API_KEY.
+        label: Clé API
+        placeholder: Saisissez votre clé API Mansa ici
+        rate_limit_warning: 'L''offre gratuite de Mansa est limitée à 100 appels API par jour et ne fournit que les cotations actuelles : les cours historiques nécessitent un forfait payant.'
+        show_details: "(afficher les détails)"
+        step_1_html: Rendez-vous sur <a href="https://mansaapi.com" target="_blank" rel="noopener noreferrer" class="underline">mansaapi.com</a> et obtenez votre clé API gratuite (aucune carte requise).
+        step_2: Copiez votre clé API et collez-la ci-dessous.
+        title: Mansa
       not_authorized: Vous n'êtes pas autorisé(e) à effectuer cette action
       openai_settings:
         access_token_label: Jeton d'accès
         access_token_placeholder: Entrez votre jeton d'accès ici
+        ai_health_probe_timeout_help: 'Par défaut : 5. S''applique uniquement aux contrôles IA en direct dans Paramètres → Santé du système, jamais aux vrais appels IA. Augmentez-le si les contrôles PDF signalent un dépassement de délai avec un modèle cloud. AI_HEALTH_PROBE_TIMEOUT remplace ce champ.'
+        ai_health_probe_timeout_label: Délai du contrôle de santé en secondes (Optionnel)
         ai_response_timeout_help: 'Valeur par défaut : 90. S''applique uniquement au chien de garde du tour complet dans le chat : dimensionnez-le comme une somme, soit (1 + ASSISTANT_MAX_TOOL_CALL_ITERATIONS) × délai de requête, plus le temps d''exécution des outils et d''attente en file. AI_RESPONSE_TIMEOUT prime sur ce champ.'
         ai_response_timeout_label: Délai de réponse en secondes (facultatif)
         budget_description: S'applique à chaque appel LLM — historique de discussion, auto-catégorisation, détection de marchand et traitement PDF. Les valeurs par défaut sont conservatrices pour les modèles locaux à petit contexte. Augmentez-les pour les modèles cloud avec des fenêtres de contexte plus grandes.
@@ -124,14 +203,13 @@ fr:
         json_mode_label: Mode JSON
         json_mode_none: Aucun (meilleur pour les modèles standard)
         json_mode_strict: Strict (meilleur pour les modèles de raisonnement)
-        max_items_per_call_help: 'Limite supérieure pour les lots d''auto-catégorisation / détection de marchand. Par défaut : 25. Les lots plus grands sont automatiquement découpés pour tenir dans la fenêtre de contexte.'
-        max_items_per_call_label: Nombre maximum d'éléments par lot (Optionnel)
         max_response_tokens_help: 'Tokens réservés à la réponse du modèle. Par défaut : 512. Abaisser pour libérer de l''espace pour un historique plus long.'
         max_response_tokens_label: Tokens de réponse max (Optionnel)
         model_function_calling_help: 'L''assistant IA lit vos données via des appels de fonctions : choisissez donc un modèle dont le fournisseur documente la prise en charge des outils. Les modèles qui en sont dépourvus font échouer le chat avec une erreur opaque du fournisseur.'
         model_function_calling_link: Vérifier le modèle configuré
         model_label: Modèle (Optionnel)
         model_placeholder: gpt-4.1 (par défaut)
+        model_required_help: "Obligatoire lorsque vous définissez une URL de base de l'API : saisissez le nom du modèle utilisé par votre serveur, par exemple llama3.1 pour Ollama."
         openai_request_timeout_help: 'Valeur par défaut : 60. S''applique à chaque requête HTTP compatible OpenAI, y compris la catégorisation automatique, la détection des marchands, le chat, le traitement des PDF et les appels au magasin de vecteurs. OPENAI_REQUEST_TIMEOUT prime sur ce champ.'
         openai_request_timeout_label: Délai de requête en secondes (facultatif)
         timeout_description: Détermine la durée maximale des appels aux modèles compatibles OpenAI avant que Sure n'abandonne. Augmentez ces valeurs si vous exécutez un modèle local sur du matériel lent.
@@ -139,6 +217,7 @@ fr:
         title: OpenAI
         uri_base_label: URL de base de l'API (Optionnel)
         uri_base_placeholder: https://api.openai.com/v1 (par défaut)
+        uri_base_local_help: "Pour un modèle sur votre propre machine, saisissez son endpoint compatible OpenAI, par exemple Ollama à http://localhost:11434/v1, ou http://ollama:11434/v1 si Sure et Ollama tournent comme services Docker Compose."
       provider_selection:
         binance_public_hint: gratuit, aucune clé API -- crypto uniquement (BTC, ETH, etc.)
         env_configured_message: La sélection du fournisseur est désactivée car des variables d'environnement sont définies. Pour activer la sélection ici, supprimez ces variables d'environnement de votre configuration.
@@ -152,6 +231,7 @@ fr:
           binance_public: Binance
           eodhd: EODHD
           frankfurter: Frankfurter
+          mansa: Mansa
           mfapi: MFAPI.in
           moex_public: MOEX
           tiingo: Tiingo
@@ -161,6 +241,7 @@ fr:
         requires_api_key: nécessite une clé API
         requires_api_key_alpha_vantage: nécessite une clé API, limite de 25 appels/jour
         requires_api_key_eodhd: nécessite une clé API, limite de 20 appels/jour
+        requires_api_key_mansa: "nécessite une clé API, offre gratuite de 100 appels/jour (bourses africaines : NGX, JSE, NSE, GSE, BRVM, etc.)"
         securities_description: Activez un ou plusieurs fournisseurs pour récupérer les cours des actions, ETF et fonds communs. Lors d'une recherche, tous les fournisseurs activés sont interrogés et les résultats sont fusionnés.
         securities_title: Fournisseurs de titres
         tinkoff_invest_hint: requiert un jeton en lecture seule -- cours des actions/fonds/obligations russes + logos des marques
@@ -188,8 +269,10 @@ fr:
           body: Êtes-vous sûr(e) de vouloir effacer le cache de données ? Cela supprimera tous les taux de change, les cours des titres, les soldes des comptes et d'autres données. Cette action ne peut pas être annulée.
           title: Effacer le cache de données ?
         danger_zone: Zone dangereuse
+        demo_refresh: Actualisation des données de démo
         financial_data_providers: Fournisseurs de données financières
         general: Paramètres généraux
+        instance_settings_restricted: 'Les identifiants des fournisseurs, la connexion IA partagée et les paramètres de synchronisation s''appliquent à toutes les familles de cette instance : seul un super administrateur peut donc les modifier. L''assistant utilisé par votre famille reste défini par famille. Une personne ayant accès au serveur peut promouvoir un utilisateur super administrateur ; le guide d''auto-hébergement Docker donne la commande dans ses notes de mise à niveau.'
         invites: Codes d'invitation
         property_valuation_providers: Fournisseurs de valorisation immobilière
         sync_settings: Paramètres de synchronisation
@@ -204,6 +287,10 @@ fr:
         env_configured_message: Ce paramètre est désactivé car une variable d'environnement du fournisseur (SIMPLEFIN_INCLUDE_PENDING ou PLAID_INCLUDE_PENDING) est définie. Supprimez-la pour activer ce paramètre.
         include_pending_description: Lorsque cette option est activée, les transactions en attente (non confirmées) seront importées et automatiquement réconciliées lors de leur validation. Désactivez si votre banque fournit des données de transactions en attente peu fiables.
         include_pending_label: Inclure les transactions en attente
+        market_data_sync_description: Lorsque cette option est activée, les cours des titres sont importés automatiquement une fois par jour (du lundi au vendredi) à l'heure indiquée.
+        market_data_sync_label: Activer l'import quotidien des données de marché
+        market_data_sync_time_description: Indiquez l'heure à laquelle l'import quotidien des cours doit s'exécuter, par exemple peu après la clôture de votre place boursière principale.
+        market_data_sync_time_label: Heure d'import des données de marché (HH:MM)
       tiingo_settings:
         description: Saisissez le token API fourni par Tiingo. Le forfait gratuit supporte 50 symboles uniques par heure avec plus de 30 ans de données historiques.
         env_configured_message: Configuré avec succès via la variable d'environnement TIINGO_API_KEY.
@@ -245,10 +332,14 @@ fr:
         anthropic_model_required_for_base_url: Le modèle Anthropic est requis lorsqu'une URL de base personnalisée est définie.
         failure: Valeur de paramètre invalide
         invalid_anthropic_base_url: L'URL de base d'Anthropic doit être une URL http(s).
+        invalid_categorization_rate: "%{field} doit être un nombre compris entre 0 et 1."
+        invalid_demo_family: La famille sélectionnée doit être propriétaire de l'e-mail de démo configuré.
+        invalid_jev_endpoint: L'endpoint Jev doit être une URL https. Le http simple n'est accepté que pour localhost.
         invalid_llm_budget: "%{field} doit être un nombre entier ≥ %{minimum}."
         invalid_onboarding_state: État d'intégration invalide
         invalid_sync_time: Format d'heure de synchronisation invalide. Veuillez utiliser le format HH:MM (ex. 02:30).
         scheduler_sync_failed: Paramètres enregistrés, mais la mise à jour du planning de synchronisation a échoué. Veuillez réessayer ou vérifier les journaux du serveur.
+        select_demo_family: Sélectionnez d'abord une famille de démo jetable.
         success: Paramètres mis à jour
       yahoo_finance_settings:
         connection_failed: Impossible de se connecter à Yahoo Finance

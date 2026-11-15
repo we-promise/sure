@@ -1,0 +1,6 @@
+---
+ru:
+  sure_import:
+    preflight:
+      missing_reference: 'Строка %{line}: запись %{type} ссылается на отсутствующее значение %{field} %{value}.'
+      skipped_missing_reference: 'Строка %{line}: запись %{type} ссылается на отсутствующее значение %{field} %{value}. Эта запись будет пропущена при импорте.'

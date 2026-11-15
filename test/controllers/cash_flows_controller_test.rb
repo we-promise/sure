@@ -58,6 +58,20 @@ class CashFlowsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "groups the graph by account on request and rejects unknown groupings" do
+    sign_in @user
+    get dashboard_cash_flow_path(@dates.merge(group_by: "account"))
+    assert_response :success
+    assert_equal "net_by_account", response.parsed_body.dig("sankey", "basis")
+
+    get dashboard_cash_flow_path(@dates)
+    assert_equal "net_by_category", response.parsed_body.dig("sankey", "basis")
+
+    get dashboard_cash_flow_path(@dates.merge(group_by: "merchant"))
+    assert_response :unprocessable_entity
+    assert_equal "invalid_group_by", response.parsed_body["error"]
+  end
+
   test "rejects incomplete malformed and reversed date ranges" do
     sign_in @user
     [ {}, { start_date: "2024-01-01" }, { start_date: "2024-02-30", end_date: "2024-03-01" },

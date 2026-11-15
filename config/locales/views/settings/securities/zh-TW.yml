@@ -10,7 +10,7 @@ zh-TW:
         mfa_enabled_description: 您的帳號已受到額外一層安全防護。
         mfa_disabled_status_html: 雙重驗證<span class="font-medium text-red-600">已停用</span>
         mfa_disabled_description: 啟用 2FA 可為您的帳號增加額外一層安全防護。
-        mfa_description: 透過在登入時要求輸入驗證應用程式產生的代碼，為您的帳號增加額外的安全防護。
+        mfa_description: 登入時除了密碼，還會要求輸入驗證應用程式產生的驗證碼，為您的帳號多一層保護。
         mfa_title: 雙重驗證
         webauthn_add: 新增密碼金鑰或安全金鑰
         webauthn_added: 於 %{date} 新增
@@ -18,13 +18,39 @@ zh-TW:
         webauthn_empty: 尚未註冊任何密碼金鑰或安全金鑰。
         webauthn_last_used: 上次使用於 %{time_ago}前
         webauthn_name_label: 金鑰名稱
+        webauthn_code_label: 驗證器代碼或備援代碼
+        webauthn_code_placeholder: 目前的驗證器代碼或未使用的備援代碼
         webauthn_name_placeholder: MacBook Touch ID、YubiKey 等
         webauthn_remove: 移除
         webauthn_remove_confirm: 確定要移除此密碼金鑰或安全金鑰嗎？
         webauthn_remove_confirm_body: 之後要再用它做登入驗證，就必須重新註冊一次。
         webauthn_title: 密碼金鑰與安全金鑰
         webauthn_unsupported: 這個瀏覽器不支援密碼金鑰或安全金鑰。
+        page_title: 安全性
+        encryption_warning:
+          title: 缺少加密金鑰
+          intro: 敏感資料（API 金鑰、供應商 Token、MFA 密鑰與個人資料）目前以未加密的狀態儲存。要啟用加密，請在環境變數或 Rails credentials 中設定下列金鑰：
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: 用這個指令產生一組：bin/rails db:encryption:init
+        sso_title: 已連結的帳號
+        sso_subtitle: 管理您的單一登入帳號連結
+        sso_disconnect: 中斷連線
+        sso_last_used: 上次使用
+        sso_never: 從未使用
+        sso_no_email: 沒有電子郵件
+        sso_no_identities: 尚未連結任何 SSO 帳號
+        sso_connect_hint: 登出後改用 SSO 供應商登入，即可連結帳號。
+        sso_confirm_title: 要中斷帳號連結嗎？
+        sso_confirm_body: 確定要中斷您的 %{provider} 帳號連結嗎？之後再用該供應商登入就能重新連結。
+        sso_confirm_button: 中斷連線
+        sso_warning_message: 這是您唯一的登入方式。中斷連結前，建議先在安全性設定中設定密碼，否則您可能會無法登入自己的帳號。
   webauthn_credentials:
+    code_already_used: 此代碼已被使用。請等待驗證器應用程式產生下一個代碼。
+    invalid_code: 此代碼無效。請輸入驗證器應用程式中的目前代碼或未使用的備援代碼。
+    rate_limited: 嘗試次數過多。請稍候一分鐘再試一次。
     default_name: 安全金鑰
     failure: 無法儲存該密碼金鑰或安全金鑰，請再試一次。
     mfa_required: 請先啟用雙重驗證，才能新增密碼金鑰或安全金鑰。

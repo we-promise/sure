@@ -1,0 +1,894 @@
+#!/bin/sh
+# Full-instance backups for a Docker Compose install of Sure.
+#
+# Runs as the `backup` service, from the same Sure image as web/worker (see
+# compose.example.yml). A backup bundle holds everything needed to bring the
+# same version back up elsewhere:
+#
+#   $BACKUP_DIR/<version>/<YYYY-MM-DD_HHMMSS>-<manual|scheduled>/
+#     manifest.json    version, commit, image tags, schema version, ...
+#     db.dump          pg_dump custom format
+#     storage.tar.gz   the app-storage volume (uploaded files)
+#     config/          the host's .env (contains secrets), compose file(s) and
+#                      bin/sure-backup
+#     restore.sh       restores the bundle into a new folder (see `recover`)
+#     SHA256SUMS
+#
+# Usage (from the compose directory):
+#   docker compose run --rm backup create [--version X] [--commit SHA]
+#   docker compose run --rm backup list
+#   docker compose run --rm backup restore <version/name | path | latest> [--yes] [--force]
+#   docker compose run --rm backup prune
+#
+# With no arguments it runs `scheduled` (create + prune) every day at the time
+# in BACKUP_SCHEDULE ("M H * * *", UTC). Off-site copies are made by the
+# separate `backup-offsite` service.
+#
+# Or on the host, from the folder with compose.yml, without a backup service
+# (works for any Sure version, including 0.7.5 and older):
+#   sh sure-backup create | list | restore <backup> | prune
+#
+# On the host, a bundle restores itself into a new project folder:
+#   sh <bundle>/restore.sh [--target DIR] [--port N] [--with-worker | --without-worker] [--yes]
+# which runs `sure-backup recover <bundle> ...`. It needs Docker with Compose.
+set -e
+
+# shellcheck disable=SC3040
+if (set -o pipefail 2>/dev/null); then
+  set -o pipefail
+fi
+
+BACKUP_DIR=${BACKUP_DIR_IN_CONTAINER:-/backups}
+STORAGE_DIR=${SURE_STORAGE_DIR:-/rails/storage}
+CONFIG_DIR=${SURE_CONFIG_DIR:-/config}
+STAMP_FILE="${STORAGE_DIR}/.sure-runtime"
+IMAGE_REPO=${SURE_IMAGE_REPO:-ghcr.io/we-promise/sure}
+
+BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+BACKUP_KEEP_DAYS=${BACKUP_KEEP_DAYS:-7}
+INSTANCE_ID=${INSTANCE_ID:-default}
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
+
+log() { echo "[sure-backup] $*"; }
+warn() { echo "[sure-backup] WARNING: $*" >&2; }
+die() { echo "[sure-backup] ERROR: $*" >&2; exit 1; }
+
+usage() {
+  awk 'NR > 1 && /^#/ { sub(/^# ?/, ""); print; next } NR > 1 { exit }' "$0"
+}
+
+# --- setup -------------------------------------------------------------------
+
+ensure_deps() {
+  # The Sure image has all of these. The apk fallback keeps Alpine-based
+  # backup services from v0.7.5 working.
+  missing=""
+  if ! command -v pg_dump >/dev/null 2>&1; then
+    # Prefer the client the Sure image ships (17); dumps it makes need a
+    # pg_restore at least that new. Older Alpine releases only have 16.
+    if apk search -q postgresql17-client 2>/dev/null | grep -qx postgresql17-client; then
+      missing="$missing postgresql17-client"
+    else
+      missing="$missing postgresql16-client~=16"
+    fi
+  fi
+  # BusyBox tar lacks --numeric-owner/--exclude semantics we rely on.
+  tar --version 2>/dev/null | grep -q "GNU tar" || missing="$missing tar~=1"
+  [ -z "$missing" ] && return 0
+
+  command -v apk >/dev/null 2>&1 || die "missing tools (${missing# }) and no apk to install them"
+  log "Installing:${missing}"
+  # shellcheck disable=SC2086
+  if ! apk_out=$(apk add --no-cache --quiet $missing 2>&1); then
+    echo "$apk_out" >&2
+    die "could not install required packages"
+  fi
+}
+
+check_db_env() {
+  if [ -z "$POSTGRES_DB" ] || [ -z "$POSTGRES_USER" ] || [ -z "$POSTGRES_PASSWORD" ] || [ -z "$POSTGRES_HOST" ]; then
+    die "database connection variables are not fully set"
+  fi
+
+  case "${POSTGRES_HOST}${POSTGRES_PORT}${POSTGRES_DB}${POSTGRES_USER}${POSTGRES_PASSWORD}" in
+    *"
+"*)
+      die "database connection parameters must not contain newlines"
+      ;;
+  esac
+}
+
+check_keep_days() {
+  if ! [ "$BACKUP_KEEP_DAYS" -gt 0 ] 2>/dev/null; then
+    die "BACKUP_KEEP_DAYS must be a positive integer (got: ${BACKUP_KEEP_DAYS})"
+  fi
+}
+
+# Write a .pgpass with escaped fields so the password never hits argv.
+setup_pgpass() {
+  WORK_DIR=$(umask 077 && mktemp -d)
+  trap 'rm -rf "${WORK_DIR}"' EXIT INT TERM
+
+  pg_esc() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/:/\\:/g'; }
+
+  # "*" for the database so dropdb/createdb can use the maintenance database.
+  (umask 077 && printf '%s:%s:*:%s:%s\n' \
+    "$(pg_esc "$POSTGRES_HOST")" "$(pg_esc "$POSTGRES_PORT")" \
+    "$(pg_esc "$POSTGRES_USER")" "$(pg_esc "$POSTGRES_PASSWORD")" > "${WORK_DIR}/.pgpass")
+  export PGPASSFILE="${WORK_DIR}/.pgpass"
+  export PGHOST="$POSTGRES_HOST" PGPORT="$POSTGRES_PORT" PGUSER="$POSTGRES_USER"
+}
+
+psql_value() {
+  psql -X -q -t -A -v ON_ERROR_STOP=1 -d "${2:-$POSTGRES_DB}" -c "$1"
+}
+
+json_str() {
+  printf '"%s"' "$(printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g')"
+}
+
+manifest_value() {
+  sed -n "s/^[[:space:]]*\"$2\": \"\([^\"]*\)\".*/\1/p" "$1/manifest.json" | head -n 1
+}
+
+# The Sure image ships an empty /rails/storage, so "is a directory" is not
+# enough: the uploaded-files volume must actually be mounted there.
+storage_mounted() {
+  [ -d "$STORAGE_DIR" ] && awk -v d="$STORAGE_DIR" '$2 == d { found = 1 } END { exit !found }' /proc/mounts 2>/dev/null
+}
+
+stamp_value() {
+  sed -n "s/^$1=//p" "$STAMP_FILE" 2>/dev/null | head -n 1
+}
+
+# --- create ------------------------------------------------------------------
+
+cmd_create() {
+  trigger=manual
+  version=""
+  commit=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --version) version=$2; shift 2 ;;
+      --commit) commit=$2; shift 2 ;;
+      --scheduled) trigger=scheduled; shift ;;
+      *) die "unknown option for create: $1" ;;
+    esac
+  done
+
+  check_db_env
+  ensure_deps
+  setup_pgpass
+
+  db_schema=$(psql_value "SELECT max(version) FROM schema_migrations" 2>/dev/null) \
+    || die "cannot read schema_migrations from ${POSTGRES_DB}; is the database initialized?"
+
+  # The web container stamps the version that migrated the database. Trust it
+  # only if the database is still at that schema, otherwise the stamp is stale
+  # (e.g. the image was swapped but web has not booted the new one yet).
+  if [ -f "$STAMP_FILE" ]; then
+    stamp_version=$(stamp_value SURE_VERSION)
+    stamp_schema=$(stamp_value SURE_SCHEMA_VERSION)
+    if [ -n "$version" ] && [ "$version" != "$stamp_version" ]; then
+      die "--version ${version} disagrees with the running app (${stamp_version}); drop --version"
+    fi
+    if [ "$stamp_schema" != "$db_schema" ]; then
+      die "database schema ${db_schema} does not match the app's stamped schema ${stamp_schema} (version ${stamp_version}). Start the web service so it re-stamps, then retry."
+    fi
+    version=$stamp_version
+    commit=${commit:-$(stamp_value SURE_COMMIT)}
+  elif [ -z "$version" ] && [ -f /rails/.sure-version ] && [ -f /rails/db/schema.rb ]; then
+    # Running in a Sure image that predates stamping: use the image's own
+    # version, but only if the database is at that version's schema.
+    image_version=$(tr -d '[:space:]' < /rails/.sure-version)
+    image_schema=$(sed -n 's/.*define(version: \([0-9_]*\)).*/\1/p' /rails/db/schema.rb | tr -d _)
+    if [ "$image_schema" != "$db_schema" ]; then
+      die "database schema ${db_schema} does not match this image (Sure ${image_version}, schema ${image_schema}). Run the backup with the image the app runs on, or pass --version."
+    fi
+    version=$image_version
+    commit=${commit:-${BUILD_COMMIT_SHA:-}}
+    log "No version stamp; using this image's version ${version} (database schema matches)"
+  elif [ -z "$version" ]; then
+    die "no version stamp at ${STAMP_FILE} (app image predates stamping). Pass --version, e.g. --version 0.7.4"
+  else
+    warn "no version stamp; trusting --version ${version}"
+  fi
+
+  case "$version" in
+    "" | *[!A-Za-z0-9._+-]*) die "invalid version: ${version}" ;;
+  esac
+
+  name="$(date -u +%Y-%m-%d_%H%M%S)-${trigger}"
+  final_dir="${BACKUP_DIR}/${version}/${name}"
+  [ -e "$final_dir" ] && die "${final_dir} already exists"
+
+  tmp_dir="${BACKUP_DIR}/.tmp-${name}-$$"
+  mkdir -p "$BACKUP_DIR"
+  (umask 077 && mkdir -p "${tmp_dir}/config")
+  trap 'rm -rf "${WORK_DIR}" "${tmp_dir}"' EXIT INT TERM
+
+  log "Backing up Sure ${version} to ${version}/${name}"
+
+  log "Dumping database ${POSTGRES_DB}..."
+  (umask 077 && pg_dump -Fc -d "$POSTGRES_DB" -f "${tmp_dir}/db.dump")
+
+  storage_service=""
+  if [ -f "${CONFIG_DIR}/.env" ]; then
+    storage_service=$(sed -n 's/^ACTIVE_STORAGE_SERVICE=//p' "${CONFIG_DIR}/.env" | tail -n 1 | tr -d '"'"'"' ')
+  fi
+  case "$storage_service" in
+    "" | local) ;;
+    *) warn "uploaded files are stored in '${storage_service}' (ACTIVE_STORAGE_SERVICE), not in this backup" ;;
+  esac
+
+  if storage_mounted; then
+    log "Archiving file storage..."
+    (umask 077 && tar -C "$STORAGE_DIR" --numeric-owner --exclude=./.sure-runtime -czf "${tmp_dir}/storage.tar.gz" .)
+  else
+    warn "${STORAGE_DIR} is not mounted; uploaded files are NOT included"
+  fi
+
+  if [ -f "${CONFIG_DIR}/.env" ]; then
+    cp "${CONFIG_DIR}/.env" "${tmp_dir}/config/.env"
+  else
+    warn "no .env in ${CONFIG_DIR}; it is NOT included"
+  fi
+  for f in compose.yml compose.yaml docker-compose.yml docker-compose.yaml; do
+    [ -f "${CONFIG_DIR}/${f}" ] || continue
+    cp "${CONFIG_DIR}/${f}" "${tmp_dir}/config/${f}"
+    compose_found=true
+  done
+  [ "${compose_found:-}" = true ] || warn "no compose file in ${CONFIG_DIR}; it is NOT included"
+  for f in compose.override.yml compose.override.yaml docker-compose.override.yml docker-compose.override.yaml; do
+    [ -f "${CONFIG_DIR}/${f}" ] && cp "${CONFIG_DIR}/${f}" "${tmp_dir}/config/${f}"
+  done
+  find "${tmp_dir}/config" -type f -exec chmod 0600 {} +
+  # This script and an entry point for it, so a bundle restores on its own.
+  mkdir -p "${tmp_dir}/config/bin"
+  cp "$0" "${tmp_dir}/config/bin/sure-backup"
+  chmod 0755 "${tmp_dir}/config/bin/sure-backup"
+  cat > "${tmp_dir}/restore.sh" <<'EOF'
+#!/bin/sh
+# Restores this backup into a new folder as a separate Sure instance.
+# Run it with: sh restore.sh   (needs Docker with Compose; --help for options)
+dir=$(cd "$(dirname "$0")" && pwd)
+exec sh "$dir/config/bin/sure-backup" recover "$dir" "$@"
+EOF
+  chmod 0755 "${tmp_dir}/restore.sh"
+
+  pg_server=$(psql_value "SHOW server_version")
+  if [ -n "$commit" ]; then
+    commit_json=$(json_str "$commit")
+    image_by_commit_json=$(json_str "${IMAGE_REPO}:sha-${commit}")
+  else
+    commit_json=null
+    image_by_commit_json=null
+  fi
+  # One key per line: manifest_value reads it back with sed.
+  {
+    echo "{"
+    echo "  \"format\": 1,"
+    echo "  \"sure_version\": $(json_str "$version"),"
+    echo "  \"sure_commit\": ${commit_json},"
+    echo "  \"image\": $(json_str "${IMAGE_REPO}:${version}"),"
+    echo "  \"image_by_commit\": ${image_by_commit_json},"
+    echo "  \"schema_version\": $(json_str "$db_schema"),"
+    echo "  \"created_at\": $(json_str "$(date -u +%Y-%m-%dT%H:%M:%SZ)"),"
+    echo "  \"trigger\": $(json_str "$trigger"),"
+    echo "  \"instance_id\": $(json_str "$INSTANCE_ID"),"
+    echo "  \"database\": $(json_str "$POSTGRES_DB"),"
+    echo "  \"postgres_server_version\": $(json_str "$pg_server"),"
+    echo "  \"pg_dump_version\": $(json_str "$(pg_dump --version)")"
+    echo "}"
+  } > "${tmp_dir}/manifest.json"
+
+  (cd "$tmp_dir" && find . -type f | sort | xargs sha256sum > "${WORK_DIR}/SHA256SUMS")
+  mv "${WORK_DIR}/SHA256SUMS" "${tmp_dir}/SHA256SUMS"
+
+  mkdir -p "${BACKUP_DIR}/${version}"
+  mv "$tmp_dir" "$final_dir"
+  log "Done: ${final_dir} ($(du -sh "$final_dir" | cut -f1))"
+}
+
+# --- list --------------------------------------------------------------------
+
+bundles() {
+  # Newest first; the directory name starts with a sortable UTC timestamp.
+  find "$BACKUP_DIR" -mindepth 3 -maxdepth 3 -name manifest.json ! -path '*/.tmp-*' 2>/dev/null \
+    | while read -r m; do
+        d=$(dirname "$m")
+        printf '%s\t%s\n' "$(basename "$d")" "$d"
+      done | sort -r | cut -f2
+}
+
+cmd_list() {
+  found=$(bundles)
+  if [ -z "$found" ]; then
+    log "No backups in ${BACKUP_DIR}"
+    return 0
+  fi
+  printf '%-40s %-10s %-8s %s\n' "BACKUP" "TRIGGER" "SIZE" "IMAGE"
+  echo "$found" | while read -r d; do
+    printf '%-40s %-10s %-8s %s\n' \
+      "${d#"${BACKUP_DIR}"/}" \
+      "$(manifest_value "$d" trigger)" \
+      "$(du -sh "$d" | cut -f1)" \
+      "$(manifest_value "$d" image)"
+  done
+}
+
+# --- restore -----------------------------------------------------------------
+
+resolve_bundle() {
+  case "$1" in
+    "") die "restore needs a backup id (see 'list'), a path, or 'latest'" ;;
+    latest) dir=$(bundles | head -n 1) ;;
+    /*) dir=$1 ;;
+    *) dir="${BACKUP_DIR}/$1" ;;
+  esac
+  [ -n "$dir" ] && [ -f "${dir}/manifest.json" ] || die "no backup found at ${dir:-$1}"
+  echo "$dir"
+}
+
+env_secret_hash() {
+  [ -f "$1" ] || return 0
+  sed -n 's/^SECRET_KEY_BASE=//p' "$1" | tail -n 1 | sha256sum | cut -c1-16
+}
+
+cmd_restore() {
+  target=""
+  assume_yes=false
+  force=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --yes) assume_yes=true; shift ;;
+      --force) force=true; shift ;;
+      -*) die "unknown option for restore: $1" ;;
+      *) target=$1; shift ;;
+    esac
+  done
+
+  check_db_env
+  ensure_deps
+  dir=$(resolve_bundle "$target")
+  setup_pgpass
+
+  log "Verifying checksums..."
+  (cd "$dir" && sha256sum -c SHA256SUMS >/dev/null) || die "checksum verification failed for ${dir}"
+
+  version=$(manifest_value "$dir" sure_version)
+  image=$(manifest_value "$dir" image)
+  image_by_commit=$(manifest_value "$dir" image_by_commit)
+
+  # pg_restore can't read dumps made by a newer pg_dump; say so plainly.
+  dump_major=$(manifest_value "$dir" pg_dump_version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')
+  client_major=$(pg_restore --version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')
+  case "$client_major" in "" | *[!0-9]*) die "cannot read the pg_restore version" ;; esac
+  case "$dump_major" in *[!0-9]*) dump_major="" ;; esac
+  if [ -n "$dump_major" ] && [ "$dump_major" -gt "$client_major" ]; then
+    die "this backup was made with pg_dump ${dump_major}, but this pg_restore is ${client_major}. Restore it from the host with 'sh sure-backup restore', which runs in the Sure image, or with PostgreSQL ${dump_major} client tools."
+  fi
+
+  # Checked up front so a missing mount can't leave a half-restored instance.
+  if [ -f "${dir}/storage.tar.gz" ] && ! storage_mounted; then
+    die "${STORAGE_DIR} is not mounted; cannot restore uploaded files"
+  fi
+
+  others=$(psql_value "SELECT count(*) FROM pg_stat_activity WHERE datname = '${POSTGRES_DB}' AND pid <> pg_backend_pid()" postgres)
+  if [ "$others" -gt 0 ] && [ "$force" != true ]; then
+    die "${others} other connection(s) to ${POSTGRES_DB}. Stop the app first: docker compose stop web worker (or pass --force)"
+  fi
+
+  if [ "$assume_yes" != true ]; then
+    if [ -t 0 ]; then
+      printf 'This REPLACES database %s and all uploaded files with %s. Type "restore" to continue: ' "$POSTGRES_DB" "${dir#"${BACKUP_DIR}"/}"
+      read -r answer
+      [ "$answer" = "restore" ] || die "aborted"
+    else
+      die "refusing to restore without a TTY; pass --yes"
+    fi
+  fi
+
+  log "Recreating database ${POSTGRES_DB}..."
+  dropdb --maintenance-db=postgres --if-exists --force "$POSTGRES_DB"
+  createdb --maintenance-db=postgres -O "$POSTGRES_USER" "$POSTGRES_DB"
+
+  log "Restoring database..."
+  server_major=$(( $(psql_value "SHOW server_version_num" postgres) / 10000 ))
+  if [ "$client_major" -le "$server_major" ]; then
+    pg_restore --no-owner --role="$POSTGRES_USER" --exit-on-error -d "$POSTGRES_DB" "${dir}/db.dump"
+  else
+    # A newer pg_restore emits settings the older server rejects (e.g.
+    # transaction_timeout, new in 17), so restore through SQL without them.
+    pg_restore --no-owner --role="$POSTGRES_USER" -f "${WORK_DIR}/restore.sql" "${dir}/db.dump"
+    sed '/^SET transaction_timeout = /d' "${WORK_DIR}/restore.sql" \
+      | psql -X -q -v ON_ERROR_STOP=1 -d "$POSTGRES_DB" >/dev/null
+    rm -f "${WORK_DIR}/restore.sql"
+  fi
+
+  if [ -f "${dir}/storage.tar.gz" ]; then
+    log "Restoring file storage..."
+    find "$STORAGE_DIR" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+    tar -C "$STORAGE_DIR" --numeric-owner -xzpf "${dir}/storage.tar.gz"
+  else
+    warn "backup has no storage.tar.gz; file storage left untouched"
+  fi
+
+  if [ -f "${dir}/config/.env" ] && [ -f "${CONFIG_DIR}/.env" ] \
+    && [ "$(env_secret_hash "${dir}/config/.env")" != "$(env_secret_hash "${CONFIG_DIR}/.env")" ]; then
+    warn "SECRET_KEY_BASE in this backup differs from the current .env."
+    warn "Encrypted data will not decrypt until you use the backup's value (see ${dir#"${BACKUP_DIR}"/}/config/.env)."
+  fi
+
+  if [ "${SURE_RECOVER:-}" = 1 ]; then
+    # Called by `recover`, which pins the image and starts the app itself.
+    log "Restored Sure ${version}."
+    return 0
+  fi
+  log "Restored Sure ${version}. Next, on the host:"
+  log "  1. Run the app on ${image}${image_by_commit:+ (or ${image_by_commit} for non-release builds)}:"
+  if [ -f "${CONFIG_DIR}/compose.restore.yml" ]; then
+    log "     set the web and worker image in compose.restore.yml (it overrides SURE_IMAGE_TAG)"
+  else
+    log "     set SURE_IMAGE_TAG=${version} in .env, or the web/worker image in your compose file"
+  fi
+  log "  2. docker compose up -d"
+}
+
+# --- recover (runs on the host) -----------------------------------------------
+
+# ask PROMPT DEFAULT: prints the answer, or DEFAULT on an empty line or EOF.
+ask() {
+  if [ "$assume_yes" = true ]; then
+    printf '%s\n' "$2"
+    return 0
+  fi
+  printf '%s%s: ' "$1" "${2:+ [$2]}" >&2
+  answer=""
+  read -r answer || true
+  printf '%s\n' "${answer:-$2}"
+}
+
+env_set() {
+  awk -v k="$2" -v v="$3" '
+    $0 ~ "^" k "=" { if (!done) print k "=" v; done = 1; next }
+    { print }
+    END { if (!done) print k "=" v }
+  ' "$1" > "$1.tmp"
+  mv "$1.tmp" "$1"
+  chmod 0600 "$1"
+}
+
+env_get() {
+  sed -n "s/^$2=//p" "$1" 2>/dev/null | tail -n 1 | sed -e 's/[[:space:]]*#.*$//' -e 's/^"\(.*\)"$/\1/'
+}
+
+port_in_use() {
+  docker ps --format '{{.Ports}}' 2>/dev/null | grep -q ":$1->" && return 0
+  if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 "$1" >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
+
+# Compose projects with a running Sure web or worker container.
+running_sure_projects() {
+  docker ps --format '{{.Label "com.docker.compose.project"}}|{{.Label "com.docker.compose.service"}}|{{.Image}}' 2>/dev/null \
+    | awk -F'|' '($2 == "web" || $2 == "worker") && $3 ~ /sure/ { print ($1 == "" ? "(not compose)" : $1) }' \
+    | sort -u
+}
+
+cmd_recover() {
+  bundle=""
+  target=""
+  port=""
+  worker=""
+  assume_yes=false
+  start=true
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --target) target=$2; shift 2 ;;
+      --port) port=$2; shift 2 ;;
+      --with-worker) worker=yes; shift ;;
+      --without-worker) worker=no; shift ;;
+      --yes) assume_yes=true; shift ;;
+      --no-start) start=false; shift ;;
+      -h | --help) usage; return 0 ;;
+      -*) die "unknown option for recover: $1" ;;
+      *) bundle=$1; shift ;;
+    esac
+  done
+
+  [ -n "$bundle" ] && [ -f "${bundle}/manifest.json" ] || die "recover needs a backup bundle folder (one with manifest.json)"
+  bundle=$(cd "$bundle" && pwd)
+  if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+    die "Docker with the Compose plugin is required (https://docs.docker.com/compose/install/)"
+  fi
+
+  version=$(manifest_value "$bundle" sure_version)
+  image=$(manifest_value "$bundle" image)
+  created=$(manifest_value "$bundle" created_at)
+  [ -n "$version" ] && [ -n "$image" ] || die "cannot read version and image from ${bundle}/manifest.json"
+  [ -f "${bundle}/config/.env" ] || die "the bundle has no config/.env; restore it by hand (see docs/hosting/docker.md)"
+  compose_file=""
+  for f in compose.yml compose.yaml docker-compose.yml docker-compose.yaml; do
+    [ -f "${bundle}/config/${f}" ] && { compose_file=$f; break; }
+  done
+  [ -n "$compose_file" ] || die "the bundle has no compose file; restore it by hand (see docs/hosting/docker.md)"
+
+  log "Backup: Sure ${version}, taken ${created:-at an unknown time} (${image})"
+  log "Verifying checksums..."
+  if command -v sha256sum >/dev/null 2>&1; then
+    (cd "$bundle" && sha256sum -c SHA256SUMS >/dev/null) || die "checksum verification failed"
+  elif command -v shasum >/dev/null 2>&1; then
+    (cd "$bundle" && shasum -a 256 -c SHA256SUMS >/dev/null) || die "checksum verification failed"
+  else
+    warn "no sha256sum or shasum; skipping checksum verification here (restore checks it again)"
+  fi
+
+  # Where to put the restored project. Its folder name becomes the Compose
+  # project name, which names its containers and data volumes.
+  [ -n "$target" ] || target=$(ask "Folder for the restored instance" "$(pwd)/sure-restore-${version}")
+  # A literal "~" typed at the prompt is not expanded by the shell.
+  # shellcheck disable=SC2088
+  case "$target" in
+    "~") target=$HOME ;;
+    "~/"*) target="${HOME}/${target#"~/"}" ;;
+  esac
+  if [ -e "$target" ] && [ -n "$(ls -A "$target" 2>/dev/null)" ]; then
+    die "${target} is not empty. Pick a new folder; to roll back an existing install, use 'restore' there instead."
+  fi
+  created_target=false
+  [ -d "$target" ] || created_target=true
+  mkdir -p "$target"
+  target=$(cd "$target" && pwd)
+  # On abort, remove the folder only if this run created it.
+  cleanup_target() { [ "$created_target" = true ] && rmdir "$target" 2>/dev/null; true; }
+
+  project=$(basename "$target" | tr '[:upper:]' '[:lower:]' | tr -cd 'a-z0-9_-' | sed 's/^[^a-z0-9]*//')
+  [ -n "$project" ] || project="sure-restore"
+  if [ -n "$(docker ps -aq --filter "label=com.docker.compose.project=${project}")" ] \
+    || [ -n "$(docker volume ls -q --filter "label=com.docker.compose.project=${project}")" ]; then
+    cleanup_target
+    die "Docker already has containers or volumes for a project named '${project}'. Pick a folder with another name, or this would overwrite that instance's data."
+  fi
+
+  # Other Sure instances on this machine.
+  others=$(running_sure_projects)
+  if [ -n "$others" ]; then
+    warn "Other Sure instances are running on this machine: $(echo "$others" | tr '\n' ' ')"
+    cat >&2 <<'EOF'
+If one of them holds the same data as this backup, running both at once means:
+  - Both workers sync the same bank connections. Some providers rotate access
+    tokens on every sync, so the copy can disconnect the original.
+  - Scheduled jobs, such as recurring transactions and emails, run twice.
+  - Signing in to both on the same host name (e.g. localhost on another port)
+    signs you out of the other, because browsers share cookies across ports.
+Starting the restored instance without its worker avoids the first two.
+EOF
+    [ -n "$worker" ] || case "$(ask "Start the restored worker too? (no = web only, abort = stop here)" "no")" in
+      y | yes) worker=yes ;;
+      abort | a | q) cleanup_target; die "aborted" ;;
+      *) worker=no ;;
+    esac
+  fi
+  [ -n "$worker" ] || worker=yes
+
+  backup_port=$(env_get "${bundle}/config/.env" PORT)
+  backup_port=${backup_port:-3000}
+  if [ -z "$port" ]; then
+    port=$backup_port
+    if port_in_use "$port"; then
+      suggestion=$port
+      while port_in_use "$suggestion"; do suggestion=$((suggestion + 1)); done
+      warn "port ${port} is already in use"
+      port=$(ask "Port for the restored instance" "$suggestion")
+    fi
+  fi
+  case "$port" in "" | *[!0-9]*) die "invalid port: ${port}" ;; esac
+  port_in_use "$port" && warn "port ${port} looks busy; the web container may fail to start"
+
+  log "Restoring into ${target} (project '${project}', port ${port})"
+  cp -R "${bundle}/config/." "${target}/"
+  # Use this copy of the script, which may be newer than the bundle's.
+  mkdir -p "${target}/bin"
+  cp "$0" "${target}/bin/sure-backup"
+  chmod 0755 "${target}/bin/sure-backup"
+  mkdir -p "${target}/backups/${version}"
+  cp -R "$bundle" "${target}/backups/${version}/"
+  name=$(basename "$bundle")
+
+  compose_files=$compose_file
+  for f in compose.override.yml compose.override.yaml docker-compose.override.yml docker-compose.override.yaml; do
+    [ -f "${target}/${f}" ] && compose_files="${compose_files}:${f}"
+  done
+  compose_files="${compose_files}:compose.restore.yml"
+
+  cat > "${target}/compose.restore.yml" <<EOF
+# Written by \`sure-backup recover\` from backup ${version}/${name}.
+# Pins web and worker to the backed-up version and adds the sure-backup
+# service; COMPOSE_FILE in .env loads it with the main compose file.
+# To upgrade later, change the image here (or remove it to follow the
+# compose file's tag) and run: docker compose pull && docker compose up -d
+services:
+  web:
+    image: ${image}
+  worker:
+    image: ${image}
+  sure-backup:
+    profiles: [sure-backup]
+    image: ${image}
+    user: "0"
+    entrypoint: ["/usr/local/bin/sure-backup"]
+    volumes:
+      - ./bin/sure-backup:/usr/local/bin/sure-backup:ro
+      - ./backups:/backups
+      - app-storage:/rails/storage
+      - .:/config:ro
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: \${POSTGRES_USER:-sure_user}
+      POSTGRES_PASSWORD: \${POSTGRES_PASSWORD:-sure_password}
+      POSTGRES_DB: \${POSTGRES_DB:-sure_production}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sure_net
+EOF
+  env_set "${target}/.env" COMPOSE_PROJECT_NAME "$project"
+  env_set "${target}/.env" COMPOSE_FILE "$compose_files"
+  env_set "${target}/.env" PORT "$port"
+
+  # Values exported in the caller's shell override .env, and could point
+  # Compose at the original install. Pin every call below to this project.
+  export COMPOSE_PROJECT_NAME="$project" COMPOSE_FILE="$compose_files"
+  unset COMPOSE_PROFILES COMPOSE_PROJECT_DIR
+  cd "$target"
+  restore_cmd="docker compose run --rm -e SURE_RECOVER=1 sure-backup restore ${version}/${name} --yes"
+
+  # The copied compose files must not reach shared storage: external volumes
+  # or networks, or host paths outside this folder, could belong to the
+  # original install, whose database or files the restore would replace.
+  resolved=$(docker compose config 2>/dev/null) || die "docker compose cannot read the copied configuration in ${target}"
+  shared=$(printf '%s\n' "$resolved" | awk -v t="$target" '
+    /^[[:space:]]*external: true/ { print "  an external volume or network (external: true)" }
+    /^[[:space:]]*source: \// { if (index($2, t) != 1) print "  host path " $2 }
+  ' | sort -u)
+  if [ -n "$shared" ]; then
+    warn "the copied compose configuration uses storage outside ${target}:"
+    printf '%s\n' "$shared" >&2
+    die "restoring here could overwrite another instance's data. Make these local to ${target} in its compose files, then run there: docker compose up -d db redis && ${restore_cmd}"
+  fi
+
+  # Local files the compose files mount (e.g. "- ./certs/ca.pem:/...") are not
+  # part of the backup. Docker would create empty directories in their place
+  # and the containers using them would fail to start.
+  missing_mounts=""
+  for f in $(echo "$compose_files" | tr ':' ' '); do
+    # The pattern stops at whitespace, so word splitting is safe here.
+    # shellcheck disable=SC2013
+    for src in $(sed -n 's/^[[:space:]]*-[[:space:]]*\(\.\/[^:[:space:]]*\):.*/\1/p' "${target}/${f}"); do
+      case "$src" in ./backups | ./backups/* | ./bin/sure-backup) continue ;; esac
+      [ -e "${target}/${src}" ] || missing_mounts="${missing_mounts} ${src}"
+    done
+  done
+  if [ -n "$missing_mounts" ]; then
+    warn "the compose files mount local paths that are not in the backup:${missing_mounts}"
+    warn "copy them into ${target} from the original install before starting."
+    start=false
+  fi
+
+  if [ "$start" != true ]; then
+    log "Prepared ${target}. Start it with:"
+    services="web worker"; [ "$worker" = yes ] || services="web"
+    log "  cd ${target}"
+    log "  export COMPOSE_PROJECT_NAME=${project} COMPOSE_FILE=${compose_files}"
+    log "  docker compose up -d db redis && ${restore_cmd} && docker compose up -d ${services}"
+    return 0
+  fi
+
+  log "Starting the database..."
+  docker compose up -d db redis
+  log "Restoring the backup..."
+  docker compose run --rm -e SURE_RECOVER=1 sure-backup restore "${version}/${name}" --yes
+  if [ "$worker" = yes ]; then
+    log "Starting web and worker..."
+    docker compose up -d web worker
+  else
+    log "Starting web only (no worker)..."
+    docker compose up -d web
+  fi
+
+  url="http://localhost:${port}"
+  if command -v curl >/dev/null 2>&1; then
+    log "Waiting for ${url} ..."
+    tries=0
+    until curl -fsS -o /dev/null "${url}/up" 2>/dev/null; do
+      tries=$((tries + 1))
+      [ "$tries" -lt 60 ] || { warn "the app did not answer within 3 minutes; check: docker compose logs web"; break; }
+      sleep 3
+    done
+  fi
+
+  log ""
+  log "Restored Sure ${version} is running at ${url}"
+  log "  Folder:  ${target}"
+  log "  Manage:  cd ${target} && docker compose ps | logs web | down"
+  [ "$worker" = yes ] || log "  Worker:  not started; start it with 'docker compose up -d worker' once the original instance is stopped"
+  log "  Remove:  cd ${target} && docker compose down -v   (deletes this copy's data)"
+}
+
+# --- prune / offsite ----------------------------------------------------------
+
+cmd_prune() {
+  check_keep_days
+  minutes=$((BACKUP_KEEP_DAYS * 1440))
+  log "Pruning scheduled backups older than ${BACKUP_KEEP_DAYS} days (manual backups are kept)..."
+  find "$BACKUP_DIR" -mindepth 2 -maxdepth 2 -type d -name '*-scheduled' -mmin "+${minutes}" ! -path '*/.tmp-*' \
+    | while read -r d; do
+        log "  removing ${d#"${BACKUP_DIR}"/}"
+        rm -rf "$d"
+      done
+  # Version directories left empty by pruning.
+  find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d ! -name '.tmp-*' -empty -exec rmdir {} + 2>/dev/null || true
+  # Interrupted runs.
+  find "$BACKUP_DIR" -mindepth 1 -maxdepth 1 -type d -name '.tmp-*' -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
+}
+
+cmd_scheduled() {
+  check_keep_days
+  cmd_create --scheduled
+  cmd_prune
+}
+
+# Seconds until the next daily run at H:M (UTC).
+seconds_until() {
+  now=$(date -u +%s)
+  next=$(date -u -d "$(date -u +%Y-%m-%d) $1:$2:00" +%s)
+  [ "$next" -gt "$now" ] || next=$((next + 86400))
+  echo $((next - now))
+}
+
+cmd_daemon() {
+  check_db_env
+  check_keep_days
+  ensure_deps
+
+  # Only daily schedules: "M H * * *" with a numeric minute and hour.
+  set -f
+  # shellcheck disable=SC2086
+  set -- $BACKUP_SCHEDULE
+  set +f
+  minute=${1:-}; hour=${2:-}
+  if [ $# -ne 5 ] || [ "$3" != "*" ] || [ "$4" != "*" ] || [ "$5" != "*" ] \
+    || ! [ "$minute" -ge 0 ] 2>/dev/null || [ "$minute" -gt 59 ] \
+    || ! [ "$hour" -ge 0 ] 2>/dev/null || [ "$hour" -gt 23 ]; then
+    die "BACKUP_SCHEDULE must be a daily time like \"0 2 * * *\" (minute hour * * *, UTC); got \"${BACKUP_SCHEDULE}\""
+  fi
+  minute=$((minute + 0)); hour=$((hour + 0))
+  hhmm=$(printf '%02d:%02d' "$hour" "$minute")
+
+  if [ -n "${BACKUP_DESTINATION:-}" ]; then
+    warn "BACKUP_DESTINATION is ignored here; off-site copies are made by the backup-offsite service"
+  fi
+  # Exit promptly on docker stop; the sleep runs in the background so the trap fires.
+  trap 'exit 0' TERM INT
+  log "Scheduled backups every day at ${hhmm} UTC into ${BACKUP_DIR}"
+  while true; do
+    wait_s=$(seconds_until "$hour" "$minute")
+    log "Next backup in $((wait_s / 3600))h $((wait_s % 3600 / 60))m"
+    sleep "$wait_s" &
+    wait $!
+    ( cmd_scheduled ) || warn "scheduled backup failed; retrying at the next scheduled time"
+  done
+}
+
+# --- host mode -----------------------------------------------------------------
+#
+# Run on the host from the folder with compose.yml, `create`, `restore`,
+# `prune` and `scheduled` start this script once in a container from the
+# exact image of the install's `web` container, with its uploaded-files
+# volume, network and database settings. No backup service needed, so it
+# also works for Sure 0.7.5 and older.
+
+on_host() {
+  [ ! -f /.dockerenv ] && [ ! -f /run/.containerenv ] && command -v docker >/dev/null 2>&1
+}
+
+host_run() {
+  docker compose version >/dev/null 2>&1 || die "Docker with the Compose plugin is required"
+  cid=$(docker compose ps -aq web 2>/dev/null | head -n 1)
+  [ -n "$cid" ] || die "no Sure 'web' container for the Compose project in $(pwd). Run this from the folder with your compose.yml; the app must have been started at least once."
+
+  # An idle app holds no database connections, so the in-container check can
+  # miss it; here Docker can tell whether the app is running.
+  if [ "$1" = restore ]; then
+    case " $* " in *" --force "*) ;; *)
+      if [ -n "$(docker compose ps -q --status running web worker 2>/dev/null)" ]; then
+        die "the app is running. Stop it first: docker compose stop web worker (or pass --force)"
+      fi
+    esac
+  fi
+
+  inspect() { docker inspect -f "$1" "$cid"; }
+  image=$(inspect '{{.Image}}')
+  workdir=$(inspect '{{index .Config.Labels "com.docker.compose.project.working_dir"}}')
+  workdir=${workdir:-$(pwd)}
+  # A Go template for docker inspect, not shell expansion.
+  # shellcheck disable=SC2016
+  network=$(inspect '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' | sed -n '1p')
+  storage=$(inspect '{{range .Mounts}}{{if eq .Destination "/rails/storage"}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{end}}{{end}}')
+  container_env=$(inspect '{{range .Config.Env}}{{println .}}{{end}}')
+  env_of() { printf '%s\n' "$container_env" | sed -n "s/^$1=//p" | tail -n 1; }
+
+  backups=$(env_get "${workdir}/.env" BACKUP_DIR)
+  backups=${backups:-./backups}
+  case "$backups" in /*) ;; *) backups="${workdir}/${backups#./}" ;; esac
+  mkdir -p "$backups"
+  script_path=$(cd "$(dirname "$0")" && pwd)/$(basename "$0")
+
+  # Database credentials go through a private env file, not the command line.
+  host_tmp=$(umask 077 && mktemp -d)
+  trap 'rm -rf "${host_tmp}"' EXIT INT TERM
+  {
+    echo "POSTGRES_HOST=$(env_of DB_HOST)"
+    echo "POSTGRES_PORT=$(env_of DB_PORT)"
+    echo "POSTGRES_USER=$(env_of POSTGRES_USER)"
+    echo "POSTGRES_PASSWORD=$(env_of POSTGRES_PASSWORD)"
+    echo "POSTGRES_DB=$(env_of POSTGRES_DB)"
+    echo "BUILD_COMMIT_SHA=$(env_of BUILD_COMMIT_SHA)"
+    for v in BACKUP_KEEP_DAYS INSTANCE_ID; do
+      val=$(env_get "${workdir}/.env" "$v")
+      [ -z "$val" ] || echo "${v}=${val}"
+    done
+  } > "${host_tmp}/env"
+
+  # Build `docker run [options] IMAGE SUBCOMMAND ARGS` by prepending to "$@".
+  set -- "$image" "$@"
+  set -- --entrypoint /usr/local/bin/sure-backup "$@"
+  set -- -v "${script_path}:/usr/local/bin/sure-backup:ro" "$@"
+  set -- -v "${workdir}:/config:ro" -v "${backups}:/backups" "$@"
+  if [ -n "$storage" ]; then
+    set -- -v "${storage}:/rails/storage" "$@"
+  else
+    warn "the web container has no /rails/storage mount; uploaded files are not included"
+  fi
+  [ -n "$network" ] && set -- --network "$network" "$@"
+  [ -t 0 ] && set -- -t "$@"
+  set -- --rm -i --user 0 --env-file "${host_tmp}/env" "$@"
+
+  host_status=0
+  docker run "$@" || host_status=$?
+  rm -rf "$host_tmp"
+  return "$host_status"
+}
+
+command=${1:-daemon}
+[ $# -gt 0 ] && shift
+
+# On the host, run the database work in a container (see host_run).
+if on_host; then
+  case "$command" in
+    create | restore | prune | scheduled)
+      host_run "$command" "$@"
+      exit $?
+      ;;
+    list)
+      dir=$(env_get .env BACKUP_DIR)
+      BACKUP_DIR=${dir:-./backups}
+      ;;
+  esac
+fi
+
+case "$command" in
+  daemon) cmd_daemon ;;
+  create) cmd_create "$@" ;;
+  scheduled) cmd_scheduled ;;
+  list) cmd_list ;;
+  restore) cmd_restore "$@" ;;
+  recover) cmd_recover "$@" ;;
+  prune) ensure_deps; cmd_prune ;;
+  -h | --help | help) usage ;;
+  *) usage; exit 1 ;;
+esac

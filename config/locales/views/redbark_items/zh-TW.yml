@@ -25,22 +25,16 @@ zh-TW:
         needs_setup: '%{count} 個帳戶需要設定...'
       success: 同步已開始
     panel:
-      setup_instructions: 設定說明：
       step_1: 在 app.redbark.com 的 Settings 中建立 API 金鑰
       step_2: 在下方輸入您的 API 金鑰並按下儲存
       step_3: 連線成功後，前往「帳戶管理」分頁設定新帳戶
-      field_descriptions: 欄位說明：
       optional: （選填）
-      required: （必填）
       optional_with_default: （選填，預設為 %{default_value}）
       save_button: 儲存設定
       update_button: 更新設定
-      status_configured_html: 已設定完成，可以開始使用。請前往 <a href="%{accounts_path}" class="link">帳戶管理</a> 分頁管理與設定帳戶。
-      status_not_configured: 未設定
       fields:
         api_key:
           label: API 金鑰
-          description: 您的 Redbark API 金鑰（以 rbk_live_ 開頭）
           placeholder_new: rbk_live_...
           placeholder_update: 輸入新的 API 金鑰以更新
     create:

@@ -39,6 +39,7 @@ mn:
       default: "%Y-%m-%d"
       long: "%Y %B %d"
       short: "%y-%m-%d"
+      short_with_year: "%Y %b %d"
     month_names:
     -
     - 1 сар

@@ -10,16 +10,14 @@ class CoinspotItem::SyncCompleteEvent
     @coinspot_item = coinspot_item
   end
 
-  # Turbo-broadcasts a re-render of this connection's card so its sync
-  # status updates live in the browser without a page reload. Logs and
-  # swallows failures -- a broadcast issue shouldn't fail the sync itself.
+  # Tells the family's browsers the sync finished, so each re-fetches the page
+  # with its own permissions. Logs and swallows failures -- a broadcast issue
+  # shouldn't fail the sync itself.
   def broadcast
-    Turbo::StreamsChannel.broadcast_replace_to(
-      @coinspot_item.family,
-      target: ActionView::RecordIdentifier.dom_id(@coinspot_item),
-      partial: "coinspot_items/coinspot_item",
-      locals: { coinspot_item: @coinspot_item }
-    )
+    # Not the rendered card: it lists every account on the connection and a
+    # broadcast has no viewer to filter for (#3630). The toast re-fetches the
+    # page per viewer.
+    @coinspot_item.family.broadcast_sync_complete
   rescue StandardError => e
     Rails.logger.warn("CoinspotItem::SyncCompleteEvent failed for #{@coinspot_item.id}: #{e.class}")
   end

@@ -14,7 +14,13 @@ module Family::PlaidConnectable
     plaid(:eu).present? && self.eu?
   end
 
-  def create_plaid_item!(public_token:, item_name:, region:)
+  # `institution_id` is optional because it only became available to callers once
+  # Link's institution metadata was threaded through. Until then the column was
+  # populated during the first sync, by PlaidItem#upsert_plaid_institution_snapshot!.
+  # Persisting it here closes the window where a freshly linked item is invisible
+  # to the duplicate-connection check in PlaidItemsController -- the item most
+  # likely to be re-linked by mistake is the one that was just added.
+  def create_plaid_item!(public_token:, item_name:, region:, institution_id: nil)
     public_token_response = plaid(region).exchange_public_token(public_token)
 
     plaid_item = plaid_items.create!(
@@ -22,6 +28,7 @@ module Family::PlaidConnectable
       plaid_id: public_token_response.item_id,
       access_token: public_token_response.access_token,
       plaid_region: region,
+      institution_id: institution_id,
       owner: Current.user
     )
 

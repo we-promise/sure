@@ -1,0 +1,35 @@
+---
+uk:
+  activerecord:
+    attributes:
+      recurrence_rule:
+        frequency: Частота
+        interval: Інтервал
+        day_of_month: День місяця
+        weekday: День тижня
+        weekday_ordinal: Тиждень місяця
+        month_of_year: Місяць
+      recurring_transaction/recurrence_rules:
+        base: 'Розклад повторення:'
+        frequency: Частота
+        interval: Інтервал
+        day_of_month: День місяця
+        weekday: День тижня
+        weekday_ordinal: Тиждень місяця
+        month_of_year: Місяць
+    errors:
+      models:
+        recurrence_rule:
+          day_spec_required: 'Виберіть щось одне: день місяця або день тижня'
+          attributes:
+            weekday:
+              required_for_weekly: обов'язковий для щотижневого розкладу
+            weekday_ordinal:
+              not_allowed_for_weekly: не застосовується до щотижневого розкладу
+              required_with_weekday: обов'язковий, якщо вказано день тижня
+              not_allowed_without_weekday: застосовується лише тоді, коли вказано день тижня
+            day_of_month:
+              not_allowed_for_weekly: не застосовується до щотижневого розкладу
+            month_of_year:
+              required_for_yearly: обов'язковий для щорічного розкладу
+              not_allowed: застосовується лише до щорічного розкладу

@@ -1,0 +1,7 @@
+<%# locals: (name:, value:, checked:, filter_name:, checkbox_data: {}) %>
+<%# One checkbox row in pages/dashboard/filter_popover. The caller yields the
+    row's label; filter_name is what the popover's search matches against. %>
+<label class="filterable-item flex items-center gap-2 p-1.5 rounded-md hover:bg-container-inset-hover cursor-pointer" data-filter-name="<%= filter_name %>">
+  <%= check_box_tag name, value, checked, id: nil, class: "checkbox checkbox--light", data: checkbox_data %>
+  <%= yield %>
+</label>

@@ -11,19 +11,40 @@ class Provider::IbkrAdapter < Provider::Base
   def self.connection_configs(family:)
     return [] unless family.can_connect_ibkr?
 
-    [ {
-      key: "ibkr",
-      name: I18n.t("providers.ibkr.name"),
-      description: I18n.t("providers.ibkr.connection_description"),
+    ibkr_items = family.ibkr_items.active.ordered.select(&:credentials_configured?)
+
+    # With a single connection (or none yet) keep one generic entry; with
+    # several, offer one entry per connection so the user picks which one.
+    return [ connection_config_for(nil) ] if ibkr_items.size <= 1
+
+    ibkr_items.map { |ibkr_item| connection_config_for(ibkr_item) }
+  end
+
+  def self.connection_config_for(ibkr_item)
+    url_helpers = Rails.application.routes.url_helpers
+
+    {
+      key: ibkr_item.present? ? "ibkr_#{ibkr_item.id}" : "ibkr",
+      name: ibkr_item.present? ? I18n.t("providers.ibkr.named_connection", name: ibkr_item.name) : I18n.t("providers.ibkr.name"),
+      description: ibkr_item.present? ? I18n.t("providers.ibkr.named_connection_description", name: ibkr_item.name) : I18n.t("providers.ibkr.connection_description"),
       can_connect: true,
       new_account_path: ->(_accountable_type, _return_to) {
-        Rails.application.routes.url_helpers.select_accounts_ibkr_items_path
+        if ibkr_item.present?
+          url_helpers.select_accounts_ibkr_items_path(ibkr_item_id: ibkr_item.id)
+        else
+          url_helpers.select_accounts_ibkr_items_path
+        end
       },
       existing_account_path: ->(account_id) {
-        Rails.application.routes.url_helpers.select_existing_account_ibkr_items_path(account_id: account_id)
+        if ibkr_item.present?
+          url_helpers.select_existing_account_ibkr_items_path(account_id: account_id, ibkr_item_id: ibkr_item.id)
+        else
+          url_helpers.select_existing_account_ibkr_items_path(account_id: account_id)
+        end
       }
-    } ]
+    }
   end
+  private_class_method :connection_config_for
 
   def provider_name
     "ibkr"

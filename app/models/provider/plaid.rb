@@ -58,6 +58,8 @@ class Provider::Plaid
     else
       request_params[:transactions] = { days_requested: MAX_HISTORY_DAYS }
       request_params[:products] = [ get_primary_product(accountable_type) ]
+      optional = get_optional_products(accountable_type)
+      request_params[:optional_products] = optional if optional.any?
       request_params[:additional_consented_products] = get_additional_consented_products(accountable_type)
     end
 
@@ -186,26 +188,35 @@ class Provider::Plaid
     end
 
     # The primary Plaid product to request for a given Sure account type.
-    # Investments map to the `investments` product, liability accounts
-    # (CreditCard/Loan) to `liabilities`, everything else to `transactions`.
+    # Investments map to the `investments` product, loans to `liabilities`,
+    # everything else (including credit cards) to `transactions`.
     def get_primary_product(accountable_type)
       return "transactions" if eu?
 
       case accountable_type
       when "Investment"
         "investments"
-      when "CreditCard", "Loan"
+      when "Loan"
         "liabilities"
       else
         "transactions"
       end
     end
 
+    # Credit cards ask for `liabilities` (APR, statement balance, minimum
+    # payment) on a best-effort basis: an issuer without it, or a failed
+    # extraction, still creates the Item with transactions.
+    def get_optional_products(accountable_type)
+      return [] if eu?
+
+      accountable_type == "CreditCard" ? [ "liabilities" ] : []
+    end
+
     # Additional Plaid products to consent to alongside the primary product.
     #
-    # We only request the `liabilities` product when the account being linked is
-    # itself a liability (CreditCard/Loan). Plaid's Link filters out any
-    # institution that does not support every requested product, so asking for
+    # Only liability links request the `liabilities` product: loans as the
+    # primary product, credit cards as an optional one. Plaid's Link filters out
+    # any institution that does not support every requested product, so asking for
     # `liabilities` on e.g. an Investment link silently hides investment-only
     # brokerages like E*TRADE that don't offer it.
     def get_additional_consented_products(accountable_type)

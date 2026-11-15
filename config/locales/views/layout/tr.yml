@@ -10,10 +10,15 @@ tr:
         home: Ana Sayfa
         reports: Raporlar
         transactions: İşlemler
+        bills: Faturalar
+        plan: Plan
       privacy_mode: Gizlilik modunu değiştir
       resize_left_sidebar: Hesaplar kenar çubuğunu yeniden boyutlandır
       resize_right_sidebar: Asistan kenar çubuğunu yeniden boyutlandır
       skip_to_main: Ana içeriğe atla
+      release_highlight:
+        title: Yenilikler
+        done: Anladım
     auth:
       existing_account: Zaten bir hesabınız var mı?
       no_account: "%{product_name}'ye yeni misiniz?"
@@ -27,6 +32,10 @@ tr:
       footer:
         privacy_policy: Gizlilik Politikası
         terms_of_service: Hizmet Şartları
+      notification_tray:
+        download_complete: İndirme tamamlandı
+        download_failed: İndirme başarısız oldu. Lütfen tekrar deneyin.
+        download_location: Dosya İndirilenler klasörünüzde.
     trial:
       contribute: Katkıda bulun
       data_deleted_in_days: Veriler %{days} gün içinde silinecek

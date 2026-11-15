@@ -26,63 +26,18 @@ class BinanceItemsController < ApplicationController
       @binance_item.set_binance_institution_defaults!
       @binance_item.sync_later
 
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @binance_items = Current.family.binance_items.ordered
-        render turbo_stream: [
-          turbo_stream.update(
-            "binance-providers-panel",
-            partial: "settings/providers/binance_panel",
-            locals: { binance_items: @binance_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @binance_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "binance-providers-panel",
-          partial: "settings/providers/binance_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      render_provider_panel("binance", alert: @binance_item.errors.full_messages.join(", "))
     end
   end
 
+  # The panel has no edit form, so an update never re-renders it.
   def update
     if @binance_item.update(binance_item_params)
-      if turbo_frame_request?
-        flash.now[:notice] = t(".success")
-        @binance_items = Current.family.binance_items.ordered
-        render turbo_stream: [
-          turbo_stream.update(
-            "binance-providers-panel",
-            partial: "settings/providers/binance_panel",
-            locals: { binance_items: @binance_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: t(".success"), status: :see_other
-      end
+      redirect_to settings_providers_path, notice: t(".success"), status: :see_other
     else
-      @error_message = @binance_item.errors.full_messages.join(", ")
-
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.replace(
-          "binance-providers-panel",
-          partial: "settings/providers/binance_panel",
-          locals: { error_message: @error_message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: @error_message, status: :see_other
-      end
+      redirect_to settings_providers_path, alert: @binance_item.errors.full_messages.join(", "), status: :see_other
     end
   end
 
@@ -95,6 +50,7 @@ class BinanceItemsController < ApplicationController
     unless @binance_item.syncing?
       @binance_item.sync_later
     end
+    return render_provider_panel("binance", notice: t("settings.providers.sync_provider_in_progress")) if provider_panel_form?
 
     respond_to do |format|
       format.html { redirect_back_or_to accounts_path }
@@ -102,8 +58,29 @@ class BinanceItemsController < ApplicationController
     end
   end
 
+  # Add Account -> Crypto -> Binance lands here. The connection's sync is what
+  # finds the accounts, so open that connection's account setup, as Kraken does.
   def select_accounts
-    redirect_to settings_providers_path
+    binance_items = Current.family.binance_items.active.ordered.select(&:credentials_configured?)
+    binance_item = if params[:binance_item_id].present?
+      binance_items.find { |item| item.id.to_s == params[:binance_item_id].to_s }
+    elsif binance_items.one?
+      binance_items.first
+    end
+
+    unless binance_item
+      message_key = if params[:binance_item_id].present? && binance_items.any?
+        ".connection_unavailable"
+      elsif binance_items.many?
+        ".select_connection"
+      else
+        ".no_credentials_configured"
+      end
+      frame_redirect_to(settings_providers_path, alert: t(message_key))
+      return
+    end
+
+    redirect_to setup_accounts_binance_item_path(binance_item, return_to: safe_return_to(params[:return_to])), status: :see_other
   end
 
   def link_accounts
@@ -179,7 +156,7 @@ class BinanceItemsController < ApplicationController
     if turbo_frame_request?
       item = binance_account.binance_item.reload
       @binance_items = Current.family.binance_items.ordered.includes(:syncs)
-      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual.order(:name).to_a }
+      @manual_accounts = Account.uncached { Current.family.accounts.visible_manual_for(Current.user).order(:name).to_a }
 
       flash.now[:notice] = t(".success")
       @account.reload
@@ -190,10 +167,11 @@ class BinanceItemsController < ApplicationController
       end
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: item }
+          locals: { binance_item: item, visible_accounts: item.accounts }
         ),
         manual_accounts_stream,
         *Array(flash_notification_stream_items)
@@ -204,6 +182,9 @@ class BinanceItemsController < ApplicationController
   end
 
   def setup_accounts
+    # Where Add Account was opened from, carried through the form so finishing
+    # or cancelling goes back there.
+    @return_to = safe_return_to(params[:return_to])
     @binance_accounts = @binance_item.binance_accounts
       .left_joins(:account_provider)
       .where(account_providers: { id: nil })
@@ -280,14 +261,15 @@ class BinanceItemsController < ApplicationController
     if turbo_frame_request?
       @binance_items = Current.family.binance_items.ordered.includes(:syncs)
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@binance_item),
           partial: "binance_items/binance_item",
-          locals: { binance_item: @binance_item }
+          locals: { binance_item: @binance_item, visible_accounts: @binance_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path, status: :see_other
+      redirect_to safe_return_to(params[:return_to]) || accounts_path, status: :see_other
     end
   end
 

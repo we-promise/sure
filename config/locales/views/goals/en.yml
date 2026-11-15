@@ -1,6 +1,12 @@
 ---
 en:
   goals:
+    currency_warning:
+      title: Some balances aren't counted
+      body:
+        one: "No %{from} → %{to} exchange rate is available yet, so %{from} balances are left out of this total."
+        other: "No exchange rates from %{from} to %{to} are available yet, so those balances are left out of this total."
+      settings_link: Exchange rate provider settings
     color_picker:
       trigger_label: Choose color and icon
       color_heading: Color
@@ -102,10 +108,12 @@ en:
       amount_hint: "%{saved} is currently backing this goal."
       account_label: From which account?
       earmark_note: The amount you record stops being reserved for this goal, so your other goals on that account get their share back.
+      goal_currency_hint: "Enter the amount in %{currency}. For an account in another currency, it's converted at today's rate before it comes off that account's earmark."
       cancel: Cancel
       submit: Record it
       success: "%{amount} recorded as used."
       errors:
+        missing_exchange_rate: No exchange rate is available yet for this account's currency, so this spending can't be recorded.
         non_positive: Enter an amount greater than zero.
         maintained: A reserve is drawn down and refilled, not spent — its shortfall already shows on the goal.
         exceeds_target: That is more than this goal ever set out to save.
@@ -139,6 +147,8 @@ en:
       funding_accounts_heading: Funding accounts
       funding_accounts:
         earmarked_of: "%{earmarked} earmarked of %{balance}"
+        converted: "≈ %{amount}"
+        rate_unavailable: No exchange rate yet, so this account isn't counted.
         empty:
           heading: No funding accounts linked yet
           body: Edit the goal to link the depository accounts you save into.
@@ -262,6 +272,7 @@ en:
       add_account: Add an account
     goal_card:
       including_used: "Including %{amount} already used"
+      partial_total: Some balances aren't counted (no exchange rate yet)
       no_accounts: No linked accounts
       n_accounts: "%{first} +%{count}"
       left: left
@@ -314,6 +325,7 @@ en:
         accounts_required: Pick at least one funding account.
       earmark:
         headroom: "{left} left to earmark on this account."
+        converted: "This earmark ≈ {amount}."
         prorata: "Your goals on this account come to {total} for a balance of {balance} — they will progress pro rata."
         whole_balance: This account will fund whatever is left after the other earmarks.
         whole_balance_alone: "This goal will use this account's whole balance."
@@ -333,9 +345,10 @@ en:
         notes_placeholder: A reminder for future you…
         funding_accounts: Funding accounts
         funding_accounts_hint: This goal's balance is the balance (or earmarked portion) of these accounts.
-        whole_balance: Whole balance
+        whole_balance: "Blank: whole balance"
         earmark_for: Earmark amount for %{account}
         earmark_hint: Leave an amount blank to dedicate that account's whole balance.
+        currency_conversion_hint: "Accounts can use different currencies. Totals are converted to %{currency}; account earmarks stay in each account's currency."
       subtypes:
         checking: Checking
         savings: Savings

@@ -1,4 +1,23 @@
 module LoansHelper
+  # The two policies Loan::Insurance knows how to charge. Listed here rather
+  # than built from the constant so each one carries a translated label.
+  def loan_insurance_rate_type_options
+    [
+      [ t("loans.form.insurance_rate_type_level_term"), Loan::Insurance::LEVEL_TERM ],
+      [ t("loans.form.insurance_rate_type_decreasing_life"), Loan::Insurance::DECREASING_LIFE ]
+    ]
+  end
+
+  # How leveraged the loan was at drawdown, as a design-system colour. Bands are
+  # Loan's; the colours are this layer's.
+  def loan_leverage_band_class(band)
+    {
+      conservative: "text-success",
+      moderate: "text-warning",
+      high: "text-destructive"
+    }.fetch(band, "text-secondary")
+  end
+
   # The rate types the form offers, plus the loan's own when a provider wrote
   # one the form does not know (#100 decision 8). Without it the select has no
   # matching option, the browser submits the first one, and saving any other
@@ -12,5 +31,19 @@ module LoansHelper
     return options if loan.rate_type.blank? || options.any? { |_, value| value == loan.rate_type }
 
     options << [ loan.rate_type.titleize, loan.rate_type ]
+  end
+
+  # Built from the model constant rather than listed here, so a convention the
+  # engine gains cannot be offered without a label. `raise: true` is what makes
+  # that true: `config.i18n.raise_on_missing_translations` is not enabled in
+  # development or test, and `config.i18n.fallbacks` is, so without it a key
+  # missing in every locale would quietly render the literal "translation
+  # missing" string instead of failing. A key missing only in the current
+  # locale still falls back to English first, so a locale that has not
+  # translated these labels yet shows the English ones rather than an error.
+  def loan_day_count_convention_options
+    Loan::DAY_COUNT_CONVENTIONS.map do |convention|
+      [ t("loans.form.day_count_convention_#{convention}", raise: true), convention ]
+    end
   end
 end
