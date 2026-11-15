@@ -9,8 +9,21 @@ WORKDIR /rails
 
 # Install base packages
 # poppler-utils provides pdftoppm, required for the PDF vision processing path
+#
+# The PostgreSQL client comes from the PostgreSQL apt repository rather than
+# Debian, which only carries one major version. bin/sure-backup needs pg_dump
+# to be at least as new as the database server, and a newer client can still
+# back up older servers. Keep PG_CLIENT_MAJOR at or above the newest server
+# version in compose.example.yml.
+ARG PG_CLIENT_MAJOR=18
 RUN apt-get update -qq \
-    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps libjemalloc2 poppler-utils \
+    && apt-get install --no-install-recommends -y ca-certificates curl libvips libyaml-0-2 procps libjemalloc2 poppler-utils \
+    && install -d /usr/share/postgresql-common/pgdg \
+    && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+    && apt-get update -qq \
+    && apt-get install --no-install-recommends -y "postgresql-client-${PG_CLIENT_MAJOR}" \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment
