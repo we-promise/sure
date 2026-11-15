@@ -512,17 +512,12 @@ class EnableBankingEntry::Processor
       nil
     end
 
-    # Remittance text that reads as a name: not a technical booking line, not a
-    # masked card number, not a reference such as "52220151204 092408560500"
-    # (fewer than three letters) or "Reference 0394676", and not the account
-    # holder.
+    # Remittance text that reads as a name rather than a reference such as
+    # "52220151204 092408560500" (fewer than three letters) or "Reference
+    # 0394676". Technical lines, masked card numbers and the account holder are
+    # already skipped by descriptive_remittance_name.
     def descriptive_remittance?(value)
-      value.present? &&
-        !technical_remittance_line?(value) &&
-        !masked_card_text?(value) &&
-        !value.match?(REFERENCE_LINE) &&
-        value.scan(/\p{L}/).size >= 3 &&
-        !account_holder_name?(value)
+      !value.match?(REFERENCE_LINE) && value.scan(/\p{L}/).size >= 3
     end
 
     def strip_payment_processor_prefix(value)
