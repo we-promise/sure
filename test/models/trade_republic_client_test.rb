@@ -651,6 +651,72 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal({ "timelineTransactions" => { "newest_event_id" => "tx-1" } }, result["timeline_cursors"])
   end
 
+  test "sync returns the PEA positions and cash and tags events with their cash account" do
+    stub_sync_session
+    requested = []
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      requested << payload
+      case payload[:type]
+      when "accountPairs"
+        {
+          "accounts" => [
+            { "securitiesAccountNumber" => "SEC-1", "cashAccountNumber" => "CASH-1", "productType" => "DEFAULT", "currency" => "EUR", "accountAccessType" => "OWNER" },
+            { "securitiesAccountNumber" => "SEC-PEA", "cashAccountNumber" => "CASH-PEA", "productType" => "TAX_WRAPPER", "currency" => "EUR", "accountAccessType" => "OWNER" }
+          ]
+        }
+      when "cash"
+        if payload[:accountNumber] == "CASH-PEA"
+          [ { "accountNumber" => "CASH-PEA", "currencyId" => "EUR", "amount" => 40.5 } ]
+        else
+          [ { "accountNumber" => "CASH-1", "currencyId" => "EUR", "amount" => 100 } ]
+        end
+      when "compactPortfolioByType"
+        { "categories" => [] }
+      when "timelineTransactions"
+        { "items" => [ { "id" => "tx-pea", "timestamp" => "2026-11-01", "eventType" => "PEA_DEPOSIT_DEBIT", "cashAccountNumber" => "CASH-1" } ], "cursors" => {} }
+      else
+        { "items" => [], "cursors" => {} }
+      end
+    end
+
+    result = @client.sync(session_txt: "session")
+
+    assert_includes requested, { type: "compactPortfolioByType", secAccNo: "SEC-PEA" }
+    assert_equal "CASH-1", result["account"]["cash_account_id"]
+    wrapper = result["tax_wrapper_accounts"].sole
+    assert_equal "SEC-PEA", wrapper["securities_account_id"]
+    assert_equal "CASH-PEA", wrapper["cash_account_id"]
+    assert_equal "40.5", wrapper.dig("cash", "amount")
+    assert_equal "EUR", wrapper.dig("cash", "currency")
+    assert_equal({ "cash" => "success", "portfolio" => "success" }, wrapper["domain_statuses"])
+    assert_equal "CASH-1", result["events"].find { |event| event["id"] == "tx-pea" }["cashAccountNumber"]
+  end
+
+  test "sync skips tax wrappers the login does not own and keeps going without account pairs" do
+    stub_sync_session
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case payload[:type]
+      when "accountPairs"
+        { "accounts" => [ { "securitiesAccountNumber" => "SEC-CHILD", "cashAccountNumber" => "CASH-CHILD", "productType" => "TAX_WRAPPER", "accountAccessType" => "GUARDIAN" } ] }
+      else
+        { "items" => [], "cursors" => {} }
+      end
+    end
+
+    assert_equal [], @client.sync(session_txt: "session")["tax_wrapper_accounts"]
+
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      raise Provider::TradeRepublicClient::ProviderUnavailable, "subscription failed" if payload[:type] == "accountPairs"
+
+      { "items" => [], "cursors" => {} }
+    end
+
+    result = @client.sync(session_txt: "session")
+
+    assert_equal [], result["tax_wrapper_accounts"]
+    assert_includes result["warnings"], "account pairs fetch failed"
+  end
+
   test "recognizes QR login pending state" do
     pending = { "challenge_id" => "challenge-1", "session_blob" => "session=1", "expires_at" => 1.minute.from_now.iso8601 }
     encoded = Base64.strict_encode64(JSON.generate(pending))

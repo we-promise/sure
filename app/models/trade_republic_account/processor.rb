@@ -31,7 +31,7 @@ class TradeRepublicAccount::Processor
 
       account.assign_attributes(
         balance: total_balance,
-        cash_balance: trade_republic_account.cash? ? cash_balance : 0,
+        cash_balance: trade_republic_account.holds_cash? ? cash_balance : 0,
         currency: trade_republic_account.currency
       )
       account.save!
