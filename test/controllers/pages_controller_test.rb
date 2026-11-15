@@ -1154,6 +1154,23 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_match(/<p>Notes<\/p>/, notes.to_html)
   end
 
+  # GitHub renders links to images and pull requests with target="_blank", and
+  # the allow-list must not turn them into links that navigate away from the app.
+  test "changelog keeps release-note links opening in a new tab" do
+    Provider::Github.any_instance.stubs(:fetch_latest_release_notes).returns(
+      avatar: "https://example.com/a.png",
+      username: "someone",
+      name: "v1.2.3",
+      published_at: Time.current,
+      body: '<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/we-promise/sure/pull/1">#1</a></p>'
+    )
+
+    get changelog_path
+
+    assert_response :success
+    assert_select ".prose--github-release-notes a[href='https://github.com/we-promise/sure/pull/1'][target='_blank'][rel='noopener noreferrer']"
+  end
+
   test "dashboard says which currencies are left out of its totals" do
     @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
 
