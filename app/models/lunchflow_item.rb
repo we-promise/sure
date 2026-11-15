@@ -1,8 +1,6 @@
 class LunchflowItem < ApplicationRecord
   include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
-  DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
-
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
@@ -157,11 +155,10 @@ class LunchflowItem < ApplicationRecord
     api_key.present?
   end
 
-  # Every branch of the old version returned DEFAULT_BASE_URL, so a configured
-  # value was silently discarded rather than checked. It is checked now, and an
-  # allowed value is actually used.
+  # The value an operator typed decides where the app sends their key, so it
+  # is checked against the provider's allow-list rather than used as given.
   def effective_base_url
-    Provider::Lunchflow.normalize_base_url(base_url) || DEFAULT_BASE_URL
+    Provider::Lunchflow.normalize_base_url(base_url) || Provider::Lunchflow::DEFAULT_BASE_URL
   end
 
   private

@@ -8,25 +8,25 @@ class LunchflowItemTest < ActiveSupport::TestCase
   test "effective_base_url returns default when base_url blank" do
     @lunchflow_item.base_url = nil
 
-    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "effective_base_url returns default for non-lunchflow host" do
     @lunchflow_item.base_url = "https://169.254.169.254/latest/meta-data"
 
-    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "effective_base_url returns default for non-https scheme" do
     @lunchflow_item.base_url = "http://lunchflow.app/api/v1"
 
-    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "effective_base_url returns canonical default for valid lunchflow url" do
     @lunchflow_item.base_url = "https://lunchflow.app/api/v1/"
 
-    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   test "sync status summary covers every German count branch" do
@@ -86,12 +86,6 @@ class LunchflowItemTest < ActiveSupport::TestCase
     end
   end
 
-  test "a value that slipped past validation is not used" do
-    @lunchflow_item.update_column(:base_url, "https://evil.example.com/api/v1")
-
-    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.reload.effective_base_url
-  end
-
   # Rows saved before the allow-list existed may hold a value it now refuses.
   # The read-time fallback already keeps them safe, so they must not make every
   # later save of the row fail (status changes during a sync, a rename).
@@ -99,7 +93,7 @@ class LunchflowItemTest < ActiveSupport::TestCase
     @lunchflow_item.update_column(:base_url, "https://lunchflow.app/")
 
     assert @lunchflow_item.reload.update(name: "Renamed")
-    assert_equal LunchflowItem::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
+    assert_equal Provider::Lunchflow::DEFAULT_BASE_URL, @lunchflow_item.effective_base_url
   end
 
   private
