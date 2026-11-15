@@ -159,6 +159,13 @@ class SureImport < Import
     raise
   end
 
+  def link_property_cost_tags!(import_session:)
+    # Every exported property carries the key, so a chunk without it has no link.
+    return unless ndjson_blob_string.include?("cost_tag_id")
+
+    Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self).link_property_cost_tags!
+  end
+
   def publish_later
     raise MaxRowCountExceededError if row_count_exceeded?
 

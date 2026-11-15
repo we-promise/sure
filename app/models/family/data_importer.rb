@@ -150,6 +150,14 @@ class Family::DataImporter
     { accounts: @created_accounts, entries: @created_entries, summary: compact_summary }
   end
 
+  # A session imports each chunk through its own importer, so a property can
+  # land in an earlier chunk than its cost tag. The session calls this for
+  # every chunk after all of them are in, when every tag has its new id.
+  def link_property_cost_tags!
+    records = parse_ndjson
+    Import.transaction { link_property_cost_tags(records["Account"] || []) }
+  end
+
   private
 
     def parse_ndjson

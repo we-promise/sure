@@ -58,6 +58,33 @@ class ImportSessionTest < ActiveSupport::TestCase
     assert_source_mapping session, "Transaction", "txn-1", transaction
   end
 
+  test "links a property to its cost tag when the tag arrives in a later chunk" do
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    session.attach_chunk!(
+      sequence: 1,
+      client_chunk_id: "property",
+      content: build_ndjson([
+        { type: "Account", data: { id: "home-1", name: "Session Home", balance: "300000", currency: "USD",
+                                   accountable_type: "Property", accountable: { cost_tag_id: "tag-costs" } } }
+      ]),
+      filename: "property.ndjson",
+      content_type: "application/x-ndjson"
+    )
+    session.attach_chunk!(
+      sequence: 2,
+      client_chunk_id: "tags",
+      content: build_ndjson([ { type: "Tag", data: { id: "tag-costs", name: "Home costs", color: "#407706" } } ]),
+      filename: "tags.ndjson",
+      content_type: "application/x-ndjson"
+    )
+
+    session.publish
+
+    assert session.reload.complete?
+    tag = @family.tags.find_by!(name: "Home costs")
+    assert_equal tag.id, @family.accounts.find_by!(name: "Session Home").property.cost_tag_id
+  end
+
   test "publishing session chunks records readback verification for each chunk" do
     session = @family.import_sessions.create!(expected_chunks: 2)
     session.attach_chunk!(

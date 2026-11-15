@@ -267,6 +267,9 @@ class ImportSession < ApplicationRecord
     imports.ordered_by_sequence.each do |import|
       process_chunk!(import)
     end
+    # A property and its cost tag can arrive in different chunks, so the links
+    # are restored again once every tag is in.
+    imports.ordered_by_sequence.each { |import| import.link_property_cost_tags!(import_session: self) }
 
     update!(status: :complete, summary: aggregate_chunk_summaries, error_details: {})
     enqueue_family_sync
