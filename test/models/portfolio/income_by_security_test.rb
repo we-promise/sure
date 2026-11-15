@@ -286,11 +286,11 @@ class Portfolio::IncomeBySecurityTest < ActiveSupport::TestCase
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
 
     performance = Portfolio::Performance.new(family: @family, account_ids: [ @account.id ], period: period)
-    previous_key = performance.cache_key.sub("_#{Portfolio::Performance::CACHE_VERSION}_", "_v8_")
+    previous_key = performance.cache_key.sub("_#{Portfolio::Performance::CACHE_VERSION}_", "_v10_")
     Rails.cache.write("#{previous_key}_income", { buckets: [], total: BigDecimal(30), fees: 0, average_value: 0, fee_ratio: nil })
 
     assert_equal({ @aapl.id.to_s => BigDecimal(30) }, performance.income[:by_security],
-                 "a v8 entry, written without by_security, must not be read")
+                 "a v10 entry, written without by_security, must not be read")
   end
 
   test "the amounts a Hash carries survive the cache round trip" do
