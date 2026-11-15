@@ -267,6 +267,18 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" }, "timelineActivityLog" => gap }, @item.reload.timeline_cursors)
   end
 
+  test "an account response without reference accounts is logged once per sync" do
+    provider = mock("trade_republic_provider")
+    warning = Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING
+    provider.expects(:sync).returns(timeline_cursor_result({}, "warnings" => [ warning, warning ]))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    logged = DebugLogEntry.where(message: "Trade Republic sync warning: #{warning}")
+    assert_equal 1, logged.count
+    assert_equal @item.family, logged.sole.family
+  end
+
   test "stops the history backfill when the cap drops a fetched event without an id" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",

@@ -376,7 +376,27 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     transfer = result["events"].find { |event| event["id"] == "transfer-own" }
     assert_equal "reference_account", transfer.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_not_includes result["warnings"], Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING
     assert_no_match(/DE00\s?(0000|1111)/, result.data.to_json)
+  end
+
+  test "a sync whose account response lists no reference account leaves transfers unchecked and warns" do
+    stub_sync_session
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case payload[:type]
+      when "timelineTransactions"
+        { "items" => [ helper.send(:transfer_item, id: "transfer-own", event_type: "INCOMING_TRANSFER") ], "cursors" => {} }
+      when "timelineDetailV2" then helper.send(:transfer_detail, note: nil)
+      else { "items" => [], "cursors" => {} }
+      end
+    end
+
+    result = @client.sync(session_txt: "session")
+
+    transfer = result["events"].find { |event| event["id"] == "transfer-own" }
+    assert_not transfer["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY)
+    assert_equal 1, result["warnings"].count(Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING)
   end
 
   test "retries the sync without a backfill that times out and counts the failure" do
@@ -1864,7 +1884,9 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       }
     )
 
-    enriched, _warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ unread, read ])
+    enriched, _warnings, improved = @client.send(
+      :enrich_timeline_details, Object.new, [], enrich_events: [ unread, read ], reference_ibans: Set["DE00999999999999999999"]
+    )
 
     assert_equal [ "transfer-old" ], requested
     assert_equal 1, improved
@@ -1973,6 +1995,58 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     [ enriched.sole, unmatched.sole ].each do |event|
       assert_no_match(/DE00\s?0000|DE00999/, event.to_json)
     end
+  end
+
+  test "without reference accounts a transfer's counterparty stays unchecked and the sync warns once" do
+    freeze_time
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: "Savings") }
+    events = %w[transfer-a transfer-b].map { |id| @client.send(:build_skeleton_event, transfer_item(id: id), warnings: []) }
+
+    enriched, warnings, = @client.send(:enrich_timeline_details, Object.new, events, reference_ibans: Set.new)
+
+    assert_equal [ Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING ], warnings
+    enriched.each do |event|
+      assert_equal Time.current.iso8601, event.dig("detail", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY)
+      assert_equal "Savings", event.dig("detail", "note")
+      assert_not event["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY)
+      assert_not event["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+      assert Provider::TradeRepublicClient.cash_note_pending?(event)
+    end
+
+    _, warnings_with_reference, = @client.send(:enrich_timeline_details, Object.new, events, reference_ibans: Set["DE00999999999999999999"])
+    assert_empty warnings_with_reference
+  end
+
+  test "a direct debit from the reference account is marked as one" do
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: nil) }
+    debit = @client.send(:build_skeleton_event, transfer_item(id: "debit-1", event_type: "PAYMENT_INBOUND_SEPA_DIRECT_DEBIT"), warnings: [])
+
+    enriched, = @client.send(:enrich_timeline_details, Object.new, [ debit ], reference_ibans: Set["DE00000000000000000000"])
+
+    assert_equal "reference_account", enriched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+  end
+
+  test "an IBAN row whose detail is not a hash is skipped" do
+    raw = transfer_detail(note: nil)
+    raw["sections"] << { "title" => "Recipient", "type" => "table", "data" => [
+      { "title" => "IBAN", "detail" => "DE00 5555 5555 5555 5555 55" },
+      { "title" => "IBAN", "detail" => nil }
+    ] }
+
+    assert @client.send(:reference_account_counterparty?, raw, Set["DE00000000000000000000"])
+  end
+
+  test "IBANs with non-breaking or other unicode spaces are normalized" do
+    nbsp = "\u00A0"
+    assert_equal "DE00000000000000000000", Provider::TradeRepublicClient.normalize_iban("DE00#{nbsp}0000#{nbsp}0000\u2009 0000 0000 00")
+    assert_equal Set["DE00222222222222222222"],
+      Provider::TradeRepublicClient.reference_ibans({ "referenceAccountList" => [ { "iban" => "DE00#{nbsp}2222#{nbsp}2222#{nbsp}2222#{nbsp}2222#{nbsp}22" } ] })
+
+    raw = transfer_detail(note: nil)
+    raw["sections"].find { |section| section["title"] == "Overview" }["data"].last["detail"]["text"] = "DE00#{nbsp}0000#{nbsp}0000#{nbsp}0000#{nbsp}0000#{nbsp}00"
+    assert @client.send(:reference_account_counterparty?, raw, Set["DE00000000000000000000"])
   end
 
   test "a transfer is not matched without reference accounts or with more than one IBAN in its detail" do

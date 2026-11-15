@@ -2009,6 +2009,55 @@ class TradeRepublicAccountActivitiesProcessorTest < ActiveSupport::TestCase
     assert_equal "standard", other.transaction.reload.kind
   end
 
+  test "direct debits with the reference account are funds movements and card top-ups stay standard" do
+    cash_account, cash_sure = create_linked_cash_account!
+    reference = deposit_event[:detail].merge(counterparty: "reference_account")
+    cash_account.update!(raw_timeline_payload: [
+      deposit_event.merge(id: "evt_debit_in", eventType: "PAYMENT_INBOUND_SEPA_DIRECT_DEBIT", title: "Cash in", detail: reference),
+      deposit_event.merge(id: "evt_debit_out", eventType: "BANK_TRANSACTION_OUTGOING_DIRECT_DEBIT", category: "POC_CREATED",
+        title: "Account holder", detail: reference),
+      deposit_event.merge(id: "evt_card_top_up", eventType: "PAYMENT_INBOUND_CREDIT_CARD", title: "Cash in")
+    ])
+
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    kinds = cash_sure.entries.where(source: "trade_republic").to_h { |entry| [ entry.external_id.delete_prefix("trade_republic_event_"), entry.transaction.kind ] }
+    assert_equal({ "evt_debit_in" => "funds_movement", "evt_debit_out" => "funds_movement", "evt_card_top_up" => "standard" }, kinds)
+    assert_equal BigDecimal("500.00"), cash_sure.entries.find_by!(external_id: "trade_republic_event_evt_debit_out").amount
+  end
+
+  test "a reference account deposit that earlier syncs stored as an investment contribution loses its stale category and label" do
+    cash_account, cash_sure = create_linked_cash_account!
+    category = @family.investment_contributions_category
+    adapter = Account::ProviderImportAdapter.new(cash_sure)
+    stale, by_rule = %w[evt_stale_own evt_rule_own].map do |id|
+      adapter.import_transaction(
+        external_id: "trade_republic_event_#{id}", amount: BigDecimal("-500.00"), currency: "EUR",
+        date: Date.parse("2026-08-01"), name: "Account holder", source: "trade_republic", investment_activity_label: "Contribution"
+      )
+    end
+    assert_equal [ "investment_contribution", category.id ], [ stale.transaction.kind, stale.transaction.category_id ]
+    by_rule.transaction.update!(category_id: nil, investment_activity_label: nil)
+    by_rule.transaction.enrich_attribute(:category_id, category.id, source: "rule")
+    by_rule.transaction.enrich_attribute(:investment_activity_label, "Contribution", source: "rule")
+
+    reference = deposit_event[:detail].merge(counterparty: "reference_account")
+    cash_account.update!(raw_timeline_payload: %w[evt_stale_own evt_rule_own].map do |id|
+      deposit_event.merge(id: id, eventType: "INCOMING_TRANSFER", title: "Account holder", detail: reference)
+    end)
+    TradeRepublicAccount::ActivitiesProcessor.new(cash_account.reload).process
+
+    stale.transaction.reload
+    assert_equal "funds_movement", stale.transaction.kind
+    assert_nil stale.transaction.category_id
+    assert_nil stale.transaction.investment_activity_label
+
+    by_rule.transaction.reload
+    assert_equal "funds_movement", by_rule.transaction.kind
+    assert_equal category.id, by_rule.transaction.category_id
+    assert_equal "Contribution", by_rule.transaction.investment_activity_label
+  end
+
   test "Google Pay inbound deposits import as standard deposits" do
     cash_account, cash_sure = create_linked_cash_account!
     cash_account.update!(raw_timeline_payload: [ {
