@@ -30,6 +30,21 @@ class TradeRepublicItemSyncerTest < ActiveSupport::TestCase
     assert_match(/expired/, sync.reload.sync_stats.dig("errors", 0, "message").to_s)
   end
 
+  test "proxy configuration errors do not mark the item requires_update" do
+    sync = Sync.create!(syncable: @item)
+    @item.stubs(:import_latest_data).raises(
+      Provider::TradeRepublicClient::ProviderUnavailable,
+      "Invalid Trade Republic WebSocket proxy configuration"
+    )
+
+    assert_raises(Provider::TradeRepublicClient::ProviderUnavailable) do
+      TradeRepublicItem::Syncer.new(@item).perform_sync(sync)
+    end
+
+    assert @item.reload.good?
+    assert_match(/proxy/, sync.reload.sync_stats.dig("errors", 0, "message").to_s)
+  end
+
   test "successful sync imports data and collects health stats" do
     sync = Sync.create!(syncable: @item)
 

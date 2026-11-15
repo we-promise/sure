@@ -126,27 +126,14 @@ class Assistant::External::Client
       http
     end
 
+    # Returns the configured proxy URI for the request, or nil when no proxy
+    # applies. Invalid proxy URLs are ignored so the request can proceed
+    # directly.
     def resolve_proxy(uri)
-      proxy_env = (uri.scheme == "https") ? "HTTPS_PROXY" : "HTTP_PROXY"
-      proxy_url = ENV[proxy_env] || ENV[proxy_env.downcase]
-      return nil if proxy_url.blank?
-
-      no_proxy = ENV["NO_PROXY"] || ENV["no_proxy"]
-      return nil if host_bypasses_proxy?(uri.host, no_proxy)
-
-      URI(proxy_url)
+      HttpProxy.resolve(scheme: uri.scheme, host: uri.host)
     rescue URI::InvalidURIError => e
       Rails.logger.warn("[External::Client] Invalid proxy URL ignored: #{e.message}")
       nil
-    end
-
-    def host_bypasses_proxy?(host, no_proxy)
-      return false if no_proxy.blank?
-      host_down = host.downcase
-      no_proxy.split(",").any? do |pattern|
-        pattern = pattern.strip.downcase.delete_prefix(".")
-        host_down == pattern || host_down.end_with?(".#{pattern}")
-      end
     end
 
     def build_request(uri, messages, user)
