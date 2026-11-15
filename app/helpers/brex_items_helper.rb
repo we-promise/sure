@@ -28,6 +28,13 @@ module BrexItemsHelper
     )
   end
 
+  def brex_account_options(accounts)
+    accounts.map do |account|
+      display = brex_account_display(account)
+      ProviderItem::AccountSelectionComponent::Option.new(id: display.id, name: display.name, metadata: brex_account_metadata(display))
+    end
+  end
+
   def brex_account_metadata(display)
     parts = [
       t("brex_items.account_metadata.provider"),
