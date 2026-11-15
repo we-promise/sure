@@ -1645,6 +1645,7 @@ class Provider::TradeRepublicClient
       end
       new_ids = new_candidates.to_set { |event| event["id"].to_s }
       page_ids = events.filter_map { |event| event["id"].presence&.to_s }.to_set
+      page_by_id = events.index_by { |event| event["id"].to_s }
       backlog_candidates = Array(enrich_events).select do |event|
         next false unless event.is_a?(Hash)
 
@@ -1655,12 +1656,14 @@ class Provider::TradeRepublicClient
         # A dividend or transfer on this sync's pages is handled there: a new
         # one is fetched above, and one that already has its details needs
         # nothing. A transfer whose note was read but whose counterparty was
-        # not is skipped on the page, so its stored copy is read here.
+        # not is skipped on the page, so its stored copy is read here, unless
+        # the page shows it can no longer be imported (cancelled, deleted).
         id = item["id"].to_s
+        page_copy_importable = note_read_ids.include?(id) && Provider::TradeRepublicTimelineEvent.importable?(page_by_id[id])
         self.class.incomplete_trade_detail_event?(item) ||
           self.class.trade_detail_needs_price_backfill?(item) ||
           (self.class.dividend_detail_missing?(item) && !page_ids.include?(id)) ||
-          (self.class.cash_note_pending?(item, check_counterparty:) && (!page_ids.include?(id) || note_read_ids.include?(id)))
+          (self.class.cash_note_pending?(item, check_counterparty:) && (!page_ids.include?(id) || page_copy_importable))
       end
 
       budget = MAX_TIMELINE_DETAILS
