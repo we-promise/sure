@@ -1,0 +1,74 @@
+---
+ko:
+  trades:
+    api_errors:
+      activity_label_must_match_type: type이 %{type}인 경우 investment_activity_label은
+        %{label}여야 합니다.
+      invalid_activity_label: 잘못된 투자 활동 라벨
+      invalid_type: 잘못된 유형
+      supported_types: type은 %{types} 중 하나여야 합니다.
+    form:
+      account: 이체 계좌(선택 사항)
+      account_prompt: 계좌 검색
+      amount: 금액
+      fee: 거래 수수료
+      holding: 티커 기호
+      holding_optional: 티커 기호(선택 사항)
+      price: 주당 가격
+      qty: 수량
+      submit: 거래 추가
+      ticker_placeholder: AAPL
+      type: 유형
+      type_buy: 매수
+      type_sell: 매도
+      type_deposit: 입금
+      type_withdrawal: 출금
+      type_dividend: 배당금
+      type_interest: 이자
+      dividend_requires_security: 배당금을 기록하려면 종목을 지정해야 합니다.
+      trade_requires_security: 매수 및 매도 거래에는 종목(티커)이 필요합니다.
+    header:
+      buy: 매수
+      sell: 매도
+      dividend: 배당금
+      interest: 이자
+      contribution: 납입
+      exchange: 교환
+      fee: 수수료
+      other: 기타
+      reinvestment: 재투자
+      sweep_in: 스윕 인
+      sweep_out: 스윕 출금
+      transfer: 이체
+      withdrawal: 출금
+      current_market_price_label: 현재 시장 가격
+      overview: 개요
+      purchase_price_label: 매입 가격
+      purchase_qty_label: 매입 수량
+      symbol_label: 기호
+      total_return_label: 미실현손익
+    new:
+      title: 새 거래
+    show:
+      additional: 추가
+      amount_label: 금액
+      buy: 매수
+      category_label: 카테고리
+      cost_per_share_label: 주당 취득 원가
+      date_label: 날짜
+      delete: 삭제
+      fee_label: 거래 수수료
+      delete_subtitle: 이 작업은 취소할 수 없습니다.
+      delete_title: 매매 내역 삭제
+      details: 세부정보
+      provider_disabled_warning: 가격 업데이트가 일시 중지되었습니다. %{provider} 제공업체가 비활성화되어 있습니다.
+        설정에서 다시 활성화하거나 보유 종목을 다른 제공업체에 연결하세요.
+      exclude_subtitle: 이 거래는 보고서 및 계산에 포함되지 않습니다.
+      exclude_title: 분석에서 제외
+      no_category: 카테고리 없음
+      note_label: 메모
+      note_placeholder: 여기에 추가 메모를 추가하세요...
+      quantity_label: 수량
+      sell: 매도
+      settings: 설정
+      type_label: 유형

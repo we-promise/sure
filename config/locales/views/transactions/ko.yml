@@ -1,0 +1,411 @@
+---
+ko:
+  transactions:
+    bulk_updates:
+      new:
+        cancel: 취소
+        category_label: 카테고리
+        category_prompt: 카테고리를 선택하세요
+        date_label: 날짜
+        header_title: 거래 수정
+        merchant_label: 가맹점
+        merchant_prompt: 가맹점을 선택하세요
+        name_label: 이름
+        name_placeholder: 선택한 거래에 적용될 이름을 입력하세요.
+        none: "(없음)"
+        notes_label: 메모
+        notes_placeholder: 선택한 거래에 적용될 메모를 입력하세요.
+        overview: 개요
+        save: 저장
+        tags_label: 태그
+        transactions_section: 거래 내역
+    unknown_name: 알 수 없는 거래
+    selection_bar:
+      duplicate: 중복
+      edit: 수정
+      selected: 선택됨
+    form:
+      details: 세부정보
+      account: 계좌
+      account_prompt: 계좌 선택
+      amount: 금액
+      category: 카테고리
+      category_label: 카테고리
+      category_prompt: 카테고리 선택
+      category_search_placeholder: 카테고리 검색
+      create_category: '"%{name}" 생성'
+      create_category_error: 카테고리를 생성할 수 없습니다.
+      create_as_subcategory: 하위 카테고리로 추가…
+      choose_parent: '아래에 "%{name}"를 생성합니다:'
+      back_to_categories: 뒤로
+      date: 날짜
+      description: 설명
+      description_placeholder: 거래 설명
+      description_placeholder_optional: 카테고리/가맹점 이름을 사용하려면 비워 두거나 먼저 해당 항목 중 하나를 선택하세요.
+      expense: 지출
+      income: 수입
+      merchant_label: 가맹점
+      none: "(없음)"
+      note_label: 메모
+      note_placeholder: 메모를 입력하세요
+      create_tag: 만들기
+      create_merchant: 만들기
+      create_merchant_error: 가맹점을 생성할 수 없습니다.
+      merchant_search_placeholder: 가맹점 검색 또는 만들기
+      no_matching_categories: 일치하는 카테고리가 없습니다.
+      submit: 거래 추가
+      tag_search_placeholder: 태그 검색 또는 만들기
+      tags_label: 태그
+      transfer: 이체
+    create:
+      created: 거래가 생성되었습니다.
+    update:
+      updated: 거래가 업데이트되었습니다.
+    new:
+      new_transaction: 새 거래
+    transaction_category:
+      set_on_outflow: 이 이체의 카테고리는 출금 측 거래에 속하며 그곳에서만 변경할 수 있습니다.
+    show:
+      category_set_on_hidden_outflow: 이체의 입금 측 거래입니다. 카테고리는 접근 권한이 없는 계좌의 출금 측 거래에
+        속하며 그곳에서만 변경할 수 있습니다.
+      category_set_on_outflow: 이체의 입금 측 거래입니다. 예산에 한 번만 반영되도록 카테고리는 출금 측 거래에 속하며 그곳에서만
+        변경할 수 있습니다.
+      keep_both: 아니요, 둘 다 유지하세요.
+      loan_payment: 대출 상환
+      mark_recurring: 반복으로 표시
+      create_bill: 청구서 작성
+      mark_recurring_subtitle: 이것을 반복 거래로 추적하세요. 지난 6개월간의 유사한 거래에 대해 금액차이가 자동으로 계산됩니다.
+      mark_recurring_title: 반복 거래
+      applied_to_title: 이 거래로 납부한 청구서
+      applied_to_detail: 납부일이 %{date}인 청구서에 %{amount} 반영됨
+      applied_to_unreviewed: 검토 필요
+      merge_duplicate: 예, 병합합니다
+      potential_duplicate_description: 이 처리 대기 거래는 아래의 확정 거래와 같을 수 있습니다. 같은 거래라면 병합하여
+        중복 계산을 방지하세요.
+      potential_duplicate_title: 중복 가능성이 감지됨
+      transfer: 이체
+      account_label: 계좌
+      amount: 금액
+      category_label: 카테고리
+      date_label: 날짜
+      delete: 삭제
+      delete_subtitle: 이렇게 하면 거래가 영구적으로 삭제되고 과거 잔액에 영향을 미치며 취소할 수 없습니다.
+      delete_title: 거래 삭제
+      details: 세부정보
+      attachments: 첨부파일
+      exclude: 제외
+      exclude_description: 제외된 거래는 예산 계산 및 보고서에서 제거됩니다.
+      activity_type: 활동 유형
+      activity_type_description: 투자 활동 유형(매수, 매도, 배당 등) 자동 감지되거나 수동으로 설정됩니다.
+      one_time_title: 일회성 %{type}
+      one_time_description: 일회성 거래는 특정 예산 계산 및 보고서에서 제외되어 실제로 중요한 것이 무엇인지 확인할 수 있습니다.
+      convert_to_trade_title: 종목 매매로 전환
+      convert_to_trade_description: 포트폴리오를 추적할 수 있도록 종목 정보를 추가해 이 거래를 매수 또는 매도 내역으로
+        전환합니다.
+      convert_to_trade_button: 매매로 전환
+      transfer_matcher_description: 이 거래를 다른 계좌의 거래와 연결하세요.
+      pending_duplicate_merger_title: 확정 거래와 중복되나요?
+      pending_duplicate_merger_description: 이 처리 대기 거래를 해당 확정 거래와 수동으로 병합합니다.
+      pending_duplicate_merger_button: 병합 창 열기
+      merchant_label: 가맹점
+      name_label: 이름
+      nature: 유형
+      none: "(없음)"
+      note_label: 메모
+      note_placeholder: 메모를 입력하세요
+      overview: 개요
+      settings: 설정
+      tags_label: 태그
+      tab_transactions: 거래 내역
+      tab_upcoming: 예정
+      uncategorized: "(분류되지 않음)"
+      additional_details: 추가 세부정보
+      payee: 수취인
+      description: 설명
+      memo: 메모
+      original_description: 원래 설명
+      payment_channel: 결제 채널
+      transaction_code: 거래코드
+      provider_extras: 제공업체 추가 사항
+      plaid_payment_meta_label: 결제 메타 · %{name}
+      plaid_counterparty_label: 상대방 %{index}
+      provider_extra_fields:
+        by_order_of: 지시인
+        confidence_level: 신뢰 수준
+        entity_id: 엔터티 ID
+        logo_url: 로고 URL
+        name: 이름
+        payee: 수취인
+        payer: 지불인
+        phone_number: 전화번호
+        ppd_id: PPD ID
+        reason: 이유
+        reference_number: 참조번호
+        type: 유형
+        website: 웹사이트
+      transfer_or_debt_payment: 이체 또는 부채 상환인가요?
+      open_matcher: 매칭 화면 열기
+      convert: 변환
+    activity_labels:
+      buy: 매수
+      sell: 매도
+      sweep_in: 스윕 인
+      sweep_out: 스윕 아웃
+      dividend: 배당금
+      reinvestment: 재투자
+      interest: 이자
+      fee: 수수료
+      transfer: 이체
+      contribution: 납입
+      withdrawal: 출금
+      exchange: 환전
+      other: 기타
+    mark_recurring: 반복으로 표시
+    mark_recurring_subtitle: 이것을 반복 거래로 추적하세요. 지난 6개월간의 유사한 거래에 대해 금액차이가 자동으로 계산됩니다.
+    mark_recurring_title: 반복 거래
+    potential_duplicate_title: 중복 가능성이 감지됨
+    potential_duplicate_description: 이 처리 대기 거래는 아래의 확정 거래와 같을 수 있습니다. 같은 거래라면 병합하여
+      중복 계산을 방지하세요.
+    keep_both: 아니요, 둘 다 유지하세요.
+    split_parent_row:
+      split_label: 분할
+    transfer_match:
+      auto_matched: 연결할까요?
+      auto_matched_short: 연결할까요?
+      confirm_match: 연결 확인
+      payment_confirmed: 결제가 확인되었습니다
+      reject_match: 연결 거부
+      transfer_confirmed: 이체가 확인되었습니다
+    transaction:
+      pending: 대기 중
+      pending_tooltip: 처리 대기 거래 — 확정 시 변경될 수 있습니다.
+      linked_with_provider: "%{provider}와 연동"
+      activity_type_tooltip: 투자 활동 유형
+      possible_duplicate: 중복되나요?
+      potential_duplicate_tooltip: 다른 거래와 중복되었을 수 있습니다.
+      review_recommended: 검토
+      review_recommended_tooltip: 금액 차이가 큽니다. 중복 여부를 검토하여 확인하는 것이 좋습니다.
+      split: 분할
+      split_tooltip: 이 거래는 여러 항목으로 분할되었습니다.
+      split_child_tooltip: 분할 거래의 일부
+      transfer_hint: 이체인가요?
+      transfer_hint_dismiss: 이체가 아님
+      transfer_hint_tooltip: 다른 계좌의 거래가 이 이체의 대응 거래로 보입니다. 클릭하여 연결하세요.
+    merge_duplicate:
+      success: 거래가 성공적으로 병합되었습니다.
+      failure: 거래를 병합할 수 없습니다.
+    dismiss_duplicate:
+      success: 별도의 거래로 보관됨
+      failure: 중복된 제안을 닫을 수 없습니다.
+    pending_duplicate_merge:
+      possible_duplicate: 중복되나요?
+      possible_duplicate_short: 중복?
+      review_recommended: 검토
+      review_recommended_short: 검토
+      confirm_title: 확정 거래(%{posted_amount})와 병합
+      reject_title: 별도의 거래로 보관
+    summary:
+      total_transactions: 총 거래
+      income: 수입
+      expenses: 지출
+      inflow: 입금
+      outflow: 출금
+    header:
+      edit_categories: 카테고리 수정
+      edit_imports: 가져오기 편집
+      edit_merchants: 가맹점 수정
+      edit_tags: 태그 편집
+      import: 가져오기
+    index:
+      title: 거래 내역
+      transaction: 거래
+      transactions: 거래
+      import: 가져오기
+      new_rule: 새로운 규칙
+      edit_rules: 규칙 수정
+      edit_categories: 카테고리 수정
+      edit_tags: 태그 편집
+      edit_merchants: 가맹점 수정
+      edit_imports: 가져오기 편집
+      new_transaction: 새 거래
+      categorize_button:
+        one: 분류 (1)
+        other: 분류 (%{count})
+    categorizes:
+      show:
+        exit: 종료
+        skip: 건너뛰기
+        remaining:
+          one: 분류되지 않은 거래 1개 남음
+          other: "%{count} 분류되지 않은 거래가 남아 있음"
+        transaction_count:
+          one: 거래 1건
+          other: "%{count} 거래"
+        transactions_hint: 거래를 제외하려면 선택을 취소하거나 해당 행에서 직접 다른 카테고리를 할당하세요.
+        assign_category: 카테고리 지정
+        assign_category_prompt: "→ 할당"
+        filter_placeholder: 카테고리 검색...
+        col_transaction: 거래
+        col_date: 날짜
+        col_amount: 금액
+        col_category: 카테고리
+        type_income: 수입
+        type_expense: 지출
+        create_rule_label: 분류 규칙 생성
+        rule_description_prefix: 이름에 다음이 포함된 향후 %{type} 거래
+        rule_description_suffix: 에도 이 카테고리를 지정합니다.
+        no_categories: 일치하는 카테고리가 없습니다.
+        all_done: 모든 거래가 분류되었습니다.
+      create:
+        categorized:
+          one: 분류된 거래 1개
+          other: "%{count} 거래 분류됨"
+        rule_creation_failed: 거래가 분류되었지만 규칙을 생성할 수 없습니다(이미 존재할 수도 있음).
+      entry_row:
+        include_checkbox: "%{name} 포함"
+        assign_category_select: "%{name}에 대한 카테고리 지정"
+    list:
+      drag_drop_title: CSV 파일을 끌어 놓아 가져오기
+      drag_drop_subtitle: 거래 직접 업로드
+      transaction: 거래
+      transactions: 거래
+    toggle_recurring_section: 예정된 반복 거래 전환
+    search:
+      filters:
+        account: 계좌
+        date: 날짜
+        type: 유형
+        status: 상태
+        amount: 금액
+        category: 카테고리
+        tag: 태그
+        merchant: 가맹점
+        ai: AI
+        attachment: 첨부파일
+    convert_to_trade:
+      title: 종목 매매로 전환
+      description: 이 거래를 종목 정보가 포함된 매매 내역으로 전환합니다.
+      date_label: '날짜:'
+      account_label: '계좌:'
+      amount_label: '금액:'
+      security_label: 종목
+      security_prompt: 종목 선택…
+      security_custom: "+ 맞춤 티커 입력"
+      security_not_listed_hint: 원하는 종목이 없나요? 목록 아래의 "사용자 지정 티커 입력"을 선택하세요.
+      ticker_placeholder: AAPL
+      ticker_hint: '주식/ETF 티커 기호(예: AAPL, MSFT)를 입력하세요.'
+      ticker_search_placeholder: 티커 검색...
+      ticker_search_hint: 종목 기호 또는 회사 이름으로 검색하거나 맞춤 종목 코드를 입력하세요.
+      price_mismatch_title: 가격이 일치하지 않을 수 있습니다.
+      price_mismatch_message: 입력한 가격(%{entered_price}/주)이 %{ticker}의 현재 시장 가격(%{market_price})과
+        크게 다릅니다. 종목을 잘못 선택했을 수 있으니 "사용자 지정 티커 입력"으로 올바른 종목을 지정해 보세요.
+      quantity_label: 수량(주)
+      quantity_placeholder: 예를 들어 20
+      quantity_hint: 매매 주식 수
+      price_label: 주당 가격
+      price_placeholder: 예를 들어 52.15
+      price_hint: 주당 가격(%{currency})
+      qty_or_price_hint: 수량 또는 가격 중 하나 이상을 입력하세요. 나머지 값은 거래 금액(%{amount})으로 계산됩니다.
+      trade_type_label: 매매 유형
+      trade_type_hint: 종목 매수 또는 매도
+      exchange_label: 거래소(선택 사항)
+      exchange_placeholder: XNAS
+      exchange_hint: 자동 감지하려면 비워두세요.
+      cancel: 취소
+      submit: 매매로 전환
+      success: 거래를 매매 내역으로 전환했습니다.
+      conversion_note: '거래에서 변환됨: %{original_name} (%{original_date})'
+      errors:
+        not_investment_account: 투자 계좌의 거래만 매매 내역으로 전환할 수 있습니다.
+        already_converted: 이 거래는 이미 전환되었거나 제외되었습니다.
+        enter_ticker: 종목코드를 입력하세요
+        security_not_found: 선택한 종목이 더 이상 존재하지 않습니다. 다른 종목을 선택하세요.
+        select_security: 종목을 선택하거나 입력하세요.
+        enter_qty_or_price: 수량이나 주당 가격을 입력하세요. 나머지 하나는 거래 금액으로 계산됩니다.
+        invalid_qty_or_price: 수량 또는 가격이 잘못되었습니다. 유효한 양수 값을 입력하세요.
+        conversion_failed: '거래 변환 실패: %{error}'
+        unexpected_error: '변환 중 예상치 못한 오류: %{error}'
+    searches:
+      filters:
+        account_filter:
+          filter_accounts: 계좌 필터링
+        category_filter:
+          filter_category: 카테고리 필터링
+        date_filter:
+          start_date: 시작일
+          end_date: 종료일
+        merchant_filter:
+          filter_merchants: 가맹점 필터링
+        tag_filter:
+          filter_tags: 태그 필터링
+        amount_filter:
+          equal_to: 같음
+          greater_than: 보다 큼
+          less_than: 미만
+          placeholder: '0'
+        badge:
+          expense: 지출
+          income: 수입
+          on_or_after: "%{date} 또는 그 이후"
+          on_or_before: "%{date} 또는 그 이전"
+          transfer: 이체
+          confirmed: 확정
+          pending: 대기 중
+          ai_current: AI
+          ai_history: AI 내역
+          attachment_with: 첨부파일 있음
+          attachment_without: 첨부 파일 없음
+        attachment_filter:
+          with: 첨부파일 있음
+          without: 첨부 파일 없음
+        ai_filter:
+          current: AI
+          current_description: 카테고리는 여전히 자동으로 할당되는 카테고리입니다(AI 또는 Bayes).
+          history: AI 내역
+          history_description: 자동 분류되었으나 이후 카테고리가 변경되었습니다.
+        type_filter:
+          expense: 지출
+          income: 수입
+          transfer: 이체
+        status_filter:
+          confirmed: 확정
+          pending: 대기 중
+      menu:
+        account_filter: 계좌
+        amount_filter: 금액
+        apply: 적용
+        cancel: 취소
+        category_filter: 카테고리
+        clear_filters: 필터 초기화
+        date_filter: 날짜
+        merchant_filter: 가맹점
+        status_filter: 상태
+        tag_filter: 태그
+        type_filter: 유형
+      search:
+        equal_to: 같음
+        greater_than: 보다 큼
+        less_than: 미만
+      form:
+        toggle_selection_checkboxes: 모든 체크박스를 전환하세요.
+        search_placeholder: 거래 검색…
+        filter: 필터
+    attachments:
+      cannot_exceed: 거래당 첨부파일 %{count}개를 초과할 수 없습니다.
+      uploaded_one: 첨부파일이 성공적으로 업로드되었습니다.
+      uploaded_many: 첨부파일 %{count}개가 업로드되었습니다.
+      failed_upload: '첨부파일 업로드 실패: %{error}'
+      no_files_selected: 업로드할 파일을 선택하지 않았습니다.
+      attachment_deleted: 첨부파일이 삭제되었습니다.
+      failed_delete: '첨부 파일 삭제 실패: %{error}'
+      upload_failed: 첨부파일을 업로드하지 못했습니다. 다시 시도하거나 지원팀에 문의하세요.
+      delete_failed: 첨부파일을 삭제하지 못했습니다. 다시 시도하거나 지원팀에 문의하세요.
+      upload: 업로드
+      no_attachments: 아직 첨부파일이 없습니다.
+      select_up_to: 파일 최대 %{count}개 선택(이미지 또는 PDF, 파일당 최대 %{size}MB) • %{count}개 중
+        %{used}개 사용
+      files:
+        one: 파일(1)
+        other: 파일(%{count})
+      browse_to_add: 파일을 추가하려면 찾아보세요.
+      max_reached: 최대 파일 제한에 도달했습니다(%{count}/%{max}). 다른 파일을 업로드하려면 기존 파일을 삭제하세요.

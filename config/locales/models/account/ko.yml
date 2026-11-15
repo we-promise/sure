@@ -1,0 +1,37 @@
+---
+ko:
+  account_order:
+    balance_asc:
+      label: 잔액(낮은 순)
+      label_short: 잔액 ↑
+    balance_desc:
+      label: 잔액(높은 순)
+      label_short: 잔액 ↓
+    manual:
+      label: 수동(드래그하여 순서 변경)
+      label_short: 수동
+    name_asc:
+      label: 이름(A~Z)
+      label_short: 이름 ↑
+    name_desc:
+      label: 이름(Z-A)
+      label_short: 이름 ↓
+  activerecord:
+    attributes:
+      account:
+        balance: 잔액
+        currency: 통화
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        name: 이름
+        subtype: 하위 유형
+    models:
+      account: 계좌
+      account/credit: 신용카드
+      account/depository: 은행 계좌
+      account/investment: 투자
+      account/loan: 대출
+      account/other_asset: 기타 자산
+      account/other_liability: 기타 부채
+      account/property: 부동산
+      account/vehicle: 차량

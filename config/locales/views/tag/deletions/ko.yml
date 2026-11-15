@@ -1,0 +1,15 @@
+---
+ko:
+  tag:
+    deletions:
+      create:
+        deleted: 태그가 삭제되었습니다.
+      new:
+        delete_and_leave_uncategorized: '"%{tag_name}" 삭제'
+        delete_and_recategorize: '"%{tag_name}" 삭제 및 새 태그 할당'
+        delete_and_reassign: 삭제 및 재할당
+        delete_tag: 태그를 삭제하시겠습니까?
+        explanation: "%{tag_name}는 거래 및 기타 태그 가능한 엔터티에서 제거됩니다.  태그를 지정하지 않은 상태로 두는
+          대신 아래에서 새 태그를 할당할 수도 있습니다."
+        replacement_tag_prompt: 태그 선택
+        tag: 태그

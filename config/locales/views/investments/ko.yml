@@ -1,0 +1,192 @@
+---
+ko:
+  investments:
+    edit:
+      edit: "%{account} 편집"
+    form:
+      none: 없음
+      subtype_prompt: 투자 유형 선택
+    new:
+      title: 계좌 잔액 입력
+    show:
+      chart_title: 총 가치
+    subtypes:
+      brokerage:
+        short: 증권 계좌
+        long: 증권 계좌
+      cash_management:
+        short: CMA
+        long: 현금관리계좌
+      401k:
+        short: 401(k)
+        long: 401(k)
+      roth_401k:
+        short: Roth 401(k)
+        long: Roth 401(k)
+      403b:
+        short: 403(b)
+        long: 403(b)
+      457b:
+        short: 457(b)
+        long: 457(b)
+      tsp:
+        short: TSP
+        long: Thrift Savings Plan
+      ira:
+        short: IRA
+        long: 전통 IRA
+      roth_ira:
+        short: Roth IRA
+        long: Roth IRA
+      sep_ira:
+        short: SEP IRA
+        long: SEP IRA
+      simple_ira:
+        short: SIMPLE IRA
+        long: SIMPLE IRA
+      529_plan:
+        short: 529 플랜
+        long: 529 교육 저축 플랜
+      hsa:
+        short: HSA
+        long: 건강 저축 계좌
+      ugma:
+        short: UGMA
+        long: UGMA 미성년자 관리 계좌
+      utma:
+        short: UTMA
+        long: UTMA 미성년자 관리 계좌
+      isa:
+        short: ISA
+        long: 개인저축계좌
+      lisa:
+        short: LISA
+        long: 평생 ISA
+      sipp:
+        short: SIPP
+        long: 자기투자 개인연금
+      workplace_pension_uk:
+        short: 연금
+        long: 직장연금
+      rrsp:
+        short: RRSP
+        long: 등록 퇴직 저축 플랜
+      tfsa:
+        short: TFSA
+        long: 면세 저축 계좌
+      resp:
+        short: RESP
+        long: 등록된 교육 저축 플랜
+      lira:
+        short: LIRA
+        long: 인출 제한 퇴직 계좌
+      rrif:
+        short: RRIF
+        long: 등록 퇴직 소득 펀드
+      super:
+        short: 슈퍼
+        long: 연금
+      smsf:
+        short: SMSF
+        long: 자기관리 슈퍼펀드
+      pea:
+        short: PEA
+        long: Plan d’Épargne en Actions
+      pillar_3a:
+        short: Pillar 3a
+        long: 개인연금(Pillar 3a)
+      riester:
+        short: Riester
+        long: Riester-Rente
+      nps:
+        short: NPS
+        long: 국민연금제도
+      apy:
+        short: APY
+        long: Atal Pension Yojana
+      indian_stocks:
+        short: 인도 주식
+        long: 인도 주식(Demat)
+      indian_equity:
+        short: 인도 주식
+        long: 인도 주식
+      indian_etf:
+        short: 인도 ETF
+        long: 인도 ETF
+      life_insurance:
+        short: 생명보험
+        long: 생명보험
+      ppf:
+        short: PPF
+        long: 공적 적립 기금(PPF)
+      ssy:
+        short: SSY
+        long: Sukanya Samriddhi Yojana
+      nsc:
+        short: NSC
+        long: 국민저축증명서
+      scss:
+        short: SCSS
+        long: 노인저축제도
+      fd:
+        short: FD
+        long: 정기예금
+      rd:
+        short: RD
+        long: 정기적금
+      pomis:
+        short: POMIS
+        long: 우체국 월 소득 제도
+      kvp:
+        short: KVP
+        long: Kisan Vikas Patra
+      gold_etf:
+        short: 금 ETF
+        long: 금 ETF
+      gold_mf:
+        short: 골드 MF
+        long: 골드 뮤추얼 펀드
+      sgb:
+        short: SGB
+        long: 국가 보증 금 채권
+      g_sec:
+        short: G-Sec
+        long: 국채(G-Sec)
+      sdl:
+        short: SDL
+        long: 주 개발 대출(SDL)
+      corporate_bond:
+        short: 회사채
+        long: 회사채
+      infrastructure_bond:
+        short: 인프라본드
+        long: 인프라 채권
+      tax_free_bond:
+        short: 면세채권
+        long: 면세채권
+      pension:
+        short: 연금
+        long: 연금
+      retirement:
+        short: 은퇴 자금
+        long: 퇴직 계좌
+      mutual_fund:
+        short: 뮤추얼 펀드
+        long: 뮤추얼 펀드
+      gold:
+        short: 골드
+        long: 골드(실물 또는 디지털)
+      angel:
+        short: 엔젤 투자
+        long: 엔젤투자
+      trust:
+        short: 신탁
+        long: 신탁
+      other:
+        short: 기타
+        long: 기타 투자
+    value_tooltip:
+      cash: 현금
+      holdings: 보유 종목
+      total: 포트폴리오 잔액
+      total_value_tooltip: 전체 포트폴리오 잔액은 증권 계좌의 현금(매매 가능 금액)과 보유 종목의 현재 시장 가치를 합한 금액입니다.

@@ -1,0 +1,10 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        entry:
+          attributes:
+            base:
+              invalid_sell_quantity: "%{ticker} 보유 수량이 %{current_qty}주이므로 %{sell_qty}주를
+                매도할 수 없습니다."

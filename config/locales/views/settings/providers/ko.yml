@@ -1,0 +1,443 @@
+---
+ko:
+  settings:
+    providers:
+      update:
+        updated_successfully: 제공업체 설정이 업데이트되었습니다.
+        no_changes: 변경사항이 없습니다.
+      not_authorized: 승인되지 않음
+      bank_sync:
+        page_title: 은행 동기화
+        lede: 외부 계좌를 연결하면 거래, 잔액, 보유 종목이 Sure에 자동으로 반영됩니다.
+      status:
+        ok: 연결됨
+        warn: 필요한 조치
+        err: 오류
+        'off': 구성되지 않음
+      maturity:
+        beta: 베타
+        alpha: 알파
+      drawer_trust_statement: 읽기 전용 액세스입니다. Sure는 절대로 돈을 이동할 수 없으며 자격 증명은 암호화되어 저장됩니다.
+      drawer_trust_statement_encryption_unconfigured: 읽기 전용 액세스입니다. Sure는 절대 돈을 옮길
+        수 없습니다. 프로덕션에 제공업체 자격 증명을 저장하기 전에 명시적인 암호화 키를 구성하세요.
+      provider_setup_encryption_warning:
+        title: 암호화 키 누락
+        message: 이 셀프 호스팅 설치에는 명시적인 Active Record 암호화 키가 설정되지 않았습니다. 운영 환경에서 제공업체
+          인증 정보를 저장하기 전에 primary_key, deterministic_key 및 key_derivation_salt를 설정하세요.
+      setup_steps:
+        eyebrow: 설정
+        need_help: 도움이 필요하신가요?
+      connect: 연결
+      financekit:
+        app_store: App Store
+        coming_soon: 곧 출시됩니다!
+        description: Sure iOS 앱에서 Apple Wallet 연결을 관리하세요. 앱이 열려 있는 동안 지갑 데이터가 동기화됩니다.
+          무인 백그라운드 동기화는 아직 사용할 수 없습니다.
+        summary: 지갑 동기화
+        accounts: 연결된 계좌
+        linked_accounts:
+          one: 연결된 계좌 1개
+          other: 연결된 계좌 %{count}개
+        status:
+          active: 동기화 활성
+          repair_required: 복구 필요 — Sure iOS 앱을 여세요
+        last_accepted_at: Sure에 의해 마지막으로 승인됨
+        last_imported_at: 가족으로 마지막으로 가져옴
+        not_yet: 아직은 아님
+      groups:
+        your_connections: 연결
+        available: 사용 가능
+        empty_available: 사용 가능한 모든 제공업체가 연결되었습니다.
+      health_strip:
+        connected: 연결됨
+        needs_attention: 주의가 필요하다
+        accounts_syncing: 계좌 동기화 중
+        last_synced: "%{time} 전에 마지막으로 동기화됨"
+      meta:
+        sync_error: 동기화 오류
+        no_recent_sync: 동기화 기한이 지났습니다
+        reconsent_required: 재동의 필요
+        login_required: 로그인이 필요합니다
+        login_expires_soon: "%{time} 후 로그인 만료(%{at})"
+        reconsent_needed:
+          one: 1일 후 재동의 필요
+          other: "%{count}일 내에 재동의 필요"
+        last_synced: "%{time} 전에 동기화됨"
+      sync_all: 모두 동기화
+      sync_all_in_progress: 연결된 모든 제공업체를 동기화하는 중…
+      sync_all_recently: 동기화가 이미 진행 중입니다. 잠시 후에 다시 시도해 보세요.
+      sync_provider: 지금 동기화
+      sync_provider_in_progress: 동기화가 시작되었습니다.
+      recently_synced: 최근에 동기화되었습니다. 잠시 후에 다시 시도해 보세요.
+      taglines:
+        financekit: Sure iOS 앱을 통해 일부 FinanceKit 계좌를 동기화합니다.
+        akahu: Akahu를 통해 뉴질랜드 금융 기관을 동기화하세요.
+        simplefin: 개방형 SimpleFIN 프로토콜을 통해 미국 은행 계좌를 연결하세요.
+        lunchflow: 40개 이상 국가(영국, EU, 미국 등)의 20,000개 이상의 은행을 연결하세요.
+        redbark: Redbark 오픈 뱅킹을 통해 호주 은행 계좌를 동기화하세요.
+        up: 개인 액세스 토큰으로 호주 Up 은행 계좌를 동기화하세요.
+        monobank: 개인 API 토큰으로 우크라이나 Monobank 카드와 저금통을 동기화하세요.
+        fio: 읽기 전용 API 토큰으로 Fio banka 계좌를 동기화하세요.
+        enable_banking: PSD2 오픈 뱅킹을 통해 유럽 은행 계좌를 동기화하세요.
+        coinstats: 지갑과 거래소 전반에 걸쳐 전체 암호화폐 포트폴리오를 추적하세요.
+        wise: Wise 다중 통화 잔액과 해외 이체를 자동으로 동기화하세요.
+        mercury: Mercury 비즈니스 은행 계좌를 자동으로 동기화하세요.
+        brex: 읽기 전용 액세스로 Brex 현금 및 법인 카드 활동을 동기화합니다.
+        coinbase: Coinbase 암호화폐 보유 자산을 가져오고 성과를 추적하세요.
+        binance: 읽기 전용 API 키를 사용하여 Binance 현물 잔액을 동기화하세요.
+        kraken: 읽기 전용 API 키로 Kraken 잔액과 현물 매매 체결 내역을 동기화하세요.
+        coinspot: 읽기 전용 API 키로 CoinSpot 잔액, AUD 환산액, 이체, 입금, 출금 및 주문 내역을 동기화하세요.
+        onchain_wallet: 공개 주소에서 자체 관리형 Bitcoin, EVM, Solana, Cosmos 및 Polkadot 지갑을
+          추적하세요.
+        snaptrade: SnapTrade 집계 네트워크를 통해 증권 계좌를 연결하세요.
+        trading212: 읽기 전용 API 키를 사용하여 Trading 212 투자 포트폴리오를 동기화하세요.
+        trade_republic: 안전한 읽기 전용 웹 로그인을 통해 Trade Republic 투자 계좌를 동기화하세요.
+        ibkr: Flex Query 가져오기로 Interactive Brokers 투자 계좌를 동기화하세요.
+        questrade: Questrade API로 Questrade 투자 계좌를 직접 동기화하세요.
+        indexa_capital: Indexa Capital 자동화 투자 포트폴리오를 추적하세요.
+        sophtron: 미국 및 캐나다의 은행과 공공요금 계정을 연결하세요.
+        plaid: Plaid를 통해 수천 개의 미국 금융 기관을 연결하세요.
+        plaid_eu: Plaid(PSD2/오픈 뱅킹)를 통해 유럽 금융 기관을 연결하세요.
+      search_filters:
+        aria_label: 제공업체 검색
+        placeholder: 제공업체 검색
+        chips:
+          all: 전체
+          bank: 은행
+          crypto: 암호화폐
+          investment: 투자
+      empty_filter: 필터와 일치하는 제공업체가 없습니다.
+      clear_filter: 필터 초기화
+      encryption_error:
+        title: 암호화 키 누락
+        message: 은행 동기화를 사용하려면 Active Record 암호화를 설정해야 합니다. Rails 인증 정보 또는 환경 변수에
+          primary_key, deterministic_key 및 key_derivation_salt를 설정하세요.
+      provider_form:
+        save_and_connect: 저장하고 연결하세요
+      coinbase_panel:
+        setup_instructions: 'Coinbase를 연결하려면:'
+        step1_html: <a href="https://portal.cdp.coinbase.com/projects/api-keys" target="_blank"
+          rel="noopener noreferrer" class="text-primary underline">Coinbase API 설정</a>로
+          이동
+        step2: 읽기 전용 권한(계좌 조회, 거래 조회)으로 새 API 키를 만드세요.
+        step3: API 키와 API 시크릿을 복사하여 아래에 붙여넣으세요.
+        api_key_label: API 키
+        api_key_placeholder: Coinbase API 키를 입력하세요.
+        api_secret_label: API 시크릿
+        api_secret_placeholder: Coinbase API 시크릿을 입력하세요.
+        connect_button: Coinbase 연결
+        syncing: 동기화 중...
+        sync: 동기화
+        disconnect: 연결 해제
+        disconnect_confirm: 이 Coinbase 연결을 해제하시겠습니까? 동기화된 계좌는 수동 계좌로 전환됩니다.
+      binance_panel:
+        setup_instructions: Binance를 연결하려면 읽기 전용 API 키를 생성하세요.
+        step1_html: <a href="https://www.binance.com/en/my/settings/api-management"
+          target="_blank" rel="noopener noreferrer" class="underline">Binance API
+          관리</a>로 이동
+        step2: 읽기 활성화 권한만 사용하여 새 API 키를 생성합니다.
+        step3: 아래에 API 키와 시크릿을 붙여넣으세요.
+        no_withdraw_title: 읽기 전용 키만
+        no_withdraw_body: Binance API 키를 생성할 때 출금 권한을 활성화하지 마세요. Sure에는 읽기 액세스만 필요합니다.
+        ip_hint_title: IP 화이트리스트 필요
+        ip_hint_body: Binance API 키 화이트리스트에 앱 서버의 송신 IP를 추가합니다.
+        ip_hint_contact_admin: 앱 서버의 송신 IP 주소를 얻으려면 관리자에게 문의하세요.
+        api_key_label: API 키
+        api_key_placeholder: Binance API 키를 붙여넣으세요.
+        api_secret_label: API 시크릿
+        api_secret_placeholder: Binance API 시크릿을 붙여넣으세요.
+        connect_button: Binance 연결
+        syncing: 동기화 중...
+        sync: 동기화
+        historical_import: 기록 가져오기 설정
+        sync_start_date_label: 다음에서 데이터 가져오기
+        sync_start_date_help: 과거 매매 내역을 얼마나 이전까지 가져올지 선택하세요.
+        disconnect: 연결 해제
+        disconnect_confirm: 정말로 Binance를 연결 해제하시겠습니까?
+      kraken_panel:
+        step1_html: <a href="https://pro.kraken.com/app/settings/api" target="_blank"
+          rel="noopener noreferrer" class="underline">Kraken API 설정으로 이동</a>
+        step2: Query Funds 및 Query Closed Orders & Trades만 사용하여 API 키를 생성하세요.
+        step3: 아래에 API 키와 개인 키를 붙여넣으세요.
+        read_only_title: 읽기 전용 거래소 동기화만 지원
+        read_only_body: 매매, 주문 취소, 출금, 내보내기, 원장, Earn, 스테이킹 또는 이체 권한은 부여하지 마세요. Sure는
+          잔액, 보유 종목 및 현물 매매 체결 내역만 가져옵니다.
+        default_connection_name: Kraken
+        add_connection: Kraken 연결 추가
+        update_connection: 연결 업데이트
+        connection_name_label: 연결 이름
+        connection_name_placeholder: 메인 Kraken
+        api_key_label: API 키
+        api_key_placeholder: Kraken API 키를 붙여넣으세요.
+        keep_api_key_placeholder: 기존 API 키를 유지하려면 비워 두세요.
+        api_secret_label: 개인 키
+        api_secret_placeholder: Kraken 개인 키를 붙여넣으세요.
+        keep_api_secret_placeholder: 기존 개인 키를 유지하려면 비워 두세요.
+        setup_accounts: 계좌 설정
+        syncing: 동기화 중...
+        sync: 동기화
+        disconnect: 연결 해제
+        disconnect_confirm: "%{name}의 연결을 해제하시겠습니까?"
+      coinspot_panel:
+        step1_html: <a href="https://www.coinspot.com.au/my/api" target="_blank" rel="noopener
+          noreferrer" class="underline">CoinSpot API 설정</a>로 이동
+        step2: 잔액 및 내역에 대한 읽기 전용 액세스 권한이 있는 API 키를 생성합니다.
+        step3: 아래에 API 키와 시크릿을 붙여넣으세요.
+        read_only_title: 읽기 전용 거래소 동기화만 지원
+        read_only_body: 송금, 출금, 매매 또는 이체 권한을 부여하지 마세요. Sure는 잔액, AUD 환산액, 이체, 입금,
+          출금 및 완료된 주문 내역만 가져옵니다.
+        default_connection_name: CoinSpot
+        add_connection: CoinSpot 연결 추가
+        update_connection: 연결 업데이트
+        connection_name_label: 연결 이름
+        connection_name_placeholder: 메인 CoinSpot
+        api_key_label: API 키
+        api_key_placeholder: CoinSpot API 키를 붙여넣으세요.
+        keep_api_key_placeholder: 기존 API 키를 유지하려면 비워 두세요.
+        api_secret_label: API 시크릿
+        api_secret_placeholder: CoinSpot API 시크릿을 붙여넣으세요.
+        keep_api_secret_placeholder: 기존 API 시크릿을 유지하려면 비워 두세요.
+        setup_accounts: 계좌 설정
+        syncing: 동기화 중...
+        sync: 동기화
+        disconnect: 연결 해제
+        disconnect_confirm: "%{name}의 연결을 해제하시겠습니까?"
+      onchain_wallet_panel:
+        add_wallet: 지갑 추가
+        advanced: 고급
+        disconnect_all: 모든 지갑 연결 해제
+        disconnect_all_confirm: 추적 중인 모든 주소와 해당 계좌가 삭제됩니다. 계속하시겠습니까?
+        etherscan_api_key_label: Etherscan API 키(옵션)
+        etherscan_api_key_placeholder: Etherscan API 키 붙여넣기
+        etherscan_hint: Ethereum 데이터는 키 없이도 조회할 수 있습니다. Etherscan 키를 추가하면 Ethereum의
+          요청 한도만 늘어납니다.
+        keep_etherscan_api_key: 기존 키를 유지하려면 비워 두세요.
+        manage_wallets: 지갑 관리
+        keyless_body: Sure는 공개 체인 데이터만 읽습니다. 키, 시드 구문 또는 서명이 필요하지 않으며 자금을 사용할 수 없습니다.
+        keyless_title: 읽기 전용, 키 필요 없음
+        save: 저장
+        sync_start_date_hint: 이 날짜 이전의 이체는 무시됩니다. Explorer가 보고하는 모든 내용을 가져오려면 비워 두세요.
+        sync_start_date_label: 이 날짜 이전 이체 제외
+      enable_banking_panel:
+        callback_url_instruction: 콜백 URL에는 %{callback_url}를 사용하세요.
+        connection_error: 연결 오류
+        step_1_html: "%{link}로 이동하여 개발자 자격 증명을 받으세요."
+        step_2: 국가를 선택하고 아래에 애플리케이션 ID + 클라이언트 인증서를 붙여넣으세요.
+        step_3: 저장한 다음 연결 추가를 사용하여 은행을 연결하세요.
+        config_locked_title: 구성이 잠겼습니다.
+        config_locked_message: 이러한 자격 증명을 변경하기 전에 연결된 모든 은행을 연결 해제하세요.
+        application_id_label: 애플리케이션 ID
+        application_id_placeholder_new: 애플리케이션 ID를 입력하세요.
+        application_id_placeholder_update: 업데이트하려면 새 ID를 입력하세요.
+        client_certificate_label: 클라이언트 인증서(개인 키 포함)
+        keep_client_certificate_hint: 현재 인증서를 유지하려면 비워 두세요.
+        save_and_connect: 저장하고 연결하세요
+        update_connection: 연결 업데이트
+        connected_bank: 연결된 은행
+        session_expires: '세션 만료: %{date}'
+        unknown: 알 수 없음
+        connection: 연결
+        session_expired_reconnect: 세션이 만료되었습니다 - 다시 연결하세요
+        configured: 구성됨
+        ready_to_link: 계좌 연결 준비 완료
+        sync: 동기화
+        reconnect: 다시 연결
+        connect_bank: 은행 연결
+        remove: 제거
+        remove_confirm: 이 연결을 제거하시겠습니까?
+        add_connection: 연결 추가
+        syncing: 동기화 중
+        select_country: 국가를 선택하세요...
+        country_label: 국가
+      lunchflow_panel:
+        step_1_html: "%{link}로 이동하여 API 키를 생성합니다."
+        step_2: 아래에 키를 붙여넣고 연결하세요.
+        step_3: 그런 다음 계좌 탭에서 동기화된 계좌를 연결하세요.
+        api_key_label: API 키
+        api_key_placeholder_new: 여기에 API 키를 붙여넣으세요.
+        api_key_placeholder_update: 업데이트하려면 새 API 키를 입력하세요.
+        base_url_label: 기본 URL(선택사항)
+        base_url_placeholder: https://lunchflow.app/api/v1(기본값)
+        save_and_connect: 저장하고 연결하세요
+        update_connection: 연결 업데이트
+      akahu_panel:
+        step_1_html: "%{link}로 이동하여 개인 앱을 만듭니다."
+        step_2: 앱 토큰과 사용자 토큰을 복사하세요.
+        step_3: 아래에 토큰을 붙여넣고 저장한 다음 동기화된 계좌를 연결하세요.
+      up_panel:
+        step_1_html: "%{link}로 이동하여 개인 액세스 토큰을 생성하세요."
+        step_2: 개인 액세스 토큰을 복사하세요.
+        step_3: 아래에 토큰을 붙여넣고 저장한 다음 동기화된 계좌를 연결하세요.
+      monobank_panel:
+        step_1_html: "%{link}로 이동하여 Monobank 앱으로 로그인하고 개인 토큰을 생성하세요."
+        step_2: 토큰을 복사하세요. 토큰은 한 번만 표시됩니다.
+        step_3: 아래에 토큰을 붙여넣고 저장한 다음 추적할 카드와 저금통을 연결하세요.
+      fio_panel:
+        step_1_html: "%{link} 인터넷뱅킹에 로그인한 후 설정 → API를 엽니다."
+        step_2: 읽기 전용 액세스 권한이 있는 토큰("Sledování účtu")을 만듭니다. 강력한 승인이 필요하며 최대 180일
+          동안 유효합니다.
+        step_3: 아래에 토큰을 붙여넣고 저장하세요. 토큰 하나로 계좌 하나에 접근하므로 Fio 계좌마다 연결을 추가하세요.
+      simplefin_panel:
+        step_1_html: 일회성 설정 토큰을 받으려면 %{link}로 이동하세요.
+        step_2: 아래 토큰을 붙여넣고 연결하세요.
+        step_3: 그런 다음 계좌 탭에서 동기화된 계좌를 연결하세요.
+        setup_token_label: 설정 토큰
+        setup_token_placeholder: SimpleFIN 설정 토큰 붙여넣기
+        save_and_connect: 저장하고 연결하세요
+      plaid_panel:
+        step_1_html: "%{link}를 열고 클라이언트 ID와 비밀 키를 복사하세요."
+        step_2: 환경을 선택하세요. 테스트에는 sandbox를, 실제 계좌에는 production을 사용하세요.
+        step_3: 아래에 자격 증명을 붙여넣고 연결하세요.
+      plaid_eu_panel:
+        step_1_html: "%{link}를 열고 EU 클라이언트 ID와 비밀 키를 복사하세요."
+      not_found: 제공업체를 찾을 수 없습니다.
+      sync_provider_no_items: 동기화할 수 있는 연결이 없습니다.
+      ibkr_panel:
+        steps:
+          step_1: IBKR Client Portal에서 "Performance & Reports" > "Flex Queries"로 이동하세요.
+          step_2: '"Activity Flex Query" 섹션에서 "+" 아이콘을 클릭하여 새 쿼리를 만드세요.'
+          step_3: '쿼리 이름(예: "Sure Sync")을 지정한 다음 아래 Flex 쿼리 세부 정보를 검토하고 나열된 섹션, 필드
+            및 구성 옵션을 활성화하세요.'
+          step_4: 쿼리를 저장하고 "Query ID"를 기록한 다음 "Flex Web Service Configuration" 섹션의
+            톱니바퀴 아이콘으로 액세스 토큰을 생성하세요.
+          step_5: 아래에 Query ID와 토큰을 붙여넣고 설정을 저장한 다음 계좌 탭에서 발견된 IBKR 계좌를 연결하세요.
+        flex_query_details:
+          eyebrow: Flex Query
+          title: 섹션, 필드 및 구성
+          summary: IBKR Activity Flex Query에 반드시 포함해야 하는 섹션, 필드 및 설정을 확인하려면 펼치세요.
+          sections_heading: 다음 섹션 및 필드를 활성화합니다.
+          configuration_heading: 다음 쿼리 옵션 설정
+        sections:
+          account_information: 'Account Information: Account ID, Currency'
+          cash_report: 'Cash Report:'
+          cash_report_options: '옵션: None'
+          cash_report_fields: '필드: Currency, Ending Cash'
+          cash_transactions: 'Cash Transactions:'
+          cash_transactions_options: '옵션: Dividends, Deposits & Withdrawals, Detail'
+          cash_transactions_fields: '필드: Amount, Conid, Currency, FX Rate To Base,
+            Report Date, Transaction ID, Type'
+          change_in_position_value_summary: 'Change In Position Value Summary: Currency,
+            End Of Period Value'
+          net_asset_value: 'Net Asset Value (NAV) in Base:'
+          net_asset_value_options: '옵션: None'
+          net_asset_value_fields: '필드: Currency, Report Date, Total'
+          open_positions: 'Open Positions:'
+          open_positions_options: '옵션: Summary'
+          open_positions_fields: '필드: Asset Class, Conid, Cost Basis Price, Currency,
+            FX Rate To Base, Mark Price, Quantity, Report Date, Security ID, Security
+            ID Type, Side, Symbol'
+          trades: 'Trades:'
+          trades_options: '옵션: Execution'
+          trades_fields: '필드: Asset Class, Buy/Sell, Conid, Currency, FX Rate To Base,
+            IB Commission, IB Commission Currency, Quantity, Symbol, Trade Date, Trade
+            ID, TradePrice, Transaction ID'
+        configuration:
+          models: 'Models: Optional'
+          format: 'Format: XML'
+          period: 'Period: Last 365 Calendar Days'
+          date_format: 'Date Format: yyyy-MM-dd'
+          time_format: 'Time Format: HH:mm:ss'
+          date_time_separator: 'Date/Time Separator: ; (semi-colon)'
+          profit_and_loss: 'Profit and Loss: Default'
+          all_other_options: '나머지 모든 설정 옵션: "No"'
+        report_window_note: IBKR Flex 보고서는 IBKR에서 설정한 조회 기간으로 제한됩니다. Sure는 이 보고서에서
+          현재 보유 종목 전체와 최대 최근 365일의 활동을 가져옵니다.
+        sync: 동기화
+        query_id_label: 쿼리 ID
+        query_id_placeholder_new: IBKR Flex Query ID를 입력하세요
+        query_id_placeholder_existing: 현재 쿼리 ID를 유지하려면 비워 두세요.
+        token_label: 토큰
+        token_placeholder_new: IBKR Flex Web Service 토큰을 입력하세요.
+        token_placeholder_existing: 현재 토큰을 유지하려면 비워 두세요.
+        update_configuration: 구성 업데이트
+        not_configured: 구성되지 않았습니다.
+      trade_republic_panel:
+        encryption_warning:
+          title: 암호화가 구성되지 않았습니다.
+          message: Active Record Encryption이 구성될 때까지는 Trade Republic 자격 증명과 세션 데이터를
+            안전하게 저장할 수 없습니다.
+        steps:
+          step_1: Trade Republic 앱에 사용하는 전화번호와 PIN 또는 비밀번호를 입력한 후 저장하세요.
+          step_2: 요청 시 인증 앱의 코드를 입력하세요.
+          step_3: 메시지가 표시되면 Trade Republic 앱에서 로그인을 승인하세요.
+        phone_number_label: 전화번호
+        phone_number_placeholder_new: "+49 170 1234567"
+        phone_number_placeholder_existing: 현재 전화번호를 유지하려면 비워두세요.
+        pin_label: PIN 또는 비밀번호
+        pin_placeholder_new: Trade Republic PIN 또는 비밀번호
+        pin_placeholder_existing: 현재 PIN 또는 비밀번호를 유지하려면 비워 두세요.
+        currency_label: 계좌 통화
+        connect: 로그인
+        confirm_login: 로그인 확인
+        complete_login: 계속
+        authenticator_code_label: 인증 코드(메시지가 표시되는 경우)
+        authenticator_code_placeholder: 6자리 코드
+        push_login_notice: 지금 Trade Republic 앱에서 로그인을 승인하세요. Sure는 백그라운드에서 자동으로 확인합니다.
+          상태를 직접 확인할 수도 있습니다.
+        check_login_status: 지금 상태 확인
+        authenticator_code_notice: 인증 앱의 코드를 입력하세요.
+        approval_pending: 로그인이 시작되었습니다. Trade Republic 앱에서 승인하세요. Sure가 자동으로 확인 중입니다.
+        awaiting_confirmation: Trade Republic 앱의 승인이 보류 중입니다.
+        awaiting_authenticator_code: 인증 코드가 필요합니다.
+        login_expired: 승인 요청이 만료되었습니다.
+        restart_login: 다시 로그인 시작
+        connection_success:
+          title: Trade Republic이 성공적으로 연결되었습니다
+          message: Trade Republic 연결이 준비되었습니다.
+          description: Sure는 이제 백그라운드에서 Trade Republic 데이터를 동기화하고 있습니다.
+          close: 완료
+        qr_login: QR코드로 로그인
+        qr_cancel: QR 로그인 취소
+        qr_back_to_credentials: 전화번호와 PIN 또는 비밀번호로 돌아가기
+        qr_loading: QR 코드 준비 중…
+        qr_instruction: 휴대폰 카메라로 QR 코드를 스캔한 다음 Trade Republic 앱에서 로그인을 승인하세요.
+        qr_success: 로그인이 승인되었습니다. Sure가 제공업체 페이지를 새로 고치는 중입니다.
+        qr_error: QR 로그인을 시작할 수 없습니다. 다시 시도해 주세요.
+        requires_update: 동기화를 재개하려면 다시 로그인하세요.
+        session_expires_in: "%{time} 후 로그인 만료(%{at})."
+        add_account: 다른 연결 추가
+        save_configuration: 저장 및 로그인 시작
+        update_configuration: 구성 업데이트
+        sync: 동기화
+        syncing: 동기화 중...
+        disconnect: Trade Republic 연결 끊기
+        disconnect_confirm: Trade Republic 연결을 해제하시겠습니까? 동기화된 계좌는 수동 계좌로 전환됩니다.
+        disconnect_confirm_with_identifier: "%{last4}로 끝나는 Trade Republic 연결을 해제하시겠습니까?
+          동기화된 계좌는 수동 계좌로 전환됩니다."
+        identifier_phone: 전화
+        identifier_account: 계좌
+        status_configured_prefix: 연결되었습니다. 발견된 계좌를 관리하려면
+        accounts_tab: 계좌
+        setup_accounts: 계좌 설정
+        accounts_discovered:
+          one: Trade Republic 계좌 1개를 발견했습니다.
+          other: Trade Republic 계좌 %{count}개를 발견했습니다.
+        status_configured_suffix: 탭으로 이동하세요.
+        not_configured: 구성되지 않았습니다.
+      trading212_panel:
+        steps:
+          step_1: Trading 212 → 설정 → API(웹 또는 모바일 앱)로 이동하세요.
+          step_2: 새로운 API 키 생성 - Trading 212에서는 API ID와 비밀 키를 보여줍니다.
+          step_3: 아래에 두 값을 붙여넣고 환경과 계좌 통화를 선택한 다음 저장하세요.
+        api_key_label: API ID
+        api_key_placeholder_new: Trading 212 API ID를 붙여넣으세요
+        api_key_placeholder_existing: 현재 API ID를 유지하려면 비워 두세요.
+        api_secret_label: 비밀키
+        api_secret_placeholder_new: Trading 212 비밀 키를 붙여넣으세요.
+        api_secret_placeholder_existing: 현재 비밀 키를 유지하려면 비워두세요.
+        environment_label: 환경
+        environment_live: 실계좌
+        environment_demo: 데모 계좌
+        currency_label: 계좌 통화
+        save_configuration: 구성 저장
+        update_configuration: 구성 업데이트
+        sync: 동기화
+        syncing: 동기화 중...
+        disconnect: Trading 212 계좌 연결 해제
+        disconnect_confirm: Trading 212 연결을 해제하시겠습니까?
+        default_account_name: Trading 212 계좌
+        add_account: 다른 계좌 추가
+        status_configured_prefix: 설정되었습니다. 발견된 계좌를 관리하려면
+        accounts_tab: 계좌
+        status_configured_suffix: 탭으로 이동하세요.
+        not_configured: 구성되지 않았습니다.

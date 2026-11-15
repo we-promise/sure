@@ -1,0 +1,18 @@
+---
+ko:
+  pdf_import_mailer:
+    next_steps:
+      greeting: 안녕하세요 %{name}님,
+      intro: "%{product}에 업로드하신 PDF 문서 분석을 완료했습니다."
+      document_type_label: 문서 유형
+      summary_label: AI 요약
+      transactions_note: 이 문서에는 거래가 포함된 것 같습니다. 이제 해당 항목을 추출하고 검토할 수 있습니다.
+      document_stored_note: 이 문서는 참조를 위해 저장되었습니다. 이는 향후 AI 대화에서 컨텍스트를 제공하는 데 사용될 수
+        있습니다.
+      next_steps_label: 다음 단계
+      next_steps_intro: '여러 가지 옵션이 있습니다:'
+      option_extract_transactions: 이 명세서에서 거래 추출
+      option_keep_reference: 향후 AI 대화에서 참고할 수 있도록 이 문서를 보관하세요.
+      option_delete: 더 이상 필요하지 않으면 이 가져오기를 삭제하세요.
+      view_import_button: 가져오기 세부정보 보기
+      footer_note: 이것은 자동 메시지입니다. 이 이메일에 직접 회신하지 마세요.

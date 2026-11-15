@@ -1,0 +1,7 @@
+---
+ko:
+  other_liabilities:
+    edit:
+      edit: "%{account} 편집"
+    new:
+      title: 부채 세부정보 입력

@@ -1,0 +1,195 @@
+---
+ko:
+  UI:
+    period_picker:
+      aria_label: '기간: %{period}'
+    account:
+      activity_feed:
+        toggle_selection_checkboxes: 선택 전환
+      balance_reconciliation:
+        labels:
+          adjustments: 조정
+          buys: 매수
+          change_in_brokerage_cash: 증권 계좌 현금 변동
+          change_in_holdings_market: 보유 종목 가치 변동(시장 가격 변동)
+          change_in_holdings_trades: 보유 종목 변동(매수/매도)
+          charges: 요금
+          end_balance: 최종 잔액
+          end_principal: 기말 원금
+          end_value: 기말 가치
+          final_balance: 최종 잔액
+          final_principal: 최종 원금
+          final_value: 최종 가치
+          market_changes: 시장 변화
+          net_cash_flow: 순현금흐름
+          net_principal_change: 순 원금 변동
+          net_value_change: 순가치 변동
+          payments: 결제 내역
+          sells: 매도
+          start_balance: 시작 잔액
+          start_principal: 기초 원금
+          start_value: 기초 가치
+        tooltips:
+          adjustments: 수동 잔액 대사 또는 기타 조정
+          adjustments_asset: 수동 가치 조정 또는 감정 평가
+          buys: 당일 암호화폐 매수
+          change_in_brokerage_cash: 예금, 출금 및 거래로 인한 현금 순 변동
+          change_in_holdings_market: 시세 변동에 따른 보유 종목 평가액 변화
+          change_in_holdings_trades: 증권 매매가 보유 자산에 미치는 영향
+          charges: 하루 동안 새로운 요금이 청구되었습니다.
+          end_balance: 모든 거래 후 계산된 잔액
+          end_balance_investment: 모든 활동 후 계산된 잔액
+          end_principal: 모든 거래 후 계산된 원금
+          end_value: 모든 변동을 반영하여 계산한 가치
+          final_balance: 당일 최종 계좌 잔액
+          final_balance_credit: 당일 최종 미결제 잔액
+          final_balance_crypto: 해당일 최종 암호화폐 보유 평가액
+          final_balance_investment: 당일 최종 포트폴리오 가치
+          final_principal: 당일 최종 원금 잔액
+          final_value: 당일 최종 자산가치
+          market_changes: 시장 가격 변동에 따른 가치 변화
+          net_cash_flow: 하루 동안의 모든 거래에서 발생한 잔액의 순 변동
+          net_principal_change: 당일 원금 상환 및 신규 차입
+          net_value_change: 개선 및 감가상각을 포함한 모든 가치 변화
+          payments: 당일 카드 대금 납부액
+          sells: 당일 암호화폐 매도
+          start_balance: 해당 일자 시작 시점의 계좌 잔액
+          start_balance_credit: 해당 일자 시작 시점의 미상환 잔액
+          start_balance_crypto: 해당 일자 시작 시점의 암호화폐 보유 가치
+          start_balance_investment: 해당 일자 시작 시점의 총 포트폴리오 가치
+          start_principal: 해당 일자 시작 시점의 원금 잔액
+          start_value: 해당 일자 시작 시점의 자산 가치
+      chart:
+        loan:
+          actual: 기록된 잔액
+          scheduled: 원래 일정
+          projected: 오늘부터 예상
+          today: 오늘
+          interactive_chart: 대화형 차트
+          no_payoff: 현재 상환액으로는 상환 불가
+          aria_description: 대출 잔액 차트. 기록된 잔액 %{current_balance}. 원래 예정된 완납일 %{scheduled_payoff_date}.
+            오늘 잔액 기준 예상 완납일 %{projected_payoff_date}.
+          aria_actual_history_starts: 기록된 잔액 내역은 %{date}로 시작됩니다.
+          aria_interest_share: 첫해 상환 기간 동안 지불된 금액의 약 %{first}%는 이자입니다. 마지막 해에는 약 %{last}%입니다.
+          aria_interest_share_overall: 모든 상환금에 걸쳐 지불된 금액의 약 %{share}%가 이자입니다.
+          interest_share: 이자 비중
+          principal_share: 원금 비중
+          projected_payoff: 예상 완납일
+          months_saved:
+            one: 예정보다 %{count}개월 빠름
+            other: 예정보다 %{count}개월 빠름
+          on_schedule: 예정대로
+          interest_saved: 절감한 이자
+          not_converged: 현재 상환액으로는 원래 만기일까지 전액 상환할 수 없으며, %{balloon}의 잔액이 남습니다.
+          projection_basis: 오늘 기록된 잔액과 원래 상환 일정상의 같은 날짜 잔액을 비교합니다. 예정일보다 먼저 반영된 상환금은
+            해당 날짜까지 일정보다 앞선 것으로, 늦게 반영된 상환금은 뒤처진 것으로 표시됩니다.
+          legend: 차트 시리즈
+          since_start: 대출이 시작된 이후로
+        no_data_available: 사용 가능한 데이터가 없습니다.
+        title:
+          balance: 잔액
+          cash_value: 현금 가치
+          debt_balance: 부채 잔액
+          estimated_property_value: 예상 부동산 가치
+          estimated_vehicle_value: 예상 차량 가치
+          holdings_value: 보유 종목 평가액
+          loan_remaining_balance: 남은 잔액
+          remaining_principal_balance: 남은 원금 잔액
+          total_account_value: 총 계좌 가치
+          total_gains: 총 이익
+        views:
+          cash: 현금
+          gains: 이익 / ROI
+          holdings: 보유 종목
+          total_value: 총 가치
+        vs_available_history: 확인 가능한 과거 기록 대비
+      activity_date:
+        balance_tooltip: 모든 거래 및 조정이 완료된 당일 잔액
+        no_balance_data: 이 날짜에는 잔액 데이터가 없습니다.
+  ds:
+    alert:
+      variants:
+        info: 정보
+        success: 성공
+        warning: 경고
+        error: 오류
+        destructive: 오류
+    pill:
+      aria_label: "%{label}"
+      default_label: 미리보기
+    dialog:
+      close: 닫기
+    popover:
+      avatar_default_label: 메뉴 열기
+    tooltip:
+      trigger_label: 추가 정보
+    link:
+      opens_in_new_tab: "(새 탭에서 열림)"
+    icon_picker:
+      no_matching_icons: 일치하는 아이콘이 없습니다.
+      search_placeholder: 아이콘 검색...
+  provider_sync_summary:
+    title: 동기화 요약
+    last_sync: '마지막 동기화: %{time_ago} 전'
+    accounts:
+      title: 계좌
+      total: '합계: %{count}'
+      linked: '링크됨: %{count}'
+      unlinked: '미연결: %{count}'
+      institutions: '기관: %{count}'
+    transactions:
+      title: 거래 내역
+      seen: '확인된 거래: %{count}'
+      imported: '가져온 거래: %{count}건'
+      updated: '업데이트됨: %{count}'
+      skipped: '건너뛰었습니다: %{count}'
+      fetching: 중개업체에서 가져오는 중...
+      protected:
+        one: "%{count} 항목이 보호됨(덮어쓰지 않음)"
+        other: "%{count} 항목이 보호됨(덮어쓰지 않음)"
+      view_protected: 보호된 항목 보기
+    skip_reasons:
+      excluded: 제외됨
+      user_modified: 사용자가 수정함
+      import_locked: CSV 가져오기
+      protected: 보호됨
+    holdings:
+      title: 보유 종목
+      found: '발견됨: %{count}'
+      processed: '처리됨: %{count}'
+    trades:
+      title: 매매 내역
+      imported: '가져온 매매: %{count}건'
+      skipped: '건너뛰었습니다: %{count}'
+      fetching: 중개업체에서 활동을 가져오는 중...
+    health:
+      title: 동기화 상태
+      view_error_details: 오류 세부정보 보기
+      rate_limited: "%{time_ago} 요청 한도 도달"
+      recently: 최근에
+      errors: '오류: %{count}'
+      pending_reconciled:
+        one: "%{count} 중복 보류 거래가 조정되었습니다."
+        other: "%{count} 중복 보류 거래가 조정되었습니다."
+      view_reconciled: 조정된 거래 보기
+      duplicate_suggestions:
+        one: "%{count} 중복 가능성 검토 필요"
+        other: "%{count} 중복 가능성 검토 필요"
+      view_duplicate_suggestions: 추천 중복 항목 보기
+      stale_pending:
+        one: "%{count} 오래된 보류 중인 거래(예산에서 제외)"
+        other: "%{count} 오래된 보류 중인 거래(예산에서 제외)"
+      view_stale_pending: 영향을 받은 계좌 보기
+      stale_pending_count:
+        one: "%{count} 거래"
+        other: "%{count} 거래"
+      stale_unmatched:
+        one: "%{count} 보류 중인 거래에는 수동 검토가 필요합니다."
+        other: "%{count} 보류 중인 거래에는 직접 검토가 필요합니다."
+      view_stale_unmatched: 검토가 필요한 거래 보기
+      stale_unmatched_count:
+        one: "%{count} 거래"
+        other: "%{count} 거래"
+      data_warnings: '데이터 경고: %{count}'
+      notices: '주의 사항: %{count}'
+      view_data_quality: 데이터 품질 세부정보 보기

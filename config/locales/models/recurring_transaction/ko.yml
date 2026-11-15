@@ -1,0 +1,36 @@
+---
+ko:
+  recurring_transactions:
+    allocator:
+      missing_rate: "%{from}에서 %{to}로의 환율은 없습니다. 명시적으로 금액을 입력하세요."
+      unmeasurable: 이 거래에는 %{currency}로 환산할 수 없는 배정 금액이 있어 남은 금액을 계산할 수 없습니다. %{date}의
+        환율을 추가하거나 기존 결제 연결을 먼저 제거하세요.
+      over_allocated: "%{amount} 할당은 거래의 남은 %{capacity} %{currency}를 초과합니다."
+      entry_exhausted: 이 거래 금액 전액이 이미 다른 납부 예정 건에 적용되었습니다.
+      already_allocated: 이 거래는 이미 이 청구서에 적용되었습니다.
+      exceeds_remaining: "%{amount}는 이 사이클에 남은 %{remaining}를 초과합니다."
+  activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: 결제 링크
+        frequency_interval: 반복 주기
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: 가맹점 또는 이름이 있어야 합니다.
+          attributes:
+            payment_url:
+              invalid_scheme: 유효한 http:// 또는 https:// 주소여야 합니다.
+            anchor_date:
+              required_for_intervals: 규칙이 2개 이상의 기간마다 반복되는 경우 필요합니다.
+            bill_type:
+              transfer_shape_mismatch: 받는 계좌가 설정된 경우에만 이체로 지정할 수 있습니다.
+            expected_amount_min:
+              greater_than_max: 예상 최대 금액보다 클 수 없습니다.
+            account:
+              required_for_transfer: 정기 이체에는 계좌를 지정해야 합니다.
+              wrong_family: 이 가족에 속해야 합니다.
+            destination_account:
+              same_as_source: 출금 계좌와 같을 수 없습니다.
+              family_mismatch: 출금 계좌와 같은 가족에 속해야 합니다.
+              wrong_family: 이 가족에 속해야 합니다.

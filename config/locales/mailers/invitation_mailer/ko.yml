@@ -1,0 +1,5 @@
+---
+ko:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter}님이 %{product_name}의 가족으로 초대했습니다!"

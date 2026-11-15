@@ -1,0 +1,231 @@
+---
+ko:
+  recurring_transactions:
+    title: 정기 거래
+    upcoming: 다가오는 반복 거래
+    projected: 예상
+    recurring: 반복
+    expected_today: 오늘 예상
+    expected_in:
+      one: "%{count}일 후 예정"
+      other: "%{count}일 후 예정"
+    day_of_month: 매월 %{day}일
+    frequency_presets:
+      monthly: 매월
+      weekly: 매주
+      biweekly: 2주마다
+      semimonthly: 한 달에 두 번
+      quarterly: 분기마다
+      semiannual: 6개월마다
+      annual: 매년
+      custom: 맞춤 일정
+      interval: 맞춤 간격
+    frequency_interval_units:
+      weekly: 주
+      monthly: 개월
+      yearly: 년
+    frequency:
+      monthly: 매월 %{day}
+      weekly: 매주 %{weekday}
+      biweekly: 격주 %{weekday}
+      semimonthly: 매월 %{first} 및 %{second}
+      quarterly: 분기마다 %{day}
+      semiannual: 6개월마다 %{day}
+      annual: 매년 %{month} %{day}
+      every_n_weeks: "%{interval}주마다 %{weekday}"
+      every_n_months: "%{interval}개월마다 %{day}"
+      every_n_years: "%{interval}년마다 %{month} %{day}"
+      custom: 맞춤 일정
+      last_day: 말일
+      numbered_day: "%{day}일"
+    identify_patterns: 패턴 식별
+    cleanup_stale: 오래된 항목 정리
+    actions:
+      edit_payment_link: 결제 링크 수정
+      pause: 일시중지
+      resume: 재개
+      delete: 제거
+    pay_action:
+      pay: 납부
+      pay_aria: "%{name} 납부(새 탭에서 열림)"
+      add_link: 링크 추가
+      add_link_aria: "%{name} 결제 링크 추가"
+      autopay: 자동결제
+      autopay_aria: "%{name} 자동 결제, 새 탭에서 납부 사이트 열기"
+    new:
+      title: 새 청구서
+      income_title: 새 수입
+      start_from_title: 발견된 반복 청구에서 시작하기
+      start_from_income_title: 발견된 반복 입금에서 시작하기
+      start_from_hint: 선택 사항입니다. 하나를 선택하면 양식만 채워지며, 언제든지 무엇이든 변경할 수 있습니다.
+      candidate_meta: "%{count}× · 마지막 %{date}"
+      search_all_prompt: 찾고 있는 내용이 보이지 않나요?
+      search_all_cta: 모든 거래 검색
+      pick_different: 다른 거래에서 시작
+      smart_fill: AI로 스마트 채우기
+      smart_fill_applied: AI가 청구 내역을 바탕으로 이 값을 제안했습니다. 저장하기 전에 검토하세요.
+      covered_title: 이 거래는 이미 청구서에 속해 있습니다.
+      covered_body: "%{name}에서 이미 이 결제를 추적하고 있어 새 청구서를 만들면 두 번 계산됩니다."
+      covered_open: 청구서 열기
+      covered_suggested_title: Sure가 이미 이 결제에 대한 청구서를 제안했습니다
+      covered_suggested_body: "%{name} 항목이 추천 목록에 있습니다. 이를 확인하여 추적을 시작하면 새 청구서로 이
+        결제 금액이 중복 집계되는 것을 막을 수 있습니다. 일치하는 결제는 자동으로 연결되며, 이 결제도 청구서에서 연결할 수 있습니다."
+      covered_confirm: 청구서 확인
+      covered_create_anyway: 그래도 별도의 청구서 만들기
+      covered_income_title: 이 입금은 이미 수입 항목에 속해 있습니다.
+      covered_income_body: "%{name}에서 이미 이 입금을 추적하고 있어 다시 추가하면 두 번 계산됩니다."
+      covered_income_open: 수입 열기
+      covered_income_suggested_title: Sure가 이미 이 수입을 추천했습니다.
+      covered_income_suggested_body: "%{name} 항목이 추천 목록에 있습니다. 이를 추가하여 추적을 시작하면 이
+        입금이 중복 집계되는 것을 막을 수 있습니다. 일치하는 입금은 자동으로 연결되며, 이 입금도 수입 항목에서 연결할 수 있습니다."
+      covered_income_confirm: 수입 추가
+      covered_income_create_anyway: 그래도 별도 수입 추가
+    smart_fills:
+      create:
+        failed: 지금은 청구 내역을 분석할 수 없습니다. 양식에는 거래의 기존 값이 유지되었습니다.
+    pick_entry:
+      title: 시작할 거래 찾기
+      income_title: 시작할 입금 내역 찾기
+      hint: 하나를 선택하면 양식만 채워지며, 언제든지 무엇이든 변경할 수 있습니다.
+      search_placeholder: 이름, 메모 또는 가맹점으로 검색
+      back: 양식으로 돌아가기
+      showing_recent: 최근 %{count}개 항목을 표시합니다. 검색으로 범위를 좁혀보세요.
+      no_results: '"%{query}"와 일치하는 항목이 없습니다. 단어 수를 줄여보거나 돌아가서 직접 양식을 작성해 보세요.'
+    picker_row:
+      claimed: "%{name}의 일부"
+    create:
+      success: 청구서가 추가됨
+      success_income: 수입이 추가되었습니다
+      due_date_required: 청구서의 다음 납부 기한을 입력하세요
+      amount_invalid: 금액을 일반 숫자로 입력하세요.
+      amount_too_precise: 소수점 이하 4자리까지 사용하세요.
+      account_invalid: 청구서를 추가할 수 있는 계좌를 선택하거나 비워두세요
+      category_invalid: 카테고리 중 하나를 선택하거나 비워두세요.
+      already_exists: 이 청구서는 이미 존재합니다.
+    edit:
+      trigger_label: 청구서 편집
+      title: "%{name} 편집"
+      income_title: 수입 수정 · %{name}
+    form:
+      payment_url_label: 결제 링크
+      payment_url_placeholder: bank.example.com/pay
+      payment_url_hint: 이 청구서를 납부할 웹 주소입니다. 반복 거래 목록이나 예정 목록에서 새 탭으로 열립니다.
+      autopay_label: 자동으로 결제
+      autopay_hint: 청구서 목록에는 유지하되, 직접 처리할 일에서는 제외합니다.
+      more_options: 추가 옵션
+      notes_label: 메모
+      notes_placeholder: 계좌 4821, Amex로 청구됨
+      notes_hint: 납부할 때 참고할 내용을 적으세요. 청구서에 표시됩니다.
+      apply_to_siblings:
+        one: 다른 %{name} 청구서에도 이 링크 사용
+        other: 다른 %{name} 청구서 %{count}개에도 이 링크 사용
+      submit: 청구서 저장
+      submit_income: 수입 저장
+      income_name_label: 수입원
+      income_name_placeholder: 고용주, 고객, 부업
+      income_amount_label: 급여당 금액
+      income_due_on_label: 다음 월급날
+      income_account_label: 입금 계좌
+      income_frequency_hint: 급여를 받는 빈도입니다. 급여일에 맞게 날짜 세부 항목을 선택하세요.
+      income_frequency_label: 지급 빈도
+      income_frequency_new_hint: 급여일 세부 정보는 위 날짜를 기준으로 합니다. 저장 후 일정을 세부 조정할 수 있습니다.
+      income_notes_placeholder: 직접 입금, 두 계좌로 분할
+      income_notes_hint: 이 수입에 관해 기억해 둘 내용을 적으세요.
+      name_label: 이름
+      name_placeholder: 임대료, PG&E, Netflix
+      amount_label: 금액
+      first_due_on_label: 다음 납부일
+      account_label: 출금 계좌
+      account_blank: 모든 계좌
+      bill_type_label: 종류
+      installment_count_label: 결제 횟수
+      installment_count_hint: 이 횟수만큼 결제하면 계획이 종료되며, 그때까지 진행 상황이 표시됩니다.
+      renews_on_label: 갱신일
+      trial_ends_on_label: 체험판 종료
+      amount_edit_hint: 앞으로 납부 기한이 도래하는 청구서부터 적용됩니다. 기한이 이미 도래한 항목의 금액은 유지됩니다.
+      income_amount_edit_hint: 앞으로 도래하는 급여일부터 적용됩니다. 지급일이 이미 도래한 항목의 금액은 유지됩니다.
+      cancelled_on_label: 취소일
+      cancelled_on_hint: 날짜를 기록하는 것은 참고용입니다. 향후 청구서가 표시되지 않도록 하려면 청구서를 일시 중지하세요.
+      category_blank: 카테고리 없음
+      frequency_new_hint: 날짜 세부정보는 위의 마감일을 기준으로 합니다. 저장 후 일정을 구체화할 수 있습니다.
+      frequency_label: 빈도
+      frequency_hint: 청구서의 납부 주기입니다. 명세서와 일치하도록 날짜를 선택하세요.
+      frequency_day_label: 날짜
+      frequency_interval_label: 반복 간격
+      frequency_interval_unit_label: 단위
+      frequency_second_day_label: 두 번째 날짜
+      frequency_weekday_label: 요일
+      frequency_month_label: 월
+    update:
+      success: 청구서가 업데이트되었습니다.
+      success_with_siblings:
+        one: 청구서가 업데이트되었으며 결제 링크가 다른 청구서 1개에 복사되었습니다.
+        other: 청구서가 업데이트되었으며 결제 링크가 다른 청구서 %{count}개에 복사되었습니다.
+    manage:
+      title: 청구서는 청구서 페이지에서 관리합니다
+      description: 청구서 페이지에서 항목을 등록하고 수정하거나 일시 중지하고 납부할 수 있습니다. 이 페이지에서는 자동 감지를 설정합니다.
+      cta: 모든 청구서 열기
+    settings:
+      enable_label: 반복 거래 활성화
+      enable_description: 반복 거래 패턴을 자동으로 감지하고 예상되는 향후 거래를 표시합니다.
+    settings_updated: 반복 거래 설정이 업데이트되었습니다.
+    info:
+      title: 자동 패턴 감지
+      manual_description: 위의 버튼을 사용하여 수동으로 패턴을 식별하거나 오래된 반복 거래를 정리할 수 있습니다.
+      automatic_description: 자동 식별은 다음 이후에도 실행됩니다.
+      triggers:
+      - CSV 가져오기를 완료한 경우(거래, 매매, 계좌 등)
+      - 연결 서비스의 동기화를 완료한 경우(Plaid, SimpleFIN 등)
+    identified: 반복 거래 패턴 %{count}개를 식별했습니다
+    identify_already_running: 감지가 이미 실행 중입니다. 잠시 후에 다시 확인하세요.
+    cleaned_up: 오래된 반복 거래 %{count}개를 정리했습니다.
+    marked_inactive: 일시 중지되었습니다. 재개하기 전까지 다시 표시되지 않습니다.
+    marked_active: 재개되었습니다.
+    deleted: 청구서가 삭제되었습니다. 거래는 변경되지 않았습니다.
+    deleted_income: 수입이 삭제되었습니다. 거래 내역은 유지됩니다.
+    confirm_delete: 청구서에서 %{name} 항목을 제거하시겠습니까? 거래는 그대로 유지됩니다. 청구서와 결제 일정만 제거됩니다.
+    confirm_delete_income: "%{name} 수입을 삭제하시겠습니까? 거래 내역은 그대로 유지되고 수입 항목과 일정만 삭제됩니다."
+    marked_as_recurring: 거래가 반복으로 표시되었습니다
+    already_exists: 이 패턴에 대한 수동 반복 거래가 이미 존재합니다.
+    already_covered: 이 거래는 이미 반복 거래와 일치합니다.
+    creation_failed: 반복 거래를 생성하지 못했습니다. 거래 세부 정보를 확인한 후 다시 시도해 주세요.
+    unexpected_error: 반복 거래를 생성하는 동안 예상치 못한 오류가 발생했습니다.
+    amount_range: '범위: %{min} ~ %{max}'
+    empty:
+      title: 반복 거래가 없습니다.
+      description: 거래 내역에서 반복 거래를 자동으로 감지하려면 "패턴 식별"을 클릭하세요.
+    table:
+      merchant: 이름
+      amount: 금액
+      frequency: 빈도
+      next_date: 다음 날짜
+      last_occurrence: 마지막 발생
+      status: 상태
+      actions: 작업
+    status:
+      active: 활성
+      inactive: 일시중지됨
+      suggested: 청구서 후보
+      paused: 일시중지됨
+      ended: 제외됨
+    suggested:
+      title: 새 청구서 후보
+      seen_count:
+        one: 1회 감지됨
+        other: "%{count}회 감지됨"
+      collapsed_hint: 검토하려면 탭하세요.
+      confirm: 청구서 추가
+      dismiss: 청구서 아님
+    suggested_income:
+      title: 새 수입 후보
+      confirm: 수입 추가
+      dismiss: 수입 아님
+    confirmed: 반복 거래에 청구서가 추가되었습니다.
+    confirmed_income: 반복 거래에 수입이 추가되었습니다
+    dismissed: 제외했습니다. 이 패턴은 다시 추천하지 않습니다.
+    badges:
+      manual: 수동
+    transfer_marked_as_recurring: 이체가 반복으로 표시되었습니다
+    transfer_already_exists: 이 계좌 쌍에 대한 반복 이체가 이미 존재합니다.
+    transfer_creation_failed: 반복 이체를 생성하지 못했습니다. 이체 세부 정보를 확인한 후 다시 시도해 주세요.
+    transfer_feature_disabled: 이 가족에 대한 반복 거래가 비활성화되었습니다.

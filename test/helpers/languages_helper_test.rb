@@ -1,6 +1,10 @@
 require "test_helper"
 
 class LanguagesHelperTest < ActionView::TestCase
+  test "Korean can be selected by its native language name" do
+    assert_includes language_options, [ "한국어 (ko)", :ko ]
+  end
+
   # The zone list is cached per process with the offsets current when it was
   # built. Another test may have built it under travel_to, when some zones had
   # a different standard offset, so rebuild it at the real time.

@@ -1,0 +1,7 @@
+---
+ko:
+  assistant:
+    external:
+      model_catalog:
+        default_agent_label: 기본 에이전트(%{id})
+        named_agent_label: "%{name} (%{id})"

@@ -1,0 +1,75 @@
+---
+ko:
+  categories:
+    bootstrap:
+      success: 기본 카테고리가 성공적으로 생성되었습니다.
+    locked: 카테고리가 잠겨 있습니다. 새 카테고리를 추가하려면 잠금을 해제하세요.
+    toggle_lock:
+      locked: 카테고리가 잠겼습니다.
+      unlocked: 카테고리 잠금 해제됨
+    category:
+      delete: 카테고리 삭제
+      edit: 카테고리 수정
+    create:
+      success: 카테고리가 성공적으로 생성되었습니다.
+    destroy:
+      success: 카테고리가 삭제되었습니다.
+    edit:
+      edit: 카테고리 수정
+    form:
+      placeholder: 카테고리 이름
+      name_label: 이름
+      unassigned: "(할당되지 않음)"
+      parent_category_label: 상위 카테고리(선택사항)
+      trigger_label: 색상 및 아이콘 선택
+      color: 색상
+      icon: 아이콘
+      auto_adjust: 자동 조정.
+      poor_contrast: 대비가 좋지 않은 경우 더 어두운 색상을 선택하거나
+    destroy_all:
+      success: 모든 카테고리가 삭제되었습니다.
+    index:
+      bootstrap: 기본값 사용(권장)
+      categories: 카테고리
+      categories_expenses: 지출 카테고리
+      categories_incomes: 수입 카테고리
+      delete_all: 모두 삭제
+      empty: 카테고리를 찾을 수 없습니다
+      lock_categories: 카테고리 생성 잠금
+      locked_message: 카테고리 생성이 잠겨 있습니다. 가져오기 및 은행 동기화는 여전히 카테고리를 추가할 수 있습니다.
+      merge: 카테고리 병합
+      new: 새 카테고리
+      unlock_categories: 카테고리 생성 잠금 해제
+    merge:
+      title: 카테고리 병합
+      description: 대상 카테고리와 여기에 병합할 카테고리를 선택하세요. 해당 거래와 예산 항목이 대상 카테고리로 이동합니다.
+      target_label: 병합 대상
+      select_target: 대상 카테고리 선택...
+      sources_label: 병합할 카테고리
+      sources_hint: 선택한 카테고리는 거래와 예산 항목을 대상 카테고리로 옮긴 후 삭제됩니다. 대상 카테고리를 원본으로 선택하지 마세요.
+      submit: 선택 항목 병합
+    new:
+      new_category: 새 카테고리
+    perform_merge:
+      success:
+        one: "%{count} 카테고리를 성공적으로 병합했습니다."
+        other: "%{count} 카테고리를 성공적으로 병합했습니다."
+      no_categories_selected: 병합할 카테고리를 선택하지 않았습니다.
+      target_not_found: 대상 카테고리를 찾을 수 없습니다
+      invalid_categories: 잘못된 카테고리가 선택되었습니다.
+      target_selected_as_source: 대상과 소스에 대해 다른 카테고리를 선택하세요.
+    update:
+      success: 카테고리가 업데이트되었습니다.
+    virtual:
+      transfer: 이체
+      payment: 결제
+      trade: 매매
+  category:
+    dropdowns:
+      show:
+        bootstrap: 기본 카테고리 생성
+        empty: 카테고리를 찾을 수 없습니다
+        match_transfer: 이체/결제 연결
+        one_time: 일회성 %{type}
+        income: 수입
+        expense: 지출

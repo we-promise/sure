@@ -1,0 +1,39 @@
+---
+ko:
+  settings:
+    debugs:
+      show:
+        page_title: 디버그
+        title: 디버그 이벤트 로그
+        subtitle: 최고 관리자를 위한 의미 있는 운영 이벤트입니다. 최신순.
+        empty: 디버그 이벤트가 없습니다.
+        missing_value: "-"
+        filters:
+          all: 전체
+          category: 카테고리
+          level: 레벨
+          source: 소스
+          provider: 제공업체
+          start_date: 시작
+          end_date: 종료
+          family_id: 가족 ID
+          account_id: 계좌 ID
+          user_id: 사용자 ID
+          account_provider_id: 계좌 제공업체 ID
+          submit: 필터
+          reset: 초기화
+        table:
+          time: 시간
+          level: 레벨
+          category: 카테고리
+          source: 소스
+          message: 메시지
+          context: 맥락
+          metadata: 메타데이터
+          view_metadata: 보기
+        context:
+          provider: provider=%{value}
+          family: family=%{value}
+          account: account=%{value}
+          user: user=%{value}
+          account_provider: account_provider=%{value}

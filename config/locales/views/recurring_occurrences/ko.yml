@@ -1,0 +1,53 @@
+---
+ko:
+  recurring_occurrences:
+    history_status:
+      paid: 납부 완료
+      skipped: 건너뜀
+      missed: 미납
+      scheduled: 미결제
+    show:
+      due_on: '납부 기한: %{date}'
+      paid_of: "%{expected} 중 %{paid} 납부"
+      paid_headline: "%{amount} 납부 완료"
+      remaining: "%{amount} 남음"
+      settled: 전액 납부 완료
+      overpaid: 예상 금액 초과
+      skipped: 건너뜀
+      missed: 미납으로 표시됨
+      payments: 결제 내역
+      manual_payment: 수동 결제
+      unlink: 연결 해제
+      review_heading: 결제 검토
+      find_heading: 결제 찾기
+      add_heading: 다른 결제 추가
+      other_matches: 기타 가능성 있는 일치 항목
+      no_ranked_candidates: 이 청구서의 결제 내역으로 보이는 거래가 아직 없습니다.
+      search_all: 모든 거래 검색
+      search_placeholder: 거래 검색
+      no_candidates: 해당 날짜 부근에 연결할 거래가 없습니다.
+      no_search_results: "%{query}에 일치하는 항목이 없습니다."
+      link_payment: 결제 연결
+      not_this_one: 해당 항목 아님
+      cant_find: 거래를 찾을 수 없나요?
+      manual_explainer: 여기에 일치하는 거래가 없을 때 실제로 이루어진 결제를 기록하세요.
+      manual_amount_label: 금액
+      manual_date_label: 날짜
+      record_payment: 결제 기록
+      mark_paid: 결제 완료로 표시
+      mark_paid_hint: 거래를 기록하지 않고 나머지를 정산합니다.
+      skip: 건너뛰기
+      snooze_week: 일주일 후 다시 알림
+      reopen: 다시 열기
+      view_bill: 청구서 보기
+    mark_paid:
+      success: 청구서가 결제 완료로 표시됨
+    skip:
+      success: 청구서를 건너뛰었습니다.
+    reopen:
+      success: 청구서가 다시 열렸습니다.
+    snooze:
+      success: "%{date}까지 알림이 연기되었습니다."
+      invalid_date: 해당 날짜를 읽을 수 없습니다.
+    override_amount:
+      success: 예상 금액이 업데이트되었습니다.

@@ -1,0 +1,7 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        simplefin_account:
+          no_balance: SimpleFin 계좌에는 현재 잔액 또는 사용 가능한 잔액이 있어야 합니다.

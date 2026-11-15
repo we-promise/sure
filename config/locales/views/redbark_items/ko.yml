@@ -1,0 +1,184 @@
+---
+ko:
+  redbark_items:
+    default_name: Redbark 연결
+    sync_status:
+      no_accounts: 계좌를 찾을 수 없습니다
+      synced:
+        one: 계좌 %{count}개가 동기화되었습니다
+        other: 계좌 %{count}개가 동기화되었습니다
+      synced_with_setup: "%{linked}개 동기화됨, %{unlinked}개 설정 필요"
+    institution_summary:
+      none: 연결된 금융기관 없음
+      count:
+        one: 기관 %{count}곳
+        other: 기관 %{count}곳
+    errors:
+      provider_not_configured: Redbark 제공업체가 구성되지 않았습니다.
+    sync:
+      status:
+        importing: Redbark에서 계좌를 가져오는 중...
+        processing: 거래 처리 중...
+        calculating: 잔액 계산 중...
+        importing_data: 계좌 데이터를 가져오는 중...
+        checking_setup: 계좌 구성을 확인하는 중...
+        needs_setup: 계좌 %{count}개 설정 필요...
+      success: 동기화가 시작되었습니다
+    panel:
+      step_1: app.redbark.com의 설정 아래에서 API 키를 생성하세요.
+      step_2: 아래에 API 키를 입력하고 저장 버튼을 클릭하세요.
+      step_3: 성공적으로 연결되면 계좌 탭으로 이동하여 새 계좌를 설정하세요.
+      optional: "(선택사항)"
+      optional_with_default: "(선택 사항, 기본값은 %{default_value})"
+      save_button: 구성 저장
+      update_button: 구성 업데이트
+      fields:
+        api_key:
+          label: API 키
+          placeholder_new: rbk_live_...
+          placeholder_update: 업데이트하려면 새 API 키를 입력하세요.
+    create:
+      success: Redbark 연결이 성공적으로 생성되었습니다.
+    update:
+      success: Redbark 연결이 업데이트되었습니다.
+    destroy:
+      success: Redbark 연결이 제거되었습니다.
+      unlink_failed:
+        one: 계좌 %{count}개의 연결을 해제할 수 없습니다. 다시 시도해 주세요.
+        other: 계좌 %{count}개의 연결을 해제할 수 없습니다. 다시 시도해 주세요.
+    index:
+      title: Redbark 연결
+    loading:
+      loading_message: Redbark 계좌 로드 중...
+      loading_title: 로드 중
+    redbark_item:
+      accounts_need_setup: 계좌를 설정해야 합니다.
+      delete: 연결 삭제
+      deletion_in_progress: 삭제 중...
+      error: 오류
+      more_accounts_available:
+        one: 추가로 사용 가능한 계좌 %{count}개
+        other: 추가로 사용 가능한 계좌 %{count}개
+      no_accounts_description: 이 연결에는 아직 연결된 계좌가 없습니다.
+      no_accounts_title: 계좌 없음
+      provider_name: Redbark
+      requires_update: 연결에 업데이트가 필요함
+      setup_action: 새 계좌 설정
+      setup_description: 전체 %{total}개 계좌 중 %{linked}개가 연결되었습니다. 새로 가져온 Redbark 계좌의
+        계좌 유형을 선택하세요.
+      setup_needed: 새 계좌 설정 준비 완료
+      status: "%{timestamp} 전에 동기화됨"
+      status_never: 동기화되지 않음
+      status_with_summary: "%{timestamp} 전 마지막 동기화 - %{summary}"
+      syncing: 동기화 중...
+      total: 합계
+      unlinked: 연결 안 됨
+      update_credentials: 자격 증명 업데이트
+    select_accounts:
+      accounts_selected: 선택한 계좌
+      api_error: 'API 오류: %{message}'
+      cancel: 취소
+      configure_name_in_provider: 가져올 수 없습니다. Redbark에서 계좌 이름을 구성하세요.
+      description: "%{product_name} 계정에 연결할 계좌를 선택하세요."
+      link_accounts: 선택한 계좌 연결
+      no_accounts_found: 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_api_key: Redbark API 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_credentials_configured: 먼저 제공업체 설정에서 Redbark 자격 증명을 구성하세요.
+      no_name_placeholder: "(이름 없음)"
+      title: Redbark 계좌 선택
+    select_existing_account:
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      all_accounts_already_linked: 모든 Redbark 계좌가 이미 연결되어 있습니다.
+      api_error: 'API 오류: %{message}'
+      balance_label: '잔액:'
+      cancel: 취소
+      cancel_button: 취소
+      configure_name_in_provider: 가져올 수 없습니다. Redbark에서 계좌 이름을 구성하세요.
+      connect_hint: 자동 동기화를 활성화하려면 Redbark 계좌를 연결하세요.
+      description: 이 계좌와 연결할 Redbark 계좌를 선택하세요. 거래는 자동으로 동기화되고 중복 제거됩니다.
+      header: Redbark와 연결
+      link_account: 계좌 연결
+      link_button: 이 계좌를 연결하세요
+      linking_to: '연결 대상:'
+      no_account_specified: 지정된 계좌가 없습니다.
+      no_accounts: 아직 연결하지 않은 Redbark 계좌를 찾을 수 없습니다.
+      no_accounts_found: Redbark 계좌를 찾을 수 없습니다. API 키 구성을 확인하세요.
+      no_api_key: Redbark API 키가 구성되지 않았습니다. 설정에서 구성해 주세요.
+      no_credentials_configured: 먼저 제공업체 설정에서 Redbark 자격 증명을 구성하세요.
+      no_name_placeholder: "(이름 없음)"
+      settings_link: 제공업체 설정으로 이동
+      subtitle: Redbark 계좌를 선택하세요
+      title: "%{account_name}를 Redbark와 연결"
+    link_existing_account:
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      api_error: 'API 오류: %{message}'
+      invalid_account_name: 이름이 비어 있는 계좌는 연결할 수 없습니다.
+      provider_account_already_linked: 이 Redbark 계좌는 이미 다른 계좌에 연결되어 있습니다.
+      provider_account_not_found: Redbark 계좌를 찾을 수 없습니다
+      missing_parameters: 필수 매개변수가 누락되었습니다.
+      no_api_key: Redbark API 키를 찾을 수 없습니다. 제공업체 설정에서 구성하세요.
+      success: "%{account_name}를 Redbark와 성공적으로 연결했습니다."
+    setup_accounts:
+      account_type_label: '계좌 유형:'
+      accounts_count:
+        one: 사용 가능한 계좌 %{count}개
+        other: 사용 가능한 계좌 %{count}개
+      all_accounts_linked: 모든 Redbark 계좌는 이미 설정되었습니다.
+      api_error: 'API 오류: %{message}'
+      creating: 계좌를 만드는 중...
+      fetch_failed: 계좌를 가져오지 못했습니다.
+      import_selected: 선택한 계좌 가져오기
+      instructions: Redbark에서 가져올 계좌를 선택하세요. 여러 계좌를 선택할 수 있습니다.
+      no_accounts: 이 Redbark 연결에서 아직 연결하지 않은 계좌를 찾을 수 없습니다.
+      no_accounts_to_setup: 설정할 계좌가 없습니다
+      no_api_key: Redbark API 키가 구성되지 않았습니다. 연결 설정을 확인하세요.
+      select_all: 모두 선택
+      account_types:
+        skip: 이 계좌 건너뛰기
+        depository: 입출금 계좌 또는 저축 계좌
+        credit_card: 신용카드
+        loan: 대출 또는 모기지
+        other_asset: 기타 자산
+      subtype_labels:
+        depository: '계좌 하위 유형:'
+        credit_card: ''
+        loan: '대출 유형:'
+        other_asset: ''
+      subtype_messages:
+        credit_card: 신용카드는 자동으로 신용카드 계좌로 설정됩니다.
+        other_asset: 기타 자산에는 추가 옵션이 필요하지 않습니다.
+      subtypes:
+        depository:
+          checking: 입출금
+          savings: 저축
+          hsa: 건강 저축 계좌
+          cd: 정기예금(CD)
+          money_market: 머니마켓
+        loan:
+          mortgage: 모기지
+          student: 학자금대출
+          auto: 자동차대출
+          other: 기타대출
+      balance: 잔액
+      cancel: 취소
+      done: 완료
+      choose_account_type: 각 Redbark 계좌에 대해 올바른 계좌 유형을 선택하세요.
+      create_accounts: 계좌 만들기
+      creating_accounts: 계좌 생성 중...
+      historical_data_range: '과거 데이터 범위:'
+      subtitle: 가져온 계좌에 대한 올바른 계좌 유형을 선택하세요.
+      sync_start_date_help: 거래 내역을 동기화하려는 기간을 선택하세요.
+      sync_start_date_label: '거래 동기화 시작일:'
+      title: Redbark 계좌 설정
+    setup_required:
+      title: Redbark를 먼저 연결하세요.
+      not_configured_title: Redbark가 아직 연결되지 않았습니다.
+      not_configured_description: 제공업체 설정에서 Redbark API 키를 추가한 다음 여기로 돌아와 계좌를 연결하세요.
+      go_to_provider_settings: 제공업체 설정으로 이동
+    complete_account_setup:
+      all_skipped: 모든 계좌를 건너뛰었습니다. 생성된 계좌가 없습니다.
+      creation_failed: '계좌 생성 실패: %{error}'
+      creation_failed_generic: 계좌를 생성하지 못했습니다.
+      setup_failed: 계좌 %{count}개를 생성하지 못했습니다. 다른 사항은 변경되지 않았습니다. 문제를 해결한 후 다시 시도하세요.
+      no_accounts: 설정할 계좌가 없습니다.
+      success: 계좌 %{count}개를 생성했습니다.

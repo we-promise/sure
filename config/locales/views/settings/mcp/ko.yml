@@ -1,0 +1,23 @@
+---
+ko:
+  settings:
+    mcp:
+      show:
+        page_title: MCP 서버
+        connect_title: AI 어시스턴트 연결
+        connect_subtitle: 이 URL을 Claude.ai(또는 MCP 호환 클라이언트)에 붙여넣어 Sure 계정에 연결하세요.
+        copy_url: 복사
+        copied: 복사했습니다!
+        how_to_connect_title: Claude 연결 방법
+        step_1: Claude.ai를 열고 설정 → 사용자 정의 → 커넥터로 이동하세요.
+        step_2: '"커넥터 추가"를 클릭하고 위의 MCP 서버 URL을 붙여넣습니다.'
+        step_3: 연결을 클릭하면 로그인하고 액세스 권한을 부여하기 위해 Sure로 리디렉션됩니다.
+        step_4: 승인하면 Claude가 계좌, 거래 및 잔액 데이터를 읽을 수 있습니다.
+        connected_title: 연결된 클라이언트
+        connected_subtitle: 이 앱은 현재 Sure 데이터에 액세스할 수 있습니다. 더 이상 사용하지 않는 항목은 취소하세요.
+        unknown_client: 알 수 없는 클라이언트
+        connected_ago: "%{time} 전에 연결됨"
+        revoke: 취소
+        revoke_confirm: 이 클라이언트의 액세스 권한을 취소하시겠습니까?
+      revoke:
+        revoked: 연결이 취소되었습니다.

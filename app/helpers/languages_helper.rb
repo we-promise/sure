@@ -41,7 +41,7 @@ module LanguagesHelper
     id: "Indonesian",
     it: "Italian",
     ja: "Japanese",
-    ko: "Korean",
+    ko: "한국어",
     lt: "Lithuanian",
     lv: "Latvian",
     'mi-NZ': "Maori (New Zealand)",
@@ -156,6 +156,7 @@ module LanguagesHelper
 
   # Locales with complete/extensive translations
   SUPPORTED_LOCALES = [
+    "ko",   # Korean
     "en",   # English
     "fr",   # French
     "de",   # German

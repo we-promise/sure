@@ -1,0 +1,50 @@
+---
+ko:
+  settings:
+    background_jobs:
+      show:
+        page_title: 백그라운드 작업
+        title: 작업 프로세스 상태
+        subtitle: Sidekiq의 실시간 실행 상태입니다. 작업 프로세스, 대기열 작업 수, 재시도 및 최종 실패 작업을 표시합니다.
+        redis_unreachable: Sidekiq 상태를 사용할 수 없습니다(Redis에 연결할 수 없음). 활성 상태를 알 수 없으므로
+          작업이 비활성화됩니다.
+        operations_title: 진행 중인 작업
+        operations_subtitle: 모든 가족의 동기화·가져오기·내보내기 중 아직 완료되거나 종료되지 않은 작업입니다. 실행 중인
+          백그라운드 작업 없이 30분 넘게 활동이 없으면 작업이 유실된 것으로 보고 표시할 수 있습니다.
+        empty: 진행 중인 작업이 없습니다.
+        missing_value: "-"
+        stats:
+          workers: 작업 프로세스
+          busy: 실행 중
+          enqueued: 대기열에 추가됨
+          retries: 재시도
+          scheduled: 예정됨
+          dead: 최종 실패
+          queue_label: "%{name}: %{size} · 지연 %{latency}초"
+        table:
+          type: 작업
+          family: 가족
+          status: 상태
+          last_activity: 마지막 활동
+          liveness: 활성 상태
+          action: 작업
+      operation:
+        ago: "%{time} 전"
+        sync_label: 동기화 · %{type}
+        running: 실행 중
+        queued: 대기 중
+        recent: 최근
+        unknown: 알 수 없음
+        stuck: 진행 멈춤 — 유실 추정
+        confirm: 이 작업을 유실된 것으로 표시하시겠습니까? 재시도할 수 있도록 기록을 종료 상태로 변경합니다. 원본 데이터는 변경되지
+          않습니다.
+        missing_value: "-"
+        actions:
+          mark_stale: 오래됨으로 표시
+          mark_failed: 실패로 표시
+          release_claim: 작업 점유 해제
+      cancel:
+        cancelled: "%{type} 작업을 유실된 것으로 표시했습니다."
+        not_cancellable: 지금은 이 작업을 수정할 수 없습니다. 해당 작업이 아직 대기열에 있거나 실행 중일 수 있습니다. 30분
+          동안 유휴 상태가 된 후 다시 시도하세요.
+        cancelled_error: 관리자에 의해 실패로 표시됨 - 백그라운드 작업이 손실된 것으로 추정됩니다.

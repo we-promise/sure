@@ -1,0 +1,144 @@
+---
+ko:
+  properties:
+    edit:
+      edit: "%{account} 편집"
+      title: 부동산 직접 입력
+    form:
+      address_line1: 거리 주소
+      address_line1_placeholder: 123 메인 스트리트
+      area: 주거 면적
+      area_placeholder: '2000'
+      area_unit: 측정 단위
+      country: 국가
+      country_placeholder: 미국
+      locality: 도시
+      locality_placeholder: 샌프란시스코
+      none: 없음
+      postal_code: 우편번호
+      postal_code_placeholder: '94105'
+      region: 주/도
+      region_placeholder: 캘리포니아
+      subtype_prompt: 부동산 유형 선택
+      year_built: 건축 연도
+      year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+      chimnie: Chimnie
+    new:
+      title: 부동산 직접 입력
+      next: 다음
+      avm_option: "%{provider}를 통해 추가"
+      avm_title: "%{provider}를 통해 부동산 추가"
+      avm_description: 부동산 이름과 주소를 입력하세요. %{provider}가 부동산 세부정보와 예상 시장 가치를 찾아드립니다.
+      avm_us_only: "%{provider}는 미국에 있는 부동산만 지원합니다."
+      avm_uk_only: "%{provider}는 영국에 위치한 주거용 부동산만 지원합니다."
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_uprn_help: 고유 부동산 참조 번호(최대 12자리)는 모든 영국 주소를 식별합니다. GeoPlace의 findmyaddress.co.uk에서
+        찾거나 지역 의회에 문의하세요. %{provider}는 이를 사용하여 부동산의 가치를 무료로 평가합니다.
+      avm_county_label: 카운티(선택사항)
+      avm_town_label: 마을 또는 도시
+      avm_postcode_label: 우편번호
+      avm_submit: 부동산을 찾아보세요
+      avm_preview_title: 부동산 세부정보 확인
+      avm_preview_description: "%{provider}가 찾은 정보입니다. 부동산을 추가하기 전에 세부정보를 확인하세요. 아직
+        생성된 항목은 없습니다."
+      avm_preview_no_record: "%{provider}는 이 주소에서 부동산 기록을 찾을 수 없으므로 표시된 값은 주변 지역을
+        기준으로 한 추정치입니다. 계속하기 전에 주소를 다시 확인하세요."
+      avm_preview_back: 뒤로
+      avm_preview_uprn: UPRN
+      avm_preview_range: 추정 범위
+      avm_preview_confidence: 신뢰도
+      avm_confidence:
+        high: 높음
+        medium: 중간
+        low: 낮음
+      avm_attribution_chimnie: Chimnie가 제공한 평가 데이터입니다. Open Government Licence v3.0에
+        따라 사용이 허가된 OS 데이터 © Crown 저작권 및 데이터베이스 권리, Royal Mail 데이터 © Royal Mail 저작권
+        및 데이터베이스 권리, HM Land Registry 데이터 © Crown 저작권 및 데이터베이스 권리가 포함되어 있습니다.
+      avm_preview_confirm: 부동산 추가
+    address:
+      title: 부동산 직접 입력
+      address_line1_label: 주소 입력란 1
+      address_line1_placeholder: 123 메인 스트리트
+      city_label: 도시
+      city_placeholder: 샌프란시스코
+      state_region_label: 주/지역
+      state_region_placeholder: 캘리포니아
+      postal_code_label: 우편번호
+      postal_code_placeholder: '12345'
+      country_label: 국가
+      country_placeholder: 미국
+      save: 저장
+    balances:
+      title: 부동산 직접 입력
+      market_value_label: 예상 시장 가치
+      market_value_tooltip: 부동산의 예상 시장 가치입니다. 이 숫자는 Zillow 또는 Redfin과 같은 사이트에서 흔히
+        찾을 수 있으며 정확한 숫자는 아닙니다.
+      save: 저장
+      next: 다음
+    overview_fields:
+      name_label: 이름
+      name_placeholder: 별장
+      subtype_prompt: 유형 선택
+      property_type_label: 부동산 유형
+      year_built_label: 건축 연도(선택사항)
+      year_built_placeholder: '1990'
+      area_label: 면적(선택사항)
+      area_placeholder: '1200'
+      square_feet: 평방 피트
+      square_meters: 평방미터
+      area_unit_label: 면적 단위
+    overview:
+      living_area: 주거 면적
+      market_value: 시장 가치
+      purchase_price: 구매 가격
+      trend: 동향
+      unknown: 알 수 없음
+      year_built: 건축연도
+    tabs:
+      overview:
+        living_area: 주거 면적
+        market_value: 시장 가치
+        purchase_price: 구매 가격
+        trend: 동향
+        unknown: 알 수 없음
+        year_built: 건축연도
+        edit_account_details: 계좌 세부정보 수정
+        refresh_valuation: 가치평가 새로고침
+        valuation_source: "%{provider}의 평가액 · 최종 업데이트 %{date}"
+        link_valuation: "%{provider}를 통해 평가액 자동 업데이트"
+        link_valuation_description: 이 부동산의 평가액은 현재 수동으로만 업데이트됩니다.
+    refresh_valuation:
+      queued: 평가 갱신이 시작되었습니다. 새로운 값이 곧 나타납니다.
+      not_linked: 이 부동산은 평가 제공자와 연결되어 있지 않습니다.
+      not_configured: "%{provider}가 구성되지 않았습니다. 이 평가를 새로 고치려면 설정 → 셀프 호스팅에 API 키를
+        추가하세요."
+    link_valuation:
+      linked: "%{provider}에 연결하고 부동산 평가액을 업데이트했습니다."
+      link_failed: "%{provider}에서 이 부동산의 가치를 평가할 수 없어 연결하지 못했습니다. 주소가 올바른지 확인한 후 다시
+        시도하세요."
+      not_linkable: 이 부동산은 해당 제공업체에 연결할 수 없습니다. 주소가 완전하게 입력되어 있고 지원 국가에 있는지, 계좌 통화가
+        제공업체와 일치하는지 확인하세요.
+    subtypes:
+      apartment:
+        short: 아파트
+        long: 아파트
+      plot:
+        short: 토지
+        long: 대지 / 토지
+      commercial:
+        short: 상업용
+        long: 상업용 부동산
+      rented:
+        short: 임대
+        long: 임대 부동산
+      agri_land:
+        short: 농지
+        long: 농업용지
+    form_tabs:
+      address: 주소
+      overview: 개요
+      value: 평가액

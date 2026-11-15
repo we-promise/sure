@@ -1,0 +1,7 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        indexa_capital_item:
+          credentials_required: INDEXA_API_TOKEN 환경 변수 또는 사용자 이름/문서/비밀번호 인증 정보가 필요합니다.

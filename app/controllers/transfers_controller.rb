@@ -456,7 +456,7 @@ class TransfersController < ApplicationController
         fee_tx = @transfer.fee_transactions.find { |t| t.entry.account_id == account.id }
         fee_tx&.destroy!
       elsif old_fee == 0 && new_fee > 0
-        fee_category = account.family.categories.find_or_create_by!(name: I18n.t("models.category.defaults.fees"))
+        fee_category = account.family.categories.find_or_create_fees!
         fee_tx = Transaction.new(
           kind: "standard",
           category: fee_category,

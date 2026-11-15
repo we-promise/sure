@@ -1,0 +1,9 @@
+---
+ko:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: 최근에 이메일 주소 변경을 요청하셨습니다. 변경사항을 확인하려면 아래 버튼을 클릭하세요.
+      cta: 이메일 변경 확인
+      expiry_notice: 이 링크는 %{hours} 시간 후에 만료됩니다.
+      greeting: 안녕하세요!
+      subject: "%{product_name}: 이메일 변경 확인"

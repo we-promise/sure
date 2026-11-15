@@ -1,0 +1,12 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        sso_provider:
+          attributes:
+            settings:
+              saml_url_required: SAML 제공업체에는 IdP 메타데이터 URL 또는 IdP SSO URL이 필요합니다.
+              saml_cert_required: 메타데이터 URL을 사용하지 않는 경우 IdP 인증서 또는 인증서 지문이 필요합니다.
+              metadata_url_invalid: IdP 메타데이터 URL은 유효한 URL이어야 합니다.
+              sso_url_invalid: IdP SSO URL은 유효한 URL이어야 합니다.

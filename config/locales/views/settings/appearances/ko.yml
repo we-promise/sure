@@ -1,0 +1,33 @@
+---
+ko:
+  settings:
+    appearances:
+      show:
+        page_title: 화면 설정
+        theme_title: 테마
+        theme_subtitle: 앱에 대해 선호하는 테마를 선택하세요
+        theme_dark: 어둡게
+        theme_light: 밝게
+        theme_system: 시스템 설정
+        modals_title: 모달
+        modals_subtitle: 모달 동작 사용자 정의
+        disable_modal_click_outside_title: 외부 클릭 시 모달을 열어두기
+        disable_modal_click_outside_description: 외부를 클릭할 때 모달이 닫히는 것을 방지합니다. 저장되지
+          않은 변경 사항이 실수로 손실되는 것을 방지하는 데 유용합니다.
+        transactions_title: 거래 내역
+        transactions_subtitle: 거래 표시 방법 맞춤설정
+        dashboard_title: 대시보드
+        dashboard_subtitle: 대시보드 표시 방법 사용자 정의
+        dashboard_two_column_title: 2열 레이아웃
+        dashboard_two_column_description: 각 위젯 헤더의 위젯별 너비 및 높이 제어 기능을 사용하여 대형 화면에
+          대시보드 위젯을 두 개의 열로 표시합니다. 끄면 위젯이 단일 열에 쌓입니다.
+        dashboard_account_groups_title: 기본적으로 펼쳐서 표시
+        dashboard_account_groups_description: 선택한 계좌 섹션을 대시보드와 계좌 사이드바에서 기본적으로 펼쳐서
+          표시합니다. 언제든지 직접 접을 수 있습니다.
+        split_grouped_title: 분할 거래 묶어서 표시
+        split_grouped_description: 거래 목록에서 분할 거래를 상위 거래 아래에 묶어 표시합니다. 끄면 분할된 하위 거래가
+          개별 행으로 표시됩니다.
+        auto_generate_transaction_names_title: 거래 이름 자동 생성
+        auto_generate_transaction_names_description: '직접 입력하는 거래의 이름을 비워 두면 선택한 카테고리와
+          가맹점으로 자동 생성합니다(예: "엔터테인먼트 - Netflix"). 둘 다 선택하지 않았다면 이름을 입력해야 합니다. 가족 전체에
+          적용되며 새 거래에만 영향을 줍니다.'

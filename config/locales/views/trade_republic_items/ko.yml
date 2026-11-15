@@ -1,0 +1,182 @@
+---
+ko:
+  providers:
+    trade_republic:
+      name: Trade Republic
+      connection_description: 보안 웹 로그인을 통해 Trade Republic 투자 계좌를 연결하세요
+      institution_name: Trade Republic
+  trade_republic_items:
+    portfolio_categories:
+      brokerage: 증권 계좌
+      private_markets: 비상장 투자 시장
+      interest_products: 이자 수익 상품
+      crypto_wallet: 암호화폐 지갑
+    duplicate_connection: 이 Trade Republic 계좌는 이미 연결되어 있습니다. 새 연결이 제거되었습니다.
+    defaults:
+      name: Trade Republic
+    trade_republic_item:
+      deletion_in_progress: 삭제 진행 중
+      syncing: 동기화 중
+      requires_update: 재인증 필요
+      session_expires_in: 로그인이 %{time} 후 만료됩니다(%{at}).
+      error: 오류
+      synced: "%{time} 전에 동기화되었습니다. %{summary}."
+      never_synced: 동기화되지 않았습니다.
+      setup_accounts: 계좌 설정
+      delete: 삭제
+      accounts_need_setup: 계좌 설정 필요
+      accounts_need_setup_description: Trade Republic 계좌는 Sure 계좌에 연결되어야 합니다.
+      no_accounts_discovered: 아직 발견된 Trade Republic 계좌가 없습니다.
+      no_accounts_discovered_description: 로그인을 완료하고 동기화를 실행하여 계좌를 찾으세요.
+      data_quality:
+        title: 데이터 품질 및 동기화 세부정보
+        repair: 가져온 데이터 복구
+        positions:
+          one: 보유 종목 %{count}개
+          other: 보유 종목 %{count}개
+        unpriced:
+          one: 현재 가격 없음 %{count}개
+          other: 현재 가격 없음 %{count}개
+        events:
+          one: 거래 내역 %{count}건
+          other: 거래 내역 %{count}건
+        unknown:
+          one: 유형 미상 거래 %{count}건
+          other: 유형 미상 거래 %{count}건
+        pending_trade_details:
+          one: 투자 거래 %{count}건의 상세정보 대기 중
+          other: 투자 거래 %{count}건의 상세정보 대기 중
+        expenses:
+          one: 지난 30일간 지출 %{count}건(%{amount})
+          other: 지난 30일간 지출 %{count}건(%{amount})
+        reconciliation: 계좌 %{total}개 중 %{matched}개의 잔액 대사 완료
+        sync_history: 최근 동기화
+        sync_status:
+          completed: 완료됨
+          failed: 실패
+          pending: 대기 중
+          syncing: 동기화 중
+          stale: 오래됨
+    setup_accounts:
+      page_title: Trade Republic 계좌 설정
+      dialog_title: Trade Republic 계좌 설정
+      subtitle: Trade Republic 투자 계좌를 연결하세요.
+      info_box:
+        title: Trade Republic 가져오기
+        items:
+          item_1: 현재 가격과 수량을 포함한 보유 종목
+          item_2: 체결된 매매 내역(매수 및 매도)
+          item_3: 입금, 출금 및 이자 지급
+      status:
+        fetching_accounts: Trade Republic에서 계좌를 가져오는 중...
+        no_accounts_found_title: 계좌를 찾을 수 없습니다.
+        no_accounts_found_description: Sure는 Trade Republic 계좌를 찾을 수 없습니다. 세션이 아직
+          유효한지 확인하세요.
+      available_accounts:
+        title: 사용 가능한 계좌
+        account_type_investment: 투자 포트폴리오
+        account_type_cash: 현금 계좌
+        account_type_crypto: 암호화폐 계좌
+        account_summary: "%{account_type} • 잔액: %{balance}"
+        account_id: '계좌 ID: %{account_id}'
+      link_existing:
+        description: 또는 검색된 Trade Republic 계좌를 기존 수동 투자 계좌에 연결하세요.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: 계좌를 선택하세요...
+      linked_accounts:
+        title: 이미 연결됨
+        linked_to_html: '연결 대상: %{account}'
+      buttons:
+        refresh: 새로고침
+        cancel: 취소
+        back_to_settings: 설정으로 돌아가기
+        create_selected_accounts: 선택한 계좌 만들기
+        link: 연결
+        done: 완료
+    sync:
+      errors:
+        phone_number_missing: Trade Republic 전화번호가 누락되었습니다.
+        reauthentication_required: Trade Republic 세션이 없거나 만료되었습니다. 설정 > 제공업체에서 다시
+          연결하세요.
+      status:
+        checking_credentials: Trade Republic 자격 증명을 확인하는 중...
+        importing_account: Trade Republic 계좌를 가져오는 중...
+        checking_configuration: 계좌 구성을 확인하는 중...
+        accounts_need_setup:
+          one: 1개의 Trade Republic 계좌를 설정해야 합니다...
+          other: Trade Republic 계좌 %{count}개 설정 필요...
+        processing_activity: 보유 종목 및 거래 내역 처리 중...
+        calculating_balances: 잔액 계산 중...
+    repair:
+      scheduled: Trade Republic 데이터 복구가 예정되어 있습니다.
+    sync_status:
+      no_accounts: 아직 발견된 Trade Republic 계좌가 없습니다.
+      all_linked:
+        one: 계좌 1개 연결됨
+        other: 계좌 %{count}개 연결됨
+      partial: "%{linked}개 연결됨, %{unlinked}개 설정 필요"
+    select_existing_account:
+      title: Trade Republic 계좌 연결
+      no_accounts_available: 아직 연결하지 않은 Trade Republic 계좌가 없습니다.
+      run_sync_hint: 로그인을 완료하고 설정 > 제공업체에서 동기화를 실행하세요.
+      wait_for_sync: 계좌 검색 동기화가 완료될 때까지 기다립니다.
+      balance: 잔액
+      link: 연결
+      cancel: 취소
+    create:
+      success: Trade Republic 정보를 저장했습니다. 연결을 완료하려면 Trade Republic 앱에서 로그인을 승인하세요.
+    update:
+      success: Trade Republic 구성을 성공적으로 업데이트했습니다.
+      pin_required: 재인증하려면 Trade Republic PIN 또는 비밀번호를 입력하세요.
+    destroy:
+      success: Trade Republic 연결 삭제가 예약되었습니다.
+      unlink_failed: Trade Republic의 연결을 완전히 끊을 수 없습니다. 안전하게 재시도할 수 있도록 연결이 유지되었습니다.
+    select_accounts:
+      not_configured: Trade Republic이 구성되지 않았습니다.
+    initiate_login:
+      not_configured: Trade Republic이 구성되지 않았습니다.
+      pin_required: 새로운 로그인을 시작하려면 Trade Republic PIN 또는 비밀번호를 입력하세요.
+      verification_required: 로그인이 시작되었습니다. %{method}를 통해 확인한 후 로그인 확인을 누르세요.
+    initiate_qr_login:
+      not_configured: Trade Republic이 구성되지 않았습니다.
+    poll_login:
+      no_pending_login: 현재 보류 중인 로그인이 없습니다. 먼저 새로운 로그인을 시작하세요.
+      login_expired: 로그인 요청이 만료되었습니다. 다시 시작해주세요.
+    poll_qr_login:
+      no_pending_login: 보류 중인 QR 로그인이 없습니다.
+      success: Trade Republic이 성공적으로 연결되었습니다.
+    complete_login:
+      no_pending_login: 현재 보류 중인 로그인이 없습니다. 먼저 새로운 로그인을 시작하세요.
+      approval_pending: 아직 확인되지 않았습니다. Trade Republic 앱에서 로그인을 승인한 후 다시 시도하세요.
+      still_pending: 아직 확인되지 않았습니다. Trade Republic 앱에서 로그인을 승인한 후 다시 시도하세요.
+      success: Trade Republic이 성공적으로 연결되었습니다.
+      login_expired: 로그인 요청이 만료되었습니다. 다시 시작해주세요.
+    link_existing_account:
+      not_found: 계좌 또는 Trade Republic 구성을 찾을 수 없습니다.
+      only_manual_investment: 수동 투자 계좌만 Trade Republic에 연결할 수 있습니다.
+      already_linked: 이 Trade Republic 계좌는 이미 연결되어 있습니다.
+      success: Trade Republic 계좌에 성공적으로 연결되었습니다.
+      processing_failed: 계좌가 연결되었지만 초기 데이터 처리에 실패했습니다. 동기화가 예약되었습니다. 불완전한 상태로 남아 있으면
+        디버그 로그를 확인하세요.
+      failed: Trade Republic 계좌를 연결하지 못했습니다.
+    complete_account_setup:
+      success:
+        one: Trade Republic 계좌 %{count}개를 생성했습니다.
+        other: Trade Republic 계좌 %{count}개를 생성했습니다.
+      none_selected: 선택한 계좌가 없습니다.
+      none_created: 생성된 계좌가 없습니다.
+      partial_failure:
+        one: 선택한 Trade Republic 계좌 1개의 설정을 완료하지 못했습니다. 디버그 로그를 확인한 후 다시 시도하세요.
+        other: 선택한 Trade Republic 계좌 %{count}개의 설정을 완료하지 못했습니다. 디버그 로그를 확인한 후 다시 시도하세요.
+    activities:
+      labels:
+        contribution: 납입
+        withdrawal: 출금
+        interest: 이자
+        dividend: 배당금
+        card_payment: 카드결제
+        cash_withdrawal: 현금인출
+        card_fee: 카드수수료
+        card_refund: 카드 환불
+        tax_refund: 세금 환급
+        round_up: 잔돈 적립

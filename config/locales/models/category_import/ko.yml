@@ -1,0 +1,8 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        category_import:
+          own_parent: 카테고리 '%{name}'는 자체 상위 항목이 될 수 없습니다.
+          missing_columns: '필수 열 누락: %{columns}'

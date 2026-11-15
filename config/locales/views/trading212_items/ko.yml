@@ -1,0 +1,103 @@
+---
+ko:
+  providers:
+    trading212:
+      name: Trading 212
+      connection_description: API 키를 통해 Trading 212 투자 계좌 연결
+      institution_name: Trading 212
+  trading212_items:
+    defaults:
+      name: Trading 212
+    trading212_item:
+      deletion_in_progress: 삭제 진행 중
+      environment_label_live: 실계좌
+      environment_label_demo: 데모 계좌
+      syncing: 동기화 중
+      requires_update: API 키에 주의가 필요함
+      error: 오류
+      synced: "%{time} 전에 동기화되었습니다. %{summary}."
+      never_synced: 동기화되지 않았습니다.
+      setup_accounts: 계좌 설정
+      delete: 삭제
+      accounts_need_setup: 계좌 설정 필요
+      accounts_need_setup_description: Trading 212 계좌는 Sure 계좌에 연결되어야 합니다.
+      no_accounts_discovered: 아직 Trading 212 계좌가 발견되지 않았습니다.
+      no_accounts_discovered_description: 계좌를 찾으려면 API 키를 저장한 후 동기화를 실행하세요.
+    setup_accounts:
+      page_title: Trading 212 계좌 설정
+      dialog_title: Trading 212 계좌 설정
+      subtitle: Trading 212 투자 계좌를 연결하세요.
+      info_box:
+        title: Trading 212 API 가져오기
+        items:
+          item_1: 현재 가격과 수량을 포함한 보유 종목
+          item_2: 전체 주문 내역(매수 및 매도)
+          item_3: 배당금 및 현금거래
+      status:
+        fetching_accounts: Trading 212에서 계좌를 가져오는 중...
+        no_accounts_found_title: 계좌를 찾을 수 없습니다.
+        no_accounts_found_description: Sure는 Trading 212 계좌를 찾을 수 없습니다. API 키가 유효한지
+          확인하세요.
+      available_accounts:
+        title: 사용 가능한 계좌
+        account_type_investment: 투자
+        account_summary: "%{account_type} • 잔액: %{balance}"
+        account_id: '계좌 ID: %{account_id}'
+      link_existing:
+        description: 또는 검색된 Trading 212 계좌를 기존 수동 투자 계좌에 연결하세요.
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: 계좌를 선택하세요...
+      linked_accounts:
+        title: 이미 연결됨
+        linked_to_html: '연결 대상: %{account}'
+      buttons:
+        refresh: 새로고침
+        cancel: 취소
+        back_to_settings: 설정으로 돌아가기
+        create_selected_accounts: 선택한 계좌 만들기
+        link: 연결
+        done: 완료
+    sync:
+      status:
+        checking_credentials: Trading 212 자격 증명을 확인하는 중...
+        importing_account: Trading 212 계좌를 가져오는 중...
+        checking_configuration: 계좌 구성을 확인하는 중...
+        accounts_need_setup:
+          one: Trading 212 계좌 1개의 설정이 필요합니다…
+          other: Trading 212 계좌 %{count}개 설정 필요...
+        processing_activity: 보유 종목 및 거래 내역 처리 중...
+        calculating_balances: 잔액 계산 중...
+    sync_status:
+      no_accounts: 아직 Trading 212 계좌가 발견되지 않았습니다.
+      all_linked:
+        one: 계좌 1개 연결됨
+        other: 계좌 %{count}개 연결됨
+      partial: "%{linked}개 연결됨, %{unlinked}개 설정 필요"
+    select_existing_account:
+      title: Trading 212 계좌 연결
+      no_accounts_available: 아직 연결하지 않은 Trading 212 계좌가 없습니다.
+      run_sync_hint: API 키를 저장한 후 설정 > 제공업체에서 동기화를 실행하세요.
+      wait_for_sync: 계좌 검색 동기화가 완료될 때까지 기다립니다.
+      balance: 잔액
+      link: 연결
+      cancel: 취소
+    create:
+      success: Trading 212를 성공적으로 구성했습니다.
+    update:
+      success: Trading 212 구성을 성공적으로 업데이트했습니다.
+    destroy:
+      success: Trading 212 연결 삭제를 예약했습니다.
+    select_accounts:
+      not_configured: Trading 212가 설정되지 않았습니다.
+    link_existing_account:
+      not_found: 계좌 또는 Trading 212 설정을 찾을 수 없습니다.
+      only_manual_investment: Trading 212에는 수동 투자 계좌만 연결할 수 있습니다.
+      already_linked: 이 Trading 212 계좌는 이미 연결되어 있습니다.
+      success: Trading 212 계좌에 성공적으로 연결되었습니다.
+      failed: Trading 212 계좌 연결에 실패했습니다.
+    complete_account_setup:
+      success:
+        one: Trading 212 계좌 %{count}개를 생성했습니다.
+        other: Trading 212 계좌 %{count}개를 생성했습니다.
+      none_selected: 선택한 계좌가 없습니다.
+      none_created: 생성된 계좌가 없습니다.

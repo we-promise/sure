@@ -1,4 +1,5 @@
 <%# locals: (outflows_data:, period:) %>
+<% categories = localized_outflow_categories(outflows_data[:categories]) %>
 <div id="outflows-donut-section" class="@container">
   <div class="px-4">
     <div class="flex flex-col @2xl:flex-row gap-8 items-center">
@@ -6,7 +7,7 @@
       <div class="w-full @2xl:w-1/3 max-w-[300px] px-4">
         <div class="h-[300px] relative"
           data-controller="donut-chart"
-          data-donut-chart-segments-value="<%= outflows_data[:categories].to_json %>"
+          data-donut-chart-segments-value="<%= categories.to_json %>"
           data-donut-chart-segment-opacity-value="0.9"
           data-donut-chart-extended-hover-value="true"
           data-donut-chart-hover-extension-value="3"
@@ -26,7 +27,7 @@
               </div>
             </div>
 
-            <% outflows_data[:categories].each do |category| %>
+            <% categories.each do |category| %>
               <div id="segment_<%= category[:id] %>" class="hidden">
                 <div class="flex flex-col gap-2 items-center">
                   <p class="text-sm text-secondary"><%= category[:name] %></p>
@@ -47,7 +48,7 @@
       <div class="w-full @2xl:w-2/3 bg-container-inset rounded-xl p-1 space-y-1 overflow-x-auto">
         <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary">
           <div class="w-16 @2xl:w-40">
-            <p><%= t("pages.dashboard.outflows_donut.categories") %><span class="text-subdued mx-1">&middot;</span><%= outflows_data[:categories].count %></p>
+            <p><%= t("pages.dashboard.outflows_donut.categories") %><span class="text-subdued mx-1">&middot;</span><%= categories.count %></p>
           </div>
           <div class="ml-auto text-right flex items-center gap-6">
             <div class="w-16 @2xl:w-40">
@@ -59,7 +60,7 @@
           </div>
         </div>
         <div class="py-3 shadow-border-xs rounded-lg bg-container font-medium text-sm max-w-full">
-          <% outflows_data[:categories].each_with_index do |category, idx| %>
+          <% categories.each_with_index do |category, idx| %>
             <%
               category_content = capture do
             %>
@@ -107,7 +108,7 @@
                 <%= category_content %>
               </div>
             <% end %>
-            <% if idx < outflows_data[:categories].size - 1 %>
+            <% if idx < categories.size - 1 %>
               <%= render "shared/ruler", classes: "mx-3 @2xl:mx-4" %>
             <% end %>
           <% end %>

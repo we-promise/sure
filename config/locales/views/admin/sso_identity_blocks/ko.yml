@@ -1,0 +1,6 @@
+---
+ko:
+  admin:
+    sso_identity_blocks:
+      destroy:
+        success: SSO ID로 다시 로그인하거나 계정을 만들 수 있습니다.

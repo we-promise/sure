@@ -1,0 +1,82 @@
+---
+ko:
+  coinbase_items:
+    create:
+      default_name: Coinbase
+      success: Coinbase에 성공적으로 연결되었습니다! 계좌가 동기화되고 있습니다.
+    update:
+      success: Coinbase 구성이 성공적으로 업데이트되었습니다.
+    destroy:
+      success: Coinbase 연결 삭제가 예약되었습니다.
+    select_accounts:
+      connection_unavailable: 해당 Coinbase 연결을 사용할 수 없습니다. 제공업체 설정에서 하나를 선택하세요.
+      no_credentials_configured: 지갑을 추가하기 전에 제공업체 설정에서 Coinbase를 연결하세요.
+      select_connection: 제공업체 설정에서 Coinbase 연결을 선택하세요.
+    setup_accounts:
+      title: Coinbase 지갑 가져오기
+      subtitle: 추적할 지갑을 선택하세요
+      instructions: 가져오려는 지갑을 선택하세요. 선택하지 않은 지갑은 나중에 추가하려는 경우 계속 사용할 수 있습니다.
+      no_accounts: 모든 지갑을 가져왔습니다.
+      accounts_count:
+        one: 사용 가능한 지갑 %{count}개
+        other: 사용 가능한 지갑 %{count}개
+      select_all: 모두 선택
+      import_selected: 선택 항목 가져오기
+      cancel: 취소
+      creating: 가져오는 중...
+    complete_account_setup:
+      success:
+        one: 지갑 %{count}개를 가져왔습니다.
+        other: 지갑 %{count}개를 가져왔습니다.
+      none_selected: 선택한 지갑이 없습니다.
+      no_accounts: 가져올 지갑이 없습니다.
+    coinbase_item:
+      provider_name: Coinbase
+      syncing: 동기화 중...
+      reconnect: 자격 증명을 업데이트해야 합니다.
+      deletion_in_progress: 삭제 중...
+      sync_status:
+        no_accounts: 계좌를 찾을 수 없습니다
+        all_synced:
+          one: "%{count} 계좌가 동기화되었습니다"
+          other: "%{count} 계좌가 동기화되었습니다."
+        partial_sync: "%{linked_count} 동기화됨, %{unlinked_count} 설정 필요"
+      status: "%{timestamp} 전에 마지막으로 동기화됨"
+      status_with_summary: "%{timestamp} 전 마지막 동기화 - %{summary}"
+      status_never: 동기화되지 않음
+      update_credentials: 자격 증명 업데이트
+      delete: 삭제
+      no_accounts_title: 계좌를 찾을 수 없습니다
+      no_accounts_message: 동기화 후 Coinbase 지갑이 여기에 표시됩니다.
+      setup_needed: 지갑을 가져올 준비가 되었습니다.
+      setup_description: 추적하려는 Coinbase 지갑을 선택하세요.
+      setup_action: 지갑 가져오기
+      import_wallets_menu: 지갑 가져오기
+      more_wallets_available:
+        one: 추가로 가져올 수 있는 지갑 %{count}개
+        other: 추가로 가져올 수 있는 지갑 %{count}개
+    select_existing_account:
+      title: Coinbase 계좌 연결
+      no_accounts_found: Coinbase 계좌를 찾을 수 없습니다.
+      wait_for_sync: Coinbase가 동기화를 마칠 때까지 기다리세요
+      check_provider_health: Coinbase API 자격 증명이 유효한지 확인하세요.
+      balance: 잔액
+      currently_linked_to: '현재 링크된 곳: %{account_name}'
+      link: 연결
+      cancel: 취소
+    link_existing_account:
+      success: Coinbase 계좌에 성공적으로 연결되었습니다
+      errors:
+        only_manual: 수동 계좌만 Coinbase에 연결할 수 있습니다.
+        invalid_coinbase_account: 잘못된 Coinbase 계좌
+  coinbase_item:
+    syncer:
+      checking_credentials: 자격 증명 확인 중...
+      credentials_invalid: API 인증 정보가 올바르지 않습니다. API 키와 시크릿을 확인하세요.
+      importing_accounts: Coinbase에서 계좌를 가져오는 중...
+      checking_configuration: 계좌 설정을 확인하는 중...
+      accounts_need_setup:
+        one: 계좌 %{count}개의 설정이 필요합니다.
+        other: 계좌 %{count}개의 설정이 필요합니다.
+      processing_accounts: 계좌 데이터 처리 중...
+      calculating_balances: 잔액 계산 중...

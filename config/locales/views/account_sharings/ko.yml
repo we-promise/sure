@@ -1,0 +1,29 @@
+---
+ko:
+  account_sharings:
+    show:
+      title: 계좌 공유
+      subtitle: 이 계좌를 조회하고 사용할 수 있는 사용자를 관리하세요.
+      member: 회원
+      permission: 권한
+      shared: 공유됨
+      no_members: "%{moniker}에 공유할 다른 회원이 없습니다."
+      permissions:
+        full_control: 모든 권한
+        full_control_description: 거래를 보고, 편집하고, 관리할 수 있습니다.
+        read_write: 주석을 달 수 있음
+        read_write_description: 거래를 분류하고 태그와 메모를 추가할 수 있습니다.
+        read_only: 보기만 가능
+        read_only_description: 계좌 데이터만 볼 수 있습니다.
+      save: 공유 설정 저장
+      owner_label: '소유자: %{name}'
+      shared_with_count:
+        one: 회원 1명과 공유됨
+        other: 구성원 %{count}명과 공유됨
+      include_in_finances: 내 예산 및 보고서에 포함
+      exclude_from_finances: 내 예산 및 보고서에서 제외
+      finance_toggle_description: 이 계좌를 순자산, 예산 및 보고서에 포함합니다.
+    update:
+      success: 공유 설정이 업데이트되었습니다.
+      not_owner: 계좌 소유자만 공유를 관리할 수 있습니다.
+      finance_toggle_success: 금융 포함 환경설정이 업데이트되었습니다.

@@ -1,0 +1,213 @@
+---
+ko:
+  snaptrade_items:
+    default_name: SnapTrade 연결
+    destroy:
+      success: SnapTrade 연결 삭제가 예약되었습니다.
+    connect:
+      decryption_failed: SnapTrade 자격 증명을 읽을 수 없습니다. 이 연결을 삭제하고 다시 만드세요.
+      connection_failed: 'SnapTrade에 연결하지 못했습니다: %{message}'
+    callback:
+      success: 증권사가 연결되었습니다! 연결할 계좌를 선택하세요.
+      no_item: SnapTrade 구성을 찾을 수 없습니다.
+    complete_account_setup:
+      success:
+        one: 계좌 %{count}개를 연결했습니다.
+        other: 계좌 %{count}개를 연결했습니다.
+      partial_success:
+        one: 계좌 %{count}개를 연결했습니다. %{failed_count}개는 연결하지 못했습니다.
+        other: 계좌 %{count}개를 연결했습니다. %{failed_count}개는 연결하지 못했습니다.
+      link_failed: '계좌 연결 실패: %{errors}'
+      no_accounts: 연결할 계좌를 선택하지 않았습니다.
+    preload_accounts:
+      not_configured: SnapTrade가 구성되지 않았습니다.
+    select_accounts:
+      not_configured: SnapTrade가 구성되지 않았습니다.
+    oauth_authorize:
+      not_configured: SnapTrade 브라우저 인증에는 SNAPTRADE_OAUTH_CLIENT_ID와 SNAPTRADE_OAUTH_CLIENT_SECRET가
+        모두 필요합니다. 두 값을 설정하고 다시 시작하거나 기기 코드 인증을 사용하세요.
+    oauth_callback:
+      success: SnapTrade 인증이 완료되었습니다.
+      access_denied: SnapTrade 인증이 취소되었습니다.
+      state_mismatch: SnapTrade 인증이 보안 검사에 실패했습니다. 다시 시도해 주세요.
+      failed: SnapTrade 인증을 완료할 수 없습니다. 다시 시도해 주세요.
+    oauth_device_flow:
+      title: SnapTrade 연결
+      subtitle: 기기 코드로 Sure에 SnapTrade 접근 권한을 부여하세요.
+      instructions: SnapTrade를 열고 이 장치 코드를 확인한 다음 여기로 돌아와서 완료하세요.
+      code_label: 장치 코드
+      open_snaptrade: SnapTrade 열기
+      start_button: 승인 시작
+      complete_button: SnapTrade에서 승인했습니다
+      cancel_button: 취소
+      missing_client_id: SnapTrade OAuth가 구성되지 않았습니다. SNAPTRADE_OAUTH_CLIENT_ID를 .env.local에
+        추가하고 앱을 다시 시작한 후 다시 시도하세요.
+    start_oauth_device_flow:
+      failed: SnapTrade 장치 인증을 시작할 수 없습니다. 다시 시도해 주세요.
+    complete_oauth_device_flow:
+      success: SnapTrade 인증이 완료되었습니다.
+      device_code_required: 이 연결에 대해 진행 중인 SnapTrade 장치 인증이 없습니다. 새 코드를 받으려면 다시 시작하세요.
+      authorization_pending: SnapTrade에서 아직 승인이 확인되지 않았습니다. SnapTrade에서 코드를 승인한 후
+        다시 시도하세요.
+      expired: 이 장치 코드가 만료되었습니다. 인증을 다시 시작하세요.
+      access_denied: SnapTrade 인증이 거부되었습니다.
+      failed: SnapTrade 장치 인증을 완료할 수 없습니다. 다시 시도해 주세요.
+    select_existing_account:
+      not_found: 계좌 또는 SnapTrade 구성을 찾을 수 없습니다.
+      title: SnapTrade 계좌에 연결
+      header: 기존 계좌 연결
+      subtitle: 연결할 SnapTrade 계좌를 선택하세요.
+      no_accounts: 아직 연결하지 않은 SnapTrade 계좌가 없습니다.
+      connect_hint: 먼저 증권사를 연결해야 할 수 있습니다.
+      settings_link: 제공업체 설정으로 이동
+      linking_to: '연결할 계좌:'
+      balance_label: '잔액:'
+      link_button: 연결
+      cancel_button: 취소
+    link_existing_account:
+      success: SnapTrade 계좌에 성공적으로 연결되었습니다.
+      failed: '계좌 연결 실패: %{message}'
+      not_found: 계좌를 찾을 수 없습니다.
+    connections:
+      unknown_brokerage: 알 수 없는 증권사
+    delete_connection:
+      success: 연결이 삭제되었습니다. 슬롯 1개가 확보되었습니다.
+      failed: '연결 삭제 실패: %{message}'
+      missing_authorization_id: 승인 ID가 누락되었습니다.
+      api_deletion_failed: SnapTrade에서 연결을 삭제할 수 없습니다. 이 항목에 접근 권한이 없습니다. SnapTrade
+        계정에 연결이 남아 있을 수 있습니다.
+    setup_accounts:
+      title: SnapTrade 계좌 설정
+      header: SnapTrade 계좌 설정
+      subtitle: 연결할 증권 계좌를 선택하세요.
+      syncing: 계좌를 가져오는 중...
+      loading: SnapTrade에서 계좌를 가져오는 중...
+      loading_hint: 계좌를 확인하려면 새로 고침을 클릭하세요.
+      refresh: 새로고침
+      info_title: SnapTrade 투자 데이터
+      info_holdings: 현재 가격과 수량을 포함한 보유 종목
+      info_cost_basis: 종목별 취득 원가(제공되는 경우)
+      info_activities: 거래 유형(매수, 매도, 배당금 등)이 표시된 매매 내역
+      info_history: 최대 3년의 거래 내역
+      free_tier_note: SnapTrade 무료 요금제는 증권사 연결 20개를 지원합니다.
+      no_accounts_title: 계좌를 찾을 수 없습니다
+      no_accounts_message: 증권 계좌를 찾을 수 없습니다. 연결을 취소했거나 해당 증권사가 지원되지 않는 경우 발생할 수 있습니다.
+      try_again: 증권사 연결
+      back_to_settings: 설정으로 돌아가기
+      available_accounts: 사용 가능한 계좌
+      balance_label: '잔액:'
+      account_number: '계좌:'
+      account_type_label: 계좌 유형
+      account_types:
+        depository: 입출금 계좌 또는 저축 계좌
+        credit_card: 신용카드
+        investment: 투자 계좌
+        crypto: 암호화폐 계좌
+        loan: 대출 또는 신용 한도
+        other_asset: 기타 자산
+      sync_start_date_label: '거래 가져오기 시작일:'
+      sync_start_date_help: 사용 가능한 모든 내역을 가져오려면 비워 두세요
+      create_button: 선택한 계좌 만들기
+      cancel_button: 취소
+      creating: 계좌 생성 중...
+      done_button: 완료
+      or_link_existing: 또는 새 계좌를 만드는 대신 기존 계좌에 연결하세요.
+      select_account: 계좌를 선택하세요...
+      link_button: 연결
+      linked_accounts: 이미 연결됨
+      linked_to: '연결됨:'
+    snaptrade_item:
+      accounts_need_setup:
+        one: 계좌 %{count}개 설정 필요
+        other: 계좌 %{count}개 설정 필요
+      deletion_in_progress: 삭제 진행 중...
+      syncing: 동기화 중...
+      requires_update: 연결에 업데이트가 필요함
+      error: 동기화 오류
+      status: "%{timestamp} 전 마지막 동기화 - %{summary}"
+      status_never: 동기화되지 않음
+      reconnect: 다시 연결
+      connect_brokerage: 증권사 연결
+      add_another_brokerage: 다른 증권사 연결
+      delete: 삭제
+      setup_needed: 계좌를 설정해야 합니다.
+      setup_description: SnapTrade의 일부 계좌를 Sure 계좌에 연결해야 합니다.
+      setup_action: 계좌 설정
+      setup_accounts_menu: 계좌 설정
+      manage_connections: 연결 관리
+      more_accounts_available:
+        one: 추가로 설정 가능한 계좌 %{count}개
+        other: 추가로 설정 가능한 계좌 %{count}개
+      no_accounts_title: 발견된 계좌가 없습니다
+      no_accounts_description: 증권사를 연결하여 투자 계좌를 가져오세요.
+  providers:
+    snaptrade:
+      name: SnapTrade
+      connection_description: SnapTrade를 통해 증권사 연결(25곳 이상 지원)
+      description: SnapTrade는 주요 증권사 25곳 이상(Fidelity, Vanguard, Schwab, Robinhood
+        등)에 연결하여 거래 유형과 취득 원가를 포함한 전체 매매 내역을 제공합니다.
+      oauth_setup_step_1_html: <a href="https://dashboard.snaptrade.com" target="_blank"
+        rel="noopener noreferrer" class="underline">dashboard.snaptrade.com</a>에서
+        OAuth 앱을 등록하세요.
+      oauth_setup_step_2_html: '브라우저 흐름에만 해당: 이 앱의 콜백 URL(<code>%{callback_url}</code>)을
+        등록된 리디렉션 URI로 추가합니다.'
+      oauth_setup_step_3: 환경 변수 SNAPTRADE_OAUTH_CLIENT_ID를 설정하고 다시 시작하세요. 이 설정만으로
+        기기 코드 인증을 사용할 수 있습니다. 브라우저 인증도 사용하려면 SNAPTRADE_OAUTH_CLIENT_SECRET를 추가하세요
+      free_tier_warning: SnapTrade 무료 요금제는 증권사 연결 20개를 지원합니다.
+      oauth_title: SnapTrade OAuth
+      oauth_status_ready: SnapTrade 계정 데이터를 읽을 수 있도록 Sure에 권한을 부여하세요.
+      oauth_status_ready_device: SnapTrade 계정 데이터를 읽으려면 장치 코드로 Sure에 권한을 부여하세요.
+      oauth_status_authorized: SnapTrade 승인이 완료되었습니다.
+      oauth_connect_button: SnapTrade와 연결
+      oauth_device_button: 장치 코드 사용
+      oauth_reauthorize_button: 재승인
+      status_connected:
+        one: SnapTrade 계좌 %{count}개
+        other: SnapTrade 계좌 %{count}개
+      needs_setup:
+        one: "%{count}개 설정 필요"
+        other: "%{count}개 설정 필요"
+      status_ready: 증권사 연결 준비 완료
+      setup_accounts_button: 계좌 설정
+      connect_button: 증권사 연결
+      connected_brokerages: '연결됨:'
+      manage_connections: 연결 관리
+      loading_connections: 연결 로드 중...
+      connections_error: '연결을 로드하지 못했습니다: %{message}'
+      accounts_count:
+        one: 계좌 %{count}개
+        other: 계좌 %{count}개
+      orphaned_connection: 분리된 연결(로컬로 동기화되지 않음)
+      needs_linking: 연결이 필요합니다
+      no_connections: 증권사 연결을 찾을 수 없습니다.
+      delete_connection: 삭제
+      delete_connection_title: 증권사 연결을 삭제하시겠습니까?
+      delete_connection_body: SnapTrade에서 %{brokerage} 연결이 영구적으로 삭제됩니다. 이 증권사의 모든
+        계좌 연결이 해제되며, 다시 동기화하려면 재연결해야 합니다.
+      delete_connection_confirm: 연결 삭제
+      manage_at_snaptrade: SnapTrade에서 연결 관리
+  snaptrade_item:
+    sync_status:
+      no_accounts: 계좌를 찾을 수 없습니다
+      synced:
+        one: 계좌 %{count}개가 동기화되었습니다
+        other: 계좌 %{count}개가 동기화되었습니다
+      synced_with_setup: "%{linked}개 동기화됨, %{unlinked}개 설정 필요"
+    institution_summary:
+      none: 연결된 금융기관 없음
+      count:
+        one: 기관 %{count}곳
+        other: 기관 %{count}곳
+    brokerage_summary:
+      none: 연결된 증권사 없음
+      count:
+        one: 증권사 %{count}곳
+        other: 증권사 %{count}곳
+    syncer:
+      discovering: 계좌 검색 중...
+      importing: SnapTrade에서 계좌를 가져오는 중...
+      processing: 보유 종목 및 거래 내역 처리 중...
+      calculating: 잔액 계산 중...
+      checking_config: 계좌 설정 확인 중...
+      needs_setup: 계좌 %{count}개 설정 필요...
+      activities_fetching_async: 거래 내역을 백그라운드에서 가져오는 중입니다. 새 증권사 연결은 최대 1분이 걸릴 수 있습니다.

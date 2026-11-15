@@ -1,0 +1,120 @@
+---
+ko:
+  account_statements:
+    account_tab:
+      coverage_title: 명세서 적용 범위
+      coverage_description: 업로드한 명세서와 잔액 확인으로 기록이 검증된 과거 월입니다.
+      coverage_range: "%{start} - %{end}"
+      empty: 아직 이 계좌에 연결된 명세서가 없습니다.
+      open_inbox: 받은편지함
+      statements_title: 명세서
+      year_label: 명세서 적용 연도
+    balance:
+      unknown: 알 수 없음
+    coverage:
+      status:
+        ambiguous: 모호함
+        covered: 명세서 있음
+        duplicate: 중복
+        mismatched: 일치하지 않음
+        missing: 누락
+        not_expected: 예상되지 않음
+    create:
+      duplicates:
+        one: 중복 명세서 1개를 건너뛰었습니다.
+        other: 중복 명세서 %{count}개를 건너뛰었습니다.
+      invalid_file_type: 크기 제한 이하의 PDF, CSV 또는 XLSX 명세서를 업로드하세요.
+      no_files: 명세서 파일을 하나 이상 선택하세요.
+      success:
+        one: 명세서 1개가 업로드되었습니다.
+        other: 명세서 %{count}개가 업로드되었습니다.
+    destroy:
+      failure: 명세서를 삭제할 수 없습니다.
+      success: 명세서가 삭제되었습니다.
+    form:
+      account_upload: 명세서 업로드
+      files_hint: PDF, CSV 또는 XLSX. 파일당 최대 %{max_size}MB입니다.
+      files_label: 명세서 파일
+      inbox_upload: 업로드
+      period_hint: 'PDF에 명세서 기간이 명시되어 있으면 Sure가 해당 기간을 읽고, 그렇지 않으면 파일 이름의 날짜(예: 2026-04)에서
+        읽습니다. 명세서에서 직접 설정할 수도 있습니다.'
+    index:
+      account_label: 계좌
+      confidence: 일치도 %{confidence}
+      empty_linked: 아직 연결된 명세서가 없습니다.
+      empty_unmatched: 명세서 받은 편지함이 비어 있습니다.
+      leave_unmatched: 연결하지 않고 유지
+      linked_title: 연결된 명세서
+      no_suggestion: 제안 없음
+      storage_used: 사용된 저장소
+      title: 명세서 보관함
+      unmatched_title: 미연결 명세서함
+      upload_description: 받은 편지함에 명세서를 업로드하거나 바로 연결할 계좌를 선택하세요.
+      upload_title: 명세서 업로드
+    link:
+      no_account: 이 명세서를 연결하기 전에 계좌를 선택하세요.
+      success: 명세서를 %{account} 계좌에 연결했습니다.
+    period:
+      unknown: 기간불명
+    reconciliation:
+      checks:
+        closing_balance: 결산 잔액
+        opening_balance: 기초 잔액
+        period_movement: 기간 중 변동액
+        unknown_check: 알 수 없는 검사
+      matched: 일치함
+      mismatched: 일치하지 않음
+      unavailable: 체크하지 않음
+    reject:
+      success: 명세서 일치가 거부되었습니다.
+    show:
+      account_label: 계좌
+      account_last4_hint: 계좌번호 끝 네 자리
+      account_name_hint: 계좌 이름 힌트
+      closing_balance: 결산 잔액
+      currency: 통화
+      delete: 삭제
+      difference: 차이
+      download: 다운로드
+      institution_name_hint: 금융기관 힌트
+      ledger_amount: Sure 원장
+      linked_to: "%{account}에 연결되었습니다."
+      linking_title: 계좌 연결
+      link_suggestion: 연결 제안
+      metadata_title: 명세서 메타데이터
+      no_suggestion: 아직 추천 계좌가 없습니다.
+      opening_balance: 기초 잔액
+      period_end_on: 기간 종료
+      period_start_on: 기간 시작
+      reconciliation_title: 잔액 대사
+      reconciliation_unavailable: 명세서 기간과 기초 또는 기말 잔액을 추가한 다음 Sure에 해당 날짜의 잔액 내역이
+        있는지 확인하세요.
+      reject: 거부
+      save: 명세서 저장
+      statement_amount: 명세서
+      suggested_account: 추천 계좌는 %{account}입니다(신뢰도 %{confidence}).
+      title: 명세서
+      unlink: 연결 해제
+      unmatched_account: 미연결 명세서함
+      unknown_value: 알 수 없음
+    status:
+      linked: 연결됨
+      rejected: 거부됨
+      unmatched: 미연결
+    table:
+      account: 계좌
+      actions: 작업
+      download: 다운로드
+      edit: 수정
+      file: 파일
+      link_suggestion: 연결 제안
+      period: 기간
+      reconciliation: 잔액 대사
+      reject: 제안 거부
+      suggestion: 제안
+      unlink: 연결 해제
+      view: 보기
+    unlink:
+      success: 명세서를 미연결 명세서함으로 옮겼습니다.
+    update:
+      success: 명세서가 업데이트되었습니다.

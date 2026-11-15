@@ -1,6 +1,33 @@
 require "test_helper"
 
 class ApplicationHelperTest < ActionView::TestCase
+  test "outflow labels use Korean default category names" do
+    I18n.with_locale(:ko) do
+      assert_equal "대출 상환", localized_outflow_categories([ { name: "Loan Payments" } ]).first[:name]
+    end
+  end
+
+  test "outflow labels localize default categories without changing filters or custom names" do
+    categories = [
+      { name: "Loan Payments", filter_value: "original-loan-id", amount: 25 }.freeze,
+      { name: "My custom category", filter_value: "custom-id", amount: 10 }.freeze
+    ].freeze
+
+    I18n.with_locale(:fr) do
+      localized = localized_outflow_categories(categories)
+
+      assert_equal I18n.t("models.category.defaults.loan_payments"), localized.first[:name]
+      assert_equal "original-loan-id", localized.first[:filter_value]
+      assert_equal 25, localized.first[:amount]
+      assert_equal "My custom category", localized.last[:name]
+      assert_equal "Loan Payments", categories.first[:name]
+    end
+
+    I18n.with_locale(:en) do
+      assert_equal "Loan Payments", localized_outflow_categories(categories).first[:name]
+    end
+  end
+
   test "#icon normalizes icon names to lowercase" do
     capture = []
 

@@ -1,0 +1,269 @@
+---
+ko:
+  reports:
+    index:
+      title: 보고서
+      subtitle: 재무 건전성에 대한 종합 분석
+      export: CSV 내보내기
+      print_report: 보고서 인쇄
+      sections_aria: 보고서 섹션
+      periods:
+        monthly: 매월
+        quarterly: 분기마다
+        ytd: 연간 누계
+        last_6_months: 지난 6개월
+        custom: 맞춤 범위
+      date_range:
+        from: 시작
+        to: 종료
+      showing_period: "%{start}부터 %{end}까지의 데이터 표시"
+      previous_period: 이전 기간
+      next_period: 다음 기간
+      shortcut_hint: "%{action} (%{key})"
+      today: 오늘
+      period_label:
+        quarterly: "%{year}년 %{quarter}분기"
+        ytd: "%{year}년 누계"
+        past_year: "%{year}"
+        last_6_months: "%{start} – %{end}"
+      period_picker:
+        quarter: "%{year}년 %{quarter}분기"
+        ytd: "%{year}년 누계"
+      previous_year: 전년도
+      next_year: 내년
+      previous_decade: 지난 10년
+      next_decade: 다음 10년
+    invalid_date_range: 종료일은 시작일보다 이전일 수 없습니다. 날짜가 바뀌었습니다.
+    summary:
+      total_income: 총 수입
+      total_expenses: 총 지출
+      net_savings: 순저축액
+      budget_performance: 예산 성과
+      vs_previous: 이전 기간 대비
+      income_minus_expenses: 수입에서 지출을 뺀 것
+      of_budget_used: 사용된 예산
+      no_budget_data: 이 기간의 예산 데이터가 없습니다.
+    budget_performance:
+      title: 예산 성과
+      spent: 사용 금액
+      budgeted: 편성 예산
+      remaining: 남은
+      over_by: 초과 금액
+      shared: 공유됨
+      suggested_daily: 남은 %{days}일 동안 하루 권장 지출액은 %{amount}입니다.
+      no_budgets: 이번 달에는 예산 카테고리가 설정되지 않았습니다.
+      status:
+        good: 예산 이내
+        warning: 한도 근접
+        over: 예산 초과
+    trends:
+      title: 동향 및 분석
+      monthly_breakdown: 월간 분석
+      month: 월
+      income: 수입
+      expenses: 지출
+      net: 순액
+      savings_rate: 저축률
+      current: 현재
+      avg_monthly_income: 평균 월수입
+      avg_monthly_expenses: 월평균 지출
+      avg_monthly_savings: 월평균 저축액
+      no_data: 사용 가능한 추세 데이터가 없습니다.
+      spending_patterns: 지출 패턴
+      weekday_spending: 평일 지출
+      weekend_spending: 주말 지출
+      total: 합계
+      avg_per_transaction: 평균 거래당
+      transactions: 거래 내역
+      insight_title: 분석
+      insight_higher_weekend: 주중보다 주말에 거래당 %{percent}% 더 많은 금액을 지출합니다.
+      insight_higher_weekday: 주말보다 주중에 거래당 %{percent}% 더 많은 비용을 지출합니다.
+      insight_similar: 거래당 지출은 주중과 주말에 비슷합니다.
+      no_spending_data: 이 기간 동안 사용 가능한 지출 데이터가 없습니다.
+    empty_state:
+      title: 사용 가능한 데이터가 없습니다
+      description: 거래를 추가하거나 계좌를 연결하여 재무 현황을 추적하고 종합 보고서를 확인하세요.
+      add_transaction: 거래 추가
+      add_account: 계좌 추가
+    transactions_breakdown:
+      title: 거래 내역 분석
+      no_transactions: 선택한 기간과 필터에 해당하는 거래 내역이 없습니다.
+      filters:
+        title: 필터
+        category: 카테고리
+        account: 계좌
+        tag: 태그
+        amount_min: 최소 금액
+        amount_max: 최대 금액
+        date_range: 기간
+        all_categories: 모든 카테고리
+        all_accounts: 모든 계좌
+        all_tags: 모든 태그
+        apply: 필터 적용
+        clear: 필터 지우기
+      sort:
+        label: 정렬 기준
+        date_desc: 날짜(최신)
+        amount_desc: 금액(높음에서 낮음)
+        amount_asc: 금액(낮음에서 높음)
+      export:
+        label: 내보내기
+        csv: CSV
+        excel: Excel
+        pdf: PDF
+        google_sheets: Google 스프레드시트에서 열기
+      table:
+        category: 카테고리
+        amount: 금액
+        type: 유형
+        expense: 지출
+        income: 수입
+        uncategorized: 미분류
+        entries:
+          one: 항목 %{count}개
+          other: 항목 %{count}개
+        percentage: 전체 대비 %
+      pagination:
+        showing:
+          one: 항목 %{count}개 표시 중
+          other: 항목 %{count}개 표시 중
+        previous: 이전
+        next: 다음
+    net_worth:
+      title: 순자산
+      current_net_worth: 현재 순자산
+      period_change: 기간 중 변동
+      assets_vs_liabilities: 자산과 부채
+      total_assets: 자산
+      total_liabilities: 부채
+      no_assets: 자산 없음
+      no_liabilities: 부채 없음
+    spending_vs_normal:
+      title: 평소 대비 지출
+      summary_html: 이 기간에 %{total} 지출했습니다. %{baseline_start}부터 %{baseline_end}까지의
+        내역을 기준으로 같은 길이의 기간에 대한 평소 지출은 %{normal}입니다.
+      summary_so_far_html: 현재까지 %{total} 지출했습니다. %{baseline_start}부터 %{baseline_end}까지의
+        내역을 기준으로 같은 일수에 대한 평소 지출은 %{normal}입니다.
+      no_history_html: 이 기간에 %{total} 지출했습니다. 평소 지출을 계산하기에는 이전 내역이 아직 부족합니다.
+      no_history_short: 아직 비교할 수 있는 이전 기록이 충분하지 않습니다.
+      no_spending: 이 기간에는 지출이 없습니다.
+      no_changes: 모든 카테고리에서 평소와 같은 금액을 지출했습니다.
+      treemap_title: 어디로 갔나
+      changes_title: 무엇이 바뀌었나
+      direct: "%{category}(하위 카테고리 없음)"
+      tooltip:
+        path: "%{parent} › %{category}"
+        total: "%{category}: %{amount}"
+        normal: '평소 지출: %{amount}'
+        more: 평소보다 %{amount} 많음(%{percent})
+        less: 평소보다 %{amount} 적음 (%{percent})
+        more_no_percent: 평소보다 %{amount} 많음
+        less_no_percent: 평소보다 %{amount} 적음
+        no_normal: 비교할 이전 기록이 없습니다.
+        open: 이 거래를 보려면 선택하세요.
+      legend:
+        less: 50~100% 감소
+        slightly_less: 15~50% 감소
+        normal: 평소 수준
+        slightly_more: 15~50% 증가
+        more: 50~100% 증가
+        much_more: 100% 이상 증가
+    investment_performance:
+      title: 투자실적
+      portfolio_value: 포트폴리오 가치
+      total_return: 총수익
+      period_return: 기간 수익
+      contributions: 기간 납입액
+      withdrawals: 기간 인출액
+      top_holdings: 주요 보유 종목
+      holding: 보유 종목
+      weight: 비중
+      value: 평가액
+      return: 수익률
+      accounts: 투자 계좌
+      gains_by_tax_treatment: 세금 처리에 따른 이익
+      unrealized_gains: 미실현 이익
+      realized_gains: 실현 이익
+      total_gains: 총 이익
+      taxable_realized_note: 이러한 이익에는 세금이 부과될 수 있습니다.
+      no_data: "-"
+      view_details: 세부정보 보기
+      holdings_count:
+        one: 보유 종목 %{count}개
+        other: 보유 종목 %{count}개
+      sells_count:
+        one: 매도 %{count}건
+        other: 매도 %{count}건
+      holdings: 보유 종목
+      sell_trades: 매도 거래
+      and_more: "+%{count} 더보기"
+    investment_flows:
+      title: 투자 흐름
+      description: 납입과 인출을 통해 투자 계좌에 들어오고 나가는 자금을 추적하세요.
+      contributions: 납입액
+      contributions_description: 투자에 추가한 자금
+      withdrawals: 인출액
+      withdrawals_description: 투자에서 인출된 자금
+      net_flow: 순유입액
+      net_flow_description: 총순변화
+    google_sheets_instructions:
+      title_no_key: API 키 필요
+      need_key: Google 스프레드시트로 데이터를 가져오려면 API 키가 필요합니다.
+      step1: 설정 → API 키로 이동
+      step2: '"읽기" 권한으로 새 API 키를 생성합니다.'
+      step3: API 키 복사
+      step4: 이 URL에 &api_key=YOUR_KEY로 추가하세요.
+      example: 예
+      then_use: 그런 다음 Google 스프레드시트에서 =IMPORTDATA()와 함께 전체 URL을 사용하세요.
+      go_to_api_keys: API 키로 이동
+      close: 확인했습니다
+    print:
+      document_title: 재무 보고서
+      title: 재무 보고서
+      generated_on: "%{date}에 생성됨"
+      summary:
+        title: 요약
+        income: 수입
+        expenses: 지출
+        net_savings: 순저축액
+        budget: 예산
+        vs_prior: 이전 대비 %{percent}%
+        of_income: 수입의 %{percent}%
+        used: 사용됨
+      net_worth:
+        title: 순자산
+        current_balance: 현재 잔액
+        this_period: 이 기간
+        assets: 자산
+        liabilities: 부채
+        no_liabilities: 부채 없음
+      trends:
+        title: 월간 동향
+        month: 월
+        income: 수입
+        expenses: 지출
+        net: 순액
+        savings_rate: 저축률
+        average: 평균
+        current_month_note: "* 당월(일부 데이터)"
+      investments:
+        title: 투자
+        portfolio_value: 포트폴리오 가치
+        total_return: 총수익
+        period_return: 기간 수익
+        contributions: 납입액
+        withdrawals: 인출액
+        this_period: 이 기간
+        top_holdings: 주요 보유 종목
+        holding: 보유 종목
+        weight: 비중
+        value: 평가액
+        return: 수익률
+      spending:
+        title: 카테고리별 지출
+        income: 수입
+        expenses: 지출
+        category: 카테고리
+        amount: 금액
+        percent: "%"
+        more_categories: "+ 카테고리 %{count}개 더"

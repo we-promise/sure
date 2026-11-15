@@ -1,0 +1,9 @@
+---
+ko:
+  messages:
+    create:
+      chat_not_found: 이 채팅은 더 이상 사용할 수 없습니다.
+    chat_form:
+      placeholder: 무엇이든 물어보세요 ...
+      disclaimer: AI 응답은 정보 제공용일 뿐입니다. 재정적인 조언이 아닙니다!
+      coming_soon: 곧 출시 예정

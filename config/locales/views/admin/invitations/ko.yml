@@ -1,0 +1,8 @@
+---
+ko:
+  admin:
+    invitations:
+      destroy:
+        success: 초대장이 삭제되었습니다.
+      destroy_all:
+        success: 이 가족의 모든 초대가 삭제되었습니다.

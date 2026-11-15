@@ -1,0 +1,147 @@
+---
+ko:
+  providers:
+    fio:
+      name: Fio banka
+      description: 읽기 전용 API 토큰으로 Fio banka 계좌 동기화
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio banka 연결
+  fio_item:
+    errors:
+      account_processing_failed: Fio 계좌를 동기화할 수 없습니다.
+      account_mismatch: 이 토큰은 이 연결에서 동기화하는 계좌와 다른 Fio 계좌의 토큰입니다. 별도의 연결로 추가하세요.
+      account_sync_schedule_failed: Fio 계좌 동기화를 예약할 수 없습니다.
+      statement_too_large: 이 명세서에는 Fio가 한 번의 요청으로 제공하는 것보다 더 많은 거래가 있습니다. 동기화 시작 날짜를
+        앞으로 이동하고 다시 동기화하세요.
+      statement_fetch_failed: Fio에서 명세서를 가져올 수 없습니다.
+      history_locked: Fio에서 이 명세서 기간에 대한 접근을 거부했습니다. 인터넷 뱅킹의 설정 → API에서 계좌의 전체 내역
+        접근을 허용한 뒤 10분 이내에 다시 동기화하세요.
+      sync_failed: Fio 연결을 동기화할 수 없습니다.
+    sync:
+      status:
+        importing: Fio에서 명세서를 가져오는 중...
+        checking_setup: 계좌 설정을 확인하는 중...
+        needs_setup:
+          one: 계좌 1개의 설정이 필요합니다...
+          other: 계좌 %{count}개의 설정이 필요합니다...
+        processing: 거래 처리 중...
+        calculating: 잔액 계산 중...
+    sync_status:
+      no_accounts: 아직 계좌를 찾을 수 없습니다
+      all_synced:
+        one: 계좌 1개 동기화됨
+        other: 계좌 %{count}개가 동기화되었습니다.
+      partial: "%{linked} 동기화됨, %{unlinked} 설정 필요"
+  fio_items:
+    account_types:
+      depository: 당좌 또는 저축 계좌
+      loan: 대출, 모기지 또는 초과인월
+    provider_panel:
+      default_connection_name: Fio banka 연결
+      add_connection: Fio banka 연결 추가
+      update_connection: 연결 업데이트
+      connection_name_label: 연결 이름
+      connection_name_placeholder: 내 Fio 계좌
+      token_label: API 토큰(읽기 전용)
+      token_placeholder: 64자 토큰을 붙여넣으세요.
+      keep_token_placeholder: 기존 토큰을 유지하려면 비워 두세요.
+      sync_start_date_label: 거래 가져오기 시작일
+      sync_start_date_hint: Fio는 추가 승인 없이 최근 90일의 내역을 제공합니다. 더 오래된 내역은 인터넷 뱅킹의 설정
+        → API(자물쇠 아이콘)에서 계좌 전체 내역 접근을 허용한 뒤, 허용된 10분 이내에 동기화하세요.
+      one_account_notice: 토큰 하나로 Fio 계좌 하나에 접근할 수 있으므로 추적할 계좌마다 연결을 추가하세요. 토큰은 30초마다
+        한 번 사용할 수 있습니다. 이보다 빨리 요청된 동기화는 다음 동기화에서 처리됩니다.
+      connected_account: 연결된 계좌
+      no_account_yet: 아직 계좌가 없습니다. 첫 번째 동기화에서는 이 토큰이 도달하는 계좌를 검색합니다.
+      account_needs_setup: 아직 Sure 계좌에 연결되지 않았습니다.
+      requires_update: 새로운 토큰이 필요합니다
+      requires_update_notice: Fio가 이 토큰을 거부했습니다. 토큰은 각 뱅킹 로그인 시 자동 연장되지 않는 한 최대 180일
+        동안 유효하므로 설정 → API에서 새로운 읽기 전용 토큰을 생성하고 아래에 붙여넣습니다.
+      last_synced: "%{timestamp} 전에 동기화됨"
+      never_synced: 동기화되지 않음
+      syncing: 동기화 중...
+      sync: 동기화
+      setup_accounts: 계좌 설정
+      disconnect: 연결 해제
+      disconnect_confirm: "%{name}의 연결을 해제하시겠습니까?"
+    create:
+      success: Fio banka 연결이 저장되었습니다.
+      token_required: Fio 인터넷 뱅킹에서 API 토큰을 붙여넣습니다.
+    update:
+      success: Fio banka 연결이 업데이트되었습니다.
+    destroy:
+      success: Fio banka 연결 삭제가 예약되었습니다.
+      unlink_failed: Fio banka 연결을 해제할 수 없습니다.
+    select_accounts:
+      title: Fio 계좌 연결
+      description: 이 토큰은 하나의 계좌에 도달합니다. Sure에서 추적 방법을 선택하세요.
+      account_type_label: 계좌 유형
+      awaiting_first_sync: Fio는 아직 이 토큰에 대한 계좌를 보고하지 않았습니다. 동기화를 실행하고 돌아오세요.
+      already_linked: 이 연결의 계좌는 이미 Sure 계좌에 연결되어 있습니다.
+      sync_now: 지금 동기화
+      no_credentials_configured: 먼저 제공업체 설정에서 Fio banka를 설정하세요.
+      cancel: 취소
+      link_account: 계좌 연결
+    link_accounts:
+      success: Fio 계좌를 %{account_name}에 연결했습니다.
+      no_account_found: 이 연결에서 미연결 Fio 계좌를 찾을 수 없습니다.
+      no_credentials_configured: 먼저 제공업체 설정에서 Fio banka를 설정하세요.
+      unsupported_account_type: Fio는 해당 계좌 유형을 지원하지 않습니다.
+      link_failed: 계좌를 연결할 수 없습니다.
+    select_existing_account:
+      title: Fio 계좌를 %{account_name}에 연결
+      description: 이 토큰이 도달하는 계좌를 선택한 계좌에 연결하세요.
+      awaiting_first_sync: Fio는 아직 이 토큰에 대한 계좌를 보고하지 않았습니다. 동기화를 실행하고 돌아오세요.
+      already_linked: 이 연결의 계좌는 이미 Sure 계좌에 연결되어 있습니다.
+      sync_now: 지금 동기화
+      no_credentials_configured: 먼저 제공업체 설정에서 Fio banka를 설정하세요.
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      cancel: 취소
+      link_account: 계좌 연결
+    link_existing_account:
+      success: Fio 계좌를 %{account_name}에 연결했습니다.
+      account_already_linked: 이 계좌는 이미 제공업체에 연결되어 있습니다.
+      fio_account_already_linked: 이 Fio 계좌는 이미 연결되어 있습니다.
+      no_account_selected: 연결할 수 있는 Fio 계좌가 없습니다.
+      unsupported_account_type: Fio는 현금과 대출 계좌만 동기화할 수 있습니다.
+    setup_accounts:
+      title: Fio 계좌 연결
+      subtitle: 이 토큰이 도달하는 계좌가 Sure에 표시되는 방식을 선택하세요.
+      choose_account_type: 계좌 유형을 선택하세요
+      choose_account_type_description: 이 계좌를 추적하지 않으려면 건너뛰세요.
+      account_type_label: 계좌 유형
+      account_types:
+        skip: 건너뛰기
+      create_account: 계좌 만들기
+      awaiting_first_sync: 아직 계좌를 찾을 수 없습니다
+      awaiting_first_sync_description: Fio는 명세서로만 계좌를 보고하므로 첫 번째 성공적인 동기화 후에 표시됩니다.
+      sync_now: 지금 동기화
+      nothing_to_setup: 설정할 항목이 없습니다.
+      account_already_handled: 이 연결의 계좌는 이미 연결되었거나 건너뛰었습니다.
+      close: 닫기
+      cancel: 취소
+    complete_account_setup:
+      success: "%{account_name}를 생성했습니다."
+      skipped: Fio 계좌를 건너뛰었습니다.
+      no_account: Fio 계좌를 설정할 필요가 없습니다.
+      unsupported_account_type: Fio는 해당 계좌 유형을 지원하지 않습니다.
+      creation_failed: Sure 계좌를 생성할 수 없습니다.
+    fio_item:
+      deletion_in_progress: 삭제 진행 중
+      syncing: 동기화 중
+      requires_update: 새로운 토큰이 필요합니다
+      error: 오류
+      status_with_summary: "%{timestamp} 전에 동기화됨 · %{summary}"
+      status_never: 동기화되지 않음
+      delete: 삭제
+      requires_update_title: 새로운 토큰이 필요합니다
+      requires_update_description: Fio가 이 연결에 대한 토큰을 거부했습니다. 인터넷뱅킹의 설정 → API에서 새로운
+        읽기 전용 토큰을 생성하세요.
+      update_token: 토큰 업데이트
+      setup_needed: 계좌 설정 필요
+      setup_description: 이 토큰이 도달하는 계좌는 아직 Sure 계좌에 연결되어 있지 않습니다.
+      setup_action: 계좌 설정
+      no_accounts_title: 아직 가져온 계좌가 없습니다.
+      no_accounts_description: Fio는 명세서로만 계좌를 보고하므로 첫 번째 성공적인 동기화 후에 표시됩니다.
+      sync_now: 지금 동기화

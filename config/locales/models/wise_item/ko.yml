@@ -1,0 +1,13 @@
+---
+ko:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: SCA 개인 키
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: 이 설치에서는 Active Record 암호화가 구성되지 않았기 때문에 저장할
+                수 없습니다.

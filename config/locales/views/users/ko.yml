@@ -1,0 +1,29 @@
+---
+ko:
+  users:
+    destroy:
+      success: 계정이 삭제되었습니다.
+    update:
+      email_change_failed: 이메일 주소를 변경하지 못했습니다.
+      email_change_initiated: 새 이메일 주소로 전송된 확인 안내를 확인하세요.
+      success: 프로필이 업데이트되었습니다.
+    resend_confirmation_email:
+      success: 새로운 확인 이메일이 전송 대기 중입니다.
+      no_pending_change: 현재 보류 중인 이메일 변경 사항이 없습니다!
+    reset:
+      success: 계정이 재설정되었습니다. 일정 시간이 지나면 백그라운드에서 데이터가 삭제됩니다.
+      unauthorized: 이 작업을 수행할 권한이 없습니다.
+    reset_with_sample_data:
+      success: 계정이 재설정되었으며 샘플 데이터를 준비 중입니다. 곧 데모 데이터가 표시됩니다.
+    roles:
+      admin: 관리자
+      member: 회원
+      super_admin: 최고 관리자
+    user_menu:
+      aria_label: 계정 메뉴 열기
+      version: 버전
+      settings: 설정
+      changelog: 변경 내역
+      feedback: 의견 보내기
+      contact: 연락처
+      log_out: 로그아웃

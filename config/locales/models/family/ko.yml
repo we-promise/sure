@@ -1,0 +1,10 @@
+---
+ko:
+  activerecord:
+    attributes:
+      family:
+        ai_prompt_chat_system: 채팅 시스템 프롬프트
+        ai_prompt_categorizer_openai: 거래 분류기 프롬프트(OpenAI)
+        ai_prompt_categorizer_anthropic: 거래 분류기 프롬프트(Anthropic)
+        ai_prompt_merchant_openai: 가맹점 감지기 프롬프트(OpenAI)
+        ai_prompt_merchant_anthropic: 가맹점 감지기 프롬프트(Anthropic)

@@ -1,0 +1,30 @@
+---
+ko:
+  activerecord:
+    attributes:
+      account_statement:
+        account: 계좌
+        account_last4_hint: 계좌번호 끝 네 자리
+        account_name_hint: 계좌 이름 힌트
+        closing_balance: 결산 잔액
+        content_sha256: 콘텐츠 다이제스트
+        currency: 통화
+        filename: 파일 이름
+        institution_name_hint: 금융기관 힌트
+        opening_balance: 기초 잔액
+        original_file: 명세서 파일
+        period_end_on: 기간 종료
+        period_start_on: 기간 시작
+    errors:
+      models:
+        account_statement:
+          attributes:
+            checksum:
+              duplicate_statement_file: 이 가족에 대해 이미 업로드되었습니다.
+            content_sha256:
+              duplicate_statement_file: 이 가족에 대해 이미 업로드되었습니다.
+            original_file:
+              invalid_format: PDF, CSV 또는 XLSX 파일이어야 합니다.
+              too_large: 너무 큽니다. 최대 크기는 %{max_mb}MB입니다.
+            period_end_on:
+              on_or_after_start: 기간 시작 당일 또는 이후여야 합니다.

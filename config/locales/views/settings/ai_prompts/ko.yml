@@ -1,0 +1,43 @@
+---
+ko:
+  settings:
+    ai_prompts:
+      prompt_field:
+        provider_label: 제공업체
+        prompt_label: 프롬프트
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: 기본값으로 재설정
+        reset_confirm_title: 기본 프롬프트로 재설정하시겠습니까?
+        reset_confirm_body: 이렇게 하면 사용자 정의 프롬프트가 삭제되고 내장된 기본 지침이 복원됩니다.
+        status_custom: 사용자 정의 프롬프트 사용
+        status_default: 내장된 기본값 사용
+        format_risk: '%{provider} 프롬프트에서 {"%{key}": ...} 예시가 빠졌습니다. 각 요청은 계속 이 형식을
+          요구하므로 대개 파싱이 가능하지만, 사용자 지정 프롬프트에서 다른 출력 형식을 요구하면 오류가 발생합니다.'
+      show:
+        page_title: AI 프롬프트
+        disable_ai: AI 도우미 비활성화
+        save: 프롬프트 저장
+        save_confirm:
+          title: 맞춤 AI 프롬프트를 저장하시겠습니까?
+          body: 사용자 지정 프롬프트는 가족 전체에 적용되는 기본 시스템 지침과 안전 장치(재무 조언 제한 등)를 대체합니다.
+          dont_show_again: 이 경고 다시 표시하지 않기
+          cancel: 취소
+          confirm: 확인
+        main_system_prompt:
+          title: 메인 시스템 프롬프트
+          subtitle: 모든 채팅 대화에서 AI 도우미의 작동 방식을 정의하는 핵심 지침
+          label: 채팅 시스템 프롬프트
+        transaction_categorizer:
+          title: 거래 분류기
+          subtitle: AI는 정의된 카테고리에 따라 거래를 자동으로 분류합니다.
+        merchant_detector:
+          title: 가맹점 감지기
+          subtitle: AI가 가맹점을 식별하고 거래 데이터에 가맹점 정보를 보완합니다.
+        insight_dig_in:
+          title: 분석 자세히 살펴보기
+          subtitle: AI로 분석을 자세히 살펴볼 때 보내는 첫 채팅 메시지
+          label: 상세 분석 요청 메시지
+      update:
+        success: AI 프롬프트가 업데이트되었습니다.
+        multiple_errors: 여러 프롬프트가 너무 깁니다(최대값은 %{count}자).

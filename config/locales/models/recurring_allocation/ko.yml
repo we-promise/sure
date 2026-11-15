@@ -1,0 +1,9 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        recurring_allocation:
+          attributes:
+            currency:
+              must_match_occurrence: 발생 통화와 일치해야 합니다.

@@ -1,0 +1,11 @@
+---
+ko:
+  passwords:
+    disabled: Sure에서 비밀번호를 변경할 수 없습니다. ID 제공업체를 통해 비밀번호를 관리하세요.
+    edit:
+      password: 새 비밀번호
+      password_challenge: 현재 비밀번호
+      submit: 비밀번호 재설정
+      title: 비밀번호 업데이트
+    update:
+      success: 비밀번호가 재설정되었습니다.

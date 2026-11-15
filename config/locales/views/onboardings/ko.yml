@@ -1,0 +1,67 @@
+---
+ko:
+  onboardings:
+    header:
+      sign_out: 로그아웃
+      setup: 설정
+      preferences: 환경설정
+      goals: 목표
+      start: 시작
+    logout:
+      sign_out: 로그아웃
+    show:
+      title: 계정을 설정해 보세요
+      subtitle: 먼저 프로필을 설정해 보겠습니다.
+      first_name: 이름
+      first_name_placeholder: 이름
+      last_name: 성
+      last_name_placeholder: 성
+      group_name: 그룹 이름
+      group_name_placeholder: 그룹 이름
+      household_name: 가구 이름
+      household_name_placeholder: 가구 이름
+      moniker_prompt: "%{product_name}를 함께 사용할 대상"
+      moniker_family: 가족(본인만 또는 파트너, 청소년 등)
+      moniker_group: 사람들의 그룹(회사, 클럽, 협회, 기타 유형)
+      country: 국가
+      submit: 계속
+    preferences:
+      title: 환경설정을 변경하세요
+      subtitle: 기본 설정을 구성해 보겠습니다.
+      example: 예시 계좌
+      preview: 기본 설정에 따라 데이터가 어떻게 표시되는지 미리 봅니다.
+      color_theme: 색상 테마
+      theme_system: 시스템 설정
+      theme_light: 밝게
+      theme_dark: 어둡게
+      locale: 언어
+      currency: 통화
+      date_format: 날짜 형식
+      submit: 완료
+    goals:
+      title: 어떤 목적으로 사용하시나요?
+      subtitle: "%{product_name}를 개인 금융 도구로 사용하면서 갖고 있는 목표를 하나 이상 선택하세요."
+      unified_accounts: 모든 계좌를 한곳에서 확인
+      cashflow: 현금 흐름과 지출 파악
+      budgeting: 재무 계획 및 예산 관리
+      partner: 파트너와 함께 재무 관리
+      investments: 투자 추적
+      ai_insights: AI의 도움으로 내 재무 상황 파악
+      optimization: 계좌 분석 및 최적화
+      reduce_stress: 재무 관련 스트레스나 불안 줄이기
+      submit: 다음
+    trial:
+      title: 45일 동안 Sure를 사용해 보세요
+      data_deletion: 그러면 데이터가 삭제됩니다
+      description_html: 오늘부터 제품을 충분히 살펴보실 수 있습니다.<br/>마음에 드시면 직접 호스팅하거나 후원하여 이곳에서
+        계속 사용하세요.
+      try_button: 45일 동안 Sure를 사용해 보세요
+      continue_trial: 체험판 계속하기
+      upgrade: 업그레이드
+      how_it_works: 이용 방식 안내
+      today: 오늘
+      today_description: AWS에서 45일 동안 Sure에 무료로 액세스할 수 있습니다.
+      in_40_days: 40일 후(%{date})
+      in_40_days_description: 데이터를 내보내도록 알려드리겠습니다.
+      in_45_days: 45일 후(%{date})
+      in_45_days_description: 데이터가 삭제됩니다. 이곳에서 Sure를 계속 사용하려면 후원해 주세요!

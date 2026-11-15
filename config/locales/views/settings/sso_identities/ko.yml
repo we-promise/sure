@@ -1,0 +1,7 @@
+---
+ko:
+  settings:
+    sso_identities:
+      destroy:
+        cannot_unlink_last: 마지막 ID의 연결을 해제할 수 없습니다.
+        success: 성공

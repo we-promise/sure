@@ -1,0 +1,103 @@
+---
+ko:
+  loans:
+    edit:
+      edit: "%{account} 편집"
+    form:
+      interest_rate: 금리
+      interest_rate_placeholder: '5.25'
+      initial_balance: 최초 대출 잔액
+      day_count_convention: 이자 계산 기준
+      day_count_convention_actual_365: 실제 일수/365
+      day_count_convention_actual_actual: 실제 일수/실제 연간 일수
+      day_count_convention_hint: 대출 기관이 각 기간의 이자를 연간 기준으로 계산하는 방식입니다. 실제 일수/365 방식은
+        해당 월의 실제 일수에 따라 이자를 계산하며, 영국과 호주의 주택담보대출에서 일반적으로 사용됩니다. 30/360 방식은 연간 이자의
+        12분의 1을 매월 동일하게 부과하며, Sure가 기존에 사용해 온 방식입니다.
+      day_count_convention_thirty_360: 30/360(매월 연간 이자의 12분의 1)
+      rate_type: 금리 유형
+      term_months: 기간(개월)
+      term_months_placeholder: '360'
+      none: 없음
+      subtype_prompt: 대출 유형 선택
+      subtype_none: 없음
+      rate_type_adjustable: 조정금리
+      rate_type_fixed: 고정
+      rate_type_variable: 변동금리
+      rate_changes: 금리 변경
+      rate_changes_hint: 각 행의 금리는 적용일부터 다음 변경일까지 적용됩니다. 같은 날짜를 다시 입력하면 새 행이 추가되는 대신
+        기존 행이 대체됩니다.
+      rate_changes_empty: 기록된 금리 변경이 없습니다. 위에 설정한 금리가 대출에 적용됩니다.
+      rate_change_effective_date: 적용일
+      rate_change_rate: 금리
+      rate_change_add: 금리 변경 추가
+      rate_change_remove: 제거
+      start_date: 대출 실행일
+      start_date_hint: 대출금을 받은 날짜입니다. 새 대출의 잔액 내역은 기초 잔액 기준일 대신 이 날짜부터 시작됩니다. 기초 잔액
+        기준일을 사용하려면 비워 두세요.
+      down_payment: 계약금
+      insurance_rate: 보험료율
+      insurance_rate_placeholder: '0.36'
+      insurance_rate_hint: 상환액과 함께 매월 청구되는 보험료의 연간 요율입니다. 정액형은 최초 대출 잔액을, 체감형은 남은
+        대출 잔액을 기준으로 보험료를 계산합니다.
+      insurance_rate_type: 보험 종류
+      insurance_rate_type_decreasing_life: 체감형
+      insurance_rate_type_level_term: 정액형
+    new:
+      title: 대출 세부정보 입력
+    overview:
+      interest_rate: 이자율
+      monthly_payment: 월 상환액
+      not_applicable: 해당 없음
+      original_payoff_date: 최초 완납 예정일
+      original_principal: 최초 대출 금액
+      remaining_principal: 남은 대출 금액
+      term: 기간
+      type: 유형
+      unknown: 알 수 없음
+    tabs:
+      repayment_progress:
+        instalment: "%{number}회차 상환 · %{date}"
+        insurance: 보험
+        interest: 이자
+        of_original: 최초 %{amount} 중
+        principal: 원금
+        repaid: 상환됨
+        total: 합계
+      schedule:
+        date: 날짜
+        description: "%{start_date}부터 최초 잔액, 금리 및 기간을 기준으로 예상한 일정입니다. 추가 상환액은 반영되지
+          않습니다."
+        variable_rate_notice: 이 대출의 금리는 시간에 따라 변동됩니다. 기록된 금리 변경 시점마다 최초 완납 예정일을 유지하면서
+          상환액을 다시 계산합니다. 아직 기록하지 않은 금리 변경이 있으면 이 수치가 달라질 수 있습니다.
+        opening_payment: 최초 상환액
+        forecasted_payoff_date: 예상 완납일
+        forecasted_payoff_not_converged: 현재 상환액으로는 완납할 수 없음
+        interest: 이자
+        monthly_payment: 월 상환액
+        not_applicable: 해당 없음
+        number: "#"
+        payment: 상환액
+        principal: 원금
+        remaining_balance: 남은 잔액
+        total_cost: 총 비용
+        total_interest: 총 이자
+      overview:
+        insurance_rate_only: 연 %{rate}
+        interest_rate: 이자율
+        leverage: 레버리지
+        leverage_band_conservative: 보수적
+        leverage_band_high: 높음
+        leverage_band_moderate: 보통
+        leverage_multiple: "%{ratio}x"
+        monthly_payment: 월 상환액
+        not_applicable: 해당 없음
+        original_payoff_date: 최초 완납 예정일
+        original_principal: 최초 대출 금액
+        remaining_principal: 남은 대출 금액
+        total_cost: 총 비용
+        total_cost_with_insurance: 보험료 포함 총 비용
+        total_insurance: 보험
+        term: 기간
+        type: 유형
+        unknown: 알 수 없음
+        edit_loan_details: 대출 세부정보 수정

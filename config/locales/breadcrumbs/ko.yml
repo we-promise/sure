@@ -1,0 +1,95 @@
+---
+ko:
+  breadcrumbs:
+    account_sharings: 계좌 공유
+    account_statements: 명세서 보관함
+    accounts: 계좌
+    ai_prompts: AI 프롬프트
+    api_key: API 키
+    api_keys: API 키
+    appearance: 화면 설정
+    appearances: 화면 설정
+    bank_sync: 은행 동기화
+    binance_items: Binance
+    brex_items: Brex
+    budget_categories: 예산 카테고리
+    budgets: 예산
+    categories: 카테고리
+    categorize: 분류
+    changelog: 새로운 소식
+    chats: 채팅
+    classifier: 분류기
+    coinbase_items: Coinbase
+    coinstats_items: CoinStats
+    credit_cards: 신용카드
+    cryptos: 암호화폐
+    dashboard: 대시보드
+    debug: 디버그
+    debugs: 디버그
+    depositories: 현금 계좌
+    enable_banking_items: Enable Banking
+    exports: 내보내기
+    family_exports: 내보내기
+    family_merchants: 가맹점
+    feedback: 의견 보내기
+    guides: 가이드
+    holdings: 보유 종목
+    home: 홈
+    hostings: 셀프 호스팅
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: 다른 사용자로 로그인
+    imports: 가져오기
+    indexa_capital_items: Indexa Capital
+    intro: 소개
+    investments: 투자
+    invitations: 초대장
+    invite_codes: 초대 코드
+    kraken_items: Kraken
+    llm_usage: LLM 사용량
+    llm_usages: LLM 사용량
+    loans: 대출
+    lunchflow_items: Lunch Flow
+    mcp: MCP 서버
+    merchants: 가맹점
+    mercury_items: Mercury
+    messages: 메시지
+    mfa: 이중 인증
+    monobank_items: Monobank
+    oidc_accounts: SSO 계정
+    onboardings: 온보딩
+    other_assets: 기타 자산
+    other_liabilities: 기타 부채
+    payments: 결제 내역
+    pending_duplicate_merges: 중복 검토
+    plaid_items: Plaid
+    plan: 계획
+    preferences: 환경설정
+    profile: 프로필 정보
+    profiles: 프로필 정보
+    properties: 부동산
+    providers: 제공업체
+    recurring_transactions: 반복
+    redbark_items: Redbark
+    registrations: 가입
+    reports: 보고서
+    rules: 규칙
+    securities: 증권
+    security: 보안
+    self_hosting: 셀프 호스팅
+    sessions: 로그인
+    simplefin_items: SimpleFIN
+    snaptrade_items: SnapTrade
+    sophtron_items: Sophtron
+    splits: 분할
+    sso_identities: SSO 연결
+    sso_providers: SSO 제공업체
+    subscriptions: 구독
+    system_health: 시스템 상태
+    tags: 태그
+    trades: 매매 내역
+    transactions: 거래 내역
+    transfer_matches: 이체 연결
+    transfers: 이체 내역
+    users: 사용자
+    valuations: 평가
+    vehicles: 차량

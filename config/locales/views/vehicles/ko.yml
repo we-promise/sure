@@ -1,0 +1,37 @@
+---
+ko:
+  vehicles:
+    edit:
+      edit: "%{account} 편집"
+    form:
+      make: 제조사
+      make_placeholder: Toyota
+      mileage: 주행 거리
+      mileage_placeholder: '15000'
+      mileage_unit: 단위
+      model: 모델
+      model_placeholder: Camry
+      year: 연도
+      year_placeholder: '2023'
+      mileage_unit_kilometers: 킬로미터
+      mileage_unit_miles: 마일
+    new:
+      title: 차량 세부정보를 입력하세요.
+    overview:
+      current_price: 현재 가격
+      make_model: 제조사 및 모델
+      mileage: 주행 거리
+      purchase_price: 구매 가격
+      trend: 동향
+      unknown: 알 수 없음
+      year: 연도
+    tabs:
+      overview:
+        current_price: 현재 가격
+        make_model: 제조사 및 모델
+        mileage: 주행 거리
+        purchase_price: 구매 가격
+        trend: 동향
+        unknown: 알 수 없음
+        year: 연도
+        edit_account_details: 계좌 세부정보 수정

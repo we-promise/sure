@@ -1,0 +1,6 @@
+---
+ko:
+  settings:
+    budget_shares:
+      update:
+        success: 예산 공유 설정이 업데이트되었습니다.

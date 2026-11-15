@@ -1,0 +1,5 @@
+---
+ko:
+  models:
+    merchant:
+      no_merchant: 가맹점 없음

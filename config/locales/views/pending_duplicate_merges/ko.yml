@@ -1,0 +1,22 @@
+---
+ko:
+  pending_duplicate_merges:
+    create:
+      no_posted_selected: 병합할 확정 거래를 선택하세요.
+      invalid_transaction: 병합을 위해 잘못된 거래가 선택되었습니다.
+      merge_success: 보류 중인 거래가 확정 거래와 병합되었습니다
+      merge_failed: 거래를 병합할 수 없습니다.
+    set_transaction:
+      pending_only: 이 기능은 보류 중인 거래에만 사용할 수 있습니다.
+    new:
+      title: 확정 거래와 병합
+      warning_title: 수동 중복 병합
+      warning_description: 보류 중인 거래를 해당 확정 거래와 직접 병합할 때 사용하세요. 보류 중인 거래는 삭제되고 확정 거래만
+        남습니다.
+      pending_transaction: 보류 중인 거래
+      select_posted: 병합할 확정 거래 선택
+      showing_range: "%{start} - %{end} 표시"
+      previous: "← 이전 10"
+      next: 다음 10개 →
+      no_candidates: 이 계좌에서 확정 거래를 찾을 수 없습니다.
+      submit_button: 거래 병합

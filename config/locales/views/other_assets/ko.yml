@@ -1,0 +1,11 @@
+---
+ko:
+  other_assets:
+    edit:
+      edit: "%{account} 편집"
+      balance_tracking_info: 기타 자산은 '새 잔액'에서 평가액을 직접 입력하여 추적합니다. 거래로 발생한 현금 흐름은 계좌
+        잔액에 영향을 미치지 않습니다.
+    new:
+      title: 자산 세부정보 입력
+      balance_tracking_info: 기타 자산은 '새 잔액'에서 평가액을 직접 입력하여 추적합니다. 거래로 발생한 현금 흐름은 계좌
+        잔액에 영향을 미치지 않습니다.

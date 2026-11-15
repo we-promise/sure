@@ -1,0 +1,39 @@
+---
+ko:
+  activerecord:
+    errors:
+      models:
+        rule:
+          min_actions: 작업이 하나 이상 있어야 합니다.
+          duplicate_actions: 규칙에는 중복 작업이 있을 수 없습니다. %{types}
+          nested_conditions: 복합 조건은 중첩될 수 없습니다.
+          split_not_alone: 분할 규칙에는 다른 작업이 포함될 수 없습니다.
+        rule/action:
+          attributes:
+            value:
+              invalid_config: 유효한 분할 구성이어야 합니다.
+              invalid_split_count: 분할 개수는 %{min}개 이상 %{max}개 이하여야 합니다.
+              split_name_required: '분할 #%{index}에 이름이 없습니다.'
+              split_name_too_long: '분할 #%{index} 이름이 너무 깁니다(최대 255자).'
+              split_name_invalid: '분할 #%{index} 이름에 잘못된 문자가 포함되어 있습니다.'
+              split_type_invalid: '분할 #%{index} 유형은 고정 금액 또는 백분율이어야 합니다.'
+              split_share_invalid: '분할 #%{index}의 배분 값은 양수여야 합니다.'
+              split_category_invalid: '분할 #%{index} 카테고리는 이 가족에 속하지 않습니다.'
+              split_merchant_invalid: '분할 #%{index} 가맹점은 이 가족에 속하지 않습니다'
+              split_tags_invalid: '분할 #%{index}에 이 가족에 속하지 않는 태그가 있습니다.'
+              percentages_must_total_100: 백분율의 합은 100이어야 합니다(현재 %{total}).
+              fixed_requires_exact_amount_condition: '고정 금액 분할에는 정확한 거래 금액과 일치하는 규칙
+                조건(예: 금액 = 42.00)이 필요합니다. 그렇지 않으면 분할 금액의 합이 조건에 맞는 모든 거래의 총액과 일치한다고
+                보장할 수 없습니다.'
+              fixed_shares_must_equal_condition_amount: 분할 금액의 합은 이 규칙 조건에서 요구하는 정확한
+                금액인 %{amount}이어야 합니다.
+        rule/condition:
+          attributes:
+            value:
+              regex_invalid: 유효한 정규 표현식이 아닙니다.
+              regex_too_complex: 안전하게 실행하기에는 너무 복잡합니다.
+              regex_too_long: 너무 깁니다(최대값은 %{count}자).
+              regex_backreference: 역참조(\1~\9)를 사용할 수 없습니다.
+  rule:
+    conditions:
+      unsupported_label: 지원되지 않음(%{type})

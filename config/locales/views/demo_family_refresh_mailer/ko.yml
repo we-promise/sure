@@ -1,0 +1,15 @@
+---
+ko:
+  demo_family_refresh_mailer:
+    completed:
+      subject: 데모 가족 새로 고침 완료
+      activity_heading: 이 기간 동안의 활동
+      sessions_label: 이전 데모 가족의 고유한 로그인 세션
+      families_label: 새로 생성된 가족 계정 수
+      period_heading: 보고 기간(UTC)
+      from_label: '시작:'
+      to_label: '종료:'
+      time_format: "%b %-d, %Y(%H:%M:%S UTC)"
+      family_heading: 이전 데모 가족
+      family_not_found: 찾을 수 없음
+      id_label: '아이디:'

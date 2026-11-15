@@ -1,0 +1,25 @@
+---
+ko:
+  impersonation_sessions:
+    approve:
+      success: 요청 승인됨
+    complete:
+      success: 세션이 완료되었습니다
+    create:
+      success: 사용자에게 요청이 전송되었습니다. 승인을 기다리고 있습니다.
+    join:
+      success: 세션에 참여했습니다.
+    leave:
+      success: 세션에서 나왔습니다.
+    reject:
+      success: 요청이 거부됨
+    super_admin_bar:
+      super_admin: 최고 관리자
+      jobs: 작업
+      impersonating: 다른 사용자로 로그인 중
+      leave: 나가기
+      terminate: 종료
+      join_a_session: 세션에 참여
+      join: 참여
+      uuid_placeholder: UUID
+      request_impersonation: 다른 사용자로 로그인 요청

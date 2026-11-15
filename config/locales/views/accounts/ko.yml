@@ -1,0 +1,218 @@
+---
+ko:
+  account:
+    entries:
+      destroy:
+        success: 항목이 삭제되었습니다.
+  accounts:
+    not_authorized: 이 계좌를 관리할 권한이 없습니다.
+    account:
+      complete_setup: 설정 완료
+      edit: 수정
+      link_lunchflow: Lunch Flow와 연결
+      link_provider: 제공업체와 연결
+      unlink_provider: 제공업체에서 연결 해제
+      change_simplefin_account: SimpleFIN 계좌 변경
+      troubleshoot: 문제 해결
+      enable: 계좌 활성화
+      disable: 계좌 비활성화
+      exclude_from_reports: 모든 보고서에서 제외
+      include_in_reports: 보고서에 포함
+      excluded_from_reports_indicator: 보고서에서 제외됨
+      set_default: 기본값으로 설정
+      remove_default: 기본값 설정 해제
+      default_label: 기본값
+      delete: 계좌 삭제
+      sharing: 공유
+    chart:
+      data_not_available: 선택한 기간의 데이터가 없습니다
+    create:
+      success: "%{type} 계좌를 만들었습니다"
+    set_default:
+      depository_only: 현금 및 신용카드 계좌만 기본값으로 설정할 수 있습니다.
+    destroy:
+      success: "%{type} 계좌 삭제가 예약되었습니다"
+      cannot_delete_linked: 연결된 계좌는 삭제할 수 없습니다. 먼저 연결을 해제해 주세요.
+      failed: 리소스 삭제에 실패했습니다. 나중에 다시 시도하세요.
+    empty:
+      empty_message: 연결, 가져오기 또는 수동 입력을 통해 계좌를 추가하세요.
+      new_account: 새 계좌
+      no_accounts: 아직 계좌가 없습니다
+    form:
+      balance: '해당 날짜의 잔액:'
+      opening_balance_date_label: 기초 잔액 기준일
+      name_label: 계좌 이름
+      name_placeholder: '예: 생활비 계좌'
+      additional_details: 추가 세부정보
+      institution_name_label: 기관명
+      institution_name_placeholder: '예: Chase Bank'
+      institution_domain_label: 기관 도메인
+      institution_domain_placeholder: '예: chase.com'
+      notes_label: 메모
+      notes_placeholder: 계좌번호, 은행 코드, IBAN, 라우팅 번호 등 추가 정보를 기록하세요.
+      exclude_from_reports: 모든 보고서에서 제외
+      enable_category_matcher_label: 카테고리 자동 매칭 사용
+      enable_category_matcher_hint: 활성화되면 제공업체가 제안한 카테고리가 가져온 거래에 적용됩니다. 새 거래를 분류되지
+        않은 상태로 두려면 비활성화하세요.
+    index:
+      accounts: 계좌
+      financekit_accounts:
+        title: Apple Wallet
+        description: Apple Wallet 연결을 관리하고 Sure iOS 앱에서 동기화하세요.
+      cancel_sync: 동기화 취소
+      manual_accounts:
+        other_accounts: 기타 계좌
+      new_account: 새 계좌
+      sync: 모두 동기화
+    sync_all:
+      syncing: 계좌 동기화 중...
+    new:
+      import_accounts: 계좌 가져오기
+      container:
+        select: 선택
+        navigate: 탐색
+        close: 닫기
+        next: 다음
+        previous: 이전
+      method_selector:
+        connected_entry: 계좌 연결
+        connected_entry_eu: EU 계좌 연결
+        link_with_provider: "%{provider}와 연결"
+        lunchflow_entry: Lunch Flow 계좌 연결
+        manual_entry: 계좌 잔액 입력
+        title: 어떻게 추가하시겠습니까?
+      title: 무엇을 추가하고 싶으신가요?
+    show:
+      limited_fx_history_warning: 환율 내역은 %{date}부터만 제공됩니다. 이 날짜 이전의 거래에는 근사 환율이 적용됩니다.
+        환율 제공업체가 제한된 기간의 과거 데이터만 제공하는 경우 발생할 수 있습니다.
+      tabs:
+        activity: 활동 내역
+        holdings: 보유 종목
+        overview: 개요
+        schedule: 일정
+        statements: 명세서
+      activity:
+        amount: 금액
+        balance: 잔액
+        date: 날짜
+        entries: 개 내역
+        entry: 개 내역
+        filter: 필터
+        new: 새로 만들기
+        new_activity: 새로운 활동
+        new_balance: 새 잔액
+        new_trade: 새 매매
+        new_transaction: 새 거래
+        new_transfer: 새 이체
+        no_entries: 내역이 없습니다
+        search:
+          placeholder: 이름으로 내역 검색
+        search_placeholder: 이름으로 내역 검색
+        title: 활동 내역
+      chart:
+        balance: 잔액
+        owed: 상환할 금액
+      header:
+        complete_setup: 설정 완료
+      menu:
+        confirm_accept: '"%{name}" 삭제'
+        confirm_body_html: "<p>이 계좌를 삭제하면 잔액 이력이 지워져 순자산 계산과 계좌 그래프에 영향을 줍니다.</p><br
+          /> <p>삭제한 계좌 정보는 복구할 수 없으며, 다시 사용하려면 새 계좌로 추가해야 합니다.</p>"
+        confirm_title: 계좌를 삭제하시겠습니까?
+        delete_account: 계좌 삭제
+        edit: 수정
+        import: 거래 내역 가져오기
+        import_trades: 매매 내역 가져오기
+        import_transactions: 거래 내역 가져오기
+        manage: 계좌 관리
+        sharing: 공유
+        statements: 명세서
+        exclude_from_reports: 모든 보고서에서 제외
+        include_in_reports: 보고서에 포함
+    update:
+      success: "%{type} 계좌를 수정했습니다"
+    sidebar:
+      missing_data: 과거 데이터가 누락되었습니다.
+      missing_data_description: "%{product}는 제3자 제공업체를 통해 과거 환율, 증권 가격 등을 가져옵니다. 이
+        데이터는 정확한 과거 계좌 잔액을 계산하는 데 필요합니다."
+      configure_providers: 여기에서 제공업체를 구성하세요.
+      tabs:
+        all: 전체
+        assets: 자산
+        debts: 부채
+      new_asset: 새 자산
+      new_debt: 새 부채
+      new_account: 새 계좌
+      new_account_group: 새로운 %{account_group}
+      expand_all: 모두 펼치기
+      collapse_all: 모두 접기
+      reorder_account: "%{account} 이동"
+      reorder_hint: 재정렬하려면 드래그하세요. 키보드를 사용하여 Enter 키를 누른 다음 화살표 키를 누르세요.
+      sort_mode:
+        start: 계좌 정렬
+        hint: 계좌를 핸들로 드래그하여 재정렬하세요.
+        done: 완료
+    types:
+      depository: 현금
+      investment: 투자
+      crypto: 암호화폐
+      property: 부동산
+      vehicle: 차량
+      other_asset: 기타 자산
+      credit_card: 신용카드
+      loan: 대출
+      other_liability: 기타 부채
+    types_plural:
+      depository: 현금
+      investment: 투자
+      crypto: 암호화폐
+      property: 부동산
+      vehicle: 차량
+      other_asset: 기타 자산
+      credit_card: 신용카드
+      loan: 대출
+      other_liability: 기타 부채
+    tax_treatments:
+      taxable: 과세
+      tax_deferred: 과세 이연
+      tax_exempt: 비과세
+      tax_advantaged: 세제 혜택
+    tax_treatment_descriptions:
+      taxable: 수익 실현 시 과세
+      tax_deferred: 납입 시 공제하고 인출 시 과세
+      tax_exempt: 세후 자금으로 납입하며 수익은 비과세
+      tax_advantaged: 조건에 따른 특별 세제 혜택
+    subtype_regions:
+      us: 미국
+      uk: 영국
+      ca: 캐나다
+      au: 호주
+      eu: 유럽
+      in: 인도
+      generic: 일반
+    confirm_unlink:
+      title: 제공업체에서 계좌를 연결 해제하시겠습니까?
+      description_html: "<strong>%{account_name}</strong> 계좌를 <strong>%{provider_name}</strong>에서
+        연결 해제하려고 합니다. 그러면 수동 계좌로 전환됩니다."
+      warning_title: 이것이 의미하는 바
+      warning_wallet_connection: 이 Apple Wallet 연결의 모든 계좌가 연결 해제됩니다. 거래와 잔액은 유지됩니다.
+        Sure iOS 앱에서 Wallet을 새로 설정하여 다시 연결할 수 있습니다.
+      warning_no_sync: 계좌는 더 이상 제공업체와 자동으로 동기화되지 않습니다.
+      warning_manual_updates: 거래를 추가하고 잔액을 수동으로 업데이트해야 합니다.
+      warning_transactions_kept: 기존의 모든 거래와 잔액은 유지됩니다.
+      warning_can_delete: 연결을 해제한 후 필요한 경우 계좌를 삭제할 수 있습니다.
+      confirm_button: 확인 및 연결 해제
+    unlink:
+      success: 계좌 연결이 해제되었습니다. 이제 수동 계좌가 되었습니다.
+      not_linked: 계좌가 제공업체에 연결되어 있지 않습니다.
+      error: '계좌 연결 해제 실패: %{error}'
+      generic_error: 예상치 못한 오류가 발생했습니다. 다시 시도해 주세요.
+    select_provider:
+      title: 연결할 제공업체를 선택하세요.
+      description: "%{account_name}를 연결하는 데 사용할 제공업체를 선택하세요."
+      already_linked: 계좌가 이미 제공업체에 연결되어 있습니다.
+      no_providers: 현재 구성된 제공업체가 없습니다.
+  email_confirmations:
+    new:
+      invalid_token: 유효하지 않거나 만료된 확인 링크입니다.
+      success_login: 이메일이 확인되었습니다. 새로운 이메일 주소로 로그인해주세요.

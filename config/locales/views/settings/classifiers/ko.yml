@@ -1,0 +1,193 @@
+---
+ko:
+  settings:
+    classifiers:
+      account:
+        account_field: 계좌를 하나의 토큰으로 포함
+        account_field_hint: 거래가 속한 계좌를 분류 근거로 사용합니다. 계좌만으로 판단하지는 않으며, 알려진 단어나 가맹점이
+          함께 필요합니다.
+      amount:
+        amount_by_direction: 입금·출금 방향 포함
+        amount_by_direction_hint: 각 카테고리는 돈이 어떤 방향으로 가는지 학습하고, 같은 매장에서 환불과 구매가 서로
+          분리됩니다.
+        amount_field: 금액 포함
+        amount_field_hint: 같은 통화 내에서 각 카테고리의 평소 거래 금액과 비교합니다. 비교에는 로그 척도를 사용합니다.
+      category_training:
+        apply: 적용
+        categories: 카테고리
+        categories_all: 모든 카테고리
+        categories_hint: 선택하지 않은 카테고리와 그 하위 카테고리는 학습에서 제외되므로 Bayes가 선택하지 않습니다.
+        categories_some: 전체 카테고리 %{total}개 중 %{count}개
+        exclude_transfers: 이체 제외
+        exclude_transfers_hint: 계좌 간 이체 및 결제입니다.
+        search_categories: 카테고리 검색
+        skip_self_labels: 확인되거나 지정한 일수가 지날 때까지 Bayes의 자체 예측을 학습에서 제외
+        skip_self_labels_hint: 직접 변경하거나 잠근 항목은 확인된 것으로 봅니다. 잘못된 예측이 다시 학습되어 강화되지 않게
+          하며, 지정한 기간 동안 그대로 둔 예측은 수락한 것으로 간주합니다.
+      add_rule:
+        success: "%{name} 규칙이 규칙 상단에 추가되었습니다."
+      classifier:
+        apply: 적용
+        lock_results: 분류기가 지정한 카테고리 잠금
+        lock_results_hint: 규칙에서 적용을 클릭하지 않는 한 규칙이 Bayes의 선택을 변경하지 못하게 합니다. AI는 잠금
+          여부와 관계없이 Bayes의 선택을 변경하지 않습니다.
+        rule: 분류기로 분류
+        rule_hint: 규칙에서 카테고리 분류기 규칙을 켜거나 끌 수 있습니다. 동기화 후 규칙 순서에 따라 미분류 거래를 분류하며, 확신이
+          낮은 거래는 자동 분류 규칙이 처리하도록 남깁니다.
+        threshold: 임계값
+        threshold_hint: Bayes가 분류를 적용할 최소 점수입니다(0.05–0.99). 낮추면 더 많은 거래를 분류하지만 오류도
+          늘어납니다.
+      clear_locks:
+        success: Bayes 잠금을 해제하는 중입니다. 잠시 기다려 주세요.
+      evaluation:
+        apply_best: 이 설정 적용
+        best: 찾은 최적 설정
+        best_changes: '찾은 최적 설정 — 현재 설정과의 차이:'
+        best_no_changes: 내 설정보다 점수가 높은 결과가 없습니다.
+        buttons_hint: 내 설정 테스트는 현재 설정의 성능을 평가합니다. 최적의 설정 찾기는 표시된 평가 기간 직전 %{tuning}개월에서
+          설정을 탐색하고, 탐색에 쓰지 않은 기간에서 결과를 평가합니다. 평가 지표는 ROC-AUC입니다. 모든 임계값에 걸쳐 각 카테고리의
+          거래에 다른 거래보다 높은 점수를 주는 정도를 측정하며, 전체 점수가 높아지고 탐색 기간 %{tuning}개월 중 한 달을 제외한
+          모든 달에서도 점수가 높아질 때만 변경을 유지합니다. 먼저 입력 요소를 선택합니다. 가맹점 토큰·금액·계좌의 모든 조합을 확인하고,
+          가맹점과 계좌를 단어와 별도로 평가하는 방식, 가맹점 이름과 메모를 단어로 사용하는 방식을 차례로 확인합니다. 이어서 다른 설정을
+          하나씩 바꾸어 보고, 마지막으로 점수 계산 설정을 조정합니다. 기본값은 선택한 카테고리를 유지하면서 원래 분류기의 설정을 사용합니다.
+          기본값으로 재설정하면 해당 설정으로 바꾸고 테스트합니다.
+        categories_heading: 카테고리 분류기
+        change: "%{setting}: %{value}"
+        confusion: "%{actual} → %{predicted}"
+        confusions: '가장 흔한 오류: %{column}, 임계값 %{threshold}'
+        current: 내 설정
+        defaults: 기본값
+        description: 각 열은 지난 %{months}개월의 거래를 새 거래로 간주하여 평가합니다. 매월 그 이전의 내역으로 학습한
+          후 사용자가 지정한 카테고리와 비교합니다. 테스트는 거래 카테고리를 변경하지 않으며, 분류기 설정은 적용하거나 재설정할 때만 바뀝니다.
+        find_best: 최적의 설정 찾기
+        matcher_confusions: '가장 흔한 가맹점 오류: %{column}, 유사도 %{similarity}'
+        matcher_description: 같은 %{months}개월 동안 가맹점 자동 매칭 성능을 평가합니다. 가맹점이 지정된 거래 %{count}건에서
+          가맹점 정보를 숨긴 후, 해당 월 이전의 내역과 비교하여 매칭합니다. 기존에 지정된 가맹점과 일치하면 정답입니다. 모든 빈도 기준과
+          가맹점 수 조합을 평가하며, 오류 비용을 반영했을 때 가장 좋은 셀을 최적 설정으로 선택합니다. 적용을 누르면 해당 설정이 반영됩니다.
+          테스트 자체는 가맹점을 지정하지 않습니다.
+        merchants_heading: 가맹점 매칭
+        no_confusions: 이 임계값에서는 실수가 없습니다.
+        no_matcher_confusions: 이 유사도에서는 가맹점 매칭 오류가 없습니다.
+        no_uncategorized: 이 임계값에서는 미분류로 남는 거래가 없습니다.
+        no_unfilled: 이 유사도에서는 가맹점이 비어 있는 항목이 없습니다.
+        none: 아직 테스트되지 않았습니다.
+        'off': 꺼짐
+        'on': 켜짐
+        ran_at: "%{time} 전 거래 %{count}건(%{months})으로 평가했습니다."
+        reset: 기본값으로 재설정
+        reset_confirm: 모든 분류자 설정을 기본값으로 재설정하고 테스트하시겠습니까?
+        right_wrong: 각 셀은 정답 수 / 오답 수입니다.
+        run: 내 설정 테스트
+        running: 테스트 중… 이 섹션은 완료되면 업데이트됩니다.
+        short_history: 카테고리 분류기를 조정할 내역이 아직 부족합니다. 카테고리가 지정된 거래가 약 %{months}개월치 필요하므로,
+          적용을 눌러도 현재 분류기 설정은 유지됩니다.
+        similarity: 유사도
+        stale: 이 테스트 이후 설정이 변경되었습니다.
+        threshold: 임계값
+        trying: "%{changes} 시도 중…"
+        uncategorized: '가장 흔한 미분류 항목: %{column}, 임계값 %{threshold}'
+        unfilled: '가맹점이 비어 있는 주요 항목: %{column}, 유사도 %{similarity}'
+        weight: 오답 1건의 비용
+        weight_hint: 적용할 설정을 선택하는 기준입니다. 정답 수에서 오답 1건당 지정한 수를 뺀 점수가 가장 높은 셀이 굵게 표시됩니다.
+          카테고리는 최적 설정의 임계값을, 가맹점 자동 매칭은 빈도 기준·유사도·가맹점 수를 적용합니다.
+        weight_option:
+          one: 정답 1개
+          other: 정답 %{count}개
+      matcher:
+        lock_similar_merchants: 자동 매칭으로 지정한 가맹점 잠금
+        lock_similar_merchants_hint: 규칙의 적용 버튼을 누르지 않는 한 규칙, AI, 동기화가 지정된 가맹점을 바꾸지
+          못하게 합니다. 자동 매칭 자체가 건 잠금은 확인된 것으로 간주하지 않습니다(가맹점 자동 매칭 조정).
+        rule: 유사 거래에서 누락된 가맹점 채우기
+        rule_hint: 규칙에서 가맹점 매칭 규칙을 켜거나 끌 수 있습니다. 설정한 규칙 순서에 따라 가맹점이 없는 거래에 유사한 거래들이
+          공통으로 가진 가맹점을 지정합니다. 예를 들어 "NETFLIX.COM 8812"와 "Netflix com"처럼 표기가 비슷한 거래를
+          참고합니다. 이체는 제외됩니다.
+        similar_threshold: 유사도
+        similar_threshold_hint: 숫자와 참조 코드를 제외한 거래 설명의 최소 유사도입니다(0.5–0.99). 낮추면 더 많은
+          가맹점을 채우지만 오류도 늘어납니다. 자동 조정에서 적용을 누를 때도 이 값이 설정됩니다.
+      matcher_tuning:
+        similar_common_share: 빈도 기준
+        similar_common_share_hint: 복사에 참조하는 거래에서 이 비율(0.01–1)을 초과하고 최소 50건에 나타나는 단어나
+          3글자 조각은, "card"나 "payment"처럼 구별에 도움이 되지 않는 흔한 표현으로 보고 무시합니다. 값을 높이면 더 많은
+          표현이 반영됩니다. 자동 조정에서 적용을 누를 때도 이 값이 설정됩니다.
+        similar_min_neighbours: 가맹점이 일치해야 하는 수
+        similar_min_neighbours_hint: 같은 가맹점이 지정된 유사 거래가 최소 몇 건 있어야 하는지를 정합니다. 이 중
+          다른 가맹점이 지정된 거래가 하나라도 있으면 복사하지 않습니다. 1로 설정하면 단일 거래를 복사하므로 오류도 그대로 복사될 수 있습니다.
+        similar_min_neighbours_option:
+          one: 가맹점 1곳
+          other: 가맹점 %{count}곳
+        similar_skip_self: 직접 확인하거나 지정한 일수가 지날 때까지 자동 매칭으로 지정된 가맹점을 다른 거래에 복사하지 않기
+        similar_skip_self_hint: 직접 변경하거나 잠근 항목은 확인된 것으로 봅니다. 잘못 매칭한 가맹점 정보가 퍼지는 것을
+          막으며, 지정한 기간 동안 그대로 둔 항목은 수락한 것으로 간주합니다.
+      merchant:
+        merchant_field: 설정된 경우 가맹점을 하나의 토큰으로 포함
+        merchant_field_hint: 가맹점 식별자로 집계하므로 이름이 바뀌어도 학습 내역이 유지됩니다.
+        merchant_name_words: 가맹점 이름을 단어로 포함
+        merchant_name_words_hint: 원래 분류기처럼 가맹점 이름을 거래 설명과 같은 방식으로 읽어 유사한 이름끼리 분류 근거를
+          공유합니다. 아래 토큰과 일부 정보가 중복됩니다.
+      run:
+        success: Bayes가 미분류 거래를 분류하는 중입니다. 잠시 기다려 주세요.
+      scoring:
+        complement: 보완 나이브 베이즈(Complement Naive Bayes) 사용
+        complement_hint: 거래가 다른 카테고리에 얼마나 부합하지 않는지를 기준으로 각 카테고리 점수를 계산합니다. 카테고리별 크기
+          차이가 클 때 더 잘 작동합니다. 끄면 원래의 다항 나이브 베이즈 방식을 사용합니다.
+        prior: 각 카테고리의 사용 빈도 포함
+        prior_hint: 자주 사용하는 카테고리에 더 높은 가중치를 줍니다. 끄면 원래 방식처럼 모든 카테고리를 동일하게 취급합니다.
+        separate_fields: 단어와 별도로 가맹점 및 계좌 점수 계산
+        separate_fields_hint: 각 항목에 별도의 분포를 적용하여 긴 설명이 가맹점이나 계좌보다 과도한 영향을 주지 않도록 합니다.
+          가맹점 또는 계좌 포함 옵션이 필요하며, 금액은 항상 별도로 평가합니다.
+        smoothing: 스무딩
+        smoothing_hint: 학습에 없던 단어 때문에 카테고리가 배제되지 않도록 각 빈도에 더하는 값입니다(0.001–10). 원래
+          기본값은 1이며, 낮출수록 관측된 데이터에 더 큰 비중을 둡니다.
+      show:
+        add_rule_body: 규칙에 %{name} 규칙이 없으므로 설정할 항목이 없습니다. 규칙 상단에 추가하시겠습니까?
+        add_rule_cancel: 아니요
+        add_rule_confirm: 규칙 추가
+        add_rule_title: "%{name} 규칙을 추가하시겠습니까?"
+        account: 계좌 조정
+        amount: 금액 조정
+        auto_tune: 자동 조정
+        category_training: 카테고리 분류기 조정
+        clear_locks: Bayes 잠금 해제
+        clear_locks_confirm_body: Bayes가 잠근 카테고리와 자동 매칭이 잠근 가맹점 중, 자동 지정된 값이 그대로 유지된
+          항목의 잠금을 해제합니다. 이후 규칙과 AI가 이를 다시 변경할 수 있으며, 카테고리와 가맹점 값 자체는 유지됩니다.
+        clear_locks_confirm_button: 잠금 해제
+        clear_locks_confirm_title: Bayes 잠금을 해제하시겠습니까?
+        description: Bayes 카테고리 분류기는 이미 분류된 거래에서 학습하여 AI 제공업체보다 먼저 새 거래를 분류합니다. 설정
+          변경은 다음 분류부터 적용되며, 이미 분류된 거래는 기존 카테고리를 유지합니다.
+        matcher: 자동 매칭
+        matcher_description: 유사 거래를 참고하여 누락된 가맹점을 채웁니다. 동기화 후 가맹점 자동 매칭 규칙이 실행되거나
+          실행 버튼을 눌렀을 때 적용되며, 저장된 가맹점 정보가 변경됩니다.
+        matcher_tuning: 가맹점 매칭 조정
+        merchant: 가맹점 조정
+        run: 실행
+        scoring: 채점
+        title: 분류기
+        training: 학습
+        words: 거래 조정
+      training:
+        max_training_transactions: 학습 거래 수
+        max_training_transactions_hint: 최근 거래 중 사용할 건수입니다(100–20,000). 분류기는 카테고리가
+          지정된 거래에서 학습하고, 자동 매칭은 가맹점이 지정된 거래를 참고하여 복사합니다.
+      words:
+        bigrams: 단어 쌍 포함
+        bigrams_hint: '"card payment"처럼 인접한 단어도 함께 계산됩니다.'
+        binary: 반복되는 단어 제외
+        binary_hint: 각 단어는 거래당 한 번씩 계산됩니다.
+        drop_codes: 참조 코드 제외
+        drop_codes_hint: 2k4l19와 같이 2자리 이상의 숫자와 문자가 혼합된 단어입니다.
+        drop_numbers: 숫자 제외
+        drop_numbers_hint: 거래 설명에 포함된 매장 번호, 날짜 및 금액입니다.
+        include_notes: 메모 포함
+        include_notes_hint: 이름뿐만 아니라 메모도 읽습니다.
+        keep_single_chars: 한 글자로 된 단어 포함
+        keep_single_chars_hint: 단어를 나눈 후 남는 단일 문자나 숫자입니다. 예를 들어 mcdonald's의 "s"가 해당합니다.
+        spread_filter: 모든 카테고리에서 동일하게 사용되는 단어 제외
+        spread_filter_hint: 카테고리를 구별하는 데 도움이 되지 않는 단어를 제외합니다. 설정값은 특정 카테고리의 사용 비중이
+          균등한 비중보다 얼마나 높아야 하는지를 나타냅니다.
+        word_split: 단어는 다음과 같이 구성됩니다.
+        word_split_ascii: a–z 및 0–9
+        word_split_hint: 나머지 문자는 모두 단어를 나누는 기준이 됩니다. 모든 문자 체계를 허용하면 Geschäft나 Кофейня
+          같은 단어를 온전히 유지합니다. 내부 기호도 허용하면 mcdonald's, s/o, m&s처럼 기호 하나로 이어진 문자도 한 단어로
+          유지합니다. 단, *netflix처럼 단어 맨 앞이나 맨 뒤에 있는 기호는 제거됩니다.
+        word_split_symbols: 문자, 숫자, 내부 기호
+        word_split_unicode: 모든 문자 체계의 문자 및 숫자

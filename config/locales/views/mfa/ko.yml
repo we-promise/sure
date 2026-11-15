@@ -1,0 +1,48 @@
+---
+ko:
+  mfa:
+    local_password_required: 2단계 인증에는 로컬 비밀번호가 필요하지만, 현재 비밀번호는 외부 인증 제공업체에서 관리하고 있습니다.
+    backup_codes:
+      backup_codes_description: 각 코드는 한 번만 사용할 수 있습니다. 이 코드를 안전하게 보관하세요.
+      backup_codes_title: 백업 코드
+      continue: 보안 설정으로 계속
+      description: 백업 코드를 안전한 곳에 보관하세요. 인증 앱에 액세스할 수 없는 경우 필요합니다.
+      page_title: 백업 코드
+      title: 백업 코드 저장
+    create:
+      code_already_used: 해당 코드는 이미 사용되었습니다. 인증 앱에서 다음 코드를 입력하세요.
+      invalid_code: 인증 코드가 잘못되었습니다. 다시 시도해 주세요.
+      invalid_password: 비밀번호가 잘못되었습니다. 다시 시도해 주세요.
+    disable:
+      invalid_password: 비밀번호가 잘못되었습니다. 다시 시도해 주세요.
+      success: 2단계 인증이 비활성화되었습니다
+    new:
+      code_label: 인증코드
+      code_placeholder: 6자리 코드를 입력하세요
+      description: 2단계 인증을 설정하여 계정 보안을 강화하세요.
+      page_title: 2단계 인증 설정
+      password_label: 비밀번호로 확인하세요
+      password_placeholder: 비밀번호를 입력하세요
+      scan_description: 이 QR 코드를 스캔하려면 Google Authenticator 또는 1Password와 같은 인증 앱을
+        사용하세요.
+      scan_title: 1. QR 코드 스캔
+      secret_description: QR 코드를 스캔할 수 없는 경우 인증 앱에 이 비밀 키를 수동으로 입력하세요.
+      secret_title: 수동 입력 코드
+      title: 2단계 인증 설정
+      verify_button: 2FA 확인 및 활성화
+      verify_description: 인증 앱의 6자리 코드를 입력하세요.
+      verify_title: 2. 인증번호 입력
+    verify:
+      description: 계속하려면 인증 앱의 코드를 입력하세요.
+      or: 또는
+      page_title: 2단계 인증 확인
+      title: 2단계 인증
+      verify_button: 확인
+      webauthn_button: 패스키 또는 보안 키 사용
+      webauthn_unsupported: 이 브라우저는 패스키나 보안 키를 지원하지 않습니다.
+    verify_code:
+      invalid_code: 인증코드가 잘못되었습니다. 다시 시도해 주세요.
+    verify_webauthn:
+      invalid_credential: 해당 패스키 또는 보안 키를 확인할 수 없습니다. 다시 시도해 주세요.
+    webauthn_options:
+      unavailable: 이 계정에는 패스키나 보안 키를 사용할 수 없습니다.

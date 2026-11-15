@@ -1,6 +1,34 @@
 require "test_helper"
 
 class RecurringTransaction::FrequencyPresetTest < ActiveSupport::TestCase
+  test "Korean cadence labels use numbered days and month end without English ordinals" do
+    I18n.with_locale(:ko) do
+      assert_equal "매월 5일", Preset.label(@recurring)
+
+      Preset.apply(@recurring, preset: "monthly", day_of_month: RecurrenceRule::LAST.to_s)
+      @recurring.save!
+      assert_equal "매월 말일", Preset.label(@recurring.reload)
+
+      Preset.apply(@recurring, preset: "semimonthly", day_of_month: "1", second_day_of_month: RecurrenceRule::LAST.to_s)
+      @recurring.save!
+      assert_equal "매월 1일 및 말일", Preset.label(@recurring.reload)
+    end
+
+    assert_equal "Twice a month, the 1st and last day", Preset.label(@recurring)
+  end
+
+  test "a locale can replace English ordinals with its own numbered-day template" do
+    I18n.backend.store_translations(:fr, recurring_transactions: { frequency: { numbered_day: "le %{day}" } })
+
+    I18n.with_locale(:fr) do
+      assert_includes Preset.label(@recurring), "le 5"
+      assert_not_includes Preset.label(@recurring), "5th"
+    end
+    assert_includes Preset.label(@recurring), "5th"
+  ensure
+    I18n.reload!
+  end
+
   Preset = RecurringTransaction::FrequencyPreset
 
   def setup

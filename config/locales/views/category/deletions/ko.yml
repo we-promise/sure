@@ -1,0 +1,14 @@
+---
+ko:
+  category:
+    deletions:
+      create:
+        success: 거래 카테고리가 삭제되었습니다.
+      new:
+        category: 카테고리
+        delete_and_leave_uncategorized: '"%{category_name}"를 삭제하고 분류되지 않은 상태로 둡니다.'
+        delete_and_recategorize: '"%{category_name}" 삭제 및 새 카테고리 할당'
+        delete_category: 카테고리를 삭제하시겠습니까?
+        explanation: 이 카테고리를 삭제하면 "%{category_name}" 카테고리가 있는 모든 거래의 카테고리가 해제됩니다.
+          카테고리를 분류하지 않은 상태로 두는 대신 아래에서 새 카테고리를 할당할 수도 있습니다.
+        replacement_category_prompt: 카테고리 선택

@@ -1,0 +1,66 @@
+---
+ko:
+  settings:
+    securities:
+      show:
+        disable_mfa: 2단계 인증 해제
+        disable_mfa_confirm: 2단계 인증을 해제하시겠습니까? 계정의 보안 수준이 낮아집니다.
+        enable_mfa: 2단계 인증 사용
+        mfa_enabled_status_html: 2단계 인증이 <span class="font-medium text-green-600">활성화</span>되어
+          있습니다.
+        mfa_enabled_description: 계정은 추가 보안 계층으로 보호됩니다.
+        mfa_disabled_status_html: 2단계 인증이 <span class="font-medium text-red-600">비활성화</span>되어
+          있습니다.
+        mfa_disabled_description: 2FA를 활성화하여 계정에 추가 보안 계층을 추가하세요.
+        mfa_description: 로그인할 때 인증 앱의 코드를 요구하여 계정에 추가 보안 계층을 추가하세요.
+        mfa_title: 2단계 인증
+        webauthn_add: 패스키 또는 보안 키 추가
+        webauthn_added: '추가일: %{date}'
+        webauthn_code_label: 인증 앱 코드 또는 백업 코드
+        webauthn_code_placeholder: 현재 인증 코드 또는 사용하지 않은 백업 코드
+        webauthn_description: 로그인 시 패스키, Touch ID, Windows Hello 또는 하드웨어 보안 키를 두 번째
+          인증 수단으로 사용하세요.
+        webauthn_empty: 아직 등록된 패스키나 보안 키가 없습니다.
+        webauthn_last_used: "%{time_ago} 전에 마지막으로 사용됨"
+        webauthn_name_label: 키 이름
+        webauthn_name_placeholder: MacBook Touch ID, YubiKey 등
+        webauthn_remove: 제거
+        webauthn_remove_confirm: 이 패스키나 보안 키를 삭제하시겠습니까?
+        webauthn_remove_confirm_body: 로그인 확인에 사용하려면 먼저 이 패스키 또는 보안 키를 다시 등록해야 합니다.
+        webauthn_title: 패스키 및 보안 키
+        webauthn_unsupported: 이 브라우저는 패스키나 보안 키를 지원하지 않습니다.
+        page_title: 보안
+        encryption_warning:
+          title: 암호화 키 누락
+          intro: 민감한 데이터(API 키, 제공업체 토큰, MFA 비밀 및 PII)는 암호화되지 않은 상태로 저장됩니다. 암호화를 활성화하려면
+            환경 변수 또는 Rails 자격 증명에 다음 키를 설정하세요.
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          generate: '다음을 사용하여 세트 생성: bin/rails db:encryption:init'
+        disable_mfa_password_label: 비밀번호로 확인하세요
+        disable_mfa_password_placeholder: 비밀번호를 입력하세요
+        mfa_sso_only: 2단계 인증은 ID 제공업체를 통해 관리됩니다.
+        sso_title: 연결된 계정
+        sso_subtitle: Single Sign-On 계정 연결 관리
+        sso_disconnect: 연결 해제
+        sso_last_used: 마지막으로 사용됨
+        sso_never: 없음
+        sso_no_email: 이메일 없음
+        sso_no_identities: 연결된 SSO 계정이 없습니다.
+        sso_connect_hint: 계정을 연결하려면 로그아웃한 후 SSO 제공업체로 로그인하세요.
+        sso_confirm_title: 계정을 연결 해제하시겠습니까?
+        sso_confirm_body: "%{provider} 계정 연결을 해제하시겠습니까? 나중에 해당 제공업체에 다시 로그인하여 다시 연결할
+          수 있습니다."
+        sso_confirm_button: 연결 해제
+        sso_warning_message: 이것이 유일한 로그인 방법입니다. 연결을 끊기 전에 보안 설정에서 비밀번호를 설정해야 합니다.
+          그렇지 않으면 계정이 잠길 수 있습니다.
+  webauthn_credentials:
+    code_already_used: 해당 코드는 이미 사용되었습니다. 인증 앱의 다음 코드를 기다립니다.
+    default_name: 보안 키
+    failure: 해당 패스키나 보안 키를 저장할 수 없습니다. 다시 시도해 주세요.
+    invalid_code: 해당 코드는 유효하지 않습니다. 인증 앱의 현재 코드 또는 사용하지 않은 백업 코드를 입력하세요.
+    mfa_required: 패스키나 보안 키를 추가하기 전에 2단계 인증을 활성화하세요.
+    rate_limited: 시도 횟수가 너무 많습니다. 1분 후에 다시 시도해 주세요.
+    success: 패스키 또는 보안 키가 삭제되었습니다.

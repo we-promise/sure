@@ -1,0 +1,25 @@
+---
+ko:
+  activerecord:
+    attributes:
+      user:
+        email: 이메일
+        family: "%{moniker}"
+        family_id: "%{moniker}"
+        first_name: 이름
+        last_name: 성
+        password: 비밀번호
+        password_confirmation: 비밀번호 확인
+    errors:
+      models:
+        user:
+          attributes:
+            base:
+              cannot_deactivate_admin_with_other_users: 관리자는 다른 사용자가 있는 동안에는 계정을 삭제할
+                수 없습니다. 먼저 모든 구성원을 삭제해 주세요.
+              provider_item_has_other_accounts: 이 사용자의 계좌가 연결된 제공업체 연결에 다른 사용자의 계좌도
+                포함되어 있습니다. 가족/그룹 소속을 변경하기 전에 해당 계좌를 이동하거나 연결을 해제하세요.
+              cannot_remove_last_super_admin: 마지막 활성 최고 관리자는 삭제할 수 없습니다. 먼저 다른 사용자를
+                최고 관리자로 승격하세요.
+            profile_image:
+              invalid_file_size: 파일 크기는 %{max_megabytes}MB보다 작아야 합니다.

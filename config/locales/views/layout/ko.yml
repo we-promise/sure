@@ -1,0 +1,42 @@
+---
+ko:
+  layouts:
+    application:
+      insights: 분석
+      privacy_mode: 금액 숨김 모드 전환
+      resize_left_sidebar: 계좌 사이드바 너비 조절
+      resize_right_sidebar: 도우미 사이드바 너비 조절
+      skip_to_main: 본문으로 바로 가기
+      release_highlight:
+        title: 새로운 소식
+        done: 확인했습니다
+      nav:
+        assistant: 도우미
+        bills: 청구서
+        budgets: 예산
+        home: 홈
+        plan: 계획
+        reports: 보고서
+        goals: 목표
+        transactions: 거래 내역
+    auth:
+      existing_account: 이미 가입하셨나요?
+      no_account: "%{product_name}를 처음 사용하시나요?"
+      sign_in: 로그인
+      sign_up: 회원가입
+    shared:
+      footer:
+        privacy_policy: 개인정보 처리방침
+        terms_of_service: 이용약관
+      confirm_dialog:
+        are_you_sure: 계속하시겠습니까?
+        cannot_be_undone: 이 작업은 되돌릴 수 없습니다.
+        confirm: 확인
+      notification_tray:
+        download_complete: 다운로드 완료
+        download_failed: 다운로드에 실패했습니다. 다시 시도해 주세요.
+        download_location: 파일은 다운로드 폴더에 있습니다.
+    trial:
+      open_demo: 데모 열기
+      data_deleted_in_days: "%{days}일 후 데이터 삭제"
+      contribute: 후원하기

@@ -1,0 +1,25 @@
+---
+ko:
+  invitations:
+    accept_choice:
+      create_account: 새 계정 만들기
+      joined_household: 귀하는 가족에 합류했습니다.
+      message: "%{inviter}님이 %{role}로 가입하도록 귀하를 초대했습니다."
+      title: "%{family}에 가입하세요"
+    create:
+      failure: 초대장을 보낼 수 없습니다.
+      success: 초대장이 성공적으로 전송되었습니다.
+    destroy:
+      failure: 초대를 삭제하는 중에 문제가 발생했습니다.
+      not_authorized: 초대장을 관리할 권한이 없습니다.
+      success: 초대장이 성공적으로 제거되었습니다.
+    new:
+      email_label: 이메일 주소
+      email_placeholder: 이메일 주소를 입력하세요
+      role_admin: 관리자
+      role_guest: 손님
+      role_label: 역할
+      role_member: 회원
+      submit: 초대장 보내기
+      subtitle: "%{product_name}에서 %{moniker} 계정에 가입하도록 초대장을 보내세요."
+      title: 누군가 초대하기
