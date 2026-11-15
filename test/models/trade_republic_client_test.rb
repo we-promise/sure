@@ -2090,7 +2090,7 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       "status" => "PENDING", "subtitle" => "Pending",
       "detail" => { "amount" => 50.0, "note" => "Savings", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
     )
-    fresh = transfer_item(id: "transfer-page", event_type: "OUTGOING_TRANSFER").merge("status" => "CANCELED", "subtitle" => "Canceled", "title" => "Renamed")
+    fresh = transfer_item(id: "transfer-page", event_type: "OUTGOING_TRANSFER").merge("status" => "EXECUTED", "subtitle" => "Sent", "title" => "Renamed")
     page = [ @client.send(:build_skeleton_event, fresh, warnings: []) ]
 
     enriched, = @client.send(
@@ -2099,11 +2099,21 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     )
 
     event = enriched.sole
-    assert_equal [ "CANCELED", "Canceled", "Renamed" ], event.values_at("status", "subtitle", "title")
-    assert_not Provider::TradeRepublicTimelineEvent.importable?(event)
+    assert_equal [ "EXECUTED", "Sent", "Renamed" ], event.values_at("status", "subtitle", "title")
     assert_equal "reference_account", event.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
     assert_equal "Savings", event.dig("detail", "note")
     assert event.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY).present?
+
+    # Once the page shows it cancelled, its stored copy is not read for the check.
+    requested = []
+    @client.define_singleton_method(:subscribe) { |_websocket, **payload| requested << payload[:id] }
+    cancelled = [ @client.send(:build_skeleton_event, fresh.merge("status" => "CANCELED"), warnings: []) ]
+    enriched, = @client.send(
+      :enrich_timeline_details, Object.new, cancelled, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ],
+      reference_ibans: Set["DE00000000000000000000"]
+    )
+    assert_empty requested
+    assert_equal "CANCELED", enriched.sole["status"]
   end
 
   test "no warning when the only transfers are already checked ones on the catch-up page" do
