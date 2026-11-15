@@ -528,6 +528,26 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), returns.rows.first.value_open
   end
 
+  # A day can open and close at zero while its components cancel: a market
+  # move against a withdrawal, or an adjustment against a deposit. None of
+  # them converts without a rate, so they drop out of the drivers, and the day
+  # still has to say it was short of one.
+  test "a zero balance day with offsetting components flags a missing rate" do
+    gbp = create_portfolio_account(family: @family, currency: "GBP")
+    lay_balance account: gbp, date: @day_one, opening: 0, closing: 0
+    lay_balance account: gbp, date: @day_two, opening: 0, closing: 0, market_flow: 100, cash_flow: -100
+
+    assert daily_returns(account_ids: [ gbp.id ]).rate_missing?,
+           "a market move of 100 GBP has to be converted, whatever the balance closed at"
+
+    adjusted = create_portfolio_account(family: @family, currency: "GBP")
+    lay_balance account: adjusted, date: @day_one, opening: 0, closing: 0
+    lay_balance account: adjusted, date: @day_two, opening: 0, closing: 0, cash_flow: 100, revaluation: -100
+
+    assert daily_returns(account_ids: [ adjusted.id ]).rate_missing?,
+           "so does an adjustment, with no market move beside it"
+  end
+
   # Regression: components used to be read from the carried-forward balance row,
   # so a day with no row of its own re-reported the previous day's market flow.
   # Over a gap that multiplied the market driver by the gap's length.

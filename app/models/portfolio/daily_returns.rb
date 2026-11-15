@@ -380,8 +380,11 @@ class Portfolio::DailyReturns
             -- anchor) contributes zero at any rate, so it cannot be short of
             -- one. start_balance is checked too, but only on a row dated this
             -- day, because that is the only start_balance value_open reads; a
-            -- row carried forward opens at its end_balance (above).
-            BOOL_OR((lb.end_balance <> 0 OR (lb.date = d.date AND lb.start_balance <> 0))
+            -- row carried forward opens at its end_balance (above). So are the
+            -- day's own components: a market move and an adjustment that
+            -- cancel leave the balance at zero, yet each needs converting.
+            BOOL_OR((lb.end_balance <> 0 OR (lb.date = d.date AND lb.start_balance <> 0)
+                     OR tb.net_market_flows <> 0 OR tb.cash_adjustments + tb.non_cash_adjustments <> 0)
                     AND sa.currency <> :target_currency
                     AND er.rate IS NULL) AS rate_missing
           FROM dates d
