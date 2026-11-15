@@ -23,7 +23,7 @@ class Provider::LunchflowTest < ActiveSupport::TestCase
     success = response(200, { transactions: [] }.to_json, "OK")
 
     Provider::Lunchflow.expects(:get).with(
-      "https://www.lunchflow.app/api/v1/accounts/acct-1/transactions?from=2026-07-30&to=2026-08-31",
+      "https://lunchflow.app/api/v1/accounts/acct-1/transactions?from=2026-07-30&to=2026-08-31",
       anything
     ).returns(success)
 
@@ -34,7 +34,7 @@ class Provider::LunchflowTest < ActiveSupport::TestCase
     success = response(200, { transactions: [] }.to_json, "OK")
 
     Provider::Lunchflow.expects(:get).with(
-      "https://www.lunchflow.app/api/v1/accounts/acct-1/transactions",
+      "https://lunchflow.app/api/v1/accounts/acct-1/transactions",
       anything
     ).returns(success)
 
