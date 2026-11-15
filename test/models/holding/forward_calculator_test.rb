@@ -208,6 +208,41 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("480"), current.cost_basis
   end
 
+  # A batch import stamps every row with one created_at, so only the ids, which
+  # mean nothing, would order a day's trades: a sale could replay before the
+  # purchase it sells from. With nothing else to go on, the purchase goes first.
+  test "a same-day sale and purchase stamped together replay the purchase first" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    sale = create_trade(@voo, qty: -10, date: 2.days.ago.to_date, price: 480, account: @account)
+    purchase = create_trade(@voo, qty: 10, date: 2.days.ago.to_date, price: 200, account: @account)
+    stamp_together(sale, purchase)
+
+    current = Holding::ForwardCalculator.new(@account).calculate
+      .find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # 10 at 100 and 10 at 200 average to 150; selling 10 leaves 10 at 150. Had
+    # the sale replayed first it would have sold the 100s and left 10 at 200.
+    assert_equal BigDecimal("150"), current.cost_basis
+  end
+
+  test "a same-day sale entered before a purchase replays first when their created_at differ" do
+    load_prices
+
+    create_trade(@voo, qty: 10, date: 4.days.ago.to_date, price: 100, account: @account)
+    sale = create_trade(@voo, qty: -10, date: 2.days.ago.to_date, price: 480, account: @account)
+    purchase = create_trade(@voo, qty: 10, date: 2.days.ago.to_date, price: 200, account: @account)
+    Entry.where(id: sale.id).update_all(created_at: 2.hours.ago)
+    Entry.where(id: purchase.id).update_all(created_at: 1.hour.ago)
+
+    current = Holding::ForwardCalculator.new(@account).calculate
+      .find { |h| h.security_id == @voo.id && h.date == Date.current }
+
+    # The order the user entered them in is theirs to set.
+    assert_equal BigDecimal("200"), current.cost_basis
+  end
+
   # An acquisition fee is part of what the units cost, so it belongs in the
   # basis. Providers already record it on the trade; nothing used to read it.
   test "an acquisition fee is part of the cost basis" do
@@ -451,6 +486,14 @@ class Holding::ForwardCalculatorTest < ActiveSupport::TestCase
         assert_equal expected_entry.price, calculated_entry.price, "Price mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
         assert_equal expected_entry.amount, calculated_entry.amount, "Amount mismatch for security_id=#{expected_entry.security_id} on #{expected_entry.date}"
       end
+    end
+
+    # Gives the two entries one created_at and ids that sort sale-first, as a
+    # batch import with unlucky UUIDs would.
+    def stamp_together(sale, purchase)
+      Entry.where(id: [ sale.id, purchase.id ]).update_all(created_at: Time.zone.parse("2026-01-01 10:00:00"))
+      Entry.where(id: sale.id).update_all(id: "00000000-0000-0000-0000-000000000001")
+      Entry.where(id: purchase.id).update_all(id: "ffffffff-ffff-ffff-ffff-ffffffffffff")
     end
 
     def load_prices

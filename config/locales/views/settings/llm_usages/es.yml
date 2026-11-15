@@ -8,13 +8,10 @@ es:
         start_date: Fecha de inicio
         end_date: Fecha de fin
         filter: Filtrar
-        total_requests: Peticiones totales
         total_tokens: Tokens totales
         prompt: prompt
         completion: respuesta
         total_cost: Coste total
-        avg_cost_per_request: Coste medio/petición
-        based_on_requests: Basado en %{with_cost} de %{total} peticiones con datos de coste
         cost_by_operation: Coste por operación
         cost_by_model: Coste por modelo
         recent_usage: Uso reciente
