@@ -898,6 +898,24 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes css_select("tr[data-category='category-other_investments']").map(&:text).join, "$42.17"
   end
 
+  # The rule is by label, not only Buy and Sell: a trade that moves units
+  # stays out unless it is labelled as income or a fee.
+  test "activity breakdown leaves out trades with other labels or none" do
+    @family.accounts.each { |account| account.entries.destroy_all }
+    brokerage = @family.accounts.create!(owner: @user, name: "Reports Brokerage", balance: 0, currency: "USD",
+                                         accountable: Investment.new(subtype: "brokerage"))
+    create_transaction(account: accounts(:depository), name: "Coffee", amount: 3)
+    [ "Contribution", "Withdrawal", "Reinvestment", "Transfer", "Exchange", "Other", nil ].each_with_index do |label, i|
+      create_trade(securities(:aapl), account: brokerage, qty: i.even? ? 2 : -2, date: Date.current, price: 50)
+        .trade.update!(investment_activity_label: label)
+    end
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-other_investments']", count: 0
+  end
+
   # The summary leaves out an amount in a currency with no rate; the
   # breakdown under it and the CSV export must leave it out too, not count
   # ₩130,000 as $130,000.
