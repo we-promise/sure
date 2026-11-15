@@ -60,20 +60,38 @@ class Holding::Materializer
         explained = lots.any?(&:source_id)
         lots.map do |lot|
           unit_cost, currency = (lot.source_id || explained) ? [ lot.unit_cost, account.currency ] : provider_unit_cost(security_id)
-          lot_row(security_id, lot.source_id, qty: lot.qty, acquired_on: lot.acquired_on, unit_cost: unit_cost, currency: currency)
+          orig_qty = lot.original_qty if lot.source_id.nil?
+          lot_row(security_id, lot.source_id, qty: lot.qty, original_quantity: orig_qty, acquired_on: lot.acquired_on, unit_cost: unit_cost, currency: currency)
         end
       end
-      rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, clamped: true) }
+      rows += @calculator.clamped_security_ids.map { |security_id| lot_row(security_id, nil, qty: 0, original_quantity: 0, clamped: true) }
 
       # Only the reverse walk knows the units held before the trades.
       HoldingLot.store!(account, rows, security_ids: security_ids, openings: strategy == :reverse)
+      persist_lot_disposals
     end
 
-    def lot_row(security_id, source_entry_id, qty:, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
+    # Recorded only under fifo, so an account sold by average keeps none; its
+    # disposal costs are in the account's currency, like its derived lots. The
+    # calculators replay every security, so a scoped run keeps to its own.
+    def persist_lot_disposals
+      by_security = @calculator.lot_disposals_by_security
+      by_security = by_security.slice(*security_ids) if security_ids
+      rows = by_security.values.flatten.map do |disposal|
+        {
+          account_id: account.id, sale_entry_id: disposal.sale_id, lot_source_entry_id: disposal.lot_source_id,
+          qty: disposal.qty, unit_cost: disposal.unit_cost, currency: account.currency
+        }
+      end
+
+      HoldingLotDisposal.store!(account, rows, security_ids: security_ids)
+    end
+
+    def lot_row(security_id, source_entry_id, qty:, original_quantity: nil, acquired_on: nil, unit_cost: nil, currency: account.currency, clamped: false)
       {
         account_id: account.id, security_id: security_id, source_entry_id: source_entry_id,
         origin_security_id: source_entry_id ? nil : opening_origin(security_id), acquired_on: acquired_on,
-        qty: qty, unit_cost: unit_cost, currency: currency, clamped: clamped
+        qty: qty, original_quantity: original_quantity, unit_cost: unit_cost, currency: currency, clamped: clamped
       }
     end
 
