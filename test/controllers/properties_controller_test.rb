@@ -962,7 +962,7 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the cost link leaves out transfers and accounts the viewer can't see" do
+  test "the cost link leaves out transfers, pending transactions and accounts the viewer can't see" do
     tag = cost_tagged_property
     create_cost(accounts(:depository), 8_000, tag)
     create_cost(accounts(:credit_card), 2_000, tag)
@@ -970,6 +970,11 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     accounts(:depository).entries.create!(
       date: 1.year.ago.to_date, name: "To savings", amount: 5_000, currency: "USD",
       entryable: Transaction.new(tags: [ tag ], kind: "funds_movement")
+    )
+    # Pending at the bank, so not counted yet.
+    accounts(:depository).entries.create!(
+      date: 1.year.ago.to_date, name: "Pending deposit", amount: 1_000, currency: "USD",
+      entryable: Transaction.new(tags: [ tag ], extra: { "simplefin" => { "pending" => true } })
     )
     # Not shared with the member.
     create_cost(accounts(:investment), 3_000, tag)
@@ -984,11 +989,12 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
     end
 
-    # The list the link opens leaves the transfer out too.
+    # The list the link opens leaves the transfer and the pending one out too.
     get css_select("[data-testid='purchase-costs'] a[href*='tags']").first["href"]
     assert_response :success
     assert_includes response.body, "Notary"
     assert_not_includes response.body, "To savings"
+    assert_not_includes response.body, "Pending deposit"
   end
 
   test "overview says the rate is unavailable for a cost without a stored rate" do
