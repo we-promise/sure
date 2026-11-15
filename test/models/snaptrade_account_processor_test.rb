@@ -291,6 +291,40 @@ class SnaptradeAccountProcessorTest < ActiveSupport::TestCase
     assert_equal BigDecimal("20900"), @account.reload.balance
   end
 
+  test "a short option next to a long without units keeps the API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("20900.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_holdings_payload: [
+        { "instrument" => { "kind" => "stock", "symbol" => securities(:aapl).ticker }, "units" => nil, "price" => "200.00", "currency" => "USD" },
+        option_position("AAPL  261218C00240000", "CALL", units: "-1", price: "1.00")
+      ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    assert_equal BigDecimal("20900"), @account.reload.balance
+  end
+
+  test "a short option next to cash in another currency keeps the API total" do
+    @snaptrade_account.update!(
+      currency: "USD",
+      current_balance: BigDecimal("1680.00"),
+      cash_balance: BigDecimal("1000.00"),
+      raw_balances_payload: [
+        { "currency" => { "code" => "USD" }, "cash" => "1000.00" },
+        { "currency" => { "code" => "EUR" }, "cash" => "800.00" }
+      ],
+      raw_holdings_payload: [ option_position("AAPL  261218P00200000", "PUT", units: "-1", price: "2.00") ]
+    )
+
+    SnaptradeAccount::Processor.new(@snaptrade_account).process
+
+    # The EUR cash is imported as a holding, not counted in 1000 - 200.
+    assert_equal BigDecimal("1680"), @account.reload.balance
+  end
+
   test "a cash-equivalent option is subtracted from cash at contract value" do
     @snaptrade_account.update!(
       raw_holdings_payload: [ option_position("AAPL  261218C00240000", "CALL", units: "2", price: "5.00").merge("cash_equivalent" => true) ]
