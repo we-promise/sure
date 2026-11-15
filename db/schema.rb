@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_13_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -843,7 +843,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_130000) do
     t.datetime "updated_at", null: false
     t.index ["from_currency", "to_currency", "date"], name: "index_exchange_rates_on_base_converted_date_unique", unique: true
     t.index ["from_currency"], name: "index_exchange_rates_on_from_currency"
-    t.index ["to_currency"], name: "index_exchange_rates_on_to_currency"
+    t.index ["to_currency", "updated_at"], name: "index_exchange_rates_on_to_currency_and_updated_at"
+    t.index ["updated_at"], name: "index_exchange_rates_on_updated_at"
     t.check_constraint "rate > 0::numeric AND rate <> 'NaN'::numeric AND rate::text <> 'Infinity'::text", name: "chk_exchange_rates_rate_positive"
   end
 
@@ -1597,6 +1598,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_130000) do
   create_table "llm_usages", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.integer "cache_creation_tokens"
     t.integer "cache_read_tokens"
+    t.uuid "call_id"
     t.integer "completion_tokens", default: 0, null: false
     t.datetime "created_at", null: false
     t.decimal "estimated_cost", precision: 10, scale: 6
@@ -1606,13 +1608,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_13_130000) do
     t.string "operation", null: false
     t.integer "prompt_tokens", default: 0, null: false
     t.string "provider", null: false
+    t.string "status", default: "succeeded", null: false
     t.integer "total_tokens", default: 0, null: false
     t.datetime "updated_at", null: false
+    t.index ["call_id"], name: "index_llm_usages_on_call_id"
     t.index ["family_id", "created_at"], name: "index_llm_usages_on_family_id_and_created_at"
     t.index ["family_id", "operation"], name: "index_llm_usages_on_family_id_and_operation"
     t.index ["family_id"], name: "index_llm_usages_on_family_id"
     t.check_constraint "cache_creation_tokens IS NULL OR cache_creation_tokens >= 0", name: "chk_llm_usages_cache_creation_tokens_non_negative"
     t.check_constraint "cache_read_tokens IS NULL OR cache_read_tokens >= 0", name: "chk_llm_usages_cache_read_tokens_non_negative"
+    t.check_constraint "status::text = ANY (ARRAY['succeeded'::character varying, 'failed'::character varying, 'cancelled'::character varying]::text[])", name: "chk_llm_usages_status"
   end
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
