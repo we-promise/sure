@@ -478,7 +478,7 @@ docker compose up -d # Restart on the new version; database migrations run autom
 
 Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Current ones don't, so after refreshing `compose.yml` from the example, `docker compose up` stops with "Set SECRET_KEY_BASE in your .env file". **Do not generate a new value for an existing install.** Put the value your install already runs with into `.env` first (if you never set one, it is the `SECRET_KEY_BASE` default in your previous `compose.yml`).
 
-Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
+Why: when neither the three `ACTIVE_RECORD_ENCRYPTION_*` variables nor Rails credentials supply the Active Record keys, those keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
 
 If the value you have been running with is that old public default, the app logs a `[SECURITY]` warning at boot.
 
@@ -494,11 +494,27 @@ docker compose run --rm --no-deps backup create
 ```
 
 Confirm the backup succeeded and retain its folder name, original configuration,
-and any external keys. Keep the database and Redis running. Then choose the applicable key path:
+and any external keys. Keep the database and Redis running.
 
-If your running containers already receive all three `ACTIVE_RECORD_ENCRYPTION_*` values and those keys encrypted your data, that data uses the explicit keys rather than keys derived from `SECRET_KEY_BASE`. Values present only in `.env` may never have reached older Compose containers; check [Generate the keys](#generate-the-keys) before assuming they were active. Keep them unchanged and skip steps 1 and 2: change `SECRET_KEY_BASE` and re-encrypt the settings as described below. To rotate explicit keys as well, follow [Encryption key rotation](encryption.md), which keeps the replaced keys readable as a `previous` scheme.
+Choose the path based on the keys that actually encrypted the data:
 
-Otherwise, move data encrypted with derived keys to new encryption keys first:
+- **Keys from environment variables or Rails credentials:** if the containers receive
+  all three `ACTIVE_RECORD_ENCRYPTION_*` values, or Rails credentials supply the
+  keys, keep those effective keys unchanged. Complete environment keys take
+  precedence over credentials. Preserve the credentials file and its decryption
+  key too. Skip steps 1 and 2 below and proceed to the settings rotation: changing
+  `SECRET_KEY_BASE` does not change these independently configured Active Record
+  keys. To rotate them as well, follow [Encryption key rotation](encryption.md)
+  with the correct previous keys.
+- **Keys derived from `SECRET_KEY_BASE`:** follow steps 1 and 2 below before
+  changing that secret. Values present only in `.env` may never have reached older
+  Compose containers; check [Generate the keys](#generate-the-keys) before assuming
+  they were active.
+
+If the configured keys no longer decrypt existing data, or rows use multiple key
+sets, stop and establish the required current and previous keys using
+[Encryption key rotation](encryption.md). Do not select a path from the current
+`.env` contents alone or discard either key set.
 
 1. Generate new keys with `docker compose run --rm --no-deps web bin/rails db:encryption:init` and put the three values into `.env` as `ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY`, `ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY` and `ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT`. For an older Compose file, follow the [key-forwarding instructions](#generate-the-keys) so both `web` and `worker` receive them. Keep `SECRET_KEY_BASE` unchanged for now.
 2. Stop the app and re-encrypt everything under the new keys. `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` holds the `SECRET_KEY_BASE` your data was encrypted with; it makes the keys derived from it a `previous` scheme ([key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation)), so existing data still decrypts:
@@ -524,31 +540,110 @@ for the `SECRET_KEY_BASE` change and settings rotation below.
 
 Pass the variable only to these commands, never put it into `.env` or `compose.yml`: while it is set, Rails writes deterministically encrypted values (emails, tokens, API keys) with the old key. Only after that is it safe to change `SECRET_KEY_BASE`. Generating a fresh value right away is only safe for a new install.
 
-If you already changed `SECRET_KEY_BASE` and logins or syncs broke, run step 2 with the old value in `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE`, then re-encrypt the settings as described next.
+If you already changed `SECRET_KEY_BASE` and logins or syncs broke, keep writers
+stopped and preserve both values. If the Active Record keys were derived, supply
+the original secret as `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_SECRET_KEY_BASE` during
+the conversion above. If they came from environment variables or Rails credentials,
+keep those keys unchanged and recover the settings below. Do not start the web
+service for manual settings recovery until Active Record data can be decrypted.
 
-Changing `SECRET_KEY_BASE` also affects settings. API keys and tokens saved on the self-hosting settings page (OpenAI and Anthropic tokens, market data and property valuation keys, and similar) are encrypted with a key derived from `SECRET_KEY_BASE` itself, not with the Active Record keys above, so the `previous` scheme does not cover them. Right after the change those settings no longer decrypt: the app does not show an error, it sends the stored ciphertext as the key and the provider rejects it. Re-encrypt them once, with the old value in `OLD_SECRET_KEY_BASE`:
+#### Rotate settings after changing `SECRET_KEY_BASE`
+
+Settings use separate encryption: API keys and tokens saved on the self-hosting
+settings page are encrypted with a key derived from `SECRET_KEY_BASE`, not the
+Active Record keys. An Active Record `previous` scheme does not cover them. If a
+stored setting cannot be decrypted, its getter returns the stored value unchanged;
+for ciphertext, that means the provider receives an unusable key.
+
+After completing any required Active Record conversion above, set a new, unique
+`SECRET_KEY_BASE` in `.env`. If you already changed it, retain that new value rather
+than generating another one. Keep the current secret stable throughout settings
+recovery. With writers still stopped, preview the settings conversion using the
+old secret only for this one-off command:
 
 ```bash
 read -rs OLD_SECRET_KEY_BASE && export OLD_SECRET_KEY_BASE   # paste the previous value; keeps it out of your shell history
-docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[1]"   # dry run: lists what would change
+docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[1]"
 ```
 
-Check the preview before writing: it must report `"dry_run":true` and `"ok":true`.
-If it fails, keep writers stopped and correct the old secret before proceeding.
-Review any `not_decryptable` entries and plan to re-enter those settings manually.
-Then run the write pass and inspect its report too:
+Inspect the report before writing:
+
+- **`"ok":true` and `"dry_run":true`:** `would_reencrypt` entries can be converted
+  with the write command below; `current` entries already use the current secret.
+  Any `not_decryptable` entries still need manual recovery, even when `ok` is true.
+- **`old_secret_key_base_did_not_match`:** first verify the supplied old secret.
+  If it is wrong, correct it and repeat the preview. If it is correct, the remaining
+  settings may be plaintext or encrypted with another secret; repeatedly changing
+  the supplied secret will not fix them. No settings were converted by the preview.
+  Skip the write pass and use [Manual settings recovery](#manual-settings-recovery).
+- **Other errors:** keep writers stopped and resolve the reported cause before
+  proceeding. For example, `old_secret_key_base_missing` requires the old value,
+  and `secret_key_base_unchanged` means the current and old values are still equal.
+
+After a successful preview, convert the settings that the old secret decrypts:
 
 ```bash
-docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[0]"   # writes
+docker compose run --rm --no-deps -e OLD_SECRET_KEY_BASE web bin/rails "security:rotate_setting_secrets[0]"
+```
+
+A successful write report shows `"dry_run":false`; converted entries read `reencrypted`.
+Inspect both `ok` and `not_decryptable`. If any settings remain undecryptable, follow
+the manual path below before starting workers. The same recovery path applies if a
+repeat command reports `old_secret_key_base_did_not_match` after decryptable settings
+were already converted. For other failures, keep writers stopped and investigate;
+preserve the current secret, original secret, backup, and effective Active Record
+keys. Remove the temporary variable when finished with the one-off commands:
+
+```bash
 unset OLD_SECRET_KEY_BASE
 ```
 
-Check that the dry run's report shows `"dry_run":true`. It marks fields it would move as `would_reencrypt`; after the second command they read `reencrypted`. If nothing decrypts with the value you gave, the task stops with `old_secret_key_base_did_not_match`: check the value. Anything listed under `not_decryptable` was saved under neither value (or as plaintext before settings encryption existed); re-enter those keys on the settings page. If you prefer not to run the task, note the keys before the change and re-enter them afterwards.
+**Choose the startup path before starting services:** if the Active Record
+conversion has succeeded (or its independent keys were preserved), and the settings
+write reports `"ok":true` with an empty `not_decryptable` list, run
+`docker compose up -d` and check sign-in, MFA, and provider connections. If settings
+need re-entry, do not run that all-services command; use the manual path instead.
 
-Once the Active Record conversion and settings rotation have succeeded, start the
-app with `docker compose up -d` and check sign-in, MFA, and provider connections.
-If settings need manual re-entry, keep background workers stopped while an admin
-re-enters them, then start the worker after verifying the configuration.
+#### Manual settings recovery
+
+Use this path only after the Active Record data is readable with the current keys
+and any required Active Record conversion succeeded. It handles settings recovery,
+not unreadable user records, lost Active Record keys, or a failed backfill.
+
+Keep `worker` and other writers stopped. Restrict web access to the administrator
+performing the recovery and avoid normal app use until the settings are verified.
+Start only `web`; the sample Compose file also starts its database and Redis
+dependencies, but not `worker`:
+
+```bash
+unset OLD_SECRET_KEY_BASE
+docker compose up -d web
+```
+
+Sign in as an administrator with access to the self-hosting settings. Re-enter each
+setting listed in `not_decryptable` using its original plaintext API key or token,
+or clear it if the integration is no longer used. Obtain replacement credentials
+from the provider if the original value is unavailable; do not paste stored
+ciphertext back into the form. Save through the settings UI so the values are
+encrypted with the current `SECRET_KEY_BASE`.
+
+While the worker remains stopped, repeat the **dry-run** command above with the
+same old secret. Before starting workers, require `"ok":true`, `"dry_run":true`,
+an empty `not_decryptable` list, and only `current` or `not_stored` entries. If any
+`would_reencrypt` entries remain, stop `web` again and return to the settings
+conversion before resuming. For any other unresolved result, keep workers stopped
+and investigate; do not change the current secret again. Unset the temporary
+variable, then start the worker only after the settings are saved and checked:
+
+```bash
+unset OLD_SECRET_KEY_BASE
+docker compose up -d worker
+```
+
+Check sign-in, MFA, and provider connections, then restore normal access and any
+other writers you stopped. If recovery cannot be completed, restore the named
+backup with its matching image, configuration, and keys instead of restarting
+normal operation with unreadable data.
 
 ### Re-encrypting data after an encryption-related update
 
