@@ -344,6 +344,53 @@ class Loan::PayoffChartTest < ActiveSupport::TestCase
     assert_equal %i[actual scheduled projected principal interest interest_share principal_share today interactive_chart], payload[:labels].keys
   end
 
+  test "a recorded end of the fixed period travels as a marker with the projected balance" do
+    loan = on_contract_loan
+    loan.update!(term_change_rows: [ { effective_date: "2026-01-01", term_end_date: "2027-07-01" } ])
+    loan = Loan.find(loan.id)
+
+    payload = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time).payload
+    balance = loan.payoff_projection(as_of: @today).balance_on(Date.new(2027, 7, 1))
+
+    assert_equal({ date: "2027-07-01", balance: balance.amount.to_f }, payload[:term_end])
+    assert_operator payload[:term_end][:balance], :<, payload[:projected].first[:balance]
+    assert_equal I18n.t("UI.account.chart.loan.term_end"), payload[:labels][:term_end]
+    assert_includes payload[:aria_description], I18n.t(
+      "UI.account.chart.loan.aria_term_end",
+      date: I18n.l(Date.new(2027, 7, 1), format: :long), balance: balance.format
+    )
+  end
+
+  # An extra repayment with the payment held ends the schedule well before
+  # the loan's last contracted payment. The period can still end after it,
+  # and the chart shows where.
+  test "the whole life reaches the end of a fixed period that outlasts the schedule" do
+    loan = build_loan
+    held = loan.amortization_schedule.periodic_payment.amount
+    loan.update!(term_change_rows: [
+      { effective_date: "2026-01-01", term_end_date: "2027-10-01" },
+      { effective_date: "2026-06-10", extra_repayment: "300000", payment: held.to_s("F") }
+    ])
+    loan = Loan.find(loan.id)
+    assert_operator loan.amortization_schedule.payoff_date, :<, @today
+    loan.account.update!(balance: 0)
+
+    payload = Loan::PayoffChart.new(loan, as_of: @today, period: @all_time).payload
+
+    assert_equal "2027-10-01", payload[:domain_end]
+    assert_equal({ date: "2027-10-01", balance: 0.0 }, payload[:term_end])
+  end
+
+  test "a fixed period that has run out leaves no marker" do
+    loan = on_contract_loan
+    loan.update!(term_change_rows: [ { effective_date: "2026-01-01", term_end_date: "2026-12-31" } ])
+
+    payload = Loan::PayoffChart.new(Loan.find(loan.id), as_of: @today, period: @all_time).payload
+
+    assert_not payload.key?(:term_end)
+    assert_not payload[:labels].key?(:term_end)
+  end
+
   test "an extra projection draws its own line, named in the legend and the description" do
     loan = on_contract_loan
     projection = loan.payoff_projection(as_of: @today)

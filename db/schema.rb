@@ -1648,13 +1648,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.decimal "extra_repayment", precision: 19, scale: 4
     t.uuid "loan_id", null: false
     t.decimal "payment", precision: 19, scale: 4
+    t.date "term_end_date"
     t.datetime "updated_at", null: false
     t.index ["loan_id", "effective_date"], name: "index_loan_term_changes_on_loan_id_and_effective_date", unique: true
     t.check_constraint "balance IS NULL OR balance >= 0::numeric", name: "chk_loan_term_changes_balance_non_negative"
-    t.check_constraint "extra_repayment IS NOT NULL OR balance IS NOT NULL OR payment IS NOT NULL", name: "chk_loan_term_changes_has_amount"
+    t.check_constraint "extra_repayment IS NOT NULL OR balance IS NOT NULL OR payment IS NOT NULL OR term_end_date IS NOT NULL", name: "chk_loan_term_changes_records_something"
     t.check_constraint "extra_repayment IS NULL OR balance IS NULL", name: "chk_loan_term_changes_one_balance_change"
     t.check_constraint "extra_repayment IS NULL OR extra_repayment > 0::numeric", name: "chk_loan_term_changes_extra_repayment_positive"
     t.check_constraint "payment IS NULL OR payment >= 0::numeric", name: "chk_loan_term_changes_payment_non_negative"
+    t.check_constraint "term_end_date IS NULL OR term_end_date > effective_date", name: "chk_loan_term_changes_term_ends_after_start"
   end
 
   create_table "loans", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

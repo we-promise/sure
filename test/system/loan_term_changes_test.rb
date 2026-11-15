@@ -27,7 +27,7 @@ class LoanTermChangesTest < ApplicationSystemTestCase
     assert_no_text "No term changes recorded"
 
     within "[data-term-change-row]" do
-      find("input[type='date']").set(1.year.ago.to_date)
+      find("input[name$='[effective_date]']").set(1.year.ago.to_date)
       find("input[name$='[extra_repayment]']").set("20000")
     end
     click_button "Update Account"
@@ -37,6 +37,30 @@ class LoanTermChangesTest < ApplicationSystemTestCase
 
     visit account_url(@account, tab: "schedule")
     assert_text "Term change: -$20,000.00"
+  end
+
+  test "a fixed-until date shows the balance at the end of the fixed period and marks the chart" do
+    term_end_date = 2.years.from_now.to_date
+    visit account_url(@account)
+    click_on "Overview"
+    click_on "Edit loan details"
+
+    find("summary", text: "Term changes").click
+    click_button "Add term change"
+    within "[data-term-change-row]" do
+      find("input[name$='[effective_date]']").set(3.years.ago.to_date)
+      find("input[name$='[term_end_date]']").set(term_end_date)
+    end
+    click_button "Update Account"
+
+    assert_loan_saved
+    assert_equal [ term_end_date ], @account.loan.reload.term_changes.map(&:term_end_date)
+
+    visit account_url(@account, period: "all_time")
+    assert_selector "[data-loan-chart-term-end] text", text: "End of fixed period"
+    click_on "Overview"
+    assert_text "Balance at End of Fixed Period"
+    assert_text "Projected for #{I18n.l(term_end_date, format: :long)}"
   end
 
   test "a term change removed in the form is deleted" do

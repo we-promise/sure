@@ -54,7 +54,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
         variable_rate_schedule: { "2026-01-01" => "6.5" }
       )
     ).loan.update!(term_change_rows: [
-      { effective_date: "2025-06-10", extra_repayment: "2500.50", payment: "210" },
+      { effective_date: "2025-06-10", extra_repayment: "2500.50", payment: "210", term_end_date: "2030-06-10" },
       { effective_date: "2025-09-01", balance: "16000" }
     ])
 
@@ -74,9 +74,11 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert loan.principal_only_transfers
     assert_equal [ [ Date.new(2026, 1, 1), BigDecimal("6.5") ] ], loan.variable_rates
     assert_equal [
-      [ Date.new(2025, 6, 10), BigDecimal("2500.5"), nil, BigDecimal("210") ],
-      [ Date.new(2025, 9, 1), nil, BigDecimal("16000"), nil ]
-    ], loan.active_term_changes.map { |change| [ change.effective_date, change.extra_repayment, change.balance, change.payment ] }
+      [ Date.new(2025, 6, 10), BigDecimal("2500.5"), nil, BigDecimal("210"), Date.new(2030, 6, 10) ],
+      [ Date.new(2025, 9, 1), nil, BigDecimal("16000"), nil, nil ]
+    ], loan.active_term_changes.map { |change|
+      [ change.effective_date, change.extra_repayment, change.balance, change.payment, change.term_end_date ]
+    }
   end
 
   test "round trips credit card details through full export" do

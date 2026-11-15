@@ -5,6 +5,11 @@
 # The record describes the contract. An extra repayment is also a transfer in
 # the ledger, and a confirmed balance a balance update; those say what
 # happened and are recorded separately.
+#
+# `term_end_date` is the day the terms that start on the effective date stop
+# being fixed: the end of a fixed-rate period, or the next renewal. The
+# schedule does not read it. A row can carry it alone, which is how the
+# period a loan opened with is recorded.
 class Loan::TermChange < ApplicationRecord
   AMOUNTS = %i[extra_repayment balance payment].freeze
 
@@ -21,9 +26,16 @@ class Loan::TermChange < ApplicationRecord
   validates :effective_date, presence: true
   validates :extra_repayment, numericality: { greater_than: 0, less_than: AMOUNT_LIMIT }, allow_nil: true
   validates :balance, :payment, numericality: { greater_than_or_equal_to: 0, less_than: AMOUNT_LIMIT }, allow_nil: true
-  validate :changes_something
+  validate :records_something
   validate :changes_the_balance_once
-  validate :effective_date_is_not_in_the_future
+  validate :balance_change_is_not_in_the_future
+  validate :term_ends_after_it_starts
+
+  # Whether the schedule has anything to follow in this row. One that records
+  # an end date alone leaves the schedule as it is.
+  def changes_schedule?
+    AMOUNTS.any? { |amount| !self[amount].nil? }
+  end
 
   # The shape Loan::Simulator takes.
   def to_schedule_change
@@ -31,8 +43,8 @@ class Loan::TermChange < ApplicationRecord
   end
 
   private
-    def changes_something
-      errors.add(:base, :no_amount) if AMOUNTS.all? { |amount| self[amount].nil? }
+    def records_something
+      errors.add(:base, :records_nothing) unless changes_schedule? || term_end_date.present?
     end
 
     # An extra repayment lowers the balance and a confirmed balance replaces
@@ -41,9 +53,18 @@ class Loan::TermChange < ApplicationRecord
       errors.add(:base, :two_balance_changes) if extra_repayment.present? && balance.present?
     end
 
-    # A change is something that happened. A repayment that is only planned
-    # belongs in the Extra repayments tab.
-    def effective_date_is_not_in_the_future
-      errors.add(:base, :in_the_future) if effective_date.present? && effective_date > Date.current
+    # A payment the lender has announced and the end of a period are known
+    # ahead of time. A repayment or a balance is something that happened; a
+    # repayment that is only planned belongs in the Extra repayments tab.
+    def balance_change_is_not_in_the_future
+      return unless effective_date.present? && effective_date > Date.current
+
+      errors.add(:base, :balance_change_in_the_future) if extra_repayment.present? || balance.present?
+    end
+
+    def term_ends_after_it_starts
+      return unless term_end_date.present? && effective_date.present?
+
+      errors.add(:base, :term_ends_before_it_starts) unless term_end_date > effective_date
     end
 end

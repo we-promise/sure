@@ -81,6 +81,22 @@ class Loan
       Money.new(simulation&.total_interest || 0, currency)
     end
 
+    # What the projection leaves owing on `date`: the balance after the last
+    # repayment on or before it, one due that day included, or today's
+    # balance when none falls that early. A settled loan owes what it owes
+    # today. Nil when a balance is owed and there is nothing to project it
+    # with, when the account has no balance yet (which #current_balance reads
+    # as zero), and for a date before `as_of`, which a projection does not
+    # cover.
+    def balance_on(date)
+      return nil if schedule.nil? || date < as_of || loan.account.balance.nil?
+      return current_balance if settled?
+      return nil unless applicable?
+
+      row = payments.reverse_each.find { |payment| payment[:payment_date] <= date }
+      row ? Money.new(row[:ending_balance], currency) : current_balance
+    end
+
     # False when the contracted repayment does not clear the balance by the
     # original maturity -- the borrower is far enough behind that the contract
     # no longer pays the loan off. There is no payoff date in that case.

@@ -643,7 +643,14 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     draw_down_loan_two_years_ago
 
     {
-      { effective_date: (Date.current + 1).iso8601, payment: "2500" } => "activerecord.errors.models.loan/term_change.in_the_future",
+      { effective_date: (Date.current + 1).iso8601, extra_repayment: "2500" } => "activerecord.errors.models.loan/term_change.balance_change_in_the_future",
+      { effective_date: (Date.current + 1).iso8601, balance: "2500" } => "activerecord.errors.models.loan/term_change.balance_change_in_the_future",
+      { effective_date: Date.current.iso8601, payment: "2500", term_end_date: Date.current.iso8601 } => "activerecord.errors.models.loan/term_change.term_ends_before_it_starts",
+      { effective_date: (Date.current - 3.years).iso8601, term_end_date: (Date.current + 1.year).iso8601 } => "activerecord.errors.models.loan.term_change_before_origination",
+      { effective_date: Date.current.iso8601, payment: "2500", term_end_date: (Date.current + 200.years).iso8601 } => "activerecord.errors.models.loan.term_change_fixed_past_maturity",
+      # More than the date column can hold.
+      { effective_date: "+9999999-01-01", payment: "2500" } => "activerecord.errors.models.loan.invalid_term_change",
+      { effective_date: Date.current.iso8601, payment: "2500", term_end_date: "+9999999-01-01" } => "activerecord.errors.models.loan.invalid_term_change",
       { effective_date: (Date.current - 3.years).iso8601, payment: "2500" } => "activerecord.errors.models.loan.term_change_not_after_origination",
       { effective_date: Date.current.iso8601, extra_repayment: "100", balance: "100" } => "activerecord.errors.models.loan/term_change.two_balance_changes"
     }.each do |row, message|
@@ -666,7 +673,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
           balance: "123456",
           accountable_attributes: {
             id: @account.loan.id,
-            term_change_rows: [ "", { effective_date: (Date.current + 1).iso8601, payment: "2500" } ]
+            term_change_rows: [ "", { effective_date: (Date.current + 1).iso8601, extra_repayment: "2500" } ]
           }
         }
       }
@@ -685,7 +692,9 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     rows = "[data-controller='loan-term-changes'] [data-loan-term-changes-target='rows'] [data-term-change-row]"
     assert_select rows, count: 1
-    assert_select "#{rows} input[type='date'][value='#{stored.iso8601}'][max='#{Date.current.iso8601}']", count: 1
+    assert_select "#{rows} input[type='date'][name='account[accountable_attributes][term_change_rows][][effective_date]'][value='#{stored.iso8601}']:not([max])",
+      { count: 1 }, "a payment the lender announced can be dated ahead"
+    assert_select "#{rows} input[type='date'][name='account[accountable_attributes][term_change_rows][][term_end_date]']:not([value])", count: 1
     assert_select "#{rows} input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='20000']", count: 1
     assert_select "#{rows} input[name='account[accountable_attributes][term_change_rows][][balance]']:not([value])", count: 1
     assert_select "input[type='hidden'][name='account[accountable_attributes][term_change_rows][]']", count: 1
@@ -745,7 +754,7 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :unprocessable_entity
-    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan/term_change.in_the_future")
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan/term_change.balance_change_in_the_future")
     assert_select "input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='5000']", count: 1
   end
 
@@ -862,6 +871,41 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     get account_path(@account)
     assert_equal [ format_money(schedule.payment_in_force(Date.current)) ], card_values(I18n.t("loans.tabs.overview.monthly_payment")),
       "the overview quotes the payment in force today, not the one the loan opened with"
+  end
+
+  test "the overview quotes the projected balance at the end of the fixed period" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(interest_rate: 6, term_months: 120, rate_type: "fixed")
+    title = I18n.t("loans.tabs.overview.balance_at_term_end")
+    get account_path(@account)
+    assert_empty card_values(title)
+
+    term_end_date = Date.current + 3.years
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id,
+        term_change_rows: [
+          "",
+          { effective_date: (Date.current - 2.years).iso8601, extra_repayment: "", balance: "", payment: "",
+            term_end_date: term_end_date.iso8601 }
+        ]
+      } }
+    }
+    assert_redirected_to account_path(@account)
+    assert_equal [ term_end_date ], @account.loan.reload.term_changes.map(&:term_end_date)
+
+    get account_path(@account)
+    term_end = Loan.find(@account.loan.id).current_term_end
+    card = card_values(title)
+    assert_equal 1, card.size
+    assert_includes card.first, format_money(term_end.balance)
+    assert_includes card.first,
+      I18n.t("loans.tabs.overview.balance_at_term_end_estimate", date: I18n.l(term_end_date, format: :long))
+    assert_equal 1, card_values(I18n.t("loans.tabs.overview.original_payoff_date")).size,
+      "a fixed-until date alone does not change the schedule"
+
+    get edit_loan_path(@account)
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][term_end_date]'][value='#{term_end_date.iso8601}']", count: 1
   end
 
   # A held payment after an extra repayment ends the loan sooner, so the date

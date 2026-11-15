@@ -122,6 +122,20 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     assert terms[:monthly_payment_formatted].present?
   end
 
+  test "reports the day a loan's current terms stop being fixed" do
+    loan = accounts(:loan).loan
+    start_date = Date.current - 2.years
+    loan.update!(start_date: start_date)
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+    assert_not terms.key?(:fixed_until)
+
+    loan.update!(term_change_rows: [ { effective_date: start_date.iso8601, term_end_date: (Date.current + 3.years).iso8601 } ])
+    terms = @fn.call[:accounts].find { |a| a[:id] == accounts(:loan).id }[:terms]
+
+    assert_equal Date.current + 3.years, terms[:fixed_until]
+    assert_equal loan.reload.monthly_payment.amount, terms[:monthly_payment], "the schedule is unchanged"
+  end
+
   # A fixed loan with a recorded term change has more than one repayment too,
   # and the Overview tab quotes the one in force.
   test "reports the repayment in force for a fixed-rate loan with a recorded term change" do
