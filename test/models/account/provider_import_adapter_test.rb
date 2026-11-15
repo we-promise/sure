@@ -20,7 +20,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "plaid_test_123",
         amount: 100.50,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Test Transaction",
         source: "plaid",
         category_id: category.id,
@@ -29,7 +29,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       assert_equal 100.50, entry.amount
       assert_equal "USD", entry.currency
-      assert_equal Date.today, entry.date
+      assert_equal Date.current, entry.date
       assert_equal "Test Transaction", entry.name
       assert_equal category.id, entry.transaction.category_id
       assert_equal merchant.id, entry.transaction.merchant_id
@@ -42,7 +42,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_abc",
         amount: 50.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Simple Transaction",
         source: "simplefin"
       )
@@ -60,7 +60,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "up_transfer_1",
       amount: -50.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Transfer to Savings",
       source: "up",
       kind: "funds_movement"
@@ -76,7 +76,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "up_loan_repayment_1",
       amount: -200.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Home Loan Repayment",
       source: "up",
       kind: "funds_movement"
@@ -364,7 +364,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "plaid_duplicate_test",
       amount: 100.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Original Name",
       source: "plaid"
     )
@@ -375,7 +375,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "plaid_duplicate_test",
         amount: 200.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Updated Name",
         source: "plaid"
       )
@@ -479,7 +479,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "transaction_123",
       amount: 100.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "SimpleFin Transaction",
       source: "simplefin"
     )
@@ -491,7 +491,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "transaction_123",
         amount: 200.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Plaid Transaction",
         source: "plaid"
       )
@@ -511,7 +511,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "",
         amount: 100.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Test",
         source: "plaid"
       )
@@ -526,7 +526,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "test_123",
         amount: 100.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Test",
         source: ""
       )
@@ -625,7 +625,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     security = securities(:aapl)
 
     # Use a date that doesn't conflict with fixtures (fixtures use today and 1.day.ago)
-    holding_date = Date.today - 2.days
+    holding_date = Date.current - 2.days
 
     assert_difference "investment_account.holdings.count", 1 do
       holding = adapter.import_holding(
@@ -653,7 +653,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         quantity: 10,
         amount: 1000,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         source: "plaid"
       )
     end
@@ -674,7 +674,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         amount: 754.95,
         fee: 4.95,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         source: "plaid"
       )
 
@@ -698,7 +698,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       price: 150.00,
       amount: 750.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       source: "plaid",
       exchange_rate: 0.91
     )
@@ -720,7 +720,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       amount: 754.95,
       fee: 4.95,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       source: "plaid"
     )
 
@@ -731,7 +731,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       price: 150.00,
       amount: 754.95,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       source: "plaid"
     )
 
@@ -747,7 +747,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         price: 100,
         amount: 500,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         source: "plaid"
       )
     end
@@ -769,7 +769,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today - 10.days,
+      date: Date.current - 10.days,
       price: 150,
       source: "plaid",
       account_provider_id: account_provider.id
@@ -936,7 +936,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 30.days,
+      date: Date.current + 30.days,
       price: 150
     )
 
@@ -949,7 +949,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       price: 150,
       source: "plaid",
       delete_future_holdings: true
@@ -987,7 +987,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 120.days,
+      date: Date.current + 120.days,
       price: 150,
       account_provider_id: provider.id
     )
@@ -997,7 +997,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 3,
       amount: 450,
       currency: "USD",
-      date: Date.today + 2.days,
+      date: Date.current + 2.days,
       price: 150,
       account_provider_id: nil
     )
@@ -1011,7 +1011,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today - 10.days,
+      date: Date.current - 10.days,
       price: 150,
       source: "plaid",
       account_provider_id: provider.id,
@@ -1034,7 +1034,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 5,
       amount: 750,
       currency: "USD",
-      date: Date.today + 121.days,
+      date: Date.current + 121.days,
       price: 150
     )
 
@@ -1043,7 +1043,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       qty: 3,
       amount: 450,
       currency: "USD",
-      date: Date.today + 2.days,
+      date: Date.current + 2.days,
       price: 150
     )
 
@@ -1056,7 +1056,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       quantity: 10,
       amount: 1500,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       price: 150,
       source: "plaid",
       delete_future_holdings: true
@@ -1081,7 +1081,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       price: 150.00,
       amount: 750.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       source: "plaid"
     )
 
@@ -1094,7 +1094,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         price: 200.00,
         amount: 2000.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         source: "plaid",
         exchange_rate: 0.95
       )
@@ -1123,7 +1123,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       price: 150.00,
       amount: 750.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       source: "plaid",
       exchange_rate: 0.95
     )
@@ -1136,7 +1136,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         price: 200.00,
         amount: 2000.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         source: "plaid"
       )
 
@@ -1158,7 +1158,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       price: 150.00,
       amount: 750.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       source: "plaid"
     )
 
@@ -1168,7 +1168,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "collision_test",
         amount: 100.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Test Transaction",
         source: "plaid"
       )
@@ -1187,7 +1187,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "collision_test_2",
       amount: 100.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Test Transaction",
       source: "plaid"
     )
@@ -1201,7 +1201,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         price: 150.00,
         amount: 750.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         source: "plaid"
       )
     end
@@ -1212,7 +1212,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   test "claims manual transaction when provider syncs matching transaction" do
     # Create a manual transaction (no external_id or source)
     manual_entry = @account.entries.create!(
-      date: Date.today,
+      date: Date.current,
       amount: 42.50,
       currency: "USD",
       name: "Coffee Shop",
@@ -1228,7 +1228,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "lunchflow_12345",
         amount: 42.50,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Coffee Shop - Lunchflow",
         source: "lunchflow"
       )
@@ -1242,13 +1242,13 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   end
 
   test "never claims a part of a split entry for a matching provider transaction" do
-    parent = @account.entries.create!(date: Date.today, amount: 37.50, currency: "USD", name: "Market", entryable: Transaction.new)
+    parent = @account.entries.create!(date: Date.current, amount: 37.50, currency: "USD", name: "Market", entryable: Transaction.new)
     parent.split!([ { name: "Groceries", amount: 25, category_id: nil }, { name: "Household", amount: 12.50, category_id: nil } ])
     household = parent.child_entries.find_by!(name: "Household")
 
     entry = nil
     assert_difference "@account.entries.count", 1 do
-      entry = @adapter.import_transaction(external_id: "lunchflow_678", amount: 12.50, currency: "USD", date: Date.today,
+      entry = @adapter.import_transaction(external_id: "lunchflow_678", amount: 12.50, currency: "USD", date: Date.current,
                                           name: "Hardware store", source: "lunchflow")
     end
 
@@ -1265,7 +1265,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     csv_entry = @account.entries.create!(
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       amount: 125.00,
       currency: "USD",
       name: "Grocery Store",
@@ -1283,7 +1283,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "plaid_csv_match",
         amount: 125.00,
         currency: "USD",
-        date: Date.today - 1.day,
+        date: Date.current - 1.day,
         name: "Grocery Store - Plaid",
         source: "plaid"
       )
@@ -1299,7 +1299,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   test "does not claim transaction when date does not match" do
     # Create a manual transaction
     manual_entry = @account.entries.create!(
-      date: Date.today - 5.days,
+      date: Date.current - 5.days,
       amount: 50.00,
       currency: "USD",
       name: "Restaurant",
@@ -1312,7 +1312,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "lunchflow_different_date",
         amount: 50.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Restaurant",
         source: "lunchflow"
       )
@@ -1325,7 +1325,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   test "does not claim transaction when amount does not match" do
     # Create a manual transaction
     manual_entry = @account.entries.create!(
-      date: Date.today,
+      date: Date.current,
       amount: 50.00,
       currency: "USD",
       name: "Restaurant",
@@ -1338,7 +1338,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "lunchflow_different_amount",
         amount: 51.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Restaurant",
         source: "lunchflow"
       )
@@ -1351,7 +1351,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   test "does not claim transaction when currency does not match" do
     # Create a manual transaction
     manual_entry = @account.entries.create!(
-      date: Date.today,
+      date: Date.current,
       amount: 50.00,
       currency: "EUR",
       name: "Restaurant",
@@ -1364,7 +1364,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "lunchflow_different_currency",
         amount: 50.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Restaurant",
         source: "lunchflow"
       )
@@ -1380,7 +1380,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_123",
       amount: 30.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Gas Station",
       source: "simplefin"
     )
@@ -1391,7 +1391,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "lunchflow_gas",
         amount: 30.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Gas Station",
         source: "lunchflow"
       )
@@ -1406,7 +1406,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   test "claims oldest matching manual transaction when multiple exist" do
     # Create multiple manual transactions with same date, amount, currency
     older_entry = @account.entries.create!(
-      date: Date.today,
+      date: Date.current,
       amount: 20.00,
       currency: "USD",
       name: "Parking - Old",
@@ -1415,7 +1415,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     )
 
     newer_entry = @account.entries.create!(
-      date: Date.today,
+      date: Date.current,
       amount: 20.00,
       currency: "USD",
       name: "Parking - New",
@@ -1429,7 +1429,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "lunchflow_parking",
         amount: 20.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Parking - Provider",
         source: "lunchflow"
       )
@@ -1526,7 +1526,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_pending_abc",
       amount: 99.99,
       currency: "USD",
-      date: Date.today - 2.days,
+      date: Date.current - 2.days,
       name: "Coffee Shop",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1542,7 +1542,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_posted_xyz",
         amount: 99.99,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Coffee Shop - Posted",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => false } }
@@ -1558,7 +1558,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
   test "clears pending flag, preserves pending date, and records old external_id when claiming pending entry with nil extra" do
     # Enable Banking booked transactions often have nil extra (no FX, no MCC).
     # The deep_merge path is skipped, so we must clear the pending flag explicitly.
-    pending_date = Date.today - 2.days
+    pending_date = Date.current - 2.days
     pending_entry = @adapter.import_transaction(
       external_id: "eb_pending_nil_extra",
       amount: 42.00,
@@ -1576,7 +1576,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "eb_booked_nil_extra",
         amount: 42.00,
         currency: "EUR",
-        date: Date.today,   # booked date is later than pending date
+        date: Date.current,   # booked date is later than pending date
         name: "Supermarket Posted",
         source: "enable_banking",
         extra: nil  # typical for simple Enable Banking booked transactions
@@ -1605,8 +1605,8 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     # On subsequent syncs the entry already exists (found by booked external_id),
     # so pending_match is nil. auto_claimed_pending_ids signals the prior claim
     # and the stored date must not be overwritten with the booked date.
-    pending_date = Date.today - 3.days
-    booked_date  = Date.today
+    pending_date = Date.current - 3.days
+    booked_date  = Date.current
 
     @adapter.import_transaction(
       external_id: "eb_pending_subseq",
@@ -1653,7 +1653,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_same_id",
       amount: 50.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Gas Station",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1665,7 +1665,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_same_id",
         amount: 50.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Gas Station - Posted",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => false } }
@@ -1682,7 +1682,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_pending_amount_test",
       amount: 100.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Restaurant",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1695,7 +1695,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_posted_amount_test",
         amount: 105.00, # 5% tip added - within 25% tolerance
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Restaurant",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => false } }
@@ -1718,7 +1718,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_pending_big_diff",
       amount: 50.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Store",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1731,7 +1731,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_posted_big_diff",
         amount: 100.00, # 100% increase - way outside 25% tolerance
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Store",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => false } }
@@ -1747,7 +1747,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_pending_date_test",
       amount: 25.00,
       currency: "USD",
-      date: Date.today - 15.days, # 15 days ago
+      date: Date.current - 15.days, # 15 days ago
       name: "Subscription",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1759,7 +1759,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_posted_date_test",
         amount: 25.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Subscription",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => false } }
@@ -1775,7 +1775,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_pending_window_test",
       amount: 75.00,
       currency: "USD",
-      date: Date.today - 5.days,
+      date: Date.current - 5.days,
       name: "Online Order",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1787,7 +1787,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_posted_window_test",
         amount: 75.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Online Order - Posted",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => false } }
@@ -1803,7 +1803,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_pending_source_test",
       amount: 30.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Pharmacy",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1815,7 +1815,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "plaid_posted_source_test",
         amount: 30.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Pharmacy",
         source: "plaid",
         extra: { "plaid" => { "pending" => false } }
@@ -1831,7 +1831,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_pending_1",
       amount: 45.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Store",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1843,7 +1843,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_pending_2",
         amount: 45.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Store",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => true } }
@@ -1859,7 +1859,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_older_pending",
       amount: 60.00,
       currency: "USD",
-      date: Date.today - 5.days,
+      date: Date.current - 5.days,
       name: "Recurring Payment - Old",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1869,7 +1869,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_newer_pending",
       amount: 60.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Recurring Payment - New",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -1881,7 +1881,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_posted_recurring",
         amount: 60.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Recurring Payment - Posted",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => false } }
@@ -1903,14 +1903,14 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "#{provider}_pending_#{index}",
         amount: amount,
         currency: "USD",
-        date: Date.today - 1.day,
+        date: Date.current - 1.day,
         name: "Pending #{provider}",
         source: provider,
         extra: { provider => { "pending" => true } }
       )
 
       result = @adapter.find_pending_transaction(
-        date: Date.today,
+        date: Date.current,
         amount: amount,
         currency: "USD",
         source: provider
@@ -1926,14 +1926,14 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_not_pending",
       amount: 40.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Regular Transaction",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => false } }
     )
 
     result = @adapter.find_pending_transaction(
-      date: Date.today,
+      date: Date.current,
       amount: 40.00,
       currency: "USD",
       source: "simplefin"
@@ -1947,7 +1947,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_unparseable_exact",
       amount: 49_231.17,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Exact Pending",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => "maybe" } }
@@ -1956,7 +1956,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_unparseable_fuzzy",
       amount: 77.00,
       currency: "USD",
-      date: Date.today - 2.days,
+      date: Date.current - 2.days,
       name: "Fuzzy Pending",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => "maybe" } }
@@ -1970,7 +1970,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_unparseable_low_confidence",
       amount: 50.00,
       currency: "USD",
-      date: Date.today - 3.days,
+      date: Date.current - 3.days,
       name: "Low Confidence Pending",
       source: "simplefin",
       merchant: merchant,
@@ -1979,13 +1979,13 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     [ exact, fuzzy, low_confidence ].each { |entry| assert entry.transaction.pending? }
     assert_equal exact.id, @adapter.find_pending_transaction(
-      date: Date.today, amount: 49_231.17, currency: "USD", source: "simplefin"
+      date: Date.current, amount: 49_231.17, currency: "USD", source: "simplefin"
     ).id
     assert_equal fuzzy.id, @adapter.find_pending_transaction_fuzzy(
-      date: Date.today, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Pending"
+      date: Date.current, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Pending"
     ).id
     assert_equal low_confidence.id, @adapter.find_pending_transaction_low_confidence(
-      date: Date.today, amount: 100, currency: "USD", source: "simplefin",
+      date: Date.current, amount: 100, currency: "USD", source: "simplefin",
       merchant_id: merchant.id, name: "Low Confidence Pending"
     ).id
   end
@@ -1995,7 +1995,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_false_exact",
       amount: 49_232.17,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Exact Posted",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => "false" } }
@@ -2004,7 +2004,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_false_fuzzy",
       amount: 77.00,
       currency: "USD",
-      date: Date.today - 2.days,
+      date: Date.current - 2.days,
       name: "Fuzzy Posted",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => "false" } }
@@ -2018,7 +2018,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_false_low_confidence",
       amount: 50.00,
       currency: "USD",
-      date: Date.today - 3.days,
+      date: Date.current - 3.days,
       name: "Low Confidence Posted",
       source: "simplefin",
       merchant: merchant,
@@ -2027,13 +2027,13 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     [ exact, fuzzy, low_confidence ].each { |entry| assert_not entry.transaction.pending? }
     assert_nil @adapter.find_pending_transaction(
-      date: Date.today, amount: 49_232.17, currency: "USD", source: "simplefin"
+      date: Date.current, amount: 49_232.17, currency: "USD", source: "simplefin"
     )
     assert_nil @adapter.find_pending_transaction_fuzzy(
-      date: Date.today, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Posted"
+      date: Date.current, amount: 100, currency: "USD", source: "simplefin", name: "Fuzzy Posted"
     )
     assert_nil @adapter.find_pending_transaction_low_confidence(
-      date: Date.today, amount: 100, currency: "USD", source: "simplefin",
+      date: Date.current, amount: 100, currency: "USD", source: "simplefin",
       merchant_id: merchant.id, name: "Low Confidence Posted"
     )
   end
@@ -2053,7 +2053,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_posted_dec31",
       amount: 6.67,
       currency: "USD",
-      date: Date.today - 8.days, # Dec 31 (earlier)
+      date: Date.current - 8.days, # Dec 31 (earlier)
       name: "CITGO Gas Station",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => false } }
@@ -2066,7 +2066,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "simplefin_pending_jan8",
         amount: 6.65, # Similar but different amount
         currency: "USD",
-        date: Date.today, # Jan 8 (later)
+        date: Date.current, # Jan 8 (later)
         name: "CITGO Gas Station",
         source: "simplefin",
         extra: { "simplefin" => { "pending" => true } }
@@ -2085,7 +2085,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_future_pending",
       amount: 50.00,
       currency: "USD",
-      date: Date.today + 3.days, # Future date
+      date: Date.current + 3.days, # Future date
       name: "Future Transaction",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -2093,7 +2093,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     # Search from today - should NOT find the future pending
     result = @adapter.find_pending_transaction(
-      date: Date.today,
+      date: Date.current,
       amount: 50.00,
       currency: "USD",
       source: "simplefin"
@@ -2109,7 +2109,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "simplefin_past_pending",
       amount: 75.00,
       currency: "USD",
-      date: Date.today - 3.days, # 3 days ago
+      date: Date.current - 3.days, # 3 days ago
       name: "Past Transaction",
       source: "simplefin",
       extra: { "simplefin" => { "pending" => true } }
@@ -2117,7 +2117,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
     # Search from today - should find the past pending
     result = @adapter.find_pending_transaction(
-      date: Date.today,
+      date: Date.current,
       amount: 75.00,
       currency: "USD",
       source: "simplefin"
@@ -2136,7 +2136,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "plaid_pending_abc",
       amount: 42.00,
       currency: "USD",
-      date: Date.today - 2.days,
+      date: Date.current - 2.days,
       name: "Coffee Shop",
       source: "plaid",
       extra: { "plaid" => { "pending" => true } }
@@ -2148,7 +2148,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "plaid_posted_xyz",
         amount: 42.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Coffee Shop",
         source: "plaid",
         pending_transaction_id: "plaid_pending_abc", # Links to pending
@@ -2170,7 +2170,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "plaid_tag_test",
       amount: 1000.00,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Paycheck",
       source: "plaid"
     )
@@ -2186,7 +2186,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "plaid_tag_test",
         amount: 1000.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Updated Paycheck Name",
         source: "plaid"
       )
@@ -2203,7 +2203,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "plaid_pending_1",
       amount: 25.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Store A",
       source: "plaid",
       extra: { "plaid" => { "pending" => true } }
@@ -2213,7 +2213,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "plaid_pending_2",
       amount: 25.00,
       currency: "USD",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "Store B",
       source: "plaid",
       extra: { "plaid" => { "pending" => true } }
@@ -2225,7 +2225,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "plaid_posted_linked",
         amount: 25.00,
         currency: "USD",
-        date: Date.today,
+        date: Date.current,
         name: "Store B",
         source: "plaid",
         pending_transaction_id: "plaid_pending_2", # Explicitly links to pending2
@@ -2253,7 +2253,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "eb_same_id_123",
       amount: 30.0,
       currency: "EUR",
-      date: Date.today - 2.days,
+      date: Date.current - 2.days,
       name: "Piero Fiorista",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => true } }
@@ -2267,7 +2267,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "eb_same_id_123",
         amount: 30.0,
         currency: "EUR",
-        date: Date.today,
+        date: Date.current,
         name: "Piero Fiorista",
         source: "enable_banking",
         extra: nil
@@ -2284,7 +2284,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "eb_same_id_user_mod",
       amount: 50.0,
       currency: "EUR",
-      date: Date.today - 3.days,
+      date: Date.current - 3.days,
       name: "Clean Center",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => true } }
@@ -2302,7 +2302,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "eb_same_id_user_mod",
         amount: 50.0,
         currency: "EUR",
-        date: Date.today,
+        date: Date.current,
         name: "Clean Center",
         source: "enable_banking",
         extra: nil
@@ -2323,7 +2323,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "user_mod_extra",
       amount: 12.0,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Amazon",
       source: "plaid",
       extra: { "plaid" => { "payment_channel" => "online", "payment_meta" => { "payee" => "Amazon" } } },
@@ -2337,7 +2337,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "user_mod_extra",
       amount: 12.0,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Amazon",
       source: "plaid",
       extra: { "plaid" => { "payment_channel" => "in store" } },
@@ -2356,7 +2356,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "user_mod_import_locked",
       amount: 12.0,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Amazon",
       source: "plaid",
       extra: { "plaid" => { "payment_channel" => "online" } },
@@ -2370,7 +2370,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "user_mod_import_locked",
       amount: 12.0,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       name: "Amazon",
       source: "plaid",
       extra: { "plaid" => { "payment_channel" => "in store" } },
@@ -2389,7 +2389,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "user_mod_exchange_rate",
       amount: 12.0,
       currency: "EUR",
-      date: Date.today,
+      date: Date.current,
       name: "Wise transfer",
       source: "wise",
       extra: { "exchange_rate" => "1.05", "wise" => { "status" => "pending" } },
@@ -2404,7 +2404,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "user_mod_exchange_rate",
       amount: 12.0,
       currency: "EUR",
-      date: Date.today,
+      date: Date.current,
       name: "Wise transfer",
       source: "wise",
       extra: { "exchange_rate" => "1.05", "wise" => { "status" => "outgoing_payment_sent" } },
@@ -2433,7 +2433,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "scalar_incoming_flag",
         amount: 12.0,
         currency: "EUR",
-        date: Date.today,
+        date: Date.current,
         name: "Scalar Provider",
         source: "enable_banking",
         extra: { "simplefin" => "oops", "akahu" => { "pending" => true } }
@@ -2449,7 +2449,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "eb_scalar_stored",
       amount: 30.0,
       currency: "EUR",
-      date: Date.today - 2.days,
+      date: Date.current - 2.days,
       name: "Scalar Stored",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => true } }
@@ -2462,7 +2462,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "eb_scalar_stored",
         amount: 30.0,
         currency: "EUR",
-        date: Date.today,
+        date: Date.current,
         name: "Scalar Stored",
         source: "enable_banking",
         extra: nil
@@ -2478,7 +2478,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "eb_scalar_user_mod",
       amount: 50.0,
       currency: "EUR",
-      date: Date.today - 3.days,
+      date: Date.current - 3.days,
       name: "Scalar User Modified",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => true } }
@@ -2491,7 +2491,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         external_id: "eb_scalar_user_mod",
         amount: 50.0,
         currency: "EUR",
-        date: Date.today,
+        date: Date.current,
         name: "Scalar User Modified",
         source: "enable_banking",
         extra: nil
@@ -2510,7 +2510,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "eb_false_flag",
       amount: 18.0,
       currency: "EUR",
-      date: Date.today - 1.day,
+      date: Date.current - 1.day,
       name: "False Flag",
       source: "enable_banking",
       extra: { "enable_banking" => { "pending" => true } }
@@ -2522,7 +2522,7 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
       external_id: "eb_false_flag",
       amount: 18.0,
       currency: "EUR",
-      date: Date.today,
+      date: Date.current,
       name: "False Flag",
       source: "enable_banking",
       extra: nil

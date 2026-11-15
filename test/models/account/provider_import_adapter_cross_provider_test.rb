@@ -31,7 +31,7 @@ class Account::ProviderImportAdapterCrossProviderTest < ActiveSupport::TestCase
     )
 
     # Use a date that will not collide with existing fixture holdings for this account
-    holding_date = Date.today - 3.days
+    holding_date = Date.current - 3.days
 
     # Existing holding created by Provider A for (security, date, currency)
     existing_a = investment_account.holdings.create!(

@@ -36,7 +36,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -15.50,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "UBER",
       "description" => "Ride to office",
       "isPending" => true
@@ -86,7 +86,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -10.00,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "UBER",
       "description" => "Morning ride",
       "isPending" => true
@@ -97,7 +97,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -15.50,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "UBER",
       "description" => "Evening ride",  # Different description
       "isPending" => true
@@ -147,7 +147,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -10.00,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "TEST",
       "description" => "Test transaction",
       "isPending" => true
@@ -187,7 +187,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -42.00,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "AMAZON",
       "description" => "Order",
       "isPending" => true
@@ -230,7 +230,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -20.00,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "TESCO",
       "description" => "Groceries",
       "isPending" => false
@@ -272,7 +272,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -3.50,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "CAFE",
       "description" => "Flat white",
       "isPending" => true
@@ -307,7 +307,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => 15.50,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "474836xxxxxx6879 003015315475",
       "description" => "474836xxxxxx6879 003015315475"
     }
@@ -338,7 +338,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => 15.50,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "474836xxxxxx6879 003015315475",
       "description" => "474836xxxxxx6879 003015315475"
     }
@@ -347,7 +347,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -20.00,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "Tesco",
       "description" => "Groceries",
       "isPending" => false
@@ -378,7 +378,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => 15.50,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "474836xxxxxx6879 003015315475",
       "description" => "474836xxxxxx6879 003015315475"
     }
@@ -387,7 +387,7 @@ class LunchflowItem::ImporterBlankIdTest < ActiveSupport::TestCase
       "accountId" => @lunchflow_account.account_id,
       "amount" => -20.00,
       "currency" => "GBP",
-      "date" => Date.today.to_s,
+      "date" => Date.current.to_s,
       "merchant" => "Tesco",
       "description" => "Groceries",
       "isPending" => false

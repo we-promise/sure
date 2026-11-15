@@ -31,7 +31,7 @@ class SimplefinItem::UnlinkerTest < ActiveSupport::TestCase
       account_provider: @link,
       qty: 1.5,
       currency: "USD",
-      date: Date.today,
+      date: Date.current,
       price: 100,
       amount: 150
     )
