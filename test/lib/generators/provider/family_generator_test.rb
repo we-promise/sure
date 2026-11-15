@@ -398,6 +398,28 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # The /accounts section renders the item partial, which --skip-view does not write,
+  # so adding it would break /accounts for every family once a connection exists.
+  test "--skip-view leaves /accounts alone and says what to add" do
+    Dir.mktmpdir do |dir|
+      path = "app/views/accounts/index.html.erb"
+      original = Rails.root.join(path).read
+      FileUtils.mkdir_p(File.join(dir, File.dirname(path)))
+
+      results = [ false, true ].index_with do |skip_view|
+        File.write(File.join(dir, path), original)
+        Dir.chdir(dir) do
+          output = capture_io { Provider::FamilyGenerator.new([ "gocardless" ], skip_view: skip_view).update_accounts_index_view }.first
+          [ File.read(path), output ]
+        end
+      end
+
+      assert_includes results[false].first, "<%= render item, visible_accounts: visible_card_accounts(item) %>"
+      assert_equal original, results[true].first
+      assert_includes results[true].last, "app/views/gocardless_items/_gocardless_item.html.erb"
+    end
+  end
+
   # An adapter the generator did not write (it existed, or --skip-adapter) lacks the
   # template's declaration, so the generator has to say what to add.
   test "recognises an adapter that declares its panel" do

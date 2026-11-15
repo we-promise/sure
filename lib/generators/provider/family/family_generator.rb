@@ -351,9 +351,17 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     add_accounts_controller_sync_stats_map(controller_path)
   end
 
+  # The section renders the item partial, which --skip-view does not write, so it is
+  # left for the developer to add with that partial.
   def update_accounts_index_view
     view_path = "app/views/accounts/index.html.erb"
     return unless File.exist?(view_path)
+
+    if options[:skip_view]
+      say "Skipped the /accounts section (--skip-view): write app/views/#{file_name}_items/_#{file_name}_item.html.erb, " \
+          "then render @#{file_name}_items in #{view_path}", :yellow
+      return
+    end
 
     content = File.read(view_path)
     items_var = "@#{file_name}_items"
