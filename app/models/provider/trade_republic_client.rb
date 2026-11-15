@@ -166,9 +166,22 @@ class Provider::TradeRepublicClient
   # Set once the detail of a transfer was read, with or without a note, so
   # transfers without a note are not fetched again.
   NOTE_CHECKED_AT_KEY = "note_checked_at"
+  # The same detail names the other party of a transfer in a row titled
+  # "IBAN" (the sender's on a transfer in, the recipient's on a transfer
+  # out). Its IBAN is compared with the reference accounts that
+  # /api/v2/auth/account lists for the login, the accounts the user deposits
+  # from and pays out to. Only the result is kept, as COUNTERPARTY_KEY =>
+  # REFERENCE_ACCOUNT_COUNTERPARTY; neither IBAN is stored. Set once the
+  # detail was read for it, so transfers read before this check are read
+  # again once, from the backlog.
+  COUNTERPARTY_CHECKED_AT_KEY = "counterparty_checked_at"
+  COUNTERPARTY_KEY = "counterparty"
+  REFERENCE_ACCOUNT_COUNTERPARTY = "reference_account"
+  IBAN_ROW_TITLE = "iban"
+  IBAN_PATTERN = /\A[A-Z]{2}\d{2}[A-Z0-9]{11,30}\z/
   RETRY_MARKER_KEYS = [
     PRICE_BACKFILL_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_ATTEMPTED_AT_KEY, SYMBOL_LOOKUP_FIRST_ATTEMPTED_AT_KEY,
-    DETAIL_BACKFILL_ATTEMPTED_AT_KEY, NOTE_CHECKED_AT_KEY
+    DETAIL_BACKFILL_ATTEMPTED_AT_KEY, NOTE_CHECKED_AT_KEY, COUNTERPARTY_CHECKED_AT_KEY
   ].freeze
   # Cap instrument lookups for sold / historical trade ISINs that are absent
   # from the current portfolio snapshot.
@@ -473,7 +486,8 @@ class Provider::TradeRepublicClient
           enrich_events: enrich_events,
           note_read_event_ids: note_read_event_ids,
           timeline_cursors: timeline_cursors,
-          interrupted_backfills: interrupted_backfills
+          interrupted_backfills: interrupted_backfills,
+          reference_ibans: self.class.reference_ibans(account)
         )
         instrument_symbols = enrich_trade_instrument_symbols(
           websocket,
@@ -587,15 +601,33 @@ class Provider::TradeRepublicClient
       Provider::TradeRepublicTimelineEvent.importable?(event.stringify_keys) && !cash_note_read?(event)
     end
 
-    # A transfer or direct debit whose detail was read for its note, with or
-    # without a result.
+    # A transfer or direct debit whose detail was read for its note and its
+    # counterparty, with or without a result. One read before the
+    # counterparty check (a note or NOTE_CHECKED_AT_KEY only) is read again.
     def cash_note_read?(event)
       return false unless event.is_a?(Hash)
 
       item = event.stringify_keys
       detail = item["detail"]
       CASH_NOTE_EVENT_TYPES.include?(item["eventType"].to_s) &&
-        detail.is_a?(Hash) && detail.stringify_keys.values_at("note", NOTE_CHECKED_AT_KEY).any?(&:present?)
+        detail.is_a?(Hash) && detail.stringify_keys[COUNTERPARTY_CHECKED_AT_KEY].present?
+    end
+
+    # The login's reference accounts from /api/v2/auth/account, as
+    # normalized IBANs: the accounts in the user's name that Trade Republic
+    # pays out to. The Cash account's own IBAN is left out.
+    def reference_ibans(account)
+      return Set.new unless account.is_a?(Hash)
+
+      account = account.stringify_keys
+      listed = Array(account["referenceAccountList"]) + [ account["referenceAccountV2"], account["referenceAccount"] ]
+      own = normalize_iban(account["cashAccount"].is_a?(Hash) ? account["cashAccount"]["iban"] : nil)
+      listed.filter_map { |entry| normalize_iban(entry["iban"]) if entry.is_a?(Hash) }.to_set - [ own ].compact
+    end
+
+    def normalize_iban(value)
+      iban = value.to_s.gsub(/\s+/, "").upcase
+      iban if iban.match?(IBAN_PATTERN)
     end
 
     # Complete trades (isin + quantity) without a price read from the detail:
@@ -1355,7 +1387,7 @@ class Provider::TradeRepublicClient
       nil
     end
 
-    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], note_read_event_ids: [], timeline_cursors: {}, interrupted_backfills: {})
+    def collect_all_timeline(websocket, known_newest_event_id:, max_pages:, enrich_events: [], note_read_event_ids: [], timeline_cursors: {}, interrupted_backfills: {}, reference_ibans: Set.new)
       timeline_cursors = (timeline_cursors || {}).to_h.stringify_keys
       topics = TIMELINE_TOPICS.index_with do |topic|
         state = timeline_cursors[topic].is_a?(Hash) ? timeline_cursors[topic].stringify_keys : {}
@@ -1375,7 +1407,8 @@ class Provider::TradeRepublicClient
         websocket,
         skeleton_events,
         enrich_events: enrich_events,
-        note_read_event_ids: note_read_event_ids
+        note_read_event_ids: note_read_event_ids,
+        reference_ibans: reference_ibans
       )
       # Backfilled stored events are older than this sync's pages and must not
       # pull the list cursor backwards.
@@ -1579,7 +1612,7 @@ class Provider::TradeRepublicClient
     # still consume budget so a bad event cannot starve the rest of the queue
     # forever within one sync. Stored dividends without their detail are
     # backfilled too.
-    def enrich_timeline_details(websocket, events, enrich_events: [], note_read_event_ids: [])
+    def enrich_timeline_details(websocket, events, enrich_events: [], note_read_event_ids: [], reference_ibans: Set.new)
       warnings = []
       events = Array(events)
       # The page holding the known newest event is read again as skeletons
@@ -1640,15 +1673,16 @@ class Provider::TradeRepublicClient
         details_fetched += 1
         fetched = nil
         begin
-          detail = normalize_event_detail(
-            subscribe(websocket, type: "timelineDetailV2", id: item["id"]),
-            item: item
-          )
+          raw_detail = subscribe(websocket, type: "timelineDetailV2", id: item["id"])
+          detail = normalize_event_detail(raw_detail, item: item)
           detail = detail&.slice(*DIVIDEND_DETAIL_KEYS) if category.to_s == DIVIDEND_DETAIL_CATEGORY
           # A transfer's imported amount stays the timeline amount; only the
-          # note comes from the detail.
+          # note and whether the other party is a reference account come
+          # from the detail.
           if self.class.cash_note_pending?(item)
-            detail = (detail || {}).slice("note").merge(NOTE_CHECKED_AT_KEY => Time.current.iso8601)
+            checked_at = Time.current.iso8601
+            detail = (detail || {}).slice("note").merge(NOTE_CHECKED_AT_KEY => checked_at, COUNTERPARTY_CHECKED_AT_KEY => checked_at)
+            detail[COUNTERPARTY_KEY] = REFERENCE_ACCOUNT_COUNTERPARTY if reference_account_counterparty?(raw_detail, reference_ibans)
           end
           fetched = build_normalized_event(item, category: category, detail: detail)
         rescue TransientProviderError, Timeout, RateLimited
@@ -1816,6 +1850,18 @@ class Provider::TradeRepublicClient
         "dividend_per_share" => decimal_string(dividend_per_share),
         "instrument_type" => (BOND_INSTRUMENT_TYPE if nominal)
       }.compact
+    end
+
+    # Whether the detail's "IBAN" row names one of the reference accounts.
+    # The row is titled "IBAN" in the German and English details. A detail
+    # with no IBAN, or with more than one distinct IBAN, is not matched.
+    def reference_account_counterparty?(raw, reference_ibans)
+      return false if reference_ibans.blank?
+
+      ibans = section_rows(collect_sections(raw)).filter_map do |row|
+        self.class.normalize_iban(row.dig("detail", "text")) if row["title"].to_s.strip.casecmp?(IBAN_ROW_TITLE)
+      end.uniq
+      ibans.one? && reference_ibans.include?(ibans.first)
     end
 
     # The payment reference: the text of the untitled section of type "note".

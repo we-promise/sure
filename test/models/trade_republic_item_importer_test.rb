@@ -800,7 +800,9 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "category" => "PAYMENT_RECEIVED",
       "detail" => { "amount" => 50.0, "signed_amount" => 50.0, "currency" => "EUR" }
     }
-    read = stored.merge("id" => "transfer-read", "detail" => stored["detail"].merge("note_checked_at" => "2026-06-18T10:00:00Z"))
+    read = stored.merge("id" => "transfer-read", "detail" => stored["detail"].merge(
+      "note_checked_at" => "2026-06-18T10:00:00Z", "counterparty_checked_at" => "2026-06-18T10:00:00Z"
+    ))
     @item.trade_republic_accounts.create!(
       kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-NOTE", currency: "EUR",
       raw_timeline_payload: [ stored, read ]
@@ -810,7 +812,9 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       raw_timeline_payload: [ stored, read ]
     )
     with_note = stored.merge(
-      "detail" => stored["detail"].merge("note" => "Invoice 2026-0001", "note_checked_at" => "2026-11-10T10:00:00Z")
+      "detail" => stored["detail"].merge(
+        "note" => "Invoice 2026-0001", "note_checked_at" => "2026-11-10T10:00:00Z", "counterparty_checked_at" => "2026-11-10T10:00:00Z"
+      )
     )
 
     provider = mock("trade_republic_provider")
@@ -847,7 +851,9 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "category" => "POC_CREATED",
       "detail" => { "amount" => 20.0, "currency" => "EUR" }
     }
-    read = transfer.merge("id" => "transfer-read", "detail" => { "amount" => 5.0, "note_checked_at" => "2026-06-18T10:00:00Z" })
+    read = transfer.merge("id" => "transfer-read", "detail" => {
+      "amount" => 5.0, "note_checked_at" => "2026-06-18T10:00:00Z", "counterparty_checked_at" => "2026-06-18T10:00:00Z"
+    })
     @item.trade_republic_accounts.create!(
       kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-CASHONLY", currency: "EUR",
       raw_timeline_payload: [ read ]

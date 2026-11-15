@@ -1050,6 +1050,51 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(12.5, "EUR"), totals.dividends
   end
 
+  # A transfer between Trade Republic Cash and one of the user's reference
+  # accounts (their own bank, which Sure need not know) is money entering or
+  # leaving the broker. A salary or a payment from someone else into the same
+  # account is not, nor is a transfer to another person.
+  test "transfers to and from the Trade Republic reference account count when the bank is not in Sure" do
+    portfolio, cash = create_split_trade_republic_connection
+    reference = { counterparty: "reference_account" }
+
+    sync_trade_republic(portfolio, [ trade_republic_order(id: "evt_buy", quantity: "2.0", signed_amount: -800, date: "2026-07-15") ])
+    sync_trade_republic(cash, [
+      trade_republic_transfer(id: "evt_own_in", type: "INCOMING_TRANSFER", category: "PAYMENT_RECEIVED", amount: "1000.00", date: "2026-07-10", detail: reference),
+      trade_republic_transfer(id: "evt_salary", type: "BANK_TRANSACTION_INCOMING", category: "PAYMENT_RECEIVED", amount: "2500.00", date: "2026-07-01"),
+      trade_republic_transfer(id: "evt_friend", type: "INCOMING_TRANSFER", category: "PAYMENT_RECEIVED", amount: "40.00", date: "2026-07-03"),
+      trade_republic_transfer(id: "evt_rent", type: "OUTGOING_TRANSFER", category: "POC_CREATED", amount: "900.00", date: "2026-07-05"),
+      trade_republic_transfer(id: "evt_own_out", type: "BANK_TRANSACTION_OUTGOING", category: "POC_CREATED", amount: "300.00", date: "2026-07-25", detail: reference)
+    ])
+
+    totals = InvestmentStatement.new(@family.reload).totals(period: july_2026)
+
+    assert_equal Money.new(1000, "EUR"), totals.contributions
+    assert_equal Money.new(300, "EUR"), totals.withdrawals
+    assert_equal Money.new(800, "EUR"), totals.buys
+  end
+
+  # When the bank is in Sure too, the deposit is one money movement whether or
+  # not the user confirms the suggested transfer.
+  test "a reference account deposit counts once when the bank is also in Sure" do
+    portfolio, cash = create_split_trade_republic_connection
+    bank = @family.accounts.create!(name: "Bank", balance: 5000, currency: "EUR", accountable: Depository.new)
+    bank_leg = create_labelled_transaction(account: bank, label: nil, amount: 1000, date: Date.new(2026, 7, 10))
+
+    sync_trade_republic(portfolio, [])
+    sync_trade_republic(cash, [
+      trade_republic_transfer(id: "evt_own_in", type: "INCOMING_TRANSFER", category: "PAYMENT_RECEIVED", amount: "1000.00", date: "2026-07-10",
+        detail: { counterparty: "reference_account" })
+    ])
+    deposit = cash.current_account.entries.find_by!(external_id: "trade_republic_event_evt_own_in")
+
+    assert_equal Money.new(1000, "EUR"), InvestmentStatement.new(@family.reload).totals(period: july_2026).contributions
+
+    Transfer.create!(inflow_transaction: deposit.entryable, outflow_transaction: bank_leg.entryable).confirm!
+
+    assert_equal Money.new(1000, "EUR"), InvestmentStatement.new(@family.reload).totals(period: july_2026).contributions
+  end
+
   # Only a broker that settles trades on a cash account of its own is read
   # with it. A bank connection holding both a checking and a brokerage
   # account keeps them apart, so a deposit from that checking account is
@@ -2390,6 +2435,17 @@ class InvestmentStatementTest < ActiveSupport::TestCase
     def sync_trade_republic(provider_account, events)
       provider_account.update!(raw_timeline_payload: events)
       TradeRepublicAccount::ActivitiesProcessor.new(provider_account.reload).process
+    end
+
+    def trade_republic_transfer(id:, type:, category:, amount:, date:, detail: {})
+      {
+        id: id,
+        timestamp: "#{date}T10:00:00Z",
+        eventType: type,
+        category: category,
+        title: "Account holder",
+        detail: { amount: amount, currency: "EUR" }.merge(detail)
+      }
     end
 
     def trade_republic_order(id:, quantity:, signed_amount:, date:)

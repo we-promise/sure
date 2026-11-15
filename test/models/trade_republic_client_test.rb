@@ -357,6 +357,28 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "page-9", error.cursor
   end
 
+  test "a sync marks a transfer from the reference account the account response lists, and returns no IBAN" do
+    stub_sync_session(account: {
+      cashAccount: { iban: "DE00 1111 1111 1111 1111 11", bic: "TRBKDEBBXXX", bankName: "Trade Republic", logoUrl: nil },
+      referenceAccountList: [ { iban: "DE00 0000 0000 0000 0000 00", bic: nil, bankName: "Bank", logoUrl: nil } ]
+    })
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case payload[:type]
+      when "timelineTransactions"
+        { "items" => [ helper.send(:transfer_item, id: "transfer-own", event_type: "INCOMING_TRANSFER") ], "cursors" => {} }
+      when "timelineDetailV2" then helper.send(:transfer_detail, note: nil)
+      else { "items" => [], "cursors" => {} }
+      end
+    end
+
+    result = @client.sync(session_txt: "session")
+
+    transfer = result["events"].find { |event| event["id"] == "transfer-own" }
+    assert_equal "reference_account", transfer.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_no_match(/DE00\s?(0000|1111)/, result.data.to_json)
+  end
+
   test "retries the sync without a backfill that times out and counts the failure" do
     stub_sync_session
     @client.stubs(:sleep_for)
@@ -1835,7 +1857,11 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
     unread = transfer_item(id: "transfer-old").merge("detail" => { "amount" => 50.0, "currency" => "EUR" })
     read = transfer_item(id: "transfer-read").merge(
-      "detail" => { "amount" => 50.0, Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+      "detail" => {
+        "amount" => 50.0,
+        Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z",
+        Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY => "2026-08-02T10:00:00Z"
+      }
     )
 
     enriched, _warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ unread, read ])
@@ -1892,7 +1918,83 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item(event_type: "CARD_TRANSACTION"))
     assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item(event_type: "INTEREST_PAYOUT"))
     assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("status" => "CANCELED"))
-    assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("detail" => { "note" => "Invoice 2026-0001" }))
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(
+      transfer_item.merge("detail" => { "note" => "Invoice 2026-0001", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" })
+    )
+  end
+
+  test "a transfer read for its note before the counterparty check is read again" do
+    assert Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("detail" => { "note" => "Invoice 2026-0001" }))
+    assert Provider::TradeRepublicClient.cash_note_pending?(
+      transfer_item.merge("detail" => { Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" })
+    )
+    assert_not Provider::TradeRepublicClient.cash_note_read?(transfer_item.merge("detail" => { "note" => "Invoice 2026-0001" }))
+  end
+
+  test "reference IBANs come from every reference account field, normalized, without the Cash account's own IBAN" do
+    account = {
+      "securitiesAccountNumber" => "0000000000",
+      "cashAccount" => { "iban" => "DE00 1111 1111 1111 1111 11", "bic" => "TRBKDEBBXXX" },
+      "referenceAccount" => { "iban" => "de00 2222 2222 2222 2222 22", "bic" => nil },
+      "referenceAccountV2" => { "iban" => "DE00222222222222222222", "bic" => nil, "bankName" => "Bank", "logoUrl" => nil },
+      "referenceAccountList" => [
+        { "iban" => "FR00 3333 3333 3333 3333 3333 333", "bic" => nil, "bankName" => "Banque", "logoUrl" => nil },
+        { "iban" => "DE00111111111111111111", "bic" => nil, "bankName" => "Trade Republic", "logoUrl" => nil },
+        { "iban" => "not an iban" },
+        "DE00444444444444444444"
+      ]
+    }
+
+    assert_equal %w[DE00222222222222222222 FR0033333333333333333333333].to_set,
+      Provider::TradeRepublicClient.reference_ibans(account)
+    assert_empty Provider::TradeRepublicClient.reference_ibans({ "securitiesAccountNumber" => "0000000000" })
+    assert_empty Provider::TradeRepublicClient.reference_ibans(nil)
+  end
+
+  test "a transfer from a reference account is marked as such and neither IBAN is stored" do
+    freeze_time
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: "Savings") }
+    own = transfer_item(id: "transfer-own", event_type: "INCOMING_TRANSFER")
+    other = transfer_item(id: "transfer-other", event_type: "INCOMING_TRANSFER")
+    events = [ own, other ].map { |item| @client.send(:build_skeleton_event, item, warnings: []) }
+
+    # The detail stub names DE00 0000 0000 0000 0000 00 for every transfer.
+    enriched, = @client.send(:enrich_timeline_details, Object.new, events.first(1), reference_ibans: Set["DE00000000000000000000"])
+    unmatched, = @client.send(:enrich_timeline_details, Object.new, events.last(1), reference_ibans: Set["DE00999999999999999999"])
+
+    detail = enriched.sole["detail"]
+    assert_equal "reference_account", detail[Provider::TradeRepublicClient::COUNTERPARTY_KEY]
+    assert_equal "Savings", detail["note"]
+    assert_equal Time.current.iso8601, detail[Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY]
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(enriched.sole)
+    assert_not unmatched.sole["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_equal Time.current.iso8601, unmatched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY)
+    [ enriched.sole, unmatched.sole ].each do |event|
+      assert_no_match(/DE00\s?0000|DE00999/, event.to_json)
+    end
+  end
+
+  test "a transfer is not matched without reference accounts or with more than one IBAN in its detail" do
+    raw = transfer_detail(note: nil)
+    reference = Set["DE00000000000000000000"]
+
+    assert @client.send(:reference_account_counterparty?, raw, reference)
+    assert_not @client.send(:reference_account_counterparty?, raw, Set.new)
+
+    # The legacy layout names the other party in the overview ("From"/"Von");
+    # a second, different IBAN anywhere makes the detail ambiguous.
+    raw["sections"] << { "title" => "Recipient", "type" => "table", "data" => [
+      { "title" => "IBAN", "detail" => { "text" => "DE00 5555 5555 5555 5555 55", "type" => "text" } }
+    ] }
+    assert_not @client.send(:reference_account_counterparty?, raw, reference)
+
+    # The same IBAN twice, and an empty IBAN row, still match.
+    raw["sections"].last["data"] = [
+      { "title" => "IBAN", "detail" => { "text" => "DE00000000000000000000", "type" => "text" } },
+      { "title" => "IBAN", "detail" => { "text" => "", "type" => "text" } }
+    ]
+    assert @client.send(:reference_account_counterparty?, raw, reference)
   end
 
   test "new dividends fetch details without changing the timeline amount" do
@@ -3109,9 +3211,9 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     # Drives the real sync_once against a stubbed account response and an
     # already connected websocket; subscriptions come from the test's stub.
-    def stub_sync_session
+    def stub_sync_session(account: {})
       account_response = Net::HTTPOK.new("1.1", "200", "OK")
-      account_response.stubs(:body).returns({ securitiesAccountNumber: "SEC-1", currency: "EUR" }.to_json)
+      account_response.stubs(:body).returns({ securitiesAccountNumber: "SEC-1", currency: "EUR" }.merge(account).to_json)
       session = stub(get: account_response, websocket_headers: {}, cookies_blob: "session")
       @client.stubs(:new_session).returns(session)
       websocket = stub(send_text: nil, receive: "connected", close: nil)

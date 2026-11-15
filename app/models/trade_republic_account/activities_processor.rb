@@ -479,6 +479,7 @@ class TradeRepublicAccount::ActivitiesProcessor
       return false unless amount && !amount.zero?
 
       legacy_kind = legacy_cash_kinds[external_id]
+      kind ||= own_funds_movement_kind(event, detail)
       entry = import_adapter.import_transaction(
         external_id: external_id,
         # The normalized category is the source of truth for direction. TR
@@ -494,7 +495,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         notes: detail[:note].presence,
         source: "trade_republic",
         category_id: category_for(event, label)&.id,
-        kind: kind || (transfer_event?(event) && !@trade_republic_account.cash? ? "funds_movement" : nil),
+        kind: kind,
         investment_activity_label: activity_label,
         extra: {
           trade_republic: {
@@ -514,6 +515,29 @@ class TradeRepublicAccount::ActivitiesProcessor
       link_settlement_counterpart!(entry) if settles_trade
 
       true
+    end
+
+    # A transfer between Trade Republic and the user's own money is a funds
+    # movement: it is left out of budgets, and the investment card counts it
+    # as a contribution or a withdrawal (Portfolio::FlowClassifier reads an
+    # unlinked funds movement by its sign).
+    #
+    # On the portfolio account every payment event is one, as before. On the
+    # Cash account, which can be a current account, a transfer is one only
+    # when its other party is one of the login's reference accounts: the
+    # accounts in the user's name that Trade Republic pays out to (the client
+    # sets the detail's counterparty from /api/v2/auth/account). A salary, a
+    # payment from someone else, a refund, a top-up by card or a transfer to
+    # another person is not, and stays a standard transaction; automatic
+    # transfer matching still links any of them to an account in Sure.
+    def own_funds_movement_kind(event, detail)
+      own_money = @trade_republic_account.cash? ? reference_account_counterparty?(detail) : transfer_event?(event)
+
+      "funds_movement" if own_money
+    end
+
+    def reference_account_counterparty?(detail)
+      detail[Provider::TradeRepublicClient::COUNTERPARTY_KEY].to_s == Provider::TradeRepublicClient::REFERENCE_ACCOUNT_COUNTERPARTY
     end
 
     # Earlier syncs stored the status subtitle ("Sent") as the note. Without a
