@@ -1,0 +1,39 @@
+---
+es:
+  settings:
+    debugs:
+      show:
+        page_title: Depuración
+        title: Registro de eventos de depuración
+        subtitle: Eventos operativos relevantes para superadministradores. Los más recientes primero.
+        empty: No se han encontrado eventos de depuración.
+        missing_value: '-'
+        filters:
+          all: Todos
+          category: Categoría
+          level: Nivel
+          source: Origen
+          provider: Proveedor
+          start_date: Desde
+          end_date: Hasta
+          family_id: ID de familia
+          account_id: ID de cuenta
+          user_id: ID de usuario
+          account_provider_id: ID de proveedor de cuenta
+          submit: Filtrar
+          reset: Restablecer
+        table:
+          time: Hora
+          level: Nivel
+          category: Categoría
+          source: Origen
+          message: Mensaje
+          context: Contexto
+          metadata: Metadatos
+          view_metadata: Ver
+        context:
+          provider: provider=%{value}
+          family: family=%{value}
+          account: account=%{value}
+          user: user=%{value}
+          account_provider: account_provider=%{value}

@@ -1241,6 +1241,21 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
     end
   end
 
+  test "never claims a part of a split entry for a matching provider transaction" do
+    parent = @account.entries.create!(date: Date.today, amount: 37.50, currency: "USD", name: "Market", entryable: Transaction.new)
+    parent.split!([ { name: "Groceries", amount: 25, category_id: nil }, { name: "Household", amount: 12.50, category_id: nil } ])
+    household = parent.child_entries.find_by!(name: "Household")
+
+    entry = nil
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(external_id: "lunchflow_678", amount: 12.50, currency: "USD", date: Date.today,
+                                          name: "Hardware store", source: "lunchflow")
+    end
+
+    assert_not_equal household.id, entry.id
+    assert_equal [ nil, nil, "Household", parent.id ], household.reload.values_at(:external_id, :source, :name, :parent_entry_id)
+  end
+
   test "claims CSV imported transaction when provider syncs matching transaction" do
     # Create a CSV imported transaction (has import_id but no external_id)
     import = Import.create!(
@@ -1425,6 +1440,78 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
 
       # Newer entry should remain unclaimed
       assert_nil newer_entry.reload.external_id
+    end
+  end
+
+  test "claims a transaction entered ahead of time when the provider books it a few days off" do
+    expected_date = 2.days.ago.to_date
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_no_difference "@account.entries.count" do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_equal scheduled_entry.id, entry.id
+      assert_equal "enable_banking_gas", entry.external_id
+      assert_equal Date.current, entry.date, "moves to the day the provider booked it"
+      assert_equal "Gas bill", entry.name, "keeps the user's own name"
+    end
+  end
+
+  test "does not claim a transaction entered ahead of time outside the matching window" do
+    expected_date = 10.days.ago.to_date
+    scheduled_entry = travel_to(20.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    assert_difference "@account.entries.count", 1 do
+      entry = @adapter.import_transaction(
+        external_id: "enable_banking_gas_late",
+        amount: 200,
+        currency: "USD",
+        date: Date.current,
+        name: "PRLV GAZ",
+        source: "enable_banking"
+      )
+
+      assert_not_equal scheduled_entry.id, entry.id
+    end
+  end
+
+  test "a pending claim of a transaction entered ahead of time reconciles with its booked version" do
+    expected_date = Date.current
+    scheduled_entry = travel_to(10.days.ago) { create_user_entered_transaction(date: expected_date, amount: 200, name: "Gas bill") }
+
+    pending_entry = @adapter.import_transaction(
+      external_id: "simplefin_gas_pending",
+      amount: 200,
+      currency: "USD",
+      date: expected_date - 1.day,
+      name: "PRLV GAZ",
+      source: "simplefin",
+      extra: { "simplefin" => { "pending" => true } }
+    )
+
+    assert_equal scheduled_entry.id, pending_entry.id
+    assert pending_entry.transaction.pending?
+
+    assert_no_difference "@account.entries.count" do
+      posted_entry = @adapter.import_transaction(
+        external_id: "simplefin_gas_posted",
+        amount: 200,
+        currency: "USD",
+        date: expected_date,
+        name: "PRLV GAZ",
+        source: "simplefin",
+        extra: { "simplefin" => { "pending" => false } }
+      )
+
+      assert_equal scheduled_entry.id, posted_entry.id
+      assert_not posted_entry.transaction.pending?
     end
   end
 
@@ -2500,5 +2587,14 @@ class Account::ProviderImportAdapterTest < ActiveSupport::TestCase
         source: "plaid",
         account_provider_id: account_provider.id
       )
+    end
+
+    # Locked and user-modified, the way TransactionsController#create leaves a
+    # transaction the user typed in.
+    def create_user_entered_transaction(date:, amount:, name:)
+      entry = @account.entries.create!(date: date, amount: amount, currency: "USD", name: name, entryable: Transaction.new)
+      entry.lock_saved_attributes!
+      entry.mark_user_modified!
+      entry
     end
 end

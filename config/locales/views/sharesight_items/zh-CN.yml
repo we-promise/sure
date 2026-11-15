@@ -1,0 +1,152 @@
+---
+zh-CN:
+  providers:
+    sharesight:
+      name: Sharesight
+      connection_description: 通过 Sharesight API 连接您的 Sharesight 投资组合
+      institution_name: Sharesight
+  sharesight_accounts:
+    settings_fields:
+      title: Sharesight 现金与分红
+      description: 选择此投资组合的现金和分红存放在何处，以避免 Sure 重复计算。
+      cash_mode: 现金
+      cash_modes:
+        broker: 由券商代持
+        settlement: 通过另一个账户结算
+        untracked: 不跟踪（仅股票持仓）
+      cash_mode_help: >-
+        使用另一个账户或未跟踪现金时，此账户仅显示股票。每笔交易的现金都会通过一笔转账进行冲销，并关联至其结算账户。
+      settlement_account: 结算账户
+      settlement_starts_on: 自此日期起在结算账户结算
+      settlement_window_days: 银行入账所需天数
+      settlement_help: >-
+        每笔买入、卖出以及支付至该处的每笔分红，都会按金额匹配该账户中的一笔交易并作为转账关联。手动账户会自动为其记账。在起始日期之前，现金由券商代持。
+      choose_account: 选择账户
+      no_account: 无
+      funding_account: 资金账户
+      funding_match_terms: 资金交易文本
+      funding_match_terms_placeholder: CMC Share Transfer, CMC Markets
+      funding_help: >-
+        资金账户中名称或备注包含以下任意一项（以逗号分隔）的充值和提现都将在此处镜像并作为转账关联。
+      cash_anchor_amount: 券商处现金
+      cash_anchor_on: 日期
+      cash_anchor_help: >-
+        针对 Sharesight 无法看到的现金：截至该日期的余额，并通过在此之后记入的所有明细进行前滚结转。每当您核对券商账户时请予以更新。
+      dividend_mode: 分红与派息
+      dividend_modes:
+        with_cash: 与现金存放位置一致
+        other_account: 支付至另一个账户
+        skip: 不导入（由另一个关联显示）
+      dividend_mode_help: >-
+        已派发的款项仍会在此处计为收入，然后关联到接收款项账户中的存款交易。
+      dividend_account: 支付至
+      sync_start_date: 导入活动起始日期
+      sync_start_date_help: 较早的交易和分红将被排除，任何已导入的较早活动都将被移除。
+    errors:
+      settlement_account_missing: 请选择该投资组合用于结算的账户。
+      dividend_account_missing: 请选择分红派发至的账户。
+      cash_anchor_incomplete: 请同时提供券商处的现金金额以及您核对的日期。
+      invalid_date:
+        settlement_starts_on: 结算起始日期不是有效日期。
+        cash_anchor_on: 您核对券商现金的日期不是有效日期。
+        sync_start_date: 导入活动的起始日期不是有效日期。
+      account_not_in_family: "%{name} 不是您的账户。"
+      account_is_portfolio: "%{name} 是此投资组合自身的账户。"
+    notices:
+      unsettled_debit: "在 %{date}，%{account} 中尚无用于 %{description} 的 %{amount} 借记交易。"
+      unsettled_credit: "在 %{date}，%{account} 中尚无用于 %{description} 的 %{amount} 贷记交易。"
+      units_drift: "%{account}：Sharesight 持有 %{held} %{ticker}，但交易记录汇总为 %{traded}。"
+  sharesight_items:
+    defaults:
+      name: Sharesight
+      portfolio_name: Sharesight 投资组合 %{id}
+    sharesight_item:
+      deletion_in_progress: 正在删除
+      syncing: 正在同步
+      requires_update: API 客户端需要处理
+      error: 错误
+      synced: "%{time}前已同步。%{summary}。"
+      never_synced: 从未同步。
+      setup_accounts: 设置投资组合
+      delete: 删除
+      accounts_need_setup: 投资组合需要设置
+      accounts_need_setup_description: 您的 Sharesight 投资组合需要关联到 Sure 账户。
+      no_accounts_discovered: 尚未发现任何 Sharesight 投资组合。
+      no_accounts_discovered_description: 保存 API 客户端后运行同步以发现您的投资组合。
+    setup_accounts:
+      page_title: 设置 Sharesight 投资组合
+      dialog_title: 设置您的 Sharesight 投资组合
+      subtitle: 将您的 Sharesight 投资组合关联到投资账户。
+      info_box:
+        title: Sharesight API 导入
+        items:
+          item_1: 当前持仓及价格和数量，以及投资组合总价值
+          item_2: 买入、卖出、期初余额、资本返还和分红（包括红利再投资）
+          item_3: 来自任何 Sharesight 现金账户的充值、提现、利息和费用
+      status:
+        fetching_accounts: 正在从 Sharesight 获取投资组合...
+        no_accounts_found_title: 未找到投资组合。
+        no_accounts_found_description: Sure 找不到任何 Sharesight 投资组合。请检查您的 API 客户端是否有效。
+      available_accounts:
+        title: 可用投资组合
+        account_type_investment: 投资
+        account_summary: "%{account_type} • 余额：%{balance}"
+        account_id: "投资组合 ID：%{account_id}"
+      link_existing:
+        description: 或将发现的投资组合关联到现有的手动投资账户。
+        manual_account_option: "%{name} (%{balance})"
+        select_prompt: 选择账户...
+      linked_accounts:
+        title: 已关联
+        linked_to_html: "已关联至：%{account}"
+      buttons:
+        refresh: 刷新
+        cancel: 取消
+        back_to_settings: 返回设置
+        create_selected_accounts: 创建所选账户
+        link: 关联
+        done: 完成
+    sync:
+      status:
+        checking_credentials: 正在检查 Sharesight 凭据...
+        importing_portfolios: 正在导入 Sharesight 投资组合...
+        checking_configuration: 正在检查投资组合配置...
+        accounts_need_setup:
+          one: 1 个 Sharesight 投资组合需要设置...
+          other: "%{count} 个 Sharesight 投资组合需要设置..."
+        processing_activity: 正在处理持仓和活动...
+        calculating_balances: 正在计算余额...
+    sync_status:
+      no_accounts: 尚未发现任何 Sharesight 投资组合
+      all_linked:
+        one: 已关联 1 个投资组合
+        other: 已关联 %{count} 个投资组合
+      partial: "已关联 %{linked} 个，%{unlinked} 个需要设置"
+    select_existing_account:
+      title: 关联 Sharesight 投资组合
+      no_accounts_available: 尚无可用的未关联 Sharesight 投资组合。
+      run_sync_hint: 保存 API 客户端后，从“设置 > 提供商”运行同步。
+      wait_for_sync: 等待投资组合发现同步完成。
+      balance: 余额
+      link: 关联
+      cancel: 取消
+    create:
+      success: 成功配置 Sharesight。
+    update:
+      success: 成功更新 Sharesight 配置。
+    destroy:
+      success: 已将 Sharesight 关联安排为删除。
+    select_accounts:
+      not_configured: Sharesight 尚未配置。
+    link_existing_account:
+      not_found: 未找到账户或 Sharesight 投资组合。
+      only_manual_investment: 仅手动投资账户可以关联到 Sharesight。
+      already_linked: 此 Sharesight 投资组合已关联。
+      success: 成功关联到 Sharesight 投资组合。
+      failed: 关联 Sharesight 投资组合失败。
+    complete_account_setup:
+      success:
+        one: 成功创建 %{count} 个 Sharesight 账户。
+        other: 成功创建 %{count} 个 Sharesight 账户。
+      none_selected: 未选择任何投资组合。
+      none_created: 未创建任何账户。

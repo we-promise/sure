@@ -35,6 +35,22 @@ class Family::ClassifierRulesTest < ActiveSupport::TestCase
     assert_operator mine.reload.position, :>, 2
   end
 
+  test "an added rule moves rule groups down with the rules" do
+    loose = name_rule("Loose", "Starbucks", tags: [ @tag ])
+    group = @family.rule_groups.create!(name: "Groceries")
+    grouped = name_rule("Grouped", "Safeway", tags: [ @tag ])
+    grouped.update!(rule_group: group)
+    @family.classifier_rules("bayes_categorize").destroy_all
+
+    @family.add_classifier_rule!("bayes_categorize")
+
+    items = Rule::Layout.new(@family).items
+    assert_equal [ "Category classifier", "Merchant matcher", "Loose", "group:Groceries" ],
+                 items.map { |item| item.group? ? "group:#{item.group.name}" : item.rule.name }
+    assert_equal [ grouped ], items.last.rules
+    assert_equal [ "Category classifier", "Merchant matcher", "Loose", "Grouped" ], @family.rules.ordered.map(&:name)
+  end
+
   test "the switch is whether the rule is on" do
     @family.set_classifier_rule_active!("bayes_categorize", false)
 
@@ -61,7 +77,7 @@ class Family::ClassifierRulesTest < ActiveSupport::TestCase
     train_two_categories
     held = uncategorized("Starbucks Coffee")
     exception = name_rule("Hold for review", "Starbucks", tags: [ @tag ], stop_processing: true)
-    Rule.update_positions!(@family, [ exception.id ] + (@family.rules.ordered.ids - [ exception.id ]))
+    Rule::Layout.new(@family).reorder!([ "rule:#{exception.id}" ] + (@family.rules.ordered.ids - [ exception.id ]).map { |id| "rule:#{id}" })
 
     ApplyRulesJob.perform_now(@family)
 
