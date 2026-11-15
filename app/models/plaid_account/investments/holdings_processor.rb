@@ -10,13 +10,16 @@ class PlaidAccount::Investments::HoldingsProcessor
   def process
     positions.each_value do |position|
       # A holding can't be negative. A net short only counts in Plaid's
-      # account total, as SnaptradeAccount::HoldingsProcessor treats one.
-      next if position[:quantity].negative?
+      # account total, as SnaptradeAccount::HoldingsProcessor treats one. A row
+      # an earlier sync stored for this date, while the position was long, is
+      # closed to zero so the snapshot no longer shows those shares.
+      closed_short = position[:quantity].negative?
+      next if closed_short && !account.holdings.exists?(security: position[:security], date: as_of, currency: position[:currency])
 
       import_adapter.import_holding(
         security: position[:security],
-        quantity: position[:quantity],
-        amount: position_amount(position),
+        quantity: closed_short ? 0 : position[:quantity],
+        amount: closed_short ? 0 : position_amount(position),
         currency: position[:currency],
         date: as_of,
         price: position_price(position),
