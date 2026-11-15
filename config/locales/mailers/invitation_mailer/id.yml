@@ -1,0 +1,5 @@
+---
+id:
+  invitation_mailer:
+    invite_email:
+      subject: "%{inviter} telah mengundang Anda untuk bergabung dengan keluarga mereka di %{product_name}!"
