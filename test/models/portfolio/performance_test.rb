@@ -190,11 +190,9 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal without_cutoff.cache_key, with_cutoff.cache_key
   end
 
-  # Every figure is converted into the family's currency, but
-  # Family#build_cache_key keys on the family id, the latest sync and the
-  # accounts' updated_at -- not the currency. Changing the family currency
-  # therefore left the old key in place and served figures converted into the
-  # previous currency until an unrelated sync changed it.
+  # Every figure is converted into the family's currency, so changing the
+  # currency has to change the key. Otherwise the old key would serve figures
+  # converted into the previous currency until an unrelated sync changed it.
   test "cache key changes when the family currency changes" do
     build_textbook_case
     before_key = performance.cache_key

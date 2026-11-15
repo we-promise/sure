@@ -12,8 +12,9 @@
 # edited a transaction.
 #
 # The family currency is in the key too. Every figure is converted into it,
-# and Family#build_cache_key does not include it, so a family that
-# changes currency would otherwise be served figures in the previous one.
+# so a family that changes currency must not be served figures in the previous
+# one. Family#build_cache_key already includes it; it is named here as well so
+# this key does not rely on that.
 class Portfolio::Performance
   # Bumped whenever the meaning of a cached figure changes, so warm caches stop
   # serving the old interpretation under the same name (the pattern #3350 used
