@@ -3,7 +3,7 @@
 # as the generic account form does with its opening balance date.
 # Saving again moves that one valuation rather than adding one.
 class Property::PurchaseValue
-  attr_reader :account
+  attr_reader :account, :submitted_date
 
   # +date+ is the submitted purchase date; blank means the default.
   def initialize(account, date: nil)

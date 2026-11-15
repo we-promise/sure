@@ -291,7 +291,9 @@ class PropertiesController < ApplicationController
     end
 
     def purchase_value
-      @purchase_value ||= Property::PurchaseValue.new(@account, date: (balance_params[:purchase_date] if params.key?(:account)))
+      @purchase_value ||= Property::PurchaseValue.new(
+        @account, date: (balance_params[:purchase_date] if params[:account].is_a?(ActionController::Parameters))
+      )
     end
 
     # Re-renders the value step with what the user typed, not the saved value.
@@ -300,6 +302,7 @@ class PropertiesController < ApplicationController
       submitted = balance_params.slice(:balance, :currency).compact_blank
       submitted.delete(:currency) unless known_currency?(submitted[:currency])
       @account.assign_attributes(submitted)
+      @submitted_balance = submitted.key?(:balance)
       @error_message = message
       render :balances, status: :unprocessable_entity
     end
