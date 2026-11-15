@@ -134,13 +134,15 @@ class InvestmentStatement
   end
 
   # Allocation of the portfolio grouped by a classification column of the
-  # security. Each account's cash -- its balance less its holdings, positive
-  # only (`positive_account_cash`) -- is placed where the grouping says cash
-  # belongs, so every grouping and every level of the drill-down sums to the
-  # same total, and weights sum to 100 within rounding. Segments are
-  # sorted largest first. Amounts convert to the family currency at the latest
-  # rate; a currency with no rate counts 1:1 (`convert_to_family_currency`).
-  ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region].freeze
+  # security, or by :account, :currency or :kind (cash, crypto, standard).
+  # Every grouping measures the same portfolio: the holdings plus each
+  # account's cash -- its balance less its holdings, positive only
+  # (`positive_account_cash`) -- placed where the grouping says cash belongs.
+  # So every grouping and every level of the drill-down sums to the same
+  # total, and weights sum to 100 within rounding. Segments are sorted largest
+  # first. Amounts convert to the family currency at the latest rate; a
+  # currency with no rate counts 1:1 (`convert_to_family_currency`).
+  ALLOCATION_GROUPINGS = %w[asset_class asset_sub_class sector region account currency kind].freeze
 
   # The bucket a holding falls into when the column it is grouped by is empty.
   # It is a real segment, not a gap, so a portfolio of unclassified securities
@@ -154,7 +156,8 @@ class InvestmentStatement
   CASH_SUB_CLASS = "cash".freeze
 
   # One level down from a classification segment: asset class -> sub-class ->
-  # positions. Sector and region do not nest, so they return [].
+  # positions. Sector, region, account, currency and kind do not nest, so they
+  # return [].
   #
   # `parent` is the asset class the sub-class was reached through. A sub-class
   # name such as `unclassified` repeats across asset classes, so without it the
@@ -171,6 +174,9 @@ class InvestmentStatement
   # name taken from a query string cannot raise.
   def allocation_by(by)
     case by.to_s
+    when "account" then allocation_by_account
+    when "currency" then allocation_by_currency
+    when "kind" then allocation_by_kind
     when "asset_class" then allocation_by_classification(:asset_class, cash_bucket: CASH_ASSET_CLASS)
     when "asset_sub_class" then allocation_by_classification(:asset_sub_class, cash_bucket: CASH_SUB_CLASS)
     when "sector" then allocation_by_classification(:sector)
@@ -260,14 +266,9 @@ class InvestmentStatement
     absolute_return = ActiveRecord::Base.connection.select_value(
       ActiveRecord::Base.sanitize_sql_array([
         <<~SQL.squish,
-          SELECT COALESCE(SUM(b.net_market_flows * COALESCE(er.rate, 1)), 0)
+          SELECT COALESCE(SUM(b.net_market_flows * #{ExchangeRate.rate_sql(from: "b.currency", to: ":currency", on: "b.date")}), 0)
           FROM balances b
           JOIN accounts a ON a.id = b.account_id
-          LEFT JOIN exchange_rates er ON (
-            er.date = b.date
-            AND er.from_currency = b.currency
-            AND er.to_currency = :currency
-          )
           WHERE a.id IN (:account_ids)
             AND a.family_id = :family_id
             AND a.status IN ('draft', 'active')
@@ -292,14 +293,9 @@ class InvestmentStatement
     start_value = ActiveRecord::Base.connection.select_value(
       ActiveRecord::Base.sanitize_sql_array([
         <<~SQL.squish,
-          SELECT COALESCE(SUM(b.end_balance * COALESCE(er.rate, 1)), 0)
+          SELECT COALESCE(SUM(b.end_balance * #{ExchangeRate.rate_sql(from: "b.currency", to: ":currency", on: ":period_start")}), 0)
           FROM accounts a
           INNER JOIN balances b ON b.account_id = a.id
-          LEFT JOIN exchange_rates er ON (
-            er.date = :period_start
-            AND er.from_currency = b.currency
-            AND er.to_currency = :currency
-          )
           INNER JOIN (
             SELECT b2.account_id, MAX(b2.date) AS max_date
             FROM balances b2
@@ -418,12 +414,16 @@ class InvestmentStatement
     # `Money * numeric` preserves the source currency — so multiplying a
     # foreign-currency Money by a rate would FX-scale the amount but keep the
     # wrong currency label, corrupting downstream sums.
+    #
+    # A currency with no rate at all converts to 0: the amount is left out of
+    # every sum here rather than counted at 1. Both sides of a trend
+    # come from the same holding, so they drop out together.
     def convert_to_family_currency(amount, from_currency)
       return amount if amount.nil?
       numeric = amount.is_a?(Money) ? amount.amount : amount
       return numeric if from_currency == family.currency
-      rate = exchange_rates[from_currency] || 1
-      numeric * rate
+      rate = exchange_rates[from_currency]
+      rate ? numeric * rate : 0
     end
 
     def all_time_totals
@@ -447,6 +447,46 @@ class InvestmentStatement
     end
 
     AllocationSegment = Data.define(:id, :name, :amount, :weight)
+
+    # Each account's holdings plus its cash, by the rule every other grouping
+    # files cash by. Not Account#balance: an account below its holdings (margin,
+    # or a stale zero balance) would otherwise show less than it holds, or drop
+    # out of the grouping altogether.
+    def allocation_by_account
+      cash = positive_account_cash.to_h { |account, value| [ account.id, value ] }
+      segments = investment_accounts.map do |account|
+        [ account.id, account.name, account_holdings_totals[account.id] + cash.fetch(account.id, 0) ]
+      end
+      build_segments(segments)
+    end
+
+    # Value by the currency each holding is priced in, plus each account's
+    # cash (`positive_account_cash`) in the account's currency. Reads
+    # `allocatable_holdings` so a corrupt negative row cannot net against a good
+    # one here while the drill-down below drops it.
+    def allocation_by_currency
+      grouped = Hash.new(0)
+      allocatable_holdings.each { |holding| grouped[holding.currency] += convert_to_family_currency(holding.amount, holding.currency) }
+      positive_account_cash.each { |account, value| grouped[account.currency] += value }
+      build_segments(grouped.map { |currency, value| [ currency, currency, value ] })
+    end
+
+    # Value by what kind of instrument each holding is -- cash, crypto or a
+    # standard security -- from the security's own flags, with each account's
+    # cash (`positive_account_cash`) under cash. Reads `allocatable_holdings` for the
+    # same reason as `allocation_by_currency`.
+    def allocation_by_kind
+      grouped = Hash.new(0)
+      allocatable_holdings.each do |holding|
+        kind = if holding.security.cash? then "cash"
+        elsif holding.security.crypto? then "crypto"
+        else "standard"
+        end
+        grouped[kind] += convert_to_family_currency(holding.amount, holding.currency)
+      end
+      grouped["cash"] += account_cash_total if account_cash_total.positive?
+      build_segments(grouped.map { |kind, value| [ kind, kind, value ] })
+    end
 
     # One shape for all four classification groupings: read the column off the
     # security, fall back to UNCLASSIFIED, and place each account's cash
@@ -772,8 +812,10 @@ class InvestmentStatement
       account_ids_hash = Digest::MD5.hexdigest(account_ids.sort.join(","))
 
       Rails.cache.fetch([
-        "investment_statement", "totals_query/v2", family.id, user&.id, family.currency,
-        account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version
+        "investment_statement", "totals_query/v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
+        account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
+        # A rate stored later can complete totals that left an amount out.
+        ExchangeRate.maximum(:updated_at)&.to_i
       ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
     end
 
