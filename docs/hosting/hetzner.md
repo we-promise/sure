@@ -63,10 +63,10 @@ curl -o compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compo
 
 ## Step 3: Configure Environment Variables
 
-Create the environment file with a secret key and database password unique to your install. Docker Compose does not run commands inside `.env`, so generate the values in your shell. The command does nothing if `.env` already exists. If you are upgrading an install that is already running, read [Upgrading an install that is already running](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base) first.
+Create the environment file with a secret key and database password unique to your install. Docker Compose does not run commands inside `.env`, so generate the values in your shell. The command does nothing if `.env` already exists, and creates it readable only by you. If you are upgrading an install that is already running, read [Upgrading an install that is already running](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base) first.
 
 ```bash
-[ -e .env ] || cat > .env <<EOF
+[ -e .env ] || (umask 077 && cat > .env <<EOF
 SECRET_KEY_BASE="$(openssl rand -hex 64)"
 
 # Database configuration
@@ -77,9 +77,10 @@ POSTGRES_DB="sure_production"
 # Optional: OpenAI integration (add your API key if you want AI features)
 # OPENAI_ACCESS_TOKEN="your_openai_api_key_here"
 EOF
+)
 ```
 
-If `.env` already existed, open it and check that `SECRET_KEY_BASE` and `POSTGRES_PASSWORD` are long random strings (unless you installed with an earlier version of this guide; see below). If it has no non-empty `SECRET_KEY_BASE`: on an install that has already been running, follow [Upgrading an install that is already running](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base); on a new install that has not started yet, set one as described in [Configure your environment](docker.md#step-3-required-configure-your-environment).
+If `.env` already existed, open it and check that `SECRET_KEY_BASE` and `POSTGRES_PASSWORD` are long random strings (unless you installed with an earlier version of this guide; see below). It keeps its old permissions; `chmod 600 .env` makes it readable only by you. If it has no non-empty `SECRET_KEY_BASE`: on an install that has already been running, follow [Upgrading an install that is already running](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base); on a new install that has not started yet, set one as described in [Configure your environment](docker.md#step-3-required-configure-your-environment).
 
 > [!IMPORTANT]
 > **Installed with an earlier version of this guide?** It had you type `SECRET_KEY_BASE="$(openssl rand -hex 64)"` into `.env`. Compose does not run that command, so your key is that literal text, the same on every install that followed the guide, and `POSTGRES_PASSWORD` is likewise the literal `$(openssl rand -base64 32)`. Do not replace either value in place: your stored credentials (bank connections and similar) and the API keys saved in the app's settings are encrypted with keys derived from `SECRET_KEY_BASE`, and the database was created with that password. Keep them, and move off the public key afterwards as described in [Upgrading an install that is already running](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).

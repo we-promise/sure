@@ -62,10 +62,10 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-[ -e .env ] || curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+[ -e .env ] || (umask 077 && curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example)
 ```
 
-The command does nothing if `.env` already exists. Upgrading an install that has been running without a `.env`? Create an empty `.env` instead of downloading `.env.example`: its `POSTGRES_USER` and `POSTGRES_PASSWORD` differ from the defaults your database was created with.
+The command does nothing if `.env` already exists, and creates it readable only by you. An existing `.env` keeps its permissions; `chmod 600 .env` makes it readable only by you. Upgrading an install that has been running without a `.env`? Create an empty one with `(umask 077 && touch .env)` instead of downloading `.env.example`: its `POSTGRES_USER` and `POSTGRES_PASSWORD` differ from the defaults your database was created with.
 
 #### Generate the app secret key
 
