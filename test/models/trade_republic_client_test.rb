@@ -2106,6 +2106,15 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert event.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY).present?
   end
 
+  test "no warning when the only transfers are already checked ones on the catch-up page" do
+    page = [ @client.send(:build_skeleton_event, transfer_item(id: "transfer-checked"), warnings: []) ]
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| raise "no detail should be read" }
+
+    _, warnings, = @client.send(:enrich_timeline_details, Object.new, page, note_read_event_ids: [ "transfer-checked" ], reference_ibans: Set.new)
+
+    assert_empty warnings
+  end
+
   test "a direct debit from the reference account is marked as one" do
     helper = self
     @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: nil) }
