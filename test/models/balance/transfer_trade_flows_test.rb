@@ -295,6 +295,42 @@ class Balance::TransferTradeFlowsTest < ActiveSupport::TestCase
     assert_equal 0, day.net_market_flows
   end
 
+  test "forward: a dividend booked as a trade doesn't make cancelling transfers a flow" do
+    # A dividend trade moves no shares, so the 5 in and 5 out still cancel
+    # out on a day with none held.
+    account = forward_account_without_holdings
+    add_trade(account, qty: 5, price: 95)
+    add_trade(account, qty: -5, price: 100)
+    account.entries.create!(
+      name: "Dividend: AAPL", date: transfer_day, amount: -10, currency: "USD",
+      entryable: Trade.new(qty: 0, price: 0, security: Security.find_by!(ticker: "AAPL"), currency: "USD", investment_activity_label: "Dividend")
+    )
+
+    day = flows_on(Balance::ForwardCalculator.new(account).calculate, transfer_day)
+
+    assert_equal 0, day.non_cash_inflows
+    assert_equal 0, day.non_cash_outflows
+    assert_equal 0, day.net_market_flows
+  end
+
+  test "holding quantities are indexed only for securities with a priced transfer" do
+    account = forward_account
+    msft = Security.find_by!(ticker: "MSFT")
+    account.holdings.create!(security: msft, date: transfer_day, qty: 5, price: 50, amount: 250, currency: "USD")
+    add_trade(account, qty: 10, price: 95, label: "Buy")
+
+    calculator = Balance::ForwardCalculator.new(account)
+    calculator.calculate
+    assert_nil calculator.send(:sync_cache).instance_variable_get(:@valued_holding_qtys),
+      "no priced transfer, so no index"
+
+    add_trade(account, qty: 10, price: 95)
+    calculator = Balance::ForwardCalculator.new(account)
+    calculator.calculate
+    indexed = calculator.send(:sync_cache).instance_variable_get(:@valued_holding_qtys)
+    assert_equal [ Security.find_by!(ticker: "AAPL").id ], indexed.keys
+  end
+
   test "forward: a Kraken transfer priced at today's spot price for want of its own is no flow" do
     account = forward_account
     add_trade(account, qty: 10, price: 95, extra: { "kraken" => { "price_missing" => true } })

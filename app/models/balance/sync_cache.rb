@@ -38,10 +38,10 @@ class Balance::SyncCache
   end
 
   # The quantity of `security_id` in the priced holdings of `date`: 0 when
-  # they hold none or have no price for it.
+  # they hold none or have no price for it. Indexed per security on first
+  # ask, so a sync that never asks builds no index.
   def valued_holding_qty(security_id, date)
-    holdings_value_by_date
-    @valued_holdings.fetch([ security_id, date ], 0)
+    valued_holding_qtys(security_id).fetch(date, 0)
   end
 
   def get_entries(date)
@@ -70,7 +70,6 @@ class Balance::SyncCache
     def holdings_value_by_date
       @holdings_value_by_date ||= begin
         missing_rate_pairs = []
-        @valued_holdings = Hash.new(0)
 
         totals = account.holdings.each_with_object(Hash.new(0)) do |h, acc|
           begin
@@ -85,7 +84,6 @@ class Balance::SyncCache
             missing_rate_pairs |= [ [ error.from_currency, error.to_currency ] ]
           end
           acc[h.date] += converted
-          @valued_holdings[[ h.security_id, h.date ]] += h.qty if h.price.to_d.positive?
         end
 
         if @unconvertible_holding_count.positive?
@@ -97,6 +95,13 @@ class Balance::SyncCache
         end
 
         totals
+      end
+    end
+
+    def valued_holding_qtys(security_id)
+      @valued_holding_qtys ||= {}
+      @valued_holding_qtys[security_id] ||= account.holdings.each_with_object(Hash.new(0)) do |h, acc|
+        acc[h.date] += h.qty if h.security_id == security_id && h.price.to_d.positive?
       end
     end
 

@@ -188,9 +188,10 @@ class Balance::BaseCalculator
       return nil unless entry.amount.zero?
 
       trade = entry.entryable
-      return nil unless holdings_show_trades?(trade.security_id, entry.date)
+      value = trade.priced_transfer_value(account.currency, date: entry.date)
+      return nil unless value && holdings_show_trades?(trade.security_id, entry.date)
 
-      trade.priced_transfer_value(account.currency, date: entry.date)
+      value
     end
 
     def holdings_show_trades?(security_id, date)
@@ -198,7 +199,8 @@ class Balance::BaseCalculator
       traded_qty = trades.sum { |e| e.entryable.qty }
       start_qty = sync_cache.valued_holding_qty(security_id, date.prev_day)
       end_qty = sync_cache.valued_holding_qty(security_id, date)
-      return false if traded_qty.zero? && start_qty.zero? && end_qty.zero? && trades.all? { |e| e.amount.zero? }
+      # Income booked as a trade (quantity zero) moves no shares, so it does not count against the cancel-out.
+      return false if traded_qty.zero? && start_qty.zero? && end_qty.zero? && trades.all? { |e| e.amount.zero? || e.entryable.qty.zero? }
 
       end_qty - start_qty == traded_qty
     end
