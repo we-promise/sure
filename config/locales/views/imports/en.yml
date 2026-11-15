@@ -242,6 +242,7 @@ en:
         qif_account_required: Please select an account for the QIF import
       update:
         qif_uploaded: "QIF file uploaded successfully."
+        qif_account_required: Please select an account for the QIF import
         monarch_uploaded: Monarch exports uploaded.
         monarch_balances_required: Choose the Monarch balances export.
       show:
