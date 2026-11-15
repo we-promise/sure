@@ -326,6 +326,40 @@ class RedbarkAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal "Groceries", entry.transaction.category&.name
   end
 
+  # The PR claims a category the user set or locked survives a re-import. enrich_attribute
+  # respects locked_attributes, so a re-sync of the same transaction must leave it alone.
+  test "transactions processor does not overwrite a locked category on re-import" do
+    @family.categories.bootstrap!
+    account, ra = link(Depository, provider: "fiskil", balance: "100")
+
+    payload = [
+      {
+        "id" => "tx_cat_locked",
+        "status" => "posted",
+        "date" => Date.current.to_s,
+        "description" => "WOOLWORTHS SYDNEY",
+        "amount" => "-45.00",
+        "direction" => "debit",
+        "merchant" => "Woolworths",
+        "category" => "FOOD_AND_DRINK"
+      }
+    ]
+
+    ra.update!(raw_transactions_payload: payload)
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    entry = account.entries.find_by(external_id: "redbark_tx_cat_locked", source: "redbark")
+    chosen = @family.categories.find_by(name: "Entertainment")
+    entry.transaction.update!(category: chosen)
+    entry.transaction.lock_attr!(:category_id)
+
+    ra.update!(raw_transactions_payload: payload)
+    RedbarkAccount::Transactions::Processor.new(ra).process
+
+    assert_equal "Entertainment", entry.transaction.reload.category&.name,
+      "a locked category must survive a Redbark re-import"
+  end
+
   test "transactions processor skips category matching when the account has the matcher switched off" do
     @family.categories.bootstrap!
     account, ra = link(Depository, provider: "fiskil", balance: "100")

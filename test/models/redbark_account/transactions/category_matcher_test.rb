@@ -93,13 +93,6 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     assert_nil matcher.match("ENTERTAINMENT", 5411)
   end
 
-  test "reads a zero-padded merchant_category_code as base 10" do
-    # Parsed as octal, "05411" would be 2825 (no match) and "05712" would be 3018, inside
-    # the 3000-3299 airline range, i.e. Travel instead of Shopping.
-    assert_equal "Groceries", @matcher.match("MERCHANDISE", "05411")&.name
-    assert_equal "Shopping", @matcher.match("MERCHANDISE", "05712")&.name
-  end
-
   # Redbark sends credit-card repayments as LOAN_PAYMENTS with no MCC. Those are money
   # movement between the user's own accounts, so they must not be categorised as spending.
   test "leaves credit-card repayments uncategorised" do
@@ -130,5 +123,34 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     assert_equal "Food & Drink", @matcher.match("FOOD_AND_DRINK", 7011)&.name
     # 5811 (caterers) maps to Food & Drink itself -- also not a narrowing, so no change.
     assert_equal "Food & Drink", @matcher.match("FOOD_AND_DRINK", 5811)&.name
+  end
+
+  test "falls back to merchant_category_code for an unrecognized category code" do
+    # Unknown codes take the fallback path, not just blank and deliberately excluded ones.
+    # This is also what would happen to every API v2 `provider_category` value.
+    assert_equal "Groceries", @matcher.match("NOT_A_REAL_CATEGORY", 5411)&.name
+  end
+
+  test "reads a zero-padded merchant_category_code as base 10" do
+    # Parsed as octal, "05411" would be 2825 (no match) and "05712" would be 3018, inside
+    # the 3000-3299 airline range, i.e. Travel instead of Shopping.
+    assert_equal "Groceries", @matcher.match("MERCHANDISE", "05411")&.name
+    assert_equal "Shopping", @matcher.match("MERCHANDISE", "05712")&.name
+  end
+
+  # The table is keyed on Redbark API v1 `category` codes. The v2 migration (#4311)
+  # replaces that field with `provider_category`, whose values are different; because an
+  # unrecognized code silently falls through to the MCC table, that switch would degrade
+  # this matcher to MCC-only without any error. Pin the v1 codes so it fails here instead.
+  test "is keyed on Redbark API v1 category codes" do
+    v1_codes = %w[
+      BANK_FEES ENTERTAINMENT FOOD_AND_DRINK GOVERNMENT_AND_NON_PROFIT HOME_IMPROVEMENT
+      INCOME LOAN_PAYMENTS MEDICAL MERCHANDISE PERSONAL_CARE RENT_AND_UTILITIES SERVICES
+      TRANSFER_IN TRANSFER_OUT TRANSPORTATION TRAVEL
+    ]
+
+    assert_equal 16, v1_codes.size, "Redbark v1 defines 16 fixed category codes"
+    mapped = RedbarkAccount::Transactions::CategoryTaxonomy::CATEGORY_GROUPS.keys
+    assert_empty mapped - v1_codes, "CATEGORY_GROUPS must only contain documented v1 codes"
   end
 end

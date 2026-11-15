@@ -12,6 +12,12 @@
 # PERSONAL_CARE, RENT_AND_UTILITIES, SERVICES, TRANSFER_IN, TRANSFER_OUT, TRANSPORTATION,
 # TRAVEL.
 #
+# NOTE: these are Redbark API *v1* codes, and `category` is a v1 field. The v2 migration
+# (issue #4311) replaces it with `provider_category`, whose values are not these. An
+# unrecognised code falls through to the MCC table, so after a v2 switch this matcher would
+# quietly degrade to MCC-only rather than failing loudly. CategoryMatcherTest pins the v1
+# codes so that migration breaks a test instead.
+#
 # Codes with no honest Sure equivalent are intentionally absent:
 #
 # * TRANSFER_IN / TRANSFER_OUT -- money movement, not spending; Sure's transfer matcher
