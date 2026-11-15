@@ -270,6 +270,31 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 0.1346, result.mwr.to_f, 0.002
   end
 
+  # No rows in the period is not the same as holding nothing: an account
+  # whose last row predates the period carries that balance into every day.
+  # It still does not withhold the figure. With no row in the period nothing
+  # was applied to it there, so its value is constant capital that cannot
+  # hide a flow, and the figure is the scope's return on all of it.
+  test "an account carrying a balance into the period with no rows in it does not withhold mwr" do
+    start_date = Date.new(2026, 1, 1)
+    mid_date = Date.new(2026, 7, 2)
+    end_date = Date.new(2026, 12, 31)
+    lay_balance account: @account, date: start_date, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: mid_date, opening: 1_000, closing: 2_000, cash_flow: 1_000
+    lay_balance account: @account, date: end_date, opening: 2_000, closing: 2_200, market_flow: 200
+    deposit account: @account, date: mid_date, amount: 1_000
+    carried = create_portfolio_account(family: @family)
+    lay_balance account: carried, date: start_date - 10.days, opening: 9_000, closing: 9_000
+
+    alone = performance(start_date: start_date, end_date: end_date)
+    with_carried = performance(account_ids: [ @account.id, carried.id ], start_date: start_date, end_date: end_date)
+
+    assert_equal BigDecimal("11200"), with_carried.drivers[:value_close], "precondition: the carried balance is in the figure"
+    assert_not_nil with_carried.mwr
+    assert_operator with_carried.mwr, :<, alone.mwr, "the same 200 gain over 9,000 more capital"
+    assert_in_delta 0.0190, with_carried.mwr.to_f, 0.0005
+  end
+
   # A single day: the opening and closing values fall on the same date, so no
   # time passes and no annual rate exists. Newton would otherwise return its
   # 10% starting guess as the answer.

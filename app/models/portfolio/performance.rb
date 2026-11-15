@@ -279,9 +279,13 @@ class Portfolio::Performance
     # several accounts is only as good as the flows of every account in it:
     # a valuation-tracked account's flows are unknown, and an account with one
     # day of history has no opening position to measure from, so either one
-    # withholds the figure. An account with no balance rows in the period
-    # contributes nothing and does not block it, the same rule a missing rate
-    # follows. A period of fewer than two days has no duration to annualise.
+    # withholds the figure. An account with no balance rows in the period does
+    # not block it, the same rule a missing rate follows. It may still carry an
+    # earlier balance into the period (DailyReturns reads the last row before
+    # each day), but with no row in the period nothing was applied to it there:
+    # its value is constant in its own currency, so it cannot hide a flow the
+    # way a revaluation can, and only the rate moves it, which is a return. A
+    # period of fewer than two days has no duration to annualise.
     #
     # A day suppressed for a journal the series could not value withholds it
     # too: that journal's flow is missing from the sum while its value moved
