@@ -1177,6 +1177,17 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "TELIA SVERIGE - Direct debit", name
   end
 
+  test "keeps the transaction type description when the remittance is a spaced masked card number" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      transaction_id: "txn_spaced_masked_pan",
+      remittance_information: [ "474836 XXXXXX 6879" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "Card purchase", name
+  end
+
   test "keeps the transaction type description when the remittance is a labelled reference" do
     name = build_name(
       credit_debit_indicator: "DBIT",

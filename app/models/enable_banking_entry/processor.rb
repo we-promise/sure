@@ -26,6 +26,10 @@ class EnableBankingEntry::Processor
   # A remittance line that is only a labelled reference ("Reference 0394676",
   # "Faktura nr 12345", "OCR: 4711"), which names no payee.
   REFERENCE_LINE = /\A(?:ref(?:erence|erens)?|invoice|faktura|ocr)\b\.?\s*(?:no\.?|nr\.?|number)?\s*[:#]?\s*(?=[^\s]*\d)[\w\/-]+\z/i
+  # A masked card number written with spaces ("474836 XXXXXX 6879"), whose mask
+  # characters would otherwise pass as letters. Kept local so card-hold
+  # detection, which uses the contiguous form, is unaffected.
+  SPACED_MASKED_CARD = /\A\d{4,6}\s+[x*]{4,8}\s+\d{4}\z/i
 
   # Prefix of the identifier synthesised for a transaction the ASPSP returned
   # with neither transaction_id nor entry_reference.
@@ -514,10 +518,13 @@ class EnableBankingEntry::Processor
 
     # Remittance text that reads as a name rather than a reference such as
     # "52220151204 092408560500" (fewer than three letters) or "Reference
-    # 0394676". Technical lines, masked card numbers and the account holder are
-    # already skipped by descriptive_remittance_name.
+    # 0394676", or a spaced masked card number. Technical lines, contiguous
+    # masked card numbers and the account holder are already skipped by
+    # descriptive_remittance_name.
     def descriptive_remittance?(value)
-      !value.match?(REFERENCE_LINE) && value.scan(/\p{L}/).size >= 3
+      !value.match?(REFERENCE_LINE) &&
+        !value.match?(SPACED_MASKED_CARD) &&
+        value.scan(/\p{L}/).size >= 3
     end
 
     def strip_payment_processor_prefix(value)
