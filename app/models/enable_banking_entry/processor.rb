@@ -90,7 +90,7 @@ class EnableBankingEntry::Processor
     groups.each do |legacy_id, indexes|
       free = indexes.reject { |i| stored.key?(suffixed[i]) }
       legacy = stored[legacy_id]
-      kept = legacy&.entryable.try(:provider_entry_reference) if indexes.size > 1
+      kept = legacy&.entryable.try(:provider_entry_reference)
       # Without a stored reference, a locked currency is the owner's change, not the bank's: match on amount and date
       # only. On a tie the row not in the locked currency wins, since the owner changed the entry away from its row's.
       match_currency = kept.present? || !legacy&.locked?(:currency)

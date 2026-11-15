@@ -547,6 +547,23 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x").amount
   end
 
+  test "a lone new sibling does not overwrite a plain entry whose row left the payload" do
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00").merge(booking_date: 40.days.ago.to_date.to_s))
+
+    # e.g. a relinked account whose first window holds only r-b
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00"))
+
+    assert_equal BigDecimal("9.00"), @account.entries.find_by!(external_id: "enable_banking_tid-x").amount
+    assert_equal BigDecimal("7.00"), @account.entries.find_by!(external_id: sibling_id("r-b")).amount
+  end
+
+  test "a lone row with a re-issued reference keeps a plain entry whose row left the payload" do
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"))
+    sync_shared(raw_shared_tid_transaction(entry_reference: "r-a2", amount: "9.00"))
+
+    assert_equal [ "enable_banking_tid-x" ], @account.entries.where(source: "enable_banking").pluck(:external_id)
+  end
+
   test "an unchanged payload does not duplicate a plain entry whose amount the user edited, before or after unlocking it" do
     rows = [ raw_shared_tid_transaction(entry_reference: "r-a", amount: "9.00"), raw_shared_tid_transaction(entry_reference: "r-b", amount: "7.00") ]
     @enable_banking_account.update!(raw_transactions_payload: rows)
