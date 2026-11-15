@@ -983,6 +983,12 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
       assert_select "*", text: /\$10,000/
       assert_select "a[href*='tags']", text: "2 transactions tagged Land costs"
     end
+
+    # The list the link opens leaves the transfer out too.
+    get css_select("[data-testid='purchase-costs'] a[href*='tags']").first["href"]
+    assert_response :success
+    assert_includes response.body, "Notary"
+    assert_not_includes response.body, "To savings"
   end
 
   test "overview says the rate is unavailable for a cost without a stored rate" do
