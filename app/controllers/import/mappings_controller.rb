@@ -17,7 +17,7 @@ class Import::MappingsController < ApplicationController
 
   private
     def mapping_params
-      params.require(:import_mapping).permit(:type, :key, :mappable_id, :mappable_type, :value)
+      params.require(:import_mapping).permit(:key, :mappable_id, :value)
     end
 
     def set_import

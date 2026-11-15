@@ -27,9 +27,9 @@ class Import::MappingsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to import_confirm_path(@import)
   end
 
-  # mappable_type and type reach `constantize` straight from request params,
-  # so any constant in the app can be resolved and have class methods called
-  # on it. Only the mapping types the importer actually uses are allowed.
+  # mappable_type and type used to reach `constantize` straight from request
+  # params, so any constant in the app could be resolved and have class methods
+  # called on it. The mapping row decides both now, whatever the request says.
   test "ignores a mappable_type that is not an importable mapping target" do
     mapping = import_mappings(:one)
 
