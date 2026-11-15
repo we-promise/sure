@@ -26,7 +26,7 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
       assert_equal @months[5].end_of_month, insight.period_end
       assert_equal I18n.l(@months[3], format: "%B"), insight.facts[:from_month]
       assert_equal I18n.l(@months[5], format: "%B"), insight.facts[:to_month]
-      assert_equal "savings_rate_change:#{@months[5].strftime("%Y-%m")}", insight.dedup_key
+      assert_equal "savings_rate_change:v2:#{@months[5].strftime("%Y-%m")}", insight.dedup_key
     end
   end
 
@@ -53,11 +53,10 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
     end
   end
 
-  # Each window's rate comes from its summed income and spending. Averaging
-  # the monthly rates instead would let one month whose pay landed elsewhere
-  # (-279%) drag the earlier window down to about -68%, and report a
-  # recovery of 88 points that never happened.
-  test "computes each window's rate from its totals, not from monthly rates" do
+  # Averaging the monthly rates would let one month whose pay landed
+  # elsewhere (-279%) drag the earlier window down to about -68%, and report
+  # a recovery of 88 points that never happened.
+  test "does not average monthly rates" do
     travel_to @today do
       record(@months[0], income: 1_000, spending: 3_788)
       record(@months[1], income: 9_000, spending: 4_000)
@@ -65,6 +64,57 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
       @months.last(3).each { |month| record(month, income: 5_000, spending: 4_000) }
 
       assert_empty generate
+    end
+  end
+
+  # A 5,000 salary normally paid on the 1st arrives once on the last day of the
+  # month before. Run by run, that month enters the latest window (two
+  # salaries in one month), then sits on the edge between the windows three
+  # months later, then leaves through the earlier window three months after
+  # that. None of those runs is a change in how the family saves.
+  test "does not report a paycheck paid early, in any window position" do
+    early = @months[3]
+    months = (-6..5).map { |offset| early + offset.months }
+
+    months.each do |month|
+      salaries = if month == early - 1.month then 2 elsif month == early then 0 else 1 end
+      record(month, income: 5_000 * salaries, spending: 4_000)
+    end
+
+    (0..6).each do |runs_later|
+      travel_to((early + runs_later.months).change(day: 10)) do
+        assert_empty generate, "#{runs_later} months after the early payday"
+      end
+    end
+  end
+
+  test "reports a raise once the latest window earns it" do
+    travel_to @today do
+      @months.first(3).each { |month| record(month, income: 5_000, spending: 4_000) }
+      @months.last(3).each { |month| record(month, income: 6_000, spending: 4_000) }
+
+      assert_equal [ "savings_rate_change.up" ], generate.map(&:template_key)
+    end
+  end
+
+  test "reports a drop in income" do
+    travel_to @today do
+      @months.first(3).each { |month| record(month, income: 5_000, spending: 4_000) }
+      @months.last(3).each { |month| record(month, income: 4_500, spending: 4_000) }
+
+      assert_equal [ "savings_rate_change.down" ], generate.map(&:template_key)
+    end
+  end
+
+  # Spending is summed, not smoothed: a one-off 1,500 in a single month moves
+  # the window's rate from 20% to 10%.
+  test "reports a one-off rise in spending" do
+    travel_to @today do
+      @months.first(3).each { |month| record(month, income: 5_000, spending: 4_000) }
+      record(@months[3], income: 5_000, spending: 5_500)
+      @months.last(2).each { |month| record(month, income: 5_000, spending: 4_000) }
+
+      assert_equal({ current_rate: 10.0, previous_rate: 20.0 }, generate.sole.metadata)
     end
   end
 
