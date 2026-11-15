@@ -362,7 +362,7 @@ class Family::DataImporter
 
     # What the property form edits. Provider links (avm_*) are left out: the
     # restored family has to link its own provider. A missing or null value
-    # keeps the column's default, such as the area unit.
+    # keeps the model's default, such as the area unit.
     def assign_property_details(property, accountable_data)
       property.assign_attributes(accountable_data.slice(*PROPERTY_DETAIL_ATTRIBUTES).compact)
 
