@@ -82,7 +82,7 @@ de:
         not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es keine Sondertilgung zu berechnen.
         payoff_with_extra: Tilgung mit Zusatzbetrag
         revised_schedule: Angepasster Tilgungsplan
-        revised_schedule_intro: Jede Rate mit dem Zusatzbetrag, bis der Kredit getilgt ist. Rate ist deine aktuelle Rate; Zusatzbetrag ist, was du in diesem Zeitraum zusätzlich zahlst.
+        revised_schedule_intro: Jede Rate mit dem Zusatzbetrag, bis der Kredit getilgt ist. Rate ist die planmäßige Rate; Zusatzbetrag ist, was du in diesem Zeitraum zusätzlich zahlst.
         total_cost: Gesamtkosten ab heute
         total_cost_not_cleared: Bis zum ursprünglichen Laufzeitende nicht getilgt
         total_cost_saved: "%{amount} weniger als ohne Zusatzbetrag"

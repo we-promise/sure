@@ -1125,26 +1125,36 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
 
   # Under the form, once an extra applies: the extra projection as the
   # Schedule tab's table, with an Extra column holding each period's own sum.
-  # Weekly, so a five-date period shows five extras and a four-date one four.
+  # Weekly from Fri 16 Oct 2026, so the first extra is Sat 17 Oct and one
+  # falls every 7 days after. Repayments are due on the 16th, so the periods
+  # to 16 Nov and to 16 Jan hold five extras each (16 Jan itself is one),
+  # and the others hold four. The figures are counted by hand, not read
+  # from the model, so the page cannot agree with a model that averages.
   test "an applied extra adds the revised schedule, with each period's extra beside its repayment" do
-    get account_path(@account, tab: "extra_repayments")
-    assert_select "[data-testid='revised-schedule']", count: 0
+    travel_to Time.zone.local(2026, 10, 16, 12) do
+      get account_path(@account, tab: "extra_repayments")
+      assert_select "[data-testid='revised-schedule']", count: 0
 
-    get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "100", frequency: "weekly" })
+      get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "100", frequency: "weekly" })
 
-    assert_response :success
-    weekly = @account.loan.reload.payoff_projection(as_of: Date.current, extra: 100, extra_frequency: "weekly")
-    rows = weekly.revised_schedule
-    assert_operator rows.map { |row| row.extra.amount }.uniq.size, :>, 1, "the fixture must have periods of different lengths"
-    assert_equal schedule_headers.insert(3, I18n.t("loans.tabs.extra_repayments.extra")),
-      css_select("[data-testid='revised-schedule'] thead th").map { |cell| cell.text.strip }
-    assert_equal rows.length, css_select("[data-testid='revised-schedule'] tbody tr").length
-    assert_equal rows.map { |row| [ row.number.to_s, I18n.l(row.date, format: :long), format_money(row.payment), format_money(row.extra) ] },
-      css_select("[data-testid='revised-schedule'] tbody tr").map { |tr| tr.css("td").first(4).map { |cell| cell.text.strip } }
+      assert_response :success
+      weekly = @account.loan.reload.payoff_projection(as_of: Date.current, extra: 100, extra_frequency: "weekly")
+      rows = weekly.revised_schedule
+      assert_equal schedule_headers.insert(3, I18n.t("loans.tabs.extra_repayments.extra")),
+        css_select("[data-testid='revised-schedule'] thead th").map { |cell| cell.text.strip }
+      cells = css_select("[data-testid='revised-schedule'] tbody tr").map { |tr| tr.css("td").first(4).map { |cell| cell.text.strip } }
+      assert_equal rows.length, cells.length
+      assert_equal [ 500, 400, 500, 400, 400, 400 ].map { |amount| format_money(Money.new(amount, @account.currency)) },
+        cells.first(6).map(&:last)
+      assert_operator cells[0..-2].map(&:last).uniq.size, :>, 1, "periods before the last must differ in length"
+      assert_equal rows.map { |row| [ row.number.to_s, I18n.l(row.date, format: :long), format_money(row.payment), format_money(row.extra) ] }, cells
+    end
   end
 
   # The revised schedule is a second table under the Extra repayments form;
-  # the Schedule tab's own table keeps its columns and its rows.
+  # the Schedule tab's own table keeps its columns and its rows. The page
+  # renders every tab (UI::AccountPage only marks one active), so the
+  # Schedule table is on this response beside the revised one.
   test "the schedule tab's table is unchanged when an extra applies" do
     get account_path(@account, tab: "extra_repayments", extra_payment: { amount: "100", frequency: "weekly" })
 

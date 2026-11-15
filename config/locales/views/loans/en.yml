@@ -82,7 +82,7 @@ en:
         not_applicable: There is nothing left to repay on this loan, so there is no extra repayment to model.
         payoff_with_extra: Payoff with extra
         revised_schedule: Revised schedule
-        revised_schedule_intro: Each repayment with the extra, until the loan is paid off. Payment is your current repayment; Extra is what you add in that period.
+        revised_schedule_intro: Each repayment with the extra, until the loan is paid off. Payment is the scheduled repayment; Extra is what you add in that period.
         total_cost: Total cost from today
         total_cost_not_cleared: Not paid off by the original maturity
         total_cost_saved: "%{amount} less than without the extra"
