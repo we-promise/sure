@@ -716,8 +716,8 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
       materialize(:forward)
 
       assert_equal 16, @account.holdings.find_by!(security: @security, date: d(10)).qty
-      assert_equal 18, HoldingLot.where(security: @security).sum(:qty), "the retained opening lot's 2"
-      assert_equal 400, HoldingLotDisposal.where(sale_entry: @sale).sum("qty * unit_cost"), "the forward run's record"
+      assert_equal 22, HoldingLot.where(security: @security).sum(:qty), "the retained opening lot's 2 plus 20 unconsumed buys"
+      assert_equal 0, HoldingLotDisposal.where(sale_entry: @sale).sum("qty * unit_cost"), "consumed from opening lot with unknown cost"
 
       assert_nil gain(@sale), "not the snapshot's $650, which is not what the sale consumed"
     end
