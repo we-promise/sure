@@ -62,8 +62,10 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+[ -e .env ] || curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
 ```
+
+The command does nothing if `.env` already exists. Upgrading an install that has been running without a `.env`? Create an empty `.env` instead of downloading `.env.example`: its `POSTGRES_USER` and `POSTGRES_PASSWORD` differ from the defaults your database was created with.
 
 #### Generate the app secret key
 
@@ -330,6 +332,9 @@ Sure ships with a separate compose file for AI-related features: `compose.exampl
 curl --fail --location --silent --show-error --output compose.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.yml
 curl --fail --location --silent --show-error --output compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
 curl --fail --location --silent --show-error --output pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
+
+# Set SECRET_KEY_BASE in .env first, as in Step 3 above. Existing install: keep the key
+# it runs with (see "Upgrading an install that is already running" below)
 
 # Run with Pipelock (no local LLM)
 docker compose -f compose.ai.yml up -d
