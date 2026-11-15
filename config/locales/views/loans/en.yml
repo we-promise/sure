@@ -63,6 +63,7 @@ en:
         clear: Clear
         comparison_basis: Compared with paying the current repayment and nothing extra, from today's balance.
         dated_note: Weekly and fortnightly extras are counted at the next repayment after each one is paid, so the interest saved is, if anything, understated.
+        extra: Extra
         extra_not_cleared: Even with this extra, the loan is not paid off by the original maturity. Try a larger amount.
         frequencies:
           fortnightly: Fortnightly
@@ -80,6 +81,8 @@ en:
         no_scheduled_repayments: No scheduled repayments remain on this loan, but a balance is still owing, so there is no repayment to add an extra to.
         not_applicable: There is nothing left to repay on this loan, so there is no extra repayment to model.
         payoff_with_extra: Payoff with extra
+        revised_schedule: Revised schedule
+        revised_schedule_intro: Each repayment with the extra, until the loan is paid off. Payment is your current repayment; Extra is what you add in that period.
         total_cost: Total cost from today
         total_cost_not_cleared: Not paid off by the original maturity
         total_cost_saved: "%{amount} less than without the extra"

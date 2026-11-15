@@ -63,6 +63,7 @@ de:
         clear: Zurücksetzen
         comparison_basis: Verglichen mit der aktuellen Rate ohne Zusatzbetrag, ab dem heutigen Saldo.
         dated_note: Wöchentliche und zweiwöchentliche Zusatzbeträge werden jeweils bei der nächsten Rate nach ihrer Zahlung angerechnet; die Zinsersparnis ist daher eher zu niedrig angegeben.
+        extra: Zusatzbetrag
         extra_not_cleared: Auch mit diesem Zusatzbetrag ist der Kredit bis zum ursprünglichen Laufzeitende nicht getilgt. Versuch es mit einem höheren Betrag.
         frequencies:
           fortnightly: Alle zwei Wochen
@@ -80,6 +81,8 @@ de:
         no_scheduled_repayments: Für diesen Kredit sind keine planmäßigen Raten mehr vorgesehen, aber es ist noch ein Saldo offen. Daher gibt es keine Rate, zu der du einen Zusatzbetrag zahlen kannst.
         not_applicable: Auf diesen Kredit ist nichts mehr zu tilgen, daher gibt es keine Sondertilgung zu berechnen.
         payoff_with_extra: Tilgung mit Zusatzbetrag
+        revised_schedule: Angepasster Tilgungsplan
+        revised_schedule_intro: Jede Rate mit dem Zusatzbetrag, bis der Kredit getilgt ist. Rate ist deine aktuelle Rate; Zusatzbetrag ist, was du in diesem Zeitraum zusätzlich zahlst.
         total_cost: Gesamtkosten ab heute
         total_cost_not_cleared: Bis zum ursprünglichen Laufzeitende nicht getilgt
         total_cost_saved: "%{amount} weniger als ohne Zusatzbetrag"

@@ -30,6 +30,10 @@ class Loan
     # repayment, as the schedule's own payments do.
     EXTRA_INTERVAL_DAYS = { "weekly" => 7, "fortnightly" => 14 }.freeze
 
+    # A row of the revised schedule: the Schedule tab's columns, with the
+    # period's extra beside the repayment it rides on.
+    Row = Data.define(:number, :date, :payment, :extra, :principal, :interest, :ending_balance)
+
     attr_reader :loan, :as_of, :extra, :extra_frequency
 
     def initialize(loan, as_of: Date.current, extra: nil, extra_frequency: "monthly")
@@ -78,6 +82,26 @@ class Loan
 
     def payoff_date
       simulation&.payoff_date
+    end
+
+    # The projection as the Extra repayments tab's revised schedule: each
+    # period numbered and dated as the Schedule tab has it, its repayment
+    # split into the contract's figure and the extra on top. The last row
+    # settles whatever is left, so its two figures can each be less.
+    def revised_schedule
+      payments.each_with_index.map do |row, index|
+        scheduled = remaining_scheduled_payments[index]
+        contracted = [ scheduled.payment.amount, row[:payment_amount] ].min
+        Row.new(
+          number: scheduled.number,
+          date: row[:payment_date],
+          payment: Money.new(contracted, currency),
+          extra: Money.new(row[:payment_amount] - contracted, currency),
+          principal: Money.new(row[:principal_payment], currency),
+          interest: Money.new(row[:interest_payment], currency),
+          ending_balance: Money.new(row[:ending_balance], currency)
+        )
+      end
     end
 
     def total_interest

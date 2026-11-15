@@ -320,6 +320,56 @@ class Loan::PayoffProjectionTest < ActiveSupport::TestCase
     assert_equal [ 3, 4, 4, 5, 4 ], extra_counts(weekly, baseline, 100).first(5)
   end
 
+  # The revised schedule shows the contract's repayment and the period's extra
+  # side by side, numbered and dated as the Schedule tab numbers and dates the
+  # same repayments, and ends where the loan is paid off. Measured against the
+  # same loan paying no extra, whose rows carry no extra at all.
+  test "the revised schedule shows the contracted repayment and the period's extra apart" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    baseline = loan.payoff_projection(as_of: @today)
+    with_extra = loan.payoff_projection(as_of: @today, extra: 20_000)
+    rows = with_extra.revised_schedule
+    remaining = loan.amortization_schedule.payments.select { |payment| payment.date > @today }
+
+    assert_equal with_extra.payments.length, rows.length
+    assert_operator rows.length, :<, baseline.revised_schedule.length, "the extra clears the loan sooner"
+    assert_equal [ 0 ], baseline.revised_schedule.map { |row| row.extra.amount }.uniq
+    rows[0..-2].each_with_index do |row, index|
+      assert_equal remaining[index].number, row.number
+      assert_equal remaining[index].date, row.date
+      assert_equal remaining[index].payment, row.payment, "row #{row.number} pays the contract's repayment"
+      assert_equal Money.new(20_000, "USD"), row.extra, "row #{row.number} carries the extra beside it"
+    end
+
+    last = rows.last
+    assert_equal with_extra.payoff_date, last.date
+    assert_equal Money.new(0, "USD"), last.ending_balance
+    assert_equal Money.new(with_extra.payments.last[:payment_amount], "USD"), last.payment + last.extra,
+      "the final row settles what is left, split between the two columns"
+    # The fixture's last settlement is less than the contract's repayment: it
+    # is all payment, with no extra and nothing negative.
+    settled = with_extra.payments.last[:payment_amount]
+    assert_operator settled, :<, remaining[rows.length - 1].payment.amount
+    assert_equal Money.new(settled, "USD"), last.payment
+    assert_equal Money.new(0, "USD"), last.extra
+  end
+
+  # Weekly extras are dated, so each row's Extra is the sum of the extras in
+  # its period: five Saturdays credit five, four credit four (see the weekly
+  # test above for the dates). An average would put the same figure on every
+  # row.
+  test "a weekly revised schedule shows each period's dated extras" do
+    loan = build_loan(term_months: 24)
+    loan.account.update!(balance: scheduled_balance_at(loan, @today))
+
+    weekly = loan.payoff_projection(as_of: @today, extra: 100, extra_frequency: "weekly")
+
+    assert_equal [ 300, 400, 400, 500, 400 ].map { |amount| Money.new(amount, "USD") },
+      weekly.revised_schedule.first(5).map(&:extra)
+  end
+
   # The first dated extra is the day after as_of, never as_of itself: that
   # day's period is already open. With as_of the day before a payment, the
   # first extra lands on the payment date, so that period carries exactly one.
