@@ -272,14 +272,35 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "a connection that already has a session is never reused for a new one" do
     stub_authorization_start
-    @family.enable_banking_items.create!(
-      name: "Connected", country_code: "DE", application_id: "test_app_id",
-      client_certificate: @item.client_certificate, aspsp_name: "Test Bank", session_id: "live-session"
-    )
+    start_new_connection
+    @family.enable_banking_items.order(:created_at).last.update!(session_id: "live-session")
 
     assert_difference -> { @family.enable_banking_items.count }, 1 do
-      post authorize_enable_banking_item_url(@item),
-           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      start_new_connection
+    end
+  end
+
+  test "a connection that already has accounts is never reused for a new one" do
+    stub_authorization_start
+    start_new_connection
+    @family.enable_banking_items.order(:created_at).last
+      .enable_banking_accounts.create!(name: "Checking", uid: "eb_existing", currency: "EUR")
+
+    assert_difference -> { @family.enable_banking_items.count }, 1 do
+      start_new_connection
+    end
+  end
+
+  # Reuse is limited to connections this browser started: two browsers of one
+  # family sharing a pending connection could both complete on it.
+  test "a pending connection started in another browser is not reused" do
+    stub_authorization_start
+
+    assert_difference -> { @family.enable_banking_items.count }, 2 do
+      start_new_connection
+      reset!
+      sign_in users(:family_admin)
+      start_new_connection
     end
   end
 
@@ -300,14 +321,11 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "a connection scheduled for deletion is not reused" do
     stub_authorization_start
-    @family.enable_banking_items.create!(
-      name: "Going away", country_code: "DE", application_id: "test_app_id",
-      client_certificate: @item.client_certificate, aspsp_name: "Test Bank", scheduled_for_deletion: true
-    )
+    start_new_connection
+    @family.enable_banking_items.order(:created_at).last.update!(scheduled_for_deletion: true)
 
     assert_difference -> { @family.enable_banking_items.count }, 1 do
-      post authorize_enable_banking_item_url(@item),
-           params: { aspsp_name: "Test Bank", psu_type: "personal", new_connection: "true" }
+      start_new_connection
     end
   end
 
@@ -328,6 +346,20 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     get callback_enable_banking_items_url, params: { code: "first", state: first_state }
     assert_redirected_to settings_providers_path
     get callback_enable_banking_items_url, params: { code: "second", state: second_state }
+    assert_redirected_to accounts_path
+  end
+
+  test "a retry that fails to start leaves the earlier login able to complete" do
+    stub_authorization_start
+    start_new_connection
+    first_state = @sent_state
+    Provider::EnableBanking.any_instance.stubs(:start_authorization)
+      .raises(Provider::EnableBanking::EnableBankingError.new("ASPSP unavailable"))
+    start_new_connection
+    EnableBankingItem.any_instance.stubs(:sync_later)
+
+    EnableBankingItem.any_instance.expects(:complete_authorization).with(code: "first")
+    get callback_enable_banking_items_url, params: { code: "first", state: first_state }
     assert_redirected_to accounts_path
   end
 
@@ -431,6 +463,11 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+
+    def start_new_connection(bank: "Test Bank")
+      post authorize_enable_banking_item_url(@item),
+           params: { aspsp_name: bank, psu_type: "personal", new_connection: "true" }
+    end
 
     def stub_authorization_start(banks: [ "Test Bank" ])
       Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(

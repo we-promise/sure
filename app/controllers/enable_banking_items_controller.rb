@@ -122,13 +122,15 @@ class EnableBankingItemsController < ApplicationController
       # begin_authorization! re-fetches ASPSP metadata and auto-selects the best
       # auth method (REDIRECT > DECOUPLED > EMBEDDED). Decoupled/MFA banks proceed
       # through Enable Banking's hosted SCA page rather than being blocked.
+      state = issue_oauth_state_for(target_item)
       redirect_url = target_item.begin_authorization!(
         aspsp_name: aspsp_name,
         redirect_url: enable_banking_callback_url,
-        state: issue_oauth_state_for(target_item, only_flow: pending_connection.present?),
+        state: state,
         psu_type: psu_type,
         language: language
       )
+      supersede_oauth_states_for(target_item, keep: state) if pending_connection
 
       safe_redirect_to_provider(
         redirect_url,
@@ -539,9 +541,12 @@ class EnableBankingItemsController < ApplicationController
     # on the same bank, a back-and-retry or a failed start would leave an empty
     # connection behind. An earlier attempt at this bank with the same
     # credentials that never came back from it (no session, no accounts) is
-    # reused instead. Other banks keep their own connection.
+    # reused instead. Other banks keep their own connection. Only attempts
+    # started in this browser session qualify: two browsers of one family
+    # sharing a pending connection could both complete on it.
     def pending_connection_for(aspsp_name)
       Current.family.enable_banking_items.active
+        .where(id: pending_oauth_states.values)
         .where(
           aspsp_name: aspsp_name,
           session_id: nil,
@@ -555,17 +560,23 @@ class EnableBankingItemsController < ApplicationController
     end
 
     # Pending states map state => item id, so parallel flows (two tabs) each
-    # keep their own entry. Only the newest few are kept. A reused pending
-    # connection (only_flow) keeps only its newest flow: two new logins to the
-    # same bank finishing on one connection would leave the first one's
-    # accounts attached to the second one's session.
-    def issue_oauth_state_for(item, only_flow: false)
+    # keep their own entry. Only the newest few are kept.
+    def issue_oauth_state_for(item)
       state = SecureRandom.urlsafe_base64(32)
-      pending = pending_oauth_states
-      pending = pending.reject { |_, item_id| item_id == item.id } if only_flow
-      pending = pending.merge(state => item.id)
-      session[OAUTH_STATE_SESSION_KEY] = pending.to_a.last(MAX_PENDING_OAUTH_STATES).to_h
+      write_pending_oauth_states(pending_oauth_states.merge(state => item.id))
       state
+    end
+
+    # A reused pending connection keeps only its newest flow, once that flow
+    # has reached the bank: two logins finishing on one connection would leave
+    # the first one's accounts attached to the second one's session, and a
+    # retry that fails to start must not cancel the login still open.
+    def supersede_oauth_states_for(item, keep:)
+      write_pending_oauth_states(pending_oauth_states.reject { |state, item_id| item_id == item.id && state != keep })
+    end
+
+    def write_pending_oauth_states(pending)
+      session[OAUTH_STATE_SESSION_KEY] = pending.to_a.last(MAX_PENDING_OAUTH_STATES).to_h
     end
 
     # An entry is removed only when it matches, so a stray callback with a
