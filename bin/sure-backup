@@ -28,6 +28,11 @@
 # (works for any Sure version, including 0.7.5 and older):
 #   sh sure-backup create | list | restore <backup> | prune
 #
+# To move the database to the PostgreSQL version in your compose file (for
+# example 16 to 18), after updating the db image and volume mount there:
+#   sh sure-backup upgrade-postgres [--yes] [--old-image IMAGE]
+# It takes a backup first, keeps the old data, and restores into the new version.
+#
 # On the host, a bundle restores itself into a new project folder:
 #   sh <bundle>/restore.sh [--target DIR] [--port N] [--with-worker | --without-worker] [--yes]
 # which runs `sure-backup recover <bundle> ...`. It needs Docker with Compose.
@@ -64,13 +69,16 @@ ensure_deps() {
   # backup services from v0.7.5 working.
   missing=""
   if ! command -v pg_dump >/dev/null 2>&1; then
-    # Prefer the client the Sure image ships (17); dumps it makes need a
-    # pg_restore at least that new. Older Alpine releases only have 16.
-    if apk search -q postgresql17-client 2>/dev/null | grep -qx postgresql17-client; then
-      missing="$missing postgresql17-client"
-    else
-      missing="$missing postgresql16-client~=16"
-    fi
+    # Take the newest client this Alpine release has: pg_dump must be at
+    # least as new as the server, and pg_restore as new as the dump.
+    pg_pkg="postgresql16-client~=16"
+    for v in 18 17; do
+      if apk search -q "postgresql${v}-client" 2>/dev/null | grep -qx "postgresql${v}-client"; then
+        pg_pkg="postgresql${v}-client"
+        break
+      fi
+    done
+    missing="$missing $pg_pkg"
   fi
   # BusyBox tar lacks --numeric-owner/--exclude semantics we rely on.
   tar --version 2>/dev/null | grep -q "GNU tar" || missing="$missing tar~=1"
@@ -152,6 +160,7 @@ cmd_create() {
       --version) version=$2; shift 2 ;;
       --commit) commit=$2; shift 2 ;;
       --scheduled) trigger=scheduled; shift ;;
+      --pre-upgrade) trigger=pre-upgrade; shift ;;
       *) die "unknown option for create: $1" ;;
     esac
   done
@@ -159,6 +168,13 @@ cmd_create() {
   check_db_env
   ensure_deps
   setup_pgpass
+
+  # pg_dump refuses servers newer than itself; say what to do about it.
+  server_major=$(( $(psql_value "SHOW server_version_num") / 10000 ))
+  dump_client_major=$(pg_dump --version | sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p')
+  if [ "$server_major" -gt "${dump_client_major:-0}" ]; then
+    die "the database server is PostgreSQL ${server_major}, but this Sure version ships pg_dump ${dump_client_major:-?}, which cannot back up newer servers. Upgrade Sure to a version that supports PostgreSQL ${server_major}."
+  fi
 
   db_schema=$(psql_value "SELECT max(version) FROM schema_migrations" 2>/dev/null) \
     || die "cannot read schema_migrations from ${POSTGRES_DB}; is the database initialized?"
@@ -335,6 +351,26 @@ env_secret_hash() {
   sed -n 's/^SECRET_KEY_BASE=//p' "$1" | tail -n 1 | sha256sum | cut -c1-16
 }
 
+sql_ident() {
+  printf '"%s"' "$(printf '%s' "$1" | sed 's/"/""/g')"
+}
+
+# load_dump DATABASE DUMP: uses client_major and server_major from cmd_restore.
+load_dump() {
+  if [ "$client_major" -le "$server_major" ]; then
+    pg_restore --no-owner --role="$POSTGRES_USER" --exit-on-error -d "$1" "$2"
+    return $?
+  fi
+  # A newer pg_restore emits settings an older server rejects (e.g.
+  # transaction_timeout, new in 17), so restore through SQL without them.
+  pg_restore --no-owner --role="$POSTGRES_USER" -f "${WORK_DIR}/restore.sql" "$2" || return 1
+  load_status=0
+  sed '/^SET transaction_timeout = /d' "${WORK_DIR}/restore.sql" \
+    | psql -X -q -v ON_ERROR_STOP=1 -d "$1" >/dev/null || load_status=$?
+  rm -f "${WORK_DIR}/restore.sql"
+  return "$load_status"
+}
+
 cmd_restore() {
   target=""
   assume_yes=false
@@ -389,22 +425,27 @@ cmd_restore() {
     fi
   fi
 
-  log "Recreating database ${POSTGRES_DB}..."
-  dropdb --maintenance-db=postgres --if-exists --force "$POSTGRES_DB"
-  createdb --maintenance-db=postgres -O "$POSTGRES_USER" "$POSTGRES_DB"
-
-  log "Restoring database..."
   server_major=$(( $(psql_value "SHOW server_version_num" postgres) / 10000 ))
-  if [ "$client_major" -le "$server_major" ]; then
-    pg_restore --no-owner --role="$POSTGRES_USER" --exit-on-error -d "$POSTGRES_DB" "${dir}/db.dump"
-  else
-    # A newer pg_restore emits settings the older server rejects (e.g.
-    # transaction_timeout, new in 17), so restore through SQL without them.
-    pg_restore --no-owner --role="$POSTGRES_USER" -f "${WORK_DIR}/restore.sql" "${dir}/db.dump"
-    sed '/^SET transaction_timeout = /d' "${WORK_DIR}/restore.sql" \
-      | psql -X -q -v ON_ERROR_STOP=1 -d "$POSTGRES_DB" >/dev/null
-    rm -f "${WORK_DIR}/restore.sql"
+  backup_major=$(manifest_value "$dir" postgres_server_version | sed -n 's/^\([0-9][0-9]*\).*/\1/p')
+  if [ -n "$backup_major" ] && [ "$backup_major" -gt "$server_major" ]; then
+    warn "this backup comes from PostgreSQL ${backup_major}. Restoring it into PostgreSQL ${server_major} usually works but is not guaranteed; ${POSTGRES_DB} is only replaced if it loads cleanly."
   fi
+
+  # Load into a scratch database and swap it in only once it has loaded, so a
+  # failed restore leaves the current database as it was.
+  scratch_db="${POSTGRES_DB}_restore_$$"
+  log "Restoring database..."
+  PGOPTIONS="-c client_min_messages=warning" dropdb --maintenance-db=postgres --if-exists --force "$scratch_db"
+  createdb --maintenance-db=postgres -O "$POSTGRES_USER" "$scratch_db"
+  if ! load_dump "$scratch_db" "${dir}/db.dump"; then
+    dropdb --maintenance-db=postgres --if-exists --force "$scratch_db" || true
+    die "the database restore failed; ${POSTGRES_DB} was left as it was"
+  fi
+
+  log "Replacing database ${POSTGRES_DB}..."
+  dropdb --maintenance-db=postgres --if-exists --force "$POSTGRES_DB"
+  psql -X -q -v ON_ERROR_STOP=1 -d postgres \
+    -c "ALTER DATABASE $(sql_ident "$scratch_db") RENAME TO $(sql_ident "$POSTGRES_DB")"
 
   if [ -f "${dir}/storage.tar.gz" ]; then
     log "Restoring file storage..."
@@ -812,12 +853,13 @@ host_run() {
   fi
 
   inspect() { docker inspect -f "$1" "$cid"; }
-  image=$(inspect '{{.Image}}')
+  image=${SURE_HOST_IMAGE:-$(inspect '{{.Image}}')}
   workdir=$(inspect '{{index .Config.Labels "com.docker.compose.project.working_dir"}}')
   workdir=${workdir:-$(pwd)}
   # A Go template for docker inspect, not shell expansion.
   # shellcheck disable=SC2016
   network=$(inspect '{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{"\n"}}{{end}}' | sed -n '1p')
+  network=${SURE_HOST_NETWORK:-$network}
   storage=$(inspect '{{range .Mounts}}{{if eq .Destination "/rails/storage"}}{{if eq .Type "volume"}}{{.Name}}{{else}}{{.Source}}{{end}}{{end}}{{end}}')
   container_env=$(inspect '{{range .Config.Env}}{{println .}}{{end}}')
   env_of() { printf '%s\n' "$container_env" | sed -n "s/^$1=//p" | tail -n 1; }
@@ -832,7 +874,8 @@ host_run() {
   host_tmp=$(umask 077 && mktemp -d)
   trap 'rm -rf "${host_tmp}"' EXIT INT TERM
   {
-    echo "POSTGRES_HOST=$(env_of DB_HOST)"
+    echo "POSTGRES_HOST=${SURE_HOST_DB:-$(env_of DB_HOST)}"
+    [ -z "${SURE_RECOVER:-}" ] || echo "SURE_RECOVER=${SURE_RECOVER}"
     echo "POSTGRES_PORT=$(env_of DB_PORT)"
     echo "POSTGRES_USER=$(env_of POSTGRES_USER)"
     echo "POSTGRES_PASSWORD=$(env_of POSTGRES_PASSWORD)"
@@ -864,6 +907,259 @@ host_run() {
   return "$host_status"
 }
 
+# --- upgrade-postgres (runs on the host) ---------------------------------------
+#
+# Moves the Sure database to the PostgreSQL major version the compose file now
+# points at, by backup and restore: take a forced backup from the old server,
+# set the old data aside inside the volume, start the new server and restore.
+# Only Sure's database is carried over, so the server must be used for nothing
+# else.
+
+upgrade_cleanup() {
+  [ -z "${old_server:-}" ] || docker stop "$old_server" >/dev/null 2>&1 || true
+  [ -z "${upgrade_net:-}" ] || docker network rm "$upgrade_net" >/dev/null 2>&1 || true
+  [ -z "${host_tmp:-}" ] || rm -rf "$host_tmp"
+}
+
+upgrade_rollback_help() {
+  cat >&2 <<EOF
+[sure-backup] Your PostgreSQL ${old_major} data is intact in the volume ${volume} (folder ${aside}/).
+[sure-backup] To go back to PostgreSQL ${old_major}:
+[sure-backup]   1. docker compose stop
+[sure-backup]   2. docker run --rm -v ${volume}:/v alpine sh -c 'rm -rf /v/${target_major} && ${restore_layout_cmd}'
+[sure-backup]   3. In your compose file, set the db image back to PostgreSQL ${old_major} AND its
+[sure-backup]      volume mount back to ${old_mount} (both, or the server starts empty).
+[sure-backup]   4. docker compose up -d
+[sure-backup] The backup taken before the upgrade is ${bundle_id:-in your backups folder}.
+EOF
+}
+
+cmd_upgrade_postgres() {
+  assume_yes=false
+  old_image=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --yes) assume_yes=true; shift ;;
+      --old-image) old_image=$2; shift 2 ;;
+      -h | --help) usage; return 0 ;;
+      *) die "unknown option for upgrade-postgres: $1" ;;
+    esac
+  done
+
+  on_host || die "upgrade-postgres runs on the host, from the folder with your compose file: sh sure-backup upgrade-postgres"
+  docker compose version >/dev/null 2>&1 || die "Docker with the Compose plugin is required"
+  resolved=$(docker compose config 2>/dev/null) || die "docker compose cannot read the configuration in $(pwd)"
+
+  # What the compose file asks for: the db image and the volume holding its data.
+  target_image=$(printf '%s\n' "$resolved" | awk '
+    /^  db:$/ { f = 1; next } /^  [^ ]/ { f = 0 }
+    f && $1 == "image:" { print $2; exit }')
+  volume_key=$(printf '%s\n' "$resolved" | awk '
+    /^  db:$/ { f = 1; next } /^  [^ ]/ { f = 0 }
+    f && $1 == "source:" { src = $2 }
+    f && $1 == "target:" && $2 ~ /^\/var\/lib\/postgresql/ { print src; exit }')
+  volume=$(printf '%s\n' "$resolved" | awk -v k="$volume_key" '
+    /^volumes:$/ { v = 1; next } /^[^ ]/ { v = 0 }
+    v && $0 == "  " k ":" { hit = 1; next }
+    v && /^  [^ ]/ { hit = 0 }
+    v && hit && $1 == "name:" { print $2; exit }')
+  tool_image=$(printf '%s\n' "$resolved" | awk '
+    /^  web:$/ { f = 1; next } /^  [^ ]/ { f = 0 }
+    f && $1 == "image:" { print $2; exit }')
+  if [ -z "$target_image" ] || [ -z "$volume" ] || [ -z "$tool_image" ]; then
+    die "cannot find the 'db' service's image and data volume, and the 'web' image, in the compose configuration. This command needs the service names from compose.example.yml."
+  fi
+  docker volume inspect "$volume" >/dev/null 2>&1 || die "the volume ${volume} does not exist yet, so there is nothing to upgrade. Start Sure with: docker compose up -d"
+
+  cid=$(docker compose ps -aq web 2>/dev/null | head -n 1)
+  [ -n "$cid" ] || die "no Sure 'web' container for the Compose project in $(pwd); the app must have been started at least once"
+  container_env=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' "$cid")
+  env_of() { printf '%s\n' "$container_env" | sed -n "s/^$1=//p" | tail -n 1; }
+  db_user=$(env_of POSTGRES_USER)
+  db_name=$(env_of POSTGRES_DB)
+  project=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project"}}' "$cid")
+  running_image=$(docker inspect -f '{{.Image}}' "$cid")
+
+  major_of() { sed -n 's/.* \([0-9][0-9]*\)\..*/\1/p'; }
+  log "Checking ${target_image}..."
+  target_major=$(docker run --rm --entrypoint postgres "$target_image" --version | major_of)
+  case "$target_major" in "" | *[!0-9]*) die "cannot read the PostgreSQL version of ${target_image}" ;; esac
+
+  # What the volume holds. Up to 17 the data sits at the volume root (mounted at
+  # /var/lib/postgresql/data); from 18 the image keeps it in <major>/docker.
+  # vol_sh SCRIPT [ARG...]: runs SCRIPT in a container with the volume at /v.
+  vol_sh() {
+    vol_script=$1
+    shift
+    docker run --rm --user 0 --entrypoint sh -v "${volume}:/v" "$running_image" -c "$vol_script" sh "$@"
+  }
+  # The scripts below run inside that container, so their $ is not ours.
+  # shellcheck disable=SC2016
+  state=$(vol_sh '
+    if [ -f /v/PG_VERSION ]; then echo "root $(cat /v/PG_VERSION)"
+    elif [ -f /v/data/PG_VERSION ]; then echo "data $(cat /v/data/PG_VERSION)"
+    else echo "none -"; fi
+    [ -f "/v/$1/docker/PG_VERSION" ] && echo has_target || echo no_target' "$target_major")
+  layout=$(printf '%s\n' "$state" | sed -n '1p' | cut -d' ' -f1)
+  old_major=$(printf '%s\n' "$state" | sed -n '1p' | cut -d' ' -f2)
+  has_target=$(printf '%s\n' "$state" | sed -n '2p')
+
+  if [ "$layout" = none ]; then
+    if [ "$has_target" = has_target ]; then
+      log "The database is already on PostgreSQL ${target_major}; nothing to do."
+    else
+      log "No PostgreSQL data found in ${volume}; nothing to upgrade."
+    fi
+    return 0
+  fi
+  case "$old_major" in "" | *[!0-9]*) die "cannot read the PostgreSQL version of the data in ${volume}" ;; esac
+  if [ "$old_major" -ge "$target_major" ]; then
+    die "the data in ${volume} is PostgreSQL ${old_major} and the compose file asks for ${target_major}; this command only upgrades to a newer major version"
+  fi
+  if [ "$has_target" = has_target ]; then
+    die "${volume} holds PostgreSQL ${old_major} data and also a PostgreSQL ${target_major} database. Decide which one to keep before upgrading; see docs/hosting/docker.md."
+  fi
+  aside="pg${old_major}-old"
+  if [ "$layout" = root ]; then
+    old_mount=/var/lib/postgresql/data
+    restore_layout_cmd="mv /v/${aside}/* /v/${aside}/.[!.]* /v/ 2>/dev/null; rmdir /v/${aside}"
+  else
+    old_mount=/var/lib/postgresql
+    restore_layout_cmd="mv /v/${aside} /v/data"
+  fi
+
+  # The tools must be new enough for the new server. Prefer the image the app
+  # runs on; fall back to the one the compose file asks for.
+  tool_major=$(docker run --rm --entrypoint pg_dump "$running_image" --version 2>/dev/null | major_of)
+  create_args="--pre-upgrade"
+  if [ "${tool_major:-0}" -ge "$target_major" ]; then
+    tool_image=$running_image
+  else
+    log "Checking ${tool_image}..."
+    tool_major=$(docker run --rm --entrypoint pg_dump "$tool_image" --version 2>/dev/null | major_of)
+    if [ "${tool_major:-0}" -lt "$target_major" ]; then
+      die "PostgreSQL ${target_major} needs a Sure version that ships its client tools, but ${tool_image} has version ${tool_major:-none}. Set SURE_IMAGE_TAG to a newer Sure release first."
+    fi
+    # Label the backup with the version the app has been running.
+    app_version=$(docker run --rm --entrypoint cat "$running_image" /rails/.sure-version 2>/dev/null | tr -d '[:space:]')
+    [ -z "$app_version" ] || create_args="$create_args --version $app_version"
+  fi
+
+  # The old server image, to read the old data one last time.
+  if [ -z "$old_image" ]; then
+    db_cid=$(docker compose ps -aq db 2>/dev/null | head -n 1)
+    [ -z "$db_cid" ] || old_image=$(docker inspect -f '{{.Config.Image}}' "$db_cid")
+    if [ -z "$old_image" ] || [ "$old_image" = "$target_image" ]; then
+      case "$target_image" in
+        pgvector/pgvector:pg"${target_major}"*) old_image="pgvector/pgvector:pg${old_major}${target_image#pgvector/pgvector:pg"${target_major}"}" ;;
+        postgres:"${target_major}"*) old_image="postgres:${old_major}" ;;
+        *) die "cannot tell which image ran PostgreSQL ${old_major}; pass it with --old-image, e.g. --old-image postgres:${old_major}" ;;
+      esac
+    fi
+  fi
+
+  other_databases() {
+    docker exec "$1" psql -X -q -t -A -U "$db_user" -d postgres \
+      -c "SELECT datname FROM pg_database WHERE NOT datistemplate AND datname NOT IN ('postgres', '$(printf '%s' "$db_name" | sed "s/'/''/g")')"
+  }
+  refuse_other_databases() {
+    others=$(other_databases "$1") || die "cannot list the databases on the PostgreSQL ${old_major} server"
+    [ -z "$others" ] && return 0
+    upgrade_cleanup
+    die "this PostgreSQL server also holds other databases: $(echo "$others" | tr '\n' ' '). Only ${db_name} would be carried over, so nothing was changed. Move them yourself (see docs/hosting/docker.md) or give Sure its own database server."
+  }
+
+  log "Upgrade ${db_name} from PostgreSQL ${old_major} to ${target_major} (${target_image}):"
+  log "  1. stop Sure and take a backup"
+  log "  2. set the PostgreSQL ${old_major} data aside in ${volume}/${aside} (kept until you delete it)"
+  log "  3. start PostgreSQL ${target_major} and restore the backup"
+  log "Sure is unavailable while this runs. Only the database ${db_name} is carried over:"
+  log "other databases and extra roles on this server would be left behind."
+  if [ "$assume_yes" != true ]; then
+    [ -t 0 ] || die "refusing to upgrade without a TTY; pass --yes"
+    printf 'Is this PostgreSQL server used only for Sure, and do you want to continue? Type "yes": '
+    read -r answer
+    [ "$answer" = "yes" ] || die "aborted; nothing was changed"
+  fi
+
+  db_cid=$(docker compose ps -q --status running db 2>/dev/null | head -n 1)
+  [ -z "$db_cid" ] || refuse_other_databases "$db_cid"
+
+  trap upgrade_cleanup EXIT INT TERM
+  log "Stopping Sure..."
+  docker compose stop >/dev/null 2>&1
+
+  log "Starting PostgreSQL ${old_major} (${old_image}) to take the backup..."
+  upgrade_net="${project}_pg-upgrade"
+  old_server="${project}-pg-upgrade-old"
+  docker network create "$upgrade_net" >/dev/null
+  docker run -d --rm --name "$old_server" --network "$upgrade_net" --network-alias pg-upgrade-old \
+    -v "${volume}:${old_mount}" "$old_image" >/dev/null
+  tries=0
+  until docker exec "$old_server" pg_isready -q -U "$db_user" -d "$db_name" 2>/dev/null; do
+    tries=$((tries + 1))
+    [ "$tries" -lt 60 ] || die "PostgreSQL ${old_major} did not start; check: docker logs ${old_server}. Nothing was changed."
+    sleep 2
+  done
+  refuse_other_databases "$old_server"
+
+  backup_status=0
+  # shellcheck disable=SC2086
+  SURE_HOST_IMAGE=$tool_image SURE_HOST_NETWORK=$upgrade_net SURE_HOST_DB=pg-upgrade-old \
+    host_run create $create_args || backup_status=$?
+  trap upgrade_cleanup EXIT INT TERM
+  [ "$backup_status" -eq 0 ] || die "the backup failed, so nothing was changed. Fix the problem above and run this again."
+
+  workdir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$cid")
+  backups=$(env_get "${workdir:-$(pwd)}/.env" BACKUP_DIR)
+  backups=${backups:-./backups}
+  case "$backups" in /*) ;; *) backups="${workdir:-$(pwd)}/${backups#./}" ;; esac
+  bundle=$(find "$backups" -mindepth 2 -maxdepth 2 -type d -name '*-pre-upgrade' | awk -F/ '{ print $NF "\t" $0 }' | sort | tail -n 1 | cut -f2)
+  [ -n "$bundle" ] && [ -f "${bundle}/db.dump" ] || die "cannot find the backup that was just taken in ${backups}; nothing was changed"
+  bundle_id="$(basename "$(dirname "$bundle")")/$(basename "$bundle")"
+
+  log "Stopping PostgreSQL ${old_major} and setting its data aside..."
+  docker stop "$old_server" >/dev/null
+  old_server=""
+  if [ "$layout" = root ]; then
+    # shellcheck disable=SC2016
+    vol_sh 'set -e; cd /v; mkdir "$1"
+      for f in * .[!.]*; do
+        [ -e "$f" ] || continue
+        [ "$f" = "$1" ] || mv "$f" "$1"/
+      done' "$aside"
+  else
+    # shellcheck disable=SC2016
+    vol_sh 'set -e; mv /v/data "/v/$1"' "$aside"
+  fi
+
+  log "Starting PostgreSQL ${target_major}..."
+  if ! docker compose up -d --wait db >/dev/null 2>&1; then
+    warn "PostgreSQL ${target_major} did not start; check: docker compose logs db"
+    upgrade_rollback_help
+    exit 1
+  fi
+
+  restore_status=0
+  SURE_HOST_IMAGE=$tool_image SURE_RECOVER=1 host_run restore "$bundle_id" --yes || restore_status=$?
+  trap upgrade_cleanup EXIT INT TERM
+  if [ "$restore_status" -ne 0 ]; then
+    warn "restoring into PostgreSQL ${target_major} failed"
+    upgrade_rollback_help
+    exit 1
+  fi
+
+  log "Starting Sure..."
+  docker compose up -d >/dev/null 2>&1 || warn "could not start everything; check: docker compose ps"
+
+  log ""
+  log "Sure now runs on PostgreSQL ${target_major}."
+  log "  Backup taken before the upgrade: ${bundle_id}"
+  log "  Old PostgreSQL ${old_major} data: kept in the volume ${volume}, folder ${aside}/"
+  log "  Once you are happy, free the space with:"
+  log "    docker run --rm -v ${volume}:/v alpine rm -rf /v/${aside}"
+}
+
 command=${1:-daemon}
 [ $# -gt 0 ] && shift
 
@@ -888,6 +1184,7 @@ case "$command" in
   list) cmd_list ;;
   restore) cmd_restore "$@" ;;
   recover) cmd_recover "$@" ;;
+  upgrade-postgres) cmd_upgrade_postgres "$@" ;;
   prune) ensure_deps; cmd_prune ;;
   -h | --help | help) usage ;;
   *) usage; exit 1 ;;
