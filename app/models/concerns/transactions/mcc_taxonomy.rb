@@ -153,11 +153,17 @@ module Transactions::MccTaxonomy
 
   # The taxonomy group for an MCC, or nil when the code has no confident mapping.
   #
+  # Base 10 is explicit because providers send the MCC as a string and some zero-pad it to
+  # five characters. Ruby's default base would read a leading zero as octal: "05411"
+  # (supermarket) becomes 2825 and matches nothing, and "05712" (electronics retail)
+  # becomes 3018, which lands inside the 3000-3299 airline range and would be
+  # miscategorised as Travel.
+  #
   # @param mcc [Integer, String, nil] Merchant Category Code, as reported by the provider
   def mcc_group(mcc)
     return nil if mcc.blank?
 
-    code = Integer(mcc.to_s, exception: false)
+    code = Integer(mcc.to_s, 10, exception: false)
     return nil if code.nil?
 
     Transactions::MccTaxonomy.group_by_mcc[code]

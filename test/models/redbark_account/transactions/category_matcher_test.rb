@@ -93,4 +93,11 @@ class RedbarkAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCas
     # because the family has no "Entertainment" category.
     assert_nil matcher.match("ENTERTAINMENT", 5411)
   end
+
+  test "reads a zero-padded merchant_category_code as base 10" do
+    # Parsed as octal, "05411" would be 2825 (no match) and "05712" would be 3018, inside
+    # the 3000-3299 airline range, i.e. Travel instead of Shopping.
+    assert_equal "Groceries", @matcher.match("MERCHANDISE", "05411")&.name
+    assert_equal "Shopping", @matcher.match("MERCHANDISE", "05712")&.name
+  end
 end
