@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -651,6 +651,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
     t.decimal "credit_limit", precision: 19, scale: 4
     t.string "currency"
     t.decimal "current_balance", precision: 19, scale: 4
+    t.datetime "early_fetched_at"
     t.uuid "enable_banking_item_id", null: false
     t.string "iban"
     t.jsonb "identification_hashes", default: []
@@ -681,6 +682,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
     t.string "country_code"
     t.datetime "created_at", null: false
     t.uuid "family_id", null: false
+    t.datetime "full_history_fetch_requested_at"
     t.string "institution_color"
     t.string "institution_domain"
     t.string "institution_id"
