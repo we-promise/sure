@@ -24,4 +24,21 @@ module RulesHelper
       { name: name, label: t("rules.filters.#{name}.label"), icon: FILTER_ICONS.fetch(name), items: items, selected: selected }
     end
   end
+
+  # "#3 Groceries", with its run position, linking to the rule's form for
+  # those who can edit it.
+  def rule_health_reference(rule, health)
+    label = t("rules.health.rule_label", position: health.position(rule), name: rule.name.presence || rule.primary_condition_title)
+    reference = if Current.user&.guest?
+      tag.span(label, class: "font-medium text-primary")
+    else
+      link_to(label, edit_rule_path(rule), class: "font-medium text-primary underline", data: { turbo_frame: "modal" })
+    end
+    rule.active? ? reference : safe_join([ reference, tag.span(t("rules.health.inactive"), class: "text-secondary") ], " ")
+  end
+
+  # e.g. "category and merchant", for the fields a Rule::Health entry names.
+  def rule_health_attributes(attributes)
+    attributes.map { |attribute| t("rules.health.attributes.#{attribute}", default: attribute.to_s.humanize(capitalize: false)) }.to_sentence
+  end
 end

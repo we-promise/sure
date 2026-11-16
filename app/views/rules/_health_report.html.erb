@@ -1,0 +1,58 @@
+<%# locals: (health:) %>
+<% ref = ->(rule) { rule_health_reference(rule, health) } %>
+<% refs = ->(rules) { safe_join(rules.map(&ref), ", ") } %>
+<% sections = {
+  duplicates: health.duplicates,
+  conflicts: health.conflicts,
+  shadowed: health.shadowed,
+  overlaps: health.overlaps,
+  match_nothing: health.match_nothing,
+  failed: health.failed
+} %>
+<%= turbo_frame_tag "rule_health_report" do %>
+  <div class="space-y-4">
+    <% if sections.values.all?(&:empty?) %>
+      <p class="text-sm text-secondary"><%= t("rules.health.no_findings") %></p>
+    <% end %>
+
+    <% sections.each do |key, entries| %>
+      <% next if entries.empty? %>
+      <%= render DS::Section.new(title: t("rules.health.#{key}.title"), count: entries.size) do %>
+        <% entries.each do |entry| %>
+          <div class="px-4 py-3 text-sm text-primary space-y-1" data-rule-health-entry="<%= key %>">
+            <% case key %>
+            <% when :duplicates %>
+              <p><%= t("rules.health.duplicates.entry_html", rules: refs.(entry)) %></p>
+            <% when :conflicts %>
+              <p><%= t("rules.health.conflicts.entry_html", rules: refs.(entry.rules), attribute: rule_health_attributes([ entry.attribute ])) %></p>
+              <p class="text-secondary">
+                <% if entry.winner.nil? %>
+                  <%= t("rules.health.conflicts.no_winner") %>
+                <% elsif entry.winner.stop_processing? %>
+                  <%= t("rules.health.conflicts.wins_stop_html", rule: ref.(entry.winner)) %>
+                <% else %>
+                  <%= t("rules.health.conflicts.wins_order_html", rule: ref.(entry.winner)) %>
+                <% end %>
+              </p>
+            <% when :shadowed %>
+              <p>
+                <%= t("rules.health.shadowed.#{entry.reason}_html", rule: ref.(entry.rule), by: refs.(entry.by),
+                      attributes: rule_health_attributes(entry.attributes), count: entry.match_count) %>
+              </p>
+            <% when :overlaps %>
+              <p><%= t("rules.health.overlaps.entry_html", rule: ref.(entry.rule), other: ref.(entry.other), attributes: rule_health_attributes(entry.attributes)) %></p>
+              <% if entry.shared_count.positive? %>
+                <p class="text-secondary"><%= t("rules.health.overlaps.shared", shared: entry.shared_count, count: entry.match_count) %></p>
+              <% end %>
+              <% if entry.same_text %>
+                <p class="text-secondary"><%= t("rules.health.overlaps.same_text") %></p>
+              <% end %>
+            <% else %>
+              <p><%= ref.(entry) %></p>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

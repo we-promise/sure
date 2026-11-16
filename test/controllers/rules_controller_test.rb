@@ -412,6 +412,41 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "span", text: /Netflix/, minimum: 6
   end
 
+  test "health page loads the report in a lazy frame" do
+    get health_rules_url
+
+    assert_response :success
+    assert_select "turbo-frame#rule_health_report[src='#{health_rules_path}'][loading='lazy']"
+  end
+
+  test "health report lists the family's duplicate rules and never another family's" do
+    first, second = 2.times.map { create_health_rule(@user.family, "woolworths") }
+    other_family_rule = create_health_rule(families(:empty), "woolworths")
+
+    get health_rules_url, headers: { "Turbo-Frame" => "rule_health_report" }
+
+    assert_response :success
+    assert_select "turbo-frame#rule_health_report [data-rule-health-entry='duplicates']" do
+      assert_select "a[href='#{edit_rule_path(first)}']"
+      assert_select "a[href='#{edit_rule_path(second)}']"
+    end
+    assert_no_match other_family_rule.id, response.body
+  end
+
+  test "a guest can read the health report but gets no edit links" do
+    first, second = 2.times.map { create_health_rule(@user.family, "woolworths") }
+    sign_in family_guest
+
+    get health_rules_url
+    assert_response :success
+
+    get health_rules_url, headers: { "Turbo-Frame" => "rule_health_report" }
+
+    assert_response :success
+    assert_select "[data-rule-health-entry='duplicates']", text: /#{Regexp.escape(first.name)}.*#{Regexp.escape(second.name)}/m
+    assert_select "a[href='#{edit_rule_path(first)}']", count: 0
+  end
+
   test "reorder saves the new order" do
     family = @user.family
     second = family.rules.create!(resource_type: "transaction",
@@ -1105,5 +1140,11 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
         .select { |rule_id, _| rule_id == rule.id }
         .flat_map(&:second)
         .sort
+    end
+
+    def create_health_rule(family, text)
+      family.rules.create!(resource_type: "transaction", active: true, name: "Rule #{SecureRandom.hex(3)}",
+        conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: text) ],
+        actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
     end
 end

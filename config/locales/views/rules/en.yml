@@ -40,6 +40,42 @@ en:
         label: Group
         all: All groups
         none: No group
+    health:
+      page_title: Rule health
+      description: Rules that repeat or contradict each other, and active rules that change nothing today. Rules run from top to bottom; each is shown with its place in that order.
+      loading: Checking your rules…
+      no_findings: No duplicate, conflicting or shadowed rules found.
+      rule_label: "#%{position} %{name}"
+      inactive: (inactive)
+      attributes:
+        category_id: category
+        merchant_id: merchant
+        name: name
+        excluded: excluded
+        transfer: transfer or payment
+        investment_activity_label: activity label
+      duplicates:
+        title: Duplicates
+        entry_html: "%{rules} have the same conditions, start date and actions."
+      conflicts:
+        title: Conflicts
+        entry_html: "%{rules} have the same conditions but set the %{attribute} differently."
+        wins_order_html: "%{rule} wins: it runs first."
+        wins_stop_html: "%{rule} wins: it runs first and stops the rules below it."
+        no_winner: None of these rules is active, so none runs on sync.
+      shadowed:
+        title: Shadowed
+        stopped_html: "%{rule} changes nothing: %{by} stops processing on all %{count} of its matches."
+        claimed_html: "%{rule} changes nothing: the %{attributes} is already set by %{by} on all %{count} of its matches."
+      overlaps:
+        title: Overlaps
+        entry_html: "%{rule} and %{other}, which runs first, both set the %{attributes}."
+        shared: "%{shared} of its %{count} matches are also matched by the rule above."
+        same_text: Their conditions name the same or contained text.
+      match_nothing:
+        title: Match nothing today
+      failed:
+        title: Couldn't be checked
     group:
       rules_count:
         one: 1 rule
@@ -93,6 +129,7 @@ en:
       new_rule: New rule
       ai_cost_warning: AI-enabled rule actions will cost money.  Be sure to filter as narrowly as possible to avoid unnecessary costs.
       rules_heading: Rules
+      rule_health: Rule health
       order_hint: Rules run from top to bottom, including the rules inside groups. Once a rule sets a field on a transaction, rules further down don't change that field. Tags are added by every matching rule. Drag rules and groups to change the order.
       new_group: New group
       reorder_group: "Move group %{name}. Press Enter or Space to grab it, then use the arrow keys to move it."

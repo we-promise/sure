@@ -724,6 +724,7 @@ Rails.application.routes.draw do
       delete :destroy_all
       patch :reorder
       get :confirm_all
+      get :health
       post :apply_all
       post :clear_ai_cache
     end
