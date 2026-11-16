@@ -5,7 +5,7 @@ require "test_helper"
 class LunchflowItem::LifecycleTest < ActiveSupport::TestCase
   include ProviderItemModelLifecycleTests
 
-  test "a sync warns about limited data only when a linked account is an investment account" do
+  test "a sync warns about limited data only when a linked account is an investment or crypto account" do
     provider_item.class.any_instance.stubs(:import_latest_lunchflow_data).returns(success: true)
     provider_item.class.any_instance.stubs(:process_accounts).returns([])
     provider_item.class.any_instance.stubs(:schedule_account_syncs).returns([])
@@ -18,8 +18,12 @@ class LunchflowItem::LifecycleTest < ActiveSupport::TestCase
     account.update!(accountable: Investment.new)
     investment_details = Sync.create!(syncable: provider_item).tap(&:perform).reload.sync_stats["data_quality_details"]
 
+    account.update!(accountable: Crypto.new)
+    crypto_details = Sync.create!(syncable: provider_item).tap(&:perform).reload.sync_stats["data_quality_details"]
+
     assert_not_includes Array(depository_details).map { |detail| detail["message"] }, warning
     assert_includes Array(investment_details).map { |detail| detail["message"] }, warning
+    assert_includes Array(crypto_details).map { |detail| detail["message"] }, warning
   end
 
   private
