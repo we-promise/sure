@@ -135,6 +135,7 @@ fr:
         height_label: Hauteur
         label: Ajuster la taille
         tall: Grand
+        gridlines_label: Lignes de grille
         width_label: Largeur
     feedback:
       bug_report: Déposer un rapport de bug

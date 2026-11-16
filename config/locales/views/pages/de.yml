@@ -95,6 +95,7 @@ de:
         height_label: Höhe
         label: Größe anpassen
         tall: Hoch
+        gridlines_label: Gitternetzlinien
         width_label: Breite
     feedback:
       bug_report: Fehler melden

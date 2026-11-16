@@ -121,6 +121,7 @@ pl:
         height_label: Wysokość
         label: Dostosuj rozmiar
         tall: Wysoki
+        gridlines_label: Linie siatki
         width_label: Szerokość
     feedback:
       bug_report: Zgłoś błąd

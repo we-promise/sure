@@ -68,6 +68,7 @@ uk:
         compact: "Компактний"
         auto: "Авто"
         tall: "Високий"
+        gridlines_label: "Лінії сітки"
       net_worth_chart:
         data_not_available: Дані за вибраний період недоступні
         title: Чистий капітал

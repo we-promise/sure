@@ -57,6 +57,7 @@ pt-PT:
         compact: "Compacto"
         auto: "Automático"
         tall: "Alto"
+        gridlines_label: "Linhas da grelha"
       net_worth_chart:
         data_not_available: Dados não disponíveis para o período selecionado
         title: Património líquido

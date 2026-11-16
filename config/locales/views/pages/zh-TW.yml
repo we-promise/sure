@@ -57,6 +57,7 @@ zh-TW:
         compact: 精簡
         auto: 自動
         tall: 加高
+        gridlines_label: 格線
       net_worth_chart:
         data_not_available: 所選時段內無資料
         title: 淨資產

@@ -94,6 +94,7 @@ tr:
         height_label: Yükseklik
         label: Boyutu ayarla
         tall: Uzun
+        gridlines_label: Izgara çizgileri
         width_label: Genişlik
       money_flow:
         title: Para Girişi / Çıkışı
