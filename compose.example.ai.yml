@@ -92,6 +92,8 @@ x-rails-env: &rails_env
   DB_HOST: db
   DB_PORT: 5432
   REDIS_URL: redis://redis:6379/1
+  # Seconds a missed scheduled job may run late (default 600); see docs/hosting/docker.md
+  SIDEKIQ_CRON_GRACE_PERIOD_SECONDS: ${SIDEKIQ_CRON_GRACE_PERIOD_SECONDS:-}
   # MCP server endpoint — enables /mcp for external AI assistants (e.g. Claude, GPT).
   # Set both values to activate. MCP_USER_EMAIL must match an existing user's email.
   # External AI clients should connect via Pipelock (port 8889) for scanning.

@@ -49,13 +49,13 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
 
   def stub_fetch(booked, pending: [], pending_raises: nil)
     @importer.stubs(:fetch_paginated_transactions)
-             .with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns(booked)
+             .with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ booked, false ])
     if pending_raises
       @importer.stubs(:fetch_paginated_transactions)
                .with(@enable_banking_account, has_entry(transaction_status: "PDNG")).raises(pending_raises)
     else
       @importer.stubs(:fetch_paginated_transactions)
-               .with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns(pending)
+               .with(@enable_banking_account, has_entry(transaction_status: "PDNG")).returns([ pending, false ])
     end
   end
 
@@ -108,6 +108,25 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     sync_and_process(%w[t4 t5 t6].map { |n| rotating_tx(n, amount: "10.00", counterparty: "Repeat") })
     assert_equal 3, snapshot_count, "must not collapse distinct same-day movements (see #2720)"
     assert_equal 3, entry_count
+  end
+
+  test "rotation re-keys both entries that share a transaction id" do
+    a = rotating_tx("old_a", amount: "10.00").merge(transaction_id: "old_shared")
+    b = rotating_tx("old_b", amount: "20.00").merge(transaction_id: "old_shared")
+    sync_and_process([ a, b ])
+
+    entries_by_amount = @account.entries.where(source: "enable_banking").pluck(:amount, :id).to_h
+    assert_equal 2, entries_by_amount.size
+
+    new_a = rotating_tx("new_a", amount: "10.00").merge(transaction_id: "new_shared")
+    new_b = rotating_tx("new_b", amount: "20.00").merge(transaction_id: "new_shared")
+    sync_and_process([ new_b, new_a ])
+
+    assert_equal 2, snapshot_count
+    assert_equal 2, entry_count
+    assert_equal entries_by_amount, @account.entries.where(source: "enable_banking").pluck(:amount, :id).to_h
+    assert_equal "ref_new_a", Entry.find(entries_by_amount.fetch(BigDecimal("10.00"))).transaction.provider_entry_reference
+    assert_equal "ref_new_b", Entry.find(entries_by_amount.fetch(BigDecimal("20.00"))).transaction.provider_entry_reference
   end
 
   test "retains stored rows that predate the fetched window" do
