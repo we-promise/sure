@@ -47,7 +47,7 @@ ru:
         other: Последние %{count} дня
       date_range: '%{from} – %{to}'
     figures:
-      vs_previous: к прошлому месяцу
+      vs_previous_three_months: к трём предыдущим месяцам
       today: сегодня
       on_pace: по текущему темпу
       of_budget: от бюджета

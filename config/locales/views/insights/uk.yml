@@ -49,7 +49,7 @@ uk:
         many: Останні %{count} днів
       date_range: "З %{from} по %{to}"
     figures:
-      vs_previous: порівняно з попереднім місяцем
+      vs_previous_three_months: порівняно з попередніми трьома місяцями
       today: сьогодні
       on_pace: за планом
       of_budget: бюджету

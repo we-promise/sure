@@ -43,7 +43,7 @@ ca:
         other: Últims %{count} dies
       date_range: Del %{from} al %{to}
     figures:
-      vs_previous: vs. el mes anterior
+      vs_previous_three_months: vs. els tres mesos anteriors
       today: avui
       on_pace: al ritme actual
       of_budget: del pressupost

@@ -43,7 +43,7 @@ it:
       date_range: "%{from} - %{to}"
     figures:
       need_attention: richiedono attenzione
-      vs_previous: rispetto al mese precedente
+      vs_previous_three_months: rispetto ai tre mesi precedenti
       today: oggi
       on_pace: in linea
       of_budget: del budget

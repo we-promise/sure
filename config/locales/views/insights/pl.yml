@@ -37,7 +37,7 @@ pl:
       of_budget: z budżetu
       on_pace: zgodnie z tempem
       today: dzisiaj
-      vs_previous: vs. poprzedni miesiąc
+      vs_previous_three_months: vs. poprzednie trzy miesiące
     index:
       empty:
         description: Analizy pojawią się tutaj, gdy na kontach będzie wystarczająco

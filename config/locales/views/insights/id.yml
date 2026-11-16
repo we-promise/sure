@@ -55,7 +55,7 @@ id:
         other: "%{count} hari terakhir"
       date_range: "%{from} hingga %{to}"
     figures:
-      vs_previous: vs bulan sebelumnya
+      vs_previous_three_months: vs tiga bulan sebelumnya
       today: hari ini
       on_pace: sesuai perkiraan
       of_budget: dari anggaran

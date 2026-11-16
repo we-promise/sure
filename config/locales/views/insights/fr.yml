@@ -37,7 +37,7 @@ fr:
       of_budget: du budget
       on_pace: au rythme actuel
       today: aujourd'hui
-      vs_previous: vs mois précédent
+      vs_previous_three_months: vs les trois mois précédents
     index:
       empty:
         description: Les analyses apparaissent ici dès qu'il y a suffisamment d'activité

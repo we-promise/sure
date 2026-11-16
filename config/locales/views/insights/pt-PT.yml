@@ -43,7 +43,7 @@ pt-PT:
         other: Últimos %{count} dias
       date_range: "%{from} a %{to}"
     figures:
-      vs_previous: vs. mês anterior
+      vs_previous_three_months: vs. os três meses anteriores
       today: hoje
       on_pace: dentro do ritmo
       of_budget: do orçamento

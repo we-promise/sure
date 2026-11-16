@@ -43,7 +43,7 @@ zh-TW:
         other: 過去 %{count} 天
       date_range: '%{from} 至 %{to}'
     figures:
-      vs_previous: 相較上月
+      vs_previous_three_months: 相較之前三個月
       today: 今天
       on_pace: 依目前進度
       of_budget: 佔預算

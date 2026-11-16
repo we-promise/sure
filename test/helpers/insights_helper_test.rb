@@ -146,6 +146,19 @@ class InsightsHelperTest < ActionView::TestCase
     assert_equal "need attention", caption
   end
 
+  # The generator compares two three-month windows, so the caption names that
+  # basis rather than a single prior month.
+  test "savings rate change is captioned against the previous three months" do
+    insight = build_insight("savings_rate_change",
+      facts: { "change_pp" => "4.2" },
+      metadata: { "current_rate" => 18.0, "previous_rate" => 13.8 })
+
+    figure, caption = insight_key_figure(insight)
+
+    assert_equal "+4.2 pp", figure
+    assert_equal "vs previous three months", caption
+  end
+
   test "budget on track still leads with overall consumption" do
     insight = build_insight("budget_on_track", facts: { "budget_spent_pct" => 62 })
 

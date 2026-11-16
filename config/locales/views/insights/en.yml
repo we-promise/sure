@@ -55,7 +55,7 @@ en:
         other: Last %{count} days
       date_range: "%{from} to %{to}"
     figures:
-      vs_previous: vs prior month
+      vs_previous_three_months: vs previous three months
       today: today
       on_pace: on pace
       of_budget: of budget

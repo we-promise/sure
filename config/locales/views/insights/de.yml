@@ -47,7 +47,7 @@ de:
       of_budget: vom Budget
       on_pace: hochgerechnet
       today: heute
-      vs_previous: vs. Vormonat
+      vs_previous_three_months: vs. die drei Monate davor
     index:
       empty:
         description: Insights erscheinen hier, sobald in deinen Konten genug passiert ist. Sie werden jede Nacht aktualisiert.

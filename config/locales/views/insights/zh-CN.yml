@@ -55,7 +55,7 @@ zh-CN:
         other: "过去 %{count} 天"
       date_range: "%{from} 至 %{to}"
     figures:
-      vs_previous: 相较上月
+      vs_previous_three_months: 相较之前三个月
       today: 今天
       on_pace: 按目前进度
       of_budget: 占预算

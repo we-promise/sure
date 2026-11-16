@@ -46,7 +46,7 @@ nl:
         other: "Afgelopen %{count} dagen"
       date_range: "%{from} t/m %{to}"
     figures:
-      vs_previous: "t.o.v. vorige maand"
+      vs_previous_three_months: "t.o.v. de drie maanden daarvoor"
       today: "vandaag"
       on_pace: "verwacht"
       of_budget: "van budget"

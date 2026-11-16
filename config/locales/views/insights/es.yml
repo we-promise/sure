@@ -42,7 +42,7 @@ es:
         other: Últimos %{count} días
       date_range: "%{from} a %{to}"
     figures:
-      vs_previous: frente al mes anterior
+      vs_previous_three_months: frente a los tres meses anteriores
       today: hoy
       on_pace: al ritmo previsto
       of_budget: del presupuesto

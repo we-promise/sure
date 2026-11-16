@@ -35,7 +35,7 @@ tr:
       of_budget: bütçenin
       on_pace: bu tempoda
       today: bugün
-      vs_previous: önceki aya göre
+      vs_previous_three_months: önceki üç aya göre
       need_attention: dikkat gerektiriyor
     index:
       empty:

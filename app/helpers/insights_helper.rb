@@ -61,7 +61,7 @@ module InsightsHelper
     when "savings_rate_change"
       return nil unless facts["change_pp"]
       sign = insight_sentiment(insight) == :positive ? "+" : "−"
-      [ "#{sign}#{facts["change_pp"]} pp", t("insights.figures.vs_previous") ]
+      [ "#{sign}#{facts["change_pp"]} pp", t("insights.figures.vs_previous_three_months") ]
     when "net_worth_milestone"
       facts["net_worth"] && [ facts["net_worth"], t("insights.figures.today") ]
     when "spending_anomaly"
