@@ -81,6 +81,22 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_nil security.region
   end
 
+  # A blank string is no answer, as nil is. The region is derived after
+  # validation, so the blank must become nil before validation sees it.
+  test "a blank region is derived from the country rather than refused" do
+    security = Security.create!(ticker: "REG-BLANK", country_code: "US", region: "")
+
+    assert_equal "north_america", security.reload.region
+  end
+
+  test "clearing a region to blank derives it again from the country" do
+    security = Security.create!(ticker: "REG-CLEAR", country_code: "US", region: "europe")
+
+    security.update!(region: "")
+
+    assert_equal "north_america", security.reload.region
+  end
+
   # `region` is filled even when a provider already answered the asset class,
   # because no provider supplies region -- so the two must not be gated on each
   # other. The source stays `provider`: this did not classify the instrument,
