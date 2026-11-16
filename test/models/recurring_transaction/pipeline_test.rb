@@ -30,6 +30,28 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
     end
   end
 
+  test "run! ends suggestions detected from charges later confirmed as transfer legs" do
+    travel_to Date.new(2026, 8, 10) do
+      savings = accounts(:connected)
+      transfers = 3.times.map do |i|
+        date = Date.new(2026, 8, 5) << i
+        outflow = create_entry(amount: 500, date: date, name: "Move to savings")
+        inflow = savings.entries.create!(date: date, amount: -500, currency: "USD",
+                                         name: "Move from checking", entryable: Transaction.new)
+        Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "pending")
+      end
+
+      Pipeline.new(@family).run!
+      detected = @family.recurring_transactions.where(name: [ "Move to savings", "Move from checking" ])
+      assert_equal 2, detected.suggested.count, "both legs are detected while they are ordinary transactions"
+
+      transfers.each(&:confirm!)
+      Pipeline.new(@family).run!
+
+      assert_equal %w[ended ended], detected.reload.map(&:status)
+    end
+  end
+
   test "run! with backfill reconstructs history and is idempotent" do
     travel_to Date.new(2026, 8, 10) do
       series = create_series(name: "CITY WATER", amount: 80, day_offset: -1)

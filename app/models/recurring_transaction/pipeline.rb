@@ -1,11 +1,12 @@
 class RecurringTransaction
-  # The full detection pipeline -- identify patterns, materialize occurrence
-  # windows, repair provider-replaced entries, match payments, detect price
-  # changes -- in one place for its three callers: the post-sync job, the
-  # Settings "Identify Patterns" button, and the Bills page's detection action.
+  # The full detection pipeline -- identify patterns, retire suggestions that
+  # became transfers, materialize occurrence windows, repair provider-replaced
+  # entries, match payments, detect price changes -- in one place for its
+  # three callers: the post-sync job, the Settings "Identify Patterns" button,
+  # and the Bills page's detection action.
   #
   # `run!` returns the identified pattern count. `backfill: true` additionally
-  # reconstructs recent history after the five stages; user-triggered detection
+  # reconstructs recent history after the six stages; user-triggered detection
   # asks for it, background syncs never do. `run_with_lock!` returns the count,
   # or nil when another run already holds the family lock.
   class Pipeline
@@ -19,6 +20,7 @@ class RecurringTransaction
 
     def run!(backfill: false)
       patterns_count = Identifier.new(family).identify_recurring_patterns
+      Cleaner.new(family).retire_transfer_suggestions
 
       # Schedule.for reads recurrence_rules for every series; preload them so
       # occurrence generation doesn't issue one query per series (N+1).

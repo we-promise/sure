@@ -38,6 +38,34 @@ class RecurringTransaction
       stale_count
     end
 
+    # End detected suggestions whose transactions have all since been confirmed
+    # as transfer legs: they were offered while the legs were still ordinary
+    # charges, and detection never revisits a suggestion it no longer finds.
+    # They end as a dismissed suggestion does, because `ended` is the
+    # tombstone detection leaves alone; `inactive` would list them as paused
+    # bills and be deleted after six months. Confirmed bills, manual series
+    # and recurring transfers (destination_account_id present, matched by
+    # their pair) are never touched.
+    def retire_transfer_suggestions
+      retired_count = 0
+
+      family.recurring_transactions
+            .suggested
+            .where(manual: false, destination_account_id: nil)
+            .find_each do |recurring_transaction|
+        next unless recurring_transaction.matches_only_transfer_legs?
+
+        # Re-read under a row lock: the user may have confirmed or dismissed
+        # the suggestion since this batch was loaded.
+        retired = recurring_transaction.with_lock do
+          recurring_transaction.suggested? && recurring_transaction.update!(status: "ended")
+        end
+        retired_count += 1 if retired
+      end
+
+      retired_count
+    end
+
     # Remove inactive recurring transactions that have been inactive for 6+ months
     # Manual recurring transactions are never automatically deleted
     def remove_old_inactive_transactions
