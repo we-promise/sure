@@ -855,7 +855,66 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action*='avm_provider=chimnie']", count: 0
   end
 
+  test "overview shows the trend in the family currency for a foreign-currency property" do
+    purchase_date = 2.years.ago.to_date
+    foreign_property_with_value(purchase_date: purchase_date)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: purchase_date, rate: 1.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']" do
+      assert_select "h4", text: "Trend in EUR"
+      assert_select "span", text: /-€1,000/
+      assert_select "span", text: "(-1.0%)"
+    end
+  end
+
+  test "overview shows an infinite family-currency trend from a zero purchase value" do
+    purchase_date = 2.years.ago.to_date
+    foreign_property_with_value(purchase_date: purchase_date, purchase_amount: 0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: purchase_date, rate: 1.0)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.9)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']" do
+      assert_select "span", text: "(＋∞)"
+      assert_select "span", text: /Infinity|NaN/, count: 0
+    end
+  end
+
+  test "overview says the rate is unavailable instead of guessing a family-currency trend" do
+    foreign_property_with_value(purchase_date: 2.years.ago.to_date)
+    ExchangeRate.stubs(:provider).returns(nil)
+
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']", text: /Exchange rate unavailable/
+    assert_select "[data-testid='family-currency-trend']", text: /€/, count: 0
+  end
+
+  test "overview has no family-currency trend when the property is in the family currency" do
+    get account_path(@account, tab: "overview")
+
+    assert_response :success
+    assert_select "[data-testid='family-currency-trend']", count: 0
+  end
+
   private
+    def foreign_property_with_value(purchase_date:, purchase_amount: 100_000)
+      @account.family.update!(currency: "EUR")
+      @account.entries.valuations.destroy_all
+      @account.entries.create!(
+        date: purchase_date, name: "Original purchase price", amount: purchase_amount, currency: "USD",
+        entryable: Valuation.new(kind: "opening_anchor")
+      )
+      @account.update!(balance: 110_000)
+    end
+
     def valuation_data(valuation)
       Provider::PropertyValuationConcept::PropertyValuation.new(
         valuation: valuation, currency: "USD", property_type: "single_family_home",

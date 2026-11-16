@@ -105,9 +105,17 @@ jobs:
       - name: Lint/Format js code
         run: npm run lint
 
-  test_unit:
+  # The unit tests already use every CPU of a runner, so they are split by
+  # file across two runners.
+  test_unit_shard:
+    name: test_unit (${{ matrix.shard }}/${{ strategy.job-total }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2 ]
 
     env:
       PLAID_CLIENT_ID: foo
@@ -154,16 +162,38 @@ jobs:
           bin/rails db:seed
 
       - name: Unit and integration tests
-        run: bin/rails test
+        env:
+          SHARD: ${{ strategy.job-index }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          # Same files as a plain `bin/rails test`, which leaves out system,
+          # dummy and fixtures tests.
+          mapfile -t all < <(find test -name '*_test.rb' -not -path 'test/system/*' -not -path 'test/dummy/*' -not -path 'test/fixtures/*' | LC_ALL=C sort)
+          # Fail when nothing is found at all: without file arguments,
+          # `bin/rails test` would quietly run the whole suite instead.
+          if [ "${#all[@]}" -eq 0 ]; then
+            echo "No unit test files found" >&2
+            exit 1
+          fi
+          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::warning::Unit test shard $((SHARD + 1))/${SHARDS} has no files (${#all[@]} in total)"
+            exit 0
+          fi
+          echo "${#files[@]} test files in shard $((SHARD + 1))/${SHARDS}"
+          # Running test files directly skips test:prepare (Tailwind build).
+          bin/rails test:prepare
+          bin/rails test "${files[@]}"
 
       # Encryption tests skip unless Active Record encryption is configured
       # through ENV or credentials (Encryptable.encryption_ready?), so the run
       # above never exercises them. Rerun every test file that checks
       # encryption_ready? with throwaway keys, so new encryption tests are
       # picked up without a hand-kept list. The whole suite is not run with
-      # keys because unrelated tests assume encryption is off.
+      # keys because unrelated tests assume encryption is off. Only the first
+      # shard runs them.
       - name: Encryption tests
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && strategy.job-index == 0 }}
         env:
           ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: test
           ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: test
@@ -177,9 +207,31 @@ jobs:
           printf '%s\n' "${files[@]}"
           bin/rails test "${files[@]}"
 
-  test_system:
+  # Keeps a single "test_unit" check for branch protection and reviewers.
+  test_unit:
+    if: ${{ always() }}
+    needs: test_unit_shard
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 5
+    steps:
+      - name: Check unit test shards
+        env:
+          RESULT: ${{ needs.test_unit_shard.result }}
+        run: |
+          echo "Unit test shards: ${RESULT}"
+          [ "$RESULT" = "success" ]
+
+  # System tests run serially (they flake when parallel workers compete for
+  # the runner's CPUs), so they are split by file across several runners.
+  test_system_shard:
+    name: test_system (${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [ 1, 2, 3 ]
 
     env:
       PLAID_CLIENT_ID: foo
@@ -233,12 +285,46 @@ jobs:
           bin/rails db:seed
 
       - name: System tests
-        run: DISABLE_PARALLELIZATION=true bin/rails test:system
+        env:
+          SHARD: ${{ strategy.job-index }}
+          SHARDS: ${{ strategy.job-total }}
+        run: |
+          mapfile -t all < <(find test/system -name '*_test.rb' | LC_ALL=C sort)
+          # Fail when nothing is found at all, so a moved folder can't pass
+          # with zero system tests.
+          if [ "${#all[@]}" -eq 0 ]; then
+            echo "No system test files found" >&2
+            exit 1
+          fi
+          mapfile -t files < <(printf '%s\n' "${all[@]}" | awk -v n="$SHARDS" -v i="$SHARD" '(NR - 1) % n == i')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::warning::System test shard $((SHARD + 1))/${SHARDS} has no files (${#all[@]} in total)"
+            exit 0
+          fi
+          printf '%s\n' "${files[@]}"
+          # Unlike test:system, running test files directly skips test:prepare,
+          # which builds the Tailwind CSS the pages need.
+          bin/rails test:prepare
+          DISABLE_PARALLELIZATION=true bin/rails test "${files[@]}"
 
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         if: failure()
         with:
-          name: screenshots
+          name: screenshots-${{ matrix.shard }}
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
+
+  # Keeps a single "test_system" check for branch protection and reviewers.
+  test_system:
+    if: ${{ always() }}
+    needs: test_system_shard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check system test shards
+        env:
+          RESULT: ${{ needs.test_system_shard.result }}
+        run: |
+          echo "System test shards: ${RESULT}"
+          [ "$RESULT" = "success" ]

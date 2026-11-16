@@ -139,6 +139,7 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ new_tag.id ], transaction_entry.transaction.tag_ids
   end
 
+
   test "bulk update ignores category, merchant and tag ids from another family" do
     other_family = families(:empty)
     foreign_category = other_family.categories.create!(name: "Foreign category")
@@ -268,5 +269,93 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Renamed", "bulk note" ], [ full_entry.reload.name, full_entry.notes ]
     assert_equal [ "Annotate", "bulk note" ], [ annotate_entry.reload.name, annotate_entry.notes ]
     assert_equal [ "Private", nil ], [ private_entry.reload.name, private_entry.notes ]
+  end
+
+  test "bulk update sets reconciled_status on manual accounts" do
+    @user.family.update!(manual_reconciliation: true)
+    manual_entry = create_transaction(account: accounts(:depository))
+    assert accounts(:depository).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ manual_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "reconciled", manual_entry.reload.reconciled_status
+  end
+
+  test "bulk update ignores reconciled_status on synced accounts" do
+    @user.family.update!(manual_reconciliation: true)
+    synced_entry = create_transaction(account: accounts(:connected))
+    assert_not accounts(:connected).manual?
+
+    post transactions_bulk_update_url, params: {
+      bulk_update: {
+        entry_ids: [ synced_entry.id ],
+        reconciled_status: "reconciled"
+      }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "unreconciled", synced_entry.reload.reconciled_status
+  end
+
+  test "bulk update rejects an invalid reconciled_status value without raising" do
+    @user.family.update!(manual_reconciliation: true)
+    manual_entry = create_transaction(account: accounts(:depository))
+
+    assert_no_changes -> { manual_entry.reload.reconciled_status } do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          reconciled_status: "not_a_real_status"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
+  end
+
+  test "bulk update records a debug log entry when the update fails" do
+    manual_entry = create_transaction(account: accounts(:depository))
+    Entry.stubs(:bulk_update!).raises(ActiveRecord::RecordInvalid.new(manual_entry))
+
+    assert_difference -> { DebugLogEntry.where(category: "reconciliation", level: "error").count }, 1 do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          notes: "Updated note"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.failure"), flash[:alert]
+
+    log_entry = DebugLogEntry.order(:created_at).last
+    assert_equal "Transactions::BulkUpdatesController#create", log_entry.source
+    assert_equal @user.family, log_entry.family
+    assert_equal @user, log_entry.user
+    assert_equal [ manual_entry.id ], log_entry.metadata["entry_ids"]
+  end
+
+  test "bulk update rejects reconciled_status when manual reconciliation is disabled" do
+    manual_entry = create_transaction(account: accounts(:depository))
+
+    assert_no_changes -> { manual_entry.reload.reconciled_status } do
+      post transactions_bulk_update_url, params: {
+        bulk_update: {
+          entry_ids: [ manual_entry.id ],
+          reconciled_status: "cleared"
+        }
+      }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transactions.reconcile.unavailable"), flash[:alert]
   end
 end
