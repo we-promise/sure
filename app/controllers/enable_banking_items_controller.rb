@@ -354,9 +354,10 @@ class EnableBankingItemsController < ApplicationController
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
 
-    # Update sync start date from form if provided
-    if params[:sync_start_date].present?
-      @enable_banking_item.update!(sync_start_date: params[:sync_start_date])
+    # The modal's date field is optional: a blank one means no lower bound, so
+    # the first fetch imports as much history as the bank provides.
+    if params.key?(:sync_start_date)
+      @enable_banking_item.update!(sync_start_date: params[:sync_start_date].presence)
     end
 
     created_count = 0

@@ -68,7 +68,7 @@ en:
       choose_account_type: "Choose the correct account type for each Enable Banking account:"
       historical_data_range: "Historical Data Range:"
       sync_start_date_label: "Start syncing transactions from:"
-      sync_start_date_help: Select how far back you want to sync transaction history. Maximum 2 years of history available.
+      sync_start_date_help: Optional. Leave it blank to import as much history as your bank provides; how far back that goes depends on the bank. If you pick a date, transactions before it are not imported.
       account_type_label: "Account Type:"
       balance: Balance
       create_accounts: Create Accounts
