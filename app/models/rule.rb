@@ -6,6 +6,7 @@ class Rule < ApplicationRecord
   SUPPORTED_RESOURCE_TYPES = %w[transaction].freeze
 
   belongs_to :family
+  belongs_to :rule_group, optional: true
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
   has_many :rule_runs, dependent: :destroy
@@ -13,7 +14,12 @@ class Rule < ApplicationRecord
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
 
+  # A name typed into the form's "new group" field. The rule joins that group,
+  # which is created unless the family already has one with that name.
+  attribute :new_rule_group_name, :string
+
   before_validation :normalize_name
+  before_validation :assign_new_rule_group
   before_create :assign_next_position
 
   # Rules run top to bottom. created_at breaks ties, e.g. for rules created at
@@ -27,10 +33,13 @@ class Rule < ApplicationRecord
   validates :name, length: { minimum: 1 }, allow_nil: true, if: -> { name.to_s.valid_encoding? }
   validates_with DatabaseTextValidator, attributes: %i[name resource_type]
   validate :no_nested_compound_conditions
+  validate :rule_group_of_same_family
+  validate :new_rule_group_valid
 
   # Every rule must have at least 1 action
   validate :min_actions
   validate :no_duplicate_actions
+  validate :split_is_only_action
 
   # Switching a rule on records the transactions it already matches as delivered,
   # so an email action only reports what appears afterwards. Rule::Action seeds the
@@ -61,6 +70,15 @@ class Rule < ApplicationRecord
   # fails the edit rolls back rather than leaving a stale baseline behind.
   before_update :note_match_criteria_change
   after_update :seed_notification_baseline, if: :notification_baseline_out_of_date?
+
+  # Joining a group puts the rule at the end of that group; leaving one keeps
+  # it right below the group. Either way the rules still run in the order the
+  # list shows (see Rule::Layout).
+  # The family's position lock is taken before the rule's row is written, in
+  # the order every other position writer takes them, so a concurrent reorder
+  # cannot deadlock against this save.
+  before_save -> { Rule.lock_positions!(family) }, if: :will_save_change_to_rule_group_id?
+  after_save :place_in_rule_group, if: :saved_change_to_rule_group_id?
 
   # Set when this save's after_update took the baseline, or tried to and timed
   # out. Rule::Action's commit callback for an email action added in the same
@@ -121,32 +139,81 @@ class Rule < ApplicationRecord
     0
   end
 
+  # Whether the rule, as stored, has an email action. Read from the database,
+  # so actions built or marked for destruction in memory do not change it. The
+  # assistant reads it before replacing a rule's actions, so a replacement email
+  # action keeps the baseline the old one recorded (see
+  # Rule::Action#keep_notification_baseline). Each of its calls commits on its
+  # own; the importers, which do not, use .ids_with_stored_email_notification_action.
+  def stored_email_notification_action?
+    persisted? && actions.email_notifications.exists?
+  end
+
+  # The ids of the rules in `rules` that have an email action as stored now.
+  # An import writes every row in one transaction, so a rule named twice would
+  # see, on its second row, the email action its first row has only just
+  # written; that one is replaced before it commits and never records a
+  # baseline. The importers take this before writing anything and ask it
+  # instead of #stored_email_notification_action?.
+  def self.ids_with_stored_email_notification_action(rules)
+    rules.joins(:actions).merge(Rule::Action.email_notifications).distinct.pluck(:id).to_set
+  end
+
   # Reads the currently-matching transaction ids WITHOUT running executors
   # (e.g. the notification baseline pre-seed).
   def matching_transaction_ids
     matching_scope.pluck(:id)
   end
 
-  # Sets the run order of all rules of a family. ordered_ids must list every
-  # rule of the family exactly once, so a stale page (a rule added or deleted
-  # meanwhile) cannot leave rules with clashing or missing positions.
-  def self.update_positions!(family, ordered_ids)
-    ordered_ids = Array(ordered_ids).map(&:to_s)
-    family_rule_ids = family.rules.pluck(:id)
-
-    unless ordered_ids.size == family_rule_ids.size && ordered_ids.sort == family_rule_ids.sort
-      raise ArgumentError, "ordered_ids must list every rule of the family exactly once"
+  # Serializes position changes per family with a transaction-scoped advisory
+  # lock. Without it, two rules created at the same time both read the same
+  # MAX(position) and share a position, so their run order would silently fall
+  # back to the created_at/id tie-break. The lock is held until the transaction
+  # ends. with_connection is the transaction's own connection and isn't leased
+  # to the thread for good.
+  def self.lock_positions!(family)
+    with_connection do |connection|
+      connection.execute(sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family.id.to_s ]))
     end
+  end
 
-    return if ordered_ids.empty?
+  # The position after every rule and rule group of the family, which share one
+  # sequence (see Rule::Layout). Takes the lock, so call it inside the
+  # transaction that writes the position.
+  def self.next_position_for(family)
+    lock_positions!(family)
+    [ family.rules.maximum(:position).to_i, family.rule_groups.maximum(:position).to_i ].max + 1
+  end
 
-    encoder = PG::TextEncoder::Array.new
-    sql = sanitize_sql_array([ <<~SQL.squish, encoder.encode(ordered_ids), encoder.encode((1..ordered_ids.size).to_a), family.id ])
-      UPDATE rules SET position = new_positions.position
-      FROM unnest(?::uuid[], ?::integer[]) AS new_positions(id, position)
-      WHERE rules.id = new_positions.id AND rules.family_id = ?
-    SQL
-    with_connection { |connection| connection.update(sql, "Rule Update Positions") }
+  # Points the family's merchant conditions and actions at another merchant
+  # after its transactions moved there (a provider merchant converted to a
+  # family merchant, or merchants merged). Otherwise a rule would keep matching
+  # or setting the old merchant and undo the move on its next run.
+  def self.replace_merchant_references!(family, from:, to:)
+    from_ids = Array(from).map { |id| id.to_s.downcase }
+    return if from_ids.empty?
+
+    rule_ids = family.rules.select(:id)
+    conditions = Rule::Condition.where(condition_type: "transaction_merchant").where("LOWER(rule_conditions.value) IN (?)", from_ids)
+    rewritten = conditions
+      .where(rule_id: rule_ids)
+      .or(conditions.where(parent_id: Rule::Condition.where(rule_id: rule_ids).select(:id)))
+    rewritten_rule_ids = rewritten.where.not(rule_id: nil).pluck(:rule_id) |
+      Rule::Condition.where(id: rewritten.where.not(parent_id: nil).select(:parent_id)).pluck(:rule_id)
+    rewritten.update_all(value: to.to_s, updated_at: Time.current)
+
+    Rule::Action.where(rule_id: rule_ids, action_type: "set_transaction_merchant")
+      .where("LOWER(rule_actions.value) IN (?)", from_ids)
+      .update_all(value: to.to_s, updated_at: Time.current)
+
+    # update_all skips the callback that re-takes an email rule's baseline when
+    # its conditions change. Without it, a merge would email the target
+    # merchant's past transactions as new matches.
+    family.rules.where(id: rewritten_rule_ids).find_each(&:reseed_notification_baseline!)
+  end
+
+  def reseed_notification_baseline!
+    seed_notification_baseline
   end
 
   # Excludes transaction ids with one array parameter. where.not(id: ids) sends
@@ -265,6 +332,33 @@ class Rule < ApplicationRecord
     displayable_conditions.first
   end
 
+  # The action the rule list shows: the saved one `actions.first` loads (lowest
+  # id), picked from preloaded actions without a query.
+  def displayed_action
+    actions.select(&:persisted?).min_by(&:id)
+  end
+
+  # Option lists (categories, merchants, accounts) that conditions and actions
+  # look their values up in, loaded once per key. They depend only on the family
+  # and the current user, so rules listed together share one cache
+  # (.share_option_lists).
+  attr_writer :option_lists
+
+  def option_list(key)
+    @option_lists ||= {}
+    @option_lists.fetch(key) { @option_lists[key] = yield }
+  end
+
+  def self.share_option_lists(rules)
+    option_lists = {}
+    rules.each { |rule| rule.option_lists = option_lists }
+  end
+
+  def reload(*)
+    @option_lists = nil
+    super
+  end
+
   def additional_displayable_conditions_count
     [ displayable_conditions.size - 1, 0 ].max
   end
@@ -302,18 +396,52 @@ class Rule < ApplicationRecord
   end
 
   private
-    # Serialized per family with a transaction-scoped advisory lock: without
-    # it, two rules created at the same time both read the same MAX(position)
-    # and share a position, so their run order would silently fall back to
-    # the created_at/id tie-break. before_create runs inside the save
-    # transaction, so the lock is held until the new row is committed.
+    # before_create runs inside the save transaction, so the lock taken by
+    # next_position_for is held until the new row is committed.
     def assign_next_position
       return if position.to_i.positive?
 
-      self.class.connection.execute(
-        self.class.sanitize_sql_array([ "SELECT pg_advisory_xact_lock(?, hashtext(?))", POSITION_LOCK_NAMESPACE, family_id.to_s ])
-      )
-      self.position = family.rules.maximum(:position).to_i + 1
+      self.position = Rule.next_position_for(family)
+    end
+
+    def assign_new_rule_group
+      name = new_rule_group_name.to_s
+      return if family.nil?
+
+      # A name the database will not store is left to RuleGroup's validation.
+      unless DatabaseTextValidator.acceptable?(name)
+        self.rule_group = family.rule_groups.build(name: name)
+        return
+      end
+
+      name = name.strip
+      return if name.empty?
+
+      self.rule_group = family.rule_groups.find_or_initialize_by(name: name)
+    end
+
+    # An id that names no group would otherwise fail on the foreign key.
+    def rule_group_of_same_family
+      if rule_group.nil?
+        errors.add(:rule_group, :invalid) if rule_group_id.present?
+      elsif rule_group.family_id != family_id
+        errors.add(:rule_group, :invalid)
+      end
+    end
+
+    # A group built from the form's name is saved with the rule; its errors are
+    # shown on the name field instead of being dropped.
+    def new_rule_group_valid
+      return unless rule_group&.new_record? && rule_group.invalid?
+
+      rule_group.errors.each do |error|
+        errors.add(:new_rule_group_name, error.message)
+      end
+    end
+
+    def place_in_rule_group
+      group = rule_group || RuleGroup.find_by(id: rule_group_id_before_last_save)
+      Rule::Layout.new(family).place_after_group!(self, group) if group
     end
 
     def min_actions
@@ -328,6 +456,14 @@ class Rule < ApplicationRecord
       action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
 
       errors.add(:base, :duplicate_actions, types: action_types.inspect) if action_types.uniq.count != action_types.count
+    end
+
+    # Actions after a split find the parent hidden, and actions before it change only the
+    # hidden parent, so a split rule can't usefully do anything else.
+    def split_is_only_action
+      action_types = actions.reject(&:marked_for_destruction?).map(&:action_type)
+
+      errors.add(:base, :split_not_alone) if action_types.include?("split_transaction") && action_types.size > 1
     end
 
     # Validation: To keep rules simple and easy to understand, we don't allow nested compound conditions.
@@ -406,7 +542,7 @@ class Rule < ApplicationRecord
 
     def seed_notification_baseline
       @notification_baseline_timed_out = false
-      return unless actions.exists?(action_type: "send_email_notification")
+      return unless actions.email_notifications.exists?
 
       @notification_baseline_taken = true
       NotificationDelivery.record_for(rule_id: id, transaction_ids: matching_transaction_ids)

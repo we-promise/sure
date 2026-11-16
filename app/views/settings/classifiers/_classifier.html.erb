@@ -1,0 +1,13 @@
+<%# locals: (settings:, active:) %>
+<%# What Bayes does: its rule's switch (categorizing, in the rule order), how
+    sure it must be, and whether its categories are locked. %>
+<div class="space-y-4">
+  <%= render "settings/classifiers/rule_toggle", action_type: "bayes_categorize", active: active,
+        label: t(".rule"), hint: t(".rule_hint") %>
+  <%= classifier_section_form do %>
+    <%= render "settings/classifiers/number", key: :threshold, settings: settings,
+          attrs: { step: 0.01 },
+          label: t(".threshold"), hint: t(".threshold_hint") %>
+    <%= render "settings/classifiers/toggle", key: :lock_results, settings: settings, label: t(".lock_results"), hint: t(".lock_results_hint") %>
+  <% end %>
+</div>

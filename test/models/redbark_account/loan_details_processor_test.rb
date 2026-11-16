@@ -286,6 +286,17 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
     assert_equal({ "2026-09-21" => BigDecimal("6.75") }, rates)
   end
 
+  # The syncer dates a sync in the family's zone. A snapshot stamped at 19:00
+  # UTC on the 20th was fetched on the 21st in Sydney, so it is this sync's.
+  test "a snapshot is judged fresh on the family's calendar" do
+    @family.update!(timezone: "Australia/Sydney")
+    detail lendingRate: "0.0675", fetched_at: Time.utc(2026, 9, 20, 19, 0, 0)
+
+    process
+
+    assert_equal({ "2026-09-21" => BigDecimal("6.75") }, rates)
+  end
+
   # A bank reporting an end date centuries out is reporting a placeholder. The
   # term is not stored, and the rate still lands.
   test "an implausible term is not stored and does not cost the loan its rate" do
@@ -469,6 +480,25 @@ class RedbarkAccount::LoanDetailsProcessorTest < ActiveSupport::TestCase
       process
     end
     assert_empty schedule
+  end
+
+  # The bound is checked on the percentage before it is rounded to three
+  # places, which would carry a reading just outside it onto 0 or 100.
+  test "a rate just outside the bound is not rounded into it" do
+    [ "-0.000004", "1.000004" ].each do |reported|
+      @loan.update_columns(variable_rate_schedule: {})
+      detail lendingRate: reported
+      assert_difference -> { DebugLogEntry.count }, 1, "#{reported} was not logged" do
+        process
+      end
+      assert_empty schedule, "#{reported} was recorded"
+    end
+  end
+
+  test "a rate just inside the ceiling rounds onto it and is recorded" do
+    detail lendingRate: "0.999996"
+    process
+    assert_equal({ "2026-09-21" => BigDecimal(100) }, rates)
   end
 
   # Row 9: the detected row reaches the engine, for a cut as well as a rise.

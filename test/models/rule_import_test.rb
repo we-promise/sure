@@ -42,6 +42,47 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_equal 1, auto_rule.actions.count
   end
 
+  test "reuses a provider merchant on the family's transactions instead of creating a family merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Coffee", source: "plaid")
+    account = @family.accounts.first
+    account.entries.create!(name: "Coffee", date: Date.current, amount: 4, currency: "USD", entryable: Transaction.new(merchant: provider_merchant))
+    csv = <<~CSV
+      name,resource_type,active,effective_date,conditions,actions
+      "Coffee","transaction",true,,"[{\"condition_type\":\"transaction_merchant\",\"operator\":\"=\",\"value\":\"Synced Coffee\"}]","[{\"action_type\":\"set_transaction_merchant\",\"value\":\"Synced Coffee\"}]"
+    CSV
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_no_difference -> { @family.merchants.count } do
+      import.send(:import!)
+    end
+
+    rule = Rule.find_by!(family: @family, name: "Coffee")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
+  end
+
+  test "creates a family merchant for a provider merchant name that is ambiguous or used in a split" do
+    account = @family.accounts.first
+    [ [ "Shared Name", "plaid" ], [ "Shared Name", "simplefin" ], [ "Split Shop", "plaid" ] ].each do |name, source|
+      merchant = ProviderMerchant.create!(name: name, source: source)
+      account.entries.create!(name: name, date: Date.current, amount: 4, currency: "USD", entryable: Transaction.new(merchant: merchant))
+    end
+    split = { splits: [ { type: "percentage", name: "Shop", share: "60", merchant: "Split Shop" }, { type: "percentage", name: "Rest", share: "40" } ] }.to_json
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [ "Ambiguous", "transaction", "true", "", '[{"condition_type":"transaction_name","operator":"like","value":"x"}]', '[{"action_type":"set_transaction_merchant","value":"Shared Name"}]' ]
+      rows << [ "Split", "transaction", "true", "", '[{"condition_type":"transaction_name","operator":"like","value":"y"}]', [ { action_type: "split_transaction", value: JSON.parse(split) } ].to_json ]
+    end
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_equal @family.merchants.find_by!(name: "Shared Name").id, Rule.find_by!(family: @family, name: "Ambiguous").actions.sole.value
+    split_merchant_id = JSON.parse(Rule.find_by!(family: @family, name: "Split").actions.sole.value)["splits"].first["merchant_id"]
+    assert_equal @family.merchants.find_by!(name: "Split Shop").id, split_merchant_id
+  end
+
   test "imports rule conditions correctly" do
     import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
     import.generate_rows_from_csv
@@ -213,6 +254,46 @@ class RuleImportTest < ActiveSupport::TestCase
     action = rule.actions.first
     assert_equal "set_transaction_tags", action.action_type
     assert_equal [ existing_tag.id, comma_tag.id ], action.value.split(",")
+  end
+
+  test "imports a split action by mapping row category, merchant and tag names to ids" do
+    actions = [
+      {
+        action_type: "split_transaction",
+        value: {
+          splits: [
+            { type: "percentage", name: "Food", share: "70", category: "Groceries", merchant: "Corner Shop", tags: [ "Shared" ] },
+            { type: "percentage", name: "Other", share: "30", category_id: categories(:food_and_drink).id }
+          ]
+        }
+      }
+    ].to_json
+    csv = CSV.generate do |rows|
+      rows << %w[name resource_type active effective_date conditions actions]
+      rows << [ "Split groceries", "transaction", "true", "", '[{"condition_type":"transaction_name","operator":"like","value":"market"}]', actions ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    food, other = JSON.parse(Rule.find_by!(family: @family, name: "Split groceries").actions.sole.value)["splits"]
+    assert_equal @category.id, food["category_id"]
+    assert_equal @family.merchants.find_by!(name: "Corner Shop").id, food["merchant_id"]
+    assert_equal [ Tag.find_by!(family: @family, name: "Shared").id ], food["tag_ids"]
+    # A raw id that belongs to the importing family is kept as is
+    assert_equal categories(:food_and_drink).id, other["category_id"]
+  end
+
+  test "csv template rows import, including the split example" do
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: RuleImport.new.csv_template.to_csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    splits = JSON.parse(Rule.find_by!(family: @family, name: "Split shared rent").actions.sole.value)["splits"]
+    rent = @family.categories.find_by!(name: "Rent")
+    assert_equal [ rent.id, rent.id ], splits.map { |split| split["category_id"] }
+    assert_equal [ @family.tags.find_by!(name: "Shared").id ], splits.last["tag_ids"]
   end
 
   test "imports transaction_tag condition and maps tag name to id" do
@@ -485,6 +566,34 @@ class RuleImportTest < ActiveSupport::TestCase
     assert_nil @family.rules.find_by(name: "Invalid condition rule")
   end
 
+  test "reports a validation error for a null byte inside a split action" do
+    split = { splits: [
+      { type: "percentage", name: "A", share: "50", category: "Bad\0Category" },
+      { type: "percentage", name: "B", share: "50" }
+    ] }
+    category_count = @family.categories.count
+
+    # As an object and as a JSON string (where the NUL byte is escaped in the raw text).
+    [ split, split.to_json ].each do |value|
+      csv = CSV.generate do |rows|
+        rows << %w[name resource_type active effective_date conditions actions]
+        rows << [
+          "Invalid split rule", "transaction", true, nil,
+          [ { condition_type: "transaction_name", operator: "like", value: "rent" } ].to_json,
+          [ { action_type: "split_transaction", value: value } ].to_json
+        ]
+      end
+
+      import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+      import.generate_rows_from_csv
+
+      error = assert_raises(ActiveRecord::RecordInvalid, value.class.name) { import.send(:import!) }
+      assert_match(/value is invalid/i, error.message)
+      assert_nil @family.rules.find_by(name: "Invalid split rule")
+      assert_equal category_count, @family.categories.count
+    end
+  end
+
   test "rejects an imported name with a trailing null byte" do
     import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
     import.generate_rows_from_csv
@@ -597,6 +706,65 @@ class RuleImportTest < ActiveSupport::TestCase
     rule = Rule.find_by!(family: @family, name: "Quoted value rule")
     condition = rule.conditions.first
     assert_equal "ני\"ע-קניה", condition.value
+  end
+
+  test "imports the group column and reuses existing groups" do
+    existing = @family.rule_groups.create!(name: "Food")
+    csv = CSV.generate do |out|
+      out << %w[name resource_type active effective_date conditions actions group]
+      out << [ "Grocery rule", "transaction", true, "", [ { condition_type: "transaction_name", operator: "like", value: "grocery" } ].to_json, [ { action_type: "set_transaction_category", value: "Groceries" } ].to_json, "Food" ]
+      out << [ "Rent rule", "transaction", true, "", [ { condition_type: "transaction_name", operator: "like", value: "rent" } ].to_json, [ { action_type: "exclude_transaction" } ].to_json, "Housing" ]
+      out << [ "Loose rule", "transaction", true, "", [ { condition_type: "transaction_name", operator: "like", value: "misc" } ].to_json, [ { action_type: "exclude_transaction" } ].to_json, "" ]
+    end
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+
+    assert_difference -> { @family.rule_groups.count }, 1 do
+      import.send(:import!)
+    end
+
+    assert_equal existing, @family.rules.find_by!(name: "Grocery rule").rule_group
+    assert_equal "Housing", @family.rules.find_by!(name: "Rent rule").rule_group.name
+    assert_nil @family.rules.find_by!(name: "Loose rule").rule_group
+    assert_equal [ { condition_type: "transaction_name", operator: "like", value: "rent" }.stringify_keys ],
+      @family.rules.find_by!(name: "Rent rule").conditions.map { |condition| condition.slice(:condition_type, :operator, :value) }
+  end
+
+  test "reads the group of a row whose JSON was split into extra fields" do
+    headers = %w[name resource_type active effective_date conditions actions group]
+    # CSV pads the headers with nil for fields beyond the named columns.
+    row = CSV::Row.new(headers + [ nil ], [ "Split rule", "transaction", "true", nil, '[{"a":1}', '{"b":2}]', "[]", "Food" ])
+
+    normalized = RuleImport.new.send(:normalize_rule_row, row)
+
+    assert_equal "Food", normalized[:rule_group]
+    assert_equal "Split rule", normalized[:name]
+  end
+
+  test "reads the group when the header row has a blank cell" do
+    conditions = [ { condition_type: "transaction_name", operator: "like", value: "rent" } ].to_json
+    actions = [ { action_type: "exclude_transaction" } ].to_json
+    csv = "name,resource_type,active,effective_date,conditions,actions,group,\n" +
+      CSV.generate_line([ "Rent rule", "transaction", "true", "", conditions, actions, "Housing" ])
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_equal "Housing", @family.rules.find_by!(name: "Rent rule").rule_group&.name
+  end
+
+  test "a file without the group column keeps the group of an updated rule" do
+    group = @family.rule_groups.create!(name: "Food")
+    @family.rules.create!(name: "Categorize groceries", resource_type: "transaction", rule_group: group,
+      actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+
+    import = @family.imports.create!(type: "RuleImport", raw_file_str: @csv, col_sep: ",")
+    import.generate_rows_from_csv
+    import.send(:import!)
+
+    assert_equal group, @family.rules.find_by!(name: "Categorize groceries").rule_group
   end
 
   test "imports wrapped JSON payloads from legacy rows" do

@@ -66,6 +66,7 @@ class Investment < ApplicationRecord
     "indian_equity" => { short: "Indian Equity", long: "Indian Equity", region: "in", tax_treatment: :taxable },
     "indian_etf" => { short: "Indian ETF", long: "Indian ETF", region: "in", tax_treatment: :taxable },
     # Fixed-income / small-savings
+    "epf" => { short: "EPF", long: "Employees' Provident Fund", region: "in", tax_treatment: :tax_advantaged },
     "ppf" => { short: "PPF", long: "Public Provident Fund", region: "in", tax_treatment: :tax_exempt },
     "ssy" => { short: "SSY", long: "Sukanya Samriddhi Yojana", region: "in", tax_treatment: :tax_exempt },
     "nsc" => { short: "NSC", long: "National Savings Certificate", region: "in", tax_treatment: :tax_advantaged },

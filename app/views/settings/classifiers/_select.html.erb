@@ -1,0 +1,13 @@
+<%# locals: (form:, key:, label:, hint:, settings:, choices:, width: "w-36") %>
+<%# One dropdown row of Settings → Classifier; choices: [[label, value]].
+    DS::Select submits its auto-submitting form when a choice is picked. %>
+<div class="flex items-center justify-between gap-x-4">
+  <div class="flex-1 min-w-0">
+    <label for="<%= key %>_trigger" class="block text-sm text-primary"><%= label %></label>
+    <p class="text-xs text-secondary"><%= hint %></p>
+  </div>
+  <div class="<%= width %> shrink-0">
+    <%= render DS::Select.new(form: form, method: key, selected: settings.public_send(key),
+                              items: choices.map { |choice_label, value| { value: value, label: choice_label } }) %>
+  </div>
+</div>

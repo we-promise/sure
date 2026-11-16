@@ -915,9 +915,8 @@ class Admin::SystemHealthControllerTest < ActionDispatch::IntegrationTest
   test "optional service rendering exposes no configured values and creates no clients" do
     sign_in users(:sure_support_staff)
     stub_healthy_sidekiq
-    Langfuse.stubs(:configuration).returns(OpenStruct.new(public_key: "optional-public-secret", secret_key: "optional-langfuse-secret"))
     Sentry.stubs(:configuration).returns(OpenStruct.new(dsn: "optional-sentry-secret", enabled_in_current_env?: true))
-    Langfuse.expects(:new).never
+    LangfuseTracing.expects(:new).never
     Stripe::StripeClient.expects(:new).never
     PostHog::Client.expects(:new).never
     Sentry.expects(:capture_exception).never

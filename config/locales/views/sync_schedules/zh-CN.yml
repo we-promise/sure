@@ -1,0 +1,19 @@
+---
+zh-CN:
+  sync_schedules:
+    menu_item: 同步频率
+    intervals:
+      minutes: 每 %{count} 分钟
+      hours:
+        one: 每小时
+        other: 每 %{count} 小时
+    edit:
+      title: 同步频率
+      description: 每个关联都会随家庭同步一起同步，对大多数提供商而言为每天一次。选择一个时间间隔，以便 %{name} 也能在全天自行进行独立同步。
+      interval_label: 同步
+      no_schedule: 仅常规同步
+      hint: 频繁同步会消耗提供商的速率限制，且部分提供商按请求收费。
+      save: 保存
+    update:
+      updated: 已保存同步频率。
+      cleared: 已清除同步频率。该关联已恢复为其常规同步。

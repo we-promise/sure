@@ -153,12 +153,20 @@ class GoalTest < ActiveSupport::TestCase
     assert_equal "contributions", new_goal.progress_basis
   end
 
+  test "crypto accounts are fundable and default to the contributions basis" do
+    new_goal = @family.goals.new(name: "BTC", target_amount: 100, currency: "USD")
+    new_goal.goal_accounts.build(account: accounts(:crypto))
+    assert new_goal.valid?, new_goal.errors.full_messages.to_sentence
+    new_goal.save!
+    assert_equal "contributions", new_goal.progress_basis
+  end
+
   test "non-fundable account types are rejected" do
     credit = accounts(:credit_card)
     new_goal = @family.goals.new(name: "Test", target_amount: 100, currency: "USD")
     new_goal.goal_accounts.build(account: credit)
     assert_not new_goal.valid?
-    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be cash or investment accounts."
+    assert_includes new_goal.errors[:linked_accounts], "All linked accounts must be cash, investment or crypto accounts."
   end
 
   test "linked accounts must belong to family" do
@@ -884,6 +892,22 @@ class GoalTest < ActiveSupport::TestCase
 
   test "investment accounts default to transfer pledge kind, never manual_save" do
     assert_equal "transfer", accounts(:investment).default_pledge_kind
+  end
+
+  test "manual crypto accounts default to transfer pledge kind, never manual_save" do
+    crypto = accounts(:crypto)
+    assert crypto.manual?
+    assert_equal "transfer", crypto.default_pledge_kind
+  end
+
+  test "a valuation delta on a crypto account never matches a pledge" do
+    crypto = accounts(:crypto)
+    goal = goals(:vacation_italy)
+    goal.goal_accounts.create!(account: crypto)
+    pledge = goal.goal_pledges.create!(account: crypto, amount: 100, kind: "manual_save")
+    entry = crypto.entries.create!(name: "Reconciliation", date: Date.current, amount: 1100, currency: crypto.currency,
+                                   entryable: Valuation.new(kind: "reconciliation"))
+    assert_not pledge.matches?(entry, valuation_delta: 100)
   end
 
   test "adding an investment account via update flips a depository goal to contributions" do

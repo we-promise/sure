@@ -33,14 +33,15 @@ class Balance::ChartSeriesBuilder
     raise
   end
 
-  # Unrealized gains series: for each date, sum of (market value - cost basis) across
+  # Builds an unrealized-gains series from the latest holding snapshot per security.
+  # For each date, it sums market value minus cost basis across
   # the latest holding snapshot per security. Holdings without a usable cost basis
   # (nil, or unlocked zero from providers) contribute a gain of 0.
   def gains_series
     values = gains_query_data.map do |datum|
       Series::Value.new(
         date: datum.date,
-        date_formatted: I18n.l(datum.date, format: :long),
+        date_formatted: Series.format_date(datum.date),
         value: Money.new(datum.end_gains, currency),
         trend: Trend.new(
           current: Money.new(datum.end_gains, currency),
@@ -69,6 +70,7 @@ class Balance::ChartSeriesBuilder
       @interval || period.interval
     end
 
+    # Builds a balance series for a balance column and its matching start column.
     def build_series_for(column)
       values = query_data.map do |datum|
         if @strict_currency_conversion && datum[:missing_currency].present?
@@ -83,7 +85,7 @@ class Balance::ChartSeriesBuilder
 
         Series::Value.new(
           date: datum.date,
-          date_formatted: I18n.l(datum.date, format: :long),
+          date_formatted: Series.format_date(datum.date),
           value: Money.new(datum.send(column), currency),
           trend: Trend.new(
             current: Money.new(datum.send(column), currency),
@@ -147,8 +149,12 @@ class Balance::ChartSeriesBuilder
       favorable_direction == "down" ? -1 : 1
     end
 
+    # 1 for an account already in the target currency, else the rate the
+    # lateral join below found. NULL when the currency has no usable rate, so
+    # the account drops out of the day's sum rather than counting at 1.
+    # Strict conversion raises on that same gap instead (see missing_currency).
     def balance_rate_sql
-      @strict_currency_conversion ? "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END" : "COALESCE(er.rate, 1)"
+      "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END"
     end
 
     def query
@@ -221,6 +227,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date <= d.date
+               AND er.rate > 0
              ORDER BY er.date DESC
              LIMIT 1),
             (SELECT er.rate
@@ -228,6 +235,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date > d.date
+               AND er.rate > 0
              ORDER BY er.date ASC
              LIMIT 1)
           ) AS rate
@@ -272,7 +280,7 @@ class Balance::ChartSeriesBuilder
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
-                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1)
+                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * CASE WHEN last_h.currency = :target_currency THEN 1 ELSE er.rate END
                 ELSE 0
               END
             ), 0) AS gains
@@ -311,6 +319,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date <= d.date
+                 AND er.rate > 0
                ORDER BY er.date DESC
                LIMIT 1),
               (SELECT er.rate
@@ -318,6 +327,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date > d.date
+                 AND er.rate > 0
                ORDER BY er.date ASC
                LIMIT 1)
             ) AS rate

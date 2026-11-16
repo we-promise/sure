@@ -161,7 +161,7 @@ class TransactionCategorySelectTest < ApplicationSystemTestCase
   test "Enter in the category search picks the match while categories are locked" do
     @user.family.update!(categories_locked: true)
     visit new_transaction_url(account_id: accounts(:depository).id)
-    fill_in "entry[name]", with: "Locked picker"
+    fill_in "entry_name", with: "Locked picker"
     find("input[name='entry[amount]']").set("12.34")
 
     assert_no_difference "Entry.count" do

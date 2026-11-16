@@ -10,13 +10,11 @@ class ConfigurationHealth::OptionalServicesTest < ActiveSupport::TestCase
 
   setup do
     @health = ConfigurationHealth::OptionalServices.new
-    @langfuse = OpenStruct.new(public_key: nil, secret_key: nil)
     @posthog = Rails.configuration.x.posthog.clone
     @posthog.api_key = nil
     @posthog.host = "https://us.i.posthog.com"
     @posthog.development_enabled = false
     @posthog.feedback_enabled = true
-    Langfuse.stubs(:configuration).returns(@langfuse)
     Sentry.stubs(:configuration).returns(nil)
     Rails.configuration.x.stubs(:posthog).returns(@posthog)
     Rails.application.config.stubs(:app_mode).returns("managed".inquiry)
@@ -24,7 +22,7 @@ class ConfigurationHealth::OptionalServicesTest < ActiveSupport::TestCase
   end
 
   test "absent optional services are informational and initialize no clients" do
-    Langfuse.expects(:new).never
+    LangfuseTracing.expects(:new).never
     Sentry.expects(:init).never
     Sentry.expects(:capture_exception).never
     Sentry.expects(:capture_message).never
@@ -57,7 +55,7 @@ class ConfigurationHealth::OptionalServicesTest < ActiveSupport::TestCase
   end
 
   test "Langfuse reports both environment keys without initializing a client" do
-    Langfuse.expects(:new).never
+    LangfuseTracing.expects(:new).never
     with_environment("LANGFUSE_PUBLIC_KEY" => "private-public", "LANGFUSE_SECRET_KEY" => "private-secret") do
       assert_equal :configured, @health.langfuse.status
       assert_no_match(/private-/, @health.langfuse.inspect)
