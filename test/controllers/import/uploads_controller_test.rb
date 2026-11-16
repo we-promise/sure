@@ -11,6 +11,22 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "sample_csv sends a CSV template for CSV imports" do
+    get import_upload_sample_csv_url(@import)
+
+    assert_response :success
+    assert_equal "text/csv", response.media_type
+  end
+
+  test "sample_csv redirects for imports without a CSV template" do
+    pdf_import = imports(:pdf)
+
+    get import_upload_sample_csv_url(pdf_import)
+
+    assert_redirected_to import_upload_url(pdf_import)
+    assert_equal "A sample CSV is not available for this import type.", flash[:alert]
+  end
+
   test "uploads valid csv by copy and pasting" do
     patch import_upload_url(@import), params: {
       import: {
