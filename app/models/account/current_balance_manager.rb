@@ -160,8 +160,11 @@ class Account::CurrentBalanceManager
       Result.new(success?: result.success?, changes_made?: result.success?, error: result.error_message)
     end
 
+    # Legacy data can still carry more than one anchor row, and the query has no ORDER BY,
+    # so pick the newest deterministically. Ids are random UUIDs: a last-resort tiebreak only.
     def current_anchor_valuation
-      @current_anchor_valuation ||= account.valuations.current_anchor.includes(:entry).first
+      @current_anchor_valuation ||=
+        account.valuations.current_anchor.includes(:entry).max_by { |v| [ v.entry.date, v.entry.created_at, v.entry.id ] }
     end
 
     # If the existing current_anchor is from a previous day, convert it to a
