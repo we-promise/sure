@@ -2398,7 +2398,8 @@ AI call, in PR 3, with the other web-thread calls (section 19).
 **Pipelock.** The CI scan stays as it is. At runtime, `Ai::Transport::Http` is the only place that
 builds AI HTTP clients, so it's the only place that has to honour the proxy (section 7). The proxy
 change can cause new blocks on hand-built Pipelock setups that relied on Anthropic going direct;
-the compose example and the Helm chart already set both proxy variables.
+the AI compose example (`compose.example.ai.yml`) and the Helm chart already set both proxy
+variables; `compose.example.yml` sets neither.
 
 ## 15. Controllers (RESTful, thin)
 
@@ -2961,7 +2962,12 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    pages (endpoints with presets, models, routes with each entry's overrides: JSON mode, prompt,
    reasoning effort) and the family AI features page replace the
    hostings AI sections. The endpoint form requires a model once a base URL is set, and keeps the
-   local-server help today's OpenAI section has (#4408). The AI features page has chat mode and each feature's switch and
+   local-server help today's OpenAI section has (#4408). The hosting guide (`docs/hosting/ai.md`)
+   covers a server on the Docker host, such as Ollama run natively on macOS (#4649), as an endpoint
+   instead of `OPENAI_URI_BASE` and `EMBEDDING_URI_BASE`: the `ollama` preset, URL
+   `http://host.docker.internal:11434/v1`, location `local` (plain http is allowed only for local
+   endpoints), used by the `embed` route as well as chat. Behind the proxy, `host.docker.internal`
+   goes in `NO_PROXY`. The AI features page has chat mode and each feature's switch and
    manifest: `families.ai_consents`, the consent migration (an `mcp_only` family gets chat
    switched off, and PR 6's `mcp_only` line goes), member emails, `:no_family_consent` and
    `:consent_outdated`, and the shadow comparison switch with `Setting.ai_shadow_rates` replacing
