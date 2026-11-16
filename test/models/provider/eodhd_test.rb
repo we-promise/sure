@@ -35,6 +35,28 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal "EUR", security.currency
   end
 
+  test "search keeps the ISIN EODHD returns and leaves it nil when absent" do
+    body = [
+      { "Code" => "SGLD", "Name" => "Invesco Physical Gold", "Exchange" => "LSE", "Country" => "UK",
+        "Currency" => "GBP", "ISIN" => "ie00b579f325" },
+      { "Code" => "XYZ", "Name" => "No isin", "Exchange" => "US", "Country" => "USA",
+        "Currency" => "USD", "ISIN" => "" },
+      { "Code" => "ABC", "Name" => "Missing key", "Exchange" => "US", "Country" => "USA", "Currency" => "USD" }
+    ].to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.search_securities("IE00B579F325")
+
+    assert result.success?
+    assert_equal [ "IE00B579F325", nil, nil ], result.data.map(&:isin)
+  end
+
   test "uses mapped MIC when exchange code is in mapping" do
     mapped_exchange_body = [
       {
