@@ -243,7 +243,7 @@ uk:
           cash_report_options: "Опції: Немає"
           cash_report_fields: "Поля: Валюта, Кінцева готівка"
           cash_transactions: "Готівкові транзакції:"
-          cash_transactions_options: "Опції: Дивіденди, Депозити та зняття, Детально"
+          cash_transactions_options: "Опції: Дивіденди, Депозити та зняття, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Детально"
           cash_transactions_fields: "Поля: Сума, Conid, Валюта, Курс FX до базової, Дата звіту, ID транзакції, Тип"
           change_in_position_value_summary: "Зведення про зміну вартості позиції: Валюта, Вартість на кінець періоду"
           net_asset_value: "Чиста вартість активів (NAV) у базовій валюті:"

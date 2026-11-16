@@ -12,11 +12,8 @@ namespace :security do
   # manual recovery script in issue #2611 first, then re-run this task.
   #
   # During a key rotation (docs/hosting/encryption.md) the write pass also
-  # re-encrypts existing ciphertext under the current key - EXCEPT for
-  # deterministic attributes, which Rails re-serializes under the OLDEST
-  # configured scheme while any previous scheme exists. This task therefore
-  # cannot migrate deterministic columns off a compromised key; see step 3
-  # of the rotation procedure.
+  # re-encrypts existing ciphertext under the current key, deterministic
+  # attributes included (see current_key_ciphertexts).
   desc "Backfill encryption for sensitive fields (idempotent). Args: batch_size, dry_run"
   task :backfill_encryption, [ :batch_size, :dry_run ] => :environment do |_, args|
     raw_batch = args[:batch_size].presence || ENV["BATCH_SIZE"].presence || "100"
@@ -138,14 +135,19 @@ namespace :security do
               encryptor.send("#{field}=", value)
             end
 
+            # During a key rotation Rails would write deterministic fields
+            # under the oldest key, so those get current-key ciphertext.
+            rotated = current_key_ciphertexts(encryptor, plaintext_values.keys)
+
             # Extract the encrypted values from the temporary instance
             encrypted_attrs = {}
-            plaintext_values.keys.each do |field|
+            (plaintext_values.keys - rotated.keys).each do |field|
               encrypted_attrs[field] = encryptor.read_attribute_before_type_cast(field)
             end
 
             # Write directly to database, bypassing callbacks/validations
-            record.update_columns(encrypted_attrs)
+            record.update_columns(encrypted_attrs) if encrypted_attrs.any?
+            write_raw_columns(record, rotated) if rotated.any?
             true
           end
           updated += 1 if written
@@ -164,6 +166,44 @@ namespace :security do
       failed_count: failed.size,
       failed_samples: failed.take(3)
     }
+  end
+
+  # While `previous` schemes are configured (a key rotation), Rails encrypts
+  # deterministic attributes with the OLDEST scheme so equality lookups keep
+  # matching. Re-encrypting that way would leave the data under the key
+  # being rotated out, so build ciphertext with the current scheme instead,
+  # the same way EncryptedAttributeType does when no previous scheme exists.
+  def current_key_ciphertexts(instance, fields)
+    fields.each_with_object({}) do |field, ciphertexts|
+      type = backfill_encrypted_type(instance.class, field)
+      next unless type.fixed? && type.previous_schemes.any?
+
+      value = type.cast_type.serialize(instance.read_attribute(field))
+      next if value.nil?
+
+      value = value.downcase if type.downcase?
+      ciphertexts[field] = type.with_context do
+        ActiveRecord::Encryption.encryptor.encrypt(
+          value.to_s, **{ key_provider: type.key_provider, cipher_options: { deterministic: true } }.compact
+        )
+      end
+    end
+  end
+
+  # `normalizes` wraps the encrypted type, so unwrap to reach it.
+  def backfill_encrypted_type(model_class, field)
+    type = model_class.type_for_attribute(field)
+    type = type.cast_type while !type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType) && type.respond_to?(:cast_type)
+    return type if type.is_a?(ActiveRecord::Encryption::EncryptedAttributeType)
+
+    raise ArgumentError, "#{model_class.name}##{field} is not an encrypted attribute"
+  end
+
+  # Raw SQL so the attribute type does not encrypt the ciphertext again.
+  def write_raw_columns(record, values)
+    connection = record.class.connection
+    assignments = values.keys.map { |field| "#{connection.quote_column_name(field)} = ?" }.join(", ")
+    record.class.where(id: record.id).update_all([ assignments, *values.values ])
   end
 
   # Rails' encryption envelope: {"p": payload, "h": {"iv": ..., "at": ..., ...}}.

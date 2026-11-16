@@ -147,8 +147,7 @@ tr:
           cash_transactions: 'Nakit İşlemleri:'
           cash_transactions_fields: 'Alanlar: Amount, Conid, Currency, FX Rate To
             Base, Report Date, Transaction ID, Type'
-          cash_transactions_options: 'Seçenekler: Dividends, Deposits & Withdrawals,
-            Detail'
+          cash_transactions_options: 'Seçenekler: Dividends, Deposits & Withdrawals, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Detail'
           change_in_position_value_summary: 'Pozisyon Değeri Değişim Özeti: Currency,
             End Of Period Value'
           net_asset_value: 'Ana Para Biriminde Net Varlık Değeri (NAV):'

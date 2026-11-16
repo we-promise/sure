@@ -149,7 +149,7 @@ ru:
           cash_transactions: 'Операции с наличными:'
           cash_transactions_fields: 'Поля: Сумма, Conid, Валюта, Курс к базовой валюте,
             Дата отчёта, ID операции, Тип'
-          cash_transactions_options: 'Опции: Дивиденды, Депозиты и снятия, Детали'
+          cash_transactions_options: 'Опции: Дивиденды, Депозиты и снятия, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Детали'
           change_in_position_value_summary: 'Изменение стоимости позиции: Валюта,
             Стоимость на конец периода'
           net_asset_value: 'Чистая стоимость активов (NAV) в базовой валюте:'

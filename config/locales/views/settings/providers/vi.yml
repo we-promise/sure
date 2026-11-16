@@ -218,7 +218,7 @@ vi:
           cash_report_options: "Tùy chọn: Không"
           cash_report_fields: "Trường: Tiền tệ, Tiền mặt cuối kỳ"
           cash_transactions: "Giao dịch tiền mặt:"
-          cash_transactions_options: "Tùy chọn: Cổ tức, Nạp/Rút, Chi tiết"
+          cash_transactions_options: "Tùy chọn: Cổ tức, Nạp/Rút, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Chi tiết"
           cash_transactions_fields: "Trường: Số tiền, Conid, Tiền tệ, Tỷ giá FX sang Cơ sở, Ngày báo cáo, ID giao dịch, Loại"
           change_in_position_value_summary: "Tóm tắt thay đổi giá trị vị thế: Tiền tệ, Giá trị cuối kỳ"
           net_asset_value: "Giá trị tài sản ròng (NAV) theo Cơ sở:"

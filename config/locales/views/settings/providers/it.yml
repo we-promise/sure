@@ -228,7 +228,7 @@ it:
           cash_report_options: "Opzioni: Nessuna"
           cash_report_fields: "Campi: Valuta, Liquidità finale"
           cash_transactions: "Transazioni liquidità:"
-          cash_transactions_options: "Opzioni: Dividendi, Depositi e prelievi, Dettaglio"
+          cash_transactions_options: "Opzioni: Dividendi, Depositi e prelievi, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Dettaglio"
           cash_transactions_fields: "Campi: Importo, Conid, Valuta, Tasso FX alla base, Data rapporto, ID transazione, Tipo"
           change_in_position_value_summary: "Riepilogo variazione valore posizione: Valuta, Valore fine periodo"
           net_asset_value: "Valore patrimoniale netto (NAV) in base:"

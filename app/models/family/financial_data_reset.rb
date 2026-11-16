@@ -40,49 +40,14 @@ class Family::FinancialDataReset
     active_storage_attachments
   ].freeze
   STATUS_COUNT_KEYS = (COUNT_KEYS - %i[syncs]) + %i[plaid_items]
-  # sorted
-  PROVIDER_ITEM_ASSOCIATIONS = %i[
-    akahu_items
-    binance_items
-    brex_items
-    coinbase_items
-    coinspot_items
-    coinstats_items
-    enable_banking_items
-    financekit_items
-    fio_items
-    ibkr_items
-    indexa_capital_items
-    kraken_items
-    lunchflow_items
-    mercury_items
-    monobank_items
-    onchain_wallet_items
-    plaid_items
-    questrade_items
-    redbark_items
-    sharesight_items
-    simplefin_items
-    snaptrade_items
-    sophtron_items
-    trade_republic_items
-    trading212_items
-    truelayer_items
-    up_items
-    wise_items
-  ].freeze
 
   Result = Struct.new(:user, :family, :dry_run, :before_counts, :deleted_counts, :after_counts, keyword_init: true)
 
   class << self
+    # The same associations the family sync runs, so a provider is reset as
+    # soon as it is synced.
     def provider_item_associations
-      PROVIDER_ITEM_ASSOCIATIONS.select do |association_name|
-        association = Family.reflect_on_association(association_name)
-
-        association&.klass&.included_modules&.include?(Syncable)
-      rescue NameError
-        false
-      end
+      Family::Syncer.syncable_item_associations
     end
   end
 
