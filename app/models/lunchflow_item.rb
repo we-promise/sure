@@ -27,14 +27,14 @@ class LunchflowItem < ApplicationRecord
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
 
-  def import_latest_lunchflow_data
+  def import_latest_lunchflow_data(sync_start_date: nil)
     provider = lunchflow_provider
     unless provider
       Rails.logger.error "LunchflowItem #{id} - Cannot import: Lunchflow provider is not configured (missing API key)"
       raise StandardError.new("Lunchflow provider is not configured")
     end
 
-    LunchflowItem::Importer.new(self, lunchflow_provider: provider).import
+    LunchflowItem::Importer.new(self, lunchflow_provider: provider, sync_start_date: sync_start_date).import
   rescue => e
     Rails.logger.error "LunchflowItem #{id} - Failed to import data: #{e.message}"
     raise

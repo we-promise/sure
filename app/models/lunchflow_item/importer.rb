@@ -1,11 +1,14 @@
 class LunchflowItem::Importer
   include LunchflowTransactionHash
 
-  attr_reader :lunchflow_item, :lunchflow_provider
+  attr_reader :lunchflow_item, :lunchflow_provider, :sync_start_date
 
-  def initialize(lunchflow_item, lunchflow_provider:)
+  # sync_start_date: an explicit window start (the sync's), which overrides
+  # where each account's fetch would otherwise start.
+  def initialize(lunchflow_item, lunchflow_provider:, sync_start_date: nil)
     @lunchflow_item = lunchflow_item
     @lunchflow_provider = lunchflow_provider
+    @sync_start_date = sync_start_date
   end
 
   def import
@@ -254,7 +257,9 @@ class LunchflowItem::Importer
     end
 
     def fetch_and_store_transactions(lunchflow_account)
-      fetches_history = history_needed?(lunchflow_account)
+      # A windowed fetch doesn't start at the chosen start date, so it says
+      # nothing about how far back the account's history reaches.
+      fetches_history = sync_start_date.blank? && history_needed?(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
       fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
@@ -504,11 +509,14 @@ class LunchflowItem::Importer
       end
     end
 
-    # Starts from the chosen start date (nil fetches the full history) when the
+    # Starts from an explicit sync window when given. Otherwise starts from the
+    # chosen start date (nil fetches the full history) when the
     # account needs history it doesn't have yet. Otherwise resumes from the last
     # successful fetch, so one that keeps failing doesn't leave a gap once the
     # item sync completes, but never goes back before the chosen start date.
     def determine_sync_start_date(lunchflow_account)
+      return sync_start_date.to_date if sync_start_date.present?
+
       chosen_start = chosen_start_date
       return chosen_start if history_needed?(lunchflow_account)
 
