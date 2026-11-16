@@ -1,5 +1,5 @@
 class EnableBankingAccount < ApplicationRecord
-  include CurrencyNormalizable, Encryptable
+  include CurrencyNormalizable, Encryptable, IgnorableProviderAccount
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -140,6 +140,10 @@ class EnableBankingAccount < ApplicationRecord
   end
 
   private
+
+    def ignored_snapshot_reset
+      { current_balance: nil, raw_payload: nil, raw_transactions_payload: nil }
+    end
 
     def build_account_name(snapshot)
       # Try to build a meaningful name from the account data

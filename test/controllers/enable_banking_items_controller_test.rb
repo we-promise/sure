@@ -344,6 +344,31 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "active", orphan.reload.status
   end
 
+  test "setup_accounts does not offer an ignored account" do
+    mine = @item.enable_banking_accounts.create!(name: "Mine", uid: "hash_mine", currency: "EUR")
+    theirs = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR")
+    theirs.ignore!
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_response :success
+    assert_select "select[name=?]", "account_types[#{mine.id}]"
+    assert_select "select[name=?]", "account_types[#{theirs.id}]", count: 0
+  end
+
+  test "complete_account_setup remembers a skipped account as ignored" do
+    theirs = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR", current_balance: 50)
+
+    assert_no_difference "Account.count" do
+      post complete_account_setup_enable_banking_item_url(@item), params: { account_types: { theirs.id => "skip" } }
+    end
+
+    assert_redirected_to accounts_path
+    assert theirs.reload.ignored?
+    assert_nil theirs.current_balance
+    assert_not @item.reload.pending_account_setup?
+  end
+
   private
 
     def stub_authorization_start

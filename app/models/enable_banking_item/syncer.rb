@@ -47,7 +47,7 @@ class EnableBankingItem::Syncer
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: enable_banking_item.enable_banking_accounts.includes(:account_provider, :account))
 
-    unlinked_accounts = enable_banking_item.enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+    unlinked_accounts = enable_banking_item.enable_banking_accounts.needs_setup
 
     if unlinked_accounts.any?
       enable_banking_item.update!(pending_account_setup: true)

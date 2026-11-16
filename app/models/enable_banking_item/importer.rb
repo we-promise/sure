@@ -1148,7 +1148,7 @@ class EnableBankingItem::Importer
         next if identification_hash.blank? || current_uid.blank?
 
         eb_acc = find_enable_banking_account_by_hash(identification_hash)
-        next unless eb_acc
+        next if eb_acc.nil? || eb_acc.ignored?
         # Update the API account_id (UUID) if it has changed (UIDs are session-scoped)
         eb_acc.update!(account_id: current_uid) if eb_acc.account_id != current_uid
       end

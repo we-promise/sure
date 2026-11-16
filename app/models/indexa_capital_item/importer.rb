@@ -43,6 +43,33 @@ class IndexaCapitalItem::Importer
     raise
   end
 
+  # Fetch the account list and refresh every account the user has not ignored.
+  # Also used by the controller to show fresh balances in the account picker.
+  def import_accounts
+    Rails.logger.info "IndexaCapitalItem::Importer - Fetching accounts from Indexa Capital API"
+
+    accounts_data = indexa_capital_provider.list_accounts
+
+    stats["api_requests"] = stats.fetch("api_requests", 0) + 1
+    stats["total_accounts"] = accounts_data.size
+
+    upstream_account_ids = []
+
+    accounts_data.each do |account_data|
+      import_account(account_data)
+      upstream_account_ids << account_data[:account_number].to_s if account_data[:account_number]
+    rescue => e
+      Rails.logger.error "IndexaCapitalItem::Importer - Failed to import account: #{e.message}"
+      stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
+      register_error(e, account_data: account_data)
+    end
+
+    persist_stats!
+
+    # Clean up accounts that no longer exist upstream
+    prune_removed_accounts(upstream_account_ids)
+  end
+
   private
 
     def stats
@@ -55,34 +82,15 @@ class IndexaCapitalItem::Importer
       sync.update_columns(sync_stats: merged)
     end
 
-    def import_accounts
-      Rails.logger.info "IndexaCapitalItem::Importer - Fetching accounts from Indexa Capital API"
-
-      accounts_data = indexa_capital_provider.list_accounts
-
-      stats["api_requests"] = stats.fetch("api_requests", 0) + 1
-      stats["total_accounts"] = accounts_data.size
-
-      upstream_account_ids = []
-
-      accounts_data.each do |account_data|
-        import_account(account_data)
-        upstream_account_ids << account_data[:account_number].to_s if account_data[:account_number]
-      rescue => e
-        Rails.logger.error "IndexaCapitalItem::Importer - Failed to import account: #{e.message}"
-        stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
-        register_error(e, account_data: account_data)
-      end
-
-      persist_stats!
-
-      # Clean up accounts that no longer exist upstream
-      prune_removed_accounts(upstream_account_ids)
-    end
-
     def import_account(account_data)
       account_number = account_data[:account_number].to_s
       return if account_number.blank?
+
+      indexa_capital_account = indexa_capital_item.indexa_capital_accounts.find_or_initialize_by(
+        indexa_capital_account_id: account_number
+      )
+      # Checked here rather than up front so an account ignored mid-sync is not written back.
+      return if indexa_capital_account.ignored?
 
       # Fetch current balance from performance endpoint
       begin
@@ -92,10 +100,6 @@ class IndexaCapitalItem::Importer
       rescue => e
         Rails.logger.warn "IndexaCapitalItem::Importer - Failed to fetch balance for #{account_number}: #{e.message}"
       end
-
-      indexa_capital_account = indexa_capital_item.indexa_capital_accounts.find_or_initialize_by(
-        indexa_capital_account_id: account_number
-      )
 
       indexa_capital_account.upsert_from_indexa_capital!(account_data)
 

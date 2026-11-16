@@ -132,4 +132,40 @@ class IndexaCapitalAccountTest < ActiveSupport::TestCase
     assert_includes encrypted, "raw_holdings_payload"
     assert_includes encrypted, "raw_activities_payload"
   end
+
+  test "ignore! keeps the account's identity but drops what was fetched for it" do
+    @account.update!(raw_payload: { "account_number" => "LPYH3MCQ" }, raw_holdings_payload: [ { "titles" => 1 } ],
+      raw_activities_payload: [ { "id" => "a1" } ])
+
+    assert @account.ignore!
+
+    @account.reload
+    assert @account.ignored?
+    assert_equal "LPYH3MCQ", @account.indexa_capital_account_id
+    assert_equal "Indexa Capital Mutual Fund (LPYH3MCQ)", @account.name
+    assert_nil @account.current_balance
+    assert_nil @account.raw_payload
+    assert_equal [], @account.raw_holdings_payload
+    assert_equal [], @account.raw_activities_payload
+  end
+
+  test "ignore! refuses an account that is linked to a Sure account" do
+    linked_account = Account.create!(family: @family, name: "My Fund", balance: 1000, currency: "EUR", accountable: Investment.new)
+    @account.ensure_account_provider!(linked_account)
+
+    assert_not @account.ignore!
+    assert_not @account.reload.ignored?
+    assert_not_nil @account.current_balance
+  end
+
+  test "needs_setup leaves out linked and ignored accounts" do
+    pension = indexa_capital_accounts(:pension_plan)
+    linked_account = Account.create!(family: @family, name: "My Fund", balance: 1000, currency: "EUR", accountable: Investment.new)
+    @account.ensure_account_provider!(linked_account)
+
+    assert_equal [ pension ], @item.indexa_capital_accounts.needs_setup.to_a
+
+    pension.ignore!
+    assert_empty @item.indexa_capital_accounts.needs_setup
+  end
 end

@@ -22,6 +22,9 @@ class AccountProvider < ApplicationRecord
   # The Sure account and its holdings are untouched and carry on as manual.
   after_destroy :destroy_onchain_provider_account, if: :onchain_provider?
 
+  # Linking an account the user ignored during setup is how they take it back.
+  after_create :stop_ignoring_provider_account, if: -> { provider.try(:ignored?) }
+
   # Returns the provider adapter for this connection
   def adapter
     Provider::Factory.create_adapter(provider, account: account)
@@ -34,6 +37,10 @@ class AccountProvider < ApplicationRecord
   end
 
   private
+
+    def stop_ignoring_provider_account
+      provider.update!(ignored: false)
+    end
 
     def financekit_has_exclusive_writer
       # belongs_to :account already reports a missing account; bail out rather

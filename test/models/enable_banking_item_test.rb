@@ -292,4 +292,38 @@ class EnableBankingItemTest < ActiveSupport::TestCase
 
     assert_equal({}, @item.build_psu_headers)
   end
+
+  test "an ignored account no longer needs setup" do
+    @item.save!
+    open_account = @item.enable_banking_accounts.create!(name: "Mine", uid: "hash_mine", currency: "EUR")
+    @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR").ignore!
+    Sync.create!(syncable: @item)
+
+    assert_equal 1, @item.unlinked_accounts_count
+    assert_equal "0 synced, 1 need setup", @item.sync_status_summary
+
+    open_account.ignore!
+    assert_equal 0, @item.unlinked_accounts_count
+    assert_equal "0 accounts synced", @item.sync_status_summary
+  end
+
+  test "re-authorizing does not refresh an ignored account" do
+    @item.save!
+    ignored = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR")
+    ignored.ignore!
+    provider = mock("enable_banking_provider")
+    provider.stubs(:create_session).returns(
+      session_id: "sess_new",
+      accounts: [
+        { uid: "uid_theirs", identification_hash: "hash_theirs", currency: "EUR", name: "Renamed", iban: "FR7600001" },
+        { uid: "uid_mine", identification_hash: "hash_mine", currency: "EUR", name: "Mine" }
+      ]
+    )
+    @item.stubs(:enable_banking_provider).returns(provider)
+
+    assert_no_changes -> { ignored.reload.attributes } do
+      @item.complete_authorization(code: "code")
+    end
+    assert @item.enable_banking_accounts.exists?(uid: "hash_mine")
+  end
 end
