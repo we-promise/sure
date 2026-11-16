@@ -275,7 +275,8 @@ class EnableBankingEntry::Processor
         source: "enable_banking",
         merchant: merchant,
         notes: notes,
-        extra: extra
+        extra: extra,
+        investment_activity_label: investment_activity_label
       )
     rescue ArgumentError => e
       Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{safe_id}: #{e.message}"
@@ -377,6 +378,16 @@ class EnableBankingEntry::Processor
         Rails.logger.error "EnableBankingEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"
         nil
       end
+    end
+
+    # The adapter detects an investment account's activity label ("Dividend",
+    # "Interest", "Fee") from the start of the name, which a combined
+    # "payee - description" name no longer has, so detect it from the bank
+    # description itself. nil leaves the adapter's name-based detection in place.
+    def investment_activity_label
+      return unless account.investment?
+
+      import_adapter.detect_activity_label(data.dig(:bank_transaction_code, :description), amount)
     end
 
     def notes

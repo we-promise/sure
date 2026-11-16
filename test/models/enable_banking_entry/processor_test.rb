@@ -1167,6 +1167,49 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "TELIA SVERIGE - Card purchase", card_purchase
   end
 
+  test "detects the investment activity label from the transaction type description" do
+    investment_account = accounts(:investment)
+    enable_banking_account = EnableBankingAccount.create!(
+      enable_banking_item: @enable_banking_item,
+      name: "Depot",
+      uid: "eb_uid_investment",
+      currency: "EUR"
+    )
+    AccountProvider.create!(account: investment_account, provider: enable_banking_account)
+
+    tx = {
+      transaction_id: "txn_dividend",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.50", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      remittance_information: [ "ACME CORP" ],
+      bank_transaction_code: { description: "Dividend" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: enable_banking_account).process
+
+    assert_equal "ACME CORP - Dividend", entry.name
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
+  test "does not set an investment activity label on a non-investment account" do
+    tx = {
+      transaction_id: "txn_interest",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "3.10", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      remittance_information: [ "SAVINGS BANK" ],
+      bank_transaction_code: { description: "Interest" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+
+    assert_equal "SAVINGS BANK - Interest", entry.name
+    assert_nil entry.transaction.investment_activity_label
+  end
+
   test "uses a later remittance line when the first one is only a reference" do
     name = build_name(
       credit_debit_indicator: "DBIT",
