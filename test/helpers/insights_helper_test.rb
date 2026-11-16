@@ -178,6 +178,24 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_action(dangling)
   end
 
+  test "bank fees warn" do
+    assert_equal "warning", insight_icon_color(build_insight("bank_fees"))
+  end
+
+  test "bank fees lead with the total and link to that account's fees in the window" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+    family.categories.create!(name: "Fees", color: "#6b7280", lucide_icon: "receipt")
+    insight = build_insight("bank_fees",
+      metadata: { "account_id" => account.id },
+      facts: { "amount" => "$36.00", "count" => 3 },
+      period_start: Date.new(2026, 8, 18), period_end: Date.new(2026, 11, 16))
+
+    assert_equal [ "$36.00", "3 charges" ], insight_key_figure(insight)
+    assert_equal transactions_path(q: { account_ids: [ account.id ], categories: [ "Fees" ], start_date: "2026-08-18", end_date: "2026-11-16" }),
+      insight_action(insight)[:href]
+  end
+
   test "maintained reserve metadata and action render in German" do
     family = families(:dylan_family)
     goal = family.goals.first

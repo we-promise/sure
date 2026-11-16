@@ -46,6 +46,9 @@ class Category < ApplicationRecord
       .order(:name, :id)
   }
   scope :roots, -> { where(parent_id: nil) }
+  # The default Fees category: its stored name is in the locale active when it
+  # was created, which is the family's own or the English default.
+  scope :fees, ->(locale) { where(name: [ locale.to_s, "en" ].uniq.map { |name_locale| I18n.t(FEES_NAME_KEY, locale: name_locale) }) }
   # Legacy scopes - classification removed; these now return all categories
   scope :incomes, -> { all }
   scope :expenses, -> { all }
@@ -111,6 +114,7 @@ class Category < ApplicationRecord
   UNCATEGORIZED_NAME_KEY = "models.category.uncategorized"
   OTHER_INVESTMENTS_NAME_KEY = "models.category.other_investments"
   INVESTMENT_CONTRIBUTIONS_NAME_KEY = "models.category.investment_contributions"
+  FEES_NAME_KEY = "models.category.defaults.fees"
   DEFAULT_CATEGORY_TRANSLATION_KEYS = %w[
     income
     food_and_drink

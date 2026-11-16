@@ -22,6 +22,13 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
     end
   end
 
+  test "bank fees have Spanish copy of their own" do
+    TEMPLATE_FACTS.slice("bank_fees.recurring", "bank_fees.new").each do |template_key, facts|
+      assert I18n.exists?("insights.templates.#{template_key}", :es, fallback: false), "missing es copy for #{template_key}"
+      assert I18n.t!("insights.templates.#{template_key}", locale: :es, **facts).present?
+    end
+  end
+
   private
     # One representative facts hash per template a generator can emit. Keeps
     # the i18n templates honest: a renamed key or interpolation raises here
@@ -39,7 +46,9 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
       "idle_cash" => { account: "Emergency fund", balance: "$28,400.00", idle_days: 60 },
       "budget_at_risk.over" => { categories: "Food & Drink and Travel", count: 2, budget_spent_pct: 84 },
       "budget_at_risk.near" => { categories: "Shopping", count: 1, budget_spent_pct: 72 },
-      "budget_on_track" => { spent: "$2,948.00", budgeted: "$5,200.00", budget_spent_pct: 57 }
+      "budget_on_track" => { spent: "$2,948.00", budgeted: "$5,200.00", budget_spent_pct: 57 },
+      "bank_fees.recurring" => { account: "Checking", amount: "$36.00", count: 3, days: 90 },
+      "bank_fees.new" => { account: "Checking", amount: "$3.00", count: 1, days: 90 }
     }.freeze
 
     def generated_insight
