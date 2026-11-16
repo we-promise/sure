@@ -1129,6 +1129,21 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     EnableBankingEntry::Processor.new(data, enable_banking_account: @enable_banking_account).send(:name)
   end
 
+  # An Enable Banking account linked to the investment fixture, for tests of
+  # investment activity labels.
+  def investment_enable_banking_account
+    @investment_enable_banking_account ||= begin
+      enable_banking_account = EnableBankingAccount.create!(
+        enable_banking_item: @enable_banking_item,
+        name: "Depot",
+        uid: "eb_uid_investment",
+        currency: "EUR"
+      )
+      AccountProvider.create!(account: accounts(:investment), provider: enable_banking_account)
+      enable_banking_account
+    end
+  end
+
   test "skips technical card counterparty and falls back to remittance_information" do
     name = build_name(
       credit_debit_indicator: "CRDT",
@@ -1168,15 +1183,6 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   test "detects the investment activity label from the transaction type description" do
-    investment_account = accounts(:investment)
-    enable_banking_account = EnableBankingAccount.create!(
-      enable_banking_item: @enable_banking_item,
-      name: "Depot",
-      uid: "eb_uid_investment",
-      currency: "EUR"
-    )
-    AccountProvider.create!(account: investment_account, provider: enable_banking_account)
-
     tx = {
       transaction_id: "txn_dividend",
       booking_date: Date.current.to_s,
@@ -1187,9 +1193,43 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
       status: "BOOK"
     }
 
-    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: enable_banking_account).process
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: investment_enable_banking_account).process
 
     assert_equal "ACME CORP - Dividend", entry.name
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
+  test "does not detect an investment activity label from the payee of a combined name" do
+    tx = {
+      transaction_id: "txn_fund_transfer",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "100.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      remittance_information: [ "Dividend Growth Fund" ],
+      bank_transaction_code: { description: "Credit transfer" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: investment_enable_banking_account).process
+
+    assert_equal "Dividend Growth Fund - Credit transfer", entry.name
+    assert_nil entry.transaction.investment_activity_label
+  end
+
+  test "still detects an investment activity label from a counterparty name" do
+    tx = {
+      transaction_id: "txn_counterparty_dividend",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "8.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor: { name: "Dividend payment ACME" },
+      bank_transaction_code: { description: "Credit transfer" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: investment_enable_banking_account).process
+
+    assert_equal "Dividend payment ACME", entry.name
     assert_equal "Dividend", entry.transaction.investment_activity_label
   end
 

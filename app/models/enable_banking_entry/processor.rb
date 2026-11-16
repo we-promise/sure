@@ -344,6 +344,8 @@ class EnableBankingEntry::Processor
       if payee
         payee = payee.truncate(100)
         return payee if bank_tx_description.nil? || payee.casecmp?(bank_tx_description)
+
+        @combined_name = true
         return "#{payee} - #{bank_tx_description}"
       end
 
@@ -381,13 +383,25 @@ class EnableBankingEntry::Processor
     end
 
     # The adapter detects an investment account's activity label ("Dividend",
-    # "Interest", "Fee") from the start of the name, which a combined
-    # "payee - description" name no longer has, so detect it from the bank
-    # description itself. nil leaves the adapter's name-based detection in place.
+    # "Interest", "Fee") from the start of the name. A combined
+    # "payee - description" name starts with the payee instead, so the label is
+    # detected from the bank description, and "" stops the adapter from reading
+    # one out of a payee such as "Dividend Growth Fund". nil leaves the adapter's
+    # name-based detection in place for every other name.
     def investment_activity_label
       return unless account.investment?
 
-      import_adapter.detect_activity_label(data.dig(:bank_transaction_code, :description), amount)
+      label = import_adapter.detect_activity_label(data.dig(:bank_transaction_code, :description), amount)
+      return label if label
+
+      "" if combined_name?
+    end
+
+    # True when #name is "payee - description", which #name records as it
+    # builds it.
+    def combined_name?
+      name
+      @combined_name == true
     end
 
     def notes
