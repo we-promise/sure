@@ -570,6 +570,21 @@ flowchart LR
 - Bill setup runs on the web thread until PR 3.
 - Configuration stays on the hostings page until PR 7.
 
+## Built on 2c afterwards
+
+- **#3605** (reasoning effort): see the reasoning effort note under Decisions.
+- **#3193** (match existing merchants only): build it on top of 2c's `DetectMerchants`, as
+  recommended on that issue, not on the old workers.
+  - The schema returns an existing merchant's id or `null`, with no `business_url`.
+  - `Family::AutoMerchantDetector`'s apply step accepts only an id that resolves to a merchant
+    valid for the family (the `Merchant::Resolver` from
+    [06 F-R7](06-ai-file-split-review.md)). It creates no merchant and writes no `website_url`
+    or `logo_url`.
+  - The mode is an option on the merchant-detection rule action, so no ENV (§4.7) and no
+    instance setting.
+  - The `detect_merchants` manifest already lists merchant names, so consent doesn't change.
+  - #3843 and #4310's merchant matcher already cover part of the issue.
+
 ## Upgrade notes and release notes (2c)
 
 - Bill setup honours `LLM_JSON_MODE`, and on native OpenAI it uses a strict schema.

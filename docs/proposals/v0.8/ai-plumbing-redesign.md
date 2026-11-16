@@ -2811,7 +2811,8 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `Ai::GenerationJob` with small batches, failover and escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
      8.3), and reasoning effort on route entries (#3605) with its per-preset mapping. Its only
      source before PR 7 is the legacy `openai_reasoning_effort` setting (section 4.5), which #3605,
-     rebuilt on 2c, adds. Features:
+     rebuilt on 2c, adds. #3193 (match existing merchants only) is also built on top of 2c's
+     `DetectMerchants`, as an option on the merchant-detection rule action. Features:
      `bill_setup`, `categorize` (the generation), `detect_merchants` and `enhance_merchants`, each
      with its requester. Lanes map onto today's two queues (interactive → `ai_high_priority`,
      prompt and background → `ai_low_priority`) until PR 4. Records live cassettes for
