@@ -329,4 +329,26 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_equal [ "hash_theirs", "hash_alt" ], ignored.identification_hashes
     assert @item.enable_banking_accounts.exists?(uid: "hash_mine")
   end
+
+  test "re-authorizing does not write back an account ignored after it was read" do
+    @item.save!
+    account = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", account_id: "uid_old", currency: "EUR")
+    stale = EnableBankingAccount.find(account.id)
+    # Another request ignores the account after the re-authorization has read it.
+    account.ignore!
+    @item.enable_banking_accounts.stubs(:find_or_initialize_by).with(uid: "hash_theirs").returns(stale)
+    @item.stubs(:enable_banking_provider).returns(stub(create_session: {
+      session_id: "sess_new",
+      accounts: [ { uid: "uid_new", identification_hash: "hash_theirs", currency: "EUR", name: "Renamed", iban: "FR7600001" } ]
+    }))
+
+    @item.complete_authorization(code: "code")
+
+    account.reload
+    assert account.ignored?
+    assert_equal "Theirs", account.name
+    assert_nil account.raw_payload
+    assert_nil account.iban
+    assert_equal "uid_new", account.account_id
+  end
 end

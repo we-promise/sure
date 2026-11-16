@@ -434,13 +434,12 @@ class EnableBankingItem < ApplicationRecord
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        if enable_banking_account.ignored?
-          enable_banking_account.refresh_session_identifiers!(account_data)
-          next
+        written = enable_banking_account.write_unless_ignored do
+          enable_banking_account.upsert_enable_banking_snapshot!(account_data)
+          enable_banking_account.save!
         end
-
-        enable_banking_account.upsert_enable_banking_snapshot!(account_data)
-        enable_banking_account.save!
+        # An ignored account keeps only its session identifiers current.
+        enable_banking_account.refresh_session_identifiers!(account_data) unless written
       end
     end
 end
