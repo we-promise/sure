@@ -384,15 +384,12 @@ class Holding < ApplicationRecord
     return unless original_security.present?
 
     transaction do
-      # Move trades back (see note above about limitation)
-      account.trades.where(security: current_security).update_all(security_id: original_security.id)
-      lots = account.holding_lots.where(security: current_security)
-      HoldingLot.move!(derived: lots.derived, opening: lots.opening.where(origin_security: original_security), to: original_security)
-
       # Reset ALL holdings that were remapped from this provider_security
       # Write only the columns the reset owns, so a negative derived row
       # still moves back (see remap_security!). Lock the rows as they are
-      # loaded, under this predicate, for the same reason as there.
+      # loaded, under this predicate, for the same reason as there. Holdings
+      # go before trades, in the order remap_security! takes them, so a remap
+      # and a reset of the same security cannot each wait on the other.
       account.holdings.where(security: current_security, provider_security: original_security).lock.find_each do |holding|
         reset = holding.update_columns(
           security_id: original_security.id,
@@ -401,9 +398,14 @@ class Holding < ApplicationRecord
           updated_at: Time.current
         )
         # As in remap_security!: should the write miss, fail and roll back
-        # the trade move.
+        # the rows already reset.
         raise ActiveRecord::RecordNotSaved.new("Holding #{holding.id} was deleted during reset", holding) unless reset
       end
+
+      # Move trades back (see note above about limitation)
+      account.trades.where(security: current_security).update_all(security_id: original_security.id)
+      lots = account.holding_lots.where(security: current_security)
+      HoldingLot.move!(derived: lots.derived, opening: lots.opening.where(origin_security: original_security), to: original_security)
     end
 
     # Reload self to reflect changes

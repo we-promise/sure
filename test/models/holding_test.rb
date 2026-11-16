@@ -665,6 +665,26 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal old_security, @amzn.reload.security
   end
 
+  # A remap and a reset of the same security lock the same holding and trade
+  # rows. Taken in opposite orders, each can hold what the other waits for and
+  # Postgres aborts one, so both take the holdings first.
+  test "remap and reset both lock holdings before moving trades" do
+    new_security = create_security("GOOGORDER", prices: [ { date: Date.current, price: 100.0 } ])
+    create_trade(@amzn.security, account: @account, qty: 5, price: 100.00, date: Date.current)
+
+    remap_sql = sql_statements { @amzn.remap_security!(new_security) }
+    reset_sql = sql_statements { @amzn.reset_security_to_provider! }
+
+    { "remap" => remap_sql, "reset" => reset_sql }.each do |name, statements|
+      holdings_lock = statements.index { |sql| sql.match?(LOCKED_LOAD) }
+      trades_move = statements.index { |sql| sql.start_with?('UPDATE "trades"') }
+
+      assert holdings_lock, "#{name} should lock the holdings it moves"
+      assert trades_move, "#{name} should move the trades"
+      assert holdings_lock < trades_move, "#{name} moved trades before locking holdings"
+    end
+  end
+
   test "remap_security! raises and rolls back when a moved holding is gone at write time" do
     old_security = @amzn.security
     new_security = create_security("GOOGGONE", prices: [ { date: Date.current, price: 100.0 } ])
@@ -1123,6 +1143,12 @@ class HoldingTest < ActiveSupport::TestCase
   end
 
   private
+    def sql_statements(&block)
+      statements = []
+      callback = ->(*, payload) { statements << payload[:sql] unless payload[:name] == "SCHEMA" }
+      ActiveSupport::Notifications.subscribed(callback, "sql.active_record", &block)
+      statements
+    end
 
     def assert_cost(expected, actual, message)
       expected.nil? ? assert_nil(actual, message) : assert_equal(expected, actual, message)
