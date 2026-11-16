@@ -1,0 +1,21 @@
+---
+ro:
+  settings:
+    preferences:
+      show:
+        country: Țară
+        currency: Monedă
+        date_format: Format dată
+        general_subtitle: Configurează-ți preferințele
+        general_title: General
+        default_period: Perioadă implicită
+        default_account_order: Ordine implicită conturi
+        language: Limbă
+        language_auto: Limba browserului
+        page_title: Preferințe
+        theme_dark: Întunecat
+        theme_light: Luminos
+        theme_subtitle: Alege o temă preferată pentru aplicație
+        theme_system: Sistem
+        theme_title: Temă
+        timezone: Fus orar

@@ -245,7 +245,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "dashboard skips the data queries of hidden widgets" do
-    %w[cashflow_sankey outflows_donut money_flow spending_trend].each { |key| @user.update_dashboard_section_hidden(key, true) }
+    %w[cashflow_sankey outflows_donut cashflow_donut money_flow spending_trend].each { |key| @user.update_dashboard_section_hidden(key, true) }
     IncomeStatement.any_instance.expects(:income_totals).never
     IncomeStatement.any_instance.expects(:expense_totals).never
     IncomeStatement.any_instance.expects(:net_category_totals).never
@@ -268,17 +268,20 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update_preferences ignores malformed dashboard_section_layout without erroring" do
-    previous_height = @user.reload.dashboard_section_height("net_worth_chart")
-
-    patch "/dashboard/preferences", params: {
-      preferences: { dashboard_section_layout: "not-a-hash" }
-    }, as: :json
+    assert_no_changes -> { @user.reload.dashboard_section_height("net_worth_chart") } do
+      patch "/dashboard/preferences", params: {
+        preferences: { dashboard_section_layout: "not-a-hash" }
+      }, as: :json
+    end
 
     assert_response :ok
-    assert_equal previous_height, @user.reload.dashboard_section_height("net_worth_chart")
   end
 
   test "dashboard memoizes income statement period totals while rendering" do
+    # The cash flow rings have their own month, so they legitimately build a
+    # second period's totals; only the widgets sharing the dashboard period
+    # are under test here.
+    @user.update_dashboard_section_hidden("cashflow_donut", true)
     income_statement = IncomeStatement.new(@family)
     IncomeStatement.stubs(:new).returns(income_statement)
 
@@ -338,6 +341,116 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
     assert_response :ok
     assert_select "[data-controller='sankey-chart']"
+  end
+
+  test "dashboard renders the cash flow rings with unspent income as a muted track on the outflows ring" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -100_000, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
+    create_transaction(account: @family.accounts.first, name: "Cash withdrawal", amount: 50)
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section"
+    assert_select "#segment_unused"
+    assert_select "#segment_overage", count: 0
+    assert_select "#cashflow-donut-section [data-donut-chart-target='defaultContent']", text: /Spent.*of .* income.* left/m
+
+    inflows, outflows = cashflow_donut_rings
+    assert inflows.any? { |s| s["id"] == "income_#{categories(:income).id}" }
+    assert outflows.any? { |s| s["id"] == "expense_uncategorized" }, "synthetic categories use their invariant key, not a localized name"
+    assert_equal "unused", outflows.last["id"]
+    assert_nil outflows.last["filter_value"]
+    assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
+    # Percentages are shares of the common ring, so each ring's sum to 100.
+    assert_in_delta 100, inflows.sum { |s| s["percentage"] }, 1
+    assert_in_delta 100, outflows.sum { |s| s["percentage"] }, 1
+  end
+
+  test "dashboard renders the cash flow rings with overspend as an overage slice on the inflows ring" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -100, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Rent", amount: 100_000, category: categories(:food_and_drink))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#segment_overage"
+    assert_select "#segment_unused", count: 0
+    assert_select "#cashflow-donut-section [data-donut-chart-target='defaultContent']", text: /over/
+
+    inflows, outflows = cashflow_donut_rings
+    assert_equal "overage", inflows.last["id"]
+    assert_in_delta inflows.sum { |s| s["amount"] }, outflows.sum { |s| s["amount"] }, 0.01
+  end
+
+  test "dashboard scopes the cash flow rings to the selected month and accounts" do
+    account = @family.accounts.create!(name: "Rings Test Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    other_account = @family.accounts.create!(name: "Rings Other Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+    other_category = @family.categories.create!(name: "Rings Other Category", color: "#123456")
+    selected_month = 1.month.ago.beginning_of_month.to_date
+    create_transaction(account: account, name: "Paycheck", amount: -3_000, date: selected_month + 1.day, category: categories(:income))
+    create_transaction(account: account, name: "Groceries", amount: 500, date: selected_month + 2.days, category: categories(:food_and_drink))
+    create_transaction(account: other_account, name: "Elsewhere", amount: 999, date: selected_month + 3.days, category: other_category)
+    create_transaction(account: account, name: "This month", amount: 777, date: Date.current, category: other_category)
+
+    get root_path, params: { cashflow_month: selected_month.iso8601, cashflow_account_ids: [ account.id ] }
+
+    assert_response :ok
+    inflows, outflows = cashflow_donut_rings
+    assert_equal 3000.0, inflows.find { |s| s["id"] == "income_#{categories(:income).id}" }["amount"]
+    assert_equal 500.0, outflows.find { |s| s["id"] == "expense_#{categories(:food_and_drink).id}" }["amount"]
+    assert_nil outflows.find { |s| s["id"] == "expense_#{other_category.id}" }, "other account's and other month's spending must be excluded"
+    assert_select "#cashflow-donut-section a[href*='account_ids%5D%5B%5D=#{account.id}']"
+    assert_select "#cashflow-donut-section [data-donut-chart-account-ids-value='#{[ account.id.to_s ].to_json}']"
+  end
+
+  test "the cash flow rings' drill-downs only list confirmed transactions, like the ring amounts" do
+    create_transaction(account: @family.accounts.first, name: "Salary", amount: -1_000, category: categories(:income))
+    create_transaction(account: @family.accounts.first, name: "Groceries", amount: 100, category: categories(:food_and_drink))
+
+    get root_path
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section a[href*='q%5Bcategories%5D%5B%5D=#{CGI.escape(categories(:food_and_drink).filter_value)}'][href*='q%5Bstatus%5D%5B%5D=confirmed']"
+    assert_select "#cashflow-donut-section [data-donut-chart-statuses-value='#{[ "confirmed" ].to_json}']"
+  end
+
+  test "dashboard keeps the cash flow rings' controls when the selection has no data" do
+    empty_account = @family.accounts.create!(name: "Rings Empty Checking", currency: @family.currency, balance: 0, accountable: Depository.new)
+
+    get root_path, params: { cashflow_account_ids: [ empty_account.id ] }
+
+    assert_response :ok
+    assert_select "#cashflow-donut-section [data-controller='donut-chart']", count: 0
+    assert_select "#cashflow-donut-section", text: /#{I18n.t("pages.dashboard.cashflow_donut.no_data")}/
+    assert_select "#cashflow-donut-section form input[name='cashflow_account_ids[]']"
+  end
+
+  test "the cash flow rings' controls keep the other widgets' months and filters, and vice versa" do
+    account = accounts(:depository)
+    category = categories(:food_and_drink)
+    money_flow_month, cashflow_month, other_month = (1..3).map { |i| i.months.ago.beginning_of_month.to_date.iso8601 }
+
+    get root_path(money_flow_month: money_flow_month, money_flow_account_ids: [ account.id ], spending_category_ids: [ category.id ],
+                  cashflow_month: cashflow_month, cashflow_account_ids: [ account.id ])
+    assert_response :ok
+
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='money_flow_month'][value='#{money_flow_month}']"
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='money_flow_account_ids[]'][value='#{account.id}']"
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='spending_category_ids[]'][value='#{category.id}']"
+    assert_select "#cashflow-donut-section form input[type='hidden'][name='cashflow_account_ids[]']", count: 0
+
+    assert_select "#money-flow-section form input[type='hidden'][name='cashflow_month'][value='#{cashflow_month}']"
+    assert_select "#money-flow-section form input[type='hidden'][name='cashflow_account_ids[]'][value='#{account.id}']"
+
+    link = dashboard_link_params("#cashflow-donut-section a[href*='cashflow_month=#{other_month}']")
+    assert_equal money_flow_month, link["money_flow_month"]
+    assert_equal [ account.id ], link["cashflow_account_ids"]
+  end
+
+  def cashflow_donut_rings
+    chart = css_select("#cashflow-donut-section [data-controller='donut-chart']").first
+    JSON.parse(chart["data-donut-chart-rings-value"])
   end
 
   test "dashboard renders sankey chart zoom controls and stable node ids" do
@@ -1079,6 +1192,48 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
       assert_equal money_text(previous_series.last.fetch("value")), previous_total
       refute_equal money_text(0), previous_total
     end
+  end
+
+  test "dashboard says which currencies are left out of its totals" do
+    @family.accounts.create!(name: "KRW Savings", balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from KRW to USD is stored yet, so some totals may leave out amounts in KRW/
+  end
+
+  test "dashboard does not name the currency of an account the member cannot see" do
+    @family.accounts.create!(name: "Admin KRW", owner: users(:family_admin), balance: 1_000_000, currency: "KRW", accountable: Depository.new)
+    sign_in users(:family_member)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+  end
+
+  test "dashboard shows no exchange rate notes when every rate is current" do
+    @family.accounts.create!(name: "EUR Savings", balance: 100, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
+    assert_select "[data-testid='stale-exchange-rates']", count: 0
+  end
+
+  test "dashboard says when today's totals use an out-of-date rate" do
+    rate_date = 30.days.ago.to_date
+    @family.accounts.create!(name: "JPY Savings", balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: rate_date, rate: 0.0067)
+
+    get root_path
+    assert_response :ok
+
+    assert_select "[data-testid='stale-exchange-rates']", text: /JPY from #{Regexp.escape(I18n.l(rate_date, format: :long))}/
+    assert_select "[data-testid='missing-exchange-rates']", count: 0
   end
 
   test "dashboard spending trend category filter narrows both months and the header totals" do

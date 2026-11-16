@@ -39,10 +39,10 @@ class Import < ApplicationRecord
 
   DOCUMENT_TYPES = %w[bank_statement credit_card_statement investment_statement financial_document contract other].freeze
 
-  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
+  TYPES = %w[TransactionImport TradeImport AccountImport MintImport ActualImport YnabImport MonarchImport CategoryImport RuleImport MerchantImport PdfImport QifImport SureImport].freeze
   # Imports that write family-wide configuration (categories, tags, rules,
   # merchants), which guests may view but not change.
-  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport].freeze
+  FAMILY_CONFIG_TYPES = %w[CategoryImport MerchantImport RuleImport SureImport MonarchImport].freeze
   SIGNAGE_CONVENTIONS = %w[inflows_positive inflows_negative]
   SEPARATORS = [ [ "Comma (,)", "," ], [ "Semicolon (;)", ";" ] ].freeze
 
@@ -252,6 +252,12 @@ class Import < ApplicationRecord
     ImportJob.perform_later(self)
   end
 
+  # Whether publishing would change existing records even when the dry run
+  # counts nothing new. Subclasses that do this override it.
+  def changes_existing_records?
+    false
+  end
+
   # Whether import! already committed rows for this import. Distinguishes a
   # job that died mid-import (single transaction → rolled back, nothing
   # attached) from one that died after the data landed but before the status
@@ -289,6 +295,7 @@ class Import < ApplicationRecord
     import!
 
     family.sync_later
+    EntryScheduledSyncJob.schedule_for_entries(entries)
 
     update! status: :complete
   rescue => error
@@ -473,6 +480,12 @@ class Import < ApplicationRecord
 
   def revertable?
     complete? || revert_failed?
+  end
+
+  # Whether the wizard's upload and configuration steps are closed even to
+  # someone who may edit the import. Subclasses that need this override it.
+  def configuration_locked?
+    false
   end
 
   def family_config?

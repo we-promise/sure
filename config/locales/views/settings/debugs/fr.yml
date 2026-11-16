@@ -1,0 +1,39 @@
+---
+fr:
+  settings:
+    debugs:
+      show:
+        context:
+          account: compte=%{value}
+          account_provider: account_provider=%{value}
+          family: famille=%{value}
+          provider: fournisseur=%{value}
+          user: utilisateur=%{value}
+        empty: Aucun événement de débogage trouvé.
+        filters:
+          account_id: Identifiant du compte
+          account_provider_id: ID du fournisseur de compte
+          all: Tout
+          category: Catégorie
+          end_date: À
+          family_id: Carte d'identité familiale
+          level: Niveau
+          provider: Fournisseur
+          reset: Réinitialiser
+          source: Origine
+          start_date: De
+          submit: Filtrer
+          user_id: Identifiant utilisateur
+        missing_value: "-"
+        page_title: Débogage
+        subtitle: Événements opérationnels significatifs pour les super administrateurs. Le plus récent en premier.
+        table:
+          category: Catégorie
+          context: Contexte
+          level: Niveau
+          message: Message
+          metadata: Métadonnées
+          source: Origine
+          time: Temps
+          view_metadata: Voir
+        title: Journal des événements de débogage

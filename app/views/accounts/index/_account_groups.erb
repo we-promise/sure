@@ -1,4 +1,4 @@
-<%# locals: (accounts:) %>
+<%# locals: (accounts:, reconciliation_indicators: {}) %>
 
 <% if accounts.any? %>
   <% ActiveRecord::Associations::Preloader.new(
@@ -26,7 +26,7 @@
     </div>
     <div class="bg-container rounded-lg shadow-border-xs overflow-hidden">
       <% accounts.each_with_index do |account, index| %>
-        <%= render "accounts/account", account: account %>
+        <%= render "accounts/account", account: account, reconciliation_indicator: reconciliation_indicators[account.id] %>
         <% unless index == accounts.count - 1 %>
           <%= render "shared/ruler" %>
         <% end %>
