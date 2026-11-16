@@ -7,6 +7,13 @@ module Entries
 
     setup do
       @account = accounts(:depository)
+      # The partial asks the statement whether Current.user may see it, so the
+      # view needs a signed-in user the way a real request has one.
+      Current.session = users(:family_admin).sessions.create!
+    end
+
+    teardown do
+      Current.session = nil
     end
 
     test "shows uncleared state for a manual entry" do
@@ -85,6 +92,25 @@ module Entries
         "tooltip trigger must stay focusable (as: :button) — it has no <a>/<summary> ancestor to borrow focus from"
       assert_empty trigger.ancestors("a"),
         "tooltip must remain a sibling of the statement link, not a descendant of it"
+    end
+
+    # A statement can be moved to another account (AccountStatement#link_to_account!)
+    # while this entry keeps pointing at it. The period label and filename must not
+    # leak to someone who cannot open the statement itself.
+    test "hides statement metadata when the statement is not viewable" do
+      statement = create_statement(filename: "private-statement.pdf")
+      entry = create_transaction(account: @account, source: "plaid")
+      entry.mark_reconciled!(statement: statement)
+
+      AccountStatement.any_instance.stubs(:viewable_by?).returns(false)
+
+      html = render(partial: "entries/reconciliation_status", locals: { entry: entry.reload })
+
+      assert_includes html, I18n.t("entries.reconciliation.statement_unavailable")
+      assert_not_includes html, "private-statement.pdf"
+      assert_not_includes html, account_statement_path(statement)
+      # The reconciled state itself still shows — only the evidence is withheld.
+      assert_includes html, I18n.t("entries.reconciliation.states.reconciled")
     end
 
     test "shows reconciled without statement when evidence was removed" do

@@ -29,7 +29,13 @@
           <div class="flex items-center justify-between gap-2 text-sm">
             <dt class="text-secondary shrink-0"><%= t("entries.reconciliation.statement_label") %></dt>
             <dd class="text-primary text-right min-w-0">
-              <% if statement.present? %>
+              <%# viewable_by?, not just present?: a statement can be moved to
+                  another account via AccountStatement#link_to_account! while the
+                  entry keeps its reconciled_by_statement FK. Without this, a user
+                  with access to this account but not the statement's new one would
+                  read its period label and filename here, even though
+                  AccountStatementsController refuses them the statement itself. %>
+              <% if statement.present? && statement.viewable_by?(Current.user) %>
                 <%# The visible label is the period range when the statement has
                     one, so the filename is additive context. It goes through
                     DS::Tooltip rather than a raw title= attribute (DS rule 1).
@@ -42,6 +48,8 @@
                         data: { turbo_frame: "_top" } %>
                   <%= render DS::Tooltip.new(text: statement.filename, html_class: "shrink-0") %>
                 </span>
+              <% elsif statement.present? %>
+                <span class="text-secondary"><%= t("entries.reconciliation.statement_unavailable") %></span>
               <% else %>
                 <span class="text-secondary"><%= t("entries.reconciliation.no_statement") %></span>
               <% end %>

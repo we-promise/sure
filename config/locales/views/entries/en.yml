@@ -26,6 +26,7 @@ en:
       statement_label: Statement
       reconciled_on_label: Reconciled on
       no_statement: No statement on file
+      statement_unavailable: Statement not available to you
       states:
         uncleared: Uncleared
         cleared: Cleared
