@@ -64,7 +64,8 @@ class Provider::Base
   # @param accounts [Symbol] The connection's provider account association
   # @param linked_accounts [Symbol, nil] An extra association to preload for status
   # @param panel [true, Hash, nil] The provider's settings panel; a Hash may set
-  #   turbo_id: (defaults to key) and auto_open:. The partial is "<key>_panel".
+  #   turbo_id: (defaults to key), auto_open: and shape: (:single for one
+  #   connection form instead of a list). The partial is "<key>_panel".
   # @param metadata [Hash, nil] Provider::Metadata attributes (region:, kinds:,
   #   maturity:, logo_text:, logo_color:, domain:, ...)
   # @param lists [Hash] How a list loads the family's items, overriding the defaults:
@@ -91,7 +92,8 @@ class Provider::Base
       title: name,
       turbo_id: panel_options.fetch(:turbo_id, key),
       partial: "#{key}_panel",
-      auto_open: panel_options[:auto_open]
+      auto_open: panel_options[:auto_open],
+      shape: panel_options[:shape]
     }.compact.freeze
     if metadata&.key?(:name) || metadata&.key?(:key)
       raise ArgumentError, "#{key}: declare key: and name: once, outside metadata:"
