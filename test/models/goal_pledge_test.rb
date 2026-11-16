@@ -178,6 +178,19 @@ class GoalPledgeTest < ActiveSupport::TestCase
     assert @pledge.reload.status_open?
   end
 
+  test "reopen! expires a pledge whose window has run out, even if the account was unlinked" do
+    matched_transaction_for(@pledge)
+    @pledge.update_columns(expires_at: 1.day.ago)
+    @goal.goal_accounts.where(account_id: @account.id).destroy_all
+
+    @pledge.reopen!
+
+    @pledge.reload
+    assert @pledge.status_expired?
+    assert_nil @pledge.matched_transaction_id
+    assert_not_includes GoalPledge.open_and_expired_now, @pledge
+  end
+
   test "reopen! leaves a pledge that is not matched alone" do
     @pledge.reopen!
     assert @pledge.reload.status_open?

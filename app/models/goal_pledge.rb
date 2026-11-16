@@ -123,15 +123,20 @@ class GoalPledge < ApplicationRecord
   # Puts a matched pledge back to open when the transaction that satisfied it
   # stopped counting: a provider reversed it, so the money never arrived. The
   # transaction foreign key only nulls matched_transaction_id when the row is
-  # deleted, which would leave the pledge matched to nothing. A window that has
-  # run out is closed by SweepExpiredGoalPledgesJob. Validations are skipped:
-  # the account may have been unlinked from the goal since the match.
+  # deleted, which would leave the pledge matched to nothing. A pledge whose
+  # window has run out goes straight to expired. Validations are skipped: the
+  # account may have been unlinked from the goal since the match, which would
+  # make a validated save (and the expiry sweep) fail.
   def reopen!
     with_lock do
       next unless status_matched? && matched_transaction_id.present?
 
       clear_matched_transaction_extra
-      update_columns(status: "open", matched_transaction_id: nil, updated_at: Time.current)
+      update_columns(
+        status: expires_at < Time.current ? "expired" : "open",
+        matched_transaction_id: nil,
+        updated_at: Time.current
+      )
     end
   end
 

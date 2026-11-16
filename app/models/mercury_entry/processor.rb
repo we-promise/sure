@@ -74,8 +74,8 @@ class MercuryEntry::Processor
 
     # An entry the user edited, locked a field on or excluded is kept, but excluded, so
     # their changes survive and it no longer counts as a real transaction. Its split
-    # children carry no Mercury id, so they are excluded with it. The entry is read under
-    # a row lock so an edit made while this runs cannot be deleted with it.
+    # children carry no Mercury id, so they are excluded with it. The entry row is read
+    # under a lock, so an edit of the entry itself made while this runs is not lost.
     def remove_unsettled_entry
       Entry.transaction do
         entry = account.entries.lock.find_by(external_id: external_id, source: "mercury")
