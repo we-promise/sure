@@ -175,7 +175,8 @@ class Provider::Eodhd < Provider
           logo_url: nil,
           exchange_operating_mic: mic,
           country_code: country,
-          currency: currency
+          currency: currency,
+          isin: security.dig("ISIN").presence&.to_s&.strip&.upcase
         )
       end
     end
