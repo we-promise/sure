@@ -130,9 +130,12 @@ class Portfolio::Performance
 
   # Dividend and interest income by calendar month, by security, and the fees
   # over the same rows -- see Portfolio::Income#to_h for the keys. A Hash, as
-  # #drivers is, so it survives the cache. `by_security` is a period figure
-  # holding only income that names a security; the rest of the total is
-  # Portfolio::IncomeBySecurity#unattributed.
+  # #drivers is, so it survives the cache. `by_security` is a period figure,
+  # keyed by the security id each income entry names, as stored; income
+  # naming none is not in it. It is raw input for Portfolio::IncomeBySecurity,
+  # whose #unattributed is the total less only the amounts it can match to a
+  # Security: income under an id naming no Security on this install is in
+  # both, so the two are not to be added together.
   #
   # Its own cache entry, computed only when asked: a caller reading only the
   # returns never runs the by-security query, and one reading only the income
