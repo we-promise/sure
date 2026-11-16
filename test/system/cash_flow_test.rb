@@ -204,8 +204,15 @@ class CashFlowTest < ApplicationSystemTestCase
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     JS
     assert_selector "#cashflow-sankey-chart [data-sankey-chart-target='zoomOutButton']:not([hidden])"
-    # The zoomed view keeps the category and its subcategory: one flow.
-    assert_selector "#cashflow-sankey-chart svg .sankey-link", count: 1
+    # The zoomed view keeps the category and what it flows on to: its
+    # subcategory and, beside it, its own spending.
+    assert_selector "#cashflow-sankey-chart svg .sankey-link", count: 2
+    flows = page.evaluate_script(<<~JS)
+      Array.from(document.querySelectorAll("#cashflow-sankey-chart svg .sankey-link"))
+        .map((path) => [path.__data__.source.name, path.__data__.target.name, path.__data__.value])
+    JS
+    own_share = I18n.t("models.category.own_share", category: "Sankey Shopping")
+    assert_equal [ [ "Sankey Shopping", "Sankey Groceries", 50 ], [ "Sankey Shopping", own_share, 100 ] ].sort, flows.sort
 
     # The sync toast refreshes the page this way once a background sync
     # finishes. The morph keeps the chart elements and their controllers but
