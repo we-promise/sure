@@ -24,6 +24,7 @@
       <CashTransactions>
         <CashTransaction transactionID="4001" type="Deposits/Withdrawals" amount="500.00" currency="CHF" fxRateToBase="1" reportDate="2026-05-03" />
         <CashTransaction transactionID="4002" type="Dividends" amount="2.50" currency="USD" fxRateToBase="0.91" reportDate="2026-05-04" conid="265598" />
+        <CashTransaction transactionID="4003" type="Withholding Tax" amount="-0.38" currency="USD" fxRateToBase="0.91" reportDate="2026-05-04" conid="265598" />
       </CashTransactions>
     </FlexStatement>
     <FlexStatement accountId="U7654321" fromDate="2025-05-08" toDate="2026-05-08" whenGenerated="2026-05-08;12:00:00">
