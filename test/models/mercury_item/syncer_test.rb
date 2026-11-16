@@ -94,6 +94,14 @@ class MercuryItem::SyncerTest < ActiveSupport::TestCase
     )
   end
 
+  test "the import starts from the sync's window" do
+    sync = recording_sync
+    sync.instance_variable_set(:@window_start_date, Date.new(2026, 9, 1))
+    @mercury_item.expects(:import_latest_mercury_data).with(sync_start_date: Date.new(2026, 9, 1)).returns(success: true)
+
+    @syncer.perform_sync(sync)
+  end
+
   test "status text comes from the Mercury syncer translations" do
     I18n.backend.store_translations(:en, mercury_items: { syncer: { importing_accounts: "Fetching from Mercury" } })
     sync = recording_sync
