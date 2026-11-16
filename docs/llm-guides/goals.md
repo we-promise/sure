@@ -112,7 +112,7 @@ enum is `transfer` / `manual_save`; kind is decided at create time by
 
 A matched pledge goes back to `open` (or `expired`, if its window has run out)
 through `GoalPledge#reopen!` when the transaction that satisfied it stops
-counting, as when a provider reverses it (`MercuryEntry::Processor`). Deleting the row alone only nulls
+counting, as when a provider reverses it (`MercuryEntry::Processor`). Deleting the transaction alone only nulls
 `matched_transaction_id`.
 
 ## Currencies and account allocations
