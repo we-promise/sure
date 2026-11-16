@@ -11,12 +11,12 @@ class BackgroundJobHealth
   # Syncs and imports run here; chat runs on ai_high_priority.
   CRITICAL_QUEUE = "high_priority".freeze
   CHAT_QUEUE = "ai_high_priority".freeze
+  AI_QUEUES = [ CHAT_QUEUE, "ai_low_priority" ].freeze
+  # A worker whose AI lane has one thread for both AI queues adds this label to
+  # its Sidekiq process at startup (config/initializers/sidekiq.rb), so web
+  # processes read the worker's lane instead of their own RAILS_AI_MAX_THREADS.
+  ONE_AI_THREAD_LABEL = "one-ai-thread".freeze
   LATENCY_WARN_SECONDS = 60
-
-  # A chat waiting this long is behind another AI job: normal with one AI
-  # thread and a slow model, so it's "busy", not unhealthy. With one thread,
-  # an ai_low_priority backlog means a chat sent now waits too.
-  AI_BUSY_SECONDS = 30
 
   CACHE_KEY = "background_job_health".freeze
   CACHE_TTL = 15.seconds
@@ -37,8 +37,31 @@ class BackgroundJobHealth
       current
     end
 
+    # Only when a single worker process polls the AI queues: with several, a
+    # chat can run on one while another runs background AI jobs.
+    def one_ai_thread?
+      ai_processes = Sidekiq::ProcessSet.new(false).select { |process| process.queues.intersect?(AI_QUEUES) }
+      ai_processes.one? && ai_processes.first.labels.include?(ONE_AI_THREAD_LABEL)
+    rescue => e
+      Rails.logger.warn("BackgroundJobHealth AI thread check failed: #{e.class}: #{e.message}")
+      false
+    end
+
+    def one_ai_thread_worker?(config)
+      ai_capsules = config.capsules.values.select { |capsule| capsule.queues.intersect?(AI_QUEUES) }
+      ai_capsules.one? && ai_capsules.first.concurrency == 1 && (AI_QUEUES - ai_capsules.first.queues).empty?
+    end
+
+    # With one AI thread, a chat sent now waits for any running AI job.
     def ai_busy?
-      current[:ai_busy]
+      one_ai_thread? && ai_job_running?
+    end
+
+    def ai_job_running?(queues: AI_QUEUES)
+      Sidekiq::WorkSet.new.any? { |_process, _thread, work| queues.include?(work.queue) }
+    rescue => e
+      Rails.logger.warn("BackgroundJobHealth busy check failed: #{e.class}: #{e.message}")
+      false
     end
 
     def summary
@@ -55,13 +78,8 @@ class BackgroundJobHealth
         polls_chat = polled_queues.include?(CHAT_QUEUE)
         latency = Sidekiq::Queue.new(CRITICAL_QUEUE).latency
 
-        ai_queues = [ CHAT_QUEUE ]
-        ai_queues << "ai_low_priority" if ENV.fetch("RAILS_AI_MAX_THREADS", 1).to_i == 1
-        ai_latency = ai_queues.map { |q| Sidekiq::Queue.new(q).latency }.max
-
         {
           healthy: workers.positive? && polls_critical && polls_chat && latency < LATENCY_WARN_SECONDS,
-          ai_busy: ai_latency > AI_BUSY_SECONDS,
           workers: workers,
           polls_critical_queue: polls_critical,
           polls_chat_queue: polls_chat,
@@ -71,7 +89,7 @@ class BackgroundJobHealth
       end
 
       def fail_open
-        { healthy: true, ai_busy: false, workers: nil, polls_critical_queue: nil, polls_chat_queue: nil, latency: nil, checked_at: Time.current, error: true }
+        { healthy: true, workers: nil, polls_critical_queue: nil, polls_chat_queue: nil, latency: nil, checked_at: Time.current, error: true }
       end
   end
 end

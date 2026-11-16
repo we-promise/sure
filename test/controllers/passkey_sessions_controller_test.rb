@@ -35,17 +35,19 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     assert_not Session.exists?(user_id: @user.id)
   end
 
-  # The pending invitation lives in the Rack session, and complete_sign_in reads
-  # it immediately after creating the session. Anything that clears the session
-  # in between — a reset_session added to "fix" session fixation, say — drops the
-  # invitee into their own family with no error and no failing test.
-  test "accepts a pending invitation stored before the passkey sign-in" do
+  # Invitations never move or re-role an existing account. A pending invitation
+  # for the user's address (sent before the account existed) must stay pending
+  # through sign-in.
+  test "passkey sign-in leaves a pending invitation for the user's address unaccepted" do
     invitation = Invitation.create!(
-      email: @user.email,
+      email: "invitee-before-signup@example.com",
       role: "member",
-      family: @user.family,
-      inviter: @user
+      family: families(:dylan_family),
+      inviter: users(:family_admin)
     )
+    invitation.update_columns(email: @user.email)
+    original_role = @user.role
+    original_family_id = @user.family_id
 
     get new_session_path(invitation: invitation.token)
     assert_response :success
@@ -53,8 +55,9 @@ class PasskeySessionsControllerTest < ActionDispatch::IntegrationTest
     post passkey_session_path, params: { credential: passkey_assertion }, as: :json
 
     assert_response :success
-    assert invitation.reload.accepted_at.present?, "invitation was not accepted during passkey sign-in"
-    assert_equal "member", @user.reload.role
+    assert_nil invitation.reload.accepted_at
+    assert_equal original_role, @user.reload.role
+    assert_equal original_family_id, @user.family_id
   end
 
   test "rejects an assertion without user verification" do

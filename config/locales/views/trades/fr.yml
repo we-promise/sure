@@ -1,6 +1,11 @@
 ---
 fr:
   trades:
+    api_errors:
+      activity_label_must_match_type: investment_activity_label doit valoir %{label} lorsque type vaut %{type}
+      invalid_activity_label: Libellé d'activité d'investissement invalide
+      invalid_type: Type invalide
+      supported_types: 'type doit être l''une des valeurs suivantes : %{types}'
     form:
       account: Compte de transfert (facultatif)
       account_prompt: Rechercher un compte
@@ -21,6 +26,9 @@ fr:
       type_interest: Intérêts
       type_sell: Vendre
       type_withdrawal: Retrait
+    trade:
+      scheduled: Planifiée
+      scheduled_tooltip: Datée dans le futur — n'affectera votre solde qu'à cette date
     header:
       buy: Acheter
       contribution: Contribution

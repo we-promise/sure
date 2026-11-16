@@ -1,0 +1,126 @@
+# Standard USD pricing per 1M tokens, excluding regional and service-tier
+# modifiers. Loaded into LlmUsage::PRICING. Sources, dated changes and
+# estimation limits: docs/hosting/ai.md#cost-considerations
+#
+# Keep one model per line. bin/update_llm_pricing (run by the "Refresh LLM
+# pricing" workflow) rewrites these lines from LiteLLM's price list and adds
+# new Claude and GPT tier releases, keeping comments and aliases intact.
+# Providers are checked in this order when inferring a model's provider.
+
+# Last complete review of every listed model against official sources, not a
+# provider price-change date. Shown on the LLM usage screen.
+verified_on: 2026-10-17
+
+providers:
+  # Source: https://developers.openai.com/api/docs/pricing
+  openai:
+    # GPT-6 Astra, GPT-6.1 Terra and GPT-6 Luna Standard pricing, November 2026.
+    gpt-6-astra: &gpt-6-astra { prompt: 10.0, completion: 50.0, long_context: { threshold: 272000, prompt: 20.0, completion: 75.0 } }
+    gpt-6.1-terra: &gpt-6-1-terra { prompt: 1.0, completion: 5.0, long_context: { threshold: 272000, prompt: 2.0, completion: 7.5 } }
+    gpt-6-luna: &gpt-6-luna { prompt: 0.1, completion: 0.5, long_context: { threshold: 272000, prompt: 0.2, completion: 0.75 } }
+    # GPT-6.1 Sol and GPT-6 Sol Standard pricing, September 2026.
+    gpt-6.1-sol: &gpt-6-1-sol { prompt: 2.0, completion: 10.0, long_context: { threshold: 272000, prompt: 4.0, completion: 15.0 } }
+    gpt-6-sol: { prompt: 2.0, completion: 10.0, long_context: { threshold: 272000, prompt: 4.0, completion: 15.0 } }
+    # GPT-4.1 and similar models
+    gpt-4.1: { prompt: 2.0, completion: 8.0 }
+    gpt-4.1-mini: { prompt: 0.4, completion: 1.6 }
+    gpt-4.1-nano: { prompt: 0.1, completion: 0.4 }
+    # 4o
+    gpt-4o: { prompt: 2.5, completion: 10.0 }
+    gpt-4o-2024-05-13: { prompt: 5.0, completion: 15.0 }
+    gpt-4o-mini: { prompt: 0.15, completion: 0.6 }
+    # Specialized models
+    chat-latest: { prompt: 5.0, completion: 30.0 }
+    gpt-5.3-codex: { prompt: 1.75, completion: 14.0 }
+    # GPT-5 models
+    # Sol promotion effective 2026-08-21, available at least through 2026-11-21.
+    gpt-5.6-sol: &gpt-5-6-sol { prompt: 4.0, completion: 20.0, long_context: { threshold: 272000, prompt: 8.0, completion: 30.0 } }
+    # OpenAI routes the gpt-5.6 alias to GPT-5.6 Sol.
+    gpt-5.6: *gpt-5-6-sol
+    # Trusted-access cyber models; listed so they don't match the rows above.
+    gpt-5.6-cyber: { prompt: 12.5, completion: 75.0 }
+    gpt-5.5-cyber: { prompt: 12.5, completion: 75.0 }
+    # Terra and Luna price reductions effective 2026-07-30.
+    gpt-5.6-terra: { prompt: 2.0, completion: 12.0, long_context: { threshold: 272000, prompt: 4.0, completion: 18.0 } }
+    gpt-5.6-luna: { prompt: 0.2, completion: 1.2, long_context: { threshold: 272000, prompt: 0.4, completion: 1.8 } }
+    gpt-5.5-pro: { prompt: 30.0, completion: 180.0, long_context: { threshold: 272000, prompt: 60.0, completion: 270.0 } }
+    gpt-5.5: { prompt: 5.0, completion: 30.0, long_context: { threshold: 272000, prompt: 10.0, completion: 45.0 } }
+    gpt-5.4: { prompt: 2.5, completion: 15.0, long_context: { threshold: 272000, prompt: 5.0, completion: 22.5 } }
+    gpt-5.4-mini: { prompt: 0.75, completion: 4.5 }
+    gpt-5.4-nano: { prompt: 0.2, completion: 1.25 }
+    gpt-5.4-pro: { prompt: 30.0, completion: 180.0, long_context: { threshold: 272000, prompt: 60.0, completion: 270.0 } }
+    # GPT-5.2 Pro is published at 12x the GPT-5.2 Thinking rate.
+    gpt-5.2-pro: { prompt: 21.0, completion: 168.0 }
+    gpt-5.2-chat-latest: { prompt: 1.75, completion: 14.0 }
+    gpt-5.2: { prompt: 1.75, completion: 14.0 }
+    gpt-5.1-chat-latest: { prompt: 1.25, completion: 10.0 }
+    gpt-5.1: { prompt: 1.25, completion: 10.0 }
+    gpt-5: { prompt: 1.25, completion: 10.0 }
+    gpt-5-mini: { prompt: 0.25, completion: 2.0 }
+    gpt-5-nano: { prompt: 0.05, completion: 0.4 }
+    gpt-5-pro: { prompt: 15.0, completion: 120.0 }
+    # o1 models
+    o1-mini: { prompt: 1.1, completion: 4.4 }
+    o1-pro: { prompt: 150.0, completion: 600.0 }
+    o1: { prompt: 15.0, completion: 60.0 }
+    # o-series models
+    o3: { prompt: 2.0, completion: 8.0 }
+    o4-mini: { prompt: 1.1, completion: 4.4 }
+    o3-mini: { prompt: 1.1, completion: 4.4 }
+    o3-pro: { prompt: 20.0, completion: 80.0 }
+    # Tier fallbacks: an unlisted release of a tier (e.g. "gpt-6.2-sol",
+    # "gpt-7-astra") is estimated at that tier's newest listed rate. Point them
+    # at a newer release when one is added.
+    gpt-astra: *gpt-6-astra
+    gpt-sol: *gpt-6-1-sol
+    gpt-terra: *gpt-6-1-terra
+    gpt-luna: *gpt-6-luna
+
+  # Source: https://ai.google.dev/gemini-api/docs/pricing
+  google:
+    # Gemini 4 models
+    # Gemini 4 Argon promotional pricing through 2026-11-30: $2.00 / $10.00 ($4.00 / $20.00 starting December 2026)
+    gemini-4-argon: { prompt: 2.0, completion: 10.0 }
+    # Gemini 3 models
+    # Flash series promotion through 2026-12-31: $0.75 / $3.75 ($1.50 / $7.50 starting 2027)
+    gemini-3.8-flash: { prompt: 0.75, completion: 3.75 }
+    gemini-3.7-flash: { prompt: 0.75, completion: 3.75 }
+    gemini-3.6-flash: { prompt: 0.75, completion: 3.75 }
+    gemini-3.5-flash: { prompt: 1.5, completion: 9.0 }
+    gemini-3.5-flash-lite: { prompt: 0.3, completion: 2.5 }
+    gemini-3.1-flash-lite: { prompt: 0.25, completion: 1.5 }
+    gemini-3.1-pro: { prompt: 2.0, completion: 12.0, long_context: { threshold: 200000, prompt: 4.0, completion: 18.0 } }
+    gemini-3.1-pro-preview: { prompt: 2.0, completion: 12.0, long_context: { threshold: 200000, prompt: 4.0, completion: 18.0 } }
+    gemini-3-flash: { prompt: 0.5, completion: 3.0 }
+    gemini-3-flash-preview: { prompt: 0.5, completion: 3.0 }
+    # Gemini 2.5 models
+    gemini-2.5-pro: { prompt: 1.25, completion: 10.0, long_context: { threshold: 200000, prompt: 2.5, completion: 15.0 } }
+    gemini-2.5-flash: { prompt: 0.3, completion: 2.5 }
+
+  # Source: https://platform.claude.com/docs/en/about-claude/pricing
+  # cache_read is set only where Anthropic lists a rate other than 0.1x input.
+  anthropic:
+    claude-fable-5-1: &claude-fable-5-1 { prompt: 10.0, completion: 50.0, cache_read: 0.25 }
+    claude-fable-5: { prompt: 10.0, completion: 50.0 }
+    claude-opus-5-5: &claude-opus-5-5 { prompt: 4.0, completion: 20.0, cache_read: 0.2 }
+    claude-opus-5: { prompt: 5.0, completion: 25.0 }
+    claude-opus-4-8: { prompt: 5.0, completion: 25.0 }
+    claude-opus-4-7: { prompt: 5.0, completion: 25.0 }
+    claude-opus-4-6: { prompt: 5.0, completion: 25.0 }
+    claude-opus-4-5: { prompt: 5.0, completion: 25.0 }
+    claude-opus-4-1: { prompt: 15.0, completion: 75.0 }
+    claude-opus-4: { prompt: 15.0, completion: 75.0 }
+    claude-sonnet-5-5: &claude-sonnet-5-5 { prompt: 2.0, completion: 10.0, cache_read: 0.1 }
+    claude-sonnet-5: { prompt: 2.0, completion: 10.0 }
+    claude-sonnet-4-6: { prompt: 3.0, completion: 15.0 }
+    claude-sonnet-4-5: { prompt: 3.0, completion: 15.0 }
+    claude-sonnet-4: { prompt: 3.0, completion: 15.0 }
+    claude-haiku-5-5: &claude-haiku-5-5 { prompt: 0.1, completion: 0.5, long_context: { threshold: 100000, prompt: 0.5, completion: 2.5 } }
+    claude-haiku-4-5: { prompt: 1.0, completion: 5.0 }
+    # Family fallbacks: a Claude model released after this review (e.g.
+    # "claude-opus-6") is estimated at its family's newest listed rate. Point
+    # them at a newer release when one is added.
+    claude-fable: *claude-fable-5-1
+    claude-opus: *claude-opus-5-5
+    claude-sonnet: *claude-sonnet-5-5
+    claude-haiku: *claude-haiku-5-5

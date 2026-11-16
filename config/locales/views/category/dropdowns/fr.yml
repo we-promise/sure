@@ -6,7 +6,13 @@ fr:
         delete: Supprimer la catégorie
         edit: Éditer la catégorie
       show:
+        assign_error: La catégorie a été créée, mais elle n'a pas pu être attribuée. Choisissez à nouveau Créer pour réessayer.
+        back: Retour
+        choose_parent: 'Créer « %{name} » dans :'
         clear: Effacer la catégorie
+        create: Créer « %{name} »
+        create_as_subcategory: Ajouter comme sous-catégorie…
+        create_error: Impossible de créer cette catégorie. Veuillez réessayer.
         no_categories: Aucune catégorie trouvée
         recent: Récents
         search_placeholder: Rechercher

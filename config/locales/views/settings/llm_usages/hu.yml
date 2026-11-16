@@ -1,0 +1,29 @@
+---
+hu:
+  settings:
+    llm_usages:
+      show:
+        page_title: "LLM-használat és -költségek"
+        subtitle: "Kövesd nyomon az AI-használatot és a becsült költségeket"
+        start_date: "Kezdő dátum"
+        end_date: "Záró dátum"
+        filter: "Szűrő"
+        total_calls: "Összes hívás"
+        avg_cost_per_call: "Átl. költség/hívás"
+        based_on_calls: "%{total} hívásból %{with_cost} rendelkezik költségadattal"
+        total_tokens: "Összes token"
+        prompt: "prompt"
+        completion: "befejezés"
+        total_cost: "Összes költség"
+        cost_by_operation: "Költség műveletek szerint"
+        cost_by_model: "Költség modellek szerint"
+        recent_usage: "Legutóbbi használat"
+        col_date: "Dátum"
+        col_operation: "Művelet"
+        col_model: "Modell"
+        col_tokens: "Tokenek"
+        col_cost: "Költség"
+        failed: "Sikertelen"
+        no_usage_data: "Nem található használati adat a kiválasztott időszakra"
+        cost_estimates_title: "A költségbecslésekről"
+        cost_estimates_description: "A költségek a szolgáltatók közzétett árai alapján becsültek, utoljára ellenőrizve: %{date}. A tényleges költségek eltérhetnek. Az árazás millió tokenenként van megadva, és modellenként változik. Az egyéni vagy önállóan üzemeltetett modellek \"N/A\"-t mutatnak, és nem szerepelnek a költségösszesítőkben."

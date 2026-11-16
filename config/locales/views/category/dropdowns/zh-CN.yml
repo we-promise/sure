@@ -6,7 +6,13 @@ zh-CN:
         delete: 删除分类
         edit: 编辑分类
       show:
+        assign_error: 已创建该分类，但未能分配。请再次选择“创建”以重试。
+        back: 返回
+        choose_parent: 在以下项下创建“%{name}”：
         clear: 清空分类
+        create: 创建“%{name}”
+        create_as_subcategory: 添加为子分类…
+        create_error: 无法创建该分类。请重试。
         no_categories: 暂无分类
         recent: 最近使用
         search_placeholder: 搜索分类

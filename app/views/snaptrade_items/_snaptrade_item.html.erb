@@ -76,6 +76,7 @@
             <% end %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, snaptrade_item) %>
               <% menu.with_item(
                 variant: "link",
                 text: t(".connect_brokerage"),
