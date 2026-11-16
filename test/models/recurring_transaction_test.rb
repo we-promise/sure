@@ -1860,6 +1860,54 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "LEGACY CO", bill.reload.matcher_name
   end
 
+  test "amount_on reads the price in force on a date from the price history" do
+    series = @family.recurring_transactions.create!(
+      name: "Rent", account: @account, amount: 1_400, currency: "USD",
+      expected_day_of_month: 1, last_occurrence_date: Date.current,
+      next_expected_date: 1.month.from_now.to_date, status: "active", manual: true
+    )
+    series.recurring_price_changes.create!(effective_on: 6.months.ago.to_date, previous_amount: 1_100,
+                                           new_amount: 1_200, currency: "USD", source: "user")
+    series.recurring_price_changes.create!(effective_on: 2.months.ago.to_date, previous_amount: 1_200,
+                                           new_amount: 1_400, currency: "USD", source: "user")
+
+    assert_equal 1_100, series.amount_on(1.year.ago.to_date)
+    assert_equal 1_200, series.amount_on(3.months.ago.to_date)
+    assert_equal 1_400, series.amount_on(2.months.ago.to_date)
+    assert_equal 1_400, series.amount_on(Date.current)
+    assert_equal Money.new(1_200, "USD"), series.monthly_equivalent_amount(on: 3.months.ago.to_date)
+  end
+
+  test "obligations keeps expenses and payments into the given debt types, whatever the status" do
+    expense = build_recurring(name: "Rent", status: "paused").tap(&:save!)
+    into_loan = create_transfer_series("Mortgage", accounts(:loan))
+    into_card = create_transfer_series("Card payment", accounts(:credit_card))
+
+    results = @family.recurring_transactions.obligations(%w[Loan])
+
+    assert_includes results, expense
+    assert_includes results, into_loan
+    assert_not_includes results, into_card
+    assert_includes @family.recurring_transactions.obligations(%w[CreditCard Loan]), into_card
+  end
+
+  test "within_accounts keeps series whose every endpoint is in the given accounts" do
+    shared = accounts(:depository)
+    private_account = accounts(:connected)
+    on_shared = @family.recurring_transactions.create!(
+      name: "Shared bill", account: shared, amount: 10, currency: "USD", expected_day_of_month: 1,
+      last_occurrence_date: Date.current, next_expected_date: 1.month.from_now.to_date, status: "active", manual: true
+    )
+    on_private = on_shared.dup.tap { |series| series.update!(name: "Private bill", account: private_account) }
+    without_account = on_shared.dup.tap { |series| series.update!(name: "Legacy bill", account: nil) }
+
+    results = @family.recurring_transactions.within_accounts(Account.where(id: shared.id))
+
+    assert_includes results, on_shared
+    assert_includes results, without_account
+    assert_not_includes results, on_private
+  end
+
   private
 
     def create_transfer_series(name, destination)

@@ -362,16 +362,20 @@ class RecurringTransaction < ApplicationRecord
   # credit-card or loan payment is a real obligation with a real due date,
   # even though it is a transfer and not spending. (It stays excluded from
   # any budget/category math for exactly that reason.)
-  scope :payable, -> {
+  scope :payable, -> { active.obligations(%w[CreditCard Loan]) }
+
+  # Outflows owed to someone, whatever the series' status: expense series and
+  # recurring transfers into accounts of the given `debt_types`.
+  scope :obligations, ->(debt_types) {
     # Correlated to the row rather than a free-standing id list: the bare
     # subquery scanned every account in the installation on every call, and
     # the destination must belong to the series' own family.
-    debt_destination = Account.where(accountable_type: %w[CreditCard Loan])
+    debt_destination = Account.where(accountable_type: debt_types)
                               .where("accounts.id = recurring_transactions.destination_account_id")
                               .where("accounts.family_id = recurring_transactions.family_id")
 
-    active.where("amount > 0")
-          .merge(where(destination_account_id: nil).or(where(debt_destination.arel.exists)))
+    where("recurring_transactions.amount > 0")
+      .merge(where(destination_account_id: nil).or(where(debt_destination.arel.exists)))
   }
 
   # The bills that want an action from you. Autopay bills still belong on the
@@ -437,8 +441,19 @@ class RecurringTransaction < ApplicationRecord
   # a $120 annual bill contributes $10, a $10 weekly bill about $43.45. This
   # is the honest number for "recurring commitment" style totals; summing raw
   # amounts across mixed cadences answers no meaningful question.
-  def monthly_equivalent_amount
-    amount_money * (schedule.occurrences_per_year / 12.0)
+  #
+  # `on:` prices it as it stood on that date instead of today; see #amount_on.
+  def monthly_equivalent_amount(on: nil)
+    price = on ? Money.new(amount_on(on), currency) : amount_money
+    price * (schedule.occurrences_per_year / 12.0)
+  end
+
+  # What this series charged on `date`, read back through its price history:
+  # the previous amount of the first change after that date, or today's amount
+  # when nothing has changed since. Preload-aware like #recent_price_changes.
+  def amount_on(date)
+    later = recurring_price_changes.select { |change| change.effective_on > date }.min_by(&:effective_on)
+    later ? later.previous_amount : amount
   end
 
   # The newest price changes, most recent first. Sorts in Ruby when a caller
@@ -469,25 +484,28 @@ class RecurringTransaction < ApplicationRecord
     cycle_days = 365.25 / schedule.occurrences_per_year
     ((Date.current - next_due_date).to_i / cycle_days).floor
   end
-  scope :accessible_by, ->(user) {
-    accessible_account_ids = Account.accessible_by(user).select(:id)
-    # A recurring row is accessible when:
-    #   * its account_id is in the user's accessible set or null (legacy rows
-    #     with no account scoping survive), AND
-    #   * its destination_account_id is also accessible OR null (so a recurring
-    #     transfer never leaks into the list of a user without access to BOTH
-    #     endpoints).
+  scope :accessible_by, ->(user) { within_accounts(Account.accessible_by(user)) }
+
+  # Series whose endpoints all fall inside `accounts`, an Account relation: the
+  # accounts one user can access, or the ones every member of a family can.
+  scope :within_accounts, ->(accounts) {
+    # A recurring row is kept when:
+    #   * its account_id is in `accounts` or null (legacy rows with no account
+    #     scoping survive), AND
+    #   * its destination_account_id is also in `accounts` OR null (so a
+    #     recurring transfer never leaks into the list of a user without
+    #     access to BOTH endpoints).
     #
     # Written as one raw SQL predicate on purpose. ActiveRecord's
     # `merge` replaces an existing hash predicate on the same column instead of
     # AND-ing it, so a hash-style `where(destination_account_id: ...)` here would
     # silently wipe out a caller's own destination filter when composed through
     # `.merge(RecurringTransaction.accessible_by(user))`.
-    # Both endpoints (ignoring NULLs) must be inside the accessible set, so the
+    # Both endpoints (ignoring NULLs) must be inside the set, so the
     # set is evaluated once instead of once per column.
     where(
       "array_remove(ARRAY[recurring_transactions.account_id, recurring_transactions.destination_account_id], NULL) <@ ARRAY(?)",
-      accessible_account_ids
+      accounts.select(:id)
     )
   }
 

@@ -88,4 +88,10 @@ class Insight::Generator
     def signed_number(value)
       value.negative? ? "−#{value.abs}" : value.to_s
     end
+
+    # A display fact rounded to one decimal with the locale's separator, so
+    # Spanish copy reads "35,0" rather than "35.0".
+    def decimal_fact(value)
+      ActiveSupport::NumberHelper.number_to_rounded(round(value, 1), precision: 1)
+    end
 end
