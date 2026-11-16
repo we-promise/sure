@@ -46,7 +46,8 @@ module Family::AutoTransferMatchable
     include_rejected: true,
     restrict_cross_currency_to_linked_accounts: false,
     require_common_writer: false,
-    exclude_same_wise_item: false
+    exclude_same_wise_item: false,
+    require_compatible_categories: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -67,6 +68,7 @@ module Family::AutoTransferMatchable
         restrict_cross_currency_to_linked_accounts:,
         require_common_writer:,
         exclude_same_wise_item:,
+        require_compatible_categories:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -134,7 +136,12 @@ module Family::AutoTransferMatchable
       # links from Wise's own activity feed. Any other pair across them is a
       # coincidence (a GBP top-up "matching" a USD payout), so it is never
       # suggested here; the manual dialog still offers it.
-      exclude_same_wise_item: true
+      exclude_same_wise_item: true,
+      # A cross-currency guess between two categorized transactions in different
+      # categories (a fuel purchase against an income) is not one movement of
+      # money. One uncategorized leg still matches, since providers often
+      # categorize only one side. Exact same-currency pairs are not affected.
+      require_compatible_categories: true
     )
 
     # Track which transactions we've already matched to avoid duplicates
@@ -356,6 +363,11 @@ module Family::AutoTransferMatchable
     # them; a missing rate leaves the tolerance check NULL, which drops the pair.
     # A zero direct rate is treated as missing so it cannot mask a usable derived rate.
     #
+    # With :require_compatible_categories, the cross-currency branch also drops pairs
+    # whose legs are both categorized, in different categories. Only
+    # auto_match_transfers! sets it; the exact same-currency branch, the manual
+    # dialog and the hint (which filters categories itself, more strictly) leave it off.
+    #
     # Candidates are ordered by match_rank before date_diff: exact same-currency matches
     # (rank 0) come before FX-tolerance guesses (rank 1). auto_match_transfers! consumes
     # candidates greedily, so without the rank a coincidental cross-currency candidate
@@ -429,6 +441,8 @@ module Family::AutoTransferMatchable
             outflow_candidates.currency <> inflow_candidates.currency
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
+          JOIN transactions inflow_txns ON inflow_txns.id = inflow_candidates.entryable_id
+          JOIN transactions outflow_txns ON outflow_txns.id = outflow_candidates.entryable_id
           LEFT JOIN exchange_rates direct_rates ON (
             direct_rates.date = outflow_candidates.date AND
             direct_rates.from_currency = outflow_candidates.currency AND
@@ -498,6 +512,12 @@ module Family::AutoTransferMatchable
               :restrict_cross_currency_to_linked_accounts = FALSE OR
               (#{linked_account_sql("inflow_accounts")} AND #{linked_account_sql("outflow_accounts")}) OR
               confirmed_routes.outflow_account_id IS NOT NULL
+            ) AND
+            (
+              :require_compatible_categories = FALSE OR
+              inflow_txns.category_id IS NULL OR
+              outflow_txns.category_id IS NULL OR
+              inflow_txns.category_id = outflow_txns.category_id
             ) AND
             #{same_wise_item_condition_sql} AND
             #{common_writer_condition_sql}

@@ -312,6 +312,81 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_not Transfer.exists?(inflow_transaction_id: coincidental_inflow.entryable_id)
   end
 
+  test "does not auto-match a cross-currency pair whose legs have different categories" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:income))
+
+    # Otherwise eligible: the automatic path's other restrictions still offer the pair.
+    eligible = @family.transfer_match_candidates(include_rejected: false, restrict_cross_currency_to_linked_accounts: true, require_common_writer: true)
+    assert_includes eligible.map { |c| [ c.inflow_transaction_id, c.outflow_transaction_id ] }, [ inflow.entryable_id, outflow.entryable_id ]
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+  end
+
+  test "auto-matches a cross-currency pair when either leg is uncategorized" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    uncategorized_inflow_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    uncategorized_inflow_in = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD")
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: uncategorized_inflow_in.entryable_id, outflow_transaction_id: uncategorized_inflow_out.entryable_id)
+
+    uncategorized_outflow_out = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 1000)
+    uncategorized_outflow_in = create_transaction(date: Date.current, account: @credit_card, amount: -1400, currency: "CAD", category: categories(:income))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: uncategorized_outflow_in.entryable_id, outflow_transaction_id: uncategorized_outflow_out.entryable_id)
+  end
+
+  test "auto-matches a cross-currency pair whose legs share a category" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:food_and_drink))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "auto-matches a same-currency exact pair whose legs have different categories" do
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -500, category: categories(:income))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "a cross-currency pair with different categories can still be matched by hand" do
+    load_exchange_prices
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 500, category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:income))
+
+    assert_includes inflow.transaction.transfer_match_candidates.map(&:outflow_transaction_id), outflow.entryable_id
+
+    transfer = Transfer::Matcher.new(inflow.transaction).match_with!(outflow.transaction)
+    assert transfer.confirmed?
+    assert_equal [ inflow.entryable_id, outflow.entryable_id ], [ transfer.inflow_transaction_id, transfer.outflow_transaction_id ]
+  end
+
   test "does not suggest a family currency cross rate outside the exchange rate tolerance" do
     load_family_currency_rates
 
