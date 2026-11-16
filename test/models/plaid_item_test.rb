@@ -156,6 +156,16 @@ class PlaidItemTest < ActiveSupport::TestCase
     end
   end
 
+  # Callers use the result to tell whether a billed refresh was queued.
+  test "requesting a refresh reports whether one was queued" do
+    @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
+    Rails.cache.stubs(:write).returns(true)
+    assert @plaid_item.request_transactions_refresh_later.present?
+
+    Rails.cache.stubs(:write).returns(false)
+    assert_not @plaid_item.request_transactions_refresh_later.present?
+  end
+
   test "user sync does not duplicate a recent provider refresh request" do
     @plaid_item.stubs(:shared_transactions_refresh_cache?).returns(true)
     Rails.cache.stubs(:write).returns(false)
