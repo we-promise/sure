@@ -1507,6 +1507,89 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert imported_holding.security_locked
   end
 
+  test "round trips property details and address through full export" do
+    source_family = Family.create!(name: "Source Property Family", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Land",
+      balance: 150_000_000,
+      currency: "PYG",
+      accountable: Property.new(
+        subtype: "plot",
+        year_built: 2001,
+        area_value: 12_000,
+        area_unit: "sqm",
+        address: Address.new(line1: "Ruta 2 km 40", locality: "Caacupe", region: "Cordillera", postal_code: "3000", country: "PY")
+      )
+    )
+
+    zip_data = Family::DataExporter.new(source_family).generate_export
+    ndjson = nil
+    Zip::File.open_buffer(zip_data) { |zip| ndjson = zip.read("all.ndjson") }
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Round Trip Land").accountable
+    assert_equal "plot", property.subtype
+    assert_equal 2001, property.year_built
+    assert_equal 12_000, property.area_value
+    assert_equal "sqm", property.area_unit
+
+    address = property.address
+    assert_not_nil address, "the address should survive a backup and restore"
+    assert_equal "Ruta 2 km 40", address.line1
+    assert_equal "Caacupe", address.locality
+    assert_equal "Cordillera", address.region
+    assert_equal "3000", address.postal_code
+    assert_equal "PY", address.country
+  end
+
+  test "imports property details from an export without an address" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-property-1",
+          name: "Imported Land",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Property",
+          accountable: { subtype: "agri_land", year_built: nil, area_value: 50, area_unit: "sqm", id: "ignored", avm_provider: "rentcast" }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Imported Land").accountable
+    assert_equal 50, property.area_value
+    assert_equal "sqm", property.area_unit
+    assert_nil property.year_built
+    assert_nil property.avm_provider, "provider links are not restored"
+    assert_nil property.address
+  end
+
+  test "an explicit null property detail keeps the default" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-property-2",
+          name: "Null Unit Land",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Property",
+          accountable: { subtype: "plot", area_value: 50, area_unit: nil }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Null Unit Land").accountable
+    assert_equal 50, property.area_value
+    assert_equal "sqft", property.area_unit
+  end
+
   test "round trips raw balance history through full export" do
     source_family = Family.create!(
       name: "Source Balance Family",
