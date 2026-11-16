@@ -61,11 +61,17 @@ class Provider::Snaptrade
   TOKEN_EXPIRY_LEEWAY = 60 # seconds; refresh this long before actual expiry
 
   # Filtered out of get_positions so they never reach raw_holdings_payload:
-  # units are per-contract and symbols OCC-style, which neither
-  # SnaptradeAccount::HoldingsProcessor nor the units * price sum in
-  # SnaptradeAccount::Processor#calculate_holdings_value models. A denylist, so
-  # equity-like kinds added later still import rather than being dropped.
-  UNSUPPORTED_INSTRUMENT_KINDS = %w[option future cfd].freeze
+  # units are per-contract, which neither SnaptradeAccount::HoldingsProcessor
+  # nor the units * price sum in SnaptradeAccount::Processor#calculate_holdings_value
+  # models (options are, via contract_multiplier). A denylist, so equity-like
+  # kinds added later still import rather than being dropped.
+  UNSUPPORTED_INSTRUMENT_KINDS = %w[future future_option cfd].freeze
+
+  # GET /accounts/{id}/activities returns at most 1000 rows per request.
+  ACTIVITIES_PAGE_SIZE = 1000
+  # Safety cap on activity pages per account (100k rows), so a server that
+  # ignores offset can't loop forever.
+  MAX_ACTIVITY_PAGES = 100
 
   class << self
     # Some OAuth flow is available. The device flow needs nothing but the public
@@ -388,12 +394,64 @@ class Provider::Snaptrade
     results.reject { |position| unsupported_instrument?(position) }
   end
 
-  # Returns raw JSON: paginated form is {"data" => [...]}, may also be a plain Array
+  # Returns raw JSON: paginated form is {"data" => [...]}, may also be a plain Array.
+  #
+  # The endpoint returns at most ACTIVITIES_PAGE_SIZE rows per request, so this
+  # walks offset/limit until every page is fetched and returns the first page's
+  # body with "data" holding all of them.
   def get_account_activities(account_id:, start_date: nil, end_date: nil)
-    params = {}
+    params = { limit: ACTIVITIES_PAGE_SIZE }
     params[:startDate] = start_date.to_date.to_s if start_date
     params[:endDate] = end_date.to_date.to_s if end_date
-    get_json("/api/v1/accounts/#{account_id}/activities", params)
+    path = "/api/v1/accounts/#{account_id}/activities"
+
+    first_response = nil
+    previous_first = nil
+    first_page_size = nil
+    known_total = nil
+    activities = []
+
+    MAX_ACTIVITY_PAGES.times do |page|
+      response = get_json(path, params.merge(offset: activities.size))
+      unless response.is_a?(Hash) && response["data"].is_a?(Array)
+        return response if first_response.nil?
+        # With rows still missing, a partial history would move the sync cursor past them.
+        raise incomplete_activities_error(account_id, "SnapTrade activities page at offset #{activities.size} was not a paged response") if known_total
+        break
+      end
+
+      first_response ||= response
+      rows = response["data"]
+      total = response.dig("pagination", "total")
+      known_total = total if total.is_a?(Integer)
+
+      # A server that ignores offset returns the same page again.
+      if previous_first && rows.first == previous_first
+        raise incomplete_activities_error(account_id, "SnapTrade activities repeated a page at offset #{activities.size}") if known_total && activities.size < known_total
+        break
+      end
+
+      previous_first = rows.first
+      activities.concat(rows)
+      first_page_size ||= rows.size
+
+      # Without a total, a page shorter than the first one is the last; the server may return fewer rows than asked.
+      more = known_total ? activities.size < known_total : rows.size >= first_page_size
+      raise incomplete_activities_error(account_id, "SnapTrade activities page at offset #{activities.size} was empty, total #{known_total}") if rows.empty? && more && page.positive?
+      return first_response.merge("data" => activities) if rows.empty? || !more
+
+      # Every page so far was full and distinct. With a total, rows are still missing; without one, they may be
+      # (exactly 100 full pages also lands here). Either way, raise rather than move the cursor past them.
+      if page == MAX_ACTIVITY_PAGES - 1
+        raise incomplete_activities_error(
+          account_id,
+          "SnapTrade activities for account #{account_id} hit the page cap " \
+          "(#{MAX_ACTIVITY_PAGES} pages, #{activities.size} rows, total #{known_total.inspect})"
+        )
+      end
+    end
+
+    first_response.merge("data" => activities)
   end
 
   # Cross-account activities endpoint. Returns Array<Hash>.
@@ -520,6 +578,25 @@ class Provider::Snaptrade
         metadata: { snaptrade_item_id: snaptrade_item.try(:id) }
       )
       raise
+    end
+
+    # Captured for support: the importer keeps the stored history and cursor
+    # when the fetch fails, but would otherwise only log why.
+    def incomplete_activities_error(account_id, message)
+      capture_activities_log(account_id, message, level: :error)
+      ApiError.new(message)
+    end
+
+    def capture_activities_log(account_id, message, level:)
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: level,
+        message: message,
+        source: "Provider::Snaptrade",
+        provider_key: "snaptrade",
+        family: snaptrade_item.try(:family),
+        metadata: { snaptrade_item_id: snaptrade_item.try(:id), snaptrade_account_id: account_id }
+      )
     end
 
     def mark_requires_update!

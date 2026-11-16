@@ -223,6 +223,26 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal 1, @occurrence.allocations.where(entry: lump).count
   end
 
+  test "remaining_by_entry reports what each used entry has left in one query" do
+    partly = entry_for(500)
+    fully = entry_for(300)
+    unused = entry_for(100)
+    @allocator.allocate!(entry: partly, amount: 200)
+    @allocator.allocate!(entry: fully, amount: 300)
+
+    remaining = assert_queries_count(1) { Allocator.remaining_by_entry([ partly, fully, unused ]) }
+
+    assert_equal({ partly.id => 300, fully.id => 0 }, remaining)
+  end
+
+  test "remaining_by_entry treats an unmeasurable entry as used up" do
+    ExchangeRate.delete_all
+    entry = foreign_entry(amount: 100, currency: "EUR")
+    Allocator.new(usd_occurrence(expected: 150)).allocate!(amount: 150, entry: entry)
+
+    assert_equal({ entry.id => 0 }, Allocator.remaining_by_entry([ entry ]))
+  end
+
   test "the same entry cannot be allocated twice to one occurrence" do
     # Partial amounts so the capacity guard passes; the unique index is the
     # backstop this test pins.

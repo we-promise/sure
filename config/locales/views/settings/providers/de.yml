@@ -132,7 +132,7 @@ de:
           cash_report_options: 'Optionen: keine'
           cash_transactions: 'Cash Transactions:'
           cash_transactions_fields: 'Felder: Amount, Conid, Currency, FX Rate To Base, Report Date, Transaction ID, Type'
-          cash_transactions_options: 'Optionen: Dividends, Deposits & Withdrawals, Detail'
+          cash_transactions_options: 'Optionen: Dividends, Deposits & Withdrawals, Payment In Lieu Of Dividends, Withholding Tax, Broker Interest Paid, Broker Interest Received, Bond Interest Paid, Bond Interest Received, Other Fees, Commission Adjustments, Detail'
           change_in_position_value_summary: 'Change In Position Value Summary: Currency, End Of Period Value'
           net_asset_value: 'Net Asset Value (NAV) in Base:'
           net_asset_value_fields: 'Felder: Currency, Report Date, Total'
