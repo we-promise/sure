@@ -13,7 +13,10 @@ class Security < ApplicationRecord
   # (e.g. raw EODHD exchange codes) mapped to their ISO MIC.
   MIC_ALIASES = {
     "WAR" => "XWAR",
-    "GER" => "XETR" # Yahoo search code for Xetra, stored before it was mapped
+    "GER" => "XETR", # Yahoo search code for Xetra, stored before it was mapped
+    # Raw EODHD codes that Provider::Eodhd still accepts for rows stored before it mapped them
+    "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB",
+    "BE" => "XBER", "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU"
   }.freeze
 
   KINDS = %w[standard cash].freeze
