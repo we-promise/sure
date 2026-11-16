@@ -1,4 +1,6 @@
 class LunchflowItemsController < ApplicationController
+  include SafeReturnPath
+
   before_action :set_lunchflow_item, only: [ :show, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
   before_action :require_admin!, only: [ :new, :create, :preload_accounts, :select_accounts, :link_accounts, :select_existing_account, :link_existing_account, :edit, :update, :destroy, :sync, :setup_accounts, :complete_account_setup ]
 
@@ -714,30 +716,5 @@ class LunchflowItemsController < ApplicationController
     # The connection whose API key lists accounts, as Provider::LunchflowAdapter.build_provider picks it.
     def credentialed_lunchflow_item
       Current.family.lunchflow_items.where.not(api_key: nil).first
-    end
-
-    # Sanitize return_to parameter to prevent XSS attacks
-    # Only allow internal paths, reject external URLs and javascript: URIs
-    def safe_return_to_path
-      return nil if params[:return_to].blank?
-
-      return_to = params[:return_to].to_s
-
-      # Parse the URL to check if it's external
-      begin
-        uri = URI.parse(return_to)
-
-        # Reject absolute URLs with schemes (http:, https:, javascript:, etc.)
-        # Only allow relative paths
-        return nil if uri.scheme.present?
-
-        # Ensure the path starts with / (is a relative path)
-        return nil unless return_to.start_with?("/")
-
-        return_to
-      rescue URI::InvalidURIError
-        # If the URI is invalid, reject it
-        nil
-      end
     end
 end
