@@ -88,11 +88,14 @@ module ProviderItemsControllerTests
       sign_in users(:family_admin)
       provider_item.class::AccountFlow.any_instance.stubs(:fetch_accounts).returns([])
       unlinked = provider_item.provider_accounts.first
+      linked = unlinked.dup.tap { |account| account.update!(account_id: "#{unlinked.account_id}-linked", name: "Already linked account") }
+      AccountProvider.create!(account: provider_item.family.accounts.create!(name: "Manual", balance: 0, currency: "USD", accountable: Depository.new), provider: linked)
 
       get provider_routes.public_send(:"setup_accounts_#{provider_item.provider_key}_item_path", provider_item)
 
       assert_response :success
       assert_includes response.body, unlinked.name
+      assert_not_includes response.body, linked.name
     end
 
     test "provider kit: completing setup links only this connection's accounts, with supported types and subtypes" do
