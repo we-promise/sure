@@ -100,13 +100,18 @@ module Entries
       assert_includes html, I18n.t("entries.reconciliation.no_statement")
     end
 
-    test "ledger row shows reconciled pill only when reconciled" do
+    # Icon-only in the row: a labelled pill collapsed the transaction name, whose
+    # wrapper is `truncate flex-shrink` against a `flex-shrink-0` badge column.
+    # The tooltip text is what carries the meaning now.
+    test "ledger row shows the reconciled indicator only when reconciled" do
       entry = create_transaction(account: @account, source: "plaid")
       entry.mark_reconciled!
 
       html = render(partial: "transactions/transaction", locals: { entry: entry, balance_trend: nil, view_ctx: "global" })
 
-      assert_includes html, I18n.t("transactions.transaction.reconciled")
+      assert_includes html, I18n.t("transactions.transaction.reconciled_tooltip")
+      # Keyboard-reachable trigger: no focusable ancestor here to borrow focus from.
+      assert_match(/<button[^>]*aria-describedby="tooltip-/, html)
     end
 
     test "ledger row does not show a cleared badge" do
@@ -115,7 +120,7 @@ module Entries
       html = render(partial: "transactions/transaction", locals: { entry: entry, balance_trend: nil, view_ctx: "global" })
 
       assert_not_includes html, I18n.t("entries.reconciliation.states.cleared")
-      assert_not_includes html, I18n.t("transactions.transaction.reconciled")
+      assert_not_includes html, I18n.t("transactions.transaction.reconciled_tooltip")
     end
 
     private

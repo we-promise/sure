@@ -111,14 +111,19 @@
                       <%= render DS::Tooltip.new(text: t("transactions.transaction.scheduled_tooltip"), as: :span) %>
                     <% end %>
 
-                    <%# Reconciled only — cleared would badge nearly every synced row (#3119) %>
+                    <%# Reconciled only — cleared would badge nearly every synced row (#3119).
+                        Icon-only here, like the manual badge's compact mode above: the
+                        name wrapper is `truncate flex-shrink` against a `flex-shrink-0`
+                        badge container, so a full-width pill squeezes the transaction
+                        name to zero. Default as: :button keeps it keyboard-reachable —
+                        the row's link is a sibling, not an ancestor to borrow focus from. %>
                     <% if entry.statement_reconciled? %>
-                      <%= render DS::Pill.new(
-                        label: t("transactions.transaction.reconciled"),
-                        tone: :success,
-                        marker: false,
-                        icon: "circle-check",
-                        title: t("transactions.transaction.reconciled_tooltip")
+                      <%= render DS::Tooltip.new(
+                        text: t("transactions.transaction.reconciled_tooltip"),
+                        trigger_content: tag.span(
+                          icon("circle-check", size: "sm", color: "current"),
+                          class: "text-success"
+                        )
                       ) %>
                     <% end %>
 
