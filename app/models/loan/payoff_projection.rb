@@ -42,16 +42,13 @@ class Loan
     end
 
     # False when there is nothing to project: no schedule, nothing left to owe,
-    # no payments remaining, or no repayment to hold.
-    #
-    # `&&` binds tighter than `||`, so the trailing `|| false` applies to the
-    # whole chain. It turns the nil that `contracted_payment&.positive?` gives for
-    # a missing payment into false, so callers always get a boolean.
+    # or no repayment ahead. A payment of zero in the next period, a payment
+    # holiday on an interest-free loan, still projects when a later payment
+    # repays the loan.
     def applicable?
       schedule.present? &&
         current_balance.amount.positive? &&
-        remaining_payment_dates.any? &&
-        contracted_payment&.positive? || false
+        remaining_scheduled_payments.any? { |payment| payment.payment.amount.positive? }
     end
 
     # True when nothing is owed. Only one of the reasons applicable? can be
@@ -168,13 +165,6 @@ class Loan
       # never agreed to.
       def remaining_payment_dates
         @remaining_payment_dates ||= remaining_scheduled_payments.map(&:date)
-      end
-
-      # The repayment in force: the next scheduled payment's amount. For a
-      # re-amortising loan that is the figure the current rate produced, which
-      # is what the borrower is actually paying.
-      def contracted_payment
-        @contracted_payment ||= remaining_scheduled_payments.first&.payment&.amount
       end
 
       # What the contract asks for in the projection's period `index`: the

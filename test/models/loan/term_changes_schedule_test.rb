@@ -332,8 +332,12 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), april.ending_balance.amount
   end
 
+  # The form refuses such a row; one stored before the term was shortened is
+  # still read.
   test "a balance confirmed on the last payment date leaves the loan without a payoff date" do
-    schedule = loan_with([ { effective_date: MATURITY.iso8601, balance: "500" } ]).amortization_schedule
+    loan = loan_with([])
+    loan.term_changes.create!(effective_date: MATURITY, balance: 500)
+    schedule = loan.reload.amortization_schedule
 
     assert_equal BigDecimal("500"), schedule.payments.last.ending_balance.amount
     assert_nil schedule.payoff_date
@@ -495,8 +499,21 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_not loan.valid?
     assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_after_last_payment")
 
-    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, balance: "500" } ]
+    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, extra_repayment: "500" } ]
     assert loan.valid?, "a change on the last payment date is read"
+  end
+
+  # No payment is left to repay what the lender confirmed, so the schedule
+  # would end with the loan still owing.
+  test "a balance left owing after the last payment of the term is refused" do
+    loan = loan_with([])
+
+    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, balance: "500" } ]
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_balance_after_last_payment")
+
+    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, balance: "0" } ]
+    assert loan.valid?, loan.errors.full_messages.to_sentence
   end
 
   test "the day count convention sizes the part period of a confirmed balance" do
@@ -680,6 +697,26 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert projection.converged?
     assert_equal MATURITY, projection.payoff_date
     assert_equal 0, projection.months_saved
+  end
+
+
+  # An interest-free loan of 12,000 repays 1,000 a month. The lender pauses
+  # the April payment and asks 1,100 from May, which repays the loan by its
+  # end. On 20 March the next payment is zero and a later one repays.
+  test "a payment holiday on an interest-free loan still projects" do
+    account = loan_account_with([
+      { effective_date: "2026-03-15", payment: "0" },
+      { effective_date: "2026-04-15", payment: "1100" }
+    ], interest_rate: 0)
+    pay_instalments(account, through: AS_OF)
+
+    projection = project_from_ledger(account)
+
+    assert_equal BigDecimal("10000"), projection.current_balance.amount
+    assert projection.applicable?
+    assert_equal BigDecimal("0"), projection.payments.first[:payment_amount]
+    assert projection.converged?
+    assert_equal BigDecimal("0"), projection.interest_saved.amount
   end
 
   private

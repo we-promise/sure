@@ -14,6 +14,7 @@ en:
           invalid_term_change: Term change rows need an effective date and amounts that are numbers.
           rate_change_before_origination: A rate change cannot take effect before the loan originated.
           term_change_after_last_payment: A term change cannot be dated after the last payment on the schedule. Date it on or before that payment.
+          term_change_balance_after_last_payment: A balance confirmed for the last payment of the term must be zero, because no payments are left to repay it. Lengthen the loan's term to record it.
           term_change_not_after_origination: A term change must take effect after the day the loan originated.
           term_change_payment_below_interest: A term change's payment must at least cover the interest of its period.
         loan/term_change:
