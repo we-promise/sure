@@ -479,6 +479,8 @@ class TradeRepublicAccount::ActivitiesProcessor
       return false unless amount && !amount.zero?
 
       legacy_kind = legacy_cash_kinds[external_id]
+      derived_kind = kind.nil?
+      kind ||= own_funds_movement_kind(event, detail)
       entry = import_adapter.import_transaction(
         external_id: external_id,
         # The normalized category is the source of truth for direction. TR
@@ -494,7 +496,7 @@ class TradeRepublicAccount::ActivitiesProcessor
         notes: detail[:note].presence,
         source: "trade_republic",
         category_id: category_for(event, label)&.id,
-        kind: kind || (transfer_event?(event) && !@trade_republic_account.cash? ? "funds_movement" : nil),
+        kind: kind,
         investment_activity_label: activity_label,
         extra: {
           trade_republic: {
@@ -510,10 +512,36 @@ class TradeRepublicAccount::ActivitiesProcessor
         }
       )
       clear_status_note!(entry, event) if detail[:note].blank?
-      reset_legacy_cash_kind!(entry, event, legacy_kind) if legacy_kind && kind.nil?
+      reset_legacy_cash_kind!(entry, event, legacy_kind, kind: kind || "standard") if legacy_kind && derived_kind
       link_settlement_counterpart!(entry) if settles_trade
 
       true
+    end
+
+    # A transfer between Trade Republic and the user's own money is a funds
+    # movement: it is left out of budgets, and the investment card counts it
+    # as a contribution or a withdrawal (Portfolio::FlowClassifier reads an
+    # unlinked funds movement by its sign).
+    #
+    # On the portfolio account every payment event is one, as before. On the
+    # Cash account, which can be a current account, a transfer is one only
+    # when its other party is one of the login's reference accounts: the
+    # accounts in the user's name that Trade Republic pays out to (the client
+    # sets the detail's counterparty from /api/v2/auth/account). That covers
+    # a direct debit whose detail names the reference account's IBAN: the
+    # money is debited from the user's own account. A salary, a payment from
+    # someone else, a refund, a top-up by card, Apple Pay or Google Pay (whose
+    # detail names no IBAN) or a transfer to another person is not, and stays
+    # a standard transaction; automatic transfer matching still links any of
+    # them to an account in Sure.
+    def own_funds_movement_kind(event, detail)
+      own_money = @trade_republic_account.cash? ? reference_account_counterparty?(detail) : transfer_event?(event)
+
+      "funds_movement" if own_money
+    end
+
+    def reference_account_counterparty?(detail)
+      detail[Provider::TradeRepublicClient::COUNTERPARTY_KEY].to_s == Provider::TradeRepublicClient::REFERENCE_ACCOUNT_COUNTERPARTY
     end
 
     # Earlier syncs stored the status subtitle ("Sent") as the note. Without a
@@ -615,8 +643,10 @@ class TradeRepublicAccount::ActivitiesProcessor
     # events as funds movements. Reset those rows unless the user edited them
     # or they belong to a matched transfer. Only rows stored with such a kind
     # are passed in: a family can assign the same category or label through a
-    # Rule, which must survive a sync.
-    def reset_legacy_cash_kind!(entry, event, legacy_kind)
+    # Rule, which must survive a sync. A transfer with the user's reference
+    # account becomes a funds movement instead of a standard transaction
+    # (own_funds_movement_kind), and loses the same stale category and label.
+    def reset_legacy_cash_kind!(entry, event, legacy_kind, kind: "standard")
       transaction = entry&.entryable
       return unless transaction.is_a?(Transaction)
       return if entry.protected_from_sync? || transaction.transfer.present?
@@ -624,14 +654,14 @@ class TradeRepublicAccount::ActivitiesProcessor
       if legacy_kind == "investment_contribution"
         return unless entry.amount.negative?
 
-        attrs = { kind: "standard" }
+        attrs = { kind: kind }
         attrs[:category_id] = nil if investment_contribution_category_ids.include?(transaction.category_id) &&
           !rule_assigned?(transaction, :category_id)
         attrs[:investment_activity_label] = nil if transaction.investment_activity_label == "Contribution" &&
           !rule_assigned?(transaction, :investment_activity_label)
         transaction.update!(attrs)
       elsif transfer_event?(event)
-        transaction.update!(kind: "standard")
+        transaction.update!(kind: kind)
       end
     end
 

@@ -267,6 +267,18 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal({ "timelineTransactions" => { "newest_event_id" => "evt_3" }, "timelineActivityLog" => gap }, @item.reload.timeline_cursors)
   end
 
+  test "an account response without reference accounts is logged once per sync" do
+    provider = mock("trade_republic_provider")
+    warning = Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING
+    provider.expects(:sync).returns(timeline_cursor_result({}, "warnings" => [ warning, warning ]))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    logged = DebugLogEntry.where(message: "Trade Republic sync warning: #{warning}")
+    assert_equal 1, logged.count
+    assert_equal @item.family, logged.sole.family
+  end
+
   test "stops the history backfill when the cap drops a fetched event without an id" do
     @item.trade_republic_accounts.create!(
       kind: "portfolio",
@@ -800,7 +812,9 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "category" => "PAYMENT_RECEIVED",
       "detail" => { "amount" => 50.0, "signed_amount" => 50.0, "currency" => "EUR" }
     }
-    read = stored.merge("id" => "transfer-read", "detail" => stored["detail"].merge("note_checked_at" => "2026-06-18T10:00:00Z"))
+    read = stored.merge("id" => "transfer-read", "detail" => stored["detail"].merge(
+      "note_checked_at" => "2026-06-18T10:00:00Z", "counterparty_checked_at" => "2026-06-18T10:00:00Z"
+    ))
     @item.trade_republic_accounts.create!(
       kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-NOTE", currency: "EUR",
       raw_timeline_payload: [ stored, read ]
@@ -810,7 +824,9 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       raw_timeline_payload: [ stored, read ]
     )
     with_note = stored.merge(
-      "detail" => stored["detail"].merge("note" => "Invoice 2026-0001", "note_checked_at" => "2026-11-10T10:00:00Z")
+      "detail" => stored["detail"].merge(
+        "note" => "Invoice 2026-0001", "note_checked_at" => "2026-11-10T10:00:00Z", "counterparty_checked_at" => "2026-11-10T10:00:00Z"
+      )
     )
 
     provider = mock("trade_republic_provider")
@@ -839,6 +855,46 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "a transfer read only for its note is passed as read and also offered for its counterparty check" do
+    note_only = {
+      "id" => "transfer-note-only", "timestamp" => "2026-06-17T10:00:00Z", "eventType" => "INCOMING_TRANSFER",
+      "category" => "PAYMENT_RECEIVED", "detail" => { "amount" => 50.0, "note_checked_at" => "2026-06-18T10:00:00Z" }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-NOTEONLY", currency: "EUR", raw_timeline_payload: [ note_only ]
+    )
+
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { |args|
+      Array(args[:enrich_events]).map { |event| event["id"] } == [ "transfer-note-only" ] &&
+        args[:note_read_event_ids] == [ "transfer-note-only" ]
+    }.returns(timeline_cursor_result({}))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+  end
+
+  test "transfers waiting only for their counterparty check do not crowd out a transfer whose note was never read" do
+    waiting = Array.new(Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS) do |index|
+      {
+        "id" => "transfer-waiting-#{index}", "timestamp" => "2024-01-01T10:00:00Z", "eventType" => "INCOMING_TRANSFER",
+        "category" => "PAYMENT_RECEIVED", "detail" => { "amount" => 5.0, "note_checked_at" => "2024-01-02T10:00:00Z" }
+      }
+    end
+    unread = {
+      "id" => "transfer-unread", "timestamp" => "2026-10-01T10:00:00Z", "eventType" => "INCOMING_TRANSFER",
+      "category" => "PAYMENT_RECEIVED", "detail" => { "amount" => 5.0 }
+    }
+    @item.trade_republic_accounts.create!(
+      kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-WAITING", currency: "EUR",
+      raw_timeline_payload: waiting + [ unread ]
+    )
+
+    enrich_ids = TradeRepublicItem::Importer.new(@item, provider: mock).send(:events_needing_detail_enrichment).map { |event| event["id"] }
+
+    assert_equal Provider::TradeRepublicClient::MAX_TIMELINE_DETAILS, enrich_ids.size
+    assert_equal "transfer-unread", enrich_ids.first
+  end
+
   test "a transfer kept only in the cash payload is backfilled and a read one is passed on" do
     transfer = {
       "id" => "transfer-cash-only",
@@ -847,7 +903,9 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
       "category" => "POC_CREATED",
       "detail" => { "amount" => 20.0, "currency" => "EUR" }
     }
-    read = transfer.merge("id" => "transfer-read", "detail" => { "amount" => 5.0, "note_checked_at" => "2026-06-18T10:00:00Z" })
+    read = transfer.merge("id" => "transfer-read", "detail" => {
+      "amount" => 5.0, "note_checked_at" => "2026-06-18T10:00:00Z", "counterparty_checked_at" => "2026-06-18T10:00:00Z"
+    })
     @item.trade_republic_accounts.create!(
       kind: "portfolio", name: "Portfolio", trade_republic_account_id: "DE-CASHONLY", currency: "EUR",
       raw_timeline_payload: [ read ]

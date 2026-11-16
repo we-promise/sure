@@ -357,6 +357,48 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_equal "page-9", error.cursor
   end
 
+  test "a sync marks a transfer from the reference account the account response lists, and returns no IBAN" do
+    stub_sync_session(account: {
+      cashAccount: { iban: "DE00 1111 1111 1111 1111 11", bic: "TRBKDEBBXXX", bankName: "Trade Republic", logoUrl: nil },
+      referenceAccountList: [ { iban: "DE00 0000 0000 0000 0000 00", bic: nil, bankName: "Bank", logoUrl: nil } ]
+    })
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case payload[:type]
+      when "timelineTransactions"
+        { "items" => [ helper.send(:transfer_item, id: "transfer-own", event_type: "INCOMING_TRANSFER") ], "cursors" => {} }
+      when "timelineDetailV2" then helper.send(:transfer_detail, note: nil)
+      else { "items" => [], "cursors" => {} }
+      end
+    end
+
+    result = @client.sync(session_txt: "session")
+
+    transfer = result["events"].find { |event| event["id"] == "transfer-own" }
+    assert_equal "reference_account", transfer.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_not_includes result["warnings"], Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING
+    assert_no_match(/DE00\s?(0000|1111)/, result.data.to_json)
+  end
+
+  test "a sync whose account response lists no reference account leaves transfers unchecked and warns" do
+    stub_sync_session
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, payload|
+      case payload[:type]
+      when "timelineTransactions"
+        { "items" => [ helper.send(:transfer_item, id: "transfer-own", event_type: "INCOMING_TRANSFER") ], "cursors" => {} }
+      when "timelineDetailV2" then helper.send(:transfer_detail, note: nil)
+      else { "items" => [], "cursors" => {} }
+      end
+    end
+
+    result = @client.sync(session_txt: "session")
+
+    transfer = result["events"].find { |event| event["id"] == "transfer-own" }
+    assert_not transfer["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY)
+    assert_equal 1, result["warnings"].count(Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING)
+  end
+
   test "retries the sync without a backfill that times out and counts the failure" do
     stub_sync_session
     @client.stubs(:sleep_for)
@@ -1835,10 +1877,16 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     end
     unread = transfer_item(id: "transfer-old").merge("detail" => { "amount" => 50.0, "currency" => "EUR" })
     read = transfer_item(id: "transfer-read").merge(
-      "detail" => { "amount" => 50.0, Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+      "detail" => {
+        "amount" => 50.0,
+        Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z",
+        Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY => "2026-08-02T10:00:00Z"
+      }
     )
 
-    enriched, _warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ unread, read ])
+    enriched, _warnings, improved = @client.send(
+      :enrich_timeline_details, Object.new, [], enrich_events: [ unread, read ], reference_ibans: Set["DE00999999999999999999"]
+    )
 
     assert_equal [ "transfer-old" ], requested
     assert_equal 1, improved
@@ -1866,7 +1914,9 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     @client.define_singleton_method(:subscribe) { |_websocket, **_payload| raise Provider::TradeRepublicClient::MalformedResponse, "bad detail" }
     stored = transfer_item.merge("detail" => { "amount" => 50.0 })
 
-    enriched, warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ stored ])
+    enriched, warnings, improved = @client.send(
+      :enrich_timeline_details, Object.new, [], enrich_events: [ stored ], reference_ibans: Set["DE00999999999999999999"]
+    )
 
     event = enriched.find { |candidate| candidate["id"] == "transfer-1" }
     assert_equal 0, improved
@@ -1882,9 +1932,13 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
       "category" => "DIVIDEND", "status" => "EXECUTED", "detail" => { "amount" => 4.3 }
     }
 
-    ordered = [ note_only, dividend ].sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
+    counterparty_only = transfer_item(id: "transfer-note-read").merge(
+      "timestamp" => "2019-01-01T10:00:00Z", "detail" => { Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2019-01-02T10:00:00Z" }
+    )
 
-    assert_equal %w[dividend-1 transfer-old], ordered.map { |event| event["id"] }
+    ordered = [ counterparty_only, note_only, dividend ].sort_by { |event| Provider::TradeRepublicClient.detail_backfill_sort_key(event) }
+
+    assert_equal %w[dividend-1 transfer-old transfer-note-read], ordered.map { |event| event["id"] }
   end
 
   test "only transfers and direct debits are checked for a note" do
@@ -1892,7 +1946,236 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
     assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item(event_type: "CARD_TRANSACTION"))
     assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item(event_type: "INTEREST_PAYOUT"))
     assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("status" => "CANCELED"))
-    assert_not Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("detail" => { "note" => "Invoice 2026-0001" }))
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(
+      transfer_item.merge("detail" => { "note" => "Invoice 2026-0001", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" })
+    )
+  end
+
+  test "a transfer read for its note before the counterparty check is read again" do
+    assert Provider::TradeRepublicClient.cash_note_pending?(transfer_item.merge("detail" => { "note" => "Invoice 2026-0001" }))
+    assert Provider::TradeRepublicClient.cash_note_pending?(
+      transfer_item.merge("detail" => { Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" })
+    )
+    assert_not Provider::TradeRepublicClient.cash_note_read?(transfer_item.merge("detail" => { "note" => "Invoice 2026-0001" }))
+  end
+
+  test "reference IBANs come from every reference account field, normalized, without the Cash account's own IBAN" do
+    account = {
+      "securitiesAccountNumber" => "0000000000",
+      "cashAccount" => { "iban" => "DE00 1111 1111 1111 1111 11", "bic" => "TRBKDEBBXXX" },
+      "referenceAccount" => { "iban" => "de00 2222 2222 2222 2222 22", "bic" => nil },
+      "referenceAccountV2" => { "iban" => "DE00222222222222222222", "bic" => nil, "bankName" => "Bank", "logoUrl" => nil },
+      "referenceAccountList" => [
+        { "iban" => "FR00 3333 3333 3333 3333 3333 333", "bic" => nil, "bankName" => "Banque", "logoUrl" => nil },
+        { "iban" => "DE00111111111111111111", "bic" => nil, "bankName" => "Trade Republic", "logoUrl" => nil },
+        { "iban" => "not an iban" },
+        "DE00444444444444444444"
+      ]
+    }
+
+    assert_equal %w[DE00222222222222222222 FR0033333333333333333333333].to_set,
+      Provider::TradeRepublicClient.reference_ibans(account)
+    assert_equal Set["DE00222222222222222222"],
+      Provider::TradeRepublicClient.reference_ibans({ "referenceAccountList" => { "iban" => "DE00222222222222222222" } })
+    assert_empty Provider::TradeRepublicClient.reference_ibans({ "securitiesAccountNumber" => "0000000000" })
+    assert_empty Provider::TradeRepublicClient.reference_ibans(nil)
+  end
+
+  test "a transfer from a reference account is marked as such and neither IBAN is stored" do
+    freeze_time
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: "Savings") }
+    own = transfer_item(id: "transfer-own", event_type: "INCOMING_TRANSFER")
+    other = transfer_item(id: "transfer-other", event_type: "INCOMING_TRANSFER")
+    events = [ own, other ].map { |item| @client.send(:build_skeleton_event, item, warnings: []) }
+
+    # The detail stub names DE00 0000 0000 0000 0000 00 for every transfer.
+    enriched, = @client.send(:enrich_timeline_details, Object.new, events.first(1), reference_ibans: Set["DE00000000000000000000"])
+    unmatched, = @client.send(:enrich_timeline_details, Object.new, events.last(1), reference_ibans: Set["DE00999999999999999999"])
+
+    detail = enriched.sole["detail"]
+    assert_equal "reference_account", detail[Provider::TradeRepublicClient::COUNTERPARTY_KEY]
+    assert_equal "Savings", detail["note"]
+    assert_equal Time.current.iso8601, detail[Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY]
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(enriched.sole)
+    assert_not unmatched.sole["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_equal Time.current.iso8601, unmatched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY)
+    [ enriched.sole, unmatched.sole ].each do |event|
+      assert_no_match(/DE00\s?0000|DE00999/, event.to_json)
+    end
+  end
+
+  test "without reference accounts a transfer's counterparty stays unchecked and the sync warns once" do
+    freeze_time
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: "Savings") }
+    events = %w[transfer-a transfer-b].map { |id| @client.send(:build_skeleton_event, transfer_item(id: id), warnings: []) }
+
+    enriched, warnings, = @client.send(:enrich_timeline_details, Object.new, events, reference_ibans: Set.new)
+
+    assert_equal [ Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING ], warnings
+    enriched.each do |event|
+      assert_equal Time.current.iso8601, event.dig("detail", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY)
+      assert_equal "Savings", event.dig("detail", "note")
+      assert_not event["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY)
+      assert_not event["detail"].key?(Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+      assert Provider::TradeRepublicClient.cash_note_pending?(event)
+    end
+
+    _, warnings_with_reference, = @client.send(:enrich_timeline_details, Object.new, events, reference_ibans: Set["DE00999999999999999999"])
+    assert_empty warnings_with_reference
+  end
+
+  test "a transfer read only for its note waits for the counterparty check until a sync lists a reference account" do
+    note_only = transfer_item(id: "transfer-note-only").merge(
+      "detail" => { "amount" => 50.0, "note" => "Savings", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+    )
+    assert_not Provider::TradeRepublicClient.cash_note_pending?(note_only, check_counterparty: false)
+    assert Provider::TradeRepublicClient.cash_note_pending?(note_only, check_counterparty: true)
+    assert Provider::TradeRepublicClient.cash_note_read?(note_only, check_counterparty: false)
+    assert_not Provider::TradeRepublicClient.cash_note_read?(note_only, check_counterparty: true)
+
+    requested = []
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      helper.send(:transfer_detail, note: "Savings")
+    end
+
+    enriched, warnings, improved = @client.send(:enrich_timeline_details, Object.new, [], enrich_events: [ note_only ], reference_ibans: Set.new)
+
+    assert_empty requested
+    assert_equal 0, improved
+    assert_equal [ Provider::TradeRepublicClient::NO_REFERENCE_ACCOUNTS_WARNING ], warnings
+    assert_empty enriched
+
+    enriched, warnings, improved = @client.send(
+      :enrich_timeline_details, Object.new, [], enrich_events: [ note_only ], reference_ibans: Set["DE00000000000000000000"]
+    )
+
+    assert_equal [ "transfer-note-only" ], requested
+    assert_equal 1, improved
+    assert_empty warnings
+    assert_equal "reference_account", enriched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+  end
+
+  test "a transfer on a catch-up page whose note was read is checked from its stored copy only when a reference account is listed" do
+    requested = []
+    helper = self
+    @client.define_singleton_method(:subscribe) do |_websocket, **payload|
+      requested << payload[:id]
+      helper.send(:transfer_detail, note: "Savings")
+    end
+    stored = transfer_item(id: "transfer-page").merge(
+      "detail" => { "amount" => 50.0, "note" => "Savings", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+    )
+    page = [ @client.send(:build_skeleton_event, transfer_item(id: "transfer-page"), warnings: []) ]
+
+    @client.send(:enrich_timeline_details, Object.new, page, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ], reference_ibans: Set.new)
+    assert_empty requested
+
+    enriched, = @client.send(
+      :enrich_timeline_details, Object.new, page, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ],
+      reference_ibans: Set["DE00000000000000000000"]
+    )
+    assert_equal [ "transfer-page" ], requested
+    assert_equal "reference_account", enriched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_equal "Savings", enriched.sole.dig("detail", "note")
+  end
+
+  test "a transfer on a catch-up page checked from its stored copy keeps the page's newer status and title" do
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: "Savings") }
+    stored = transfer_item(id: "transfer-page", event_type: "OUTGOING_TRANSFER").merge(
+      "status" => "PENDING", "subtitle" => "Pending",
+      "detail" => { "amount" => 50.0, "note" => "Savings", Provider::TradeRepublicClient::NOTE_CHECKED_AT_KEY => "2026-08-02T10:00:00Z" }
+    )
+    fresh = transfer_item(id: "transfer-page", event_type: "OUTGOING_TRANSFER").merge("status" => "EXECUTED", "subtitle" => "Sent", "title" => "Renamed")
+    page = [ @client.send(:build_skeleton_event, fresh, warnings: []) ]
+
+    enriched, = @client.send(
+      :enrich_timeline_details, Object.new, page, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ],
+      reference_ibans: Set["DE00000000000000000000"]
+    )
+
+    event = enriched.sole
+    assert_equal [ "EXECUTED", "Sent", "Renamed" ], event.values_at("status", "subtitle", "title")
+    assert_equal "reference_account", event.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+    assert_equal "Savings", event.dig("detail", "note")
+    assert event.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_CHECKED_AT_KEY).present?
+
+    # Once the page shows it cancelled, its stored copy is not read for the check.
+    requested = []
+    @client.define_singleton_method(:subscribe) { |_websocket, **payload| requested << payload[:id] }
+    cancelled = [ @client.send(:build_skeleton_event, fresh.merge("status" => "CANCELED"), warnings: []) ]
+    enriched, = @client.send(
+      :enrich_timeline_details, Object.new, cancelled, enrich_events: [ stored ], note_read_event_ids: [ "transfer-page" ],
+      reference_ibans: Set["DE00000000000000000000"]
+    )
+    assert_empty requested
+    assert_equal "CANCELED", enriched.sole["status"]
+  end
+
+  test "no warning when the only transfers are already checked ones on the catch-up page" do
+    page = [ @client.send(:build_skeleton_event, transfer_item(id: "transfer-checked"), warnings: []) ]
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| raise "no detail should be read" }
+
+    _, warnings, = @client.send(:enrich_timeline_details, Object.new, page, note_read_event_ids: [ "transfer-checked" ], reference_ibans: Set.new)
+
+    assert_empty warnings
+  end
+
+  test "a direct debit from the reference account is marked as one" do
+    helper = self
+    @client.define_singleton_method(:subscribe) { |_websocket, **_payload| helper.send(:transfer_detail, note: nil) }
+    debit = @client.send(:build_skeleton_event, transfer_item(id: "debit-1", event_type: "PAYMENT_INBOUND_SEPA_DIRECT_DEBIT"), warnings: [])
+
+    enriched, = @client.send(:enrich_timeline_details, Object.new, [ debit ], reference_ibans: Set["DE00000000000000000000"])
+
+    assert_equal "reference_account", enriched.sole.dig("detail", Provider::TradeRepublicClient::COUNTERPARTY_KEY)
+  end
+
+  test "an IBAN row whose detail is not a hash is skipped" do
+    raw = transfer_detail(note: nil)
+    raw["sections"] << { "title" => "Recipient", "type" => "table", "data" => [
+      { "title" => "IBAN", "detail" => "DE00 5555 5555 5555 5555 55" },
+      { "title" => "IBAN", "detail" => nil }
+    ] }
+
+    assert @client.send(:reference_account_counterparty?, raw, Set["DE00000000000000000000"])
+  end
+
+  test "IBANs with non-breaking or other unicode spaces are normalized" do
+    nbsp = "\u00A0"
+    assert_equal "DE00000000000000000000", Provider::TradeRepublicClient.normalize_iban("DE00#{nbsp}0000#{nbsp}0000\u2009 0000 0000 00")
+    assert_equal Set["DE00222222222222222222"],
+      Provider::TradeRepublicClient.reference_ibans({ "referenceAccountList" => [ { "iban" => "DE00#{nbsp}2222#{nbsp}2222#{nbsp}2222#{nbsp}2222#{nbsp}22" } ] })
+
+    raw = transfer_detail(note: nil)
+    raw["sections"].find { |section| section["title"] == "Overview" }["data"].last["detail"]["text"] = "DE00#{nbsp}0000#{nbsp}0000#{nbsp}0000#{nbsp}0000#{nbsp}00"
+    assert @client.send(:reference_account_counterparty?, raw, Set["DE00000000000000000000"])
+  end
+
+  test "a transfer is not matched without reference accounts or with more than one IBAN in its detail" do
+    raw = transfer_detail(note: nil)
+    reference = Set["DE00000000000000000000"]
+
+    assert @client.send(:reference_account_counterparty?, raw, reference)
+    assert_not @client.send(:reference_account_counterparty?, raw, Set.new)
+
+    # The legacy layout names the other party in the overview ("From"/"Von");
+    # a second, different IBAN anywhere makes the detail ambiguous.
+    raw["sections"] << { "title" => "Recipient", "type" => "table", "data" => [
+      { "title" => "IBAN", "detail" => { "text" => "DE00 5555 5555 5555 5555 55", "type" => "text" } }
+    ] }
+    assert_not @client.send(:reference_account_counterparty?, raw, reference)
+
+    # The same IBAN twice, and an empty IBAN row, still match.
+    raw["sections"].last["data"] = [
+      { "title" => "IBAN", "detail" => { "text" => "DE00000000000000000000", "type" => "text" } },
+      { "title" => "IBAN", "detail" => { "text" => "", "type" => "text" } }
+    ]
+    assert @client.send(:reference_account_counterparty?, raw, reference)
   end
 
   test "new dividends fetch details without changing the timeline amount" do
@@ -3109,9 +3392,9 @@ class TradeRepublicClientTest < ActiveSupport::TestCase
 
     # Drives the real sync_once against a stubbed account response and an
     # already connected websocket; subscriptions come from the test's stub.
-    def stub_sync_session
+    def stub_sync_session(account: {})
       account_response = Net::HTTPOK.new("1.1", "200", "OK")
-      account_response.stubs(:body).returns({ securitiesAccountNumber: "SEC-1", currency: "EUR" }.to_json)
+      account_response.stubs(:body).returns({ securitiesAccountNumber: "SEC-1", currency: "EUR" }.merge(account).to_json)
       session = stub(get: account_response, websocket_headers: {}, cookies_blob: "session")
       @client.stubs(:new_session).returns(session)
       websocket = stub(send_text: nil, receive: "connected", close: nil)
