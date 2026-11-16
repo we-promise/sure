@@ -56,6 +56,7 @@ class RulesController < ApplicationController
 
   def create
     @rule = Current.family.rules.build(rule_params)
+    return render :new, status: :unprocessable_entity if similar_rules_to_confirm?
 
     if save_rule
       redirect_to confirm_rule_path(@rule, reload_on_close: true)
@@ -90,6 +91,7 @@ class RulesController < ApplicationController
 
   def update
     @rule.assign_attributes(rule_params)
+    return render :edit, status: :unprocessable_entity if similar_rules_to_confirm?
 
     if save_rule
       flash_message = if @rule.notification_baseline_timed_out?
@@ -154,6 +156,17 @@ class RulesController < ApplicationController
   end
 
   private
+    # Advice, not a validation: the form lists the family's similar rules
+    # until the user saves anyway. Rules written elsewhere (the assistant,
+    # imports, Quick Categorize) are not checked. An invalid rule shows its
+    # errors first.
+    def similar_rules_to_confirm?
+      return false if params[:confirm_similar].present? || !@rule.valid?
+
+      @similar_rules = Rule::Health.new(Current.family).similar_to(@rule)
+      @similar_rules.any?
+    end
+
     # A group typed into the form may be created by another request at the
     # same moment; the save then rolls back, and saving again finds it.
     def save_rule

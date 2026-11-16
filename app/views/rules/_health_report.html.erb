@@ -1,5 +1,5 @@
 <%# locals: (health:) %>
-<% ref = ->(rule) { rule_health_reference(rule, health) } %>
+<% ref = ->(rule) { rule_health_reference(rule, health.position(rule)) } %>
 <% refs = ->(rules) { safe_join(rules.map(&ref), ", ") } %>
 <% sections = {
   duplicates: health.duplicates,

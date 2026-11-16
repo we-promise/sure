@@ -85,6 +85,18 @@ class Assistant::Function::CreateRuleTest < ActiveSupport::TestCase
     assert_match "add it in Settings > Rules", result[:problems].join
   end
 
+  test "creates a rule identical to an existing one, as before" do
+    params = {
+      "name" => "Coffee",
+      "conditions" => [ { "condition_type" => "transaction_name", "operator" => "like", "value" => "zxq coffee" } ],
+      "actions" => [ { "action_type" => "set_transaction_category", "value" => @category.id } ]
+    }
+
+    assert_difference "@family.rules.count", 2 do
+      2.times { assert @fn.call(params)[:success] }
+    end
+  end
+
   test "ignores an attempt to create an active rule" do
     result = @fn.call(
       "active" => true,

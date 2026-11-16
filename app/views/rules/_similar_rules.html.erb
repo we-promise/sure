@@ -1,0 +1,19 @@
+<%# locals: (similar_rules:) %>
+<%= render DS::Alert.new(title: t("rules.similar_rules.title", count: similar_rules.size), variant: :warning) do %>
+  <% similar_rules.each do |similar| %>
+    <div class="space-y-1" data-similar-rule="<%= similar.rule.id %>">
+      <p><%= rule_health_reference(similar.rule, similar.position) %></p>
+      <p class="text-secondary"><%= rule_summary(similar.rule) %></p>
+      <% if similar.shared_count %>
+        <p class="text-secondary" data-similar-rule-shared><%= t("rules.similar_rules.shared", count: similar.shared_count) %></p>
+      <% end %>
+      <% if similar.wins %>
+        <p class="text-secondary" data-similar-rule-wins><%= t("rules.similar_rules.wins") %></p>
+      <% end %>
+    </div>
+  <% end %>
+  <div class="flex justify-end gap-2 pt-2">
+    <%= render DS::Button.new(text: t("rules.similar_rules.cancel"), variant: :secondary, data: { action: "DS--dialog#close" }) %>
+    <%= render DS::Button.new(text: t("rules.similar_rules.save_anyway"), type: :submit, name: "confirm_similar", value: "1") %>
+  </div>
+<% end %>

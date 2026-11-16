@@ -76,6 +76,16 @@ en:
         title: Match nothing today
       failed:
         title: Couldn't be checked
+    similar_rules:
+      title:
+        one: A similar rule already exists
+        other: Similar rules already exist
+      shared:
+        one: Both rules match 1 transaction.
+        other: Both rules match %{count} transactions.
+      wins: It runs before this one, so on the transactions both match, it wins.
+      cancel: Cancel
+      save_anyway: Save anyway
     group:
       rules_count:
         one: 1 rule

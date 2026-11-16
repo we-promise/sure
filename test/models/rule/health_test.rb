@@ -217,6 +217,45 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal unchanged, shadowed
   end
 
+  test "compares an unsaved rule with compound conditions against the family's active and inactive rules" do
+    active = create_rule(name_condition("like", "woolworths"), amount_condition, category: @groceries)
+    inactive = create_rule(name_condition("like", "woolworths"), amount_condition, category: @dining, active: false)
+    create_rule(name_condition("like", "hardware"), category: @groceries)
+    rule = @family.rules.build(resource_type: "transaction")
+    rule.conditions.build(condition_type: "compound", operator: "and", sub_conditions: [ amount_condition, name_condition("like", " WOOLWORTHS") ])
+    rule.actions.build(action_type: "set_transaction_category", value: @groceries.id)
+
+    similar = health.similar_to(rule)
+
+    assert_equal [ active, inactive ], similar.map(&:rule)
+    assert_equal [ true, nil ], similar.map(&:wins)
+    assert_equal [ 2, nil ], similar.map(&:shared_count)
+  end
+
+  test "a rule whose matches cannot be read gets no shared count rather than zero" do
+    existing = create_rule(name_condition("like", "woolworths"), category: @groceries)
+    rule = @family.rules.build(resource_type: "transaction")
+    rule.conditions.build(condition_type: "transaction_name", operator: "like", value: "woolworths metro")
+    rule.conditions.build(condition_type: "transaction_merchant", operator: "=", value: "not-a-uuid")
+    rule.actions.build(action_type: "set_transaction_category", value: @dining.id)
+
+    similar = health.similar_to(rule).sole
+
+    assert_equal existing, similar.rule
+    assert_nil similar.shared_count
+  end
+
+  test "a condition marked for destruction on an edited rule is left out" do
+    existing = create_rule(name_condition("like", "woolworths"), category: @groceries)
+    edited = create_rule(name_condition("like", "woolworths"), name_condition("like", "hardware"), category: @groceries)
+    edited.reload.conditions.find { |condition| condition.value == "hardware" }.mark_for_destruction
+
+    similar = health.similar_to(edited)
+
+    assert_equal [ existing ], similar.map(&:rule)
+    assert_equal [ 2 ], similar.map(&:shared_count)
+  end
+
   private
     def health
       Rule::Health.new(@family)

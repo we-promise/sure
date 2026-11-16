@@ -9,6 +9,10 @@
     <%= render "shared/form_errors", model: @rule %>
   <% end %>
 
+  <% if @similar_rules.present? %>
+    <%= render "rules/similar_rules", similar_rules: @similar_rules %>
+  <% end %>
+
   <section class="space-y-4">
     <div class="flex items-center gap-1 text-secondary">
       <%= icon "tag", size: "sm" %>

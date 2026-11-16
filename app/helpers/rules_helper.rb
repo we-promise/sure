@@ -27,14 +27,28 @@ module RulesHelper
 
   # "#3 Groceries", with its run position, linking to the rule's form for
   # those who can edit it.
-  def rule_health_reference(rule, health)
-    label = t("rules.health.rule_label", position: health.position(rule), name: rule.name.presence || rule.primary_condition_title)
+  def rule_health_reference(rule, position)
+    label = t("rules.health.rule_label", position: position, name: rule.name.presence || rule.primary_condition_title)
     reference = if Current.user&.guest?
       tag.span(label, class: "font-medium text-primary")
     else
       link_to(label, edit_rule_path(rule), class: "font-medium text-primary underline", data: { turbo_frame: "modal" })
     end
     rule.active? ? reference : safe_join([ reference, tag.span(t("rules.health.inactive"), class: "text-secondary") ], " ")
+  end
+
+  # e.g. "If transaction name like woolworths · Set transaction category to
+  # Groceries": the condition and action the rules list shows first.
+  def rule_summary(rule)
+    action = rule.displayed_action
+    action_label = if action.nil?
+      t("rules.no_action")
+    elsif action.value && action.options
+      t("rules.rule.action_label_to", label: action.executor.label, value: action.value_display)
+    else
+      action.executor.label
+    end
+    "#{rule.primary_condition_title} · #{action_label}"
   end
 
   # e.g. "category and merchant", for the fields a Rule::Health entry names.
