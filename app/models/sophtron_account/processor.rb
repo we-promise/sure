@@ -35,7 +35,7 @@ class SophtronAccount::Processor
 
     Rails.logger.info "SophtronAccount::Processor - Processing sophtron_account #{sophtron_account.id} (account #{sophtron_account.account_id})"
     begin
-      process_account!
+      account, balance, currency = balance_for_anchor
     rescue StandardError => e
       Rails.logger.error "SophtronAccount::Processor - Failed to process account #{sophtron_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
@@ -43,59 +43,82 @@ class SophtronAccount::Processor
       raise
     end
 
-    process_transactions
+    return unless process_transactions
+
+    begin
+      anchor_account!(account, balance, currency)
+    rescue StandardError => e
+      Rails.logger.error "SophtronAccount::Processor - Failed to anchor account #{sophtron_account.id}: #{e.message}"
+      Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
+      report_exception(e, "account")
+      raise
+    end
   end
 
-  # Updates the linked Maybe Account's balance from Sophtron data.
-  #
-  # Handles sign conventions for different account types:
-  # - Credit cards negate the provider balance unless a balance sign
-  #   override says the amount is debt or a genuine credit
-  # - Loans always use inverted signs (negated)
-  # - Other account types use Sophtron's native sign convention
-  #
-  # @return [void]
-  # @raise [StandardError] if the account or its current balance anchor cannot be updated
+  # Applies the provider balance immediately. Used when the user changes the
+  # balance sign override; the sync path imports transactions before anchoring.
   def process_account!
-    account = sophtron_account.current_account
-    if account.blank?
-      Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
-      return
-    end
+    account, balance, currency = balance_for_anchor
+    return if account.nil?
 
-    # Update account balance from latest Sophtron data
-    balance = signed_balance(account, sophtron_account.observed_balance)
-
-    # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
-    currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
-
-    # The anchor is what a later account sync reads. Write it here, without
-    # queueing that sync, so the caller can schedule one sync after every
-    # account has been updated.
-    ActiveRecord::Base.transaction do
-      account.update!(currency: currency)
-      result = account.set_current_balance(balance, schedule_sync: false)
-      raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
-      account.update!(cash_balance: balance) unless result.historical?
-    end
+    anchor_account!(account, balance, currency)
   end
 
   private
+
+    # Computes the linked Maybe Account's balance from Sophtron data.
+    #
+    # Handles sign conventions for different account types:
+    # - Credit cards negate the provider balance unless a balance sign
+    #   override says the amount is debt or a genuine credit
+    # - Loans always use inverted signs (negated)
+    # - Other account types use Sophtron's native sign convention
+    #
+    # @return [Array(Account, Numeric, String), nil] account, balance and currency
+    # @raise [StandardError] if the account cannot be read
+    def balance_for_anchor
+      account = sophtron_account.current_account
+      if account.blank?
+        Rails.logger.error("Sophtron account #{sophtron_account.id} has no associated Account")
+        return
+      end
+
+      balance = signed_balance(account, sophtron_account.observed_balance)
+
+      # Normalize currency with fallback chain: parsed sophtron currency -> existing account currency -> USD
+      currency = parse_currency(sophtron_account.currency) || account.currency || "USD"
+
+      [ account, balance, currency ]
+    end
+
+    # Writes the anchor only after the transaction batch has been imported, so the
+    # manager can judge the standing anchor against a complete ledger.
+    def anchor_account!(account, balance, currency)
+      # The anchor is what a later account sync reads. Write it here, without
+      # queueing that sync, so the caller can schedule one sync after every
+      # account has been updated.
+      ActiveRecord::Base.transaction do
+        account.update!(currency: currency)
+        result = account.set_current_balance(balance, schedule_sync: false)
+        raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
+        account.update!(cash_balance: balance) unless result.historical?
+      end
+    end
 
     # Processes all stored transactions for this account.
     #
     # Delegates to SophtronAccount::Transactions::Processor to convert
     # raw transaction data into Maybe Transaction records.
     #
-    # @return [void]
-    # @raise [StandardError] if transaction processing fails
+    # @return [Boolean] true when the batch imported without per-row failures
     def process_transactions
-      SophtronAccount::Transactions::Processor.new(sophtron_account).process
+      result = SophtronAccount::Transactions::Processor.new(sophtron_account).process
+      result[:success]
     rescue StandardError => e
       Rails.logger.error "SophtronAccount::Processor - Failed to process transactions for sophtron_account #{sophtron_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
       report_exception(e, "transactions")
-      raise
+      false
     end
 
     # Converts a Sophtron balance into Sure's stored sign.
