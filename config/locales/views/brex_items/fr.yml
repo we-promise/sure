@@ -114,15 +114,13 @@ fr:
       description: Connectez-vous en utilisant %{name}
       name: Brex-%{name}
     provider_panel:
-      accounts_link: Comptes
       add_connection: Ajouter une connexion Brex
       base_url_label: URL de base (facultatif)
       base_url_placeholder: https://api.brex.com
-      configured_html: Configuré et prêt à l'emploi. Visitez l'onglet %{accounts_link}
-        pour gérer et configurer des comptes.
       connection_name_label: Nom de la connexion
       connection_name_placeholder: Vérification commerciale
       default_connection_name: Connexion Brex
+      disconnect: Déconnecter
       disconnect_confirm: Déconnecter %{name} ?
       disconnect_label: Déconnecter %{name}
       encryption_warning:
@@ -133,22 +131,20 @@ fr:
         title: Le chiffrement de la base de données n'est pas configuré
       instructions:
         copy_token_html: Copiez le jeton et ajoutez-le en tant que connexion nommée
-          ci-dessous. Bien sûr, stocke le jeton uniquement pour synchroniser cette
-          famille.
-        create_token: 'Créez un jeton API avec ces étendues en lecture seule : comptes.cash.readonly,
-          comptes.card.readonly, transactions.cash.readonly, transactions.card.readonly'
+          ci-dessous. Sure stocke le jeton uniquement pour synchroniser cette
+          entreprise.
+        create_token: 'Créez un jeton API avec ces étendues en lecture seule : accounts.cash.readonly,
+          accounts.card.readonly, transactions.cash.readonly, transactions.card.readonly'
         open_tokens: Accédez aux paramètres du développeur Brex/du jeton API de l'entreprise
           que vous souhaitez connecter.
         sign_in_html: Visitez %{link} et connectez-vous au compte que vous souhaitez
           connecter
       keep_token_placeholder: Laisser vide pour conserver le jeton actuel
-      not_configured: Non configuré
       sandbox_note_html: Utilisez une connexion nommée distincte pour chaque jeton
         d'entreprise/API Brex que vous souhaitez synchroniser. Laissez l’URL de base
         vide pour la production. La mise en scène est limitée aux tests approuvés
         par le Brex et ne fonctionne pas avec les jetons client.
       setup_accounts: Configurer des comptes
-      setup_title: 'Instructions de configuration :'
       sync: Synchroniser
       token_label: Jeton
       token_placeholder: Collez le jeton ici
@@ -238,9 +234,9 @@ fr:
           savings: Économies
         investment:
           401k: 401(k)
-          403b: 403b)
+          403b: 403(b)
           529_plan: Régime 529
-          angel: Ange
+          angel: Angel
           brokerage: Courtage
           hsa: Compte d'épargne santé
           ira: IRA traditionnel
@@ -249,7 +245,7 @@ fr:
           retirement: Retraite
           roth_401k: Roth 401(k)
           roth_ira: Roth IRA
-          tsp: Plan d'épargne-épargne
+          tsp: Plan d'épargne
         loan:
           auto: Prêt automobile
           mortgage: Hypothèque

@@ -210,8 +210,11 @@ end
     private
 
       def sign_out
-        @user.sessions.each do |session|
-          delete session_path(session)
-        end
+        # Deleting sessions through the controller de-authenticates the request the
+        # moment our own session dies, so every later delete in the loop is a
+        # silent no-op and whichever sessions sort after it survive. The order is
+        # unspecified, which made every suite that signs out this way flaky.
+        # Teardown hygiene is not the behavior under test, so destroy directly.
+        @user.sessions.destroy_all
       end
 end

@@ -61,6 +61,7 @@ de:
     pending_duplicate_merges: Duplikatprüfung
     plaid_items: Plaid
     plan: Plan
+    portfolio: Portfolio
     preferences: Einstellungen
     profile: Profil
     profiles: Profil
@@ -82,6 +83,7 @@ de:
     sso_identities: SSO-Verbindungen
     sso_providers: SSO-Anbieter
     subscriptions: Abo
+    system_health: Systemstatus
     tags: Tags
     trades: Trades
     transactions: Transaktionen

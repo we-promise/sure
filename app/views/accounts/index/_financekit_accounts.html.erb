@@ -1,0 +1,16 @@
+<%# locals: (accounts:) %>
+
+<%= render DS::Disclosure.new(variant: :card, open: true, id: "financekit-accounts") do |disclosure| %>
+  <% disclosure.with_summary_content do %>
+    <div class="flex items-center gap-2">
+      <%= icon "chevron-right", class: "group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150" %>
+      <%= render ProviderLogo.new(provider_key: :financekit) %>
+      <span class="text-sm font-medium text-primary"><%= t(".title") %></span>
+    </div>
+  <% end %>
+
+  <div class="space-y-4 mt-4">
+    <p class="text-sm text-secondary"><%= t(".description") %></p>
+    <%= render "accounts/index/account_groups", accounts: accounts %>
+  </div>
+<% end %>

@@ -4,8 +4,11 @@ module Assistant::Configurable
   # The byte-stable half of the system prompt. Everything volatile (date,
   # currency, per-family context) lives in the trailing Session context block,
   # because providers cache and discount an exactly-repeated prefix; one
-  # changed byte mid-prompt invalidates everything after it. Self-hosters
-  # customizing the prompt should edit this constant.
+  # changed byte mid-prompt invalidates everything after it.
+  #
+  # This is the default. A family can override it from /settings/ai_prompts
+  # (`Family#ai_prompt(:chat_system)`), which trades that cache discount away for
+  # that family only. Edit the constant to change what every family starts from.
   STATIC_INSTRUCTIONS = <<~PROMPT.freeze
     ## Your identity
 
@@ -28,6 +31,7 @@ module Assistant::Configurable
     - Reuse data already present in this conversation or in the Session context below instead of calling a tool again for it. Exception: always re-fetch when the data may have changed (for example after you created or updated something) or when the user asks for a different time range or more detail.
     - Prefer the most specific tool: use get_income_statement or get_balance_sheet for totals and trends; use get_transactions only to find or inspect individual transactions.
     - If a tool result contains an "error" and a "hint", follow the hint and retry once with corrected arguments. Never repeat an identical failing call.
+    - Never mention internal tool or function names in your responses. Describe what you did in plain language ("I checked your bills", not "I called get_bills").
     - If you suspect that you do not have enough data to 100% accurately answer, be transparent about it and state exactly what the data you're presenting represents and what context it is in (i.e. date range, account, etc.)
 
     ### Response rules
@@ -103,7 +107,9 @@ module Assistant::Configurable
       end
 
       def default_instructions(preferred_currency, preferred_date_format, user: nil)
-        "#{Assistant::Configurable::STATIC_INSTRUCTIONS}\n#{session_context(preferred_currency, preferred_date_format, user: user)}"
+        static = user&.family&.ai_prompt(:chat_system) || Assistant::Configurable::STATIC_INSTRUCTIONS
+
+        "#{static}\n#{session_context(preferred_currency, preferred_date_format, user: user)}"
       end
 
       def session_context(preferred_currency, preferred_date_format, user: nil)

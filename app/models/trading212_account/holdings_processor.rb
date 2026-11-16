@@ -44,6 +44,10 @@ class Trading212Account::HoldingsProcessor
       price    = parse_decimal(position[:currentPrice])
       return unless quantity && price && quantity > 0
 
+      position_ccy, price, cost_basis = normalize_minor_units(
+        position_ccy, price, parse_decimal(position[:averagePricePaid])
+      )
+
       amount = quantity * price
       date   = Date.current
 
@@ -56,7 +60,7 @@ class Trading212Account::HoldingsProcessor
         currency:           position_ccy,
         date:               date,
         price:              price,
-        cost_basis:         parse_decimal(position[:averagePricePaid]),
+        cost_basis:         cost_basis,
         external_id:        external_id,
         source:             "trading212",
         account_provider_id: @trading212_account.account_provider&.id,

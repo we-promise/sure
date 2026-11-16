@@ -78,14 +78,19 @@ class Period
     },
     "all_time" => {
       date_range: -> {
-        oldest_date = Current.family&.oldest_entry_date
-        # If no family or no entries exist, use a reasonable historical fallback
-        # to ensure "All Time" represents a meaningful range, not just today
-        start_date = if oldest_date && oldest_date < Date.current
-          oldest_date
-        else
-          5.years.ago.to_date
-        end
+        # Anchor to one month before the first real activity (a Transaction or
+        # Trade), not to the oldest entry of any kind -- a stray Valuation or
+        # opening balance dated far in the past would otherwise stretch every
+        # All chart into a long flat zero line (#4007). Only a family with no
+        # transactions or trades falls back to oldest_entry_date, i.e. the
+        # previous behaviour; a family that has activity never does, even when
+        # that activity is today.
+        family = Current.family
+        earliest_activity_date = family&.earliest_activity_date
+        start_date = earliest_activity_date ? earliest_activity_date - 1.month : family&.oldest_entry_date
+        # The guard is unchanged: a start of today or later is not a meaningful
+        # "All Time" range, so it degrades to the historical 5-year range.
+        start_date = 5.years.ago.to_date unless start_date && start_date < Date.current
         [ start_date, Date.current ]
       },
       label_short: "All",
@@ -147,11 +152,12 @@ class Period
     end
   end
 
-  def initialize(start_date: nil, end_date: nil, key: nil, date_format: "%b %d, %Y")
+  # NOTE: dates are rendered through `I18n.l`, so there is no `date_format:`
+  # knob — the format follows the active locale, not the caller.
+  def initialize(start_date: nil, end_date: nil, key: nil)
     @key = key
     @start_date = start_date
     @end_date = end_date
-    @date_format = date_format
     validate!
   end
 
@@ -199,15 +205,55 @@ class Period
 
   def comparison_label
     if key
-      I18n.t("period.#{key}.comparison_label", default: key_metadata&.fetch(:comparison_label) || "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}")
+      I18n.t("period.#{key}.comparison_label", default: key_metadata&.fetch(:comparison_label) || custom_comparison_label)
     else
-      "#{start_date.strftime(@date_format)} to #{end_date.strftime(@date_format)}"
+      custom_comparison_label
     end
+  end
+
+  # Compact rendering of the actual dates, sized for a control that has to show
+  # its own value (the period picker trigger). `label_short` answers "which
+  # option is this" and degrades to a bare "Custom" for a keyless range, which
+  # tells the reader nothing; `comparison_label` is the long form shown beside
+  # trend values and is too wide for a button.
+  #
+  # The year is dropped while the whole range sits inside the current year — it
+  # adds width without disambiguating anything.
+  def label_range
+    return label_short if start_date.nil? || end_date.nil?
+
+    # `:short_with_year` matches `comparison_label`'s format so the trigger and
+    # the range printed above the chart read as the same range.
+    format = within_current_year? ? :short : :short_with_year
+
+    I18n.t(
+      "period.range",
+      start_date: I18n.l(start_date, format: format),
+      end_date: I18n.l(end_date, format: format),
+      default: "%{start_date} – %{end_date}"
+    )
   end
 
   private
     def key_metadata
       @key_metadata ||= PERIODS[key]
+    end
+
+    # The year is dropped while the whole range sits inside the current year — it
+    # adds width without disambiguating anything.
+    def within_current_year?
+      start_date.year == end_date.year && end_date.year == Date.current.year
+    end
+
+    # Both the separator and the date order are translatable: `to` is a word, and
+    # locales disagree on where the day, month and year go. `I18n.l` resolves the
+    # month name against the active locale, which `strftime` cannot do.
+    def custom_comparison_label
+      I18n.t(
+        "period.custom.comparison_label",
+        start_date: I18n.l(start_date, format: :short_with_year),
+        end_date: I18n.l(end_date, format: :short_with_year)
+      )
     end
 
     def must_be_valid_date_range

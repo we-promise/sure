@@ -1,0 +1,24 @@
+<%# locals: (icon_name:, title:, subtitle:, open: false) %>
+<%= render DS::Disclosure.new(
+      variant: :card,
+      open: open,
+      class: "hover:bg-container-inset transition-colors",
+      body_class: "mt-4 pt-4 border-t border-primary space-y-4"
+    ) do |disclosure| %>
+  <% disclosure.with_summary_content do %>
+    <div class="flex items-center justify-between gap-4 select-none">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-9 h-9 rounded-full bg-surface-inset flex justify-center items-center shrink-0">
+          <%= icon icon_name %>
+        </div>
+        <div class="min-w-0">
+          <p class="text-sm font-medium text-primary"><%= title %></p>
+          <p class="text-xs text-secondary truncate"><%= subtitle %></p>
+        </div>
+      </div>
+      <%= icon "chevron-down", class: "group-open:rotate-180 motion-safe:transition-transform motion-safe:duration-150 text-secondary shrink-0" %>
+    </div>
+  <% end %>
+
+  <%= yield %>
+<% end %>

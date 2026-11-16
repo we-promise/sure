@@ -1,0 +1,13 @@
+<svg viewBox="0 0 <%= DS::Sparkline::WIDTH %> <%= DS::Sparkline::HEIGHT %>" class="<%= css %>" role="img" aria-label="<%= aria_label %>">
+  <polyline points="<%= polyline_points %>"
+            fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.7" />
+  <% points.each do |x, y, value| %>
+    <circle cx="<%= x.round(1) %>" cy="<%= y.round(1) %>" r="3"
+            fill="<%= value.positive? ? "currentColor" : "none" %>"
+            stroke="currentColor" stroke-width="1.5" />
+  <% end %>
+  <% labels.each do |x, text| %>
+    <text x="<%= x %>" y="<%= DS::Sparkline::LABEL_Y %>" text-anchor="middle"
+          fill="currentColor" opacity="0.5" font-size="9"><%= text %></text>
+  <% end %>
+</svg>

@@ -43,6 +43,22 @@ class BrexEntry::ProcessorTest < ActiveSupport::TestCase
     assert_equal "cc_payment", entry.transaction.kind
   end
 
+  test "does not classify non-negative collection as card payment" do
+    entry = BrexEntry::Processor.new(card_transaction(id: "tx_collection_positive", amount: 50_00, type: "COLLECTION"), brex_account: @brex_account).process
+
+    assert_equal BigDecimal("50.0"), entry.amount
+    assert_equal "standard", entry.transaction.kind
+  end
+
+  test "does not classify non-card collection as card payment" do
+    @brex_account.update!(account_kind: "cash")
+
+    entry = BrexEntry::Processor.new(card_transaction(id: "tx_collection_cash", amount: -50_00, type: "COLLECTION"), brex_account: @brex_account).process
+
+    assert_equal BigDecimal("-50.0"), entry.amount
+    assert_equal "standard", entry.transaction.kind
+  end
+
   test "is idempotent by external id and source" do
     transaction = card_transaction(id: "tx_duplicate", amount: 12_34)
 

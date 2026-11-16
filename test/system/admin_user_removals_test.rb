@@ -19,8 +19,9 @@ class AdminUserRemovalsTest < ApplicationSystemTestCase
     find("details", text: @target.family.name).find("summary").click
 
     within find("tr", text: @target_email) do
-      click_on "Remove"
+      find("button[aria-haspopup='dialog']").click
     end
+    click_on "Delete User"
 
     within "dialog[open]" do
       assert_text "This immediately revokes access"

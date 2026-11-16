@@ -24,7 +24,7 @@
         <%= t("entries.reconciliation.descriptions.#{state}") %>
       </p>
 
-      <% if entry.reconciled? %>
+      <% if entry.statement_reconciled? %>
         <dl class="space-y-2 bg-surface-inset rounded-lg px-3 py-2">
           <div class="flex items-center justify-between gap-2 text-sm">
             <dt class="text-secondary shrink-0"><%= t("entries.reconciliation.statement_label") %></dt>

@@ -16,8 +16,16 @@
 # @attr [JSONB] raw_payload Raw account data from Sophtron API
 # @attr [JSONB] raw_transactions_payload Raw transaction data from Sophtron API
 # @attr [DateTime] last_updated When Sophtron last updated this account
+# @attr [String, nil] balance_sign_override Credit card meaning: "credit", "debt", or nil for automatic
+# @attr [Boolean, nil] lender_signed Feed sign convention detected when the override is saved
 class SophtronAccount < ApplicationRecord
-  include CurrencyNormalizable
+  include CurrencyNormalizable, Encryptable
+
+  # Encrypt raw payloads if ActiveRecord encryption is configured
+  if encryption_ready?
+    encrypts :raw_payload
+    encrypts :raw_transactions_payload
+  end
 
   belongs_to :sophtron_item
 
@@ -30,12 +38,61 @@ class SophtronAccount < ApplicationRecord
   scope :automatic_sync, -> { where(manual_sync: false) }
 
   validates :name, :currency, presence: true
+  validates :balance_sign_override, inclusion: { in: %w[credit debt], allow_nil: true }
   validate :has_balance
+
   # Returns the linked Maybe Account for this Sophtron account.
   #
   # @return [Account, nil] The linked Maybe Account, or nil if not linked
   def current_account
     account
+  end
+
+  # Saves the override, applies it to the stored provider balance, and schedules
+  # the linked account sync atomically. A failure leaves the previous setting in
+  # place so the same selection can be retried.
+  #
+  # An item sync is not enough when this card or its parent item is marked for
+  # manual sync: SophtronItem::Syncer only processes automatic accounts, so the
+  # override would sit unused until the user finishes that flow.
+  #
+  # The override is also the only signal for the feed's sign convention, so
+  # the convention is detected here, from the balance the user is confirming,
+  # and never inferred later from balances nobody looked at. Saving while the
+  # balance is zero leaves it undetected until the override is saved again.
+  # When the convention changes, the stored transactions are re-signed in the
+  # background rather than in this request.
+  #
+  # @return [void]
+  def apply_balance_sign_override!(override)
+    transaction(requires_new: true) do
+      was_lender_signed = lender_signed?
+      self.balance_sign_override = override
+      detect_sign_convention if balance_sign_override_changed? || lender_signed.nil?
+      save!
+      next unless current_account.present?
+
+      SophtronAccount::Processor.new(self).process_account! if saved_change_to_balance_sign_override?
+      reprocess = lender_signed? != was_lender_signed
+      SophtronTransactionsReprocessJob.perform_later(self) if reprocess
+      current_account.sync_later if saved_change_to_balance_sign_override? || reprocess
+    end
+  end
+
+  # The provider balance before Sure applies its sign convention.
+  #
+  # @return [Numeric]
+  def observed_balance
+    balance || available_balance || 0
+  end
+
+  # Whether this credit card's feed signs amounts from the lender's side, with
+  # debt and charges positive. Automatic mode keeps the account-holder
+  # convention.
+  #
+  # @return [Boolean]
+  def lender_signed?
+    lender_signed == true && current_account&.accountable_type == "CreditCard"
   end
 
   def institution_name
@@ -116,6 +173,18 @@ class SophtronAccount < ApplicationRecord
   end
 
   private
+
+    # Sophtron institutions differ in sign convention: a debt reported as
+    # positive, or a credit reported as negative, comes from a lender-signed
+    # feed. A zero balance carries no sign, so it leaves the convention unknown.
+    def detect_sign_convention
+      self.lender_signed =
+        if balance_sign_override.blank? || observed_balance.zero?
+          nil
+        else
+          (balance_sign_override == "debt") == observed_balance.positive?
+        end
+    end
 
     def log_invalid_currency(currency_value)
       Rails.logger.warn("Invalid currency code '#{currency_value}' for Sophtron account #{id}, defaulting to USD")

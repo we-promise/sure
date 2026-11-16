@@ -4,10 +4,16 @@ pl:
     edit:
       edit: Edytuj %{account}
     form:
+      initial_balance: Początkowe saldo pożyczki
       interest_rate: Oprocentowanie
       interest_rate_placeholder: '5.25'
-      initial_balance: Początkowe saldo pożyczki
+      none: Brak
       rate_type: Typ oprocentowania
+      rate_type_adjustable: Regulowane
+      rate_type_fixed: Stałe
+      rate_type_variable: Zmienne
+      subtype_none: Brak
+      subtype_prompt: Wybierz typ pożyczki
       term_months: Okres (miesiące)
       term_months_placeholder: '360'
     new:
@@ -21,3 +27,28 @@ pl:
       term: Okres
       type: Typ
       unknown: Nieznane
+    tabs:
+      overview:
+        edit_loan_details: Edytuj szczegóły pożyczki
+        interest_rate: Oprocentowanie
+        monthly_payment: Rata miesięczna
+        not_applicable: Nie dotyczy
+        original_principal: Kapitał początkowy
+        remaining_principal: Pozostały kapitał
+        term: Okres
+        type: Typ
+        unknown: Nieznany
+      schedule:
+        date: Data
+        description: Prognoza na podstawie początkowego salda, oprocentowania i okresu,
+          licząc od %{start_date}. Dodatkowe wpłaty i zmiany oprocentowania nie są
+          uwzględnione.
+        interest: Odsetki
+        monthly_payment: Rata miesięczna
+        number: "#"
+        payment: Rata
+        payoff_date: Data spłaty
+        principal: Kapitał
+        remaining_balance: Pozostałe saldo
+        total_cost: Całkowity koszt
+        total_interest: Suma odsetek

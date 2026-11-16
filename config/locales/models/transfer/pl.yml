@@ -6,13 +6,22 @@ pl:
         transfer:
           attributes:
             base:
-              inflow_cannot_be_in_multiple_transfers: Transakcja wpływu nie może być częścią wielu przelewów
+              inflow_cannot_be_in_multiple_transfers: Transakcja wpływu nie może być
+                częścią wielu przelewów
               must_be_from_different_accounts: Przelew musi dotyczyć różnych kont
-              must_be_from_same_family: Przelew musi być w ramach tego samego gospodarstwa domowego
-              must_be_within_date_range: Daty transakcji przelewu muszą być w ciągu 4 dni od siebie
-              must_have_opposite_amounts: Transakcje przelewu muszą mieć przeciwne kwoty
+              must_be_from_same_family: Przelew musi być w ramach tego samego gospodarstwa
+                domowego
+              must_be_within_date_range: Daty transakcji przelewu nie mogą różnić
+                się o więcej niż 4 dni
+              must_have_opposite_amounts: Transakcje przelewu muszą mieć przeciwne
+                kwoty
               must_have_single_currency: Przelew musi być w jednej walucie
-              outflow_cannot_be_in_multiple_transfers: Transakcja wypływu nie może być częścią wielu przelewów
+              outflow_cannot_be_in_multiple_transfers: Transakcja wypływu nie może
+                być częścią wielu przelewów
+          different_accounts: Musi dotyczyć różnych kont
+          opposite_amounts: Musi mieć przeciwne kwoty
+          same_family: Musi być w ramach tego samego gospodarstwa domowego
+          within_days: Musi mieścić się w ciągu %{count} dni
   transfer:
     name: Przelew do %{to_account}
     payment_name: Płatność do %{to_account}

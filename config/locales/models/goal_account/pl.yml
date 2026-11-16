@@ -1,0 +1,10 @@
+---
+pl:
+  activerecord:
+    errors:
+      models:
+        goal_account:
+          attributes:
+            base:
+              account_already_fully_earmarked: To konto jest już w całości przypisane
+                do celu "%{goal_name}". Wpisz kwotę, żeby je podzielić.

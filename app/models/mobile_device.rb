@@ -15,18 +15,21 @@ class MobileDevice < ApplicationRecord
   before_validation :set_last_seen_at, on: :create
 
   CALLBACK_URL = "sureapp://oauth/callback"
+  OAUTH_APPLICATION_NAME = "Sure Mobile"
 
   scope :active, -> { where("last_seen_at > ?", 90.days.ago) }
 
   def self.shared_oauth_application
+    # Matches on the app's callback too and lets the oldest row win, so a
+    # same-named client from dynamic registration (before names were reserved)
+    # with its own redirect URI is never picked as the mobile app.
     @shared_oauth_application ||= begin
-      Doorkeeper::Application.find_or_create_by!(name: "Sure Mobile") do |app|
-        app.redirect_uri = CALLBACK_URL
+      Doorkeeper::Application.order(:created_at, :id).find_or_create_by!(name: OAUTH_APPLICATION_NAME, redirect_uri: CALLBACK_URL) do |app|
         app.scopes = "read_write"
         app.confidential = false
       end
     rescue ActiveRecord::RecordNotUnique
-      Doorkeeper::Application.find_by!(name: "Sure Mobile")
+      Doorkeeper::Application.order(:created_at, :id).find_by!(name: OAUTH_APPLICATION_NAME, redirect_uri: CALLBACK_URL)
     end
   end
 
@@ -66,13 +69,19 @@ class MobileDevice < ApplicationRecord
   # Issues a fresh Doorkeeper access token for this device, revoking any
   # previous tokens. Returns a hash with token details ready for an API
   # response or deep-link callback.
+  #
+  # This is the single choke point every mobile-token-issuing path funnels
+  # through, so User#with_active_lock! (the actual authorization boundary,
+  # locked immediately before minting) lives here rather than at each call
+  # site. Callers may *additionally* check active? earlier for fast, friendly
+  # rejection (skip an MFA/device-validation round trip, avoid a pointless
+  # MobileDevice upsert) — but that's a UX optimization only and must never
+  # be assumed a substitute for this check, however "obviously"
+  # already-checked the user seems. Raises User::InactiveError for a
+  # deactivated/concurrently-purged user, distinct from a genuine
+  # ActiveRecord::RecordInvalid from Doorkeeper::AccessToken.create! itself.
   def issue_token!
-    user.with_lock do
-      unless user.active?
-        errors.add(:base, "User is inactive")
-        raise ActiveRecord::RecordInvalid, self
-      end
-
+    user.with_active_lock! do
       revoke_all_tokens!
 
       access_token = Doorkeeper::AccessToken.create!( # pipelock:ignore Credential in URL
@@ -92,9 +101,6 @@ class MobileDevice < ApplicationRecord
         created_at: access_token.created_at.to_i
       }
     end
-  rescue ActiveRecord::RecordNotFound
-    errors.add(:base, "User is inactive")
-    raise ActiveRecord::RecordInvalid, self
   end
 
   private

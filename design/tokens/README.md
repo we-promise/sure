@@ -113,7 +113,8 @@ The pre-resolved alpha tints (`color.gray.tint-5`, `color.gray.tint-10`, `color.
 - `utility.border-divider`: the value is a plain class string (`border-tertiary`) instead of a `{ref}`. The build treats values without `{}` as raw `@apply` arguments.
 - `utility.bg-overlay`: uses `sure.utility.raw: "background-color"` because it needs alpha rendering instead of `@apply`.
 - `utility.bg-loader`: uses `sure.compose` to apply two utilities together (`bg-surface-inset animate-pulse`).
-- `utility.button-bg-ghost-hover`: its dark value is a multi-class string (`bg-gray-800 text-inverse`), not a single ref. The build accepts both forms.
+- `utility.*` with `sure.dark`: the value switches through a `--utility-<name>` variable, declared in `@theme` and overridden in the dark block like the color tokens, so pseudo-element variants (`placeholder:text-secondary`, `backdrop:bg-overlay`) get the dark value. A nested `@variant theme-dark` can't reach a pseudo-element. The light value stays as the utility's first declaration so Tailwind's sort order doesn't change: a plain utility on the same element still wins.
+- `utility.button-bg-ghost-hover`: its dark value is a multi-class string (`bg-gray-800 text-inverse`), not a single ref. The build accepts both forms, but a class list can't be a variable, so this one keeps the nested `@variant theme-dark` and doesn't get its dark value under a pseudo-element variant.
 
 ## Consumers
 

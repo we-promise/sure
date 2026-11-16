@@ -1,0 +1,48 @@
+<%# locals: (goal:, outflows:) %>
+
+<%# Money has left this goal's accounts and nothing says where it went. Goals
+    never read transactions — `current_balance` is a stock — so an outflow
+    reaches them only as a smaller number. This is the app saying what it
+    already knows instead of waiting to be asked. %>
+<div class="bg-container rounded-xl shadow-border-xs p-4 space-y-3">
+  <div class="flex items-start gap-3">
+    <div class="w-8 h-8 rounded-full bg-surface-inset inline-flex items-center justify-center text-secondary shrink-0">
+      <%= icon("arrow-down-left", size: "sm") %>
+    </div>
+    <div class="min-w-0">
+      <h2 class="text-sm font-medium text-primary"><%= t(".heading") %></h2>
+      <p class="text-xs text-secondary mt-0.5"><%= t(".body", goal: goal.name) %></p>
+    </div>
+  </div>
+
+  <ul class="space-y-2">
+    <% outflows.each do |entry| %>
+      <li class="flex items-center justify-between gap-3 rounded-lg bg-surface-inset px-3 py-2">
+        <div class="min-w-0">
+          <p class="text-sm text-primary truncate"><%= entry.name %></p>
+          <p class="text-xs text-secondary tabular-nums privacy-sensitive">
+            <%= l(entry.date, format: :long) %>
+            <span aria-hidden="true"><%= t("shared.dot_separator") %></span>
+            <%= entry.account.name %>
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="text-sm text-primary tabular-nums privacy-sensitive">
+            <%= Money.new(entry.amount, entry.currency).format(precision: 0) %>
+          </span>
+          <%# DS::Button, not a bare button_to with raw btn classes: the same
+              primitive the consumption dialog uses, so the two ways of
+              recording a spend do not look like two different features. %>
+          <%= render DS::Button.new(
+                text: t(".attribute"),
+                href: consume_goal_path(goal),
+                method: :post,
+                params: { transaction_id: entry.entryable_id },
+                variant: :secondary,
+                size: :sm
+              ) %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
+</div>

@@ -58,6 +58,7 @@ it:
     payments: Pagamenti
     pending_duplicate_merges: Revisione duplicati
     plaid_items: Plaid
+    plan: Piano
     preferences: Preferenze
     profile: Informazioni profilo
     profiles: Informazioni profilo

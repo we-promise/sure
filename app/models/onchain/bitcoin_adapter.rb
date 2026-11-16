@@ -18,27 +18,20 @@ class Onchain::BitcoinAdapter
 
   SATS_PER_BTC = 100_000_000.to_d
 
-  # P2PKH ("1…") and P2SH ("3…"), Base58Check: no 0, O, I or l.
-  BASE58_PATTERN = /\A[13][1-9A-HJ-NP-Za-km-z]{25,39}\z/
-  # Bech32 (P2WPKH/P2WSH, "bc1q…") and Bech32m (Taproot, "bc1p…"). The bech32
-  # character set excludes 1, b, i and o after the separator.
-  BECH32_PATTERN = /\Abc1[ac-hj-np-z02-9]{11,87}\z/i
-
   def initialize(credentials: {})
     @credentials = credentials
   end
 
+  # Checksum-verified, so a mistyped address is refused instead of syncing as empty.
   def valid_address?(address)
-    candidate = address.to_s.strip
-    BASE58_PATTERN.match?(candidate) || BECH32_PATTERN.match?(candidate)
+    Onchain::BitcoinPublicKey.valid_address?(address.to_s.strip)
   end
 
   # Bech32 is case-insensitive and canonically lowercase — and the API reports it
   # that way, so an uppercase input would otherwise match no output and silently
   # produce zero movements. Base58 is case-sensitive and must be left alone.
   def canonical_address(address)
-    candidate = address.to_s.strip
-    BECH32_PATTERN.match?(candidate) ? candidate.downcase : candidate
+    Onchain::BitcoinPublicKey.canonical_address(address)
   end
 
   def fetch_snapshot(address)

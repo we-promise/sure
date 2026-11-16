@@ -4,41 +4,57 @@ fr:
     securities:
       show:
         disable_mfa: Désactiver la 2FA
-        disable_mfa_confirm: Êtes-vous sûr(e) de vouloir désactiver l'authentification
-          à deux facteurs ? Cela rendra votre compte moins sécurisé.
+        disable_mfa_confirm: Êtes-vous sûr(e) de vouloir désactiver l'authentification à deux facteurs ? Cela rendra votre compte moins sécurisé.
         enable_mfa: Activer la 2FA
-        mfa_description: Ajoutez une couche supplémentaire de sécurité à votre compte
-          en exigeant un code de votre application d'authentificateur lors de la connexion
-        mfa_disabled_description: Activez 2FA pour ajouter une couche de sécurité
-          supplémentaire à votre compte.
-        mfa_disabled_status_html: L'authentification à deux facteurs est <span class="font-medium
-          text-red-600">désactivée</span>
-        mfa_enabled_description: Votre compte est protégé par une couche de sécurité
-          supplémentaire.
-        mfa_enabled_status_html: L'authentification à deux facteurs est <span class="font-medium
-          text-green-600">activée</span>
+        mfa_description: Ajoutez une couche supplémentaire de sécurité à votre compte en exigeant un code de votre application d'authentificateur lors de la connexion
+        mfa_disabled_description: Activez 2FA pour ajouter une couche de sécurité supplémentaire à votre compte.
+        mfa_disabled_status_html: L'authentification à deux facteurs est <span class="font-medium text-red-600">désactivée</span>
+        mfa_enabled_description: Votre compte est protégé par une couche de sécurité supplémentaire.
+        mfa_enabled_status_html: L'authentification à deux facteurs est <span class="font-medium text-green-600">activée</span>
         mfa_title: Authentification à deux facteurs
         webauthn_add: Ajouter un mot de passe ou une clé de sécurité
         webauthn_added: "%{date} ajouté"
-        webauthn_description: Utilisez un mot de passe, Touch ID, Windows Hello ou
-          une clé de sécurité matérielle comme deuxième facteur lors de la connexion.
+        webauthn_description: Utilisez un mot de passe, Touch ID, Windows Hello ou une clé de sécurité matérielle comme deuxième facteur lors de la connexion.
         webauthn_empty: Aucun mot de passe ou clé de sécurité n'est encore enregistré.
         webauthn_last_used: Dernière utilisation il y a %{time_ago}
         webauthn_name_label: Nom de la clé
+        webauthn_code_label: Code d'authentification ou de sauvegarde
+        webauthn_code_placeholder: Code actuel de l'authentificateur ou code de sauvegarde inutilisé
         webauthn_name_placeholder: MacBook Touch ID, YubiKey, etc.
         webauthn_remove: Supprimer
-        webauthn_remove_confirm: Êtes-vous sûr de vouloir supprimer ce mot de passe
-          ou cette clé de sécurité ?
-        webauthn_remove_confirm_body: Vous devrez enregistrer à nouveau ce mot de
-          passe ou cette clé de sécurité avant de pouvoir l'utiliser pour la vérification
-          de la connexion.
+        webauthn_remove_confirm: Êtes-vous sûr de vouloir supprimer ce mot de passe ou cette clé de sécurité ?
+        webauthn_remove_confirm_body: Vous devrez enregistrer à nouveau ce mot de passe ou cette clé de sécurité avant de pouvoir l'utiliser pour la vérification de la connexion.
         webauthn_title: Clés d'accès et clés de sécurité
-        webauthn_unsupported: Ce navigateur ne prend pas en charge les mots de passe
-          ou les clés de sécurité.
+        webauthn_unsupported: Ce navigateur ne prend pas en charge les mots de passe ou les clés de sécurité.
+        disable_mfa_password_label: Confirmez avec votre mot de passe
+        disable_mfa_password_placeholder: Entrez votre mot de passe
+        encryption_warning:
+          generate: 'Générez un ensemble avec : bin/rails db:encryption:init'
+          intro: 'Les données sensibles (clés API, jetons de fournisseur, secrets MFA et PII) sont stockées non chiffrées au repos. Pour activer le chiffrement, définissez les clés suivantes dans vos variables d''environnement ou identifiants Rails :'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          title: Clés de chiffrement manquantes
+        mfa_sso_only: L'authentification à deux facteurs est gérée par votre fournisseur d'identité.
+        page_title: Sécurité
+        sso_confirm_body: Êtes-vous sûr(e) de vouloir déconnecter votre compte %{provider} ? Vous pourrez le reconnecter ultérieurement en vous connectant avec ce fournisseur.
+        sso_confirm_button: Déconnecter
+        sso_confirm_title: Déconnecter le compte ?
+        sso_connect_hint: Déconnectez-vous et connectez-vous avec un fournisseur SSO pour connecter un compte.
+        sso_disconnect: Déconnecter
+        sso_last_used: Dernière utilisation
+        sso_never: Jamais
+        sso_no_email: Pas d'email
+        sso_no_identities: Aucun compte SSO connecté
+        sso_subtitle: Gérez vos connexions de compte à authentification unique
+        sso_title: Comptes connectés
+        sso_warning_message: C'est votre seule méthode de connexion. Vous devriez définir un mot de passe dans vos paramètres de sécurité avant de déconnecter, sinon vous pourriez être bloqué(e) hors de votre compte.
   webauthn_credentials:
+    code_already_used: Ce code a déjà été utilisé. Attendez le prochain code de votre application d'authentification.
+    invalid_code: Ce code n'est pas valide. Saisissez un code actuel de votre application d'authentification ou un code de sauvegarde inutilisé.
+    rate_limited: Trop de tentatives. Veuillez patienter une minute puis réessayer.
     default_name: Clé de sécurité
-    failure: Impossible d'enregistrer ce mot de passe ou cette clé de sécurité. Veuillez
-      réessayer.
-    mfa_required: Activez l'authentification à deux facteurs avant d'ajouter un mot
-      de passe ou une clé de sécurité.
+    failure: Impossible d'enregistrer ce mot de passe ou cette clé de sécurité. Veuillez réessayer.
+    mfa_required: Activez l'authentification à deux facteurs avant d'ajouter un mot de passe ou une clé de sécurité.
     success: Clé d'accès ou clé de sécurité supprimée.

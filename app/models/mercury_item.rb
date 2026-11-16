@@ -1,24 +1,18 @@
 class MercuryItem < ApplicationRecord
-  include Syncable, Provided, Unlinking
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
-
-  # Helper to detect if ActiveRecord Encryption is configured for this app
-  def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
-  end
 
   # Encrypt sensitive credentials if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :token, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
   end
 
   validates :name, presence: true
   validates :token, presence: true, on: :create
+  validate :base_url_must_be_an_official_host, if: :will_save_change_to_base_url?
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -30,11 +24,6 @@ class MercuryItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # TODO: Implement data import from provider API
   # This method should fetch the latest data from the provider and import it.
@@ -171,7 +160,16 @@ class MercuryItem < ApplicationRecord
     token.to_s.strip.present?
   end
 
+  # The value an operator typed decides where the app sends their token, so it
+  # is checked against the provider's allow-list rather than used as given.
   def effective_base_url
-    base_url.presence || "https://api.mercury.com/api/v1"
+    Provider::Mercury.normalize_base_url(base_url) || Provider::Mercury::DEFAULT_BASE_URL
   end
+
+  private
+    def base_url_must_be_an_official_host
+      return if base_url.blank? || Provider::Mercury.allowed_base_url?(base_url)
+
+      errors.add(:base_url, :official_hosts_only)
+    end
 end

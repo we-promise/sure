@@ -2,12 +2,13 @@
 fr:
   assistant_messages:
     assistant_message:
-      assistant_reasoning: Assistant de raisonnement
+      assistant_reasoning: Raisonnement de l'assistant
     tool_calls:
       arguments: 'Arguments :'
       function: 'Fonction :'
       tool_calls: Appels d'outils
   chats:
+    ai_busy: Je termine une tâche en arrière-plan, puis je m'occupe tout de suite de votre message.
     ai_consent:
       available_description: Le chat IA peut répondre aux questions financières et fournir des informations basées sur vos données. Pour utiliser cette fonctionnalité, vous devrez l'activer explicitement.
       disable_note: Désactivez à tout moment. Toutes les données envoyées à nos prestataires LLM sont anonymisées.
@@ -30,7 +31,7 @@ fr:
       delete_chat: Supprimer le chat
       edit_chat_title: Modifier le titre du chat
       start_new_chat: Démarrer une nouvelle discussion
-    demo_banner_message: Vous utilisez un LLM Qwen3 open-weights avec des crédits fournis par Cloudflare Workers AI. Les résultats peuvent varier car le code a été principalement testé sur `gpt-4.1` mais vos tokens ne sont envoyés nulle part ailleurs pour être entraînés !
+    demo_banner_message: "Des tokens LLM gratuits offerts par Vercel AI Gateway. Les résultats peuvent varier, car nous changeons souvent les poids des modèles à des fins de test. Consultez la documentation de Vercel pour savoir où vont vos conversations ! 🤖"
     demo_banner_title: Mode Démo Actif
     destroy:
       notice: Le chat a été supprimé avec succès
@@ -39,6 +40,11 @@ fr:
     index:
       chats: Discussions
       new_chat: Nouvelle discussion
+    new:
+      default_title: Nouvelle discussion %{timestamp}
+    reservation:
+      busy: Je termine une tâche en arrière-plan, puis je suis tout à vous. Continuez à écrire !
+      ready_html: J'ai mis de côté quelques tâches en arrière-plan pour m'occuper tout de suite de votre message. Elles reprendront dans %{countdown} s, alors continuez à écrire !
     thinking: Traitement en cours ...
     update:
       success: Chat mis à jour

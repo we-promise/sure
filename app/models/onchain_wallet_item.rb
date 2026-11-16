@@ -4,7 +4,7 @@
 # the family tracks; the addresses and the assets held at them live on
 # onchain_wallet_accounts.
 class OnchainWalletItem < ApplicationRecord
-  include Syncable, Provided, Encryptable
+  include Syncable, Provided, Encryptable, DestroyableLater
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
@@ -25,11 +25,6 @@ class OnchainWalletItem < ApplicationRecord
   scope :needs_update, -> { where(status: :requires_update) }
 
   before_validation :strip_credentials
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   # Self-custody needs no credentials: every chain is readable keyless. The
   # optional Etherscan key only raises Ethereum's rate limit.
@@ -99,25 +94,6 @@ class OnchainWalletItem < ApplicationRecord
   # Moves every tracked asset at an address to a new one, keeping the rows — and
   # so the accounts, holdings and entries hanging off them — intact. Recreating
   # them would throw away the balance history the user came here for.
-  def change_wallet_address!(chain:, from:, to:)
-    rows = accounts_for_wallet(chain, from).to_a
-    raise ActiveRecord::RecordNotFound, "No tracked assets at that address" if rows.empty?
-
-    transaction do
-      rows.each do |row|
-        previous_display_name = row.display_name
-        # The digest is cleared so the next sync reprocesses against the new
-        # address even if it happens to hold the same amount.
-        row.update!(wallet_address: to, content_hash: nil)
-
-        account = row.current_account
-        account.update!(name: row.display_name) if account && account.name == previous_display_name
-      end
-    end
-
-    sync_later
-    rows.size
-  end
 
   # Stops tracking every asset at an address. The accounts and their history stay
   # behind as manual accounts; only the provider link goes.

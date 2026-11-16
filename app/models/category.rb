@@ -12,13 +12,30 @@ class Category < ApplicationRecord
          dependent: :nullify
   belongs_to :parent, class_name: "Category", optional: true
 
+  # Set by .uncategorized so #filter_value can identify the synthetic instance
+  # without a locale-sensitive name comparison. Not a DB column.
+  attr_writer :synthetic_uncategorized
+
+  # Stable, non-localized filter value for the synthetic "Uncategorized" option.
+  # Using an opaque sentinel (rather than the translated display name) means a real
+  # category can never collide with it, regardless of name or locale.
+  UNCATEGORIZED_FILTER_VALUE = "__uncategorized__"
+
   validates :name, :color, :lucide_icon, :family, presence: true
   validates :color, format: { with: /\A#[0-9A-Fa-f]{6}\z/ }
   validates :name, uniqueness: { scope: :family_id }
+  validates :name, exclusion: { in: [ UNCATEGORIZED_FILTER_VALUE ] }
 
   validate :category_level_limit
+  validate :parent_in_same_family
 
   before_save :inherit_color_from_parent
+  after_update :propagate_color_to_subcategories, if: :saved_change_to_color?
+
+  # prepend: runs before dependent: :nullify's own before_destroy, so the
+  # reassignment (which touches entries to bust report caches) still sees the
+  # transactions; nullify then runs as the safety net.
+  before_destroy :reassign_transactions_to_nothing, prepend: true
 
   scope :alphabetically, -> { order(:name) }
   scope :recently_used, -> { where.not(last_used_at: nil).order(last_used_at: :desc) }
@@ -123,11 +140,35 @@ class Category < ApplicationRecord
 
     delegate :name, :color, to: :category
 
+    # NOTE: if `categories` is a filtered/partial collection, any child whose
+    # parent isn't included is silently dropped (it's grouped under its
+    # parent_id, but that parent never appears in `roots`). Every current
+    # call site passes the full family category list, so this is latent
+    # today — pass a filtered scope with care.
     def self.for(categories)
       categories_by_parent_id = categories.to_a.group_by(&:parent_id)
 
-      categories_by_parent_id[nil].to_a.map do |category|
-        new(category, categories_by_parent_id[category.id].to_a)
+      roots = categories_by_parent_id[nil].to_a.sort_by { |category| category.name.downcase }
+
+      roots.map do |category|
+        subcategories = categories_by_parent_id[category.id].to_a.sort_by { |sub| sub.name.downcase }
+        new(category, subcategories)
+      end
+    end
+
+    # Builds [label, id] pairs for plain HTML <select> elements, ordered
+    # parent-then-children with children visually indented. Native <select>
+    # options can't render icons, so we use a unicode arrow prefix (regular
+    # leading spaces collapse in <option> text).
+    #
+    # Pass indent: false when the result is used as a display-label lookup
+    # rather than rendered as actual <select> options (e.g. Rule::Action and
+    # Rule::Condition#value_display), so the cosmetic arrow doesn't leak into
+    # plain-text summaries.
+    def self.select_options(categories, indent: true)
+      self.for(categories).flat_map do |group|
+        [ [ group.category.name, group.category.id ] ] +
+          group.subcategories.map { |sub| [ indent ? "↳ #{sub.name}" : sub.name, sub.id ] }
       end
     end
 
@@ -204,7 +245,7 @@ class Category < ApplicationRecord
         name: I18n.t(UNCATEGORIZED_NAME_KEY),
         color: UNCATEGORIZED_COLOR,
         lucide_icon: "circle-dashed"
-      )
+      ).tap { |category| category.synthetic_uncategorized = true }
     end
 
     def other_investments
@@ -312,7 +353,7 @@ class Category < ApplicationRecord
 
   def replace_and_destroy!(replacement)
     transaction do
-      transactions.update_all category_id: replacement&.id
+      Transaction.reassign_category!(transactions, replacement&.id)
       destroy!
     end
   end
@@ -340,6 +381,28 @@ class Category < ApplicationRecord
     self.class.localized_default_name_for(name)
   end
 
+  # True if `candidate` matches this category's display name in ANY
+  # supported locale, not just the current one -- a name generated (or
+  # persisted by a background job) under one locale must still be
+  # recognized as "this category" when compared under a different one. For
+  # a default category this checks every locale's translation of its i18n
+  # key; for a custom (non-default) category the raw `name` is the only
+  # locale-independent label there is.
+  def any_locale_display_name_matches?(candidate)
+    return false if candidate.blank?
+
+    normalized = candidate.strip
+    return true if normalized.casecmp?(name)
+
+    i18n_key = self.class.send(:default_category_translation_key_for, name)
+    return false unless i18n_key
+
+    LanguagesHelper::SUPPORTED_LOCALES.any? do |locale|
+      translated = I18n.t(i18n_key, locale: locale, default: nil)
+      translated.present? && normalized.casecmp?(translated)
+    end
+  end
+
   def display_name_with_parent
     subcategory? ? "#{parent.display_name} > #{display_name}" : display_name
   end
@@ -347,6 +410,18 @@ class Category < ApplicationRecord
   # Predicate: is this the synthetic "Uncategorized" category?
   def uncategorized?
     !persisted? && name == I18n.t(UNCATEGORIZED_NAME_KEY)
+  end
+
+  # The value the transactions-filter checkbox submits for this category: the
+  # persisted name for a real category, or the stable sentinel for the
+  # synthetic "Uncategorized" pseudo-category returned by .uncategorized.
+  #
+  # Uses the explicit synthetic_uncategorized marker set by .uncategorized, not
+  # uncategorized? -- that predicate compares name against I18n.t in the *current*
+  # locale, so it would give the wrong answer if the instance were built under one
+  # locale and read under another.
+  def filter_value
+    @synthetic_uncategorized ? UNCATEGORIZED_FILTER_VALUE : name
   end
 
   # Predicate: is this the synthetic "Other Investments" category?
@@ -360,10 +435,24 @@ class Category < ApplicationRecord
   end
 
   private
+    def propagate_color_to_subcategories
+      subcategories.update_all(color: color, updated_at: Time.current)
+    end
+
+    def reassign_transactions_to_nothing
+      Transaction.reassign_category!(transactions, nil)
+    end
+
     def category_level_limit
       if (subcategory? && parent&.subcategory?) || (parent? && subcategory?)
         errors.add(:parent, "can't have more than 2 levels of subcategories")
       end
+    end
+
+    def parent_in_same_family
+      return if parent.nil? || parent.family_id == family_id
+
+      errors.add(:parent, :invalid)
     end
 
     def monetizable_currency

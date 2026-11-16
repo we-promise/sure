@@ -5,6 +5,7 @@ class Api::V1::CategoriesController < Api::V1::BaseController
 
   before_action :ensure_read_scope, only: %i[index show]
   before_action :ensure_write_scope, only: :create
+  before_action :reject_guest_writes!, only: :create
   before_action :set_category, only: :show
 
   def index
@@ -48,6 +49,14 @@ class Api::V1::CategoriesController < Api::V1::BaseController
 
   def create
     family = current_resource_owner.family
+
+    if family.categories_locked?
+      return render json: {
+        error: "unprocessable_entity",
+        message: "Categories are locked. Unlock them to add a new category."
+      }, status: :unprocessable_entity
+    end
+
     attrs = category_params
 
     if attrs[:parent_id].present? && !family.categories.exists?(id: attrs[:parent_id])

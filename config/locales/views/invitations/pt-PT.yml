@@ -1,0 +1,26 @@
+---
+pt-PT:
+  invitations:
+    accept_choice:
+      create_account: Criar nova conta
+      existing_account_hint: "Já tem uma conta? As contas existentes não podem juntar-se a outro agregado através de um convite."
+      joined_household: Entrou no agregado familiar.
+      message: "%{inviter} convidou-o a juntar-se como %{role}."
+      title: Juntar-se a %{family}
+    create:
+      failure: Não foi possível enviar o convite
+      success: Convite enviado com sucesso
+    destroy:
+      failure: Houve um problema ao remover o convite.
+      not_authorized: Não está autorizado a gerir convites.
+      success: O convite foi removido com sucesso.
+    new:
+      email_label: Endereço de E-mail
+      email_placeholder: Introduza o endereço de e-mail
+      role_admin: Administrador
+      role_guest: Convidado
+      role_label: Função
+      role_member: Membro
+      submit: Enviar Convite
+      subtitle: Dê acesso à sua conta %{moniker} no %{product_name} a outra pessoa
+      title: Convidar alguém

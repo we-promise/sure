@@ -1,0 +1,5 @@
+---
+pl:
+  passkey_sessions:
+    invalid_credential: Nie udało się zalogować tym kluczem dostępu. Spróbuj ponownie
+      albo użyj hasła.

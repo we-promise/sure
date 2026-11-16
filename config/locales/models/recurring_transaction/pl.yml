@@ -1,7 +1,37 @@
 ---
 pl:
   activerecord:
+    attributes:
+      recurring_transaction:
+        payment_url: Link płatności
     errors:
       models:
         recurring_transaction:
-          merchant_or_name_required: "Kontrahent lub nazwa muszą być obecne"
+          attributes:
+            account:
+              required_for_transfer: musi być podane dla cyklicznego przelewu
+              wrong_family: musi należeć do tej rodziny
+            anchor_date:
+              required_for_intervals: jest wymagana, gdy reguła powtarza się co 2
+                lub więcej okresów
+            bill_type:
+              transfer_shape_mismatch: może być przelewem tylko wtedy, gdy ustawiono
+                konto docelowe
+            destination_account:
+              family_mismatch: musi należeć do tej samej rodziny co konto źródłowe
+              same_as_source: nie może być takie samo jak konto źródłowe
+              wrong_family: musi należeć do tej rodziny
+            expected_amount_min:
+              greater_than_max: nie może być większa niż oczekiwana kwota maksymalna
+            payment_url:
+              invalid_scheme: musi być prawidłowym adresem http:// lub https://
+          merchant_or_name_required: Kontrahent lub nazwa muszą być obecne
+  recurring_transactions:
+    allocator:
+      exceeds_remaining: "%{amount} przekracza pozostałe %{remaining} w tym cyklu"
+      missing_rate: brak kursu wymiany z %{from} na %{to}; wpisz kwotę ręcznie
+      over_allocated: przypisanie %{amount} przekracza pozostałe %{capacity} %{currency}
+        tej transakcji
+      unmeasurable: ta transakcja ma przypisaną kwotę, której nie można przeliczyć
+        na %{currency}, więc nie da się określić, ile z niej zostało. Dodaj kurs wymiany
+        dla %{date} albo najpierw usuń istniejącą płatność

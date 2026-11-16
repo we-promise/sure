@@ -30,6 +30,7 @@ uk:
         other: "Імпортовано %{count} рахунків"
       none_selected: "Не вибрано жодного рахунку"
       no_accounts: "Немає рахунків для імпорту"
+      invalid_sync_start_date: Дата початку синхронізації має бути дійсною датою в минулому.
     binance_item:
       provider_name: "Binance"
       syncing: "Синхронізація..."

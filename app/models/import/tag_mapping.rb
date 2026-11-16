@@ -1,7 +1,11 @@
 class Import::TagMapping < Import::Mapping
   class << self
     def mappables_by_key(import)
-      unique_values = import.rows.map(&:tags_list).flatten.uniq
+      unique_values = if import.is_a?(QifImport)
+        import.row_tags
+      else
+        import.rows.map(&:tags_list).flatten.uniq
+      end
 
       tags = import.family.tags.where(name: unique_values).index_by(&:name)
 

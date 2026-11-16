@@ -3,7 +3,7 @@ de:
   binance_items:
     create:
       default_name: Binance
-      success: Erfolgreich mit Binance verbunden! Ihr Konto wird synchronisiert.
+      success: Erfolgreich mit Binance verbunden! Dein Konto wird synchronisiert.
     update:
       success: Binance-Konfiguration wurde erfolgreich aktualisiert.
     destroy:
@@ -22,6 +22,7 @@ de:
       cancel: Abbrechen
       creating: Importiere...
     complete_account_setup:
+      invalid_sync_start_date: Wähl ein gültiges Startdatum für die Synchronisierung, das nicht in der Zukunft liegt.
       success:
         one: "%{count} Konto importiert"
         other: "%{count} Konten importiert"
@@ -44,7 +45,7 @@ de:
       update_credentials: Zugangsdaten aktualisieren
       delete: Löschen
       no_accounts_title: Keine Konten gefunden
-      no_accounts_message: Ihr Binance-Portfolio erscheint hier nach der Synchronisierung.
+      no_accounts_message: Dein Binance-Portfolio erscheint hier nach der Synchronisierung.
       setup_needed: Konto bereit zum Import
       setup_description: Wähl die Binance-Portfolios, die du verfolgen willst.
       setup_action: Konto importieren

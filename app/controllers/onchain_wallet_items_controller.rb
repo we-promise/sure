@@ -6,15 +6,15 @@
 class OnchainWalletItemsController < ApplicationController
   before_action :require_admin!
   before_action :set_onchain_wallet_item,
-                only: %i[update destroy sync manage review_tokens update_tokens edit_wallet change_address
+                only: %i[update destroy sync manage review_tokens update_tokens
                          disconnect_wallet disconnect_asset]
-  before_action :set_wallet, only: %i[review_tokens update_tokens edit_wallet change_address disconnect_wallet]
+  before_action :set_wallet, only: %i[review_tokens update_tokens disconnect_wallet]
 
   def update
     if @onchain_wallet_item.update(onchain_wallet_item_params)
-      render_panel_success(t(".success"))
+      render_provider_panel("onchain_wallet", notice: t(".success"))
     else
-      render_panel_error(@onchain_wallet_item.errors.full_messages.join(", "))
+      render_provider_panel("onchain_wallet", alert: @onchain_wallet_item.errors.full_messages.join(", "))
     end
   end
 
@@ -155,28 +155,7 @@ class OnchainWalletItemsController < ApplicationController
     redirect_to_manage(notice: t(".success", created: result.created, removed: result.removed))
   end
 
-  def edit_wallet
-  end
 
-  def change_address
-    new_address = Onchain::Chains.canonical_address(@chain, params[:new_address])
-
-    unless Onchain::Chains.valid_address?(@chain, new_address)
-      return render_edit_wallet(t(".errors.invalid_address"))
-    end
-
-    if new_address == @address
-      return render_edit_wallet(t(".errors.unchanged"))
-    end
-
-    if Current.family.onchain_address_linked?(@chain, new_address)
-      return render_edit_wallet(t(".errors.already_linked"))
-    end
-
-    @onchain_wallet_item.change_wallet_address!(chain: @chain, from: @address, to: new_address)
-
-    redirect_to_manage(notice: t(".success"))
-  end
 
   def disconnect_wallet
     removed = @onchain_wallet_item.disconnect_wallet!(chain: @chain, address: @address)
@@ -222,10 +201,6 @@ class OnchainWalletItemsController < ApplicationController
       redirect_to manage_onchain_wallet_item_path(@onchain_wallet_item), **flash_message, status: :see_other
     end
 
-    def render_edit_wallet(error_message)
-      @error_message = error_message
-      render :edit_wallet, status: :unprocessable_entity
-    end
 
     def onchain_wallet_item_params
       permitted = params.require(:onchain_wallet_item).permit(:sync_start_date, :etherscan_api_key)
@@ -286,34 +261,5 @@ class OnchainWalletItemsController < ApplicationController
     def render_new_wallet(error_message, status: :unprocessable_entity)
       @error_message = error_message
       render :new_wallet, status: status
-    end
-
-    def render_panel_success(message)
-      if turbo_frame_request?
-        flash.now[:notice] = message
-        @onchain_wallet_items = Current.family.onchain_wallet_items.active.ordered
-        render turbo_stream: [
-          turbo_stream.update(
-            "onchain_wallet-providers-panel",
-            partial: "settings/providers/onchain_wallet_panel",
-            locals: { onchain_wallet_items: @onchain_wallet_items }
-          ),
-          *flash_notification_stream_items
-        ]
-      else
-        redirect_to settings_providers_path, notice: message, status: :see_other
-      end
-    end
-
-    def render_panel_error(message)
-      if turbo_frame_request?
-        render turbo_stream: turbo_stream.update(
-          "onchain_wallet-providers-panel",
-          partial: "settings/providers/onchain_wallet_panel",
-          locals: { error_message: message }
-        ), status: :unprocessable_entity
-      else
-        redirect_to settings_providers_path, alert: message, status: :see_other
-      end
     end
 end

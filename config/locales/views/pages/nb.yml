@@ -4,6 +4,11 @@ nb:
     changelog:
       title: Hva er nytt
     dashboard:
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Kontantstrøm"
+          surplus: "Overskudd"
+          deficit: "Underskudd"
       net_worth_chart:
         data_not_available: Data ikke tilgjengelig for den valgte perioden
         title: Nettoformue

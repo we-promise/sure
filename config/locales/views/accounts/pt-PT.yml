@@ -1,0 +1,206 @@
+---
+pt-PT:
+  account:
+    entries:
+      destroy:
+        success: "Registo eliminado com sucesso."
+  accounts:
+    not_authorized: "Não tem permissão para gerir esta conta"
+    account:
+      complete_setup: Concluir configuração
+      edit: Editar
+      link_lunchflow: Ligar com Lunch Flow
+      link_provider: Ligar serviço externo
+      unlink_provider: Desligar serviço externo
+      change_simplefin_account: Alterar conta SimpleFIN
+      troubleshoot: Resolver problemas
+      enable: Ativar conta
+      disable: Desativar conta
+      exclude_from_reports: Excluir de todos os relatórios
+      include_in_reports: Incluir nos relatórios
+      excluded_from_reports_indicator: Excluída dos relatórios
+      set_default: Definir como predefinida
+      remove_default: Remover predefinição
+      default_label: Predefinida
+      delete: Eliminar conta
+      sharing: Partilhar
+    chart:
+      data_not_available: Dados não disponíveis para o período selecionado
+    create:
+      success: "Conta %{type} criada"
+    set_default:
+      depository_only: "Apenas as contas de dinheiro e cartões de crédito podem ser definidas como predefinidas."
+    destroy:
+      success: "Conta %{type} agendada para eliminação"
+      cannot_delete_linked: "Não é possível eliminar uma conta ligada. Desligue-a primeiro."
+      failed: "A eliminação do recurso falhou. Tente novamente mais tarde."
+    empty:
+      empty_message: Adicione uma conta através de ligação, importação ou introdução manual.
+      new_account: Nova conta
+      no_accounts: Ainda sem contas
+    form:
+      balance: "Saldo à data:"
+      opening_balance_date_label: Data do saldo inicial
+      name_label: Nome da conta
+      name_placeholder: Exemplo de nome de conta
+      additional_details: Detalhes adicionais
+      institution_name_label: Nome da instituição
+      institution_name_placeholder: ex., Banco Montepio
+      institution_domain_label: Domínio da instituição
+      institution_domain_placeholder: ex., montepio.pt
+      notes_label: Notas
+      notes_placeholder: Guarde informações adicionais, como números de conta, códigos de classificação, IBAN, números de encaminhamento, etc.
+      exclude_from_reports: Excluir de todos os relatórios
+      enable_category_matcher_label: Ativar correspondência de categorias
+      enable_category_matcher_hint: Quando ativado, a categoria sugerida pelo serviço externo é aplicada às transações importadas. Desative para deixar as novas transações sem categoria.
+    index:
+      accounts: Contas
+      cancel_sync: Cancelar sincronização
+      manual_accounts:
+        other_accounts: Outras contas
+      new_account: Nova conta
+      sync: Sincronizar tudo
+    sync_all:
+      syncing: "A sincronizar contas..."
+    new:
+      import_accounts: Importar contas
+      container:
+        select: Selecionar
+        navigate: Navegar
+        close: Fechar
+      method_selector:
+        connected_entry: Ligar conta
+        connected_entry_eu: Ligar conta da UE
+        link_with_provider: "Ligar com %{provider}"
+        lunchflow_entry: Ligar conta do Lunch Flow
+        manual_entry: Introduzir saldo da conta
+        title: Como gostaria de adicionar?
+      title: O que gostaria de adicionar?
+    show:
+      limited_fx_history_warning: "O histórico de taxas de câmbio só está disponível a partir de %{date}. As transações anteriores a esta data utilizam conversões de moeda aproximadas — tal acontece quando o serviço externo de câmbio apenas oferece uma janela histórica limitada."
+      tabs:
+        activity: Atividade
+        holdings: Posições
+        overview: Visão geral
+        statements: Extratos
+      activity:
+        amount: Montante
+        balance: Saldo
+        confirmed: Confirmado
+        date: Data
+        entries: registos
+        entry: registo
+        filter: Filtrar
+        new: Novo
+        new_activity: Nova atividade
+        new_balance: Novo saldo
+        new_trade: Nova negociação
+        new_transaction: Nova transação
+        new_transfer: Nova transferência
+        no_entries: Nenhum registo encontrado
+        pending: Pendente
+        search:
+          placeholder: Pesquisar registos por nome
+        search_placeholder: Pesquisar registos por nome
+        status: Estado
+        title: Atividade
+      chart:
+        balance: Saldo
+        owed: Montante em dívida
+      header:
+        complete_setup: Concluir configuração
+      menu:
+        confirm_accept: Eliminar "%{name}"
+        confirm_body_html: "<p>Ao eliminar esta conta, irá apagar o seu histórico de valores,
+          afetando vários aspetos da sua conta geral. Esta ação
+          terá um impacto direto nos cálculos do património líquido e nos
+          gráficos da conta.</p><br /> <p>Após a eliminação, não há forma de restaurar
+          as informações da conta, pois terá de a adicionar como uma nova conta.</p>"
+        confirm_title: Eliminar conta?
+        delete_account: Eliminar conta
+        edit: Editar
+        import: Importar transações
+        import_trades: Importar negociações
+        import_transactions: Importar transações
+        manage: Gerir contas
+        sharing: Partilha
+        statements: Extratos
+        exclude_from_reports: Excluir de todos os relatórios
+        include_in_reports: Incluir nos relatórios
+    update:
+      success: "Conta %{type} atualizada"
+    sidebar:
+      missing_data: Dados históricos em falta
+      missing_data_description: "%{product} utiliza fontes externas para obter dados históricos, como taxas de câmbio, preços de títulos, entre outros, para calcular com precisão os saldos históricos das contas."
+      configure_providers: Configure aqui as fontes externas.
+      tabs:
+        all: Tudo
+        assets: Ativos
+        debts: Dívidas
+      new_asset: Novo ativo
+      new_debt: Nova dívida
+      new_account: Nova conta
+      new_account_group: "Novo(a) %{account_group}"
+    types:
+      depository: Dinheiro
+      investment: Investimento
+      crypto: Cripto
+      property: Imóvel
+      vehicle: Veículo
+      other_asset: Outro Ativo
+      credit_card: Cartão de Crédito
+      loan: Empréstimo
+      other_liability: Outro Passivo
+    types_plural:
+      depository: Dinheiro
+      investment: Investimentos
+      crypto: Cripto
+      property: Imóveis
+      vehicle: Veículos
+      other_asset: Outros Ativos
+      credit_card: Cartões de Crédito
+      loan: Empréstimos
+      other_liability: Outros Passivos
+    tax_treatments:
+      taxable: Tributável
+      tax_deferred: Imposto Diferido
+      tax_exempt: Isento de Impostos
+      tax_advantaged: Com Benefícios Fiscais
+    tax_treatment_descriptions:
+      taxable: Ganhos tributados quando realizados
+      tax_deferred: Contribuições dedutíveis, tributadas no levantamento
+      tax_exempt: Contribuições após impostos, ganhos não tributados
+      tax_advantaged: Benefícios fiscais especiais com condições
+    subtype_regions:
+      us: Estados Unidos
+      uk: Reino Unido
+      ca: Canadá
+      au: Austrália
+      eu: Europa
+      in: Índia
+      generic: Geral
+    confirm_unlink:
+      title: Desligar conta do serviço externo?
+      description_html: "Está prestes a desligar <strong>%{account_name}</strong> de <strong>%{provider_name}</strong>. Isto irá convertê-la numa conta manual."
+      warning_title: O que isto significa
+      warning_no_sync: A conta deixará de sincronizar automaticamente com o seu serviço externo
+      warning_manual_updates: Terá de adicionar transações e atualizar saldos manualmente
+      warning_transactions_kept: Todas as transações e saldos existentes serão preservados
+      warning_can_delete: Após desligar, poderá eliminar a conta, se necessário
+      confirm_button: Confirmar e desligar
+    unlink:
+      success: "Conta desligada com sucesso. Agora é uma conta manual."
+      not_linked: "A conta não está ligada a um serviço externo"
+      error: "Falha ao desligar a conta: %{error}"
+      generic_error: "Ocorreu um erro inesperado. Tente novamente."
+    select_provider:
+      title: Selecionar um serviço externo para ligar
+      description: "Escolha o serviço externo que pretende utilizar para ligar %{account_name}"
+      already_linked: "A conta já está ligada a um serviço externo"
+      no_providers: "Nenhum serviço externo configurado atualmente"
+
+  email_confirmations:
+    new:
+      invalid_token: Link de confirmação inválido ou expirado.
+      success_login: O seu e-mail foi confirmado. Inicie sessão com o seu novo endereço
+        de e-mail.

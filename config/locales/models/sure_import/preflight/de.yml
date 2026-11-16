@@ -1,0 +1,6 @@
+---
+de:
+  sure_import:
+    preflight:
+      missing_reference: 'Zeile %{line}: %{type} verweist über %{field}=%{value} auf einen nicht vorhandenen Datensatz.'
+      skipped_missing_reference: 'Zeile %{line}: %{type} verweist über %{field}=%{value} auf einen nicht vorhandenen Datensatz. Der Datensatz in dieser Zeile wird beim Import übersprungen.'

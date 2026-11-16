@@ -23,5 +23,5 @@ fr:
         title: Correspondre au transfert ou au paiement
       inflow_transaction: Opération d'entrée
       outflow_transaction: Opération de sortie
-      to_account: Pour rendre compte
+      to_account: Vers le compte
       to_account_named: 'Au compte : %{name}'

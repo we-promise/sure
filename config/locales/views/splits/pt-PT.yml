@@ -1,0 +1,47 @@
+---
+pt-PT:
+  splits:
+    new:
+      title: Dividir Transação
+      description: Divida esta transação em vários registos com categorias e montantes diferentes.
+      submit: Dividir Transação
+      cancel: Cancelar
+      add_row: Adicionar divisão
+      remove_row: Eliminar
+      remaining: Restante
+      amounts_must_match: Os montantes das divisões têm de ser iguais ao montante original da transação.
+      name_label: Designação
+      name_placeholder: Designação da divisão
+      amount_label: Montante
+      category_label: Categoria
+      uncategorized: "(sem categoria)"
+      original_name: "Designação:"
+      original_date: "Data:"
+      original_amount: "Montante"
+      split_number: "Divisão nº %{number}"
+    create:
+      success: Transação dividida com sucesso
+      not_splittable: Esta transação não pode ser dividida.
+    destroy:
+      success: Divisão da transação desfeita com sucesso
+    show:
+      title: Registos da Divisão
+      description: Esta transação foi dividida nos seguintes registos.
+      button_title: Dividir Transação
+      button_description: Divida esta transação em vários registos com categorias e montantes diferentes.
+      button: Dividir
+      unsplit_title: Desfazer Divisão
+      unsplit_button: Desfazer Divisão
+      unsplit_confirm: Isto removerá todos os registos da divisão e restaurará a transação original.
+    edit:
+      title: Editar Divisão
+      description: Modifique os registos da divisão desta transação.
+      submit: Atualizar Divisão
+      not_split: Esta transação não está dividida.
+    update:
+      success: Divisão atualizada com sucesso
+    child:
+      title: Parte de uma Divisão
+      description: Este registo faz parte de uma transação dividida.
+      edit_split: Editar Divisão
+      unsplit: Desfazer Divisão

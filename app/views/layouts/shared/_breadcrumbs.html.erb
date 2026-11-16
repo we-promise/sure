@@ -7,7 +7,7 @@
     <% end %>
 
     <% if path.present? && index < breadcrumbs.size - 1 %>
-      <%= link_to name, path, class: "text-sm text-secondary font-medium" %>
+      <%= link_to name, path, class: "text-sm text-secondary font-medium focus-ring rounded-sm" %>
     <% elsif index == breadcrumbs.size - 1 %>
       <span class="text-primary font-medium text-sm"><%= name %></span>
     <% else %>

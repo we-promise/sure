@@ -1,6 +1,7 @@
 ---
 vi:
   passwords:
+    disabled: "Đổi mật khẩu qua Sure đã bị tắt. Vui lòng quản lý mật khẩu của bạn thông qua nhà cung cấp danh tính."
     edit:
       password: Mật khẩu mới
       password_challenge: Mật khẩu hiện tại

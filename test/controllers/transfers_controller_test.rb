@@ -1,6 +1,8 @@
 require "test_helper"
 
 class TransfersControllerTest < ActionDispatch::IntegrationTest
+  include EntriesTestHelper
+
   setup do
     sign_in users(:family_admin)
   end
@@ -8,6 +10,16 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
   test "should get new" do
     get new_transfer_url
     assert_response :success
+  end
+
+  test "excludes disabled accounts from the new transfer form" do
+    disabled_account = accounts(:depository)
+    disabled_account.update!(status: "disabled")
+
+    get new_transfer_url
+
+    assert_response :success
+    assert_no_match disabled_account.name, response.body
   end
 
   test "can create transfers" do
@@ -23,6 +35,271 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
       }
       assert_enqueued_with job: SyncJob
     end
+  end
+
+  test "resubmitting the same idempotency key does not create a duplicate transfer" do
+    idempotency_key = SecureRandom.uuid
+    params = {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        name: "Test Transfer",
+        idempotency_key: idempotency_key
+      }
+    }
+
+    assert_difference "Transfer.count", 1 do
+      assert_difference "Entry.count", 2 do
+        post transfers_url, params: params
+      end
+    end
+    first_transfer = Transfer.order(:created_at).last
+
+    # Simulates a double-click or a browser retry: same form, same
+    # idempotency key, submitted again after the first request already
+    # completed and committed.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: params
+    end
+    assert_redirected_to transactions_path
+  end
+
+  test "the idempotency key does not mark either leg as provider-linked" do
+    # Regression test: the key must not be stored in external_id/source
+    # (Entry#linked? = external_id.present?), or an ordinary manual transfer
+    # would incorrectly look provider-synced.
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        name: "Test Transfer",
+        source_fee_amount: 3,
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    transfer = Transfer.order(:created_at).last
+    [ transfer.outflow_transaction.entry, transfer.inflow_transaction.entry, transfer.fee_transactions.first.entry ].each do |entry|
+      assert_not entry.linked?
+      assert_nil entry.external_id
+      assert_nil entry.source
+    end
+  end
+
+  test "each leg gets a distinct idempotency key so fee legs don't collide with their primary leg" do
+    # Regression test: the outflow/source-fee share source_account, and the
+    # inflow/destination-fee share destination_account. The unique index is
+    # scoped per account_id, so without role-specific suffixes a fee leg
+    # would collide with its primary leg under the same idempotency key.
+    post transfers_url, params: {
+      transfer: {
+        from_account_id: accounts(:depository).id,
+        to_account_id: accounts(:credit_card).id,
+        date: Date.current,
+        amount: 100,
+        name: "Test Transfer",
+        source_fee_amount: 2,
+        destination_fee_amount: 3,
+        idempotency_key: SecureRandom.uuid
+      }
+    }
+
+    transfer = Transfer.order(:created_at).last
+    keys = [
+      transfer.outflow_transaction.entry.idempotency_key,
+      transfer.inflow_transaction.entry.idempotency_key,
+      transfer.fee_transactions.map { |t| t.entry.idempotency_key }
+    ].flatten
+
+    assert_equal keys.uniq.length, keys.length
+    assert keys.all?(&:present?)
+  end
+
+  test "handles a genuine concurrent double-submit without raising or duplicating" do
+    idempotency_key = SecureRandom.uuid
+    from_account = accounts(:depository)
+    to_account = accounts(:credit_card)
+
+    # Simulates the race: another request with the same idempotency key wins
+    # and commits its transfer in the window between our pre-check (which
+    # therefore still sees nothing, hence the first `nil`) and our own
+    # Transfer#save! (which then hits the real partial unique index on
+    # entries(account_id, idempotency_key) and raises RecordNotUnique,
+    # exactly like the DB would under real concurrent requests). The rescue
+    # then re-runs the same lookup, this time finding the winner.
+    winning_transfer = Transfer::Creator.new(
+      family: users(:family_admin).family,
+      source_account_id: from_account.id,
+      destination_account_id: to_account.id,
+      date: Date.current,
+      amount: 100,
+      idempotency_key: idempotency_key
+    ).create
+    Transfer::Creator.any_instance.stubs(:find_existing_transfer).returns(nil, winning_transfer)
+    Transfer.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_redirected_to transactions_path
+  end
+
+  test "a RecordNotUnique with no matching transfer is not silently swallowed" do
+    idempotency_key = SecureRandom.uuid
+
+    # Defensive-branch coverage: if the unique index ever rejects an insert
+    # for a reason other than "another request with this exact idempotency
+    # key already won," we must not pretend it succeeded - it should
+    # surface as a stale-form error instead of a raw DB exception.
+    Transfer::Creator.any_instance.stubs(:find_existing_transfer).returns(nil)
+    Transfer.any_instance.stubs(:save!).raises(ActiveRecord::RecordNotUnique.new("duplicate key value violates unique constraint"))
+
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: accounts(:depository).id,
+          to_account_id: accounts(:credit_card).id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reusing a key for a genuinely different request does not silently return the old transfer" do
+    idempotency_key = SecureRandom.uuid
+    from_account = accounts(:depository)
+    to_account = accounts(:credit_card)
+    other_destination = accounts(:other_liability)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    # Simulates a stale hidden field (cached page / reopened dialog) still
+    # carrying the first request's key while the user changed the
+    # destination account before resubmitting.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: other_destination.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reusing a key with a different fee does not silently return the old transfer" do
+    idempotency_key = SecureRandom.uuid
+    from_account = accounts(:depository)
+    to_account = accounts(:credit_card)
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    # Same accounts/date/amount/key as the first request, but a fee was
+    # added before resubmitting - the persisted effect differs, so this
+    # must not be reported as a successful retry of the fee-less transfer.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: from_account.id,
+          to_account_id: to_account.id,
+          date: Date.current,
+          amount: 100,
+          name: "Test Transfer",
+          source_fee_amount: 5,
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test "reusing a key with a different exchange rate does not silently return the old transfer" do
+    idempotency_key = SecureRandom.uuid
+    usd_account = accounts(:depository)
+    eur_account = users(:family_admin).family.accounts.create!(
+      name: "EUR Account",
+      balance: 1000,
+      currency: "EUR",
+      accountable: Depository.new
+    )
+
+    assert_difference "Transfer.count", 1 do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: usd_account.id,
+          to_account_id: eur_account.id,
+          date: Date.current,
+          amount: 100,
+          exchange_rate: 0.9,
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    # Same accounts/date/amount/key, but a different exchange rate - the
+    # persisted inflow amount would differ, so this must not be reported as
+    # a successful retry of the first, differently-converted transfer.
+    assert_no_difference [ "Transfer.count", "Entry.count" ] do
+      post transfers_url, params: {
+        transfer: {
+          from_account_id: usd_account.id,
+          to_account_id: eur_account.id,
+          date: Date.current,
+          amount: 100,
+          exchange_rate: 0.5,
+          idempotency_key: idempotency_key
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
   end
 
   test "can create transfer with custom exchange rate" do
@@ -285,6 +562,33 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # The Wise sync links a conversion's legs again on its own, so removing
+  # that link rejects it, and the legs stay unlinked.
+  test "rejects a link the Wise sync makes, so it stays removed" do
+    family = users(:family_admin).family
+    wise_item = WiseItem.create!(family: family, name: "Wise", token: "test_token", profile_id: "123", profile_type: :business)
+    legs = { "EUR" => -117.5, "GBP" => 100 }.to_h do |currency, amount|
+      wise_account = wise_item.wise_accounts.create!(balance_id: "1000000#{currency == 'EUR' ? 1 : 2}", name: "Wise #{currency}",
+                                                     currency: currency, raw_payload: { "type" => "STANDARD" })
+      account = Account.create!(family: family, name: "Wise #{currency}", balance: 0, currency: currency,
+                                accountable: Depository.new(subtype: "checking"))
+      AccountProvider.create!(account: account, provider: wise_account)
+      side = amount.negative? ? "inflow" : "outflow"
+      [ currency, account.entries.create!(external_id: "wise_interbalance_8001_#{side}", source: "wise", amount: amount, currency: currency,
+                                          date: Date.current, name: "Conversion", entryable: Transaction.new) ]
+    end
+    wise_item.link_jar_transfers!
+    transfer = Transfer.find_by!(inflow_transaction_id: legs["EUR"].entryable_id)
+
+    delete transfer_url(transfer)
+
+    assert RejectedTransfer.exists?(inflow_transaction_id: legs["EUR"].entryable_id, outflow_transaction_id: legs["GBP"].entryable_id)
+    assert_no_difference -> { Transfer.count } do
+      wise_item.link_jar_transfers!
+    end
+    assert_equal %w[standard standard], legs.values.map { |entry| entry.entryable.reload.kind }
+  end
+
   test "can create transfer with tags on both sides" do
     tag = tags(:one)
 
@@ -361,6 +665,19 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal original_inflow_tags, transfer.inflow_transaction.reload.tag_ids
   end
 
+  test "confirming requires write permission on both transfer sides" do
+    # family_member: full_control on depository (outflow), read_only on credit_card (inflow)
+    sign_in users(:family_member)
+    transfer = transfers(:one)
+
+    assert_no_changes -> { transfer.inflow_transaction.reload.kind } do
+      patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert transfer.reload.pending?
+  end
+
   test "can add notes to transfer" do
     transfer = transfers(:one)
     assert_nil transfer.notes
@@ -370,6 +687,28 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to transactions_url
     assert_equal "Transfer updated", flash[:notice]
     assert_equal "Test notes", transfer.reload.notes
+  end
+
+  test "confirming a transfer keeps the outflow category" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update!(category: categories(:food_and_drink))
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert transfer.reload.confirmed?
+    assert_equal categories(:food_and_drink), transfer.outflow_transaction.reload.category
+  end
+
+  test "confirming a transfer keeps its notes" do
+    transfer = transfers(:one)
+    transfer.update!(notes: "Rent split")
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed" } }
+
+    assert_redirected_to transactions_url
+    assert transfer.reload.confirmed?
+    assert_equal "Rent split", transfer.notes
   end
 
   test "handles rejection without FrozenError" do
@@ -390,6 +729,335 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_raises(ActiveRecord::RecordNotFound) do
       transfer.reload
     end
+  end
+
+  test "rejecting a pending match from an account page redraws both rows in place" do
+    transfer = transfers(:one)
+    assert transfer.pending?, "precondition: the fixture is a pending match"
+    inflow_entry = transfer.inflow_transaction.entry
+    outflow_entry = transfer.outflow_transaction.entry
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+        headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+    end
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(inflow_entry)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(outflow_entry)
+    assert_select "turbo-stream[action=redirect]", count: 0
+    assert_no_match transfer_path(transfer), response.body, "the redrawn rows still offer the rejected match"
+  end
+
+  test "rejecting a pending match redraws only the rows the user can see" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_select "turbo-stream[target=?]", dom_id(transfer.inflow_transaction.entry), count: 0
+  end
+
+  test "rejecting a pending match with fees reloads the page, as the fees go with it" do
+    transfer = transfers(:one)
+    attach_fee(transfer, account: accounts(:depository))
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+  end
+
+  test "rejecting a pending match with a leg in a split group reloads the page, which draws the group" do
+    transfer = transfers(:one)
+    outflow_entry = transfer.outflow_transaction.entry
+    parent = create_transaction(account: outflow_entry.account, amount: 250, name: "Split parent")
+    outflow_entry.update_columns(parent_entry_id: parent.id)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+  end
+
+  test "a redrawn leg that still pairs with another transaction offers the transfer hint" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Another payment")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(inflow_entry)
+    assert_select "##{dom_id(transfer.inflow_transaction, :transfer_hint)}"
+  end
+
+  # A pair touching a transfer is never offered, so destroying the match can
+  # free another visible row to pair with one of its legs.
+  test "a row the rejection frees to pair with a leg is redrawn with the transfer hint" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    other = create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Another payment")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(other)
+    assert_select "##{dom_id(other.transaction, :transfer_hint)}"
+  end
+
+  test "a rejection freeing a row inside a split group to pair reloads the page, which draws the group" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    other = create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Another payment")
+    parent = create_transaction(account: accounts(:depository), amount: 500, name: "Split parent")
+    other.update_columns(parent_entry_id: parent.id)
+
+    account_page = account_url(transfer.outflow_transaction.entry.account)
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => account_page }
+
+    assert_select "turbo-stream[action=redirect][target=?]", account_page
+  end
+
+  test "a rejection freeing more rows than the bound to pair reloads the page" do
+    transfer = transfers(:one)
+    inflow_entry = transfer.inflow_transaction.entry
+    (TransfersController::MAX_REDRAWN_PAIRED_ROWS + 1).times do |i|
+      create_transaction(account: accounts(:depository), amount: -inflow_entry.amount, date: inflow_entry.date, name: "Candidate #{i}")
+    end
+
+    account_page = account_url(transfer.outflow_transaction.entry.account)
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => account_page }
+
+    assert_select "turbo-stream[action=redirect][target=?]", account_page
+  end
+
+  test "a rejection leaving no row the user can see reloads the page" do
+    transfer = transfers(:one)
+    TransfersController.any_instance.stubs(:accessible_transaction_entries).returns([])
+
+    account_page = account_url(transfer.outflow_transaction.entry.account)
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => account_page }
+
+    assert_select "turbo-stream[action=redirect][target=?]", account_page
+  end
+
+  # The transactions list draws a transfer once, by its outflow, so the
+  # inflow has no row there to redraw.
+  test "rejecting a pending match whose legs are both on the transactions list reloads the page" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+    assert_not Transfer.exists?(transfer.id)
+  end
+
+  test "rows redrawn on an account page keep the account view's signed amounts" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update_columns(kind: "funds_movement")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_no_match "+/-", response.body
+  end
+
+  test "an account page's reject button carries no view of its own" do
+    transfer = transfers(:one)
+
+    get account_url(transfer.outflow_transaction.entry.account)
+
+    assert_select "##{dom_id(transfer.outflow_transaction, :transfer_match)} form[action=?]",
+      transfer_path(transfer, transfer: { status: "rejected" })
+  end
+
+  # The page a request comes from decides the view, so a client flag cannot
+  # claim the account view on the transactions list.
+  test "a view_ctx param does not make the transactions list redraw a rejection in place" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer, view_ctx: "account"), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+  end
+
+  test "editing a pending transfer on an account page redraws its rows in the account view" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update_columns(kind: "funds_movement")
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Rent" } }, as: :turbo_stream,
+      headers: { "Referer" => account_url(transfer.outflow_transaction.entry.account) }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_no_match "+/-", response.body
+  end
+
+  test "editing a pending transfer on the transactions list redraws its rows in the list's view" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.update_columns(kind: "funds_movement")
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Rent" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_match "+/-", response.body
+  end
+
+  test "rejecting a confirmed transfer reloads the page, whose totals it moves" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan, status: "confirmed")
+
+    patch transfer_url(transfer), params: { transfer: { status: "rejected" } }, as: :turbo_stream,
+      headers: { "Referer" => transactions_url }
+
+    assert_select "turbo-stream[action=redirect][target=?]", transactions_url
+  end
+
+  test "can reject a match when only the outflow account is accessible" do
+    # Confirmed, so the legs carry transfer kinds that rejecting must reset
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan, status: "confirmed")
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_redirected_to transactions_url
+    assert_equal "standard", transfer.outflow_transaction.reload.kind
+    assert_equal "standard", transfer.inflow_transaction.reload.kind
+  end
+
+  test "can reject a match when only the inflow account is accessible" do
+    transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_redirected_to transactions_url
+  end
+
+  test "can unlink a match when only one side is accessible" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+
+    assert_difference -> { Transfer.count }, -1 do
+      delete transfer_url(transfer)
+    end
+  end
+
+  test "cannot unlink a match from one side when a fee sits in the other account" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    writable_fee = attach_fee(transfer, account: accounts(:depository))
+    unwritable_fee = attach_fee(transfer, account: member_loan)
+
+    assert_no_difference -> { Transfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+      delete transfer_url(transfer)
+    end
+
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert Transfer.exists?(transfer.id)
+    assert Transaction.exists?(writable_fee.id)
+    assert Transaction.exists?(unwritable_fee.id)
+  end
+
+  test "can reject a match from one side when its fees sit in a writable account" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    fee = attach_fee(transfer, account: accounts(:depository))
+
+    assert_difference -> { Transfer.count } => -1, -> { RejectedTransfer.count } => 1 do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_not Transaction.exists?(fee.id)
+  end
+
+  test "cannot edit a match when only the inflow account is accessible" do
+    transfer = cross_owner_transfer(outflow_account: member_loan, inflow_account: accounts(:depository))
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed", notes: "Nope" } }
+
+    assert_response :not_found
+    assert transfer.reload.pending?
+    assert_nil transfer.notes
+  end
+
+  test "cannot edit a match when only the outflow account is accessible" do
+    transfer = cross_owner_transfer(outflow_account: accounts(:depository), inflow_account: member_loan)
+    inflow_amount = transfer.inflow_transaction.entry.amount
+
+    patch transfer_url(transfer), params: { transfer: { status: "confirmed", amount: transfer.amount + 10, notes: "Nope" } }
+
+    assert_response :not_found
+    assert transfer.reload.pending?
+    assert_nil transfer.notes
+    assert_equal inflow_amount, transfer.inflow_transaction.entry.reload.amount
+  end
+
+  test "cannot reject a match when neither side is accessible" do
+    vehicle = accounts(:vehicle)
+    vehicle.update!(owner: users(:family_member))
+    transfer = cross_owner_transfer(outflow_account: vehicle, inflow_account: member_loan)
+
+    assert_no_difference -> { Transfer.count } do
+      patch transfer_url(transfer), params: { transfer: { status: "rejected" } }
+    end
+
+    assert_response :not_found
+  end
+
+  test "show offers the investment contribution switch only for transfers into an investment account" do
+    contribution = create_confirmed_transfer(to: accounts(:investment))
+    payment = create_confirmed_transfer(to: accounts(:credit_card))
+
+    get transfer_url(contribution)
+    assert_select "input[type=checkbox][name='transfer[investment_contribution]'][checked]"
+
+    get transfer_url(payment)
+    assert_select "input[name='transfer[investment_contribution]']", count: 0
+  end
+
+  test "turning off the investment contribution makes a plain transfer and reloads the page" do
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+
+    patch transfer_url(transfer),
+          params: { transfer: { investment_contribution: "0" } },
+          headers: { "Accept" => "text/vnd.turbo-stream.html", "Referer" => transactions_url }
+
+    assert_response :success
+    assert_includes response.body, %(action="redirect")
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
+  test "turning the investment contribution back on restores it" do
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+    transfer.update_investment_contribution!(false)
+
+    patch transfer_url(transfer), params: { transfer: { investment_contribution: "1" } }
+
+    assert_redirected_to transactions_url
+    assert_equal "investment_contribution", transfer.outflow_transaction.reload.kind
+  end
+
+  test "switching the investment contribution requires write permission on both transfer sides" do
+    sign_in users(:family_member)
+    accounts(:investment).account_shares.create!(user: users(:family_member), permission: "read_only")
+    transfer = create_confirmed_transfer(to: accounts(:investment))
+
+    patch transfer_url(transfer), params: { transfer: { investment_contribution: "0" } }
+
+    assert_redirected_to transactions_url
+    assert_equal "investment_contribution", transfer.outflow_transaction.reload.kind
   end
 
   test "mark_as_recurring creates a recurring transfer" do
@@ -435,4 +1103,30 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     end
     assert_equal I18n.t("recurring_transactions.transfer_feature_disabled"), flash[:alert]
   end
+
+  private
+    def create_confirmed_transfer(to:)
+      outflow_entry = create_transaction(date: Date.current, account: accounts(:depository), amount: 500)
+      inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)
+
+      Transfer.create!(inflow_transaction: inflow_entry.transaction, outflow_transaction: outflow_entry.transaction).tap(&:confirm!)
+    end
+
+    # A loan owned by family_member and not shared with family_admin
+    def member_loan
+      accounts(:loan).tap { |loan| loan.update!(owner: users(:family_member)) }
+    end
+
+    def cross_owner_transfer(outflow_account:, inflow_account:, status: "pending")
+      outflow = create_transaction(account: outflow_account, amount: 250, kind: "funds_movement")
+      inflow = create_transaction(account: inflow_account, amount: -250, kind: "funds_movement")
+
+      Transfer.create!(outflow_transaction: outflow.transaction, inflow_transaction: inflow.transaction, status: status)
+    end
+
+    def attach_fee(transfer, account:)
+      create_transaction(account: account, amount: 5, name: "Transfer fee").transaction.tap do |fee|
+        fee.update!(transfer: transfer)
+      end
+    end
 end

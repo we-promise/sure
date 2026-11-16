@@ -4,6 +4,9 @@ class TransactionCategoriesController < ApplicationController
   def update
     @entry = Current.accessible_entries.transactions.find(params[:transaction_id])
     return unless require_account_permission!(@entry.account, :annotate, redirect_path: transaction_path(@entry))
+    # The inflow leg of a matched transfer shows its outflow's category
+    # read-only (Transaction#category_set_on_transfer_outflow?).
+    return head(:unprocessable_entity) if @entry.transaction.category_set_on_transfer_outflow?
 
     @entry.update!(entry_params)
 
@@ -55,6 +58,7 @@ class TransactionCategoriesController < ApplicationController
     end
 
     def needs_rule_notification?(transaction)
+      return false if Current.user.guest?
       return false if Current.user.rule_prompts_disabled
       return false if transaction.category_id.blank?
 

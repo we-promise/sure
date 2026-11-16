@@ -16,7 +16,9 @@ fr:
     budgets: Budgets
     categories: Catégories
     categorize: Catégoriser
+    changelog: Nouveautés
     chats: Discussions
+    classifier: Classifieur
     coinbase_items: Coinbase
     coinstats_items: CoinStats
     credit_cards: Cartes de crédit
@@ -29,12 +31,13 @@ fr:
     exports: Exports
     family_exports: Exportations
     family_merchants: Marchands
+    feedback: Retours
     guides: Guides
     holdings: Holdings
     home: Accueil
     hostings: Auto-hébergement
-    ibkr_items: Courtiers interactifs
-    impersonation_sessions: Usurpations d'identité
+    ibkr_items: Interactive Brokers
+    impersonation_sessions: Emprunts d'identité
     imports: Imports
     indexa_capital_items: Indexa Capital
     intro: Introduction
@@ -48,9 +51,10 @@ fr:
     lunchflow_items: Lunch Flow
     mcp: Serveur MCP
     merchants: Marchands
-    mercury_items: Mercure
+    mercury_items: Mercury
     messages: Messages
     mfa: Authentification à deux facteurs
+    monobank_items: Monobank
     oidc_accounts: Comptes SSO
     onboardings: Intégration
     other_assets: Autres actifs
@@ -58,12 +62,14 @@ fr:
     payments: Paiements
     pending_duplicate_merges: Avis en double
     plaid_items: Plaid
+    plan: Plan
     preferences: Préférences
     profile: Informations sur le profil
     profiles: Informations sur le profil
     properties: Propriétés
     providers: Fournisseurs
     recurring_transactions: Récurrent
+    redbark_items: Redbark
     registrations: Inscrivez-vous
     reports: Rapports
     rules: Règles
@@ -78,8 +84,9 @@ fr:
     sso_identities: Connexions SSO
     sso_providers: Fournisseurs SSO
     subscriptions: Abonnement
+    system_health: Santé du système
     tags: Balises
-    trades: Métiers
+    trades: Transactions boursières
     transactions: Transactions
     transfer_matches: Matchs de transfert
     transfers: Transferts

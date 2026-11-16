@@ -1,5 +1,5 @@
 class LunchflowItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
 
@@ -14,6 +14,7 @@ class LunchflowItem < ApplicationRecord
 
   validates :name, presence: true
   validates :api_key, presence: true, on: :create
+  validate :sync_start_date_must_be_valid
 
   belongs_to :family
   has_one_attached :logo, dependent: :purge_later
@@ -25,11 +26,6 @@ class LunchflowItem < ApplicationRecord
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
-
-  def destroy_later
-    update!(scheduled_for_deletion: true)
-    DestroyJob.perform_later(self)
-  end
 
   def import_latest_lunchflow_data
     provider = lunchflow_provider
@@ -106,11 +102,16 @@ class LunchflowItem < ApplicationRecord
     unlinked_count = unlinked_accounts_count
 
     if total_accounts == 0
-      "No accounts found"
+      I18n.t("lunchflow_items.lunchflow_item.sync_status.no_accounts")
     elsif unlinked_count == 0
-      "#{linked_count} #{'account'.pluralize(linked_count)} synced"
+      I18n.t("lunchflow_items.lunchflow_item.sync_status.synced", count: linked_count)
     else
-      "#{linked_count} synced, #{unlinked_count} need setup"
+      I18n.t(
+        "lunchflow_items.lunchflow_item.sync_status.partial_setup",
+        count: unlinked_count,
+        linked: linked_count,
+        unlinked: unlinked_count
+      )
     end
   end
 
@@ -169,4 +170,15 @@ class LunchflowItem < ApplicationRecord
   rescue URI::InvalidURIError
     DEFAULT_BASE_URL
   end
+
+  private
+
+    def sync_start_date_must_be_valid
+      if sync_start_date.nil?
+        # A value that isn't a date casts to nil; reject it instead of clearing the saved date.
+        errors.add(:sync_start_date, :invalid) if sync_start_date_before_type_cast.present?
+      elsif sync_start_date.to_date > Date.current
+        errors.add(:sync_start_date, :invalid)
+      end
+    end
 end

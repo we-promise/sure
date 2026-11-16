@@ -52,9 +52,9 @@ $("prefs-add").addEventListener("submit", async (e) => {
   if (!url) return;
   $("prefs-status").textContent = S.checking;
   try {
-    const ok = await invoke<boolean>("check_server", { url });
-    if (!ok) { $("prefs-status").textContent = S.unreachable; return; }
-    await invoke("add_server", { url, label: "" });
+    const base = await invoke<string | null>("check_server", { url });
+    if (!base) { $("prefs-status").textContent = S.unreachable; return; }
+    await invoke("add_server", { url: base, label: "" });
     ($("prefs-url") as HTMLInputElement).value = "";
     $("prefs-status").textContent = "";
     renderServers();

@@ -239,15 +239,16 @@ class BrexItem::ImporterTest < ActiveSupport::TestCase
     assert_equal "snapshot failed", error.message
   end
 
-  test "marks item as requiring update on authorization errors" do
+  test "marks item as requiring update and raises on authorization errors" do
     provider = mock("brex_provider")
     provider.expects(:get_accounts).raises(
       Provider::Brex::BrexError.new("Access forbidden", :access_forbidden, http_status: 403, trace_id: "trace_123")
     )
 
-    result = BrexItem::Importer.new(@brex_item, brex_provider: provider).import
+    assert_raises(Provider::Brex::BrexError) do
+      BrexItem::Importer.new(@brex_item, brex_provider: provider).import
+    end
 
-    refute result[:success]
     assert @brex_item.reload.requires_update?
   end
 

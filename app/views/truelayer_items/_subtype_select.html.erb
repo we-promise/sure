@@ -1,0 +1,16 @@
+<%# locals: (form:, account_type:, subtype_config:, truelayer_account:) %>
+<div class="subtype-select" data-type="<%= account_type %>" style="display: none;">
+  <% if subtype_config[:options].present? %>
+    <% placeholder_key = account_type == "Depository" ? "subtype" : "type" %>
+    <%= render DS::Select.new(
+      form: form,
+      method: "account_subtypes[#{truelayer_account.id}]",
+      items: subtype_config[:options].map { |label, value| { label: label, value: value } },
+      selected: account_type == "Depository" ? truelayer_account.suggested_depository_subtype : nil,
+      include_blank: t(".placeholder.#{placeholder_key}"),
+      label: subtype_config[:label]
+    ) %>
+  <% else %>
+    <p class="text-sm text-secondary"><%= subtype_config[:message] %></p>
+  <% end %>
+</div>

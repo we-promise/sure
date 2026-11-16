@@ -1,0 +1,39 @@
+---
+zh-TW:
+  settings:
+    debugs:
+      show:
+        page_title: 偵錯
+        title: 偵錯事件紀錄
+        subtitle: 提供給超級管理員的重要運作事件，最新的在最前面。
+        empty: 找不到偵錯事件。
+        missing_value: '-'
+        filters:
+          all: 全部
+          category: 分類
+          level: 層級
+          source: 來源
+          provider: 供應商
+          start_date: 開始
+          end_date: 結束
+          family_id: 家庭 ID
+          account_id: 帳戶 ID
+          user_id: 使用者 ID
+          account_provider_id: 帳戶供應商 ID
+          submit: 篩選
+          reset: 重設
+        table:
+          time: 時間
+          level: 層級
+          category: 分類
+          source: 來源
+          message: 訊息
+          context: 情境
+          metadata: 中繼資料
+          view_metadata: 查看
+        context:
+          provider: provider=%{value}
+          family: family=%{value}
+          account: account=%{value}
+          user: user=%{value}
+          account_provider: account_provider=%{value}

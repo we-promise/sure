@@ -1,0 +1,9 @@
+---
+en:
+  tag:
+    dropdowns:
+      show:
+        empty: No tags yet
+        manage: Manage tags
+        no_tags: No tags found
+        search_placeholder: Search

@@ -1,0 +1,49 @@
+---
+pt-PT:
+  settings:
+    encryption_migration_guide: Guia de configuração da encriptação e migração
+    settings_nav:
+      accounts_label: Contas
+      advanced_section_title: Avançado
+      ai_prompts_label: Prompts de IA
+      auto_matches_label: Correspondências automáticas
+      background_jobs_label: Tarefas em segundo plano
+      api_key_label: Chaves de API
+      payment_label: Pagamento
+      categories_label: Categorias
+      feedback_label: Feedback
+      general_section_title: Geral
+      imports_label: Importações
+      exports_label: Exportações
+      llm_usage_label: Utilização de AI
+      logout: Terminar sessão
+      merchants_label: Comerciantes
+      providers_label: Serviços
+      guides_label: Guias
+      other_section_title: Mais
+      preferences_label: Preferências
+      profile_label: Informações do Perfil
+      recurring_transactions_label: Recorrentes
+      rules_label: Regras
+      mcp_label: MCP
+      security_label: Segurança
+      self_hosting_label: Self-Hosting
+      sso_providers_label: Serviços SSO
+      statement_vault_label: Arquivo de Extratos
+      system_health_label: Estado do sistema
+      tags_label: Etiquetas
+      transactions_section_title: Transações
+      users_label: Utilizadores
+      whats_new_label: Novidades
+      api_keys_label: Chaves de API
+      appearance_label: Aparência
+      bank_sync_label: Sincronização bancária
+      debug_label: Depuração
+    settings_nav_link_large:
+      next: Seguinte
+      previous: Voltar
+    user_avatar_field:
+      accepted_formats: JPG ou PNG. Máx. 5MB.
+      choose: Carregar foto
+      choose_label: (opcional)
+      change: Alterar foto

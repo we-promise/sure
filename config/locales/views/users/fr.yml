@@ -24,7 +24,7 @@ fr:
         les instructions de confirmation.
       success: Votre profil a été mis à jour.
     user_menu:
-      aria_label: Menu Ouvrir un compte
+      aria_label: Ouvrir le menu du compte
       changelog: Journal des modifications
       contact: Contacter
       feedback: Commentaires

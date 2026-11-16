@@ -14,6 +14,8 @@ de:
         mfa_enabled_status_html: Zwei-Faktor-Authentifizierung ist <span class="font-medium text-green-600">aktiv</span>
         webauthn_add: Passkey oder Sicherheitsschlüssel hinzufügen
         webauthn_added: Hinzugefügt am %{date}
+        webauthn_code_label: Authenticator- oder Backup-Code
+        webauthn_code_placeholder: Aktueller Authenticator-Code oder unbenutzter Backup-Code
         webauthn_description: Nutz einen Passkey, Touch ID, Windows Hello oder einen Hardware-Sicherheitsschlüssel als zweiten Faktor beim Anmelden.
         webauthn_empty: Es sind noch keine Passkeys oder Sicherheitsschlüssel hinterlegt.
         webauthn_last_used: Zuletzt genutzt vor %{time_ago}
@@ -24,8 +26,32 @@ de:
         webauthn_remove_confirm_body: Du musst ihn neu registrieren, bevor er sich wieder zum Anmelden nutzen lässt.
         webauthn_title: Passkeys und Sicherheitsschlüssel
         webauthn_unsupported: Dieser Browser unterstützt keine Passkeys oder Sicherheitsschlüssel.
+        page_title: Sicherheit
+        sso_title: Verbundene Konten
+        sso_subtitle: Verwalte deine Single Sign-On-Kontoverbindungen
+        sso_disconnect: Trennen
+        sso_last_used: Zuletzt verwendet
+        sso_never: Nie
+        sso_no_email: Keine E-Mail
+        sso_no_identities: Keine SSO-Konten verbunden
+        sso_connect_hint: Melde dich ab und mit einem SSO-Anbieter an, um ein Konto zu verbinden.
+        sso_confirm_title: Konto trennen?
+        sso_confirm_body: Bist du sicher, dass du dein %{provider}-Konto trennen möchtest? Du kannst es später erneut verbinden, indem du dich erneut mit diesem Anbieter anmeldest.
+        sso_confirm_button: Trennen
+        sso_warning_message: Dies ist deine einzige Anmeldemethode. Du solltest vor dem Trennen ein Passwort in den Sicherheitseinstellungen festlegen, sonst könntest du dich aus deinem Konto ausschließen.
+        encryption_warning:
+          generate: 'Einen Satz erzeugst du mit: bin/rails db:encryption:init'
+          intro: 'Sensible Daten wie API-Keys, Anbieter-Tokens, MFA-Geheimnisse und personenbezogene Angaben liegen unverschlüsselt auf der Platte. Setze diese Schlüssel in deinen Umgebungsvariablen oder Rails-Credentials, um die Verschlüsselung einzuschalten:'
+          keys:
+          - ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+          - ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+          - ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+          title: Verschlüsselungsschlüssel fehlen
   webauthn_credentials:
+    code_already_used: Dieser Code wurde schon verwendet. Warte auf den nächsten Code aus deiner Authenticator-App.
     default_name: Sicherheitsschlüssel
     failure: Dieser Passkey oder Sicherheitsschlüssel ließ sich nicht speichern. Versuch es noch einmal.
+    invalid_code: Dieser Code ist ungültig. Gib einen aktuellen Code aus deiner Authenticator-App oder einen unbenutzten Backup-Code ein.
     mfa_required: Aktivier die Zwei-Faktor-Authentifizierung, bevor du einen Passkey oder Sicherheitsschlüssel hinzufügst.
+    rate_limited: Zu viele Versuche. Warte eine Minute und versuch es dann noch einmal.
     success: Passkey oder Sicherheitsschlüssel entfernt.

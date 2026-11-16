@@ -22,6 +22,10 @@ class ReportsController < ApplicationController
   end
 
   def update_preferences
+    # `require` passes a scalar through, and indexing a String by key raises,
+    # so a body whose `preferences` is not an object is refused here.
+    return head :bad_request unless params[:preferences].is_a?(ActionController::Parameters)
+
     if Current.user.update_reports_preferences(preferences_params)
       head :ok
     else
@@ -80,9 +84,8 @@ class ReportsController < ApplicationController
       sort_direction: params[:sort_direction]
     }.compact
 
-    # Build the full URL with the API key, if present
+    # The CSV URL the instructions tell people to add their API key to
     @csv_url = export_transactions_reports_url(base_params.merge(format: :csv))
-    @api_key_present = @csv_url.include?("api_key=")
 
     # This action will render `app/views/reports/google_sheets_instructions.html.erb`
     # It will render *inside* the modal frame.
@@ -133,6 +136,9 @@ class ReportsController < ApplicationController
       # Investment metrics
       @investment_metrics = build_investment_metrics
 
+      # Spending vs normal (preview): this period against the year before it
+      @spending_comparison = build_spending_comparison
+
       # Investment flows (contributions/withdrawals)
       @investment_flows = InvestmentFlowStatement.new(Current.family, user: Current.user).period_totals(period: @period)
 
@@ -144,11 +150,13 @@ class ReportsController < ApplicationController
     end
 
     def preferences_params
+      # Only the two reports keys are passed on; User#update_section_preferences
+      # drops any value that is not an array of keys or a hash of flags.
       prefs = params.require(:preferences)
-      {}.tap do |permitted|
-        permitted["reports_collapsed_sections"] = prefs[:reports_collapsed_sections].to_unsafe_h if prefs[:reports_collapsed_sections]
-        permitted["reports_section_order"] = prefs[:reports_section_order] if prefs[:reports_section_order]
-      end
+      {
+        "reports_collapsed_sections" => prefs[:reports_collapsed_sections],
+        "reports_section_order" => prefs[:reports_section_order]
+      }
     end
 
     def build_reports_sections
@@ -168,6 +176,15 @@ class ReportsController < ApplicationController
           locals: { trends_data: @trends_data },
           visible: @has_accounts,
           collapsible: true
+        },
+        {
+          key: "spending_vs_normal",
+          title: "reports.spending_vs_normal.title",
+          partial: "reports/spending_vs_normal",
+          locals: { comparison: @spending_comparison, start_date: @start_date, end_date: @end_date },
+          visible: @has_accounts && @spending_comparison.present?,
+          collapsible: true,
+          preview: true
         },
         {
           key: "investment_performance",
@@ -321,6 +338,16 @@ class ReportsController < ApplicationController
       nil
     end
 
+    def build_spending_comparison
+      return nil unless preview_features_enabled?
+
+      IncomeStatement::SpendingComparison.new(
+        @income_statement,
+        period: @period,
+        history_start: IncomeStatement::SpendingComparison.history_start(@income_statement)
+      )
+    end
+
     def build_trends_data(income_statement:)
       # Generate month-by-month data based on the current period filter
       trends = []
@@ -355,6 +382,28 @@ class ReportsController < ApplicationController
       trends
     end
 
+    # An entry's amount in family currency at the rate the summary totals use:
+    # ExchangeRate.rate_sql, the stored rate nearest the entry's date, however
+    # old, as IncomeStatement::ScopedTransactionsQuery reads it. Nil when there
+    # is none, so the entry is left out, as the summary leaves it out, rather
+    # than counted at 1. No provider is called.
+    def report_amount_converter(family_currency)
+      rates = {}
+      rate_query = "SELECT #{ExchangeRate.rate_sql(from: ':from', to: ':to', on: 'CAST(:on AS date)')}"
+      lambda do |entry|
+        amount = entry.amount.abs
+        next amount if entry.currency == family_currency
+
+        key = [ entry.date, entry.currency ]
+        unless rates.key?(key)
+          sql = ExchangeRate.sanitize_sql_array([ rate_query, { from: entry.currency, to: family_currency, on: entry.date } ])
+          value = ExchangeRate.connection.select_value(sql)
+          rates[key] = value && BigDecimal(value.to_s)
+        end
+        rates[key] && amount * rates[key]
+      end
+    end
+
     def build_transactions_breakdown
       # Base query: all transactions in the period
       # Exclude transfers, one-time, and CC payments (matching income_statement logic)
@@ -364,7 +413,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: :parent)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -397,10 +446,11 @@ class ReportsController < ApplicationController
       family_currency = Current.family.currency
 
       # Helper to initialize a category group hash
-      init_category_group = ->(id, name, color, icon, type) do
+      init_category_group = ->(id, name, color, icon, type, filter_value) do
         {
           category_id: id,
           category_name: name,
+          category_filter_value: filter_value,
           category_color: color,
           category_icon: icon,
           type: type,
@@ -416,6 +466,7 @@ class ReportsController < ApplicationController
         {
           category_id: category.id,
           category_name: category.name,
+          category_filter_value: category.filter_value,
           category_color: category.color,
           category_icon: category.lucide_icon,
           total: 0,
@@ -425,28 +476,26 @@ class ReportsController < ApplicationController
       end
 
       # Helper to process an entry (transaction or trade)
+      convert = report_amount_converter(family_currency)
       process_entry = ->(category, entry, is_trade) do
         type = entry.amount > 0 ? "expense" : "income"
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        converted_amount = convert.call(entry)
+        next if converted_amount.nil?
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
           if is_trade
             parent_key = [ :other_investments, type ]
-            grouped_data[parent_key] ||= init_category_group.call(:other_investments, Category.other_investments.name, Category.other_investments.color, Category.other_investments.lucide_icon, type)
+            grouped_data[parent_key] ||= init_category_group.call(:other_investments, Category.other_investments.name, Category.other_investments.color, Category.other_investments.lucide_icon, type, Category.other_investments.name)
           else
             parent_key = [ :uncategorized, type ]
-            grouped_data[parent_key] ||= init_category_group.call(:uncategorized, Category.uncategorized.name, Category.uncategorized.color, Category.uncategorized.lucide_icon, type)
+            grouped_data[parent_key] ||= init_category_group.call(:uncategorized, Category.uncategorized.name, Category.uncategorized.color, Category.uncategorized.lucide_icon, type, Category.uncategorized.filter_value)
           end
         elsif category.parent_id.present?
           # This is a subcategory - group under parent
           parent = category.parent
           parent_key = [ parent.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, parent.lucide_icon, type)
+          grouped_data[parent_key] ||= init_category_group.call(parent.id, parent.name, parent.color || Category::UNCATEGORIZED_COLOR, parent.lucide_icon, type, parent.filter_value)
 
           # Add to subcategory
           grouped_data[parent_key][:subcategories][category.id] ||= init_subcategory.call(category)
@@ -456,7 +505,7 @@ class ReportsController < ApplicationController
         else
           # This is a root category (no parent)
           parent_key = [ category.id, type ]
-          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, category.lucide_icon, type)
+          grouped_data[parent_key] ||= init_category_group.call(category.id, category.name, category.color || Category::UNCATEGORIZED_COLOR, category.lucide_icon, type, category.filter_value)
         end
 
         grouped_data[parent_key][:count] += 1
@@ -488,7 +537,12 @@ class ReportsController < ApplicationController
       investment_statement = Current.family.investment_statement
       investment_accounts = investment_statement.investment_accounts
 
-      return { has_investments: false } unless investment_accounts.any?
+      # Shown when there is something to show: an investment account in scope,
+      # or a disposal in the period for the realised-gains half. That half reads
+      # every account included in reports, disabled ones too, while
+      # `investment_accounts` is visible accounts only -- so a family whose only
+      # brokerage account is closed used to get no card at all.
+      return { has_investments: false } unless investment_accounts.any? || period_sell_trades.exists?
 
       period_totals = investment_statement.totals(period: @period)
       {
@@ -516,11 +570,7 @@ class ReportsController < ApplicationController
 
       # Get sell trades in period with realized gains
       # Eager-load security, account, and accountable to avoid N+1
-      sell_trades = Current.family.trades
-        .joins(entry: :account)
-        .where(entries: { date: @period.date_range })
-        .merge(Account.included_in_reports)
-        .where("trades.qty < 0")
+      sell_trades = period_sell_trades
         .includes(:security, entry: { account: :accountable })
         .to_a
 
@@ -537,6 +587,10 @@ class ReportsController < ApplicationController
         trade.instance_variable_set(:@preloaded_holdings, holdings_by_account[trade.entry.account_id] || [])
       end
 
+      # The rates the proceeds conversion needs, in one query rather than one
+      # per foreign disposal.
+      Trade.preload_exchange_rates(sell_trades)
+
       trades_by_treatment = sell_trades.group_by { |t| t.entry.account.tax_treatment || :taxable }
 
       # Unwrap helper: Trend#value / realized_gain_loss#value are Money objects,
@@ -546,23 +600,43 @@ class ReportsController < ApplicationController
       to_numeric = ->(value) { value.is_a?(Money) ? value.amount : value }
 
       # Unrealized gains mark holdings to market, so convert at today's FX.
+      # Both conversions return nil when there is no rate, since converting
+      # at 1 would report a ¥1,000,000 gain as $1,000,000. A figure that
+      # cannot be converted is left out of the total and counted, so the card
+      # can say the total is partial.
       foreign_holding_currencies = current_holdings.map(&:currency).compact.uniq.reject { |c| c == currency }
       holding_rates = ExchangeRate.rates_for(foreign_holding_currencies, to: currency, date: Date.current)
       convert_current = ->(amount, from) {
         numeric = to_numeric.call(amount)
-        from == currency ? numeric : numeric * (holding_rates[from] || 1)
+        next numeric if from == currency
+
+        rate = holding_rates[from]
+        rate && numeric * rate
       }
 
       # Realized gains are locked at trade time, so convert each at its own
       # entry-date FX. Mirrors InvestmentStatement::Totals, which also uses
       # entry-date rates for contributions/withdrawals on this same card.
-      foreign_trade_currencies = sell_trades.map(&:currency).compact.uniq.reject { |c| c == currency }
+      # A realised figure arrives in the currency the POSITION is held in, not
+      # the one the disposal was priced in: Trade#realized_gain_loss converts
+      # the proceeds into the basis's currency before subtracting, so that the
+      # two sides are comparable. All three sets are needed -- the accounts',
+      # which is what a gain usually carries, the trades' own, and the
+      # holdings', for a position carried in a third currency.
+      foreign_trade_currencies = (
+        sell_trades.map(&:currency) +
+        sell_trades.map { |t| t.entry.account.currency } +
+        holdings_by_account.values.flatten.map(&:currency)
+      ).compact.uniq.reject { |c| c == currency }
       rates_by_trade_date = sell_trades.map { |t| t.entry.date }.uniq.each_with_object({}) do |date, memo|
         memo[date] = ExchangeRate.rates_for(foreign_trade_currencies, to: currency, date: date)
       end
       convert_trade = ->(amount, from, date) {
         numeric = to_numeric.call(amount)
-        from == currency ? numeric : numeric * (rates_by_trade_date.dig(date, from) || 1)
+        next numeric if from == currency
+
+        rate = rates_by_trade_date.dig(date, from)
+        rate && numeric * rate
       }
 
       # Build metrics per treatment
@@ -570,17 +644,41 @@ class ReportsController < ApplicationController
         holdings = holdings_by_treatment[treatment] || []
         trades = trades_by_treatment[treatment] || []
 
-        # Sum unrealized gains from holdings (only those with known cost basis)
+        # Sum unrealized gains from holdings (only those with known cost basis
+        # and a rate into family currency)
+        unconverted = 0
+        unrealized_by_holding = {}
         unrealized = holdings.sum do |h|
           trend = h.trend
-          trend ? convert_current.call(trend.value, h.currency) : 0
+          next 0 unless trend
+
+          converted = convert_current.call(trend.value, h.currency)
+          unconverted += 1 if converted.nil?
+          unrealized_by_holding[h.id] = Money.new(converted, currency) if converted
+          converted || 0
         end
 
-        # Sum realized gains from sell trades
-        realized = trades.sum do |t|
+        # Sum realized gains from sell trades, each converted from the currency
+        # its own figure carries.
+        realized_by_trade = trades.each_with_object({}) do |t, memo|
           gain = t.realized_gain_loss
-          gain ? convert_trade.call(gain.value, t.currency, t.entry.date) : 0
+          if gain.nil?
+            # A sale with no rate between its own two currencies is left out
+            # too, and counted; one with no cost basis never had a figure.
+            unconverted += 1 if t.realized_gain_unconvertible?
+            next
+          end
+
+          converted = convert_trade.call(gain.value, gain.value.currency.iso_code, t.entry.date)
+          if converted.nil?
+            unconverted += 1
+            next
+          end
+
+          memo[t.id] = Money.new(converted, currency)
         end
+
+        realized = realized_by_trade.values.sum(Money.new(0, currency)).amount
 
         # Only include treatment groups that have some activity
         next if holdings.empty? && trades.empty?
@@ -590,9 +688,41 @@ class ReportsController < ApplicationController
           sell_trades: trades,
           unrealized_gain: Money.new(unrealized, currency),
           realized_gain: Money.new(realized, currency),
+          # Per-trade figures in family currency, so the lines under the card
+          # and the card's own total are the same arithmetic. The partial used
+          # to re-label `gain.value` as family currency without converting it.
+          realized_gain_by_trade: realized_by_trade,
+          # The same for each holding's unrealised gain; one with no rate has
+          # no entry, and its line says so.
+          unrealized_gain_by_holding: unrealized_by_holding,
+          # Holdings and sells left out of the totals for want of a rate.
+          unconverted_count: unconverted,
           total_gain: Money.new(unrealized + realized, currency)
         }
       end
+    end
+
+    # The period's disposals, as the realised-gains half of the investment
+    # card lists them. The card's gate asks the same relation, so the two
+    # cannot disagree about what counts as a disposal. Scoped to the accounts
+    # this user includes in their finances -- the per-user scope
+    # `investment_accounts` applies -- so another member's unshared account
+    # is neither listed nor opens the card.
+    def period_sell_trades
+      Current.family.trades
+        .joins(entry: :account)
+        # An excluded trade is left out of reports, as InvestmentStatement::Totals
+        # leaves it out of the same card's contributions and withdrawals.
+        .where(entries: { date: @period.date_range, excluded: false })
+        .where(entries: { account_id: Current.user.finance_accounts.select(:id) })
+        .merge(Account.included_in_reports)
+        .where("trades.qty < 0")
+        # A transfer out has the same negative quantity as a sale and would be
+        # counted and listed as one. Nothing was sold, so it belongs in neither.
+        .where(
+          "trades.investment_activity_label IS NULL OR trades.investment_activity_label NOT IN (?)",
+          Trade::INTERNAL_MOVEMENT_LABELS
+        )
     end
 
     def build_net_worth_metrics
@@ -664,7 +794,8 @@ class ReportsController < ApplicationController
         # Scope to family's categories to prevent cross-family data access
         subcategory_ids = Current.family.categories.where(parent_id: category_id).pluck(:id)
         all_category_ids = [ category_id ] + subcategory_ids
-        scope = scope.where(category_id: all_category_ids)
+        # Trades have no category, so a category filter leaves them out.
+        scope = scope.model == Trade ? scope.none : scope.where(category_id: all_category_ids)
       end
 
       # Filter by account
@@ -706,7 +837,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -745,7 +876,7 @@ class ReportsController < ApplicationController
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS)
+        .where.not(kind: Current.family.analytics_excluded_kinds)
         .includes(entry: :account, category: [])
       transactions = exclude_tax_advantaged_accounts(transactions)
 
@@ -754,6 +885,7 @@ class ReportsController < ApplicationController
       # Group by category, type, and month
       breakdown = {}
       family_currency = Current.family.currency
+      convert = report_amount_converter(family_currency)
 
       # Process transactions
       transactions.each do |transaction|
@@ -763,12 +895,9 @@ class ReportsController < ApplicationController
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
-        # Convert to family currency
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        # Convert to family currency, leaving out what has no rate
+        converted_amount = convert.call(entry)
+        next if converted_amount.nil?
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }

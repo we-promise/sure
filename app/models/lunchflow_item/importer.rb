@@ -23,7 +23,8 @@ class LunchflowItem::Importer
         accounts_failed: 0,
         accounts_pruned: 0,
         transactions_imported: 0,
-        transactions_failed: 0
+        transactions_failed: 0,
+        balances_failed: 0
       }
     end
 
@@ -94,11 +95,11 @@ class LunchflowItem::Importer
 
     Rails.logger.info "LunchflowItem::Importer - Updated #{accounts_updated} accounts, created #{accounts_created} new (#{accounts_failed} failed), pruned #{accounts_pruned}"
 
-    # Step 3: Fetch transactions only for linked accounts with active status
     transactions_imported = 0
     transactions_failed = 0
+    balances_failed = 0
 
-    lunchflow_item.lunchflow_accounts.joins(:account).merge(Account.visible).each do |lunchflow_account|
+    lunchflow_item.lunchflow_accounts.joins(:account).includes(:account_provider).merge(Account.visible).each do |lunchflow_account|
       begin
         result = fetch_and_store_transactions(lunchflow_account)
         if result[:success]
@@ -111,18 +112,21 @@ class LunchflowItem::Importer
         Rails.logger.error "LunchflowItem::Importer - Failed to fetch/store transactions for account #{lunchflow_account.account_id}: #{e.message}"
         # Continue with other accounts even if one fails
       end
+
+      balances_failed += 1 unless fetch_and_update_balance(lunchflow_account)
     end
 
-    Rails.logger.info "LunchflowItem::Importer - Completed import for item #{lunchflow_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions"
+    Rails.logger.info "LunchflowItem::Importer - Completed import for item #{lunchflow_item.id}: #{accounts_updated} accounts updated, #{accounts_created} new accounts discovered, #{transactions_imported} transactions, #{balances_failed} balance failures"
 
     {
-      success: accounts_failed == 0 && transactions_failed == 0,
+      success: accounts_failed == 0 && transactions_failed == 0 && balances_failed == 0,
       accounts_updated: accounts_updated,
       accounts_created: accounts_created,
       accounts_failed: accounts_failed,
       accounts_pruned: accounts_pruned,
       transactions_imported: transactions_imported,
-      transactions_failed: transactions_failed
+      transactions_failed: transactions_failed,
+      balances_failed: balances_failed
     }
   end
 
@@ -185,6 +189,8 @@ class LunchflowItem::Importer
           rescue => update_error
             Rails.logger.error "LunchflowItem::Importer - Failed to update item status: #{update_error.message}"
           end
+          # Fail the sync instead of completing it with nothing imported
+          raise
         end
         Rails.logger.error "LunchflowItem::Importer - Lunch flow API error: #{e.message}"
         return nil
@@ -248,10 +254,12 @@ class LunchflowItem::Importer
     end
 
     def fetch_and_store_transactions(lunchflow_account)
+      fetches_history = history_needed?(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
+      fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
 
-      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date} (include_pending=#{include_pending})"
+      Rails.logger.info "LunchflowItem::Importer - Fetching transactions for account #{lunchflow_account.account_id} from #{start_date || "the beginning"} (include_pending=#{include_pending})"
 
       begin
         # Fetch transactions
@@ -267,7 +275,7 @@ class LunchflowItem::Importer
         end
 
         # Validate response structure
-        unless transactions_data.is_a?(Hash)
+        unless transactions_data.is_a?(Hash) && transactions_data[:transactions].is_a?(Array)
           Rails.logger.error "LunchflowItem::Importer - Invalid transactions_data format for account #{lunchflow_account.account_id}"
           return { success: false, transactions_count: 0, error: "Invalid response format" }
         end
@@ -285,7 +293,7 @@ class LunchflowItem::Importer
         # leaving the entry stuck with a "Pending" badge (#2735). We now refresh
         # the stored snapshot in place when the upstream payload changes, while
         # still deduplicating by key to prevent unbounded growth.
-        if transactions_data[:transactions].present?
+        if transactions_data[:transactions].present? || !include_pending
           begin
             existing_transactions = lunchflow_account.raw_transactions_payload.to_a
 
@@ -312,7 +320,30 @@ class LunchflowItem::Importer
             new_count = 0
             updated_count = 0
             merged = []
-            transactions_data[:transactions].each do |tx|
+
+            pending_or_hold = lambda do |tx|
+              next false unless tx.is_a?(Hash)
+              tx_ia = tx.with_indifferent_access
+              ActiveModel::Type::Boolean.new.cast(tx_ia[:isPending]) || LunchflowEntry::Processor.unidentified_hold?(tx_ia)
+            end
+
+            incoming_transactions = transactions_data[:transactions] || []
+            if include_pending
+              # Tag unidentified card holds as isPending: true
+              incoming_transactions = incoming_transactions.map do |tx|
+                next tx unless tx.is_a?(Hash)
+                if LunchflowEntry::Processor.unidentified_hold?(tx) && !ActiveModel::Type::Boolean.new.cast(tx.with_indifferent_access[:isPending])
+                  tx.merge("isPending" => true)
+                else
+                  tx
+                end
+              end
+            else
+              # If include_pending is disabled, filter out pending transactions and unidentified holds
+              incoming_transactions = incoming_transactions.reject(&pending_or_hold)
+            end
+
+            incoming_transactions.each do |tx|
               next unless tx.is_a?(Hash)
 
               stored = existing_pool[transaction_key.call(tx)].shift
@@ -335,12 +366,14 @@ class LunchflowItem::Importer
             # Keep any stored rows the current response no longer returned — a normal
             # sync never prunes the snapshot (unchanged prior behaviour).
             leftover = existing_pool.values.flatten(1)
+            leftover = leftover.reject(&pending_or_hold) unless include_pending
+            merged_snapshot = merged + leftover
 
-            if new_count > 0 || updated_count > 0
+            if new_count > 0 || updated_count > 0 || merged_snapshot.size != existing_transactions.size
               Rails.logger.info "LunchflowItem::Importer - Storing #{new_count} new and #{updated_count} updated transactions (#{existing_transactions.count} existing) for account #{lunchflow_account.account_id}"
-              lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged + leftover)
+              lunchflow_account.upsert_lunchflow_transactions_snapshot!(merged_snapshot)
             else
-              Rails.logger.info "LunchflowItem::Importer - No new or updated transactions to store (all #{transactions_data[:transactions].count} unchanged) for account #{lunchflow_account.account_id}"
+              Rails.logger.info "LunchflowItem::Importer - No new or updated transactions to store (all #{incoming_transactions.count} unchanged) for account #{lunchflow_account.account_id}"
             end
           rescue => e
             Rails.logger.error "LunchflowItem::Importer - Failed to store transactions for account #{lunchflow_account.account_id}: #{e.message}"
@@ -350,26 +383,6 @@ class LunchflowItem::Importer
           Rails.logger.info "LunchflowItem::Importer - No transactions to store for account #{lunchflow_account.account_id}"
         end
 
-        # Fetch and update balance
-        begin
-          fetch_and_update_balance(lunchflow_account)
-        rescue => e
-          # Log but don't fail transaction import if balance fetch fails.
-          # current_balance stays nil, so the processor will skip the balance
-          # update for this account — capture the failure, because the sync
-          # still reports success and this is otherwise invisible to support.
-          DebugLogEntry.capture(
-            category: "provider_sync",
-            level: "warn",
-            message: "Balance fetch failed for account #{lunchflow_account.account_id}; keeping previous balance",
-            source: self.class.name,
-            provider_key: "lunchflow",
-            family: lunchflow_item.family,
-            metadata: { account_id: lunchflow_account.account_id, error_class: e.class.name, error: e.message }
-          )
-          Rails.logger.warn "LunchflowItem::Importer - Failed to update balance for account #{lunchflow_account.account_id}: #{e.message}"
-        end
-
         # Fetch holdings for investment/crypto accounts
         begin
           fetch_and_store_holdings(lunchflow_account)
@@ -377,6 +390,10 @@ class LunchflowItem::Importer
           # Log but don't fail sync if holdings fetch fails
           Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
         end
+
+        sync_markers = { transactions_synced_through: fetch_started_at }
+        sync_markers[:history_synced_from] = start_date if fetches_history
+        lunchflow_account.update!(sync_markers)
 
         { success: true, transactions_count: transactions_count }
       rescue Provider::Lunchflow::LunchflowError => e
@@ -393,46 +410,51 @@ class LunchflowItem::Importer
     end
 
     def fetch_and_update_balance(lunchflow_account)
-      begin
-        balance_data = lunchflow_provider.get_account_balance(lunchflow_account.account_id)
+      balance_data = lunchflow_provider.get_account_balance(lunchflow_account.account_id)
 
-        # Validate response structure
-        unless balance_data.is_a?(Hash)
-          Rails.logger.error "LunchflowItem::Importer - Invalid balance_data format for account #{lunchflow_account.account_id}"
-          return
-        end
+      return balance_failure(lunchflow_account, "Invalid balance response format") unless balance_data.is_a?(Hash)
 
-        if balance_data[:balance].present?
-          balance_info = balance_data[:balance]
+      balance_info = balance_data[:balance]
+      return balance_failure(lunchflow_account, "No balance data returned") if balance_info.blank?
+      return balance_failure(lunchflow_account, "Invalid balance data format") unless balance_info.is_a?(Hash)
+      return balance_failure(lunchflow_account, "No amount in balance data") if balance_info[:amount].blank?
 
-          # Validate balance info structure
-          unless balance_info.is_a?(Hash)
-            Rails.logger.error "LunchflowItem::Importer - Invalid balance info format for account #{lunchflow_account.account_id}"
-            return
-          end
+      amount = BigDecimal(balance_info[:amount].to_s, exception: false)
+      return balance_failure(lunchflow_account, "Invalid balance amount") unless amount&.finite?
 
-          # Only update if we have a valid amount
-          if balance_info[:amount].present?
-            lunchflow_account.update!(
-              current_balance: balance_info[:amount],
-              currency: balance_info[:currency].presence || lunchflow_account.currency
-            )
-          else
-            Rails.logger.warn "LunchflowItem::Importer - No amount in balance data for account #{lunchflow_account.account_id}"
-          end
-        else
-          Rails.logger.warn "LunchflowItem::Importer - No balance data returned for account #{lunchflow_account.account_id}"
-        end
-      rescue Provider::Lunchflow::LunchflowError => e
-        Rails.logger.error "LunchflowItem::Importer - Lunchflow API error fetching balance for account #{lunchflow_account.id}: #{e.message}"
-        # Don't fail if balance fetch fails
-      rescue ActiveRecord::RecordInvalid => e
-        Rails.logger.error "LunchflowItem::Importer - Failed to save balance for account #{lunchflow_account.id}: #{e.message}"
-        # Don't fail if balance save fails
-      rescue => e
-        Rails.logger.error "LunchflowItem::Importer - Unexpected error updating balance for account #{lunchflow_account.id}: #{e.class} - #{e.message}"
-        # Don't fail if balance update fails
+      lunchflow_account.update!(
+        current_balance: amount,
+        currency: balance_info[:currency].presence || lunchflow_account.currency
+      )
+      true
+    rescue => e
+      balance_failure(lunchflow_account, "Balance fetch failed", error: e)
+    end
+
+    def balance_failure(lunchflow_account, reason, error: nil)
+      message = "#{reason} for account #{lunchflow_account.account_id}; keeping previous Sure account balance"
+      metadata = { account_id: lunchflow_account.account_id }
+      if error
+        metadata[:error_class] = error.class.name
+        metadata[:error] = error.message
+        metadata[:error_type] = error.error_type if error.respond_to?(:error_type)
       end
+
+      DebugLogEntry.capture(
+        category: "provider_sync",
+        level: "warn",
+        message: message,
+        source: self.class.name,
+        provider_key: "lunchflow",
+        family: lunchflow_item.family,
+        account_provider: lunchflow_account.account_provider,
+        metadata: metadata
+      )
+      Rails.logger.warn "LunchflowItem::Importer - #{message}#{": #{error.message}" if error}"
+      false
+    rescue => e
+      Rails.logger.error "LunchflowItem::Importer - Failed to capture balance diagnostic: #{e.class} - #{e.message}"
+      false
     end
 
     def fetch_and_store_holdings(lunchflow_account)
@@ -482,30 +504,33 @@ class LunchflowItem::Importer
       end
     end
 
+    # Starts from the chosen start date (nil fetches the full history) when the
+    # account needs history it doesn't have yet. Otherwise resumes from the last
+    # successful fetch, so one that keeps failing doesn't leave a gap once the
+    # item sync completes, but never goes back before the chosen start date.
     def determine_sync_start_date(lunchflow_account)
-      # Check if this account has any stored transactions
-      # If not, treat it as a first sync for this account even if the item has been synced before
-      has_stored_transactions = lunchflow_account.raw_transactions_payload.to_a.any?
+      chosen_start = chosen_start_date
+      return chosen_start if history_needed?(lunchflow_account)
 
-      if has_stored_transactions
-        # Account has been synced before, use item-level logic with buffer
-        # For subsequent syncs, fetch from last sync date with a buffer
-        if lunchflow_item.last_synced_at
-          lunchflow_item.last_synced_at - 7.days
-        else
-          # Fallback if item hasn't been synced but account has transactions
-          90.days.ago
-        end
-      else
-        # Account has no stored transactions - this is a first sync for this account
-        # Use account creation date or a generous historical window
-        account_baseline = lunchflow_account.created_at || Time.current
-        first_sync_window = [ account_baseline - 7.days, 90.days.ago ].max
+      [ (lunchflow_account.transactions_synced_through - 7.days).to_date, chosen_start ].compact.max
+    end
 
-        # Use the more recent of: (account created - 7 days) or (90 days ago)
-        # This caps old accounts at 90 days while respecting recent account creation dates
-        first_sync_window
-      end
+    # The chosen start date as a day on the family's calendar. The panel saves it
+    # in the family's timezone, but syncs run in the app's zone.
+    def chosen_start_date
+      start = lunchflow_item.sync_start_date
+      start && lunchflow_item.family.local_date(start)
+    end
+
+    # True until the account has a successful fetch on record, and again when the
+    # chosen start date moves before the history already fetched or is cleared.
+    # A blank history_synced_from means the account already has everything.
+    def history_needed?(lunchflow_account)
+      return true if lunchflow_account.raw_transactions_payload.to_a.empty? || lunchflow_account.transactions_synced_through.nil?
+
+      synced_from = lunchflow_account.history_synced_from
+      chosen_start = chosen_start_date
+      synced_from.present? && (chosen_start.nil? || chosen_start < synced_from.to_date)
     end
 
     def handle_error(error_message)

@@ -1,0 +1,14 @@
+<%# locals: (recurring_transaction:) %>
+
+<%# The portal as a call to action. Shared by the pay action and a bill row's
+    verb, which offers it for an autopay bill too once the bill is overdue. %>
+<%= render DS::Link.new(
+      text: t("recurring_transactions.pay_action.pay"),
+      href: recurring_transaction.payment_url,
+      icon: "external-link",
+      icon_position: :right,
+      variant: "accent",
+      size: "sm",
+      target: "_blank",
+      aria: { label: t("recurring_transactions.pay_action.pay_aria", name: recurring_transaction.display_name) }
+    ) %>

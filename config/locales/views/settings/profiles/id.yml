@@ -1,0 +1,55 @@
+---
+id:
+  settings:
+    profiles:
+      destroy:
+        cannot_remove_self: "Anda tidak dapat menghapus diri sendiri dari akun."
+        member_owns_other_family_data: "Anggota ini masih memiliki rekening di keluarga lain dan tidak dapat dihapus. Transfer atau hapus rekening tersebut terlebih dahulu."
+        member_removal_failed: "Terjadi masalah saat menghapus anggota."
+        member_removed: "Anggota berhasil dihapus."
+        not_authorized: "Anda tidak memiliki izin untuk menghapus anggota."
+      show:
+        confirm_delete:
+          body: "Apakah Anda yakin ingin menghapus akun Anda secara permanen? Tindakan ini tidak dapat dibatalkan."
+          title: "Hapus akun?"
+        confirm_reset:
+          body: "Apakah Anda yakin ingin mengatur ulang akun Anda? Tindakan ini akan menghapus semua rekening, kategori, merchant, tag, dan data lainnya. Tindakan ini tidak dapat dibatalkan."
+          title: "Atur ulang akun?"
+        confirm_reset_with_sample_data:
+          body: "Apakah Anda yakin ingin mengatur ulang akun Anda dan memuat data contoh? Tindakan ini akan menghapus data Anda yang ada dan menggantinya dengan data demo agar Anda dapat mencoba Sure dengan aman."
+          title: "Atur ulang akun dan muat data contoh?"
+        confirm_remove_invitation:
+          body: "Apakah Anda yakin ingin menghapus undangan untuk %{email}?"
+          title: "Hapus Undangan"
+        confirm_remove_member:
+          body: "Apakah Anda yakin ingin menghapus %{name} dari akun Anda?"
+          title: "Hapus Anggota"
+        danger_zone_title: "Zona Bahaya"
+        delete_account: "Hapus akun"
+        delete_account_warning: "Menghapus akun Anda akan menghapus semua data Anda secara permanen dan tidak dapat dibatalkan."
+        reset_account: "Atur ulang akun"
+        reset_account_warning: "Mengatur ulang akun Anda akan menghapus semua rekening, kategori, merchant, tag, dan data lainnya, tetapi akun pengguna Anda tetap dipertahankan."
+        reset_account_with_sample_data: "Atur ulang dan muat data"
+        reset_account_with_sample_data_warning: "Hapus semua data Anda yang ada lalu muat data contoh baru agar Anda dapat menjelajah dengan lingkungan yang sudah terisi."
+        email: "Email"
+        first_name: "Nama Depan"
+        group_form_input_placeholder: "Masukkan nama grup"
+        group_form_label: "Nama grup"
+        group_title: "Anggota Grup"
+        household_form_input_placeholder: "Masukkan nama keluarga"
+        household_form_label: "Nama keluarga"
+        household_subtitle: "Orang yang diundang dapat masuk ke akun %{moniker} Anda dan mengakses sumber daya bersama."
+        household_title: "Keluarga"
+        invitation_link: "Tautan undangan"
+        invite_member: "Tambah anggota"
+        invite_multiple: "Tambah beberapa anggota"
+        last_name: "Nama Belakang"
+        page_title: "Info Profil"
+        pending: "Menunggu"
+        profile_subtitle: "Sesuaikan tampilan Anda di %{product_name}"
+        profile_title: "Pribadi"
+        remove_invitation: "Hapus Undangan"
+        remove_member: "Hapus Anggota"
+        resend_confirmation_link: "minta email konfirmasi baru"
+        save: "Simpan"
+        unconfirmed_email_notice_html: "Anda telah meminta untuk mengubah email Anda ke %{email}. Silakan buka email Anda dan konfirmasikan agar perubahan diterapkan. Jika Anda belum menerima email tersebut, periksa folder spam Anda, atau %{resend_link}."

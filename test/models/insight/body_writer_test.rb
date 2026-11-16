@@ -1,37 +1,15 @@
 require "test_helper"
-require "ostruct"
 
 class Insight::BodyWriterTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
   end
 
-  test "writes the template body when nobody in the family has AI enabled" do
-    @family.users.update_all(ai_enabled: false)
+  test "writes the template body without calling an LLM, even with AI enabled" do
+    assert @family.users.any?(&:ai_enabled?), "fixture family should have a user with AI enabled"
     Provider::Registry.expects(:preferred_llm_provider).never
 
-    body = Insight::BodyWriter.new(@family).write(generated_insight)
-
-    assert_equal I18n.t("insights.templates.idle_cash", **generated_insight.facts.symbolize_keys), body
-  end
-
-  test "uses LLM prose when a user has opted in and a provider is configured" do
-    Provider::Registry.stubs(:preferred_llm_provider).returns(FakeLlmProvider.new("Narrated body."))
-
-    body = Insight::BodyWriter.new(@family).write(generated_insight)
-
-    assert_equal "Narrated body.", body
-  end
-
-  test "falls back to the template and captures a debug log when the LLM call fails" do
-    provider = FakeLlmProvider.new("unused")
-    provider.stubs(:chat_response).raises(StandardError.new("boom"))
-    Provider::Registry.stubs(:preferred_llm_provider).returns(provider)
-
-    body = nil
-    assert_difference "DebugLogEntry.count", 1 do
-      body = Insight::BodyWriter.new(@family).write(generated_insight)
-    end
+    body = Insight::BodyWriter.new.write(generated_insight)
 
     assert_equal I18n.t("insights.templates.idle_cash", **generated_insight.facts.symbolize_keys), body
   end
@@ -63,23 +41,6 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
       "budget_at_risk.near" => { categories: "Shopping", count: 1, budget_spent_pct: 72 },
       "budget_on_track" => { spent: "$2,948.00", budgeted: "$5,200.00", budget_spent_pct: 57 }
     }.freeze
-
-    class FakeLlmProvider
-      def self.effective_model
-        "fake-model"
-      end
-
-      def initialize(body)
-        @body = body
-      end
-
-      def chat_response(*, **)
-        OpenStruct.new(
-          success?: true,
-          data: OpenStruct.new(messages: [ OpenStruct.new(id: "1", output_text: @body) ])
-        )
-      end
-    end
 
     def generated_insight
       @generated_insight ||= Insight::Generator::GeneratedInsight.new(

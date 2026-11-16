@@ -17,7 +17,7 @@
         </span>
       <% end %>
     </h3>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <span class="text-sm text-secondary">
         <%= entry.date ? I18n.l(entry.date, format: :long) : "—" %>
       </span>
@@ -30,7 +30,13 @@
           title: t("transactions.transaction.pending_tooltip")
         ) %>
       <% end %>
-      <% if entry.reconciled? %>
+      <%# Manual reconciliation toggle (#2950) — manual accounts only. %>
+      <%= render "transactions/reconcile_badge", entry: entry %>
+
+      <%# Statement-matched state (#3119) — evidence-driven, read-only.
+          statement_reconciled?, not reconciled?: the latter is the
+          reconciled_status enum's predicate for the manual toggle above. %>
+      <% if entry.statement_reconciled? %>
         <%= render DS::Pill.new(
           label: t("transactions.transaction.reconciled"),
           tone: :success,

@@ -54,4 +54,19 @@ class Provider::OnchainWalletAdapter < Provider::Base
   def institution_name
     provider_account.chain_label
   end
+
+  # Account#logo_url asks its provider adapter for one, and without this a
+  # tracked asset shows no icon at all on the accounts page — there is no
+  # institution behind a wallet, and nothing attaches a file.
+  #
+  # Built from the symbol rather than looked up: the accounts page renders one
+  # of these per account, and a Security lookup each would be a query per row.
+  # Brandfetch answers nil without a client id, which is the same nothing the
+  # page shows today.
+  def logo_url
+    base = Onchain::AssetSymbol.canonical(provider_account.symbol)
+    return nil if base.blank?
+
+    Security.brandfetch_crypto_url(base)
+  end
 end

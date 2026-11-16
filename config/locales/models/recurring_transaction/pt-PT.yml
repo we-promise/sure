@@ -1,0 +1,7 @@
+---
+pt-PT:
+  activerecord:
+    errors:
+      models:
+        recurring_transaction:
+          merchant_or_name_required: "Tem de estar presente um comerciante ou um nome"

@@ -62,6 +62,20 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert session[:pending_oidc_auth].present?
   end
 
+  test "links a user whose email row is still legacy plaintext" do
+    session[:pending_oidc_auth] = pending_auth
+    email = store_legacy_plaintext_email(@user)
+
+    get :link
+    assert @controller.instance_variable_get(:@user_exists)
+
+    assert_difference "OidcIdentity.count", 1 do
+      post :create_link, params: { email: email, password: user_password_test }
+    end
+
+    assert_redirected_to root_path
+  end
+
   test "should reject linking with invalid password" do
     session[:pending_oidc_auth] = pending_auth
 
@@ -77,7 +91,8 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_equal "Invalid email or password", flash[:alert]
   end
 
-  test "should reject linking an identity to an inactive user" do
+  test "should reject linking for a deactivated user even with correct password" do
+    @user.sessions.destroy_all # @user (family_admin) has a pre-existing fixture session
     @user.update_column(:active, false)
     session[:pending_oidc_auth] = pending_auth
 
@@ -91,6 +106,34 @@ class OidcAccountsControllerTest < ActionController::TestCase
 
     assert_response :unprocessable_entity
     assert_equal "Invalid email or password", flash[:alert]
+  end
+
+  test "should reject linking for a user deactivated between the initial check and session creation" do
+    session[:pending_oidc_auth] = pending_auth
+    @user.sessions.destroy_all
+
+    # Simulate deactivation landing after the initial active? check but
+    # before create_session_for's reload catches it — SsoAuditLog.log_link!
+    # runs in that window in the real flow, so hook the deactivation there.
+    # create_link wraps identity creation, the audit log, and session creation
+    # in one transaction, so a failed session creation rolls back the identity
+    # link too — no dangling, unlinked OidcIdentity left behind.
+    SsoAuditLog.stubs(:log_link!).with do |**kwargs|
+      kwargs[:user].update_column(:active, false)
+      true
+    end
+
+    assert_no_difference "OidcIdentity.count" do
+      post :create_link,
+        params: {
+          email: @user.email,
+          password: user_password_test
+        }
+    end
+
+    assert_redirected_to new_session_path
+    assert_equal "Could not authenticate via OpenID Connect.", flash[:alert]
+    assert_not Session.exists?(user_id: @user.id)
   end
 
   test "should redirect to MFA when user has MFA enabled" do
@@ -149,6 +192,32 @@ class OidcAccountsControllerTest < ActionController::TestCase
     assert_response :success
     assert_select "p", text: /Create New Account/
     assert_select "strong", text: new_user_auth["email"]
+  end
+
+  test "link page offers linking, not account creation, for a legacy plaintext-email user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", new_user_auth["email"], @user.id ])
+    )
+    session[:pending_oidc_auth] = new_user_auth
+
+    get :link
+    assert_response :success
+    assert_select "p", text: /Create New Account/, count: 0
+  end
+
+  test "create_user does not create a duplicate of a legacy plaintext-email user" do
+    skip "Encryption not configured" unless User.encryption_ready?
+
+    ActiveRecord::Base.connection.execute(
+      ActiveRecord::Base.sanitize_sql([ "UPDATE users SET email = ? WHERE id = ?", new_user_auth["email"], @user.id ])
+    )
+    session[:pending_oidc_auth] = new_user_auth
+
+    assert_no_difference [ "User.count", "OidcIdentity.count", "Family.count" ] do
+      post :create_user
+    end
   end
 
   test "does not show create account button when JIT link-only mode" do
