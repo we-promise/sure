@@ -38,22 +38,25 @@ class SyncScheduledItemsJob < ApplicationJob
     # could not be started at all (e.g. the queue was unreachable) puts the
     # schedule back, so the next tick tries this run again instead of a
     # long schedule skipping a whole interval.
-    def dispatch(schedule, item, due_at)
-      sync(item)
-    rescue
-      schedule.update_columns(next_run_at: due_at)
-      raise
-    end
-
+    #
     # Plaid only hands over transactions it has pulled from the bank on its
     # own cadence unless asked to refresh, as every other sync entry point
-    # does (its cooldown keeps the requests apart).
-    def sync(item)
-      if item.respond_to?(:sync_later_with_provider_refresh)
-        item.sync_later_with_provider_refresh
+    # does. A refresh is billed per request and, once queued, ends in a sync
+    # of its own, so a run whose refresh was queued is not put back even if
+    # the sync after it could not be started: retrying would pay for a
+    # second refresh.
+    def dispatch(schedule, item, due_at)
+      refresh_queued = false
+
+      if item.respond_to?(:request_transactions_refresh_later)
+        refresh_queued = item.request_transactions_refresh_later.present?
+        item.sync_later_with_follow_up
       else
         item.sync_later
       end
+    rescue
+      schedule.update_columns(next_run_at: due_at) unless refresh_queued
+      raise
     end
 
     def capture_failure(schedule, item, error)
