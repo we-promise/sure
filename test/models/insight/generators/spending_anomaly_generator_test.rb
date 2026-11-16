@@ -309,6 +309,29 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
     end
   end
 
+  # The category's spending is gross of refunds, so what an envelope drew
+  # has to be too. Read net, the 400 refund would leave 400 of spending the
+  # envelope paid for looking unplanned.
+  test "measures an envelope's draw gross of refunds, like the category's spending" do
+    @anchor_day = 15
+    insurance = @family.categories.create!(name: "Pace Test Insurance", parent: @category)
+    premium = create_bill(category: insurance, amount: 400, name: "Insurance", day: 3)
+    budget_line(budgeted_spending: 200)
+    budget_line(category: insurance, rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 900)
+
+    travel_to anchor do
+      baseline_months.each do |month|
+        pay_bill(premium, date: month.change(day: 3))
+        spend(month, 300, day: 12)
+      end
+      pay_bill(premium, date: current_month.change(day: 3))
+      create_transaction(category: insurance, amount: 600, date: current_month.change(day: 5), name: "Insurance excess")
+      create_transaction(category: insurance, amount: -400, date: current_month.change(day: 6), name: "Insurance refund")
+
+      assert_empty generate
+    end
+  end
+
   test "flags a rollover category that has outspent its envelope" do
     @anchor_day = 15
     budget_line(rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 400)

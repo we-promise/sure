@@ -21,7 +21,8 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     elapsed_days = (Date.current - period.start_date).to_i + 1
     return [] if elapsed_days < MIN_ELAPSED_DAYS
 
-    current = category_spend(period)
+    @current_spend = spend_by_category(period)
+    current = parents_only(@current_spend)
     return [] if current.empty?
 
     baseline = baseline_spend(period)
@@ -125,32 +126,44 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     # Spending within the month's allocation is ordinary spending, whatever
     # cushion sits behind it. Bills are already planned in `data[:bills]`, and
     # a parent leaves its ring-fenced subcategories to their own envelopes.
+    # Spending is read gross of refunds, as the category's own is.
     def drawn_from_savings(envelope, pace_factor)
-      fenced = envelope.subcategories.reject(&:inherits_parent_budget?)
-      spent, allocated = %i[actual_spending budgeted_spending].map do |amount|
-        outside_bills(envelope, amount) - fenced.sum { |bc| outside_bills(bc, amount) }
+      spent, allocated = outside_bills(envelope)
+      envelope.subcategories.reject(&:inherits_parent_budget?).each do |fenced|
+        fenced_spent, fenced_allocated = outside_bills(fenced)
+        spent -= fenced_spent
+        allocated -= fenced_allocated
       end
 
       (spent - allocated.clamp(0, nil) / pace_factor).clamp(0, envelope.rolled_over_amount.to_d)
     end
 
-    def outside_bills(budget_category, amount)
-      budget_category.public_send(amount).to_d - budget_category.bills_paid.to_d
+    # [spent, allocated] for a budget line this month, less the bills it paid.
+    def outside_bills(budget_category)
+      spend = @current_spend.fetch(budget_category.category_id, { total: 0, bills: 0 })
+      [ spend[:total], budget_category.budgeted_spending.to_d ].map { |amount| amount - spend[:bills] }
     end
 
-    # { category_id => { name:, total:, bills: } } for persisted parent
-    # categories only. Subcategory spend is already rolled into its parent's
-    # total, and synthetic categories (uncategorized / other investments) are
-    # too noisy to flag. `bills` is the part of `total` that paid bills.
-    def category_spend(period)
+    # { category_id => { name:, parent_id:, total:, bills: } } for persisted
+    # categories, gross of refunds. Synthetic categories (uncategorized / other
+    # investments) are too noisy to flag. `bills` is the part of `total` that
+    # paid bills.
+    def spend_by_category(period)
       bills = income_statement.bill_expense_totals(period: period).category_totals.to_h { |ct| [ ct.category.id, ct.total.to_d ] }
 
       income_statement.expense_totals(period: period).category_totals.each_with_object({}) do |ct, totals|
-        next if ct.category.synthetic? || ct.category.parent_id.present?
+        next if ct.category.synthetic?
         next unless ct.total.positive?
 
-        totals[ct.category.id] = { name: ct.category.name, total: ct.total.to_d, bills: bills.fetch(ct.category.id, 0) }
+        totals[ct.category.id] = { name: ct.category.name, parent_id: ct.category.parent_id,
+                                   total: ct.total.to_d, bills: bills.fetch(ct.category.id, 0) }
       end
+    end
+
+    # Only parent categories are flagged: subcategory spend is already rolled
+    # into its parent's total.
+    def parents_only(spend)
+      spend.reject { |_, data| data[:parent_id] }
     end
 
     def baseline_spend(current_period)
@@ -160,7 +173,7 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         start_date = current_period.start_date - (i + 1).months
         month = Period.custom(start_date: start_date, end_date: start_date + 1.month - 1.day)
 
-        category_spend(month).each do |category_id, data|
+        parents_only(spend_by_category(month)).each do |category_id, data|
           sums[category_id][:total] += data[:total]
           sums[category_id][:bills] += data[:bills]
         end
