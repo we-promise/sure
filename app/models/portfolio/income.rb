@@ -13,12 +13,9 @@
 #
 # WHAT THIS DOES NOT DO is attribute income to a security. The daily rows are
 # scope-wide, and a Transaction-shaped dividend carries a security only when the
-# provider recorded one (Transaction#activity_security). Attribution lives in
-# Portfolio::DailyReturns#income_by_security, which reads the same entries
-# through the same fragments, and `to_h` carries its result as `by_security`.
-# Portfolio::IncomeBySecurity turns that into a table, with whatever it cannot
-# name kept as an explicit unattributed remainder so the table adds up to
-# #total by construction.
+# provider recorded one (Transaction#activity_security). `to_h` carries
+# Portfolio::DailyReturns#income_by_security as `by_security`, and
+# Portfolio::IncomeBySecurity keeps what it cannot name as a remainder.
 class Portfolio::Income
   # One calendar month in which income was paid. A month that paid nothing is
   # absent rather than present as a zero: an empty bar and a month that netted

@@ -130,22 +130,14 @@ class Portfolio::Performance
 
   # Dividend and interest income by calendar month, by security, and the fees
   # over the same rows -- see Portfolio::Income#to_h for the keys. A Hash, as
-  # #drivers is, because it is cached and an object would not survive the round
-  # trip.
+  # #drivers is, so it survives the cache. `by_security` is a period figure
+  # holding only income that names a security; the rest of the total is
+  # Portfolio::IncomeBySecurity#unattributed.
   #
-  # `by_security` is a PERIOD figure, not by month, so it cannot be placed
-  # under a bar. It holds only income that names a security; the rest of the
-  # period's total is the unattributed remainder, which
-  # Portfolio::IncomeBySecurity#unattributed reports so the table still adds
-  # up to the total.
-  #
-  # Its OWN cache entry rather than part of #metrics, and computed only when
-  # asked. The by-security figures cost a query, and a caller that builds a
-  # Performance only to read index_series or the returns never needs them:
-  # folded into the shared blob, every one of them would run it. The other way
-  # round holds too: the missing-rate flag it needs is read from the daily
-  # returns, not from #metrics, so a caller reading only the income never runs
-  # the returns' compute.
+  # Its own cache entry, computed only when asked: a caller reading only the
+  # returns never runs the by-security query, and one reading only the income
+  # never runs the returns' compute (the missing-rate flag comes from the
+  # daily returns, not #metrics).
   def income
     @income ||= begin
       key = cache_key

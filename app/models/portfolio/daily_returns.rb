@@ -187,23 +187,15 @@ class Portfolio::DailyReturns
     rows.any?
   end
 
-  # Income paid in the period, by the security it came from, in the family
-  # currency: { "security-uuid" => BigDecimal }.
-  #
-  # Only what names a security. A Trade-shaped dividend carries one as a column;
-  # a Transaction-shaped one only when the provider recorded it in `extra`
-  # (Transaction#activity_security_id reads the same two keys). Everything else
-  # is simply absent from this Hash: the caller subtracts what is here from
-  # `rows.sum(&:income)` to get the unattributed remainder, which is what makes
-  # a by-security table reconcile to the total by construction.
-  #
-  # That only holds if this reads the SAME entries the rows' `income` does, so
-  # it shares their fragments and not copies of them: the flow classifier for
-  # "is this income?", #rate_lookup for the previous day's rate, and the
-  # same date, active-until and split-parent predicates as `flows_by_date`,
-  # and #entry_fx_joins for the conversion. An entry whose rate is missing is
-  # dropped here exactly as the rows drop it (the product is NULL and falls out
-  # of their SUM); #rate_missing? reports it either way.
+  # Income paid in the period by the security that paid it, in the family
+  # currency: { "security-uuid" => BigDecimal }. Only income that names a
+  # security is here (a Trade's column, or the `extra` keys
+  # Transaction#activity_security_id reads); the caller keeps the rest of the
+  # rows' income as an unattributed remainder. That only adds up if this reads
+  # the entries the rows do, so it shares their fragments rather than copying
+  # them: the flow classifier, #entry_fx_joins, and the date, active-until and
+  # split-parent predicates. An unconvertible entry drops out of both, and
+  # #rate_missing? reports it.
   def income_by_security
     return {} if account_ids.empty?
 
