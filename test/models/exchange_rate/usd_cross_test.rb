@@ -7,6 +7,7 @@ class ExchangeRate::UsdCrossTest < ActiveSupport::TestCase
     @provider = mock
     @day1 = Date.new(2026, 10, 19)
     @day2 = @day1 + 1
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
   end
 
   test "multiplies the USD legs, carrying the latest USD rate over a gap" do
@@ -87,6 +88,95 @@ class ExchangeRate::UsdCrossTest < ActiveSupport::TestCase
 
     metadata = DebugLogEntry.where(category: "exchange_rates").recent.first.metadata
     assert_equal({ "from" => "KZT", "to" => "USD", "error" => "no pair" }, metadata.slice("from", "to", "error"))
+  end
+
+  test "does not ask again for a pair whose first leg just failed, nor log it again" do
+    @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("no pair")))
+    cross = ExchangeRate::UsdCross.new(@provider)
+
+    assert_empty cross.rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2)
+
+    assert_no_difference -> { DebugLogEntry.where(category: "exchange_rates").count } do
+      assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2)
+    end
+  end
+
+  test "does not let a miss for other dates hide the pair" do
+    old_day = Date.new(2010, 1, 4)
+    @provider.stubs(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: old_day, end_date: old_day)
+             .returns(provider_success_response([]))
+    @provider.stubs(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: @day1)
+             .returns(provider_success_response([ rate(@day1, "KZT", "USD", 0.002) ]))
+    @provider.stubs(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: @day1)
+             .returns(provider_success_response([ rate(@day1, "USD", "RUB", 80) ]))
+
+    assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: old_day, end_date: old_day)
+    assert_equal 1, ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day1).size
+  end
+
+  test "remembers a pair whose second leg has no rates" do
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: @day2)
+             .returns(provider_success_response([ rate(@day1, "KZT", "USD", 0.002) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: @day2)
+             .returns(provider_error_response(StandardError.new("no pair")))
+
+    2.times { assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2) }
+  end
+
+  test "asks again once the remembered miss expires, and a later success is derived" do
+    @provider.stubs(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: @day2)
+             .returns(provider_error_response(StandardError.new("down"))).then
+             .returns(provider_success_response([ rate(@day1, "KZT", "USD", 0.002) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: @day2)
+             .returns(provider_success_response([ rate(@day1, "USD", "RUB", 80) ]))
+
+    assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2)
+
+    travel_to(ExchangeRate::UsdCross::MISS_TTL.from_now + 1.minute) do
+      rates = ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2)
+      assert_equal [ 0.16 ], rates.map { |r| r.rate.to_f }
+    end
+  end
+
+  test "forgets a remembered miss when a lookup that began before it was recorded derives the pair" do
+    cache = ActiveSupport::Cache::MemoryStore.new
+    Rails.stubs(:cache).returns(cache)
+    key = "usd_cross_miss:#{@provider.class.name}:KZT:RUB:#{@day1}:#{@day1}"
+    cache.write(key, true)
+    cache.stubs(:exist?).with(key).returns(false)
+    @provider.stubs(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: @day1)
+             .returns(provider_success_response([ rate(@day1, "KZT", "USD", 0.002) ]))
+    @provider.stubs(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: @day1)
+             .returns(provider_success_response([ rate(@day1, "USD", "RUB", 80) ]))
+
+    assert_equal 1, ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day1).size
+    assert_not cache.read(key)
+  end
+
+  test "remembers a miss for its own provider and pair only" do
+    other = Provider::YahooFinance.new
+    @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("no pair")))
+    other.expects(:fetch_exchange_rates).twice.returns(provider_error_response(StandardError.new("no pair")))
+
+    ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2)
+    ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2)
+    ExchangeRate::UsdCross.new(other).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2)
+    ExchangeRate::UsdCross.new(other).rates(from: "KZT", to: "PYG", start_date: @day1, end_date: @day2)
+  end
+
+  test "does not remember a leg that failed because the provider is rate limiting" do
+    @provider.expects(:fetch_exchange_rates).twice.returns(provider_error_response(Provider::TwelveData::RateLimitError.new("slow down")))
+
+    2.times { assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day2) }
+  end
+
+  test "does not remember days before the first USD rate as a miss" do
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: @day1).twice
+             .returns(provider_success_response([ rate(@day1, "KZT", "USD", 0.002) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: @day1).twice
+             .returns(provider_success_response([ rate(@day1 + 1, "USD", "RUB", 80) ]))
+
+    2.times { assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: @day1) }
   end
 
   private

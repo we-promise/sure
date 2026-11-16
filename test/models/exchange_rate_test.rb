@@ -94,6 +94,15 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
   end
 
+  test "asks for the USD legs once for a pair the provider lacks in every form" do
+    ExchangeRate.delete_all
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.expects(:fetch_exchange_rate).twice.returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("no KZT/USD")))
+
+    2.times { assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current) }
+  end
+
   test "does not derive and cache a pair the provider has quoted before when it fails" do
     ExchangeRate.delete_all
     ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
