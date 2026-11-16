@@ -359,58 +359,99 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes result, "pl\\\\aid"
   end
 
-  # Row and drawer forms post from the page, so no request carries a Turbo-Frame
-  # header: saves and errors stream into the panel, and a new connection reloads.
-  test "the controller scaffold renders to valid Ruby and answers panel requests in place" do
-    rendered = render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless",
-                               table_name: "gocardless_items", parsed_fields: [ { name: "secret_id" } ])
+  # ProviderItemsController serves the generated provider; the subclass names only
+  # the params it permits, and a blank secret on an edit keeps the stored one.
+  test "the generated controller is a thin provider kit controller" do
+    fields = [ { name: "api_key", secret: true }, { name: "region", secret: false } ]
+    rendered = render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless", parsed_fields: fields)
 
     assert_parses rendered
-    assert_not_includes rendered, "turbo_frame_request?"
-    assert_includes rendered, %(render_provider_panel("gocardless", alert: @gocardless_item.errors.full_messages.join(", ")))
-    assert_includes rendered, 'render_provider_panel("gocardless", notice: t(".success"'
-    assert_match(/if @gocardless_item\.save\n\s+redirect_to settings_providers_path, notice:/, rendered)
+    GeneratedControllers.module_eval(rendered)
+    controller_class = GeneratedControllers::GocardlessItemsController
+    assert_operator controller_class, :<, ProviderItemsController
+    assert_includes controller_class.private_instance_methods(false), :item_params
+    assert_empty controller_class.public_instance_methods(false), "the kit serves every action"
+
+    permitted = lambda do |persisted, submitted|
+      controller = controller_class.new
+      controller.params = ActionController::Parameters.new(gocardless_item: submitted)
+      controller.instance_variable_set(:@gocardless_item, OpenStruct.new(persisted?: persisted))
+      controller.send(:item_params).to_h.symbolize_keys
+    end
+
+    submitted = { name: "Main", sync_start_date: "2026-01-01", api_key: "", region: "eu", status: "good" }
+    assert_equal({ name: "Main", sync_start_date: "2026-01-01", region: "eu" }, permitted.call(true, submitted))
+    assert_equal({ name: "Main", sync_start_date: "2026-01-01", api_key: "", region: "eu" }, permitted.call(false, submitted))
+    assert_equal "new", permitted.call(true, submitted.merge(api_key: "new"))[:api_key]
+  ensure
+    GeneratedControllers.send(:remove_const, :GocardlessItemsController) if GeneratedControllers.const_defined?(:GocardlessItemsController, false)
   end
 
-  test "generated account entry points escape frames and preserve ordinary redirects" do
-    rendered = render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless",
-                               table_name: "gocardless_items", parsed_fields: [])
-    # Evaluate the actual scaffold in an isolated namespace, without installing a
-    # provider or altering the application's routes/models.
-    namespace = GeneratedControllers
-    namespace.module_eval(rendered)
-    controller_class = namespace.const_get(:GocardlessItemsController)
-    family = mock("family")
-    items = mock("items")
-    accounts = mock("accounts")
-    family.stubs(:gocardless_items).returns(items)
-    family.stubs(:accounts).returns(accounts)
-    items.stubs(:first).returns(nil)
-    accounts.stubs(:find).with("account-id").returns(accounts(:depository))
-    Current.stubs(:family).returns(family)
+  # The generated routes use the provider_items concern, so they must follow its
+  # definition in config/routes.rb, and give the kit's controller every route it serves.
+  test "the generated routes use the provider_items concern after it is defined" do
+    Dir.mktmpdir do |dir|
+      original = Rails.root.join("config/routes.rb").read
+      FileUtils.mkdir_p(File.join(dir, "config"))
+      File.write(File.join(dir, "config/routes.rb"), original)
 
-    [ :preload_accounts, :select_accounts, :select_existing_account ].each do |action|
-      [ nil, "modal", "account-picker" ].each do |frame_id|
-        controller = controller_class.new
-        request = ActionDispatch::TestRequest.create
-        request.headers["Turbo-Frame"] = frame_id if frame_id
-        controller.set_request!(request)
-        controller.set_response!(ActionDispatch::TestResponse.new)
-        controller.params = { account_id: "account-id" }
-        controller.stubs(:settings_providers_path).returns("/settings/providers")
-        controller.stubs(:t).with(".no_credentials_configured").returns("Configure a connection first.")
+      routes = Dir.chdir(dir) do
+        capture_io { Provider::FamilyGenerator.new([ "gocardless" ], {}, destination_root: dir).add_routes }
+        File.read("config/routes.rb")
+      end
 
-        controller.public_send(action)
+      line = "  resources :gocardless_items, only: %i[index new create show edit update destroy], concerns: :provider_items\n"
+      assert_equal 1, routes.scan(line).size
+      assert_operator routes.index(line), :>, routes.index("concern :provider_items do")
+      assert_equal line, inserted_text(original, routes).lines.reject(&:blank?).join
 
-        assert_equal "Configure a connection first.", controller.flash[:alert]
-        if frame_id
-          assert_equal 200, controller.response.status
-          html = Nokogiri::HTML.fragment(controller.response.body)
-          assert html.at_css("turbo-frame##{frame_id} turbo-stream[action=redirect][target='/settings/providers']")
-        else
-          assert_equal 302, controller.response.status
-          assert_equal "http://test.host/settings/providers", controller.response.location
-        end
+      # A string eval sees the block's locals, so none may be named like a routing method.
+      concern_source = original[/^  concern :provider_items do\n.*?^  end\n/m]
+      route_set = ActionDispatch::Routing::RouteSet.new
+      route_set.draw { instance_eval(concern_source + line) }
+      helpers = route_set.named_routes.names.map(&:to_s)
+      Rails.application.reload_routes_unless_loaded # routes load lazily in test
+      brex = Rails.application.routes.named_routes.names.map(&:to_s).grep(/brex_item/).map { |name| name.sub("brex", "gocardless") }
+      assert_equal brex.sort, helpers.sort
+    end
+  end
+
+  # The flash and error messages ProviderItemsController and ProviderItem::AccountFlow
+  # look up under <key>_items, with Brex's plural forms and interpolations.
+  KIT_CONTROLLER_KEYS = %w[
+    default_connection_name create.success update.success destroy.success errors.unexpected_error
+    link_accounts.all_already_linked link_accounts.api_error link_accounts.invalid_account_names
+    link_accounts.invalid_account_type link_accounts.link_failed link_accounts.no_accounts_selected
+    link_accounts.no_api_token link_accounts.partial_invalid link_accounts.partial_success
+    link_accounts.select_connection link_accounts.success
+    link_existing_account.account_already_linked link_existing_account.api_error
+    link_existing_account.invalid_account_name link_existing_account.missing_parameters
+    link_existing_account.no_account_specified link_existing_account.no_api_token
+    link_existing_account.provider_account_already_linked link_existing_account.provider_account_not_found
+    link_existing_account.select_connection link_existing_account.success
+    select_accounts.no_accounts_found select_accounts.no_api_token select_accounts.no_credentials_configured
+    select_accounts.select_connection select_accounts.unexpected_error
+    select_existing_account.account_already_linked select_existing_account.all_accounts_already_linked
+    select_existing_account.no_account_specified select_existing_account.no_api_token
+    select_existing_account.no_credentials_configured select_existing_account.select_connection
+    select_existing_account.unexpected_error
+    setup_accounts.api_error setup_accounts.no_api_token
+    complete_account_setup.all_skipped complete_account_setup.creation_failed
+    complete_account_setup.creation_failed_count complete_account_setup.no_accounts
+    complete_account_setup.partial_skipped complete_account_setup.partial_success
+    complete_account_setup.success complete_account_setup.unexpected_error
+  ].freeze
+
+  test "the generated locale has every message the provider kit's controller and account flow read" do
+    shape = ->(value) { value.is_a?(Hash) ? value.keys.map(&:to_s).sort : value.to_s.scan(/%\{(\w+)\}/).flatten.sort }
+
+    [ true, false ].each do |banking|
+      messages = YAML.safe_load(render_provider_template("locale.en.yml.tt", banking: banking)).dig("en", "gocardless_items")
+
+      KIT_CONTROLLER_KEYS.each do |key|
+        generated = messages.dig(*key.split("."))
+        assert generated, "banking: #{banking}: no gocardless_items.#{key}"
+        assert_equal shape.call(I18n.t("brex_items.#{key}", locale: :en)), shape.call(generated), "banking: #{banking}: #{key}"
       end
     end
   end

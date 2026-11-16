@@ -25,8 +25,8 @@ require "rails/generators/active_record"
 #   - Models for items, accounts, and provided concern
 #   - Adapter class
 #   - Manual panel view for provider settings
-#   - Simple controller for CRUD operations
-#   - Routes
+#   - A ProviderItemsController subclass naming its permitted params
+#   - Routes, through the provider_items concern
 class Provider::FamilyGenerator < Rails::Generators::NamedBase
   include Rails::Generators::Migration
 
@@ -303,35 +303,28 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     end
   end
 
+  # The routes use the provider_items concern, so they go straight after its
+  # definition: `route` would put them at the top of the block, before it.
   def add_routes
     return if options[:skip_routes]
 
-    route_content = <<~RUBY.strip
-          resources :#{file_name}_items, only: [:index, :new, :create, :show, :edit, :update, :destroy] do
-            collection do
-              get :preload_accounts
-              get :select_accounts
-              post :link_accounts
-              get :select_existing_account
-              post :link_existing_account
-            end
-
-            member do
-              post :sync
-              get :setup_accounts
-              post :complete_account_setup
-            end
-          end
-        RUBY
-
-    # Check if routes already exist
     routes_file = "config/routes.rb"
-    if File.read(routes_file).include?("resources :#{file_name}_items")
+    content = File.read(routes_file)
+    if content.include?("resources :#{file_name}_items")
       say "Routes already exist for :#{file_name}_items", :skip
-    else
-      route route_content
-      say "Added routes for :#{file_name}_items", :green
+      return
     end
+
+    concern = content.match(/^  concern :provider_items do\n.*?^  end\n/m)
+    unless concern
+      say "Could not find the provider_items route concern in #{routes_file}; add: " \
+          "resources :#{file_name}_items, only: %i[index new create show edit update destroy], concerns: :provider_items", :yellow
+      return
+    end
+
+    line = "  resources :#{file_name}_items, only: %i[index new create show edit update destroy], concerns: :provider_items\n"
+    write_file(routes_file, content.dup.insert(concern.end(0), "\n#{line}"))
+    say "Added routes for :#{file_name}_items", :green
   end
 
   # Bank sync lists a provider, with its connection row, summary and sync status, from
