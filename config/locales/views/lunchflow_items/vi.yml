@@ -101,7 +101,7 @@ vi:
       api_error: "Lỗi API: %{message}"
       fetch_failed: "Tải tài khoản thất bại"
       no_accounts_to_setup: "Không có tài khoản nào để thiết lập"
-      no_api_key: "Khóa API Lunchflow chưa được cấu hình. Vui lòng kiểm tra cài đặt kết nối."
+      no_api_token: "Khóa API Lunchflow chưa được cấu hình. Vui lòng kiểm tra cài đặt kết nối."
       account_types:
         skip: Bỏ qua tài khoản này
         depository: Tài khoản thanh toán hoặc tiết kiệm

@@ -207,10 +207,15 @@ class ProviderItem::AccountFlow
     def translate_subtypes(type_key, subtypes_hash)
       subtypes_hash.map do |key, value|
         [
-          I18n.t("#{i18n_scope}.setup_accounts.subtypes.#{type_key}.#{key}", default: value[:long] || key.to_s.humanize),
+          I18n.t("#{i18n_scope}.setup_accounts.subtypes.#{type_key}.#{key}", default: subtype_label_default(type_key, key, value)),
           key
         ]
       end
+    end
+
+    # The label for a subtype the provider's locale doesn't name.
+    def subtype_label_default(_type_key, key, value)
+      value[:long] || key.to_s.humanize
     end
 
     def selected_subtype_for(selected_type:, submitted_subtype:)

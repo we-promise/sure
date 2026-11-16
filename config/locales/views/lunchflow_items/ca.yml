@@ -150,7 +150,7 @@ ca:
       fetch_failed: No s'han pogut obtenir els comptes
       historical_data_range: 'Rang de dades històriques:'
       no_accounts_to_setup: No hi ha comptes per configurar
-      no_api_key: La clau API de Lunch Flow no està configurada. Revisa la configuració
+      no_api_token: La clau API de Lunch Flow no està configurada. Revisa la configuració
         de la connexió.
       subtitle: Tria els tipus de compte correctes per als teus comptes importats
       subtype_labels:

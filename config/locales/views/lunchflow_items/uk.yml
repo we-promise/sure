@@ -133,7 +133,7 @@ uk:
       api_error: "Помилка API: %{message}"
       fetch_failed: "Не вдалося завантажити рахунки"
       no_accounts_to_setup: "Немає рахунків для налаштування"
-      no_api_key: "Ключ API Lunch Flow не налаштовано. Перевірте налаштування з'єднання."
+      no_api_token: "Ключ API Lunch Flow не налаштовано. Перевірте налаштування з'єднання."
       account_types:
         skip: Пропустити цей рахунок
         depository: Поточний або ощадний рахунок

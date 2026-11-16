@@ -101,7 +101,7 @@ es:
       api_error: 'Error de API: %{message}'
       fetch_failed: Error al obtener las cuentas
       no_accounts_to_setup: No hay cuentas para configurar
-      no_api_key: La clave API de Lunch Flow no está configurada. Por favor, comprueba los ajustes de conexión.
+      no_api_token: La clave API de Lunch Flow no está configurada. Por favor, comprueba los ajustes de conexión.
       account_types:
         skip: Omitir esta cuenta
         depository: Cuenta corriente o de ahorro

@@ -56,6 +56,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "setup accounts renders German subtype options without English fallbacks" do
     ensure_tailwind_build
+    stub_lunchflow_accounts([])
     @user.update!(locale: "de")
 
     get setup_accounts_lunchflow_item_url(lunchflow_items(:one))
@@ -93,6 +94,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "setup accounts preserves the English title and placeholders" do
     ensure_tailwind_build
+    stub_lunchflow_accounts([])
     @user.update!(locale: "en")
 
     get setup_accounts_lunchflow_item_url(lunchflow_items(:one))
@@ -215,8 +217,10 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
   test "complete_account_setup's stream lists only the manual accounts the viewer can access" do
     own, shared, private_account = create_manual_accounts_for_scope_test
 
+    lunchflow_account = lunchflow_accounts(:investment_account)
+
     post complete_account_setup_lunchflow_item_url(lunchflow_items(:one)),
-         params: {},
+         params: { account_types: { lunchflow_account.id => "Investment" } },
          headers: { "Turbo-Frame" => "modal" }
 
     assert_turbo_stream action: "update", target: "manual-accounts"
@@ -226,6 +230,12 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def stub_lunchflow_accounts(accounts)
+      provider = mock("lunchflow_provider")
+      provider.stubs(:get_accounts).returns(accounts: accounts)
+      LunchflowItem.any_instance.stubs(:lunchflow_provider).returns(provider)
+    end
+
     # The #manual-accounts list rebuilt in this response must match /accounts
     # for the viewer: their own manual accounts and those shared with them,
     # never a member's account that was not shared.

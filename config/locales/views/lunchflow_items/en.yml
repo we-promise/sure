@@ -157,7 +157,7 @@ en:
       api_error: "API error: %{message}"
       fetch_failed: "Failed to Fetch Accounts"
       no_accounts_to_setup: "No Accounts to Set Up"
-      no_api_key: "Lunch Flow API key is not configured. Please check your connection settings."
+      no_api_token: "Lunch Flow API key is not configured. Please check your connection settings."
       page_title: Set Up Lunch Flow Accounts
       account_types:
         skip: Skip this account
@@ -214,7 +214,10 @@ en:
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       creation_failed: "Failed to create accounts: %{error}"
+      creation_failed_count: "Failed to create %{count} account(s)."
       no_accounts: "No accounts to set up."
+      partial_skipped: "Successfully created %{created_count} account(s); %{skipped_count} account(s) were skipped."
+      partial_success: "Successfully created %{created_count} account(s), but %{failed_count} account(s) failed."
       success: "Successfully created %{count} account(s)."
       unexpected_error: An unexpected error occurred
     sync:

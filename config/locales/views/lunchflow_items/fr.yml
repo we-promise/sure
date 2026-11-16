@@ -141,7 +141,7 @@ fr:
       fetch_failed: Échec de la récupération des comptes
       historical_data_range: 'Plage de données historiques :'
       no_accounts_to_setup: Aucun compte à configurer
-      no_api_key: La clé API Lunch Flow n'est pas configurée. Veuillez vérifier les
+      no_api_token: La clé API Lunch Flow n'est pas configurée. Veuillez vérifier les
         paramètres de connexion.
       page_title: Configurer les comptes Lunch Flow
       subtitle: Choisissez les types de compte corrects pour vos comptes importés
