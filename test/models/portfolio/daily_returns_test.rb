@@ -1561,6 +1561,26 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), third.market
   end
 
+  # Several splits between the journal and its first priced day compound, and
+  # the product is taken through logs (split_product_sql). 2:1, 3:1 and 3:2
+  # multiply to 9 exactly, so 5 units carried become 45 at the post-split
+  # price, not 44.999... or 45.000...1.
+  test "an inbound journal carried across several splits is scaled by their exact product" do
+    days = (0..4).map { |offset| @day_one + offset.days }
+    days.each { |date| lay_balance account: @account, date: date, opening: 1_000, closing: date == days.last ? 1_450 : 1_000, market_flow: date == days.last ? 450 : 0 }
+    security_journal account: @account, date: days[1], qty: 5, price: 0
+    [ [ days[2], 2, 1 ], [ days[3], 3, 1 ], [ days[4], 3, 2 ] ].each do |ex_date, numerator, denominator|
+      Security::Split.create!(security: security_under_test, ex_date: ex_date, numerator: numerator, denominator: denominator, source: "manual")
+    end
+    @account.holdings.create!(security: security_under_test, date: days[4], qty: 45, price: 10,
+                              amount: 450, currency: @account.currency)
+
+    last = daily_returns(end_date: days[4]).rows.last
+
+    assert_equal BigDecimal("450"), last.external_flow
+    assert_equal BigDecimal("0"), last.market
+  end
+
   # A split going ex on the journal's own date applied before the journal, so
   # its quantity is already in post-split shares and is not scaled again.
   test "a split on the journal's own date does not scale the carried journal" do
