@@ -105,21 +105,37 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     # Counted as planned, like a bill, does the rise still stand? The envelope
     # may be the parent's or a ring-fenced subcategory's (Insurance under
     # Home), as long as it isn't overspent. Only the household budget counts.
-    # Bills paid from an envelope are already in `data[:bills]`, so only the
-    # rest of its spending is added.
     def paid_from_rollover?(category_id, data, due, usual, pace_factor)
       return false unless current_budget&.initialized?
 
-      lines = current_budget.budget_categories.select do |bc|
-        bc.category_id == category_id || bc.category.parent_id == category_id
+      envelopes = current_budget.budget_categories.select do |bc|
+        (bc.category_id == category_id || bc.category.parent_id == category_id) &&
+          bc.rollover_enabled? && !bc.inherits_parent_budget? && !bc.over_budget?
       end
-      saved = lines.select { |bc| bc.rollover_enabled? && !bc.inherits_parent_budget? && !bc.over_budget? }
-                   .sum { |bc| [ bc.actual_spending.to_d - bc.bills_paid.to_d, 0 ].max }
+      saved = envelopes.sum { |bc| drawn_from_savings(bc, pace_factor) }
       return false unless saved.positive?
 
       planned = [ data[:bills] + saved, data[:total] ].min
       deviation_pct, unplanned_deviation_pct = project(data, planned, due, usual, pace_factor).drop(1)
       !(deviation_pct.positive? && significant?(deviation_pct, unplanned_deviation_pct))
+    end
+
+    # What an envelope has spent outside bills beyond its own allocation to
+    # date, up to what it carried over: the part that came out of savings.
+    # Spending within the month's allocation is ordinary spending, whatever
+    # cushion sits behind it. Bills are already planned in `data[:bills]`, and
+    # a parent leaves its ring-fenced subcategories to their own envelopes.
+    def drawn_from_savings(envelope, pace_factor)
+      fenced = envelope.subcategories.reject(&:inherits_parent_budget?)
+      spent, allocated = %i[actual_spending budgeted_spending].map do |amount|
+        outside_bills(envelope, amount) - fenced.sum { |bc| outside_bills(bc, amount) }
+      end
+
+      (spent - allocated.clamp(0, nil) / pace_factor).clamp(0, envelope.rolled_over_amount.to_d)
+    end
+
+    def outside_bills(budget_category, amount)
+      budget_category.public_send(amount).to_d - budget_category.bills_paid.to_d
     end
 
     # { category_id => { name:, total:, bills: } } for persisted parent

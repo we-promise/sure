@@ -275,6 +275,40 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
     end
   end
 
+  # A cushion builds up when the allocation runs above what the category
+  # spends. Spending that keeps within the month's own allocation draws
+  # nothing from it, so a real rise against the baseline still shows, however
+  # much has been carried over.
+  test "flags a rise within the month's allocation of a rollover envelope" do
+    @anchor_day = 15
+    budget_line(rollover_enabled: true, budgeted_spending: 400, rolled_over_amount: 1_200)
+
+    travel_to anchor do
+      baseline_months.each { |month| spend(month, 100) }
+      spend(current_month, 150, day: 5)
+
+      assert_equal [ "above" ], generate.map { |insight| insight.metadata[:direction] }
+    end
+  end
+
+  # The parent's envelope holds only what its ring-fenced subcategories don't:
+  # their spending is drawn from their own envelope and not again from the
+  # parent's, which would leave none of the parent's own rise unplanned.
+  test "draws a ring-fenced subcategory's spending from its own envelope only" do
+    @anchor_day = 15
+    insurance = @family.categories.create!(name: "Pace Test Insurance", parent: @category)
+    budget_line(rollover_enabled: true, budgeted_spending: 200, rolled_over_amount: 1_000)
+    budget_line(category: insurance, rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 600)
+
+    travel_to anchor do
+      baseline_months.each { |month| spend(month, 100) }
+      create_transaction(category: insurance, amount: 600, date: current_month.change(day: 5), name: "Insurance premium")
+      spend(current_month, 300, day: 6)
+
+      assert_equal [ "above" ], generate.map { |insight| insight.metadata[:direction] }
+    end
+  end
+
   test "flags a rollover category that has outspent its envelope" do
     @anchor_day = 15
     budget_line(rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 400)
