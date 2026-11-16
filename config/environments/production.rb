@@ -126,11 +126,7 @@ Rails.application.configure do
     config.hosts = allowed_hosts
     config.host_authorization = AllowedHosts.host_authorization
   else
-    # Deferred: this block runs while the environment is still being configured
-    # and Rails.logger is not final yet, so a warning emitted here goes nowhere.
-    config.after_initialize do
-      Rails.logger.warn("[SECURITY] ALLOWED_HOSTS lists no usable host, so DNS rebinding protection is off")
-    end
+    AllowedHosts.warn_unprotected_on_server_boot(self)
   end
 
   # set REDIS_URL for Sidekiq to use Redis

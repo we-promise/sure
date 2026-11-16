@@ -12,7 +12,8 @@
 #
 # An empty list leaves config.hosts unset, which means Rails accepts any Host.
 # That is the pre-existing behaviour, kept so an upgrade cannot lock an operator
-# out of their own instance; the boot warning points at the fix.
+# out of their own instance; the warning logged when the web server starts
+# points at the fix.
 module AllowedHosts
   module_function
 
@@ -31,6 +32,16 @@ module AllowedHosts
   # check starts failing with a 403 the moment the list is set.
   def host_authorization
     { exclude: ->(request) { request.path == "/up" } }
+  end
+
+  # Registered as a server block, which Rails runs from the load_server call in
+  # config.ru, so it is logged once when the web server boots. after_initialize
+  # also runs for every rails runner, console, rake task and Sidekiq worker,
+  # which filled self-hosters' cron output and worker logs with it.
+  def warn_unprotected_on_server_boot(app)
+    app.server do
+      Rails.logger.warn("[SECURITY] ALLOWED_HOSTS lists no usable host, so DNS rebinding protection is off")
+    end
   end
 
   def parse

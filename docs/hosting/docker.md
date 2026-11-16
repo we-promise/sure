@@ -125,7 +125,8 @@ is always exempt, so container probes keep passing. With
 through it is refused.
 
 Without `ALLOWED_HOSTS`, the app answers to any `Host`, whether or not
-`APP_DOMAIN` is set, and logs a `[SECURITY]` warning at boot.
+`APP_DOMAIN` is set, and logs a `[SECURITY]` warning when the web server
+starts.
 
 Like the SMTP settings below, these reach the app only when `compose.yml` lists
 them in the `x-rails-env` anchor, for example `ALLOWED_HOSTS: ${ALLOWED_HOSTS}`.

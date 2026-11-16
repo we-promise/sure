@@ -116,6 +116,28 @@ class AllowedHostsTest < ActiveSupport::TestCase
     end
   end
 
+  # Registering happens in every process that loads production.rb: runner,
+  # console, rake, the Sidekiq worker. Only the web server runs server blocks,
+  # through the Rails.application.load_server call in config.ru.
+  test "warns about the missing host check only when the web server boots" do
+    server_blocks = Rails.application.class.server
+    registered_before = server_blocks.dup
+    log = StringIO.new
+    Rails.stubs(:logger).returns(ActiveSupport::Logger.new(log))
+
+    AllowedHosts.warn_unprotected_on_server_boot(Rails.application)
+    assert_empty log.string
+
+    Rails.application.load_server
+    assert_equal 1, log.string.scan("[SECURITY] ALLOWED_HOSTS lists no usable host").size
+  ensure
+    server_blocks.replace(registered_before)
+  end
+
+  test "config.ru runs the server blocks the warning is registered as" do
+    assert_match(/^Rails\.application\.load_server$/, Rails.root.join("config.ru").read)
+  end
+
   private
     def status_for(host, path: "/")
       app = ->(_env) { [ 200, {}, [ "ok" ] ] }
