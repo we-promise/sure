@@ -370,6 +370,151 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  # A lot's stored quantity is what is left after every sale; adding back
+  # what this sale and each later one took gives what it held when this sale
+  # ran.
+  test "each lot choice shows what was left of it when the sale ran" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAML", 30)
+      lot = trade(security, 100, 12, 1)
+      first_sale = trade(security, -60, 25, 5)
+      second_sale = trade(security, -40, 25, 5)
+      third_sale = trade(security, -10, 25, 7)
+      entered_in_order(first_sale, second_sale)
+      materialize(:forward)
+
+      assert_equal [ 100, 100 ], shares_left(first_sale, lot)
+      assert_equal [ 40, 100 ], shares_left(second_sale, lot)
+      assert_empty Trade.find(third_sale.entryable_id).lot_choices
+    end
+  end
+
+  test "a named lot shows what was left before the sale took from it" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMN", 30)
+      first = trade(security, 10, 20, 2)
+      second = trade(security, 10, 22, 3)
+      trade(security, -3, 25, 4)
+      sale = trade(security, -4, 25, 5)
+      name_lot(sale, second)
+      materialize(:forward)
+
+      assert_equal [ 7, 10 ], shares_left(sale, first), "an earlier sale's disposal was added back"
+      assert_equal [ 10, 10 ], shares_left(sale, second), "this sale's own disposal was not added back"
+    end
+  end
+
+  # Stored lots are in today's shares and each disposal in its own sale's, so
+  # both are restated into the shares of the sale being viewed, as is the
+  # purchase size.
+  test "a lot choice reads in the sale date's shares across a split" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMP", 30)
+      lot = trade(security, 100, 12, 2)
+      sale = trade(security, -60, 25, 4)
+      Security::Split.create!(security: security, ex_date: d(6), numerator: 2, denominator: 1, source: "manual")
+      later_sale = trade(security, -20, 13, 8)
+      materialize(:forward)
+
+      assert_equal 60, HoldingLot.derived.find_by!(source_entry_id: lot.id).qty, "40 left, doubled, less 20"
+      assert_equal [ 100, 100 ], shares_left(sale, lot)
+      assert_equal [ 80, 200 ], shares_left(later_sale, lot)
+    end
+  end
+
+  # A split goes ex at the open, so a sale on its ex-date is already in the
+  # new shares: the split restates the purchase, not the sale's own figures.
+  test "a split on the sale's own date counts toward the purchase size only" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMX", 30)
+      lot = trade(security, 100, 12, 2)
+      Security::Split.create!(security: security, ex_date: d(4), numerator: 2, denominator: 1, source: "manual")
+      sale = trade(security, -60, 7, 4)
+      materialize(:forward)
+
+      assert_equal [ 200, 200 ], shares_left(sale, lot)
+    end
+  end
+
+  # A stored lot is in the shares of the day it was last synced, so a split
+  # that went ex since then has not been applied to it yet.
+  test "a split since the last sync is not undone from the stored lot" do
+    setup_account(method: "fifo")
+    security = priced_security("NAMY", 30)
+    lot = sale = nil
+    travel_to(TODAY - 5.days) do
+      lot = trade(security, 100, 12, 2)
+      sale = trade(security, -60, 25, 4)
+      materialize(:forward)
+    end
+    Security::Split.create!(security: security, ex_date: d(6), numerator: 2, denominator: 1, source: "manual")
+
+    travel_to TODAY do
+      assert_equal 40, HoldingLot.derived.find_by!(source_entry_id: lot.id).qty
+      assert_equal [ 100, 100 ], shares_left(sale, lot)
+    end
+  end
+
+  # The lot a sale names stays offered even once it no longer replays before
+  # the sale; what it held then is not in the stored figures.
+  test "a held choice that now replays after the sale shows no shares left" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMW", 30)
+      first = trade(security, 10, 20, 2)
+      named = trade(security, 10, 22, 3)
+      sale = trade(security, -4, 25, 5)
+      name_lot(sale, named)
+      named.update_columns(date: d(7))
+      materialize(:forward)
+
+      assert_equal [ first, named ], Trade.find(sale.entryable_id).lot_choices.to_a
+      assert_equal [ 10, 10 ], shares_left(sale, first)
+      assert_nil shares_left(sale, named)
+    end
+  end
+
+  test "a sale entered since the last sync shows the lot's stored figure" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMQ", 30)
+      lot = trade(security, 10, 20, 2)
+      trade(security, -4, 25, 4)
+      materialize(:forward)
+      sale = trade(security, -5, 25, 6)
+
+      assert_equal [ 6, 10 ], shares_left(sale, lot)
+    end
+  end
+
+  # A transfer out takes from lots without recording a disposal, and a lot
+  # bought since the last sync has no stored row: neither says what was left.
+  test "a lot's shares left are unknown after a later transfer out or before the lot is synced" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMR", 30)
+      lot = trade(security, 10, 20, 2)
+      sale = trade(security, -4, 25, 4)
+      transfer_out(security, -3, 6)
+      materialize(:forward)
+
+      assert_nil shares_left(sale, lot), "a later transfer out took from the lot unrecorded"
+
+      other = priced_security("NAMV", 30)
+      synced = trade(other, 10, 20, 2)
+      materialize(:forward)
+      unsynced = trade(other, 5, 21, 3)
+      other_sale = trade(other, -4, 25, 5)
+
+      assert_equal [ 10, 10 ], shares_left(other_sale, synced)
+      assert_nil shares_left(other_sale, unsynced)
+    end
+  end
+
   # A transfer out consumes lots without recording a disposal, so a lot it
   # emptied after the sale looks the same as one emptied before it. The lot
   # was still open on the sale's date, so it stays offered and can be named.
@@ -874,6 +1019,13 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
 
     def name_lot(sale, lot)
       Trade.find(sale.entryable_id).update!(lot_source_entry: lot)
+    end
+
+    # [shares left, purchase size] of `lot` as `sale`'s picker reads it, or nil.
+    def shares_left(sale, lot)
+      trade = Trade.find(sale.entryable_id)
+      shares = trade.lot_shares(trade.lot_choices.to_a)[lot.id]
+      shares && [ shares.left, shares.size ]
     end
 
     def avg_cost_on(date)

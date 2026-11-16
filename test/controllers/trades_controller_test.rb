@@ -568,6 +568,19 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_select lot_select, count: 0
   end
 
+  test "the lot choice reads the shares left in the lot when the sale ran" do
+    account, buy, sale = lot_choice_account(method: "fifo")
+    option = "select[name='entry[entryable_attributes][lot_source_entry_id]'] option[value='#{buy.id}']"
+    date = I18n.l(buy.date, format: :long)
+
+    get trade_url(sale)
+    assert_select option, text: "#{date} · 40 at $20.00", count: 1
+
+    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    get trade_url(sale)
+    assert_select option, text: "#{date} · 40 of 40 left at $20.00", count: 1
+  end
+
   test "naming a lot on a sale saves it and restates the account" do
     account, buy, sale = lot_choice_account(method: "fifo")
 
