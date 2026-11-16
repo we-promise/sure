@@ -3,7 +3,7 @@
 require "test_helper"
 
 class LunchflowItem::LifecycleTest < ActiveSupport::TestCase
-  include ProviderItemModelLifecycleTests
+  include ProviderItemLifecycleTests
 
   test "a sync warns about limited data only when a linked account is an investment or crypto account" do
     provider_item.class.any_instance.stubs(:import_latest_lunchflow_data).returns(success: true)
@@ -33,5 +33,17 @@ class LunchflowItem::LifecycleTest < ActiveSupport::TestCase
 
     def other_provider_account
       @other_provider_account ||= mercury_accounts(:checking_account)
+    end
+
+    def selectable_accountable_type
+      "Depository"
+    end
+
+    def provider_api_error
+      @provider_api_error ||= Provider::Lunchflow::LunchflowError.new("Lunch Flow is unavailable", :server_error)
+    end
+
+    def api_accounts_for(account_ids)
+      account_ids.map { |id| { id: id, name: "Lunch Flow #{id}", currency: "USD" } }
     end
 end
