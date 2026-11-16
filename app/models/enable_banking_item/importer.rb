@@ -805,6 +805,8 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_store_transactions(enable_banking_account)
+      @book_truncated = false
+      @pending_truncated = false
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
@@ -851,6 +853,7 @@ class EnableBankingItem::Importer
         rescue Provider::EnableBanking::EnableBankingError => e
           raise unless [ :validation_error, :bad_request ].include?(e.error_type)
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
+          @pending_truncated = true
           Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
           capture_pdng_unsupported_debug_log(enable_banking_account, error: e)
         end
@@ -894,10 +897,7 @@ class EnableBankingItem::Importer
       removed_pending = false
 
       unless include_pending
-        removed_pending = existing_transactions.reject! do |tx|
-          tx = tx.with_indifferent_access
-          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
-        end
+        removed_pending = existing_transactions.reject! { |tx| pending_row?(tx) }
       end
 
       if all_transactions.any?
@@ -922,8 +922,7 @@ class EnableBankingItem::Importer
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
-            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
-            next false unless pending_flag
+            next false unless pending_row?(tx)
 
             fp = EnableBankingEntry::Processor.compute_external_id(tx)
             entry_ref = tx[:entry_reference].presence
@@ -932,17 +931,57 @@ class EnableBankingItem::Importer
           end
         end
 
-        existing_ids = existing_transactions.map { |tx|
+        # Replace the window the fetch covers rather than appending rows whose
+        # identifier is unfamiliar. Some ASPSPs re-issue transaction_id and
+        # entry_reference on every response, so appending makes the snapshot
+        # grow by the whole window on each sync (#3464).
+        #
+        # Safe because the response is already internally consistent:
+        # deduplicate_api_transactions has run on it and genuine repeats keep
+        # their multiplicity, so nothing is compared across syncs — the content
+        # matching that would be needed there is what collapses distinct
+        # transactions in #2720.
+        #
+        # Only a status whose fetch completed may replace its half of the window.
+        # Pagination can be cut short and PDNG can be refused outright, and the
+        # two fail independently, so a booked fetch that returned every page is
+        # still authoritative for booked rows even when PDNG was refused. A
+        # truncated status contributes only rows we have not already stored,
+        # because pages it never received are not evidence that those rows are gone.
+        booked_authoritative = !@book_truncated
+        pending_authoritative = include_pending && !@pending_truncated
+        authoritative = ->(tx) { pending_row?(tx) ? pending_authoritative : booked_authoritative }
+
+        superseded_rows = existing_transactions.select do |tx|
+          authoritative.(tx) && in_fetched_window?(tx, start_date)
+        end
+        retained_transactions = existing_transactions - superseded_rows
+
+        retained_ids = retained_transactions.map { |tx|
           EnableBankingEntry::Processor.compute_external_id(tx)
         }.compact.to_set
 
-        new_transactions = all_transactions.select do |tx|
+        incoming_transactions = all_transactions.select do |tx|
+          next true if authoritative.(tx)
+
           ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
-          ext_id.present? && !existing_ids.include?(ext_id)
+          ext_id.present? && !retained_ids.include?(ext_id)
         end
 
-        if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
+        next_snapshot = retained_transactions + incoming_transactions
+
+        if removed_pending || next_snapshot != existing_transactions
+          # One transaction: a re-key that outlived a failed snapshot write would
+          # leave the entry under an identifier the snapshot no longer mentions,
+          # and the next sync would insert a duplicate beside it.
+          ActiveRecord::Base.transaction do
+            # Carry the entries over to the identifiers the ASPSP now uses, or the
+            # processor keys each replaced row by its new identifier and inserts a
+            # second entry beside the first — the duplication users actually see.
+            rekey_rotated_identifiers!(enable_banking_account, superseded_rows, incoming_transactions)
+
+            enable_banking_account.upsert_enable_banking_transactions_snapshot!(next_snapshot)
+          end
         end
       elsif removed_pending
         enable_banking_account.upsert_enable_banking_transactions_snapshot!(
@@ -1071,6 +1110,7 @@ class EnableBankingItem::Importer
           # error_type mid-pagination, not just the specific Trade Republic continuationKey
           # mismatch this was written for — worth surfacing prominently in case a future
           # ASPSP hits this path for a genuinely different reason.
+          mark_fetch_truncated(transaction_status)
           Rails.logger.error "EnableBankingItem::Importer - Validation error mid-pagination for account #{enable_banking_account.uid} (status=#{transaction_status}), keeping #{all_transactions.count} transaction(s) from #{page_count - 1} page(s). #{e.message}"
           capture_pagination_truncation_debug_log(
             enable_banking_account,
@@ -1099,9 +1139,22 @@ class EnableBankingItem::Importer
       all_transactions
     rescue PaginationTruncatedError => e
       # Log as warning and return collected partial data instead of failing entirely.
-      # This ensures accounts with huge history don't lose all synced data.
+      # This ensures accounts with huge history don't lose all synced data. The
+      # caller must know the result is partial, or it would treat pages it never
+      # received as evidence that those rows are gone.
+      mark_fetch_truncated(transaction_status)
       Rails.logger.warn(e.message)
       all_transactions
+    end
+
+    # Pagination and PDNG support fail independently, so completeness is tracked
+    # per status: a refused PDNG request says nothing about the booked rows.
+    def mark_fetch_truncated(transaction_status)
+      if transaction_status == "PDNG"
+        @pending_truncated = true
+      else
+        @book_truncated = true
+      end
     end
 
     def filter_transactions_by_date(transactions, start_date)
@@ -1109,15 +1162,299 @@ class EnableBankingItem::Importer
 
       transactions.reject do |tx|
         tx = tx.with_indifferent_access
-        date_str = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
-        next false if date_str.blank?  # Keep if no date (cannot determine)
+        value = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
+        next false if value.blank?  # Keep if no date (cannot determine)
 
-        begin
-          Date.parse(date_str.to_s) < start_date
-        rescue ArgumentError
-          false  # Keep if date is unparseable
+        # parse_row_date, not Date.parse: a Unix timestamp read as digits is
+        # either rejected outright or, worse, accepted as a date in the 1700s,
+        # which discards a recent transaction. in_fetched_window? decides what
+        # the window holds using the same parser, and the two must agree.
+        parsed = parse_row_date(value)
+        parsed.present? && parsed < start_date  # Keep if unparseable
+      end
+    end
+
+    # Point existing entries at the identifiers the ASPSP now uses for the same
+    # movements, so import_transaction upserts them instead of inserting beside
+    # them. Category, merchant, transfer links and attachments survive.
+    #
+    # Rows are paired within one content group: identifiers that did not rotate
+    # pair with themselves, and only what is left over is paired by position.
+    # Multiplicity is preserved either way — three identical movements on one day
+    # map one-to-one onto the three that came back, rather than collapsing into
+    # one. That is the difference between this and content-level deduplication,
+    # which #2720 shows drops distinct booked transactions.
+    #
+    # Only rows whose identifier actually changed are touched, and a new
+    # identifier already present on the account is skipped rather than
+    # collided with.
+    # Must run inside the transaction that writes the snapshot: the re-keys and
+    # the snapshot they correspond to have to commit or roll back together.
+    def rekey_rotated_identifiers!(enable_banking_account, superseded_rows, fetched_rows)
+      account = enable_banking_account.current_account
+      return if account.blank? || superseded_rows.empty?
+
+      content_key = ->(tx) {
+        EnableBankingEntry::Processor.compute_external_id(
+          tx.with_indifferent_access.except(:transaction_id, :entry_reference)
+        )
+      }
+      external_id = ->(tx) { EnableBankingEntry::Processor.compute_external_id(tx) }
+
+      incoming_by_content = fetched_rows.group_by(&content_key)
+      paired = Set.new  # object_ids of rows settled by content, old and new alike
+
+      superseded_rows.group_by(&content_key).each do |key, old_rows|
+        next if key.blank?
+
+        new_rows = incoming_by_content[key] or next
+
+        # Settle the rows that kept their identifier first. Pairing a whole
+        # content group by position would otherwise hand one movement's
+        # identifier to another when the response order changes, moving the
+        # annotations with it.
+        unpaired_new = new_rows.dup
+        rotated_old = []
+
+        old_rows.each do |old_row|
+          old_id = external_id.(old_row)
+          index = old_id.present? ? unpaired_new.index { |row| external_id.(row) == old_id } : nil
+
+          if index
+            paired << old_row.object_id << unpaired_new[index].object_id
+            unpaired_new.delete_at(index)  # identifier unchanged: nothing to carry over
+          else
+            rotated_old << old_row
+          end
+        end
+
+        rotated_old.zip(unpaired_new).each do |old_row, new_row|
+          next if new_row.nil?
+
+          paired << old_row.object_id << new_row.object_id
+          old_id = external_id.(old_row)
+          new_id = external_id.(new_row)
+          next if old_id.blank? || new_id.blank? || old_id == new_id
+          next if account.entries.exists?(source: "enable_banking", external_id: new_id)
+
+          entry = account.entries.find_by(source: "enable_banking", external_id: old_id) or next
+
+          entry.lock!
+          next unless entry.external_id == old_id
+
+          entry.update_column(:external_id, new_id)
         end
       end
+
+      pair_identifier_transitions!(
+        account,
+        superseded_rows.reject { |tx| paired.include?(tx.object_id) },
+        fetched_rows.reject { |tx| paired.include?(tx.object_id) }
+      )
+    end
+
+    # Tie a booked movement to its other shape when the ASPSP switches between
+    # returning it with and without an identifier, rewriting the remittance text
+    # as it does (#4652).
+    #
+    # Some ASPSPs describe one booked movement in two shapes: a short line with
+    # neither transaction_id nor entry_reference, and a detailed one with an
+    # entry_reference and multi-line remittance text. Successive responses can
+    # switch between them in either direction. rekey_rotated_identifiers! pairs
+    # by content, remittance included, so neither switch matches and the
+    # movement imports a second time.
+    #
+    # The evidence used here is not content similarity. In one complete booked
+    # fetch, a row we had stored is gone and a row of the other shape that we had
+    # not stored has appeared, on the same date for the same signed amount. A row
+    # the ASPSP still returns pairs with itself above and never reaches this
+    # method, so a charge coexisting with a same-day charge of the same amount
+    # stays separate. Rows are only paired across shapes, never identified with
+    # identified, so the loose key cannot merge distinct identified charges (the
+    # hazard described on #3464).
+    #
+    # The entry keeps, or takes, the ASPSP identifier. The identifierless shape
+    # is recorded as superseded on it, which
+    # EnableBankingAccount::Transactions::Processor reads into excluded_ids, so
+    # whichever shape the next response carries, the movement stays one entry.
+    #
+    # Groups are paired only when both sides hold the same number of rows. Any
+    # other shape is ambiguous and left alone, so the worst case is the
+    # duplicate that would have appeared anyway.
+    def pair_identifier_transitions!(account, leftover_old, leftover_new)
+      return if @book_truncated
+
+      olds = leftover_old.reject { |tx| pending_row?(tx) }.select { |tx| replacement_key(tx) }
+      return if olds.empty?
+
+      news = leftover_new.reject { |tx| pending_row?(tx) }.select { |tx| replacement_key(tx) }
+      pairs = exact_date_transitions(olds, news)
+
+      paired = pairs.flatten.map(&:object_id).to_set
+      pairs += shifted_date_transitions(olds.reject { |tx| paired.include?(tx.object_id) },
+                                        news.reject { |tx| paired.include?(tx.object_id) })
+
+      pairs.each do |old_row, new_row|
+        if EnableBankingEntry::Processor.identifierless?(old_row)
+          adopt_identifier!(account, from: old_row, to: new_row)
+        else
+          alias_identifierless_shape!(account, entry_row: old_row, alias_row: new_row)
+        end
+      end
+    end
+
+    # Some ASPSPs give the two shapes booking dates a day or two apart, the
+    # identifierless one usually later. Wide enough for that, narrow enough that
+    # a recurring charge of the same amount (weekly at the shortest) can't match.
+    SHAPE_TRANSITION_DATE_TOLERANCE = 3
+
+    # Same date: the groups pair one to one when both sides hold the same
+    # number of rows, so identical movements on one day keep their multiplicity.
+    # Any other shape is ambiguous here and left to the shifted-date pass.
+    def exact_date_transitions(olds, news)
+      new_groups = news.group_by { |tx| [ replacement_key(tx), transition_shape(tx) ] }
+
+      olds.group_by { |tx| [ replacement_key(tx), transition_shape(tx) ] }.flat_map do |(key, shape), old_rows|
+        new_rows = new_groups[[ key, opposite_shape(shape) ]]
+        next [] if new_rows.nil? || new_rows.size != old_rows.size
+
+        old_rows.zip(new_rows)
+      end
+    end
+
+    # Shifted date: a pair is taken only when each row is the other's sole
+    # candidate within the tolerance, the safest reading once dates disagree.
+    # Anything else is ambiguous and left alone, so the worst case is the
+    # duplicate that would have appeared anyway.
+    def shifted_date_transitions(olds, news)
+      candidates = ->(row, pool) {
+        key = replacement_key(row)
+        pool.select do |other|
+          other_key = replacement_key(other)
+          transition_shape(other) == opposite_shape(transition_shape(row)) &&
+            other_key.drop(1) == key.drop(1) &&
+            (Date.parse(other_key.first) - Date.parse(key.first)).abs <= SHAPE_TRANSITION_DATE_TOLERANCE
+        end
+      }
+
+      olds.filter_map do |old_row|
+        matches = candidates.(old_row, news)
+        next unless matches.one?
+
+        new_row = matches.first
+        next unless candidates.(new_row, olds).one?
+
+        [ old_row, new_row ]
+      end
+    rescue Date::Error
+      []
+    end
+
+    def transition_shape(transaction)
+      EnableBankingEntry::Processor.identifierless?(transaction) ? :identifierless : :identified
+    end
+
+    def opposite_shape(shape)
+      shape == :identifierless ? :identified : :identifierless
+    end
+
+    # Identifierless row replaced by an identified one: move the entry onto the
+    # ASPSP identifier, as EnableBankingEntry::Processor's own claim does for an
+    # unchanged description.
+    def adopt_identifier!(account, from:, to:)
+      old_id = EnableBankingEntry::Processor.compute_external_id(from)
+      new_id = EnableBankingEntry::Processor.compute_external_id(to)
+      return if old_id.blank? || new_id.blank?
+      return if account.entries.exists?(source: "enable_banking", external_id: new_id)
+
+      entry = account.entries.find_by(source: "enable_banking", external_id: old_id) or return
+
+      entry.lock!
+      return unless entry.external_id == old_id
+
+      entry.update_column(:external_id, new_id)
+      record_superseded_external_id!(entry, old_id)
+    end
+
+    # Identified row replaced by an identifierless one: keep the entry on the
+    # ASPSP identifier, which is the more durable of the two, and record the
+    # identifierless shape so the processor skips it instead of importing it.
+    def alias_identifierless_shape!(account, entry_row:, alias_row:)
+      entry_id = EnableBankingEntry::Processor.compute_external_id(entry_row)
+      alias_id = EnableBankingEntry::Processor.compute_external_id(alias_row)
+      return if entry_id.blank? || alias_id.blank?
+
+      entry = account.entries.find_by(source: "enable_banking", external_id: entry_id) or return
+      entry.lock!
+      record_superseded_external_id!(entry, alias_id)
+    end
+
+    # Date, amount, currency and direction: what a bank cannot rewrite without
+    # it being a different movement. Remittance and counterparty are left out on
+    # purpose, as they are what the ASPSP enriches when it assigns the identifier.
+    def replacement_key(transaction)
+      tx = transaction.with_indifferent_access
+      date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
+      amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
+      currency = tx.dig(:transaction_amount, :currency).presence || tx[:currency]
+      direction = tx[:credit_debit_indicator]
+      return nil if [ date, amount, direction ].any?(&:blank?)
+
+      [ date.to_s, BigDecimal(amount.to_s).abs.to_s, currency.to_s.upcase, direction.to_s ]
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    # Same record EnableBankingEntry::Processor keeps when it claims a
+    # predecessor, which EnableBankingAccount::Transactions::Processor reads into
+    # excluded_ids. Keeps the retired id from importing again should the ASPSP
+    # ever return the identifierless row once more.
+    def record_superseded_external_id!(entry, retired_id)
+      transaction = entry.entryable
+      return unless transaction.is_a?(Transaction)
+
+      key = EnableBankingEntry::Processor::SUPERSEDED_IDS_KEY
+      extra = transaction.extra.presence || {}
+      recorded = Array(extra[key])
+      return if recorded.include?(retired_id)
+
+      transaction.update_column(:extra, extra.merge(key => recorded + [ retired_id ]))
+    end
+
+    # True when a stored row falls inside the window just fetched, so the fresh
+    # response supersedes it. Date resolution mirrors filter_transactions_by_date,
+    # which decides what the window contains. Undated rows are kept: they cannot
+    # be shown to be superseded.
+    def in_fetched_window?(transaction, start_date)
+      return true unless start_date  # no lower bound: the fetch covers everything
+
+      tx = transaction.with_indifferent_access
+      value = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
+      return false if value.blank?
+
+      parsed = parse_row_date(value)
+      parsed.present? && parsed >= start_date
+    end
+
+    # Accepts the same shapes as EnableBankingEntry::Processor#date, including
+    # the Unix timestamps some ASPSPs send. Returns nil when unparseable.
+    def parse_row_date(value)
+      case value
+      when Integer, Float then Time.at(value).to_date
+      when Time, DateTime then value.to_date
+      when Date then value
+      else Date.parse(value.to_s)
+      end
+    rescue ArgumentError, TypeError, RangeError
+      nil
+    end
+
+    # A row is pending either as stored (extra.enable_banking.pending, written by
+    # the processor) or as freshly tagged by tag_as_pending during this fetch.
+    def pending_row?(transaction)
+      tx = transaction.with_indifferent_access
+      pending = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
+      pending ? true : false
     end
 
     def tag_as_pending(transactions)
