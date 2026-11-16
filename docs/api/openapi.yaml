@@ -668,6 +668,7 @@ components:
       - classification
       - account_type
       - status
+      - hidden
       - created_at
       - updated_at
       properties:
@@ -703,6 +704,10 @@ components:
           - draft
           - disabled
           - pending_deletion
+        hidden:
+          type: boolean
+          description: Hidden from account pickers and the sidebar; still included
+            in reports
         institution_name:
           type: string
           nullable: true

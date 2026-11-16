@@ -87,6 +87,14 @@
           <span class="text-sm"><%= t(".exclude_from_reports") %></span>
           <%= form.toggle :exclude_from_reports %>
         </div>
+
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <span class="text-sm"><%= t(".hidden_label") %></span>
+            <p class="text-xs text-secondary"><%= t(".hidden_hint") %></p>
+          </div>
+          <%= form.toggle :hidden %>
+        </div>
       </div>
     </details>
   </div>

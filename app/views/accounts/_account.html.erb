@@ -31,6 +31,14 @@
               <% end %>
             <% end %>
 
+            <% if account.hidden? %>
+              <%= render DS::Tooltip.new(text: t("accounts.account.hidden_indicator"), as: :span) do |tooltip| %>
+                <% tooltip.with_trigger do %>
+                  <%= icon("archive", class: "w-3.5 h-3.5 text-secondary") %>
+                <% end %>
+              <% end %>
+            <% end %>
+
             <% if account.shared? %>
               <%= icon("users", class: "w-3.5 h-3.5 text-secondary", title: account.owned_by?(Current.user) ? nil : account.owner&.display_name) %>
             <% end %>
@@ -109,6 +117,12 @@
               <% menu.with_item(variant: "button", text: t("accounts.account.include_in_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye", data: { turbo_frame: :_top }) %>
             <% else %>
               <% menu.with_item(variant: "button", text: t("accounts.account.exclude_from_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye-off", data: { turbo_frame: :_top }) %>
+            <% end %>
+
+            <% if account.hidden? %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.unhide"), href: toggle_hidden_account_path(account), method: :patch, icon: "archive-restore", data: { turbo_frame: :_top }) %>
+            <% else %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.hide"), href: toggle_hidden_account_path(account), method: :patch, icon: "archive", data: { turbo_frame: :_top }) %>
             <% end %>
           <% end %>
 

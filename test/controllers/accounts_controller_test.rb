@@ -1594,6 +1594,41 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to account_url(accounts(:credit_card))
   end
 
+  test "toggle_hidden toggles the flag without excluding the account from reports" do
+    patch toggle_hidden_account_url(@account)
+    assert_redirected_to accounts_path
+    assert @account.reload.hidden?
+    assert_not @account.exclude_from_reports?
+
+    patch toggle_hidden_account_url(@account)
+    assert_redirected_to accounts_path
+    assert_not @account.reload.hidden?
+  end
+
+  test "toggle_hidden requires write permission" do
+    sign_in users(:family_member)
+
+    patch toggle_hidden_account_url(accounts(:credit_card))
+    assert_redirected_to account_url(accounts(:credit_card))
+    assert_not accounts(:credit_card).reload.hidden?
+  end
+
+  test "sidebar leaves out hidden accounts but the accounts page still lists them" do
+    @account.update!(hidden: true)
+
+    get root_url
+
+    assert_response :success
+    assert_select "#account-sidebar-tabs a[href=?]", account_path(accounts(:credit_card))
+    assert_select "#account-sidebar-tabs a[href=?]", account_path(@account), count: 0
+    assert_select "#account-sidebar-tabs a[href=?]", accounts_path, text: I18n.t("accounts.sidebar.hidden_accounts", count: 1)
+
+    get accounts_url
+
+    assert_response :success
+    assert_select "a[href=?]", account_path(@account), text: @account.name
+  end
+
   test "logo_options shows the icons found and Brandfetch inside the logo frame without saving" do
     Setting.stubs(:brand_fetch_client_id).returns("test-client-id")
     @account.update!(institution_domain: "krungsri.com")

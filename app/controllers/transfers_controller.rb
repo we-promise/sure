@@ -362,6 +362,7 @@ class TransfersController < ApplicationController
     def set_accounts
       @accounts = accessible_accounts
         .active
+        .selectable_or_including(@from_account_id)
         .alphabetically
         .includes(
           :account_providers,

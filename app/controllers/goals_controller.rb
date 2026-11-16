@@ -219,8 +219,12 @@ class GoalsController < ApplicationController
       Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.where(id: ids).to_a
     end
 
+    # Hidden accounts are left out of the picker unless the goal already links
+    # them, so editing a goal never silently unlinks a hidden account.
     def linkable_accounts_for_new
-      Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible.alphabetically.to_a
+      linked_ids = @goal&.goal_accounts&.map(&:account_id)
+      Current.user.accessible_accounts.where(accountable_type: FUNDABLE_TYPES).visible
+        .selectable_or_including(linked_ids).alphabetically.to_a
     end
 
     def sync_linked_accounts!(goal, accounts, allocations = {})

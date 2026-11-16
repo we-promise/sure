@@ -10,6 +10,32 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
+  test "hidden accounts are not selectable unless explicitly included" do
+    @account.update!(hidden: true)
+
+    assert_not_includes @family.accounts.selectable, @account
+    assert_not_includes @family.accounts.selectable_or_including(nil), @account
+    assert_includes @family.accounts.selectable_or_including(@account.id), @account
+    assert_includes @family.accounts.selectable_or_including(@account.id), accounts(:credit_card)
+  end
+
+  test "a hidden account still counts in net worth" do
+    net_worth = @family.balance_sheet(user: @admin).net_worth
+
+    @account.update!(hidden: true)
+
+    assert_includes @family.accounts.visible, @account
+    assert_equal net_worth, Family.find(@family.id).balance_sheet(user: @admin).net_worth
+  end
+
+  test "a hidden account is not eligible as the transaction default" do
+    assert @account.eligible_for_transaction_default?
+
+    @account.update!(hidden: true)
+
+    assert_not @account.eligible_for_transaction_default?
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy

@@ -753,6 +753,7 @@ class TransactionsController < ApplicationController
       @manual_accounts = accessible_accounts_scope
         .manual
         .active
+        .selectable_or_including(@entry&.account_id)
         .alphabetically
         .includes(:account_providers, logo_attachment: :blob)
         .to_a

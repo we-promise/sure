@@ -3,7 +3,7 @@ class TransferMatchesController < ApplicationController
 
   def new
     # Preloaded for the logo selects, which call Account#logo_url per option.
-    @accounts = Current.family.accounts.writable_by(Current.user).visible.alphabetically.where.not(id: @entry.account_id)
+    @accounts = Current.family.accounts.writable_by(Current.user).visible.selectable.alphabetically.where.not(id: @entry.account_id)
       .includes(:account_providers, logo_attachment: :blob)
     @candidate_entries = writable_candidate_entries
   end
