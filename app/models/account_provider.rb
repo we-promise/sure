@@ -23,7 +23,7 @@ class AccountProvider < ApplicationRecord
   after_destroy :destroy_onchain_provider_account, if: :onchain_provider?
 
   # Linking an account the user ignored during setup is how they take it back.
-  after_create :stop_ignoring_provider_account, if: -> { provider.try(:ignored?) }
+  after_create :stop_ignoring_provider_account, if: -> { provider.respond_to?(:ignored?) }
 
   # Returns the provider adapter for this connection
   def adapter
@@ -38,8 +38,10 @@ class AccountProvider < ApplicationRecord
 
   private
 
+    # Under the provider's row lock, which reloads it: an ignore! that committed
+    # after the provider was loaded is seen, and one still running waits.
     def stop_ignoring_provider_account
-      provider.update!(ignored: false)
+      provider.with_lock { provider.update!(ignored: false) if provider.ignored? }
     end
 
     def financekit_has_exclusive_writer

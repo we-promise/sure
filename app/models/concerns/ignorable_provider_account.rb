@@ -14,10 +14,13 @@ module IgnorableProviderAccount
   end
 
   # Returns false, and changes nothing, when the account is linked: unlink it first.
+  # The row lock reloads the account, so a link committed meanwhile is seen.
   def ignore!
-    return false if account_provider.present?
+    with_lock do
+      next false if account_provider.present?
 
-    update!(ignored: true, **ignored_snapshot_reset)
+      update!(ignored: true, **ignored_snapshot_reset)
+    end
   end
 
   # Runs the block (a snapshot write) under the row lock unless the account is

@@ -45,4 +45,13 @@ class IndexaCapitalItem::ImporterTest < ActiveSupport::TestCase
     assert_nil mutual_fund.current_balance
     assert_nil mutual_fund.raw_payload
   end
+
+  test "an account still listed upstream is kept when importing it fails" do
+    @provider.stubs(:get_account_balance).returns(100)
+    IndexaCapitalAccount.any_instance.stubs(:upsert_from_indexa_capital!).raises(ActiveRecord::RecordInvalid)
+
+    assert_no_difference -> { @item.indexa_capital_accounts.count } do
+      IndexaCapitalItem::Importer.new(@item, indexa_capital_provider: @provider).import
+    end
+  end
 end

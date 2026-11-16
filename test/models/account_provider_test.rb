@@ -183,4 +183,13 @@ class AccountProviderTest < ActiveSupport::TestCase
 
     assert_not indexa_account.reload.ignored?
   end
+
+  test "linking stops ignoring an account that was ignored after it was loaded" do
+    indexa_account = indexa_capital_accounts(:pension_plan)
+    IndexaCapitalAccount.find(indexa_account.id).ignore!
+
+    AccountProvider.create!(account: @account, provider: indexa_account)
+
+    assert_not indexa_account.reload.ignored?
+  end
 end

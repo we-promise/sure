@@ -168,4 +168,13 @@ class IndexaCapitalAccountTest < ActiveSupport::TestCase
     pension.ignore!
     assert_empty @item.indexa_capital_accounts.needs_setup
   end
+
+  test "ignore! sees a link created after the account was loaded" do
+    @account.account_provider # loaded while still unlinked
+    linked_account = Account.create!(family: @family, name: "My Fund", balance: 1000, currency: "EUR", accountable: Investment.new)
+    IndexaCapitalAccount.find(@account.id).ensure_account_provider!(linked_account)
+
+    assert_not @account.ignore!
+    assert_not @account.reload.ignored?
+  end
 end

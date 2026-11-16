@@ -53,11 +53,12 @@ class IndexaCapitalItem::Importer
     stats["api_requests"] = stats.fetch("api_requests", 0) + 1
     stats["total_accounts"] = accounts_data.size
 
-    upstream_account_ids = []
+    # Collected up front: an account the provider still lists must not be pruned
+    # because importing it failed.
+    upstream_account_ids = accounts_data.filter_map { |account_data| account_data[:account_number]&.to_s }
 
     accounts_data.each do |account_data|
       import_account(account_data)
-      upstream_account_ids << account_data[:account_number].to_s if account_data[:account_number]
     rescue => e
       Rails.logger.error "IndexaCapitalItem::Importer - Failed to import account: #{e.message}"
       stats["accounts_skipped"] = stats.fetch("accounts_skipped", 0) + 1
