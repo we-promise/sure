@@ -79,14 +79,86 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  test "the unlinking scaffold renders to valid Ruby and carries the disposition seam" do
-    rendered = render_template("unlinking_concern.rb.tt", class_name: "Gocardless", file_name: "gocardless")
+  # A template rendered as the generator renders it, with the generator's predicate
+  # helpers, which a Struct cannot name.
+  def render_provider_template(name, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ])
+    helpers = {
+      class_name: "Gocardless", file_name: "gocardless", parsed_fields: parsed_fields,
+      banking_provider?: banking, investment_provider?: !banking
+    }
+    context = Object.new
+    helpers.each { |helper, value| context.define_singleton_method(helper) { value } }
+    template = Rails.root.join("lib/generators/provider/family/templates", name).read
+    ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+  end
 
-    assert_parses rendered
-    # A generated provider retains by default and refuses a discard it has not
-    # implemented, rather than accepting one and keeping the data.
-    assert_includes rendered, "disposition: ProviderDisconnectable::DEFAULT_DISPOSITION"
-    assert_includes rendered, "does not implement the #{'#{disposition}'} disposition"
+  # The provider kit's base class supplies syncing, the syncer and unlinking, so a
+  # generated connection model inherits them instead of carrying its own copies.
+  test "the generated item model is a provider kit connection" do
+    [ true, false ].each do |banking|
+      model = render_provider_template("item_model.rb.tt", banking: banking)
+
+      assert_parses model
+      assert_includes model, "class GocardlessItem < ProviderItem\n"
+      assert_includes model, "  include Provided, Encryptable, DestroyableLater, ProviderDisconnectable\n"
+      assert_not_includes model, "def syncer"
+      # The kit's syncer imports with the sync window's start date.
+      assert_includes model, "def import_latest_gocardless_data(sync_start_date: nil)"
+      # The kit's account flow lists only connections whose secret is set.
+      assert_includes model, %(scope :with_credentials, -> { where.not(api_key: [ nil, *BLANK_TOKEN_SENTINELS ]) })
+    end
+  end
+
+  test "the generated item model counts every connection as credentialed when it has no secret field" do
+    model = render_provider_template("item_model.rb.tt", parsed_fields: [ { name: "region", type: "string", secret: false, default: nil } ])
+
+    assert_parses model
+    assert_includes model, "scope :with_credentials, -> { all }"
+  end
+
+  test "the generated account model is a provider kit account" do
+    [ true, false ].each do |banking|
+      model = render_provider_template("account_model.rb.tt", banking: banking)
+
+      assert_parses model
+      assert_includes model, "class GocardlessAccount < ProviderAccount\n"
+      # ProviderAccount defines the link and #current_account.
+      assert_not_includes model, "has_one :account_provider"
+      assert_not_includes model, "def current_account"
+    end
+  end
+
+  # ProviderItem::Syncer and ProviderItem::Unlinking replace both scaffolds.
+  test "the generator writes no syncer or unlinking concern for the item" do
+    Dir.mktmpdir do |dir|
+      generator = Provider::FamilyGenerator.new([ "gocardless" ], {}, destination_root: dir)
+      capture_io { Dir.chdir(dir) { generator.send(:create_item_concerns) } }
+
+      assert File.exist?(File.join(dir, "app/models/gocardless_item/importer.rb"))
+      assert_not File.exist?(File.join(dir, "app/models/gocardless_item/syncer.rb"))
+      assert_not File.exist?(File.join(dir, "app/models/gocardless_item/unlinking.rb"))
+    end
+    assert_not Rails.root.join("lib/generators/provider/family/templates/syncer.rb.tt").exist?
+    assert_not Rails.root.join("lib/generators/provider/family/templates/unlinking_concern.rb.tt").exist?
+  end
+
+  # ProviderItem::Syncer reads its status and error messages from <key>_items.syncer.*.
+  # Brex's are the reference set: the generated locale defines the same keys, plural
+  # forms and interpolations.
+  test "the generated locale has every syncer message the provider kit reads" do
+    # Each message's plural forms, or the variables it interpolates.
+    shape = ->(messages) do
+      messages.deep_stringify_keys.transform_values { |value| value.is_a?(Hash) ? value.keys.sort : value.scan(/%\{(\w+)\}/).flatten.sort }
+    end
+    reference = shape.call(I18n.t("brex_items.syncer", locale: :en))
+
+    [ true, false ].each do |banking|
+      locale = YAML.safe_load(render_provider_template("locale.en.yml.tt", banking: banking))
+      generated = locale.dig("en", "gocardless_items", "syncer")
+
+      assert generated, "banking: #{banking}: no gocardless_items.syncer"
+      assert_equal reference, shape.call(generated), "banking: #{banking}"
+    end
   end
 
   # A generated card must require the accounts it lists, so a render that
