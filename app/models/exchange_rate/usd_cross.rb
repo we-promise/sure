@@ -41,6 +41,9 @@ class ExchangeRate::UsdCross
     from_usd = leg("USD", to, start_date, end_date)
     return miss(from, to, start_date, end_date) if from_usd.empty?
 
+    # The latest USD→Y rate in the fetched window is carried however old, as the
+    # importer carries a direct rate over a gap; X→USD still moves the result
+    # each day.
     i = -1
     crossed = to_usd.filter_map do |first|
       i += 1 while i + 1 < from_usd.size && from_usd[i + 1].date <= first.date

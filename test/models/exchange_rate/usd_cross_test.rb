@@ -57,6 +57,19 @@ class ExchangeRate::UsdCrossTest < ActiveSupport::TestCase
     assert_equal [ @day2 ], rates.map(&:date)
   end
 
+  test "carries the latest USD rate however old, as the importer carries a direct rate over a gap" do
+    last = @day1 + 30
+    @provider.stubs(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: @day1, end_date: last)
+             .returns(provider_success_response((@day1..last).map { |d| rate(d, "KZT", "USD", 0.002) }))
+    @provider.stubs(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: @day1, end_date: last)
+             .returns(provider_success_response([ rate(@day1, "USD", "RUB", 80) ]))
+
+    rates = ExchangeRate::UsdCross.new(@provider).rates(from: "KZT", to: "RUB", start_date: @day1, end_date: last)
+
+    assert_equal 31, rates.size
+    assert_equal [ 0.16 ], rates.map { |r| r.rate.to_f }.uniq
+  end
+
   test "is empty without asking the provider when a side is USD" do
     @provider.expects(:fetch_exchange_rates).never
 
