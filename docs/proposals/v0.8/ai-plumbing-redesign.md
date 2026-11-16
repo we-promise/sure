@@ -1627,9 +1627,15 @@ end
   - a different reasoning effort: `{ model: openai/gpt-5.4-nano, reasoning_effort: high }`
     against the live `low`;
   - the identical route twice, which measures how repeatable the model is.
-- **Asynchronous.** The job gets the input actually sent and the primary output as arguments. It
-  can't re-query, because the primary's answers are already applied and locked. It never holds
-  the AI thread for the primary job (drift bug 8).
+- **Asynchronous.** The job gets the primary output and a fingerprint of the input actually sent
+  as arguments: each item's id and a digest of it, and a digest of the rest of the input (the
+  categories). Never the items: job arguments sit in Redis and the Sidekiq UI, and the items are
+  the family's data. The feature's requester rebuilds the items from their ids
+  (`ai_shadow_generation`), read as they are now, because the primary's answers are already
+  applied and locked. An item whose digest no longer matches (edited while the job waited) is left
+  out of both sides, and a changed rest of the input skips the run, so a comparison never sets an
+  answer about the old text against one about the new. It never holds the AI thread for the
+  primary job (drift bug 8).
 - **Same pipeline, never applied.** The job emits the normal event with `shadow: true`, so usage,
   Langfuse and the debug log need no extra code, and the usage page shows shadow spend separately.
   Only `ComparisonSubscriber` sees the result: the job emits one `compare.ai_shadow` event with

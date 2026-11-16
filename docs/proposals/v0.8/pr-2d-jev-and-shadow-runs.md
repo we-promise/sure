@@ -120,7 +120,8 @@ flowchart LR
   domain maps names, as 2c does.
 - **Shadow runs (§8.2):**
   - their own job, in the background lane, for any feature;
-  - the job gets the input actually sent and the primary's answer;
+  - the job gets the primary's answer and a fingerprint of the input actually sent (ids and digests,
+    never the family's text); the requester rebuilds the items, and any edited since are left out;
   - they're never applied;
   - only `ComparisonSubscriber` writes `Ai::Comparison`;
   - the rate is the family's `effective_categorization_shadow_rate` until PR 7;
