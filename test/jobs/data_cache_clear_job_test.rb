@@ -32,28 +32,27 @@ class DataCacheClearJobTest < ActiveJob::TestCase
     DataCacheClearJob.perform_now(@family)
   end
 
-  # A connection sync already running would be reused, so the cleared
-  # accounts are rebuilt on their own as well.
-  test "rebuilds the accounts of a connection on its own day-long schedule" do
-    account = accounts(:connected)
-    item = account.plaid_account.plaid_item
-    item.create_sync_schedule!(interval_minutes: 10080)
+  # The connection's own sync rebuilds its accounts after importing, so
+  # they are not rebuilt alongside the import.
+  test "leaves the accounts of a day-long connection to that connection's sync" do
+    @plaid_item.create_sync_schedule!(interval_minutes: 10080)
 
-    @family.expects(:sync_later).once
-    PlaidItem.any_instance.expects(:sync_later).once
-    manual = accounts(:depository)
-
-    assert_difference -> { account.syncs.count }, 1 do
-      assert_no_difference -> { manual.syncs.count } do
-        DataCacheClearJob.perform_now(@family)
-      end
-    end
-  end
-
-  test "leaves accounts to the family sync when no connection has a day-long schedule" do
     @family.expects(:sync_later).once
     Account.any_instance.expects(:sync_later).never
 
     DataCacheClearJob.perform_now(@family)
+  end
+
+  # A running sync would be reused and may already be past its import.
+  test "follows a running sync of a day-long connection with a fresh one" do
+    @plaid_item.create_sync_schedule!(interval_minutes: 10080)
+    running = @plaid_item.syncs.create!(status: "syncing")
+
+    @family.expects(:sync_later).once
+    PlaidItem.any_instance.expects(:sync_later).never
+
+    assert_enqueued_with(job: FollowUpSyncJob, args: [ @plaid_item, { active_sync_id: running.id } ]) do
+      DataCacheClearJob.perform_now(@family)
+    end
   end
 end

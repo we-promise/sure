@@ -18,28 +18,18 @@ class DataCacheClearJob < ApplicationJob
   private
     # The family sync leaves out connections on their own schedule of a day or
     # longer, but their accounts' balances and holdings were just cleared too.
-    # Each such connection is synced so provider holdings are imported again,
-    # and each of its accounts is rebuilt on its own, since a connection sync
-    # already running is reused and would not see the cleared data.
+    # Each is synced again, and its sync rebuilds the accounts once the import
+    # is done. A sync already running would be reused and may be past its
+    # import, so a fresh one follows it instead.
     def sync_daily_scheduled_items(family)
-      items = Family::Syncer.syncable_item_associations.flat_map do |association|
-        SyncSchedule.with_own_daily_schedule(family.public_send(association).syncable).to_a
+      Family::Syncer.syncable_item_associations.each do |association|
+        SyncSchedule.with_own_daily_schedule(family.public_send(association).syncable).find_each do |item|
+          if (running = item.syncs.visible.first)
+            FollowUpSyncJob.perform_later(item, active_sync_id: running.id)
+          else
+            item.sync_later
+          end
+        end
       end
-      return if items.empty?
-
-      items.each(&:sync_later)
-
-      keys = items.map { |item| [ item.class.name, item.id ] }.to_set
-      family.accounts.each do |account|
-        account.sync_later if account_items(account).any? { |item| keys.include?([ item.class.name, item.id ]) }
-      end
-    end
-
-    def account_items(account)
-      [
-        *account.providers.filter_map { |adapter| adapter.try(:item) },
-        account.plaid_account&.plaid_item,
-        account.simplefin_account&.simplefin_item
-      ].compact
     end
 end
