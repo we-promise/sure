@@ -297,11 +297,12 @@ class Loan < ApplicationRecord
   #
   # Assigned term change rows count as a change even when they equal the
   # stored ones. A loan is saved before its account on create, when the term
-  # change checks that need the account cannot run; they run on the first
-  # form save after that, whatever it changes. The assignment counts until
-  # the loan has saved once: a later save of the account in the same request
-  # must not save the loan again, which would clear the saved changes
-  # `lock_saved_attributes!` reads.
+  # change checks that need the account cannot run. The form's create runs
+  # them through #term_changes_fit_account?; for a loan created any other way
+  # they run on the first form save, whatever it changes. The assignment
+  # counts until the loan has saved once: a later save of the account in the
+  # same request must not save the loan again, which would clear the saved
+  # changes `lock_saved_attributes!` reads.
   def changed_for_autosave?
     super || invalid_rate_changes.present? || rate_changes_precede_origination? || @term_changes_assigned == true
   end
@@ -426,9 +427,10 @@ class Loan < ApplicationRecord
 
   # A row that could not be read, then the first row that is invalid on its
   # own or not dated after the loan began, then a payment that does not cover
-  # its period's interest. Checked when rows were assigned or the start date
-  # moves, which can leave a stored row behind it; any other save has nothing
-  # new to check and skips the query.
+  # its period's interest or a row dated after the schedule's last payment.
+  # Checked when rows were assigned or the start date moves, which can leave
+  # a stored row behind it; any other save has nothing new to check and skips
+  # the query.
   private def term_changes_must_be_valid
     @term_change_refused = false
     refusal = term_change_refusal
@@ -438,10 +440,37 @@ class Loan < ApplicationRecord
     errors.add(:base, refusal)
   end
 
+  # A loan being created is saved before its account, and two of the checks
+  # read the account: the origination date of a loan without a start date,
+  # and the schedule a payment is measured against. Account.create_and_sync
+  # asks again here once the account and its opening balance exist. False,
+  # with the error on the loan, when a row is refused.
+  def term_changes_fit_account?
+    return true if active_term_changes.empty?
+
+    forget_account_reads
+    refusal = term_change_refusal(recheck: true)
+    # The check read the account through its own copy of the record, inside
+    # a creation that a refusal rolls back. Neither is kept.
+    forget_account_reads
+    return true if refusal.nil?
+
+    @term_change_refused = true
+    errors.add(:base, refusal)
+    false
+  end
+
+  private def forget_account_reads
+    association(:account).reset
+    @amortization_schedule = nil
+    @insurance = nil
+  end
+
   # The error key or message for the first term change that cannot be saved.
-  private def term_change_refusal
+  # `recheck` reads the stored rows although none was assigned.
+  private def term_change_refusal(recheck: false)
     return :invalid_term_change if invalid_term_changes.present?
-    return unless @term_changes_assigned || will_save_change_to_start_date?
+    return unless recheck || @term_changes_assigned || will_save_change_to_start_date?
 
     origin = origination_date_for_validation
     active_term_changes.each do |change|
@@ -451,22 +480,32 @@ class Loan < ApplicationRecord
       return change.errors.full_messages.first if (change.new_record? || change.changed?) && change.invalid?
     end
 
-    :term_change_payment_below_interest if term_change_payment_below_interest?
+    term_change_schedule_refusal
   end
 
+  # The two checks that read the schedule.
+  #
   # A payment below the interest would let the balance grow. The schedule
   # would charge interest on that growth and the ledger replay would not, so
   # the two could not agree.
-  private def term_change_payment_below_interest?
-    return false unless active_term_changes.any?(&:payment)
+  #
+  # The schedule ends on its last payment: the last of the term, or an earlier
+  # one that repaid the loan. It does not read a row dated after that, so the
+  # row is refused instead of stored without effect.
+  private def term_change_schedule_refusal
+    return if active_term_changes.empty?
     # The schedule reads the account, which a loan being created does not
-    # have yet.
-    return false unless account_for_validation
+    # have yet. #term_changes_fit_account? asks again once it does.
+    return unless account_for_validation
     # A loan saved before its account existed can still hold that absence.
     association(:account).reset if association(:account).target.nil?
 
     schedule = amortization_schedule
-    schedule.present? && schedule.lender_payment_below_interest?
+    return if schedule.blank?
+    return :term_change_payment_below_interest if schedule.lender_payment_below_interest?
+
+    last_payment_date = schedule.payments.last&.date
+    :term_change_after_last_payment if last_payment_date && active_term_changes.last.effective_date > last_payment_date
   end
 
   def amortization_schedule

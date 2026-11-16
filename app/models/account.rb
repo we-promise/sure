@@ -349,6 +349,13 @@ class Account < ApplicationRecord
           raise reconciliation.error_message unless reconciliation.success?
         end
 
+        # A loan's term changes are checked against its schedule, which needs
+        # the account and the opening balance set above.
+        if account.loan? && !account.accountable.term_changes_fit_account?
+          account.accountable.errors.full_messages.each { |message| account.errors.add(:base, message) }
+          raise ActiveRecord::RecordInvalid.new(account)
+        end
+
         account.auto_share_with_family! if account.family.share_all_by_default?
       end
 

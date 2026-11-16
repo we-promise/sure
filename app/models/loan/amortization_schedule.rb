@@ -122,11 +122,11 @@ class Loan::AmortizationSchedule
   # change took off the balance (an extra repayment, or a confirmed balance
   # below the schedule's) was paid outside the instalments, so it is added
   # here. A confirmed balance above the schedule's is not a payment and is
-  # left out; the instalments after it repay it.
+  # left out; the instalments after it repay it. Nor does it offset a
+  # repayment recorded in the same period, which is why the rows' net
+  # adjustments are not what is summed.
   def total_paid
-    repaid_outside_payments = balance_adjustments.values.sum(BigDecimal("0")) do |adjustment|
-      [ -adjustment.amount, BigDecimal("0") ].max
-    end
+    repaid_outside_payments = row_figures(:repaid_outside_payment).values.sum(BigDecimal("0"), &:amount)
 
     money(payments.sum(BigDecimal("0")) { |payment| payment.payment.amount } + repaid_outside_payments)
   end
@@ -148,11 +148,11 @@ class Loan::AmortizationSchedule
   end
 
   # Whether a payment the lender set falls short of the interest of a period
-  # it is in force for. Only those rows are read: on a long loan at a high
-  # rate under an actual day count, the level payment itself can fall a little
-  # short in a 31-day period.
+  # it is in force for, the final one included. Only those rows are read: on
+  # a long loan at a high rate under an actual day count, the level payment
+  # itself can fall a little short in a 31-day period.
   def lender_payment_below_interest?
-    simulation.payments.any? { |row| row[:lender_payment] && row[:principal_payment].negative? }
+    simulation.payments.any? { |row| row[:lender_payment_below_interest] }
   end
 
   # The share of its balance the period of a payment charged as interest,
