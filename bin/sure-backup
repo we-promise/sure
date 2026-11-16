@@ -351,6 +351,10 @@ env_secret_hash() {
   sed -n 's/^SECRET_KEY_BASE=//p' "$1" | tail -n 1 | sha256sum | cut -c1-16
 }
 
+sql_literal() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/''/g")"
+}
+
 sql_ident() {
   printf '"%s"' "$(printf '%s' "$1" | sed 's/"/""/g')"
 }
@@ -445,10 +449,42 @@ cmd_restore() {
     die "the database restore failed; ${POSTGRES_DB} was left as it was"
   fi
 
+  # Swap by renaming: set the current database aside, give the restored one
+  # its name, and only then drop the old one. At every point both copies
+  # exist under some name, and a failure puts the current database back.
   log "Replacing database ${POSTGRES_DB}..."
-  dropdb --maintenance-db=postgres --if-exists --force "$POSTGRES_DB"
-  psql -X -q -v ON_ERROR_STOP=1 -d postgres \
-    -c "ALTER DATABASE $(sql_ident "$scratch_db") RENAME TO $(sql_ident "$POSTGRES_DB")"
+  previous_db="sure_replaced_$$_$(date +%s)"
+  admin_sql() { psql -X -q -v ON_ERROR_STOP=1 -d postgres -c "$1" >/dev/null; }
+  rename_db() { admin_sql "ALTER DATABASE $(sql_ident "$1") RENAME TO $(sql_ident "$2")"; }
+  live_exists=$(psql_value "SELECT count(*) FROM pg_database WHERE datname = $(sql_literal "$POSTGRES_DB")" postgres)
+  swap_interrupted() {
+    warn "interrupted while replacing ${POSTGRES_DB}. No data was lost: the previous database may now be named ${previous_db}, and the restored one ${scratch_db} or ${POSTGRES_DB}. Run the restore again, or rename the one you want with: ALTER DATABASE \"<name>\" RENAME TO \"${POSTGRES_DB}\""
+    rm -rf "${WORK_DIR}"
+    exit 1
+  }
+  trap swap_interrupted INT TERM
+
+  if [ "$live_exists" -gt 0 ]; then
+    # Renaming needs the database idle. Other sessions were ruled out above,
+    # or --force was given.
+    admin_sql "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $(sql_literal "$POSTGRES_DB") AND pid <> pg_backend_pid()"
+    if ! rename_db "$POSTGRES_DB" "$previous_db"; then
+      dropdb --maintenance-db=postgres --if-exists --force "$scratch_db" || true
+      die "could not set ${POSTGRES_DB} aside to replace it; it was left as it was"
+    fi
+  fi
+  if ! rename_db "$scratch_db" "$POSTGRES_DB"; then
+    if [ "$live_exists" -gt 0 ] && rename_db "$previous_db" "$POSTGRES_DB"; then
+      dropdb --maintenance-db=postgres --if-exists --force "$scratch_db" || true
+      die "could not put the restored database in place; ${POSTGRES_DB} was left as it was"
+    fi
+    die "could not put the restored database in place. No data was lost: the previous database is now named ${previous_db} and the restored one ${scratch_db}. Rename the one you want with: ALTER DATABASE \"<name>\" RENAME TO \"${POSTGRES_DB}\""
+  fi
+  trap 'rm -rf "${WORK_DIR}"' EXIT INT TERM
+  if [ "$live_exists" -gt 0 ]; then
+    dropdb --maintenance-db=postgres --if-exists --force "$previous_db" \
+      || warn "the restore succeeded, but the previous database could not be removed; drop ${previous_db} when convenient"
+  fi
 
   if [ -f "${dir}/storage.tar.gz" ]; then
     log "Restoring file storage..."
@@ -1107,6 +1143,13 @@ cmd_upgrade_postgres() {
   done
   refuse_other_databases "$old_server"
 
+  workdir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$cid")
+  backups=$(env_get "${workdir:-$(pwd)}/.env" BACKUP_DIR)
+  backups=${backups:-./backups}
+  case "$backups" in /*) ;; *) backups="${workdir:-$(pwd)}/${backups#./}" ;; esac
+  pre_upgrade_bundles() { find "$backups" -mindepth 2 -maxdepth 2 -type d -name '*-pre-upgrade' 2>/dev/null | sort; }
+  bundles_before=$(pre_upgrade_bundles)
+
   backup_status=0
   # shellcheck disable=SC2086
   SURE_HOST_IMAGE=$tool_image SURE_HOST_NETWORK=$upgrade_net SURE_HOST_DB=pg-upgrade-old \
@@ -1114,11 +1157,11 @@ cmd_upgrade_postgres() {
   trap upgrade_cleanup EXIT INT TERM
   [ "$backup_status" -eq 0 ] || die "the backup failed, so nothing was changed. Fix the problem above and run this again."
 
-  workdir=$(docker inspect -f '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' "$cid")
-  backups=$(env_get "${workdir:-$(pwd)}/.env" BACKUP_DIR)
-  backups=${backups:-./backups}
-  case "$backups" in /*) ;; *) backups="${workdir:-$(pwd)}/${backups#./}" ;; esac
-  bundle=$(find "$backups" -mindepth 2 -maxdepth 2 -type d -name '*-pre-upgrade' | awk -F/ '{ print $NF "\t" $0 }' | sort | tail -n 1 | cut -f2)
+  # The bundle this run created: the one that was not there before, so a
+  # leftover from an earlier attempt is never restored by mistake.
+  bundle=$(pre_upgrade_bundles | while read -r d; do
+    printf '%s\n' "$bundles_before" | grep -qxF "$d" || printf '%s\n' "$d"
+  done | tail -n 1)
   [ -n "$bundle" ] && [ -f "${bundle}/db.dump" ] || die "cannot find the backup that was just taken in ${backups}; nothing was changed"
   bundle_id="$(basename "$(dirname "$bundle")")/$(basename "$bundle")"
 
