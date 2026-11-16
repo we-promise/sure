@@ -8,9 +8,10 @@ module IbkrAccount::DataHelpers
   # Flex Query without the Multiplier field gets IBKR's bond multiplier.
   BOND_MULTIPLIER = BigDecimal("0.01")
 
-  # A bond is tracked under this prefix and its IBKR symbol (Trades carry no
-  # ISIN), which keeps it off a listed security that shares the symbol, and
-  # off that security's prices.
+  # A bond is tracked under this prefix, its IBKR symbol and its contract id
+  # (conid), as "BOND:<symbol>:<conid>". Trades carry no ISIN, and two bonds
+  # can share a symbol, so the conid keeps them apart. The prefix keeps a bond
+  # off a listed security that shares the symbol, and off that security's prices.
   BOND_TICKER_PREFIX = "BOND:"
 
   # No price provider quotes a bond per 100 face, so a bond is offline and
@@ -114,9 +115,10 @@ module IbkrAccount::DataHelpers
     # savepoint keeps a lost create race from aborting the import around it.
     def resolve_bond_security(data)
       symbol = data[:symbol].to_s.strip.upcase
-      return nil if symbol.blank?
+      conid = data[:conid].to_s.strip
+      return nil if symbol.blank? || conid.blank?
 
-      ticker = "#{BOND_TICKER_PREFIX}#{symbol}"
+      ticker = "#{BOND_TICKER_PREFIX}#{symbol}:#{conid}"
       Security.find_by(ticker: ticker) || Security.transaction(requires_new: true) do
         Security.create!(
           ticker: ticker,

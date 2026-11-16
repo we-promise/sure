@@ -47,7 +47,7 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("180"), fund.cost_basis
 
     # 10,000 face at 98.50% of par, counted in units of 100 face.
-    bond = holding_for("BOND:SURCO 3 1/2 06/15/30")
+    bond = holding_for("BOND:SURCO 3 1/2 06/15/30:900003")
     assert_equal BigDecimal("100"), bond.qty
     assert_equal BigDecimal("98.5"), bond.price
     assert_equal BigDecimal("9850"), bond.amount
@@ -78,12 +78,50 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
 
     process!
 
-    bond = Security.find_by!(ticker: "BOND:SURCO 3 1/2 06/15/30")
+    bond = Security.find_by!(ticker: "BOND:SURCO 3 1/2 06/15/30:900003")
     assert_not_equal listed, bond
     assert bond.offline?
     assert_equal "ibkr_bond", bond.offline_reason
     assert_equal "SURCO 3 1/2 06/15/30", bond.name
     assert_empty @account.holdings.where(security: listed)
+  end
+
+  test "two bonds sharing a symbol are kept apart by their contract id" do
+    bond_position = @statement[:open_positions].find { |row| row["conid"] == "900003" }
+    @statement[:open_positions] << bond_position.merge(
+      "conid" => "900007", "security_id" => "XX0000000052", "position" => "5000",
+      "mark_price" => "101.00", "position_value" => "5050.00",
+      "cost_basis_price" => "99.00", "cost_basis_money" => "4950.00"
+    )
+    bond_trade = @statement[:trades].find { |row| row["conid"] == "900003" }
+    @statement[:trades] << bond_trade.merge(
+      "trade_id" => "9105", "transaction_id" => "9105a", "conid" => "900007",
+      "quantity" => "5000", "trade_price" => "99.00", "proceeds" => "-4950.00"
+    )
+    @statement[:cash_transactions] << @statement[:cash_transactions].first.merge(
+      "transaction_id" => "9202", "amount" => "-7.00", "conid" => "900007"
+    )
+
+    process!
+
+    bonds = @account.holdings.joins(:security).where(date: @report_date, securities: { offline_reason: "ibkr_bond" })
+    assert_equal [ BigDecimal("5050"), BigDecimal("9850") ], bonds.map(&:amount).sort
+
+    first = holding_for("BOND:SURCO 3 1/2 06/15/30:900003")
+    assert_equal BigDecimal("100"), first.qty
+    assert_equal BigDecimal("9850"), first.amount
+    assert_equal BigDecimal("97.25"), first.cost_basis
+
+    second = holding_for("BOND:SURCO 3 1/2 06/15/30:900007")
+    assert_equal BigDecimal("50"), second.qty
+    assert_equal BigDecimal("5050"), second.amount
+    assert_equal BigDecimal("99"), second.cost_basis
+    assert_not_equal first.security, second.security
+
+    assert_equal first.security, @account.entries.find_by!(external_id: "ibkr_trade_9102").entryable.security
+    assert_equal second.security, @account.entries.find_by!(external_id: "ibkr_trade_9105").entryable.security
+    assert_equal first.security.id, @account.entries.find_by!(external_id: "ibkr_cash_9201").entryable.extra["security_id"]
+    assert_equal second.security.id, @account.entries.find_by!(external_id: "ibkr_cash_9202").entryable.extra["security_id"]
   end
 
   test "a bond without the multiplier field is counted per 100 face" do
@@ -92,7 +130,7 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
 
     process!
 
-    bond = holding_for("BOND:SURCO 3 1/2 06/15/30")
+    bond = holding_for("BOND:SURCO 3 1/2 06/15/30:900003")
     assert_equal BigDecimal("100"), bond.qty
     assert_equal BigDecimal("9850"), bond.amount
 
@@ -115,8 +153,8 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("5"), bond_trade.entryable.fee
     # IBKR's proceeds (9725) plus the commission.
     assert_equal BigDecimal("9730"), bond_trade.amount
-    assert_equal "Buy 100.0 units of BOND:SURCO 3 1/2 06/15/30", bond_trade.name
-    assert_equal holding_for("BOND:SURCO 3 1/2 06/15/30").security, bond_trade.entryable.security
+    assert_equal "Buy 100.0 units of BOND:SURCO 3 1/2 06/15/30:900003", bond_trade.name
+    assert_equal holding_for("BOND:SURCO 3 1/2 06/15/30:900003").security, bond_trade.entryable.security
   end
 
   test "accrued interest paid on a bond lands on the bond's security" do
@@ -124,7 +162,7 @@ class IbkrAccount::FundsAndBondsTest < ActiveSupport::TestCase
 
     entry = @account.entries.find_by!(external_id: "ibkr_cash_9201")
     assert_equal "Interest", entry.entryable.investment_activity_label
-    assert_equal Security.find_by!(ticker: "BOND:SURCO 3 1/2 06/15/30").id, entry.entryable.extra["security_id"]
+    assert_equal Security.find_by!(ticker: "BOND:SURCO 3 1/2 06/15/30:900003").id, entry.entryable.extra["security_id"]
   end
 
   test "positions and trades of unsupported types are reported, one entry each" do

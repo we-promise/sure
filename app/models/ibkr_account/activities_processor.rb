@@ -360,7 +360,7 @@ class IbkrAccount::ActivitiesProcessor
       source = security_row_for_conid(row[:conid])
       return nil if source.nil?
 
-      resolve_security(source.slice(:symbol, :asset_category, :description))
+      resolve_security(source.slice(:symbol, :conid, :asset_category, :description))
     end
 
     def security_symbol_for_conid(conid)
