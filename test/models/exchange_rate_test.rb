@@ -84,6 +84,16 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal 0.16, ExchangeRate.find_by!(from_currency: "KZT", to_currency: "RUB", date: date).rate.to_f
   end
 
+  test "does not ask Yahoo for the USD legs when its single lookup failed on authentication" do
+    ExchangeRate.delete_all
+    yahoo = Provider::YahooFinance.new
+    ExchangeRate.stubs(:provider).returns(yahoo)
+    auth = Provider::YahooFinance::AuthenticationError.new("no crumb")
+    yahoo.expects(:fetch_exchange_rates).once.returns(provider_error_response(auth))
+
+    assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
+  end
+
   test "does not derive and cache a pair the provider has quoted before when it fails" do
     ExchangeRate.delete_all
     ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
