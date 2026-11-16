@@ -1759,6 +1759,47 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert third.suppressed, "the arriving units are in market, so the day cannot be a return"
   end
 
+  # A zero-priced row can be stored in a currency other than the first priced
+  # row's. Reading only that currency, the carry found the earlier priced row,
+  # took nothing as repriced from zero, and the units held at nothing came back
+  # as a market gain. A zero-priced row in another currency leaves the carry
+  # incomplete instead.
+  test "a zero priced row in another currency suppresses the first priced day" do
+    day_three = @day_two + 1.day
+    holding_snapshot account: @account, date: @day_one, qty: 5, price: 10, cost_basis: 10
+    lay_balance account: @account, date: @day_one, opening: 1_050, closing: 1_050
+    lay_balance account: @account, date: @day_two, opening: 1_050, closing: 1_000, market_flow: -50
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_100, market_flow: 100
+    security_journal account: @account, date: @day_two, qty: 5, currency: "EUR", price: 0, holding_qty: 10
+    # The priced row gapfill can leave beside it on the same date.
+    @account.holdings.create!(security: security_under_test, date: @day_two, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 10, price: 10,
+                              amount: 100, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert third.suppressed, "the 5 units held at nothing on day two are not a return"
+  end
+
+  # The other side: when the zero-priced row in another currency holds only
+  # what the journal brought in, every repriced unit is a flow and the day is
+  # valued, not suppressed.
+  test "a journal whose zero priced row is in another currency is carried in full" do
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: day_three, opening: 1_000, closing: 1_050, market_flow: 50
+    security_journal account: @account, date: @day_two, qty: 5, currency: "EUR", price: 0
+    @account.holdings.create!(security: security_under_test, date: day_three, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    third = daily_returns(end_date: day_three).rows.last
+
+    assert_not third.suppressed
+    assert_equal BigDecimal("50"), third.external_flow
+  end
+
   # Units journalled in from outside and journalled out again before any price
   # are gone; units arriving later from another selected account are not them.
   # Counting the first journal's gross quantity carried the internal arrival

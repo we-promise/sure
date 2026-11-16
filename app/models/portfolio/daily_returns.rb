@@ -750,16 +750,18 @@ class Portfolio::DailyReturns
             LIMIT 1
           ) first_priced ON TRUE
           -- The row the first priced day opens from: the last one before it,
-          -- in the same currency. Its units are repriced from zero only when it
-          -- is itself priced at zero.
+          -- in any currency, since a quantity does not depend on one and the
+          -- journal's zero price can be stored in the trade's currency rather
+          -- than the price's. On a date with rows in several currencies a
+          -- zero-priced one is read first, then the first priced row's. Its
+          -- units are repriced from zero only when it is itself priced at zero.
           LEFT JOIN LATERAL (
             SELECT h.date, h.qty, h.price
             FROM holdings h
             WHERE h.account_id = entries.account_id
               AND h.security_id = trades.security_id
-              AND h.currency = first_priced.currency
               AND h.date < first_priced.date
-            ORDER BY h.date DESC
+            ORDER BY h.date DESC, (h.price <= 0) DESC, (h.currency = first_priced.currency) DESC, h.currency
             LIMIT 1
           ) before_priced ON TRUE
           LEFT JOIN LATERAL (
