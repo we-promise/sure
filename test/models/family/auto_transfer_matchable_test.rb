@@ -329,6 +329,43 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
   end
 
+  # A route the user confirmed is a stronger signal than the categories, which an
+  # auto-categorizer can get wrong on one leg.
+  test "auto-matches a cross-currency pair with different categories on a confirmed route" do
+    load_family_currency_rates
+    confirm_transfer!(from: @depository, to: @other_asset)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP", category: categories(:food_and_drink))
+    inflow = create_transaction(date: Date.current, account: @other_asset, amount: -680, currency: "CAD", category: categories(:income))
+
+    assert_difference -> { Transfer.count } => 1 do
+      @family.auto_match_transfers!
+    end
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  # The category filter removes one row, not the inflow's slot: the greedy matcher
+  # then takes the next eligible candidate, as it does after a rejected pair.
+  test "a category-blocked cross-currency candidate leaves the inflow to the next eligible one" do
+    load_exchange_prices
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    inflow = create_transaction(date: Date.current, account: @credit_card, amount: -700, currency: "CAD", category: categories(:income))
+    blocked_outflow = create_transaction(date: Date.current, account: @depository, amount: 500, category: categories(:food_and_drink))
+    next_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 505)
+
+    # Without the category filter the blocked outflow, one day closer, ranks first.
+    unfiltered = @family.transfer_match_candidates(include_rejected: false, restrict_cross_currency_to_linked_accounts: true, require_common_writer: true)
+    assert_equal [ blocked_outflow.entryable_id, next_outflow.entryable_id ],
+                 unfiltered.select { |c| c.inflow_transaction_id == inflow.entryable_id }.map(&:outflow_transaction_id)
+
+    @family.auto_match_transfers!
+
+    assert Transfer.exists?(inflow_transaction_id: inflow.entryable_id, outflow_transaction_id: next_outflow.entryable_id)
+    assert_not Transfer.exists?(outflow_transaction_id: blocked_outflow.entryable_id)
+  end
+
   test "auto-matches a cross-currency pair when either leg is uncategorized" do
     load_exchange_prices
     link_account!(@depository)
