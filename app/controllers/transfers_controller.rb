@@ -359,10 +359,17 @@ class TransfersController < ApplicationController
       @new_transfer_idempotency_key ||= submitted_idempotency_key || SecureRandom.uuid
     end
 
+    # Runs as a before_action, before `new` and `create` assign
+    # @from_account_id, so the source is also read from the request. A hidden
+    # source account stays selectable when the transfer starts from it.
     def set_accounts
+      source_account_id = @from_account_id.presence ||
+        params[:from_account_id].presence ||
+        params.dig(:transfer, :from_account_id).presence
+
       @accounts = accessible_accounts
         .active
-        .selectable_or_including(@from_account_id)
+        .selectable_or_including(source_account_id)
         .alphabetically
         .includes(
           :account_providers,

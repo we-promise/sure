@@ -90,10 +90,10 @@
 
         <div class="flex items-center justify-between gap-2">
           <div>
-            <span class="text-sm"><%= t(".hidden_label") %></span>
-            <p class="text-xs text-secondary"><%= t(".hidden_hint") %></p>
+            <%= form.label :hidden, t(".hidden_label"), class: "text-sm" %>
+            <p id="account_hidden_hint" class="text-xs text-secondary"><%= t(".hidden_hint") %></p>
           </div>
-          <%= form.toggle :hidden %>
+          <%= form.toggle :hidden, aria: { describedby: "account_hidden_hint" } %>
         </div>
       </div>
     </details>

@@ -32,11 +32,10 @@
             <% end %>
 
             <% if account.hidden? %>
-              <%= render DS::Tooltip.new(text: t("accounts.account.hidden_indicator"), as: :span) do |tooltip| %>
-                <% tooltip.with_trigger do %>
-                  <%= icon("archive", class: "w-3.5 h-3.5 text-secondary") %>
-                <% end %>
-              <% end %>
+              <%= render DS::Tooltip.new(
+                    text: t("accounts.account.hidden_indicator"),
+                    trigger_content: icon("archive", class: "w-3.5 h-3.5 text-secondary")
+                  ) %>
             <% end %>
 
             <% if account.shared? %>

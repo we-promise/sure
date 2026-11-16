@@ -22,6 +22,7 @@ class PlansController < ApplicationController
     @linkable_account_count = Current.user.accessible_accounts
                                      .where(accountable_type: Goal::FUNDABLE_ACCOUNT_TYPES)
                                      .visible
+                                     .selectable
                                      .count
 
     @breadcrumbs = [ [ t("breadcrumbs.home"), root_path ], [ t("breadcrumbs.plan"), nil ] ]
