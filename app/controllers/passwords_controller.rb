@@ -42,8 +42,9 @@ class PasswordsController < ApplicationController
       redirect_to root_path, alert: t("passwords.disabled")
     end
 
-    # A missing or null current password becomes "", so the model always
-    # checks it; nil would skip that validation.
+    # User skips the current-password check when password_challenge is nil,
+    # and a JSON null or a bare form key without "=" both arrive as nil, so
+    # always pass a string here.
     def password_params
       permitted = params.require(:user).permit(:password, :password_confirmation, :password_challenge)
       permitted.merge(password_challenge: permitted[:password_challenge].to_s)
