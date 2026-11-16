@@ -37,7 +37,7 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     @user.setup_mfa!
     totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
 
-    post mfa_path, params: { code: totp.now }
+    post mfa_path, params: { code: totp.now, password: user_password_test }
 
     assert_response :success
     assert @user.reload.otp_required?
@@ -48,16 +48,89 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
     assert_equal 8, rendered_codes.length
     assert rendered_codes.all? { |code| code.match?(/\A[0-9a-f]{16}\z/) }
     assert_empty rendered_codes & @user.otp_backup_codes
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_enabled")
+  end
+
+  test "does not enable MFA when the audit log write fails" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+    SecurityAuditLog.stubs(:log_mfa_enabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    post mfa_path, params: { code: totp.now }
+
+    assert_redirected_to new_mfa_path
+    assert_not @user.reload.otp_required?
+    assert_empty @user.otp_backup_codes
+  end
+
+  # A double-click or browser resubmit replays the correct enrollment code;
+  # before the guard this fell into disable_mfa! and wiped the whole setup.
+  test "resubmitting the enrollment code does not tear down the finished setup" do
+    @user.setup_mfa!
+    code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+
+    post mfa_path, params: { code: code, password: user_password_test }
+    assert_response :success
+    assert @user.reload.otp_required?
+
+    @user.webauthn_credentials.create!(
+      nickname: "Touch ID",
+      credential_id: "touch-id-credential",
+      public_key: "public-key"
+    )
+
+    post mfa_path, params: { code: code }
+
+    assert_redirected_to root_path
+    @user.reload
+    assert @user.otp_required?, "MFA must stay enabled"
+    assert_equal 8, @user.otp_backup_codes.length
+    assert @user.webauthn_credentials.exists?, "WebAuthn credentials must survive"
+  end
+
+  # Same replay, but caught before the first submit finished enabling MFA
+  # (the otp_required? guard cannot help yet): keep the pending secret so
+  # the user can enter the next code instead of restarting setup.
+  test "a replayed enrollment code keeps the pending secret" do
+    @user.setup_mfa!
+    code = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances").now
+    assert @user.verify_otp?(code), "simulates the concurrent submit that claimed the step first"
+    secret = @user.otp_secret
+
+    post mfa_path, params: { code: code, password: user_password_test }
+
+    assert_redirected_to new_mfa_path
+    assert_equal I18n.t("mfa.create.code_already_used"), flash[:alert]
+    @user.reload
+    assert_equal secret, @user.otp_secret, "the pending secret must survive"
+    assert_not @user.otp_required?
   end
 
   test "does not enable MFA with invalid code" do
     @user.setup_mfa!
 
-    post mfa_path, params: { code: "invalid" }
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid", password: user_password_test }
+    end
 
     assert_redirected_to new_mfa_path
     assert_not @user.reload.otp_required?
     assert_empty @user.otp_backup_codes
+  end
+
+  test "create refuses to touch an already-enabled MFA even with a wrong code" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    assert @user.otp_required?
+
+    assert_no_difference "SecurityAuditLog.count" do
+      post mfa_path, params: { code: "invalid" }
+    end
+
+    assert_redirected_to root_path
+    assert @user.reload.otp_required?
+    assert @user.otp_secret.present?
   end
 
   test "verify shows MFA verification page" do
@@ -297,24 +370,136 @@ class MfaControllerTest < ActionDispatch::IntegrationTest
       public_key: "public-key"
     )
 
-    delete disable_mfa_path
+    delete disable_mfa_path, params: { password: user_password_test }
 
     assert_redirected_to settings_security_path
     assert_not @user.reload.otp_required?
     assert_nil @user.otp_secret
     assert_empty @user.otp_backup_codes
     assert_empty @user.webauthn_credentials
+
+    assert SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
+  end
+
+  test "disable while impersonating attributes the audit entry to the impersonator, not the victim" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    sign_out
+
+    impersonator = users(:sure_support_staff)
+    sign_in impersonator
+    post join_impersonation_sessions_path, params: { impersonation_session_id: impersonation_sessions(:in_progress).id }
+    assert_response :redirect
+
+    delete disable_mfa_path, params: { password: user_password_test }
+
+    log = SecurityAuditLog.find_by(user: @user, event_type: "mfa_disabled")
+    assert_not_nil log
+    assert_equal impersonator.id, log.metadata["actor_user_id"]
+  end
+
+  test "still disables MFA when the audit log write fails" do
+    # Log-and-continue, not transactional: a failed audit write must not
+    # block turning off a security control the user is actively trying to
+    # disable (e.g. because they believe it's compromised).
+    @user.setup_mfa!
+    @user.enable_mfa!
+    @user.webauthn_credentials.create!(
+      nickname: "YubiKey",
+      credential_id: "disable-mfa-audit-fail-credential",
+      public_key: "public-key"
+    )
+    SecurityAuditLog.stubs(:log_mfa_disabled!).raises(ActiveRecord::RecordInvalid.new(SecurityAuditLog.new))
+
+    delete disable_mfa_path, params: { password: user_password_test }
+
+    assert_redirected_to settings_security_path
+    assert_not @user.reload.otp_required?
+    assert_nil @user.otp_secret
+    assert_empty @user.webauthn_credentials
+    assert_not SecurityAuditLog.exists?(user: @user, event_type: "mfa_disabled")
+  end
+
+
+  # Turning MFA on or off is a change to how the account is protected, so it
+  # asks for the password. Without it, anyone who walks up to an unlocked
+  # session can strip the second factor.
+  test "enabling MFA requires the password" do
+    @user.setup_mfa!
+    totp = ROTP::TOTP.new(@user.otp_secret, issuer: "Sure Finances")
+
+    post mfa_path, params: { code: totp.now, password: "wrong-password" }
+
+    assert_redirected_to new_mfa_path
+    assert_not @user.reload.otp_required?
+  end
+
+  test "a wrong password while enabling does not discard the setup in progress" do
+    @user.setup_mfa!
+    secret = @user.otp_secret
+    totp = ROTP::TOTP.new(secret, issuer: "Sure Finances")
+
+    post mfa_path, params: { code: totp.now, password: "wrong-password" }
+
+    assert_equal secret, @user.reload.otp_secret, "the in-progress secret must survive a wrong password"
+  end
+
+  test "disabling MFA requires the password" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+
+    delete disable_mfa_path, params: { password: "wrong-password" }
+
+    assert_redirected_to settings_security_path
+    assert @user.reload.otp_required?, "MFA must stay on"
+  end
+
+  # A user with no local password can never satisfy that prompt, so the MFA
+  # pages are closed to them rather than left as a dead end. Visiting /mfa/new
+  # would otherwise call setup_mfa! and strand an otp_secret they cannot
+  # finish wiring up.
+  test "a user without a local password cannot reach the MFA pages" do
+    identity = oidc_identities(:sso_only_identity)
+    sso_user = identity.user
+    sign_in_through_sso(identity)
+
+    get new_mfa_path
+    assert_redirected_to settings_security_path
+    assert_nil sso_user.reload.otp_secret, "no half-finished secret may be left behind"
+
+    delete disable_mfa_path
+    assert_redirected_to settings_security_path
   end
 
   private
+    # The SSO-only fixture has no password, so the normal sign_in helper, which
+    # posts to /sessions, cannot be used. Sign in the way that user actually
+    # would, through the identity provider.
+    def sign_in_through_sso(identity)
+      @user.sessions.destroy_all
+      OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new(
+        provider: identity.provider,
+        uid: identity.uid,
+        info: { email: identity.user.email, name: identity.user.display_name },
+        credentials: {}
+      )
+      get "/auth/openid_connect/callback"
+      assert Session.exists?(user_id: identity.user_id), "the SSO sign-in must establish a session"
+    ensure
+      OmniAuth.config.mock_auth[:openid_connect] = nil
+    end
+
     def register_webauthn_credential(origin: "http://www.example.com", rp_id: "www.example.com")
       client = WebAuthn::FakeClient.new(origin)
 
-      post options_settings_webauthn_credentials_path, as: :json
+      # A backup code confirms the registration so the current TOTP step stays
+      # free for the sign-in steps these tests go on to exercise.
+      code = @user.enable_mfa!.first
+      post options_settings_webauthn_credentials_path, params: { webauthn_credential: { code: code } }, as: :json
       options = JSON.parse(response.body)
       credential = client.create(challenge: options.fetch("challenge"), rp_id: rp_id)
       post settings_webauthn_credentials_path, params: {
-        webauthn_credential: { nickname: "MacBook Touch ID" },
+        webauthn_credential: { nickname: "MacBook Touch ID", code: code },
         credential: credential
       }, as: :json
       assert_response :success

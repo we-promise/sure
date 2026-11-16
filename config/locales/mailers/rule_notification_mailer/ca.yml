@@ -1,0 +1,16 @@
+---
+ca:
+  rule_notification_mailer:
+    digest:
+      subject:
+        one: '%{count} transacció nova coincideix amb la teva regla a %{product_name}'
+        other: '%{count} transaccions noves coincideixen amb la teva regla a %{product_name}'
+      heading:
+        one: '%{count} transacció nova coincideix amb la teva regla'
+        other: '%{count} transaccions noves coincideixen amb la teva regla'
+      intro: 'Aquestes transaccions coincideixen amb la regla «%{rule}»:'
+      date: Data
+      name: Nom
+      account: Compte
+      amount: Import
+      cta: Mostra les transaccions

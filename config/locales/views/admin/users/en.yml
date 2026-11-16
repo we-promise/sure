@@ -21,8 +21,6 @@ en:
           trial_expiring_soon: "Expiring in 7 days"
           trial_trialing: "On trial"
           submit: "Filter"
-        summary:
-          trials_expiring_7_days: "Trials expiring in next 7 days"
         table:
           user: "User"
           trial_ends_at: "Trial ends"
@@ -94,6 +92,7 @@ en:
         failure: "Failed to update user details (role or family/group membership)."
         family_required: "Select an existing family/group or enter a name for a new one."
         password_and_family_conflict: "Password and family/group membership cannot be updated at the same time."
+        password_disabled: "Setting a password is disabled because users can only sign in with SSO."
         password_too_short: "Password must be at least 8 characters long."
         password_missing_case: "Password must include both uppercase and lowercase letters."
         password_missing_number: "Password must include at least one number."

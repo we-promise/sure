@@ -42,7 +42,6 @@ es:
       subtitle: Esto es lo que está pasando con tus finanzas
       new: Nuevo
       sections_aria_label: Secciones del panel
-      drag_to_reorder: Arrastra para reordenar la sección
       toggle_section: Alternar visibilidad de la sección
       widget_size:
         label: Ajustar tamaño
@@ -74,6 +73,11 @@ es:
         classifications:
           asset: Activos
           liability: Pasivos
+      cashflow_preview:
+        node_labels:
+          cash_flow: "Flujo de caja"
+          surplus: "Superávit"
+          deficit: "Déficit"
       cashflow_sankey:
         title: Flujo de caja
         zoom_out: Volver al flujo de caja completo

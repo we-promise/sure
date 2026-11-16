@@ -1,41 +1,43 @@
 <%= content_for :page_title, t(".page_title") %>
 <%= content_for :page_actions do %>
-  <% if @rules.any? %>
-    <%= render DS::Menu.new do |menu| %>
-      <% menu.with_item(
-        variant: "button",
-        text: t("rules.clear_ai_cache.button"),
-        href: clear_ai_cache_rules_path,
-        icon: "refresh-cw",
-        method: :post,
-        confirm: CustomConfirm.new(
-          title: t("rules.clear_ai_cache.confirm_title"),
-          body: t("rules.clear_ai_cache.confirm_body"),
-          btn_text: t("rules.clear_ai_cache.confirm_button")
-        )) %>
-      <% menu.with_item(
-        variant: "button",
-        text: t(".delete_all_rules"),
-        href: destroy_all_rules_path,
-        icon: "trash-2",
-        method: :delete,
-        confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
+  <% unless Current.user&.guest? %>
+    <% if @rules.any? %>
+      <%= render DS::Menu.new do |menu| %>
+        <% menu.with_item(
+          variant: "button",
+          text: t("rules.clear_ai_cache.button"),
+          href: clear_ai_cache_rules_path,
+          icon: "refresh-cw",
+          method: :post,
+          confirm: CustomConfirm.new(
+            title: t("rules.clear_ai_cache.confirm_title"),
+            body: t("rules.clear_ai_cache.confirm_body"),
+            btn_text: t("rules.clear_ai_cache.confirm_button")
+          )) %>
+        <% menu.with_item(
+          variant: "button",
+          text: t(".delete_all_rules"),
+          href: destroy_all_rules_path,
+          icon: "trash-2",
+          method: :delete,
+          confirm: CustomConfirm.for_resource_deletion("all rules", high_severity: true)) %>
+      <% end %>
+      <%= render DS::Link.new(
+        text: t("rules.apply_all.button"),
+        variant: "secondary",
+        href: confirm_all_rules_path,
+        icon: "play",
+        frame: :modal
+      ) %>
     <% end %>
     <%= render DS::Link.new(
-      text: t("rules.apply_all.button"),
-      variant: "secondary",
-      href: confirm_all_rules_path,
-      icon: "play",
+      text: t(".new_rule"),
+      variant: "primary",
+      href: new_rule_path(resource_type: "transaction"),
+      icon: "plus",
       frame: :modal
     ) %>
   <% end %>
-  <%= render DS::Link.new(
-    text: t(".new_rule"),
-    variant: "primary",
-    href: new_rule_path(resource_type: "transaction"),
-    icon: "plus",
-    frame: :modal
-  ) %>
 <% end %>
 
 <% if self_hosted? %>
@@ -47,36 +49,50 @@
   </div>
 <% end %>
 <div class="bg-container rounded-xl shadow-border-xs p-4">
-  <% if @rules.any? %>
-    <div class="bg-container-inset rounded-xl">
-      <div class="flex justify-between px-4 py-2 text-xs uppercase">
-        <div class="flex items-center gap-1.5 font-medium text-secondary">
-          <p><%= t(".rules_heading") %></p>
-          <span class="text-subdued">&middot;</span>
-          <p><%= @rules.count %></p>
-        </div>
-        <div class="flex items-center gap-1">
-          <span class="text-secondary"><%= t(".sort_by") %></span>
-          <%= form_with url: rules_path, method: :get, local: true, class: "flex items-center", data: { controller: "auto-submit-form" } do |form| %>
-            <%= form.select :sort_by,
-                      options_for_select([[t(".sort_name"), "name"], [t(".sort_updated_at"), "updated_at"]], @sort_by),
-                      {},
-                      class: "min-w-[120px] bg-transparent rounded border-none cursor-pointer text-primary uppercase text-xs w-auto",
-                      data: { auto_submit_form_target: "auto", autosubmit_trigger_event: "change" } %>
-            <%= form.hidden_field :direction, value: @direction %>
+  <% if @layout.items.any? %>
+    <%# A refresh (e.g. after a rule's switch saves) morphs the page back to
+      the server's open groups and unfiltered rows; filter() applies the
+      search, filters and stored folds again. %>
+    <div data-controller="rules-filter" data-action="turbo:morph@window->rules-filter#filter">
+      <%= render "rules/filters", list_filter: @list_filter, groups: @layout.groups %>
+
+      <div class="bg-container-inset rounded-xl">
+        <div class="flex justify-between items-center px-4 py-2">
+          <div class="flex items-center gap-1.5 text-xs uppercase font-medium text-secondary">
+            <p><%= t(".rules_heading") %></p>
+            <span class="text-subdued">&middot;</span>
+            <p><%= @rules.size %></p>
+          </div>
+          <% unless Current.user&.guest? %>
+            <%= render DS::Link.new(
+              text: t(".new_group"),
+              variant: "ghost",
+              size: "sm",
+              href: new_rule_group_path,
+              icon: "folder-plus",
+              frame: :modal
+            ) %>
           <% end %>
-          <%= render DS::Link.new(
-            href: rules_path(direction: @direction == "asc" ? "desc" : "asc", sort_by: @sort_by),
-            variant: "icon",
-            icon: "arrow-up-down",
-            size: :sm,
-            title: t(".toggle_sort_direction")
-          ) %>
         </div>
-      </div>
-      <div class="p-1">
-        <div class="flex flex-col bg-container rounded-lg shadow-border-xs">
-          <%= render partial: "rule", collection: @rules, spacer_template: "shared/ruler" %>
+        <p class="px-4 pb-2 text-sm text-secondary"><%= t(".order_hint") %></p>
+        <p class="hidden px-4 pb-2 text-sm text-secondary" data-rules-filter-target="dragHint"><%= t(".filters.drag_disabled") %></p>
+        <div class="p-1">
+          <div class="flex flex-col bg-container rounded-lg shadow-border-xs divide-y divide-subdued"
+               data-controller="sortable-list"
+               data-sortable-list-url-value="<%= reorder_rules_path %>"
+               data-sortable-list-param-value="items"
+               data-action="dragover->sortable-list#dragOver drop->sortable-list#drop"
+               role="list"
+               aria-label="<%= t(".rules_heading") %>">
+            <% @layout.items.each do |item| %>
+              <% if item.group? %>
+                <%= render "rules/group", item: item, list_filter: @list_filter %>
+              <% else %>
+                <%= render "rules/list_rule", rule: item.rule, sortable_id: item.key, list_filter: @list_filter, foldable: true %>
+              <% end %>
+            <% end %>
+          </div>
+          <p class="hidden px-4 py-6 text-sm text-center text-secondary" data-rules-filter-target="empty"><%= t(".filters.no_matches") %></p>
         </div>
       </div>
     </div>
@@ -85,15 +101,17 @@
       <div class="text-center flex flex-col items-center max-w-[500px]">
         <p class="text-sm text-primary font-medium mb-1"><%= t(".no_rules_title") %></p>
         <p class="text-sm text-secondary mb-4"><%= t(".no_rules_description") %></p>
-        <div class="flex items-center gap-2">
-          <%= render DS::Link.new(
-            text: t(".new_rule"),
-            variant: "primary",
-            href: new_rule_path(resource_type: "transaction"),
-            icon: "plus",
-            frame: :modal
-          ) %>
-        </div>
+        <% unless Current.user&.guest? %>
+          <div class="flex items-center gap-2">
+            <%= render DS::Link.new(
+              text: t(".new_rule"),
+              variant: "primary",
+              href: new_rule_path(resource_type: "transaction"),
+              icon: "plus",
+              frame: :modal
+            ) %>
+          </div>
+        <% end %>
       </div>
     </div>
   <% end %>
@@ -140,9 +158,7 @@
                 <%= run.executed_at.strftime("%b %d, %Y %I:%M %p") %>
               </td>
               <td class="px-4 py-3 text-sm text-primary text-center">
-                <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium <%= run.execution_type == "manual" ? "bg-blue-50 text-blue-700 theme-dark:bg-blue-950/30 theme-dark:text-blue-400" : "bg-purple-50 text-purple-700 theme-dark:bg-purple-950/30 theme-dark:text-purple-400" %>">
-                  <%= t("rules.recent_runs.execution_types.#{run.execution_type}") %>
-                </span>
+                <%= render DS::Pill.new(label: t("rules.recent_runs.execution_types.#{run.execution_type}"), tone: run.execution_type == "manual" ? :indigo : :violet, marker: false) %>
               </td>
               <td class="px-4 py-3 text-sm text-center">
                 <div class="flex items-center justify-center gap-2">

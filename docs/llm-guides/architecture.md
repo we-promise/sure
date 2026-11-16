@@ -40,7 +40,12 @@ preferred currency is used to normalize reports; it does not mean every stored
 amount is already in that currency. [Money](../../lib/money.rb) handles monetary
 operations and formatting, with [ExchangeRate](../../app/models/exchange_rate.rb)
 and its [Provided concern](../../app/models/exchange_rate/provided.rb) supplying
-dated conversion rates.
+dated conversion rates. `Money` never converts on its own: adding, subtracting,
+dividing or ordering two amounts in different currencies raises
+`Money::CurrencyMismatchError` in development and test (production reports it
+and keeps the old result). Convert with `exchange_to(currency, date:)` first,
+at the date that fits the figure. Mixed-currency paths are covered in
+[test/integration/mixed_currency_test.rb](../../test/integration/mixed_currency_test.rb).
 
 ## Accounts, balances and entries
 

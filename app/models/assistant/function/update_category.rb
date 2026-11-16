@@ -6,11 +6,15 @@ class Assistant::Function::UpdateCategory < Assistant::Function
 
     def description
       <<~INSTRUCTIONS
-        Updates an existing category's name, color, or icon.
+        Updates an existing category's name, color, icon, or parent.
 
         Use get_categories first to find the category id. At least one of name, color,
-        or icon must be supplied. Changing a parent's color does not cascade to existing
-        subcategories (their colors are set at creation time).
+        icon, or parent_id must be supplied. Changing a parent's color also changes the color
+        of all its subcategories.
+
+        Pass parent_id to move the category under another top-level category (it takes the
+        parent's color), or pass an empty string to make it a top-level category. A category
+        that has subcategories cannot itself become a subcategory.
       INSTRUCTIONS
     end
   end
@@ -38,6 +42,10 @@ class Assistant::Function::UpdateCategory < Assistant::Function
         icon: {
           type: "string",
           description: "New Lucide icon name (optional)"
+        },
+        parent_id: {
+          type: "string",
+          description: "ID of a top-level category to move this category under, or an empty string to make it top-level (optional)"
         }
       }
     )
@@ -53,7 +61,19 @@ class Assistant::Function::UpdateCategory < Assistant::Function
     attrs[:color] = params["color"].to_s.strip if params["color"].present?
     attrs[:lucide_icon] = params["icon"].to_s.strip if params["icon"].present?
 
-    return error("no_changes", "Provide at least one of name, color, or icon to update.") if attrs.empty?
+
+    # Only an empty string promotes to top-level; null counts as omitted, and
+    # any other value must be the id of a category in the family.
+    if params["parent_id"] == ""
+      attrs[:parent] = nil
+    elsif !params["parent_id"].nil?
+      parent = family.categories.find_by(id: params["parent_id"]) if valid_uuid?(params["parent_id"])
+      return error("parent_not_found", "Parent category with id '#{params["parent_id"]}' not found.") unless parent
+      return error("invalid_parent", "A category cannot be its own parent.") if parent == category
+      attrs[:parent] = parent
+    end
+
+    return error("no_changes", "Provide at least one of name, color, icon, or parent_id to update.") if attrs.empty?
 
     if category.update(attrs)
       { success: true, category: serialize(category), message: "Category '#{category.name_with_parent}' updated." }

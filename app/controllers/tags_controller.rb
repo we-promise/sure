@@ -1,8 +1,10 @@
 class TagsController < ApplicationController
+  before_action :require_non_guest!, except: %i[index]
   before_action :set_tag, only: %i[edit update destroy]
 
   def index
-    @tags = Current.family.tags.alphabetically
+    @tags = Current.family.tags.alphabetically.to_a
+    @tag_ids_with_transactions = Tag.ids_with_transactions(family: Current.family, tag_ids: @tags.map(&:id))
 
     render layout: "settings"
   end

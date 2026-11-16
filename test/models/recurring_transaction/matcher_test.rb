@@ -173,6 +173,20 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     end
   end
 
+  # Pausing keeps the open leftover, and a late payment must still reach it:
+  # the window of an overdue leftover runs to today, paused or not.
+  test "a late payment still matches a paused bill's overdue leftover" do
+    series = create_series(name: "POWER CO", amount: 60, day_offset: -20)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    series.mark_inactive!
+    assert_not occurrence.overdue?
+    entry = create_entry(amount: 60, date: Date.current, name: "POWER CO")
+
+    @matcher.run!
+
+    assert_equal entry, occurrence.allocations.sole.entry
+  end
+
   test "backfill mode writes confirmed history only, never suggestions" do
     series = create_series(name: "CITY WATER", amount: 80, day_offset: -7)
     exact_series = create_series(name: "POWER CO", amount: 60, day_offset: 2)
@@ -199,6 +213,35 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     @matcher.repair_orphans!
 
     assert_equal replacement.id, allocation.reload.entry_id
+  end
+
+  test "repair re-attaches a recurring transfer's payment by its account pair, not its name" do
+    series = create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    original = create_transfer(amount: 500, date: Date.current, to: accounts(:loan), name: "LOAN DD 1234")
+    @matcher.run!
+    allocation = occurrence.allocations.sole
+
+    original.destroy!
+    assert_nil allocation.reload.entry_id
+
+    create_transfer(amount: 500, date: allocation.paid_on, to: accounts(:credit_card), name: "LOAN DD 1234")
+    replacement = create_transfer(amount: 500, date: allocation.paid_on, to: accounts(:loan), name: "REF 998877")
+    Matcher.new(@family).repair_orphans!
+
+    assert_equal replacement.id, allocation.reload.entry_id
+  end
+
+  test "candidate collection looks up no transfer per ordinary charge" do
+    create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    create_transfer(amount: 500, date: Date.current, to: accounts(:loan))
+    3.times { |i| create_entry(amount: 500, date: Date.current - i, name: "charge #{i}") }
+
+    lookups = 0
+    count_lookups = ->(*, payload) { lookups += 1 if payload[:sql].match?(/FROM "transfers".*LIMIT/m) }
+    ActiveSupport::Notifications.subscribed(count_lookups, "sql.active_record") { @matcher.run! }
+
+    assert_equal 0, lookups, "the batch preload already answers every entry in the window"
   end
 
   test "manually attaching an alien-named entry teaches an alias" do
@@ -319,14 +362,68 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert_nil allocation.reload.entry_id, "a stranger with the same price is not the bill"
   end
 
+  test "a recurring transfer is paid by the transfer into its destination account" do
+    series = create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    outflow = create_transfer(amount: 500, date: Date.current, to: accounts(:loan))
+
+    assert_equal 1, @matcher.run!
+
+    allocation = occurrence.allocations.sole
+    assert allocation.allocation_confirmed?
+    assert_equal outflow.id, allocation.entry_id
+    assert allocation.match_signals.key?("transfer")
+    assert occurrence.reload.paid?
+  end
+
+  test "a recurring transfer ignores transfers into another account and plain charges" do
+    series = create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    create_transfer(amount: 500, date: Date.current, to: accounts(:credit_card))
+    create_entry(amount: 500, date: Date.current, name: "Payment to Loan")
+
+    assert_equal 0, @matcher.run!
+    assert_empty series.recurring_occurrences.flat_map(&:allocations)
+  end
+
+  test "an ordinary bill never matches a transfer leg, even with the same name" do
+    series = create_series(name: "MORTGAGE DD", amount: 500, day_offset: 0)
+    create_transfer(amount: 500, date: Date.current, to: accounts(:loan), name: "MORTGAGE DD")
+
+    assert_equal 0, @matcher.run!
+    assert_empty series.recurring_occurrences.flat_map(&:allocations)
+  end
+
+  test "backfill closes a recurring transfer's past occurrence from its transfer" do
+    series = create_series(name: "Payment to Loan", amount: 500, day_offset: -30, destination: accounts(:loan))
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    create_transfer(amount: 500, date: occurrence.due_on, to: accounts(:loan))
+
+    @matcher.run_backfill!
+
+    assert occurrence.reload.paid?
+  end
+
+  test "explain scores a recurring transfer's own transfer and refuses others" do
+    series = create_series(name: "Payment to Loan", amount: 500, day_offset: 0, destination: accounts(:loan))
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    own = create_transfer(amount: 500, date: Date.current, to: accounts(:loan))
+    other = create_transfer(amount: 500, date: Date.current, to: accounts(:credit_card))
+
+    explanation = Matcher.new(@family).explain(occurrence, own)
+    assert_operator explanation.confidence, :>=, Matcher::EXACT_TIER
+    assert explanation.signals.key?(:transfer)
+    assert_nil Matcher.new(@family).explain(occurrence, other)
+  end
+
   private
-    def create_series(amount:, day_offset:, name: nil, merchant: nil, dedup_scope: "", preset: "monthly", bill_type: "bill")
+    def create_series(amount:, day_offset:, name: nil, merchant: nil, dedup_scope: "", preset: "monthly", bill_type: "bill", destination: nil)
       due = Date.current + day_offset
 
       series = @family.recurring_transactions.create!(
         name: name,
         merchant: merchant,
         account: @account,
+        destination_account: destination,
         amount: amount,
         currency: "USD",
         bill_type: bill_type,
@@ -345,6 +442,18 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
       end
 
       series
+    end
+
+    # The outflow leg of a confirmed transfer from @account into `to`.
+    def create_transfer(amount:, date:, to:, name: "Transfer")
+      outflow = create_entry(amount: amount, date: date, name: name)
+      outflow.entryable.update!(kind: "loan_payment")
+      inflow = to.entries.create!(
+        date: date, amount: -amount, currency: "USD", name: name,
+        entryable: Transaction.new(kind: "funds_movement")
+      )
+      Transfer.create!(outflow_transaction: outflow.entryable, inflow_transaction: inflow.entryable, status: "confirmed")
+      outflow
     end
 
     def create_entry(amount:, date:, name: "charge", merchant: nil, extra: {})

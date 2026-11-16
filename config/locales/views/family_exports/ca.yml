@@ -41,8 +41,13 @@ ca:
         actions:
           delete: Elimina
           download: Descarrega
+          mark_failed: Marca com a fallida
+          confirm_mark_failed: Aquesta exportació fa estona que està inactiva i probablement la seva tasca en segon pla es va interrompre. Vols marcar-la com a fallida? Podràs crear una exportació nova immediatament.
         status:
           complete: Completat
           failed: Error
           in_progress: En curs
       title: Exportacions
+    cancel:
+      cancelled: Exportació marcada com a fallida. Ja pots crear una exportació nova.
+      not_cancellable: 'Ara mateix no es pot marcar aquesta exportació com a fallida: pot ser que la seva tasca encara s''estigui executant. Torna-ho a provar quan porti una hora inactiva.'

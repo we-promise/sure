@@ -20,7 +20,7 @@ tr:
       save: Paylaşım ayarlarını kaydet
       shared: Paylaşıldı
       shared_with_count:
-        one: 1 üyeyle paylaşıldı
+        one: "%{count} üyeyle paylaşıldı"
         other: "%{count} üyeyle paylaşıldı"
       subtitle: Bu hesabı kimlerin görüp etkileşime girebileceğini kontrol edin
       title: Hesap Paylaşımı

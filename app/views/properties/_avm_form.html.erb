@@ -1,6 +1,8 @@
 <%# locals: (account:, provider_key:) %>
 
 <% provider_name = t("properties.avm_providers.#{provider_key}") %>
+<% provider = avm_provider_class(provider_key) %>
+<% uk = provider&.supported_country == "GB" %>
 
 <%= render DS::Dialog.new do |dialog| %>
   <% dialog.with_header(title: t("properties.new.avm_title", provider: provider_name)) %>
@@ -26,23 +28,35 @@
                                       required: true %>
           <div class="flex items-center gap-2">
             <%= address_form.text_field :locality,
-                                      label: t("properties.form.locality"),
-                                      placeholder: t("properties.form.locality_placeholder"),
-                                      required: true %>
+                                      label: uk ? t("properties.new.avm_town_label") : t("properties.form.locality"),
+                                      placeholder: uk ? nil : t("properties.form.locality_placeholder"),
+                                      required: provider.nil? || provider.required_address_fields.include?(:locality) %>
             <%= address_form.text_field :region,
-                                      label: t("properties.form.region"),
-                                      placeholder: t("properties.form.region_placeholder"),
-                                      required: true %>
+                                      label: uk ? t("properties.new.avm_county_label") : t("properties.form.region"),
+                                      placeholder: uk ? nil : t("properties.form.region_placeholder"),
+                                      required: provider.nil? || provider.required_address_fields.include?(:region) %>
           </div>
           <div class="flex items-center gap-2">
             <%= address_form.text_field :postal_code,
-                                        label: t("properties.form.postal_code"),
-                                        placeholder: t("properties.form.postal_code_placeholder"),
+                                        label: uk ? t("properties.new.avm_postcode_label") : t("properties.form.postal_code"),
+                                        placeholder: uk ? nil : t("properties.form.postal_code_placeholder"),
                                         required: true %>
           </div>
         <% end %>
 
-        <p class="text-sm text-secondary"><%= t("properties.new.avm_us_only", provider: provider_name) %></p>
+        <% if provider&.requires_external_id? %>
+          <%= form.fields_for :property, Property.new(avm_external_id: @avm_external_id) do |property_form| %>
+            <%= property_form.text_field :avm_external_id,
+                                         label: t("properties.new.avm_uprn_label"),
+                                         placeholder: t("properties.new.avm_uprn_placeholder"),
+                                         help_text: t("properties.new.avm_uprn_help", provider: provider_name),
+                                         inputmode: "numeric",
+                                         autocomplete: "off",
+                                         required: true %>
+          <% end %>
+        <% end %>
+
+        <p class="text-sm text-secondary"><%= uk ? t("properties.new.avm_uk_only", provider: provider_name) : t("properties.new.avm_us_only", provider: provider_name) %></p>
       </div>
 
       <div class="flex justify-end mt-4">

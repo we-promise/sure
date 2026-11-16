@@ -178,6 +178,7 @@ de:
       connection_name_label: Name der Verbindung
       connection_name_placeholder: Geschäftskonto
       default_connection_name: Mercury-Verbindung
+      disconnect: Trennen
       disconnect_confirm: "%{name} trennen?"
       instructions:
         copy_token_html: Kopier den <strong>vollständigen Token</strong> samt Präfix <code>secret-token:</code> und füg ihn unten als benannte Verbindung hinzu

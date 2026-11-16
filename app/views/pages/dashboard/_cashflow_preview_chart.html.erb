@@ -1,0 +1,36 @@
+<%# locals: (period:) %>
+<div
+  data-controller="preview-sankey-chart"
+  data-action="turbo:before-cache@document->preview-sankey-chart#clear"
+  data-cash-flow-target="chart"
+  data-preview-sankey-chart-labels-value="<%= t("pages.dashboard.cashflow_preview.node_labels").to_json %>"
+  data-preview-sankey-chart-start-date-value="<%= period.start_date&.iso8601 %>"
+  data-preview-sankey-chart-end-date-value="<%= period.end_date&.iso8601 %>"
+  class="w-full min-w-0 h-full privacy-sensitive flex flex-col gap-2">
+  <div class="flex items-center justify-between gap-2 px-4">
+    <%= render DS::Button.new(
+      variant: :icon,
+      icon: "arrow-left",
+      type: "button",
+      title: t("pages.dashboard.cashflow_sankey.zoom_out"),
+      aria: { label: t("pages.dashboard.cashflow_sankey.zoom_out") },
+      hidden: true,
+      data: {
+        preview_sankey_chart_target: "zoomOutButton",
+        action: "preview-sankey-chart#zoomOut"
+      }
+    ) %>
+    <%# Remembered per browser; "auto" keeps d3-sankey's crossing-minimising layout. %>
+    <%= render DS::SegmentedControl.new(aria_label: t("pages.dashboard.cashflow_preview.sort_label"), class: "ml-auto") do |sc| %>
+      <% { "auto" => "sort_auto", "ascending" => "sort_ascending", "descending" => "sort_descending" }.each do |order, key| %>
+        <% sc.with_segment(
+             t("pages.dashboard.cashflow_preview.#{key}"),
+             active: order == "auto",
+             class: "text-xs",
+             data: { preview_sankey_chart_target: "sortSegment", sort_order: order, action: "preview-sankey-chart#setSort" }
+           ) %>
+      <% end %>
+    <% end %>
+  </div>
+  <div data-preview-sankey-chart-target="chart" class="min-h-0 flex-1"></div>
+</div>

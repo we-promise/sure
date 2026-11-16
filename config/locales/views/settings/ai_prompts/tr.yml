@@ -1,0 +1,42 @@
+---
+tr:
+  settings:
+    ai_prompts:
+      show:
+        disable_ai: Yapay Zeka Asistanını Devre Dışı Bırak
+        main_system_prompt:
+          subtitle: Yapay zeka asistanının tüm sohbet konuşmalarında nasıl davrandığını
+            tanımlayan temel talimatlar
+          title: Ana Sistem İstemi
+          label: Sohbet sistem istemi
+        merchant_detector:
+          subtitle: Yapay zeka, işlem verilerini satıcı bilgileriyle tanımlar ve zenginleştirir
+          title: Satıcı Algılayıcı
+        openai_label: OpenAI
+        page_title: Yapay Zeka İstemleri
+        prompt_instructions: İstem Talimatları
+        transaction_categorizer:
+          subtitle: Yapay zeka, tanımladığınız kategorilere göre işlemlerinizi otomatik
+            olarak kategorilendirir
+          title: İşlem Kategorileyici
+        save: İstemleri kaydet
+        save_confirm:
+          title: Özel yapay zeka istemleri kaydedilsin mi?
+          body: Özel istemler, aileniz için yerleşik sistem talimatlarının ve güvenlik önlemlerinin (finansal tavsiye kısıtlamaları gibi) yerini alır.
+          dont_show_again: Bu uyarıyı bir daha gösterme
+          cancel: İptal
+          confirm: Onayla
+      prompt_field:
+        provider_label: Sağlayıcı
+        prompt_label: İstem
+        provider_openai: OpenAI
+        provider_anthropic: Anthropic
+        reset: Varsayılana sıfırla
+        reset_confirm_title: Varsayılan isteme sıfırlansın mı?
+        reset_confirm_body: Bu işlem özel isteminizi silecek ve yerleşik varsayılan talimatları geri yükleyecektir.
+        status_custom: Özel isteminiz kullanılıyor
+        status_default: Yerleşik varsayılan kullanılıyor
+        format_risk: '%{provider} isteminizden {"%{key}": ...} örneği çıkarılmış. Her istek yine bu biçimi istediği için ayrıştırma genellikle çalışır, ancak farklı bir çıktı biçimi isteyen bir özelleştirme bunu bozar.'
+      update:
+        success: Yapay zeka istemleri güncellendi
+        multiple_errors: Birden fazla istem çok uzun (en fazla %{count} karakter)

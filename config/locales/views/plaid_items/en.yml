@@ -1,10 +1,76 @@
 ---
 en:
   plaid_items:
+    auto_link_opener:
+      create_failed: We couldn't confirm this connection was added. Reload the page to
+        check before trying again.
     create:
+      already_connected: You already have a connection for this institution, so this
+        one wasn't added.
+      exchange_failed: We couldn't add this connection. Try again, and if the problem
+        continues, check the server logs.
       success: Account linked successfully.  Please wait for accounts to sync.
+      token_expired: This connection expired before it was added. Connect the institution
+        again.
     destroy:
       success: Accounts scheduled for deletion.
+    duplicate_warning:
+      close: Close
+      confirm: Confirm this connection
+      connected_by: Connected by %{name}
+      eu_no_add_accounts: Plaid doesn't support adding accounts to an existing
+        EU connection. To change which accounts are connected, remove this one and
+        add it again.
+      linked_on: Linked %{date}
+      manage_connection: Go to accounts
+      mask: "****%{mask}"
+      no_accounts: No accounts have synced from this connection yet.
+      overlap:
+        all_connected:
+          one: The account you tried to add is already connected, so adding it again
+            would only create a duplicate.
+          other: The %{count} accounts you tried to add are all already connected, so
+            adding them again would only create duplicates.
+        different_login: To connect a different %{institution} login, choose New account
+          again, and sign in with that login through Plaid.
+        more_accounts: To add more accounts to this connection, close this and choose
+          Add accounts on the %{institution} connection.
+        others_connected:
+          one: Sure already has this account through %{name}'s connection, so adding
+            yours would only create a duplicate.
+          other: Sure already has these accounts through %{name}'s connection, so adding
+            yours would only create duplicates.
+        others_connected_several:
+          one: Sure already has this account through other members' connections, so
+            adding yours would only create a duplicate.
+          other: Sure already has these accounts through other members' connections, so
+            adding yours would only create duplicates.
+        none_connected: None of the accounts you tried to add are connected yet, so this
+          is likely a different login. Adding it only counts as another Plaid connection.
+        some_connected:
+          connected:
+            one: The other one is already connected, so adding this connection would
+              duplicate it and count as another Plaid connection.
+            other: The other %{count} are already connected, so adding this connection
+              would duplicate them and count as another Plaid connection.
+          unconnected:
+            one: "One account you tried to add isn't connected yet:"
+            other: "%{count} accounts you tried to add aren't connected yet:"
+        unknown:
+          one: These accounts can't be checked against your existing connection. If
+            they're the same accounts, adding this connection would duplicate them and
+            count as another Plaid connection.
+          other: These accounts can't be checked against your existing connections. If
+            they're the same accounts, adding this connection would duplicate them and
+            count as another Plaid connection.
+      title:
+        one: You already have a connection for this institution
+        other: You already have %{count} connections for this institution
+      title_all_connected: You've already made this connection
+      title_others_connected:
+        one: This account is already connected
+        other: These accounts are already connected
+      update_existing: Update existing connection
     errors:
       link_token_generic: We couldn't open Plaid right now. Please try again, and
         if the problem persists check the server logs for details.
@@ -25,6 +91,7 @@ en:
       no_accounts_description: We could not load any accounts from this financial
         institution.
       no_accounts_title: No accounts found
+      provider_name: Plaid
       requires_update: Reconnect
       status: Last synced %{timestamp} ago
       status_never: Requires data sync

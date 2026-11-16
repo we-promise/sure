@@ -267,7 +267,7 @@ zh-TW:
         notes_placeholder: 留給未來的自己的提醒...
         funding_accounts: 資金帳戶
         funding_accounts_hint: 這個目標的餘額，就是這些帳戶的餘額（或其中指定的部分）。
-        whole_balance: 全部餘額
+        whole_balance: "留空即全部餘額"
         earmark_for: 為 %{account} 指定金額
         earmark_hint: 把金額留白，就會把該帳戶的全部餘額都投入這個目標。
       subtypes:

@@ -1,3 +1,4 @@
+<%# locals: (redirect_to: "home") %>
 <div class="rounded-lg p-4 bg-container shadow-border-xs">
   <div class="flex justify-center mb-4">
     <%= render "chats/ai_avatar" %>
@@ -16,7 +17,7 @@
   <% if Current.user.ai_available? %>
     <%= form_with url: user_path(Current.user), method: :patch, class: "w-full", data: { turbo: false } do |form| %>
       <%= form.hidden_field "user[ai_enabled]", value: true %>
-      <%= form.hidden_field "user[redirect_to]", value: "home" %>
+      <%= form.hidden_field "user[redirect_to]", value: redirect_to %>
       <%= form.submit t(".enable_button"), class: "cursor-pointer hover:bg-inverse-hover w-full py-2 px-4 bg-inverse text-inverse rounded-lg text-sm font-medium" %>
     <% end %>
   <% end %>

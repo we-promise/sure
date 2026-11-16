@@ -83,11 +83,14 @@ class ExchangeRate::Importer
     inverse_rates = gapfilled_rates.filter_map do |row|
       next if row[:rate].to_f <= 0
 
+      inverse = inverse_rate(row[:rate])
+      next unless inverse
+
       {
         from_currency: row[:to_currency],
         to_currency: row[:from_currency],
         date: row[:date],
-        rate: (BigDecimal("1") / BigDecimal(row[:rate].to_s)).round(12)
+        rate: inverse
       }
     end
 
@@ -235,15 +238,26 @@ class ExchangeRate::Importer
         next if existing_inverse_dates.include?(rate.date)
         next if rate.rate.to_f <= 0
 
+        inverse = inverse_rate(rate.rate)
+        next unless inverse
+
         {
           from_currency: to,
           to_currency: from,
           date: rate.date,
-          rate: (BigDecimal("1") / BigDecimal(rate.rate.to_s)).round(12)
+          rate: inverse
         }
       end
 
       upsert_rows(inverse_rows) if inverse_rows.any?
+    end
+
+    # Inverses are stored to 12 decimal places, so a forward rate above 1e12
+    # rounds its inverse to zero. That pair is skipped rather than stored as the
+    # zero rate ExchangeRate.valid_rate? rejects.
+    def inverse_rate(rate)
+      inverse = (BigDecimal("1") / BigDecimal(rate.to_s)).round(12)
+      inverse if ExchangeRate.valid_rate?(inverse)
     end
 
     def all_rates_exist?

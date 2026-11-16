@@ -1,0 +1,19 @@
+require "test_helper"
+require Rails.root.join("lib/job_usage_tracking")
+
+class JobUsageTrackingTest < ActiveSupport::TestCase
+  test "server execution captures without forwarding job metadata and preserves return value" do
+    Usage.expects(:capture).with("job_served_daily").once
+    result = JobUsageTracking.new.call(Object.new, { "class" => "PrivateJob", "args" => [ "private" ] }, "private_queue") { :done }
+    assert_equal :done, result
+  end
+
+  test "failed execution and retries reach the daily claim and retain the job error" do
+    Usage.expects(:capture).with("job_served_daily").twice
+    2.times do
+      assert_raises(ArgumentError) do
+        JobUsageTracking.new.call(nil, {}, nil) { raise ArgumentError, "job failed" }
+      end
+    end
+  end
+end

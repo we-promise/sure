@@ -1,0 +1,9 @@
+checking:
+  fio_item: one
+  fio_account_id: "2400222222"
+  name: "Fio banka 2400222222"
+  bank_id: "2010"
+  iban: "CZ7920100000002400222222"
+  bic: "FIOBCZPPXXX"
+  currency: CZK
+  current_balance: 195.01

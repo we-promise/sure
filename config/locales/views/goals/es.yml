@@ -268,7 +268,7 @@ es:
         notes_placeholder: Un recordatorio para tu yo del futuro…
         funding_accounts: Cuentas de financiación
         funding_accounts_hint: El saldo de este objetivo es el saldo (o la parte reservada) de estas cuentas.
-        whole_balance: Saldo completo
+        whole_balance: "Vacío: todo el saldo"
         earmark_for: Importe reservado para %{account}
         earmark_hint: Deja un importe en blanco para dedicar todo el saldo de esa cuenta.
       subtypes:

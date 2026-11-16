@@ -75,6 +75,7 @@ hu:
       connection_name_label: Kapcsolat neve
       connection_name_placeholder: Üzleti folyószámla
       default_connection_name: Mercury kapcsolat
+      disconnect: Lecsatlakozás
       disconnect_confirm: "%{name} lecsatlakoztatása?"
       instructions:
         copy_token_html: "Másold ki a <strong>teljes tokent</strong> (beleértve a <code>secret-token:</code> előtagot), és add hozzá alább elnevezett kapcsolatként"

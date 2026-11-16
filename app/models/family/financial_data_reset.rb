@@ -24,6 +24,7 @@ class Family::FinancialDataReset
     balances
     recurring_transactions
     rules
+    rule_groups
     rule_actions
     rule_conditions
     rule_runs
@@ -39,39 +40,14 @@ class Family::FinancialDataReset
     active_storage_attachments
   ].freeze
   STATUS_COUNT_KEYS = (COUNT_KEYS - %i[syncs]) + %i[plaid_items]
-  PROVIDER_ITEM_ASSOCIATIONS = %i[
-    binance_items
-    brex_items
-    coinbase_items
-    coinstats_items
-    enable_banking_items
-    ibkr_items
-    indexa_capital_items
-    kraken_items
-    questrade_items
-    lunchflow_items
-    redbark_items
-    mercury_items
-    onchain_wallet_items
-    plaid_items
-    simplefin_items
-    snaptrade_items
-    sophtron_items
-    up_items
-    monobank_items
-  ].freeze
 
   Result = Struct.new(:user, :family, :dry_run, :before_counts, :deleted_counts, :after_counts, keyword_init: true)
 
   class << self
+    # The same associations the family sync runs, so a provider is reset as
+    # soon as it is synced.
     def provider_item_associations
-      PROVIDER_ITEM_ASSOCIATIONS.select do |association_name|
-        association = Family.reflect_on_association(association_name)
-
-        association&.klass&.included_modules&.include?(Syncable)
-      rescue NameError
-        false
-      end
+      Family::Syncer.syncable_item_associations
     end
   end
 
@@ -154,11 +130,13 @@ class Family::FinancialDataReset
       scope(:account_providers).destroy_all
       scope(:recurring_transactions).destroy_all
       scope(:rules).destroy_all
+      scope(:rule_groups).destroy_all
       scope(:budgets).destroy_all
       scope(:categories).destroy_all
       scope(:tags).destroy_all
       scope(:merchants).destroy_all
       delete_provider_items!
+      family.financekit_account_lineages.destroy_all
       scope(:accounts).destroy_all
     end
 
@@ -281,6 +259,7 @@ class Family::FinancialDataReset
           balances: Balance.where(account_id: account_ids),
           recurring_transactions: RecurringTransaction.where(family_id: family.id),
           rules: rule_scope,
+          rule_groups: RuleGroup.where(family_id: family.id),
           rule_actions: Rule::Action.where(rule_id: rule_ids),
           rule_conditions: Rule::Condition.where(rule_id: rule_ids),
           rule_runs: RuleRun.where(rule_id: rule_ids),

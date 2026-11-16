@@ -1,0 +1,17 @@
+<%# locals: (form:) %>
+
+<div class="p-2 space-y-3">
+  <% Transaction::Search::ATTACHMENT_STATUSES.each do |status| %>
+    <div class="flex items-center gap-3" data-filter-name="<%= status %>">
+      <%= form.check_box :attachment_status,
+                             {
+                               multiple: true,
+                               checked: @q[:attachment_status]&.include?(status),
+                               class: "checkbox checkbox--light"
+                             },
+                             status,
+                             nil %>
+      <%= form.label :attachment_status, t(".#{status}"), value: status, class: "text-sm text-primary" %>
+    </div>
+  <% end %>
+</div>

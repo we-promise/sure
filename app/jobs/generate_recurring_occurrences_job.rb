@@ -31,7 +31,7 @@ class GenerateRecurringOccurrencesJob < ApplicationJob
       # Shares the pipeline's per-family lock so the nightly sweep and the
       # sync-triggered pipeline serialize against each other.
       RecurringTransaction::Pipeline.with_family_lock(family_id) do
-        family.recurring_transactions.active.find_each do |series|
+        family.recurring_transactions.active.includes(:recurrence_rules).find_each do |series|
           RecurringTransaction::OccurrenceGenerator.new(series).generate!
         end
       end

@@ -13,6 +13,18 @@ ru:
       subtype_prompt: Выберите тип кредита
       term_months: Срок (месяцы)
       term_months_placeholder: '360'
+      rate_type_adjustable: Пересматриваемая
+      rate_type_fixed: Фиксированная
+      rate_type_variable: Плавающая
+      rate_changes: Изменения ставки
+      rate_changes_hint: Каждая строка задаёт ставку, действующую с даты вступления в силу до следующей строки. Повторный ввод той же даты заменяет строку, а не добавляет вторую.
+      rate_changes_empty: Изменения ставки не записаны. Кредит обслуживается по указанной выше процентной ставке.
+      rate_change_effective_date: Дата вступления в силу
+      rate_change_rate: Ставка
+      rate_change_add: Добавить изменение ставки
+      rate_change_remove: Удалить
+      start_date: Дата выдачи
+      start_date_hint: Когда кредит был выдан. Оставьте пустым, чтобы использовать дату открытия счёта.
     new:
       title: Введите детали кредита
     overview:
@@ -24,6 +36,7 @@ ru:
       term: Срок
       type: Тип
       unknown: Неизвестно
+      original_payoff_date: Первоначальная дата погашения
     tabs:
       overview:
         edit_loan_details: Редактировать детали кредита
@@ -35,3 +48,17 @@ ru:
         term: Срок
         type: Тип
         unknown: Неизвестно
+        original_payoff_date: Первоначальная дата погашения
+      schedule:
+        date: Дата
+        description: Рассчитано по первоначальной сумме, ставке и сроку, начиная с %{start_date}. Досрочные платежи не учитываются.
+        variable_rate_notice: Ставка по этому кредиту меняется со временем. При каждом записанном изменении график пересчитывается с сохранением первоначальной даты погашения и изменением размера платежа; ещё не записанное изменение сдвинет эти цифры.
+        opening_payment: Первый платёж
+        interest: Проценты
+        monthly_payment: Ежемесячный платёж
+        number: №
+        payment: Платёж
+        principal: Основной долг
+        remaining_balance: Остаток долга
+        total_cost: Общая сумма выплат
+        total_interest: Всего процентов

@@ -91,6 +91,7 @@ tr:
       connection_name_label: Bağlantı adı
       connection_name_placeholder: İşletme vadesiz hesabı
       default_connection_name: Mercury Bağlantısı
+      disconnect: Bağlantıyı kes
       disconnect_confirm: "%{name} bağlantısı kesilsin mi?"
       instructions:
         copy_token_html: "<strong>Tam token'ı</strong> (<code>secret-token:</code>

@@ -1,0 +1,24 @@
+---
+en:
+  settings:
+    payments:
+      show:
+        page_title: Payments
+        subscription_subtitle: Update your credit card details
+        subscription_title: Manage contributions
+        currently_on_plan: "Currently on the"
+        trialing: "Currently using the open demo of %{product_name}"
+        trial_days_left:
+          one: "Data will be deleted in %{count} day"
+          other: "Data will be deleted in %{count} days"
+        not_contributing_prefix: "You are currently"
+        not_contributing_emphasis: "not contributing"
+        contributions_note: "Contributions to %{product_name} will show here."
+        manage: "Manage"
+        choose_level: "Choose level"
+        payment_via_stripe: "Payment via Stripe"
+  views:
+    settings:
+      payments:
+        renewal: "Your contribution continues on %{date}."
+        cancellation: "Your contribution ends on %{date}."

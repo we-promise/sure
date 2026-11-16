@@ -28,6 +28,12 @@ class EnableBankingAccount::Transactions::Processor
     # merchant queries for every imported row.
     shared_known_merchant_names = enable_banking_account.current_account&.family&.known_merchant_names || []
 
+    # Same reasoning: read once per sync batch. Scoped to the rows stored under a
+    # synthesised content hash, which are the only ones a later identifier can
+    # claim, so this does not grow with the account's history.
+    shared_identifierless_external_ids =
+      EnableBankingEntry::Processor.identifierless_external_ids_for(enable_banking_account.current_account)
+
     # Pre-fetch external_ids that must not be re-imported.
     # One query per category per sync; O(1) Set lookup per transaction — avoids N+1.
     excluded_ids = if enable_banking_account.current_account
@@ -72,14 +78,32 @@ class EnableBankingAccount::Transactions::Processor
                                     .compact
                                     .to_set
 
-      manually_merged_ids | auto_claimed_ids
+      # 3. Superseded: rows whose synthesised external_id was claimed by the same
+      #    movement arriving later with an identifier the ASPSP had not yet
+      #    assigned. The stored raw payload still holds the identifierless row, so
+      #    without this it would be reimported as a separate transaction.
+      superseded_ids = Transaction.joins(:entry)
+                                  .where(entries: { account_id: account_id })
+                                  .where("transactions.extra ? 'superseded_external_ids'")
+                                  .joins(
+                                    Arel.sql(<<~SQL.squish)
+                                      CROSS JOIN LATERAL jsonb_array_elements_text(
+                                        transactions.extra->'superseded_external_ids'
+                                      ) AS superseded_id
+                                    SQL
+                                  )
+                                  .pluck(Arel.sql("superseded_id"))
+                                  .compact
+                                  .to_set
+
+      manually_merged_ids | auto_claimed_ids | superseded_ids
     else
       Set.new
     end
 
-    enable_banking_account.raw_transactions_payload.each_with_index do |transaction_data, index|
+    rows_in_import_order.each do |transaction_data, index|
       begin
-        ext_id = EnableBankingEntry::Processor.compute_external_id(transaction_data)
+        ext_id = external_ids[index]
 
         if ext_id && excluded_ids.include?(ext_id)
           Rails.logger.info("EnableBankingAccount::Transactions::Processor - Skipping re-import of manually merged pending transaction: #{ext_id}")
@@ -91,7 +115,10 @@ class EnableBankingAccount::Transactions::Processor
           transaction_data,
           enable_banking_account: enable_banking_account,
           import_adapter: shared_adapter,
-          known_merchant_names: shared_known_merchant_names
+          known_merchant_names: shared_known_merchant_names,
+          identifierless_external_ids: shared_identifierless_external_ids,
+          excluded_external_ids: excluded_ids,
+          external_id: ext_id
         ).process
 
         if result.nil?
@@ -99,6 +126,16 @@ class EnableBankingAccount::Transactions::Processor
           errors << { index: index, transaction_id: transaction_data[:transaction_id], error: "No linked account" }
         else
           imported_count += 1
+
+          # An identifierless row just stored under its content hash becomes
+          # claimable by the same movement appearing later in this very batch
+          # carrying the identifier the ASPSP has since assigned. Pending rows stay
+          # out, as they do in identifierless_external_ids_for: their settlement
+          # belongs to ProviderImportAdapter's pending->booked reconciliation.
+          if ext_id && EnableBankingEntry::Processor.identifierless?(transaction_data) &&
+             !EnableBankingEntry::Processor.pending_payload?(transaction_data)
+            shared_identifierless_external_ids.add(ext_id)
+          end
         end
       rescue ArgumentError => e
         failed_count += 1
@@ -133,4 +170,20 @@ class EnableBankingAccount::Transactions::Processor
 
     result
   end
+
+  private
+
+    def external_ids
+      @external_ids ||= EnableBankingEntry::Processor.external_ids_for(
+        enable_banking_account.raw_transactions_payload, account: enable_banking_account.current_account
+      )
+    end
+
+    # Rows keeping their plain id go first, so a pending entry under a shared
+    # transaction_id settles into the row that keeps that id, not a same-amount sibling.
+    def rows_in_import_order
+      enable_banking_account.raw_transactions_payload.each_with_index.sort_by do |data, index|
+        [ external_ids[index] == EnableBankingEntry::Processor.compute_external_id(data) ? 0 : 1, index ]
+      end
+    end
 end

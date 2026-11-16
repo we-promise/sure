@@ -53,6 +53,7 @@ it:
       short: "%d %b"
       month_year: "%B %Y"
       short_month_year: "%b %Y"
+      short_with_year: '%d %b %Y'
     month_names:
     -
     - gennaio

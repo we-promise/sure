@@ -44,8 +44,8 @@ export function zoomSankeyData(data, rootNodeId) {
 function buildGraph(data) {
   const nodes = data?.nodes || [];
   const links = (data?.links || []).map((link) => {
-    const sourceIndex = linkIndex(link.source);
-    const targetIndex = linkIndex(link.target);
+    const sourceIndex = sankeyLinkIndex(link.source);
+    const targetIndex = sankeyLinkIndex(link.target);
 
     return {
       original: link,
@@ -77,7 +77,7 @@ function nodeId(node, index) {
   return node?.id ?? index;
 }
 
-function linkIndex(endpoint) {
+export function sankeyLinkIndex(endpoint) {
   return typeof endpoint === "object" ? endpoint.index : endpoint;
 }
 
