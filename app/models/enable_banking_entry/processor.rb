@@ -2,6 +2,7 @@ require "digest/md5"
 
 class EnableBankingEntry::Processor
   include CurrencyNormalizable
+  extend CurrencyNormalizable
   include CardAuthorizationHold
 
   # Small-merchant card terminal providers that prefix the payee with "KEYWORD *"
@@ -75,6 +76,61 @@ class EnableBankingEntry::Processor
     return nil if content.gsub("\x1F", "").blank?
 
     "#{CONTENT_ID_PREFIX}#{Digest::MD5.hexdigest(content)}"
+  end
+
+  # One external id per raw row. transaction_id is not guaranteed unique, so booked
+  # rows sharing one are told apart by entry_reference: one keeps
+  # enable_banking_<transaction_id> (the row with its own suffixed entry never does;
+  # otherwise the best match for the entry stored under the plain id, else the first),
+  # the others get enable_banking_<transaction_id>_<MD5(entry_reference)>.
+  # Pending rows keep compute_external_id.
+  #
+  # @return [Array<String, nil>]
+  def self.external_ids_for(raw_transactions, account: nil)
+    rows = raw_transactions.map(&:with_indifferent_access)
+    ids = rows.map { |data| compute_external_id(data) }
+    ref = ->(i) { rows[i][:entry_reference].to_s }
+    suffixed = ->(i) { "#{ids[i]}_#{Digest::MD5.hexdigest(ref[i])}" }
+    groups = rows.each_index.select { |i| rows[i][:transaction_id].present? && !pending_payload?(rows[i]) }.group_by { |i| ids[i] }
+    stored = account ? account.entries.where(source: "enable_banking", external_id: groups.flat_map { |id, is| [ id, *is.map(&suffixed) ] }).includes(:entryable).index_by(&:external_id) : {}
+
+    groups.each do |legacy_id, indexes|
+      free = indexes.reject { |i| stored.key?(suffixed[i]) }
+      legacy = stored[legacy_id]
+      kept = legacy&.entryable.try(:provider_entry_reference)
+      # Without a stored reference, a locked currency is the owner's change, not the bank's: match on amount and date
+      # only. On a tie the row not in the locked currency wins, since the owner changed the entry away from its row's.
+      match_currency = kept.present? || !legacy&.locked?(:currency)
+      score = ->(i) { movement_match(legacy, rows[i], account, match_currency: match_currency) }
+      other_currency = ->(i) { !match_currency && movement_match(legacy, rows[i], account).zero? ? 1 : 0 }
+      # Rows that already have a suffixed entry never take the plain id; if all do, nobody does (no duplicate).
+      owner = free.each_with_index.max_by { |i, pos| [ score[i], other_currency[i], -pos ] }&.first
+      # The plain entry stores its row's entry_reference. Without one (older entries): a sibling already has its
+      # own entry, so the plain one is another row's unless its amount matches or was edited.
+      owner = free.find { |i| ref[i] == kept } if kept && indexes.any? { |i| ref[i] == kept }
+      # A stored reference missing from the payload (re-issued, or aged out): keep the entry only on an exact match.
+      # The entry's date is not the bank's when the user locked it or a settled hold froze it: an amount match is then exact.
+      own_date = legacy && (legacy.locked?(:date) || legacy.entryable.try(:extra)&.key?("auto_claimed_pending_ids"))
+      owner = nil if kept && indexes.none? { |i| ref[i] == kept } && owner && score[owner] < (own_date ? 1 : 2)
+      owner = nil if !kept && owner && legacy && free.size < indexes.size && score[owner].zero? && !legacy.protected_from_sync? && !legacy.locked?(:amount) && !legacy.locked?(:currency)
+      indexes.each { |i| ids[i] = suffixed[i] unless owner && ref[i] == ref[owner] }
+    end
+    ids
+  end
+
+  # 2: same signed amount, currency and date as the entry; 1: same signed amount and currency; 0: neither.
+  # match_currency: false leaves the currency out.
+  def self.movement_match(entry, data, account, match_currency: true)
+    amount = data.dig(:transaction_amount, :amount).presence || data[:amount]
+    return 0 if entry.nil? || amount.blank?
+
+    signed = BigDecimal(amount.to_s).abs * (data[:credit_debit_indicator] == "CRDT" ? -1 : 1)
+    currency = parse_currency(data.dig(:transaction_amount, :currency)) || parse_currency(data[:currency]) || account.currency
+    return 0 unless entry.amount == signed && (!match_currency || entry.currency == currency)
+
+    entry.date == transaction_date(data, account.family&.timezone) ? 2 : 1
+  rescue ArgumentError, TypeError
+    0
   end
 
   # True when the ASPSP supplied no identifier of its own, so compute_external_id
@@ -235,9 +291,13 @@ class EnableBankingEntry::Processor
   # same pattern again. Both are mutated as claims happen, so a row later in the
   # same batch sees what earlier rows did -- excluded_ids in the batch processor
   # is built once, before the loop, and would otherwise be stale.
+  #
+  # external_id: this row's id from external_ids_for over the whole payload,
+  # which can differ from compute_external_id when rows share a transaction_id.
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
-                 identifierless_external_ids: nil, excluded_external_ids: nil)
+                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil)
     @enable_banking_transaction = enable_banking_transaction
+    @external_id = external_id
     @enable_banking_account = enable_banking_account
     @import_adapter = import_adapter
     @known_merchant_names = known_merchant_names
@@ -248,7 +308,7 @@ class EnableBankingEntry::Processor
   def process
     # Cache a safe diagnostic id upfront — used in all logging paths so rescue
     # blocks never call the potentially-raising private external_id method.
-    safe_id = self.class.compute_external_id(@enable_banking_transaction) || "unknown"
+    safe_id = @external_id || self.class.compute_external_id(@enable_banking_transaction) || "unknown"
 
     unless account.present?
       Rails.logger.warn "EnableBankingEntry::Processor - No linked account for enable_banking_account #{enable_banking_account.id}, skipping transaction #{safe_id}"
@@ -256,6 +316,7 @@ class EnableBankingEntry::Processor
     end
 
     claim_identifierless_predecessor!
+    skips = import_adapter.skipped_entries.size
 
     # EnableBankingAccount::Transactions::Processor re-processes the whole stored
     # payload on every sync, so a live hold passes through here once per sync until
@@ -274,6 +335,7 @@ class EnableBankingEntry::Processor
         name: name,
         source: "enable_banking",
         merchant: merchant,
+        allow_heuristic_matching: !plain_sibling_pending_match?,
         notes: notes,
         extra: extra,
         investment_activity_label: investment_activity_label
@@ -290,6 +352,7 @@ class EnableBankingEntry::Processor
       raise StandardError.new("Unexpected error importing transaction: #{e.message}")
     end
 
+    store_entry_reference(entry) if import_adapter.skipped_entries.size == skips
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
 
     entry
@@ -312,9 +375,34 @@ class EnableBankingEntry::Processor
     end
 
     def external_id
-      id = self.class.compute_external_id(data)
+      id = @external_id || self.class.compute_external_id(data)
       raise ArgumentError, "Enable Banking transaction missing required identifier (transaction_id, entry_reference, or identifiable content)" unless id
       id
+    end
+
+    # A suffixed row must not claim, through the adapter's exact-amount pending match, the
+    # pending entry still under its plain id. That entry belongs to the row keeping the plain
+    # id, and stays pending when that row skips it as protected (excluded or import-locked).
+    def plain_sibling_pending_match?
+      plain_id = self.class.compute_external_id(data)
+      return false if @external_id.nil? || @external_id == plain_id
+
+      plain = account.entries.find_by(source: "enable_banking", external_id: plain_id)
+      # The adapter tries a scheduled or manual duplicate before the pending match; keep those.
+      plain&.entryable.try(:pending?) &&
+        !import_adapter.find_scheduled_transaction(date: date, amount: amount, currency: currency) &&
+        !import_adapter.find_duplicate_transaction(date: date, amount: amount, currency: currency) &&
+        import_adapter.find_pending_transaction(date: date, amount: amount, currency: currency, source: "enable_banking") == plain
+    end
+
+    # external_ids_for reads the stored entry_reference to tell rows sharing a transaction_id
+    # apart. It has its own column, so it is not part of the details rules match on. An entry
+    # the adapter skipped as protected keeps what it had, as it keeps the rest of its data.
+    def store_entry_reference(entry)
+      reference = data[:entry_reference].to_s
+      return if reference.blank? || data[:transaction_id].blank? || pending_payload? || !entry&.entryable.is_a?(Transaction)
+
+      entry.transaction.update_column(:provider_entry_reference, reference) unless entry.transaction.provider_entry_reference == reference
     end
 
     def name
@@ -638,7 +726,7 @@ class EnableBankingEntry::Processor
       # sides avoids the two mechanisms fighting over the same row.
       return if pending_payload?
 
-      incoming = self.class.compute_external_id(data)
+      incoming = @external_id || self.class.compute_external_id(data)
       return if incoming.blank?
 
       content_id = self.class.compute_external_id(data.except(:transaction_id, :entry_reference))

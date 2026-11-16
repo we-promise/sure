@@ -978,14 +978,16 @@ class EnableBankingItem::Importer
           end
         end
 
-        existing_ids = existing_transactions.map { |tx|
-          EnableBankingEntry::Processor.compute_external_id(tx)
-        }.compact.to_set
+        # Ids are computed over stored + fetched rows together so a fetched row
+        # sharing a stored row's transaction_id, but not its entry_reference, is
+        # recognised as new (see EnableBankingEntry::Processor.external_ids_for).
+        ids = EnableBankingEntry::Processor.external_ids_for(existing_transactions + all_transactions)
+        existing_ids = ids.first(existing_transactions.size).compact.to_set
 
-        new_transactions = all_transactions.select do |tx|
-          ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
+        new_transactions = all_transactions.each_with_index.select { |_tx, index|
+          ext_id = ids[existing_transactions.size + index]
           ext_id.present? && !existing_ids.include?(ext_id)
-        end
+        }.map(&:first)
 
         if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
@@ -1011,22 +1013,36 @@ class EnableBankingItem::Importer
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
     end
 
-    # Deduplicate transactions from the Enable Banking API response.
-    # Some banks return the same logical transaction multiple times with different
-    # entry_reference IDs. We build a composite content key that includes
-    # transaction_id (when present) alongside date, amount, currency, creditor,
-    # debtor, remittance_information, and status. Per the Enable Banking API docs
-    # transaction_id is not guaranteed to be unique, so it cannot be used as
-    # the sole dedup criterion. Including it in the composite key preserves
-    # legitimately distinct transactions with identical content but different
-    # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
+    # Collapse rows the API returns more than once for the same movement.
+    #
+    # Two real same-day payments, with no transaction_id or a shared one (it is
+    # not guaranteed unique), can match on every content field and differ only
+    # in entry_reference, which Enable Banking documents as the per-account
+    # identifier of a booked entry. Booked rows with distinct references
+    # therefore stay apart, while pending and reference-less copies of the same
+    # content still collapse into them.
     def deduplicate_api_transactions(transactions)
+      reference_groups = transactions.each_with_object(Set.new) do |tx, groups|
+        tx = tx.with_indifferent_access
+        groups.add(build_transaction_content_key(tx)) if distinct_booked_reference?(tx)
+      end
+
       seen = {}
       duplicates_removed = 0
 
       result = transactions.select do |tx|
         tx = tx.with_indifferent_access
         key = build_transaction_content_key(tx)
+
+        if reference_groups.include?(key)
+          # Prefer booked rows over their otherwise identical pending/ID-less
+          # copies, regardless of which appears first in the response.
+          unless distinct_booked_reference?(tx)
+            duplicates_removed += 1
+            next false
+          end
+          key = [ key, tx[:entry_reference] ]
+        end
 
         if seen[key]
           duplicates_removed += 1
@@ -1047,9 +1063,12 @@ class EnableBankingItem::Importer
       result
     end
 
-    # Build a composite key for deduplication. Two transactions with different
-    # entry_reference values but identical content fields (including
-    # transaction_id and credit_debit_indicator) are considered duplicates.
+    def distinct_booked_reference?(tx)
+      tx[:entry_reference].present? && !EnableBankingEntry::Processor.pending_payload?(tx)
+    end
+
+    # Build the content key for deduplication. Different entry_reference values
+    # can share it; deduplicate_api_transactions decides whether they stay apart.
     # transaction_id is included as one component — not a standalone key —
     # because the Enable Banking API docs state it is not guaranteed to be
     # unique. credit_debit_indicator (CRDT/DBIT) is included because
@@ -1057,12 +1076,9 @@ class EnableBankingItem::Importer
     # and a same-day refund of the same amount would produce identical keys.
     # status (BOOK/PDNG) is intentionally excluded: the same logical transaction
     # may appear as PDNG then BOOK across imports and must not create duplicates.
-    # Known limitation: when transaction_id is nil for both, pure content
-    # comparison applies. This means two genuinely distinct transactions
-    # with identical content (same date, amount, direction, creditor, etc.)
-    # and no transaction_id would collapse to one. In practice, banks that
-    # omit transaction_id rarely produce such exact duplicates in the same
-    # API response; timestamps or remittance info usually differ. (Issue #954)
+    # Identical real operations share this key; their booked references tell
+    # them apart (EnableBankingEntry::Processor.external_ids_for gives rows
+    # sharing a transaction_id their own ids).
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
