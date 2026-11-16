@@ -104,8 +104,8 @@ id:
       maintained_goal_depleted: "%{goal} saat ini memiliki %{saved} dari %{target} yang seharusnya dipertahankan. Kurang %{missing} dari target."
       subscription_audit: "%{name} (%{amount}) belum muncul sejak jatuh tempo pada %{expected_on}. Langganan mungkin telah dibatalkan, atau tanggal tagihan telah bergeser."
       savings_rate_change:
-        up: Dari %{from_month} hingga %{to_month} Anda menabung %{current_rate}% dari pendapatan Anda, naik %{change_pp} poin persentase dari %{previous_rate}% pada tiga bulan sebelumnya.
-        down: Dari %{from_month} hingga %{to_month} Anda menabung %{current_rate}% dari pendapatan Anda, turun %{change_pp} poin persentase dari %{previous_rate}% pada tiga bulan sebelumnya.
+        up: Dari %{from_month} hingga %{to_month} tingkat tabungan Anda terhadap pendapatan bulanan biasa Anda adalah %{current_rate}%, naik %{change_pp} poin persentase dari %{previous_rate}% pada tiga bulan sebelumnya.
+        down: Dari %{from_month} hingga %{to_month} tingkat tabungan Anda terhadap pendapatan bulanan biasa Anda adalah %{current_rate}%, turun %{change_pp} poin persentase dari %{previous_rate}% pada tiga bulan sebelumnya.
         down_negative: "Dari %{from_month} hingga %{to_month} pengeluaran Anda melebihi pendapatan: tingkat tabungan Anda turun menjadi %{current_rate}%, dari %{previous_rate}% pada tiga bulan sebelumnya."
       idle_cash: "%{account} memiliki saldo %{balance} tanpa aktivitas dalam %{idle_days} hari terakhir."
       budget_at_risk:

@@ -78,9 +78,9 @@ de:
       maintained_goal_depleted: "Für %{goal} sind %{saved} von %{target} zurückgelegt. Bis zum Zielstand fehlen %{missing}."
       net_worth_milestone: Dein Nettovermögen hat %{milestone} überschritten und liegt jetzt bei %{net_worth}.
       savings_rate_change:
-        down: Von %{from_month} bis %{to_month} hast du %{current_rate} % deiner Einnahmen gespart, %{change_pp} Prozentpunkte weniger als die %{previous_rate} % in den drei Monaten davor.
+        down: Von %{from_month} bis %{to_month} lag deine Sparquote, gemessen an deinen üblichen Monatseinnahmen, bei %{current_rate} %, %{change_pp} Prozentpunkte weniger als die %{previous_rate} % in den drei Monaten davor.
         down_negative: "Von %{from_month} bis %{to_month} hast du mehr ausgegeben als eingenommen: Deine Sparquote fiel auf %{current_rate} %, nach %{previous_rate} % in den drei Monaten davor."
-        up: Von %{from_month} bis %{to_month} hast du %{current_rate} % deiner Einnahmen gespart, %{change_pp} Prozentpunkte mehr als die %{previous_rate} % in den drei Monaten davor.
+        up: Von %{from_month} bis %{to_month} lag deine Sparquote, gemessen an deinen üblichen Monatseinnahmen, bei %{current_rate} %, %{change_pp} Prozentpunkte mehr als die %{previous_rate} % in den drei Monaten davor.
       spending_anomaly:
         above: Hochgerechnet gibst du diesen Monat %{projected_spend} für %{category} aus, rund %{deviation_pct} % mehr als dein jüngster Monatsschnitt von %{baseline_spend}.
         below: Hochgerechnet gibst du diesen Monat %{projected_spend} für %{category} aus, rund %{deviation_pct} % weniger als dein jüngster Monatsschnitt von %{baseline_spend}.

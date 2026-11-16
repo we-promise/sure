@@ -102,8 +102,8 @@ ru:
       maintained_goal_depleted: В резерве «%{goal}» %{saved} из %{target}, которые он должен поддерживать. Не хватает %{missing}.
       subscription_audit: Платёж %{name} (%{amount}) не поступал с ожидаемой даты %{expected_on}. Возможно, подписка отменена или дата списания изменилась.
       savings_rate_change:
-        up: За период %{from_month} — %{to_month} вы сберегли %{current_rate}% дохода — на %{change_pp} п. п. больше, чем %{previous_rate}% за три месяца до этого.
-        down: За период %{from_month} — %{to_month} вы сберегли %{current_rate}% дохода — на %{change_pp} п. п. меньше, чем %{previous_rate}% за три месяца до этого.
+        up: За период %{from_month} — %{to_month} норма сбережений от вашего обычного месячного дохода составила %{current_rate}% — на %{change_pp} п. п. больше, чем %{previous_rate}% за три месяца до этого.
+        down: За период %{from_month} — %{to_month} норма сбережений от вашего обычного месячного дохода составила %{current_rate}% — на %{change_pp} п. п. меньше, чем %{previous_rate}% за три месяца до этого.
         down_negative: "За период %{from_month} — %{to_month} вы потратили больше, чем заработали: норма сбережений упала до %{current_rate}% с %{previous_rate}% за три месяца до этого."
       idle_cash: На счёте %{account} лежит %{balance} без движения последние %{idle_days} дн.
       budget_at_risk:

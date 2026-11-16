@@ -217,6 +217,28 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
     end
   end
 
+  # A bill paid from a rollover envelope is already planned as a bill. Counted
+  # again as envelope spend, the 400 premium would hide the 600 spent
+  # elsewhere in the category.
+  test "counts a bill paid from a rollover envelope once" do
+    @anchor_day = 15
+    insurance = @family.categories.create!(name: "Pace Test Insurance", parent: @category)
+    premium = create_bill(category: insurance, amount: 400, name: "Insurance", day: 3)
+    budget_line(budgeted_spending: 200)
+    budget_line(category: insurance, rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 900)
+
+    travel_to anchor do
+      baseline_months.each do |month|
+        pay_bill(premium, date: month.change(day: 3))
+        spend(month, 300, day: 12)
+      end
+      pay_bill(premium, date: current_month.change(day: 3))
+      spend(current_month, 600, day: 5)
+
+      assert_equal [ "above" ], generate.map { |insight| insight.metadata[:direction] }
+    end
+  end
+
   test "flags a rollover category that has outspent its envelope" do
     @anchor_day = 15
     budget_line(rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 400)

@@ -95,8 +95,8 @@ nl:
       maintained_goal_depleted: "%{goal} bevat %{saved} van de %{target} die het moet aanhouden. Er ontbreekt %{missing}."
       subscription_audit: "%{name} (%{amount}) is niet meer verschenen sinds de verwachte datum %{expected_on}. Mogelijk is het opgezegd, of is de afschrijving verschoven."
       savings_rate_change:
-        up: Van %{from_month} tot en met %{to_month} heeft u %{current_rate}% van uw inkomsten gespaard, %{change_pp} procentpunt meer dan de %{previous_rate}% in de drie maanden daarvoor.
-        down: Van %{from_month} tot en met %{to_month} heeft u %{current_rate}% van uw inkomsten gespaard, %{change_pp} procentpunt minder dan de %{previous_rate}% in de drie maanden daarvoor.
+        up: Van %{from_month} tot en met %{to_month} was uw spaarquote ten opzichte van uw gebruikelijke maandinkomen %{current_rate}%, %{change_pp} procentpunt meer dan de %{previous_rate}% in de drie maanden daarvoor.
+        down: Van %{from_month} tot en met %{to_month} was uw spaarquote ten opzichte van uw gebruikelijke maandinkomen %{current_rate}%, %{change_pp} procentpunt minder dan de %{previous_rate}% in de drie maanden daarvoor.
         down_negative: "Van %{from_month} tot en met %{to_month} heeft u meer uitgegeven dan verdiend: uw spaarpercentage daalde naar %{current_rate}%, van %{previous_rate}% in de drie maanden daarvoor."
       idle_cash: "%{account} bevat %{balance} zonder activiteit in de afgelopen %{idle_days} dagen."
       budget_at_risk:

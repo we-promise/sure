@@ -104,8 +104,8 @@ zh-CN:
       maintained_goal_depleted: "%{goal} 目前持有 %{saved}，低于预定目标 %{target}，尚缺 %{missing}。"
       subscription_audit: "%{name}（%{amount}）自预期的 %{expected_on} 后未再出现。可能已被取消，或扣款日期有所变动。"
       savings_rate_change:
-        up: "%{from_month}至%{to_month}，您存下了收入的 %{current_rate}%，比之前三个月的 %{previous_rate}% 提高了 %{change_pp} 个百分点。"
-        down: "%{from_month}至%{to_month}，您存下了收入的 %{current_rate}%，比之前三个月的 %{previous_rate}% 降低了 %{change_pp} 个百分点。"
+        up: "%{from_month}至%{to_month}，按您平常的月收入计算，储蓄率为 %{current_rate}%，比之前三个月的 %{previous_rate}% 提高了 %{change_pp} 个百分点。"
+        down: "%{from_month}至%{to_month}，按您平常的月收入计算，储蓄率为 %{current_rate}%，比之前三个月的 %{previous_rate}% 降低了 %{change_pp} 个百分点。"
         down_negative: "%{from_month}至%{to_month}，您的支出超过了收入：储蓄率从之前三个月的 %{previous_rate}% 降至 %{current_rate}%。"
       idle_cash: "%{account} 拥有 %{balance}，且在过去 %{idle_days} 天内没有任何交易活动。"
       budget_at_risk:

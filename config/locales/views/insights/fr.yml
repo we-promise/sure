@@ -78,9 +78,9 @@ fr:
       net_worth_milestone: Votre patrimoine net a franchi %{milestone} et s'élève
         désormais à %{net_worth}.
       savings_rate_change:
-        down: Entre %{from_month} et %{to_month}, vous avez épargné %{current_rate}% de vos revenus, soit %{change_pp} points de pourcentage de moins que les %{previous_rate}% des trois mois précédents.
+        down: Entre %{from_month} et %{to_month}, votre taux d'épargne rapporté à vos revenus mensuels habituels était de %{current_rate}%, soit %{change_pp} points de pourcentage de moins que les %{previous_rate}% des trois mois précédents.
         down_negative: "Entre %{from_month} et %{to_month}, vous avez dépensé plus que vous n'avez gagné : votre taux d'épargne est tombé à %{current_rate}%, contre %{previous_rate}% les trois mois précédents."
-        up: Entre %{from_month} et %{to_month}, vous avez épargné %{current_rate}% de vos revenus, soit %{change_pp} points de pourcentage de plus que les %{previous_rate}% des trois mois précédents.
+        up: Entre %{from_month} et %{to_month}, votre taux d'épargne rapporté à vos revenus mensuels habituels était de %{current_rate}%, soit %{change_pp} points de pourcentage de plus que les %{previous_rate}% des trois mois précédents.
       spending_anomaly:
         above: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
           ce mois-ci, soit environ %{deviation_pct}% de plus que votre moyenne mensuelle

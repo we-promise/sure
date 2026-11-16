@@ -89,8 +89,8 @@ zh-TW:
       net_worth_milestone: 您的淨資產已越過 %{milestone}，目前為 %{net_worth}。
       subscription_audit: '%{name}（%{amount}）自預期的 %{expected_on} 之後就沒有再出現。可能已經取消，或是扣款時間改變了。'
       savings_rate_change:
-        up: "%{from_month}至%{to_month}，您存下了收入的 %{current_rate}%，比之前三個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。"
-        down: "%{from_month}至%{to_month}，您存下了收入的 %{current_rate}%，比之前三個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。"
+        up: "%{from_month}至%{to_month}，以您平常的月收入計算，儲蓄率為 %{current_rate}%，比之前三個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。"
+        down: "%{from_month}至%{to_month}，以您平常的月收入計算，儲蓄率為 %{current_rate}%，比之前三個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。"
         down_negative: "%{from_month}至%{to_month}，您的支出超過收入：儲蓄率從之前三個月的 %{previous_rate}% 降到 %{current_rate}%。"
       idle_cash: '%{account} 有 %{balance}，且在過去 %{idle_days} 天內沒有任何活動。'
       budget_at_risk:

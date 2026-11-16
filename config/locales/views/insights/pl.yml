@@ -84,9 +84,9 @@ pl:
       net_worth_milestone: Twoja wartość netto przekroczyła %{milestone} i wynosi
         teraz %{net_worth}.
       savings_rate_change:
-        down: Od %{from_month} do %{to_month} zaoszczędziłeś %{current_rate}% swojego dochodu, o %{change_pp} punktów procentowych mniej niż %{previous_rate}% w poprzednich trzech miesiącach.
+        down: Od %{from_month} do %{to_month} Twoja stopa oszczędności względem zwykłego miesięcznego dochodu wyniosła %{current_rate}%, o %{change_pp} punktów procentowych mniej niż %{previous_rate}% w poprzednich trzech miesiącach.
         down_negative: "Od %{from_month} do %{to_month} wydałeś więcej, niż zarobiłeś: Twoja stopa oszczędności spadła do %{current_rate}% z %{previous_rate}% w poprzednich trzech miesiącach."
-        up: Od %{from_month} do %{to_month} zaoszczędziłeś %{current_rate}% swojego dochodu, o %{change_pp} punktów procentowych więcej niż %{previous_rate}% w poprzednich trzech miesiącach.
+        up: Od %{from_month} do %{to_month} Twoja stopa oszczędności względem zwykłego miesięcznego dochodu wyniosła %{current_rate}%, o %{change_pp} punktów procentowych więcej niż %{previous_rate}% w poprzednich trzech miesiącach.
       spending_anomaly:
         above: Jesteś na dobrej drodze, aby wydać %{projected_spend} na %{category}
           w tym miesiącu, około %{deviation_pct}% więcej niż Twoja średnia miesięczna

@@ -75,9 +75,9 @@ tr:
       net_worth_milestone: Net değeriniz %{milestone} sınırını geçti ve şu anda %{net_worth}
         seviyesinde.
       savings_rate_change:
-        down: "%{from_month}–%{to_month} döneminde gelirinizin %{current_rate}%'ini biriktirdiniz; bu, önceki üç aydaki %{previous_rate}%'e göre %{change_pp} puan daha az."
+        down: "%{from_month}–%{to_month} döneminde olağan aylık gelirinize göre tasarruf oranınız %{current_rate}% oldu; bu, önceki üç aydaki %{previous_rate}%'e göre %{change_pp} puan daha az."
         down_negative: "%{from_month}–%{to_month} döneminde kazandığınızdan fazla harcadınız: tasarruf oranınız önceki üç aydaki %{previous_rate}%'den %{current_rate}%'e düştü."
-        up: "%{from_month}–%{to_month} döneminde gelirinizin %{current_rate}%'ini biriktirdiniz; bu, önceki üç aydaki %{previous_rate}%'e göre %{change_pp} puan daha fazla."
+        up: "%{from_month}–%{to_month} döneminde olağan aylık gelirinize göre tasarruf oranınız %{current_rate}% oldu; bu, önceki üç aydaki %{previous_rate}%'e göre %{change_pp} puan daha fazla."
       spending_anomaly:
         above: Bu ay %{category} kategorisinde %{projected_spend} harcama temposundasınız;
           bu, son aylık ortalamanız olan %{baseline_spend}'den yaklaşık %{deviation_pct}%

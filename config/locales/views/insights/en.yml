@@ -104,8 +104,8 @@ en:
       maintained_goal_depleted: "%{goal} holds %{saved} of the %{target} it is meant to keep. It is %{missing} short."
       subscription_audit: "%{name} (%{amount}) hasn't appeared since it was expected on %{expected_on}. It may have been cancelled, or the charge may have moved."
       savings_rate_change:
-        up: From %{from_month} to %{to_month} you saved %{current_rate}% of your income, up %{change_pp} percentage points from %{previous_rate}% in the three months before.
-        down: From %{from_month} to %{to_month} you saved %{current_rate}% of your income, down %{change_pp} percentage points from %{previous_rate}% in the three months before.
+        up: From %{from_month} to %{to_month} your savings rate against your typical monthly income was %{current_rate}%, up %{change_pp} percentage points from %{previous_rate}% in the three months before.
+        down: From %{from_month} to %{to_month} your savings rate against your typical monthly income was %{current_rate}%, down %{change_pp} percentage points from %{previous_rate}% in the three months before.
         down_negative: "From %{from_month} to %{to_month} you spent more than you earned: your savings rate fell to %{current_rate}%, from %{previous_rate}% in the three months before."
       idle_cash: "%{account} holds %{balance} with no activity in the last %{idle_days} days."
       budget_at_risk:

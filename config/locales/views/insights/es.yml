@@ -88,8 +88,8 @@ es:
       net_worth_milestone: Tu patrimonio neto superó %{milestone} y ahora está en %{net_worth}.
       subscription_audit: "%{name} (%{amount}) no aparece desde que se esperaba el %{expected_on}. Puede haberse cancelado o el cargo puede haber cambiado de fecha."
       savings_rate_change:
-        up: De %{from_month} a %{to_month} ahorraste el %{current_rate}% de tus ingresos, %{change_pp} puntos porcentuales más que el %{previous_rate}% de los tres meses anteriores.
-        down: De %{from_month} a %{to_month} ahorraste el %{current_rate}% de tus ingresos, %{change_pp} puntos porcentuales menos que el %{previous_rate}% de los tres meses anteriores.
+        up: De %{from_month} a %{to_month} tu tasa de ahorro sobre tus ingresos mensuales habituales fue del %{current_rate}%, %{change_pp} puntos porcentuales más que el %{previous_rate}% de los tres meses anteriores.
+        down: De %{from_month} a %{to_month} tu tasa de ahorro sobre tus ingresos mensuales habituales fue del %{current_rate}%, %{change_pp} puntos porcentuales menos que el %{previous_rate}% de los tres meses anteriores.
         down_negative: "De %{from_month} a %{to_month} gastaste más de lo que ingresaste: tu tasa de ahorro cayó al %{current_rate}%, desde el %{previous_rate}% de los tres meses anteriores."
       idle_cash: "%{account} tiene %{balance} sin actividad en los últimos %{idle_days} días."
       budget_at_risk:

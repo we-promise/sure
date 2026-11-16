@@ -92,8 +92,8 @@ pt-PT:
       maintained_goal_depleted: "%{goal} detém %{saved} do objetivo de %{target} que deve manter. Faltam %{missing}."
       subscription_audit: "%{name} (%{amount}) não aparece desde a data prevista de %{expected_on}. Pode ter sido cancelada, ou o cobrança pode ter mudado."
       savings_rate_change:
-        up: De %{from_month} a %{to_month} poupou %{current_rate}% do seu rendimento, mais %{change_pp} pontos percentuais do que os %{previous_rate}% dos três meses anteriores.
-        down: De %{from_month} a %{to_month} poupou %{current_rate}% do seu rendimento, menos %{change_pp} pontos percentuais do que os %{previous_rate}% dos três meses anteriores.
+        up: De %{from_month} a %{to_month} a sua taxa de poupança face ao seu rendimento mensal habitual foi de %{current_rate}%, mais %{change_pp} pontos percentuais do que os %{previous_rate}% dos três meses anteriores.
+        down: De %{from_month} a %{to_month} a sua taxa de poupança face ao seu rendimento mensal habitual foi de %{current_rate}%, menos %{change_pp} pontos percentuais do que os %{previous_rate}% dos três meses anteriores.
         down_negative: "De %{from_month} a %{to_month} gastou mais do que ganhou: a sua taxa de poupança caiu para %{current_rate}%, face aos %{previous_rate}% dos três meses anteriores."
       idle_cash: "%{account} detém %{balance} sem atividade nos últimos %{idle_days} dias."
       budget_at_risk:

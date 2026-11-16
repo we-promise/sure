@@ -132,6 +132,23 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
     end
   end
 
+  # The same window saved 25% of what came in, while the rate reads -100%:
+  # the copy has to say the rate is measured against typical monthly income,
+  # not that the family saved -100% of its income.
+  test "names the typical-income basis of the rate it reports" do
+    travel_to @today do
+      @months.first(3).each { |month| record(month, income: 5_000, spending: 4_000) }
+      record(@months[3], income: 2_000, spending: 4_000)
+      record(@months[4], income: 2_000, spending: 4_000)
+      record(@months[5], income: 12_000, spending: 4_000)
+
+      body = Insight::BodyWriter.new.write(generate.sole)
+
+      assert_includes body, "against your typical monthly income was −100.0%"
+      assert_no_match(/of your income/, body)
+    end
+  end
+
   # With months starting on the 15th the window runs from the 15th to the
   # 14th, which month names alone would misreport.
   test "names a custom-month window by its dates" do

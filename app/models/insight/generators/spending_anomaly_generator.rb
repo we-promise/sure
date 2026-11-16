@@ -105,6 +105,8 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     # Counted as planned, like a bill, does the rise still stand? The envelope
     # may be the parent's or a ring-fenced subcategory's (Insurance under
     # Home), as long as it isn't overspent. Only the household budget counts.
+    # Bills paid from an envelope are already in `data[:bills]`, so only the
+    # rest of its spending is added.
     def paid_from_rollover?(category_id, data, due, usual, pace_factor)
       return false unless current_budget&.initialized?
 
@@ -112,7 +114,7 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         bc.category_id == category_id || bc.category.parent_id == category_id
       end
       saved = lines.select { |bc| bc.rollover_enabled? && !bc.inherits_parent_budget? && !bc.over_budget? }
-                   .sum { |bc| bc.actual_spending.to_d }
+                   .sum { |bc| [ bc.actual_spending.to_d - bc.bills_paid.to_d, 0 ].max }
       return false unless saved.positive?
 
       planned = [ data[:bills] + saved, data[:total] ].min
