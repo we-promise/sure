@@ -232,6 +232,22 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
       "expected the entry lookup to take FOR UPDATE"
   end
 
+  test "locks the transaction row before the entry row, the order Entry#split! uses" do
+    process(tx(status: "sent"))
+
+    queries = []
+    subscriber = ->(*, payload) { queries << payload[:sql] if payload[:sql].include?("FOR UPDATE") }
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      process(tx(status: "reversed"))
+    end
+
+    transaction_lock = queries.index { |sql| sql.include?("FROM \"transactions\"") }
+    entry_lock = queries.index { |sql| sql.include?("FROM \"entries\"") }
+    assert transaction_lock, "expected the transaction row to be locked"
+    assert entry_lock, "expected the entry row to be locked"
+    assert_operator transaction_lock, :<, entry_lock
+  end
+
   test "excludes the split children of an entry whose transaction was reversed" do
     process(tx(status: "sent"))
     children = imported_entry.split!([
