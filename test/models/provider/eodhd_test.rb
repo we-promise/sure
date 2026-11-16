@@ -142,6 +142,15 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     end
   end
 
+  test "currency_for reads the currency a search cached under the MIC for a legacy raw-code row" do
+    EODHD_EUROPEAN_VENUES.each do |mic, code|
+      Rails.cache.stubs(:read).with("eodhd:currency:ABC:#{mic}").returns("NOK")
+      Rails.cache.stubs(:read).with("eodhd:currency:ABC:#{code}").returns(nil)
+
+      assert_equal "NOK", @provider.send(:currency_for, exchange_operating_mic: code, symbol: "ABC"), "legacy #{code} should find the #{mic} cache"
+    end
+  end
+
   test "search maps further European EODHD exchange codes to MICs Sure can name" do
     body = EODHD_EUROPEAN_VENUES.values.map do |code|
       { "Code" => "ABC#{code}", "Name" => "Fund #{code}", "Exchange" => code, "Country" => "Germany", "Currency" => "EUR" }
