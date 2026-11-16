@@ -67,7 +67,7 @@ es:
         type_builtin: Integrado (LLM directo)
         type_external: Externo (agente remoto)
         type_mcp_only: Ninguno en la app (conecta tu propio agente por MCP)
-        mcp_only_help: El asistente de la app queda desactivado para todo el hogar. También dejan de funcionar los atajos de IA de las facturas y «Profundizar con IA» en los insights. MCP y la categorización en segundo plano siguen disponibles; conecta agentes externos en Ajustes > MCP.
+        mcp_only_help: El asistente de la app queda desactivado para todo el hogar. También dejan de funcionar los atajos de IA de los recibos y "Profundizar con IA" en los insights. MCP y la categorización en segundo plano siguen disponibles; conecta agentes externos en Ajustes > MCP.
         external_status: Punto de conexión del asistente externo
         external_configured: Configurado
         external_not_configured: No configurado. Introduce la URL y el token a continuación, o define las variables de entorno EXTERNAL_ASSISTANT_URL y EXTERNAL_ASSISTANT_TOKEN.

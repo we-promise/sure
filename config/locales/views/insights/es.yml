@@ -30,7 +30,7 @@ es:
         Cifras:
         %{facts}
 
-        ¿Qué hay detrás y debería hacer algo?
+        ¿A qué se debe y debería hacer algo al respecto?
     feed:
       view_all: Ver todos los insights
       header: Últimos
@@ -83,7 +83,7 @@ es:
         low: Tu saldo de efectivo podría bajar demasiado
         negative: Tu saldo de efectivo podría volverse negativo
       net_worth_milestone: "Hito de patrimonio neto: %{milestone}"
-      maintained_goal_depleted: "%{goal} ha bajado de su nivel"
+      maintained_goal_depleted: "%{goal} está por debajo del saldo que debe mantener"
       subscription_audit: "¿%{name} sigue activa?"
       savings_rate_change:
         up: Tu tasa de ahorro mejoró en %{month}
