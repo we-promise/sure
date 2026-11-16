@@ -337,6 +337,81 @@ class Security::ClassificationDefaultsTest < ActiveSupport::TestCase
     assert_equal "north_america", security.reload.region
   end
 
+  # Validation can run before the save does. Taking the country back to the
+  # stored one before saving must leave the stored region too.
+  test "a country reverted after validation keeps the stored region" do
+    security = Security.create!(ticker: "REG-REVERT", exchange_operating_mic: "XNAS", country_code: "US")
+
+    security.country_code = "MX"
+    security.valid?
+
+    security.country_code = "US"
+    security.save!
+
+    assert_equal "north_america", security.reload.region
+  end
+
+  # A region worked out while validating must not read as the caller's on save.
+  test "a country changed twice before saving takes the last one's region" do
+    security = Security.create!(ticker: "REG-AGAIN", exchange_operating_mic: "XNAS", country_code: "US")
+
+    security.country_code = "MX"
+    security.valid?
+    security.country_code = "GB"
+    security.save!
+
+    assert_equal "europe", security.reload.region
+  end
+
+  test "a blank region is filled from the country saved, not one validated" do
+    security = Security.create!(ticker: "REG-FILLED", exchange_operating_mic: "XNAS", country_code: "US")
+    security.update_columns(region: nil)
+
+    security.country_code = "GB"
+    security.valid?
+
+    security.country_code = "JP"
+    security.save!
+
+    assert_equal "asia_pacific", security.reload.region
+  end
+
+  test "a region the caller sets after validation is kept" do
+    security = Security.create!(ticker: "REG-CALLER", exchange_operating_mic: "XNAS", country_code: "US")
+
+    security.country_code = "MX"
+    security.valid?
+    security.region = "europe"
+    security.country_code = "US"
+    security.save!
+
+    assert_equal "europe", security.reload.region
+  end
+
+  test "a caller restating the region validation would have derived is kept" do
+    security = Security.create!(ticker: "REG-SAME", exchange_operating_mic: "XNAS", country_code: "US")
+
+    security.country_code = "MX"
+    security.valid?
+    security.region = "latin_america"
+    security.country_code = "US"
+    security.save!
+
+    assert_equal "latin_america", security.reload.region
+  end
+
+  test "a region is not derived on a save that locks the classification" do
+    security = Security.create!(ticker: "REG-LOCK", exchange_operating_mic: "XNAS", country_code: "US")
+
+    security.country_code = "MX"
+    security.valid?
+    security.classification_locked = true
+    security.country_code = "US"
+    security.save!
+
+    assert_equal "north_america", security.reload.region
+  end
+
   # How an existing security picks the defaults up: on its next write, with no
   # backfill job.
   test "an unclassified cash security is classified on an unrelated save" do
