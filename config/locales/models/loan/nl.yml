@@ -13,6 +13,7 @@ nl:
           invalid_rate_change: "Rijen met rentewijzigingen hebben zowel een ingangsdatum als een rentepercentage nodig."
           invalid_term_change: "Rijen met wijzigingen in de voorwaarden hebben een ingangsdatum nodig en bedragen die getallen zijn."
           rate_change_before_origination: "Een rentewijziging kan niet ingaan vóór de startdatum van de lening."
+          term_change_after_last_payment: "Een wijziging in de voorwaarden kan niet na de laatste betaling van het schema liggen. Zet de datum op of vóór die betaling."
           term_change_not_after_origination: "Een wijziging in de voorwaarden moet ingaan na de startdatum van de lening."
           term_change_payment_below_interest: "De betaling van een wijziging in de voorwaarden moet minstens de rente van de periode dekken."
         loan/term_change:

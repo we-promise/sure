@@ -69,6 +69,10 @@ class Loan
     #   balance            the balance the period charges interest on
     #   accrual_start      where that charge starts: the period's opening, or
     #                      the date of a balance confirmed part-way through
+    #   repaid_early       repaid before the charge: an extra repayment in
+    #                      the grace days or ahead of a balance confirmed
+    #                      part-way through, and what such a balance is below
+    #                      the one those repayments left
     #   closing_reduction  repaid on the payment date, after the charge
     #   closing_balance    a balance confirmed for the payment date itself
     #   payment            the instalment the lender set
@@ -78,8 +82,8 @@ class Loan
     #   resize_next        re-amortise the next payment
     #   any                a term change is dated in the period
     PeriodChanges = Struct.new(
-      :balance, :accrual_start, :closing_reduction, :closing_balance, :payment, :payment_set_on, :resize,
-      :payment_next, :resize_next, :any,
+      :balance, :accrual_start, :repaid_early, :closing_reduction, :closing_balance, :payment, :payment_set_on,
+      :resize, :payment_next, :resize_next, :any,
       keyword_init: true
     )
 
@@ -299,11 +303,13 @@ class Loan
 
         balance = step[:ending_balance]
         balance_adjustment = opening_adjustment - closing_reduction
+        repaid_outside_payment = changes.repaid_early + closing_reduction
 
         # A balance confirmed for the payment date is the balance after that
         # day's payment, whatever the row above worked out.
         if changes.closing_balance
           balance_adjustment += changes.closing_balance - balance
+          repaid_outside_payment += [ balance - changes.closing_balance, BigDecimal("0") ].max
           balance = changes.closing_balance
           row[:ending_balance] = balance
         end
@@ -314,10 +320,22 @@ class Loan
         # charged its balance at. A row that no term change reaches carries
         # none of these keys and is unchanged.
         row[:balance_adjustment] = balance_adjustment unless balance_adjustment.zero?
+        # Every reduction on its own. The adjustment above is their net with
+        # any increase: a balance confirmed 1,000 higher and an extra
+        # repayment of 2,000 in one period move the balance by -1,000, and
+        # 2,000 was still repaid.
+        row[:repaid_outside_payment] = repaid_outside_payment if repaid_outside_payment.positive?
         row[:repaid_after_charge] = closing_reduction if closing_reduction.positive?
         row[:accrual_factor] = accrual_rate if changes.any
         # The payment of this row is one the lender set, not one sized here.
-        row[:lender_payment] = true if lender_payment_in_force
+        # The final row settles whatever is owed, so its principal cannot
+        # show a payment that fell short of the period's interest. A row an
+        # extra repayment cleared has no balance left to grow, and is not
+        # marked.
+        if lender_payment_in_force
+          row[:lender_payment] = true
+          row[:lender_payment_below_interest] = true if payment < interest && amortised_balance.positive?
+        end
         payments << row
       end
 
@@ -393,8 +411,8 @@ class Loan
         period_start = index.zero? ? @accrual_start_date : @payment_schedule[index - 1]
         payment_date = @payment_schedule[index]
         folded = PeriodChanges.new(
-          balance: balance, accrual_start: period_start, closing_reduction: BigDecimal("0"),
-          closing_balance: nil, payment: nil, payment_set_on: nil, resize: false,
+          balance: balance, accrual_start: period_start, repaid_early: BigDecimal("0"),
+          closing_reduction: BigDecimal("0"), closing_balance: nil, payment: nil, payment_set_on: nil, resize: false,
           payment_next: nil, resize_next: false, any: false
         )
 
@@ -406,13 +424,20 @@ class Loan
             if on_payment_date
               folded.closing_balance = change[:balance]
             else
+              # The confirmed balance replaces the repayments waiting for the
+              # payment date. They were still made, so they count as repaid,
+              # and the balance is measured against what they left.
+              pending = [ folded.closing_reduction, folded.balance ].min
+              folded.repaid_early += pending + [ folded.balance - pending - change[:balance], BigDecimal("0") ].max
               folded.balance = change[:balance]
               folded.accrual_start = change[:date]
               folded.closing_reduction = BigDecimal("0")
             end
           elsif change[:extra_repayment]
             if !on_payment_date && folded.accrual_start == period_start && grace_day?(period_start, change[:date])
-              folded.balance = [ folded.balance - change[:extra_repayment], BigDecimal("0") ].max
+              repaid = [ change[:extra_repayment], folded.balance ].min
+              folded.repaid_early += repaid
+              folded.balance -= repaid
             else
               folded.closing_reduction += change[:extra_repayment]
             end

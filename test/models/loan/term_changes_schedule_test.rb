@@ -204,6 +204,64 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
   end
 
+  # The final row settles whatever is owed, so its principal never goes
+  # negative. The last period charges 10.56.
+  test "a payment below the interest is refused on the final payment date too" do
+    loan = loan_with([])
+
+    loan.term_change_rows = [ { effective_date: "2026-12-15", payment: "10" } ]
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+
+    loan.term_change_rows = [ { effective_date: "2026-12-15", payment: "10.56" } ]
+    assert loan.valid?, loan.errors.full_messages.to_sentence
+    assert_equal MATURITY, loan.amortization_schedule.payoff_date
+  end
+
+  # The row settles the period's 100.98 of interest and nothing is left to
+  # grow, so the payment of zero that follows a payoff is not a short one.
+  test "a payoff recorded with a payment of zero is accepted" do
+    [ "2026-03-20", "2026-04-01" ].each do |date|
+      loan = loan_with([])
+      loan.term_change_rows = [ { effective_date: date, extra_repayment: "10098.16", payment: "0" } ]
+
+      assert loan.valid?, loan.errors.full_messages.to_sentence
+      assert_equal APRIL, loan.amortization_schedule.payoff_date, date
+    end
+  end
+
+  # March closes on 10,098.16. The lender confirms 1,000 more, and 2,000 is
+  # repaid later in the same period: the row's balance moves by -1,000, and
+  # 2,000 was repaid outside the instalments.
+  test "a higher confirmed balance does not offset a repayment in the same period" do
+    schedule = loan_with([
+      { effective_date: "2026-03-10", balance: "11098.16" },
+      { effective_date: "2026-03-20", extra_repayment: "2000" }
+    ]).amortization_schedule
+
+    assert_equal BigDecimal("-1000"), schedule.balance_adjustment_for(schedule.payment_for(APRIL)).amount
+    assert_equal BigDecimal("12000") + BigDecimal("1000") + schedule.total_interest.amount, schedule.total_paid.amount
+    assert_equal schedule.total_paid.amount,
+                 schedule.payments.sum { |payment| payment.payment.amount } + BigDecimal("2000")
+  end
+
+  # The same 2,000, whichever side of the grace days or of the confirmed
+  # balance it is dated on, and whether that balance is above or below the
+  # one before it.
+  test "a repayment counts in full whatever order it and a confirmed balance come in" do
+    [ "11098.16", "9098.16" ].each do |confirmed|
+      [ "2026-03-03", "2026-03-10" ].each do |repaid_on|
+        schedule = loan_with([
+          { effective_date: repaid_on, extra_repayment: "2000" },
+          { effective_date: "2026-03-20", balance: confirmed }
+        ]).amortization_schedule
+
+        assert_equal schedule.payments.sum { |payment| payment.payment.amount } + BigDecimal("2000"),
+                     schedule.total_paid.amount, "#{repaid_on}, #{confirmed}"
+      end
+    end
+  end
+
   test "a later change overrides an earlier one from its own date" do
     schedule = loan_with([
       { effective_date: "2026-03-15", extra_repayment: "2000" },
@@ -397,21 +455,48 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100"), schedule.payments.first.interest.amount
   end
 
-  test "a change dated after the loan was cleared changes nothing" do
-    cleared = loan_with([ { effective_date: "2026-03-01", balance: "0" } ]).amortization_schedule
-    schedule = loan_with([
-      { effective_date: "2026-03-01", balance: "0" },
-      { effective_date: "2026-06-10", extra_repayment: "500" }
-    ]).amortization_schedule
+  # The schedule ends on its last payment and does not read a row dated after
+  # it, so the form refuses the row instead of storing it without effect.
+  test "a change dated after the loan was cleared is refused" do
+    loan = loan_with([ { effective_date: "2026-03-01", balance: "0" } ])
+    cleared = loan.amortization_schedule.payments
 
-    assert_equal cleared.payments, schedule.payments
+    loan.term_change_rows = [
+      { effective_date: "2026-03-01", balance: "0" },
+      { effective_date: "2026-06-10", balance: "500" }
+    ]
+
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_after_last_payment")
+    assert_equal cleared, loan.amortization_schedule.payments, "the schedule itself leaves such a row unread"
   end
 
-  test "a change dated after the last payment changes nothing" do
-    unchanged = loan_with([]).amortization_schedule
-    schedule = loan_with([ { effective_date: "2027-02-01", extra_repayment: "500" } ]).amortization_schedule
+  # A payment of 1,300 from April repays the loan on 1 November. A balance
+  # the lender confirms for that day is read, and the schedule runs on from
+  # it to the end of the term.
+  test "a balance confirmed on the last payment of a schedule that ended early runs it on" do
+    held = [ { effective_date: "2026-03-20", payment: "1300" } ]
+    ended = loan_with(held).amortization_schedule.payoff_date
+    assert_operator ended, :<, MATURITY, "premise: the held payment ends the schedule early"
 
-    assert_equal unchanged.payments, schedule.payments
+    loan = loan_with(held)
+    loan.term_change_rows = held + [ { effective_date: ended.iso8601, balance: "500" } ]
+
+    assert loan.valid?, loan.errors.full_messages.to_sentence
+    schedule = loan.amortization_schedule
+    assert_equal BigDecimal("500"), schedule.payment_for(ended).ending_balance.amount
+    assert_equal MATURITY, schedule.payoff_date
+  end
+
+  test "a change dated after the last payment of the term is refused" do
+    loan = loan_with([])
+
+    loan.term_change_rows = [ { effective_date: "2027-02-01", extra_repayment: "500" } ]
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_after_last_payment")
+
+    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, balance: "500" } ]
+    assert loan.valid?, "a change on the last payment date is read"
   end
 
   test "the day count convention sizes the part period of a confirmed balance" do

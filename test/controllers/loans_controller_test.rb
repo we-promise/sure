@@ -724,32 +724,74 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='5000']", count: 1
   end
 
-  # A loan is saved before its account, and the schedule needs the account.
-  # So a payment below the interest gets through on create and is caught the
-  # first time the loan is edited.
-  test "a payment below its period's interest on a new loan is caught on the first edit" do
+  # A loan is saved before its account, and the schedule needs the account, so
+  # the payment is checked once the account and its opening balance exist.
+  test "a new loan with a payment below its period's interest comes back as the form" do
     start_date = Date.current - 2.years
     row = { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "", balance: "", payment: "10" }
 
-    post loans_path, params: {
-      account: {
-        name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
-        opening_balance_date: start_date.iso8601,
-        accountable_attributes: {
-          subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
-          initial_balance: 300_000, start_date: start_date.iso8601, term_change_rows: [ "", row ]
+    assert_no_difference [ "Account.count", "Loan.count", "Loan::TermChange.count", "Entry.count" ] do
+      assert_no_enqueued_jobs only: SyncJob do
+        post loans_path, params: {
+          account: {
+            name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+            opening_balance_date: start_date.iso8601,
+            accountable_attributes: {
+              subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+              initial_balance: 300_000, start_date: start_date.iso8601, term_change_rows: [ "", row ]
+            }
+          }
         }
-      }
-    }
-    account = Account.order(:created_at).last
-    assert_redirected_to account
-
-    patch loan_path(account), params: {
-      account: { accountable_attributes: { id: account.loan.id, term_change_rows: [ "", row ] } }
-    }
+      end
+    end
 
     assert_response :unprocessable_entity
     assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+    assert_select "form[action='#{loans_path}']"
+    assert_select "input[name='account[accountable_attributes][id]']", count: 0
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][payment]'][value='10']", count: 1
+  end
+
+  # Without a start date the loan began on its opening balance date, which
+  # only the account knows.
+  test "a new loan without a start date refuses a term change before its opening balance date" do
+    opening_date = Date.current - 2.years
+
+    assert_no_difference [ "Account.count", "Loan::TermChange.count" ] do
+      post loans_path, params: {
+        account: {
+          name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+          opening_balance_date: opening_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+            term_change_rows: [ "", { effective_date: (opening_date - 1.month).iso8601, extra_repayment: "5000", balance: "", payment: "" } ]
+          }
+        }
+      }
+    end
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_not_after_origination")
+  end
+
+  test "a new loan with a payment that covers its period's interest is created" do
+    start_date = Date.current - 2.years
+
+    assert_difference [ "Account.count", "Loan::TermChange.count" ], 1 do
+      post loans_path, params: {
+        account: {
+          name: "New mortgage", balance: 290_000, currency: "USD", accountable_type: "Loan",
+          opening_balance_date: start_date.iso8601,
+          accountable_attributes: {
+            subtype: "mortgage", interest_rate: 5, term_months: 360, rate_type: "fixed",
+            initial_balance: 300_000, start_date: start_date.iso8601,
+            term_change_rows: [ "", { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "", balance: "", payment: "1700" } ]
+          }
+        }
+      }
+    end
+
+    assert_redirected_to Account.order(:created_at).last
   end
 
   test "a new loan with a term change before its start date comes back as the form" do
