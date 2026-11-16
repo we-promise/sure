@@ -1417,6 +1417,29 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     refute daily_returns.rate_missing?
   end
 
+  # A whole position journalled out of a holding the balance carried at a
+  # zero price left at nothing, in any currency, so its rate is not missing
+  # and the day is complete. Priced above zero, the same journal needs the
+  # rate it lacks.
+  test "an unpriced journal out of a zero priced holding needs no rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
+    prior = @account.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 0,
+                                      amount: 0, currency: "EUR")
+    security_journal account: @account, date: @day_two, qty: -5, currency: "EUR", price: 0
+
+    returns = daily_returns
+    refute returns.rate_missing?
+    assert_not returns.rows.last.suppressed
+    assert_in_delta 0.10, returns.returns.last.last.to_f, 0.000001
+
+    prior.update!(price: 10, amount: 50)
+    returns = daily_returns
+
+    assert returns.rate_missing?, "a position carried at a price converts from EUR, which has no rate"
+    assert returns.rows.last.suppressed
+  end
+
   # Carried, the same journal is still one that could not be valued. Its
   # zero-priced row left the position at nothing, so the first priced day's
   # jump is the zero price undoing itself; dropped from the carry, that jump
@@ -1439,6 +1462,16 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert third.suppressed, "with none, the repriced units are unaccounted for"
     assert third.unvalued_journal
     assert_equal BigDecimal("0"), third.external_flow, "a journal with no quantity carries no flow"
+
+    # The same journal with no zero-priced row to measure the repriced units
+    # by: the first priced row opens from an earlier priced one instead, and
+    # the journal's units are still unknown.
+    @account.holdings.where(date: @day_two).delete_all
+    @account.holdings.create!(security: security_under_test, date: @day_one, qty: 5, price: 10,
+                              amount: 50, currency: @account.currency)
+
+    assert daily_returns(end_date: day_three).rows.last.suppressed,
+           "an unknown quantity is unaccounted for whatever the first priced row opens from"
   end
 
   # One journal that cannot be valued suppresses the whole day, even beside

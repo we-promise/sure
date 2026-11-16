@@ -506,6 +506,7 @@ class Portfolio::DailyReturns
                                  AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))
                              OR (journal_prior_fx.rate IS NULL
                                  AND journal_prior.currency IS NOT NULL
+                                 AND journal_prior.price > 0
                                  AND #{journal_out_unpriced_sql}
                                  AND #{fragment(:journal_predicate)}
                                  AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
@@ -538,7 +539,9 @@ class Portfolio::DailyReturns
             -- that emptied the position: #journal_value_sql values it from the
             -- previous day's row, and with nothing left there is no unit at
             -- the zero price to misread. Part of a position leaving still
-            -- suppresses the day, for the units that stayed.
+            -- suppresses the day, for the units that stayed. A previous row
+            -- priced at zero left at nothing in any currency, so it needs no
+            -- rate, here or in flow_rate_missing.
             --
             -- A quantity of 0 moves no units and has nothing to value, as the
             -- carried pass also reads it, so it never suppresses the day. A
@@ -550,7 +553,7 @@ class Portfolio::DailyReturns
                                                        OR (#{journal_out_unpriced_sql}
                                                            AND journal_holdings.qty = 0
                                                            AND journal_prior.price IS NOT NULL
-                                                           AND journal_prior_fx.rate IS NOT NULL), false)))), false) AS journal_unpriced
+                                                           AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false)))), false) AS journal_unpriced
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
@@ -714,6 +717,7 @@ class Portfolio::DailyReturns
             CASE WHEN trades.qty < 0 OR (trades.qty > 0 AND #{fragment(:flow_class_sql)} = 'external_inflow')
                  THEN ROUND(trades.qty * carry_splits.numerator / carry_splits.denominator, #{Security::Split::QTY_SCALE})
                  ELSE 0 END AS qty,
+            trades.qty IS NULL AS qty_unknown,
             entries.date AS journal_date,
             MIN(CASE WHEN trades.qty > 0 AND #{fragment(:flow_class_sql)} = 'external_inflow' THEN entries.date END)
               OVER (PARTITION BY entries.account_id, trades.security_id, first_priced.date, first_priced.currency) AS first_in_date,
@@ -785,7 +789,9 @@ class Portfolio::DailyReturns
             -- A NULL quantity is carried too, contributing no units: it
             -- suppressed its own day (flows_by_date), and whatever its
             -- zero-priced row left at nothing is settled here, through
-            -- carry_incomplete, like any other unit not journalled in.
+            -- carry_incomplete, like any other unit not journalled in. With
+            -- no zero-priced row to measure that by, its unknown units leave
+            -- the carry incomplete on their own (qty_unknown).
             AND (trades.qty <> 0 OR trades.qty IS NULL)
             AND (journal_day.price IS NULL OR journal_day.price <= 0)
             AND (carry_windows.active_until_date IS NULL OR first_priced.date <= carry_windows.active_until_date)
@@ -799,7 +805,7 @@ class Portfolio::DailyReturns
             COALESCE(SUM(per_row.carried_qty * per_row.price * per_row.rate), 0) AS carried_flow,
             BOOL_OR(per_row.rate IS NULL AND per_row.carried_qty > 0) AS carry_rate_missing,
             COALESCE(BOOL_OR(per_row.zero_qty > per_row.carried_qty
-                             OR (per_row.zero_qty IS NULL AND per_row.netted)), false) AS carry_incomplete
+                             OR (per_row.zero_qty IS NULL AND (per_row.netted OR per_row.qty_unknown))), false) AS carry_incomplete
           FROM (
             SELECT
               cj.date,
@@ -807,6 +813,7 @@ class Portfolio::DailyReturns
               cj.rate,
               cj.zero_qty,
               BOOL_OR(cj.qty < 0 AND cj.journal_date >= cj.first_in_date) AS netted,
+              BOOL_OR(cj.qty_unknown) AS qty_unknown,
               GREATEST(LEAST(COALESCE(SUM(cj.qty) FILTER (WHERE cj.qty > 0 OR cj.journal_date >= cj.first_in_date), 0),
                              COALESCE(cj.zero_qty, cj.held_qty)), 0) AS carried_qty
             FROM carried_journals cj
