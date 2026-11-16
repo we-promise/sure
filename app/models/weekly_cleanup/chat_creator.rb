@@ -20,7 +20,12 @@ class WeeklyCleanup::ChatCreator
 
       # Findings are built per admin so an account they can't access never
       # shows up by name in their chat.
-      report = WeeklyCleanup::Report.new(family:, findings: collect_findings(user))
+      findings = collect_findings(user)
+      # A failed detector must not look like a clean week or burn the period:
+      # skip so the next run retries.
+      next if findings.nil?
+
+      report = WeeklyCleanup::Report.new(family:, findings:)
       chat = nil
       WeeklyCleanupRun.transaction do
         chat = user.chats.create!(
@@ -45,12 +50,17 @@ class WeeklyCleanup::ChatCreator
       family.users.select { |user| user.admin? && user.active? && user.ai_enabled? }
     end
 
+    # Returns nil when any detector raised, so a partial scan is never
+    # reported (or recorded) as a complete one.
     def collect_findings(user)
-      WeeklyCleanup::Detector.registry.filter_map do |detector_class|
+      failed = false
+      findings = WeeklyCleanup::Detector.registry.filter_map do |detector_class|
         detector_class.new(family, user:).generate
       rescue => e
+        failed = true
         Rails.logger.error("WeeklyCleanup: detector #{detector_class.key} failed for family #{family.id}: #{e.class}: #{e.message}")
         nil
       end
+      failed ? nil : findings
     end
 end

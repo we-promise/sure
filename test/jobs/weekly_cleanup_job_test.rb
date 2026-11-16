@@ -107,4 +107,14 @@ class WeeklyCleanupJobTest < ActiveJob::TestCase
     assert_equal %w[families users], foreign_keys.map(&:to_table).sort
     assert(foreign_keys.all? { |fk| fk.on_delete == :cascade })
   end
+
+  test "a failing detector skips the chat and does not record the period" do
+    WeeklyCleanup::Detectors::StaleImports.any_instance.stubs(:generate).raises(StandardError, "boom")
+
+    assert_no_difference -> { Chat.count } do
+      assert_no_difference -> { WeeklyCleanupRun.count } do
+        WeeklyCleanupJob.perform_now(family_id: @family.id)
+      end
+    end
+  end
 end

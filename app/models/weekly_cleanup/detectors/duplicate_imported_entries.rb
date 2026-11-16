@@ -7,7 +7,7 @@ class WeeklyCleanup::Detectors::DuplicateImportedEntries < WeeklyCleanup::Detect
   def generate
     groups = entries
       .where.not(import_id: nil)
-      .where("entries.date >= ?", today - DUPLICATE_WINDOW.in_days.to_i)
+      .where("entries.date >= ? AND entries.date <= ?", today - DUPLICATE_WINDOW.in_days.to_i, today)
       .group(:account_id, :date, :amount, Arel.sql("lower(entries.name)"))
       .having("COUNT(*) > 1")
       .pluck(:account_id, :date, :amount, Arel.sql("lower(entries.name)"), Arel.sql("COUNT(*)"))

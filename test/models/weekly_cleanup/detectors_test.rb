@@ -112,4 +112,35 @@ class WeeklyCleanup::DetectorsTest < ActiveSupport::TestCase
     assert finding
     assert_operator finding.count, :>=, 1
   end
+
+  test "future-dated entries are outside the cleanup window" do
+    create_transaction(account: @account, name: "Scheduled Future Thing", date: 3.days.from_now.to_date, amount: 42)
+
+    finding = WeeklyCleanup::Detectors::UncategorizedTransactions.new(@family).generate
+
+    assert_nil finding&.samples&.find { |s| s.include?("Scheduled Future Thing") }
+  end
+
+  test "provider data gaps ignores a failed sync that a later sync recovered" do
+    Sync.where(syncable: @family).delete_all
+    Sync.create!(syncable: @family, status: "failed", created_at: 2.days.ago)
+    Sync.create!(syncable: @family, status: "completed", created_at: 1.day.ago)
+
+    assert_nil WeeklyCleanup::Detectors::ProviderDataGaps.new(@family).generate
+  end
+
+  test "detectors scoped to a user count only accounts that user can access" do
+    member = users(:family_member)
+    hidden = Account.create!(family: @family, owner: member, name: "Hidden", balance: 0, currency: "USD", accountable: Depository.new)
+    create_transaction(account: hidden, name: "Hidden Purchase", date: 1.day.ago.to_date, amount: 10)
+    create_transaction(account: @account, name: "Visible Purchase", date: 1.day.ago.to_date, amount: 10)
+    admin = users(:family_admin)
+
+    scoped = WeeklyCleanup::Detectors::UncategorizedTransactions.new(@family, user: admin).generate
+    unscoped = WeeklyCleanup::Detectors::UncategorizedTransactions.new(@family).generate
+
+    assert scoped.samples.any? { |s| s.include?("Visible Purchase") }
+    assert scoped.samples.none? { |s| s.include?("Hidden Purchase") }
+    assert_equal scoped.count + 1, unscoped.count
+  end
 end

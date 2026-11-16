@@ -69,6 +69,6 @@ class WeeklyCleanup::Detector
         .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
         .where(entryable_type: "Transaction", excluded: false)
         .where(transactions: { kind: "standard" })
-        .where("entries.date >= ?", since)
+        .where("entries.date >= ? AND entries.date <= ?", since, today)
     end
 end

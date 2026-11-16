@@ -23,7 +23,17 @@ class WeeklyCleanup::Detectors::ProviderDataGaps < WeeklyCleanup::Detector
           next
         end
 
-      owned = recent.where(syncable_type: type, syncable_id: owned_ids)
+      # Only syncables whose latest sync is still failed/stale: a later run that
+      # went through means provider data is flowing again.
+      owned = recent.where(syncable_type: type, syncable_id: owned_ids).where(<<~SQL.squish)
+        NOT EXISTS (
+          SELECT 1 FROM syncs later
+          WHERE later.syncable_type = syncs.syncable_type
+            AND later.syncable_id = syncs.syncable_id
+            AND later.created_at > syncs.created_at
+            AND later.status NOT IN ('failed', 'stale')
+        )
+      SQL
       count += owned.count
       owned.order(created_at: :desc).limit(MAX_SAMPLES).each do |sync|
         samples << "#{type.underscore.humanize} — #{sync.status} (#{sync.created_at.to_date})"
