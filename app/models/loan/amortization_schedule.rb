@@ -165,7 +165,8 @@ class Loan::AmortizationSchedule
 
   # The date of the final payment. Nil when there's nothing to amortise, or
   # when a balance the lender confirmed for the last payment date leaves the
-  # loan owing.
+  # loan owing. The loan form refuses such a row; one stored before the term
+  # was shortened can still give it.
   def payoff_date
     simulation.payoff_date
   end

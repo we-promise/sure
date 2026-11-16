@@ -505,7 +505,11 @@ class Loan < ApplicationRecord
     return :term_change_payment_below_interest if schedule.lender_payment_below_interest?
 
     last_payment_date = schedule.payments.last&.date
-    :term_change_after_last_payment if last_payment_date && active_term_changes.last.effective_date > last_payment_date
+    return :term_change_after_last_payment if last_payment_date && active_term_changes.last.effective_date > last_payment_date
+
+    # Only a balance confirmed for the last payment date can leave the loan
+    # owing: the final payment otherwise settles whatever is left.
+    :term_change_balance_after_last_payment if last_payment_date && schedule.payoff_date.nil?
   end
 
   def amortization_schedule
