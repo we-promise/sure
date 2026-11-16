@@ -229,8 +229,24 @@ class Assistant::External::ClientTest < ActiveSupport::TestCase
       client.chat(messages: [ { role: "user", content: "test" } ]) { |_| }
     end
 
-    # Should NOT pass proxy args — only host and port
-    assert_equal 2, captured_args.length
+    assert_nil captured_args[2], "no proxy for a NO_PROXY host"
+  end
+
+  test "an http gateway goes through HTTPS_PROXY when only it is set, and loopback never does" do
+    captured = []
+    mock_http = stub("http", :use_ssl= => nil, :open_timeout= => nil, :read_timeout= => nil)
+    mock_response = stub("response", code: "200", read_body: nil)
+    mock_response.stubs(:is_a?).with(Net::HTTPSuccess).returns(true)
+    mock_http.stubs(:request).yields(mock_response)
+    Net::HTTP.stubs(:new).with { |*args| captured << args }.returns(mock_http)
+
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy:8888", HTTP_PROXY: nil, NO_PROXY: "127.0.0.0/8") do
+      [ "http://openclaw.lan:18789/v1/chat", "http://127.0.0.1:18789/v1/chat", "http://localhost:18789/v1/chat" ].each do |url|
+        Assistant::External::Client.new(url:, token: "test-token").chat(messages: [ { role: "user", content: "x" } ]) { |_| }
+      end
+    end
+
+    assert_equal [ "proxy", nil, nil ], captured.map { _1[2] }
   end
 
   private

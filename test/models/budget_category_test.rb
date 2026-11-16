@@ -766,6 +766,158 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
     assert_equal 0, stored_rollover(second)
   end
 
+  test "an unchanged chain is not recomputed" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).never
+    recompute!
+  end
+
+  test "new spending recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    spend(30, budget: first)
+    recompute!
+
+    assert_equal 70, stored_rollover(second)
+  end
+
+  test "an allocation change recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    allocate(first, 40)
+    recompute!
+
+    assert_equal 40, stored_rollover(second)
+  end
+
+  test "a sync recomputes a chain that was already settled" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    @family.touch(:latest_sync_completed_at)
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+    recompute!
+  end
+
+  test "an allocation committed behind a later timestamp recomputes a settled chain" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    budget_category_for(first).update_columns(budgeted_spending: 40, updated_at: 1.day.ago)
+    recompute!
+
+    assert_equal 40, stored_rollover(second)
+  end
+
+  test "an account reassigned without a touch recomputes a settled chain" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    first = initialized_budget(2.months.ago)
+    allocate(first, 100)
+    second = initialized_budget(1.month.ago)
+    allocate(second, 100)
+    recompute!
+    recompute!
+
+    new_owner = @family.users.where.not(id: @account.owner_id).first!
+    Account.where(id: @account.id).update_all(owner_id: new_owner.id)
+    Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+    recompute!
+  end
+
+  test "a balance update keeps a settled chain" do
+    settle_chain
+
+    @account.update!(balance: 1)
+
+    assert_no_recompute
+  end
+
+  test "excluding an account from reports recomputes a settled chain" do
+    second = settle_chain { |first| spend(30, budget: first) }.last
+    assert_equal 70, stored_rollover(second)
+
+    Account.where(id: @account.id).update_all(exclude_from_reports: true)
+    @family = Family.find(@family.id)
+    recompute!
+
+    assert_equal 100, stored_rollover(second)
+  end
+
+  test "a tax-advantaged subtype recomputes a settled chain" do
+    investment = @family.accounts.create!(accountable: Investment.new(subtype: "brokerage"), name: "Brokerage", currency: "USD", balance: 0, status: "active")
+    second = settle_chain { |first| create_transaction(account: investment, date: first.start_date, amount: 30, category: @category) }.last
+    assert_equal 70, stored_rollover(second)
+
+    investment.accountable.update!(subtype: "401k")
+    @family = Family.find(@family.id)
+    recompute!
+
+    assert_equal 100, stored_rollover(second)
+  end
+
+  test "a share permission change keeps a settled chain" do
+    share = AccountShare.create!(account: @account, user: @family.users.first!, include_in_finances: true)
+    settle_chain
+
+    share.update!(permission: "full_control")
+
+    assert_no_recompute
+  end
+
+  test "a share's include in finances flag recomputes a settled chain" do
+    share = AccountShare.create!(account: @account, user: @family.users.first!, include_in_finances: true)
+    settle_chain
+
+    share.update!(include_in_finances: false)
+
+    assert_recompute
+  end
+
+  test "a rate into another currency keeps a settled chain" do
+    settle_chain
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "KRW", date: Date.current, rate: 9)
+
+    assert_no_recompute
+  end
+
+  test "a rate into the family currency recomputes a settled chain" do
+    settle_chain
+
+    ExchangeRate.create!(from_currency: "EUR", to_currency: @family.currency, date: Date.current, rate: 1.1)
+
+    assert_recompute
+  end
+
   test "recompute does not clobber an allocation changed underneath it" do
     first = initialized_budget(2.months.ago)
     allocate(first, 100)
@@ -1083,6 +1235,31 @@ class BudgetCategoryRolloverTest < ActiveSupport::TestCase
 
     def recompute!(user: nil)
       Budget::RolloverCalculator.new(family: @family, user: user).recompute!
+    end
+
+    def settle_chain
+      Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+      first = initialized_budget(2.months.ago)
+      allocate(first, 100)
+      yield first if block_given?
+      second = initialized_budget(1.month.ago)
+      allocate(second, 100)
+      recompute!
+      recompute!
+      [ first, second ]
+    end
+
+    # A fresh family, as on the next request: Family memoizes derived reads.
+    def assert_recompute
+      @family = Family.find(@family.id)
+      Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).once.returns(false)
+      recompute!
+    end
+
+    def assert_no_recompute
+      @family = Family.find(@family.id)
+      Budget::RolloverCalculator.any_instance.expects(:recompute_chain!).never
+      recompute!
     end
 
     def budget_category_for(budget)
