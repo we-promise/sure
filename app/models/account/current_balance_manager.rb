@@ -103,14 +103,14 @@ class Account::CurrentBalanceManager
     # Processors write the anchor AFTER importing the sync's transactions, so the ledger for
     # the gap since the standing anchor is complete and we can judge it now:
     #
-    # Gated on BALANCE_REUSE_EXPLAINED_ANCHOR; when it is off the old anchor always rotates.
-    #
-    #   * the imported ledger explains the move to the statement's reading -> the old anchor
-    #     carries nothing the transactions don't already carry, so it just moves forward
-    #     in place (date AND amount) exactly like a same-day update
+    #   * the imported ledger explains the move to the statement's reading -> the stale
+    #     anchor carries nothing the transactions don't already carry.
+    #     With BALANCE_REUSE_EXPLAINED_ANCHOR on, it moves forward in place (date AND
+    #     amount) like a same-day update. With the flag off, it is dropped and a fresh
+    #     anchor is created for the statement date.
     #   * it doesn't -> the provider knew something the ledger doesn't, so the old anchor
     #     is preserved as a reconciliation waypoint (#1492, #1484) and a fresh anchor is
-    #     created for the statement date
+    #     created for the statement date.
     def set_current_balance_for_linked_account(balance, date)
       changes_made = false
       error = nil
@@ -215,7 +215,6 @@ class Account::CurrentBalanceManager
     #
     # Restricted to :cash accounts: an :investment total moves with market prices, and
     # :non_cash accounts are valuation-driven, so the identity means nothing for either.
-    # Off by default (BALANCE_REUSE_EXPLAINED_ANCHOR): every stale anchor rotates, as before.
     def ledger_explains?(older_entry, new_balance, date)
       return false unless Rails.configuration.x.balance.reuse_explained_anchor
       return false unless account.balance_type == :cash

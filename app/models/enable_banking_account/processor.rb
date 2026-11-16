@@ -36,18 +36,23 @@ class EnableBankingAccount::Processor
     # A failed import leaves the ledger incomplete, so skip anchoring and let the next
     # successful sync judge the wider gap.
     if anchor_balance && transactions_ok
-      result = enable_banking_account.current_account.set_current_balance(anchor_balance)
+      begin
+        result = enable_banking_account.current_account.set_current_balance(anchor_balance)
 
-      unless result.success?
-        error = ProcessingError.new("Failed to set current balance: #{result.error}")
-        report_exception(error, "account")
-        raise error
+        unless result.success?
+          raise ProcessingError.new("Failed to set current balance: #{result.error}")
+        end
+
+        # The anchor now holds this balance, so its verification is the
+        # importer's evidence for it. Only set here, so a sync that stops
+        # before this point never vouches for an older anchor.
+        enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
+      rescue => e
+        # Whatever happened to the anchor here, it is not known to be verified.
+        enable_banking_account.update_column(:balance_verified, false) if enable_banking_account.persisted?
+        report_exception(e, "account")
+        raise
       end
-
-      # The anchor now holds this balance, so its verification is the
-      # importer's evidence for it. Only set here, so a sync that stops
-      # before this point never vouches for an older anchor.
-      enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
     end
   end
 

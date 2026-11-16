@@ -42,6 +42,9 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     # entry fixtures - asserted rather than assumed, since every balance below is derived
     # from the ledger this test builds.
     assert_equal 0, accounts(:connected).entries.count
+
+    # The reuse of an explained anchor is gated on BALANCE_REUSE_EXPLAINED_ANCHOR (default off).
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
   end
 
   # ---------------------------------------------------------------------------------------
@@ -380,7 +383,21 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     end
 
     def materialize!(account)
-      Balance::Materializer.new(Account.find(account.id), strategy: :reverse).materialize_balances
+      account = Account.find(account.id)
+
+      # Reverse syncs exclude entries dated after `Date.current` (future-dated
+      # scheduled entries). These scenarios build history on days that are
+      # still ahead of the wall clock, so materialize as of the newest date
+      # the scenario actually produced instead of today.
+      as_of = [
+        account.current_anchor_date,
+        account.entries.maximum(:date),
+        Date.current
+      ].compact.max
+
+      travel_to sync_clock(as_of) do
+        Balance::Materializer.new(account, strategy: :reverse).materialize_balances
+      end
     end
 
     def balance_row(account, date)
