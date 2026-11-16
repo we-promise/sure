@@ -47,14 +47,15 @@ class IncomeStatement
   # The part of expense_totals that paid the family's bills: the same
   # filters, currency conversion and roll-up into parent categories, so the
   # two subtract cleanly. A payment counts once at its entry's amount, however
-  # many occurrences it settles.
+  # many occurrences it settles. A payment that was split counts through its
+  # children, so only the parts that are spending, each in its own category.
   def bill_expense_totals(period: Period.current_month)
     key = period_cache_key(period)
     @bill_expense_totals_by_period ||= {}
     return @bill_expense_totals_by_period[key] if @bill_expense_totals_by_period.key?(key)
 
     paying_bills = Entry.where(entryable_type: "Transaction")
-                        .where(id: RecurringAllocation.to_family_bills(family).select(:entry_id))
+                        .with_split_children(RecurringAllocation.to_family_bills(family).select(:entry_id))
                         .select(:entryable_id)
     rows = totals_query(
       transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled)

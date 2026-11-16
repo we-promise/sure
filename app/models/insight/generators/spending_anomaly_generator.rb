@@ -162,7 +162,7 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
 
       RecurringOccurrence.open_bills_due(family.id, dates).each_with_object(Hash.new(0.to_d)) do |occurrence, sums|
         category_id = occurrence.recurring_transaction.category_id
-        sums[parent_ids[category_id] || category_id] += occurrence.remaining_amount_money.exchange_to(family.currency).amount
+        sums[parent_ids[category_id] || category_id] += occurrence.remaining_spending_money.exchange_to(family.currency).amount
       rescue Money::ConversionError
         next
       end

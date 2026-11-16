@@ -35,8 +35,8 @@ class RecurringOccurrence < ApplicationRecord
   scope :due_between, ->(from, to) { where(due_on: from..to) }
 
   # The family's open bill occurrences due within `dates`, with their confirmed
-  # allocation sums loaded in one grouped query so remaining_amount on each
-  # row issues none.
+  # allocation sums and their series' spending shares loaded in grouped
+  # queries so remaining_spending_money on each row issues none.
   def self.open_bills_due(family_id, dates)
     occurrences = open_status
                     .joins(:recurring_transaction)
@@ -50,7 +50,37 @@ class RecurringOccurrence < ApplicationRecord
                               .where(recurring_occurrence_id: occurrences.map(&:id))
                               .group(:recurring_occurrence_id)
                               .sum(:allocated_amount)
-    occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+    shares = spending_shares(occurrences.map(&:recurring_transaction_id).uniq)
+    occurrences.each do |occurrence|
+      occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
+      occurrence.spending_share = shares.fetch(occurrence.recurring_transaction_id, 1)
+    end
+  end
+
+  # The part of each series' charge that is spending, by series id, for the
+  # series whose charges get split: a mortgage instalment split into its
+  # interest and a transfer of the principal to the loan is spending only for
+  # the interest. Read off the series' latest split charge, as its children
+  # that count as spending (the kinds and exclusions IncomeStatement::Totals
+  # applies) over the charge. Series never split are absent: all spending.
+  def self.spending_shares(series_ids)
+    latest_splits = RecurringAllocation.confirmed
+      .joins(:recurring_occurrence, :entry)
+      .where(recurring_occurrences: { recurring_transaction_id: series_ids })
+      .where(entry_id: Entry.where.not(parent_entry_id: nil).select(:parent_entry_id))
+      .order("recurring_occurrences.recurring_transaction_id", "entries.date DESC", "entries.id DESC")
+      .pluck(Arel.sql("DISTINCT ON (recurring_occurrences.recurring_transaction_id) recurring_occurrences.recurring_transaction_id"),
+             "entries.id", "entries.amount")
+    return {} if latest_splits.empty?
+
+    spent = Entry.where(parent_entry_id: latest_splits.map(&:second), excluded: false, entryable_type: "Transaction")
+                 .where(entryable_id: Transaction.where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS).select(:id))
+                 .group(:parent_entry_id)
+                 .sum(:amount)
+
+    latest_splits.each_with_object({}) do |(series_id, entry_id, amount), shares|
+      shares[series_id] = (spent.fetch(entry_id, 0) / amount).clamp(0, 1) if amount.positive?
+    end
   end
 
   # The amount this occurrence expects, resolving NULL through the series'
@@ -105,6 +135,15 @@ class RecurringOccurrence < ApplicationRecord
 
   def remaining_amount_money
     Money.new(remaining_amount, currency)
+  end
+
+  attr_writer :spending_share
+
+  # The part of remaining_amount that will be spending: all of it, unless the
+  # series' charges get split (see .spending_shares).
+  def remaining_spending_money
+    share = @spending_share || self.class.spending_shares([ recurring_transaction_id ]).fetch(recurring_transaction_id, 1)
+    Money.new((remaining_amount * share).round(Money::Currency.new(currency).default_precision), currency)
   end
 
   # Exact sum, not tolerance: $1,850 allocated against $2,000 rent is

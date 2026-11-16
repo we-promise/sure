@@ -451,7 +451,7 @@ class BudgetCategory < ApplicationRecord
 
         total = occurrences.reduce(Money.new(0, currency)) do |sum, occurrence|
           begin
-            sum + occurrence.remaining_amount_money.exchange_to(currency)
+            sum + occurrence.remaining_spending_money.exchange_to(currency)
           rescue Money::ConversionError
             unconvertible += 1
             sum

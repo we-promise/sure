@@ -1195,6 +1195,23 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 0, bill_totals[@food_category.id]
   end
 
+  # A split payment is excluded and its children count in its place: the
+  # expense parts in their own categories, the transfer part not at all.
+  test "bill_expense_totals counts the spending parts of a split payment" do
+    fees = @family.categories.create!(name: "Fees")
+    split_payment(pay_bill(groceries_bill, date: Date.current),
+                  { amount: 30, category: @groceries_category },
+                  { amount: 15, category: fees },
+                  { amount: 5, kind: "funds_movement" })
+
+    totals = bill_totals
+
+    assert_equal 30, totals[@groceries_category.id]
+    assert_equal 30, totals[@food_category.id]
+    assert_equal 15, totals[fees.id]
+    assert_equal 45, IncomeStatement.new(@family).bill_expense_totals(period: Period.current_month).total
+  end
+
   # Mid-month, so the future-dated payment still falls inside the period.
   test "bill_expense_totals leaves out what expense_totals leaves out" do
     travel_to Date.current.beginning_of_month + 14.days do

@@ -1,6 +1,8 @@
 require "test_helper"
 
 class RecurringOccurrenceTest < ActiveSupport::TestCase
+  include EntriesTestHelper
+
   def setup
     @family = families(:dylan_family)
     @series = recurring_transactions(:netflix_subscription)
@@ -19,6 +21,25 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
 
     occurrence.override_amount!(nil)
     assert_equal 18.99, occurrence.resolved_expected_amount
+  end
+
+  test "remaining_spending_money is the whole remaining amount for a series never split" do
+    occurrence = create_occurrence
+
+    assert_equal occurrence.remaining_amount_money, occurrence.remaining_spending_money
+  end
+
+  # Only the interest of a mortgage instalment is spending; the principal is a
+  # transfer to the loan, and an excluded part is not counted either.
+  test "remaining_spending_money keeps the spending share of the series' latest split charge" do
+    interest = @family.categories.create!(name: "Mortgage interest")
+    mortgage = create_bill(category: interest, amount: 1_423.86, name: "Mortgage")
+    split_payment(pay_bill(mortgage, date: Date.current - 1.month),
+                  { amount: 683.07, category: interest },
+                  { amount: 40, category: interest, excluded: true },
+                  { amount: 700.79, kind: "funds_movement" })
+
+    assert_equal Money.new(683.07, "USD"), expect_bill(mortgage, due_on: Date.current).remaining_spending_money
   end
 
   test "average strategy resolves through the series variance" do

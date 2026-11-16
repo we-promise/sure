@@ -135,6 +135,17 @@ module EntriesTestHelper
     entry
   end
 
+  # Splits a payment into `parts` ({ amount:, category:, kind:, excluded: }), the way a
+  # family splits a mortgage instalment into its interest and a transfer of
+  # the principal to the loan. A part with a transfer kind is that transfer.
+  def split_payment(entry, *parts)
+    children = entry.split!(parts.map.with_index(1) do |part, i|
+      { name: "#{entry.name} part #{i}", amount: part[:amount], category_id: part[:category]&.id, excluded: part[:excluded] }
+    end)
+    children.zip(parts) { |child, part| child.entryable.update!(kind: part[:kind]) if part[:kind] }
+    children
+  end
+
   # An occurrence of `bill` still waiting to be paid.
   def expect_bill(bill, due_on:, amount: bill.amount)
     bill.recurring_occurrences.create!(

@@ -111,6 +111,42 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
     end
   end
 
+  # A mortgage instalment split into its interest, spent in the category, and
+  # a transfer of the principal to the loan: the interest is a paid bill.
+  test "does not project a bill paid with a split charge" do
+    mortgage = split_mortgage_bill
+
+    travel_to anchor do
+      [ *baseline_months, current_month ].each { |month| pay_split_instalment(mortgage, month) }
+      baseline_months.each { |month| spend(month, 300, day: 12) }
+      spend(current_month, 100, day: 5)
+
+      assert_empty generate
+    end
+  end
+
+  # Of the instalment still due only its interest will be spending, as in the
+  # last split charge; counted whole it doubled the projection.
+  test "counts only the spending share of a split bill still due" do
+    mortgage = split_mortgage_bill
+
+    travel_to anchor do
+      baseline_months.each do |month|
+        pay_split_instalment(mortgage, month)
+        spend(month, 300, day: 12)
+      end
+      expect_bill(mortgage, due_on: current_month.change(day: 25))
+      spend(current_month, 200, day: 5)
+
+      insights = generate
+
+      assert_equal 1, insights.size
+      assert_equal "above", insights.first.metadata[:direction]
+      pace = BigDecimal(current_month.end_of_month.day) / 10
+      assert_equal Money.new(BigDecimal("683.07") + 200 * pace, "USD").format, insights.first.facts[:projected_spend]
+    end
+  end
+
   # Bills do not hide the rest of the category: spending outside them that is
   # running ahead of its usual pace is still reported.
   test "flags unplanned spending running ahead in a category with bills" do
@@ -291,6 +327,16 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
     def uncached_query_count(&block)
       Rails.cache.clear
       ActiveRecord::Base.uncached { capture_sql_queries(&block).size }
+    end
+
+    def split_mortgage_bill
+      @mortgage_category = @family.categories.create!(name: "Pace Test Mortgage", parent: @category)
+      create_bill(category: @mortgage_category, amount: 1_423.86, name: "Mortgage", day: 3)
+    end
+
+    def pay_split_instalment(mortgage, month)
+      split_payment(pay_bill(mortgage, date: month.change(day: 3)),
+                    { amount: 683.07, category: @mortgage_category }, { amount: 740.79, kind: "funds_movement" })
     end
 
     def budget_line(category: @category, user: nil, **attributes)

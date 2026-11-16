@@ -117,6 +117,20 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 0, @parent_budget_category.bills_reserved_unconvertible_count
   end
 
+  # Only the interest of a mortgage instalment lands in the bill's category;
+  # the principal is a transfer to the loan. The latest split charge says how
+  # much of the next one will be spending.
+  test "bills_reserved counts only the spending share of a bill whose charges are split" do
+    mortgage = create_bill(category: @parent_category, amount: 1_000, name: "Mortgage")
+    split_payment(pay_bill(mortgage, date: @budget.start_date - 2.months),
+                  { amount: 500, category: @parent_category }, { amount: 500, kind: "funds_movement" })
+    split_payment(pay_bill(mortgage, date: @budget.start_date - 1.month),
+                  { amount: 600, category: @parent_category }, { amount: 400, kind: "funds_movement" })
+    expect_bill(mortgage, due_on: @budget.start_date + 3)
+
+    assert_equal 600, @parent_budget_category.bills_reserved.amount
+  end
+
   test "bills_reserved loads the budget's obligations once for all its categories" do
     bill = @family.recurring_transactions.create!(
       name: "Groceries plan", account: accounts(:depository), amount: 120,
@@ -175,6 +189,17 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     pay_bill(create_bill(category: @parent_category, amount: 950, name: "Rent"), date: Date.current)
 
     assert_operator @parent_budget_category.percent_of_budget_spent, :>=, BudgetCategory::NEAR_LIMIT_PERCENT
+    assert_not @parent_budget_category.near_limit?
+  end
+
+  # The payment is split into its interest, spent in the line, and a transfer
+  # of the principal; the interest is the bill's.
+  test "near_limit? ignores a line filled by a bill paid with a split charge" do
+    mortgage = create_bill(category: @parent_category, amount: 1_400, name: "Mortgage")
+    split_payment(pay_bill(mortgage, date: Date.current),
+                  { amount: 950, category: @parent_category }, { amount: 450, kind: "funds_movement" })
+
+    assert_equal 950, @parent_budget_category.bills_paid
     assert_not @parent_budget_category.near_limit?
   end
 
