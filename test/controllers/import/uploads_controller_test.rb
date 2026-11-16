@@ -18,13 +18,15 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "text/csv", response.media_type
   end
 
-  test "sample_csv redirects for imports without a CSV template" do
-    pdf_import = imports(:pdf)
+  [ PdfImport, QifImport, MonarchImport, SureImport ].each do |import_type|
+    test "sample_csv redirects for #{import_type} without a CSV template" do
+      import = import_type.create!(family: @user.family)
 
-    get import_upload_sample_csv_url(pdf_import)
+      get import_upload_sample_csv_url(import)
 
-    assert_redirected_to import_upload_url(pdf_import)
-    assert_equal "A sample CSV is not available for this import type.", flash[:alert]
+      assert_redirected_to import_upload_url(import)
+      assert_equal "A sample CSV is not available for this import type.", flash[:alert]
+    end
   end
 
   test "uploads valid csv by copy and pasting" do
