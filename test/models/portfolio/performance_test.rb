@@ -209,6 +209,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
   # rows it read are not cached under the key a later instance reads, which
   # computes the income from rows that have the rate.
   test "an income read after a rate is stored is not cached under the newer key" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     eur = eur_account_with_fee
     earlier = performance(account_ids: [ eur.id ])
 
@@ -222,12 +223,16 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_nil earlier.income[:fee_ratio], "one instance reports one snapshot"
     later = performance(account_ids: [ eur.id ])
     assert_in_delta 10 / 995.0, later.income[:fee_ratio].to_f, 0.000001
+    warm = performance(account_ids: [ eur.id ])
+    warm.expects(:income_metrics).never
+    assert_in_delta 10 / 995.0, warm.income[:fee_ratio].to_f, 0.000001, "the newer key's cached entry is the income with the rate"
   end
 
   # Rows read through #daily_returns before the key was taken can predate it.
   # The income entry, like the metrics, is computed from rows built for its
   # own key, not from those.
   test "the income is computed from rows built for its key, not ones read earlier" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     eur = eur_account_with_fee
     result = performance(account_ids: [ eur.id ])
 
@@ -239,6 +244,9 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     end
 
     assert_in_delta 10 / 995.0, result.income[:fee_ratio].to_f, 0.000001
+    warm = performance(account_ids: [ eur.id ])
+    warm.expects(:income_metrics).never
+    assert_in_delta 10 / 995.0, warm.income[:fee_ratio].to_f, 0.000001, "a later instance reads the cached entry, which has the rate"
   end
 
   # A guard rather than a test of a fix: under one key the two entries share

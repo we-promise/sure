@@ -267,6 +267,18 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), drivers.change
   end
 
+  # A trade with no quantity buys nothing: the balance books its amount as
+  # cash leaving, not as a market move, so there is no commission in `market`
+  # to take out, even when the fee equals the amount.
+  test "a commission on a trade with no quantity is not moved out of market" do
+    commission_ledger(trades: [ { date: @day_two, qty: 0, price: 50, fee: 5 } ])
+
+    drivers = drivers_for
+
+    assert_equal BigDecimal("0"), drivers.market, "the balance booked the amount as cash out, not as a market move"
+    assert_equal BigDecimal("0"), drivers.fees
+  end
+
   test "a trade with no fee moves nothing between market and fees" do
     commission_ledger(trades: [ { date: @day_two, qty: 100, price: 50, fee: 0 } ])
 

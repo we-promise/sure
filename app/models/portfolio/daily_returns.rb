@@ -990,12 +990,15 @@ class Portfolio::DailyReturns
     end
 
     # A buy's or sell's commission that its entry amount includes, as
-    # trade_fees sums it: amount = qty x price + fee, within half the fee.
+    # trade_fees sums it: amount = qty x price + fee, within half the fee. A
+    # trade with no quantity bought or sold nothing; the balance books its
+    # amount as cash, so there is no commission in `market` to move.
     def trade_commission_sql
       <<~SQL.squish
         (entries.entryable_type = 'Trade'
           AND #{fragment(:flow_class_sql)} = 'internal'
           AND trades.fee > 0
+          AND trades.qty <> 0
           AND trades.currency = entries.currency
           AND ABS(entries.amount - (trades.qty * trades.price + trades.fee)) < trades.fee / 2)
       SQL

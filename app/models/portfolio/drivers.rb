@@ -82,6 +82,11 @@ class Portfolio::Drivers
   # revaluation. Moved from `market` anyway, that day reads market +fee and fees
   # +fee. The period still reconciles; only the split between those drivers is
   # off, and only for a trade dated on that anchor.
+  #
+  # Another: Trade Republic stores only the commission in `trades.fee` while
+  # its entry amount includes the commission and any tax, so a trade taxed at
+  # half its commission or more does not match amount = qty x price + fee, and
+  # its commission stays in `market`.
   def fees
     @fees ||= sum(:fees)
   end
