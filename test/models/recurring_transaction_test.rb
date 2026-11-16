@@ -1605,7 +1605,7 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal "inactive", rt.reload.status
   end
 
-  test "Cleaner ends a suggestion once every transaction it matches is a confirmed transfer leg" do
+  test "Cleaner removes a suggestion once every transaction it matches is a confirmed transfer leg" do
     travel_to Date.new(2026, 8, 10) do
       suggestion = transfer_shaped_suggestion
       transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
@@ -1618,7 +1618,50 @@ class RecurringTransactionTest < ActiveSupport::TestCase
       transfers.each(&:confirm!)
 
       assert_equal 1, cleaner.retire_transfer_suggestions
-      assert suggestion.reload.ended?, "ended, like a dismissed suggestion, so detection leaves it alone"
+      assert_not RecurringTransaction.exists?(suggestion.id),
+        "deleted, not tombstoned: no dismissal by the user stands behind it"
+    end
+  end
+
+  test "Cleaner's retirement leaves the bill detectable again once the transfers are unlinked" do
+    travel_to Date.new(2026, 8, 10) do
+      transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+      transfers.each(&:confirm!)
+      RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+
+      transfers.each(&:reject!)
+      # A fresh family, as the next detection job loads: this one has the
+      # retired row cached in its association.
+      RecurringTransaction.identify_patterns_for!(Family.find(@family.id))
+
+      revived = RecurringTransaction.find_by(family: @family, name: "Move to savings")
+      assert revived&.suggested?, "the legs are standard again, so detection offers the bill again"
+    end
+  end
+
+  test "Cleaner keeps a suggestion detection attributes to this run's charges" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      3.times { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i).confirm! }
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions(claimed_ids: [ suggestion.id ])
+      assert suggestion.reload.suggested?
+    end
+  end
+
+  test "Cleaner keeps a suggestion whose transfer was unlinked before it took the lock" do
+    travel_to Date.new(2026, 8, 10) do
+      suggestion = transfer_shaped_suggestion
+      transfers = 3.times.map { |i| pending_transfer_leg_pair(Date.new(2026, 8, 5) << i) }
+      transfers.each(&:confirm!)
+      # The unlink commits after the unlocked check and before the row lock.
+      RecurringTransaction.any_instance.stubs(:lock!).with do
+        transfers.each { |transfer| transfer.reload.destroy! if Transfer.exists?(transfer.id) }
+      end.returns(suggestion)
+
+      assert_equal 0, RecurringTransaction::Cleaner.new(@family).retire_transfer_suggestions
+      assert suggestion.reload.suggested?
     end
   end
 

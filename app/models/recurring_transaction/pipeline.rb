@@ -19,8 +19,9 @@ class RecurringTransaction
     end
 
     def run!(backfill: false)
-      patterns_count = Identifier.new(family).identify_recurring_patterns
-      Cleaner.new(family).retire_transfer_suggestions
+      identifier = Identifier.new(family)
+      patterns_count = identifier.identify_recurring_patterns
+      Cleaner.new(family).retire_transfer_suggestions(claimed_ids: identifier.claimed_series_ids)
 
       # Schedule.for reads recurrence_rules for every series; preload them so
       # occurrence generation doesn't issue one query per series (N+1).

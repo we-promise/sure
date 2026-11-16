@@ -203,6 +203,11 @@ class Transfer < ApplicationRecord
       inflow_transaction.update!(kind: "funds_movement")
       outflow_transaction.update!(outflow_attrs)
     end
+
+    # The legs just stopped being ordinary transactions, so a bill suggestion
+    # detected from them can now be retired. A family that never syncs would
+    # otherwise keep it until someone reruns detection by hand.
+    RecurringTransaction.identify_patterns_for(to_account.family)
   end
 
   def date

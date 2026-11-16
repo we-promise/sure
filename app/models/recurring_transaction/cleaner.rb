@@ -38,27 +38,34 @@ class RecurringTransaction
       stale_count
     end
 
-    # End detected suggestions whose transactions have all since been confirmed
-    # as transfer legs: they were offered while the legs were still ordinary
-    # charges, and detection never revisits a suggestion it no longer finds.
-    # They end as a dismissed suggestion does, because `ended` is the
-    # tombstone detection leaves alone; `inactive` would list them as paused
-    # bills and be deleted after six months. Confirmed bills, manual series
-    # and recurring transfers (destination_account_id present, matched by
-    # their pair) are never touched.
-    def retire_transfer_suggestions
+    # Delete detected suggestions whose transactions have all since been
+    # confirmed as transfer legs: they were offered while the legs were still
+    # ordinary charges, and detection never revisits a suggestion it no longer
+    # finds. Deleting rather than tombstoning as `ended` keeps them revivable:
+    # nothing rebuilds the row while the transfers stand, and if the transfers
+    # are later unlinked the legs are ordinary again and detection offers the
+    # bill afresh. An `ended` row would block that, as it does for a user's
+    # dismissal. Confirmed bills, manual series and recurring transfers
+    # (destination_account_id present, matched by their pair) are never
+    # touched, nor is any series in `claimed_ids`: the ones detection just
+    # attributed this run's ordinary charges to, which may sit at an amount
+    # `matching_transactions` does not look at.
+    def retire_transfer_suggestions(claimed_ids: [])
       retired_count = 0
 
       family.recurring_transactions
             .suggested
             .where(manual: false, destination_account_id: nil)
+            .where.not(id: claimed_ids)
             .find_each do |recurring_transaction|
         next unless recurring_transaction.matches_only_transfer_legs?
 
-        # Re-read under a row lock: the user may have confirmed or dismissed
-        # the suggestion since this batch was loaded.
+        # Re-check under a row lock: the user may have confirmed or dismissed
+        # the suggestion, or unlinked one of its transfers, since the check.
         retired = recurring_transaction.with_lock do
-          recurring_transaction.suggested? && recurring_transaction.update!(status: "ended")
+          recurring_transaction.suggested? &&
+            recurring_transaction.matches_only_transfer_legs? &&
+            recurring_transaction.destroy!
         end
         retired_count += 1 if retired
       end
