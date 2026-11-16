@@ -138,7 +138,13 @@ class Portfolio::Performance
   # flag it needs is read from the daily returns, not from #metrics, so a
   # caller reading only the income never runs the returns' compute.
   def income
-    @income ||= Rails.cache.fetch("#{cache_key}_income") { income_metrics(daily_returns.rate_missing?) }
+    @income ||= begin
+      key = cache_key
+      Rails.cache.fetch("#{key}_income") do
+        daily_returns_for(key)
+        income_metrics(daily_returns.rate_missing?)
+      end
+    end
   end
 
   # True when a currency pair had no rate anywhere in the period, in which

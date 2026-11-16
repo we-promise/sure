@@ -204,6 +204,60 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 10 / 995.0, result.income[:fee_ratio].to_f, 0.000001
   end
 
+  # A rate stored after an instance read its returns does not mix snapshots:
+  # that instance's income is still the one its returns came from, and the
+  # rows it read are not cached under the key a later instance reads, which
+  # computes the income from rows that have the rate.
+  test "an income read after a rate is stored is not cached under the newer key" do
+    eur = eur_account_with_fee
+    earlier = performance(account_ids: [ eur.id ])
+
+    assert_nil earlier.twr, "precondition: the returns were read with no rate"
+
+    travel 1.minute do
+      set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.0
+      set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.0
+    end
+
+    assert_nil earlier.income[:fee_ratio], "one instance reports one snapshot"
+    later = performance(account_ids: [ eur.id ])
+    assert_in_delta 10 / 995.0, later.income[:fee_ratio].to_f, 0.000001
+  end
+
+  # Rows read through #daily_returns before the key was taken can predate it.
+  # The income entry, like the metrics, is computed from rows built for its
+  # own key, not from those.
+  test "the income is computed from rows built for its key, not ones read earlier" do
+    eur = eur_account_with_fee
+    result = performance(account_ids: [ eur.id ])
+
+    assert result.daily_returns.rate_missing?, "precondition: the rows were read with no rate"
+
+    travel 1.minute do
+      set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.0
+      set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.0
+    end
+
+    assert_in_delta 10 / 995.0, result.income[:fee_ratio].to_f, 0.000001
+  end
+
+  # A guard rather than a test of a fix: under one key the two entries share
+  # one series, so the income after the returns does not run the series query
+  # again.
+  test "the returns and the income under one key build the series once" do
+    eur = eur_account_with_fee
+    set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.0
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.0
+    result = performance(account_ids: [ eur.id ])
+
+    queries = capture_sql_queries do
+      result.twr
+      result.income
+    end
+
+    assert_equal 1, queries.count { |sql| sql.include?("balances_by_date") }
+  end
+
   # #income is its own cache entry so that asking for it does not pay for the
   # returns, and that has to hold on a cold instance too. It needs one fact the
   # returns also use -- whether a rate is missing -- and reading that from the
