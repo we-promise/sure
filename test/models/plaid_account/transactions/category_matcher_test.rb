@@ -133,4 +133,41 @@ class PlaidAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCase
     assert_equal @income, @matcher.match("income_wages")
     assert_equal @income, @matcher.match("income_other_income")
   end
+
+  # A family created under another locale gets its default categories named in that
+  # language. The matcher must still find them, whatever locale the sync runs in.
+  test "matches default categories created in another locale" do
+    family = families(:empty)
+    family.categories.destroy_all
+    I18n.with_locale(:de) { family.categories.bootstrap! }
+    matcher = PlaidAccount::Transactions::CategoryMatcher.new(family.categories.to_a)
+
+    expectations = {
+      "food_and_drink_groceries"          => :groceries,
+      "food_and_drink_coffee"             => :food_and_drink,
+      "travel_lodging"                    => :travel,
+      "transportation_gas"                => :transportation,
+      "loan_payments_credit_card_payment" => :loan_payments,
+      "income_wages"                      => :income
+    }
+
+    [ :en, :de ].each do |sync_locale|
+      I18n.with_locale(sync_locale) do
+        expectations.each do |plaid_category, default_key|
+          expected = I18n.t("models.category.defaults.#{default_key}", locale: :de)
+          assert_equal expected, matcher.match(plaid_category)&.name,
+                       "#{plaid_category} should match the German default category while syncing in #{sync_locale}"
+        end
+      end
+    end
+  end
+
+  test "leaves custom non-English category names unmatched" do
+    family = families(:empty)
+    family.categories.destroy_all
+    family.categories.create!(name: "Kaffeekasse")
+    matcher = PlaidAccount::Transactions::CategoryMatcher.new(family.categories.to_a)
+
+    assert_nil matcher.match("food_and_drink_coffee")
+  end
 end

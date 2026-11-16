@@ -1,0 +1,32 @@
+---
+tr:
+  settings:
+    llm_usages:
+      show:
+        col_cost: Maliyet
+        col_date: Tarih
+        col_model: Model
+        col_operation: İşlem
+        col_tokens: Token
+        completion: tamamlama
+        cost_by_model: Modele Göre Maliyet
+        cost_by_operation: İşleme Göre Maliyet
+        cost_estimates_description: Maliyetler, en son %{date} tarihinde doğrulanan yayınlanmış sağlayıcı fiyatlarına göre tahmin edilir. Gerçek
+          maliyetler farklılık gösterebilir. Fiyatlandırma 1 milyon token başınadır
+          ve modele göre değişir. Özel veya kendi sunucunuzda barındırılan modeller
+          "Yok" olarak gösterilir ve maliyet toplamlarına dahil edilmez.
+        cost_estimates_title: Maliyet Tahminleri Hakkında
+        end_date: Bitiş Tarihi
+        failed: Başarısız
+        filter: Filtrele
+        no_usage_data: Seçilen dönem için kullanım verisi bulunamadı
+        page_title: LLM Kullanımı ve Maliyetleri
+        prompt: istem
+        recent_usage: Son Kullanım
+        start_date: Başlangıç Tarihi
+        subtitle: Yapay zeka kullanımınızı ve tahmini maliyetlerinizi takip edin
+        total_cost: Toplam Maliyet
+        total_calls: "Toplam Çağrı"
+        avg_cost_per_call: "Ort. Maliyet/Çağrı"
+        based_on_calls: "Maliyet verisi bulunan %{total} çağrıdan %{with_cost} tanesine dayanmaktadır"
+        total_tokens: Toplam Token

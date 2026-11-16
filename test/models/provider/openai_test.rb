@@ -89,6 +89,48 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     end
   end
 
+  # The registry and the settings form both stop a custom base URL without a
+  # model before it gets here; this is the provider's own guard behind them.
+  test "a custom base URL without a model is refused" do
+    error = assert_raises(Provider::Openai::Error) do
+      Provider::Openai.new("ollama-local", uri_base: "http://localhost:11434/v1", model: nil)
+    end
+
+    assert_match(/Model is required/, error.message)
+  end
+
+  test "a custom base URL accepts any model name, as a local server's models are its own" do
+    local = Provider::Openai.new("ollama-local", uri_base: "http://localhost:11434/v1", model: "llama3.1")
+
+    assert local.custom_provider?
+    assert local.supports_model?("llama3.1")
+    assert local.supports_model?("qwen2.5:32b")
+  end
+
+  # Some keys only work on a regional host, so setting one must not turn off
+  # the OpenAI-only paths like the Responses API and max_completion_tokens.
+  test "an OpenAI regional host is hosted OpenAI, not a custom provider" do
+    with_env_overrides("OPENAI_SUPPORTS_RESPONSES_ENDPOINT" => nil) do
+      regional = Provider::Openai.new("test-token", uri_base: "https://us.api.openai.com")
+
+      assert_not regional.custom_provider?
+      assert regional.supports_responses_endpoint?
+      assert_equal "OpenAI", regional.provider_name
+      assert Provider::Openai.native_pdf_completion_limit?(model: "gpt-6-luna", custom_provider: regional.custom_provider?)
+    end
+  end
+
+  test "only OpenAI's own hosts count as a hosted OpenAI endpoint" do
+    [ "https://api.openai.com", "https://api.openai.com/v1/", "https://us.api.openai.com", "https://EU.api.openai.com/v1" ].each do |url|
+      assert Provider::Openai.hosted_endpoint?(url), url
+    end
+
+    [ "http://us.api.openai.com", "https://evil-api.openai.com", "https://api.openai.com.example.com",
+      "https://us.api.openai.com/proxy", "https://us.api.openai.com:8443", "https://custom.example/v1", "not a url" ].each do |url|
+      assert_not Provider::Openai.hosted_endpoint?(url), url
+    end
+  end
+
   test "legacy and custom PDF processing preserve the fallback output limit" do
     with_env_overrides("LLM_MAX_RESPONSE_TOKENS" => nil) do
       Setting.stubs(:llm_max_response_tokens).returns(nil)
@@ -1092,6 +1134,16 @@ class Provider::OpenaiTest < ActiveSupport::TestCase
     recorded = family.llm_usages.order(:created_at).last
     assert_equal BigDecimal("0"), recorded.estimated_cost
     assert_equal [ 10, 5, 15 ], [ recorded.prompt_tokens, recorded.completion_tokens, recorded.total_tokens ]
+  end
+
+  test "the client takes its proxy from Ai::Transport::Http, never proxying loopback" do
+    ClimateControl.modify(HTTPS_PROXY: "http://proxy.internal:8888", HTTP_PROXY: nil, NO_PROXY: nil, no_proxy: nil) do
+      cloud = Faraday.new.tap { Provider::Openai.new("token").send(:client).faraday_middleware.call(_1) }
+      local = Faraday.new.tap { Provider::Openai.new("token", uri_base: "http://127.0.0.1:8080/v1", model: "qwen3").send(:client).faraday_middleware.call(_1) }
+
+      assert_equal URI("http://proxy.internal:8888"), cloud.proxy.uri
+      assert_nil local.proxy
+    end
   end
 
   private

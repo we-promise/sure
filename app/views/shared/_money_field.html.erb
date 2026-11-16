@@ -29,7 +29,7 @@
       <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
-          <span class="text-red-500 ml-0.5">*</span>
+          <span class="text-destructive ml-0.5">*</span>
         <% end %>
       <% end %>
       <div class="form-field__actions">
@@ -48,7 +48,7 @@
       <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
-          <span class="text-red-500 ml-0.5">*</span>
+          <span class="text-destructive ml-0.5">*</span>
         <% end %>
       <% end %>
     <% end %>
@@ -79,6 +79,7 @@
             action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount", "blur->money-field#normalizeAmount" ].compact.join(" ")
           }.compact),
           required: options[:required],
+          aria: options[:aria],
           **options.slice(:name) %>
       </div>
 

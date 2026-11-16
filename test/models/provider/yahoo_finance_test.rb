@@ -383,6 +383,47 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   #      Exchange Rate Tests
   # ================================
 
+  test "fetch_exchange_rates rejects a quote Yahoo gives no currency for" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("GELRUB=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+    # Live on that date: GEL per 100 RUB, with no currency.
+    @provider.stubs(:fetch_authenticated_chart).with("RUBGEL=X", anything).returns(fx_chart(date, nil, 3.1481))
+    DebugLogEntry.expects(:capture).with do |attributes|
+      attributes[:category] == "exchange_rates" &&
+        attributes[:metadata] == { symbol: "RUBGEL=X", expected_currency: "GEL", quote_currency: nil }
+    end
+
+    response = @provider.fetch_exchange_rates(from: "GEL", to: "RUB", start_date: date, end_date: date)
+
+    assert_not response.success?
+  end
+
+  test "fetch_exchange_rates takes a quote in the pair's currency as is and inverts the reverse quote" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("EURUSD=X", anything).returns(fx_chart(date, "USD", 1.12))
+    @provider.stubs(:fetch_authenticated_chart).with("USDEUR=X", anything)
+             .returns("chart" => { "error" => { "code" => "Not Found" } })
+
+    eur_usd = @provider.fetch_exchange_rates(from: "EUR", to: "USD", start_date: date, end_date: date)
+    usd_eur = @provider.fetch_exchange_rates(from: "USD", to: "EUR", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, eur_usd.data.first.rate.to_f
+    assert_in_delta 1 / 1.12, usd_eur.data.first.rate.to_f, 1e-9
+  end
+
+  test "fetch_exchange_rates matches the quote currency regardless of case" do
+    @provider.stubs(:throttle_request)
+    date = Date.new(2026, 10, 22)
+    @provider.stubs(:fetch_authenticated_chart).with("eurusd=X", anything).returns(fx_chart(date, "USD", 1.12))
+
+    response = @provider.fetch_exchange_rates(from: "eur", to: "usd", start_date: date, end_date: date)
+
+    assert_in_delta 1.12, response.data.first.rate.to_f
+  end
+
   test "fetch_exchange_rate returns 1.0 for same currency" do
     date = Date.parse("2024-01-15")
     response = @provider.fetch_exchange_rate(from: "USD", to: "USD", date: date)
@@ -489,6 +530,27 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "CIBEST.CL", security.symbol
     assert_equal "XBOG", security.exchange_operating_mic
     assert_equal "CO", security.country_code
+  end
+
+  test "search_securities maps Yahoo's Xetra exchange code to XETR" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [
+        { symbol: "SXR8.DE", shortname: "iShares Core S&P 500", exchange: "GER", exchDisp: "XETRA" },
+        { symbol: "SXR8.AS", shortname: "iShares Core S&P 500", exchange: "AMS", exchDisp: "Amsterdam" }
+      ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("SXR8")
+
+    assert response.success?
+    xetra = response.data.index_by(&:symbol).fetch("SXR8.DE")
+    assert_equal "XETR", xetra.exchange_operating_mic
+    assert_equal "DE", xetra.country_code
+    assert_equal "EUR", @provider.send(:default_currency_for_exchange, "GER")
   end
 
   test "search_securities preserves catalog countries and display-name fallback" do
@@ -849,7 +911,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
         attributes[:metadata][:exception_class] == "Faraday::ConnectionFailed"
     end
 
-    result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current) { |ts, close| close }
+    result = @provider.send(:fetch_chart_data, "EURUSD=X", Date.current - 5.days, Date.current, currency: "USD") { |ts, close| close }
 
     assert_nil result
   end
@@ -1137,6 +1199,14 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       auth_client = mock
       auth_client.expects(:get).times(responses.length).returns(*responses)
       provider.stubs(:health_auth_client).returns(auth_client)
+    end
+
+    def fx_chart(date, currency, close)
+      { "chart" => { "result" => [ {
+        "meta" => { "currency" => currency },
+        "timestamp" => [ date.to_time.utc.to_i ],
+        "indicators" => { "quote" => [ { "close" => [ close ] } ] }
+      } ] } }
     end
 
     def stub_health_chart_responses(*responses, provider: @provider)
