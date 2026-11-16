@@ -25,10 +25,11 @@
 # moved a position between brokers.
 #
 # Inputs, in the order they are consulted: whether the entry is excluded or
-# pending; a transfer-fee leg; the activity label on the Trade or Transaction;
-# for an unlabelled Transaction its `kind`; and for a transfer, whether the
-# counterpart leg's account is inside the scope and the leg posted the same
-# day (each leg moves its own balance on its own date). Direction for an external
+# pending; a transfer-fee leg; the activity label on the Trade or Transaction
+# (a split child without one reads its parent's); for an unlabelled
+# Transaction its `kind`; and for a transfer, whether the counterpart leg's
+# account is inside the scope and the leg posted the same day (each leg moves
+# its own balance on its own date). Direction for an external
 # flow comes from the Trade's quantity sign or the Transaction's amount sign
 # (negative amount = money in).
 #
@@ -180,6 +181,9 @@ class Portfolio::FlowClassifier
         ORDER BY (t.inflow_transaction_id = transactions.id) DESC, t.created_at, t.id
         LIMIT 1
       ) flow_transfers ON TRUE
+      LEFT JOIN entries flow_parent_entries
+        ON flow_parent_entries.id = entries.parent_entry_id AND flow_parent_entries.entryable_type = 'Transaction'
+      LEFT JOIN transactions flow_parent_transactions ON flow_parent_transactions.id = flow_parent_entries.entryable_id
       LEFT JOIN entries flow_counterpart_entries
         ON flow_counterpart_entries.entryable_type = 'Transaction'
         AND flow_counterpart_entries.entryable_id = CASE
@@ -235,7 +239,7 @@ class Portfolio::FlowClassifier
       # back at their transfer; nothing else sets transfer_id.
       return :fee if transaction.transfer_id.present? && transaction.kind == "standard"
 
-      rule = LABEL_RULES[transaction.investment_activity_label]
+      rule = LABEL_RULES[transaction.investment_activity_label || split_parent_label(entry)]
 
       case rule
       when nil
@@ -327,8 +331,16 @@ class Portfolio::FlowClassifier
       active_until.nil? || date <= active_until
     end
 
+    # Entry#split! copies a parent's kind to its children but not its
+    # activity label, and readers skip the parent, so a child with no label
+    # of its own reads its parent's: a split dividend is still a dividend.
+    def split_parent_label(entry)
+      parent = entry.parent_entry&.entryable
+      parent.investment_activity_label if parent.is_a?(Transaction)
+    end
+
     def label_sql
-      "COALESCE(trades.investment_activity_label, transactions.investment_activity_label)"
+      "COALESCE(trades.investment_activity_label, transactions.investment_activity_label, flow_parent_transactions.investment_activity_label)"
     end
 
     # A Trade's direction is its quantity's sign, and a summing caller takes

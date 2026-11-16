@@ -460,6 +460,18 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     assert_equal :internal, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
   end
 
+  # Entry#split! does not copy the activity label to the children it makes,
+  # so a child with no label of its own reads its parent's, in both forms.
+  test "a split child without a label of its own takes its parent's in both forms" do
+    dividend = create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -100)
+    labelled, unlabelled = dividend.split!([ { name: "Part one", amount: -60 }, { name: "Part two", amount: -40 } ])
+    labelled.entryable.update!(investment_activity_label: "Fee")
+
+    assert_equal :income, @brokerage_scope.classify(unlabelled.reload)
+    assert_equal :fee, @brokerage_scope.classify(labelled.reload), "a child's own label still wins"
+    assert_equal({ labelled.id => :fee, unlabelled.id => :income }, @brokerage_scope.classify_ids([ labelled.id, unlabelled.id ]))
+  end
+
   test "every activity label has a rule" do
     assert_equal Transaction::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_equal Trade::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
@@ -605,6 +617,8 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries << create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -11, extra: { "plaid" => { "pending" => "no" } })
       entries << create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -12, extra: { "plaid" => { "pending" => "maybe" } })
       entries << create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -13, extra: { "plaid" => { "pending" => "false" } })
+      entries.concat(create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -20)
+        .split!([ { name: "Split dividend one", amount: -15 }, { name: "Split dividend two", amount: -5 } ]))
       entries << @brokerage.entries.create!(name: "Valuation", date: Date.current, amount: 1000, currency: "USD", entryable: Valuation.new(kind: "reconciliation"))
       entries
     end

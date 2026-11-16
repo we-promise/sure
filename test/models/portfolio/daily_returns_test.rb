@@ -234,6 +234,22 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("500"), daily_returns.rows.last.external_flow
   end
 
+  # Entry#split! copies the parent's kind to each child but not its activity
+  # label, and the parent is left out, so the children are all the series
+  # reads. A split dividend is still a dividend: income, not a deposit.
+  test "a split dividend stays income through its children" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, cash_flow: 100
+    parent = income_transaction(account: @account, date: @day_two, amount: 100)
+    parent.split!([ { name: "Part one", amount: -60 }, { name: "Part two", amount: -40 } ])
+
+    assert_nil parent.child_entries.first.entryable.investment_activity_label, "precondition: the children carry no label of their own"
+    row = daily_returns.rows.last
+    assert_equal BigDecimal("100"), row.income
+    assert_equal BigDecimal("0"), row.external_flow
+    assert_in_delta 0.10, daily_returns.returns.last.last.to_f, 0.000001
+  end
+
   test "a disabled account stops contributing after its cut off date" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
 
