@@ -83,6 +83,24 @@ class WeeklyCleanupJobTest < ActiveJob::TestCase
     assert_equal Date.new(2026, 11, 23), WeeklyCleanupRun.find_by!(family: @family, user: @admin).period_start
   end
 
+  test "destroying a family with cleanup runs does not violate foreign keys" do
+    # A fresh family keeps the fixture family's Stripe/Plaid teardown (network
+    # calls) out of the way; family destroy still runs its real callbacks.
+    family = Family.create!(name: "Cleanup Destroy Family", currency: "USD", locale: "en")
+    admin = family.users.create!(
+      email: "cleanup-destroy@example.com", password: "password-1234-abcd", role: "admin",
+      first_name: "Clean", last_name: "Up", onboarded_at: 1.day.ago, ai_enabled: true,
+      preferences: { "preview_features_enabled" => true }
+    )
+    Account.create!(family: family, owner: admin, name: "Checking", balance: 0, currency: "USD", accountable: Depository.new)
+
+    WeeklyCleanupJob.perform_now(family_id: family.id)
+    assert_equal 1, WeeklyCleanupRun.where(family: family).count
+
+    assert_nothing_raised { family.destroy! }
+    assert_equal 0, WeeklyCleanupRun.where(family_id: family.id).count
+  end
+
   test "cleanup run foreign keys cascade so family and user deletes don't raise" do
     foreign_keys = ActiveRecord::Base.connection.foreign_keys("weekly_cleanup_runs")
 
