@@ -118,7 +118,6 @@ nl:
       description: "Selecteer een Mercury-account om aan dit account te koppelen. Transacties worden automatisch gesynchroniseerd en ontdubbeld."
       link_account: "Account koppelen"
       no_account_specified: "Geen account opgegeven"
-      no_accounts_found: "Geen Mercury-accounts gevonden. Controleer de configuratie van uw API-token."
       no_api_token: "Mercury-API-token is niet geconfigureerd. Configureer het in de instellingen."
       no_credentials_configured: "Configureer eerst uw Mercury-API-token in de providerinstellingen."
       no_name_placeholder: "(Geen naam)"
@@ -128,10 +127,10 @@ nl:
       account_already_linked: "Dit account is al gekoppeld aan een provider"
       api_error: "API-fout: %{message}"
       invalid_account_name: "Kan geen account zonder naam koppelen"
-      mercury_account_already_linked: "Dit Mercury-account is al gekoppeld aan een ander account"
-      mercury_account_not_found: "Mercury-account niet gevonden"
       missing_parameters: "Vereiste parameters ontbreken"
       no_api_token: "Mercury-API-token niet gevonden. Configureer het in de providerinstellingen."
+      provider_account_already_linked: "Dit Mercury-account is al gekoppeld aan een ander account"
+      provider_account_not_found: "Mercury-account niet gevonden"
       select_connection: "Kies een Mercury-koppeling voordat u accounts koppelt."
       success: "%{account_name} gekoppeld aan Mercury"
     setup_accounts:
@@ -202,8 +201,3 @@ nl:
       success: "Synchronisatie gestart"
     update:
       success: "Mercury-koppeling bijgewerkt"
-    mercury_item_selection_error_payload:
-      select_connection: "Kies een Mercury-koppeling voordat u accounts laadt."
-    render_mercury_item_selection_failure:
-      select_connection: "Kies een Mercury-koppeling in de providerinstellingen."
-      no_credentials_configured: "Configureer eerst uw Mercury-API-token in de providerinstellingen."

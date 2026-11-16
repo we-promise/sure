@@ -1,8 +1,6 @@
 class BrexItem < ProviderItem
   include Provided, Encryptable, DestroyableLater
 
-  BLANK_TOKEN_SENTINELS = [ "", " ", "  ", "   ", "\t", "\n", "\r" ].freeze
-
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
   if encryption_ready?

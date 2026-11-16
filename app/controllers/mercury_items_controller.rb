@@ -12,392 +12,58 @@ class MercuryItemsController < ApplicationController
   def show
   end
 
-  # Preload Mercury accounts in background (async, non-blocking)
   def preload_accounts
-    begin
-      account_flow = mercury_item_account_flow_context
-      mercury_item = account_flow[:mercury_item]
-      unless mercury_item
-        render json: mercury_item_selection_error_payload(account_flow[:credentialed_items])
-        return
-      end
-
-      unless mercury_item.credentials_configured?
-        render json: { success: false, error: "no_credentials", has_accounts: false }
-        return
-      end
-
-      cache_key = mercury_accounts_cache_key(mercury_item)
-
-      # Check if already cached
-      cached_accounts = Rails.cache.read(cache_key)
-
-      if cached_accounts.present?
-        render json: { success: true, has_accounts: cached_accounts.any?, cached: true }
-        return
-      end
-
-      mercury_provider = mercury_item.mercury_provider
-
-      unless mercury_provider.present?
-        render json: { success: false, error: "no_api_token", has_accounts: false }
-        return
-      end
-
-      accounts_data = mercury_provider.get_accounts
-      available_accounts = accounts_data[:accounts] || []
-
-      # Cache the accounts for 5 minutes
-      Rails.cache.write(cache_key, available_accounts, expires_in: 5.minutes)
-
-      render json: { success: true, has_accounts: available_accounts.any?, cached: false }
-    rescue Provider::Mercury::MercuryError => e
-      Rails.logger.error("Mercury preload error: #{e.message}")
-      # API error (bad token, network issue, etc) - keep button visible, show error when clicked
-      render json: { success: false, error: "api_error", error_message: e.message, has_accounts: nil }
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error preloading Mercury accounts: #{e.class}: #{e.message}")
-      # Unexpected error - keep button visible, show error when clicked
-      render json: { success: false, error: "unexpected_error", error_message: e.message, has_accounts: nil }
-    end
+    render json: account_flow.preload_payload
   end
 
-  # Fetch available accounts from Mercury API and show selection UI
   def select_accounts
-    begin
-      account_flow = mercury_item_account_flow_context
-      @mercury_item = account_flow[:mercury_item]
-      unless @mercury_item
-        render_mercury_item_selection_failure(credentialed_items: account_flow[:credentialed_items])
-        return
-      end
+    @accountable_type = params[:accountable_type] || "Depository"
+    @return_to = safe_return_to_path
+    result = account_flow.select_accounts_result(accountable_type: @accountable_type)
 
-      cache_key = mercury_accounts_cache_key(@mercury_item)
+    return handle_selection_result(result, empty_path: new_account_path, api_return_path: @return_to) unless result.success?
 
-      # Try to get cached accounts first
-      @available_accounts = Rails.cache.read(cache_key)
+    @mercury_item = result.item
+    @available_accounts = result.available_accounts
 
-      # If not cached, fetch from API
-      if @available_accounts.nil?
-        mercury_provider = @mercury_item.mercury_provider
-
-        unless mercury_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_api_token",
-                                                        default: "Mercury API token not found. Please configure it in Provider Settings.")
-          return
-        end
-
-        accounts_data = mercury_provider.get_accounts
-
-        @available_accounts = accounts_data[:accounts] || []
-
-        # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
-      end
-
-      linked_account_ids = @mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
-      @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-
-      @accountable_type = params[:accountable_type] || "Depository"
-      @return_to = safe_return_to_path
-
-      if @available_accounts.empty?
-        redirect_to new_account_path, alert: t(".no_accounts_found")
-        return
-      end
-
-      render layout: false
-    rescue Provider::Mercury::MercuryError => e
-      Rails.logger.error("Mercury API error in select_accounts: #{e.message}")
-      @error_message = e.message
-      @return_path = safe_return_to_path
-      render partial: "mercury_items/api_error",
-             locals: { error_message: @error_message, return_path: @return_path },
-             layout: false
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error in select_accounts: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
-      @return_path = safe_return_to_path
-      render partial: "mercury_items/api_error",
-             locals: { error_message: @error_message, return_path: @return_path },
-             layout: false
-    end
+    render layout: false
   end
 
-  # Create accounts from selected Mercury accounts
   def link_accounts
-    selected_account_ids = params[:account_ids] || []
-    accountable_type = params[:accountable_type] || "Depository"
-    return_to = safe_return_to_path
+    result = account_flow.link_new_accounts_result(
+      account_ids: params[:account_ids] || [],
+      accountable_type: params[:accountable_type] || "Depository"
+    )
 
-    if selected_account_ids.empty?
-      redirect_to new_account_path, alert: t(".no_accounts_selected")
-      return
-    end
-
-    account_flow = mercury_item_account_flow_context
-    mercury_item = account_flow[:mercury_item]
-
-    unless mercury_item
-      redirect_to settings_providers_path, alert: t(".select_connection", default: "Choose a Mercury connection before linking accounts.")
-      return
-    end
-
-    # Fetch account details from API
-    mercury_provider = mercury_item.mercury_provider
-    unless mercury_provider.present?
-      redirect_to new_account_path, alert: t(".no_api_token")
-      return
-    end
-
-    accounts_data = mercury_provider.get_accounts
-
-    created_accounts = []
-    already_linked_accounts = []
-    invalid_accounts = []
-
-    selected_account_ids.each do |account_id|
-      # Find the account data from API response
-      account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == account_id.to_s }
-      next unless account_data
-
-      # Get account name
-      account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
-
-      # Validate account name is not blank (required by Account model)
-      if account_name.blank?
-        invalid_accounts << account_id
-        Rails.logger.warn "MercuryItemsController - Skipping account #{account_id} with blank name"
-        next
-      end
-
-      # Create or find mercury_account
-      mercury_account = mercury_item.mercury_accounts.find_or_initialize_by(
-        account_id: account_id.to_s
-      )
-      mercury_account.upsert_mercury_snapshot!(account_data)
-      mercury_account.save!
-
-      # Check if this mercury_account is already linked
-      if mercury_account.account_provider.present?
-        already_linked_accounts << account_name
-        next
-      end
-
-      # Create the internal Account with proper balance initialization
-      account = Account.create_and_sync(
-        {
-          family: Current.family,
-          name: account_name,
-          balance: 0, # Initial balance will be set during sync
-          currency: "USD", # Mercury is US-only
-          accountable_type: accountable_type,
-          accountable_attributes: {}
-        },
-        skip_initial_sync: true
-      )
-
-      # Link account to mercury_account via account_providers join table
-      AccountProvider.create!(
-        account: account,
-        provider: mercury_account
-      )
-
-      created_accounts << account
-    end
-
-    # Trigger sync to fetch transactions if any accounts were created
-    mercury_item.sync_later if created_accounts.any?
-
-    # Build appropriate flash message
-    if invalid_accounts.any? && created_accounts.empty? && already_linked_accounts.empty?
-      # All selected accounts were invalid (blank names)
-      redirect_to new_account_path, alert: t(".invalid_account_names", count: invalid_accounts.count)
-    elsif invalid_accounts.any? && (created_accounts.any? || already_linked_accounts.any?)
-      # Some accounts were created/already linked, but some had invalid names
-      redirect_to return_to || accounts_path,
-                  alert: t(".partial_invalid",
-                           created_count: created_accounts.count,
-                           already_linked_count: already_linked_accounts.count,
-                           invalid_count: invalid_accounts.count)
-    elsif created_accounts.any? && already_linked_accounts.any?
-      redirect_to return_to || accounts_path,
-                  notice: t(".partial_success",
-                           created_count: created_accounts.count,
-                           already_linked_count: already_linked_accounts.count,
-                           already_linked_names: already_linked_accounts.join(", "))
-    elsif created_accounts.any?
-      redirect_to return_to || accounts_path,
-                  notice: t(".success", count: created_accounts.count)
-    elsif already_linked_accounts.any?
-      redirect_to return_to || accounts_path,
-                  alert: t(".all_already_linked",
-                          count: already_linked_accounts.count,
-                          names: already_linked_accounts.join(", "))
-    else
-      redirect_to new_account_path, alert: t(".link_failed")
-    end
-  rescue Provider::Mercury::MercuryError => e
-    redirect_to new_account_path, alert: t(".api_error", message: e.message)
+    redirect_with_navigation(result, return_to: safe_return_to_path)
   end
 
-  # Fetch available Mercury accounts to link with an existing account
   def select_existing_account
-    account_id = params[:account_id]
+    return redirect_to accounts_path, alert: t(".no_account_specified") if params[:account_id].blank?
 
-    unless account_id.present?
-      redirect_to accounts_path, alert: t(".no_account_specified")
-      return
-    end
+    @account = Current.family.accounts.find_by(id: params[:account_id])
+    return redirect_to accounts_path, alert: t(".no_account_specified") unless @account
 
-    @account = Current.family.accounts.find(account_id)
+    result = account_flow.select_existing_account_result(account: @account)
 
-    # Check if account is already linked
-    if @account.account_providers.exists?
-      redirect_to accounts_path, alert: t(".account_already_linked")
-      return
-    end
+    return handle_selection_result(result, empty_path: accounts_path, api_return_path: accounts_path) unless result.success?
 
-    account_flow = mercury_item_account_flow_context
-    @mercury_item = account_flow[:mercury_item]
-    unless @mercury_item
-      render_mercury_item_selection_failure(credentialed_items: account_flow[:credentialed_items])
-      return
-    end
+    @mercury_item = result.item
+    @available_accounts = result.available_accounts
+    @return_to = safe_return_to_path
 
-    begin
-      cache_key = mercury_accounts_cache_key(@mercury_item)
-
-      # Try to get cached accounts first
-      @available_accounts = Rails.cache.read(cache_key)
-
-      # If not cached, fetch from API
-      if @available_accounts.nil?
-        mercury_provider = @mercury_item.mercury_provider
-
-        unless mercury_provider.present?
-          redirect_to settings_providers_path, alert: t(".no_api_token",
-                                                        default: "Mercury API token not found. Please configure it in Provider Settings.")
-          return
-        end
-
-        accounts_data = mercury_provider.get_accounts
-
-        @available_accounts = accounts_data[:accounts] || []
-
-        # Cache the accounts for 5 minutes
-        Rails.cache.write(cache_key, @available_accounts, expires_in: 5.minutes)
-      end
-
-      if @available_accounts.empty?
-        redirect_to accounts_path, alert: t(".no_accounts_found")
-        return
-      end
-
-      linked_account_ids = @mercury_item.mercury_accounts.joins(:account_provider).pluck(:account_id)
-      @available_accounts = @available_accounts.reject { |acc| linked_account_ids.include?(acc[:id].to_s) }
-
-      if @available_accounts.empty?
-        redirect_to accounts_path, alert: t(".all_accounts_already_linked")
-        return
-      end
-
-      @return_to = safe_return_to_path
-
-      render layout: false
-    rescue Provider::Mercury::MercuryError => e
-      Rails.logger.error("Mercury API error in select_existing_account: #{e.message}")
-      @error_message = e.message
-      render partial: "mercury_items/api_error",
-             locals: { error_message: @error_message, return_path: accounts_path },
-             layout: false
-    rescue StandardError => e
-      Rails.logger.error("Unexpected error in select_existing_account: #{e.class}: #{e.message}")
-      @error_message = "An unexpected error occurred. Please try again later."
-      render partial: "mercury_items/api_error",
-             locals: { error_message: @error_message, return_path: accounts_path },
-             layout: false
-    end
+    render layout: false
   end
 
-  # Link a selected Mercury account to an existing account
   def link_existing_account
-    account_id = params[:account_id]
-    mercury_account_id = params[:mercury_account_id]
-    return_to = safe_return_to_path
+    return redirect_to accounts_path, alert: t(".no_account_specified") if params[:account_id].blank?
 
-    unless account_id.present? && mercury_account_id.present?
-      redirect_to accounts_path, alert: t(".missing_parameters")
-      return
-    end
+    account = Current.family.accounts.find_by(id: params[:account_id])
+    return redirect_to accounts_path, alert: t(".no_account_specified") unless account
 
-    account_flow = mercury_item_account_flow_context
-    mercury_item = account_flow[:mercury_item]
+    result = account_flow.link_existing_account_result(account: account, provider_account_id: params[:mercury_account_id])
 
-    @account = Current.family.accounts.find(account_id)
-
-    # Check if account is already linked
-    if @account.account_providers.exists?
-      redirect_to accounts_path, alert: t(".account_already_linked")
-      return
-    end
-
-    unless mercury_item
-      redirect_to settings_providers_path, alert: t(".select_connection", default: "Choose a Mercury connection before linking accounts.")
-      return
-    end
-
-    # Fetch account details from API
-    mercury_provider = mercury_item.mercury_provider
-    unless mercury_provider.present?
-      redirect_to accounts_path, alert: t(".no_api_token")
-      return
-    end
-
-    accounts_data = mercury_provider.get_accounts
-
-    # Find the selected Mercury account data
-    account_data = accounts_data[:accounts].find { |acc| acc[:id].to_s == mercury_account_id.to_s }
-    unless account_data
-      redirect_to accounts_path, alert: t(".mercury_account_not_found")
-      return
-    end
-
-    # Get account name
-    account_name = account_data[:nickname].presence || account_data[:name].presence || account_data[:legalBusinessName].presence
-
-    # Validate account name is not blank (required by Account model)
-    if account_name.blank?
-      redirect_to accounts_path, alert: t(".invalid_account_name")
-      return
-    end
-
-    # Create or find mercury_account
-    mercury_account = mercury_item.mercury_accounts.find_or_initialize_by(
-      account_id: mercury_account_id.to_s
-    )
-    mercury_account.upsert_mercury_snapshot!(account_data)
-    mercury_account.save!
-
-    # Check if this mercury_account is already linked to another account
-    if mercury_account.account_provider.present?
-      redirect_to accounts_path, alert: t(".mercury_account_already_linked")
-      return
-    end
-
-    # Link account to mercury_account via account_providers join table
-    AccountProvider.create!(
-      account: @account,
-      provider: mercury_account
-    )
-
-    # Trigger sync to fetch transactions
-    mercury_item.sync_later
-
-    redirect_to return_to || accounts_path,
-                notice: t(".success", account_name: @account.name)
-  rescue Provider::Mercury::MercuryError => e
-    redirect_to accounts_path, alert: t(".api_error", message: e.message)
+    redirect_with_navigation(result, return_to: safe_return_to_path)
   end
 
   def new
@@ -698,6 +364,39 @@ class MercuryItemsController < ApplicationController
       end
     end
 
+    def account_flow
+      @account_flow ||= MercuryItem::AccountFlow.new(family: Current.family, item_id: params[:mercury_item_id], item: @mercury_item)
+    end
+
+    def handle_selection_result(result, empty_path:, api_return_path:)
+      case result.status
+      when :empty, :account_already_linked
+        redirect_to empty_path, alert: result.message
+      when :no_api_token, :select_connection
+        redirect_to settings_providers_path, alert: result.message
+      when :setup_required
+        if turbo_frame_request?
+          render partial: "mercury_items/setup_required", layout: false
+        else
+          redirect_to settings_providers_path, alert: result.message
+        end
+      when :api_error, :unexpected_error
+        render partial: "mercury_items/api_error", locals: { error_message: result.message, return_path: api_return_path }, layout: false
+      else
+        redirect_to settings_providers_path, alert: result.message
+      end
+    end
+
+    def redirect_with_navigation(result, return_to:)
+      path = {
+        new_account: new_account_path,
+        settings_providers: settings_providers_path,
+        return_to_or_accounts: return_to || accounts_path
+      }.fetch(result.target, accounts_path)
+
+      redirect_to path, result.flash_type => result.message
+    end
+
     def set_mercury_item
       @mercury_item = Current.family.mercury_items.find(params[:id])
     end
@@ -708,61 +407,11 @@ class MercuryItemsController < ApplicationController
       permitted
     end
 
-    def mercury_items_with_credentials
-      Current.family.mercury_items.active.ordered.select(&:credentials_configured?)
-    end
-
-    def mercury_item_account_flow_context
-      credentialed_items = mercury_items_with_credentials
-      mercury_item = nil
-
-      if params[:mercury_item_id].present?
-        mercury_item = credentialed_items.find { |item| item.id.to_s == params[:mercury_item_id].to_s }
-      elsif credentialed_items.one?
-        mercury_item = credentialed_items.first
-      end
-
-      {
-        mercury_item: mercury_item,
-        credentialed_items: credentialed_items
-      }
-    end
-
     def mercury_accounts_cache_key(mercury_item)
       "mercury_accounts_#{Current.family.id}_#{mercury_item.id}"
     end
 
     def mercury_accounts_cache_sensitive_update?(permitted_params)
       permitted_params.key?(:token) || permitted_params.key?(:base_url)
-    end
-
-    def mercury_item_selection_error_payload(credentialed_items)
-      if mercury_item_selection_required?(credentialed_items)
-        {
-          success: false,
-          error: "select_connection",
-          error_message: t(".select_connection", default: "Choose a Mercury connection before loading accounts."),
-          has_accounts: nil
-        }
-      else
-        { success: false, error: "no_credentials", has_accounts: false }
-      end
-    end
-
-    def render_mercury_item_selection_failure(credentialed_items:)
-      if mercury_item_selection_required?(credentialed_items)
-        redirect_to settings_providers_path,
-                    alert: t(".select_connection", default: "Choose a Mercury connection in Provider Settings.")
-      elsif turbo_frame_request?
-        render partial: "mercury_items/setup_required", layout: false
-      else
-        redirect_to settings_providers_path,
-                    alert: t(".no_credentials_configured",
-                             default: "Please configure your Mercury API token first in Provider Settings.")
-      end
-    end
-
-    def mercury_item_selection_required?(credentialed_items)
-      credentialed_items.count > 1 && params[:mercury_item_id].blank?
     end
 end

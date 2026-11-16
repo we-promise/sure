@@ -118,7 +118,6 @@ es:
       description: Selecciona una cuenta de Mercury para vincular con esta cuenta. Las transacciones se sincronizarán y desduplicarán automáticamente.
       link_account: Vincular cuenta
       no_account_specified: No se especificó ninguna cuenta
-      no_accounts_found: No se encontraron cuentas de Mercury. Por favor, verifica la configuración de tu token de API.
       no_api_token: El token de API de Mercury no está configurado. Por favor, configúralo en Ajustes.
       no_credentials_configured: Por favor, configura primero tu token de API de Mercury en los Ajustes del Proveedor.
       no_name_placeholder: (Sin nombre)
@@ -128,10 +127,10 @@ es:
       account_already_linked: Esta cuenta ya está vinculada a un proveedor
       api_error: 'Error de API: %{message}'
       invalid_account_name: No se puede vincular una cuenta con el nombre en blanco
-      mercury_account_already_linked: Esta cuenta de Mercury ya está vinculada a otra cuenta
-      mercury_account_not_found: Cuenta de Mercury no encontrada
       missing_parameters: Faltan parámetros requeridos
       no_api_token: No se encontró el token de API de Mercury. Por favor, configúralo en los Ajustes del Proveedor.
+      provider_account_already_linked: Esta cuenta de Mercury ya está vinculada a otra cuenta
+      provider_account_not_found: Cuenta de Mercury no encontrada
       select_connection: Elige una conexión de Mercury antes de vincular cuentas.
       success: '%{account_name} vinculada con Mercury con éxito'
     setup_accounts:
@@ -202,8 +201,3 @@ es:
       success: Sincronización iniciada
     update:
       success: Conexión con Mercury actualizada
-    mercury_item_selection_error_payload:
-      select_connection: Elige una conexión de Mercury antes de cargar cuentas.
-    render_mercury_item_selection_failure:
-      select_connection: Elige una conexión de Mercury en los ajustes de proveedores.
-      no_credentials_configured: Configura primero tu token de API de Mercury en los ajustes de proveedores.
