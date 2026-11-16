@@ -23,7 +23,7 @@ module Provider::RateLimitable
     # counters) should call `super` or invoke this via `throttle_interval` and
     # add their own checks.
     def throttle_request
-      @last_request_time ||= Time.at(0)
+      @last_request_time ||= Time.zone.at(0)
       elapsed = Time.current - @last_request_time
       sleep_time = min_request_interval - elapsed
       sleep(sleep_time) if sleep_time > 0

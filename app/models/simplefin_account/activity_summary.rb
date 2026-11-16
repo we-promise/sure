@@ -49,7 +49,7 @@ class SimplefinAccount
         value = timestamp_value(fetch(tx, "transacted_at")) ||
                 timestamp_value(fetch(tx, "posted"))
         return nil unless value
-        Time.at(value)
+        Time.zone.at(value)
       rescue StandardError
         nil
       end

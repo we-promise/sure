@@ -273,7 +273,7 @@ class SimplefinAccount::Investments::HoldingsProcessor
 
       case created_timestamp
       when Integer
-        Time.at(created_timestamp).to_date
+        Time.at(created_timestamp).utc.to_date
       when String
         Date.parse(created_timestamp)
       else

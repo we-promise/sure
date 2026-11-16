@@ -286,7 +286,7 @@ class Provider::TwelveData < Provider
     # ExchangeRate::Provided accounts for worst-case throttle waits.
     def throttle_request(credits: 1)
       # Layer 1: Per-instance minimum interval between calls
-      @last_request_time ||= Time.at(0)
+      @last_request_time ||= Time.zone.at(0)
       elapsed = Time.current - @last_request_time
       sleep_time = min_request_interval - elapsed
       sleep(sleep_time) if sleep_time > 0

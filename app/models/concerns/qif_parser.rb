@@ -512,7 +512,7 @@ module QifParser
     if !s.match?(/\d{4}/) && (m = s.match(%r{\A(.+[/.\- ])(\d{2})\z}))
       short_year = m[2].to_i
       full_year  = 2000 + short_year
-      full_year -= 100 if full_year > Date.today.year
+      full_year -= 100 if full_year > Date.current.year
       s = "#{m[1]}#{full_year}"
     end
 

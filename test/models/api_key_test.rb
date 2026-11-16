@@ -132,7 +132,7 @@ class ApiKeyTest < ActiveSupport::TestCase
     @api_key.update_last_used!
 
     assert_not_equal original_time, @api_key.last_used_at
-    assert @api_key.last_used_at > (original_time || Time.at(0))
+    assert @api_key.last_used_at > (original_time || Time.zone.at(0))
   end
 
   test "allows multiple active api keys for the same user" do

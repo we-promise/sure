@@ -167,7 +167,7 @@ class Api::V1::BaseControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     @api_key.reload
     assert_not_equal original_time, @api_key.last_used_at
-    assert @api_key.last_used_at > (original_time || Time.at(0))
+    assert @api_key.last_used_at > (original_time || Time.zone.at(0))
   end
 
   test "should prioritize OAuth over API key when both are provided" do

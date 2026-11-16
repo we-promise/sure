@@ -34,8 +34,8 @@ class Provider::Plaid
       }
     )
 
-    issued_at = Time.at(payload["iat"])
-    raise JWT::VerificationError, "Webhook is too old" if Time.now - issued_at > 5.minutes
+    issued_at = Time.zone.at(payload["iat"])
+    raise JWT::VerificationError, "Webhook is too old" if Time.current - issued_at > 5.minutes
 
     expected_hash = payload["request_body_sha256"]
     actual_hash = Digest::SHA256.hexdigest(raw_body)

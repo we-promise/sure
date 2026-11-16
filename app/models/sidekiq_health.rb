@@ -117,7 +117,7 @@ class SidekiqHealth
       @processes_count = process_set.size
 
       beats = process_set.map { |p| p["beat"] }.compact
-      @last_heartbeat_at = beats.present? ? Time.at(beats.max) : nil
+      @last_heartbeat_at = beats.present? ? Time.zone.at(beats.max) : nil
 
       queues = Sidekiq::Queue.all
       latencies = queues.map { |q| q.latency.to_f }

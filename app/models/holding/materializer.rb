@@ -102,7 +102,7 @@ class Holding::Materializer
     def persist_holdings
       return if @holdings.empty?
 
-      current_time = Time.now
+      current_time = Time.current
 
       # Load existing holdings to check locked status and source priority
       existing_holdings_map = load_existing_holdings_map
