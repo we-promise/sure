@@ -689,6 +689,100 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Test notes", transfer.reload.notes
   end
 
+  test "can rename both sides of a transfer" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer), params: {
+      transfer: { outflow_name: "Rent", inflow_name: "Rent received" }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal "Transfer updated", flash[:notice]
+    assert_equal "Rent", transfer.outflow_transaction.entry.reload.name
+    assert_equal "Rent received", transfer.inflow_transaction.entry.reload.name
+  end
+
+  test "renaming a transfer replaces both rows and its drawer name in a turbo stream" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer),
+          params: { transfer: { outflow_name: "Rent", inflow_name: "Rent" } },
+          as: :turbo_stream
+
+    assert_response :success
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.inflow_transaction.entry)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer, :display_name) do
+      assert_select "span", text: "Rent"
+    end
+  end
+
+  test "show renders both transfer names for a writable viewer" do
+    transfer = transfers(:one)
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "input[name='transfer[outflow_name]'][value=?]", transfer.outflow_transaction.entry.name
+    assert_select "input[name='transfer[inflow_name]'][value=?]", transfer.inflow_transaction.entry.name
+    assert_select "label", text: /Name in #{Regexp.escape(transfer.from_account.name)}/
+    assert_select "label", text: /Name in #{Regexp.escape(transfer.to_account.name)}/
+  end
+
+  test "show hides transfer names without write access to both sides" do
+    sign_in users(:family_member)
+
+    get transfer_url(transfers(:one))
+
+    assert_response :success
+    assert_select "input[name='transfer[outflow_name]']", count: 0
+    assert_select "input[name='transfer[inflow_name]']", count: 0
+  end
+
+  test "renaming requires write permission on both transfer sides" do
+    sign_in users(:family_member)
+    transfer = transfers(:one)
+    outflow_name = transfer.outflow_transaction.entry.name
+    inflow_name = transfer.inflow_transaction.entry.name
+
+    patch transfer_url(transfer), params: {
+      transfer: { outflow_name: "Rent", inflow_name: "Rent received" }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
+    assert_equal outflow_name, transfer.outflow_transaction.entry.reload.name
+    assert_equal inflow_name, transfer.inflow_transaction.entry.reload.name
+  end
+
+  test "rejects blank transfer names without changing either side" do
+    transfer = transfers(:one)
+    outflow_name = transfer.outflow_transaction.entry.name
+    inflow_name = transfer.inflow_transaction.entry.name
+
+    patch transfer_url(transfer), params: {
+      transfer: { outflow_name: "  ", inflow_name: "Rent received" }
+    }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.name_required"), flash[:alert]
+    assert_equal outflow_name, transfer.outflow_transaction.entry.reload.name
+    assert_equal inflow_name, transfer.inflow_transaction.entry.reload.name
+  end
+
+  test "a notes-only update leaves transfer names and locks unchanged" do
+    transfer = transfers(:one)
+    outflow_name = transfer.outflow_transaction.entry.name
+    inflow_name = transfer.inflow_transaction.entry.name
+
+    patch transfer_url(transfer), params: { transfer: { notes: "Rent split" } }
+
+    assert_equal outflow_name, transfer.outflow_transaction.entry.reload.name
+    assert_equal inflow_name, transfer.inflow_transaction.entry.reload.name
+    assert_not transfer.outflow_transaction.entry.locked?(:name)
+    assert_not transfer.inflow_transaction.entry.locked?(:name)
+  end
+
   test "confirming a transfer keeps the outflow category" do
     transfer = transfers(:one)
     transfer.outflow_transaction.update!(category: categories(:food_and_drink))

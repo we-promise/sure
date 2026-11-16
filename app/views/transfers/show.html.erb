@@ -11,9 +11,7 @@
           </span>
           <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
         </h3>
-        <span class="text-sm text-secondary">
-          <%= @transfer.name %>
-        </span>
+        <%= render "transfers/display_name", transfer: @transfer %>
       </div>
       <%= dialog.close_button %>
     </div>
@@ -82,6 +80,24 @@
     <% end %>
     <% dialog.with_section(title: t(".details")) do %>
       <div class="space-y-2">
+        <% if @can_rename_transfer_entries %>
+          <%= styled_form_with scope: :transfer,
+                url: transfer_path(@transfer),
+                method: :patch,
+                class: "space-y-2",
+                data: { controller: "auto-submit-form" } do |f| %>
+            <%= f.text_field :outflow_name,
+                  value: @transfer.outflow_transaction.entry.name,
+                  label: t(".outflow_name", account: @transfer.from_account.name),
+                  required: true,
+                  "data-auto-submit-form-target": "auto" %>
+            <%= f.text_field :inflow_name,
+                  value: @transfer.inflow_transaction.entry.name,
+                  label: t(".inflow_name", account: @transfer.to_account.name),
+                  required: true,
+                  "data-auto-submit-form-target": "auto" %>
+          <% end %>
+        <% end %>
         <%# Separate forms: the investment contribution switch reloads the page, so
             it must not be submitted along with every category or notes edit. %>
         <% if @transfer.categorizable? %>

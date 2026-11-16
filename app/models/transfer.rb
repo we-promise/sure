@@ -84,6 +84,41 @@ class Transfer < ApplicationRecord
     end
   end
 
+  # A shared name means the user (or the importer) gave both legs the same
+  # label; otherwise the derived account-based title is the useful summary.
+  def display_name
+    outflow_name = outflow_transaction&.entry&.name
+    inflow_name = inflow_transaction&.entry&.name
+
+    if outflow_name.present? && outflow_name == inflow_name
+      outflow_name
+    else
+      name
+    end
+  end
+
+  # Renames both legs. Returns false when either name is blank (the controller
+  # validates before calling). A changed entry locks its name so provider syncs
+  # do not overwrite it, without freezing unrelated provider enrichment.
+  def rename_entries!(outflow_name:, inflow_name:)
+    names = {
+      outflow_transaction.entry => outflow_name.to_s.strip,
+      inflow_transaction.entry => inflow_name.to_s.strip
+    }
+    return false if names.values.any?(&:blank?)
+
+    Transfer.transaction do
+      names.each do |entry, new_name|
+        next if entry.name == new_name
+
+        entry.update!(name: new_name)
+        entry.lock_saved_attributes!
+      end
+    end
+
+    true
+  end
+
   def payment?
     to_account&.liability?
   end

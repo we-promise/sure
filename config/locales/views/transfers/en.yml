@@ -43,6 +43,8 @@ en:
       mark_recurring_title: Mark transfer as recurring
       note_label: Notes
       note_placeholder: Add a note to this transfer
+      outflow_name: Name in %{account}
+      inflow_name: Name in %{account}
       overview: Overview
       settings: Settings
       from: From
@@ -56,4 +58,5 @@ en:
       category: Category
       uncategorized: Uncategorized
     update:
+      name_required: Transfer names cannot be blank
       success: Transfer updated
