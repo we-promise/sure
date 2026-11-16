@@ -55,4 +55,16 @@ class DataCacheClearJobTest < ActiveJob::TestCase
       DataCacheClearJob.perform_now(@family)
     end
   end
+
+  test "follows an unfinished sync older than the reuse window with a fresh one" do
+    @plaid_item.create_sync_schedule!(interval_minutes: 10080)
+    running = @plaid_item.syncs.create!(status: "syncing", created_at: 10.minutes.ago)
+
+    @family.expects(:sync_later).once
+    PlaidItem.any_instance.expects(:sync_later).never
+
+    assert_enqueued_with(job: FollowUpSyncJob, args: [ @plaid_item, { active_sync_id: running.id } ]) do
+      DataCacheClearJob.perform_now(@family)
+    end
+  end
 end
