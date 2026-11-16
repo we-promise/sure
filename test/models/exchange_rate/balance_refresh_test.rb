@@ -19,7 +19,7 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
 
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
     perform_enqueued_jobs do
-      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date } ])
+      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
     end
 
     assert_equal before + 110, closing_balance(@account), "the 100 EUR deposit is now in the balance at 1.1"
@@ -30,7 +30,7 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     eur_deposit(account: @account, date: @date + 1.day, amount: 50)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
 
-    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date } ])
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
 
     assert_equal [ @date + 1.day ], @account.syncs.pluck(:window_start_date)
   end
@@ -55,12 +55,27 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
     eur_deposit(account: @account, date: @date, amount: 100)
 
-    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date } ])
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
 
     assert_equal 1, @account.syncs.count, "precondition: the account that did use the rate is synced"
     [ later_rate, out_of_reach, other_pair, same_currency ].each do |account|
       assert_equal 0, account.syncs.count, "#{account.name} converts no differently"
     end
+  end
+
+  # Two writes stored apart, each queuing its own refresh before either runs:
+  # the rate the other write stored was not there when this one's balance
+  # went without, so it cannot stand in for one that was.
+  test "rates stored by separate writes do not cancel each other's refresh" do
+    eur_deposit(account: @account, date: @date + 1.day, amount: 100)
+    first = ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
+    travel 1.second
+    second = ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date + 1.day, rate: 1.1)
+
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: first.date, stored_at: first.created_at } ])
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: second.date, stored_at: second.created_at } ])
+
+    assert_operator @account.syncs.count, :>=, 1, "the entry that had no rate is rebuilt by one of the two refreshes"
   end
 
   # Several pairs at once: the account syncs from the earliest date any of
@@ -72,8 +87,8 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: @date, rate: 1.3)
 
     ExchangeRate::BalanceRefresh.schedule([
-      { from: "EUR", to: "USD", date: @date + 2.days },
-      { from: "GBP", to: "USD", date: @date }
+      { from: "EUR", to: "USD", date: @date + 2.days, stored_at: Time.current },
+      { from: "GBP", to: "USD", date: @date, stored_at: Time.current }
     ])
 
     assert_equal [ @date ], @account.syncs.pluck(:window_start_date)
@@ -88,7 +103,7 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     @account.holdings.create!(security: security, date: @date, qty: 1, price: 100, amount: 100, currency: "USD")
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
 
-    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date } ])
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
 
     assert_equal [ @date ], @account.syncs.pluck(:window_start_date)
   end
@@ -102,7 +117,7 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     Account.any_instance.expects(:sync_later).never
 
     assert_no_difference "Sync.count" do
-      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date } ])
+      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
     end
     assert running.reload.full_resync_requested
   end
@@ -118,7 +133,7 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     Sync.any_instance.stubs(:syncing?).returns(false)
     Account.any_instance.expects(:sync_later).with(window_start_date: @date).once
 
-    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date } ])
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
 
     assert_not running.reload.full_resync_requested
   end
@@ -132,7 +147,7 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: today, rate: 1.1)
 
     assert_no_difference "Sync.count" do
-      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: today } ])
+      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: today, stored_at: Time.current } ])
     end
   end
 
@@ -140,7 +155,7 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     eur_deposit(account: @account, date: @date, amount: 100)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
 
-    ExchangeRateBalanceRefreshJob.perform_now([ { from: "EUR", to: "USD", date: @date } ])
+    ExchangeRateBalanceRefreshJob.perform_now([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
 
     assert_equal [ @date ], @account.syncs.pluck(:window_start_date)
   end
