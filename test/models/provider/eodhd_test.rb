@@ -120,7 +120,7 @@ class Provider::EodhdTest < ActiveSupport::TestCase
 
   EODHD_EUROPEAN_VENUES = {
     "XFRA" => "F", "XBRU" => "BR", "XLIS" => "LS", "XWBO" => "VI", "XDUB" => "IR",
-    "XBER" => "BE", "XDUS" => "DU", "XHAM" => "HA", "XHAN" => "HAN", "XMUN" => "MU", "XSTU" => "STU"
+    "XBER" => "BE", "XDUS" => "DU", "XHAM" => "HM", "XHAN" => "HA", "XMUN" => "MU", "XSTU" => "STU"
   }.freeze
 
   test "eodhd_symbol maps further European MICs to their EODHD codes" do
