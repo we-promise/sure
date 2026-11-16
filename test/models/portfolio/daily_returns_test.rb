@@ -1248,8 +1248,8 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
   # Valued from the position anyway, the day read: external_flow 500, market
   # -500, denominator 1500, unexplained 0 and a -33% return -- a phantom loss
   # that reconciles, which is worse than one the drivers table would flag.
-  # Keyed on the amount as well, the trade keeps flowing at its own amount and
-  # the day is what it was.
+  # Keyed on the amount as well, the trade is left to the classifier, which
+  # reads its cash amount as a purchase (internal), and the day stays flat.
   test "a Transfer labelled trade that carries a cash amount is not valued as a journal" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
@@ -1264,25 +1264,29 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
       amount: BigDecimal(500), currency: @account.currency
     )
 
-    second = daily_returns.rows.last
+    series = daily_returns
+    second = series.rows.last
 
-    assert_equal BigDecimal("-500"), second.external_flow,
-                 "the trade flows at the cash amount it carries, not at the position's worth"
+    assert_equal BigDecimal("0"), second.external_flow, "a purchase is no flow, and not the position's worth"
     assert_equal BigDecimal("0"), second.market,
                  "and nothing is subtracted from market for a purchase the close already absorbed"
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001, "neither the -33% phantom nor any other return"
+  end
 
-    # The day does NOT reconcile, and that is the point. How the flow
-    # classifier treats a Transfer-labelled trade that carries cash is a
-    # separate question; what this pins is that the journal valuation does not
-    # paper over it. Revalued from the position the residual would cancel to
-    # zero and the day report -33%: a phantom loss that reconciles, which the
-    # drivers cannot flag. Left alone it lands in `unexplained`, where it is visible.
-    assert_equal BigDecimal("500"), second.unexplained,
-                 "the residual stays visible rather than being cancelled by a revaluation"
+  # The same purchase on a day with no price is still a purchase. Read as a
+  # journal by its label alone, it would suppress the day as unpriced.
+  test "a Transfer labelled trade that carries a cash amount does not suppress an unpriced day" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
 
-    second_return = daily_returns.returns.find { |date, _| date == @day_two }&.last
-    assert_operator second_return.to_f, :>, -0.3,
-                    "-33% was the revaluation's phantom, not the day's return"
+    @account.entries.create!(
+      name: "Transfer in", date: @day_two, amount: 500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: @account.currency, investment_activity_label: "Transfer")
+    )
+
+    assert_not daily_returns.rows.last.suppressed
   end
 
   # The flow is qty x price, NOT the holding row's `amount`. `amount` is the
