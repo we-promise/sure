@@ -1395,6 +1395,28 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_equal BigDecimal("0"), second.external_flow
   end
 
+  # Nor does it need a rate: it moves no units, so its holding's currency
+  # converts nothing, whether or not that currency has a pair, even when that
+  # holding carries a price.
+  test "a zero-quantity journal on a holding with no rate does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal(account: @account, date: @day_two, qty: 0, currency: "EUR", price: 10)
+
+    refute daily_returns.rate_missing?
+  end
+
+  # A journal is valued from its holding's price only when that price is
+  # positive. At a zero price it is carried, and settled at the first priced
+  # row's currency, so the zero-priced row's currency needs no rate.
+  test "a journal at a zero price on a holding with no rate does not flag a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    security_journal(account: @account, date: @day_two, qty: 5, currency: "EUR", price: 0)
+
+    refute daily_returns.rate_missing?
+  end
+
   # Carried, the same journal is still one that could not be valued. Its
   # zero-priced row left the position at nothing, so the first priced day's
   # jump is the zero price undoing itself; dropped from the carry, that jump

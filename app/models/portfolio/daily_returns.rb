@@ -500,7 +500,8 @@ class Portfolio::DailyReturns
                               AND NOT COALESCE((#{fragment(:journal_predicate)}), false)
                               AND #{fragment(:flow_class_sql)} IS NOT NULL)
                              OR (journal_fx.rate IS NULL
-                                 AND journal_holdings.currency IS NOT NULL
+                                 AND journal_holdings.price > 0
+                                 AND trades.qty <> 0
                                  AND #{fragment(:journal_predicate)}
                                  AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))
                              OR (journal_prior_fx.rate IS NULL
