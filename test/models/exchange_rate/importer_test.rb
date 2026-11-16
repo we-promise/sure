@@ -36,7 +36,26 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 1.3, db_rates[0].rate
     assert_equal 1.4, db_rates[1].rate
     assert_equal 1.5, db_rates[2].rate
-    assert ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR").quoted_directly?
+    assert_not ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR").quoted_directly?
+  end
+
+  test "records that the provider answered a pair with neither side USD" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+
+    @provider.expects(:fetch_exchange_rates)
+             .with(from: "KZT", to: "RUB", start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current)
+             .returns(provider_success_response([ OpenStruct.new(from: "KZT", to: "RUB", date: Date.current, rate: 0.16) ]))
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "KZT",
+      to: "RUB",
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert ExchangeRatePair.find_by!(from_currency: "KZT", to_currency: "RUB").quoted_directly?
   end
 
   test "syncs diff when some rates already exist" do

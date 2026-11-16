@@ -58,7 +58,18 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_difference "ExchangeRate.count", 1 do
       assert_equal 1.2, ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true).rate
     end
-    assert ExchangeRatePair.find_by!(from_currency: "USD", to_currency: "EUR").quoted_directly?
+    assert_not ExchangeRatePair.exists?(from_currency: "USD", to_currency: "EUR")
+  end
+
+  test "records that the provider answered a pair with neither side USD" do
+    ExchangeRate.delete_all
+    ExchangeRatePair.delete_all
+    @provider.expects(:fetch_exchange_rate)
+             .returns(provider_success_response(OpenStruct.new(from: "KZT", to: "RUB", date: Date.current, rate: 0.16)))
+
+    ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
+
+    assert ExchangeRatePair.find_by!(from_currency: "KZT", to_currency: "RUB").quoted_directly?
   end
 
   test "returns nil on provider error" do

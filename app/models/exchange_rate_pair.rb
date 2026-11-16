@@ -26,7 +26,10 @@ class ExchangeRatePair < ApplicationRecord
 
   # Once the provider has answered the pair itself, a later failure is an
   # outage rather than a pair it lacks, so it no longer derives from USD legs.
+  # A pair with a USD side is never derived, so its flag is never used.
   def self.record_direct_quote(from:, to:, provider_name: nil)
+    return if from == "USD" || to == "USD"
+
     current_provider = provider_name || resolve_provider_name
     pair = for_pair(from: from, to: to, provider_name: current_provider)
     return if pair.quoted_directly?

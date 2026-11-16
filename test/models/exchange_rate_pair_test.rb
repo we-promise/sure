@@ -50,6 +50,15 @@ class ExchangeRatePairTest < ActiveSupport::TestCase
     assert_equal "yahoo_finance", pair.provider_name
   end
 
+  test "record_direct_quote leaves a pair with a USD side alone, as it is never derived" do
+    ExchangeRatePair.delete_all
+
+    ExchangeRatePair.record_direct_quote(from: "USD", to: "EUR", provider_name: "yahoo_finance")
+    ExchangeRatePair.record_direct_quote(from: "EUR", to: "USD", provider_name: "yahoo_finance")
+
+    assert_equal 0, ExchangeRatePair.count
+  end
+
   test "for_pair forgets a direct quote when the provider changes" do
     ExchangeRatePair.delete_all
     ExchangeRatePair.create!(from_currency: "KZT", to_currency: "RUB", quoted_directly: true, provider_name: "twelve_data")
