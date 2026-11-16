@@ -130,13 +130,16 @@ class ExchangeRate::Importer
         upserted = ExchangeRate.upsert_all(
           batch,
           unique_by: %i[from_currency to_currency date],
-          returning: Arel.sql("from_currency, to_currency, date, (xmax = 0) AS inserted")
+          returning: Arel.sql("from_currency, to_currency, date, created_at, (xmax = 0) AS inserted")
         )
 
         upserted.each do |row|
           next unless ActiveModel::Type::Boolean.new.cast(row["inserted"])
 
-          inserted_rates << { from: row["from_currency"], to: row["to_currency"], date: row["date"].to_date }
+          inserted_rates << {
+            from: row["from_currency"], to: row["to_currency"], date: row["date"].to_date,
+            stored_at: ExchangeRate.type_for_attribute(:created_at).deserialize(row["created_at"])
+          }
         end
 
         total_upsert_count += upserted.count
@@ -151,14 +154,11 @@ class ExchangeRate::Importer
 
     # A rate stored where there was none is one a balance had to do without
     # (ExchangeRate::BalanceRefresh). An updated row was already usable: the
-    # table refuses a rate that is not positive. Logged rather than raised, so
-    # a queue outage neither fails an import that worked nor hides one that
-    # did not.
+    # table refuses a rate that is not positive.
     def refresh_balances
-      ExchangeRateBalanceRefreshJob.perform_later(inserted_rates) if inserted_rates.any?
-    rescue StandardError => e
-      Rails.logger.error("Could not queue the balance refresh for #{from}/#{to}: #{e.message}")
-      Sentry.capture_exception(e)
+      return if inserted_rates.empty?
+
+      ExchangeRate::BalanceRefresh.enqueue(inserted_rates, source: "ExchangeRate::Importer", provider: current_provider_name)
     end
 
     def start_rate_value

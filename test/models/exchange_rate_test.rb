@@ -143,12 +143,54 @@ class ExchangeRateTest < ActiveSupport::TestCase
     @provider.expects(:fetch_exchange_rate).returns(provider_success_response(
       OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.2)
     ))
-    ExchangeRateBalanceRefreshJob.expects(:perform_later).with([ { from: "USD", to: "EUR", date: Date.current } ]).once
+    refreshed = nil
+    ExchangeRateBalanceRefreshJob.expects(:perform_later).with { |rates| refreshed = rates }.once
 
     ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+    stored = ExchangeRate.find_by!(from_currency: "USD", to_currency: "EUR", date: Date.current)
+    assert_equal [ { from: "USD", to: "EUR", date: Date.current, stored_at: stored.created_at } ], refreshed
 
     ExchangeRateBalanceRefreshJob.expects(:perform_later).never
     ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+  end
+
+  # The rate is stored before the refresh is queued, so a queue that cannot
+  # take the job must not cost the caller the rate it fetched; support sees
+  # the balance it left unrepaired in the debug log.
+  test "a refresh that cannot be queued still returns the fetched rate" do
+    ExchangeRate.delete_all
+    @provider.expects(:fetch_exchange_rate).returns(provider_success_response(
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.2)
+    ))
+    ExchangeRateBalanceRefreshJob.expects(:perform_later).raises(StandardError, "queue unavailable")
+
+    rate = nil
+    assert_difference -> { DebugLogEntry.where(category: "exchange_rates").count }, 1 do
+      rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+    end
+
+    assert_equal 1.2, rate.rate
+    assert ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: Date.current)
+  end
+
+  # Inside a transaction the job is queued when it commits (ApplicationJob
+  # enqueue_after_transaction_commit), after the write has returned; a queue
+  # that cannot take it then must not fail whoever committed.
+  test "a refresh that cannot be queued when a transaction commits does not fail the commit" do
+    ExchangeRate.delete_all
+    @provider.expects(:fetch_exchange_rate).returns(provider_success_response(
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.2)
+    ))
+    ExchangeRateBalanceRefreshJob.queue_adapter.stubs(:enqueue).raises(StandardError, "queue unavailable")
+
+    rate = nil
+    assert_difference -> { DebugLogEntry.where(category: "exchange_rates").count }, 1 do
+      ExchangeRate.transaction do
+        rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+      end
+    end
+
+    assert_equal 1.2, rate.rate
   end
 
   test "returns nil on provider error" do

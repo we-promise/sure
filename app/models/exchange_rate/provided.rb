@@ -117,7 +117,10 @@ module ExchangeRate::Provided
       # Reached only when no usable rate was stored for the date, so this one
       # is a rate a balance may have had to do without
       # (ExchangeRate::BalanceRefresh).
-      ExchangeRateBalanceRefreshJob.perform_later([ { from: stored.from_currency, to: stored.to_currency, date: stored.date } ])
+      ExchangeRate::BalanceRefresh.enqueue(
+        [ { from: stored.from_currency, to: stored.to_currency, date: stored.date, stored_at: stored.created_at } ],
+        source: "ExchangeRate.find_or_fetch_rate", provider: provider
+      )
       rate
     end
 

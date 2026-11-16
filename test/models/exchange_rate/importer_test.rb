@@ -99,6 +99,32 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
                  refreshed.map { |rate| [ rate[:from], rate[:to], rate[:date] ] }.sort
     assert_equal BigDecimal("1.35"), ExchangeRate.find_by(from_currency: "USD", to_currency: "EUR", date: yesterday).rate,
                  "precondition: the existing row was corrected, not left alone"
+    refreshed.each do |rate|
+      stored = ExchangeRate.find_by!(from_currency: rate[:from], to_currency: rate[:to], date: rate[:date])
+      assert_equal stored.created_at, rate[:stored_at], "each rate carries the time it was stored"
+    end
+  end
+
+  # The rates are stored either way; a queue that cannot take the refresh is
+  # recorded for support rather than failing the import.
+  test "a refresh that cannot be queued is logged and the import completes" do
+    ExchangeRate.delete_all
+    @provider.expects(:fetch_exchange_rates)
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.4) ]))
+    ExchangeRateBalanceRefreshJob.expects(:perform_later).raises(StandardError, "queue unavailable")
+
+    assert_difference -> { DebugLogEntry.where(category: "exchange_rates").count }, 1 do
+      ExchangeRate::Importer.new(
+        exchange_rate_provider: @provider,
+        from: "USD",
+        to: "EUR",
+        start_date: Date.current,
+        end_date: Date.current,
+        clear_cache: true
+      ).import_provider_rates
+    end
+
+    assert ExchangeRate.exists?(from_currency: "USD", to_currency: "EUR", date: Date.current)
   end
 
   test "no provider calls when all rates exist" do

@@ -10,14 +10,40 @@
 #
 # Given the rates a write newly stored, this syncs every account with an entry,
 # or a holding priced in that currency, that had no usable rate before them:
-# every usable rate in its lookback is one of the new ones. A rate following
-# yesterday's, which the conversion already had, changes nothing here. Synced
-# from the earliest such date. Run from ExchangeRateBalanceRefreshJob, never
-# inside the write, which can sit in a sync's open transaction.
+# every usable rate in its lookback is one of the new ones, or was stored after
+# them by another write, whose own refresh counts these as already there. A
+# rate following yesterday's, which the conversion already had, changes
+# nothing here. Synced from the earliest such date. Run from
+# ExchangeRateBalanceRefreshJob, never inside the write, which can sit in a
+# sync's open transaction.
 class ExchangeRate::BalanceRefresh
-  # `rates` is [{ from:, to:, date: }], the rows a write newly stored.
+  # `rates` is [{ from:, to:, date:, stored_at: }], the rows a write newly
+  # stored and the time it stored them (their created_at).
   def self.schedule(rates)
     new(rates).schedule
+  end
+
+  # Queues the refresh for rates a write just stored. Best-effort: the rates
+  # are stored either way, so a queue that cannot take the job is recorded for
+  # support rather than raised into the write's caller -- or, inside a
+  # transaction, into whoever commits it: the job is queued once every open
+  # transaction has committed (as ApplicationJob would defer it), within the
+  # rescue.
+  def self.enqueue(rates, source:, provider: nil)
+    ActiveRecord.after_all_transactions_commit do
+      ExchangeRateBalanceRefreshJob.perform_later(rates)
+    rescue StandardError => e
+      Rails.logger.error("Could not queue the balance refresh for #{rates.size} exchange rate(s): #{e.message}")
+      Sentry.capture_exception(e)
+      DebugLogEntry.capture(
+        category: "exchange_rates",
+        level: "error",
+        message: "Could not queue the balance refresh for newly stored exchange rates: #{e.class} - #{e.message}",
+        source: source,
+        provider: provider,
+        metadata: { rates: rates.map { |rate| rate.slice(:from, :to, :date) } }
+      )
+    end
   end
 
   def initialize(rates)
@@ -54,7 +80,8 @@ class ExchangeRate::BalanceRefresh
     # { account_id => earliest affected date } across every changed pair.
     def earliest_dates
       rates.group_by { |rate| [ rate[:from], rate[:to] ] }.each_with_object({}) do |((from, to), rows), earliest|
-        affected_accounts(from, to, rows.map { |rate| rate[:date].to_date }.uniq).each do |account_id, date|
+        stored_at = rows.map { |rate| rate.fetch(:stored_at) }.min
+        affected_accounts(from, to, rows.map { |rate| rate[:date].to_date }.uniq, stored_at).each do |account_id, date|
           earliest[account_id] = [ earliest[account_id], date ].compact.min
         end
       end
@@ -64,8 +91,9 @@ class ExchangeRate::BalanceRefresh
     # entry already applied (a day of headroom past today, since a sync reads
     # today in the family's zone), or a holding whose security is priced in
     # `from` -- at a date whose lookback holds a new rate and no other usable
-    # one, so the conversion found none before.
-    def affected_accounts(from, to, dates)
+    # one stored before it, so the conversion found none before. A rate
+    # another write stored later is not one the balance had.
+    def affected_accounts(from, to, dates, stored_at)
       sql = <<~SQL
         SELECT converted.account_id, MIN(converted.date)
         FROM (
@@ -87,12 +115,12 @@ class ExchangeRate::BalanceRefresh
           AND NOT EXISTS (SELECT 1 FROM exchange_rates r
                           WHERE r.from_currency = :from AND r.to_currency = :to AND r.rate > 0
                             AND r.date BETWEEN converted.date - :lookback AND converted.date
-                            AND r.date NOT IN (:dates))
+                            AND r.date NOT IN (:dates) AND r.created_at < :stored_at)
         GROUP BY converted.account_id
       SQL
 
       binds = {
-        from: from, to: to, dates: dates, today: Date.current + 1.day,
+        from: from, to: to, dates: dates, stored_at: stored_at, today: Date.current + 1.day,
         lookback: ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS,
         first_date: dates.min, last_date: dates.max + ExchangeRate::Provided::NEAREST_RATE_LOOKBACK_DAYS
       }
