@@ -159,8 +159,46 @@ class GoalPledgeTest < ActiveSupport::TestCase
     assert_raises(GoalPledge::NotOpenError) { pledge.cancel! }
   end
 
+  test "reopen! puts a matched pledge back to open and clears the transaction stamp" do
+    transaction = matched_transaction_for(@pledge)
+
+    @pledge.reopen!
+
+    assert @pledge.reload.status_open?
+    assert_nil @pledge.matched_transaction_id
+    assert_nil transaction.reload.extra.dig("goal", "pledge_id")
+  end
+
+  test "reopen! still works after the account was unlinked from the goal" do
+    matched_transaction_for(@pledge)
+    @goal.goal_accounts.where(account_id: @account.id).destroy_all
+
+    @pledge.reopen!
+
+    assert @pledge.reload.status_open?
+  end
+
+  test "reopen! leaves a pledge that is not matched alone" do
+    @pledge.reopen!
+    assert @pledge.reload.status_open?
+
+    @pledge.cancel!
+    @pledge.reopen!
+    assert @pledge.reload.status_cancelled?
+  end
+
   private
     def build_entry(account:, amount:, date:)
       OpenStruct.new(account_id: account.id, amount: BigDecimal(amount.to_s), date: date.to_date)
+    end
+
+    def matched_transaction_for(pledge)
+      entry = pledge.account.entries.create!(
+        name: "Deposit", date: Date.current, amount: -pledge.amount.to_d, currency: "USD",
+        entryable: Transaction.new
+      )
+      pledge.resolve_with!(entry.transaction)
+      assert pledge.reload.status_matched?
+      entry.transaction
     end
 end

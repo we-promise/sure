@@ -135,18 +135,11 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
   # skipped statuses
   # ---------------------------------------------------------------------------
 
-  test "skips failed transactions" do
-    assert_no_difference "@account.entries.count" do
-      result = process(tx(status: "failed"))
-      assert_nil result
-    end
-  end
-
-  %w[cancelled blocked reversed].each do |status|
+  %w[failed cancelled blocked reversed].each do |status|
     test "skips #{status} transactions" do
       assert_no_difference "@account.entries.count" do
         result = process(tx(status: status))
-        assert_nil result
+        assert_equal :skipped, result
       end
     end
   end
@@ -193,6 +186,92 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
       process(tx(status: "reversed"))
     end
 
+    assert imported_entry.excluded?
+  end
+
+  test "reports a removed entry as skipped" do
+    process(tx(status: "pending"))
+
+    assert_equal :skipped, process(tx(status: "failed"))
+  end
+
+  test "excludes instead of deleting an unsettled entry with a locked field" do
+    process(tx(status: "sent"))
+    imported_entry.lock_attr!(:name)
+    assert_not imported_entry.user_modified?
+
+    assert_no_difference "@account.entries.count" do
+      process(tx(status: "reversed"))
+    end
+
+    assert imported_entry.excluded?
+  end
+
+  test "excludes instead of deleting an unsettled entry whose transaction has a locked field" do
+    process(tx(status: "sent"))
+    imported_entry.entryable.lock_attr!(:category_id)
+    assert_not imported_entry.user_modified?
+
+    assert_no_difference "@account.entries.count" do
+      process(tx(status: "failed"))
+    end
+
+    assert imported_entry.excluded?
+  end
+
+  test "reads the entry under a row lock before deciding whether to delete it" do
+    process(tx(status: "sent"))
+
+    queries = []
+    subscriber = ->(*, payload) { queries << payload[:sql] }
+    ActiveSupport::Notifications.subscribed(subscriber, "sql.active_record") do
+      process(tx(status: "reversed"))
+    end
+
+    assert queries.any? { |sql| sql.include?("FROM \"entries\"") && sql.include?("FOR UPDATE") },
+      "expected the entry lookup to take FOR UPDATE"
+  end
+
+  test "excludes the split children of an entry whose transaction was reversed" do
+    process(tx(status: "sent"))
+    children = imported_entry.split!([
+      { name: "Part one", amount: -60 },
+      { name: "Part two", amount: -40 }
+    ])
+    assert children.none?(&:excluded?)
+
+    assert_no_difference "@account.entries.count" do
+      process(tx(status: "reversed"))
+    end
+
+    assert imported_entry.excluded?
+    assert_equal 2, imported_entry.child_entries.count
+    assert imported_entry.child_entries.all?(&:excluded?)
+  end
+
+  test "reopens the goal pledge a removed entry had satisfied" do
+    pledge = pledge_matched_by_inflow
+
+    assert_difference "@account.entries.count", -1 do
+      process(tx(status: "reversed", posted_at: Time.current.iso8601))
+    end
+
+    pledge.reload
+    assert pledge.status_open?
+    assert_nil pledge.matched_transaction_id
+  end
+
+  test "reopens the goal pledge when the entry is kept and excluded instead" do
+    pledge = pledge_matched_by_inflow
+    imported_entry.mark_user_modified!
+    transaction = imported_entry.entryable
+
+    process(tx(status: "reversed", posted_at: Time.current.iso8601))
+
+    pledge.reload
+    assert pledge.status_open?
+    assert_nil pledge.matched_transaction_id
+    assert_nil transaction.reload.extra.dig("goal", "pledge_id")
     assert imported_entry.excluded?
   end
 
@@ -257,6 +336,18 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    # A pledge on the account that an inflow imported by the processor satisfies.
+    def pledge_matched_by_inflow
+      goal = goals(:vacation_italy)
+      GoalAccount.create!(goal: goal, account: @account)
+      pledge = goal.goal_pledges.create!(account: @account, amount: 100, currency: "USD", kind: "transfer")
+
+      process(tx(status: "sent", posted_at: Time.current.iso8601))
+      assert pledge.reload.status_matched?
+      assert_equal imported_entry.entryable_id, pledge.matched_transaction_id
+      pledge
+    end
 
     def imported_entry
       @account.entries.find_by(external_id: "mercury_tx_001", source: "mercury")

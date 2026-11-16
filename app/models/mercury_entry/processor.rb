@@ -29,7 +29,7 @@ class MercuryEntry::Processor
     if UNSETTLED_STATUSES.include?(data[:status])
       Rails.logger.debug "MercuryEntry::Processor - Skipping #{data[:status]} transaction #{external_id}"
       remove_unsettled_entry
-      return nil
+      return :skipped
     end
 
     # Wrap import in error handling to catch validation and save errors
@@ -72,17 +72,31 @@ class MercuryEntry::Processor
       @account ||= mercury_account.current_account
     end
 
-    # An entry the user edited or excluded is kept, but excluded, so their changes
-    # survive and it no longer counts as a real transaction.
+    # An entry the user edited, locked a field on or excluded is kept, but excluded, so
+    # their changes survive and it no longer counts as a real transaction. Its split
+    # children carry no Mercury id, so they are excluded with it. The entry is read under
+    # a row lock so an edit made while this runs cannot be deleted with it.
     def remove_unsettled_entry
-      entry = account.entries.find_by(external_id: external_id, source: "mercury")
-      return unless entry
+      Entry.transaction do
+        entry = account.entries.lock.find_by(external_id: external_id, source: "mercury")
+        next unless entry
 
-      if entry.protected_from_sync?
-        entry.update!(excluded: true) unless entry.excluded?
-      else
-        entry.destroy!
+        # The money the pledge was waiting for did not arrive.
+        GoalPledge.status_matched.where(matched_transaction_id: entry.entryable_id).find_each(&:reopen!)
+
+        if keep_unsettled_entry?(entry)
+          entry.update!(excluded: true) unless entry.excluded?
+          entry.child_entries.reject(&:excluded?).each { |child| child.update!(excluded: true) }
+        else
+          entry.destroy!
+        end
       end
+    end
+
+    # An API edit locks the fields it changes without setting user_modified, and
+    # Entry#protected_from_sync? does not look at those locks.
+    def keep_unsettled_entry?(entry)
+      entry.protected_from_sync? || entry.locked_field_names.any?
     end
 
     def data

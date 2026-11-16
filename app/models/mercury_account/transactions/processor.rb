@@ -8,13 +8,14 @@ class MercuryAccount::Transactions::Processor
   def process
     unless mercury_account.raw_transactions_payload.present?
       Rails.logger.info "MercuryAccount::Transactions::Processor - No transactions in raw_transactions_payload for mercury_account #{mercury_account.id}"
-      return { success: true, total: 0, imported: 0, failed: 0, errors: [] }
+      return { success: true, total: 0, imported: 0, skipped: 0, failed: 0, errors: [] }
     end
 
     total_count = mercury_account.raw_transactions_payload.count
     Rails.logger.info "MercuryAccount::Transactions::Processor - Processing #{total_count} transactions for mercury_account #{mercury_account.id}"
 
     imported_count = 0
+    skipped_count = 0
     failed_count = 0
     errors = []
 
@@ -27,8 +28,11 @@ class MercuryAccount::Transactions::Processor
           mercury_account: mercury_account
         ).process
 
-        if result.nil?
-          # Transaction was skipped (e.g., no linked account)
+        if result == :skipped
+          # Did not settle: not imported, and any entry imported earlier was removed
+          skipped_count += 1
+        elsif result.nil?
+          # Transaction could not be processed (no linked account)
           failed_count += 1
           errors << { index: index, transaction_id: transaction_data[:id], error: "No linked account" }
         else
@@ -56,6 +60,7 @@ class MercuryAccount::Transactions::Processor
       success: failed_count == 0,
       total: total_count,
       imported: imported_count,
+      skipped: skipped_count,
       failed: failed_count,
       errors: errors
     }
@@ -63,7 +68,7 @@ class MercuryAccount::Transactions::Processor
     if failed_count > 0
       Rails.logger.warn "MercuryAccount::Transactions::Processor - Completed with #{failed_count} failures out of #{total_count} transactions"
     else
-      Rails.logger.info "MercuryAccount::Transactions::Processor - Successfully processed #{imported_count} transactions"
+      Rails.logger.info "MercuryAccount::Transactions::Processor - Successfully processed #{imported_count} transactions (#{skipped_count} skipped)"
     end
 
     result

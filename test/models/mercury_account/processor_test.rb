@@ -93,6 +93,37 @@ class MercuryAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "counts a removed unsettled transaction as skipped, not failed" do
+    account = create_account("Checking")
+    mercury_account = create_mercury_account("acc_005", balance: 0, account: account,
+      raw_transactions: [ raw_transaction("tx_a", status: "pending") ])
+    MercuryAccount::Processor.new(mercury_account).process
+
+    mercury_account.update!(raw_transactions_payload: [
+      raw_transaction("tx_a", status: "reversed"),
+      raw_transaction("tx_b", status: "sent")
+    ])
+    result = MercuryAccount::Transactions::Processor.new(mercury_account).process
+
+    assert result[:success]
+    assert_equal 2, result[:total]
+    assert_equal 1, result[:imported]
+    assert_equal 1, result[:skipped]
+    assert_equal 0, result[:failed]
+    assert_empty result[:errors]
+  end
+
+  test "still counts a transaction without a linked account as failed" do
+    mercury_account = create_unlinked_mercury_account("acc_006", raw_transactions: [ raw_transaction("tx_a", status: "sent") ])
+
+    result = MercuryAccount::Transactions::Processor.new(mercury_account).process
+
+    assert_not result[:success]
+    assert_equal 1, result[:failed]
+    assert_equal 0, result[:skipped]
+    assert_equal "No linked account", result[:errors].first[:error]
+  end
+
   private
 
     def raw_transaction(id, status:)
@@ -105,6 +136,13 @@ class MercuryAccount::ProcessorTest < ActiveSupport::TestCase
       @family.accounts.create!(
         name: name, balance: 0, currency: "USD",
         accountable: Depository.new(subtype: "checking")
+      )
+    end
+
+    def create_unlinked_mercury_account(account_id, raw_transactions: [])
+      @item.mercury_accounts.create!(
+        name: account_id, account_id: account_id, currency: "USD",
+        current_balance: 0, raw_transactions_payload: raw_transactions
       )
     end
 

@@ -110,6 +110,11 @@ The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
 enum is `transfer` / `manual_save`; kind is decided at create time by
 `Account#default_pledge_kind` (see "Connected vs manual accounts").
 
+A matched pledge goes back to `open` through `GoalPledge#reopen!` when the
+transaction that satisfied it stops counting, as when a provider reverses it
+(`MercuryEntry::Processor`). Deleting the row alone only nulls
+`matched_transaction_id`.
+
 ## Currencies and account allocations
 
 A goal can link cash, investment and crypto accounts in different currencies.

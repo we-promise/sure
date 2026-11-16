@@ -120,6 +120,21 @@ class GoalPledge < ApplicationRecord
   # got there first") from a generic validation failure.
   class AlreadyClaimedError < StandardError; end
 
+  # Puts a matched pledge back to open when the transaction that satisfied it
+  # stopped counting: a provider reversed it, so the money never arrived. The
+  # transaction foreign key only nulls matched_transaction_id when the row is
+  # deleted, which would leave the pledge matched to nothing. A window that has
+  # run out is closed by SweepExpiredGoalPledgesJob. Validations are skipped:
+  # the account may have been unlinked from the goal since the match.
+  def reopen!
+    with_lock do
+      next unless status_matched? && matched_transaction_id.present?
+
+      clear_matched_transaction_extra
+      update_columns(status: "open", matched_transaction_id: nil, updated_at: Time.current)
+    end
+  end
+
   def extend!(days: EXTEND_DAYS)
     raise NotOpenError, "Only open pledges can be extended" unless status_open?
 
