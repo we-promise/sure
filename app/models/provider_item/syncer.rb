@@ -54,6 +54,7 @@ class ProviderItem::Syncer
       process_results = provider_item.process_accounts
       sync_errors.concat(result_failure_errors(process_results, category: :account_processing_error, message_key: :account_processing_failed))
       Rails.logger.info "#{self.class.name} - Finished processing accounts"
+      collect_processing_warnings(sync, linked_accounts)
 
       # Phase 4: Schedule balance calculations for linked accounts
       update_status(sync, :calculating_balances)
@@ -151,6 +152,10 @@ class ProviderItem::Syncer
 
     def credentials_error?(_error)
       false
+    end
+
+    # Data quality warnings about the linked provider accounts just processed.
+    def collect_processing_warnings(_sync, _linked_provider_accounts)
     end
 
     def provider_key

@@ -1,4 +1,4 @@
-class LunchflowAccount < ApplicationRecord
+class LunchflowAccount < ProviderAccount
   include CurrencyNormalizable, Encryptable
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
@@ -12,18 +12,10 @@ class LunchflowAccount < ApplicationRecord
 
   belongs_to :lunchflow_item
 
-  # New association through account_providers
-  has_one :account_provider, as: :provider, dependent: :destroy
-  has_one :account, through: :account_provider, source: :account
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
   validates :account_id, uniqueness: { scope: :lunchflow_item_id, allow_nil: true }
-
-  # Helper to get account using account_providers system
-  def current_account
-    account
-  end
 
   def upsert_lunchflow_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
