@@ -49,6 +49,29 @@ class Provider::RentcastTest < ActiveSupport::TestCase
     assert_requested stub
   end
 
+  test "values the property at a given living area instead of the looked-up one" do
+    stub = stub_request(:get, "https://api.rentcast.io/v1/avm/value")
+      .with(
+        query: {
+          "address" => "5500 Grand Lake Dr, San Antonio, TX, 78244",
+          "lookupSubjectAttributes" => "true",
+          "squareFootage" => "1364"
+        }
+      )
+      .to_return(status: 200, body: avm_response_body)
+
+    response = @provider.fetch_property_valuation(
+      line1: "5500 Grand Lake Dr",
+      locality: "San Antonio",
+      region: "TX",
+      postal_code: "78244",
+      square_footage: 1364
+    )
+
+    assert response.success?
+    assert_requested stub
+  end
+
   test "returns a friendly error when no property matches the address" do
     stub_request(:get, "https://api.rentcast.io/v1/avm/value")
       .with(query: hash_including("address" => "1 Nowhere Ln"))

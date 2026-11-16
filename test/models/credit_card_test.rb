@@ -348,8 +348,151 @@ class CreditCardTest < ActiveSupport::TestCase
     assert_not card.minimum_payment_shortfall?
   end
 
+  test "the statement summary reports the remaining amount and partial status" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    charge(card.account, Date.new(2026, 10, 12), -100)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 300, summary.balance.amount
+    assert_equal 200, summary.remaining.amount
+    assert_equal 0, summary.charges.amount
+    assert_equal(-100, summary.credits.amount)
+    assert_equal(-100, summary.accrued.amount)
+    assert_equal Date.new(2026, 10, 26), summary.due_date
+    assert_equal Date.new(2026, 10, 26), summary.last_due_date
+    assert_equal :partial, summary.status
+  end
+
+  test "the statement summary marks a settled statement as paid and moves to the next due date" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    charge(card.account, Date.new(2026, 10, 20), -300)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 27), viewer: users(:family_admin))
+
+    assert_equal 0, summary.remaining.amount
+    assert_equal :paid, summary.status
+    assert_equal Date.new(2026, 11, 26), summary.due_date
+    assert_equal Date.new(2026, 10, 26), summary.last_due_date
+  end
+
+  test "the statement summary keeps an unpaid passed bill overdue" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 27), viewer: users(:family_admin))
+
+    assert_equal 300, summary.remaining.amount
+    assert_equal :overdue, summary.status
+    assert_equal Date.new(2026, 10, 26), summary.due_date
+  end
+
+  test "the statement summary reports no balance when the statement is zero" do
+    card = statement_card(close_day: 10, due_day: 26)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 0, summary.balance.amount
+    assert_equal 0, summary.remaining.amount
+    assert_equal :no_balance, summary.status
+  end
+
+  test "the statement summary surfaces an overdue open payment instead of the stale hint" do
+    travel_to Date.new(2026, 10, 16) do
+      card = accounts(:credit_card).credit_card
+      card.update!(statement_close_day: 10, due_day: 26)
+      series = scheduled_payment_series(card, source: accounts(:depository), stale: 45.days.ago.to_date)
+
+      assert_operator series.next_expected_date, :<, Date.current
+
+      summary = card.statement_summary(as_of: Date.current, viewer: users(:family_admin))
+      open_due = series.recurring_occurrences.open_status.minimum(:due_on)
+
+      assert_equal series.id, summary.scheduled_payment.payment.id
+      assert_equal open_due, summary.scheduled_payment.due_date
+      assert_operator summary.scheduled_payment.due_date, :>, series.next_expected_date
+      assert_operator summary.scheduled_payment.due_date, :<, Date.current
+    end
+  end
+
+  test "the statement summary hides a scheduled payment the viewer cannot reach" do
+    card = accounts(:credit_card).credit_card
+    card.update!(statement_close_day: 10, due_day: 26)
+    scheduled_payment_series(card, source: accounts(:investment), stale: 45.days.ago.to_date)
+
+    member_summary = card.statement_summary(as_of: Date.current, viewer: users(:family_member))
+    admin_summary = card.statement_summary(as_of: Date.current, viewer: users(:family_admin))
+
+    assert_nil member_summary.scheduled_payment
+    assert admin_summary.scheduled_payment.present?
+  end
+
+  test "the statement summary estimates monthly interest on the remaining balance" do
+    card = statement_card(close_day: 10, due_day: 26)
+    card.update!(apr: 12)
+    charge(card.account, Date.new(2026, 9, 20), 1200)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 12, summary.estimated_interest.amount
+    assert_equal 1, summary.monthly_rate
+  end
+
+  test "the statement summary rounds interest to the account currency precision" do
+    card = statement_card(close_day: 10, due_day: 26, currency: "KWD")
+    card.update!(apr: 12)
+    charge(card.account, Date.new(2026, 9, 20), 0.40)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal BigDecimal("0.004"), summary.estimated_interest.amount
+    assert_equal "KWD", summary.estimated_interest.currency.iso_code
+  end
+
+  test "the statement summary reports no interest on a zero remaining balance" do
+    card = statement_card(close_day: 10, due_day: 26)
+    card.update!(apr: 12)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_equal 0, summary.estimated_interest.amount
+  end
+
+  test "the statement summary has no interest estimate without an APR" do
+    card = statement_card(close_day: 10, due_day: 26)
+    card.update!(apr: nil)
+    charge(card.account, Date.new(2026, 9, 20), 1200)
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_nil summary.estimated_interest
+  end
+
+  test "the statement summary refuses a remaining amount it cannot total" do
+    card = statement_card(close_day: 10, due_day: 26)
+    charge(card.account, Date.new(2026, 9, 20), 300)
+    foreign = card.account.entries.create!(
+      name: "Foreign payment",
+      date: Date.new(2026, 10, 12),
+      amount: -100,
+      currency: "EUR",
+      entryable: Transaction.new
+    )
+
+    summary = card.statement_summary(as_of: Date.new(2026, 10, 16), viewer: users(:family_admin))
+
+    assert_nil summary.remaining
+    assert_nil summary.status
+    assert_nil summary.charges
+    assert_nil summary.credits
+    assert_nil summary.accrued
+    assert foreign.persisted?
+  end
+
   private
-    def statement_card(close_day:, due_day:, minimum_payment: 100)
+    def statement_card(close_day:, due_day:, minimum_payment: 100, currency: "USD")
       card = CreditCard.create!(
         statement_close_day: close_day,
         due_day: due_day,
@@ -362,13 +505,32 @@ class CreditCardTest < ActiveSupport::TestCase
         family: accounts(:credit_card).family,
         name: "Statement Cycle Card",
         balance: 0,
-        currency: "USD",
+        currency: currency,
         classification: "liability",
         status: "active",
         accountable: card
       )
 
       card.reload
+    end
+
+    def scheduled_payment_series(card, source:, stale:)
+      series = card.account.family.recurring_transactions.create!(
+        name: "Card payment #{stale}",
+        account: source,
+        destination_account: card.account,
+        amount: 100,
+        currency: "USD",
+        status: "active",
+        bill_type: "transfer",
+        manual: true,
+        dedup_scope: "card-payment-#{card.account.id}-#{stale}",
+        expected_day_of_month: stale.day,
+        last_occurrence_date: stale << 1,
+        next_expected_date: stale
+      )
+
+      series.reload
     end
 
     # Positive amount is a charge on a liability; negative is a payment, which

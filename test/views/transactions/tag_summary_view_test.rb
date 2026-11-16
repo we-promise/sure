@@ -111,7 +111,7 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction", locals: { entry: entry.reload, balance_trend: nil, view_ctx: "global" }))
     summary = html.at_css("##{dom_id(entry.transaction, "tag_summary_desktop")}")
 
-    assert_nil html.at_css("turbo-frame#tag_dropdown")
+    assert_nil html.at_css("[data-ds--popover-frame-id-value='tag_dropdown']"), "read-only rows have no picker popover"
     assert summary.at_css("[aria-describedby] [tabindex='0']"), "read-only trigger should be keyboard focusable"
   end
 
@@ -121,7 +121,10 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
 
     html = Nokogiri::HTML.fragment(render_row)
 
-    assert html.at_css("turbo-frame#tag_dropdown")
+    # The picker's <turbo-frame> is created by the popover on first open; the
+    # row only carries the frame's id and src.
+    assert html.at_css("[data-ds--popover-frame-id-value='tag_dropdown'][data-ds--popover-frame-src-value]")
+    assert_nil html.at_css("turbo-frame#tag_dropdown")
     assert_nil html.at_css("##{dom_id(@transaction, "tag_summary_desktop")} [tabindex='0']")
   end
 
@@ -157,7 +160,7 @@ class Transactions::TagSummaryViewTest < ActionView::TestCase
     html = Nokogiri::HTML.fragment(render(partial: "transactions/transaction", locals: { entry: outflow_entry, balance_trend: nil, view_ctx: "global" }))
 
     assert html.at_css("##{dom_id(outflow_tx, "tag_summary_desktop")}")
-    assert_nil html.at_css("turbo-frame#tag_dropdown")
+    assert_nil html.at_css("[data-ds--popover-frame-id-value='tag_dropdown']")
     assert_empty html.at_css("##{dom_id(outflow_tx, "tag_summary_desktop")}").text.strip
   end
 

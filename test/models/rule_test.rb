@@ -10,6 +10,21 @@ class RuleTest < ActiveSupport::TestCase
     @groceries_category = @family.categories.create!(name: "Groceries")
   end
 
+  test "displayed_action skips an unsaved action and option lists reset on reload" do
+    rule = @family.rules.create!(resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ])
+    saved = rule.actions.first
+    rule.actions.build(action_type: "exclude_transaction")
+
+    assert_equal saved, rule.displayed_action
+
+    assert_equal "Groceries", saved.value_display
+    @groceries_category.update!(name: "Food")
+    rule.reload
+
+    assert_equal "Food", rule.actions.first.value_display
+  end
+
   test "rejects a null byte in the rule name" do
     rule = @family.rules.build(name: "bad\0name", resource_type: "transaction")
     rule.actions.build(action_type: "exclude_transaction")
@@ -565,25 +580,12 @@ class RuleTest < ActiveSupport::TestCase
     assert_equal [ first, second ], @family.rules.ordered.to_a
   end
 
-  test "update_positions! sets the order of all rules of the family" do
+  test "new rules come after existing rule groups" do
     first = create_exclude_rule
-    second = create_exclude_rule
+    group = @family.rule_groups.create!(name: "Later")
 
-    Rule.update_positions!(@family, [ second.id, first.id ])
-
-    assert_equal [ second, first ], @family.rules.ordered.to_a
-  end
-
-  test "update_positions! rejects foreign and incomplete id lists" do
-    first = create_exclude_rule
-    second = create_exclude_rule
-    foreign = rules(:one)
-
-    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id, second.id, foreign.id ]) }
-    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id ]) }
-    assert_raises(ArgumentError) { Rule.update_positions!(@family, [ first.id, first.id ]) }
-    assert_equal 1, foreign.reload.position
-    assert_equal [ first, second ], @family.rules.ordered.to_a
+    assert_operator group.position, :>, first.position
+    assert_operator create_exclude_rule.position, :>, group.position
   end
 
   private

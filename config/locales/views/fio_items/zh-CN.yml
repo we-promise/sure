@@ -1,0 +1,141 @@
+---
+zh-CN:
+  providers:
+    fio:
+      name: Fio banka
+      description: 使用只读 API 令牌同步 Fio banka 账户
+  family:
+    fio:
+      create_fio_item:
+        default_name: Fio banka 连接
+  fio_item:
+    errors:
+      account_processing_failed: 无法同步 Fio 账户
+      account_mismatch: 此令牌属于另一个 Fio 账户，而不是此连接当前同步的账户。请将其作为单独的连接添加。
+      account_sync_schedule_failed: 无法计划 Fio 账户同步
+      statement_too_large: 对账单中的交易数量超出了 Fio 单次请求能返回的上限。请将同步起始日期向后调整后重新同步。
+      statement_fetch_failed: 无法从 Fio 获取对账单
+      history_locked: Fio 拒绝了此对账单周期的请求。请在网银的“设置 → API”中解锁账户的完整历史记录，并在 10 分钟内重新同步。
+      sync_failed: 无法同步 Fio 连接
+    sync:
+      status:
+        importing: 正在从 Fio 导入对账单...
+        checking_setup: 正在检查账户配置...
+        needs_setup:
+          one: 1 个账户需要设置...
+          other: "%{count} 个账户需要设置..."
+        processing: 正在处理交易...
+        calculating: 正在计算余额...
+    sync_status:
+      no_accounts: 尚未找到账户
+      all_synced:
+        one: 已同步 1 个账户
+        other: 已同步 %{count} 个账户
+      partial: 已同步 %{linked} 个，%{unlinked} 个需要设置
+  fio_items:
+    account_types:
+      depository: 活期或储蓄账户
+      loan: 贷款、抵押贷款或透支
+    provider_panel:
+      default_connection_name: Fio banka 连接
+      add_connection: 添加 Fio banka 连接
+      update_connection: 更新连接
+      connection_name_label: 连接名称
+      connection_name_placeholder: 我的 Fio 账户
+      token_label: API 令牌（只读）
+      token_placeholder: 粘贴 64 位令牌
+      keep_token_placeholder: 留空以保留现有令牌
+      sync_start_date_label: 导入交易起始日期
+      sync_start_date_hint: Fio 无需额外授权即可提供最近 90 天的数据。若需获取更早的数据，请在网银的“设置 → API”（挂锁图标）中解锁账户的完整历史记录（将开启一个 10 分钟的时间窗口），并在该窗口内进行同步。
+      one_account_notice: 每个令牌对应一个 Fio 账户，因此请为您想要追踪的每个账户添加一个连接。令牌每 30 秒最多可使用一次；更早发起的同步将在下一次同步时合并处理。
+      connected_account: 已连接账户
+      no_account_yet: 尚无账户 — 首次同步将发现此令牌对应的账户。
+      account_needs_setup: 尚未关联到 Sure 账户。
+      requires_update: 需要新令牌
+      requires_update_notice: Fio 拒绝了此令牌。除非在每次网银登录时自动延长，否则令牌有效期最长为 180 天。请在“设置 → API”中创建新的只读令牌并粘贴到下方。
+      last_synced: 上次同步于 %{timestamp} 前
+      never_synced: 从未同步
+      syncing: 同步中...
+      sync: 同步
+      setup_accounts: 设置账户
+      disconnect: 断开连接
+      disconnect_confirm: 确定要断开 %{name} 的连接吗？
+    create:
+      success: Fio banka 连接已保存。
+      token_required: 请粘贴来自 Fio 网银的 API 令牌。
+    update:
+      success: Fio banka 连接已更新。
+    destroy:
+      success: 已计划删除 Fio banka 连接。
+      unlink_failed: 无法断开 Fio banka 连接
+    select_accounts:
+      title: 关联您的 Fio 账户
+      description: 此令牌对应一个账户。选择它在 Sure 中的追踪方式。
+      account_type_label: 账户类型
+      awaiting_first_sync: Fio 尚未报告此令牌对应的账户。请先执行一次同步后再回来查看。
+      already_linked: 此连接的账户已关联到一个 Sure 账户。
+      sync_now: 立即同步
+      no_credentials_configured: 请先在提供商设置中配置 Fio banka。
+      cancel: 取消
+      link_account: 关联账户
+    link_accounts:
+      success: 已将您的 Fio 账户关联到 %{account_name}。
+      no_account_found: 未找到此连接对应的未关联 Fio 账户。
+      no_credentials_configured: 请先在提供商设置中配置 Fio banka。
+      unsupported_account_type: Fio 不支持该账户类型。
+      link_failed: 无法关联该账户。
+    select_existing_account:
+      title: 将 Fio 账户关联到 %{account_name}
+      description: 将此令牌对应的账户关联到您选择的账户。
+      awaiting_first_sync: Fio 尚未报告此令牌对应的账户。请先执行一次同步后再回来查看。
+      already_linked: 此连接的账户已关联到一个 Sure 账户。
+      sync_now: 立即同步
+      no_credentials_configured: 请先在提供商设置中配置 Fio banka。
+      account_already_linked: 此账户已关联到其他提供商。
+      cancel: 取消
+      link_account: 关联账户
+    link_existing_account:
+      success: 已将您的 Fio 账户关联到 %{account_name}。
+      account_already_linked: 此账户已关联到其他提供商。
+      fio_account_already_linked: 此 Fio 账户已关联。
+      no_account_selected: 没有可供关联的 Fio 账户。
+      unsupported_account_type: Fio 仅能同步现金和贷款账户。
+    setup_accounts:
+      title: 关联您的 Fio 账户
+      subtitle: 选择此令牌对应的账户在 Sure 中的显示方式。
+      choose_account_type: 选择账户类型
+      choose_account_type_description: 如果您不想追踪此账户，可以选择跳过。
+      account_type_label: 账户类型
+      account_types:
+        skip: 跳过
+      create_account: 创建账户
+      awaiting_first_sync: 尚未找到账户
+      awaiting_first_sync_description: Fio 仅在对账单中返回账户信息，因此账户将在首次成功同步后显示。
+      sync_now: 立即同步
+      nothing_to_setup: 无需设置
+      account_already_handled: 此连接的账户已经关联或跳过。
+      close: 关闭
+      cancel: 取消
+    complete_account_setup:
+      success: 已创建 %{account_name}。
+      skipped: 已跳过此 Fio 账户。
+      no_account: 没有需要设置的 Fio 账户。
+      unsupported_account_type: Fio 不支持该账户类型。
+      creation_failed: 无法创建 Sure 账户。
+    fio_item:
+      deletion_in_progress: 正在删除中
+      syncing: 同步中
+      requires_update: 需要新令牌
+      error: 错误
+      status_with_summary: 上次同步于 %{timestamp} 前 · %{summary}
+      status_never: 从未同步
+      delete: 删除
+      requires_update_title: 需要新令牌
+      requires_update_description: Fio 拒绝了此连接的令牌。请在网银的“设置 → API”中创建新的只读令牌。
+      update_token: 更新令牌
+      setup_needed: 账户需要设置
+      setup_description: 此令牌对应的账户尚未关联到 Sure 账户。
+      setup_action: 设置账户
+      no_accounts_title: 尚未导入账户
+      no_accounts_description: Fio 仅在对账单中返回账户信息，因此账户将在首次成功同步后显示。
+      sync_now: 立即同步

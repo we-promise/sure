@@ -38,6 +38,11 @@ class ChatProvider with ChangeNotifier {
   /// to avoid prematurely stopping on a brief server-side generation pause.
   int _stablePollingCount = 0;
 
+  /// Ids deleted while a chat-list fetch was awaiting later pages; null when
+  /// no fetch is running. Lets the fetch drop chats the user removed meanwhile
+  /// instead of restoring them from a stale page.
+  final List<Set<String>> _deletedDuringChatListFetches = [];
+
   List<Chat> get chats => _chats;
   Chat? get currentChat => _currentChat;
   bool get isLoading => _isLoading;
@@ -52,6 +57,12 @@ class ChatProvider with ChangeNotifier {
   bool _hasIncompleteHistory = false;
   bool get hasIncompleteHistory => _hasIncompleteHistory;
 
+  /// True when the chat list on screen may be missing chats: a later page
+  /// failed to load, or the server reported more pages than we follow. The
+  /// UI can offer a retry without treating it as a hard error.
+  bool _hasIncompleteChatList = false;
+  bool get hasIncompleteChatList => _hasIncompleteChatList;
+
   /// Fetch list of chats
   Future<void> fetchChats({
     required String accessToken,
@@ -61,6 +72,8 @@ class ChatProvider with ChangeNotifier {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
+    final deletedDuringFetch = <String>{};
+    _deletedDuringChatListFetches.add(deletedDuringFetch);
 
     try {
       final result = await _chatService.getChats(
@@ -70,7 +83,21 @@ class ChatProvider with ChangeNotifier {
       );
 
       if (result['success'] == true) {
-        _chats = result['chats'] as List<Chat>;
+        final loaded = await _loadRemainingChatPages(
+          accessToken: accessToken,
+          perPage: perPage,
+          page: page,
+          firstPage: result,
+        );
+        _hasIncompleteChatList = !loaded.complete;
+        // A failed later page returns null chats: keep the list already on
+        // screen rather than replacing it with a truncated one.
+        if (loaded.chats != null) {
+          final deleted = deletedDuringFetch;
+          _chats = deleted.isEmpty
+              ? loaded.chats!
+              : loaded.chats!.where((c) => !deleted.contains(c.id)).toList();
+        }
         _errorMessage = null;
       } else {
         _errorMessage = result['error'] ?? 'Failed to fetch chats';
@@ -79,9 +106,51 @@ class ChatProvider with ChangeNotifier {
       _log.warning('ChatProvider', 'fetchChats failed: ${e.runtimeType}');
       _errorMessage = 'Something went wrong. Please try again.';
     } finally {
+      _deletedDuringChatListFetches.remove(deletedDuringFetch);
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Upper bound on chat-list pages followed in one refresh, so a bogus
+  /// `total_pages` from the server cannot trigger an unbounded request loop.
+  static const _maxChatListPages = 100;
+
+  /// Fetches the pages after [firstPage] (the response for [page]) of the chat
+  /// list and returns all chats. The API paginates `/chats`, so without this
+  /// only the first page would ever be shown. If a later page fails, returns
+  /// the pages loaded so far when nothing is shown yet, and null chats otherwise
+  /// so the caller keeps the list it already has. `complete` is false when a
+  /// page failed or the page cap truncated the list.
+  Future<({List<Chat>? chats, bool complete})> _loadRemainingChatPages({
+    required String accessToken,
+    required int perPage,
+    required int page,
+    required Map<String, dynamic> firstPage,
+  }) async {
+    final chats = <Chat>[...(firstPage['chats'] as List<Chat>)];
+    final pagination = firstPage['pagination'] as Map<String, dynamic>?;
+    final totalPages = (pagination?['total_pages'] as int?) ?? 1;
+    final lastPage = totalPages < _maxChatListPages ? totalPages : _maxChatListPages;
+    final seen = chats.map((c) => c.id).toSet();
+
+    for (var next = page + 1; next <= lastPage; next++) {
+      final pageResult = await _chatService.getChats(
+        accessToken: accessToken,
+        page: next,
+        perPage: perPage,
+      );
+
+      if (pageResult['success'] != true) {
+        _log.warning('ChatProvider', 'fetchChats page $next failed; stopping');
+        return (chats: _chats.isEmpty ? chats : null, complete: false);
+      }
+      for (final chat in pageResult['chats'] as List<Chat>) {
+        if (seen.add(chat.id)) chats.add(chat);
+      }
+    }
+
+    return (chats: chats, complete: totalPages <= lastPage);
   }
 
   /// Fetch a specific chat with messages
@@ -379,6 +448,9 @@ class ChatProvider with ChangeNotifier {
 
       if (result['success'] == true) {
         _chats.removeWhere((c) => c.id == chatId);
+        for (final s in _deletedDuringChatListFetches) {
+          s.add(chatId);
+        }
 
         if (_currentChat != null && _currentChat!.id == chatId) {
           _currentChat = null;
@@ -416,6 +488,9 @@ class ChatProvider with ChangeNotifier {
             ((result['failedIds'] as List?) ?? []).cast<String>().toSet();
         final deleted = chatIds.toSet().difference(failedIds);
         _chats.removeWhere((c) => deleted.contains(c.id));
+        for (final s in _deletedDuringChatListFetches) {
+          s.addAll(deleted);
+        }
 
         if (_currentChat != null && deleted.contains(_currentChat!.id)) {
           _currentChat = null;

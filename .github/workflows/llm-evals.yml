@@ -77,7 +77,8 @@ jobs:
     name: Discover eval datasets
     needs: check_openai
     if: needs.check_openai.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
+    # The pinned ruby/setup-ruby action does not support Ubuntu 26.04.
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -180,7 +181,7 @@ jobs:
     name: Run eval for ${{ matrix.dataset }} on ${{ matrix.model }}
     needs: [check_openai, discover_datasets]
     if: needs.check_openai.outputs.should_run == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
