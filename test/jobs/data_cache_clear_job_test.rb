@@ -46,24 +46,24 @@ class DataCacheClearJobTest < ActiveJob::TestCase
   # A running sync would be reused and may already be past its import.
   test "follows a running sync of a day-long connection with a fresh one" do
     @plaid_item.create_sync_schedule!(interval_minutes: 10080)
-    running = @plaid_item.syncs.create!(status: "syncing")
+    @plaid_item.syncs.create!(status: "syncing")
 
     @family.expects(:sync_later).once
     PlaidItem.any_instance.expects(:sync_later).never
 
-    assert_enqueued_with(job: FollowUpSyncJob, args: [ @plaid_item, { active_sync_id: running.id } ]) do
+    assert_enqueued_with(job: FollowUpSyncJob, args: [ @plaid_item ]) do
       DataCacheClearJob.perform_now(@family)
     end
   end
 
   test "follows an unfinished sync older than the reuse window with a fresh one" do
     @plaid_item.create_sync_schedule!(interval_minutes: 10080)
-    running = @plaid_item.syncs.create!(status: "syncing", created_at: 10.minutes.ago)
+    @plaid_item.syncs.create!(status: "syncing", created_at: 10.minutes.ago)
 
     @family.expects(:sync_later).once
     PlaidItem.any_instance.expects(:sync_later).never
 
-    assert_enqueued_with(job: FollowUpSyncJob, args: [ @plaid_item, { active_sync_id: running.id } ]) do
+    assert_enqueued_with(job: FollowUpSyncJob, args: [ @plaid_item ]) do
       DataCacheClearJob.perform_now(@family)
     end
   end

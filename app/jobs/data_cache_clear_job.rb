@@ -25,8 +25,8 @@ class DataCacheClearJob < ApplicationJob
     def sync_daily_scheduled_items(family)
       Family::Syncer.syncable_item_associations.each do |association|
         SyncSchedule.with_own_daily_schedule(family.public_send(association).syncable).find_each do |item|
-          if (running = item.syncs.incomplete.order(created_at: :desc).first)
-            FollowUpSyncJob.perform_later(item, active_sync_id: running.id)
+          if item.syncs.incomplete.exists?
+            FollowUpSyncJob.perform_later(item)
           else
             item.sync_later
           end
