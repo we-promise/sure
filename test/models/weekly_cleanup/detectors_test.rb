@@ -143,4 +143,14 @@ class WeeklyCleanup::DetectorsTest < ActiveSupport::TestCase
     assert scoped.samples.none? { |s| s.include?("Hidden Purchase") }
     assert_equal scoped.count + 1, unscoped.count
   end
+
+  test "provider data gaps still counts a failed sync whose retry has not completed" do
+    Sync.where(syncable: @family).delete_all
+    Sync.create!(syncable: @family, status: "failed", created_at: 2.days.ago)
+    Sync.create!(syncable: @family, status: "syncing", created_at: 1.day.ago)
+
+    finding = WeeklyCleanup::Detectors::ProviderDataGaps.new(@family).generate
+
+    assert_equal 1, finding.count
+  end
 end

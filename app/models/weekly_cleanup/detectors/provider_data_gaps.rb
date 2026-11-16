@@ -31,7 +31,7 @@ class WeeklyCleanup::Detectors::ProviderDataGaps < WeeklyCleanup::Detector
           WHERE later.syncable_type = syncs.syncable_type
             AND later.syncable_id = syncs.syncable_id
             AND later.created_at > syncs.created_at
-            AND later.status NOT IN ('failed', 'stale')
+            AND later.status = 'completed'
         )
       SQL
       count += owned.count
