@@ -40,6 +40,11 @@ class Import::AccountMapping < Import::Mapping
       new_account.import = import
       new_account.currency = import.family.currency
       new_account.accountable = Depository.new
+      new_account.owner = import.initiating_user if import.initiating_user
+    end
+
+    if account.previously_new_record? && import.family.share_all_by_default?
+      account.auto_share_with_family!
     end
 
     self.mappable = account
