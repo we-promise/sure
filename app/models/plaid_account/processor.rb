@@ -22,11 +22,6 @@ class PlaidAccount::Processor
     investments_ok = process_investments
     process_liabilities
 
-    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
-    # complete ledger. See Account::CurrentBalanceManager.
-    # A failed import leaves the ledger incomplete, so skip anchoring and let the next
-    # successful sync judge the wider gap.
-    # Liabilities write no entries, so they cannot affect that judgement.
     anchor_account!(account, balance_info) if transactions_ok && investments_ok
   end
 
@@ -121,20 +116,19 @@ class PlaidAccount::Processor
       cash_balance = balance_info[:cash_balance]
       balance_date = balance_info[:balance_date]
 
-      manager = Account::CurrentBalanceManager.new(account)
-      behind_anchor = manager.has_current_anchor? && manager.current_date > balance_date
+      account.with_lock do
+        manager = Account::CurrentBalanceManager.new(account)
+        behind_anchor = manager.has_current_anchor? && manager.current_date > balance_date
 
-      # A snapshot dated behind the anchor is a correction to a day gone
-      # by: the cached balance and cash describe now and stay as they are,
-      # in the denomination they were written in.
-      if !behind_anchor && account.currency != plaid_account.currency
-        account.update!(currency: plaid_account.currency)
+        if !behind_anchor && account.currency != plaid_account.currency
+          account.update!(currency: plaid_account.currency)
+        end
+
+        result = manager.set_current_balance(balance, date: balance_date)
+        raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
+
+        account.update!(cash_balance: cash_balance) unless result.historical?
       end
-
-      result = manager.set_current_balance(balance, date: balance_date)
-      raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
-
-      account.update!(cash_balance: cash_balance) unless result.historical?
 
       account.sync_later
     rescue BalanceError => e
@@ -142,7 +136,6 @@ class PlaidAccount::Processor
       raise
     end
 
-    # Returns whether every transaction was imported, which gates the anchor in `process`.
     def process_transactions
       PlaidAccount::Transactions::Processor.new(plaid_account).process
       true
@@ -151,7 +144,6 @@ class PlaidAccount::Processor
       false
     end
 
-    # Returns whether every investment record was imported, which gates the anchor in `process`.
     def process_investments
       PlaidAccount::Investments::TransactionsProcessor.new(plaid_account, security_resolver: security_resolver).process
       PlaidAccount::Investments::HoldingsProcessor.new(plaid_account, security_resolver: security_resolver).process

@@ -34,8 +34,6 @@ class SnaptradeAccount::Processor
       Rails.logger.warn "SnaptradeAccount::Processor - No activities payload to process"
     end
 
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
     account.set_current_balance(anchor_balance) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
@@ -64,7 +62,6 @@ class SnaptradeAccount::Processor
       )
       account.save!
 
-      # Returned to `process`, which anchors it once holdings and activities are in.
       total_balance
     end
 

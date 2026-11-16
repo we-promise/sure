@@ -60,7 +60,6 @@ services:
     # .available? returns false and Imports -> New renders no upload option at
     # all -- document and PDF import cannot be exercised in the devcontainer.
     image: pgvector/pgvector:pg16-trixie
-    command: postgres -c max_locks_per_transaction=256
     volumes:
       - postgres-data:/var/lib/postgresql/data
     ports:

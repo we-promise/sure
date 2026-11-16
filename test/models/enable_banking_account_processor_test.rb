@@ -81,7 +81,7 @@ class EnableBankingAccountProcessorTest < ActiveSupport::TestCase
         )
       end
       true
-    end
+    end.returns({ success: true })
 
     observed_transaction_count = nil
 

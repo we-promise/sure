@@ -33,10 +33,6 @@ class RedbarkAccount::Processor
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
     end
 
-    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
-    # complete ledger. See Account::CurrentBalanceManager.
-    # A failed import leaves the ledger incomplete, so skip anchoring and let the next
-    # successful sync judge the wider gap.
     account.set_current_balance(anchor_balance) if anchor_balance && transactions_ok
 
     # A loan's rate, read from what the bank reported. After transactions, so a
@@ -88,7 +84,6 @@ class RedbarkAccount::Processor
       )
       account.save!
 
-      # Returned to `process`, which anchors it once transactions are in.
       balance
     end
 end

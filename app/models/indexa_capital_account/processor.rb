@@ -39,8 +39,6 @@ class IndexaCapitalAccount::Processor
       Rails.logger.warn "IndexaCapitalAccount::Processor - No activities payload to process"
     end
 
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
     account.set_current_balance(anchor_balance) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
@@ -67,7 +65,6 @@ class IndexaCapitalAccount::Processor
       )
       account.save!
 
-      # Returned to `process`, which anchors it once holdings and activities are in.
       total_balance
     end
 

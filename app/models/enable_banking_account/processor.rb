@@ -16,43 +16,22 @@ class EnableBankingAccount::Processor
 
     Rails.logger.info "EnableBankingAccount::Processor - Processing enable_banking_account #{enable_banking_account.id} (uid #{enable_banking_account.uid})"
 
-    anchor_balance = nil
-
     begin
       anchor_balance = process_account!
+      transactions_ok = process_transactions
+
+      if anchor_balance && transactions_ok
+        result = enable_banking_account.current_account.set_current_balance(anchor_balance)
+        raise ProcessingError.new("Failed to set current balance: #{result.error}") unless result.success?
+
+        enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
+      end
     rescue StandardError => e
       Rails.logger.error "EnableBankingAccount::Processor - Failed to process account #{enable_banking_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
       report_exception(e, "account")
-      # Whatever happened to the anchor here, it is not known to be verified.
       enable_banking_account.update_column(:balance_verified, false) if enable_banking_account.persisted?
       raise
-    end
-
-    transactions_ok = process_transactions
-
-    # Anchor the reported balance AFTER importing, so the standing anchor is judged against a
-    # complete ledger. See Account::CurrentBalanceManager.
-    # A failed import leaves the ledger incomplete, so skip anchoring and let the next
-    # successful sync judge the wider gap.
-    if anchor_balance && transactions_ok
-      begin
-        result = enable_banking_account.current_account.set_current_balance(anchor_balance)
-
-        unless result.success?
-          raise ProcessingError.new("Failed to set current balance: #{result.error}")
-        end
-
-        # The anchor now holds this balance, so its verification is the
-        # importer's evidence for it. Only set here, so a sync that stops
-        # before this point never vouches for an older anchor.
-        enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
-      rescue => e
-        # Whatever happened to the anchor here, it is not known to be verified.
-        enable_banking_account.update_column(:balance_verified, false) if enable_banking_account.persisted?
-        report_exception(e, "account")
-        raise
-      end
     end
   end
 
@@ -112,9 +91,6 @@ class EnableBankingAccount::Processor
         end
       end
 
-      # Returned to `process`, which anchors it once transactions are in. That anchor drives
-      # Balance::ReverseCalculator, which works backward from the bank-reported balance -
-      # eliminating spurious cash adjustment spikes.
       balance unless skip_balance_update
     end
 
@@ -189,7 +165,6 @@ class EnableBankingAccount::Processor
       )
     end
 
-    # Returns whether every transaction was imported, which gates the anchor in `process`.
     def process_transactions
       EnableBankingAccount::Transactions::Processor.new(enable_banking_account).process[:success]
     rescue => e

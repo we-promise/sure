@@ -8,28 +8,9 @@ class IbkrAccount::Processor
   def process
     return unless account.present?
 
-    total_balance = ibkr_account.current_balance || ibkr_account.cash_balance || 0
-    cash_balance = ibkr_account.cash_balance || 0
-    date = balance_date
-
-    holdings_ok = process_holdings
-    activities_ok = process_activities
-
-    if holdings_ok && activities_ok
-      update_account_balance_and_anchor!(total_balance: total_balance, cash_balance: cash_balance, date: date)
-    else
-      DebugLogEntry.capture(
-        category: "provider_sync_error",
-        level: "error",
-        message: "Skipped IBKR anchor: holdings_ok=#{holdings_ok}, activities_ok=#{activities_ok}",
-        source: self.class.name,
-        provider_key: "ibkr",
-        account_provider: ibkr_account.account_provider,
-        family: ibkr_account.ibkr_item&.family,
-        metadata: { report_date: ibkr_account.report_date&.to_s, balance_date: date.to_s }
-      )
-    end
-
+    update_account_balance!
+    IbkrAccount::HoldingsProcessor.new(ibkr_account).process
+    IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
     repair_default_opening_anchor!
     move_opening_anchor_before_entries!
 
@@ -42,23 +23,9 @@ class IbkrAccount::Processor
       @account ||= ibkr_account.current_account
     end
 
-    def process_holdings
-      IbkrAccount::HoldingsProcessor.new(ibkr_account).process
-      true
-    rescue => e
-      report_exception(e, "holdings")
-      false
-    end
-
-    def process_activities
-      IbkrAccount::ActivitiesProcessor.new(ibkr_account).process
-      true
-    rescue => e
-      report_exception(e, "activities")
-      false
-    end
-
-    def update_account_balance_and_anchor!(total_balance:, cash_balance:, date:)
+    def update_account_balance!
+      total_balance = ibkr_account.current_balance || ibkr_account.cash_balance || 0
+      cash_balance = ibkr_account.cash_balance || 0
       result = nil
 
       # One lock across the whole of it. Which statement the account follows is
@@ -75,7 +42,7 @@ class IbkrAccount::Processor
         # an older one leaves the balance where it is, and the cached figures
         # must keep the denomination they were written in. Rolled back below
         # with everything else if the write fails.
-        if ibkr_account.currency != account.currency && !statement_behind_anchor?(manager, date)
+        if ibkr_account.currency != account.currency && !statement_behind_anchor?(manager)
           account.update!(currency: ibkr_account.currency)
         end
 
@@ -85,7 +52,7 @@ class IbkrAccount::Processor
         # prices, and the cash plug absorbs the difference -- a phantom balance
         # the size of whatever the holdings moved that day, on every day of the
         # account's history.
-        result = manager.set_current_balance(total_balance, date: date)
+        result = manager.set_current_balance(total_balance, date: balance_date)
 
         # The manager rescues and reports failure through its result, and its
         # own lock joined this transaction rather than opening one -- so what
@@ -114,15 +81,15 @@ class IbkrAccount::Processor
           provider_key: "ibkr",
           account_provider: ibkr_account.account_provider,
           family: ibkr_account.ibkr_item&.family,
-          metadata: { report_date: ibkr_account.report_date&.to_s, balance_date: date.to_s }
+          metadata: { report_date: ibkr_account.report_date&.to_s, balance_date: balance_date.to_s }
         )
       end
 
       result
     end
 
-    def statement_behind_anchor?(manager, date)
-      manager.has_current_anchor? && manager.current_date > date
+    def statement_behind_anchor?(manager)
+      manager.has_current_anchor? && manager.current_date > balance_date
     end
 
     def balance_date
@@ -171,15 +138,6 @@ class IbkrAccount::Processor
           "IbkrAccount::Processor - Failed to repair opening anchor for account #{account.id}: #{result.error}"
         )
         Sentry.capture_message(result.error)
-      end
-    end
-
-    def report_exception(error, context)
-      Sentry.capture_exception(error) do |scope|
-        scope.set_tags(
-          ibkr_account_id: ibkr_account.id,
-          context: context
-        )
       end
     end
 end

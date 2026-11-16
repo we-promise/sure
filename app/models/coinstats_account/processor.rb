@@ -27,10 +27,8 @@ class CoinstatsAccount::Processor
       report_exception(e, "holdings")
     end
 
-    anchor_balance = nil
-
     begin
-      anchor_balance = process_account!
+      process_account!
     rescue StandardError => e
       Rails.logger.error "CoinstatsAccount::Processor - Failed to process account #{coinstats_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
@@ -39,10 +37,6 @@ class CoinstatsAccount::Processor
     end
 
     process_transactions
-
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
-    coinstats_account.current_account.set_current_balance(anchor_balance) if anchor_balance
   end
 
   private
@@ -64,8 +58,7 @@ class CoinstatsAccount::Processor
         currency: currency
       )
 
-      # Returned to `process`, which anchors it once transactions are in.
-      balance
+      account.set_current_balance(balance)
     end
 
     # Delegates transaction processing to the specialized processor.

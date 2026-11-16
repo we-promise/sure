@@ -1,65 +1,18 @@
 require "test_helper"
 
-# Approach-agnostic acceptance scenarios for the "mid-day provider reading frozen as a
-# waypoint" bug.
-#
-# WHY THIS FILE DRIVES A REAL PROCESSOR INSTEAD OF Account::CurrentBalanceManager
-# ------------------------------------------------------------------------------
-# Candidate fixes disagree about *where* and *when* a stale provider reading is settled:
-#
-#   * settle it on a later sync, leaving the reading inert in the meantime
-#     (HEAD, 83d1f351b)
-#   * settle it in the same sync, after the provider's transaction batch has been imported
-#     (requires moving `set_current_balance` below the import in every processor)
-#   * settle it somewhere in between (a hook in the account sync, a differently placed
-#     waypoint, ...)
-#
-# A test that calls `Account::CurrentBalanceManager#set_current_balance` directly has to
-# pick an order for "take the reading" vs. "import the batch", and that choice alone
-# decides which of the designs above passes. So each scenario here drives one real
-# provider cycle through `PlaidAccount::Processor#process`, with only the transaction
-# sub-processor replaced by a stand-in that creates the batch's entries. The order of
-# "reading" and "import" is then whatever the implementation under test chooses, and every
-# assertion below is on what the user can observe afterwards: materialized Balance rows and
-# the valuation entries rendered in the account's activity list.
-#
-# Nothing here asserts on Valuation#kind or on how many `current_anchor` rows exist.
-#
-# Caveat for a fix that settles anchors inside `Account::Syncer#perform_sync`: balances are
-# materialized here through `Balance::Materializer` (the object `Account::Syncer` itself
-# delegates to), so such a fix must place its hook at or below the materializer, or this
-# file's `materialize!` helper must be pointed at `Account::Syncer#perform_sync` instead.
+# Acceptance scenarios for mid-day provider readings. Each drives a real provider sync and
+# asserts on materialized balances, so the processor's anchor ordering is exercised too.
 class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
-  # Provider readings are taken mid-day (the default auto-sync cron runs at 02:22), which is
-  # the whole reason a reading is not a valid end-of-day balance for its own date.
   SYNC_TIME_OF_DAY = "02:22"
 
   setup do
-    @day_one = Date.current
+    @day_one = Date.current - 7.days
     @plaid_account = plaid_accounts(:one)
 
-    # accounts(:connected) is the depository linked to plaid_accounts(:one) and carries no
-    # entry fixtures - asserted rather than assumed, since every balance below is derived
-    # from the ledger this test builds.
     assert_equal 0, accounts(:connected).entries.count
-
-    # The reuse of an explained anchor is gated on BALANCE_REUSE_EXPLAINED_ANCHOR (default off).
-    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
   end
 
-  # ---------------------------------------------------------------------------------------
-  # A. The reported bug.
-  #
-  # Discriminates: a design that freezes day one's MID-DAY reading (1000) as an end-of-day
-  # waypoint. That pins day one's close at 1000 instead of its true 600 and inflates every
-  # earlier day by the 400 that posted after the reading was taken.
-  #
-  # Passes for: any design that leaves day one's close to be derived from the ledger -
-  # whether it drops the reading immediately, or leaves it inert and settles it a sync later.
-  # Asserted twice on purpose: once immediately after the day-two sync (history must ALREADY
-  # be right - a lagging design does not get a grace period here), and once after a day-three
-  # sync (a design must not corrupt history at the moment it finally settles the reading).
-  # ---------------------------------------------------------------------------------------
+  # A mid-day reading must not become that day's closing waypoint.
   test "a mid-day reading is not frozen as that day's closing balance" do
     account = seed_opening_balance(1000)
 
@@ -89,8 +42,6 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     assert_not_equal 1400, balance_on(account, day(0))
     assert_equal 1000, balance_on(account, day(-2))
 
-    # Day three: an ordinary sync with nothing new. A design that defers settling the day-one
-    # reading settles it here; history must be unchanged.
     provider_sync!(@plaid_account, on: day(3), reading: 600)
 
     materialize!(account)
@@ -101,28 +52,12 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     assert_equal 600, balance_on(account, day(3)), "today's balance is still the provider's"
   end
 
-  # ---------------------------------------------------------------------------------------
-  # B. The waypoint that must survive (no regression of #1492 / #1484).
-  #
-  # The provider reading moves 1000 -> 2000 with no transaction to explain it (missing /
-  # truncated transaction history). The reverse walk subtracts only the flows it knows about,
-  # so without a provider-confirmed ground truth somewhere in the chain the whole pre-jump
-  # history silently reads 2000.
-  #
-  # Discriminates: a design that "simplifies" by always discarding the previous reading
-  # (plain revert of #1663) - every day before the jump then drifts up by 1000.
-  #
-  # Deliberately does NOT assert where the ground truth is recorded, or on which exact date
-  # the reset lands: both "waypoint on the reading's own date" and "waypoint on the day
-  # before it" leave the pre-jump history at 1000, which is the property that matters.
-  # Checked after a third sync so a design that settles a reading one sync late still counts.
-  # ---------------------------------------------------------------------------------------
+  # An unexplained move must leave a provider waypoint behind (#1492, #1484).
   test "history stays grounded at the provider's reading when the ledger cannot explain a move" do
     account = seed_opening_balance(1000)
 
     provider_sync!(@plaid_account, on: day(1), reading: 1000)
 
-    # No batch: the transaction that moved the account never reaches us.
     provider_sync!(@plaid_account, on: day(2), reading: 2000)
     provider_sync!(@plaid_account, on: day(3), reading: 2000)
 
@@ -137,24 +72,7 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
       "drift must stay bounded all the way back to the opening balance"
   end
 
-  # ---------------------------------------------------------------------------------------
-  # C. User-visible noise, measured at steady state.
-  #
-  # AccountsController#show renders `account.entries.excluding_split_parents.search(...)`
-  # with no filter on entryable_type or Valuation#kind, so EVERY valuation row on a linked
-  # account - provider anchor or rotated reconciliation - is a line item the user sees in the
-  # activity list. That rendered count is what this asserts; a fix that keeps a row but hides
-  # it from the ledger is equally acceptable here.
-  #
-  # Six days of ordinary syncs in which the ledger explains every move: no waypoint is
-  # warranted on any of them, so at steady state the account should carry at most the one
-  # live reading (zero if a design hides it).
-  #
-  # Discriminates: a design that rotates a "Manual balance update" into the ledger every day
-  # (one row per day), AND a design that leaves yesterday's unsettled reading sitting in the
-  # ledger next to today's (two rows forever - HEAD's deferred-settlement limitation).
-  # Counted on day six, long after any one-sync settlement lag has drained.
-  # ---------------------------------------------------------------------------------------
+  # Repeated explained syncs must not accumulate visible valuation rows.
   test "ordinary syncs whose ledger explains every move leave no valuation clutter behind" do
     account = nil
 
@@ -171,7 +89,6 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
 
     materialize!(account)
 
-    # Guard rail: the count assertion below must not be satisfiable by throwing history away.
     assert_equal 500, balance_on(account, day(6))
     assert_equal 900, balance_on(account, day(1))
 
@@ -183,19 +100,7 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
       "(saw: #{visible.map { |e| [ e.date.to_s, e.name, e.amount.to_i ] }.inspect})"
   end
 
-  # ---------------------------------------------------------------------------------------
-  # D. Liability sign math and a multi-day gap between syncs.
-  #
-  # A credit card (liability: a positive entry amount INCREASES the balance) goes three days
-  # without a sync; the whole backlog arrives in one batch, some of it dated to the day of the
-  # last reading.
-  #
-  # Discriminates: a design that freezes the day-one reading (500) as that day's close -
-  # day one actually closed at 530 after the purchase that posted later - and any design that
-  # gets the liability sign backwards while deciding whether the batch explains the move
-  # (getting it backwards turns an explained move into an unexplained one and strands a
-  # waypoint at the wrong value). Also checks that gap length is not assumed to be one day.
-  # ---------------------------------------------------------------------------------------
+  # Liability sign math and multi-day gaps must still explain the move.
   test "a liability reading survives a multi-day gap with the right sign math" do
     card_plaid_account = create_credit_card_plaid_account
 
@@ -227,7 +132,6 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     assert_equal 500, balance_on(account, day(0)),
       "days before the gap must not shift because of the backlog"
 
-    # Settle-later designs get their chance; history must survive it unchanged.
     account = provider_sync!(card_plaid_account, on: day(5), reading: 450)
     materialize!(account)
 
@@ -236,17 +140,7 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     assert_equal 450, balance_on(account, day(5))
   end
 
-  # ---------------------------------------------------------------------------------------
-  # E. Repeat syncs on the same day.
-  #
-  # Many providers sync several times a day; the second and third cycle of a day report a
-  # newer reading for a date that already has one.
-  #
-  # Discriminates: a design that treats "there is already a reading for today" as "the
-  # existing one is stale, leave it and add another" - rows accumulate within a single day -
-  # and a design that turns an intra-day superseded reading into an end-of-day waypoint,
-  # which pins day one at 1000 rather than its true 900.
-  # ---------------------------------------------------------------------------------------
+  # Repeated same-day syncs must not accumulate rows or freeze intra-day readings.
   test "repeat syncs on the same day neither accumulate rows nor freeze intra-day readings" do
     provider_sync!(@plaid_account, on: day(1), reading: 1000)
 
@@ -259,7 +153,6 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
 
     rows_after_first_cycle = user_visible_valuation_entries(account).count
 
-    # Two more cycles the same day, one of them carrying a fresh batch.
     provider_sync!(
       @plaid_account,
       on: day(2),
@@ -383,21 +276,7 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     end
 
     def materialize!(account)
-      account = Account.find(account.id)
-
-      # Reverse syncs exclude entries dated after `Date.current` (future-dated
-      # scheduled entries). These scenarios build history on days that are
-      # still ahead of the wall clock, so materialize as of the newest date
-      # the scenario actually produced instead of today.
-      as_of = [
-        account.current_anchor_date,
-        account.entries.maximum(:date),
-        Date.current
-      ].compact.max
-
-      travel_to sync_clock(as_of) do
-        Balance::Materializer.new(account, strategy: :reverse).materialize_balances
-      end
+      Balance::Materializer.new(Account.find(account.id), strategy: :reverse).materialize_balances
     end
 
     def balance_row(account, date)

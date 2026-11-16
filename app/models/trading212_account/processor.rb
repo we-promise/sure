@@ -8,13 +8,9 @@ class Trading212Account::Processor
   def process
     return unless account.present?
 
-    total_balance = update_account_balance!
+    update_account_balance!
     Trading212Account::HoldingsProcessor.new(trading212_account).process
     Trading212Account::ActivitiesProcessor.new(trading212_account).process
-
-    # Anchor the reported balance AFTER importing, so the previous reading can be judged
-    # against a complete ledger. See Account::CurrentBalanceManager.
-    account.set_current_balance(total_balance)
 
     account.broadcast_sync_complete
   end
@@ -35,8 +31,6 @@ class Trading212Account::Processor
         currency: trading212_account.currency
       )
       account.save!
-
-      # Returned to `process`, which anchors it once holdings and activities are in.
-      total_balance
+      account.set_current_balance(total_balance)
     end
 end

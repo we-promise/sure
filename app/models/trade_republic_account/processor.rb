@@ -15,9 +15,8 @@ class TradeRepublicAccount::Processor
       TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
       TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
 
-      # Anchor the reported balance AFTER importing, so the previous reading can be judged
-      # against a complete ledger. See Account::CurrentBalanceManager.
-      account.set_current_balance(total_balance)
+      # TradeRepublicItem schedules account syncs after every account is processed.
+      account.set_current_balance(total_balance, schedule_sync: false)
     end
 
     account.broadcast_sync_complete
@@ -40,7 +39,6 @@ class TradeRepublicAccount::Processor
       )
       account.save!
 
-      # Returned to `process`, which anchors it once holdings and activities are in.
       total_balance
     end
 end
