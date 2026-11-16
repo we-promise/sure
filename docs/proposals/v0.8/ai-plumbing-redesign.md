@@ -647,7 +647,7 @@ migration (each variable's `Setting` field, where it has one, maps the same way)
 | `OPENAI_EXTRA_HEADERS` | `extra_headers` on the endpoint |
 | `OPENAI_REQUEST_TIMEOUT` (`openai_request_timeout`) | `timeout_seconds` on the endpoint |
 | `LLM_JSON_MODE` (`openai_json_mode`) | `json_mode` on the endpoint |
-| `OPENAI_REASONING_EFFORT` (`openai_reasoning_effort`), if #3605 merged first | `reasoning_effort` on every route entry the OpenAI side serves |
+| `openai_reasoning_effort` (#3605's settings field), and `OPENAI_REASONING_EFFORT` only if #3605 merged before 2c | `reasoning_effort` on every route entry the OpenAI side serves. Until PR 7 this is how a self-hoster sets effort; 2c has no other source |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_ACCESS_TOKEN` (`anthropic_access_token`) | `api_key` of the Anthropic endpoint |
 | `ANTHROPIC_BASE_URL` (`anthropic_base_url`) | `base_url` of the Anthropic endpoint |
 | `ANTHROPIC_MODEL` (`anthropic_model`) | A model on the Anthropic endpoint |
@@ -2809,7 +2809,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
      `llm_usages.metadata`), `Ai::Generation`,
      `Ai::Requester`, `Ai::Batch` with per-item costs and splitting on overflow,
      `Ai::GenerationJob` with small batches, failover and escalation down the list (section 5.4), the ERB prompt files with the key collapse (section
-     8.3), and reasoning effort on route entries (#3605) with its per-preset mapping. Features:
+     8.3), and reasoning effort on route entries (#3605) with its per-preset mapping. Its only
+     source before PR 7 is the legacy `openai_reasoning_effort` setting (section 4.5), which #3605,
+     rebuilt on 2c, adds. Features:
      `bill_setup`, `categorize` (the generation), `detect_merchants` and `enhance_merchants`, each
      with its requester. Lanes map onto today's two queues (interactive → `ai_high_priority`,
      prompt and background → `ai_low_priority`) until PR 4. Records live cassettes for

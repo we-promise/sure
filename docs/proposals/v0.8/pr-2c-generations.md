@@ -204,9 +204,13 @@ flowchart LR
 - **Message roles:** on native OpenAI, the batch's data goes as the `user` message. Today it's a
   `developer` message, and RubyLLM 2.1.1 has no developer role for input. The text is
   unchanged.
-- **Reasoning effort has no source in 2c unless #3605 merges first.** If it does, the
-  `OPENAI_REASONING_EFFORT` and `Setting.openai_reasoning_effort` values go onto every route
-  entry the OpenAI side serves (§4.5). No new ENV either way (§4.7).
+- **Reasoning effort has no source in 2c itself.** 2c sends a route entry's effort, but nothing
+  sets one until PR 7's route editor. The bridge is #3605, rebuilt on top of 2c as recommended
+  on that PR: its Settings → Self-hosting field stays, and `Ai::LegacyEnvConfig` puts
+  `Setting.openai_reasoning_effort` onto every route entry the OpenAI side serves (§4.5). The
+  worker edits and the `JsonMode` concern refactor in #3605 are dropped, since 2c removes those
+  files. No new ENV (§4.7): `OPENAI_REASONING_EFFORT` is read only if #3605 merged before 2c and
+  released it.
   - The per-preset `none` mapping is a table in the transport, keyed by preset:
     - `llama_cpp`: `chat_template_kwargs: {enable_thinking: false}`;
     - `ollama` and `openrouter`: `none` as given.
@@ -302,7 +306,9 @@ flowchart LR
 ## Steps (one commit each, on `feat/ai-transports-instrumentation`)
 
 0. **Rebase** onto `origin/main` and run the 2a/2b tests. Check whether #3605 has merged. If it
-   has, add its effort mapping to step 2 and convert its tests in step 11.
+   has, take 2c's side of the conflicts in its worker files, add its effort mapping (ENV and
+   setting) to step 2 and convert its tests in step 11. If not, the mapping lands with #3605's
+   rebuild on top of 2c.
 
 1. **Golden prompt texts, captured before anything moves.** A test-support script renders each of
    the eleven variants through today's workers, with fixed inputs, into
