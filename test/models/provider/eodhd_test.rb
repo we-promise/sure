@@ -118,6 +118,49 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     assert_equal "NSRGY.US", @provider.send(:eodhd_symbol, "NSRGY", "XOTC")
   end
 
+  EODHD_EUROPEAN_VENUES = {
+    "XFRA" => "F", "XBRU" => "BR", "XLIS" => "LS", "XWBO" => "VI", "XDUB" => "IR",
+    "XBER" => "BE", "XDUS" => "DU", "XHAM" => "HA", "XHAN" => "HAN", "XMUN" => "MU", "XSTU" => "STU"
+  }.freeze
+
+  test "eodhd_symbol maps further European MICs to their EODHD codes" do
+    EODHD_EUROPEAN_VENUES.each do |mic, code|
+      assert_equal "ABC.#{code}", @provider.send(:eodhd_symbol, "ABC", mic), "#{mic} should map to #{code}"
+    end
+  end
+
+  test "eodhd_symbol still accepts the raw EODHD code stored by earlier searches" do
+    EODHD_EUROPEAN_VENUES.each_value do |code|
+      assert_equal "ABC.#{code}", @provider.send(:eodhd_symbol, "ABC", code)
+    end
+  end
+
+  test "currency_for the further European venues falls back to EUR" do
+    EODHD_EUROPEAN_VENUES.each do |mic, code|
+      assert_equal "EUR", @provider.send(:currency_for, exchange_operating_mic: mic, symbol: "ABC")
+      assert_equal "EUR", @provider.send(:currency_for, exchange_operating_mic: code, symbol: "ABC")
+    end
+  end
+
+  test "search maps further European EODHD exchange codes to MICs Sure can name" do
+    body = EODHD_EUROPEAN_VENUES.values.map do |code|
+      { "Code" => "ABC#{code}", "Name" => "Fund #{code}", "Exchange" => code, "Country" => "Germany", "Currency" => "EUR" }
+    end.to_json
+
+    mock_response = mock
+    mock_response.stubs(:body).returns(body)
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    result = @provider.search_securities("ABC")
+
+    assert result.success?
+    assert_equal EODHD_EUROPEAN_VENUES.keys, result.data.map(&:exchange_operating_mic)
+    assert result.data.all? { |s| ::Security::EXCHANGES.key?(s.exchange_operating_mic) }
+  end
+
   test "eodhd_symbol builds Warsaw ticker from XWAR MIC" do
     assert_equal "KTY.WAR", @provider.send(:eodhd_symbol, "KTY", "XWAR")
   end
