@@ -200,6 +200,30 @@ en:
       success: "Successfully created %{count} account(s)."
     sync:
       success: Sync started
+    syncer:
+      account_processing_failed:
+        one: "%{count} Mercury account failed while processing."
+        other: "%{count} Mercury accounts failed while processing."
+      account_sync_failed:
+        one: "%{count} Mercury account sync could not be scheduled."
+        other: "%{count} Mercury account syncs could not be scheduled."
+      accounts_failed:
+        one: "%{count} Mercury account failed to import."
+        other: "%{count} Mercury accounts failed to import."
+      accounts_need_setup:
+        one: "%{count} account needs setup..."
+        other: "%{count} accounts need setup..."
+      calculating_balances: Calculating balances...
+      checking_account_configuration: Checking account configuration...
+      credentials_invalid: Invalid Mercury API token or account permissions
+      failed: Sync failed. Please try again or contact support.
+      import_failed: Mercury import failed.
+      import_failed_with_error: "Mercury import failed: %{error}"
+      importing_accounts: Importing accounts from Mercury...
+      processing_transactions: Processing transactions...
+      transactions_failed:
+        one: "%{count} Mercury account had transaction import failures."
+        other: "%{count} Mercury accounts had transaction import failures."
     update:
       success: Mercury connection updated
     mercury_item_selection_error_payload:
