@@ -37,6 +37,35 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal "RentCast valuation", @account.entries.valuations.find_by(date: Date.current).name
   end
 
+  # The scheduler runs this at 01:30 UTC on the 1st, which is still the
+  # evening before in Los Angeles. A valuation dated by UTC would land on the
+  # family's tomorrow, as a scheduled entry instead of today's balance.
+  test "dates the valuation on the family's calendar, not UTC's" do
+    @account.family.update!(timezone: "America/Los_Angeles")
+    expect_rentcast_lookup(anything)
+
+    travel_to Time.utc(2026, 12, 1, 1, 30) do # 17:30 on November 30 in Los Angeles
+      SyncPropertyValuationsJob.new.perform
+    end
+
+    assert_equal Date.new(2026, 11, 30), @property.reload.avm_last_synced_on
+    assert @account.entries.valuations.exists?(date: Date.new(2026, 11, 30))
+    assert_not @account.entries.valuations.exists?(date: Date.new(2026, 12, 1))
+  end
+
+  test "skips a property already refreshed on the family's today" do
+    @account.family.update!(timezone: "America/Los_Angeles")
+    @property.update!(avm_last_synced_on: Date.new(2026, 11, 30))
+
+    provider = mock
+    provider.expects(:fetch_property_valuation).never
+    Provider::Registry.stubs(:rentcast).returns(provider)
+
+    travel_to Time.utc(2026, 12, 1, 1, 30) do # 17:30 on November 30 in Los Angeles
+      SyncPropertyValuationsJob.new.perform
+    end
+  end
+
   def expect_rentcast_lookup(params_matcher)
     provider = mock
     provider.stubs(:requests_remaining?).returns(true)

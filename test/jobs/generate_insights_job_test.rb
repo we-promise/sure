@@ -75,6 +75,22 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     end
   end
 
+  # The scheduler starts this job at 06:00 UTC, which is still the evening
+  # before in the Americas. Generators read "today" from Date.current, so a
+  # budget pace or an overdue count would otherwise be a day ahead.
+  test "generates on the family's calendar, not UTC's" do
+    @family.update!(timezone: "America/Los_Angeles")
+    dates_seen = []
+    result = Insight::GeneratorRegistry::Result.new(insights: [], succeeded_types: [])
+    Insight::GeneratorRegistry.any_instance.stubs(:generate_all).with { dates_seen << Date.current }.returns(result)
+
+    travel_to Time.utc(2026, 12, 1, 6, 0) do # 22:00 on November 30 in Los Angeles
+      GenerateInsightsJob.perform_now(family_id: @family.id)
+    end
+
+    assert_equal [ Date.new(2026, 11, 30) ], dates_seen
+  end
+
   test "creates an active insight with a body from a generated insight" do
     stub_generated([ generated_insight ])
 

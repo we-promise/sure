@@ -37,7 +37,11 @@ class GenerateInsightsJob < ApplicationJob
       # broadcast below too, not just the generation.
       return unless family.preview_features_enabled?
 
-      notifiable_insights = with_advisory_lock(family_id) do
+      family.with_time_zone { generate_and_broadcast(family) }
+    end
+
+    def generate_and_broadcast(family)
+      notifiable_insights = with_advisory_lock(family.id) do
         I18n.with_locale(family.locale) do
           result = Insight::GeneratorRegistry.new(family).generate_all
           created_or_resurfaced = upsert_insights(family, result.insights)

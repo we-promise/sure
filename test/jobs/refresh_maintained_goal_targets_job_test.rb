@@ -14,6 +14,21 @@ class RefreshMaintainedGoalTargetsJobTest < ActiveJob::TestCase
     assert_equal BigDecimal("3000"), goal.reload.target_amount.to_d
   end
 
+  # The scheduler runs this at 03:00 UTC on the 1st, which is still the last
+  # day of the previous month in the Americas.
+  test "refreshes on the family's calendar, not UTC's" do
+    @family.update!(timezone: "America/Los_Angeles")
+    reserve(months: 6, target: 1_000)
+    dates_seen = []
+    Goal.any_instance.stubs(:refresh_target_from_expenses!).with { dates_seen << Date.current }.returns(nil)
+
+    travel_to Time.utc(2026, 12, 1, 3, 0) do # 19:00 on November 30 in Los Angeles
+      RefreshMaintainedGoalTargetsJob.perform_now
+    end
+
+    assert_equal [ Date.new(2026, 11, 30) ], dates_seen.uniq
+  end
+
   # A family with no spending history yet would compute a floor of zero,
   # which violates the target_amount > 0 constraint and would read as "your
   # reserve is complete". Keep the number the user has been saving against.

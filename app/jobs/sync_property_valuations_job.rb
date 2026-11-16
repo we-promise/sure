@@ -19,7 +19,7 @@ class SyncPropertyValuationsJob < ApplicationJob
     # tight monthly budget is spent where it matters most, not in
     # primary-key order.
     properties = Property.where.not(avm_provider: nil)
-                         .includes(:address, :account)
+                         .includes(:address, account: :family)
                          .order(Arel.sql("avm_last_synced_on ASC NULLS FIRST"))
     properties = properties.where(id: property_id) if property_id.present?
 
@@ -93,11 +93,14 @@ class SyncPropertyValuationsJob < ApplicationJob
 
       if response.success?
         result = nil
-        Property.transaction do
-          result = account.set_current_balance(response.data.valuation)
-          raise ActiveRecord::Rollback unless result.success?
-          property.name_avm_valuation!
-          property.update!(avm_last_synced_on: Date.current)
+        # The valuation is dated today, and the scheduler runs this in UTC.
+        account.family.with_time_zone do
+          Property.transaction do
+            result = account.set_current_balance(response.data.valuation)
+            raise ActiveRecord::Rollback unless result.success?
+            property.name_avm_valuation!
+            property.update!(avm_last_synced_on: Date.current)
+          end
         end
 
         unless result&.success?
@@ -117,7 +120,7 @@ class SyncPropertyValuationsJob < ApplicationJob
     # RentCast and Realie refresh at most daily; Chimnie at most monthly.
     def recently_synced?(property, provider_class)
       property.avm_last_synced_on.present? &&
-        property.avm_last_synced_on > Date.current - provider_class.refresh_interval
+        property.avm_last_synced_on > property.account.family.local_date - provider_class.refresh_interval
     end
 
     def capture_failure(property, account, message, level: "error")

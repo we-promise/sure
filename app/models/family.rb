@@ -315,8 +315,7 @@ class Family < ApplicationRecord
   # finds by `Date.current` can land a day off the user's calendar. A blank or
   # unknown zone falls back to the app's, as Localize#resolved_timezone does.
   def local_date(time = Time.current)
-    zone = timezone.present? ? ActiveSupport::TimeZone[timezone] : nil
-    time.in_time_zone(zone || Time.zone).to_date
+    time.in_time_zone(resolved_time_zone).to_date
   end
 
   def uses_custom_month_start?
@@ -837,6 +836,14 @@ class Family < ApplicationRecord
 
     log_invalid_timezone_once
     Time.zone
+  end
+
+  # Runs the block on the family's clock, so `Date.current` is the family's
+  # today. Requests and syncs already run on it, and a job keeps the zone it
+  # was enqueued in, but the scheduler enqueues in the app's zone (UTC), so a
+  # scheduled job's per-family work goes inside this block.
+  def with_time_zone(&)
+    Time.use_zone(resolved_time_zone, &)
   end
 
   # How often to write a DebugLogEntry for the same (family, bad value)
