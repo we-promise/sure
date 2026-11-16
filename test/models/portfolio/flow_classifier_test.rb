@@ -283,6 +283,7 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     # A Transfer trade with no opposite leg anywhere (position moved in from
     # a broker that is not tracked) is external even at family scope.
     orphan = create_portfolio_trade(account: @brokerage, security: create_portfolio_security, qty: 3, price: 20, label: "Transfer")
+      .tap { |entry| entry.update!(amount: 0) }
     assert_equal :external_inflow, @family_scope.classify(orphan)
   end
 
@@ -421,6 +422,44 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     end
   end
 
+  # A Transfer-labelled trade whose amount is signed like its quantity is a
+  # buy or a sale to the balance calculators, cash for units at the same
+  # value, as a Contribution or Withdrawal trade is. Only the zero-amount
+  # journal shape moves a position across the scope.
+  test "a Transfer trade that settles in cash is internal in both forms" do
+    bought = create_portfolio_trade(account: @brokerage, qty: 5, price: 100, label: "Transfer")
+    sold = create_portfolio_trade(account: @brokerage, qty: -5, price: 100, label: "Transfer")
+    journal = create_portfolio_trade(account: @brokerage, qty: 3, price: 20, label: "Transfer").tap { |e| e.update!(amount: 0) }
+
+    [ @family_scope, @brokerage_scope ].each do |scope|
+      assert_equal :internal, scope.classify(bought)
+      assert_equal :internal, scope.classify(sold)
+      assert_equal :external_inflow, scope.classify(journal), "the journal shape stays external"
+      assert_equal({ bought.id => :internal, sold.id => :internal, journal.id => :external_inflow },
+                   scope.classify_ids([ bought.id, sold.id, journal.id ]))
+    end
+  end
+
+  # Each leg of a transfer moves its own account's balance on its own date.
+  # Internal only when both legs land on one day; across days each leg is a
+  # flow on its day, or the outflow day reads as a loss and the inflow day as
+  # a gain.
+  test "a linked transfer whose legs post on different days is a flow on each day in both forms" do
+    transfer = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 400, date: Date.new(2026, 3, 2))
+    out_leg = transfer.outflow_transaction.entry
+    in_leg = transfer.inflow_transaction.entry
+    in_leg.update!(date: Date.new(2026, 3, 3))
+
+    assert_equal :external_outflow, @family_scope.classify(out_leg)
+    assert_equal :external_inflow, @family_scope.classify(in_leg)
+    assert_equal({ out_leg.id => :external_outflow, in_leg.id => :external_inflow },
+                 @family_scope.classify_ids([ out_leg.id, in_leg.id ]))
+
+    in_leg.update!(date: out_leg.date)
+    assert_equal :internal, @family_scope.classify(in_leg), "on one day the same transfer is internal"
+    assert_equal :internal, @family_scope.classify_ids([ out_leg.id ])[out_leg.id]
+  end
+
   test "every activity label has a rule" do
     assert_equal Transaction::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
     assert_equal Trade::ACTIVITY_LABELS.sort, Portfolio::FlowClassifier::LABEL_RULES.keys.sort
@@ -536,13 +575,21 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       entries << contribution.outflow_transaction.entry
       entries << contribution.inflow_transaction.entry
 
+      staggered = create_linked_transfer(family: @family, from: @brokerage, to: @ira, amount: 300)
+      staggered.inflow_transaction.entry.update!(date: 1.day.from_now.to_date)
+      entries << staggered.outflow_transaction.entry
+      entries << staggered.inflow_transaction.entry
+
       entries << create_labelled_transaction(account: @brokerage, label: nil, amount: -800, kind: "funds_movement")
       entries << create_labelled_transaction(account: @ira, label: nil, amount: 200, kind: "investment_contribution")
       entries << create_labelled_transaction(account: @brokerage, label: "Transfer", amount: 60)
 
       entries.concat(create_security_transfer(security: security, from: @brokerage, to: @ira, qty: 10, price: 50))
       entries << create_portfolio_trade(account: @brokerage, security: create_portfolio_security, qty: 3, price: 20, label: "Transfer")
+        .tap { |entry| entry.update!(amount: 0) }
       entries << create_portfolio_trade(account: @brokerage, security: security, qty: -10, price: 50, label: "Transfer", date: 1.day.ago.to_date)
+        .tap { |entry| entry.update!(amount: 0) }
+      entries << create_portfolio_trade(account: @brokerage, security: create_portfolio_security, qty: 4, price: 25, label: "Transfer")
 
       entries << create_portfolio_trade(account: @brokerage, qty: 2, price: 10).tap { |e| e.entryable.update!(investment_activity_label: nil) }
       entries << create_portfolio_trade(account: @brokerage, qty: -2, price: 10, label: "Other")

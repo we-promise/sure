@@ -58,6 +58,54 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
     assert_in_delta 0.0, daily_returns.returns.last.last.to_f, 0.000001
   end
 
+  # The Transfer-labelled form of the same buy. Its cash amount says the
+  # balance paid for the units, so nothing crossed the scope.
+  test "a transfer labelled trade that settles in cash is not an external flow" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+
+    @account.entries.create!(
+      name: "Transfer in", date: @day_two, amount: 500, currency: @account.currency,
+      entryable: Trade.new(security: security_under_test, qty: 5, price: 100,
+                           currency: @account.currency, investment_activity_label: "Transfer")
+    )
+
+    series = daily_returns
+    second = series.rows.last
+
+    assert_equal BigDecimal("0"), second.external_flow
+    assert_equal BigDecimal("0"), second.unexplained
+    assert_in_delta 0.0, series.returns.last.last.to_f, 0.000001
+  end
+
+  # 400 leaves one selected account on Monday and reaches the other on
+  # Tuesday. Each balance moves on its own leg's date, so each leg is a flow on
+  # that day. Read as one internal move it was -20% on Monday and +25% on
+  # Tuesday, and a period ending on Monday kept the loss.
+  test "transfer legs posted on different days are no return on either day" do
+    other = create_portfolio_account(family: @family)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 600, cash_flow: -400
+    lay_balance account: other, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: other, date: @day_two, opening: 1_000, closing: 1_000
+    day_three = @day_two + 1.day
+    lay_balance account: @account, date: day_three, opening: 600, closing: 600
+    lay_balance account: other, date: day_three, opening: 1_000, closing: 1_400, cash_flow: 400
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: @account.id, destination_account_id: other.id,
+      date: @day_two, amount: 400
+    ).create
+    transfer.inflow_transaction.entry.update!(date: day_three)
+
+    series = daily_returns(account_ids: [ @account.id, other.id ], end_date: day_three)
+    rows = series.rows.index_by(&:date)
+
+    assert_equal BigDecimal("-400"), rows.fetch(@day_two).external_flow
+    assert_equal BigDecimal("400"), rows.fetch(day_three).external_flow
+    series.returns.each { |date, r| assert_in_delta 0.0, r.to_f, 0.000001, "#{date} is no return" }
+  end
+
   # The account does not move in its own currency; the rate does.
   # Because returns are quoted in the family's currency, that is a real 10% day
   # for this family, and it must appear as one.

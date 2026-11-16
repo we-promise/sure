@@ -8,7 +8,7 @@
 #   :fee               a fee or commission
 #   :internal          cash turning into a security or back, or moving between
 #                      places inside the scope (buy, sell, sweep, exchange, a
-#                      transfer whose other leg is also in scope)
+#                      transfer whose other leg is also in scope that day)
 #
 # Returns, allocation, income and contribution-room figures all need this
 # split, and they need the same answer. Deriving it in each reader is how the
@@ -27,7 +27,8 @@
 # Inputs, in the order they are consulted: whether the entry is excluded or
 # pending; a transfer-fee leg; the activity label on the Trade or Transaction;
 # for an unlabelled Transaction its `kind`; and for a transfer, whether the
-# counterpart leg's account is inside the scope. Direction for an external
+# counterpart leg's account is inside the scope and the leg posted the same
+# day (each leg moves its own balance on its own date). Direction for an external
 # flow comes from the Trade's quantity sign or the Transaction's amount sign
 # (negative amount = money in).
 #
@@ -51,9 +52,11 @@ class Portfolio::FlowClassifier
   # Activity label -> class. Two pseudo-classes resolve at classification
   # time, and both consult the link before the label: :external and :transfer
   # each become :internal when the entry is a linked Transfer whose other leg
-  # is inside the scope, and an inflow or an outflow by direction otherwise.
+  # is inside the scope and posted the same day, and an inflow or an outflow
+  # by direction otherwise.
   # A label describes what the borrower meant; a Transfer row records where
-  # the money went, and between two accounts in scope it went nowhere. A nil rule means the label decides nothing and
+  # the money went, and between two accounts in scope on one day it went
+  # nowhere. A nil rule means the label decides nothing and
   # the fallthrough applies (a Trade is internal; a Transaction goes by kind).
   #
   # "Exchange" is internal on both a Trade and a Transaction here, following
@@ -163,7 +166,7 @@ class Portfolio::FlowClassifier
   # make one transaction a leg of two transfers. A plain join would then give
   # the entry two rows and a SUM over it would count the entry twice. The
   # lateral reads one transfer per transaction, preferring one the
-  # transaction is the inflow of, as #transfer_counterpart_account_id does,
+  # transaction is the inflow of, as #transfer_counterpart does,
   # then the earliest by created_at and id, which #classify reads too.
   def sql_joins
     <<~SQL.squish
@@ -200,7 +203,7 @@ class Portfolio::FlowClassifier
         WHEN #{label_sql} IN (#{quote_list(INCOME_LABELS)}) THEN 'income'
         WHEN #{label_sql} IN (#{quote_list(FEE_LABELS)}) THEN 'fee'
         WHEN #{label_sql} IN (#{quote_list(INTERNAL_LABELS)}) THEN 'internal'
-        WHEN entries.entryable_type = 'Trade' AND #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)})
+        WHEN entries.entryable_type = 'Trade' AND #{label_sql} IN (#{quote_list(EXTERNAL_LABELS + [ TRANSFER_LABEL ])})
           AND trades.qty * entries.amount > 0 THEN 'internal'
         WHEN #{label_sql} IN (#{quote_list(EXTERNAL_LABELS)}) THEN #{transfer_resolution_sql}
         WHEN #{label_sql} = '#{TRANSFER_LABEL}' AND entries.entryable_type = 'Trade'
@@ -220,7 +223,8 @@ class Portfolio::FlowClassifier
       case rule
       when nil then :internal
       when :external then cash_settled?(entry, trade) ? :internal : trade_direction(trade)
-      when :transfer then security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(trade)
+      when :transfer
+        cash_settled?(entry, trade) || security_transfer_counterpart_in_scope?(entry, trade) ? :internal : trade_direction(trade)
       else rule
       end
     end
@@ -238,21 +242,21 @@ class Portfolio::FlowClassifier
         transaction.transfer? ? transfer_resolution(entry, transaction) : transaction_direction(entry)
       # A Contribution or Withdrawal label says where the borrower thinks the
       # money went; a linked Transfer says where it actually went. When both
-      # legs are inside the scope the movement is internal whatever either leg
-      # is labelled, so the label cannot outrank the link. #transfer_resolution
-      # falls back to the same direction this used to return whenever there is
-      # no link, or the counterpart sits outside the scope.
+      # legs are inside the scope on the same day the movement is internal
+      # whatever either leg is labelled, so the label cannot outrank the link.
+      # #transfer_resolution falls back to the direction whenever there is no
+      # link, the counterpart sits outside the scope, or it posted another day.
       when :external then transfer_resolution(entry, transaction)
       when :transfer then transfer_resolution(entry, transaction)
       else rule
       end
     end
 
-    # A Contribution or Withdrawal trade whose amount is signed like its
-    # quantity (qty x price, as the trades form and API write it). The balance
-    # calculators apply it as a buy or a sale, cash for units at the same
-    # value, so nothing crosses the scope. In kind (amount 0) or cash only
-    # (qty 0), it is an external flow by direction.
+    # A Contribution, Withdrawal or Transfer trade whose amount is signed like
+    # its quantity (qty x price, as the trades form and API write it). The
+    # balance calculators apply it as a buy or a sale, cash for units at the
+    # same value, so nothing crosses the scope. In kind (amount 0, a security
+    # journal) or cash only (qty 0), it is an external flow by direction.
     def cash_settled?(entry, trade)
       (trade.qty * entry.amount).positive?
     end
@@ -265,30 +269,34 @@ class Portfolio::FlowClassifier
       entry.amount.negative? ? :external_inflow : :external_outflow
     end
 
+    # Internal only when the other leg is in scope AND posted the same day: a
+    # transfer's legs can be days apart, and each moves its own balance on its
+    # own date, so across days each leg is a flow on its day.
     def transfer_resolution(entry, transaction)
-      counterpart_account_id = transfer_counterpart_account_id(transaction)
-      if counterpart_account_id && in_scope_on?(counterpart_account_id, entry.date)
+      counterpart_account_id, counterpart_date = transfer_counterpart(transaction)
+      if counterpart_account_id && counterpart_date == entry.date && in_scope_on?(counterpart_account_id, entry.date)
         :internal
       else
         transaction_direction(entry)
       end
     end
 
-    # The account on the other leg of a linked Transfer, by id only; the
-    # counterpart account itself is never loaded, so a scope check cannot
-    # leak an account the user is not allowed to see.
+    # The account (by id only) and date of the other leg of a linked
+    # Transfer; the counterpart account itself is never loaded, so a scope
+    # check cannot leak an account the user is not allowed to see.
     #
     # The transfer is chosen as #sql_joins chooses it: one the transaction is
     # the inflow of first, then the earliest by created_at and id. Not through
     # transfer_as_inflow / transfer_as_outflow: has_one is unordered, so of two
     # transfers on one leg it can return either.
-    def transfer_counterpart_account_id(transaction)
+    def transfer_counterpart(transaction)
       transfer = earliest_transfer(inflow_transaction_id: transaction.id) ||
         earliest_transfer(outflow_transaction_id: transaction.id)
       return nil unless transfer
 
       counterpart_id = transfer.inflow_transaction_id == transaction.id ? transfer.outflow_transaction_id : transfer.inflow_transaction_id
-      Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id)&.to_s
+      account_id, date = Entry.where(entryable_type: "Transaction", entryable_id: counterpart_id).pick(:account_id, :date)
+      [ account_id&.to_s, date ]
     end
 
     def earliest_transfer(leg)
@@ -327,8 +335,8 @@ class Portfolio::FlowClassifier
     # the magnitude from -entries.amount. For a Contribution or Withdrawal
     # trade the two would disagree when the amount is signed like the
     # quantity, which the trades form and API write; that shape is internal
-    # (#cash_settled?) and never reaches here. A Transfer-labelled trade
-    # carrying cash still does; how to classify it is an open question.
+    # (#cash_settled?) and never reaches here, nor does the same shape
+    # labelled Transfer.
     def direction_sql
       <<~SQL.squish
         CASE
@@ -340,7 +348,8 @@ class Portfolio::FlowClassifier
     end
 
     def transfer_resolution_sql
-      "CASE WHEN #{in_scope_sql('flow_counterpart_entries.account_id')} THEN 'internal' ELSE #{direction_sql} END"
+      "CASE WHEN flow_counterpart_entries.date = entries.date AND #{in_scope_sql('flow_counterpart_entries.account_id')} " \
+        "THEN 'internal' ELSE #{direction_sql} END"
     end
 
     def security_transfer_counterpart_in_scope_sql
