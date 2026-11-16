@@ -23,6 +23,16 @@ class FollowUpSyncJobTest < ActiveJob::TestCase
     end
   end
 
+  test "keeps waiting on a sync that is still running after the reuse window" do
+    running = @item.syncs.create!(status: "syncing", created_at: 10.minutes.ago)
+
+    assert_no_difference -> { @item.syncs.count } do
+      assert_enqueued_with(job: FollowUpSyncJob) do
+        FollowUpSyncJob.perform_now(@item, active_sync_id: running.id)
+      end
+    end
+  end
+
   test "gives up waiting after the last attempt, records it and syncs anyway" do
     running = @item.syncs.create!(status: "syncing")
     @item.expects(:sync_later).once
