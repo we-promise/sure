@@ -1,6 +1,30 @@
 ---
 en:
   lunchflow_items:
+    syncer:
+      account_processing_failed:
+        one: "%{count} Lunch Flow account failed while processing."
+        other: "%{count} Lunch Flow accounts failed while processing."
+      account_sync_failed:
+        one: "%{count} Lunch Flow account sync could not be scheduled."
+        other: "%{count} Lunch Flow account syncs could not be scheduled."
+      accounts_need_setup:
+        one: "%{count} account needs setup..."
+        other: "%{count} accounts need setup..."
+      calculating_balances: Calculating balances...
+      checking_account_configuration: Checking account configuration...
+      credentials_invalid: Invalid Lunch Flow API key or account permissions
+      failed: Sync failed. Please try again or contact support.
+      import_failed: Lunch Flow import failed.
+      importing_accounts: Importing accounts from Lunchflow...
+      processing_transactions: Processing transactions and holdings...
+      accounts_failed:
+        one: "Lunchflow import: %{count} account failed to update"
+        other: "Lunchflow import: %{count} accounts failed to update"
+      import_failed_with_error: "Lunchflow import: %{error}"
+      transactions_failed:
+        one: "Lunchflow import: transaction fetch failed for %{count} account"
+        other: "Lunchflow import: transaction fetch failed for %{count} accounts"
     api_error:
       title: Lunch Flow Connection Error
       unable_to_connect: Unable to connect to Lunch Flow

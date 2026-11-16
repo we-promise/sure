@@ -1,6 +1,14 @@
 ---
 fr:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: 'Import Lunchflow : la mise à jour de %{count} compte a échoué'
+        other: 'Import Lunchflow : la mise à jour de %{count} comptes a échoué'
+      import_failed_with_error: 'Import Lunchflow : %{error}'
+      transactions_failed:
+        one: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} compte'
+        other: 'Import Lunchflow : la récupération des transactions a échoué pour %{count} comptes'
     api_error:
       check_provider_settings: Vérifier les paramètres du fournisseur
       common_issues: 'Problèmes courants :'

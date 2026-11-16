@@ -1,6 +1,14 @@
 ---
 nl:
   lunchflow_items:
+    syncer:
+      accounts_failed:
+        one: "Lunchflow-import: %{count} account kon niet worden bijgewerkt"
+        other: "Lunchflow-import: %{count} accounts konden niet worden bijgewerkt"
+      import_failed_with_error: "Lunchflow-import: %{error}"
+      transactions_failed:
+        one: "Lunchflow-import: ophalen van transacties mislukt voor %{count} account"
+        other: "Lunchflow-import: ophalen van transacties mislukt voor %{count} accounts"
     api_error:
       title: "Lunch Flow-verbindingsfout"
       unable_to_connect: "Kan geen verbinding maken met Lunch Flow"
