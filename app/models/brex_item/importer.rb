@@ -222,11 +222,21 @@ class BrexItem::Importer
       return sync_start_date if sync_start_date.present?
 
       if brex_account.raw_transactions_payload.to_a.any?
-        brex_item.last_synced_at ? brex_item.last_synced_at - 7.days : 90.days.ago
+        resume_date = brex_item.last_synced_at ? brex_item.last_synced_at - 7.days : 90.days.ago
+        # Never go back before the chosen start date
+        chosen_start = chosen_start_date
+        chosen_start && chosen_start > resume_date.to_date ? chosen_start : resume_date
       else
         account_baseline = brex_account.created_at || Time.current
-        [ account_baseline - 7.days, 90.days.ago ].max
+        chosen_start_date || [ account_baseline - 7.days, 90.days.ago ].max
       end
+    end
+
+    # The start date chosen on the connection, as a day on the family's calendar,
+    # and never after today.
+    def chosen_start_date
+      start = brex_item.sync_start_date
+      start && [ brex_item.family.local_date(start), brex_item.family.local_date ].min
     end
 
     def credentials_error?(error)

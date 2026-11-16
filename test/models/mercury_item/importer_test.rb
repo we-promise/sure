@@ -109,6 +109,57 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
     assert_equal expected, captured_start.to_date
   end
 
+  test "first sync starts from the chosen start date when it is older than 90 days" do
+    create_linked_account("acc_chosen")
+    chosen = Date.current - 2.years
+    @item.update!(sync_start_date: chosen)
+
+    assert_equal chosen, first_requested_start_date("acc_chosen").to_date
+  end
+
+  test "first sync starts from the chosen start date when it is newer than 90 days" do
+    create_linked_account("acc_recent")
+    chosen = Date.current - 20.days
+    @item.update!(sync_start_date: chosen)
+
+    assert_equal chosen, first_requested_start_date("acc_recent").to_date
+  end
+
+  test "first sync reads the chosen start date as a day on the family calendar" do
+    @family.update!(timezone: "Pacific/Auckland")
+    create_linked_account("acc_zone")
+    @item.update!(sync_start_date: Time.utc(2024, 3, 9, 23, 0, 0))
+
+    assert_equal Date.new(2024, 3, 10), first_requested_start_date("acc_zone").to_date
+  end
+
+  test "first sync never starts after today when the chosen start date is in the future" do
+    create_linked_account("acc_future")
+    @item.update!(sync_start_date: 10.days.from_now)
+
+    assert_equal @family.local_date, first_requested_start_date("acc_future").to_date
+  end
+
+  test "resync does not go back before the chosen start date" do
+    chosen = Date.current - 3.days
+    _account, _mercury_account = create_linked_account("acc_floor",
+      raw_transactions: [ tx_payload("existing_tx") ])
+    @item.update!(sync_start_date: chosen)
+    @item.stubs(:last_synced_at).returns(1.day.ago)
+
+    assert_equal chosen, first_requested_start_date("acc_floor").to_date
+  end
+
+  test "resync keeps the last sync buffer when it is after the chosen start date" do
+    last_synced = 10.days.ago
+    _account, _mercury_account = create_linked_account("acc_buffer",
+      raw_transactions: [ tx_payload("existing_tx") ])
+    @item.update!(sync_start_date: Date.current - 2.years)
+    @item.stubs(:last_synced_at).returns(last_synced)
+
+    assert_equal (last_synced - 7.days).to_date, first_requested_start_date("acc_buffer").to_date
+  end
+
   # ---------------------------------------------------------------------------
   # auth error handling
   # ---------------------------------------------------------------------------
@@ -152,5 +203,18 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
       { "id" => id, "amount" => amount, "status" => status,
         "bankDescription" => "Test", "createdAt" => "2024-06-01T00:00:00Z",
         "postedAt" => "2024-06-01T00:00:00Z" }
+    end
+
+    def first_requested_start_date(account_id)
+      @provider.stubs(:get_accounts).returns({ accounts: [ account_payload(account_id, "Checking") ] })
+
+      captured_start = nil
+      @provider.stubs(:get_account_transactions).with do |_id, opts|
+        captured_start = opts[:start_date]
+        true
+      end.returns({ transactions: [] })
+
+      run_import
+      captured_start
     end
 end

@@ -290,12 +290,16 @@ class MercuryItem::Importer
       if has_stored_transactions
         # Account has been synced before, use item-level logic with buffer
         # For subsequent syncs, fetch from last sync date with a buffer
-        if mercury_item.last_synced_at
+        resume_date = if mercury_item.last_synced_at
           mercury_item.last_synced_at - 7.days
         else
           # Fallback if item hasn't been synced but account has transactions
           90.days.ago
         end
+
+        # Never go back before the chosen start date
+        chosen_start = chosen_start_date
+        chosen_start && chosen_start > resume_date.to_date ? chosen_start : resume_date
       else
         # Account has no stored transactions - this is a first sync for this account
         # Use account creation date or a generous historical window
@@ -304,8 +308,16 @@ class MercuryItem::Importer
 
         # Use the more recent of: (account created - 7 days) or (90 days ago)
         # This caps old accounts at 90 days while respecting recent account creation dates
-        first_sync_window
+        # A start date chosen on the connection replaces that window
+        chosen_start_date || first_sync_window
       end
+    end
+
+    # The start date chosen on the connection, as a day on the family's calendar,
+    # and never after today.
+    def chosen_start_date
+      start = mercury_item.sync_start_date
+      start && [ mercury_item.family.local_date(start), mercury_item.family.local_date ].min
     end
 
     def handle_error(error_message)

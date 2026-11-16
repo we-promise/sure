@@ -160,6 +160,82 @@ class BrexItem::ImporterTest < ActiveSupport::TestCase
     assert result[:success]
   end
 
+  test "first sync starts from the chosen start date" do
+    chosen = Date.current - 2.years
+    @brex_item.update!(sync_start_date: chosen)
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: chosen).returns(transactions: [])
+
+    assert BrexItem::Importer.new(@brex_item, brex_provider: provider).import[:success]
+  end
+
+  test "first sync reads the chosen start date as a day on the family calendar" do
+    @family.update!(timezone: "Pacific/Auckland")
+    @brex_item.update!(sync_start_date: Time.utc(2024, 3, 9, 23, 0, 0))
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: Date.new(2024, 3, 10)).returns(transactions: [])
+
+    assert BrexItem::Importer.new(@brex_item, brex_provider: provider).import[:success]
+  end
+
+  test "first sync never starts after today when the chosen start date is in the future" do
+    @brex_item.update!(sync_start_date: 10.days.from_now)
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: @family.local_date).returns(transactions: [])
+
+    assert BrexItem::Importer.new(@brex_item, brex_provider: provider).import[:success]
+  end
+
+  test "first sync without a chosen start date keeps the default window" do
+    captured_start = nil
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with do |_id, opts|
+      captured_start = opts[:start_date]
+      true
+    end.returns(transactions: [])
+
+    assert BrexItem::Importer.new(@brex_item, brex_provider: provider).import[:success]
+    assert captured_start >= 91.days.ago, "first-sync start date must be within 90 days"
+  end
+
+  test "resync does not go back before the chosen start date" do
+    chosen = Date.current - 3.days
+    @brex_item.update!(sync_start_date: chosen)
+    @brex_item.stubs(:last_synced_at).returns(1.day.ago)
+    @brex_account.update!(raw_transactions_payload: [ { id: "cash_tx_1", posted_at_date: Date.current.to_s } ])
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: chosen).returns(transactions: [])
+
+    assert BrexItem::Importer.new(@brex_item, brex_provider: provider).import[:success]
+  end
+
+  test "resync keeps the last sync buffer when it is after the chosen start date" do
+    last_synced = 10.days.ago
+    @brex_item.update!(sync_start_date: Date.current - 2.years)
+    @brex_item.stubs(:last_synced_at).returns(last_synced)
+    @brex_account.update!(raw_transactions_payload: [ { id: "cash_tx_1", posted_at_date: Date.current.to_s } ])
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: last_synced - 7.days).returns(transactions: [])
+
+    assert BrexItem::Importer.new(@brex_item, brex_provider: provider).import[:success]
+  end
+
+  test "a sync window still takes precedence over the chosen start date" do
+    @brex_item.update!(sync_start_date: Date.current - 2.years)
+    window = Date.current - 5.days
+    provider = mock("brex_provider")
+    provider.expects(:get_accounts).returns(accounts: [ cash_account_payload ])
+    provider.expects(:get_cash_transactions).with("cash_1", start_date: window).returns(transactions: [])
+
+    assert BrexItem::Importer.new(@brex_item, brex_provider: provider, sync_start_date: window).import[:success]
+  end
+
   test "imports aggregate card transactions only into the selected connection" do
     first_card_account = @family.accounts.create!(
       name: "First Brex Card",
