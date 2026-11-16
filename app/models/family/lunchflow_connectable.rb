@@ -12,7 +12,7 @@ module Family::LunchflowConnectable
 
   def create_lunchflow_item!(api_key:, base_url: nil, item_name: nil)
     lunchflow_item = lunchflow_items.create!(
-      name: item_name || "Lunch Flow Connection",
+      name: item_name || I18n.t("lunchflow_items.default_connection_name"),
       api_key: api_key,
       base_url: base_url
     )
