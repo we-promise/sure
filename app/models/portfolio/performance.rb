@@ -17,8 +17,7 @@
 # this key does not rely on that.
 class Portfolio::Performance
   # Bumped whenever the meaning of a cached figure changes, so warm caches stop
-  # serving the old interpretation under the same name (the pattern #3350 used
-  # for totals_query/v2).
+  # serving the old interpretation under the same name.
   CACHE_VERSION = "v9".freeze
 
   # The balance rows are calendar daily, so the series includes weekends and
