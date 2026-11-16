@@ -3,28 +3,30 @@
     <% dialog.with_header(title: dialog_t("title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <div class="flex items-start gap-3">
-          <%= helpers.icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
-          <div class="text-sm">
-            <p class="font-medium text-primary mb-2"><%= dialog_t("heading") %></p>
-            <p class="text-secondary"><%= error_message %></p>
+        <% if notice == :alert %>
+          <%= render DS::Alert.new(title: heading, message: error_message, variant: :error) %>
+        <% else %>
+          <div class="flex items-start gap-3">
+            <%= helpers.icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
+            <div class="text-sm">
+              <p class="font-medium text-primary mb-2"><%= heading %></p>
+              <p class="text-secondary"><%= error_message %></p>
+            </div>
           </div>
-        </div>
+        <% end %>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
           <p class="font-medium text-primary"><%= dialog_t("common_issues") %></p>
           <ul class="list-disc list-inside space-y-1 text-secondary">
-            <li><strong><%= dialog_t("invalid_token_label") %></strong> <%= dialog_t("invalid_token") %></li>
-            <li><strong><%= dialog_t("expired_credentials_label") %></strong> <%= dialog_t("expired_credentials") %></li>
-            <li><strong><%= dialog_t("permissions_label") %></strong> <%= dialog_t("permissions") %></li>
-            <li><strong><%= dialog_t("network_label") %></strong> <%= dialog_t("network") %></li>
-            <li><strong><%= dialog_t("service_label") %></strong> <%= dialog_t("service") %></li>
+            <% issues.each do |label, description| %>
+              <li><strong><%= label %></strong> <%= description %></li>
+            <% end %>
           </ul>
         </div>
 
         <div class="mt-4">
           <%= render DS::Link.new(
-            text: dialog_t("settings_link"),
+            text: link_text,
             href: return_path.presence || helpers.settings_providers_path,
             variant: :primary,
             data: { turbo: false }

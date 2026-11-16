@@ -3,27 +3,30 @@
     <% dialog.with_header(title: dialog_t("title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <div class="flex items-start gap-3">
-          <%= helpers.icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
-          <div class="text-sm text-secondary">
-            <p class="font-medium text-primary mb-2"><%= dialog_t("heading") %></p>
-            <p><%= dialog_t("description") %></p>
+        <% if notice == :alert %>
+          <%= render DS::Alert.new(title: heading, message: description, variant: :warning) %>
+        <% else %>
+          <div class="flex items-start gap-3">
+            <%= helpers.icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
+            <div class="text-sm text-secondary">
+              <p class="font-medium text-primary mb-2"><%= heading %></p>
+              <p><%= description %></p>
+            </div>
           </div>
-        </div>
+        <% end %>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
-          <p class="font-medium text-primary"><%= dialog_t("setup_steps") %></p>
+          <p class="font-medium text-primary"><%= steps_title %></p>
           <ol class="list-decimal list-inside space-y-1 text-secondary">
-            <li><%= dialog_t("steps.open_settings_html") %></li>
-            <li><%= dialog_t("steps.find_section_html") %></li>
-            <li><%= dialog_t("steps.enter_token") %></li>
-            <li><%= dialog_t("steps.return_to_link") %></li>
+            <% steps.each do |step| %>
+              <li><%= step %></li>
+            <% end %>
           </ol>
         </div>
 
         <div class="mt-4">
           <%= render DS::Link.new(
-            text: dialog_t("settings_link"),
+            text: link_text,
             href: helpers.settings_providers_path,
             variant: :primary,
             data: { turbo: false }

@@ -1,0 +1,52 @@
+<turbo-frame id="modal">
+<turbo-frame id="modal">
+<dialog class="w-full h-full bg-transparent text-primary backdrop:bg-overlay pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] lg:p-1" role="dialog" aria-modal="true" aria-labelledby="dialog-title-ID" data-controller="DS--dialog hotkey" data-DS--dialog-auto-open-value="true" data-DS--dialog-reload-on-close-value="false" data-DS--dialog-disable-click-outside-value="false" data-action="click-&gt;DS--dialog#clickOutside" data-hotkey="esc:DS--dialog#close">
+<div class="flex h-full w-full items-center justify-center">
+<div class="flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full max-h-full lg:max-w-[550px]" data-DS--dialog-target="content">
+<div class="grow py-4 space-y-4 flex flex-col overflow-auto">
+<header class="px-4 flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2">
+<h2 id="dialog-title-ID" class="font-medium text-primary">Select Lunch Flow Accounts</h2>
+<button title="Close" type="button" aria-label="Close" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-md ml-auto shrink-0 justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11 hover:bg-container-inset-hover" data-action="DS--dialog#close">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary">
+<path d="M18 6 6 18">
+</path>
+<path d="m6 6 12 12">
+</path>
+</svg>
+</button>
+</div>
+</header>
+<div class="px-4 grow">
+<div class="space-y-4">
+<p class="text-sm text-secondary">Select the accounts you want to link to your Sure account.</p>
+<form action="/lunchflow_items/link_accounts" method="post" class="space-y-4" data-turbo-frame="_top">
+<input type="hidden" name="authenticity_token" id="authenticity_token" value="CSRF" />
+<input type="hidden" name="lunchflow_item_id" id="lunchflow_item_id" value="UUID" />
+<input type="hidden" name="accountable_type" id="accountable_type" value="Depository" />
+<input type="hidden" name="return_to" id="return_to" />
+<div class="space-y-2">
+<label class="flex items-start gap-3 p-3 border border-error bg-error/5 rounded-lg cursor-not-allowed opacity-60 transition-colors">
+<input type="checkbox" name="account_ids[]" id="account_ids_" value="103" disabled="disabled" class="mt-1" />
+<div class="flex-1">
+<div class="font-medium text-sm text-error">(No name)</div>
+<div class="text-xs text-secondary mt-1">Example Bank • GBP • ACTIVE</div>
+<div class="text-xs text-error mt-1">Cannot import - please configure account name in Lunchflow</div>
+</div>
+</label>
+</div>
+<div class="flex gap-2 justify-end pt-4">
+<a class="inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover" data-turbo-frame="_top" data-action="DS--dialog#close" href="/accounts/new">Cancel</a>
+<button type="submit" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400">
+<span class="min-w-0 truncate">Link selected accounts</span>
+</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+</div>
+</dialog>
+</turbo-frame>
+</turbo-frame>
