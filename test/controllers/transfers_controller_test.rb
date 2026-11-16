@@ -723,6 +723,8 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     get transfer_url(transfer)
 
     assert_response :success
+    assert_select "details[open] input[name='transfer[outflow_name]']"
+    assert_select "details[open] input[name='transfer[inflow_name]']"
     assert_select "input[name='transfer[outflow_name]'][value=?]", transfer.outflow_transaction.entry.name
     assert_select "input[name='transfer[inflow_name]'][value=?]", transfer.inflow_transaction.entry.name
     assert_select "label", text: /Name in #{Regexp.escape(transfer.from_account.name)}/

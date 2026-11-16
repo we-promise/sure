@@ -35,7 +35,7 @@ class TransfersTest < ApplicationSystemTestCase
     visit transactions_url
     find("a", text: transfer.outflow_transaction.entry.name, match: :first).click
 
-    find("summary", text: /details/i).click
+    assert_selector "details[open] input[name='transfer[outflow_name]']"
     find("input[name='transfer[outflow_name]']").set("Rent")
     find("input[name='transfer[inflow_name]']").set("Rent")
     find("input[name='transfer[inflow_name]']").send_keys(:tab)
