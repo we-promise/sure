@@ -5,14 +5,32 @@ class PasswordsController < ApplicationController
   end
 
   def update
-    if Current.user.update(password_params)
+    if update_password_and_log_change
       redirect_to root_path, notice: t(".success")
     else
       render :edit, status: :unprocessable_entity
     end
+  rescue ActiveRecord::ActiveRecordError
+    render :edit, status: :unprocessable_entity
   end
 
   private
+
+    def update_password_and_log_change
+      # has_secure_password ignores a blank password, so update would succeed without a change.
+      if password_params[:password].blank?
+        Current.user.errors.add(:password, :blank)
+        return false
+      end
+
+      ActiveRecord::Base.transaction do
+        next false unless Current.user.update(password_params)
+
+        SecurityAuditLog.log_password_changed!(user: Current.user, request: request, actor: Current.true_user)
+
+        true
+      end
+    end
 
     # Mirrors the local login policy: when only SSO is allowed, a local
     # password could not be used to sign in, so it must not be set here
@@ -24,7 +42,11 @@ class PasswordsController < ApplicationController
       redirect_to root_path, alert: t("passwords.disabled")
     end
 
+    # User skips the current-password check when password_challenge is nil,
+    # and a JSON null or a bare form key without "=" both arrive as nil, so
+    # always pass a string here.
     def password_params
-      params.require(:user).permit(:password, :password_confirmation, :password_challenge).with_defaults(password_challenge: "")
+      permitted = params.require(:user).permit(:password, :password_confirmation, :password_challenge)
+      permitted.merge(password_challenge: permitted[:password_challenge].to_s)
     end
 end

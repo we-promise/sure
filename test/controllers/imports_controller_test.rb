@@ -22,6 +22,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     get new_import_url
 
@@ -120,6 +121,43 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to import_upload_url(Import.all.ordered.first)
   end
 
+  test "dropping a Sure transactions.csv export presets the export sign convention" do
+    exported_csv = "#{Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")}\n2024-05-15,Checking Account,42.5,Grocery,,,,USD\n"
+
+    post imports_url, params: {
+      import: {
+        type: "TransactionImport",
+        import_file: Rack::Test::UploadedFile.new(StringIO.new(exported_csv), "text/csv", original_filename: "transactions.csv")
+      }
+    }
+
+    import = Import.all.ordered.first
+    assert_redirected_to import_configuration_url(import)
+    assert_equal "inflows_negative", import.signage_convention
+    assert_equal "%Y-%m-%d", import.date_format
+  end
+
+  test "dropping a CSV with non-ASCII characters presets by header and does not fail" do
+    header = Family::DataExporter::TRANSACTIONS_CSV_HEADERS.join(",")
+    [ "#{header}\n2024-05-15,Checking Account,42.5,Café,,,,USD\n", "\uFEFFdate,amount,name\n2024-05-15,5,Café\n" ].each do |csv|
+      file = Tempfile.new([ "upload", ".csv" ], binmode: true)
+      file.write(csv)
+      file.rewind
+
+      assert_difference "Import.count", 1 do
+        post imports_url, params: {
+          import: { type: "TransactionImport", import_file: Rack::Test::UploadedFile.new(file.path, "text/csv") }
+        }
+      end
+
+      import = Import.all.ordered.first
+      assert_redirected_to import_configuration_url(import)
+      assert_equal csv.start_with?(header) ? "inflows_negative" : "inflows_positive", import.signage_convention
+    ensure
+      file&.close!
+    end
+  end
+
   test "create with an empty request body redirects back with an alert" do
     assert_no_difference "Import.count" do
       post imports_url
@@ -144,6 +182,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.csv .pdf])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     family_document = family_documents(:tax_return)
     Family.any_instance.expects(:upload_document).with do |file_content:, filename:, **|
@@ -182,6 +221,7 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     @user.family.expects(:upload_document).never
 
@@ -424,10 +464,34 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal I18n.t("accounts.not_authorized"), flash[:alert]
   end
 
+  test "a document upload is refused with the router's reason when embed isn't available" do
+    use_no_ai
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal Ai::Availability.unavailable(:embed, :not_configured).message_for(@user), flash[:alert]
+  end
+
+  test "a document upload says no store is configured when the embed route is set but the store can't be built" do
+    VectorStore::Registry.stubs(:adapter).returns(nil)
+    use_ai_routes
+
+    assert_no_difference "Import.count" do
+      post imports_url, params: { import: { type: "DocumentImport", import_file: file_fixture_upload("imports/valid.csv", "text/csv") } }
+    end
+
+    assert_redirected_to new_import_url
+    assert_equal I18n.t("imports.create.document_provider_not_configured"), flash[:alert]
+  end
+
   test "rejects unsupported document type for DocumentImport option" do
     adapter = mock("vector_store_adapter")
     adapter.stubs(:supported_extensions).returns(%w[.pdf .txt])
     VectorStore::Registry.stubs(:adapter).returns(adapter)
+    use_ai_routes
 
     assert_no_difference "Import.count" do
       post imports_url, params: {

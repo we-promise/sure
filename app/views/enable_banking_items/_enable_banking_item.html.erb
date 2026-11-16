@@ -61,6 +61,7 @@
             <% end %>
 
             <%= render DS::Menu.new do |menu| %>
+              <% sync_schedule_menu_item(menu, enable_banking_item) %>
               <% unless enable_banking_item.requires_update? %>
                 <%# Always-available manual reconnect, independent of the automatic
                     requires_update detection above. Enable Banking sometimes rejects

@@ -1,5 +1,8 @@
 class FamilyMerchantsController < ApplicationController
+  include AiFeatureGuard
+
   before_action :require_non_guest!, except: %i[index]
+  requires_ai :enhance_merchants, only: :enhance
   before_action :set_merchant, only: %i[edit update destroy]
 
   def index
@@ -29,7 +32,7 @@ class FamilyMerchantsController < ApplicationController
     @unlinked_merchants = ProviderMerchant.where(id: recently_unlinked_ids - assigned_ids).alphabetically
 
     @enhanceable_count = @all_provider_merchants.where(website_url: [ nil, "" ]).count
-    @llm_available = Provider::Registry.get_provider(:openai).present?
+    @llm_available = Ai.available?(:enhance_merchants, family: Current.family, user: Current.user)
 
     @pagy_family_merchants, @family_merchants = pagy(family_scope.with_attached_logo, page_param: :family_page, limit: safe_per_page)
     @pagy_provider_merchants, @provider_merchants = pagy(provider_scope, page_param: :provider_page, limit: safe_per_page)
@@ -81,14 +84,14 @@ class FamilyMerchantsController < ApplicationController
         end
       else
         respond_to do |format|
-          format.html { redirect_to family_merchants_path, notice: t(".success") }
-          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+          format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+          format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
         end
       end
     elsif @merchant.update(merchant_params)
       respond_to do |format|
-        format.html { redirect_to family_merchants_path, notice: t(".success") }
-        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, family_merchants_path) }
+        format.html { redirect_to updated_merchant_return_path, notice: t(".success") }
+        format.turbo_stream { render turbo_stream: turbo_stream.action(:redirect, updated_merchant_return_path) }
       end
     else
       render :edit, status: :unprocessable_entity
@@ -169,6 +172,10 @@ class FamilyMerchantsController < ApplicationController
         merchant_params[:website_url].to_s.strip != @merchant.website_url.to_s
 
       name_changed || website_changed
+    end
+
+    def updated_merchant_return_path
+      safe_return_to(params[:return_to]) || family_merchants_path
     end
 
     def merchant_params

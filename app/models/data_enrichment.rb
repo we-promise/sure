@@ -19,11 +19,14 @@ class DataEnrichment < ApplicationRecord
     questrade: "questrade",
     redbark: "redbark",
     rule: "rule",
+    sharesight: "sharesight",
     similar: "similar",
     simplefin: "simplefin",
     sophtron: "sophtron",
     synth: "synth",
     trade_republic: "trade_republic",
-    up: "up"
+    truelayer: "truelayer",
+    up: "up",
+    wise: "wise"
   }
 end
