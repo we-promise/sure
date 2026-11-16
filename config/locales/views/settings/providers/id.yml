@@ -342,18 +342,16 @@ id:
           title: Enkripsi belum dikonfigurasi
           message: Kredensial dan data sesi Trade Republic tidak dapat disimpan dengan aman hingga Enkripsi Active Record dikonfigurasi.
         steps:
-          step_1: Masukkan nomor telepon dan PIN atau kata sandi yang Anda gunakan untuk aplikasi Trade Republic, lalu simpan.
-          step_2: Masukkan kode dari aplikasi autentikator Anda saat diminta.
-          step_3: Setujui login di aplikasi Trade Republic Anda saat diminta.
+          step_1: "Di Tambah koneksi, pilih login QR atau login PIN."
+          step_2: "Login QR: pindai kode QR dengan kamera ponsel Anda, lalu setujui login di aplikasi Trade Republic."
+          step_3: "Login PIN: masukkan nomor telepon dan PIN atau kata sandi yang Anda gunakan untuk aplikasi Trade Republic, lalu kode dari aplikasi autentikator Anda, dan setujui login di aplikasi Trade Republic."
         phone_number_label: Nomor telepon
         phone_number_placeholder_new: "+49 170 1234567"
         phone_number_placeholder_existing: Biarkan kosong untuk mempertahankan nomor telepon saat ini
         pin_label: PIN atau kata sandi
         pin_placeholder_new: PIN atau kata sandi Trade Republic Anda
-        pin_placeholder_existing: Biarkan kosong untuk mempertahankan PIN atau kata sandi saat ini
         currency_label: Mata uang rekening
         connect: Masuk
-        confirm_login: Periksa login
         complete_login: Lanjutkan
         authenticator_code_label: Kode autentikator (jika diminta)
         authenticator_code_placeholder: "Kode 6 digit"
@@ -364,27 +362,28 @@ id:
         awaiting_confirmation: Persetujuan di aplikasi Trade Republic sedang menunggu.
         awaiting_authenticator_code: Kode autentikator diperlukan.
         login_expired: Permintaan persetujuan telah kedaluwarsa.
-        restart_login: Mulai login lagi
         connection_success:
           title: Trade Republic berhasil terhubung
           message: Koneksi Trade Republic Anda sudah siap.
           description: Sure kini menyinkronkan data Trade Republic Anda di latar belakang.
           close: Selesai
-        qr_login: Masuk dengan kode QR
+        qr_login: Login QR
         qr_cancel: Batalkan login QR
-        qr_back_to_credentials: Kembali ke nomor telepon dan PIN atau kata sandi
         qr_loading: Menyiapkan kode QR …
         qr_instruction: Pindai kode QR dengan kamera ponsel Anda, lalu setujui login di aplikasi Trade Republic.
         qr_success: Login disetujui. Sure sedang memuat ulang halaman penyedia.
         qr_error: Login QR tidak dapat dimulai. Silakan coba lagi.
         requires_update: Masuk lagi untuk melanjutkan sinkronisasi.
         session_expires_in: "Login berakhir dalam %{time} (%{at})."
-        add_account: Tambah koneksi lain
-        save_configuration: Simpan & Mulai Login
-        update_configuration: Perbarui Konfigurasi
+        pin_login: Login PIN
+        pin_cancel: Batalkan login PIN
+        remove: Hapus
+        new_connection: Koneksi baru
+        cancel_login: Batal
+        add_connection: Tambah koneksi
+        pin_login_hint: Masukkan nomor telepon dan PIN atau kata sandi yang Anda gunakan untuk aplikasi Trade Republic.
         sync: Sinkronkan
         syncing: Menyinkronkan...
-        disconnect: Putuskan Trade Republic
         disconnect_confirm: Putuskan koneksi Trade Republic? Rekening yang tersinkronisasi akan menjadi rekening manual.
         disconnect_confirm_with_identifier: "Putuskan koneksi Trade Republic yang berakhiran %{last4}? Rekening yang tersinkronisasi akan menjadi rekening manual."
         identifier_phone: Telepon
