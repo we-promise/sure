@@ -49,8 +49,9 @@ class Security < ApplicationRecord
   # adding a value means changing both, deliberately.
   #
   # `apply_classification_defaults` fills the two kinds a provider cannot
-  # answer (cash, crypto) and the region; everything else stays unclassified
-  # (NULL) until a provider, the user or an approved proposal answers it.
+  # answer (cash, crypto) and `apply_default_region` fills the region;
+  # everything else stays unclassified (NULL) until a provider, the user or an
+  # approved proposal answers it.
   #
   # The migration repeats these lists rather than reading them from here, so
   # that it produces the same schema whenever it runs. Changing a list is
@@ -106,6 +107,7 @@ class Security < ApplicationRecord
   # Declared after :upcase_symbols deliberately -- `crypto?` compares against a
   # canonical MIC, and that callback is what canonicalises it.
   before_validation :apply_classification_defaults
+  before_save :apply_default_region, unless: :classification_locked?
   before_save :generate_logo_url_from_brandfetch, if: :should_generate_logo?
   before_save :reset_first_provider_price_on_if_provider_changed
 
@@ -352,7 +354,6 @@ class Security < ApplicationRecord
       return if classification_locked?
 
       apply_default_asset_class
-      apply_default_region
     end
 
     # Only the two kinds a provider cannot answer. An ordinary listed
@@ -388,6 +389,10 @@ class Security < ApplicationRecord
       self.classification_source ||= "default"
     end
 
+    # Runs once per save, against the values being written. Validation can run
+    # several times before a save, and a region derived on an earlier pass
+    # would still be pending when the country changed again, then read as the
+    # caller's own.
     def apply_default_region
       # An offline security's `country_code` is not the instrument's listing
       # country. `Security::Resolver#offline_security` persists whatever the
