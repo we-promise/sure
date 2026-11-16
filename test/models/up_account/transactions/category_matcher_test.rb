@@ -59,4 +59,16 @@ class UpAccount::Transactions::CategoryMatcherTest < ActiveSupport::TestCase
 
     assert_nil matcher.match("groceries"), "no Groceries category exists, so no match"
   end
+
+  test "maps Up categories to default categories created in another locale" do
+    family = families(:empty)
+    family.categories.destroy_all
+    I18n.with_locale(:de) { family.categories.bootstrap! }
+    matcher = UpAccount::Transactions::CategoryMatcher.new(family.categories.to_a)
+
+    { "groceries" => :groceries, "restaurants-and-cafes" => :food_and_drink, "fuel" => :transportation }.each do |slug, default_key|
+      expected = I18n.t("models.category.defaults.#{default_key}", locale: :de)
+      assert_equal expected, matcher.match(slug)&.name, "expected '#{slug}' to match the German default category"
+    end
+  end
 end

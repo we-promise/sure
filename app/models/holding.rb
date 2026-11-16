@@ -42,7 +42,11 @@ class Holding < ApplicationRecord
     return nil unless amount
     return 0 if amount.zero?
 
-    account.balance.zero? ? 1 : amount_in_account_currency / account.balance * 100
+    # Never divide by less than the holdings (this one included), so negative
+    # cash cannot push a weight past 100%. As InvestmentStatement#weight_denominator.
+    value = amount_in_account_currency
+    denominator = [ account.balance, account.current_holdings_total, value ].max
+    denominator.positive? ? value / denominator * 100 : 1
   end
 
   # The stored per-share cost when it is a real value:
@@ -456,13 +460,14 @@ class Holding < ApplicationRecord
       remove_instance_variable(:@day_change) if defined?(@day_change)
     end
 
-    def amount_in_account_currency
+    def amount_in_account_currency(unconvertible: amount)
       return amount if currency == account.currency
 
       Money.new(amount, currency).exchange_to(account.currency, date: date).amount
     rescue Money::ConversionError
-      amount
+      unconvertible
     end
+    public :amount_in_account_currency
 
     def calculate_trend
       return nil unless amount_money

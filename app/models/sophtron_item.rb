@@ -32,6 +32,7 @@ class SophtronItem < ApplicationRecord
   validates :name, presence: true
   validates :user_id, presence: true, on: :create
   validates :access_key, presence: true, on: :create
+  validate :base_url_must_be_an_official_host, if: :will_save_change_to_base_url?
 
   belongs_to :family
   belongs_to :current_job_sophtron_account, class_name: "SophtronAccount", optional: true
@@ -363,7 +364,7 @@ class SophtronItem < ApplicationRecord
   end
 
   def effective_base_url
-    base_url.presence || Provider::Sophtron::DEFAULT_BASE_URL
+    Provider::Sophtron.normalize_base_url(base_url) || Provider::Sophtron::DEFAULT_BASE_URL
   end
 
   def generated_customer_unique_id
@@ -398,5 +399,13 @@ class SophtronItem < ApplicationRecord
 
       customer_payload = customer_payload.with_indifferent_access
       customer_payload[:CustomerName] || customer_payload[:customer_name] || customer_payload[:name]
+    end
+
+    # The value an operator typed decides where the app sends their key, so it
+    # is checked against the provider's allow-list rather than used as given.
+    def base_url_must_be_an_official_host
+      return if base_url.blank? || Provider::Sophtron.allowed_base_url?(base_url)
+
+      errors.add(:base_url, :official_hosts_only)
     end
 end
