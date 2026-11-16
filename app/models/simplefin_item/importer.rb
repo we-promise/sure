@@ -403,8 +403,8 @@ class SimplefinItem::Importer
       #   We do NOT use the small initial lookback (7 days) here, because that
       #   would clip the very first chunk to ~1 week and prevent further history.
       user_start_date = simplefin_item.sync_start_date
-      implied_max_lookback_days = chunk_size_days * max_requests
-      default_start_date = implied_max_lookback_days.days.ago
+      # Measured in elapsed time like each chunk, so the cap always reaches it.
+      default_start_date = Time.current - (MAX_REQUEST_SECONDS * max_requests)
       target_start_date = user_start_date ? user_start_date.beginning_of_day : default_start_date
 
       # Enforce maximum 1-year lookback since SimpleFIN rarely provides more than 90 days
