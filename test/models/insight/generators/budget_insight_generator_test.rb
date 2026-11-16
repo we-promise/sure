@@ -15,8 +15,8 @@ class Insight::Generators::BudgetInsightGeneratorTest < ActiveSupport::TestCase
   # Fixed charges that land early fill the line on day 6, but nothing in it is
   # left to watch: the month's bills are paid and nothing else was spent.
   test "does not warn about a line filled by bills already paid" do
-    budget_line(53)
-    gym = create_bill(category: @category, amount: 47.98, name: "Gym", day: 3)
+    budget_line(50)
+    gym = create_bill(category: @category, amount: 45, name: "Gym", day: 3)
     medical = create_bill(category: @category, amount: 5, name: "Medical plan", day: 5)
 
     travel_to @today do

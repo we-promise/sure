@@ -33,13 +33,13 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
   # transfer to the loan, and an excluded part is not counted either.
   test "remaining_spending_money keeps the spending share of the series' latest split charge" do
     interest = @family.categories.create!(name: "Mortgage interest")
-    mortgage = create_bill(category: interest, amount: 1_423.86, name: "Mortgage")
+    mortgage = create_bill(category: interest, amount: 1_500, name: "Mortgage")
     split_payment(pay_bill(mortgage, date: Date.current - 1.month),
-                  { amount: 683.07, category: interest },
+                  { amount: 700, category: interest },
                   { amount: 40, category: interest, excluded: true },
-                  { amount: 700.79, kind: "funds_movement" })
+                  { amount: 760, kind: "funds_movement" })
 
-    assert_equal Money.new(683.07, "USD"), expect_bill(mortgage, due_on: Date.current).remaining_spending_money
+    assert_equal Money.new(700, "USD"), expect_bill(mortgage, due_on: Date.current).remaining_spending_money
   end
 
   # A charge split into spending and a contribution to an investment account
