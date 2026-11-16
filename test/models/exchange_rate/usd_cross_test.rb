@@ -63,6 +63,13 @@ class ExchangeRate::UsdCrossTest < ActiveSupport::TestCase
     assert_empty ExchangeRate::UsdCross.new(@provider).rates(from: "RUB", to: "USD", start_date: @day1, end_date: @day2)
   end
 
+  test "is empty without asking a provider that cannot quote both USD legs" do
+    moex = Provider::MoexPublic.new
+    moex.expects(:fx_history).never
+
+    assert_empty ExchangeRate::UsdCross.new(moex).rates(from: "RUB", to: "KZT", start_date: @day1, end_date: @day2)
+  end
+
   test "is empty without asking the provider for a pair it has quoted before" do
     ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
     @provider.expects(:fetch_exchange_rates).never

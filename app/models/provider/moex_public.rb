@@ -181,6 +181,11 @@ class Provider::MoexPublic < Provider
   #          Exchange Rates
   # ================================
 
+  # Only X/RUB pairs are quoted, so no pair has both USD legs.
+  def usd_cross?
+    false
+  end
+
   def fetch_exchange_rate(from:, to:, date:)
     with_provider_response do
       # Fetch a short lookback window, not just the exact day, so a weekend or

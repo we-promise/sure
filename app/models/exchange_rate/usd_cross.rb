@@ -14,12 +14,14 @@ class ExchangeRate::UsdCross
 
   # Rate[] dated like the X→USD leg, each multiplied by the latest USD→Y rate
   # on or before that date. `error` is why the direct pair failed, when it did.
-  # [] when either side is USD, the provider itself is failing, it has quoted
+  # [] when either side is USD, the provider itself is failing or cannot derive
+  # a pair (see Provider::ExchangeRateConcept#usd_cross?), it has quoted
   # this pair before (so the failure is an outage, and a derived rate would
   # be cached in place of its own), or a leg has no rates.
   def rates(from:, to:, start_date:, end_date:, error: nil)
     return [] if from == to || [ from, to ].include?("USD")
     return [] if error.class.name.to_s.demodulize.in?(PROVIDER_FAILURES)
+    return [] if @provider.respond_to?(:usd_cross?) && !@provider.usd_cross?
     # shortcut: until the provider answers a pair once, a transient failure keeps the rates derived then; flag derived rows if that shows up.
     return [] if ExchangeRatePair.for_pair(from: from, to: to).quoted_directly?
 
