@@ -434,7 +434,10 @@ class EnableBankingItem < ApplicationRecord
         next unless uid.present?
 
         enable_banking_account = enable_banking_accounts.find_or_initialize_by(uid: uid)
-        next if enable_banking_account.ignored?
+        if enable_banking_account.ignored?
+          enable_banking_account.refresh_session_identifiers!(account_data)
+          next
+        end
 
         enable_banking_account.upsert_enable_banking_snapshot!(account_data)
         enable_banking_account.save!

@@ -19,4 +19,13 @@ module IgnorableProviderAccount
 
     update!(ignored: true, **ignored_snapshot_reset)
   end
+
+  # Runs the block (a snapshot write) under the row lock unless the account is
+  # ignored by then, so data fetched before an ignore! is not written after it.
+  # An ignore! arriving meanwhile waits for the lock. Returns false when skipped.
+  def write_unless_ignored
+    return yield if new_record?
+
+    with_lock { ignored? ? false : yield }
+  end
 end

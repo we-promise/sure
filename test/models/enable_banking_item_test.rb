@@ -307,23 +307,26 @@ class EnableBankingItemTest < ActiveSupport::TestCase
     assert_equal "0 accounts synced", @item.sync_status_summary
   end
 
-  test "re-authorizing does not refresh an ignored account" do
+  test "re-authorizing refreshes only the session identifiers of an ignored account" do
     @item.save!
-    ignored = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR")
+    ignored = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", account_id: "uid_old", currency: "EUR")
     ignored.ignore!
     provider = mock("enable_banking_provider")
     provider.stubs(:create_session).returns(
       session_id: "sess_new",
       accounts: [
-        { uid: "uid_theirs", identification_hash: "hash_theirs", currency: "EUR", name: "Renamed", iban: "FR7600001" },
+        { uid: "uid_theirs", identification_hash: "hash_theirs", identification_hashes: [ "hash_theirs", "hash_alt" ],
+          currency: "EUR", name: "Renamed", iban: "FR7600001", balance: { amount: "10.00" } },
         { uid: "uid_mine", identification_hash: "hash_mine", currency: "EUR", name: "Mine" }
       ]
     )
     @item.stubs(:enable_banking_provider).returns(provider)
 
-    assert_no_changes -> { ignored.reload.attributes } do
+    assert_no_changes -> { ignored.reload.attributes.except("account_id", "identification_hashes", "updated_at") } do
       @item.complete_authorization(code: "code")
     end
+    assert_equal "uid_theirs", ignored.account_id
+    assert_equal [ "hash_theirs", "hash_alt" ], ignored.identification_hashes
     assert @item.enable_banking_accounts.exists?(uid: "hash_mine")
   end
 end

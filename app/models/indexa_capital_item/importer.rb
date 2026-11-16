@@ -89,7 +89,8 @@ class IndexaCapitalItem::Importer
       indexa_capital_account = indexa_capital_item.indexa_capital_accounts.find_or_initialize_by(
         indexa_capital_account_id: account_number
       )
-      # Checked here rather than up front so an account ignored mid-sync is not written back.
+      # Skip the balance call for an ignored account; write_unless_ignored below
+      # covers one ignored while the call is in flight.
       return if indexa_capital_account.ignored?
 
       # Fetch current balance from performance endpoint
@@ -101,7 +102,7 @@ class IndexaCapitalItem::Importer
         Rails.logger.warn "IndexaCapitalItem::Importer - Failed to fetch balance for #{account_number}: #{e.message}"
       end
 
-      indexa_capital_account.upsert_from_indexa_capital!(account_data)
+      return unless indexa_capital_account.write_unless_ignored { indexa_capital_account.upsert_from_indexa_capital!(account_data) }
 
       stats["accounts_imported"] = stats.fetch("accounts_imported", 0) + 1
     end
