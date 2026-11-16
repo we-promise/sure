@@ -37,11 +37,11 @@ class RecurringOccurrence < ApplicationRecord
   # The family's open bill occurrences due within `dates`, with their confirmed
   # allocation sums and their series' spending shares loaded in grouped
   # queries so remaining_spending_money on each row issues none.
-  def self.open_bills_due(family_id, dates)
+  def self.open_bills_due(family, dates)
     occurrences = open_status
                     .joins(:recurring_transaction)
                     .merge(RecurringTransaction.bills)
-                    .where(recurring_transactions: { family_id: family_id })
+                    .where(recurring_transactions: { family_id: family.id })
                     .where(due_on: dates)
                     .includes(:recurring_transaction)
                     .to_a
@@ -50,7 +50,7 @@ class RecurringOccurrence < ApplicationRecord
                               .where(recurring_occurrence_id: occurrences.map(&:id))
                               .group(:recurring_occurrence_id)
                               .sum(:allocated_amount)
-    shares = spending_shares(occurrences.map(&:recurring_transaction_id).uniq)
+    shares = spending_shares(family, occurrences.map(&:recurring_transaction_id).uniq)
     occurrences.each do |occurrence|
       occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0)
       occurrence.spending_share = shares.fetch(occurrence.recurring_transaction_id, 1)
@@ -61,9 +61,12 @@ class RecurringOccurrence < ApplicationRecord
   # series whose charges get split: a mortgage instalment split into its
   # interest and a transfer of the principal to the loan is spending only for
   # the interest. Read off the series' latest split charge, as its children
-  # that count as spending (the kinds and exclusions IncomeStatement::Totals
-  # applies) over the charge. Series never split are absent: all spending.
-  def self.spending_shares(series_ids)
+  # that count as spending over the charge: the family's reported kinds
+  # (Family#analytics_excluded_kinds, so a contribution to an investment
+  # account counts only when the family counts investing as spending, as in
+  # IncomeStatement::Totals) and not excluded. Series never split are absent:
+  # all spending.
+  def self.spending_shares(family, series_ids)
     latest_splits = RecurringAllocation.confirmed
       .joins(:recurring_occurrence, :entry)
       .where(recurring_occurrences: { recurring_transaction_id: series_ids })
@@ -74,7 +77,7 @@ class RecurringOccurrence < ApplicationRecord
     return {} if latest_splits.empty?
 
     spent = Entry.where(parent_entry_id: latest_splits.map(&:second), excluded: false, entryable_type: "Transaction")
-                 .where(entryable_id: Transaction.where.not(kind: Transaction::BUDGET_EXCLUDED_KINDS).select(:id))
+                 .where(entryable_id: Transaction.where.not(kind: family.analytics_excluded_kinds).select(:id))
                  .group(:parent_entry_id)
                  .sum(:amount)
 
@@ -142,7 +145,7 @@ class RecurringOccurrence < ApplicationRecord
   # The part of remaining_amount that will be spending: all of it, unless the
   # series' charges get split (see .spending_shares).
   def remaining_spending_money
-    share = @spending_share || self.class.spending_shares([ recurring_transaction_id ]).fetch(recurring_transaction_id, 1)
+    share = @spending_share || self.class.spending_shares(family, [ recurring_transaction_id ]).fetch(recurring_transaction_id, 1)
     Money.new((remaining_amount * share).round(Money::Currency.new(currency).default_precision), currency)
   end
 

@@ -430,7 +430,7 @@ class Budget < ApplicationRecord
   # each BudgetCategory#bills_reserved reads its slice instead of querying.
   def open_bill_occurrences_by_category_id
     @open_bill_occurrences_by_category_id ||= RecurringOccurrence
-      .open_bills_due(family_id, start_date..end_date)
+      .open_bills_due(family, start_date..end_date)
       .group_by { |occurrence| occurrence.recurring_transaction.category_id }
   end
 

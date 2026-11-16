@@ -42,6 +42,25 @@ class RecurringOccurrenceTest < ActiveSupport::TestCase
     assert_equal Money.new(683.07, "USD"), expect_bill(mortgage, due_on: Date.current).remaining_spending_money
   end
 
+  # A charge split into spending and a contribution to an investment account
+  # reserves the contribution only for a family that counts investing as
+  # spending, as IncomeStatement::Totals does.
+  test "remaining_spending_money counts a split contribution only when investing counts as spending" do
+    [ [ true, 1_000 ], [ false, 200 ] ].each do |as_spending, expected|
+      @family.update!(investment_contributions_as_spending: as_spending)
+      groceries = @family.categories.create!(name: "Groceries #{as_spending}")
+      bill = create_bill(category: groceries, amount: 1_000, name: "Groceries and savings #{as_spending}")
+      split_payment(pay_bill(bill, date: Date.current - 1.month),
+                    { amount: 200, category: groceries },
+                    { amount: 800, kind: "investment_contribution" })
+      due = expect_bill(bill, due_on: Date.current)
+
+      assert_equal Money.new(expected, "USD"), due.remaining_spending_money, "as_spending: #{as_spending}"
+      loaded = RecurringOccurrence.open_bills_due(@family, Date.current..Date.current).find { |o| o.id == due.id }
+      assert_equal Money.new(expected, "USD"), loaded.remaining_spending_money, "open_bills_due, as_spending: #{as_spending}"
+    end
+  end
+
   test "average strategy resolves through the series variance" do
     @series.update!(amount_strategy: "average", expected_amount_min: 10, expected_amount_max: 20, expected_amount_avg: 15.5)
     occurrence = create_occurrence

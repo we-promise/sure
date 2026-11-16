@@ -189,7 +189,7 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     def bills_still_due(dates)
       parent_ids = family.categories.pluck(:id, :parent_id).to_h
 
-      RecurringOccurrence.open_bills_due(family.id, dates).each_with_object(Hash.new(0.to_d)) do |occurrence, sums|
+      RecurringOccurrence.open_bills_due(family, dates).each_with_object(Hash.new(0.to_d)) do |occurrence, sums|
         category_id = occurrence.recurring_transaction.category_id
         sums[parent_ids[category_id] || category_id] += occurrence.remaining_spending_money.exchange_to(family.currency).amount
       rescue Money::ConversionError
