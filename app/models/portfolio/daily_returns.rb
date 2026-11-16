@@ -481,11 +481,7 @@ class Portfolio::DailyReturns
             -- `fees`, converted as the trade's own amount is. An amount nearer
             -- qty x price than qty x price + fee left the fee out, so the
             -- balance never charged it and there is nothing to move.
-            COALESCE(SUM(CASE WHEN entries.entryable_type = 'Trade'
-                              AND #{fragment(:flow_class_sql)} = 'internal'
-                              AND trades.fee > 0
-                              AND trades.currency = entries.currency
-                              AND ABS(entries.amount - (trades.qty * trades.price + trades.fee)) < trades.fee / 2
+            COALESCE(SUM(CASE WHEN #{trade_commission_sql}
                               THEN trades.fee * entry_fx.rate * fx.rate ELSE 0 END), 0) AS trade_fees,
             -- A missing rate applies to flows as it does to balances: a flow in a
             -- currency with no rate is flagged, never converted at parity. So is
@@ -495,7 +491,8 @@ class Portfolio::DailyReturns
             -- An entry with no class is pending, which SyncCache never applies,
             -- or a valuation, which is written in the account's own currency. A
             -- zero amount converts to zero at any rate, so it cannot be short of
-            -- one.
+            -- one -- unless it carries a commission, which is a fee to convert
+            -- even when a sale's proceeds cancel it to a zero amount.
             --
             -- A journal converts from the HOLDING's currency, not the entry's,
             -- so a missing rate there is invisible to the check above. Without
@@ -509,7 +506,7 @@ class Portfolio::DailyReturns
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
             COALESCE(BOOL_OR(((entry_fx.rate IS NULL OR fx.rate IS NULL)
-                              AND entries.amount <> 0
+                              AND (entries.amount <> 0 OR #{trade_commission_sql})
                               AND NOT COALESCE((#{fragment(:journal_predicate)}), false)
                               AND #{fragment(:flow_class_sql)} IS NOT NULL)
                              OR (journal_fx.rate IS NULL
@@ -989,6 +986,18 @@ class Portfolio::DailyReturns
         WHERE s.security_id = trades.security_id
           AND s.ex_date > #{from_expression}
           AND s.ex_date <= #{to}
+      SQL
+    end
+
+    # A buy's or sell's commission that its entry amount includes, as
+    # trade_fees sums it: amount = qty x price + fee, within half the fee.
+    def trade_commission_sql
+      <<~SQL.squish
+        (entries.entryable_type = 'Trade'
+          AND #{fragment(:flow_class_sql)} = 'internal'
+          AND trades.fee > 0
+          AND trades.currency = entries.currency
+          AND ABS(entries.amount - (trades.qty * trades.price + trades.fee)) < trades.fee / 2)
       SQL
     end
 

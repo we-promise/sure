@@ -315,6 +315,28 @@ class Portfolio::DriversTest < ActiveSupport::TestCase
     assert returns.rate_missing?, "a commission that could not be converted leaves the fees short"
   end
 
+  # A sale whose proceeds equal its commission has a zero entry amount, so
+  # the flow check, which skips zero amounts, never sees it. The commission is
+  # still a fee that could not be converted.
+  test "a commission on a zero-amount trade with no rate flags a missing rate" do
+    lay_balance account: @account, date: @day_one, opening: 10_000, closing: 10_000
+    lay_balance account: @account, date: @day_two, opening: 10_000, closing: 10_000
+    @account.entries.create!(
+      name: "Sell", date: @day_two, currency: "EUR", amount: 0,
+      entryable: Trade.new(security: security_under_test, qty: -1, price: 5, fee: 5, currency: "EUR",
+                           investment_activity_label: "Sell")
+    )
+    period = Period.custom(start_date: @day_one, end_date: @day_two)
+
+    unrated = Portfolio::DailyReturns.new(account_ids: [ @account.id ], currency: @family.currency, period: period)
+    assert unrated.rate_missing?, "the commission could not be converted"
+
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.0
+    rated = Portfolio::DailyReturns.new(account_ids: [ @account.id ], currency: @family.currency, period: period)
+    assert_not rated.rate_missing?, "with the rate it converts, so nothing else was short of one"
+    assert_equal BigDecimal("5"), rated.rows.last.fees
+  end
+
   # Both balance calculators book an investment account's market movement on
   # a valuation day as on any other, so a commission there is in `market`,
   # not in the revaluation, and moving it to `fees` leaves a flat price flat.
