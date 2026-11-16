@@ -4,6 +4,16 @@ en:
     show:
       title: Plan
       subtitle: Decide where your money goes — what you spend, and what you save.
+    bills_card:
+      nothing_owed: "Nothing left to pay this month."
+      overdue_count:
+        one: "1 overdue"
+        other: "%{count} overdue"
+      owed_count:
+        one: "1 bill left to pay this month"
+        other: "%{count} bills left to pay this month"
+      title: Bills
+      view_bills: View bills
     budget_card:
       title: This month
       edit_budget: Edit budget

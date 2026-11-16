@@ -4,6 +4,20 @@ uk:
     show:
       title: План
       subtitle: Вирішуйте, куди йдуть ваші гроші, — що ви витрачаєте і що заощаджуєте.
+    bills_card:
+      nothing_owed: "Цього місяця більше нічого сплачувати."
+      overdue_count:
+        one: "%{count} прострочений"
+        few: "%{count} прострочені"
+        many: "%{count} прострочених"
+        other: "%{count} простроченого"
+      owed_count:
+        one: "%{count} платіж цього місяця"
+        few: "%{count} платежі цього місяця"
+        many: "%{count} платежів цього місяця"
+        other: "%{count} платежу цього місяця"
+      title: Платежі
+      view_bills: Відкрити платежі
     budget_card:
       title: Цей місяць
       edit_budget: Редагувати бюджет

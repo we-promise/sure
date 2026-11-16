@@ -1,6 +1,16 @@
 ---
 fr:
   plans:
+    bills_card:
+      nothing_owed: "Plus rien à payer ce mois-ci."
+      overdue_count:
+        one: "1 en retard"
+        other: "%{count} en retard"
+      owed_count:
+        one: "1 facture à payer ce mois-ci"
+        other: "%{count} factures à payer ce mois-ci"
+      title: Factures
+      view_bills: Voir les factures
     budget_card:
       days_left:
         one: 1 jour restant

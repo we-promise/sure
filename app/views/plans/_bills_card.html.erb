@@ -1,0 +1,26 @@
+<%# locals: (summary:) %>
+
+<%= render DS::Card.new do %>
+  <div class="flex flex-wrap items-center gap-2 mb-4">
+    <span class="w-7 h-7 rounded-lg bg-surface-inset text-secondary flex items-center justify-center shrink-0">
+      <%= icon("receipt", size: "sm") %>
+    </span>
+    <h2 class="text-sm font-medium text-primary shrink-0"><%= t(".title") %></h2>
+    <% if summary[:overdue_count].positive? %>
+      <%= render DS::Pill.new(label: t(".overdue_count", count: summary[:overdue_count]), tone: :warning, marker: false, icon: "alert-triangle") %>
+    <% end %>
+  </div>
+
+  <p class="text-sm text-secondary">
+    <%= summary[:owed_count].positive? ? t(".owed_count", count: summary[:owed_count]) : t(".nothing_owed") %>
+  </p>
+  <%= render DS::Link.new(
+    text: t(".view_bills"),
+    variant: "secondary",
+    href: bills_path,
+    icon: "chevron-right",
+    icon_position: :right,
+    full_width: true,
+    class: "mt-5"
+  ) %>
+<% end %>
