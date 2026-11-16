@@ -7,15 +7,15 @@
 #
 # TWO THINGS ARE EASY TO GET WRONG HERE.
 #
-# First, `balances.net_market_flows` is only populated for investment accounts on
-# days WITHOUT a valuation (Balance::BaseCalculator#market_value_change_on_date
-# returns 0 otherwise, and the forward calculator skips it entirely on a
-# valuation day). When a valuation overrides the balance, the whole move lands
-# in cash_adjustments / non_cash_adjustments instead. Reporting only
-# `net_market_flows` as "market" would therefore show a flat zero market return
-# for every manually valued account. Those adjustments are reported here as
-# `revaluations`, and Portfolio::ReturnScope tells the UI which label an account
-# has earned.
+# First, `balances.net_market_flows` is the change in an investment account's
+# HOLDINGS value less its trades (Balance::BaseCalculator#market_value_change_on_date),
+# and zero for every other account type.
+# A valuation sets the balance, and whatever it moves beyond the holdings lands
+# in cash_adjustments / non_cash_adjustments. A manually valued account holds no
+# securities, so its whole move is there and `net_market_flows` is zero every
+# day; reporting only that as "market" would show a flat zero market return for
+# every such account. Those adjustments are reported here as `revaluations`,
+# and Portfolio::ReturnScope tells the UI which label an account has earned.
 #
 # Second, `fx_effect` is MEASURED, not inferred. Portfolio::DailyReturns computes
 # it per day as the closing local balance times that day's rate change, and the
