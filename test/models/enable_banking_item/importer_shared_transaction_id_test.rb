@@ -114,12 +114,13 @@ class EnableBankingItem::ImporterSharedTransactionIdTest < ActiveSupport::TestCa
       }
     end
 
+    # fetch_paginated_transactions returns the rows and whether the fetch was cut short.
     def sync(booked:, pending: nil)
       @importer.stubs(:fetch_paginated_transactions)
-               .with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns(booked)
+               .with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ booked, false ])
       unless pending.nil?
         @importer.stubs(:fetch_paginated_transactions)
-                 .with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns(pending)
+                 .with(@enable_banking_account, has_entries(transaction_status: "PDNG")).returns([ pending, false ])
       end
 
       assert @importer.send(:fetch_and_store_transactions, @enable_banking_account)[:success]
