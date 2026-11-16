@@ -48,27 +48,27 @@ en:
         one: "%{count} <%= class_name %> account had transaction import failures."
         other: "%{count} <%= class_name %> accounts had transaction import failures."
 
-    # Panel (settings view)
-    panel:
-      setup_instructions: "Setup instructions:"
-      step_1: "Visit your <%= class_name.titleize %> dashboard to get your credentials"
-      step_2: "Enter your credentials below and click the Save button"
-      step_3: "After a successful connection, go to the Accounts tab to set up new accounts"
-      field_descriptions: "Field descriptions:"
-      optional: "(Optional)"
-      required: "(required)"
-      optional_with_default: "(optional, defaults to %{default_value})"
-      save_button: "Save Configuration"
-      update_button: "Update Configuration"
-      status_configured_html: "Configured and ready to use. Visit the <a href=\"%{accounts_path}\" class=\"link\">Accounts</a> tab to manage and set up accounts."
-      status_not_configured: "Not configured"
+    # Settings panel (ProviderItem::PanelComponent)
+    provider_panel:
+      add_connection: "Add <%= class_name %> connection"
+      connection_name_label: "Connection name"
+      connection_name_placeholder: "My <%= class_name %> connection"
+      disconnect: "Disconnect"
+      disconnect_confirm: "Disconnect %{name}?"
+      disconnect_label: "Disconnect %{name}"
+      setup_accounts: "Set up accounts"
+      sync: "Sync"
+      update_connection: "Update connection"
+      instructions:
+        step_1: "Visit your <%= class_name.titleize %> dashboard to get your credentials"
+        step_2: "Add them as a named connection below"
+        step_3: "After a successful connection, go to the Accounts tab to set up new accounts"
       fields:
 <% parsed_fields.each do |field| -%>
         <%= field[:name] %>:
           label: "<%= field[:name].titleize %>"
-          description: "Your <%= class_name.titleize %> <%= field[:name].humanize.downcase %>"
           placeholder_new: "Paste <%= field[:name].humanize.downcase %> here"
-          placeholder_update: "Enter new <%= field[:name].humanize.downcase %> to update"
+          placeholder_update: "Leave blank to keep the current <%= field[:name].humanize.downcase %>"
 <% end -%>
 
     # CRUD success messages
@@ -78,13 +78,6 @@ en:
       success: "<%= class_name %> connection updated"
     destroy:
       success: "<%= class_name %> connection removed"
-    index:
-      title: "<%= class_name %> Connections"
-
-    # Loading states
-    loading:
-      loading_message: "Loading <%= class_name %> accounts..."
-      loading_title: "Loading"
 
     # Account linking
     link_accounts:
@@ -106,19 +99,14 @@ en:
         one: "Successfully linked %{count} account"
         other: "Successfully linked %{count} accounts"
 
-    # Provider item display (used in _item partial)
+    # Accounts page card (ProviderItem::CardComponent)
     <%= file_name %>_item:
       accounts_need_setup: "Accounts need setup"
       delete: "Delete connection"
       deletion_in_progress: "deletion in progress..."
       error: "Error"
-      more_accounts_available:
-        one: "%{count} more account available"
-        other: "%{count} more accounts available"
       no_accounts_description: "This connection has no linked accounts yet."
       no_accounts_title: "No accounts"
-      provider_name: "<%= class_name %>"
-      requires_update: "Connection needs update"
       setup_action: "Set Up New Accounts"
       setup_description: "%{linked} of %{total} accounts linked. Choose account types for your newly imported <%= class_name %> accounts."
       setup_needed: "New accounts ready to set up"
@@ -128,14 +116,12 @@ en:
       syncing: "Syncing..."
       total: "Total"
       unlinked: "Unlinked"
-      update_credentials: "Update credentials"
 
-    # Select accounts view
+    # Account selection dialogs (ProviderItem::AccountSelectionComponent)
     select_accounts:
-      accounts_selected: "accounts selected"
       api_error: "API error: %{message}"
       cancel: "Cancel"
-      configure_name_in_provider: "Cannot import - please configure account name in <%= class_name %>"
+      configure_name_in_<%= file_name %>: "Cannot import - please configure account name in <%= class_name %>"
       description: "Select the accounts you want to link to your %{product_name} account."
       link_accounts: "Link selected accounts"
       no_accounts_found: "No accounts found. Please check your API key configuration."
@@ -145,31 +131,20 @@ en:
       select_connection: "Choose a <%= class_name %> connection in Provider Settings."
       title: "Select <%= class_name %> Accounts"
       unexpected_error: "An unexpected error occurred. Please try again later."
-
-    # Select existing account view
     select_existing_account:
       account_already_linked: "This account is already linked to a provider"
       all_accounts_already_linked: "All <%= class_name %> accounts are already linked"
       api_error: "API error: %{message}"
-      balance_label: "Balance:"
       cancel: "Cancel"
-      cancel_button: "Cancel"
-      configure_name_in_provider: "Cannot import - please configure account name in <%= class_name %>"
-      connect_hint: "Connect a <%= class_name %> account to enable automatic syncing."
+      configure_name_in_<%= file_name %>: "Cannot import - please configure account name in <%= class_name %>"
       description: "Select a <%= class_name %> account to link with this account. Transactions will be synced and deduplicated automatically."
-      header: "Link with <%= class_name %>"
       link_account: "Link account"
-      link_button: "Link this account"
-      linking_to: "Linking to:"
       no_account_specified: "No account specified"
-      no_accounts: "No unlinked <%= class_name %> accounts found."
       no_accounts_found: "No <%= class_name %> accounts found. Please check your API key configuration."
       no_api_token: "<%= class_name %> API key is not configured. Please configure it in Settings."
       no_credentials_configured: "Please configure your <%= class_name %> credentials first in Provider Settings."
       no_name_placeholder: "(No name)"
       select_connection: "Choose a <%= class_name %> connection in Provider Settings."
-      settings_link: "Go to Provider Settings"
-      subtitle: "Choose a <%= class_name %> account"
       title: "Link %{account_name} with <%= class_name %>"
       unexpected_error: "An unexpected error occurred. Please try again later."
 
@@ -186,22 +161,44 @@ en:
       select_connection: "Choose a <%= class_name %> connection before linking accounts."
       success: "Successfully linked %{account_name} with <%= class_name %>"
 
-    # Setup accounts wizard
+    # Dialog when listing accounts fails (ProviderItem::ApiErrorComponent)
+    api_error:
+      title: "<%= class_name %> Connection Error"
+      heading: "Unable to connect to <%= class_name %>"
+      common_issues: "Common issues:"
+      invalid_token_label: "Invalid credentials:"
+      invalid_token: "Check your credentials in Provider Settings."
+      expired_credentials_label: "Expired credentials:"
+      expired_credentials: "Generate new credentials in <%= class_name %>."
+      permissions_label: "Missing permissions:"
+      permissions: "Make sure the credentials can read accounts and transactions."
+      network_label: "Network issue:"
+      network: "Check your connection and try again."
+      service_label: "Service issue:"
+      service: "<%= class_name %>'s API may be temporarily unavailable."
+      settings_link: "Check Provider Settings"
+
+    # Dialog when no connection has credentials (ProviderItem::SetupRequiredComponent)
+    setup_required:
+      title: "<%= class_name %> Setup Required"
+      heading: "Credentials not configured"
+      description: "Add a <%= class_name %> connection before linking <%= class_name %> accounts."
+      setup_steps: "Setup steps:"
+      steps:
+        open_settings_html: "Go to <strong>Settings → Providers</strong>"
+        find_section_html: "Find the <strong><%= class_name.titleize %></strong> section"
+        enter_token: "Add a connection with your <%= class_name %> credentials"
+        return_to_link: "Return here to link your accounts"
+      settings_link: "Go to Provider Settings"
+
+    # Setup page (ProviderItem::AccountSetupComponent)
     setup_accounts:
       account_type_label: "Account Type:"
-      accounts_count:
-        one: "%{count} account available"
-        other: "%{count} accounts available"
       all_accounts_linked: "All your <%= class_name %> accounts have already been set up."
       api_error: "API error: %{message}"
-      creating: "Creating accounts..."
       fetch_failed: "Failed to Fetch Accounts"
-      import_selected: "Import selected accounts"
-      instructions: "Select the accounts you want to import from <%= class_name %>. You can choose multiple accounts."
-      no_accounts: "No unlinked accounts found from this <%= class_name %> connection."
       no_accounts_to_setup: "No Accounts to Set Up"
       no_api_token: "<%= class_name %> API key is not configured. Please check your connection settings."
-      select_all: "Select all"
       account_types:
         skip: "Skip this account"
 <% if banking_provider? -%>
@@ -260,16 +257,17 @@ en:
           student: "Student Loan"
           auto: "Auto Loan"
           other: "Other Loan"
-      balance: "Balance"
       cancel: "Cancel"
       choose_account_type: "Choose the correct account type for each <%= class_name %> account:"
       create_accounts: "Create Accounts"
       creating_accounts: "Creating Accounts..."
-      historical_data_range: "Historical Data Range:"
       subtitle: "Choose the correct account types for your imported accounts"
-      sync_start_date_help: "Select how far back you want to sync transaction history."
-      sync_start_date_label: "Start syncing transactions from:"
       title: "Set Up Your <%= class_name %> Accounts"
+
+    subtype_select:
+      placeholder:
+        subtype: "Select subtype"
+        type: "Select type"
 
     # Complete account setup
     complete_account_setup:
