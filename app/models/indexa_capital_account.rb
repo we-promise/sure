@@ -92,6 +92,8 @@ class IndexaCapitalAccount < ApplicationRecord
     )
   end
 
+  writes_unless_ignored :upsert_from_indexa_capital!, :upsert_holdings_snapshot!, :upsert_activities_snapshot!
+
   private
 
     def ignored_snapshot_reset

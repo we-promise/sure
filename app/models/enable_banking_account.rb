@@ -146,6 +146,8 @@ class EnableBankingAccount < ApplicationRecord
     save!
   end
 
+  writes_unless_ignored :upsert_enable_banking_snapshot!, :upsert_enable_banking_transactions_snapshot!
+
   private
 
     def ignored_snapshot_reset

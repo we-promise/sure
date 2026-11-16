@@ -183,4 +183,14 @@ class EnableBankingAccountTest < ActiveSupport::TestCase
     @account.ignore!
     assert_empty @item.enable_banking_accounts.needs_setup
   end
+
+  test "snapshot writers skip an account ignored after it was loaded" do
+    stale = EnableBankingAccount.find(@account.id)
+    @account.ignore!
+
+    assert_no_changes -> { @account.reload.attributes } do
+      assert_not stale.upsert_enable_banking_snapshot!(uid: "uid_1", identification_hash: "hash_abc123", name: "Renamed", currency: "EUR")
+      assert_not stale.upsert_enable_banking_transactions_snapshot!([ { "transaction_id" => "t1" } ])
+    end
+  end
 end

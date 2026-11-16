@@ -90,7 +90,7 @@ class IndexaCapitalItem::Importer
       indexa_capital_account = indexa_capital_item.indexa_capital_accounts.find_or_initialize_by(
         indexa_capital_account_id: account_number
       )
-      # Skip the balance call for an ignored account; write_unless_ignored below
+      # Skip the balance call for an ignored account; the guarded upsert below
       # covers one ignored while the call is in flight.
       return if indexa_capital_account.ignored?
 
@@ -103,7 +103,7 @@ class IndexaCapitalItem::Importer
         Rails.logger.warn "IndexaCapitalItem::Importer - Failed to fetch balance for #{account_number}: #{e.message}"
       end
 
-      return unless indexa_capital_account.write_unless_ignored { indexa_capital_account.upsert_from_indexa_capital!(account_data) }
+      return unless indexa_capital_account.upsert_from_indexa_capital!(account_data)
 
       stats["accounts_imported"] = stats.fetch("accounts_imported", 0) + 1
     end
@@ -128,9 +128,8 @@ class IndexaCapitalItem::Importer
           holdings_array = positions_from_portfolio(portfolio_data)
         end
 
-        if holdings_array.any?
-          holdings_hashes = holdings_array.map { |h| sdk_object_to_hash(h) }
-          indexa_capital_account.upsert_holdings_snapshot!(holdings_hashes)
+        # Skipped when the account was unlinked and ignored during the fetch.
+        if holdings_array.any? && indexa_capital_account.upsert_holdings_snapshot!(holdings_array.map { |h| sdk_object_to_hash(h) })
           stats["holdings_found"] = stats.fetch("holdings_found", 0) + holdings_array.size
         end
       rescue => e

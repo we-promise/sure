@@ -45,4 +45,52 @@ class EnableBankingItem::ImporterIgnoredTest < ActiveSupport::TestCase
 
     importer.import
   end
+
+  test "an account unlinked and ignored while its transactions are being fetched is not written back" do
+    mine = linked_account("hash_mine")
+    skip_mine = -> { unlink_and_ignore(mine) }
+    @importer.stubs(:include_pending?).returns(false)
+    @importer.define_singleton_method(:fetch_paginated_transactions) do |*, **|
+      skip_mine.call
+      [ { transaction_id: "tx1", booking_date: Date.current.to_s, transaction_amount: { amount: "15.00", currency: "EUR" }, credit_debit_indicator: "DBIT" } ]
+    end
+
+    @importer.send(:fetch_and_store_transactions, mine)
+
+    mine.reload
+    assert mine.ignored?
+    assert_nil mine.raw_transactions_payload
+  end
+
+  test "an account unlinked and ignored while its balance is being fetched is not written back" do
+    mine = linked_account("hash_mine")
+    skip_mine = -> { unlink_and_ignore(mine) }
+    provider = Object.new
+    provider.define_singleton_method(:get_account_balances) do |**|
+      skip_mine.call
+      { balances: [ { balance_type: "ITBD", balance_amount: { amount: "50.00", currency: "EUR" }, credit_debit_indicator: "CRDT" } ] }
+    end
+    importer = EnableBankingItem::Importer.new(@item, enable_banking_provider: provider)
+
+    importer.send(:fetch_and_update_balance, mine)
+
+    mine.reload
+    assert mine.ignored?
+    assert_nil mine.current_balance
+  end
+
+  private
+
+    def linked_account(uid)
+      enable_banking_account = @item.enable_banking_accounts.create!(name: "Mine", uid: uid, account_id: "uid-mine", currency: "EUR", current_balance: 10)
+      account = Account.create!(family: @item.family, name: "Mine", balance: 10, currency: "EUR", accountable: Depository.new)
+      AccountProvider.create!(account: account, provider: enable_banking_account)
+      enable_banking_account
+    end
+
+    # What another request does while a sync is fetching this account.
+    def unlink_and_ignore(enable_banking_account)
+      AccountProvider.find_by(provider: enable_banking_account)&.destroy!
+      EnableBankingAccount.find(enable_banking_account.id).ignore!
+    end
 end

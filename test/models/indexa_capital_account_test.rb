@@ -177,4 +177,15 @@ class IndexaCapitalAccountTest < ActiveSupport::TestCase
     assert_not @account.ignore!
     assert_not @account.reload.ignored?
   end
+
+  test "snapshot writers skip an account ignored after it was loaded" do
+    stale = IndexaCapitalAccount.find(@account.id)
+    @account.ignore!
+
+    assert_no_changes -> { @account.reload.attributes } do
+      assert_not stale.upsert_from_indexa_capital!(account_number: "LPYH3MCQ", name: "Renamed", current_balance: 1)
+      assert_not stale.upsert_holdings_snapshot!([ { "titles" => 1 } ])
+      assert_not stale.upsert_activities_snapshot!([ { "id" => "a1" } ])
+    end
+  end
 end
