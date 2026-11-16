@@ -23,6 +23,13 @@ class EnableBankingEntry::Processor
   # 2-letter FamilyMerchant name matching inside unrelated text, like "IT" would
   # inside "NAME IT" -- a real chain name observed in this issue's own data).
   MIN_KNOWN_MERCHANT_MATCH_LENGTH = 3
+  # A remittance line that is only a labelled reference ("Reference 0394676",
+  # "Faktura nr 12345", "OCR: 4711"), which names no payee.
+  REFERENCE_LINE = /\A(?:ref(?:erence|erens)?|invoice|faktura|ocr)\b\.?\s*(?:no\.?|nr\.?|number)?\s*[:#]?\s*(?=[^\s]*\d)[\w\/-]+\z/i
+  # A masked card number written with spaces ("474836 XXXXXX 6879"), whose mask
+  # characters would otherwise pass as letters. Kept local so card-hold
+  # detection, which uses the contiguous form, is unaffected.
+  SPACED_MASKED_CARD = /\A\d{4,6}\s+[x*]{4,8}\s+\d{4}\z/i
 
   # Prefix of the identifier synthesised for a transaction the ASPSP returned
   # with neither transaction_id nor entry_reference.
@@ -268,7 +275,8 @@ class EnableBankingEntry::Processor
         source: "enable_banking",
         merchant: merchant,
         notes: notes,
-        extra: extra
+        extra: extra,
+        investment_activity_label: investment_activity_label
       )
     rescue ArgumentError => e
       Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{safe_id}: #{e.message}"
@@ -313,7 +321,9 @@ class EnableBankingEntry::Processor
       return HOLD_TRANSACTION_NAME if unidentified_hold?
 
       # Build name from available Enable Banking transaction fields
-      # Priority: counterparty name > bank_transaction_code description > remittance_information
+      # Priority: counterparty name > descriptive remittance (combined with the
+      # bank_transaction_code description) > bank_transaction_code description >
+      # any remittance_information
 
       counterparty = counterparty_name
       return counterparty if counterparty.present? && !technical_card_counterparty?(counterparty)
@@ -325,9 +335,22 @@ class EnableBankingEntry::Processor
         return remittance.truncate(100) if remittance.present?
       end
 
+      # The bank_transaction_code description is the transaction *type* (SEB sends
+      # "Card purchase", "Direct debit", "Payment" with no counterparty), so the
+      # payee is only in the remittance. Combine the two, as the other providers
+      # do, so rows of different types to the same payee keep distinct names.
+      bank_tx_description = data.dig(:bank_transaction_code, :description).presence
+      payee = descriptive_remittance_name
+      if payee
+        payee = payee.truncate(100)
+        return payee if bank_tx_description.nil? || payee.casecmp?(bank_tx_description)
+
+        @combined_name = true
+        return "#{payee} - #{bank_tx_description}"
+      end
+
       # Fall back to bank_transaction_code description
-      bank_tx_description = data.dig(:bank_transaction_code, :description)
-      return bank_tx_description if bank_tx_description.present?
+      return bank_tx_description if bank_tx_description
 
       # Fall back to remittance_information
       remittance = primary_remittance_information
@@ -357,6 +380,28 @@ class EnableBankingEntry::Processor
         Rails.logger.error "EnableBankingEntry::Processor - Failed to create merchant '#{merchant_name}': #{e.message}"
         nil
       end
+    end
+
+    # The adapter detects an investment account's activity label ("Dividend",
+    # "Interest", "Fee") from the start of the name. A combined
+    # "payee - description" name starts with the payee instead, so the label is
+    # detected from the bank description, and "" stops the adapter from reading
+    # one out of a payee such as "Dividend Growth Fund". nil leaves the adapter's
+    # name-based detection in place for every other name.
+    def investment_activity_label
+      return unless account.investment?
+
+      label = import_adapter.detect_activity_label(data.dig(:bank_transaction_code, :description), amount)
+      return label if label
+
+      "" if combined_name?
+    end
+
+    # True when #name is "payee - description", which #name records as it
+    # builds it.
+    def combined_name?
+      name
+      @combined_name == true
     end
 
     def notes
@@ -450,7 +495,12 @@ class EnableBankingEntry::Processor
       descriptive = lines.find { |line| !technical_remittance_line?(line) } || lines.first
       return descriptive if descriptive.blank?
 
-      matched_known_merchant_name(descriptive) || strip_payment_processor_prefix(descriptive)
+      cleaned = strip_payment_processor_prefix(descriptive)
+      # Keep a holder-only remittance whole, so a known merchant matching part
+      # of the name ("Jane" in "Jane Doe") is not picked out of it.
+      return cleaned if account_holder_name?(cleaned)
+
+      matched_known_merchant_name(descriptive) || cleaned
     end
 
     # The remittance lines describing who was paid, one per element, with any
@@ -474,6 +524,34 @@ class EnableBankingEntry::Processor
       self.class.technical_remittance_line?(value)
     end
 
+    # The first remittance line that names the payee, cleaned and matched to a
+    # known merchant the same way as primary_remittance_information.
+    # A known merchant is trusted before the letter-count heuristic, so short
+    # names such as "H&M" are kept.
+    def descriptive_remittance_name
+      remittance_information_lines.each do |value|
+        line = strip_payment_processor_prefix(value)
+        next if technical_remittance_line?(line) || masked_card_text?(line) || account_holder_name?(line)
+
+        known_merchant = matched_known_merchant_name(line)
+        return known_merchant if known_merchant
+        return line if descriptive_remittance?(line)
+      end
+
+      nil
+    end
+
+    # Remittance text that reads as a name rather than a reference such as
+    # "52220151204 092408560500" (fewer than three letters) or "Reference
+    # 0394676", or a spaced masked card number. Technical lines, contiguous
+    # masked card numbers and the account holder are already skipped by
+    # descriptive_remittance_name.
+    def descriptive_remittance?(value)
+      !value.match?(REFERENCE_LINE) &&
+        !value.match?(SPACED_MASKED_CARD) &&
+        value.scan(/\p{L}/).size >= 3
+    end
+
     def strip_payment_processor_prefix(value)
       return value if value.blank?
       value.sub(PAYMENT_PROCESSOR_PREFIX, "").strip.presence || value
@@ -486,7 +564,9 @@ class EnableBankingEntry::Processor
     # so e.g. "BILLA DANKT 0007114" resolves to "Billa", not "BILLA". Longest match
     # wins when multiple known names match (prefer the more specific one).
     def matched_known_merchant_name(line)
-      candidates = known_merchant_names.select { |name| name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH }
+      candidates = known_merchant_names.select do |name|
+        name.length >= MIN_KNOWN_MERCHANT_MATCH_LENGTH && !account_holder_name?(name)
+      end
       # Lookaround instead of \b at both ends: \b only fires on a word/non-word
       # transition, so it silently fails to match right after a name that itself
       # ends in punctuation (e.g. "A+B (Café)" ends in ")" -- a non-word char next
@@ -501,6 +581,28 @@ class EnableBankingEntry::Processor
 
     def known_merchant_names
       @known_merchant_names ||= account&.family&.known_merchant_names || []
+    end
+
+    # Some banks end a card payment's remittance with the cardholder's name, and
+    # a transfer between the holder's own accounts can make that name a known
+    # merchant. The holder is never the payee, so their name is not matched.
+    def account_holder_name?(name)
+      account_holder_names.any? { |holder| holder.casecmp?(name) }
+    end
+
+    # The account holder as Enable Banking names the account, plus this
+    # transaction's own side: the debtor of a payment, the creditor of a credit.
+    def account_holder_names
+      @account_holder_names ||= begin
+        payload = enable_banking_account.raw_payload
+        own_side = credit_debit_indicator == "CRDT" ? :creditor : :debtor
+
+        [
+          payload.is_a?(Hash) ? (payload["name"] || payload[:name]) : nil,
+          self.class.party_name(data, own_side),
+          data[:"#{own_side}_name"]
+        ].filter_map { |value| value.to_s.strip.presence }
+      end
     end
 
     def identifierless_external_ids
@@ -604,6 +706,8 @@ class EnableBankingEntry::Processor
 
       remittance = primary_remittance_information
       return nil if remittance.blank?
+      # The remittance may be nothing but the holder's name, which never names the payee.
+      return nil if account_holder_name?(remittance)
 
       # Trust remittance-derived text as a merchant candidate when either the
       # counterparty was a technical CARD-* placeholder (existing Wise case), or

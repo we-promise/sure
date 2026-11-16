@@ -4,6 +4,7 @@ fr:
     api_keys:
       create:
         success: Votre clé API a été créée avec succès
+        creation_failed: "Impossible de créer votre clé API. Veuillez réessayer."
       created:
         continue: Continuer vers les paramètres de la clé API
         copy_key: Copier la clé API

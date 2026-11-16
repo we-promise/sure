@@ -593,6 +593,20 @@ class FamilyTest < ActiveSupport::TestCase
     assert family.valid?
   end
 
+  test "stores an empty timezone from the settings form as nil" do
+    family = families(:dylan_family)
+    family.update!(timezone: "")
+
+    assert_nil family.reload.timezone
+  end
+
+  test "stores a Rails zone name as its IANA identifier" do
+    family = families(:dylan_family)
+    family.update!(timezone: " Pacific Time (US & Canada) ")
+
+    assert_equal "America/Los_Angeles", family.reload.timezone
+  end
+
   test "does not re-validate an existing invalid timezone when saving unrelated changes" do
     family = families(:dylan_family)
     # Bypasses validations, simulating data that predates this validation --
@@ -604,6 +618,39 @@ class FamilyTest < ActiveSupport::TestCase
 
     assert family.valid?, "an unrelated change must not be blocked by a pre-existing bad timezone"
     assert family.save
+  end
+
+  test "resolved_time_zone returns the family's zone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, "America/New_York")
+
+    assert_equal "America/New_York", family.resolved_time_zone.name
+  end
+
+  test "resolved_time_zone falls back to the app default and logs once for a stale/invalid zone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, "Invalid/Timezone")
+
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    assert_difference "DebugLogEntry.count", 1 do
+      2.times { assert_equal Time.zone, family.resolved_time_zone }
+    end
+
+    entry = DebugLogEntry.order(:created_at).last
+    assert_equal "warn", entry.level
+    assert_includes entry.message, "Invalid/Timezone"
+    assert_equal family, entry.family
+  ensure
+    Rails.cache = original_cache
+  end
+
+  test "resolved_time_zone falls back to the app default for a blank timezone" do
+    family = families(:dylan_family)
+    family.update_column(:timezone, nil)
+
+    assert_equal Time.zone, family.resolved_time_zone
   end
 
   test "balance_sheet memoizes per user for the same family instance" do
@@ -685,20 +732,22 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "categorization_model_name names the Jev model when Jev will categorize" do
+  test "the categorize plan names the Jev model when Jev will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Jev.allocate)
-    Provider::Jev.stubs(:effective_model).returns("~typesafe/jev-latest")
+    family.update!(categorization_provider: "jev")
 
-    assert_equal "~typesafe/jev-latest", family.categorization_model_name
+    with_env_overrides("JEV_API_KEY" => "test_api_key", "JEV_MODEL" => "~typesafe/jev-latest", "OPENAI_ACCESS_TOKEN" => "sk-test") do
+      assert_equal "~typesafe/jev-latest", Ai.plan(:categorize, family:).model.name
+      assert_equal family.resolved_categorization_provider.class, Provider::Jev
+    end
   end
 
-  test "categorization_model_name names the Anthropic model when Anthropic will categorize" do
+  test "the categorize plan names the Anthropic model when Anthropic will categorize" do
     family = families(:dylan_family)
-    family.stubs(:resolved_categorization_provider).returns(Provider::Anthropic.allocate)
-    Provider::Anthropic.stubs(:effective_model).returns("claude-sonnet-test")
 
-    assert_equal "claude-sonnet-test", family.categorization_model_name
+    with_env_overrides("ANTHROPIC_API_KEY" => "test-key", "ANTHROPIC_MODEL" => "claude-sonnet-test", "LLM_PROVIDER" => "anthropic") do
+      assert_equal "claude-sonnet-test", Ai.plan(:categorize, family:).model.name
+    end
   end
 
   test "resolved_categorization_provider falls back to the LLM provider when the endpoint is rejected" do
@@ -724,14 +773,13 @@ class FamilyTest < ActiveSupport::TestCase
     end
   end
 
-  test "categorization_model_name does not write diagnostics from view-time callers" do
+  test "the categorize plan leaves out a rejected Jev endpoint and writes no diagnostics" do
     family = families(:dylan_family)
     family.update!(categorization_provider: "jev")
-    Provider::Registry.stubs(:preferred_llm_provider).returns(nil)
 
     assert_no_difference "DebugLogEntry.count" do
       with_env_overrides(REJECTED_JEV_ENV) do
-        assert_nil family.categorization_model_name
+        assert_nil Ai.plan(:categorize, family:)
       end
     end
   end
@@ -766,6 +814,81 @@ class FamilyTest < ActiveSupport::TestCase
     Provider::Registry.stubs(:get_provider).with(:jev).raises(ArgumentError, "boom")
 
     assert_raises(ArgumentError) { family.resolved_categorization_provider }
+  end
+
+  # The currencies whose amounts every converted total leaves out (#3640).
+  test "currencies_without_exchange_rate names used currencies with no rate on any date" do
+    family = families(:empty)
+    family.accounts.create!(name: "JPY", balance: 1, currency: "JPY", accountable: Depository.new)
+    family.accounts.create!(name: "KRW", balance: 1, currency: "KRW", accountable: Depository.new)
+    family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 400.days.ago.to_date, rate: 0.009)
+
+    assert_equal %w[KRW], family.currencies_without_exchange_rate
+  end
+
+  test "stale_exchange_rate_dates names used currencies whose newest rate is out of date" do
+    family = families(:empty)
+    family.accounts.create!(name: "JPY", balance: 1, currency: "JPY", accountable: Depository.new)
+    family.accounts.create!(name: "CAD", balance: 1, currency: "CAD", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+    ExchangeRate.create!(from_currency: "CAD", to_currency: family.currency, date: Date.current, rate: 0.73)
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
+  end
+
+  # The stale note says today's totals use the old rate, so it names only
+  # currencies today's totals convert: account balances and current holdings.
+  # A trip's yen spending from long ago still has an old newest rate, but
+  # nothing converts it today.
+  test "stale_exchange_rate_dates ignores a currency only old entries use" do
+    family = families(:empty)
+    home = family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    home.entries.create!(name: "Tokyo dinner", date: 400.days.ago.to_date, amount: 5_000, currency: "JPY",
+                         entryable: Transaction.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 400.days.ago.to_date, rate: 0.0067)
+
+    assert_empty family.stale_exchange_rate_dates
+  end
+
+  test "stale_exchange_rate_dates names the currency of a current holding" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "JPH#{SecureRandom.hex(2)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 1, price: 1_000, amount: 1_000, currency: "JPY")
+    ExchangeRate.create!(from_currency: "JPY", to_currency: family.currency, date: 30.days.ago.to_date, rate: 0.0067)
+
+    assert_equal({ "JPY" => 30.days.ago.to_date }, family.stale_exchange_rate_dates)
+  end
+
+  # A trade can be priced in a currency neither its entry nor its account
+  # uses, and holding cost converts that currency.
+  test "currencies_without_exchange_rate includes currencies only a trade uses" do
+    family = families(:empty)
+    account = family.accounts.create!(name: "Brokerage", balance: 1, currency: family.currency, accountable: Investment.new)
+    security = Security.create!(ticker: "SEK#{SecureRandom.hex(2)}", name: "Stockholm Listed")
+    account.entries.create!(name: "Buy", date: Date.current, amount: 100, currency: family.currency,
+                            entryable: Trade.new(security: security, qty: 1, price: 1000, currency: "SEK"))
+
+    assert_equal %w[SEK], family.currencies_without_exchange_rate
+  end
+
+  test "a disabled account's currency is not named" do
+    family = families(:empty)
+    family.accounts.create!(name: "Old KRW", balance: 1, currency: "KRW", accountable: Depository.new, status: "disabled")
+
+    assert_empty family.currencies_without_exchange_rate
+  end
+
+  # The pages pass the viewer's accounts, so a member is not told about an
+  # account they cannot see, and the note matches the totals they get.
+  test "currencies_without_exchange_rate names only the given accounts' currencies" do
+    family = families(:empty)
+    home = family.accounts.create!(name: "Home", balance: 1, currency: family.currency, accountable: Depository.new)
+    family.accounts.create!(name: "KRW", balance: 1, currency: "KRW", accountable: Depository.new)
+
+    assert_equal %w[KRW], family.currencies_without_exchange_rate
+    assert_empty family.currencies_without_exchange_rate(accounts: family.accounts.where(id: home.id))
   end
 
   test "earliest_activity_date ignores valuations, using earliest Transaction/Trade entry" do
