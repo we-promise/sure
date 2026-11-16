@@ -1129,6 +1129,21 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     EnableBankingEntry::Processor.new(data, enable_banking_account: @enable_banking_account).send(:name)
   end
 
+  # An Enable Banking account linked to the investment fixture, for tests of
+  # investment activity labels.
+  def investment_enable_banking_account
+    @investment_enable_banking_account ||= begin
+      enable_banking_account = EnableBankingAccount.create!(
+        enable_banking_item: @enable_banking_item,
+        name: "Depot",
+        uid: "eb_uid_investment",
+        currency: "EUR"
+      )
+      AccountProvider.create!(account: accounts(:investment), provider: enable_banking_account)
+      enable_banking_account
+    end
+  end
+
   test "skips technical card counterparty and falls back to remittance_information" do
     name = build_name(
       credit_debit_indicator: "CRDT",
@@ -1138,6 +1153,207 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     )
 
     assert_equal "ACME SHOP", name
+  end
+
+  test "combines the remittance merchant with a generic transaction type description" do
+    # SEB sends no counterparty for card purchases; the merchant is only in the remittance
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "RACKSTA KROG" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "RACKSTA KROG - Card purchase", name
+  end
+
+  test "keeps payments of different types to the same payee apart" do
+    direct_debit = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Direct debit" }
+    )
+    card_purchase = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "TELIA SVERIGE - Direct debit", direct_debit
+    assert_equal "TELIA SVERIGE - Card purchase", card_purchase
+  end
+
+  test "detects the investment activity label from the transaction type description" do
+    tx = {
+      transaction_id: "txn_dividend",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "12.50", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      remittance_information: [ "ACME CORP" ],
+      bank_transaction_code: { description: "Dividend" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: investment_enable_banking_account).process
+
+    assert_equal "ACME CORP - Dividend", entry.name
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
+  test "does not detect an investment activity label from the payee of a combined name" do
+    tx = {
+      transaction_id: "txn_fund_transfer",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "100.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      remittance_information: [ "Dividend Growth Fund" ],
+      bank_transaction_code: { description: "Credit transfer" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: investment_enable_banking_account).process
+
+    assert_equal "Dividend Growth Fund - Credit transfer", entry.name
+    assert_nil entry.transaction.investment_activity_label
+  end
+
+  test "still detects an investment activity label from a counterparty name" do
+    tx = {
+      transaction_id: "txn_counterparty_dividend",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "8.00", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      debtor: { name: "Dividend payment ACME" },
+      bank_transaction_code: { description: "Credit transfer" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: investment_enable_banking_account).process
+
+    assert_equal "Dividend payment ACME", entry.name
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
+  test "does not set an investment activity label on a non-investment account" do
+    tx = {
+      transaction_id: "txn_interest",
+      booking_date: Date.current.to_s,
+      transaction_amount: { amount: "3.10", currency: "EUR" },
+      credit_debit_indicator: "CRDT",
+      remittance_information: [ "SAVINGS BANK" ],
+      bank_transaction_code: { description: "Interest" },
+      status: "BOOK"
+    }
+
+    entry = EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
+
+    assert_equal "SAVINGS BANK - Interest", entry.name
+    assert_nil entry.transaction.investment_activity_label
+  end
+
+  test "uses a later remittance line when the first one is only a reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "52220151204", "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Direct debit" }
+    )
+
+    assert_equal "TELIA SVERIGE - Direct debit", name
+  end
+
+  test "keeps the transaction type description when the remittance is a spaced masked card number" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      transaction_id: "txn_spaced_masked_pan",
+      remittance_information: [ "474836 XXXXXX 6879" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "Card purchase", name
+  end
+
+  test "keeps the transaction type description when the remittance is a labelled reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Reference 0394676" ],
+      bank_transaction_code: { description: "Credit transfer" }
+    )
+
+    assert_equal "Credit transfer", name
+  end
+
+  test "skips a labelled reference and uses the payee on a later line" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "Faktura nr 12345", "TELIA SVERIGE" ],
+      bank_transaction_code: { description: "Direct debit" }
+    )
+
+    assert_equal "TELIA SVERIGE - Direct debit", name
+  end
+
+  test "keeps a short known merchant name over a later descriptive line" do
+    @family.merchants.create!(name: "H&M")
+
+    name = build_name_with_family(
+      credit_debit_indicator: "DBIT",
+      creditor: { name: "" },
+      bank_transaction_code: nil,
+      remittance_information: [ "H&M", "LONDON" ]
+    )
+
+    assert_equal "H&M", name
+  end
+
+  test "does not treat a merchant name starting with a reference keyword as a reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "REFILL STATION 2" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "REFILL STATION 2 - Card purchase", name
+  end
+
+  test "uses the descriptive remittance alone when there is no transaction type description" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "RACKSTA KROG" ],
+      bank_transaction_code: { code: "PMNT" }
+    )
+
+    assert_equal "RACKSTA KROG", name
+  end
+
+  test "keeps the transaction type description when the remittance is a masked card number" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      transaction_id: "txn_masked_pan",
+      remittance_information: [ "474836xxxxxx6879" ],
+      bank_transaction_code: { description: "Card purchase" }
+    )
+
+    assert_equal "Card purchase", name
+  end
+
+  test "keeps the transaction type description when the remittance is only a reference" do
+    name = build_name(
+      credit_debit_indicator: "DBIT",
+      remittance_information: [ "52220151204 092408560500" ],
+      bank_transaction_code: { description: "Credit transfer" }
+    )
+
+    assert_equal "Credit transfer", name
+  end
+
+  test "keeps the transaction type description when the remittance is the account holder" do
+    name = build_name_with_family(
+      credit_debit_indicator: "CRDT",
+      creditor: { name: "JANE DOE" },
+      remittance_information: [ "Jane Doe" ],
+      bank_transaction_code: { description: "Transfer" }
+    )
+
+    assert_equal "Transfer", name
   end
 
   test "uses counterparty when it is human readable" do
