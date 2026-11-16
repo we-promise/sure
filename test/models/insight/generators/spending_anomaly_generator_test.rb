@@ -186,6 +186,37 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
     end
   end
 
+  # The feed is the whole family's, so only the household budget may hold
+  # back an anomaly: one member's personal envelope says nothing about what
+  # the others spent.
+  test "ignores a personal budget's rollover envelope" do
+    @anchor_day = 15
+    budget_line(user: users(:family_admin), rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 900)
+
+    travel_to anchor do
+      baseline_months.each { |month| spend(month, 100) }
+      spend(current_month, 600, day: 5)
+
+      assert_equal [ "above" ], generate.map { |insight| insight.metadata[:direction] }
+    end
+  end
+
+  # The carry often sits on a ring-fenced subcategory (Insurance under Home)
+  # while the parent has none. Spending from that envelope is still planned.
+  test "does not flag spending from a subcategory's rollover envelope" do
+    @anchor_day = 15
+    insurance = @family.categories.create!(name: "Pace Test Insurance", parent: @category)
+    budget_line(budgeted_spending: 200)
+    budget_line(category: insurance, rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 900)
+
+    travel_to anchor do
+      baseline_months.each { |month| spend(month, 100) }
+      create_transaction(category: insurance, amount: 600, date: current_month.change(day: 5), name: "Insurance premium")
+
+      assert_empty generate
+    end
+  end
+
   test "flags a rollover category that has outspent its envelope" do
     @anchor_day = 15
     budget_line(rollover_enabled: true, budgeted_spending: 100, rolled_over_amount: 400)
@@ -240,11 +271,12 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
       ActiveRecord::Base.uncached { capture_sql_queries(&block).size }
     end
 
-    def budget_line(**attributes)
-      budget = @family.budgets.create!(
-        start_date: current_month, end_date: current_month.end_of_month,
-        budgeted_spending: 2_000, expected_income: 3_000, currency: "USD"
-      )
-      budget.budget_categories.create!(category: @category, currency: "USD", **attributes)
+    def budget_line(category: @category, user: nil, **attributes)
+      budget = @family.budgets.find_or_create_by!(start_date: current_month, end_date: current_month.end_of_month, user: user) do |b|
+        b.budgeted_spending = 2_000
+        b.expected_income = 3_000
+        b.currency = "USD"
+      end
+      budget.budget_categories.create!(category: category, currency: "USD", **attributes)
     end
 end

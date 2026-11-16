@@ -52,10 +52,13 @@ class Insight::Generator
       @balance_sheet ||= BalanceSheet.new(family)
     end
 
+    # The household budget: the feed is shared by the whole family, so one
+    # member's personal budget can't speak for it.
     def current_budget
       return @current_budget if defined?(@current_budget)
 
       @current_budget = family.budgets
+        .where(user_id: nil)
         .includes(budget_categories: :category)
         .where("start_date <= ? AND end_date >= ?", Date.current, Date.current)
         .first

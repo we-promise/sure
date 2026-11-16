@@ -124,8 +124,9 @@ module EntriesTestHelper
   end
 
   # The entry that pays `bill` on `date`, and the paid occurrence it settles.
-  def pay_bill(bill, date:, amount: bill.amount)
-    entry = create_transaction(category: bill.category, account: bill.account, amount: amount, date: date, name: "#{bill.name} #{date}")
+  # The entry takes the bill's category unless `category:` says otherwise.
+  def pay_bill(bill, date:, amount: bill.amount, category: bill.category)
+    entry = create_transaction(category: category, account: bill.account, amount: amount, date: date, name: "#{bill.name} #{date}")
     occurrence = bill.recurring_occurrences.create!(
       family: bill.family, original_due_on: date, due_on: date, currency: bill.currency,
       expected_amount: amount, status: "paid", closed_at: Time.current, closed_source: "auto"

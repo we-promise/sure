@@ -26,9 +26,10 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
 
     direction = delta.positive? ? "up" : "down"
 
-    # "You saved -5.4% of your income" is machine-speak; a negative rate means
-    # the family spent more than it earned, and the copy should say so.
-    template_key = if direction == "down" && current_rate.negative?
+    # "You saved -5.4% of your income" is machine-speak: when the family spent
+    # more than it earned, the copy says so. Decided on the window's actual
+    # totals, since the median-based rate can be negative after a bonus month.
+    template_key = if direction == "down" && current_rate.negative? && spent_more_than_earned?(window_start)
       "savings_rate_change.down_negative"
     else
       "savings_rate_change.#{direction}"
@@ -41,8 +42,8 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
         title: I18n.t("insights.titles.savings_rate_change.#{direction}"),
         template_key: template_key,
         facts: {
-          from_month: I18n.l(window.start_date, format: "%B"),
-          to_month: I18n.l(last_month.start_date, format: "%B"),
+          from_month: window_bound(window.start_date, window.start_date),
+          to_month: window_bound(last_month.start_date, window.end_date),
           current_rate: signed_number(round(current_rate, 1)),
           previous_rate: signed_number(round(previous_rate, 1)),
           change_pp: round(delta.abs, 1)
@@ -63,16 +64,39 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
   private
     # The rate of the window of WINDOW_MONTHS months starting on `start_date`.
     def savings_rate(start_date)
+      incomes, expense = window_totals(start_date)
+      income = incomes.sort[WINDOW_MONTHS / 2] * WINDOW_MONTHS # the median: WINDOW_MONTHS is odd
+      return nil if income <= 0
+
+      (income - expense) / income * 100
+    end
+
+    def spent_more_than_earned?(start_date)
+      incomes, expense = window_totals(start_date)
+      expense > incomes.sum
+    end
+
+    # [each month's income, the window's summed spending].
+    def window_totals(start_date)
       months = Array.new(WINDOW_MONTHS) do |i|
         month_start = start_date + i.months
         Period.custom(start_date: month_start, end_date: month_start + 1.month - 1.day)
       end
 
-      incomes = months.map { |month| income_statement.income_totals(period: month).total.to_d }
-      income = incomes.sort[WINDOW_MONTHS / 2] * WINDOW_MONTHS # the median: WINDOW_MONTHS is odd
-      return nil if income <= 0
+      [
+        months.map { |month| income_statement.income_totals(period: month).total.to_d },
+        months.sum { |month| income_statement.expense_totals(period: month).total.to_d }
+      ]
+    end
 
-      expense = months.sum { |month| income_statement.expense_totals(period: month).total.to_d }
-      (income - expense) / income * 100
+    # Month names for calendar months; for months that start on another day
+    # (a custom month start) the window's dates, which month names would
+    # misreport.
+    def window_bound(month_start, date)
+      if month_start == month_start.beginning_of_month
+        I18n.l(month_start, format: "%B")
+      else
+        I18n.l(date, format: :short)
+      end
     end
 end

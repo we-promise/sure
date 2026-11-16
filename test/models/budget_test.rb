@@ -266,6 +266,24 @@ class BudgetTest < ActiveSupport::TestCase
     end
   end
 
+  # Uncategorized spending is part of actual_spending, so a bill paid from
+  # an uncategorized entry is part of the bills too.
+  test "near_limit? counts uncategorized bill payments as bills" do
+    today = (Date.current - 3.months).change(day: 15)
+    category = @family.categories.create!(name: "Uncategorized bill", color: "#101010", lucide_icon: "circle")
+    account = @family.accounts.create!(name: "Checking", currency: "USD", balance: 0, accountable: Depository.new)
+    budget = @family.budgets.create!(start_date: today.beginning_of_month, end_date: today.end_of_month,
+                                     budgeted_spending: 1_000, expected_income: 2_000, currency: "USD")
+
+    travel_to today do
+      pay_bill(create_bill(category: category, amount: 950, name: "Rent", account: account),
+               date: today.change(day: 3), category: nil)
+
+      assert_operator budget.percent_of_budget_spent, :>=, 90
+      assert_not budget.near_limit?
+    end
+  end
+
   test "to_donut_segments_json only includes top-level budget categories" do
     family = @family
     budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)

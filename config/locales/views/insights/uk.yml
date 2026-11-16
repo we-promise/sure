@@ -103,9 +103,9 @@ uk:
       net_worth_milestone: Ваш чистий капітал перевищив %{milestone} і тепер становить %{net_worth}.
       subscription_audit: "%{name} (%{amount}) не з'являвся з моменту очікуваної дати %{expected_on}. Можливо, його було скасовано, або платіж перенесено."
       savings_rate_change:
-        up: З початку %{from_month} до кінця %{to_month} ви заощадили %{current_rate}% свого доходу, що на %{change_pp} процентних пунктів більше, ніж %{previous_rate}% за попередні три місяці.
-        down: З початку %{from_month} до кінця %{to_month} ви заощадили %{current_rate}% свого доходу, що на %{change_pp} процентних пунктів менше, ніж %{previous_rate}% за попередні три місяці.
-        down_negative: "З початку %{from_month} до кінця %{to_month} ви витратили більше, ніж заробили: ваш рівень заощаджень впав до %{current_rate}% з %{previous_rate}% за попередні три місяці."
+        up: За період %{from_month} — %{to_month} ви заощадили %{current_rate}% свого доходу, що на %{change_pp} процентних пунктів більше, ніж %{previous_rate}% за попередні три місяці.
+        down: За період %{from_month} — %{to_month} ви заощадили %{current_rate}% свого доходу, що на %{change_pp} процентних пунктів менше, ніж %{previous_rate}% за попередні три місяці.
+        down_negative: "За період %{from_month} — %{to_month} ви витратили більше, ніж заробили: ваш рівень заощаджень впав до %{current_rate}% з %{previous_rate}% за попередні три місяці."
       idle_cash: "%{account} містить %{balance} без активності протягом останніх %{idle_days} днів."
       budget_at_risk:
         over: "%{categories} перевищили бюджет цього місяця. Ви використали %{budget_spent_pct}% свого загального бюджету наразі."

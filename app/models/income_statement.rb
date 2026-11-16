@@ -59,7 +59,8 @@ class IncomeStatement
     rows = totals_query(
       transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled)
                                 .in_period(period).where(id: paying_bills),
-      date_range: period.date_range
+      date_range: period.date_range,
+      freshness: bill_allocations_version
     )
     @bill_expense_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
   end
@@ -363,6 +364,19 @@ class IncomeStatement
     # Rates, target currency and whether investing counts as spending can
     # change without touching entries or accounts. Scheduled entries are
     # excluded as of "today", so the key also rolls over daily.
+    # Linking or unlinking a payment doesn't touch its entry, so the bill
+    # totals' cache key also tracks the allocations and series they read.
+    def bill_allocations_version
+      @bill_allocations_version ||= begin
+        count, allocated_at, series_at = RecurringAllocation.to_family_bills(family).pick(
+          Arel.sql("COUNT(*)"),
+          Arel.sql("MAX(recurring_allocations.updated_at)"),
+          Arel.sql("MAX(recurring_transactions.updated_at)")
+        )
+        [ count, allocated_at&.to_f, series_at&.to_f ]
+      end
+    end
+
     def cache_freshness_key
       @cache_freshness_key ||= [
         Date.current,
@@ -374,11 +388,13 @@ class IncomeStatement
       ]
     end
 
-    def totals_query(transactions_scope:, date_range:)
+    # `freshness` adds whatever else the scope reads beyond the entries the
+    # default key already tracks.
+    def totals_query(transactions_scope:, date_range:, freshness: nil)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
+        "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, *freshness
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 

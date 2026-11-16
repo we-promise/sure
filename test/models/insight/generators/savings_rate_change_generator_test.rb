@@ -118,6 +118,39 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
     end
   end
 
+  # A bonus month lifts the window's real income above its spending while
+  # the median-based rate is negative. "You spent more than you earned" would
+  # be false; the plain "down" copy still reports the drop.
+  test "says spending passed income only when the window's totals say so" do
+    travel_to @today do
+      @months.first(3).each { |month| record(month, income: 5_000, spending: 4_000) }
+      record(@months[3], income: 2_000, spending: 4_000)
+      record(@months[4], income: 2_000, spending: 4_000)
+      record(@months[5], income: 12_000, spending: 4_000)
+
+      assert_equal [ "savings_rate_change.down" ], generate.map(&:template_key)
+    end
+  end
+
+  # With months starting on the 15th the window runs from the 15th to the
+  # 14th, which month names alone would misreport.
+  test "names a custom-month window by its dates" do
+    @family.update!(month_start_day: 15)
+    today = (Date.current - 7.months).change(day: 20)
+    window_start = (today.change(day: 15) - 3.months)
+    starts = (0..5).map { |i| window_start - 3.months + i.months }
+
+    travel_to today do
+      starts.first(3).each { |start| record(start, income: 5_000, spending: 4_000) }
+      starts.last(3).each { |start| record(start, income: 5_000, spending: 3_000) }
+
+      facts = generate.sole.facts
+
+      assert_equal I18n.l(window_start, format: :short), facts[:from_month]
+      assert_equal I18n.l(today.change(day: 14), format: :short), facts[:to_month]
+    end
+  end
+
   test "does not report without income in both windows" do
     travel_to @today do
       @months.last(3).each { |month| record(month, income: 5_000, spending: 3_000) }
@@ -139,8 +172,9 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
       Insight::Generators::SavingsRateChangeGenerator.new(@family).generate
     end
 
+    # Pay on the month's first day, spending four days later.
     def record(month, income:, spending:)
-      create_transaction(amount: -income, date: month.change(day: 2), name: "Pay #{month}") if income.positive?
-      create_transaction(amount: spending, date: month.change(day: 5), name: "Spend #{month}")
+      create_transaction(amount: -income, date: month + 1.day, name: "Pay #{month}") if income.positive?
+      create_transaction(amount: spending, date: month + 4.days, name: "Spend #{month}")
     end
 end

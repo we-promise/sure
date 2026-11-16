@@ -1164,6 +1164,27 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 50, bill_totals[@food_category.id]
   end
 
+  # Totals are cached for the day and linking a payment doesn't touch its
+  # entry, so the cache has to notice the allocation itself.
+  test "bill_expense_totals follows payments linked and unlinked the same day" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    bill = groceries_bill
+    entry = pay_bill(bill, date: Date.current)
+    assert_equal 50, bill_totals[@food_category.id]
+
+    allocation = RecurringAllocation.find_by!(entry: entry)
+    allocation.destroy!
+    assert_equal 0, bill_totals[@food_category.id]
+
+    relinked = allocation.recurring_occurrence.allocations.create!(
+      entry: entry, allocated_amount: 50, currency: "USD", source: "auto_matched", state: "suggested"
+    )
+    assert_equal 0, bill_totals[@food_category.id]
+
+    relinked.update!(state: "confirmed", source: "user_confirmed")
+    assert_equal 50, bill_totals[@food_category.id]
+  end
+
   # The Allocator lets an entry be matched again once its bill was deleted or
   # dismissed; the tombstone must not count it a second time, or at all.
   test "bill_expense_totals ignores payments of ended bills" do

@@ -416,19 +416,14 @@ class Budget < ApplicationRecord
   end
 
   def budget_category_actual_spending(budget_category)
-    key = budget_category.category_id || stable_synthetic_key(budget_category.category)
-    expense = expense_totals_by_category[key]&.total || 0
-    refund = income_totals_by_category[key]&.total || 0
-    [ expense - refund, 0 ].max
+    actual_spending_for(category_key(budget_category))
   end
 
   # The part of budget_category_actual_spending that paid bills. Gross of
   # refunds, which actual spending nets: a refund lowers the spending outside
   # bills, which errs towards fewer warnings.
   def budget_category_bills_paid(budget_category)
-    @bill_expense_totals_by_category ||= income_statement.bill_expense_totals(period: period)
-                                                         .category_totals.index_by { |ct| ct.category.id }
-    @bill_expense_totals_by_category[budget_category.category_id]&.total || 0
+    bills_paid_for(category_key(budget_category))
   end
 
   # Open bill occurrences due in this period, by category id, loaded once so
@@ -459,9 +454,11 @@ class Budget < ApplicationRecord
 
   # The part of actual_spending that paid bills, line by line: a line's
   # refunds can bring its spending below its bills, and actual_spending only
-  # counts what is left.
+  # counts what is left. Uncategorized spending is in actual_spending, so its
+  # synthetic line is counted too.
   def bills_paid
-    budget_categories.reject(&:subcategory?).sum { |bc| [ bc.bills_paid, bc.actual_spending ].min }
+    keys = budget_categories.reject(&:subcategory?).map { |bc| category_key(bc) } + [ :uncategorized ]
+    keys.uniq.sum { |key| [ bills_paid_for(key), actual_spending_for(key) ].min }
   end
 
   # The rule each line follows (BudgetCategory#near_limit?), for the whole budget.
@@ -585,6 +582,22 @@ class Budget < ApplicationRecord
 
     def income_totals_by_category
       @income_totals_by_category ||= income_totals.category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+    end
+
+    def category_key(budget_category)
+      budget_category.category_id || stable_synthetic_key(budget_category.category)
+    end
+
+    def actual_spending_for(key)
+      expense = expense_totals_by_category[key]&.total || 0
+      refund = income_totals_by_category[key]&.total || 0
+      [ expense - refund, 0 ].max
+    end
+
+    def bills_paid_for(key)
+      @bill_expense_totals_by_category ||= income_statement.bill_expense_totals(period: period)
+                                                           .category_totals.index_by { |ct| ct.category.id || stable_synthetic_key(ct.category) }
+      @bill_expense_totals_by_category[key]&.total || 0
     end
 
     def stable_synthetic_key(category)

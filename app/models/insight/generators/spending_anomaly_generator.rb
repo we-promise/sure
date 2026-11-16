@@ -37,12 +37,10 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
       usual = baseline[category_id]
       next unless usual && usual[:total] >= MIN_BASELINE
 
-      unplanned = (data[:total] - data[:bills]) * pace_factor
-      projected = data[:bills] + bills_due.fetch(category_id, 0) + unplanned
-      deviation_pct = (projected - usual[:total]) / usual[:total] * 100
-      unplanned_deviation_pct = (unplanned - (usual[:total] - usual[:bills])) / usual[:total] * 100
+      due = bills_due.fetch(category_id, 0)
+      projected, deviation_pct, unplanned_deviation_pct = project(data, data[:bills], due, usual, pace_factor)
       next unless significant?(deviation_pct, unplanned_deviation_pct)
-      next if deviation_pct.positive? && within_rollover_envelope?(category_id)
+      next if deviation_pct.positive? && paid_from_rollover?(category_id, data, due, usual, pace_factor)
 
       { category_id: category_id, name: data[:name], projected: projected,
         baseline: usual[:total], deviation_pct: deviation_pct }
@@ -90,13 +88,36 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         deviation_pct.positive? == unplanned_deviation_pct.positive?
     end
 
-    # Money saved up in a rollover envelope is there to be spent in a lump, so
-    # spending that stays inside it is the plan, not a trend.
-    def within_rollover_envelope?(category_id)
+    # [projected, deviation_pct, unplanned_deviation_pct]. `planned` counts
+    # once at face value and `due` is added as it stands; only the rest of the
+    # month-to-date spend is projected at the month's pace.
+    def project(data, planned, due, usual, pace_factor)
+      unplanned = (data[:total] - planned) * pace_factor
+      projected = planned + due + unplanned
+      [
+        projected,
+        (projected - usual[:total]) / usual[:total] * 100,
+        (unplanned - (usual[:total] - usual[:bills])) / usual[:total] * 100
+      ]
+    end
+
+    # Money saved up in a rollover envelope is there to be spent in a lump.
+    # Counted as planned, like a bill, does the rise still stand? The envelope
+    # may be the parent's or a ring-fenced subcategory's (Insurance under
+    # Home), as long as it isn't overspent. Only the household budget counts.
+    def paid_from_rollover?(category_id, data, due, usual, pace_factor)
       return false unless current_budget&.initialized?
 
-      budget_category = current_budget.budget_categories.find { |bc| bc.category_id == category_id }
-      budget_category.present? && budget_category.rollover_enabled? && !budget_category.over_budget?
+      lines = current_budget.budget_categories.select do |bc|
+        bc.category_id == category_id || bc.category.parent_id == category_id
+      end
+      saved = lines.select { |bc| bc.rollover_enabled? && !bc.inherits_parent_budget? && !bc.over_budget? }
+                   .sum { |bc| bc.actual_spending.to_d }
+      return false unless saved.positive?
+
+      planned = [ data[:bills] + saved, data[:total] ].min
+      deviation_pct, unplanned_deviation_pct = project(data, planned, due, usual, pace_factor).drop(1)
+      !(deviation_pct.positive? && significant?(deviation_pct, unplanned_deviation_pct))
     end
 
     # { category_id => { name:, total:, bills: } } for persisted parent
