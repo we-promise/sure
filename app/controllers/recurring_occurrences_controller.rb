@@ -144,7 +144,7 @@ class RecurringOccurrencesController < ApplicationController
 
       scope = candidate_scope
         .where(date: candidate_window)
-        .not_excluded_by_user
+        .not_excluded_or_split_parent
         .where.not(id: RecurringMatchRejection.where(recurring_transaction: series).select(:entry_id))
         # preload, not includes: entryable is polymorphic so it can never be
         # joined, and naming it keeps the raw transactions join above out of

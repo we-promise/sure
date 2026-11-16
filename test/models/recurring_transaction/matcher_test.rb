@@ -113,6 +113,21 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert occurrence.reload.paid?
   end
 
+  # The bank took the money whatever the user does with the parts, and the
+  # matcher already settled the bill this way when it ran before the split.
+  test "a split charge whose children are all excluded still settles the bill" do
+    series = create_series(name: "MORTGAGE", amount: 1000, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 1000, date: Date.current, name: "MORTGAGE")
+    entry.split!([ { name: "Interest", amount: 400, excluded: "1" }, { name: "Principal", amount: 600, excluded: "1" } ])
+    assert entry.child_entries.all?(&:excluded?)
+
+    assert_equal 1, @matcher.run!
+
+    assert_equal entry.id, occurrence.allocations.sole.entry_id
+    assert occurrence.reload.paid?
+  end
+
   test "a charge the user excluded never settles a bill" do
     series = create_series(name: "MORTGAGE", amount: 1000, day_offset: 0)
     occurrence = series.recurring_occurrences.order(:due_on).first
