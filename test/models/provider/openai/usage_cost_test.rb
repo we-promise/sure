@@ -41,6 +41,19 @@ class Provider::Openai::UsageCostTest < ActiveSupport::TestCase
       Provider::Openai::UsageCost.calculate(model: "gpt-4.1", usage: usage, uri_base: @endpoint)
   end
 
+  test "fallback prices cached Claude input at the cache read rate" do
+    usage = { "prompt_tokens" => 10_000, "completion_tokens" => 100, "prompt_tokens_details" => { "cached_tokens" => 8_000 } }
+
+    # Opus 5.5: 2K input * $4 + 8K cache read * $0.20 + 100 output * $20 per MTok.
+    assert_in_delta 0.0116, Provider::Openai::UsageCost.calculate(
+      model: "anthropic/claude-opus-5-5", usage: usage, uri_base: @endpoint
+    ), 0.000001
+
+    # Other providers keep the inclusive prompt count.
+    assert_equal LlmUsage.calculate_cost(model: "gpt-4.1", prompt_tokens: 10_000, completion_tokens: 100),
+      Provider::Openai::UsageCost.calculate(model: "gpt-4.1", usage: usage, uri_base: @endpoint)
+  end
+
   test "only official OpenRouter API endpoints supply USD costs" do
     %w[https://openrouter.ai/api/v1/ https://OPENROUTER.AI/api/v1 https://eu.openrouter.ai/api/v1 https://us.openrouter.ai/api/v1].each do |endpoint|
       assert_equal BigDecimal("0.01"), calculate({ "cost" => 0.01 }, uri_base: endpoint)

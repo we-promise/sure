@@ -1,6 +1,8 @@
 ---
 zh-CN:
   providers:
+    truelayer:
+      description: 通过 TrueLayer 连接到您的英国银行
     property_valuation:
       not_configured: 此房产数据提供商未配置。
       missing_fields: 请提供名称和完整的美国地址（街道、城市、州和邮政编码）。

@@ -79,6 +79,26 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "#000000", @merchant.reload.color
   end
 
+  test "edit keeps return_to in the form" do
+    get edit_family_merchant_url(@merchant, return_to: merchant_path(@merchant))
+
+    assert_select "input[type=hidden][name=return_to][value=?]", merchant_path(@merchant)
+  end
+
+  test "update returns to the given path" do
+    patch family_merchant_url(@merchant), params: { return_to: merchant_path(@merchant), family_merchant: { name: "new name" } }
+
+    assert_redirected_to merchant_path(@merchant)
+  end
+
+  test "update ignores an external return_to" do
+    [ "//evil.example", "/\t/evil.example" ].each do |return_to|
+      patch family_merchant_url(@merchant), params: { return_to: return_to, family_merchant: { name: "new name" } }
+
+      assert_redirected_to family_merchants_path
+    end
+  end
+
   test "should upload merchant logo" do
     patch family_merchant_url(@merchant), params: {
       family_merchant: { logo: file_fixture_upload("profile_image.png", "image/png", :binary) }
@@ -169,10 +189,37 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "enhance enqueues job and redirects" do
+    use_ai_routes
+
     assert_enqueued_with(job: EnhanceProviderMerchantsJob) do
       post enhance_family_merchants_path
     end
 
     assert_redirected_to family_merchants_path
+  end
+
+  test "enhance is refused with the reason when no model can enhance merchants" do
+    use_no_ai
+
+    assert_no_enqueued_jobs(only: EnhanceProviderMerchantsJob) do
+      post enhance_family_merchants_path
+    end
+
+    assert_redirected_to root_path
+    assert flash[:alert].present?
+  end
+
+  test "the Enhance button shows whenever enhance_merchants has a model, Anthropic included" do
+    merchant = ProviderMerchant.create!(name: "Enhanceable Shop", source: "plaid")
+    transactions(:one).update_columns(merchant_id: merchant.id)
+
+    with_env_overrides("ANTHROPIC_API_KEY" => "test-key", "LLM_PROVIDER" => "anthropic", "OPENAI_ACCESS_TOKEN" => nil) do
+      get family_merchants_path
+    end
+    assert_includes response.body, enhance_family_merchants_path
+
+    use_no_ai
+    get family_merchants_path
+    assert_not_includes response.body, enhance_family_merchants_path
   end
 end

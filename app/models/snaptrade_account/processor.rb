@@ -21,14 +21,9 @@ class SnaptradeAccount::Processor
     holdings_count = snaptrade_account.raw_holdings_payload&.size || 0
     Rails.logger.info "SnaptradeAccount::Processor - Holdings payload has #{holdings_count} items"
 
-    # Run the holdings processor when there are security holdings OR
-    # non-primary-currency cash to surface as synthetic cash holdings (#1809).
-    if snaptrade_account.raw_holdings_payload.present? || snaptrade_account.non_primary_cash_entries.any?
-      Rails.logger.info "SnaptradeAccount::Processor - Processing holdings..."
-      SnaptradeAccount::HoldingsProcessor.new(snaptrade_account).process
-    else
-      Rails.logger.warn "SnaptradeAccount::Processor - No holdings payload to process"
-    end
+    # Always run: an empty payload can clear sold positions, and non-primary
+    # cash is surfaced as synthetic cash holdings (#1809).
+    SnaptradeAccount::HoldingsProcessor.new(snaptrade_account).process
 
     # Process activities (trades, dividends, etc.)
     activities_count = snaptrade_account.raw_activities_payload&.size || 0
@@ -85,8 +80,11 @@ class SnaptradeAccount::Processor
 
       calculated_total = holdings_value + cash_value
 
-      # Use calculated total if we have holdings, otherwise trust API value
-      if holdings_value > 0
+      # Use calculated total if we have holdings, otherwise trust API value.
+      # Net short positions (a short option on its own) make it negative; then
+      # only when nothing is missing from it: a long without units or a price
+      # counts as 0 and would leave just the short.
+      if holdings_value.positive? || (holdings_value.negative? && net_short_total_complete?)
         Rails.logger.debug "SnaptradeAccount::Processor - Using calculated total: holdings=#{holdings_value} + cash=#{cash_value} = #{calculated_total}"
         calculated_total
       elsif snaptrade_account.current_balance.present?
@@ -156,8 +154,20 @@ class SnaptradeAccount::Processor
         data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
         units = parse_decimal(data[:units]) || 0
         price = parse_decimal(data[:price]) || 0
-        units * price
+        units * price * contract_multiplier(extract_symbol_data(data))
       end
+    end
+
+    # Every position has units and a price, and there is no cash in another
+    # currency: that cash is imported as a holding, so it is in the API total
+    # but not in holdings plus cash.
+    def net_short_total_complete?
+      positions_complete = Array(snaptrade_account.raw_holdings_payload).all? do |holding|
+        data = holding.is_a?(Hash) ? holding.with_indifferent_access : {}
+        parse_decimal(data[:units]).present? && parse_decimal(data[:price]).present?
+      end
+
+      positions_complete && snaptrade_account.non_primary_cash_entries.none? { |entry| parse_decimal(entry[:amount])&.nonzero? }
     end
 
     def use_api_total_balance?

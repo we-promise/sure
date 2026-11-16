@@ -30,17 +30,21 @@ class RescaleTradeRepublicBondHoldingPrices < ActiveRecord::Migration[8.1]
   SHARED_BOND_TICKER = "BOND"
   SHARED_BOND_MIC = "XHAM"
 
+  class HoldingRecord < ActiveRecord::Base
+    self.table_name = "holdings"
+  end
+
   def up
     bond_security_ids = Security.where(ticker: SHARED_BOND_TICKER, exchange_operating_mic: SHARED_BOND_MIC).pluck(:id)
     item_ids = []
 
     TradeRepublicAccount.where(kind: "portfolio").includes(:account_provider).find_each do |trade_republic_account|
-      account = trade_republic_account.current_account
-      provider_id = trade_republic_account.account_provider&.id
-      next if account.nil? || provider_id.nil?
+      # Account can require columns added by later migrations. Read its ID
+      # from the provider link without loading the application model.
+      provider = trade_republic_account.account_provider
+      next unless provider
 
-      snapshots = account.holdings
-        .where(account_provider_id: provider_id)
+      snapshots = HoldingRecord.where(account_id: provider.account_id, account_provider_id: provider.id)
         .where("external_id LIKE ?", "#{snapshot_prefix(trade_republic_account)}%")
       bond_positions = Array(trade_republic_account.raw_positions_payload).map { |position| position.to_h.with_indifferent_access }
         .select { |position| position[:isin].present? && position[:category].to_s == "interest_products" }
@@ -55,7 +59,7 @@ class RescaleTradeRepublicBondHoldingPrices < ActiveRecord::Migration[8.1]
       payload_rescaled = rescale_payload_prices(trade_republic_account)
       next if rescaled.zero? && !payload_rescaled
 
-      say "Rescaled #{rescaled} Trade Republic bond holdings on account #{account.id}"
+      say "Rescaled #{rescaled} Trade Republic bond holdings on account #{provider.account_id}"
       item_ids << trade_republic_account.trade_republic_item_id
     end
 
