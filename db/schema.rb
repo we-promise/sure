@@ -3345,6 +3345,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
   add_foreign_key "webauthn_credentials", "users"
   add_foreign_key "wise_accounts", "wise_items", on_delete: :cascade
   add_foreign_key "wise_items", "families"
-  add_foreign_key "weekly_cleanup_runs", "families"
-  add_foreign_key "weekly_cleanup_runs", "users"
+  add_foreign_key "weekly_cleanup_runs", "families", on_delete: :cascade
+  add_foreign_key "weekly_cleanup_runs", "users", on_delete: :cascade
 end

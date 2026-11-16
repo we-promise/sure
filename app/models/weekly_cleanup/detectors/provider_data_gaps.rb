@@ -10,9 +10,20 @@ class WeeklyCleanup::Detectors::ProviderDataGaps < WeeklyCleanup::Detector
 
     recent.distinct.pluck(:syncable_type).each do |type|
       klass = type.safe_constantize
-      next unless klass&.column_names&.include?("family_id")
+      next unless klass
 
-      owned = recent.where(syncable_type: type, syncable_id: klass.where(family_id: family.id).select(:id))
+      # The family umbrella sync is keyed by syncable_id == family.id; every
+      # other syncable is owned through its family_id column.
+      owned_ids =
+        if type == "Family"
+          [ family.id ]
+        elsif klass.column_names.include?("family_id")
+          klass.where(family_id: family.id).select(:id)
+        else
+          next
+        end
+
+      owned = recent.where(syncable_type: type, syncable_id: owned_ids)
       count += owned.count
       owned.order(created_at: :desc).limit(MAX_SAMPLES).each do |sync|
         samples << "#{type.underscore.humanize} — #{sync.status} (#{sync.created_at.to_date})"

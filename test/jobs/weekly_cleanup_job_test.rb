@@ -46,4 +46,47 @@ class WeeklyCleanupJobTest < ActiveJob::TestCase
       WeeklyCleanupJob.perform_now
     end
   end
+
+  test "findings omit accounts the admin cannot access" do
+    other = users(:family_member)
+    hidden = Account.create!(
+      family: @family, owner: other, name: "Hidden Member Account", balance: 0, currency: "USD",
+      accountable: Depository.new
+    )
+    entry = hidden.entries.create!(
+      name: "Secret Merchant", date: 1.day.ago.to_date, amount: 42, currency: "USD",
+      entryable: Transaction.new(kind: "standard")
+    )
+    assert_not @admin.accessible_accounts.exists?(hidden.id)
+
+    WeeklyCleanupJob.perform_now(family_id: @family.id)
+
+    content = @admin.chats.ordered.first.messages.first.content
+    assert_not_includes content, entry.name
+    assert_not_includes content, hidden.name
+  end
+
+  test "skips deactivated admins and admins with AI turned off" do
+    @admin.update_columns(ai_enabled: false)
+
+    assert_no_difference -> { Chat.count } do
+      WeeklyCleanupJob.perform_now(family_id: @family.id)
+    end
+  end
+
+  test "dates the weekly period by the family's local date" do
+    @family.update!(timezone: "Pacific/Kiritimati")
+    travel_to Time.utc(2026, 11, 22, 12, 0) do # Sunday UTC, Monday in UTC+14
+      WeeklyCleanupJob.perform_now(family_id: @family.id)
+    end
+
+    assert_equal Date.new(2026, 11, 23), WeeklyCleanupRun.find_by!(family: @family, user: @admin).period_start
+  end
+
+  test "cleanup run foreign keys cascade so family and user deletes don't raise" do
+    foreign_keys = ActiveRecord::Base.connection.foreign_keys("weekly_cleanup_runs")
+
+    assert_equal %w[families users], foreign_keys.map(&:to_table).sort
+    assert(foreign_keys.all? { |fk| fk.on_delete == :cascade })
+  end
 end

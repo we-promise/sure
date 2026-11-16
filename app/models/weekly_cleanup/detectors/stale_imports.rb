@@ -3,8 +3,9 @@
 # (the same threshold SyncCleanerJob uses to reap them).
 class WeeklyCleanup::Detectors::StaleImports < WeeklyCleanup::Detector
   def generate
-    failed = family.imports.where(status: "failed").where("imports.updated_at >= ?", window_start)
-    stuck = family.imports.where(status: %w[importing reverting]).where("imports.updated_at < ?", Import::STUCK_AFTER.ago)
+    imports = family.imports.where(account_id: [ nil, *accounts.select(:id) ])
+    failed = imports.where(status: "failed").where("imports.updated_at >= ?", window_start)
+    stuck = imports.where(status: %w[importing reverting]).where("imports.updated_at < ?", Import::STUCK_AFTER.ago)
     scope = failed.or(stuck)
 
     samples = scope.order(updated_at: :desc).limit(MAX_SAMPLES).map do |import|

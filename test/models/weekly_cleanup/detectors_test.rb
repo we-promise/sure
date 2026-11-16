@@ -103,4 +103,13 @@ class WeeklyCleanup::DetectorsTest < ActiveSupport::TestCase
     quiet_family = Family.create!(name: "No Dup Family")
     assert_nil WeeklyCleanup::Detectors::MerchantDuplicates.new(quiet_family).generate
   end
+
+  test "provider data gaps counts the family umbrella sync" do
+    Sync.create!(syncable: @family, status: "failed")
+
+    finding = WeeklyCleanup::Detectors::ProviderDataGaps.new(@family).generate
+
+    assert finding
+    assert_operator finding.count, :>=, 1
+  end
 end

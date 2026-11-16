@@ -20,7 +20,7 @@ class WeeklyCleanup::Report
     parts.join("\n\n")
   end
 
-  def title(date = Date.current)
+  def title(date = family.local_date)
     I18n.t("weekly_cleanup.chat_title", date: I18n.l(WeeklyCleanupRun.period_for(date), format: :long))
   end
 

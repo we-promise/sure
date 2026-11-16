@@ -5,15 +5,15 @@ class WeeklyCleanup::Detectors::DuplicateImportedEntries < WeeklyCleanup::Detect
   DUPLICATE_WINDOW = 30.days
 
   def generate
-    groups = family.entries
+    groups = entries
       .where.not(import_id: nil)
-      .where("entries.date >= ?", DUPLICATE_WINDOW.ago.to_date)
+      .where("entries.date >= ?", today - DUPLICATE_WINDOW.in_days.to_i)
       .group(:account_id, :date, :amount, Arel.sql("lower(entries.name)"))
       .having("COUNT(*) > 1")
       .pluck(:account_id, :date, :amount, Arel.sql("lower(entries.name)"), Arel.sql("COUNT(*)"))
 
     samples = groups.first(MAX_SAMPLES).map do |account_id, date, amount, name, n|
-      account_name = family.accounts.detect { |a| a.id == account_id }&.name || "?"
+      account_name = accounts.detect { |a| a.id == account_id }&.name || "?"
       "#{date} — #{name} (#{n}x, #{account_name})"
     end
 
