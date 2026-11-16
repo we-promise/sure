@@ -424,6 +424,98 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_equal [ inflow.entryable_id, outflow.entryable_id ], [ transfer.inflow_transaction_id, transfer.outflow_transaction_id ]
   end
 
+  test "a later exact same-currency match replaces a pending cross-currency guess" do
+    outflow, guess = pending_cross_currency_guess
+
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    assert_no_difference -> { RejectedTransfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert_not Transfer.exists?(guess.id)
+    exact = Transfer.find_by(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+    assert exact.present?
+    assert exact.pending?
+  end
+
+  test "a confirmed cross-currency transfer is never displaced by a later exact match" do
+    outflow, guess = pending_cross_currency_guess
+    # Confirmed with the legs still "standard", as an importer that creates a
+    # confirmed Transfer without calling confirm! leaves it.
+    guess.update_columns(status: "confirmed")
+
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    assert_not displacing_candidate?(real_inflow, outflow)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert guess.reload.confirmed?
+  end
+
+  test "a pending same-currency match is not displaced by another exact match" do
+    load_family_currency_rates
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    first_inflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: -400, currency: "GBP")
+    @family.auto_match_transfers!
+    first = Transfer.find_by!(inflow_transaction_id: first_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+
+    second_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    assert_not displacing_candidate?(second_inflow, outflow)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(first.id)
+  end
+
+  test "a cross-currency candidate does not displace a pending cross-currency guess" do
+    outflow, guess = pending_cross_currency_guess
+
+    # Another CAD credit inside the FX band: a second guess, not an exact match.
+    create_transaction(date: Date.current, account: @credit_card, amount: -680, currency: "CAD")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(guess.id)
+    assert_equal guess.id, outflow.entryable.reload.transfer.id
+  end
+
+  test "a pending cross-currency transfer with a kind already set is not displaced" do
+    outflow, guess = pending_cross_currency_guess
+    # As Family::DataImporter leaves an imported pending transfer: kinds set, with a fee.
+    guess.outflow_transaction.update_columns(kind: "funds_movement")
+    guess.inflow_transaction.update_columns(kind: "funds_movement")
+    fee = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 5, currency: "GBP")
+    fee.entryable.update_columns(transfer_id: guess.id)
+
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    assert_not displacing_candidate?(real_inflow, outflow)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert Transfer.exists?(guess.id)
+    assert Transaction.exists?(fee.entryable_id)
+  end
+
+  test "the manual match dialog still offers no exact match while a cross-currency guess holds the leg" do
+    outflow, _guess = pending_cross_currency_guess
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    assert_not real_inflow.entryable.transfer_match_candidates.any? { |row| row.outflow_transaction_id == outflow.entryable_id }
+  end
+
   test "does not suggest a family currency cross rate outside the exchange rate tolerance" do
     load_family_currency_rates
 
@@ -1191,6 +1283,29 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     end
 
     # Only rates to the family currency (USD) are synced; there is no direct GBP -> CAD rate
+    # A GBP outflow auto-matched (pending) to an unrelated CAD credit inside
+    # the FX band, the only candidate at the time. Returns [outflow, guess].
+    def pending_cross_currency_guess
+      load_family_currency_rates
+      link_account!(@depository)
+      link_account!(@credit_card)
+
+      outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+      coincidental_inflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: -680, currency: "CAD")
+      @family.auto_match_transfers!
+
+      guess = Transfer.find_by!(inflow_transaction_id: coincidental_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+      assert guess.pending?
+      [ outflow, guess ]
+    end
+
+    # Whether the automatic path's candidate query offers this exact pair.
+    def displacing_candidate?(inflow, outflow)
+      @family.transfer_match_candidates(include_rejected: false, displace_pending_cross_currency: true).any? do |row|
+        row.inflow_transaction_id == inflow.entryable_id && row.outflow_transaction_id == outflow.entryable_id
+      end
+    end
+
     def load_family_currency_rates
       ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: 1.day.ago.to_date, rate: 1.25)
       ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0.72)

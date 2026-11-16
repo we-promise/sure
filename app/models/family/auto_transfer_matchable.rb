@@ -47,7 +47,8 @@ module Family::AutoTransferMatchable
     restrict_cross_currency_to_linked_accounts: false,
     require_common_writer: false,
     exclude_same_connection_pairs: false,
-    require_compatible_categories: false
+    require_compatible_categories: false,
+    displace_pending_cross_currency: false
   )
     date_window = coerce_transfer_match_date_window!(date_window)
     exchange_rate_tolerance = coerce_transfer_match_exchange_rate_tolerance!(exchange_rate_tolerance)
@@ -69,6 +70,7 @@ module Family::AutoTransferMatchable
         require_common_writer:,
         exclude_same_connection_pairs:,
         require_compatible_categories:,
+        displace_pending_cross_currency:,
         lower_exchange_rate_bound: 1 - exchange_rate_tolerance,
         upper_exchange_rate_bound: 1 + exchange_rate_tolerance
       }
@@ -140,7 +142,10 @@ module Family::AutoTransferMatchable
       # money. One uncategorized leg still matches, since providers often
       # categorize only one side. Exact same-currency pairs, and pairs on a route
       # the user has confirmed before, are not affected.
-      require_compatible_categories: true
+      require_compatible_categories: true,
+      # A pending cross-currency guess is not final: an exact same-currency
+      # counterpart that turns up later replaces it (find_or_create_transfer!).
+      displace_pending_cross_currency: true
     )
 
     # Track which transactions we've already matched to avoid duplicates
@@ -229,6 +234,8 @@ module Family::AutoTransferMatchable
     # rolls back only the failed statement, leaving the outer transaction healthy.
     def find_or_create_transfer!(match)
       Transfer.transaction(requires_new: true) do
+        displace_pending_cross_currency_guesses!(match) if match.match_rank.to_i.zero?
+
         Transfer.find_or_create_by!(
           inflow_transaction_id: match.inflow_transaction_id,
           outflow_transaction_id: match.outflow_transaction_id,
@@ -247,6 +254,60 @@ module Family::AutoTransferMatchable
       # ...and even for :taken, only accept it once the exact (inflow, outflow) row is
       # confirmed present; otherwise the :taken came from a different pairing.
       existing_transfer(match)
+    end
+
+    # Destroys the pending cross-currency auto-match suggestions holding either leg
+    # of an exact same-currency candidate, so the exact pair can take their place.
+    # Same predicate as displaceable_transfer_sql, which let the candidate through.
+    # Destroyed rather than rejected: the user never judged the guess, so no
+    # RejectedTransfer is recorded. Runs inside the caller's savepoint, so a
+    # failed insert restores the guess.
+    def displace_pending_cross_currency_guesses!(match)
+      Transfer.pending
+        .where(inflow_transaction_id: match.inflow_transaction_id)
+        .or(Transfer.pending.where(outflow_transaction_id: match.outflow_transaction_id))
+        .includes(inflow_transaction: :entry, outflow_transaction: :entry)
+        .select { |transfer| displaceable_guess?(transfer) }
+        .each(&:destroy!)
+    end
+
+    # A genuine auto-match suggestion (both legs still "standard", as
+    # AutoMatchesController#cleanup_pending_auto_matches! defines it) whose legs
+    # are in different currencies.
+    def displaceable_guess?(transfer)
+      inflow = transfer.inflow_transaction
+      outflow = transfer.outflow_transaction
+
+      transfer.pending? &&
+        inflow.kind == "standard" && outflow.kind == "standard" &&
+        inflow.entry.currency != outflow.entry.currency
+    end
+
+    # SQL mirror of displaceable_guess? for the transfer at `transfers_alias`.
+    def displaceable_transfer_sql(transfers_alias)
+      <<~SQL.squish
+        (
+          #{transfers_alias}.status = 'pending' AND
+          EXISTS (
+            SELECT 1
+            FROM transactions displaced_inflows
+            JOIN entries displaced_inflow_entries ON (
+              displaced_inflow_entries.entryable_type = 'Transaction' AND
+              displaced_inflow_entries.entryable_id = displaced_inflows.id
+            )
+            JOIN transactions displaced_outflows ON displaced_outflows.id = #{transfers_alias}.outflow_transaction_id
+            JOIN entries displaced_outflow_entries ON (
+              displaced_outflow_entries.entryable_type = 'Transaction' AND
+              displaced_outflow_entries.entryable_id = displaced_outflows.id
+            )
+            WHERE
+              displaced_inflows.id = #{transfers_alias}.inflow_transaction_id AND
+              displaced_inflows.kind = 'standard' AND
+              displaced_outflows.kind = 'standard' AND
+              displaced_inflow_entries.currency <> displaced_outflow_entries.currency
+          )
+        )
+      SQL
     end
 
     # The committed transfer for this exact candidate pair, or nil if none exists.
@@ -358,6 +419,13 @@ module Family::AutoTransferMatchable
     # Only auto_match_transfers! sets it; the exact same-currency branch, the manual
     # dialog and the hint (which filters categories itself, more strictly) leave it off.
     #
+    # With :displace_pending_cross_currency (only auto_match_transfers! sets it), the
+    # exact branch does not count a pending cross-currency auto-match suggestion
+    # (displaceable_transfer_sql) as holding a leg, so a later exact counterpart is
+    # still offered; find_or_create_transfer! then destroys the guess. The
+    # cross-currency branch keeps every transfer as a blocker, so a guess never
+    # displaces another guess.
+    #
     # Candidates are ordered by match_rank before date_diff: exact same-currency matches
     # (rank 0) come before FX-tolerance guesses (rank 1). auto_match_transfers! consumes
     # candidates greedily, so without the rank a coincidental cross-currency candidate
@@ -392,8 +460,11 @@ module Family::AutoTransferMatchable
           )
           JOIN accounts outflow_accounts ON outflow_accounts.id = outflow_candidates.account_id
           LEFT JOIN transfers existing_transfers ON (
-            existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
-            existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+            (
+              existing_transfers.inflow_transaction_id = inflow_candidates.entryable_id OR
+              existing_transfers.outflow_transaction_id = outflow_candidates.entryable_id
+            ) AND
+            NOT (:displace_pending_cross_currency = TRUE AND #{displaceable_transfer_sql("existing_transfers")})
           )
           LEFT JOIN rejected_transfers ON (
             rejected_transfers.inflow_transaction_id = inflow_candidates.entryable_id AND
