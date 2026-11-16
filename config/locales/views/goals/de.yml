@@ -59,7 +59,7 @@ de:
         savings: Sparkonto
       suggested_no_date: Setz eine Frist, um ein Zieldatum hochzurechnen.
       suggested_with_date: Spar {monthly}/Monat über {accounts}, um es rechtzeitig zu schaffen.
-      progress_basis_locked: Dieses Ziel ist abgeschlossen. Öffne es wieder, um zu ändern, was dafür zählt.
+      progress_basis_locked: Der Fortschritt dieses Ziels wurde beim Abschluss eingefroren. Öffne es wieder oder stelle es wieder her, um zu ändern, was dafür zählt.
       progress_bases:
         balance:
           label: Was die Konten heute wert sind

@@ -350,7 +350,7 @@ pt-PT:
         cd: CD
         money_market: Mercado monetário
         other: Outro
-      progress_basis_locked: Este objetivo está concluído. Reabra-o para alterar o que conta para ele.
+      progress_basis_locked: O progresso deste objetivo foi congelado quando foi concluído. Reabra-o ou restaure-o para alterar o que conta para ele.
       progress_bases:
         balance:
           label: O que as contas valem hoje

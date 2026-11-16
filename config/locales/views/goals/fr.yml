@@ -82,7 +82,7 @@ fr:
         savings: Épargne
       suggested_no_date: Définissez une date cible pour projeter la fin.
       suggested_with_date: Épargnez {monthly}/mois sur {accounts} pour l'atteindre à temps.
-      progress_basis_locked: Cet objectif est terminé. Rouvrez-le pour changer ce qui est pris en compte.
+      progress_basis_locked: La progression de cet objectif a été figée lorsqu'il a été terminé. Rouvrez-le ou restaurez-le pour changer ce qui est pris en compte.
       progress_bases:
         balance:
           label: La valeur actuelle des comptes

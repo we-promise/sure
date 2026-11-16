@@ -84,7 +84,7 @@ tr:
         prorata: Bu hesaptaki hedefleriniz {balance} bakiyeye karşılık toplam {total} tutarında — orantılı olarak ilerleyecekler.
         whole_balance: Bu hesap, diğer ayrılan tutarlardan sonra kalan bakiyenin tamamıyla bu hedefi finanse edecek.
         whole_balance_alone: Bu hedef, bu hesabın tüm bakiyesini kullanacak.
-      progress_basis_locked: Bu hedef tamamlandı. Nelerin sayılacağını değiştirmek için hedefi yeniden açın.
+      progress_basis_locked: Bu hedefin ilerlemesi tamamlandığında donduruldu. Nelerin sayılacağını değiştirmek için hedefi yeniden açın veya geri yükleyin.
       progress_bases:
         balance:
           label: Hesapların bugünkü değeri

@@ -284,7 +284,7 @@ it:
         cd: CD
         money_market: Mercato monetario
         other: Altro
-      progress_basis_locked: Questo obiettivo è completato. Riaprilo per cambiare cosa conta.
+      progress_basis_locked: I progressi di questo obiettivo sono stati congelati al completamento. Riaprilo o ripristinalo per cambiare cosa conta.
       progress_bases:
         balance:
           label: Ciò che valgono oggi i conti

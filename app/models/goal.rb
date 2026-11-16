@@ -1442,8 +1442,8 @@ class Goal < ApplicationRecord
 
     # A completed goal reports `completed_amount`, frozen on the basis it had
     # when it closed. Switching basis afterwards would label that figure with
-    # the other basis, so the switch waits for a reopen, which thaws the
-    # snapshot. The persisted snapshot, for the reason kind_locked_while_released
+    # the other basis, so the switch waits for a reopen or restore; both thaw
+    # the snapshot. The persisted snapshot, for the reason kind_locked_while_released
     # reads the persisted state: a write that also sets `state: "active"` skips
     # the transition that clears it. An archived goal that never completed has
     # no snapshot and reports the live figure, so its basis stays editable.

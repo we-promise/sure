@@ -284,7 +284,7 @@ zh-TW:
         cd: 定期存款 (CD)
         money_market: 貨幣市場帳戶
         other: 其他
-      progress_basis_locked: 此目標已完成。重新開啟後才能變更計入方式。
+      progress_basis_locked: 此目標的進度已在完成時凍結。重新開啟或還原後才能變更計入方式。
       progress_bases:
         balance:
           label: 帳戶目前的價值

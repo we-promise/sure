@@ -110,7 +110,7 @@ pl:
       target_modes:
         fixed: Stała kwota
         months_of_expenses: Liczba miesięcy wydatków
-      progress_basis_locked: Ten cel jest zakończony. Otwórz go ponownie, aby zmienić, co się do niego liczy.
+      progress_basis_locked: Postęp tego celu został zamrożony w chwili jego zakończenia. Otwórz go ponownie lub przywróć, aby zmienić, co się do niego liczy.
       progress_bases:
         balance:
           label: Ile konta są dziś warte

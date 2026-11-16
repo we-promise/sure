@@ -23,4 +23,4 @@ zh-TW:
             currency:
               locked_after_linked: 目標連結帳戶之後就不能再更改幣別了。
             progress_basis:
-              locked_once_completed: 請先重新開啟此目標，再變更計入方式。
+              locked_once_completed: 請先重新開啟或還原此目標，再變更計入方式。

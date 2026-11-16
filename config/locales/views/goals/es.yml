@@ -285,7 +285,7 @@ es:
         cd: Depósito a plazo
         money_market: Mercado monetario
         other: Otra
-      progress_basis_locked: Este objetivo está completado. Vuelve a abrirlo para cambiar lo que se tiene en cuenta.
+      progress_basis_locked: El progreso de este objetivo se congeló al completarse. Reábrelo o restáuralo para cambiar lo que se tiene en cuenta.
       progress_bases:
         balance:
           label: Lo que valen hoy las cuentas

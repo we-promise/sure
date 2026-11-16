@@ -355,7 +355,32 @@ class GoalsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "input[type=radio][name='goal[progress_basis]'][disabled]", 2
-    assert_includes response.body, I18n.t("goals.form.progress_basis_locked")
+    assert_select "p.text-secondary", text: "This goal's progress was frozen when it was completed. Reopen or restore it to change what counts toward it."
+  end
+
+  # Archiving a completed goal keeps its snapshot, so the basis stays locked,
+  # but the page offers Restore rather than Reopen. The note has to name a
+  # way out that the page actually shows.
+  test "the form locks the basis on an archived completed goal and names restore" do
+    @goal.complete!
+    @goal.archive!
+
+    get edit_goal_url(@goal)
+
+    assert_response :success
+    assert_select "input[type=radio][name='goal[progress_basis]'][disabled]", 2
+    assert_select "p.text-secondary", text: "This goal's progress was frozen when it was completed. Reopen or restore it to change what counts toward it."
+  end
+
+  test "update refuses a basis change on an archived completed goal and names restore" do
+    @goal.complete!
+    @goal.archive!
+
+    patch goal_url(@goal), params: { goal: { progress_basis: "contributions" } }
+
+    assert_response :unprocessable_entity
+    assert_equal "balance", @goal.reload.progress_basis
+    assert_select "p.text-destructive", text: "Reopen or restore this goal before changing what counts toward it."
   end
 
   test "the form leaves the basis editable on an active goal" do

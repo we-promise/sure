@@ -23,4 +23,4 @@ es:
             currency:
               locked_after_linked: No se puede cambiar la moneda cuando el objetivo ya está vinculado a cuentas.
             progress_basis:
-              locked_once_completed: Vuelve a abrir este objetivo antes de cambiar lo que se tiene en cuenta.
+              locked_once_completed: Reabre o restaura este objetivo antes de cambiar lo que se tiene en cuenta.

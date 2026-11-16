@@ -23,4 +23,4 @@ it:
             currency:
               locked_after_linked: Impossibile cambiare la valuta dopo che l'obiettivo è stato collegato ai conti.
             progress_basis:
-              locked_once_completed: Riapri questo obiettivo prima di cambiare cosa conta.
+              locked_once_completed: Riapri o ripristina questo obiettivo prima di cambiare cosa conta.

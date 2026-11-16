@@ -363,7 +363,7 @@ zh-CN:
         cd: 定期存单
         money_market: 货币市场
         other: 其他
-      progress_basis_locked: 此目标已完成。重新打开后才能更改计入方式。
+      progress_basis_locked: 此目标的进度已在完成时冻结。重新打开或恢复后才能更改计入方式。
       progress_bases:
         balance:
           label: 账户当前的价值

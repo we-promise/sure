@@ -116,7 +116,7 @@ whatever the basis.
 
 A goal that has completed reports `completed_amount`, frozen on the basis
 it had when it closed, instead of the live figure; its basis is locked
-until it is reopened. An archived goal that never completed has no
+until it is reopened or restored. An archived goal that never completed has no
 snapshot and keeps the live calculation.
 
 Market gains come from `balances.net_market_flows`, which is derived from
