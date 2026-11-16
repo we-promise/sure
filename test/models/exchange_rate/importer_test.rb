@@ -342,6 +342,31 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     assert_equal 0.16, ExchangeRate.find_by!(from_currency: "KZT", to_currency: "RUB", date: Date.current).rate.to_f
   end
 
+  test "reports the direct failure when a USD leg fails too" do
+    ExchangeRate.delete_all
+    window = { start_date: get_provider_fetch_start_date(Date.current), end_date: Date.current }
+
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "RUB", **window)
+             .returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", **window)
+             .returns(provider_error_response(StandardError.new("no KZT/USD")))
+    Sentry.expects(:capture_exception).with do |error, options|
+      error.is_a?(ExchangeRate::Importer::MissingExchangeRateError) &&
+        error.message.include?("Provider error: no KZT/RUB") &&
+        options == { level: :warning }
+    end
+
+    ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "KZT",
+      to: "RUB",
+      start_date: Date.current,
+      end_date: Date.current
+    ).import_provider_rates
+
+    assert_equal 0, ExchangeRate.count
+  end
+
   test "does not derive a pair the provider has quoted before from its USD legs" do
     ExchangeRate.delete_all
     ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
