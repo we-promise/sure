@@ -29,7 +29,8 @@
     <%= form.text_field :api_key,
                         label: t("settings.providers.lunchflow_panel.api_key_label"),
                         placeholder: is_new_record ? t("settings.providers.lunchflow_panel.api_key_placeholder_new") : t("settings.providers.lunchflow_panel.api_key_placeholder_update"),
-                        type: :password %>
+                        type: :password,
+                        value: nil %>
 
     <%= form.text_field :base_url,
                         label: t("settings.providers.lunchflow_panel.base_url_label"),
