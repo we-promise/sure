@@ -129,7 +129,9 @@ class Security < ApplicationRecord
   validates :classification_source, inclusion: { in: CLASSIFICATION_SOURCES }, allow_nil: true
   # `region` has no check constraint, so this is the only thing keeping it a
   # vocabulary rather than free text. Nil is allowed: a country the config does
-  # not name leaves the region unanswered rather than guessed.
+  # not name leaves the region unanswered rather than guessed. A blank is no
+  # answer either, so it becomes nil before validation and the country fills it.
+  normalizes :region, with: ->(value) { value.presence }
   validates :region, inclusion: { in: REGION_KEYS }, allow_nil: true
 
   scope :online, -> { where(offline: false) }
