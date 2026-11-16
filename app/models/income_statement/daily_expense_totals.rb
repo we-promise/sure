@@ -54,11 +54,10 @@ class IncomeStatement::DailyExpenseTotals
             ae.date as day,
             #{category_column_sql("at.category_id as category_id")}
             #{classification_sql("at")} as classification,
-            ABS(SUM(#{converted_amount_sql("at")})) as total
+            ABS(COALESCE(SUM(#{converted_amount_sql("at")}), 0)) as total
           FROM (#{@transactions_scope.to_sql}) at
           #{entries_join_sql("at")}
           #{accounts_join_sql}
-          #{exchange_rates_join_sql}
           WHERE at.kind NOT IN (#{budget_excluded_kinds_sql})
             #{investment_activity_label_sql("at")}
             AND ae.excluded = false
