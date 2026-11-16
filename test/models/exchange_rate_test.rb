@@ -276,6 +276,19 @@ class ExchangeRateTest < ActiveSupport::TestCase
       "index_exchange_rates_on_to_currency_and_updated_at"
   end
 
+  test "cache_version changes when a rate is stored within the same second as the previous one" do
+    second = Time.zone.parse("2026-11-16 10:00:00")
+    ExchangeRate.update_all(updated_at: second - 1.day)
+    first = ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0.00075)
+    first.update_columns(updated_at: second + 0.1)
+    before = ExchangeRate.cache_version
+
+    later = ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0.0065)
+    later.update_columns(updated_at: second + 0.6)
+
+    assert_not_equal before, ExchangeRate.cache_version
+  end
+
   private
     # With sequential scans priced out, the planner uses an index whenever one
     # can answer the query; without one it still falls back to a sequential scan.

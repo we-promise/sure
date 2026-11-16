@@ -349,7 +349,7 @@ class IncomeStatement
         family.entries_cache_version,
         family.accounts_status_version,
         family.currency,
-        ExchangeRate.maximum(:updated_at)&.to_i,
+        ExchangeRate.cache_version,
         family.investment_contributions_as_spending?
       ]
     end
