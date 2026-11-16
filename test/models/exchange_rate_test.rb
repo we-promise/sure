@@ -124,6 +124,21 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
   end
 
+  test "returns a derived rate without storing it when cache is false" do
+    ExchangeRate.delete_all
+    date = Date.current
+
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).with(from: "KZT", to: "USD", start_date: date - 5, end_date: date)
+             .returns(provider_success_response([ OpenStruct.new(from: "KZT", to: "USD", date: date, rate: 0.002) ]))
+    @provider.expects(:fetch_exchange_rates).with(from: "USD", to: "RUB", start_date: date - 5, end_date: date)
+             .returns(provider_success_response([ OpenStruct.new(from: "USD", to: "RUB", date: date, rate: 80) ]))
+
+    assert_no_difference "ExchangeRate.count" do
+      assert_equal 0.16, ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: date, cache: false).rate.to_f
+    end
+  end
+
   test "does not derive and cache a pair the provider has quoted before when it fails" do
     ExchangeRate.delete_all
     ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")
