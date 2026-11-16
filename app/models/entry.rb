@@ -145,13 +145,14 @@ class Entry < ApplicationRecord
     SQL
   }
 
-  scope :excluding_split_parents, -> {
-    where(<<~SQL.squish)
-      NOT EXISTS (
-        SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id
-      )
-    SQL
-  }
+  SPLIT_PARENT_SQL = "EXISTS (SELECT 1 FROM entries ce WHERE ce.parent_entry_id = entries.id)".freeze
+
+  scope :excluding_split_parents, -> { where("NOT #{SPLIT_PARENT_SQL}") }
+
+  # Entries the user has not excluded. split! excludes the parent so its
+  # children are not counted twice, but the parent is still the charge the bank
+  # made, so anything matching real payments (bills) keeps it.
+  scope :not_excluded_by_user, -> { where("entries.excluded = FALSE OR #{SPLIT_PARENT_SQL}") }
 
   # Balance updates: reconciliation valuations. On linked accounts most of them
   # are the provider's daily balance, kept as a waypoint by

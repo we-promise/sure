@@ -96,6 +96,32 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert occurrence.allocations.sole.allocation_suggested?
   end
 
+  # Splitting a charge excludes the parent so its children are not counted
+  # twice, but the parent is still the payment the bank made. Split before the
+  # matcher ran, the bill used to stay overdue although it had been paid.
+  test "a charge split before matching still settles the bill" do
+    series = create_series(name: "MORTGAGE", amount: 1000, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    entry = create_entry(amount: 1000, date: Date.current, name: "MORTGAGE")
+    entry.split!([ { name: "Interest", amount: 400 }, { name: "Principal", amount: 600 } ])
+
+    assert_equal 1, @matcher.run!
+
+    allocation = occurrence.allocations.sole
+    assert allocation.allocation_confirmed?
+    assert_equal entry.id, allocation.entry_id
+    assert occurrence.reload.paid?
+  end
+
+  test "a charge the user excluded never settles a bill" do
+    series = create_series(name: "MORTGAGE", amount: 1000, day_offset: 0)
+    occurrence = series.recurring_occurrences.order(:due_on).first
+    create_entry(amount: 1000, date: Date.current, name: "MORTGAGE").update!(excluded: true)
+
+    assert_equal 0, @matcher.run!
+    assert_empty occurrence.allocations
+  end
+
   # The payment review queue is where suggestions land, and income review has
   # no home there: a paycheck is not a bill anyone needs to approve paying.
   test "an income series never suggests, while the same shape on a bill does" do

@@ -252,7 +252,8 @@ class RecurringTransaction
 
       # One query over the envelope of every open occurrence's window.
       # Transfer legs are left out, except the outflow side of a transfer that
-      # a recurring transfer series could be paid by.
+      # a recurring transfer series could be paid by. A split charge stays in:
+      # its parent is excluded by the split, not by the user, and is the payment.
       def entries_for(occurrences, include_closed_window)
         window_min = occurrences.map { |occurrence| window_for(occurrence).begin }.min
         window_max = occurrences.map { |occurrence| window_for(occurrence).end }.max
@@ -264,7 +265,7 @@ class RecurringTransaction
         family.entries
               .joins("INNER JOIN transactions ON transactions.id = entries.entryable_id")
               .where(entryable_type: "Transaction")
-              .where(excluded: false)
+              .not_excluded_by_user
               .where(date: window_min..window_max)
               .where("transactions.kind NOT IN (?) OR transactions.id IN (?)", Transaction::TRANSFER_KINDS, transfer_destinations.keys)
               .where.not(id: RecurringAllocation.where.not(entry_id: nil).where(state: "confirmed").select(:entry_id))
