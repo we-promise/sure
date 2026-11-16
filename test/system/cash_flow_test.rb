@@ -205,12 +205,11 @@ class CashFlowTest < ApplicationSystemTestCase
     JS
     assert_selector "#cashflow-sankey-chart [data-sankey-chart-target='zoomOutButton']:not([hidden])"
     # The zoomed view keeps the category and what it flows on to: its
-    # subcategory and, beside it, its own spending.
-    assert_selector "#cashflow-sankey-chart svg .sankey-link", count: 2
-    flows = page.evaluate_script(<<~JS)
-      Array.from(document.querySelectorAll("#cashflow-sankey-chart svg .sankey-link"))
-        .map((path) => [path.__data__.source.name, path.__data__.target.name, path.__data__.value])
-    JS
+    # subcategory and, beside it, its own spending. Read only the visible
+    # links; the closed expanded dialog holds a second, unzoomed copy.
+    flows = all("#cashflow-sankey-chart svg .sankey-link", count: 2).map do |link|
+      page.evaluate_script("[arguments[0].__data__.source.name, arguments[0].__data__.target.name, arguments[0].__data__.value]", link)
+    end
     own_share = I18n.t("models.category.own_share", category: "Sankey Shopping")
     assert_equal [ [ "Sankey Shopping", "Sankey Groceries", 50 ], [ "Sankey Shopping", own_share, 100 ] ].sort, flows.sort
 
