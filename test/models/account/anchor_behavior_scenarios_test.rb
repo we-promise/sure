@@ -10,6 +10,9 @@ class AnchorBehaviorScenariosTest < ActiveSupport::TestCase
     @plaid_account = plaid_accounts(:one)
 
     assert_equal 0, accounts(:connected).entries.count
+
+    # The reuse of an explained anchor is gated on BALANCE_REUSE_EXPLAINED_ANCHOR (default off).
+    Rails.configuration.x.balance.stubs(:reuse_explained_anchor).returns(true)
   end
 
   # A mid-day reading must not become that day's closing waypoint.

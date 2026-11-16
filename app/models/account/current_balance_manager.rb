@@ -101,7 +101,8 @@ class Account::CurrentBalanceManager
     # linked account data (e.g. via Plaid).
     #
     # A stale anchor the imported ledger explains moves forward in place. Otherwise it is
-    # preserved as a reconciliation waypoint (#1492, #1484).
+    # preserved as a reconciliation waypoint (#1492, #1484). Gated on
+    # BALANCE_REUSE_EXPLAINED_ANCHOR; when off, every stale anchor is preserved.
     def set_current_balance_for_linked_account(balance, date)
       changes_made = false
       error = nil
@@ -185,6 +186,7 @@ class Account::CurrentBalanceManager
     # True when the imported transactions and trades account for the entire move
     # between the standing anchor and the new reading. Only meaningful for :cash.
     def ledger_explains?(older_entry, new_balance, date)
+      return false unless Rails.configuration.x.balance.reuse_explained_anchor
       return false unless account.balance_type == :cash
       return false unless older_entry.currency == account.currency
 
