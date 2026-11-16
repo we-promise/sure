@@ -75,6 +75,13 @@ class Portfolio::Drivers
   # Portfolio::DailyReturns moves it from `market` to here; the change and
   # the returns are the same either way. A writer that keeps the fee out of
   # the amount never charged it to the balance, so it is not counted.
+  #
+  # A known limit: Balance::ReverseCalculator (a linked account) pins its
+  # opening-anchor day to the anchor, so a trade that day moves nothing; its
+  # commission shows, if anywhere, in the next day's boundary adjustment, a
+  # revaluation. Moved from `market` anyway, that day reads market +fee and fees
+  # +fee. The period still reconciles; only the split between those drivers is
+  # off, and only for a trade dated on that anchor.
   def fees
     @fees ||= sum(:fees)
   end
