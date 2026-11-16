@@ -142,6 +142,58 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_not Rails.root.join("lib/generators/provider/family/templates/unlinking_concern.rb.tt").exist?
   end
 
+  module GeneratedFlows
+    GocardlessItem = Class.new
+  end
+
+  # ProviderItem::AccountFlow raises for a hook a provider has not defined, so the
+  # generated flow is checked to define every hook itself, as a stub that names
+  # what is left to do.
+  test "the generated account flow stubs every hook the provider kit needs" do
+    flow_source = render_provider_template("account_flow.rb.tt")
+    assert_parses flow_source
+    GeneratedFlows.module_eval(flow_source)
+    flow_class = GeneratedFlows::GocardlessItem::AccountFlow
+    flow = flow_class.allocate
+
+    assert_operator flow_class, :<, ProviderItem::AccountFlow
+    assert_equal flow_class.singleton_class, flow_class.method(:cache_sensitive_params).owner
+    error = assert_raises(NotImplementedError) { flow_class.cache_sensitive_params }
+    assert_includes error.message, "TODO"
+    {
+      fetch_accounts: [],
+      resolve_item: [ "item-id" ],
+      provider_error_class: [],
+      upsert_provider_account!: [ "acc_1", {} ],
+      provider_account_snapshot_changed?: [ Object.new, {} ]
+    }.each do |hook, args|
+      assert_equal flow_class, flow_class.instance_method(hook).owner, "#{hook} is not stubbed"
+      error = assert_raises(NotImplementedError, hook.to_s) { flow.send(hook, *args) }
+      assert_includes error.message, "TODO", hook.to_s
+    end
+  ensure
+    GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
+  end
+
+  test "the generator writes the account flow" do
+    Dir.mktmpdir do |dir|
+      generator = Provider::FamilyGenerator.new([ "gocardless" ], {}, destination_root: dir)
+      capture_io { Dir.chdir(dir) { generator.send(:create_item_concerns) } }
+
+      assert_includes File.read(File.join(dir, "app/models/gocardless_item/account_flow.rb")), "class GocardlessItem::AccountFlow < ProviderItem::AccountFlow"
+    end
+  end
+
+  # The account flow reads a payload's name and currency through the account class.
+  test "the generated account model answers the account flow's payload questions" do
+    model = render_provider_template("account_model.rb.tt")
+
+    assert_parses model
+    assert_includes model, "  def self.name_for(account_data)\n    account_data.with_indifferent_access[:name]\n"
+    assert_includes model, "  def self.currency_for(account_data)\n"
+    assert_includes model, "  def self.default_accountable_attributes(_accountable_type)\n    {}\n"
+  end
+
   # ProviderItem::Syncer reads its status and error messages from <key>_items.syncer.*.
   # Brex's are the reference set: the generated locale defines the same keys, plural
   # forms and interpolations.

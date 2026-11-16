@@ -1,0 +1,41 @@
+# frozen_string_literal: true
+
+# Lists, links and sets up <%= class_name %> accounts. ProviderItem::AccountFlow does
+# the work; the hooks below supply what only <%= class_name %> knows, and each raises
+# until it is implemented. See BrexItem::AccountFlow for a complete example.
+class <%= class_name %>Item::AccountFlow < ProviderItem::AccountFlow
+  # TODO: The <%= class_name %>Item params whose change makes the cached account list
+  # stale, usually the credentials and base URL.
+  def self.cache_sensitive_params
+    raise NotImplementedError, "TODO: <%= class_name %>Item::AccountFlow.cache_sensitive_params"
+  end
+
+  private
+
+    # TODO: The API's account payloads for `item`, as hashes with at least an id.
+    # Raise NoApiTokenError when the connection has no usable credentials.
+    def fetch_accounts
+      raise NotImplementedError, "TODO: <%= class_name %>Item::AccountFlow#fetch_accounts"
+    end
+
+    # TODO: The family's credentialed connection with this id, or its only one when
+    # no id is given (see BrexItem.resolve_for).
+    def resolve_item(_item_id)
+      raise NotImplementedError, "TODO: <%= class_name %>Item::AccountFlow#resolve_item"
+    end
+
+    # TODO: The error class the <%= class_name %> API client raises.
+    def provider_error_class
+      raise NotImplementedError, "TODO: <%= class_name %>Item::AccountFlow#provider_error_class"
+    end
+
+    # TODO: Create or update the <%= class_name %>Account for this payload and return it.
+    def upsert_provider_account!(_account_id, _account_data)
+      raise NotImplementedError, "TODO: <%= class_name %>Item::AccountFlow#upsert_provider_account!"
+    end
+
+    # TODO: Whether the stored account differs from this payload, so setup refreshes it.
+    def provider_account_snapshot_changed?(_provider_account, _account_data)
+      raise NotImplementedError, "TODO: <%= class_name %>Item::AccountFlow#provider_account_snapshot_changed?"
+    end
+end

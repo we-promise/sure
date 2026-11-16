@@ -424,6 +424,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "     - app/models/#{file_name}_item.rb"
     say "     - app/models/#{file_name}_account.rb"
     say "     - app/models/#{file_name}_item/provided.rb"
+    say "     - app/models/#{file_name}_item/account_flow.rb"
     say "     - app/models/#{file_name}_item/importer.rb"
     say "     - app/models/#{file_name}_account/data_helpers.rb"
     say "     - app/models/#{file_name}_account/processor.rb"
@@ -489,6 +490,8 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "  3. Customize the Importer class:"
     say "     app/models/#{file_name}_item/importer.rb"
     say "     - Map API response fields to account fields"
+    say "     app/models/#{file_name}_item/account_flow.rb"
+    say "     - Implement each hook; they raise NotImplementedError until then"
     say ""
     say "  4. Customize the Processors:"
     if investment_provider?
@@ -674,6 +677,15 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       else
         template "provided_concern.rb.tt", provided_concern_path
         say "Created Provided concern: #{provided_concern_path}", :green
+      end
+
+      # Account flow: the hooks ProviderItem::AccountFlow needs to list and link accounts
+      account_flow_path = "#{item_dir}/account_flow.rb"
+      if File.exist?(account_flow_path)
+        say "Account flow already exists: #{account_flow_path}", :skip
+      else
+        template "account_flow.rb.tt", account_flow_path
+        say "Created account flow: #{account_flow_path}", :green
       end
 
       # Importer class
