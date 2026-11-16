@@ -894,6 +894,24 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_empty @account.loan.reload.term_changes
   end
 
+  # The form always sends the rows, so a stored payment is measured against a
+  # rate changed in the same save.
+  test "a rate raised in the form is refused when a stored payment no longer covers the interest" do
+    draw_down_loan_two_years_ago
+    @account.loan.update!(interest_rate: 6, term_months: 120, rate_type: "fixed")
+    # 500,000 charges about 2,500 a month at 6% and 10,000 at 24%.
+    row = { effective_date: (Date.current - 1.year).iso8601, extra_repayment: "", balance: "", payment: "6000" }
+    @account.loan.update!(term_change_rows: [ row ])
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: { id: @account.loan.id, interest_rate: 24, term_change_rows: [ "", row ] } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_includes CGI.unescapeHTML(response.body), I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+    assert_equal 6, @account.loan.reload.interest_rate
+  end
+
   # Reads the payload off the mounted controller's own data attribute rather
   # than parsing rendered SVG paths, which would be a brittle way to assert on
   # data that already has model-level coverage. This test's job is to prove the
