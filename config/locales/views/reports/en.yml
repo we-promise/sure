@@ -176,7 +176,7 @@ en:
         merchant: Merchant
         spent: Spent
         purchases: Purchases
-        average: Average
+        average: Avg. purchase
     investment_performance:
       title: Investment Performance
       portfolio_value: Portfolio Value
