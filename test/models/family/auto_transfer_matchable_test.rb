@@ -918,7 +918,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert_includes sql, "EXISTS (SELECT 1 FROM account_providers WHERE account_providers.account_id = outflow_accounts.id)"
     assert_includes sql, ":restrict_cross_currency_to_linked_accounts = FALSE"
     assert_equal 2, sql.scan(":require_common_writer = FALSE").size
-    assert_equal 2, sql.scan(":exclude_same_wise_item = FALSE").size
+    assert_equal 2, sql.scan(":exclude_same_connection_pairs = FALSE").size
   end
 
   # Moves between one Wise connection's balances are linked from Wise's own
@@ -964,6 +964,34 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
 
     assert Transfer.exists?(inflow_transaction_id: bank_credit.entryable_id, outflow_transaction_id: payout.entryable_id)
     assert Transfer.exists?(inflow_transaction_id: move_in.entryable_id, outflow_transaction_id: move_out.entryable_id)
+  end
+
+  test "the same-connection exclusion comes from the provider adapter" do
+    wise_item = wise_items(:one)
+    jar_out = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: 250.75, currency: "EUR")
+    jar_in = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: -250.75, currency: "EUR")
+    Provider::WiseAdapter.stubs(:auto_match_exclusion_sql).returns(nil)
+
+    @family.auto_match_transfers!
+
+    assert Transfer.exists?(inflow_transaction_id: jar_in.entryable_id, outflow_transaction_id: jar_out.entryable_id)
+  end
+
+  test "one provider adapter's exclusion does not lift another's" do
+    wise_item = wise_items(:one)
+    jar_out = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: 250.75, currency: "EUR")
+    jar_in = create_transaction(date: Date.current, account: link_wise_balance!(wise_item, "EUR"), amount: -250.75, currency: "EUR")
+    link_account!(@depository)
+    link_account!(@credit_card)
+    create_transaction(date: Date.current, account: @depository, amount: 500)
+    create_transaction(date: Date.current, account: @credit_card, amount: -500)
+    Provider::PlaidAdapter.stubs(:auto_match_exclusion_sql).with("inflow_accounts", "outflow_accounts")
+                          .returns("inflow_accounts.id = '#{@credit_card.id}'")
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+    assert_not Transfer.exists?(inflow_transaction_id: jar_in.entryable_id, outflow_transaction_id: jar_out.entryable_id)
   end
 
   test "does not auto-match transfers when the family has disabled auto match" do
