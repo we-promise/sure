@@ -179,8 +179,12 @@ class Portfolio::Performance
   # The digest only shortens the key; nothing depends on it being secret.
   # SHA-256 rather than MD5 so code scanning does not flag account ids fed to a
   # broken hash.
+  #
+  # Taken once per instance, so every figure one instance reports comes from
+  # one snapshot: a sync or a rate landing mid-instance moves the key for the
+  # next instance, not for half of this one's entries.
   def cache_key
-    family.build_cache_key(
+    @cache_key ||= family.build_cache_key(
       [
         "portfolio_performance", CACHE_VERSION, user&.id, family.currency,
         Digest::SHA256.hexdigest(
@@ -205,7 +209,24 @@ class Portfolio::Performance
     end
 
     def metrics
-      @metrics ||= Rails.cache.fetch(cache_key) { compute }
+      @metrics ||= begin
+        key = cache_key
+        Rails.cache.fetch(key) do
+          daily_returns_for(key)
+          compute
+        end
+      end
+    end
+
+    # The series an entry stored under `key` is computed from, built for that
+    # key. Rows read through #daily_returns before the key was taken can
+    # predate it -- a sync or a rate stored in between -- and would otherwise
+    # be cached under it and served to every later instance. Entries computed
+    # under the same key share one series.
+    def daily_returns_for(key)
+      @daily_returns = nil unless @daily_returns_key == key
+      @daily_returns_key = key
+      daily_returns
     end
 
     def compute

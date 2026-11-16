@@ -219,6 +219,25 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     refute_equal before_key, performance.cache_key
   end
 
+  # A rate stored after an instance has read its rows moves the key. The
+  # entry computed on that miss must come from current data, or the stale
+  # rows are cached under the newer key and served to every later instance.
+  test "a miss after the key has moved recomputes from current rows" do
+    eur = create_portfolio_account(family: @family, currency: "EUR")
+    lay_balance account: eur, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: eur, date: @day_two, opening: 1_000, closing: 1_100, market_flow: 100
+    result = performance(account_ids: [ eur.id ])
+
+    assert result.daily_returns.rate_missing?, "precondition: the rows were read with no rate"
+
+    travel 1.minute do
+      set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.0
+    end
+
+    assert_not_nil result.twr, "computed from rows that have the rate"
+    assert_in_delta 0.10, result.twr.to_f, 0.000001
+  end
+
   # The flow scope is the accounts themselves (see Portfolio::DailyReturns),
   # so there is no second set to pass, and none to key the cache on.
   test "the flow scope cannot be widened beyond the accounts measured" do
