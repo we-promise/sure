@@ -2,7 +2,7 @@ class Security < ApplicationRecord
   include Provided, PlanRestrictionTracker
 
   # Transient attribute for search results -- not persisted
-  attr_accessor :search_currency
+  attr_accessor :search_currency, :search_isin
 
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes
@@ -278,7 +278,8 @@ class Security < ApplicationRecord
       exchange_operating_mic: exchange_operating_mic,
       country_code: country_code,
       price_provider: price_provider,
-      currency: search_currency
+      currency: search_currency,
+      isin: search_isin
     )
   end
 
