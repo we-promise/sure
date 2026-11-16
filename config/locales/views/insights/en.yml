@@ -46,6 +46,7 @@ en:
       budget_at_risk: Budget
       budget_on_track: Budget
       maintained_goal_depleted: Reserve
+      bill_not_covered: Bills
     meta:
       next_n_days:
         one: Next day
@@ -66,6 +67,7 @@ en:
       idle_days:
         one: idle %{count} day
         other: idle %{count} days
+      short_on: short on %{date}
     actions:
       spending_anomaly: View %{category} transactions
       cash_flow_warning: Review recurring transactions
@@ -75,6 +77,7 @@ en:
       idle_cash: Go to account
       budget: View budget
       maintained_goal_depleted: View reserve
+      bill_not_covered: Go to account
     titles:
       spending_anomaly:
         above: "%{category} spending is trending up"
@@ -93,6 +96,7 @@ en:
         one: One category needs attention in your budget
         other: "%{count} categories need attention in your budget"
       budget_on_track: Your budget is on track
+      bill_not_covered: "%{account} may not cover %{name}"
     templates:
       spending_anomaly:
         above: You're on pace to spend %{projected_spend} on %{category} this month, about %{deviation_pct}% more than your recent monthly average of %{baseline_spend}.
@@ -112,3 +116,4 @@ en:
         over: "%{categories} went over budget this month. You've used %{budget_spent_pct}% of your total budget so far."
         near: "%{categories} are close to their limits this month. You've used %{budget_spent_pct}% of your total budget so far."
       budget_on_track: You've spent %{spent} of your %{budgeted} budget (%{budget_spent_pct}%) and everything is within its limit.
+      bill_not_covered: "%{name} of %{amount} is due on %{due_on} from %{account}. Counting the other bills and income scheduled on that account until then, it will be about %{shortfall} short."

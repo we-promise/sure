@@ -46,6 +46,7 @@ es:
       budget_at_risk: Presupuesto
       budget_on_track: Presupuesto
       maintained_goal_depleted: Reserva
+      bill_not_covered: Recibos
     meta:
       next_n_days:
         one: Próximo día
@@ -66,6 +67,7 @@ es:
       idle_days:
         one: "%{count} día inactivo"
         other: "%{count} días inactivos"
+      short_on: faltarán el %{date}
     actions:
       spending_anomaly: Ver transacciones de %{category}
       cash_flow_warning: Revisar transacciones recurrentes
@@ -75,6 +77,7 @@ es:
       idle_cash: Ir a la cuenta
       budget: Ver presupuesto
       maintained_goal_depleted: Ver reserva
+      bill_not_covered: Ir a la cuenta
     titles:
       spending_anomaly:
         above: El gasto en %{category} va en aumento
@@ -93,6 +96,7 @@ es:
         one: Una categoría necesita atención en tu presupuesto
         other: "%{count} categorías necesitan atención en tu presupuesto"
       budget_on_track: Tu presupuesto va según lo previsto
+      bill_not_covered: "%{account} podría no cubrir %{name}"
     templates:
       spending_anomaly:
         above: Vas camino de gastar %{projected_spend} en %{category} este mes, aproximadamente un %{deviation_pct}% más que tu promedio mensual reciente de %{baseline_spend}.
@@ -112,3 +116,4 @@ es:
         over: "%{categories} superaron el presupuesto este mes. Has usado el %{budget_spent_pct}% de tu presupuesto total hasta ahora."
         near: "%{categories} están cerca de sus límites este mes. Has usado el %{budget_spent_pct}% de tu presupuesto total hasta ahora."
       budget_on_track: Has gastado %{spent} de tu presupuesto de %{budgeted} (%{budget_spent_pct}%) y todo está dentro de su límite.
+      bill_not_covered: "%{name}, de %{amount}, vence el %{due_on} y se paga desde %{account}. Contando los demás recibos e ingresos previstos en esa cuenta hasta entonces, faltarán unos %{shortfall}."

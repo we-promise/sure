@@ -112,11 +112,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
       # remaining_amount reads the confirmed-allocation sum, and this runs
       # nightly for every family: one grouped query instead of one SUM per
       # occurrence in the horizon.
-      sums = RecurringAllocation.confirmed
-                                .where(recurring_occurrence_id: occurrences.map(&:id))
-                                .group(:recurring_occurrence_id)
-                                .sum(:allocated_amount)
-      occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+      RecurringOccurrence.preload_confirmed_allocated(occurrences)
 
       occurrences.map { |occurrence| Obligation.new(date: occurrence.due_on, amount: occurrence.remaining_amount) }
     end

@@ -72,6 +72,14 @@ class RecurringOccurrence < ApplicationRecord
   # here, so row rendering issues no per-occurrence SUM.
   attr_writer :cached_confirmed_allocated
 
+  def self.preload_confirmed_allocated(occurrences)
+    sums = RecurringAllocation.confirmed
+                              .where(recurring_occurrence_id: occurrences.map(&:id))
+                              .group(:recurring_occurrence_id)
+                              .sum(:allocated_amount)
+    occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+  end
+
   def confirmed_allocated
     @cached_confirmed_allocated || allocations.confirmed.sum(:allocated_amount)
   end

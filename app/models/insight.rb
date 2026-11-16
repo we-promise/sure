@@ -27,6 +27,7 @@ class Insight < ApplicationRecord
     budget_at_risk
     budget_on_track
     maintained_goal_depleted
+    bill_not_covered
   ].freeze
 
   # How many the dashboard widget shows. Shared so PagesController (first render)
