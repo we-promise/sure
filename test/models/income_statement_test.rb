@@ -282,6 +282,33 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(200, @family.currency), checking_only_totals.expense_money
   end
 
+  test "monthly_totals_for matches totals_for for each month in one query" do
+    income_statement = IncomeStatement.new(@family)
+    this_month = Date.current.beginning_of_month
+    last_month = this_month.prev_month
+    create_transaction(account: @checking_account, amount: 50, category: @food_category, date: last_month + 2.days)
+    create_transaction(account: @credit_card_account, amount: -25, category: @income_category, date: last_month + 3.days)
+
+    window = Period.custom(start_date: last_month, end_date: Date.current)
+
+    [ nil, [ @checking_account.id ] ].each do |account_ids|
+      monthly = income_statement.monthly_totals_for(window, account_ids: account_ids)
+      assert_equal [ last_month, this_month ], monthly.keys
+
+      { last_month => last_month.end_of_month, this_month => Date.current }.each do |month, end_date|
+        expected = income_statement.totals_for(Period.custom(start_date: month, end_date: end_date), account_ids: account_ids)
+        assert_equal expected.income_money, monthly[month].income_money
+        assert_equal expected.expense_money, monthly[month].expense_money
+        assert_equal expected.transactions_count, monthly[month].transactions_count
+      end
+    end
+
+    IncomeStatement::MonthlyTotals.expects(:new).once.returns(stub(call: []))
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    empty = IncomeStatement.new(@family).monthly_totals_for(window)
+    assert_equal Money.new(0, @family.currency), empty[last_month].income_money
+  end
+
   test "eligible_accounts excludes accounts not reflected in totals" do
     tax_advantaged_account = @family.accounts.create! name: "401k", currency: @family.currency, balance: 10000, accountable: Investment.new(subtype: "401k")
     excluded_account = @family.accounts.create! name: "Excluded", currency: @family.currency, balance: 0, exclude_from_reports: true, accountable: Depository.new

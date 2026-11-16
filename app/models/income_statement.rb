@@ -157,6 +157,38 @@ class IncomeStatement
     totals(transactions_scope: scope, date_range: period.date_range)
   end
 
+  # Same totals as `totals_for`, for each calendar month overlapping `period`,
+  # computed in a single query instead of one per month. Returns
+  # { month_start_date => ScopeTotals }; months without activity get zeros.
+  def monthly_totals_for(period, account_ids: nil)
+    scope = family.transactions.visible.excluding_pending.in_period(period)
+    scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
+    date_range = period.date_range
+
+    rows = Rails.cache.fetch([
+      "income_statement", "monthly_totals", "v1", family.id, user&.id, included_account_ids_hash,
+      Digest::MD5.hexdigest(scope.to_sql), date_range.begin, date_range.end, *cache_freshness_key
+    ]) do
+      MonthlyTotals.new(family, transactions_scope: scope, date_range: date_range, included_account_ids: included_account_ids).call
+    end
+
+    rows_by_month = rows.group_by(&:month)
+    month = period.start_date.beginning_of_month
+    result = {}
+    while month <= period.end_date
+      month_rows = rows_by_month[month] || []
+      sum_for = ->(classification) { month_rows.select { |r| r.classification == classification }.sum(&:total) }
+      result[month] = ScopeTotals.new(
+        transactions_count: month_rows.sum(&:transactions_count),
+        income_money: Money.new(sum_for.call("income"), family.currency),
+        expense_money: Money.new(sum_for.call("expense"), family.currency),
+        invested_money: Money.new(sum_for.call("investment"), family.currency)
+      )
+      month = month.next_month
+    end
+    result
+  end
+
   # Accounts actually reflected in totals/totals_for: visible, not excluded
   # from reports, not tax-advantaged, and (when scoped to a user) included in
   # that user's finances. Callers offering an account filter (e.g. a
