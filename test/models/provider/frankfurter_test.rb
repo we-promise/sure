@@ -54,6 +54,10 @@ class Provider::FrankfurterTest < ActiveSupport::TestCase
     assert_equal "INR", response.data.to
   end
 
+  test "usd_cross? is false, as Frankfurter converts any pair itself" do
+    assert_not @provider.usd_cross?
+  end
+
   # ================================
   #        fetch_exchange_rate (GET /rate/{base}/{quote})
   # ================================
