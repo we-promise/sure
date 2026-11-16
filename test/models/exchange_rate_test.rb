@@ -136,6 +136,21 @@ class ExchangeRateTest < ActiveSupport::TestCase
     end
   end
 
+  # A rate stored here can be one a balance had to do without, so it is
+  # passed to the balance refresh. One already stored is not.
+  test "a rate fetched and stored is passed to the balance refresh" do
+    ExchangeRate.delete_all
+    @provider.expects(:fetch_exchange_rate).returns(provider_success_response(
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.2)
+    ))
+    ExchangeRateBalanceRefreshJob.expects(:perform_later).with([ { from: "USD", to: "EUR", date: Date.current } ]).once
+
+    ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+
+    ExchangeRateBalanceRefreshJob.expects(:perform_later).never
+    ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+  end
+
   test "returns nil on provider error" do
     provider_response = provider_error_response(StandardError.new("Test error"))
 
