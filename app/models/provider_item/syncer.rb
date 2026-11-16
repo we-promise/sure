@@ -84,7 +84,8 @@ class ProviderItem::Syncer
       scope.set_tags("#{provider_key}_item_id": provider_item.id)
     end
     collect_health_stats(sync, errors: [ { message: safe_message, category: "sync_error" } ])
-    raise SafeSyncError, safe_message
+    # cause: nil keeps the raw error, already reported above, off Sync's own report.
+    raise SafeSyncError.new(safe_message), cause: nil
   end
 
   def perform_post_sync

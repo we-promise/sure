@@ -46,6 +46,21 @@ module ProviderItemModelLifecycleTests
                    without_error.map { |error| error.values_at("message", "category") }
     end
 
+    test "lifecycle: a failed sync reaches Sentry once, without the safe error carrying it as its cause" do
+      error = StandardError.new("raw provider failure")
+      provider_item.class.any_instance.stubs(:"import_latest_#{provider_item.provider_key}_data").raises(error)
+      captured = []
+
+      Sentry.stub(:capture_exception, ->(exception, *) { captured << exception }) do
+        Sync.create!(syncable: provider_item).perform
+      end
+
+      safe_errors = captured.grep(ProviderItem::Syncer::SafeSyncError)
+      assert_equal 1, safe_errors.size
+      assert_nil safe_errors.first.cause
+      assert_equal 1, captured.flat_map { |exception| exception_chain(exception) }.count { |exception| exception.equal?(error) }
+    end
+
     test "lifecycle: unlinking removes the connection's links and detaches their holdings" do
       account, link = link_provider_account(provider_account)
       holding = create_holding(account, link)
@@ -85,6 +100,15 @@ module ProviderItemModelLifecycleTests
   end
 
   private
+    def exception_chain(exception)
+      chain = []
+      while exception
+        chain << exception
+        exception = exception.cause
+      end
+      chain
+    end
+
     def provider_account
       provider_item.provider_accounts.first
     end

@@ -74,6 +74,22 @@ class MercuryItem::SyncerTest < ActiveSupport::TestCase
                  sync.sync_stats["errors"].map { |e| e.values_at("message", "category") }
   end
 
+  test "a failed sync reaches Sentry once, without the safe error carrying it as its cause" do
+    error = StandardError.new("raw provider failure")
+    @mercury_item.stubs(:import_latest_mercury_data).raises(error)
+    captured = []
+
+    Sentry.stub(:capture_exception, ->(exception, *) { captured << exception }) do
+      Sync.create!(syncable: @mercury_item).perform
+    end
+
+    safe_errors = captured.grep(MercuryItem::Syncer::SafeSyncError)
+    assert_equal 1, safe_errors.size
+    assert_nil safe_errors.first.cause
+    reported = captured.flat_map { |exception| exception_chain(exception) }
+    assert_equal 1, reported.count { |exception| exception.equal?(error) }
+  end
+
   test "linked accounts that fail to process or schedule are reported" do
     mercury_account = mercury_accounts(:checking_account)
     account = @mercury_item.family.accounts.create!(name: "Linked", balance: 0, currency: "USD", accountable: Depository.new)
@@ -128,6 +144,15 @@ class MercuryItem::SyncerTest < ActiveSupport::TestCase
   end
 
   private
+
+    def exception_chain(exception)
+      chain = []
+      while exception
+        chain << exception
+        exception = exception.cause
+      end
+      chain
+    end
 
     def recording_sync
       Class.new do
