@@ -43,6 +43,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      terminationGracePeriodSeconds: {{ .Values.pipelock.terminationGracePeriodSeconds | default 600 }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- $plSecrets := coalesce .Values.pipelock.image.imagePullSecrets .Values.image.imagePullSecrets }}
@@ -105,6 +106,11 @@ spec:
             - name: mcp
               containerPort: {{ $mcpPort }}
               protocol: TCP
+            {{- if include "sure.pipelockMetricsEnabled" . }}
+            - name: metrics
+              containerPort: {{ include "sure.pipelockMetricsPort" . }}
+              protocol: TCP
+            {{- end }}
           livenessProbe:
             httpGet:
               path: /health

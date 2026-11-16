@@ -250,13 +250,20 @@ class Family::DataExporter
 
       # Export accounts with full accountable data
       @family.accounts.includes(:accountable).find_each do |account|
+        data = account.as_json(
+          include: {
+            accountable: {}
+          }
+        )
+        # A property's address lives in its own table, so it is not part of
+        # the accountable's columns.
+        if account.accountable.is_a?(Property) && (address = account.accountable.address)
+          data["accountable"]["address"] = address.as_json(only: Family::DataImporter::PROPERTY_ADDRESS_ATTRIBUTES)
+        end
+
         lines << {
           type: "Account",
-          data: account.as_json(
-            include: {
-              accountable: {}
-            }
-          )
+          data: data
         }.to_json
       end
 
