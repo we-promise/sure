@@ -332,6 +332,25 @@ class SyncPropertyValuationsJobTest < ActiveSupport::TestCase
     assert_equal Date.current, uk_account.property.reload.avm_last_synced_on
   end
 
+  # West of UTC the monthly cron lands on local month-ends, and
+  # November 30 - 1.month is October 30: a month counted backwards from the
+  # shorter month would skip the run after an October 31 refresh.
+  test "refreshes UK properties a calendar month after a month-end refresh" do
+    @property.update!(avm_provider: nil)
+    @account.family.update!(timezone: "America/Los_Angeles")
+    uk_account = create_uk_property(avm_last_synced_on: Date.new(2026, 10, 31))
+
+    provider = stub_chimnie_provider
+    provider.expects(:fetch_property_valuation).once
+      .returns(Provider::Response.new(success?: true, data: gbp_valuation_data, error: nil))
+
+    travel_to Time.utc(2026, 12, 1, 1, 30) do # 17:30 on November 30 in Los Angeles
+      SyncPropertyValuationsJob.new.perform
+    end
+
+    assert_equal Date.new(2026, 11, 30), uk_account.property.reload.avm_last_synced_on
+  end
+
   test "a forced refresh of one property skips the refresh interval" do
     uk_account = create_uk_property(avm_last_synced_on: Date.current - 2.weeks)
 

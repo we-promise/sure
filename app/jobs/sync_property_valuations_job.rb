@@ -118,9 +118,11 @@ class SyncPropertyValuationsJob < ApplicationJob
   private
 
     # RentCast and Realie refresh at most daily; Chimnie at most monthly.
+    # Count forward from the last sync: Oct 31 + 1.month is Nov 30, while
+    # Nov 30 - 1.month is Oct 30 and would skip a month-end run.
     def recently_synced?(property, provider_class)
       property.avm_last_synced_on.present? &&
-        property.avm_last_synced_on > property.account.family.local_date - provider_class.refresh_interval
+        property.avm_last_synced_on + provider_class.refresh_interval > property.account.family.local_date
     end
 
     def capture_failure(property, account, message, level: "error")
