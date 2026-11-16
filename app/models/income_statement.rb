@@ -150,9 +150,10 @@ class IncomeStatement
     daily_expense_by_category(period).map(&:category_id).uniq
   end
 
-  def totals_for(period, account_ids: nil)
+  def totals_for(period, account_ids: nil, tag_ids: nil)
     scope = family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period)
     scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
+    scope = scope.with_any_tag(tag_ids) if tag_ids.present?
 
     totals(transactions_scope: scope, date_range: period.date_range)
   end

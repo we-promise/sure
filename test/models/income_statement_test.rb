@@ -282,6 +282,21 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal Money.new(200, @family.currency), checking_only_totals.expense_money
   end
 
+  test "totals_for limits totals to transactions carrying any of the tag ids" do
+    travel = @family.tags.create!(name: "Travel")
+    work = @family.tags.create!(name: "Work")
+    create_transaction(account: @checking_account, amount: 30, category: @food_category, tags: [ travel ])
+    create_transaction(account: @checking_account, amount: 50, category: @food_category, tags: [ work ])
+    create_transaction(account: @checking_account, amount: 20, category: @food_category, tags: [ travel, work ])
+    create_transaction(account: @checking_account, amount: -10, category: @income_category, tags: [ travel ])
+
+    totals = IncomeStatement.new(@family).totals_for(Period.last_30_days, tag_ids: [ travel.id, work.id ])
+
+    assert_equal Money.new(10, @family.currency), totals.income_money
+    assert_equal Money.new(30 + 50 + 20, @family.currency), totals.expense_money
+    assert_equal 4, totals.transactions_count
+  end
+
   test "eligible_accounts excludes accounts not reflected in totals" do
     tax_advantaged_account = @family.accounts.create! name: "401k", currency: @family.currency, balance: 10000, accountable: Investment.new(subtype: "401k")
     excluded_account = @family.accounts.create! name: "Excluded", currency: @family.currency, balance: 0, exclude_from_reports: true, accountable: Depository.new
