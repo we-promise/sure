@@ -45,6 +45,8 @@ en:
       note_placeholder: Add a note to this transfer
       outflow_name: Name in %{account}
       inflow_name: Name in %{account}
+      shared_name: Transfer name
+      shared_name_hint: Rename both sides
       overview: Overview
       settings: Settings
       from: From

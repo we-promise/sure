@@ -40,13 +40,33 @@ class TransfersTest < ApplicationSystemTestCase
     find("input[name='transfer[inflow_name]']").set("Rent")
     find("input[name='transfer[inflow_name]']").send_keys(:tab)
 
-    within "#display_name_transfer_#{transfer.id}" do
-      assert_text "Rent"
-    end
+    assert_selector "#display_name_transfer_#{transfer.id} input[name='transfer[shared_name]'][value='Rent']"
 
     within "#entry-group-#{date}" do
       assert_text "Rent"
     end
+  end
+
+  test "can rename a transfer from the inline header name" do
+    transfer = transfers(:one)
+    transfer.confirm!
+    transfer.outflow_transaction.entry.update!(name: "Rent")
+    transfer.inflow_transaction.entry.update!(name: "Rent")
+    date = transfer.outflow_transaction.entry.date
+
+    visit transactions_url
+    find("a", text: "Rent", match: :first).click
+
+    inline_name = find("#display_name_transfer_#{transfer.id} input[name='transfer[shared_name]']")
+    inline_name.set("Shared rent")
+    inline_name.send_keys(:tab)
+
+    within "#entry-group-#{date}" do
+      assert_text "Shared rent"
+    end
+
+    assert_equal "Shared rent", transfer.outflow_transaction.entry.reload.name
+    assert_equal "Shared rent", transfer.inflow_transaction.entry.reload.name
   end
 
   test "shows exchange rate field for different currencies" do

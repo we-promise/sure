@@ -460,14 +460,21 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "Rent", entry.reload.name
   end
 
-  test "display_name uses a shared leg name and otherwise falls back to the derived title" do
+  test "shared_name returns the common leg name only when both match" do
     transfer = transfers(:one)
-    assert_equal transfer.name, transfer.display_name
+    assert_nil transfer.shared_name
 
     transfer.outflow_transaction.entry.update!(name: "Rent")
     transfer.inflow_transaction.entry.update!(name: "Rent")
 
+    assert_equal "Rent", transfer.shared_name
     assert_equal "Rent", transfer.display_name
+  end
+
+  test "display_name falls back to the derived title when the leg names differ" do
+    transfer = transfers(:one)
+
+    assert_equal transfer.name, transfer.display_name
   end
 
   test "name stays derived after renaming the entries" do

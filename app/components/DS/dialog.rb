@@ -163,8 +163,9 @@ class DS::Dialog < DesignSystemComponent
 
   # Shown at every width: responsive dialogs use it as their only close
   # control on phones too. shrink-0 keeps its square beside a long title in a
-  # custom header.
-  def close_button
+  # custom header. Pass autofocus: true when the header's first editable
+  # control should not take initial focus from the close button.
+  def close_button(autofocus: false)
     render DS::Button.new(
       variant: "icon",
       size: :sm,
@@ -172,6 +173,7 @@ class DS::Dialog < DesignSystemComponent
       icon: "x",
       title: I18n.t("ds.dialog.close"),
       aria_label: I18n.t("ds.dialog.close"),
+      autofocus: autofocus || nil,
       data: { action: "DS--dialog#close" }
     )
   end

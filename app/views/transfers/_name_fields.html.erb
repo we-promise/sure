@@ -1,0 +1,18 @@
+<div id="<%= dom_id(transfer, :name_fields) %>">
+  <%= styled_form_with scope: :transfer,
+        url: transfer_path(transfer),
+        method: :patch,
+        class: "space-y-2",
+        data: { controller: "auto-submit-form" } do |f| %>
+    <%= f.text_field :outflow_name,
+          value: transfer.outflow_transaction.entry.name,
+          label: t("transfers.show.outflow_name", account: transfer.from_account.name),
+          required: true,
+          "data-auto-submit-form-target": "auto" %>
+    <%= f.text_field :inflow_name,
+          value: transfer.inflow_transaction.entry.name,
+          label: t("transfers.show.inflow_name", account: transfer.to_account.name),
+          required: true,
+          "data-auto-submit-form-target": "auto" %>
+  <% end %>
+</div>

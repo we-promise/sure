@@ -702,7 +702,7 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Rent received", transfer.inflow_transaction.entry.reload.name
   end
 
-  test "renaming a transfer replaces both rows and its drawer name in a turbo stream" do
+  test "renaming a transfer replaces both rows and its name surfaces in a turbo stream" do
     transfer = transfers(:one)
 
     patch transfer_url(transfer),
@@ -712,9 +712,21 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.outflow_transaction.entry)
     assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer.inflow_transaction.entry)
+    assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer, :name_fields)
     assert_select "turbo-stream[action=replace][target=?]", dom_id(transfer, :display_name) do
-      assert_select "span", text: "Rent"
+      assert_select "input[name='transfer[shared_name]'][value='Rent']"
     end
+  end
+
+  test "can rename both sides from the inline shared name" do
+    transfer = transfers(:one)
+
+    patch transfer_url(transfer), params: { transfer: { shared_name: "Rent" } }
+
+    assert_redirected_to transactions_url
+    assert_equal "Transfer updated", flash[:notice]
+    assert_equal "Rent", transfer.outflow_transaction.entry.reload.name
+    assert_equal "Rent", transfer.inflow_transaction.entry.reload.name
   end
 
   test "show renders both transfer names for a writable viewer" do
@@ -723,12 +735,26 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     get transfer_url(transfer)
 
     assert_response :success
+    assert_select "button[autofocus][aria-label=?]", I18n.t("ds.dialog.close")
     assert_select "details[open] input[name='transfer[outflow_name]']"
     assert_select "details[open] input[name='transfer[inflow_name]']"
     assert_select "input[name='transfer[outflow_name]'][value=?]", transfer.outflow_transaction.entry.name
     assert_select "input[name='transfer[inflow_name]'][value=?]", transfer.inflow_transaction.entry.name
+    assert_select "input[name='transfer[shared_name]']", count: 0
     assert_select "label", text: /Name in #{Regexp.escape(transfer.from_account.name)}/
     assert_select "label", text: /Name in #{Regexp.escape(transfer.to_account.name)}/
+  end
+
+  test "show renders an inline shared name when both legs match" do
+    transfer = transfers(:one)
+    transfer.outflow_transaction.entry.update!(name: "Rent")
+    transfer.inflow_transaction.entry.update!(name: "Rent")
+
+    get transfer_url(transfer)
+
+    assert_response :success
+    assert_select "input[name='transfer[shared_name]'][value='Rent']"
+    assert_select "input[name='transfer[shared_name]'][aria-label=?]", I18n.t("transfers.show.shared_name")
   end
 
   test "show hides transfer names without write access to both sides" do
@@ -765,6 +791,19 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     patch transfer_url(transfer), params: {
       transfer: { outflow_name: "  ", inflow_name: "Rent received" }
     }
+
+    assert_redirected_to transactions_url
+    assert_equal I18n.t("transfers.update.name_required"), flash[:alert]
+    assert_equal outflow_name, transfer.outflow_transaction.entry.reload.name
+    assert_equal inflow_name, transfer.inflow_transaction.entry.reload.name
+  end
+
+  test "rejects a blank shared name without changing either side" do
+    transfer = transfers(:one)
+    outflow_name = transfer.outflow_transaction.entry.name
+    inflow_name = transfer.inflow_transaction.entry.name
+
+    patch transfer_url(transfer), params: { transfer: { shared_name: "  " } }
 
     assert_redirected_to transactions_url
     assert_equal I18n.t("transfers.update.name_required"), flash[:alert]

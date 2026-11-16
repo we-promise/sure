@@ -11,31 +11,16 @@
           </span>
           <%= icon "arrow-left-right", size: "sm", class: "text-secondary" %>
         </h3>
-        <%= render "transfers/display_name", transfer: @transfer %>
+        <%= render "transfers/display_name", transfer: @transfer, can_rename: @can_rename_transfer_entries %>
       </div>
-      <%= dialog.close_button %>
+      <%= dialog.close_button(autofocus: true) %>
     </div>
   <% end %>
   <% dialog.with_body do %>
     <% dialog.with_section(title: t(".overview"), open: true) do %>
       <div class="pb-4 px-3 pt-2 text-sm space-y-3 text-primary">
         <% if @can_rename_transfer_entries %>
-          <%= styled_form_with scope: :transfer,
-                url: transfer_path(@transfer),
-                method: :patch,
-                class: "space-y-2",
-                data: { controller: "auto-submit-form" } do |f| %>
-            <%= f.text_field :outflow_name,
-                  value: @transfer.outflow_transaction.entry.name,
-                  label: t(".outflow_name", account: @transfer.from_account.name),
-                  required: true,
-                  "data-auto-submit-form-target": "auto" %>
-            <%= f.text_field :inflow_name,
-                  value: @transfer.inflow_transaction.entry.name,
-                  label: t(".inflow_name", account: @transfer.to_account.name),
-                  required: true,
-                  "data-auto-submit-form-target": "auto" %>
-          <% end %>
+          <%= render "transfers/name_fields", transfer: @transfer %>
         <% end %>
         <div class="space-y-3">
           <dl class="flex items-center gap-2 justify-between">
