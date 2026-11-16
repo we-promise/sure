@@ -80,7 +80,7 @@ pt-PT:
       description: Selecione as contas que pretende associar à sua conta %{product_name}.
       link_accounts: Associar contas selecionadas
       no_accounts_found: Não foram encontradas contas. Verifique a configuração da sua chave de API.
-      no_api_key: A chave de API do Lunch Flow não está configurada. Configure-a nas Definições.
+      no_api_token: A chave de API do Lunch Flow não está configurada. Configure-a nas Definições.
       no_name_placeholder: "(Sem nome)"
       title: Selecionar contas Lunch Flow
     select_existing_account:
@@ -92,17 +92,16 @@ pt-PT:
       description: Selecione uma conta Lunch Flow para associar a esta conta. As transações serão sincronizadas e desduplicadas automaticamente.
       link_account: Associar conta
       no_account_specified: Nenhuma conta especificada
-      no_accounts_found: Não foram encontradas contas Lunch Flow. Verifique a configuração da sua chave de API.
-      no_api_key: A chave de API do Lunch Flow não está configurada. Configure-a nas Definições.
+      no_api_token: A chave de API do Lunch Flow não está configurada. Configure-a nas Definições.
       no_name_placeholder: "(Sem nome)"
       title: "Associar %{account_name} com Lunch Flow"
     link_existing_account:
       account_already_linked: Esta conta já está associada a um serviço
       api_error: "Erro de API: %{message}"
       invalid_account_name: Não é possível associar uma conta com nome em branco
-      lunchflow_account_already_linked: Esta conta Lunch Flow já está associada a outra conta
-      lunchflow_account_not_found: Conta Lunch Flow não encontrada
       missing_parameters: Parâmetros obrigatórios em falta
+      provider_account_already_linked: Esta conta Lunch Flow já está associada a outra conta
+      provider_account_not_found: Conta Lunch Flow não encontrada
       success: "%{account_name} associada com sucesso ao Lunch Flow"
     setup_accounts:
       account_type_label: "Tipo de conta:"

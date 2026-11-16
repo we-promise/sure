@@ -207,7 +207,7 @@ class ProviderItem::AccountFlow
             family: family,
             name: account_name,
             balance: 0,
-            currency: provider_account_class.currency_for(account_data),
+            currency: provider_account.currency.presence || provider_account_class.currency_for(account_data),
             accountable_type: accountable_type,
             accountable_attributes: provider_account_class.default_accountable_attributes(accountable_type)
           },

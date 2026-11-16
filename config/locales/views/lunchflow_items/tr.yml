@@ -45,7 +45,7 @@ tr:
         other: Adı boş olan %{count} hesap bağlanamaz
       link_failed: Hesaplar bağlanamadı
       no_accounts_selected: Lütfen en az bir hesap seçin
-      no_api_key: ''
+      no_api_token: ''
       partial_invalid: "%{created_count} hesap başarıyla bağlandı, %{already_linked_count}
         hesap zaten bağlıydı, %{invalid_count} hesabın adı geçersizdi"
       partial_success: "%{created_count} hesap başarıyla bağlandı. %{already_linked_count}
@@ -57,11 +57,11 @@ tr:
       account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
       api_error: 'API hatası: %{message}'
       invalid_account_name: Adı boş olan hesap bağlanamaz
-      lunchflow_account_already_linked: Bu Lunch Flow hesabı zaten başka bir hesaba
-        bağlı
-      lunchflow_account_not_found: Lunch Flow hesabı bulunamadı
       missing_parameters: Gerekli parametreler eksik
-      no_api_key: ''
+      no_api_token: ''
+      provider_account_already_linked: Bu Lunch Flow hesabı zaten başka bir hesaba
+        bağlı
+      provider_account_not_found: Lunch Flow hesabı bulunamadı
       success: "%{account_name} Lunch Flow ile başarıyla bağlandı"
     loading:
       loading_message: Lunch Flow hesapları yükleniyor...
@@ -101,10 +101,11 @@ tr:
       link_accounts: Seçilen hesapları bağla
       no_accounts_found: Hesap bulunamadı. Lütfen API anahtarı yapılandırmanızı kontrol
         edin.
-      no_api_key: Lunch Flow API anahtarı yapılandırılmamış. Lütfen Ayarlar'dan yapılandırın.
+      no_api_token: Lunch Flow API anahtarı yapılandırılmamış. Lütfen Ayarlar'dan yapılandırın.
       no_credentials_configured: ''
       no_name_placeholder: "(Ad yok)"
       title: Lunch Flow Hesaplarını Seç
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.
     select_existing_account:
       account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
       all_accounts_already_linked: Tüm Lunch Flow hesapları zaten bağlı
@@ -116,12 +117,11 @@ tr:
         otomatik olarak senkronize edilecek ve yinelenenler ayıklanacaktır.
       link_account: Hesabı bağla
       no_account_specified: Hesap belirtilmedi
-      no_accounts_found: Lunch Flow hesabı bulunamadı. Lütfen API anahtarı yapılandırmanızı
-        kontrol edin.
-      no_api_key: Lunch Flow API anahtarı yapılandırılmamış. Lütfen Ayarlar'dan yapılandırın.
+      no_api_token: Lunch Flow API anahtarı yapılandırılmamış. Lütfen Ayarlar'dan yapılandırın.
       no_credentials_configured: ''
       no_name_placeholder: "(Ad yok)"
       title: "%{account_name} hesabını Lunch Flow ile bağla"
+      unexpected_error: Beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.
     setup_accounts:
       account_type_label: 'Hesap Türü:'
       account_types:

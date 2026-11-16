@@ -72,7 +72,7 @@ zh-TW:
       description: 選擇您想要連結到 %{product_name} 的帳戶。
       link_accounts: 連結所選帳戶
       no_accounts_found: 找不到帳戶。請檢查您的 API 金鑰設定。
-      no_api_key: 尚未設定 Lunch Flow API 金鑰，請前往「設定」完成設定。
+      no_api_token: 尚未設定 Lunch Flow API 金鑰，請前往「設定」完成設定。
       no_name_placeholder: （無名稱）
       title: 選擇 Lunch Flow 帳戶
     select_existing_account:
@@ -84,17 +84,16 @@ zh-TW:
       description: 選擇一個 Lunch Flow 帳戶與此帳戶連結。交易紀錄將會自動同步並排除重複。
       link_account: 連結帳戶
       no_account_specified: 未指定帳戶
-      no_accounts_found: 找不到 Lunch Flow 帳戶。請檢查您的 API 金鑰設定。
-      no_api_key: 尚未設定 Lunch Flow API 金鑰，請前往「設定」完成設定。
+      no_api_token: 尚未設定 Lunch Flow API 金鑰，請前往「設定」完成設定。
       no_name_placeholder: （無名稱）
       title: 將 %{account_name} 與 Lunch Flow 連結
     link_existing_account:
       account_already_linked: 此帳戶已與供應商連結
       api_error: API 錯誤：%{message}
       invalid_account_name: 無法連結名稱空白的帳戶
-      lunchflow_account_already_linked: 此 Lunch Flow 帳戶已連結至另一個帳戶
-      lunchflow_account_not_found: 找不到 Lunch Flow 帳戶
       missing_parameters: 缺少必要參數
+      provider_account_already_linked: 此 Lunch Flow 帳戶已連結至另一個帳戶
+      provider_account_not_found: 找不到 Lunch Flow 帳戶
       success: 已成功將 %{account_name} 與 Lunch Flow 連結
     setup_accounts:
       account_type_label: 帳戶類型：

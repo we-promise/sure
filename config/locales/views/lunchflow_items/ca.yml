@@ -45,7 +45,7 @@ ca:
         other: No es poden enllaçar %{count} comptes sense nom
       link_failed: No s'han pogut enllaçar els comptes
       no_accounts_selected: Selecciona almenys un compte
-      no_api_key: La clau API de Lunch Flow no està configurada. Configura-la a la
+      no_api_token: La clau API de Lunch Flow no està configurada. Configura-la a la
         configuració.
       no_credentials_configured: Configura primer la teva clau API de Lunch Flow a
         la configuració del proveïdor.
@@ -60,12 +60,12 @@ ca:
       account_already_linked: Aquest compte ja està enllaçat a un proveïdor
       api_error: 'Error de l''API: %{message}'
       invalid_account_name: No es pot enllaçar un compte sense nom
-      lunchflow_account_already_linked: Aquest compte de Lunch Flow ja està enllaçat
-        a un altre compte
-      lunchflow_account_not_found: No s'ha trobat el compte de Lunch Flow
       missing_parameters: Falten paràmetres obligatoris
-      no_api_key: La clau API de Lunch Flow no està configurada. Configura-la a la
+      no_api_token: La clau API de Lunch Flow no està configurada. Configura-la a la
         configuració.
+      provider_account_already_linked: Aquest compte de Lunch Flow ja està enllaçat
+        a un altre compte
+      provider_account_not_found: No s'ha trobat el compte de Lunch Flow
       success: S'ha enllaçat correctament %{account_name} amb Lunch Flow
     loading:
       loading_message: Carregant comptes de Lunch Flow...
@@ -105,12 +105,13 @@ ca:
       link_accounts: Enllaça els comptes seleccionats
       no_accounts_found: No s'han trobat comptes. Comprova la configuració de la teva
         clau API.
-      no_api_key: La clau API de Lunch Flow no està configurada. Configura-la a la
+      no_api_token: La clau API de Lunch Flow no està configurada. Configura-la a la
         configuració.
       no_credentials_configured: Configura primer la teva clau API de Lunch Flow a
         la configuració del proveïdor.
       no_name_placeholder: "(Sense nom)"
       title: Selecciona comptes de Lunch Flow
+      unexpected_error: S'ha produït un error inesperat. Torna-ho a provar més tard.
     select_existing_account:
       account_already_linked: Aquest compte ja està enllaçat a un proveïdor
       all_accounts_already_linked: Tots els comptes de Lunch Flow ja estan enllaçats
@@ -122,14 +123,13 @@ ca:
         Les transaccions es sincronitzaran i deduplicaran automàticament.
       link_account: Enllaça compte
       no_account_specified: No s'ha especificat cap compte
-      no_accounts_found: No s'han trobat comptes de Lunch Flow. Comprova la configuració
-        de la teva clau API.
-      no_api_key: La clau API de Lunch Flow no està configurada. Configura-la a la
+      no_api_token: La clau API de Lunch Flow no està configurada. Configura-la a la
         configuració.
       no_credentials_configured: Configura primer la teva clau API de Lunch Flow a
         la configuració del proveïdor.
       no_name_placeholder: "(Sense nom)"
       title: Enllaça %{account_name} amb Lunch Flow
+      unexpected_error: S'ha produït un error inesperat. Torna-ho a provar més tard.
     setup_accounts:
       account_type_label: 'Tipus de compte:'
       account_types:

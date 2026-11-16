@@ -133,7 +133,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "account selection localizes an unexpected error in German" do
     @user.update!(locale: "de")
-    Provider::LunchflowAdapter.stubs(:build_provider).raises(StandardError, "Synthetic failure")
+    LunchflowItem.any_instance.stubs(:lunchflow_provider).raises(StandardError, "Synthetic failure")
 
     get select_accounts_lunchflow_items_url
 
@@ -147,7 +147,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "existing-account selection localizes an unexpected error in German" do
     @user.update!(locale: "de")
-    Provider::LunchflowAdapter.stubs(:build_provider).raises(StandardError, "Synthetic failure")
+    LunchflowItem.any_instance.stubs(:lunchflow_provider).raises(StandardError, "Synthetic failure")
 
     get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id)
 
@@ -158,7 +158,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
 
   test "account selection preserves provider error details" do
     @user.update!(locale: "de")
-    Provider::LunchflowAdapter.stubs(:build_provider).raises(
+    LunchflowItem.any_instance.stubs(:lunchflow_provider).raises(
       Provider::Lunchflow::LunchflowError,
       "Provider-specific failure"
     )
@@ -175,7 +175,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     provider.stubs(:get_accounts).returns(accounts: [
       { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
     ])
-    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+    LunchflowItem.any_instance.stubs(:lunchflow_provider).returns(provider)
 
     get select_accounts_lunchflow_items_url
 
@@ -189,7 +189,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     provider.stubs(:get_accounts).returns(accounts: [
       { id: "acc_1", name: "Checking", iban: "DE89370400440532013000", institution_name: "Test Bank", currency: "EUR", status: "active" } # pipelock:ignore IBAN
     ])
-    Provider::LunchflowAdapter.stubs(:build_provider).returns(provider)
+    LunchflowItem.any_instance.stubs(:lunchflow_provider).returns(provider)
 
     get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id)
 
