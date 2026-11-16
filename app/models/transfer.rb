@@ -86,15 +86,15 @@ class Transfer < ApplicationRecord
 
   # A shared name means the user (or the importer) gave both legs the same
   # label; otherwise the derived account-based title is the useful summary.
-  def shared_name
+  def display_name
     outflow_name = outflow_transaction&.entry&.name
     inflow_name = inflow_transaction&.entry&.name
 
-    outflow_name if outflow_name.present? && outflow_name == inflow_name
-  end
-
-  def display_name
-    shared_name || name
+    if outflow_name.present? && outflow_name == inflow_name
+      outflow_name
+    else
+      name
+    end
   end
 
   # Renames both legs. Returns false when either name is blank (the controller

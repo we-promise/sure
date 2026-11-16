@@ -380,7 +380,7 @@ class TransfersController < ApplicationController
     end
 
     def transfer_update_params
-      params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount, :investment_contribution, :shared_name, :outflow_name, :inflow_name)
+      params.require(:transfer).permit(:notes, :status, :category_id, :amount, :source_fee_amount, :destination_fee_amount, :investment_contribution, :outflow_name, :inflow_name)
     end
 
     def update_transfer_status
@@ -411,13 +411,8 @@ class TransfersController < ApplicationController
 
     # Both leg names travel together: the form always submits both, and a
     # request with only one is treated as invalid rather than silently leaving
-    # the other leg unchanged. The inline header submits one shared name.
+    # the other leg unchanged.
     def submitted_transfer_names
-      if transfer_update_params.key?(:shared_name)
-        name = transfer_update_params[:shared_name].to_s.strip
-        return { outflow_name: name, inflow_name: name }
-      end
-
       return unless transfer_update_params.key?(:outflow_name) || transfer_update_params.key?(:inflow_name)
 
       {
