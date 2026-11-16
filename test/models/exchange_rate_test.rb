@@ -114,6 +114,16 @@ class ExchangeRateTest < ActiveSupport::TestCase
     2.times { assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current) }
   end
 
+  test "builds the provider once per lookup, so its throttle spaces the direct request and the legs" do
+    ExchangeRate.delete_all
+    ExchangeRate.unstub(:provider)
+    ExchangeRate.expects(:provider).once.returns(@provider)
+    @provider.expects(:fetch_exchange_rate).returns(provider_error_response(StandardError.new("no KZT/RUB")))
+    @provider.expects(:fetch_exchange_rates).once.returns(provider_error_response(StandardError.new("no KZT/USD")))
+
+    assert_nil ExchangeRate.find_or_fetch_rate(from: "KZT", to: "RUB", date: Date.current)
+  end
+
   test "does not derive and cache a pair the provider has quoted before when it fails" do
     ExchangeRate.delete_all
     ExchangeRatePair.record_direct_quote(from: "KZT", to: "RUB")

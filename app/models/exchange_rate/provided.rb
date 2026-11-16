@@ -38,6 +38,7 @@ module ExchangeRate::Provided
                   .first
       return nearest if nearest.present?
 
+      provider = self.provider
       return nil unless provider.present? # No provider configured (some self-hosted apps)
 
       response = provider.fetch_exchange_rate(from: from, to: to, date: date)
