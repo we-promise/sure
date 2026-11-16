@@ -4,9 +4,10 @@
 # test case that defines `provider_item` (a persisted connection with at least
 # one provider account), `other_provider_account` (a provider account that
 # belongs to a different account provider in the same family),
-# `selectable_accountable_type` and `api_accounts_for(account_ids)` (the
+# `selectable_accountable_type`, `api_accounts_for(account_ids)` (the
 # provider's API payload listing accounts with those ids, each offered for
-# that type).
+# that type) and `provider_api_error` (an error the provider's client raises
+# for an API failure).
 module ProviderItemLifecycleTests
   extend ActiveSupport::Concern
 
@@ -99,6 +100,18 @@ module ProviderItemLifecycleTests
       with_memory_cache do
         assert_equal [ "any-account" ], offered_account_ids
         assert_empty account_flow.select_accounts_result(accountable_type: unsupported_type).available_accounts
+      end
+    end
+
+    test "lifecycle: a provider API error reaches the flow as an api_error" do
+      account_flow_class.any_instance.stubs(:fetch_accounts).raises(provider_api_error)
+
+      with_memory_cache do
+        assert_equal [ "api_error", provider_api_error.message ], account_flow.preload_payload.values_at(:error, :error_message)
+
+        result = account_flow.select_accounts_result(accountable_type: selectable_accountable_type)
+        assert_equal [ :api_error, provider_api_error.message ], [ result.status, result.message ]
+        assert result.provider_error?
       end
     end
 

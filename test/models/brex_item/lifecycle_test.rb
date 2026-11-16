@@ -31,6 +31,10 @@ class BrexItem::LifecycleTest < ActiveSupport::TestCase
       "Depository"
     end
 
+    def provider_api_error
+      @provider_api_error ||= Provider::Brex::BrexError.new("Brex is unavailable", :server_error)
+    end
+
     def api_accounts_for(account_ids)
       account_ids.map { |id| { id: id, name: "Brex #{id}", account_kind: "cash" } }
     end
