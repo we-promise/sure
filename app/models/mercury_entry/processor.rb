@@ -3,6 +3,11 @@ require "digest/md5"
 class MercuryEntry::Processor
   include CurrencyNormalizable
 
+  # A payment that does not settle ends as one of these instead of `sent`
+  # (https://docs.mercury.com/docs/send-money, "Track a Payment"). A transaction
+  # imported earlier as pending or booked can later report one of them.
+  UNSETTLED_STATUSES = %w[cancelled failed reversed blocked].freeze
+
   # mercury_transaction is the raw hash fetched from Mercury API and converted to JSONB
   # Transaction structure: { id, amount, bankDescription, counterpartyId, counterpartyName,
   #                          counterpartyNickname, createdAt, dashboardLink, details,
@@ -20,9 +25,10 @@ class MercuryEntry::Processor
       return nil
     end
 
-    # Skip failed transactions
-    if data[:status] == "failed"
-      Rails.logger.debug "MercuryEntry::Processor - Skipping failed transaction #{external_id}"
+    # Never import a transaction that did not settle, and drop one imported earlier
+    if UNSETTLED_STATUSES.include?(data[:status])
+      Rails.logger.debug "MercuryEntry::Processor - Skipping #{data[:status]} transaction #{external_id}"
+      remove_unsettled_entry
       return nil
     end
 
@@ -64,6 +70,19 @@ class MercuryEntry::Processor
 
     def account
       @account ||= mercury_account.current_account
+    end
+
+    # An entry the user edited or excluded is kept, but excluded, so their changes
+    # survive and it no longer counts as a real transaction.
+    def remove_unsettled_entry
+      entry = account.entries.find_by(external_id: external_id, source: "mercury")
+      return unless entry
+
+      if entry.protected_from_sync?
+        entry.update!(excluded: true) unless entry.excluded?
+      else
+        entry.destroy!
+      end
     end
 
     def data

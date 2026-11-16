@@ -226,9 +226,10 @@ class MercuryItem::Importer
 
               if existing_by_id.key?(tx_id)
                 existing = existing_by_id[tx_id].with_indifferent_access
-                # Mercury reuses the same transaction ID when a pending entry posts.
-                # Replace the stored copy so the processor clears the pending flag.
-                if existing[:status] == "pending" && tx_data[:status] != "pending"
+                # Mercury reuses the same transaction ID when a transaction changes
+                # status: pending to sent, or to cancelled, failed, reversed or blocked.
+                # Replace the stored copy so the processor sees the new status.
+                if existing[:status] != tx_data[:status]
                   existing_by_id[tx_id] = tx
                   updated_transactions << tx_id
                 end

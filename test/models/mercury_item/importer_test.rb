@@ -123,6 +123,56 @@ class MercuryItem::ImporterTest < ActiveSupport::TestCase
     assert @item.reload.requires_update?
   end
 
+  # ---------------------------------------------------------------------------
+  # status changes of stored transactions
+  # ---------------------------------------------------------------------------
+
+  %w[sent cancelled failed reversed blocked].each do |status|
+    test "replaces a stored pending transaction that is now #{status}" do
+      _account, mercury_account = create_linked_account("acc_status",
+        raw_transactions: [ tx_payload("tx_a").merge("status" => "pending") ])
+
+      @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_status", "Checking") ] })
+      @provider.stubs(:get_account_transactions).with("acc_status", anything).returns({
+        transactions: [ tx_payload("tx_a").merge("status" => status) ]
+      })
+
+      run_import
+
+      stored = mercury_account.reload.raw_transactions_payload
+      assert_equal 1, stored.size
+      assert_equal status, stored.first["status"]
+    end
+  end
+
+  test "replaces a stored booked transaction that was later reversed" do
+    _account, mercury_account = create_linked_account("acc_reversed",
+      raw_transactions: [ tx_payload("tx_a").merge("status" => "sent") ])
+
+    @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_reversed", "Checking") ] })
+    @provider.stubs(:get_account_transactions).with("acc_reversed", anything).returns({
+      transactions: [ tx_payload("tx_a").merge("status" => "reversed") ]
+    })
+
+    run_import
+
+    assert_equal [ "reversed" ], mercury_account.reload.raw_transactions_payload.map { |tx| tx["status"] }
+  end
+
+  test "keeps the stored copy when the status has not changed" do
+    _account, mercury_account = create_linked_account("acc_same",
+      raw_transactions: [ tx_payload("tx_a").merge("status" => "sent", "note" => "stored") ])
+
+    @provider.stubs(:get_accounts).returns({ accounts: [ account_payload("acc_same", "Checking") ] })
+    @provider.stubs(:get_account_transactions).with("acc_same", anything).returns({
+      transactions: [ tx_payload("tx_a").merge("status" => "sent", "note" => "fetched") ]
+    })
+
+    run_import
+
+    assert_equal [ "stored" ], mercury_account.reload.raw_transactions_payload.map { |tx| tx["note"] }
+  end
+
   private
 
     def run_import

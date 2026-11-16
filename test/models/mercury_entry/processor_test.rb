@@ -142,6 +142,85 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  %w[cancelled blocked reversed].each do |status|
+    test "skips #{status} transactions" do
+      assert_no_difference "@account.entries.count" do
+        result = process(tx(status: status))
+        assert_nil result
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # status changes after import
+  # ---------------------------------------------------------------------------
+
+  %w[cancelled blocked failed reversed].each do |status|
+    test "removes a pending entry whose transaction became #{status}" do
+      process(tx(status: "pending"))
+      assert imported_entry
+
+      assert_difference "@account.entries.count", -1 do
+        process(tx(status: status))
+      end
+
+      assert_nil imported_entry
+    end
+  end
+
+  test "removes a booked entry whose transaction was later reversed" do
+    process(tx(status: "sent"))
+
+    assert_difference "@account.entries.count", -1 do
+      process(tx(status: "reversed"))
+    end
+  end
+
+  test "leaves other entries alone when removing an unsettled one" do
+    process(tx(id: "tx_keep", status: "sent"))
+    process(tx(id: "tx_gone", status: "pending"))
+
+    process(tx(id: "tx_gone", status: "failed"))
+
+    assert_equal [ "mercury_tx_keep" ], @account.entries.where(source: "mercury").pluck(:external_id)
+  end
+
+  test "excludes instead of deleting an unsettled entry the user has edited" do
+    process(tx(status: "sent"))
+    imported_entry.mark_user_modified!
+
+    assert_no_difference "@account.entries.count" do
+      process(tx(status: "reversed"))
+    end
+
+    assert imported_entry.excluded?
+  end
+
+  test "keeps an already excluded entry excluded when its transaction is cancelled" do
+    process(tx(status: "pending"))
+    imported_entry.update!(excluded: true)
+
+    assert_no_difference "@account.entries.count" do
+      process(tx(status: "cancelled"))
+    end
+
+    assert imported_entry.excluded?
+  end
+
+  test "an unsettled status does not touch an entry another provider imported with the same id" do
+    other = @account.entries.create!(
+      name: "Other", date: Date.current, amount: 5, currency: "USD",
+      external_id: "mercury_tx_001", source: "plaid",
+      entryable: Transaction.new
+    )
+
+    assert_no_difference "@account.entries.count" do
+      process(tx(status: "failed"))
+    end
+
+    assert Entry.exists?(other.id)
+  end
+
   # ---------------------------------------------------------------------------
   # idempotency
   # ---------------------------------------------------------------------------
@@ -178,6 +257,10 @@ class MercuryEntry::ProcessorTest < ActiveSupport::TestCase
   end
 
   private
+
+    def imported_entry
+      @account.entries.find_by(external_id: "mercury_tx_001", source: "mercury")
+    end
 
     def process(transaction_data)
       MercuryEntry::Processor.new(transaction_data, mercury_account: @mercury_account).process

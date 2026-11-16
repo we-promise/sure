@@ -77,7 +77,29 @@ class MercuryAccount::ProcessorTest < ActiveSupport::TestCase
     end
   end
 
+  test "removes an imported entry once its transaction is stored as failed" do
+    account = create_account("Checking")
+    mercury_account = create_mercury_account("acc_004", balance: 0, account: account,
+      raw_transactions: [ raw_transaction("tx_a", status: "pending") ])
+
+    assert_difference "account.entries.count", 1 do
+      MercuryAccount::Processor.new(mercury_account).process
+    end
+
+    mercury_account.update!(raw_transactions_payload: [ raw_transaction("tx_a", status: "failed") ])
+
+    assert_difference "account.entries.count", -1 do
+      MercuryAccount::Processor.new(mercury_account).process
+    end
+  end
+
   private
+
+    def raw_transaction(id, status:)
+      { "id" => id, "amount" => 100.0, "status" => status,
+        "bankDescription" => "Deposit", "createdAt" => "2024-06-01T00:00:00Z",
+        "postedAt" => "2024-06-01T00:00:00Z" }
+    end
 
     def create_account(name)
       @family.accounts.create!(
