@@ -939,6 +939,18 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_nil result
   end
 
+  test "fetch_exchange_rates reports a chart HTTP 429 as a rate limit, without trying the inverse symbol" do
+    @provider.stubs(:throttle_request)
+    @provider.expects(:fetch_authenticated_chart).once
+             .raises(Faraday::TooManyRequestsError.new("Too many requests", { body: "slow down" }))
+    DebugLogEntry.expects(:capture).with { |attributes| attributes[:metadata][:exception_class] == "Faraday::TooManyRequestsError" }
+
+    response = @provider.fetch_exchange_rates(from: "KZT", to: "USD", start_date: Date.new(2026, 10, 20), end_date: Date.new(2026, 10, 22))
+
+    assert_not response.success?
+    assert_instance_of Provider::YahooFinance::RateLimitError, response.error
+  end
+
   # ================================
   #  Cookie/Crumb Authentication Tests
   # ================================

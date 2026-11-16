@@ -939,6 +939,9 @@ class Provider::YahooFinance < Provider
           provider_key: "yahoo_finance",
           metadata: { symbol: symbol, exception_class: e.class.name, exception_message: e.message }
         )
+        # Not a missing pair: the inverse symbol would only be limited too.
+        raise RateLimitError.new("Yahoo Finance rate limit exceeded", details: e.response&.dig(:body)) if e.is_a?(Faraday::TooManyRequestsError)
+
         nil
       end
     end
