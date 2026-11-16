@@ -32,7 +32,7 @@ class ExchangeRate::UsdCross
     return [] if provider_failure?(error)
     return [] if @provider.respond_to?(:usd_cross?) && !@provider.usd_cross?
     return [] if Rails.cache.exist?(miss_key(from, to, start_date, end_date))
-    # shortcut: until the provider answers a pair once, a transient failure keeps the rates derived then; flag derived rows if that shows up.
+    # A pair is derived until the provider has answered it once, so a transient failure before then keeps the rates derived at that point.
     return [] if ExchangeRatePair.for_pair(from: from, to: to).quoted_directly?
 
     to_usd = leg(from, "USD", start_date, end_date)
