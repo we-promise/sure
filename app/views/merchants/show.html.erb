@@ -69,7 +69,7 @@
             <%= render "transactions/searches/menu",
                   form: form,
                   exclude: [ "merchant_filter", "ai_filter", "attachment_filter" ],
-                  clear_filters_path: merchant_path(@merchant, per_page: params[:per_page]) %>
+                  clear_href: merchant_path(@merchant, per_page: params[:per_page]) %>
           <% end %>
         <% end %>
       </div>

@@ -14,6 +14,7 @@ class EntrySearch
   attribute :categories, array: true
   attribute :tags, array: true
   attribute :merchants, array: true
+  attribute :ai_status, array: true
 
   attr_reader :family
 
@@ -113,6 +114,11 @@ class EntrySearch
     query = self.class.apply_amount_filter(query, amount, amount_operator)
     query = self.class.apply_accounts_filter(query, accounts, account_ids)
     query = self.class.apply_status_filter(query, status)
+
+    if (Array(ai_status) & Transaction::Search::AI_STATUSES).present?
+      matches = Transaction::Search.new(family, filters: { ai_status: ai_status, active_accounts_only: false })
+      query = query.where(id: matches.transactions_scope.select("entries.id"))
+    end
 
     if transaction_specific_filters?
       # Only Transaction entries have a category/merchant/type/tags, so this

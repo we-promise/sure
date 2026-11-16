@@ -142,6 +142,14 @@ class Transactions::TransactionRowCacheTest < ActionView::TestCase
     end
   end
 
+  test "cached rows preserve the current filtered drawer context" do
+    [ false, true, false ].each do |filtered|
+      html = render(partial: "transactions/transaction", locals: { entry: @entry.reload, view_ctx: "account", is_filtered: filtered })
+      link = Nokogiri::HTML.fragment(html).at_css("a[data-clickable-row-target='link']")
+      assert_equal filtered.to_s, Rack::Utils.parse_nested_query(URI.parse(link["href"]).query)["is_filtered"]
+    end
+  end
+
   private
     def row_key(entry: @entry, view_ctx: "global", in_split_group: false)
       transaction_row_cache_key(entry.reload, view_ctx: view_ctx, in_split_group: in_split_group)

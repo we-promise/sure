@@ -14,6 +14,8 @@ en:
         other: "The latest exchange rates to %{currency} are out of date: %{rates}. Today's totals use them."
       stale_rate: "%{from} from %{date}"
     dot_separator: "·"
+    pagination:
+      per_page: "Rows per page"
     sync_toast:
       message: "New data available"
       refresh: "Refresh"

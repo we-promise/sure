@@ -1,4 +1,16 @@
 module TransactionsHelper
+  def transaction_transfer_subtitle(entry)
+    transaction = entry.entryable
+    label = transaction.loan_payment? ? t("transactions.show.loan_payment") : t("transactions.show.transfer")
+    accounts = entry.account.name
+    if transaction.transfer.present?
+      outflow = transaction.transfer_as_outflow.present?
+      counterpart = outflow ? transaction.transfer.to_account : transaction.transfer.from_account
+      accounts = "#{accounts} #{outflow ? '→' : '←'} #{counterpart.name}" if counterpart && @accessible_account_ids&.include?(counterpart.id)
+    end
+    "#{label} • #{accounts}"
+  end
+
   # @param exclude [Array<String>] filter keys to leave out (e.g. the account
   #   tab doesn't apply to the account activity feed, which is already scoped
   #   to one account)
@@ -95,6 +107,9 @@ module TransactionsHelper
   # transaction_row_cache_key.
   TRANSACTION_ROW_SOURCES = %w[
     app/views/transactions/_transaction.html.erb
+    app/views/transactions/_badges.html.erb
+    app/views/transactions/_subtitle.html.erb
+    app/views/transactions/_reconcile_badge.html.erb
     app/views/transactions/_transaction_category.html.erb
     app/views/transactions/_transfer_match.html.erb
     app/views/categories/_*.html.erb
@@ -132,7 +147,7 @@ module TransactionsHelper
   # - the Brandfetch settings that shape logo URLs
   #
   # Add a file to TRANSACTION_ROW_SOURCES when the row starts rendering it.
-  def transaction_row_cache_key(entry, view_ctx:, in_split_group:)
+  def transaction_row_cache_key(entry, view_ctx:, in_split_group:, is_filtered: false)
     transaction = entry.entryable
     transfer = transaction.transfer
     outflow_leg = transaction.transfer_as_outflow.present?
@@ -151,6 +166,7 @@ module TransactionsHelper
       Current.family&.currency,
       Current.family&.locale,
       view_ctx,
+      is_filtered,
       in_split_group,
       split_parent,
       # The "Transfer?" hint is drawn inside the cached row.

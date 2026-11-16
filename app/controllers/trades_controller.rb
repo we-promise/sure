@@ -60,6 +60,26 @@ class TradesController < ApplicationController
       respond_to do |format|
         format.html { redirect_back_or_to account_path(@entry.account), notice: t("entries.update.success") }
         format.turbo_stream do
+          is_compact = Current.user.preview_features_enabled? && Current.user.transactions_compact?
+          is_flat_compact = is_compact && !Current.user.transactions_group_by_date?
+          assign_compact_row_context
+          view_ctx, is_filtered = @view_ctx, @is_filtered
+          running_balance = nil
+          hide_balance = true
+          if is_flat_compact
+            running_balance = Account::RunningBalanceCalculator.new([ @entry ]).running_balances[@entry.id]
+            hide_balance = view_ctx != "account" || is_filtered ? true : false
+          end
+          entry_row_stream = if is_compact
+            turbo_stream.replace(
+              dom_id(@entry),
+              partial: "trades/compact_trade",
+              locals: { entry: @entry, view_ctx: view_ctx || "global", is_filtered: is_filtered, in_split_group: false, running_balance: running_balance, hide_balance: hide_balance, flat: is_flat_compact }
+            )
+          else
+            turbo_stream.replace(@entry)
+          end
+
           render turbo_stream: [
             turbo_stream.replace(
               dom_id(@entry, :header),
@@ -71,11 +91,12 @@ class TradesController < ApplicationController
               partial: "entries/protection_indicator",
               locals: { entry: @entry, unlock_path: unlock_trade_path(@entry.trade) }
             ),
-            turbo_stream.replace(@entry)
+            entry_row_stream
           ]
         end
       end
     else
+      assign_compact_row_context
       render :show, status: :unprocessable_entity, formats: [ :html ]
     end
   end

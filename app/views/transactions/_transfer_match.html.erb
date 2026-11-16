@@ -9,11 +9,15 @@
     <%# The pill's tooltip gives the other side of the suggested match (see
         Transfer::PendingMatch) and, when the viewer may see it, the pill
         opens the transfer. The tooltip is the design system's rather than a
-        native title, so the amount in it is blurred in privacy mode. %>
+        native title, so the amount in it is blurred in privacy mode.
+        The lg breakpoint picks short vs long label for the global/standard
+        row; @max-3xl/compact-table overrides both for the compact row, which
+        shares this partial and needs the short form below its own, narrower
+        breakpoint regardless of the viewport's lg state. %>
     <% match = pending_transfer_match(transaction) %>
     <% pills = capture do %>
       <%# Empty titles: the tooltip below replaces the pills' native ones. %>
-      <span class="hidden lg:flex items-center">
+      <span class="hidden lg:flex items-center @max-3xl/compact-table:hidden">
         <%= render DS::Pill.new(
           label: t("transactions.transfer_match.auto_matched"),
           tone: :neutral,
@@ -23,7 +27,7 @@
           label_testid: "transfer-match-pill"
         ) %>
       </span>
-      <span class="flex items-center lg:hidden">
+      <span class="flex items-center lg:hidden @max-3xl/compact-table:flex">
         <%= render DS::Pill.new(
           label: t("transactions.transfer_match.auto_matched_short"),
           tone: :neutral,

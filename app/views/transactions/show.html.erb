@@ -59,6 +59,7 @@
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+          <%= compact_row_context_fields %>
           <%= f.text_field :name,
                 label: t(".name_label"),
                 disabled: @entry.split_child? || edit_locked,
@@ -120,6 +121,7 @@
               class: "space-y-2",
               data: { controller: "auto-submit-form" } do |f| %>
           <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+          <%= compact_row_context_fields %>
           <% unless @entry.transaction.transfer? %>
             <%= f.select :account,
                 options_for_select(
@@ -292,6 +294,7 @@
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
               <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+              <%= compact_row_context_fields %>
               <div class="flex cursor-pointer items-center gap-4 justify-between">
                 <div class="text-sm space-y-1">
                   <h4 class="text-primary"><%= t(".exclude") %></h4>
@@ -309,6 +312,7 @@
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
               <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+              <%= compact_row_context_fields %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">
@@ -335,6 +339,7 @@
                   class: "p-3",
                   data: { controller: "auto-submit-form" } do |f| %>
               <%= hidden_field_tag :grouped, "true" if params[:grouped] == "true" %>
+              <%= compact_row_context_fields %>
               <%= f.fields_for :entryable do |ef| %>
                 <div class="flex cursor-pointer items-center gap-4 justify-between">
                   <div class="text-sm space-y-1">
