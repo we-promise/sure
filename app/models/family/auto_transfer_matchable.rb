@@ -258,32 +258,26 @@ module Family::AutoTransferMatchable
 
     # Destroys the pending cross-currency auto-match suggestions holding either leg
     # of an exact same-currency candidate, so the exact pair can take their place.
-    # Same predicate as displaceable_transfer_sql, which let the candidate through.
+    # Selected by displaceable_transfer_sql, the predicate that let the candidate
+    # through, so the two cannot disagree about which transfers may go.
     # Destroyed rather than rejected: the user never judged the guess, so no
     # RejectedTransfer is recorded. Runs inside the caller's savepoint, so a
     # failed insert restores the guess.
+    #
+    # Each leg is looked up in its own role only: a transaction's sign fixes its
+    # role (the inflow leg is always the negative-amount entry), so the inflow
+    # leg can never be held as some transfer's outflow, nor the reverse.
     def displace_pending_cross_currency_guesses!(match)
-      Transfer.pending
-        .where(inflow_transaction_id: match.inflow_transaction_id)
-        .or(Transfer.pending.where(outflow_transaction_id: match.outflow_transaction_id))
-        .includes(inflow_transaction: :entry, outflow_transaction: :entry)
-        .select { |transfer| displaceable_guess?(transfer) }
+      Transfer.where(inflow_transaction_id: match.inflow_transaction_id)
+        .or(Transfer.where(outflow_transaction_id: match.outflow_transaction_id))
+        .where(displaceable_transfer_sql("transfers"))
         .each(&:destroy!)
     end
 
     # A genuine auto-match suggestion (both legs still "standard", as
-    # AutoMatchesController#cleanup_pending_auto_matches! defines it) whose legs
-    # are in different currencies.
-    def displaceable_guess?(transfer)
-      inflow = transfer.inflow_transaction
-      outflow = transfer.outflow_transaction
-
-      transfer.pending? &&
-        inflow.kind == "standard" && outflow.kind == "standard" &&
-        inflow.entry.currency != outflow.entry.currency
-    end
-
-    # SQL mirror of displaceable_guess? for the transfer at `transfers_alias`.
+    # AutoMatchesController#cleanup_pending_auto_matches! defines it) that is
+    # pending and whose legs are in different currencies, for the transfer at
+    # `transfers_alias`.
     def displaceable_transfer_sql(transfers_alias)
       <<~SQL.squish
         (

@@ -509,6 +509,41 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transaction.exists?(fee.entryable_id)
   end
 
+  test "a leg held by a guess and by a confirmed transfer is not freed" do
+    outflow, guess = pending_cross_currency_guess
+
+    # The exact counterpart is already confirmed against another outflow, so
+    # its leg has a blocker that is not displaceable.
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    other_outflow = create_transaction(date: Date.current, account: @depository, amount: 400, currency: "GBP")
+    confirmed = Transfer.create!(inflow_transaction: real_inflow.entryable, outflow_transaction: other_outflow.entryable)
+    confirmed.update_columns(status: "confirmed")
+
+    assert_not displacing_candidate?(real_inflow, outflow)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert guess.reload.pending?
+    assert confirmed.reload.confirmed?
+  end
+
+  test "a failed insert of the exact pair keeps the displaced guess" do
+    outflow, guess = pending_cross_currency_guess
+
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    assert displacing_candidate?(real_inflow, outflow)
+
+    # The insert fails after the guess was destroyed in the same savepoint.
+    Transfer.stubs(:find_or_create_by!).raises(ActiveRecord::RecordNotUnique)
+
+    assert_nothing_raised { @family.auto_match_transfers! }
+
+    assert Transfer.exists?(guess.id)
+    assert_not Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
   test "the manual match dialog still offers no exact match while a cross-currency guess holds the leg" do
     outflow, _guess = pending_cross_currency_guess
     real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
