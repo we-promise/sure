@@ -297,6 +297,46 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "spending by merchant lists a merchant linked to its transactions for the period" do
+    merchant = @family.merchants.create!(name: "Corner Bakery")
+    create_transaction(date: Date.current, amount: 12, merchant: merchant)
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+
+    get reports_path(period_type: :monthly)
+
+    assert_response :ok
+    href = transactions_path(q: { merchants: [ "Corner Bakery" ], start_date: start_date, end_date: end_date })
+    assert_select "[data-section-key=spending_by_merchant] a[href=?]", href, text: "Corner Bakery"
+  end
+
+  test "spending by merchant links the no merchant row to the no merchant filter" do
+    create_transaction(date: Date.current, amount: 12)
+
+    get reports_path(period_type: :monthly)
+
+    href = transactions_path(q: { merchants: [ Merchant::NO_MERCHANT_FILTER_VALUE ], start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month })
+    assert_select "[data-section-key=spending_by_merchant] a[href=?]", href, text: Merchant.no_merchant_name
+  end
+
+  test "spending by merchant shows for a saved section order that predates it" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_section_order" => %w[transactions_breakdown net_worth]))
+    create_transaction(date: Date.current, amount: 12, merchant: @family.merchants.create!(name: "Corner Bakery"))
+
+    get reports_path(period_type: :monthly)
+
+    keys = css_select("[data-section-key]").map { |node| node["data-section-key"] }
+    assert_equal %w[transactions_breakdown net_worth], keys.first(2)
+    assert_includes keys, "spending_by_merchant"
+  end
+
+  test "spending by merchant is hidden for a period with no spending" do
+    get reports_path(period_type: :custom, start_date: "2001-01-01", end_date: "2001-01-31")
+
+    assert_response :ok
+    assert_select "[data-section-key=spending_by_merchant]", count: 0
+  end
+
   test "the spending baseline starts at the first transaction in the user's own finances" do
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
     @family.entries.where(entryable_type: "Transaction").destroy_all

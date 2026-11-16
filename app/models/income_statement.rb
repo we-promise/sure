@@ -122,6 +122,21 @@ class IncomeStatement
     )
   end
 
+  # Spending per merchant in the period, largest net spending first and the
+  # no-merchant row last. Merchants whose net isn't spending (refunds or
+  # income only) are left out.
+  def merchant_totals(period: Period.current_month)
+    rows = MerchantTotals.new(
+      family,
+      transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
+      date_range: period.date_range,
+      included_account_ids: included_account_ids
+    ).call.select { |row| row.net.positive? }
+
+    named, no_merchant = rows.partition(&:name)
+    named.sort_by { |row| [ -row.net, row.name ] } + no_merchant
+  end
+
   # Income/expense totals for an arbitrary period, optionally scoped to a
   # subset of accounts (e.g. a dashboard widget's account filter). Unlike
   # `income_totals`/`expense_totals`, this isn't memoized per-period since

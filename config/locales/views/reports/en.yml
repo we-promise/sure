@@ -167,6 +167,16 @@ en:
         slightly_more: 15–50% more
         more: 50–100% more
         much_more: 100%+ more
+    spending_by_merchant:
+      title: Spending by merchant
+      show_all:
+        one: Show 1 more merchant
+        other: Show %{count} more merchants
+      table:
+        merchant: Merchant
+        spent: Spent
+        purchases: Purchases
+        average: Average
     investment_performance:
       title: Investment Performance
       portfolio_value: Portfolio Value
