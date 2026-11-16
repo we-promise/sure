@@ -1,0 +1,202 @@
+<turbo-frame id="modal">
+<dialog class="w-full h-full bg-transparent text-primary backdrop:bg-overlay pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] lg:p-1" role="dialog" aria-modal="true" aria-labelledby="dialog-title-ID" data-controller="DS--dialog hotkey" data-DS--dialog-auto-open-value="true" data-DS--dialog-reload-on-close-value="false" data-DS--dialog-disable-click-outside-value="false" data-action="click-&gt;DS--dialog#clickOutside" data-hotkey="esc:DS--dialog#close">
+<div class="flex h-full w-full items-center justify-center">
+<div class="flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full max-h-full lg:max-w-[550px]" data-DS--dialog-target="content">
+<div class="grow py-4 space-y-4 flex flex-col overflow-auto">
+<header class="px-4 flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2">
+<h2 id="dialog-title-ID" class="font-medium text-primary">Set Up Your Mercury Accounts</h2>
+<button title="Close" type="button" aria-label="Close" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-md ml-auto shrink-0 justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11 hover:bg-container-inset-hover" data-action="DS--dialog#close">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary">
+<path d="M18 6 6 18">
+</path>
+<path d="m6 6 12 12">
+</path>
+</svg>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary text-primary">
+<path d="M10 12h4">
+</path>
+<path d="M10 8h4">
+</path>
+<path d="M14 21v-3a2 2 0 0 0-4 0v3">
+</path>
+<path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2">
+</path>
+<path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16">
+</path>
+</svg>
+<span class="text-primary">Choose the correct account types for your imported accounts</span>
+</div>
+</header>
+<div class="px-4 grow">
+<form class="space-y-6" data-controller="loading-button" data-action="submit-&gt;loading-button#showLoading" data-loading-button-loading-text-value="Creating Accounts..." data-turbo-frame="_top" action="/mercury_items/UUID/complete_account_setup" accept-charset="UTF-8" method="post">
+<div class="space-y-4">
+<div class="bg-surface border border-primary p-4 rounded-lg">
+<div class="flex items-start gap-3">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary text-primary mt-0.5 flex-shrink-0">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M12 16v-4">
+</path>
+<path d="M12 8h.01">
+</path>
+</svg>
+<div>
+<p class="text-sm text-primary mb-2">
+<strong>Choose the correct account type for each Mercury account:</strong>
+</p>
+<ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+<li>
+<strong>Checking or Savings Account</strong>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Mercury Checking</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option selected="selected" value="checking">Checking</option>
+<option value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option value="money_market">Money Market</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Treasury MM</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option value="checking">Checking</option>
+<option value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option selected="selected" value="money_market">Money Market</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Operating</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option value="checking">Checking</option>
+<option value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option value="money_market">Money Market</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Mercury Savings</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option value="checking">Checking</option>
+<option selected="selected" value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option value="money_market">Money Market</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex gap-3">
+<button type="submit" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg flex-1 px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-loading-button-target="button">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-inverse">
+<path d="M5 12h14">
+</path>
+<path d="M12 5v14">
+</path>
+</svg>
+<span class="min-w-0 truncate">Create Accounts</span>
+</button>
+<a class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600" href="/accounts">Cancel</a>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+</dialog>
+</turbo-frame>

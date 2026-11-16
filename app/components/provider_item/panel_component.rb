@@ -8,18 +8,24 @@
 # provider fills the `setup_steps` slot and supplies its credential fields as
 # `<key>_items/_credential_fields` (locals `form:`, `item:`, `editing:`),
 # rendered inside each form. Messages come from the provider's own keys under
-# `i18n_scope`, by default `<key>_items.provider_panel`.
+# `i18n_scope`, by default `<key>_items.provider_panel`. `variant: :classic`
+# reproduces Mercury's panel, whose disconnect buttons carry no aria-label.
 class ProviderItem::PanelComponent < ApplicationComponent
   renders_one :setup_steps
 
   attr_reader :items, :new_item, :item, :error_message
 
-  def initialize(items: [], new_item: nil, item: nil, error_message: nil, i18n_scope: nil)
+  def initialize(items: [], new_item: nil, item: nil, error_message: nil, i18n_scope: nil, variant: :kit)
     @items = items
     @new_item = new_item
     @item = item
     @error_message = error_message
     @i18n_scope = i18n_scope
+    @variant = variant
+  end
+
+  def disconnect_aria(item)
+    { label: panel_t("disconnect_label", name: item.name) } unless @variant == :classic
   end
 
   def provider_key
