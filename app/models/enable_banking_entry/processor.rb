@@ -146,6 +146,14 @@ class EnableBankingEntry::Processor
     data[:transaction_id].blank? && data[:entry_reference].blank?
   end
 
+  # External id of the movement's identifierless copy: its content hash, which
+  # a later identified row claims as its predecessor.
+  #
+  # @return [String, nil]
+  def self.content_external_id(raw_transaction_data)
+    compute_external_id(raw_transaction_data.with_indifferent_access.except(:transaction_id, :entry_reference))
+  end
+
   def self.party_name(data, key)
     value = data[key]
     nested = value.is_a?(Hash) ? value[:name] : (value if value.is_a?(String))
@@ -760,7 +768,7 @@ class EnableBankingEntry::Processor
       incoming = @external_id || self.class.compute_external_id(data)
       return if incoming.blank?
 
-      content_id = self.class.compute_external_id(data.except(:transaction_id, :entry_reference))
+      content_id = self.class.content_external_id(data)
       return if content_id.blank? || !identifierless_external_ids.include?(content_id)
 
       # Already stored under its own identifier: nothing to claim, and re-keying

@@ -209,9 +209,17 @@ class EnableBankingAccount::Transactions::Processor
     # or by its entry_reference, settles that entry. Importing those rows first
     # keeps another booked row of the same amount from claiming the entry
     # through ProviderImportAdapter's amount-based pending match, which would
-    # move the pending entry's notes and edits onto the wrong operation. Within
-    # each group, rows keep rows_in_import_order. Indexes remain those of the
-    # stored payload, for error reporting.
+    # move the pending entry's notes and edits onto the wrong operation.
+    #
+    # An identifierless booked copy of a settling row still goes ahead of it, so
+    # the settling row claims that copy's entry as its predecessor instead of
+    # the copy importing as a second entry.
+    #
+    # A settling row whose content key raises is left out of that match:
+    # processing it raises again inside its own rescue, which records the
+    # failure against that row. Within each group, rows keep
+    # rows_in_import_order. Indexes remain those of the stored payload, for
+    # error reporting.
     #
     # @return [Array<Array(Hash, Integer)>]
     def rows_in_settlement_order(pending_external_ids)
@@ -223,6 +231,19 @@ class EnableBankingAccount::Transactions::Processor
           transaction_data, pending_external_ids, external_id: external_ids[index]
         ).present?
       end
-      settling + others
+      return rows if settling.empty?
+
+      settling_content_ids = settling.filter_map do |transaction_data, _index|
+        EnableBankingEntry::Processor.content_external_id(transaction_data)
+      rescue StandardError
+        nil
+      end.to_set
+
+      predecessors, others = others.partition do |transaction_data, _index|
+        EnableBankingEntry::Processor.identifierless?(transaction_data) &&
+          !EnableBankingEntry::Processor.pending_payload?(transaction_data) &&
+          settling_content_ids.include?(EnableBankingEntry::Processor.content_external_id(transaction_data))
+      end
+      predecessors + settling + others
     end
 end
