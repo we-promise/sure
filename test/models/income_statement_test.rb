@@ -297,6 +297,28 @@ class IncomeStatementTest < ActiveSupport::TestCase
     assert_equal 4, totals.transactions_count
   end
 
+  test "cached tagged totals follow tag changes that do not touch entries" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    period = Period.last_30_days
+    travel = @family.tags.create!(name: "Travel")
+    trip = @family.tags.create!(name: "Trip")
+    create_transaction(account: @checking_account, amount: 30, category: @food_category, tags: [ travel ])
+    toggled = create_transaction(account: @checking_account, amount: 50, category: @food_category).transaction
+    create_transaction(account: @checking_account, amount: 20, category: @food_category, tags: [ trip ])
+    expenses = -> { IncomeStatement.new(@family).totals_for(period, tag_ids: [ travel.id ]).expense_money }
+
+    assert_equal Money.new(30, @family.currency), expenses.call
+
+    toggled.toggle_tag!(travel)
+    assert_equal Money.new(80, @family.currency), expenses.call
+
+    trip.replace_and_destroy!(travel)
+    assert_equal Money.new(100, @family.currency), expenses.call
+
+    toggled.toggle_tag!(travel)
+    assert_equal Money.new(50, @family.currency), expenses.call
+  end
+
   test "eligible_accounts excludes accounts not reflected in totals" do
     tax_advantaged_account = @family.accounts.create! name: "401k", currency: @family.currency, balance: 10000, accountable: Investment.new(subtype: "401k")
     excluded_account = @family.accounts.create! name: "Excluded", currency: @family.currency, balance: 0, exclude_from_reports: true, accountable: Depository.new

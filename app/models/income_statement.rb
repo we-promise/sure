@@ -341,13 +341,14 @@ class IncomeStatement
 
     # An IncomeStatement is a request-scoped reporting snapshot, like its memoized
     # period totals. Share these aggregate reads across totals and daily series.
-    # Rates, target currency and whether investing counts as spending can
-    # change without touching entries or accounts. Scheduled entries are
+    # Rates, target currency, tag membership and whether investing counts as
+    # spending can change without touching entries or accounts. Scheduled entries are
     # excluded as of "today", so the key also rolls over daily.
     def cache_freshness_key
       @cache_freshness_key ||= [
         Date.current,
         family.entries_cache_version,
+        family.tags_version,
         family.accounts_status_version,
         family.currency,
         ExchangeRate.maximum(:updated_at)&.to_i,
