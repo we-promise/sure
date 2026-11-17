@@ -207,11 +207,17 @@ class Rule::Health
     def same_text?(rule, other)
       return false unless conditions_besides_text(rule) == conditions_besides_text(other)
 
-      texts(rule).any? { |text| texts(other).any? { |other_text| text.include?(other_text) || other_text.include?(text) } }
+      texts(rule).any? do |text, folds|
+        texts(other).any? do |other_text, other_folds|
+          text, other_text = text.downcase, other_text.downcase if folds || other_folds
+          text.include?(other_text) || other_text.include?(text)
+        end
+      end
     end
 
-    # The text a match must contain, case-folded, with a merchant condition
-    # read as its merchant's name.
+    # The text a match must contain, with a merchant condition read as its
+    # merchant's name, and whether its operator runs as ILIKE, so case can be
+    # ignored; `=` compares case too.
     def texts(rule)
       @texts ||= {}
       @texts[rule.id] ||= leaf_conditions(rule).filter_map do |condition|
@@ -221,7 +227,8 @@ class Rule::Health
         when "transaction_name" then condition.value
         when "transaction_merchant" then merchant_names[condition.value.to_s]
         end
-        text.to_s.gsub(/\s+/, " ").strip.downcase.presence
+        text = text.to_s.gsub(/\s+/, " ").strip.presence
+        [ text, CASE_INSENSITIVE_OPERATORS.include?(condition.operator) ] if text
       end
     end
 

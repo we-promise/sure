@@ -166,6 +166,13 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal 0, overlap.shared_count
   end
 
+  test "equals conditions whose text differs only in case are not the same text" do
+    create_rule(name_condition("=", "Uber"), category: @groceries)
+    create_rule(name_condition("=", "uber"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
   test "contained text with contradicting amount conditions is not an overlap" do
     create_rule(name_condition("like", "uber"), amount_condition(">", "100"), category: @groceries)
     create_rule(name_condition("like", "uber"), amount_condition("<", "10"), category: @dining)
