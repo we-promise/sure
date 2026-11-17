@@ -19,6 +19,24 @@ class Transfer::SavingsKindReconcilerTest < ActiveSupport::TestCase
     assert_equal({ "funds_movement->investment_contribution" => 1 }, result.changed)
   end
 
+  test "gives a reclassified saving the Investment Contributions category" do
+    category = ensure_investment_contributions_category(@family)
+    transfer = create_transfer(from: accounts(:depository), to: @term_deposit, outflow_kind: "funds_movement")
+    transfer.outflow_transaction.update_columns(category_id: nil)
+
+    Transfer::SavingsKindReconciler.new.run
+
+    assert_equal category, transfer.outflow_transaction.reload.category
+  end
+
+  test "leaves pending suggestions alone" do
+    transfer = create_transfer(from: accounts(:depository), to: @term_deposit, outflow_kind: "funds_movement")
+    transfer.update_columns(status: "pending")
+
+    assert_equal 0, Transfer::SavingsKindReconciler.new.run.checked
+    assert_equal "funds_movement", transfer.outflow_transaction.reload.kind
+  end
+
   test "leaves a transfer booked after the release date alone" do
     @term_deposit.update!(available_on: 1.month.ago.to_date)
     transfer = create_transfer(from: accounts(:depository), to: @term_deposit, outflow_kind: "funds_movement")

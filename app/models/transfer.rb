@@ -31,6 +31,8 @@ class Transfer < ApplicationRecord
     # bound on that date); otherwise it's a plain funds movement. They also
     # decide whether money moved into a bound bank account counts as saving.
     def kind_for_account(account, from_account: nil, date: nil)
+      # Forms hand the booking date over as a string.
+      date = date.presence&.to_date
       if account.loan?
         "loan_payment"
       elsif account.credit_card?

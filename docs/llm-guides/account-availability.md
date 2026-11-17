@@ -95,7 +95,12 @@ budgets show it as money set aside. Rules:
   keep their kind until `rake data_migration:reconcile_savings_transfer_kinds`
   (`Transfer::SavingsKindReconciler`) and
   `rake data_migration:reconcile_investment_transfer_kinds` run; both take
-  `DRY_RUN=1` and `FAMILY_ID=`.
+  `DRY_RUN=1` and `FAMILY_ID=`. The same holds when a user later changes an
+  account's availability or release date: stored kinds stay until the tasks
+  run again.
+- `InvestmentFlowStatement` follows the same rule: a matched brokerage
+  contribution or withdrawal whose counterpart is a bank account locked or
+  long-term on the booking date is not counted.
 
 ## Preview gating
 

@@ -427,4 +427,17 @@ class Transfer::CreatorTest < ActiveSupport::TestCase
     assert_equal [ tag.id ], transfer.outflow_transaction.tag_ids
     assert_equal [ tag.id ], transfer.inflow_transaction.tag_ids
   end
+  test "accepts the booking date as a string for a transfer into a locked deposit" do
+    term_deposit = @family.accounts.create!(
+      name: "Term deposit", balance: 0, currency: "USD",
+      accountable: Depository.new(subtype: "cd"), available_on: 1.year.from_now.to_date
+    )
+
+    transfer = Transfer::Creator.new(
+      family: @family, source_account_id: @source_account.id, destination_account_id: term_deposit.id,
+      date: Date.current.iso8601, amount: 100
+    ).create
+
+    assert_equal "investment_contribution", transfer.outflow_transaction.kind
+  end
 end
