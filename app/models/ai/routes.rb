@@ -40,6 +40,9 @@ module Ai::Routes
 
   def queue_for(feature) = QUEUES.fetch(fetch(feature)[:lane])
 
+  # The queues the worker's `ai` capsule polls, and only it (Ai::Capsule).
+  def ai_queues = QUEUES.values.uniq
+
   # The feature whose route and needs this one uses: a shadow's primary, or search's `embed`.
   def source_of(feature) = fetch(feature).values_at(:shadow_of, :route_of).compact.first || feature.to_sym
 

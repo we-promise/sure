@@ -172,7 +172,8 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     Ai::Requesters.stubs(:fetch).raises(KeyError)
 
     assert_nothing_raised do
-      Ai::GenerationJob.perform_now(:retirement_planner, { ids: %w[a], family_id: @family.id })
+      # A queued job carries its queue; a new one would ask the routes for the gone feature's.
+      Ai::GenerationJob.set(queue: "ai_low_priority").perform_now(:retirement_planner, { ids: %w[a], family_id: @family.id })
     end
   end
 
