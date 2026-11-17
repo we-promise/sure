@@ -3,7 +3,8 @@
 **Companion to:** [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) §19 (PR 3), §7 (transports
 run only inside the AI capsules), §11 ("No LLM call on a web thread"), §12, §13, §14, §15 and §17,
 and [`pr-4-sequencer.md`](pr-4-sequencer.md), which merges between 3a and 3b.
-**Base:** `feat/ai-2f-review` @ `d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0). 2f's head now pins ruby_llm 2.2.2; rebase onto it before building.
+**Base:** `feat/ai-2f-review` @ `928052010` (2f squashed onto 2e, ruby_llm 2.2.2). The context
+below was checked on the earlier head `d55dc808a`; 3a was built on `928052010`.
 **Parts:** four PRs into `main`, each stacked on the one before (decision 9):
 
 | Part | Branch | Steps |
@@ -17,7 +18,8 @@ Worktree `~/src/sure-ai-3`. PR 4's branch `feat/ai-4-sequencer` starts from 3a; 
 built from 3a while PR 4 is, and rebased onto PR 4 before review.
 **Merge order:** 3a, then PR 4, then 3b and 3c (neither depends on the other), then 3d. No part has
 to ship in the same release as another (see [Order with PR 4](#order-with-pr-4)).
-**Status:** plan; decisions 1–8 made by @josh-sanders on 2026-11-13, decision 9 on 2026-11-16.
+**Status:** 3a built 2026-11-17 (`d4ddc5b4c`, `d7d558114`), not pushed and no PR yet; 3b–3d
+planned. Decisions 1–8 made by @josh-sanders on 2026-11-13, decision 9 on 2026-11-16.
 
 ## Context
 
@@ -240,7 +242,8 @@ Each part is its own PR; each step is one commit.
 ### 2. `Ai::ProbeJob`
 
 - `Ai::ProbeJob` (`queue_as Ai::Routes::QUEUES.fetch(:background)`) runs the probes with
-  `AiHealth.new(force_probes: true, probe_cache: Ai::SharedState)` and records the `WorkerAiHealth`
+  `AiHealth.new(force_probes: true)`, whose probe cache is `AiHealth::Probe::Store` over
+  `Ai::SharedState`, and records the `WorkerAiHealth`
   snapshot with its process identity in the same store (decision 5). It then broadcasts a
   replacement for the AI tab's lazy frame, with the same `src`, so the browser reloads the tab.
   That's decision 3's pattern: the tab's "Run checks again" form renders in a request, with its
@@ -274,7 +277,7 @@ Each part is its own PR; each step is one commit.
   lane's queue; `WorkerAiHealthCheckJob` is gone. (PR 4's `ai_lane_test.rb`, which finds AI jobs
   from the code, comes after 3a.)
 - **Deletes:** `WorkerAiHealthCheckJob`, `verify_worker_ai` and its route and button, and the
-  `force_probes` request parameter.
+  `refresh_ai_health` request parameter.
 
 **As built (2026-11-17, `feat/ai-3a-capsule-probes`):**
 
@@ -551,7 +554,7 @@ follows both.
 | `Ai::GenerationJob`, `Ai::Generation` | 3b: none expected (cancel already there) | `Busy` re-enqueue, `Preempted` retry | 3b rebases onto PR 4's rescues; if it touches them, new rescue lines only |
 | `ProcessPdfJob` | 3b: cancel checks, `Cancelled` rescue | none expected | — |
 | `test/support/ai_test_helper.rb` | 3a: `with_ai_capsule`, `ai_capsule!` | gate helpers | separate methods |
-| `ai_lane_test.rb`, `ai-pipeline.md` | 3a's and 3c's jobs; 3d's guide | new queues, gate | 3c and 3d rebase by hand |
+| Job lists, `ai-pipeline.md` | 3a's job in `sidekiq_config_test.rb`'s `AI_JOBS`; 3c's in `ai_lane_test.rb`; 3d's guide | creates `ai_lane_test.rb`, new queues, gate | 3c and 3d rebase by hand |
 
 **Why 3b and 3c come after PR 4.** Before PR 4, smart-fill, smart-configure and the MCP search
 jobs would go to `ai_high_priority`, which shares the `ai` capsule's one thread with background
@@ -573,7 +576,7 @@ button. Configuration from the deprecated ENV, built per process. The probe time
   and the MCP AI tools from 3c. With none, the dialogs and the health tab say so.
 - **Release notes:**
   - 3a: AI health checks run in the worker; "Run checks again" queues them, and each result shows
-    its age; "Verify from worker" is gone, since every check now runs there. The PDF vision health
+    its age; "Verify worker configuration" is gone, since every check now runs there. The PDF vision health
     check no longer fails on reasoning models (#4866), and the AI tab shows how long a result is
     kept (#3279).
   - 3b: smart-fill and smart-configure answer in the dialog when ready, and can be stopped; a PDF
@@ -594,7 +597,9 @@ Every part:
 Per part:
 
 - **3a:** system test for the health tab's "Run checks again"; on venus, the tab with a worker and
-  with none.
+  with none. Done 2026-11-17: full suite (13 failures, all the date-dependent Wise, Budget,
+  Binance and Financekit tests that fail on 2f too), `test/system/admin/system_health_test.rb`,
+  RuboCop and erb_lint on the changed files, Brakeman. Left: the `AI_E2E=1` legs and venus.
 - **3b:** system tests for smart-fill (skeleton → prefilled form → save), smart-configure, stop
   on both, and PDF import stop. On venus (sure-dev pod, local qwen): smart-fill with a categorize
   run queued, answered without waiting for the batch (PR 4's gate interrupts it).
