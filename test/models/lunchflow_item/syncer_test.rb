@@ -117,6 +117,16 @@ class LunchflowItem::SyncerTest < ActiveSupport::TestCase
     assert_equal({ "lunchflow_item_id" => @lunchflow_item.id, "error_class" => "RuntimeError", "error_message" => "connection reset" }, entry.metadata)
   end
 
+  test "a failed import with no counts and no error text reports the generic failure" do
+    sync = recording_sync
+    @lunchflow_item.expects(:import_latest_lunchflow_data).returns(success: false)
+
+    @syncer.perform_sync(sync)
+
+    assert_equal [ [ I18n.t("lunchflow_items.syncer.import_failed"), "import_error" ] ],
+                 sync.sync_stats["errors"].map { |e| e.values_at("message", "category") }
+  end
+
   test "linked accounts that fail to process or schedule are reported" do
     lunchflow_account = @lunchflow_item.lunchflow_accounts.first
     account = @lunchflow_item.family.accounts.create!(name: "Linked", balance: 0, currency: "USD", accountable: Depository.new)
