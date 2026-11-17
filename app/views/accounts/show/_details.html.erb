@@ -47,7 +47,7 @@
     <% end %>
   </dl>
 
-  <% if account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+  <% if account.liquidity_selectable? && account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
     <%= render DS::Link.new(
       text: t("accounts.liquidity.details.edit"),
       href: edit_account_path(account),
