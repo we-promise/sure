@@ -56,13 +56,20 @@ class Balance::IntegrityChecker
         next
       end
 
-      # A busy day's snapshot that the day's own activity can explain says
-      # nothing either way: it neither opens nor closes an episode, and the
-      # anchor stays, so a gap smaller than the day's activity still shows on
-      # the next exact snapshot. An episode already open keeps its start and
-      # the residual last measured outside the timing range.
+      # A busy day's snapshot that the day's own activity can explain never
+      # opens an episode, and the anchor stays, so a gap smaller than the
+      # day's activity still shows on the next exact snapshot. It closes an
+      # open episode only when the open gap can no longer explain it (see
+      # gap_closed?); otherwise the episode keeps its start and the residual
+      # last measured outside the timing range.
       if same_day_timing?(b, residual)
         next unless first_open_waypoint
+
+        if gap_closed?(b, residual, open_residual)
+          first_open_waypoint = nil
+          open_residual = nil
+          next
+        end
       else
         first_open_waypoint ||= b
         # An exact snapshot measures the gap itself. On a busy day only the
@@ -157,6 +164,21 @@ class Balance::IntegrityChecker
     def timing_range(waypoint)
       flows = same_day_flows(waypoint.date)
       [ flows.select(&:negative?).sum, flows.select(&:positive?).sum ]
+    end
+
+    # Whether a busy day's residual shows that an open gap has gone, e.g. a
+    # transaction the bank booked late now agrees with the ledger. True when
+    # the history agrees within tolerance, or when the residual sits so far
+    # toward zero from the open gap that the day's activity cannot bridge
+    # the difference. open_residual never overstates the gap (on a busy day
+    # it is the part beyond the timing range), so a gap that is still there
+    # cannot pass the second test.
+    def gap_closed?(waypoint, residual, open_residual)
+      return true if residual.abs <= tolerance
+
+      lowest, highest = timing_range(waypoint)
+      shift = residual - open_residual
+      open_residual.positive? ? shift < lowest - tolerance : shift > highest + tolerance
     end
 
     # The part of a busy day's residual that its activity cannot explain.

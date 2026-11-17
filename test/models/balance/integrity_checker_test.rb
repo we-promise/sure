@@ -485,6 +485,81 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_in_delta 50, gap.difference, 0.01, "the 100 purchase booked after day 5's sync is timing, not part of the gap"
   end
 
+  # A purchase dated day 8 that the bank only booked on day 3: the snapshots
+  # in between are 30 higher than the ledger. From day 3 on the history
+  # agrees again, but every later day has activity, so no exact snapshot
+  # follows.
+  test "an open gap closes on a busy day once the history agrees again" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 30)
+    (4..7).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    end
+    assert Balance::IntegrityChecker.new(account).latest_flagged_gap, "the late booking opens a gap first"
+
+    ledger = 970
+    (1..3).reverse_each do |days_ago|
+      ledger -= 10
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 10)
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: ledger, kind: "reconciliation")
+    end
+
+    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
+  end
+
+  test "an open gap closes on a busy day when the snapshot misses only that day's late bookings" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    add_linked_entry(account, date: 8.days.ago.to_date, amount: 30)
+    (4..7).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    end
+
+    # Each snapshot is taken before that day's 10 purchase is booked.
+    ledger = 970
+    (1..3).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: ledger, kind: "reconciliation")
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 10)
+      ledger -= 10
+    end
+
+    assert_nil Balance::IntegrityChecker.new(account).latest_flagged_gap
+  end
+
+  test "a gap that is still there stays open across busy days" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # A 30 deposit (day 9) was never imported.
+    (5..8).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 1030, kind: "reconciliation")
+    end
+
+    # Each snapshot is taken before that day's 10 purchase is booked.
+    ledger = 1000
+    (1..4).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: ledger + 30, kind: "reconciliation")
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 10)
+      ledger -= 10
+    end
+
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap
+    assert_equal 8.days.ago.to_date, gap.first_open_waypoint.date
+    assert_equal 1.day.ago.to_date, gap.latest_waypoint.date
+    assert_in_delta 30, gap.difference, 0.01
+  end
+
   private
     def add_linked_entry(account, date:, amount:, kind: nil)
       account.entries.create!(
