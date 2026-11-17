@@ -761,6 +761,10 @@ Rails.application.routes.draw do
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
   end
 
+  resources :annual_fees, only: :index do
+    collection { post :detect }
+  end
+
   resources :account_statements, only: %i[index show create update destroy] do
     member do
       patch :link

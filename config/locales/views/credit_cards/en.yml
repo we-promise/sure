@@ -1,6 +1,16 @@
 ---
 en:
   credit_cards:
+    annual_fee:
+      all_cards: All cards' fees
+      in_days:
+        zero: today
+        one: in 1 day
+        other: "in %{count} days"
+      next: "%{amount}, next charged %{date}"
+      no_date: "%{amount} a year; add the month it's charged to see when it's next due."
+      not_set: Not set. Edit card details, or find it in past transactions on the Annual fees page.
+      title: Annual fee
     due:
       in_days:
         zero: Due today
@@ -14,6 +24,9 @@ en:
     form:
       annual_fee: Annual fee
       annual_fee_placeholder: '99'
+      annual_fee_month: Annual fee month
+      annual_fee_day: Annual fee day
+      annual_fee_date_description: When the annual fee is charged each year. Leave blank and use "Find fees in transactions" on the Annual fees page to fill it in from past charges.
       apr: APR
       apr_placeholder: '15.99'
       available_credit: Available credit

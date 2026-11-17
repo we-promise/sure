@@ -1,0 +1,19 @@
+<%# locals: (card:, as_of:) %>
+
+<% next_fee = card.next_annual_fee_date(as_of: as_of) %>
+<div class="rounded-xl bg-container-inset px-4 py-3 mb-2 flex flex-wrap items-center justify-between gap-2" data-testid="annual-fee">
+  <div>
+    <p class="text-sm font-medium text-primary"><%= t("credit_cards.annual_fee.title") %></p>
+    <% if card.annual_fee.present? && next_fee %>
+      <p class="text-sm text-secondary">
+        <%= t("credit_cards.annual_fee.next", amount: format_money(card.annual_fee_money), date: l(next_fee, format: :long)) %>
+        · <%= t("credit_cards.annual_fee.in_days", count: card.days_until_annual_fee(as_of: as_of)) %>
+      </p>
+    <% elsif card.annual_fee.present? %>
+      <p class="text-sm text-secondary"><%= t("credit_cards.annual_fee.no_date", amount: format_money(card.annual_fee_money)) %></p>
+    <% else %>
+      <p class="text-sm text-secondary"><%= t("credit_cards.annual_fee.not_set") %></p>
+    <% end %>
+  </div>
+  <%= link_to t("credit_cards.annual_fee.all_cards"), annual_fees_path, class: "text-sm font-medium text-primary underline", data: { turbo_frame: "_top" } %>
+</div>

@@ -17,6 +17,8 @@ class CreditCard < ApplicationRecord
   validates :statement_close_day, :due_day,
             numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 31 },
             allow_nil: true
+  validates :annual_fee_day, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 31 }, allow_nil: true
+  validates :annual_fee_month, numericality: { only_integer: true, greater_than_or_equal_to: 1, less_than_or_equal_to: 12 }, allow_nil: true
 
   class << self
     def color
@@ -54,6 +56,24 @@ class CreditCard < ApplicationRecord
 
   def annual_fee_money
     annual_fee ? Money.new(annual_fee, account.currency) : nil
+  end
+
+  def annual_fee_date_configured?
+    annual_fee_month.present? && annual_fee_day.present?
+  end
+
+  # The next date the annual fee is charged, on or after `as_of`. A day past
+  # the end of the month (e.g. Feb 30) falls on the month's last day.
+  def next_annual_fee_date(as_of: Date.current)
+    return nil unless annual_fee_date_configured?
+
+    this_year = annual_fee_date_in(as_of.year)
+    this_year >= as_of ? this_year : annual_fee_date_in(as_of.year + 1)
+  end
+
+  def days_until_annual_fee(as_of: Date.current)
+    date = next_annual_fee_date(as_of: as_of)
+    date && (date - as_of).to_i
   end
 
   def statement_cycle_configured?
@@ -297,5 +317,9 @@ class CreditCard < ApplicationRecord
 
     def day_of_month_in(base_date, day)
       Date.new(base_date.year, base_date.month, [ day, base_date.end_of_month.day ].min)
+    end
+
+    def annual_fee_date_in(year)
+      Date.new(year, annual_fee_month, [ annual_fee_day, Date.new(year, annual_fee_month, -1).day ].min)
     end
 end

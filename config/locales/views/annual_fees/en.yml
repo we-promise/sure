@@ -1,0 +1,29 @@
+---
+en:
+  annual_fees:
+    detect:
+      updated:
+        zero: No new fees found in card transactions.
+        one: Filled in 1 card from its transactions.
+        other: "Filled in %{count} cards from their transactions."
+    index:
+      card: Card
+      cards_with_fee:
+        one: 1 card
+        other: "%{count} cards"
+      detect: Find fees in transactions
+      edit: Edit
+      empty: No credit cards yet.
+      fee: Annual fee
+      hint: "\"Find fees in transactions\" looks for annual or membership fee charges in each card's last 13 months and fills in the amount and renewal date where they're missing. A fee refunded soon after it was charged is treated as waived."
+      in_days:
+        zero: today
+        one: in 1 day
+        other: "in %{count} days"
+      next_60_days: Due in the next 60 days
+      next_charge: Next charge
+      next_fee: Next fee
+      no_date: No date set
+      per_year: Annual fees per year
+      title: Annual fees
+      unknown: Not set

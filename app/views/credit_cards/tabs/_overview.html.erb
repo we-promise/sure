@@ -6,6 +6,8 @@
 <% today = as_of %>
 <% card = account.credit_card %>
 
+<%= render "credit_cards/tabs/annual_fee", card: card, as_of: today %>
+
 <% if (summary = card.statement_summary(as_of: today, viewer: Current.user)) %>
   <% due_for_last_balance = summary.due_date.present? && summary.due_date == summary.last_due_date %>
   <% show_apr = card.apr.present? %>

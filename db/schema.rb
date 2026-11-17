@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_160000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -572,6 +572,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
 
   create_table "credit_cards", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.decimal "annual_fee", precision: 10, scale: 2
+    t.integer "annual_fee_day"
+    t.integer "annual_fee_month"
     t.decimal "apr", precision: 10, scale: 2
     t.decimal "available_credit", precision: 10, scale: 2
     t.datetime "created_at", null: false
@@ -582,6 +584,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.integer "statement_close_day"
     t.string "subtype"
     t.datetime "updated_at", null: false
+    t.check_constraint "annual_fee_day >= 1 AND annual_fee_day <= 31", name: "chk_credit_cards_annual_fee_day"
+    t.check_constraint "annual_fee_month >= 1 AND annual_fee_month <= 12", name: "chk_credit_cards_annual_fee_month"
     t.check_constraint "due_day >= 1 AND due_day <= 31", name: "chk_credit_cards_due_day"
     t.check_constraint "statement_close_day >= 1 AND statement_close_day <= 31", name: "chk_credit_cards_statement_close_day"
   end
