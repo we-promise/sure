@@ -141,6 +141,19 @@ class Transfer::InvestmentKindReconcilerTest < ActiveSupport::TestCase
     assert_equal categories(:food_and_drink), transfer.outflow_transaction.reload.category
   end
 
+  test "does not categorize a transfer the user made plain after the batch was read" do
+    transfer = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "investment_contribution")
+    stale = Transfer.includes(outflow_transaction: :entry).find(transfer.id)
+    Transfer.find(transfer.id).update_investment_contribution!(false)
+
+    assigned = Transfer::InvestmentKindReconciler.new.send(:assign_contribution_category!, stale)
+
+    assert_not assigned
+    outflow = transfer.outflow_transaction.reload
+    assert_equal "funds_movement", outflow.kind
+    assert_nil outflow.category_id
+  end
+
   test "does not categorize an investment-to-investment transfer" do
     transfer = create_transfer(from: accounts(:crypto), to: accounts(:investment), outflow_kind: "investment_contribution")
 

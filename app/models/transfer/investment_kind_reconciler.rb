@@ -93,9 +93,10 @@ class Transfer::InvestmentKindReconciler
       outflow = transfer.outflow_transaction
 
       Transaction.transaction do
-        # The user may have set or locked a category since the batch was read.
+        # Since the batch was read, the user may have set or locked a category,
+        # or made the transfer a plain one (update_investment_contribution!).
         outflow.lock!
-        next false unless outflow.category_id.nil? && !outflow.locked?(:category_id)
+        next false unless outflow.investment_contribution? && needs_contribution_category?(transfer)
 
         now = Time.current
         outflow.update_columns(category_id: category.id, updated_at: now)
