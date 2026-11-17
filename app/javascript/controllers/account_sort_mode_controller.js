@@ -12,6 +12,26 @@ export default class extends Controller {
   connect() {
     this.sorting = false;
     this.render();
+    this.startIfRequested();
+  }
+
+  // The sidebar settings menu sets this flag when the user switches to the
+  // custom order, so sort mode is open as soon as the page reloads. The flag
+  // is cleared on the next tick so both sidebar instances (desktop and
+  // mobile) see it.
+  startIfRequested() {
+    let requested = false;
+    try {
+      requested = sessionStorage.getItem("accountSidebarStartSort") === "1";
+    } catch (_) {}
+    if (!requested || this.handleTargets.length === 0) return;
+
+    setTimeout(() => {
+      try {
+        sessionStorage.removeItem("accountSidebarStartSort");
+      } catch (_) {}
+    }, 0);
+    this.start();
   }
 
   toggle() {

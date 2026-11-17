@@ -119,6 +119,13 @@
   // positioned fixed but stays inside its tab panel in the DOM.
   if (!window.__sidebarSetOpenBound) {
     window.__sidebarSetOpenBound = true;
+    // Picking "Custom order" reloads the page; remember to open sort mode
+    // once the reloaded sidebar connects (account_sort_mode_controller).
+    document.addEventListener("click", function (e) {
+      if (!e.target.closest("[data-account-sidebar-start-sort]")) return;
+      try { sessionStorage.setItem("accountSidebarStartSort", "1"); } catch (_) {}
+    });
+
     document.addEventListener("click", function (e) {
       var btn = e.target.closest("[data-account-sidebar-set-open]");
       if (!btn) return;

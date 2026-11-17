@@ -50,7 +50,8 @@
           method: :patch,
           params: { order: order_key },
           roving: false,
-          selected: current_order == order_key
+          selected: current_order == order_key,
+          data: (order_key == "manual" && current_order != "manual") ? { account_sidebar_start_sort: true } : {}
         ) %>
       <% end %>
 
