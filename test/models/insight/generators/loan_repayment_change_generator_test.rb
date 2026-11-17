@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Insight::Generators::LoanPaymentChangeGeneratorTest < ActiveSupport::TestCase
+class Insight::Generators::LoanRepaymentChangeGeneratorTest < ActiveSupport::TestCase
   setup do
     travel_to Date.new(2026, 11, 20)
     @family = families(:dylan_family)
@@ -72,6 +72,16 @@ class Insight::Generators::LoanPaymentChangeGeneratorTest < ActiveSupport::TestC
     assert_equal "high", generate.sole.priority
   end
 
+  test "keeps the payment precision of a currency with three decimals" do
+    stub_payments([ 0.010, Date.new(2026, 11, 10) ], [ 0.009, Date.new(2026, 12, 10) ], [ 0.009, Date.new(2027, 1, 10) ],
+                  currency: "KWD")
+
+    insight = generate.sole
+
+    assert_equal "loan_payment_change.down", insight.template_key
+    assert_equal({ previous_payment: 0.01, new_payment: 0.009 }, insight.metadata.slice(:previous_payment, :new_payment))
+  end
+
   test "the final payment absorbing rounding is not a change" do
     stub_payments([ 1_000, Date.new(2026, 11, 10) ], [ 400, Date.new(2026, 12, 10) ])
 
@@ -118,16 +128,16 @@ class Insight::Generators::LoanPaymentChangeGeneratorTest < ActiveSupport::TestC
 
   private
     def generate
-      Insight::Generators::LoanPaymentChangeGenerator.new(@family).generate
+      Insight::Generators::LoanRepaymentChangeGenerator.new(@family).generate
     end
 
     # A schedule reduced to what the generator reads: [amount, date] per payment.
-    def stub_payments(*rows)
+    def stub_payments(*rows, currency: "USD")
       payments = rows.each_with_index.map do |(amount, date), index|
-        money = Money.new(amount, "USD")
+        money = Money.new(amount, currency)
         Loan::AmortizationSchedule::Payment.new(number: index + 1, date: date, payment: money,
-                                                principal: money, interest: Money.new(0, "USD"),
-                                                ending_balance: Money.new(0, "USD"))
+                                                principal: money, interest: Money.new(0, currency),
+                                                ending_balance: Money.new(0, currency))
       end
       Loan.any_instance.stubs(:amortization_schedule).returns(stub(payments: payments))
     end

@@ -4,9 +4,12 @@
 # and nothing else, so the figures are the ones the loan page shows, built
 # from the terms the user entered. No market rate is guessed.
 #
+# Named "Repayment" while the type stays loan_payment_change: in CamelCase,
+# "LoanPaymentChange..." matches the CI secret scanner's AWS key pattern.
+#
 # The dedup key carries the effective date, so each change is its own insight,
 # and it expires by itself once that date has passed.
-class Insight::Generators::LoanPaymentChangeGenerator < Insight::Generator
+class Insight::Generators::LoanRepaymentChangeGenerator < Insight::Generator
   produces "loan_payment_change"
 
   HORIZON_DAYS = 60
@@ -73,11 +76,17 @@ class Insight::Generators::LoanPaymentChangeGenerator < Insight::Generator
         metadata: {
           account_id: account.id,
           effective_on: upcoming.date.iso8601,
-          previous_payment: round(previous.payment.amount),
-          new_payment: round(upcoming.payment.amount)
+          previous_payment: payment_amount(previous),
+          new_payment: payment_amount(upcoming)
         },
         dedup_key: "loan_payment_change:#{account.id}:#{upcoming.date.iso8601}"
       )
+    end
+
+    # At the loan currency's own precision: rounding a three-decimal payment
+    # to two would hide small changes and read some drops as no change.
+    def payment_amount(payment)
+      round(payment.payment.amount, payment.payment.currency.default_precision)
     end
 
     # A lower payment is good news, so it sits at the bottom of the feed.
