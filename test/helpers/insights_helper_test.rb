@@ -219,7 +219,7 @@ class InsightsHelperTest < ActionView::TestCase
       period_start: Date.new(2026, 8, 18), period_end: Date.new(2026, 11, 16))
 
     assert_equal [ "$36.00", "3 charges" ], insight_key_figure(insight)
-    assert_equal transactions_path(q: { account_ids: [ account.id ], categories: [ "Fees" ], status: [ "confirmed" ], start_date: "2026-08-18", end_date: "2026-11-16" }),
+    assert_equal transactions_path(q: { account_ids: [ account.id ], categories: [ "Fees" ], status: [ "confirmed" ], types: [ "expense", "income" ], start_date: "2026-08-18", end_date: "2026-11-16" }),
       insight_action(insight)[:href]
   end
 

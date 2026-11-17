@@ -115,7 +115,7 @@ module InsightsHelper
       fee_names = insight.family.categories.fees.pluck(:name)
       return nil unless account && fee_names.any? && insight.period_start && insight.period_end
       { text: t("insights.actions.bank_fees"),
-        href: transactions_path(q: { account_ids: [ account.id ], categories: fee_names, status: [ "confirmed" ],
+        href: transactions_path(q: { account_ids: [ account.id ], categories: fee_names, status: [ "confirmed" ], types: [ "expense", "income" ],
                                      start_date: insight.period_start.to_s, end_date: insight.period_end.to_s }) }
     when "subscription_audit"
       { text: t("insights.actions.subscription_audit"), href: recurring_transactions_path }
