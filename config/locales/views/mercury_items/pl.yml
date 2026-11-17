@@ -61,12 +61,12 @@ pl:
       account_already_linked: To konto jest już połączone z dostawcą
       api_error: 'Błąd API: %{message}'
       invalid_account_name: Nie można połączyć konta bez nazwy
-      mercury_account_already_linked: To konto Mercury jest już połączone z innym
-        kontem
-      mercury_account_not_found: Nie znaleziono konta Mercury
       missing_parameters: Brak wymaganych parametrów
       no_api_token: Nie znaleziono tokenu API Mercury. Skonfiguruj go w Ustawieniach
         dostawcy.
+      provider_account_already_linked: To konto Mercury jest już połączone z innym
+        kontem
+      provider_account_not_found: Nie znaleziono konta Mercury
       select_connection: Wybierz połączenie Mercury przed połączeniem kont.
       success: Pomyślnie połączono %{account_name} z Mercury
     loading:
@@ -89,8 +89,6 @@ pl:
       syncing: Synchronizacja...
       total: Łącznie
       unlinked: Niepodłączone
-    mercury_item_selection_error_payload:
-      select_connection: Wybierz połączenie Mercury przed wczytaniem kont.
     provider_connection:
       default_description: Połącz swój bank przez Mercury
       default_name: Mercury
@@ -124,10 +122,6 @@ pl:
       token_label: Token
       token_placeholder: Wklej token tutaj
       update_connection: Zaktualizuj połączenie
-    render_mercury_item_selection_failure:
-      no_credentials_configured: Najpierw skonfiguruj token API Mercury w ustawieniach
-        dostawcy.
-      select_connection: Wybierz połączenie Mercury w ustawieniach dostawcy.
     select_accounts:
       accounts_selected: wybranych kont
       api_error: 'Błąd API: %{message}'
@@ -154,8 +148,6 @@ pl:
         synchronizowane i deduplikowane automatycznie.
       link_account: Połącz konto
       no_account_specified: Nie podano konta
-      no_accounts_found: Nie znaleziono kont Mercury. Sprawdź konfigurację tokenu
-        API.
       no_api_token: Token API Mercury nie jest skonfigurowany. Skonfiguruj go w Ustawieniach.
       no_credentials_configured: Skonfiguruj token API Mercury najpierw w Ustawieniach
         dostawcy.

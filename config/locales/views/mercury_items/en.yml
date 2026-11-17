@@ -16,6 +16,8 @@ en:
       service_down_label: Service Down
       service_down_desc: Mercury API may be temporarily unavailable
       check_provider_settings: Check Provider Settings
+    errors:
+      unexpected_error: An unexpected error occurred. Please try again later.
     setup_required:
       title: Mercury Setup Required
       api_token_not_configured: API Token Not Configured
@@ -43,6 +45,7 @@ en:
       invalid_account_names:
         one: "Cannot link account with blank name"
         other: "Cannot link %{count} accounts with blank names"
+      invalid_account_type: Unsupported Mercury account type
       link_failed: Failed to link accounts
       no_accounts_selected: Please select at least one account
       no_api_token: Mercury API token not found. Please configure it in Provider Settings.
@@ -109,6 +112,7 @@ en:
       no_name_placeholder: "(No name)"
       select_connection: Choose a Mercury connection in Provider Settings.
       title: Select Mercury Accounts
+      unexpected_error: An unexpected error occurred. Please try again later.
     select_existing_account:
       account_already_linked: This account is already linked to a provider
       all_accounts_already_linked: All Mercury accounts are already linked
@@ -118,20 +122,21 @@ en:
       description: Select a Mercury account to link with this account. Transactions will be synced and deduplicated automatically.
       link_account: Link account
       no_account_specified: No account specified
-      no_accounts_found: No Mercury accounts found. Please check your API token configuration.
       no_api_token: Mercury API token is not configured. Please configure it in Settings.
       no_credentials_configured: Please configure your Mercury API token first in Provider Settings.
       no_name_placeholder: "(No name)"
       select_connection: Choose a Mercury connection in Provider Settings.
       title: "Link %{account_name} with Mercury"
+      unexpected_error: An unexpected error occurred. Please try again later.
     link_existing_account:
       account_already_linked: This account is already linked to a provider
       api_error: "API error: %{message}"
       invalid_account_name: Cannot link account with blank name
-      mercury_account_already_linked: This Mercury account is already linked to another account
-      mercury_account_not_found: Mercury account not found
       missing_parameters: Missing required parameters
+      no_account_specified: No account specified
       no_api_token: Mercury API token not found. Please configure it in Provider Settings.
+      provider_account_already_linked: This Mercury account is already linked to another account
+      provider_account_not_found: Mercury account not found
       select_connection: Choose a Mercury connection before linking accounts.
       success: "Successfully linked %{account_name} with Mercury"
     setup_accounts:
@@ -226,8 +231,3 @@ en:
         other: "%{count} Mercury accounts had transaction import failures."
     update:
       success: Mercury connection updated
-    mercury_item_selection_error_payload:
-      select_connection: Choose a Mercury connection before loading accounts.
-    render_mercury_item_selection_failure:
-      select_connection: Choose a Mercury connection in Provider Settings.
-      no_credentials_configured: Please configure your Mercury API token first in Provider Settings.

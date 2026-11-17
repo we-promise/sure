@@ -51,10 +51,10 @@ tr:
       account_already_linked: Bu hesap zaten bir sağlayıcıya bağlı
       api_error: 'API hatası: %{message}'
       invalid_account_name: Boş isimli hesap bağlanamaz
-      mercury_account_already_linked: Bu Mercury hesabı zaten başka bir hesaba bağlı
-      mercury_account_not_found: Mercury hesabı bulunamadı
       missing_parameters: Gerekli parametreler eksik
       no_api_token: Mercury API token'ı bulunamadı. Lütfen Sağlayıcı Ayarlarında yapılandırın.
+      provider_account_already_linked: Bu Mercury hesabı zaten başka bir hesaba bağlı
+      provider_account_not_found: Mercury hesabı bulunamadı
       select_connection: Hesapları bağlamadan önce bir Mercury bağlantısı seçin.
       success: "%{account_name} Mercury ile başarıyla bağlandı"
     loading:
@@ -77,8 +77,6 @@ tr:
       syncing: Eşitleniyor...
       total: Toplam
       unlinked: Bağlantısız
-    mercury_item_selection_error_payload:
-      select_connection: Hesapları yüklemeden önce bir Mercury bağlantısı seçin.
     provider_connection:
       default_description: Mercury üzerinden bankanıza bağlanın
       default_name: Mercury
@@ -115,10 +113,6 @@ tr:
       token_label: Token
       token_placeholder: Token'ı buraya yapıştırın
       update_connection: Bağlantıyı güncelle
-    render_mercury_item_selection_failure:
-      no_credentials_configured: Lütfen önce Sağlayıcı Ayarlarında Mercury API token'ınızı
-        yapılandırın.
-      select_connection: Sağlayıcı Ayarlarında bir Mercury bağlantısı seçin.
     select_accounts:
       accounts_selected: hesap seçildi
       api_error: 'API hatası: %{message}'
@@ -146,8 +140,6 @@ tr:
         olarak eşitlenecek ve yinelenenler kaldırılacaktır.
       link_account: Hesabı bağla
       no_account_specified: Hesap belirtilmedi
-      no_accounts_found: Mercury hesabı bulunamadı. Lütfen API token yapılandırmanızı
-        kontrol edin.
       no_api_token: Mercury API token'ı yapılandırılmamış. Lütfen Ayarlar'da yapılandırın.
       no_credentials_configured: Lütfen önce Sağlayıcı Ayarlarında Mercury API token'ınızı
         yapılandırın.

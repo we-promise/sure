@@ -60,11 +60,11 @@ ru:
       account_already_linked: Этот счёт уже связан с провайдером
       api_error: 'Ошибка API: %{message}'
       invalid_account_name: Невозможно связать счёт с пустым именем
-      mercury_account_already_linked: Этот счёт Mercury уже связан с другим счётом
-      mercury_account_not_found: Счёт Mercury не найден
       missing_parameters: Отсутствуют необходимые параметры
       no_api_token: API токен Mercury не найден. Пожалуйста, настройте его в настройках
         провайдера.
+      provider_account_already_linked: Этот счёт Mercury уже связан с другим счётом
+      provider_account_not_found: Счёт Mercury не найден
       select_connection: Выберите подключение к Mercury перед связыванием счетов.
       success: Успешно связан %{account_name} с Mercury
     loading:
@@ -87,8 +87,6 @@ ru:
       syncing: Синхронизация...
       total: Всего
       unlinked: Несвязанные
-    mercury_item_selection_error_payload:
-      select_connection: Выберите подключение к Mercury перед загрузкой счетов.
     provider_connection:
       default_description: Подключитесь к вашему банку через Mercury
       default_name: Mercury
@@ -123,10 +121,6 @@ ru:
       token_label: Токен
       token_placeholder: Вставьте токен здесь
       update_connection: Обновить подключение
-    render_mercury_item_selection_failure:
-      no_credentials_configured: Пожалуйста, сначала настройте ваш API токен Mercury
-        в настройках провайдера.
-      select_connection: Выберите подключение к Mercury в настройках провайдера.
     select_accounts:
       accounts_selected: счета выбраны
       api_error: 'Ошибка API: %{message}'
@@ -154,8 +148,6 @@ ru:
         синхронизированы и дубли удалены автоматически.
       link_account: Связать счёт
       no_account_specified: Счёт не указан
-      no_accounts_found: Счета Mercury не найдены. Пожалуйста, проверьте конфигурацию
-        вашего API токена.
       no_api_token: API токен Mercury не настроен. Пожалуйста, настройте его в Настройках.
       no_credentials_configured: Пожалуйста, сначала настройте ваш API токен Mercury
         в настройках провайдера.

@@ -14,6 +14,21 @@ class MercuryAccount < ProviderAccount
   validates :name, :currency, presence: true
   validates :account_id, uniqueness: { scope: :mercury_item_id }
 
+  # The name an account is linked under: its nickname, name or business name.
+  def self.name_for(account_data)
+    data = account_data.with_indifferent_access
+    data[:nickname].presence || data[:name].presence || data[:legalBusinessName].presence
+  end
+
+  # Mercury is US-only.
+  def self.currency_for(_account_data)
+    "USD"
+  end
+
+  def self.default_accountable_attributes(_accountable_type)
+    {}
+  end
+
   def upsert_mercury_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
     snapshot = account_snapshot.with_indifferent_access

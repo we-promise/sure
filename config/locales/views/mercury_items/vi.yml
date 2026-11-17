@@ -118,7 +118,6 @@ vi:
       description: Chọn tài khoản Mercury để liên kết với tài khoản này. Giao dịch sẽ được đồng bộ và loại bỏ trùng lặp tự động.
       link_account: Liên kết tài khoản
       no_account_specified: Chưa chỉ định tài khoản
-      no_accounts_found: Không tìm thấy tài khoản Mercury. Vui lòng kiểm tra cấu hình mã thông báo API.
       no_api_token: Mã thông báo API Mercury chưa được cấu hình. Vui lòng cấu hình trong Cài đặt.
       no_credentials_configured: Vui lòng cấu hình mã thông báo API Mercury trước trong Cài đặt nhà cung cấp.
       no_name_placeholder: "(Không có tên)"
@@ -128,10 +127,10 @@ vi:
       account_already_linked: Tài khoản này đã được liên kết với nhà cung cấp
       api_error: "Lỗi API: %{message}"
       invalid_account_name: Không thể liên kết tài khoản không có tên
-      mercury_account_already_linked: Tài khoản Mercury này đã được liên kết với tài khoản khác
-      mercury_account_not_found: Không tìm thấy tài khoản Mercury
       missing_parameters: Thiếu tham số bắt buộc
       no_api_token: Không tìm thấy mã thông báo API Mercury. Vui lòng cấu hình trong Cài đặt nhà cung cấp.
+      provider_account_already_linked: Tài khoản Mercury này đã được liên kết với tài khoản khác
+      provider_account_not_found: Không tìm thấy tài khoản Mercury
       select_connection: Chọn kết nối Mercury trước khi liên kết tài khoản.
       success: "Đã liên kết thành công %{account_name} với Mercury"
     setup_accounts:
@@ -202,8 +201,3 @@ vi:
       success: Đã bắt đầu đồng bộ
     update:
       success: Kết nối Mercury đã được cập nhật
-    mercury_item_selection_error_payload:
-      select_connection: Chọn kết nối Mercury trước khi tải tài khoản.
-    render_mercury_item_selection_failure:
-      select_connection: Chọn kết nối Mercury trong Cài đặt nhà cung cấp.
-      no_credentials_configured: Vui lòng cấu hình mã thông báo API Mercury trước trong Cài đặt nhà cung cấp.

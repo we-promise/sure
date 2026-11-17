@@ -52,11 +52,11 @@ fr:
       account_already_linked: Ce compte est déjà lié à un fournisseur
       api_error: 'Erreur API : %{message}'
       invalid_account_name: Impossible de lier un compte sans nom
-      mercury_account_already_linked: Ce compte Mercury est déjà lié à un autre compte
-      mercury_account_not_found: Compte Mercury introuvable
       missing_parameters: Paramètres requis manquants
       no_api_token: Jeton API Mercury introuvable. Veuillez le configurer dans les
         paramètres du fournisseur.
+      provider_account_already_linked: Ce compte Mercury est déjà lié à un autre compte
+      provider_account_not_found: Compte Mercury introuvable
       select_connection: Choisissez une connexion Mercury avant de lier des comptes.
       success: "%{account_name} lié avec succès à Mercury"
     loading:
@@ -79,8 +79,6 @@ fr:
       syncing: Synchronisation…
       total: Total
       unlinked: Non lié
-    mercury_item_selection_error_payload:
-      select_connection: Choisissez une connexion Mercury avant de charger les comptes.
     provider_connection:
       default_description: Connectez-vous à votre banque via Mercury
       default_name: Mercury
@@ -117,10 +115,6 @@ fr:
       token_label: Jeton
       token_placeholder: Collez le jeton ici
       update_connection: Mettre à jour la connexion
-    render_mercury_item_selection_failure:
-      no_credentials_configured: Veuillez d'abord configurer votre jeton API Mercury
-        dans les paramètres du fournisseur.
-      select_connection: Choisissez une connexion Mercury dans les paramètres du fournisseur.
     select_accounts:
       accounts_selected: comptes sélectionnés
       api_error: 'Erreur API : %{message}'
@@ -150,8 +144,6 @@ fr:
         seront synchronisées et dédupliquées automatiquement.
       link_account: Lier le compte
       no_account_specified: Aucun compte spécifié
-      no_accounts_found: Aucun compte Mercury trouvé. Veuillez vérifier la configuration
-        de votre jeton API.
       no_api_token: Le jeton API Mercury n'est pas configuré. Veuillez le configurer
         dans les Paramètres.
       no_credentials_configured: Veuillez d'abord configurer votre jeton API Mercury

@@ -23,6 +23,16 @@ class MercuryItem < ProviderItem
   scope :syncable, -> { active }
   scope :ordered, -> { order(created_at: :desc) }
   scope :needs_update, -> { where(status: :requires_update) }
+  scope :with_credentials, -> { where.not(token: [ nil, *BLANK_TOKEN_SENTINELS ]).where("BTRIM(token) <> ''") }
+
+  # The family's credentialed connection with this id, or its only one.
+  def self.resolve_for(family:, mercury_item_id: nil)
+    normalized_id = mercury_item_id.to_s.strip.presence
+    return family.mercury_items.active.with_credentials.find_by(id: normalized_id) if normalized_id.present?
+
+    credentialed_items = family.mercury_items.active.with_credentials.ordered
+    credentialed_items.first if credentialed_items.one?
+  end
 
   # TODO: Implement data import from provider API
   # This method should fetch the latest data from the provider and import it.
