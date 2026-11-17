@@ -140,9 +140,9 @@ class Loan::AmortizationSchedule
   end
 
   # The part of a row's extra repayments made after the period's interest was
-  # charged: later than the grace days, or on the payment date. In the ledger
-  # replay such a transfer pays that interest first. Nil for a row without
-  # one.
+  # charged and before the payment date: later than the grace days. In the
+  # ledger replay such a transfer pays that interest first. Nil for a row
+  # without one.
   def repaid_after_charge_for(payment)
     row_figures(:repaid_after_charge)[payment.number]
   end

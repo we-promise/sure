@@ -73,7 +73,11 @@ class Loan
     #                      the grace days or ahead of a balance confirmed
     #                      part-way through, and what such a balance is below
     #                      the one those repayments left
-    #   closing_reduction  repaid on the payment date, after the charge
+    #   closing_reduction  repaid after the grace days, taken off before the
+    #                      payment date's payment is sized
+    #   repaid_after_payment
+    #                      repaid on the payment date itself, after that
+    #                      day's payment
     #   closing_balance    a balance confirmed for the payment date itself
     #   payment            the instalment the lender set
     #   payment_set_on     the date of the change that set it
@@ -82,8 +86,8 @@ class Loan
     #   resize_next        re-amortise the next payment
     #   any                a term change is dated in the period
     PeriodChanges = Struct.new(
-      :balance, :accrual_start, :repaid_early, :closing_reduction, :closing_balance, :payment, :payment_set_on,
-      :resize, :payment_next, :resize_next, :any,
+      :balance, :accrual_start, :repaid_early, :closing_reduction, :repaid_after_payment, :closing_balance,
+      :payment, :payment_set_on, :resize, :payment_next, :resize_next, :any,
       keyword_init: true
     )
 
@@ -203,8 +207,9 @@ class Loan
         interest = (balance * accrual_rate).round(@currency_precision)
         interest = @first_period_interest if index.zero? && @first_period_interest
 
-        # An extra repayment on the payment date comes off after the charge, so
-        # the payment is sized and applied against what is left.
+        # An extra repayment made after the grace days comes off on the payment
+        # date after the charge, so the payment is sized and applied against
+        # what is left.
         closing_reduction = [ changes.closing_reduction, balance ].min
         amortised_balance = balance - closing_reduction
         # The plain annuity formula assumes this period charges
@@ -305,6 +310,16 @@ class Loan
         balance_adjustment = opening_adjustment - closing_reduction
         repaid_outside_payment = changes.repaid_early + closing_reduction
 
+        # An extra repayment on the payment date comes off after that day's
+        # payment.
+        repaid_after_payment = [ changes.repaid_after_payment, balance ].min
+        if repaid_after_payment.positive?
+          balance -= repaid_after_payment
+          balance_adjustment -= repaid_after_payment
+          repaid_outside_payment += repaid_after_payment
+          row[:ending_balance] = balance
+        end
+
         # A balance confirmed for the payment date is the balance after that
         # day's payment, whatever the row above worked out.
         if changes.closing_balance
@@ -385,9 +400,11 @@ class Loan
       #
       #   * An extra repayment is what a linked transfer is there. Dated
       #     within the grace days after the period opened, it lowers the
-      #     balance the period charges interest on. Later in the period, or on
-      #     the payment date, the period still charges the balance it opened
-      #     with and the repayment comes off on the payment date.
+      #     balance the period charges interest on. Later in the period, the
+      #     period still charges the balance it opened with and the repayment
+      #     comes off on the payment date. On the payment date itself it
+      #     comes off after that day's payment, which the lender has already
+      #     collected.
       #   * A confirmed balance is what a balance update is there. It replaces
       #     the balance on its own date. Part-way through a period, the charge
       #     runs from that date on that balance, and anything recorded earlier
@@ -396,9 +413,9 @@ class Loan
       #
       # The payment follows the change: the lender's figure when the change
       # carries one, otherwise re-amortised over the periods left. Both apply
-      # from the first payment on or after the change. A balance confirmed for
-      # a payment date changes the payment from the next one, because that
-      # day's payment is already behind it.
+      # from the first payment on or after the change. An extra repayment or
+      # a balance confirmed for a payment date changes the payment from the
+      # next one, because that day's payment is already behind it.
       #
       # The match with the replay has three limits. The replay carries unpaid
       # interest without charging interest on it, so a payment below the
@@ -412,8 +429,8 @@ class Loan
         payment_date = @payment_schedule[index]
         folded = PeriodChanges.new(
           balance: balance, accrual_start: period_start, repaid_early: BigDecimal("0"),
-          closing_reduction: BigDecimal("0"), closing_balance: nil, payment: nil, payment_set_on: nil, resize: false,
-          payment_next: nil, resize_next: false, any: false
+          closing_reduction: BigDecimal("0"), repaid_after_payment: BigDecimal("0"), closing_balance: nil,
+          payment: nil, payment_set_on: nil, resize: false, payment_next: nil, resize_next: false, any: false
         )
 
         term_changes_in(index).each do |change|
@@ -434,7 +451,9 @@ class Loan
               folded.closing_reduction = BigDecimal("0")
             end
           elsif change[:extra_repayment]
-            if !on_payment_date && folded.accrual_start == period_start && grace_day?(period_start, change[:date])
+            if on_payment_date
+              folded.repaid_after_payment += change[:extra_repayment]
+            elsif folded.accrual_start == period_start && grace_day?(period_start, change[:date])
               repaid = [ change[:extra_repayment], folded.balance ].min
               folded.repaid_early += repaid
               folded.balance -= repaid
@@ -443,7 +462,7 @@ class Loan
             end
           end
 
-          if on_payment_date && change[:balance]
+          if on_payment_date && (change[:balance] || change[:extra_repayment])
             folded.payment_next = change[:payment]
             folded.resize_next = change[:payment].nil?
           elsif change[:payment]
