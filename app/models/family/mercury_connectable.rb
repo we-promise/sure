@@ -12,7 +12,7 @@ module Family::MercuryConnectable
 
   def create_mercury_item!(token:, base_url: nil, item_name: nil)
     mercury_item = mercury_items.create!(
-      name: item_name || I18n.t("mercury_items.default_connection_name"),
+      name: item_name.presence || I18n.t("mercury_items.default_connection_name"),
       token: token,
       base_url: base_url
     )
