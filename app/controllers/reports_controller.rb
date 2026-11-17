@@ -497,6 +497,9 @@ class ReportsController < ApplicationController
       # Helper to process an entry (transaction or trade)
       convert = report_amount_converter(family_currency)
       process_entry = ->(category, entry, is_trade) do
+        # No money moved (e.g. a 0.00 card authorisation): neither income nor expense
+        next if entry.amount.zero?
+
         type = entry.amount > 0 ? "expense" : "income"
         converted_amount = convert.call(entry)
         next if converted_amount.nil?
@@ -919,6 +922,7 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
+        next if entry.amount.zero? # neither income nor expense
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
