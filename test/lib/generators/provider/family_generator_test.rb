@@ -60,34 +60,12 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     new_lines[prefix...(new_lines.size - suffix)].join
   end
 
-  # Renders a generated view the way Rails would, from a real view path, so relative
-  # translation keys and strict locals behave as they do in the app. Redbark has the
-  # model, routes, fixtures and translations the generated views call, so it stands
-  # in for a new provider here. The view sits at the app's own path, prepended so it
-  # renders instead of Redbark's: under any other prefix its relative keys would
-  # resolve in a scope the app does not have.
-  def render_generated_view(generated, partial: nil, template: nil, **options)
-    Dir.mktmpdir do |dir|
-      virtual_path = partial ? partial.sub(%r{([^/]+)\z}, '_\\1') : template
-      file = File.join(dir, "#{virtual_path}.html.erb")
-      FileUtils.mkdir_p(File.dirname(file))
-      File.write(file, generated)
-
-      controller = Class.new(ApplicationController) { prepend_view_path dir }
-      target = partial ? { partial: partial } : { template: template, layout: false }
-      html = controller.renderer.render(**target, **options)
-      # Missing keys render a placeholder rather than raising in test, so a key
-      # the app does not define would otherwise pass unnoticed.
-      assert_not_includes html, "translation_missing"
-      html
-    end
-  end
-
   # A template rendered as the generator renders it, with the generator's predicate
   # helpers, which a Struct cannot name.
-  def render_provider_template(name, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ], **extra_helpers)
+  def render_provider_template(name, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ],
+                               class_name: "Gocardless", file_name: "gocardless", **extra_helpers)
     helpers = {
-      class_name: "Gocardless", file_name: "gocardless", parsed_fields: parsed_fields,
+      class_name: class_name, file_name: file_name, parsed_fields: parsed_fields,
       banking_provider?: banking, investment_provider?: !banking
     }.merge(extra_helpers)
     context = Object.new
@@ -363,7 +341,7 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     job = render_template("activities_fetch_job.rb.tt", class_name: "Gocardless", file_name: "gocardless")
 
     assert_equal "<%# locals: (gocardless_item:, visible_accounts:) %>\n", card.lines.first
-    assert_includes card, '<%= render "accounts/index/account_groups", accounts: visible_accounts %>'
+    assert_includes card, "      visible_accounts: visible_accounts,\n"
     assert_parses job
     assert_not_includes job, '"gocardless_items/gocardless_item"'
     assert_includes job, "@gocardless_account.gocardless_item&.family&.broadcast_sync_complete"
@@ -704,20 +682,17 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  # The generated panel counts only connections that have their secret, so the panel
-  # list loads those rather than the default.
-  test "the generated adapter's panel loads only connections that have their secret" do
+  # The generated panel lists every active connection, so one whose credentials
+  # are missing can still be edited, as Brex's does. Settings > Providers hands the
+  # panel its settings_page list, so that list loads whole records too: the
+  # default selects only ids, and the panel then fails reading a connection's name.
+  test "the generated adapter's panel lists the family's active connections" do
     [ false, true ].each do |skip_view|
-      assert_includes render_adapter(skip_view: skip_view),
-                      %(lists: { settings_panel: ->(items) { items.where.not(api_key: [ nil, "" ]) } }\n), "skip_view: #{skip_view}"
-    end
+      adapter = render_adapter(skip_view: skip_view)
 
-    access_token = render_adapter(skip_view: false, parsed_fields: [
-      { name: "region", type: "string", secret: false, default: "eu" },
-      { name: "access_token", type: "string", secret: true, default: nil }
-    ])
-    assert_includes access_token,
-                    %(lists: { settings_panel: ->(items) { items.where.not(access_token: [ nil, "" ]) } }\n)
+      assert_includes adapter, "settings_page: %i[active ordered],\n", "skip_view: #{skip_view}"
+      assert_includes adapter, "settings_panel: ->(items) { items.active.ordered.includes(:syncs, :gocardless_accounts) }\n", "skip_view: #{skip_view}"
+    end
   end
 
   # Bank sync's lists all derive from the declaration, so the generator only checks
@@ -844,61 +819,190 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
-  test "the generated item card is plain ERB" do
-    generated = render_template("item_partial.html.erb.tt", file_name: "gocardless")
+  GENERATED_VIEWS = {
+    "panel.html.erb.tt" => "settings/providers/_%s_panel",
+    "credential_fields.html.erb.tt" => "%s_items/_credential_fields",
+    "item_partial.html.erb.tt" => "%s_items/_%s_item",
+    "select_accounts.html.erb.tt" => "%s_items/select_accounts",
+    "select_existing_account.html.erb.tt" => "%s_items/select_existing_account",
+    "api_error.html.erb.tt" => "%s_items/_api_error",
+    "setup_required.html.erb.tt" => "%s_items/_setup_required",
+    "setup_accounts.html.erb.tt" => "%s_items/setup_accounts"
+  }.freeze
 
-    assert_plain_erb generated
-    assert_equal "<%# locals: (gocardless_item:, visible_accounts:) %>\n", generated.lines.first
-    assert_includes generated, "<%= tag.div id: dom_id(gocardless_item) do %>"
-  end
-
-  test "the generated item card renders sync frequency and the visible accounts it is given" do
-    Current.session = Session.create!(user: users(:family_admin))
-    item = redbark_items(:one)
-    linked = accounts(:depository)
-    generated = render_template("item_partial.html.erb.tt", file_name: "redbark")
-    render_card = lambda do |visible|
-      render_generated_view(generated, partial: "redbark_items/redbark_item",
-                                       locals: { redbark_item: item.reload, visible_accounts: visible.call })
+  test "every generated view is plain ERB" do
+    fields = [ { name: "api_key", type: "string", secret: true }, { name: "region", type: "string", default: "eu" },
+               { name: "client_id", type: "integer" }, { name: "sandbox", type: "boolean" } ]
+    GENERATED_VIEWS.each_key do |name|
+      assert_plain_erb render_provider_template(name, parsed_fields: fields)
     end
-
-    before = render_card.call(-> { item.accounts.to_a })
-    AccountProvider.create!(account: linked, provider: redbark_accounts(:savings_account))
-    after = render_card.call(-> { item.accounts.to_a })
-    other = render_card.call(-> { [ accounts(:investment) ] })
-
-    assert_includes after, item.name
-    assert_includes after, I18n.t("sync_schedules.menu_item")
-    assert_not_includes before, linked.name
-    assert_includes after, linked.name
-    assert_not_includes after, accounts(:investment).name
-    # The card lists the accounts it is given, not every account on the connection.
-    assert_includes other, accounts(:investment).name
-    assert_not_includes other, linked.name
   end
 
-  test "the generated setup accounts view is plain ERB that renders" do
-    assert_plain_erb render_template("setup_accounts.html.erb.tt", file_name: "gocardless")
-
-    item = redbark_items(:one)
-    html = render_generated_view(render_template("setup_accounts.html.erb.tt", file_name: "redbark"),
-                                 template: "redbark_items/setup_accounts",
-                                 assigns: { redbark_item: item, unlinked_accounts: item.redbark_accounts })
-
-    assert_includes html, redbark_accounts(:savings_account).name
-    assert_includes html, "/redbark_items/#{item.id}/complete_account_setup"
+  module GeneratedHelpers
   end
 
-  test "the generated select existing account view is plain ERB that renders" do
-    assert_plain_erb render_template("select_existing_account.html.erb.tt", file_name: "gocardless")
+  # Brex runs on the provider kit and has the model, routes and fixtures a
+  # generated provider's views use, so it stands in for one here: the generated
+  # views, helper and translations replace Brex's own while each view renders.
+  # Brex's translations are removed first, so a key the generated locale lacks
+  # shows as missing rather than falling back to Brex's.
+  BREX_FIELDS = [ { name: "token", type: "text", secret: true }, { name: "base_url", type: "string" } ].freeze
 
+  def render_as_generated_brex(target, **options)
+    I18n.t("brex_items.default_connection_name") # loads the translations before replacing them
+    I18n.backend.store_translations(:en, { brex_items: nil })
+    generated = YAML.safe_load(render_provider_template("locale.en.yml.tt", class_name: "Brex", file_name: "brex", parsed_fields: BREX_FIELDS))
+    I18n.backend.store_translations(:en, generated["en"])
+    assert_not I18n.exists?("brex_items.provider_panel.token_label", :en), "Brex's own translations are still loaded"
+
+    GeneratedHelpers.module_eval(render_provider_template("items_helper.rb.tt", class_name: "Brex", file_name: "brex")) unless GeneratedHelpers.const_defined?(:BrexItemsHelper, false)
+
+    Dir.mktmpdir do |dir|
+      GENERATED_VIEWS.each do |name, path|
+        file = File.join(dir, "#{format(path, 'brex', 'brex')}.html.erb")
+        FileUtils.mkdir_p(File.dirname(file))
+        File.write(file, render_provider_template(name, class_name: "Brex", file_name: "brex", parsed_fields: BREX_FIELDS))
+      end
+
+      controller = Class.new(ApplicationController) do
+        prepend_view_path dir
+        helper GeneratedHelpers::BrexItemsHelper
+      end
+      html = controller.renderer.render(**target, **options)
+      assert_not_includes html, "translation_missing"
+      html
+    end
+  ensure
+    I18n.reload!
+  end
+
+  test "a generated provider's panel renders through the kit with its own translations" do
+    Current.session = Session.create!(user: users(:family_admin))
+    item = brex_items(:one)
+    ProviderItem::PanelComponent.any_instance.expects(:before_render).once
+
+    html = render_as_generated_brex({ partial: "settings/providers/brex_panel" }, locals: { brex_items: BrexItem.where(id: item.id), error_message: nil })
+
+    assert_includes html, item.name
+    assert_includes html, "Visit your Brex dashboard to get your credentials"
+    assert_includes html, "Leave blank to keep the current token"
+    assert_includes html, "Paste token here"
+    assert_not_includes html, item.token
+  end
+
+  test "a generated provider's card renders through the kit with the accounts it is given" do
+    Current.session = Session.create!(user: users(:family_admin))
+    item = brex_items(:one)
+    linked = item.family.accounts.create!(name: "Brex Ops", balance: 10, currency: "USD", accountable: Depository.new)
+    AccountProvider.create!(account: linked, provider: item.brex_accounts.first)
+    ProviderItem::CardComponent.any_instance.expects(:before_render).twice
+
+    shown = render_as_generated_brex({ partial: "brex_items/brex_item" }, locals: { brex_item: item, visible_accounts: [ linked ] })
+    hidden = render_as_generated_brex({ partial: "brex_items/brex_item" }, locals: { brex_item: item, visible_accounts: [] })
+
+    assert_includes shown, item.name
+    assert_includes shown, "Brex Ops"
+    assert_not_includes hidden, "Brex Ops"
+  end
+
+  test "a generated provider's selection dialogs render through the kit with the generated helper" do
+    Current.session = Session.create!(user: users(:family_admin))
+    item = brex_items(:one)
     account = accounts(:depository)
-    html = render_generated_view(render_template("select_existing_account.html.erb.tt", file_name: "redbark"),
-                                 template: "redbark_items/select_existing_account",
-                                 assigns: { account: account, redbark_accounts: [ redbark_accounts(:savings_account) ] })
+    payloads = [ { id: "acc_ops", name: "Ops", account_kind: "cash", current_balance: { amount: 1, currency: "USD" } } ]
+    ProviderItem::AccountSelectionComponent.any_instance.expects(:before_render).twice
 
-    assert_includes html, account.name
-    assert_includes html, redbark_accounts(:savings_account).name
-    assert_includes html, "/redbark_items/link_existing_account"
+    new_accounts = render_as_generated_brex({ template: "brex_items/select_accounts", layout: false },
+                                            assigns: { brex_item: item, available_accounts: payloads, accountable_type: "Depository", return_to: nil })
+    existing = render_as_generated_brex({ template: "brex_items/select_existing_account", layout: false },
+                                        assigns: { brex_item: item, available_accounts: payloads, account: account, return_to: nil })
+
+    assert_includes new_accounts, "Select Brex Accounts"
+    assert_includes new_accounts, %(value="acc_ops")
+    assert_includes new_accounts, "/brex_items/link_accounts"
+    assert_includes existing, "Link #{account.name} with Brex"
+    assert_includes existing, "/brex_items/link_existing_account"
+  end
+
+  test "a generated provider's error dialogs render through the kit" do
+    Current.session = Session.create!(user: users(:family_admin))
+
+    api_error = render_as_generated_brex({ partial: "brex_items/api_error" }, locals: { error_message: "Unauthorized", return_path: "/accounts/new" })
+    setup_required = render_as_generated_brex({ partial: "brex_items/setup_required" })
+
+    assert_includes api_error, "Unable to connect to Brex"
+    assert_includes api_error, "Unauthorized"
+    assert_includes api_error, %(href="/accounts/new")
+    assert_includes setup_required, "Credentials not configured"
+  end
+
+  test "a generated provider's setup page renders through the kit" do
+    Current.session = Session.create!(user: users(:family_admin))
+    item = brex_items(:one)
+    flow = BrexItem::AccountFlow.new(family: item.family, item: item)
+    ProviderItem::AccountSetupComponent.any_instance.expects(:before_render).once
+
+    html = render_as_generated_brex({ template: "brex_items/setup_accounts", layout: false },
+                                    assigns: { brex_item: item, brex_accounts: item.brex_accounts, api_error: nil,
+                                               account_type_options: flow.account_type_options,
+                                               displayable_account_type_options: flow.displayable_account_type_options,
+                                               subtype_options: flow.subtype_options })
+
+    assert_includes html, item.brex_accounts.first.name
+    assert_includes html, "/brex_items/#{item.id}/complete_account_setup"
+    assert_includes html, %(<option selected="selected" value="skip">)
+  end
+
+  # The messages the kit's view components read under <key>_items; %s is the
+  # provider key. Rendering covers the common branches, this list every branch.
+  KIT_VIEW_KEYS = %w[
+    %s_item.delete %s_item.deletion_in_progress %s_item.error %s_item.no_accounts_description
+    %s_item.no_accounts_title %s_item.setup_action %s_item.setup_description %s_item.setup_needed
+    %s_item.status %s_item.status_never %s_item.status_with_summary %s_item.syncing
+    provider_panel.add_connection provider_panel.connection_name_label provider_panel.connection_name_placeholder
+    provider_panel.disconnect provider_panel.disconnect_confirm provider_panel.disconnect_label
+    provider_panel.setup_accounts provider_panel.sync provider_panel.update_connection
+    select_accounts.title select_accounts.description select_accounts.no_name_placeholder
+    select_accounts.configure_name_in_%s select_accounts.cancel select_accounts.link_accounts
+    select_existing_account.title select_existing_account.description select_existing_account.no_name_placeholder
+    select_existing_account.configure_name_in_%s select_existing_account.cancel select_existing_account.link_account
+    api_error.title api_error.heading api_error.common_issues api_error.invalid_token_label api_error.invalid_token
+    api_error.expired_credentials_label api_error.expired_credentials api_error.permissions_label api_error.permissions
+    api_error.network_label api_error.network api_error.service_label api_error.service api_error.settings_link
+    setup_required.title setup_required.heading setup_required.description setup_required.setup_steps
+    setup_required.steps.open_settings_html setup_required.steps.find_section_html setup_required.steps.enter_token
+    setup_required.steps.return_to_link setup_required.settings_link
+    setup_accounts.title setup_accounts.subtitle setup_accounts.creating_accounts setup_accounts.fetch_failed
+    setup_accounts.no_accounts_to_setup setup_accounts.all_accounts_linked setup_accounts.choose_account_type
+    setup_accounts.account_type_label setup_accounts.create_accounts setup_accounts.cancel
+    subtype_select.placeholder.subtype subtype_select.placeholder.type
+  ].freeze
+
+  test "the generated locale has every message the provider kit's views read" do
+    shape = ->(value) { value.is_a?(Hash) ? value.keys.map(&:to_s).sort : value.to_s.scan(/%\{(\w+)\}/).flatten.sort }
+
+    [ true, false ].each do |banking|
+      messages = YAML.safe_load(render_provider_template("locale.en.yml.tt", banking: banking)).dig("en", "gocardless_items")
+
+      KIT_VIEW_KEYS.each do |key|
+        generated = messages.dig(*format(key, "gocardless").split("."))
+        assert generated, "banking: #{banking}: no gocardless_items.#{format(key, 'gocardless')}"
+        assert_equal shape.call(I18n.t("brex_items.#{format(key, 'brex')}", locale: :en)), shape.call(generated), "banking: #{banking}: #{key}"
+      end
+    end
+  end
+
+  test "the generator writes the kit's views and helper, and the panel's with --skip-view" do
+    { false => 9, true => 2 }.each do |skip_view, count|
+      Dir.mktmpdir do |dir|
+        generator = Provider::FamilyGenerator.new([ "gocardless" ], { skip_view: skip_view }, destination_root: dir)
+        capture_io { Dir.chdir(dir) { generator.create_panel_view && generator.create_item_views } }
+        written = Dir.glob("**/*", base: dir).select { |path| File.file?(File.join(dir, path)) }
+
+        assert_equal count, written.size, "skip_view: #{skip_view}: #{written.sort}"
+        assert_includes written, "app/views/gocardless_items/_credential_fields.html.erb"
+        assert_includes written, "app/helpers/gocardless_items_helper.rb" unless skip_view
+      end
+    end
   end
 end

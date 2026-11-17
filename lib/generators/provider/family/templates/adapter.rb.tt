@@ -4,12 +4,15 @@ class Provider::<%= class_name %>Adapter < Provider::Base
 
   # Register this adapter with the factory
   Provider::Factory.register("<%= class_name %>Account", self)
-<% secret_field = parsed_fields.select { |f| f[:secret] }.first&.dig(:name) || "api_key" -%>
   # TODO: Set the region and maturity Bank sync shows for this provider. The panel
-  # counts only connections that have their <%= secret_field %>.
+  # lists the family's active connections, and so does the settings page, whose
+  # list the panel renders when the page loads.
   declares_connection key: "<%= file_name %>", name: "<%= class_name.titleize %>", panel: true,
                       metadata: { region: "Global", kinds: %w[<%= investment_provider? ? "Investment" : "Bank" %>], maturity: :alpha, logo_text: "<%= class_name.first(2).upcase %>" },
-                      lists: { settings_panel: ->(items) { items.where.not(<%= secret_field %>: [ nil, "" ]) } }
+                      lists: {
+                        settings_page: %i[active ordered],
+                        settings_panel: ->(items) { items.active.ordered.includes(:syncs, :<%= file_name %>_accounts) }
+                      }
 
   # Define which account types this provider supports
   def self.supported_account_types

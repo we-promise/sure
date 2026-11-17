@@ -1,0 +1,23 @@
+# frozen_string_literal: true
+
+module <%= class_name %>ItemsHelper
+  # Each account from the <%= class_name %> API as a row in the selection dialogs.
+  # TODO: Show what tells the accounts apart (a masked number, a type, a status).
+  def <%= file_name %>_account_options(accounts)
+    accounts.map do |account|
+      ProviderItem::AccountSelectionComponent::Option.new(
+        id: account.with_indifferent_access[:id],
+        name: <%= class_name %>Account.name_for(account),
+        metadata: <%= class_name %>Account.currency_for(account)
+      )
+    end
+  end
+
+  # The account type and depository subtype each imported account starts on in
+  # the setup page. TODO: Preselect a type when the API says what an account is.
+  def <%= file_name %>_account_setup_defaults(<%= file_name %>_accounts)
+    <%= file_name %>_accounts.to_h do |<%= file_name %>_account|
+      [ <%= file_name %>_account.id, { account_type: "skip", depository_subtype: "" } ]
+    end
+  end
+end
