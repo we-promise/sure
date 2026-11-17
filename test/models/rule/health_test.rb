@@ -96,6 +96,20 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal [ :category_id ], entry.attributes
   end
 
+  test "a rule whose field is claimed counts only the matches no rule above stopped" do
+    create_rule(name_condition("like", "metro"), tags: [ @tag ], stop_processing: true)
+    above = create_rule(name_condition("like", "hardware"), category: @groceries)
+    below = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "metro"), name_condition("like", "hardware") ]),
+      category: @dining
+    )
+
+    entry = health.shadowed.sole
+    assert_equal [ below, :claimed, [ above ] ], [ entry.rule, entry.reason, entry.by ]
+    assert_equal 2, health.match_count(below)
+    assert_equal 1, entry.match_count
+  end
+
   test "a rule that only adds tags is not shadowed, since tags claim nothing" do
     create_rule(name_condition("like", "woolworths"), category: @groceries)
     create_rule(name_condition("like", "metro"), tags: [ @tag ])
@@ -135,6 +149,24 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal [ below, above ], [ overlap.rule, overlap.other ]
     assert overlap.same_text
     assert_equal 0, overlap.shared_count
+  end
+
+  test "contained text with contradicting amount conditions is not an overlap" do
+    create_rule(name_condition("like", "uber"), amount_condition(">", "100"), category: @groceries)
+    create_rule(name_condition("like", "uber"), amount_condition("<", "10"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
+  test "contained text inside an OR group is still the same text" do
+    above = create_rule(name_condition("like", "uber"), category: @groceries)
+    below = create_rule(
+      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "uber eats zz"), name_condition("like", "deliveroo") ]),
+      category: @dining
+    )
+
+    overlap = health.overlaps.sole
+    assert_equal [ below, above, true ], [ overlap.rule, overlap.other, overlap.same_text ]
   end
 
   test "a merchant condition is compared by the merchant's name" do
@@ -234,7 +266,7 @@ class Rule::HealthTest < ActiveSupport::TestCase
       Rule::Condition.new(condition_type: "transaction_name", operator: operator, value: value)
     end
 
-    def amount_condition
-      Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: "10")
+    def amount_condition(operator = ">", value = "10")
+      Rule::Condition.new(condition_type: "transaction_amount", operator: operator, value: value)
     end
 end
