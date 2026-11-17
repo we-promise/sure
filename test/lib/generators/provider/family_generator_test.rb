@@ -174,9 +174,6 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     flow = flow_class.allocate
 
     assert_operator flow_class, :<, ProviderItem::AccountFlow
-    assert_equal flow_class.singleton_class, flow_class.method(:cache_sensitive_params).owner
-    error = assert_raises(NotImplementedError) { flow_class.cache_sensitive_params }
-    assert_includes error.message, "TODO"
     {
       fetch_accounts: [],
       resolve_item: [ "item-id" ],
@@ -186,8 +183,25 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     }.each do |hook, args|
       assert_equal flow_class, flow_class.instance_method(hook).owner, "#{hook} is not stubbed"
       error = assert_raises(NotImplementedError, hook.to_s) { flow.send(hook, *args) }
-      assert_includes error.message, "TODO", hook.to_s
+      assert_includes error.message, "TODO: GocardlessItem::AccountFlow##{hook}", hook.to_s
     end
+  ensure
+    GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
+  end
+
+  # ProviderItemsController#update asks the flow which params expire the cached
+  # account list before saving, so this hook works without being filled in.
+  test "the generated account flow expires the account cache on the declared fields" do
+    flow_source = render_provider_template("account_flow.rb.tt", parsed_fields: [
+      { name: "api_key", type: "string", secret: true, default: nil },
+      { name: "base_url", type: "string", secret: false, default: "https://api.example.com" }
+    ])
+    assert_parses flow_source
+    GeneratedFlows.module_eval(flow_source)
+    flow_class = GeneratedFlows::GocardlessItem::AccountFlow
+
+    assert_equal flow_class.singleton_class, flow_class.method(:cache_sensitive_params).owner
+    assert_equal %i[api_key base_url], flow_class.cache_sensitive_params
   ensure
     GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
   end
