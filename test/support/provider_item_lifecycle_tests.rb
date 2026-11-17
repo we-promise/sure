@@ -168,14 +168,17 @@ module ProviderItemLifecycleTests
     end
 
     test "lifecycle: linking an existing account attaches it once" do
-      provider_item.class.any_instance.stubs(:sync_later)
+      provider_item.class.any_instance.expects(:sync_later).once
       account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "linked-existing-1" ]))
       account = provider_item.family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
 
       with_memory_cache do
-        provider_account = assert_difference("AccountProvider.count", 1) do
-          account_flow.link_existing_account!(account: account, provider_account_id: "linked-existing-1")
+        navigation = assert_difference("AccountProvider.count", 1) do
+          account_flow.link_existing_account_result(account: account, provider_account_id: "linked-existing-1")
         end
+        # The text names the provider, so a flow reading another provider's scope fails here.
+        assert_equal I18n.t("#{provider_item.provider_key}_items.link_existing_account.success", account_name: "Existing"), navigation.message
+        provider_account = provider_item.provider_accounts.find_by!(account_id: "linked-existing-1")
         assert_equal account, provider_account.reload.account
         assert_equal provider_account.class.name, provider_account.account_provider.provider_type
 
