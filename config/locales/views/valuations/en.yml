@@ -56,6 +56,8 @@ en:
       value: value
     new:
       title: New balance
+      amount: Amount
+      submit: Add balance update
     show:
       amount: Amount
       amount_label: Account value on date

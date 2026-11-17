@@ -115,11 +115,20 @@ class User < ApplicationRecord
   # unknown emails. The legacy lookup runs first on every login (one indexed
   # query) so that legacy and encrypted rows cost the same single password
   # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  # A user without a local password (SSO only) still costs one hash, so
+  # response time does not reveal such accounts. A non-String password (a
+  # JSON number) is checked as text instead of raising.
   def self.authenticate_by_email(email:, password:)
-    return nil if password.nil? || password.empty?
+    return nil if password.nil? || password.to_s.empty?
 
+    password = password.to_s
     normalized = email.to_s.strip.downcase
     legacy_user = find_by_legacy_plaintext_email(normalized)
+    user = legacy_user || find_by(email: normalized)
+    if user && user.password_digest.blank?
+      new(password: password)
+      return nil
+    end
     return authenticate_by(email: normalized, password: password) unless legacy_user
 
     legacy_user if legacy_user.authenticate(password)
@@ -861,12 +870,26 @@ class User < ApplicationRecord
     section_order("reports")
   end
 
+  REPORTS_BIGGEST_EXPENSES_LIMITS = [ 5, 10, 25 ].freeze
+  DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT = 10
+
+  def reports_biggest_expenses_limit
+    stored = preferences&.[]("reports_biggest_expenses_limit")
+    REPORTS_BIGGEST_EXPENSES_LIMITS.include?(stored) ? stored : DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT
+  end
+
   def update_reports_preferences(prefs)
-    update_section_preferences(
+    return false unless update_section_preferences(
       "reports",
       order: prefs["reports_section_order"],
       collapsed: prefs["reports_collapsed_sections"]
     )
+
+    # A limit outside the offered choices is dropped, like any other bad value.
+    limit = Integer(prefs["reports_biggest_expenses_limit"].to_s, exception: false)
+    return true unless REPORTS_BIGGEST_EXPENSES_LIMITS.include?(limit)
+
+    with_locked_preferences { |updated_prefs| updated_prefs["reports_biggest_expenses_limit"] = limit }
   end
 
   # Transactions preferences management
