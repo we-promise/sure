@@ -1,13 +1,17 @@
 # frozen_string_literal: true
 
-class <%= class_name %>Item < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater, ProviderDisconnectable
+# A family's connection to <%= class_name %>. ProviderItem supplies syncing (through
+# ProviderItem::Syncer, which calls #import_latest_<%= file_name %>_data, #process_accounts
+# and #schedule_account_syncs) and unlinking.
+class <%= class_name %>Item < ProviderItem
+  include Provided, Encryptable, DestroyableLater, ProviderDisconnectable
 
   # Set to true once this provider implements removal of the data it imported, so
   # a client may disconnect with disposition "discard". Left false until then:
   # the capability is advertised to API clients, and claiming it without the
   # implementation would tell a family their data was deleted when it was not.
-  # See Unlinking#unlink_all! and Financekit::Purge for the worked example.
+  # ProviderItem::Unlinking#unlink_all! always retains; see Financekit::Purge for
+  # the worked example of a discard.
   self.supports_discard = false
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
@@ -40,10 +44,13 @@ class <%= class_name %>Item < ApplicationRecord
   # `*_items` association whose model includes Syncable. Omitting this scope breaks the
   # whole nightly family sync, not just this provider.
   scope :syncable, -> { active }
-
-  def syncer
-    <%= class_name %>Item::Syncer.new(self)
-  end
+  # The connections the account flow can list accounts from.
+<% secret_fields = parsed_fields.select { |f| f[:secret] } -%>
+<% if secret_fields.any? -%>
+  scope :with_credentials, -> { <%= secret_fields.map { |f| "where.not(#{f[:name]}: [ nil, *BLANK_TOKEN_SENTINELS ])" }.join(".") %> }
+<% else -%>
+  scope :with_credentials, -> { all }
+<% end -%>
 
 <% if investment_provider? -%>
   # Override syncing? to include background activities fetch
@@ -53,14 +60,15 @@ class <%= class_name %>Item < ApplicationRecord
 <% end -%>
 
   # Import data from provider API
-  def import_latest_<%= file_name %>_data(sync: nil)
+  def import_latest_<%= file_name %>_data(sync_start_date: nil)
     provider = <%= file_name %>_provider
     unless provider
       Rails.logger.error "<%= class_name %>Item #{id} - Cannot import: provider is not configured"
       raise StandardError, I18n.t("<%= file_name %>_items.errors.provider_not_configured")
     end
 
-    <%= class_name %>Item::Importer.new(self, <%= file_name %>_provider: provider, sync: sync).import
+    # TODO: Pass sync_start_date to the importer if the API can limit how far back it reads.
+    <%= class_name %>Item::Importer.new(self, <%= file_name %>_provider: provider).import
   rescue => e
     Rails.logger.error "<%= class_name %>Item #{id} - Failed to import data: #{e.message}"
     raise

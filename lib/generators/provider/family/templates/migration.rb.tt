@@ -42,7 +42,7 @@ class Create<%= class_name %>ItemsAndAccounts < ActiveRecord::Migration<%= migra
 
       # Account identification
       t.string :name
-      t.string :<%= file_name %>_account_id
+      t.string :account_id
       t.string :account_number
 
       # Account details
@@ -76,7 +76,16 @@ class Create<%= class_name %>ItemsAndAccounts < ActiveRecord::Migration<%= migra
       t.timestamps
     end
 
-    add_index :<%= file_name %>_accounts, :<%= file_name %>_account_id, unique: true
+    # Unique per item: two connections can see the same provider account.
+<% account_index_name = "index_#{file_name}_accounts_on_item_and_account_id" -%>
+    add_index :<%= file_name %>_accounts,
+              [ :<%= file_name %>_item_id, :account_id ],
+<% if account_index_name.length <= 63 -%>
+              unique: true,
+              name: "<%= account_index_name %>"
+<% else -%>
+              unique: true
+<% end -%>
 <% if investment_provider? -%>
     add_index :<%= file_name %>_accounts, :<%= file_name %>_authorization_id
 <% end -%>

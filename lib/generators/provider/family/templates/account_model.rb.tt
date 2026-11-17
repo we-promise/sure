@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class <%= class_name %>Account < ApplicationRecord
+class <%= class_name %>Account < ProviderAccount
   include CurrencyNormalizable, Encryptable
   include <%= class_name %>Account::DataHelpers
 
@@ -18,9 +18,7 @@ class <%= class_name %>Account < ApplicationRecord
 
   belongs_to :<%= file_name %>_item
 
-  # Association through account_providers
-  has_one :account_provider, as: :provider, dependent: :destroy
-  has_one :account, through: :account_provider, source: :account
+  # ProviderAccount links the account through account_providers.
   has_one :linked_account, through: :account_provider, source: :account
 
   validates :name, :currency, presence: true
@@ -32,11 +30,6 @@ class <%= class_name %>Account < ApplicationRecord
 
   # Callbacks
   after_destroy :enqueue_connection_cleanup
-
-  # Helper to get account using account_providers system
-  def current_account
-    account
-  end
 
   # Idempotently create or update AccountProvider link
   # CRITICAL: After creation, reload association to avoid stale nil
@@ -58,7 +51,7 @@ class <%= class_name %>Account < ApplicationRecord
 
     # TODO: Customize this mapping based on your provider's API response
     update!(
-      <%= file_name %>_account_id: (data[:id] || data[:account_id])&.to_s,
+      account_id: (data[:id] || data[:account_id])&.to_s,
       name: data[:name] || data[:account_name],
       current_balance: parse_decimal(data[:balance] || data[:current_balance]),
       currency: extract_currency(data, fallback: "USD"),

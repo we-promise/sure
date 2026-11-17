@@ -424,8 +424,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "     - app/models/#{file_name}_item.rb"
     say "     - app/models/#{file_name}_account.rb"
     say "     - app/models/#{file_name}_item/provided.rb"
-    say "     - app/models/#{file_name}_item/unlinking.rb"
-    say "     - app/models/#{file_name}_item/syncer.rb"
     say "     - app/models/#{file_name}_item/importer.rb"
     say "     - app/models/#{file_name}_account/data_helpers.rb"
     say "     - app/models/#{file_name}_account/processor.rb"
@@ -676,24 +674,6 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       else
         template "provided_concern.rb.tt", provided_concern_path
         say "Created Provided concern: #{provided_concern_path}", :green
-      end
-
-      # Unlinking concern
-      unlinking_concern_path = "#{item_dir}/unlinking.rb"
-      if File.exist?(unlinking_concern_path)
-        say "Unlinking concern already exists: #{unlinking_concern_path}", :skip
-      else
-        template "unlinking_concern.rb.tt", unlinking_concern_path
-        say "Created Unlinking concern: #{unlinking_concern_path}", :green
-      end
-
-      # Syncer class
-      syncer_path = "#{item_dir}/syncer.rb"
-      if File.exist?(syncer_path)
-        say "Syncer class already exists: #{syncer_path}", :skip
-      else
-        template "syncer.rb.tt", syncer_path
-        say "Created Syncer class: #{syncer_path}", :green
       end
 
       # Importer class
