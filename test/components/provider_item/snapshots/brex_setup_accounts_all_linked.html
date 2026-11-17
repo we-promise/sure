@@ -34,15 +34,17 @@
 <div class="px-4 grow">
 <form class="space-y-6" data-controller="loading-button" data-action="submit-&gt;loading-button#showLoading" data-loading-button-loading-text-value="Creating Accounts..." data-turbo-frame="_top" action="/brex_items/UUID/complete_account_setup" accept-charset="UTF-8" method="post">
 <div class="space-y-4">
-<div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
-<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-6 h-6 text-secondary text-success">
+<div class="flex flex-col items-center text-center px-4 py-12">
+<div class="mb-4">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-7 h-7 text-secondary">
 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14">
 </path>
 <path d="m9 11 3 3L22 4">
 </path>
 </svg>
-<p class="text-primary font-medium">No Accounts to Set Up</p>
-<p class="text-secondary text-sm">All your Brex accounts have already been set up.</p>
+</div>
+<p class="text-primary font-medium mb-2">No Accounts to Set Up</p>
+<p class="text-secondary text-sm max-w-md">All your Brex accounts have already been set up.</p>
 </div>
 </div>
 <div class="flex gap-3">
