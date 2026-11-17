@@ -120,6 +120,15 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert_not Trade::SaleLimit.new(build_sale(qty: 3, date: 7.days.ago.to_date)).validate
   end
 
+  test "a back-dated sale of the whole position before a 2-for-3 reverse split is allowed" do
+    create_trade(@security, account: @account, qty: 30, date: 10.days.ago.to_date, price: 100)
+    Security::Split.create!(security: @security, ex_date: 5.days.ago.to_date, numerator: 2, denominator: 3, source: "manual")
+
+    # 20 are held after the split, which is 30 in the units of the sale date.
+    assert Trade::SaleLimit.new(build_sale(qty: 30, date: 7.days.ago.to_date)).validate
+    assert_not Trade::SaleLimit.new(build_sale(qty: 31, date: 7.days.ago.to_date)).validate
+  end
+
   test "two future-dated sales cannot count the same units" do
     create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
     create_trade(@security, account: @account, qty: -10, date: 1.day.from_now.to_date, price: 100)

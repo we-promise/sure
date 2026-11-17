@@ -129,10 +129,13 @@ class Trade::SaleLimit
     end
 
     # A quantity written in units of `date`, expressed in units of the sale date.
+    # Rounded the way the holdings are: BigDecimal division by a Rational such
+    # as 2/3 falls a hair short of the exact quotient and would refuse a sale
+    # of the whole position.
     def in_sale_units(qty, date)
       from, to = [ entry.date, date ].minmax
       factor = split_ratios.select { |day, _| day > from && day <= to }.values.reduce(Rational(1), :*)
-      date >= entry.date ? qty / factor : qty * factor
+      date >= entry.date ? Security::Split.unscale(qty, factor) : Security::Split.scale(qty, factor)
     end
 
     # Net units of this security that other trades dated after today add or remove, by day.
