@@ -435,7 +435,12 @@ class Family::DataImporter
     # As Account.create_and_sync does once an account has its opening balance:
     # the term change checks that read the schedule need the account, its
     # valuations and its origination date, so they run after everything else.
+    # A session imports in chunks that commit one by one, so a loan's opening
+    # history can arrive in a later chunk; its rows are checked on the next
+    # form save instead.
     def check_imported_term_changes
+      return if @import_session
+
       @created_accounts.select(&:loan?).each do |account|
         loan = account.accountable
         next if loan.term_changes_fit_account?
