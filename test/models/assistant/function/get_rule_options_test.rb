@@ -34,5 +34,8 @@ class Assistant::Function::GetRuleOptionsTest < ActiveSupport::TestCase
 
     category = result[:actions].find { |a| a[:action_type] == "set_transaction_category" }
     assert_match "get_categories", category[:values]
+
+    rename_from_detail = result[:actions].find { |a| a[:action_type] == "set_transaction_name_from_additional_detail" }
+    assert_match "counterparty_address", rename_from_detail[:values]
   end
 end
