@@ -31,6 +31,7 @@ zh-TW:
       net_worth_milestone: 淨資產
       subscription_audit: 訂閱
       savings_rate_change: 儲蓄率
+      negative_position: "持倉"
       idle_cash: 閒置現金
       budget_at_risk: 預算
       budget_on_track: 預算
@@ -60,6 +61,7 @@ zh-TW:
       net_worth_milestone: 查看淨資產報表
       subscription_audit: 檢視定期交易
       savings_rate_change: 查看該月份的交易
+      negative_position: "檢查持倉"
       idle_cash: 前往帳戶
       budget: 查看預算
     titles:
@@ -74,6 +76,7 @@ zh-TW:
       savings_rate_change:
         up: 您在%{month}的儲蓄率提高了
         down: 您在%{month}的儲蓄率下降了
+      negative_position: "%{account} 的持倉低於零"
       idle_cash: '%{account} 有閒置現金'
       budget_at_risk:
         one: 您的預算中有一個分類需要注意
@@ -92,6 +95,7 @@ zh-TW:
         up: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。
         down: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。
         down_negative: 您在%{month}的支出超過收入：儲蓄率從前一個月的 %{previous_rate}% 降到 %{current_rate}%。
+      negative_position: "%{account} 中的 %{security} (%{ticker}) 自 %{date} 起低於零，最低為 %{qty}。可能缺少一筆買入或轉入；受影響的持倉：%{count}。"
       idle_cash: '%{account} 有 %{balance}，且在過去 %{idle_days} 天內沒有任何活動。'
       budget_at_risk:
         over: '%{categories} 這個月已超出預算。您目前已使用總預算的 %{budget_spent_pct}%。'

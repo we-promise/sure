@@ -750,7 +750,11 @@ class Entry < ApplicationRecord
             if attrs.present?
               attrs[:entryable_attributes] = attrs[:entryable_attributes].dup if attrs[:entryable_attributes].present?
               attrs[:entryable_attributes][:id] = entry.entryable_id if attrs[:entryable_attributes].present?
-              entry.update! attrs
+              entry.assign_attributes(attrs)
+              # Moving a sale to another date can take the position below zero.
+              # The edit is all or nothing: one refused sale rolls back every
+              # entry in the batch.
+              Trade::SaleLimit.save!(entry)
               entry.transaction.record_category_usage! if entry.transaction?
               changed = true
               lockable_change = attrs.except(:reconciled_status).present?

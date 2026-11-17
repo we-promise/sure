@@ -10,33 +10,18 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
-  test "negative_positions lists calculated positions below zero" do
+  test "held_securities_on lists positive standard holdings on that day, a provider row first" do
     account = accounts(:investment)
-    msft = securities(:msft)
-    # A sale without its purchase, as an import or a deleted buy can leave behind.
-    account.entries.create!(
-      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
-      entryable: Trade.new(security: msft, qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
-    )
-    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    aapl = securities(:aapl)
+    # Clear of the fixture rows (today and yesterday at load time), even when
+    # the suite runs across midnight.
+    provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    account.holdings.create!(security: aapl, date: 5.days.ago.to_date, qty: 7, price: 200, amount: 1400, currency: "EUR", account_provider: provider)
+    account.holdings.create!(security: aapl, date: 5.days.ago.to_date, qty: 5, price: 200, amount: 1000, currency: "USD")
+    account.holdings.create!(security: securities(:msft), date: 5.days.ago.to_date, qty: 0, price: 400, amount: 0, currency: "USD")
 
-    positions = account.negative_positions
-
-    assert_equal [ msft ], positions.map(&:security)
-    assert_equal 3.days.ago.to_date, positions.first.first_date
-    assert_equal(-3, positions.first.lowest_qty)
-  end
-
-  test "negative_positions ignores linked accounts" do
-    account = accounts(:investment)
-    account.entries.create!(
-      name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
-      entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
-    )
-    Holding::Materializer.new(account, strategy: :forward).materialize_holdings
-    account.stubs(:linked?).returns(true)
-
-    assert_empty account.negative_positions
+    assert_equal [ [ aapl, 7 ] ], account.held_securities_on(5.days.ago.to_date)
+    assert_equal [ [ aapl, 10 ] ], account.held_securities_on(1.year.from_now.to_date)
   end
 
   test "can destroy" do

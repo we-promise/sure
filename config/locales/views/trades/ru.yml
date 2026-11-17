@@ -1,6 +1,9 @@
 ---
 ru:
   trades:
+    sale_limit:
+      exceeds_holding: "Нельзя продать %{qty} %{ticker}: на счёте только %{available} на %{date}."
+      exceeds_later_holding: "Нельзя продать %{qty} %{ticker}: на эту дату можно продать не более %{available}, иначе позиция станет отрицательной %{date}."
     form:
       account: Счёт для перевода (необязательно)
       account_prompt: Поиск счёта
@@ -15,6 +18,9 @@ ru:
       ticker_placeholder: AAPL
       trade_requires_security: Для операций покупки и продажи требуется указать инструмент 
         (тикер)
+      held_security: "%{name} (%{ticker}), в наличии %{qty}"
+      held_security_prompt: "Выберите позицию"
+      held_security_hint: "Нет в списке? Сначала добавьте покупку."
       type: Тип
       type_buy: Покупка
       type_deposit: Пополнение

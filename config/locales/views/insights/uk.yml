@@ -32,6 +32,7 @@ uk:
       net_worth_milestone: Чистий капітал
       subscription_audit: Підписки
       savings_rate_change: Рівень заощаджень
+      negative_position: "Позиції"
       idle_cash: Незадіяні кошти
       budget_at_risk: Бюджет
       budget_on_track: Бюджет
@@ -70,6 +71,7 @@ uk:
       net_worth_milestone: Переглянути звіт про чистий капітал
       subscription_audit: Переглянути повторювані транзакції
       savings_rate_change: Переглянути транзакції за цей місяць
+      negative_position: "Перевірити позиції"
       idle_cash: Перейти до рахунку
       budget: Переглянути бюджет
       maintained_goal_depleted: Переглянути резерв
@@ -85,6 +87,7 @@ uk:
       savings_rate_change:
         up: Ваш рівень заощаджень покращився в %{month}
         down: Ваш рівень заощаджень знизився в %{month}
+      negative_position: "Позиції на рахунку %{account} опустилися нижче нуля"
       idle_cash: Незадіяні кошти на %{account}
       budget_at_risk:
         one: "%{count} категорія потребує уваги у вашому бюджеті"
@@ -106,6 +109,7 @@ uk:
         up: Ви заощадили %{current_rate}% свого доходу в %{month}, що на %{change_pp} процентних пунктів більше, ніж %{previous_rate}% попереднього місяця.
         down: Ви заощадили %{current_rate}% свого доходу в %{month}, що на %{change_pp} процентних пунктів менше, ніж %{previous_rate}% попереднього місяця.
         down_negative: "Ви витратили більше, ніж заробили в %{month}: ваш рівень заощаджень впав до %{current_rate}%, з %{previous_rate}% попереднього місяця."
+      negative_position: "На рахунку %{account} позиція %{security} (%{ticker}) опустилася нижче нуля %{date}, до %{qty}. Імовірно, бракує купівлі або переказу; позицій зачеплено: %{count}."
       idle_cash: "%{account} містить %{balance} без активності протягом останніх %{idle_days} днів."
       budget_at_risk:
         over: "%{categories} перевищили бюджет цього місяця. Ви використали %{budget_spent_pct}% свого загального бюджету наразі."

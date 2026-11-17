@@ -4,6 +4,7 @@ pl:
     actions:
       budget: Zobacz budżet
       cash_flow_warning: Przejrzyj cykliczne transakcje
+      negative_position: "Sprawdź pozycje"
       idle_cash: Przejdź do konta
       maintained_goal_depleted: Zobacz rezerwę
       net_worth_milestone: Zobacz raport wartości netto
@@ -77,6 +78,7 @@ pl:
           Twoje saldo gotówki może spaść do %{projected_low} około %{projected_low_date}.
         negative: Na podstawie nadchodzących cyklicznych transakcji i typowych wydatków,
           Twoje saldo gotówki może spaść do %{projected_low} około %{projected_low_date}.
+      negative_position: "Na koncie %{account} %{security} (%{ticker}) spadł poniżej zera %{date}, do %{qty}. Prawdopodobnie brakuje zakupu lub przeniesienia; liczba pozycji: %{count}."
       idle_cash: "%{account} posiada %{balance} bez aktywności w ostatnich %{idle_days}
         dniach."
       maintained_goal_depleted: "%{goal} zawiera %{saved} z docelowych %{target}.
@@ -110,6 +112,7 @@ pl:
       cash_flow_warning:
         low: Twoje saldo gotówki może się wyczerpać
         negative: Twoje saldo gotówki może być ujemne
+      negative_position: "Pozycje na koncie %{account} spadły poniżej zera"
       idle_cash: Nieaktywna gotówka na %{account}
       maintained_goal_depleted: "%{goal} spadł poniżej swojego poziomu"
       net_worth_milestone: 'Kamień milowy wartości netto: %{milestone}'
@@ -124,6 +127,7 @@ pl:
       budget_at_risk: Budżet
       budget_on_track: Budżet
       cash_flow_warning: Przepływy pieniężne
+      negative_position: "Pozycje"
       idle_cash: Nieaktywna gotówka
       maintained_goal_depleted: Rezerwa
       net_worth_milestone: Wartość netto

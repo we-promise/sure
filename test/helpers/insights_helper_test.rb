@@ -178,6 +178,15 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_action(dangling)
   end
 
+  test "a negative position links to the account's holdings and shows the lowest quantity" do
+    account = accounts(:investment)
+    insight = build_insight("negative_position", metadata: { "account_id" => account.id }, facts: { "qty" => "−3", "ticker" => "MSFT" })
+
+    assert_equal account_path(account, tab: "holdings"), insight_action(insight)[:href]
+    assert_equal [ "−3", "MSFT" ], insight_key_figure(insight)
+    assert_equal :warning, insight_sentiment(insight)
+  end
+
   test "maintained reserve metadata and action render in German" do
     family = families(:dylan_family)
     goal = family.goals.first

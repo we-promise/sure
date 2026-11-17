@@ -54,7 +54,9 @@ class Transactions::BulkUpdatesController < ApplicationController
         entry_ids: bulk_update_params[:entry_ids]
       }
     )
-    redirect_back_or_to transactions_path, alert: t("transactions.reconcile.failure")
+    # Base errors (e.g. a refused sale) are written for the user; anything else stays generic.
+    alert = e.record.errors[:base].to_sentence.presence || t("transactions.reconcile.failure")
+    redirect_back_or_to transactions_path, alert: alert
   end
 
   private

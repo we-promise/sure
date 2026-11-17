@@ -7,6 +7,7 @@ tr:
     actions:
       budget: Bütçeyi görüntüle
       cash_flow_warning: Yinelenen işlemleri incele
+      negative_position: "Pozisyonları incele"
       idle_cash: Hesaba git
       net_worth_milestone: Net değer raporunu görüntüle
       savings_rate_change: O ayın işlemlerini görüntüle
@@ -70,6 +71,7 @@ tr:
         negative: Yaklaşan yinelenen işlemleriniz ve tipik harcamalarınıza dayanarak,
           nakit bakiyeniz %{projected_low_date} civarında %{projected_low} seviyesine
           kadar gerileyebilir.
+      negative_position: "%{account} hesabında %{security} (%{ticker}) %{date} tarihinde sıfırın altına, %{qty} seviyesine düştü. Muhtemelen bir alım veya transfer eksik; etkilenen pozisyon: %{count}."
       idle_cash: "%{account} hesabında son %{idle_days} gündür herhangi bir hareket
         olmadan %{balance} bulunuyor."
       net_worth_milestone: Net değeriniz %{milestone} sınırını geçti ve şu anda %{net_worth}
@@ -99,6 +101,7 @@ tr:
       cash_flow_warning:
         low: Nakit bakiyeniz azalabilir
         negative: Nakit bakiyeniz eksiye düşebilir
+      negative_position: "%{account} hesabındaki pozisyonlar sıfırın altına düştü"
       idle_cash: "%{account} hesabında hareketsiz nakit"
       net_worth_milestone: 'Net değer kilometre taşı: %{milestone}'
       savings_rate_change:
@@ -113,6 +116,7 @@ tr:
       budget_at_risk: Bütçe
       budget_on_track: Bütçe
       cash_flow_warning: Nakit akışı
+      negative_position: "Pozisyonlar"
       idle_cash: Hareketsiz nakit
       net_worth_milestone: Net değer
       savings_rate_change: Tasarruf oranı

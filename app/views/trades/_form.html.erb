@@ -1,6 +1,6 @@
 <%# locals: (model:, account:) %>
 
-<% type = params[:type] || "buy" %>
+<% type = params[:type] || params.dig(:model, :type) || "buy" %>
 
 <%= styled_form_with url: trades_path(account_id: account&.id), scope: :model, data: { controller: "trade-form", trade_type: type } do |form| %>
   <div class="space-y-4">
@@ -24,7 +24,19 @@
           trade_form_key_param: "type",
         }} %>
 
-      <% if %w[buy sell].include?(type) %>
+      <% if type == "sell" %>
+        <%= form.date_field :date, label: true, value: model.date || Date.current, required: true,
+              data: {
+                action: "change->trade-form#reloadHoldings",
+                trade_form_url_param: new_trade_path(account_id: account&.id, type: type)
+              } %>
+
+        <%= turbo_frame_tag "sale_holdings", data: { trade_form_target: "holdings" } do %>
+          <%= form.select :security_id, held_security_options(account, model.date || Date.current),
+                { label: t(".holding"), prompt: t(".held_security_prompt"), selected: model.try(:entryable).try(:security_id), required: true } %>
+          <p class="text-xs text-secondary mt-1"><%= t(".held_security_hint") %></p>
+        <% end %>
+      <% elsif type == "buy" %>
         <% if Security.providers.any? %>
           <div class="form-field combobox">
             <%= form.combobox :ticker,
@@ -48,7 +60,9 @@
         <%= form.select :ticker, security_options, select_options %>
       <% end %>
 
-      <%= form.date_field :date, label: true, value: model.date || Date.current, required: true %>
+      <% unless type == "sell" %>
+        <%= form.date_field :date, label: true, value: model.date || Date.current, required: true %>
+      <% end %>
 
       <% unless %w[buy sell].include?(type) %>
         <%= form.money_field :amount, label: t(".amount"), value: model.amount, required: true, default_currency: account&.currency %>
@@ -59,9 +73,10 @@
       <% end %>
 
       <% if %w[buy sell].include?(type) %>
-        <%= form.number_field :qty, label: t(".qty"), placeholder: "10", min: 0.000000000000000001, step: "any", required: true %>
-        <%= form.money_field :price, label: t(".price"), step: "any", precision: 10, required: true, default_currency: account&.currency %>
-        <%= form.money_field :fee, label: t(".fee"), step: "any", min: 0, default_currency: account&.currency %>
+        <% trade = model.try(:entryable) %>
+        <%= form.number_field :qty, label: t(".qty"), value: trade.try(:qty)&.abs, placeholder: "10", min: 0.000000000000000001, step: "any", required: true %>
+        <%= form.money_field :price, label: t(".price"), value: trade.try(:price), step: "any", precision: 10, required: true, default_currency: account&.currency %>
+        <%= form.money_field :fee, label: t(".fee"), value: trade.try(:fee)&.nonzero?, step: "any", min: 0, default_currency: account&.currency %>
       <% end %>
     </div>
 

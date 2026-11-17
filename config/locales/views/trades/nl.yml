@@ -1,6 +1,9 @@
 ---
 nl:
   trades:
+    sale_limit:
+      exceeds_holding: "U kunt geen %{qty} %{ticker} verkopen: de rekening bevat op %{date} slechts %{available}."
+      exceeds_later_holding: "U kunt geen %{qty} %{ticker} verkopen: op deze datum kunt u er hoogstens %{available} verkopen, anders komt de positie op %{date} onder nul."
     api_errors:
       activity_label_must_match_type: "investment_activity_label moet %{label} zijn wanneer type %{type} is"
       invalid_activity_label: "Ongeldig label voor beleggingsactiviteit"
@@ -26,6 +29,9 @@ nl:
       type_interest: "Rente"
       dividend_requires_security: "Een effect is verplicht voor dividenden"
       trade_requires_security: "Een effect (ticker) is verplicht voor aan- en verkopen"
+      held_security: "%{name} (%{ticker}), %{qty} in bezit"
+      held_security_prompt: "Kies een positie"
+      held_security_hint: "Staat het er niet bij? Voeg eerst de aankoop toe."
     header:
       buy: "Kopen"
       sell: "Verkopen"

@@ -1,6 +1,9 @@
 ---
 it:
   trades:
+    sale_limit:
+      exceeds_holding: "Non puoi vendere %{qty} %{ticker}: il conto ne detiene solo %{available} il %{date}."
+      exceeds_later_holding: "Non puoi vendere %{qty} %{ticker}: in questa data se ne possono vendere al massimo %{available}, altrimenti la posizione scende sotto zero il %{date}."
     form:
       account: Conto di trasferimento (facoltativo)
       account_prompt: Cerca conto
@@ -21,6 +24,9 @@ it:
       type_interest: Interessi
       dividend_requires_security: Il titolo è obbligatorio per i dividendi
       trade_requires_security: Un titolo (ticker) è obbligatorio per le operazioni di acquisto e vendita
+      held_security: "%{name} (%{ticker}), %{qty} in portafoglio"
+      held_security_prompt: "Scegli una posizione"
+      held_security_hint: "Non è in elenco? Aggiungi prima l'acquisto."
     header:
       buy: Acquisto
       sell: Vendita
