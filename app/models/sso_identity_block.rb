@@ -28,13 +28,15 @@ class SsoIdentityBlock < ApplicationRecord
   validate :uid_or_digest_present
 
   class << self
+    # Fails closed: while a stored legacy key cannot be read, the legacy
+    # blocks it covers cannot be checked, so the identity counts as blocked.
     def blocked?(provider:, uid:)
-      find_block(provider: provider, uid: uid).present?
+      block, legacy_check_unavailable = lookup(provider: provider, uid: uid)
+      block.present? || legacy_check_unavailable
     end
 
     def find_block(provider:, uid:)
-      uid = uid.to_s
-      (encryption_ready? && find_by(provider: provider, uid: uid)) || find_by_digest(provider: provider, uid: uid)
+      lookup(provider: provider, uid: uid).first
     end
 
     def block_all!(identities, identity_label:)
@@ -65,27 +67,37 @@ class SsoIdentityBlock < ApplicationRecord
         encryption_ready? ? { uid: uid.to_s } : { uid_digest: digest(uid) }
       end
 
-      def find_by_digest(provider:, uid:)
-        digested = where(provider: provider).where.not(uid_digest: nil)
-
-        # The migration stores the same key with every legacy row, so one
-        # decrypted copy covers all of them.
-        if (stored_key = stored_legacy_digest_key(digested))
-          block = digested.where.not(legacy_digest_key: nil).find_by(uid_digest: digest(uid, key: stored_key))
-          return block if block
+      # Returns the matching block and whether some legacy rows could not be
+      # checked because their stored key is unreadable.
+      def lookup(provider:, uid:)
+        uid = uid.to_s
+        if encryption_ready? && (block = find_by(provider: provider, uid: uid))
+          return [ block, false ]
         end
 
-        digested.find_by(legacy_digest_key: nil, uid_digest: digest(uid))
+        digested = where(provider: provider).where.not(uid_digest: nil)
+        stored_keys, unreadable = stored_legacy_digest_keys(digested)
+        stored_keys.each do |stored_key|
+          block = digested.where.not(legacy_digest_key: nil).find_by(uid_digest: digest(uid, key: stored_key))
+          return [ block, false ] if block
+        end
+
+        block = digested.find_by(legacy_digest_key: nil, uid_digest: digest(uid))
+        [ block, block.nil? && unreadable ]
       end
 
-      # A key that no longer decrypts (a row the rotation backfill reported as
-      # failed) must not turn every SSO login into an error.
-      def stored_legacy_digest_key(scope)
-        encoded = scope.where.not(legacy_digest_key: nil).pick(:legacy_digest_key)
-        encoded && Base64.strict_decode64(encoded)
-      rescue ActiveRecord::Encryption::Errors::Base, ArgumentError => e
-        Rails.logger.error("[SsoIdentityBlock] Stored legacy digest key is unreadable (#{e.class}); legacy blocks cannot be checked")
-        nil
+      # Each row is read on its own, so one unreadable key (a row the rotation
+      # backfill reported as failed) does not hide the readable ones.
+      def stored_legacy_digest_keys(scope)
+        unreadable = false
+        keys = scope.where.not(legacy_digest_key: nil).select(:id, :legacy_digest_key).find_each.filter_map do |row|
+          Base64.strict_decode64(row.legacy_digest_key)
+        rescue ActiveRecord::Encryption::Errors::Base, ArgumentError => e
+          Rails.logger.error("[SsoIdentityBlock] Stored legacy digest key of block #{row.id} is unreadable (#{e.class}); treating unmatched SSO logins for this provider as blocked")
+          unreadable = true
+          nil
+        end
+        [ keys.uniq, unreadable ]
       end
 
       def derived_digest_key

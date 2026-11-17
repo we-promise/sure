@@ -42,6 +42,13 @@ class MoveSsoIdentityBlocksToActiveRecordEncryptionMigrationTest < ActiveSupport
     end
   end
 
+  test "down refuses a block whose subject identifier does not decrypt" do
+    block = SsoIdentityBlock.create!(provider: "openid_connect", uid: "new-subject", identity_label: "removed-user@example.com")
+    connection.execute(ActiveRecord::Base.sanitize_sql_array([ "UPDATE sso_identity_blocks SET uid = 'not-a-ciphertext' WHERE id = ?", block.id ]))
+
+    assert_raises(ActiveRecord::IrreversibleMigration) { migrate(:down) }
+  end
+
   test "down then up restores the columns and indexes" do
     before = shape
 

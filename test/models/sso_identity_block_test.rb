@@ -72,17 +72,30 @@ class SsoIdentityBlockTest < ActiveSupport::TestCase
     end
   end
 
-  test "an unreadable stored key does not break the check for other identities" do
+  test "an unreadable stored key does not hide readable legacy keys and fails closed" do
+    key = Rails.application.key_generator.generate_key(SsoIdentityBlock::LEGACY_DIGEST_SALT, 32)
     SsoIdentityBlock.create!(
       provider: "openid_connect",
-      uid_digest: SsoIdentityBlock.digest("legacy-subject"),
+      uid_digest: SsoIdentityBlock.digest("corrupt-subject", key: key),
       legacy_digest_key: "not base64 !",
+      identity_label: "removed-user@example.com"
+    )
+    SsoIdentityBlock.create!(
+      provider: "openid_connect",
+      uid_digest: SsoIdentityBlock.digest("legacy-subject", key: key),
+      legacy_digest_key: Base64.strict_encode64(key),
       identity_label: "removed-user@example.com"
     )
     SsoIdentityBlock.create!(provider: "openid_connect", uid: "new-subject", identity_label: "removed-user@example.com")
 
-    assert_not SsoIdentityBlock.blocked?(provider: "openid_connect", uid: "someone-else")
-    assert SsoIdentityBlock.blocked?(provider: "openid_connect", uid: "new-subject")
+    with_rotated_secret_key_base do
+      assert SsoIdentityBlock.blocked?(provider: "openid_connect", uid: "legacy-subject")
+      assert SsoIdentityBlock.blocked?(provider: "openid_connect", uid: "new-subject")
+      assert SsoIdentityBlock.blocked?(provider: "openid_connect", uid: "someone-else"),
+        "an identity the unreadable rows might cover must not pass"
+      assert_nil SsoIdentityBlock.find_block(provider: "openid_connect", uid: "someone-else")
+      assert_not SsoIdentityBlock.blocked?(provider: "google_oauth2", uid: "someone-else")
+    end
   end
 
   test "uses a keyed digest instead of a plain subject hash" do

@@ -29,8 +29,13 @@ class MoveSsoIdentityBlocksToActiveRecordEncryption < ActiveRecord::Migration[8.
     ensure_reversible!(derived_key)
 
     block_model = ActiveRecordEncryptionConfig.ready? ? encrypted_block_model : MigrationBlock
-    block_model.where(uid_digest: nil).find_each do |block|
-      block.update_columns(uid_digest: OpenSSL::HMAC.hexdigest("SHA256", derived_key, block.uid.to_s))
+    begin
+      block_model.where(uid_digest: nil).find_each do |block|
+        block.update_columns(uid_digest: OpenSSL::HMAC.hexdigest("SHA256", derived_key, block.uid.to_s))
+      end
+    rescue ActiveRecord::Encryption::Errors::Base => e
+      raise ActiveRecord::IrreversibleMigration,
+        "An SSO identity block does not decrypt with the configured keys (#{e.class}); rolling back would lose it."
     end
 
     remove_index :sso_identity_blocks, [ :provider, :uid ]
@@ -56,14 +61,19 @@ class MoveSsoIdentityBlocksToActiveRecordEncryption < ActiveRecord::Migration[8.
 
       raise ActiveRecord::IrreversibleMigration,
         "SECRET_KEY_BASE changed since this migration ran; rolling back would lift SSO identity blocks made before the change."
+    rescue ActiveRecord::Encryption::Errors::Base => e
+      raise ActiveRecord::IrreversibleMigration,
+        "A stored SSO identity block key does not decrypt with the configured keys (#{e.class}); rolling back would lift blocks."
     end
 
     def encrypted_block_model
       MigrationBlock.reset_column_information
       Class.new(MigrationBlock) do
         def self.name = "SsoIdentityBlockMigrationRecord"
-        encrypts :uid, deterministic: true
-        encrypts :legacy_digest_key
+        # Strict reads: a value the keys do not decrypt must stop the
+        # migration instead of being hashed or copied as if it were plaintext.
+        encrypts :uid, deterministic: true, support_unencrypted_data: false
+        encrypts :legacy_digest_key, support_unencrypted_data: false
       end
     end
 end

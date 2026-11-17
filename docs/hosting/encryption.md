@@ -16,9 +16,11 @@ commands are in the [Docker guide](docker.md#upgrading-an-install-that-is-alread
 ## Before you start: find the values in use
 
 You need the `SECRET_KEY_BASE` your data was encrypted with, and the three
-`ACTIVE_RECORD_ENCRYPTION_*` values if you set them. They are in your
-`.env`, or for an install that never set them, in the `SECRET_KEY_BASE`
-default of the `compose.yml` it was started with. If that file was already
+Active Record encryption keys if you set them. They are in your `.env`
+(`ACTIVE_RECORD_ENCRYPTION_*`), in the `active_record_encryption` block of
+your Rails credentials if you configured them there, or, for an install
+that never set `SECRET_KEY_BASE`, in the default of the `compose.yml` it
+was started with. If that file was already
 replaced, read the value from the old container instead. This works without
 a Compose file and also while the container is stopped:
 
@@ -84,6 +86,9 @@ flow.
 `SECRET_KEY_BASE` itself also signs session cookies and is the key source
 for values saved on the self-hosting settings page (AI and market-data
 provider keys). Once the steps above are done, it is safe to change it.
+Stop the app again and take a fresh database backup first: the app has
+been running since step 3, and a later rollback to the first backup would
+lose what was written in between.
 Existing sessions are signed out. Re-encrypt the settings once, with the
 old value in `OLD_SECRET_KEY_BASE`:
 
@@ -99,9 +104,14 @@ Re-enter any key the task lists under `not_decryptable`.
 ## What a new `SECRET_KEY_BASE` invalidates
 
 Data in the database is covered by the steps above, including blocked SSO
-identities of removed users (on installs where Active Record encryption was
-configured when they updated to the version that encrypts them). These signed values are not stored and simply
-stop working:
+identities of removed users. One exception: blocks created while the
+install had no Active Record encryption keys at all are stored only as a
+digest keyed by `SECRET_KEY_BASE`, and they stop matching once it changes.
+Before changing it, note the entries under removed SSO identities on the
+instance users page; a removed user who signs in again via SSO afterwards
+has to be removed again.
+
+These signed values are not stored and simply stop working:
 
 - Every session: everyone has to sign in again.
 - Password reset and email confirmation links that were already sent.
@@ -115,7 +125,9 @@ If a step fails and you cannot fix the listed rows, go back to the state
 before the rotation:
 
 1. Stop the app (web and worker).
-2. Restore the database backup you took before step 1.
+2. Restore the latest backup taken before the failing step: the one from
+   before step 1, or the one from before step 4. Everything written after
+   that backup is lost, so roll back as early as possible.
 3. Put the old values back: `SECRET_KEY_BASE`, and the old
    `ACTIVE_RECORD_ENCRYPTION_*` values if you had set any (remove the new
    ones otherwise). Unset every `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*`
