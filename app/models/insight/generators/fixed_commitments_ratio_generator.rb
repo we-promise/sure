@@ -70,9 +70,12 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
         # Banded by the rise threshold: the reference window rolls every month
         # and averaged amounts nudge with every charge, so only a climb into the
         # next band is a new insight. One key for the family, so an acknowledged
-        # rise is not raised again next month with the same numbers.
+        # rise is not raised again next month with the same numbers. The day the
+        # rise was first seen tells a rise that came back apart from one that
+        # never left, even in the same band.
         metadata: {
           current_band: peak_band((current_ratio / RISE_THRESHOLD_PP).floor * RISE_THRESHOLD_PP),
+          rise_since: live_metadata.fetch("rise_since", Date.current.iso8601),
           accounts_digest: shared_accounts_digest
         },
         period: income_window(months_back: 0),
@@ -114,16 +117,20 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
     end
 
     # The band a live insight last showed, so a ratio easing into a lower band
-    # does not read as a change and reopen an acknowledged warning. Once the
-    # rise has cleared the band starts again. The job expires only unread and
+    # does not read as a change and reopen an acknowledged warning.
+    def peak_band(band)
+      [ band, live_metadata["current_band"].to_i ].max
+    end
+
+    # Metadata of the insight while its rise is still live; empty once it has
+    # cleared, so band and start begin again. The job expires only unread and
     # read rows, so for an acknowledged one "still live" means the job
     # regenerated it on its last nightly run; a missed run errs towards
     # showing the warning again.
-    def peak_band(band)
-      shown = family.insights.where.not(status: :expired)
-                    .where(generated_at: LIVE_WITHIN.ago..)
-                    .find_by(dedup_key: DEDUP_KEY)
-      [ band, shown&.metadata&.dig("current_band").to_i ].max
+    def live_metadata
+      @live_metadata ||= family.insights.where.not(status: :expired)
+                               .where(generated_at: LIVE_WITHIN.ago..)
+                               .find_by(dedup_key: DEDUP_KEY)&.metadata || {}
     end
 
     # Only a start Sure actually saw counts as new. A series known before the

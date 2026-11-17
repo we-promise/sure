@@ -231,6 +231,36 @@ class Insight::Generators::FixedCommitmentsRatioGeneratorTest < ActiveSupport::T
     assert_equal 35, acknowledged.metadata["current_band"]
   end
 
+  test "a rise that cleared after being acknowledged comes back visible in the same band" do
+    monthly_income(4_000)
+    commitment("Rent", 1_200, since: 2.years.ago)
+    commitment("Gym", 200, since: 2.months.ago)
+    acknowledged = travel_to(3.days.ago) do
+      @family.insights.create!(insight_type: "fixed_commitments_ratio", priority: "medium",
+                               status: "dismissed", title: "t", body: "b", dedup_key: "fixed_commitments_ratio",
+                               metadata: JSON.parse(generate.sole.metadata.to_json), generated_at: Time.current)
+    end
+    @family.users.each { |user| user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true)) }
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert acknowledged.reload.active?
+    assert_equal 35, acknowledged.metadata["current_band"]
+  end
+
+  test "an acknowledged rise that stays live keeps its metadata" do
+    monthly_income(4_000)
+    commitment("Rent", 1_200, since: 2.years.ago)
+    commitment("Gym", 200, since: 2.months.ago)
+    acknowledged = travel_to(1.day.ago) do
+      @family.insights.create!(insight_type: "fixed_commitments_ratio", priority: "medium",
+                               status: "dismissed", title: "t", body: "b", dedup_key: "fixed_commitments_ratio",
+                               metadata: JSON.parse(generate.sole.metadata.to_json), generated_at: Time.current)
+    end
+
+    assert_equal acknowledged.metadata, JSON.parse(generate.sole.metadata.to_json)
+  end
+
   test "an expired rise starts again from the current band" do
     monthly_income(4_000)
     commitment("Rent", 1_200, since: 2.years.ago)
