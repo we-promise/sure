@@ -14,7 +14,7 @@ class PlaidAccount::Investments::HoldingsProcessor
 
       # Parse quantity and price into BigDecimal for proper arithmetic
       quantity_bd = parse_decimal(plaid_holding["quantity"])
-      price_bd = parse_decimal(plaid_holding["institution_price"])
+      price_bd = parse_decimal(plaid_account.holding_price(plaid_holding))
 
       # Skip if essential values are missing
       next if quantity_bd.nil? || price_bd.nil?

@@ -74,4 +74,25 @@ class PlaidAccountTest < ActiveSupport::TestCase
       )
     end
   end
+
+  test "holding_price uses the security's close price when Plaid reports a zero institution price" do
+    plaid_account = plaid_accounts(:one)
+    plaid_account.update!(raw_holdings_payload: {
+      holdings: [],
+      securities: [
+        { security_id: "priced", close_price: 42.5 },
+        { security_id: "no_close", close_price: nil },
+        { security_id: "zero_close", close_price: 0 }
+      ]
+    })
+    plaid_account.reload
+
+    assert_equal 10, plaid_account.holding_price({ "security_id" => "priced", "institution_price" => 10 })
+    assert_equal 42.5, plaid_account.holding_price({ "security_id" => "priced", "institution_price" => 0 })
+    assert_equal 42.5, plaid_account.holding_price({ "security_id" => "priced", "institution_price" => "0.0" })
+    assert_equal 0, plaid_account.holding_price({ "security_id" => "no_close", "institution_price" => 0 })
+    assert_equal 0, plaid_account.holding_price({ "security_id" => "zero_close", "institution_price" => 0 })
+    assert_equal 0, plaid_account.holding_price({ "security_id" => "unknown", "institution_price" => 0 })
+    assert_nil plaid_account.holding_price({ "security_id" => "priced", "institution_price" => nil })
+  end
 end

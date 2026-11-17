@@ -325,4 +325,55 @@ class PlaidAccount::Investments::HoldingsProcessorTest < ActiveSupport::TestCase
     holding = account.holdings.find_by(security: securities(:aapl))
     assert_equal "EUR", holding.currency  # Should use account's currency
   end
+
+  test "values a holding Plaid prices at zero at its security's close price" do
+    account = @plaid_account.current_account
+
+    @plaid_account.update!(raw_holdings_payload: {
+      securities: [
+        { "security_id" => "zero_priced", "close_price" => 150.25 },
+        { "security_id" => "zero_no_close", "close_price" => nil }
+      ],
+      holdings: [
+        {
+          "security_id" => "zero_priced",
+          "quantity" => 10,
+          "institution_price" => 0,
+          "institution_value" => 0,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => Date.current
+        },
+        {
+          "security_id" => "zero_no_close",
+          "quantity" => 5,
+          "institution_price" => 0,
+          "institution_value" => 0,
+          "iso_currency_code" => "USD",
+          "institution_price_as_of" => Date.current
+        }
+      ],
+      transactions: []
+    })
+
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "zero_priced")
+                      .returns(OpenStruct.new(security: securities(:aapl)))
+    @security_resolver.expects(:resolve)
+                      .with(plaid_security_id: "zero_no_close")
+                      .returns(OpenStruct.new(security: securities(:msft)))
+
+    processor = PlaidAccount::Investments::HoldingsProcessor.new(@plaid_account, security_resolver: @security_resolver)
+
+    assert_difference "Holding.count", 2 do
+      processor.process
+    end
+
+    priced = account.holdings.find_by!(security: securities(:aapl), date: Date.current)
+    assert_equal BigDecimal("150.25"), priced.price
+    assert_equal BigDecimal("1502.5"), priced.amount
+
+    # Without a close price there is nothing better to use: the zero is kept, as before.
+    unpriced = account.holdings.find_by!(security: securities(:msft), date: Date.current)
+    assert_equal 0, unpriced.price
+  end
 end
