@@ -348,6 +348,18 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal %w[High Euros Low], names
   end
 
+  test "sorts by the whole-account balance each row shows, not the viewer's share" do
+    user = users(:empty)
+    user.update!(default_account_order: "balance_desc")
+    big = create_account(name: "Big but mostly someone else's", balance: 1_000, accountable: Depository.new, owner: user)
+    big.update!(ownership_percentage: 10)
+    create_account(name: "Small", balance: 500, accountable: Depository.new, owner: user)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal [ "Big but mostly someone else's", "Small" ], names
+  end
+
   test "breaks balance and name ties by id so the order stays fixed" do
     user = users(:empty)
     accounts = 3.times.map do
