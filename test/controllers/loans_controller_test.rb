@@ -222,6 +222,30 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
                  "the controller filtered out the convention the user chose"
   end
 
+  # The same end-to-end path for the compounding: a select whose value the
+  # controller drops would leave every schedule on the default.
+  test "the compounding chosen on the form is saved" do
+    assert_equal "per_period", @account.loan.interest_compounding
+
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          interest_compounding: "semi_annual"
+        }
+      }
+    }
+
+    assert_equal "semi_annual", @account.loan.reload.interest_compounding,
+                 "the controller filtered out the compounding the user chose"
+  end
+
+  test "the loan form offers the compounding" do
+    get edit_loan_path(@account)
+
+    assert_select "select[name='account[accountable_attributes][interest_compounding]'] option", count: Loan::INTEREST_COMPOUNDINGS.size
+  end
+
   test "saving principal_only_transfers queues a balance sync" do
     patch loan_path(@account), params: {
       account: {

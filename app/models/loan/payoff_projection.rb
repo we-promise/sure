@@ -259,7 +259,9 @@ class Loan
           # on a flat twelfth beside a schedule that is not, and a borrower
           # exactly on contract would be quoted interest saved or lost that
           # only the difference in basis produced.
-          day_count_convention: loan.day_count_convention
+          day_count_convention: loan.day_count_convention,
+          # The same holds for the compounding.
+          compounding: loan.interest_compounding
         ).run
       end
 

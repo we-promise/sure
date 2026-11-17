@@ -30,7 +30,8 @@ class Loan::AmortizationSchedule
         start_date: loan.origination_date,
         currency: loan.account.currency,
         rate_resolver: (Loan::RateResolver.for(loan) if loan.variable_rate_type?),
-        day_count_convention: loan.day_count_convention
+        day_count_convention: loan.day_count_convention,
+        compounding: loan.interest_compounding
       )
     end
   end
@@ -39,7 +40,8 @@ class Loan::AmortizationSchedule
   # simulator. Omitted, the schedule runs at one rate for its whole life, which
   # is what a fixed loan does.
   def initialize(principal:, annual_rate:, term_months:, start_date:, currency:, rate_resolver: nil,
-                 day_count_convention: Loan::Simulator::DEFAULT_DAY_COUNT_CONVENTION)
+                 day_count_convention: Loan::Simulator::DEFAULT_DAY_COUNT_CONVENTION,
+                 compounding: Loan::Simulator::DEFAULT_COMPOUNDING)
     @currency = currency
     # Rounded to the currency at the door. A balance carrying more fractional
     # units than the currency has -- `first_valuation_amount` is decimal(19,4)
@@ -53,6 +55,7 @@ class Loan::AmortizationSchedule
     @start_date = start_date
     @rate_resolver = rate_resolver
     @day_count_convention = day_count_convention
+    @compounding = compounding
   end
 
   # True when this schedule re-amortises part-way through, i.e. the repayment
@@ -146,7 +149,8 @@ class Loan::AmortizationSchedule
           accrual_rate_for: @rate_resolver ? @rate_resolver.method(:accrual_rate_for) : ->(_date) { annual_rate },
           re_amortisation_events: @rate_resolver&.method(:re_amortisation_events),
           currency_precision: currency_precision,
-          day_count_convention: @day_count_convention
+          day_count_convention: @day_count_convention,
+          compounding: @compounding
         ).run
       else
         Loan::SimulationResult.new(payments: [], currency_precision: currency_precision)

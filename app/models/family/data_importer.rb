@@ -44,7 +44,7 @@ class Family::DataImporter
   # rate schedule is restored separately (see assign_liability_details).
   LOAN_DETAIL_ATTRIBUTES = %w[
     interest_rate rate_type term_months start_date down_payment initial_balance
-    insurance_rate insurance_rate_type day_count_convention principal_only_transfers
+    insurance_rate insurance_rate_type day_count_convention interest_compounding principal_only_transfers
   ].freeze
   CREDIT_CARD_DETAIL_ATTRIBUTES = %w[apr annual_fee minimum_payment available_credit due_day statement_close_day expiration_date].freeze
 
