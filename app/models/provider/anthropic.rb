@@ -284,7 +284,8 @@ class Provider::Anthropic < Provider
         tool_name: tool_name,
         schema: schema,
         instructions: instructions,
-        family: family
+        family: family,
+        max_tokens: default_max_tokens
       ).extract
     end
   end

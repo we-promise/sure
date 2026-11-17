@@ -2,6 +2,7 @@ class EquityVest < ApplicationRecord
   include Monetizable
 
   belongs_to :equity_grant, inverse_of: :vests
+  belongs_to :account_statement, optional: true
 
   enum :source, EquityGrant::SOURCES.index_by(&:itself), validate: true, prefix: :from
 

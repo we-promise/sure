@@ -17,6 +17,7 @@ class CreateEquityGrants < ActiveRecord::Migration[8.1]
 
     create_table :equity_vests, id: :uuid do |t|
       t.references :equity_grant, type: :uuid, null: false, foreign_key: { on_delete: :cascade }
+      t.references :account_statement, type: :uuid, foreign_key: { on_delete: :nullify }
       t.date :vest_date, null: false
       t.decimal :units, precision: 24, scale: 6, null: false
       # Filled in once the vest has happened, from the release confirmation.

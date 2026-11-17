@@ -7,8 +7,8 @@
 <% upcoming = all_vests.reject { |_, v| v.vested?(as_of: today) }.sort_by { |_, v| v.vest_date } %>
 <% past = all_vests.select { |_, v| v.vested?(as_of: today) }.sort_by { |_, v| v.vest_date }.reverse %>
 <% next_year = upcoming.select { |_, v| v.vest_date <= today + 1.year } %>
-<% next_year_value = next_year.filter_map { |_, v| v.estimated_value }.reduce(:+) %>
-<% unvested_value = grants.filter_map(&:unvested_value).reduce(:+) %>
+<% next_year_value = equity_grant_value_total(next_year.map { |_, v| v.estimated_value }, currency: account.currency, date: today) %>
+<% unvested_value = equity_grant_value_total(grants.map(&:unvested_value), currency: account.currency, date: today) %>
 <% ai_available = AccountStatement::InvestmentDataReader.available? %>
 
 <div class="space-y-4" data-testid="grants-tab">
@@ -208,16 +208,16 @@
             </label>
             <div class="grid grid-cols-2 gap-2">
               <label class="block text-xs text-secondary"><%= t(".vest_date") %>
-                <%= date_field_tag "equity_vest[vest_date]", today, required: true, class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
+                <%= date_field_tag "equity_vest[vest_date]", today, required: true, autocomplete: "off", class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
               </label>
               <label class="block text-xs text-secondary"><%= t(".units_heading") %>
-                <%= number_field_tag "equity_vest[units]", nil, step: "any", required: true, class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
+                <%= number_field_tag "equity_vest[units]", nil, step: "any", required: true, autocomplete: "off", class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
               </label>
               <label class="block text-xs text-secondary"><%= t(".every_months") %>
-                <%= number_field_tag "equity_vest[every_months]", nil, min: 0, class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
+                <%= number_field_tag "equity_vest[every_months]", nil, min: 0, autocomplete: "off", class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
               </label>
               <label class="block text-xs text-secondary"><%= t(".count") %>
-                <%= number_field_tag "equity_vest[count]", nil, min: 1, class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
+                <%= number_field_tag "equity_vest[count]", nil, min: 1, autocomplete: "off", class: "w-full border border-secondary rounded-lg px-2 py-1.5 text-sm" %>
               </label>
             </div>
             <%= render DS::Button.new(text: t(".add_vest"), type: "submit") %>

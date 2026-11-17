@@ -154,7 +154,9 @@ class AccountStatement::InvestmentDataReader
 
     def store_grants(data)
       count = 0
-      EquityGrant.transaction do
+      account.with_lock do
+        EquityVest.where(equity_grant: account.equity_grants, account_statement: statement, source: "statement").delete_all
+        retained_ids = []
         Array(data["grants"]).each do |row|
           next if row["ticker"].blank?
 
@@ -164,11 +166,15 @@ class AccountStatement::InvestmentDataReader
             grant_type: EquityGrant::GRANT_TYPES.include?(row["grant_type"]) ? row["grant_type"] : "rsu",
             grant_date: parse_date(row["grant_date"]) || grant.grant_date,
             total_units: row["total_units"].presence || grant.total_units,
-            source: grant.source.presence || "statement",
+            source: grant.new_record? ? "statement" : grant.source,
             account_statement: grant.account_statement || statement
           )
           Array(row["vests"]).each { |vest| upsert_vest(grant, vest) }
+          retained_ids << grant.id
           count += 1
+        end
+        account.equity_grants.where(account_statement: statement, source: "statement").where.not(id: retained_ids).find_each do |grant|
+          grant.destroy! if grant.vests.empty?
         end
       end
       count
@@ -188,11 +194,14 @@ class AccountStatement::InvestmentDataReader
       return if date.nil? || units.nil? || units <= 0
 
       vest = grant.vests.find_or_initialize_by(vest_date: date)
+      return if vest.persisted? && !vest.from_statement?
+
       vest.update!(
         units: units,
         units_withheld: row["units_withheld"].presence || vest.units_withheld,
         net_proceeds: row["net_proceeds"].presence || vest.net_proceeds,
-        source: vest.source.presence || "statement"
+        source: "statement",
+        account_statement: statement
       )
     end
 

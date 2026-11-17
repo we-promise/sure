@@ -7,9 +7,9 @@ class Provider::Anthropic::DocumentExtractor
 
   MAX_PDF_BYTES = 32 * 1024 * 1024
 
-  attr_reader :client, :model, :pdf_content, :tool_name, :schema, :instructions, :family
+  attr_reader :client, :model, :pdf_content, :tool_name, :schema, :instructions, :family, :max_tokens
 
-  def initialize(client:, model:, pdf_content:, tool_name:, schema:, instructions:, family: nil)
+  def initialize(client:, model:, pdf_content:, tool_name:, schema:, instructions:, family: nil, max_tokens: 4096)
     @client = client
     @model = model
     @pdf_content = pdf_content
@@ -17,6 +17,7 @@ class Provider::Anthropic::DocumentExtractor
     @schema = schema
     @instructions = instructions
     @family = family
+    @max_tokens = max_tokens
   end
 
   def extract
@@ -27,7 +28,7 @@ class Provider::Anthropic::DocumentExtractor
       tool_name: tool_name,
       operation: tool_name,
       model: model,
-      max_tokens: ENV.fetch("ANTHROPIC_MAX_TOKENS", 4096).to_i,
+      max_tokens: max_tokens,
       system_: Provider::Anthropic.structured_output_system(instructions, model, tool_name),
       messages: [ { role: "user", content: user_content } ],
       tools: [ { name: tool_name, description: "Return the data read from the document.", input_schema: schema } ],

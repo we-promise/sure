@@ -788,6 +788,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_150001) do
 
   create_table "equity_vests", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "equity_grant_id", null: false
+    t.uuid "account_statement_id"
     t.date "vest_date", null: false
     t.decimal "units", precision: 24, scale: 6, null: false
     t.decimal "units_withheld", precision: 24, scale: 6
@@ -796,6 +797,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_150001) do
     t.string "source", default: "manual", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["account_statement_id"], name: "index_equity_vests_on_account_statement_id"
     t.index ["equity_grant_id", "vest_date"], name: "index_equity_vests_on_equity_grant_id_and_vest_date"
     t.index ["equity_grant_id"], name: "index_equity_vests_on_equity_grant_id"
   end
@@ -3234,6 +3236,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_150001) do
   add_foreign_key "entries", "imports"
   add_foreign_key "equity_grants", "account_statements", on_delete: :nullify
   add_foreign_key "equity_grants", "accounts", on_delete: :cascade
+  add_foreign_key "equity_vests", "account_statements", on_delete: :nullify
   add_foreign_key "equity_vests", "equity_grants", on_delete: :cascade
   add_foreign_key "eval_results", "eval_runs"
   add_foreign_key "eval_results", "eval_samples"

@@ -52,4 +52,21 @@ class EquityGrantsControllerTest < ActionDispatch::IntegrationTest
       delete equity_grant_url(grant)
     end
   end
+
+  test "converts grant and upcoming vest values to the account currency" do
+    @account.update!(currency: "USD")
+    @account.investment.update!(subtype: "stock_plan")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+    [ [ "ACME", "USD", 10 ], [ "EXAMPLE", "EUR", 20 ] ].each do |ticker, currency, price|
+      security = Security.create!(ticker: ticker, name: ticker)
+      security.prices.create!(date: Date.current, price: price, currency: currency)
+      grant = @account.equity_grants.create!(ticker: ticker, total_units: 10)
+      grant.vests.create!(vest_date: 1.month.from_now.to_date, units: 10)
+    end
+
+    get account_url(@account, tab: "grants")
+
+    assert_response :success
+    assert_select ".privacy-sensitive", text: "$400.00", count: 2
+  end
 end
