@@ -354,9 +354,6 @@ class UpItemsController < ApplicationController
 
     # Create and sync a Sure account from an Up account snapshot.
     def create_account_from_up(up_account, account_type)
-      # Linking an account clears any prior skip so a future unlink re-prompts for setup.
-      up_account.update!(ignored: false) if up_account.ignored?
-
       balance = up_account.current_balance || 0
       balance = balance.abs if account_type == "Loan"
       subtype = if account_type == "Depository" && up_account.suggested_account_type == account_type
