@@ -36,6 +36,50 @@ class HoldingTest < ActiveSupport::TestCase
     assert_in_delta 0.75, foreign_holding.weight, 0.001
   end
 
+  # A missing deposit leaves the account's cash negative, so its
+  # balance is below the holdings value. Weights must still stay at or below 100%.
+  test "weight does not exceed 100 percent when account cash is negative" do
+    @account.update!(balance: 3000, cash_balance: 3000 - (3240 + 3720))
+
+    assert_in_delta 3240.0 / (3240 + 3720) * 100, @amzn.weight, 0.001
+    assert_in_delta 3720.0 / (3240 + 3720) * 100, @nvda.weight, 0.001
+  end
+
+  test "weight sums the account holdings once per account instance" do
+    holdings = @account.current_holdings.to_a
+
+    Holding.uncached { assert_queries_count(2) { holdings.each { |holding| 3.times { holding.weight } } } }
+  end
+
+  test "weight sees holdings added before an account reload" do
+    @account.update!(balance: 0)
+    assert_in_delta 3240.0 / (3240 + 3720) * 100, @amzn.weight, 0.001
+
+    @account.holdings.create!(security: Security.create!(ticker: "W1", name: "W1"), date: Date.current, qty: 1, price: 3040, amount: 3040, currency: "USD")
+    @amzn.account.reload
+
+    assert_in_delta 3240.0 / 10_000 * 100, @amzn.weight, 0.001
+  end
+
+  test "weight of a holding outside the current holdings does not exceed 100 percent" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+    eur = @account.holdings.create!(security: Security.create!(ticker: "ASML", name: "ASML"), date: Date.current, qty: 1, price: 10_000, amount: 10_000, currency: "EUR")
+    @account.update!(balance: 50, cash_balance: 50 - 6960)
+
+    assert_in_delta 100, eur.weight, 0.001
+  end
+
+  test "a holding with no exchange rate does not shrink the other holdings' weights" do
+    # Only a provider snapshot lists holdings in other currencies.
+    provider = AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    @account.holdings.update_all(account_provider_id: provider.id)
+    @account.holdings.create!(security: Security.create!(ticker: "7203", name: "Toyota"), date: Date.current, qty: 1, price: 1_000_000, amount: 1_000_000,
+                              currency: "JPY", account_provider_id: provider.id)
+    @account.update!(balance: 7000, cash_balance: 40)
+
+    assert_in_delta 3240.0 / 7000 * 100, @amzn.weight, 0.001
+  end
+
   test "calculates average cost basis" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
@@ -338,6 +382,33 @@ class HoldingTest < ActiveSupport::TestCase
 
     assert_equal Money.new(200), @amzn.avg_cost
     assert_equal BigDecimal("120"), unsaved.avg_cost&.amount
+  end
+
+  # A preloaded cost answers for the attributes it was computed from. Once the
+  # holding changes, the holding's own attributes decide again.
+  test "a holding changed after the preload reads its own cost, not the preloaded one" do
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200.00, date: 1.day.ago.to_date)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100.00, date: Date.current)
+    Holding.preload_avg_costs([ @amzn ])
+    assert_equal Money.new(150), @amzn.avg_cost, "the preload answers for today's date"
+
+    @amzn.date = 1.day.ago.to_date
+
+    assert_equal Money.new(200), @amzn.avg_cost
+  end
+
+  test "a holding saved after the preload reads its own cost, not the preloaded one" do
+    earlier = 400.days.ago.to_date
+    create_trade(@amzn.security, account: @account, qty: 10, price: 200.00, date: earlier)
+    create_trade(@amzn.security, account: @account, qty: 10, price: 100.00, date: Date.current)
+    Holding.preload_avg_costs([ @amzn ])
+    assert_equal Money.new(150), @amzn.avg_cost, "the preload answers for today's date"
+    assert_equal Money.new(150 * @amzn.qty), @amzn.trend.previous, "the trend is built on the preloaded cost"
+
+    @amzn.update!(date: earlier)
+
+    assert_equal Money.new(200), @amzn.avg_cost
+    assert_equal Money.new(200 * @amzn.qty), @amzn.trend.previous
   end
 
   test "calculates total return trend" do
@@ -645,6 +716,56 @@ class HoldingTest < ActiveSupport::TestCase
     assert_equal 0, @account.holdings.where(security: amzn_security).count
   end
 
+  # cost_basis is per share and the merged row carries both sides' units, so
+  # the merge takes the quantity-weighted mean: (5 x 100 + 10 x 40) / 15 = 60.
+  # Neither side's figure, and not their plain mean (70).
+  test "remap_security! merge pins the weighted cost basis" do
+    new_security = create_security("GOOGW", prices: [ { date: Date.current, price: 100.00 } ])
+    existing = @account.holdings.create!(
+      date: @amzn.date, security: new_security, qty: 5, price: 100, amount: 500,
+      currency: "USD", cost_basis: 100
+    )
+    @amzn.update_columns(qty: 10, amount: 2160, cost_basis: 40)
+
+    assert_equal 100, existing.reload.cost_basis
+
+    @amzn.remap_security!(new_security)
+
+    existing.reload
+    assert_equal 15, existing.qty
+    assert_equal 60, existing.cost_basis
+  end
+
+  # When either side has no basis the merge keeps the row merged into as it
+  # was: a known figure is applied to every merged unit, and an unknown one
+  # stays unknown even though the moved side had a figure.
+  test "remap_security! merge with an unknown side keeps the existing basis" do
+    moved_unknown_target = create_security("GOOGU", prices: [ { date: Date.current, price: 100.00 } ])
+    known_existing = @account.holdings.create!(
+      date: @amzn.date, security: moved_unknown_target, qty: 5, price: 100, amount: 500,
+      currency: "USD", cost_basis: 100
+    )
+    @amzn.update_columns(qty: 10, amount: 2160, cost_basis: nil)
+
+    existing_unknown_target = create_security("MSFTU", prices: [ { date: Date.current, price: 100.00 } ])
+    unknown_existing = @account.holdings.create!(
+      date: @nvda.date, security: existing_unknown_target, qty: 5, price: 100, amount: 500,
+      currency: "USD", cost_basis: nil
+    )
+    @nvda.update_columns(qty: 10, amount: 1240, cost_basis: 40)
+
+    @amzn.remap_security!(moved_unknown_target)
+    @nvda.remap_security!(existing_unknown_target)
+
+    known_existing.reload
+    assert_equal 15, known_existing.qty
+    assert_equal 100, known_existing.cost_basis, "the existing figure now covers the moved units too"
+
+    unknown_existing.reload
+    assert_equal 15, unknown_existing.qty
+    assert_nil unknown_existing.cost_basis, "the moved side's 40 is dropped"
+  end
+
   test "reset_security_to_provider! restores original security" do
     old_security = @amzn.security
     new_security = create_security("GOOG", prices: [ { date: Date.current, price: 100.00 } ])
@@ -783,4 +904,13 @@ class HoldingTest < ActiveSupport::TestCase
 
         assert_not_nil holding.avg_cost
       end
+
+    test "weight stays finite for a short holding when the balance and holdings are not positive" do
+      account = families(:empty).accounts.create!(name: "Short only", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+      holding = account.holdings.create!(security: Security.create!(ticker: "SHRT", name: "Short"), date: Date.current,
+                                         qty: 1, price: 1, amount: 1, currency: "USD")
+      holding.update_columns(qty: -1, price: 500, amount: -500)
+
+      assert_equal 1, holding.reload.weight
+    end
 end

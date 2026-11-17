@@ -1,0 +1,24 @@
+---
+hu:
+  settings:
+    payments:
+      show:
+        page_title: Fizetések
+        subscription_subtitle: Frissítsd bankkártyaadataidat
+        subscription_title: Hozzájárulások kezelése
+        currently_on_plan: "Jelenleg a"
+        trialing: "Jelenleg a %{product_name} nyílt demóját használod"
+        trial_days_left:
+          one: "Az adatok %{count} nap múlva törlődnek"
+          other: "Az adatok %{count} nap múlva törlődnek"
+        not_contributing_prefix: "Jelenleg"
+        not_contributing_emphasis: "nem járulsz hozzá"
+        contributions_note: "A(z) %{product_name} felé tett hozzájárulásaid itt jelennek meg."
+        manage: "Kezelés"
+        choose_level: "Szint kiválasztása"
+        payment_via_stripe: "Fizetés Stripe-on keresztül"
+  views:
+    settings:
+      payments:
+        renewal: "A hozzájárulásod %{date}-én megújul."
+        cancellation: "A hozzájárulásod %{date}-én lejár."

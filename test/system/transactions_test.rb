@@ -209,7 +209,7 @@ class TransactionsTest < ApplicationSystemTestCase
     visit transactions_url(per_page: @page_size)
 
     assert_selector match
-    pill_bounds = find("#{match} [title='#{I18n.t("transactions.transfer_match.auto_matched")}']", visible: true).evaluate_script("this.getBoundingClientRect().toJSON()")
+    pill_bounds = find("#{match} [data-testid='transfer-match-pill']", visible: true).evaluate_script("this.getBoundingClientRect().toJSON()")
     amount_bounds = find("##{dom_id(outflow)} p.privacy-sensitive").evaluate_script("this.getBoundingClientRect().toJSON()")
     assert_in_delta pill_bounds["y"] + pill_bounds["height"] / 2,
                     amount_bounds["y"] + amount_bounds["height"] / 2, 0.5

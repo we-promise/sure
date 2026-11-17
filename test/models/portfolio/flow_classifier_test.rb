@@ -252,8 +252,13 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
     shapes.each do |flag, expected|
       entry = create_labelled_transaction(account: @brokerage, label: "Dividend", amount: -10, extra: { "plaid" => { "pending" => flag } })
 
-      assert_equal expected, @family_scope.classify(entry.reload), "Ruby, pending=#{flag.inspect}"
-      assert_equal expected, @family_scope.classify_ids([ entry.id ])[entry.id], "SQL, pending=#{flag.inspect}"
+      if expected.nil?
+        assert_nil @family_scope.classify(entry.reload), "Ruby, pending=#{flag.inspect}"
+        assert_nil @family_scope.classify_ids([ entry.id ])[entry.id], "SQL, pending=#{flag.inspect}"
+      else
+        assert_equal expected, @family_scope.classify(entry.reload), "Ruby, pending=#{flag.inspect}"
+        assert_equal expected, @family_scope.classify_ids([ entry.id ])[entry.id], "SQL, pending=#{flag.inspect}"
+      end
     end
   end
 
@@ -300,8 +305,6 @@ class Portfolio::FlowClassifierTest < ActiveSupport::TestCase
       assert_equal corpus.size, sql.size
       ruby.each do |id, ruby_class|
         entry = corpus.find { |e| e.id == id }
-        # assert_nil / assert_equal split so a nil expectation does not trip
-        # Minitest's deprecation of assert_equal nil.
         message =
           "scope #{classifier.scope_account_ids.size} accounts: #{entry.name} (#{entry.entryable_type}, #{entry.entryable.try(:investment_activity_label).inspect}, kind #{entry.entryable.try(:kind).inspect})"
         if ruby_class.nil?

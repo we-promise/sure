@@ -123,7 +123,11 @@ class PlaidAccount::Liabilities::StudentLoanProcessorTest < ActiveSupport::TestC
 
       PlaidAccount::Liabilities::StudentLoanProcessor.new(@plaid_account).process
 
-      assert_equal expected, @plaid_account.current_account.loan.reload.term_months, "payoff on #{payoff}"
+      if expected.nil?
+        assert_nil @plaid_account.current_account.loan.reload.term_months, "payoff on #{payoff}"
+      else
+        assert_equal expected, @plaid_account.current_account.loan.reload.term_months, "payoff on #{payoff}"
+      end
     end
   end
 

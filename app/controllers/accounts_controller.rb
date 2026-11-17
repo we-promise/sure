@@ -1,5 +1,6 @@
 class AccountsController < ApplicationController
   include StreamExtensions
+  include FilterClearable
 
   before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
   before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
@@ -16,6 +17,11 @@ class AccountsController < ApplicationController
           .with_attached_logo
           .includes(:accountable, :account_providers, :plaid_account, :simplefin_account)
           .order(:name)
+    @reconciliation_indicators = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts(@manual_accounts)
+    else
+      {}
+    end
     @financekit_accounts = Current.family.accounts
       .where(id: @accessible_account_ids).where.not(status: :pending_deletion)
       .joins(:account_providers).where(account_providers: { provider_type: "FinancekitAccountLineage" })
@@ -46,6 +52,7 @@ class AccountsController < ApplicationController
     @coinspot_items = visible_provider_items(family.coinspot_items.ordered.with_attached_logo.includes(:coinspot_accounts, :accounts))
     @trading212_items = visible_provider_items(family.trading212_items.ordered.with_attached_logo.includes(:trading212_accounts)).sort_by(&:created_at)
     @questrade_items = visible_provider_items(family.questrade_items.ordered.with_attached_logo.includes(:accounts, questrade_accounts: :account_provider))
+    @sharesight_items = visible_provider_items(family.sharesight_items.ordered.with_attached_logo.includes(sharesight_accounts: [ :account, :linked_account ])).sort_by(&:created_at)
     @wise_items = visible_provider_items(family.wise_items.ordered.includes(:wise_accounts, :accounts))
     @trade_republic_items = visible_provider_items(
       family.trade_republic_items.ordered.includes(trade_republic_accounts: { account_provider: :account })
@@ -97,6 +104,9 @@ class AccountsController < ApplicationController
     # date beside a table shaded against another.
     @as_of = Date.current
     @accessible_account_ids = Current.user.accessible_accounts.pluck(:id).to_set
+    @reconciliation_indicator = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts([ @account ])[@account.id]
+    end
     @q = activity_search_params
     entries = @account.entries.excluding_split_parents.search(@q, family).reverse_chronological.includes(:entryable)
     if statement_tab_active?
@@ -216,21 +226,7 @@ class AccountsController < ApplicationController
   # activity feed has no cross-request stored filters to update, so this only
   # needs to redirect with one param removed from the current query string.
   def clear_filter
-    q_params = activity_search_params.to_h
-
-    param_key = params[:param_key]
-    param_value = params[:param_value]
-
-    if q_params[param_key].is_a?(Array)
-      q_params[param_key].delete(param_value)
-      q_params.delete(param_key) if q_params[param_key].empty?
-    else
-      q_params.delete(param_key)
-    end
-
-    q_params.delete("amount_operator") unless q_params["amount"].present?
-
-    redirect_to account_path(@account, q: q_params.presence, tab: "activity", page: params[:page], per_page: params[:per_page])
+    redirect_to account_path(@account, q: without_cleared_filter(activity_search_params.to_h), tab: "activity", page: params[:page], per_page: params[:per_page])
   end
 
   def sparkline
@@ -456,7 +452,7 @@ class AccountsController < ApplicationController
     def activity_search_params
       q = params.fetch(:q, {}).permit(
         :search, :start_date, :end_date, :amount, :amount_operator,
-        categories: [], tags: [], merchants: [], types: [], status: []
+        categories: [], tags: [], merchants: [], types: [], status: [], reconcile_status: []
       )
       q.delete(:amount_operator) unless q[:amount].present?
       q
@@ -546,6 +542,7 @@ class AccountsController < ApplicationController
         @coinspot_items,
         @trading212_items,
         @questrade_items,
+        @sharesight_items,
         @wise_items,
         @trade_republic_items,
         @onchain_wallet_items

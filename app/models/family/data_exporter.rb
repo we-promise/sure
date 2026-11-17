@@ -248,13 +248,20 @@ class Family::DataExporter
 
       # Export accounts with full accountable data
       @family.accounts.includes(:accountable).find_each do |account|
+        data = account.as_json(
+          include: {
+            accountable: {}
+          }
+        )
+        # A property's address lives in its own table, so it is not part of
+        # the accountable's columns.
+        if account.accountable.is_a?(Property) && (address = account.accountable.address)
+          data["accountable"]["address"] = address.as_json(only: Family::DataImporter::PROPERTY_ADDRESS_ATTRIBUTES)
+        end
+
         lines << {
           type: "Account",
-          data: account.as_json(
-            include: {
-              accountable: {}
-            }
-          )
+          data: data
         }.to_json
       end
 
@@ -804,7 +811,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if condition.condition_type == "transaction_merchant"
-        return rule_operand(condition.value, type: "Merchant", relation: :merchants)
+        return rule_operand(condition.value, type: "Merchant", relation: :available_merchants)
       end
 
       # Map tag UUIDs to names for portability
@@ -825,7 +832,7 @@ class Family::DataExporter
 
       # Map merchant UUIDs to names for portability
       if action.action_type == "set_transaction_merchant"
-        return rule_operand(action.value, type: "Merchant", relation: :merchants, fallback_to_name: true)
+        return rule_operand(action.value, type: "Merchant", relation: :available_merchants, fallback_to_name: true)
       end
 
       # Map tag UUIDs to names for portability. Stored as a comma-separated

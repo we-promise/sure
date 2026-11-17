@@ -26,6 +26,10 @@ zh-CN:
         other: 已导入 %{count} 个钱包
       none_selected: 未选择钱包
       no_accounts: 没有可导入的钱包
+    select_accounts:
+      connection_unavailable: 该 Coinbase 连接不可用。请在提供商设置中选择一个连接。
+      no_credentials_configured: 请先在提供商设置中连接 Coinbase，然后再添加其钱包。
+      select_connection: 请在提供商设置中选择一个 Coinbase 连接。
     coinbase_item:
       provider_name: Coinbase
       syncing: 正在同步...

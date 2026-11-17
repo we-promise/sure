@@ -32,11 +32,21 @@ class Family::DataImporter
   end
 
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  PROPERTY_DETAIL_ATTRIBUTES = %w[year_built area_value area_unit].freeze
+  PROPERTY_ADDRESS_ATTRIBUTES = %w[line1 line2 locality region county postal_code country].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
+
+  # What the loan and credit card forms edit, restored on import. The loan's
+  # rate schedule is restored separately (see assign_liability_details).
+  LOAN_DETAIL_ATTRIBUTES = %w[
+    interest_rate rate_type term_months start_date down_payment initial_balance
+    insurance_rate insurance_rate_type day_count_convention principal_only_transfers
+  ].freeze
+  CREDIT_CARD_DETAIL_ATTRIBUTES = %w[apr annual_fee minimum_payment available_credit due_day statement_close_day expiration_date].freeze
 
   def self.accountable_class_for(type)
     ACCOUNTABLE_TYPE_CLASSES[type.to_s]
@@ -78,7 +88,9 @@ class Family::DataImporter
     "Rule" => "rules"
   }.freeze
 
-  def initialize(family, ndjson_content, import_session: nil, import: nil)
+  # account_targets maps source account IDs to existing accounts that the
+  # import's records go into instead of accounts it creates.
+  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {})
     @family = family
     @ndjson_content = ndjson_content
     @import_session = import_session
@@ -96,6 +108,7 @@ class Family::DataImporter
       securities: {},
       rules: {}
     }
+    account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
     @created_accounts = []
@@ -282,6 +295,25 @@ class Family::DataImporter
       account.entries.find_by(source: session_entry_source, external_id: external_id)
     end
 
+    # A missing or null value keeps the column's default, so older exports,
+    # which carry none of these, still import.
+    def assign_liability_details(accountable, accountable_data)
+      attributes = case accountable
+      when Loan then LOAN_DETAIL_ATTRIBUTES
+      when CreditCard then CREDIT_CARD_DETAIL_ATTRIBUTES
+      end
+      return unless attributes
+
+      accountable.assign_attributes(accountable_data.slice(*attributes).compact)
+
+      # Through the form's own parser, so a schedule the loan could not read
+      # back is rejected instead of stored.
+      schedule = accountable_data["variable_rate_schedule"]
+      if accountable.is_a?(Loan) && schedule.is_a?(Hash)
+        accountable.rate_changes = schedule.map { |date, rate| { "effective_date" => date, "rate" => rate } }
+      end
+    end
+
     def import_accounts(records)
       records.each do |record|
         data = record["data"]
@@ -307,6 +339,7 @@ class Family::DataImporter
           # Build accountable
           accountable = accountable_class.new
           accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+          assign_liability_details(accountable, accountable_data)
 
           # Copy any other accountable attributes
           safe_accountable_attrs = %w[subtype locked_attributes]
@@ -315,6 +348,8 @@ class Family::DataImporter
               accountable.send("#{attr}=", accountable_data[attr])
             end
           end
+
+          assign_property_details(accountable, accountable_data) if accountable.is_a?(Property)
 
           account = @family.accounts.build(accountable: accountable)
         end
@@ -351,6 +386,16 @@ class Family::DataImporter
         @created_accounts << account if created
         increment_summary("Account", created ? :created : :updated)
       end
+    end
+
+    # What the property form edits. Provider links (avm_*) are left out: the
+    # restored family has to link its own provider. A missing or null value
+    # keeps the model's default, such as the area unit.
+    def assign_property_details(property, accountable_data)
+      property.assign_attributes(accountable_data.slice(*PROPERTY_DETAIL_ATTRIBUTES).compact)
+
+      address_data = accountable_data["address"]
+      property.build_address(address_data.slice(*PROPERTY_ADDRESS_ATTRIBUTES)) if address_data.is_a?(Hash)
     end
 
     def importable_account_status(status)
@@ -934,6 +979,10 @@ class Family::DataImporter
           merchant_id: new_merchant_id,
           kind: data["kind"] || "standard"
         )
+        # Source-system metadata, such as the ID that lets a later import from
+        # that system recognise the transaction, kept out of external_id so
+        # provider sync can still claim the entry.
+        transaction.extra = transaction.extra.merge(data["extra"]) if data["extra"].is_a?(Hash)
 
         entry ||= Entry.new(entryable: transaction)
         entry.assign_attributes(
@@ -949,6 +998,9 @@ class Family::DataImporter
           entry.external_id = session_entry_external_id("Transaction", old_id)
           entry.source = session_entry_source
         end
+        # Records from another system may lock the entry against provider sync
+        # overwrites, as the CSV importer does.
+        entry.import_locked = true if truthy?(data["import_locked"])
 
         entry.save!
 
@@ -1519,7 +1571,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if condition_type == "transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(condition_data, value)
       end
 
       # Map tag names to IDs
@@ -1551,7 +1603,7 @@ class Family::DataImporter
 
       # Map merchant names to IDs
       if action_type == "set_transaction_merchant"
-        return find_or_create_rule_merchant(value).id
+        return resolve_rule_merchant_id(action_data, value)
       end
 
       value
@@ -1627,6 +1679,18 @@ class Family::DataImporter
         classification_unused: "expense",
         lucide_icon: "shapes"
       )
+    end
+
+    # A merchant this import already mapped (a FamilyMerchant, or a reused
+    # ProviderMerchant, see import_provider_merchants) keeps the rule on the same
+    # record as the restored transactions. Anything else is found or created by
+    # name.
+    def resolve_rule_merchant_id(data, name)
+      value_ref = data["value_ref"]
+      ref_id = value_ref["id"] if value_ref.is_a?(Hash) && value_ref["type"] == "Merchant"
+      mapped = mapped_id(:merchants, ref_id.to_s, record_type: "Rule", required: false) if ref_id.present?
+
+      mapped || find_or_create_rule_merchant(name).id
     end
 
     def find_or_create_rule_merchant(name)

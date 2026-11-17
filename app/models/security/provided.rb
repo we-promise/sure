@@ -100,6 +100,7 @@ module Security::Provided
             exchange_operating_mic: ps[:exchange_operating_mic],
             country_code: ps[:country_code],
             search_currency: ps[:currency],
+            search_isin: ps[:isin],
             price_provider: provider_key
           )
           all_results << security
@@ -131,7 +132,8 @@ module Security::Provided
           response.data.map do |ps|
             { symbol: ps.symbol, name: ps.name, logo_url: ps.logo_url,
               exchange_operating_mic: ps.exchange_operating_mic, country_code: ps.country_code,
-              currency: ps.respond_to?(:currency) ? ps.currency : nil }
+              currency: ps.respond_to?(:currency) ? ps.currency : nil,
+              isin: ps.respond_to?(:isin) ? ps.isin : nil }
           end
         end
       rescue => e
@@ -139,8 +141,25 @@ module Security::Provided
         nil
       end
 
+      ISIN_FORMAT = /\A[A-Z]{2}[A-Z0-9]{9}\d\z/
+
+      # True when the query is a well-formed ISIN: 2 letters, 9 alphanumerics and a
+      # check digit (letters expand to two digits, then the Luhn check applies).
+      def isin_query?(query)
+        return false unless query.match?(ISIN_FORMAT)
+
+        digits = query.chars.map { |c| c.match?(/\d/) ? c : (c.ord - 55).to_s }.join
+        sum = digits.reverse.chars.each_with_index.sum do |c, i|
+          n = c.to_i
+          n *= 2 if i.odd?
+          n > 9 ? n - 9 : n
+        end
+        (sum % 10).zero?
+      end
+
       # Scores and sorts search results so the most relevant matches appear first.
       # Scoring criteria (lower = better):
+      #  -1: the query is a valid ISIN and the result carries that exact ISIN
       #   0: exact ticker match
       #   1: ticker starts with query
       #   2: name contains query
@@ -149,10 +168,13 @@ module Security::Provided
       def rank_search_results(results, symbol, country_code)
         query = symbol.upcase
         user_country = country_code&.upcase
+        isin_search = isin_query?(query)
 
         results.sort_by do |s|
           ticker_up = s.ticker.upcase
-          relevance = if ticker_up == query
+          relevance = if isin_search && s.search_isin.present? && s.search_isin.upcase == query
+            -1
+          elsif ticker_up == query
             0
           elsif ticker_up.start_with?(query)
             1
