@@ -547,6 +547,21 @@ class McpControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "tools/list omits rule write tools for a guest" do
+    with_guest_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/list").to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      tool_names = JSON.parse(response.body)["result"]["tools"].map { |t| t["name"] }
+
+      assert_includes tool_names, "get_rules"
+      %w[create_rule update_rule apply_rule preview_rule].each do |name|
+        assert_not_includes tool_names, name
+      end
+    end
+  end
+
   # -- tools/call --
 
   test "tools/call rejects a preview tool for a user without preview features" do
@@ -561,6 +576,51 @@ class McpControllerTest < ActionDispatch::IntegrationTest
       body = JSON.parse(response.body)
       assert_equal(-32602, body["error"]["code"])
       assert_includes body["error"]["message"], "list_account_statements"
+    end
+  end
+
+  test "tools/call creates a rule for an admin" do
+    with_mcp_env do
+      assert_difference "Rule.count", 1 do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_nil JSON.parse(response.body)["error"]
+    end
+  end
+
+  test "tools/call rejects create_rule for a guest" do
+    with_guest_mcp_env do
+      assert_no_difference "Rule.count" do
+        post "/mcp", params: jsonrpc_request("tools/call", { name: "create_rule", arguments: rule_arguments }, id: 7).to_json,
+             headers: mcp_headers(@token)
+      end
+
+      assert_response :ok
+      assert_equal(-32602, JSON.parse(response.body)["error"]["code"])
+    end
+  end
+
+  test "tools/call rejects apply_rule for a guest" do
+    rule = @user.family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "zxq coffee" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: categories(:food_and_drink).id } ]
+    )
+    # Preview tokens are bound to the user who previewed, so the guest needs its
+    # own: before the fix, preview_rule was open to guests too.
+    token = Assistant::Function::PreviewRule.new(family_guest).call("rule_id" => rule.id)[:preview][:preview_token]
+    assert token, "a preview of a saved rule should issue a token"
+
+    with_guest_mcp_env do
+      post "/mcp", params: jsonrpc_request("tools/call", { name: "apply_rule", arguments: { rule_id: rule.id, preview_token: token } }, id: 8).to_json,
+           headers: mcp_headers(@token)
+
+      assert_response :ok
+      assert_not rule.reload.active, "apply_rule activated the rule for a guest"
+      assert_equal(-32602, JSON.parse(response.body).dig("error", "code"))
     end
   end
 
@@ -819,6 +879,17 @@ class McpControllerTest < ActionDispatch::IntegrationTest
 
     def with_mcp_env(&block)
       with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => @user.email, &block) # pipelock:ignore
+    end
+
+    def with_guest_mcp_env(&block)
+      with_env_overrides("MCP_API_TOKEN" => @token, "MCP_USER_EMAIL" => family_guest.email, &block) # pipelock:ignore
+    end
+
+    def rule_arguments
+      {
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: "zxq" } ],
+        actions: [ { action_type: "set_transaction_category", value: categories(:food_and_drink).id } ]
+      }
     end
 
     def with_mcp_cache
