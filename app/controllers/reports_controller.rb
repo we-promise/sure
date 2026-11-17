@@ -1,6 +1,8 @@
 class ReportsController < ApplicationController
   include Periodable
 
+  SIGN_AGNOSTIC_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
+
   # Allow API key authentication for exports (for Google Sheets integration)
   # Note: We run authentication_for_export which handles both session and API key auth
   skip_authentication only: :export_transactions
@@ -139,6 +141,9 @@ class ReportsController < ApplicationController
       # Transactions breakdown
       @transactions = build_transactions_breakdown
 
+      @biggest_expenses_limit = Current.user.reports_biggest_expenses_limit
+      @biggest_expenses = build_biggest_expenses(@biggest_expenses_limit)
+
       # Investment metrics
       @investment_metrics = build_investment_metrics
 
@@ -156,12 +161,14 @@ class ReportsController < ApplicationController
     end
 
     def preferences_params
-      # Only the two reports keys are passed on; User#update_section_preferences
-      # drops any value that is not an array of keys or a hash of flags.
+      # Only the reports keys are passed on; User#update_reports_preferences
+      # drops any value that is not an array of keys, a hash of flags or an
+      # offered limit.
       prefs = params.require(:preferences)
       {
         "reports_collapsed_sections" => prefs[:reports_collapsed_sections],
-        "reports_section_order" => prefs[:reports_section_order]
+        "reports_section_order" => prefs[:reports_section_order],
+        "reports_biggest_expenses_limit" => prefs[:reports_biggest_expenses_limit]
       }
     end
 
@@ -220,6 +227,16 @@ class ReportsController < ApplicationController
             filter_tags: filter_tags
           },
           visible: @has_accounts,
+          collapsible: true
+        },
+        {
+          key: "biggest_expenses",
+          title: "reports.biggest_expenses.title",
+          partial: "reports/biggest_expenses",
+          locals: { expenses: @biggest_expenses },
+          header_partial: "reports/biggest_expenses_limit",
+          header_locals: { limit: @biggest_expenses_limit },
+          visible: @has_accounts && @biggest_expenses.any?,
           collapsible: true
         }
       ]
@@ -423,21 +440,51 @@ class ReportsController < ApplicationController
       end
     end
 
-    def build_transactions_breakdown
-      # Base query: all transactions in the period
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+    # The period's reportable transactions with every Reports filter applied
+    # (finance account scoping, tax-advantaged exclusion, tags, ...).
+    def report_transactions_scope(excluded_kinds:)
       transactions = Transaction
         .joins(:entry)
         .joins(entry: :account)
         .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
         .merge(Account.included_in_reports)
         .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Current.family.analytics_excluded_kinds)
+        .where.not(kind: excluded_kinds)
         .includes(entry: :account, category: :parent)
       transactions = exclude_tax_advantaged_accounts(transactions)
 
-      # Apply filters (includes finance account scoping)
-      transactions = apply_transaction_filters(transactions)
+      apply_transaction_filters(transactions)
+    end
+
+    # The period's largest expenses in the family currency, largest first.
+    # Unlike the breakdown it keeps one-time expenses (the view marks them):
+    # a one-off is exactly what this list is for. Trades are left out, as in
+    # the income statement.
+    def build_biggest_expenses(limit)
+      family_currency = Current.family.currency
+      # Loan payments and investment contributions are expenses whatever their
+      # sign (some importers store them negative), as in the income statement.
+      expenses = report_transactions_scope(excluded_kinds: Current.family.analytics_excluded_kinds - [ "one_time" ])
+        .where("entries.amount > 0 OR (entries.amount < 0 AND transactions.kind IN (?))", SIGN_AGNOSTIC_EXPENSE_KINDS)
+      expense_amount_sql = Arel.sql(ActiveRecord::Base.sanitize_sql_array([
+        "CASE WHEN transactions.kind IN (?) THEN ABS(entries.amount) ELSE entries.amount END DESC", SIGN_AGNOSTIC_EXPENSE_KINDS
+      ]))
+
+      # The overall top `limit` is always among the top `limit` in the family
+      # currency plus the foreign-currency rows, so only those get loaded.
+      candidates = expenses.where(entries: { currency: family_currency }).order(expense_amount_sql).limit(limit).to_a +
+        expenses.where.not(entries: { currency: family_currency }).to_a
+
+      convert = report_amount_converter(family_currency)
+      candidates.filter_map do |transaction|
+        amount = convert.call(transaction.entry)
+        { transaction: transaction, entry: transaction.entry, amount: Money.new(amount, family_currency) } if amount
+      end.sort_by { |expense| -expense[:amount].amount }.first(limit)
+    end
+
+    def build_transactions_breakdown
+      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
+      transactions = report_transactions_scope(excluded_kinds: Current.family.analytics_excluded_kinds)
 
       # Get trades in the period (matching income_statement logic)
       trades = Trade
@@ -497,6 +544,9 @@ class ReportsController < ApplicationController
       # Helper to process an entry (transaction or trade)
       convert = report_amount_converter(family_currency)
       process_entry = ->(category, entry, is_trade) do
+        # No money moved (e.g. a 0.00 card authorisation): neither income nor expense
+        next if entry.amount.zero?
+
         type = entry.amount > 0 ? "expense" : "income"
         converted_amount = convert.call(entry)
         next if converted_amount.nil?
@@ -857,35 +907,6 @@ class ReportsController < ApplicationController
       scope
     end
 
-    def build_transactions_breakdown_for_export
-      # Get flat transactions list (not grouped) for export
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
-      transactions = Transaction
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .merge(Account.included_in_reports)
-        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Current.family.analytics_excluded_kinds)
-        .includes(entry: :account, category: [])
-      transactions = exclude_tax_advantaged_accounts(transactions)
-
-      transactions = apply_transaction_filters(transactions)
-
-      sort_by = params[:sort_by] || "date"
-      # Whitelist sort_direction to prevent SQL injection
-      sort_direction = %w[asc desc].include?(params[:sort_direction]&.downcase) ? params[:sort_direction].upcase : "DESC"
-
-      case sort_by
-      when "date"
-        transactions.order("entries.date #{sort_direction}")
-      when "amount"
-        transactions.order("entries.amount #{sort_direction}")
-      else
-        transactions.order("entries.date DESC")
-      end
-    end
-
     def build_monthly_breakdown_for_export
       # Generate list of months in the period
       months = []
@@ -919,6 +940,7 @@ class ReportsController < ApplicationController
       # Process transactions
       transactions.each do |transaction|
         entry = transaction.entry
+        next if entry.amount.zero? # neither income nor expense
         is_expense = entry.amount > 0
         type = is_expense ? "expense" : "income"
         category_name = transaction.category&.name || "Uncategorized"
