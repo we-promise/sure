@@ -3,13 +3,7 @@
     <% dialog.with_header(title: dialog_t("title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <div class="flex items-start gap-3">
-          <%= helpers.icon("alert-circle", class: "text-warning w-5 h-5 shrink-0 mt-0.5") %>
-          <div class="text-sm text-secondary">
-            <p class="font-medium text-primary mb-2"><%= dialog_t("heading") %></p>
-            <p><%= dialog_t("description") %></p>
-          </div>
-        </div>
+        <%= render DS::Alert.new(title: dialog_t("heading"), message: dialog_t("description"), variant: :warning) %>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
           <p class="font-medium text-primary"><%= dialog_t("setup_steps") %></p>

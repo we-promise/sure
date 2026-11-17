@@ -257,10 +257,12 @@ class LunchflowItem::Importer
     end
 
     def fetch_and_store_transactions(lunchflow_account)
-      # A windowed fetch doesn't start at the chosen start date, so it says
-      # nothing about how far back the account's history reaches.
-      fetches_history = sync_start_date.blank? && history_needed?(lunchflow_account)
+      fetches_history = history_needed?(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
+      # A window that starts after the last fetch leaves the days between them
+      # unfetched, so the next fetch still resumes from the last one.
+      synced_through = lunchflow_account.transactions_synced_through
+      leaves_gap = sync_start_date.present? && synced_through.present? && start_date > synced_through.to_date
       fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
 
@@ -396,7 +398,8 @@ class LunchflowItem::Importer
           Rails.logger.warn "LunchflowItem::Importer - Failed to fetch holdings for account #{lunchflow_account.account_id}: #{e.message}"
         end
 
-        sync_markers = { transactions_synced_through: fetch_started_at }
+        sync_markers = {}
+        sync_markers[:transactions_synced_through] = fetch_started_at unless leaves_gap
         sync_markers[:history_synced_from] = start_date if fetches_history
         lunchflow_account.update!(sync_markers)
 
