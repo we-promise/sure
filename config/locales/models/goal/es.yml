@@ -16,9 +16,21 @@ es:
         goal:
           attributes:
             base:
+              missing_exchange_rate: Aún no hay tipo de cambio para una de las cuentas de este objetivo, así que no se puede completar.
               at_least_one_linked_account_required: Elige al menos una cuenta para financiar este objetivo.
+              whole_account_conflict_on_restore: 'No se puede restaurar este objetivo: “%{account_name}” está ahora reservada por completo para “%{goal_name}”. Indica primero un importe en uno de ellos.'
+            target_mode:
+              months_requires_maintained: Solo un fondo a mantener puede tener una meta en meses de gastos.
+            target_months:
+              blank: Indica cuántos meses de gastos debe cubrir este fondo.
+              only_with_months_mode: Los meses de gastos solo se aplican cuando la meta se fija así.
             linked_accounts:
               must_be_fundable: Todas las cuentas vinculadas deben ser cuentas de efectivo, de inversión o de criptomonedas.
               must_belong_to_family: Las cuentas vinculadas deben pertenecer a la misma familia que el objetivo.
+            kind:
+              locked_while_released: Reabre este objetivo antes de convertirlo en un fondo.
+              locked_once_consumed: Este objetivo ya ha registrado dinero como gastado, así que no puede convertirse en un fondo.
+            target_amount:
+              below_consumed: No puedes fijar una meta por debajo de lo que este objetivo ya ha registrado como gastado.
             currency:
               locked_after_linked: No se puede cambiar la moneda cuando el objetivo ya está vinculado a cuentas.
