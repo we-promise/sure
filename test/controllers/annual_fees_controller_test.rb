@@ -34,4 +34,28 @@ class AnnualFeesControllerTest < ActionDispatch::IntegrationTest
 
     assert_select "[data-testid='annual-fee']", text: /\$120/
   end
+
+  test "converts annual and upcoming totals to the family currency" do
+    today = Date.current
+    @account.credit_card.update!(annual_fee: 100, annual_fee_month: today.month, annual_fee_day: today.day)
+    @account.family.accounts.create!(name: "Euro card", balance: 0, currency: "EUR", owner: users(:family_admin),
+                                    accountable: CreditCard.new(annual_fee: 100, annual_fee_month: today.month, annual_fee_day: today.day))
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: today, rate: 1.2)
+
+    get annual_fees_url
+
+    assert_response :success
+    assert_select ".privacy-sensitive", text: "$220.00", count: 2
+  end
+
+  test "does not show an unconverted total when an exchange rate is unavailable" do
+    @account.update!(currency: "EUR")
+    @account.credit_card.update!(annual_fee: 100)
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+
+    get annual_fees_url
+
+    assert_response :success
+    assert_select ".privacy-sensitive", text: "—"
+  end
 end
