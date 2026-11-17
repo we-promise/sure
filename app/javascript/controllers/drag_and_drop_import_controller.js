@@ -25,7 +25,15 @@ export default class extends Controller {
     document.removeEventListener("drop", this.boundDrop)
   }
 
+  // Only files dragged in from outside the page open the import overlay;
+  // dragging an element on the page (e.g. reordering sidebar accounts)
+  // must not.
+  carriesFiles(event) {
+    return Array.from(event.dataTransfer?.types || []).includes("Files")
+  }
+
   dragEnter(event) {
+    if (!this.carriesFiles(event)) return
     event.preventDefault()
     this.dragDepth++
     if (this.dragDepth === 1) {
@@ -34,10 +42,12 @@ export default class extends Controller {
   }
 
   dragOver(event) {
+    if (!this.carriesFiles(event)) return
     event.preventDefault()
   }
 
   dragLeave(event) {
+    if (!this.carriesFiles(event)) return
     event.preventDefault()
     this.dragDepth--
     if (this.dragDepth <= 0) {
@@ -47,6 +57,7 @@ export default class extends Controller {
   }
 
   drop(event) {
+    if (!this.carriesFiles(event)) return
     event.preventDefault()
     this.dragDepth = 0
     this.overlayTarget.classList.add("hidden")
