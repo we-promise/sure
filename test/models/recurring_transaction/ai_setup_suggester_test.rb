@@ -14,9 +14,8 @@ class RecurringTransaction::AiSetupSuggesterTest < ActiveSupport::TestCase
   test "raises when bill setup isn't available" do
     use_no_ai
 
-    assert_raises(Suggester::Error) do
-      Suggester.new(@family, user: @user).suggest_from_entries(@entries)
-    end
+    error = assert_raises(Suggester::Error) { Suggester.new(@family, user: @user).suggest_from_entries(@entries) }
+    assert_equal "Bill setup is unavailable: not_configured", error.message
   end
 
   test "raises with the error when every route fails" do

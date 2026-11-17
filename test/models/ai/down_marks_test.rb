@@ -26,8 +26,8 @@ class Ai::DownMarksTest < ActiveSupport::TestCase
     Ai::DownMarks.mark(timed_out, Ai::Error::Timeout.new("slow"))
     Ai::DownMarks.mark(rejected, Ai::Error::Unauthorized.new("401"))
 
-    assert Ai::DownMarks.passing?(timed_out)
-    assert_not Ai::DownMarks.passing?(rejected)
+    assert_equal :passing, Ai::DownMarks.state(timed_out)
+    assert_equal :failing, Ai::DownMarks.state(rejected)
   end
 
   test "a route's state comes from one read of each mark, so one expiring mid-check can't split down from why" do

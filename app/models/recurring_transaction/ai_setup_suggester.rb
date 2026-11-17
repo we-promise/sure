@@ -47,14 +47,14 @@ class RecurringTransaction
     private
       # Runs on the web thread: smart-fill and smart-configure wait for the answer.
       def run(charges:, current_config:)
-        raise Error, "No LLM provider configured" unless Ai.available?(:bill_setup, family:, user:)
         raise Error, "No charge history to analyze" if charges.empty?
 
         result = Ai::Generations::SuggestBillSetup.new(
           charges:, categories: family.categories.pluck(:name), current_config:, family:, user:
         ).call
 
-        raise Error, "Provider failed: #{result.error&.message || result.availability&.reason}" unless result.success?
+        raise Error, "Bill setup is unavailable: #{result.availability.reason}" if result.unavailable?
+        raise Error, "Provider failed: #{result.error.message}" unless result.success?
 
         normalize(result.value)
       end

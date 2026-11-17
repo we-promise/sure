@@ -33,8 +33,6 @@ module Ai::DownMarks
 
   def down?(route) = state(route) != :up
 
-  def passing?(route) = state(route) == :passing
-
   def key_for(route, error)
     case error
     when Ai::Error::Unreachable then server_key(route.endpoint)

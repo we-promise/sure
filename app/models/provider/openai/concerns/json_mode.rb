@@ -6,13 +6,8 @@
 # OpenAI-compatible runtimes -- LM Studio, for example, answers
 # "'response_format.type' must be 'json_schema' or 'text'" and never reaches the
 # model. Self-hosters need a way to turn the constraint off without patching the
-# app, which is what JSON_MODE_NONE is for.
-#
-# This concern was extracted from the identical copies that previously lived in
-# AutoCategorizer, AutoMerchantDetector, and ProviderMerchantEnhancer. Those
-# classes resolved the mode but not all of them applied it, and the document
-# extraction path (BankStatementExtractor, PdfProcessor) applied neither -- it
-# hardcoded `json_object`.
+# app, which is what JSON_MODE_NONE is for. Only the PDF workers use it; generations
+# go through Ai::Transport::JsonMode.
 module Provider::Openai::Concerns::JsonMode
   extend ActiveSupport::Concern
 
