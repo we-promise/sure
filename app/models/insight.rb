@@ -9,7 +9,7 @@
 # "Acknowledged" rather than "dismissed" because that is what the state has
 # always actually meant. GenerateInsightsJob resurfaces a row whose bucketed
 # metadata changes materially even if the user acknowledged the stale version,
-# and 6 of 8 generators scope `dedup_key` to a month, so acknowledging July's
+# and most generators scope `dedup_key` to a month, so acknowledging July's
 # budget card says nothing about August's. The contract is: acknowledgement
 # covers the numbers you saw; new numbers are a new insight. The DB value stays
 # `"dismissed"` (and the `dismissed_at` column keeps its name) so this needed no
@@ -27,7 +27,7 @@ class Insight < ApplicationRecord
     budget_at_risk
     budget_on_track
     maintained_goal_depleted
-    fixed_commitments_ratio
+    loan_payment_change
   ].freeze
 
   # How many the dashboard widget shows. Shared so PagesController (first render)
