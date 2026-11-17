@@ -440,6 +440,35 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  test "a part-sold lot choice reads whole shares back across a reverse split" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMY", 30)
+      lot = trade(security, 10, 12, 2)
+      trade(security, -3, 25, 3)
+      sale = trade(security, -2, 25, 4)
+      Security::Split.create!(security: security, ex_date: d(6), numerator: 1, denominator: 3, source: "manual")
+      materialize(:forward)
+
+      assert_equal [ 7, 10 ], shares_left(sale, lot)
+    end
+  end
+
+  # A quantity stores 18 places, so a lot this sale took all of reads its full
+  # size back, not the size cut to fewer places.
+  test "a lot choice with an 18-place quantity reads its full size left" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMQ", 30)
+      size = BigDecimal("0.123456789012345678")
+      lot = trade(security, size, 12, 2)
+      sale = trade(security, -size, 25, 4)
+      materialize(:forward)
+
+      assert_equal [ size, size ], shares_left(sale, lot)
+    end
+  end
+
   # A split goes ex at the open, so a sale on its ex-date is already in the
   # new shares: the split restates the purchase, not the sale's own figures.
   test "a split on the sale's own date counts toward the purchase size only" do

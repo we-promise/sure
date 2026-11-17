@@ -135,6 +135,7 @@ class Trade < ApplicationRecord
   # What was left of a lot when this sale ran, and what the lot was bought
   # as, both in the shares of the sale's date.
   LotShares = Data.define(:left, :size)
+  LOT_SHARES_TOLERANCE = BigDecimal("1e-15")
 
   # The LotShares of each of `lots` (#lot_choices) by entry id, as of the last
   # sync: the lot's stored quantity, in the shares of the position's latest
@@ -156,11 +157,13 @@ class Trade < ApplicationRecord
     sale_order = [ entry.date, entry.created_at || Time.current ]
 
     lots.select { |lot| stored.key?(lot.id) && ([ lot.date, lot.created_at ] <=> sale_order) <= 0 }.to_h do |lot|
-      # A reverse split stores a repeating decimal, so undoing it is off in the
-      # last places (10 reads 10.000000000000000001); drop those places.
-      left = (Security::Split.unscale(stored[lot.id], split_factor(splits, entry.date, synced_on)) +
-        taken.fetch(lot.id, []).sum(BigDecimal("0")) { |_, date, qty| Security::Split.unscale(qty, split_factor(splits, entry.date, date)) }).round(16)
+      left = Security::Split.unscale(stored[lot.id], split_factor(splits, entry.date, synced_on)) +
+        taken.fetch(lot.id, []).sum(BigDecimal("0")) { |_, date, qty| Security::Split.unscale(qty, split_factor(splits, entry.date, date)) }
       size = Security::Split.scale(lot.trade.qty, split_factor(splits, lot.date, entry.date))
+      # A reverse split stores a repeating decimal, so undoing it is off in the
+      # last places (10 reads 10.000000000000000001). A lot within that of its
+      # size reads as its size, and anything else drops those places.
+      left = (left - size).abs < LOT_SHARES_TOLERANCE ? size : left.round(16)
       [ lot.id, LotShares.new(left: left, size: size) ]
     end
   end
