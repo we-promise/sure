@@ -79,6 +79,8 @@ class Loan
     #                      repaid on the payment date itself, after that
     #                      day's payment
     #   closing_balance    a balance confirmed for the payment date itself
+    #   unused_repayment   an extra repayment after a balance confirmed at
+    #                      zero earlier in the period, with nothing to repay
     #   payment            the instalment the lender set
     #   payment_set_on     the date of the change that set it
     #   resize             re-amortise this payment
@@ -87,7 +89,7 @@ class Loan
     #   any                a term change is dated in the period
     PeriodChanges = Struct.new(
       :balance, :accrual_start, :repaid_early, :closing_reduction, :repaid_after_payment, :closing_balance,
-      :payment, :payment_set_on, :resize, :payment_next, :resize_next, :any,
+      :unused_repayment, :payment, :payment_set_on, :resize, :payment_next, :resize_next, :any,
       keyword_init: true
     )
 
@@ -341,9 +343,13 @@ class Loan
         # 2,000 was still repaid.
         row[:repaid_outside_payment] = repaid_outside_payment if repaid_outside_payment.positive?
         row[:repaid_after_charge] = closing_reduction if closing_reduction.positive?
-        # An extra repayment on a payment date that the day's payment had
-        # already repaid the loan before. Only the last row can carry it.
-        row[:repaid_after_payoff] = changes.repaid_after_payment if changes.repaid_after_payment.positive? && !repaid_after_payment.positive?
+        # An extra repayment the loan was already repaid before: after a
+        # balance confirmed at zero earlier in the period, or on the payment
+        # date after that day's payment repaid it. Only the last row can
+        # carry it.
+        repaid_after_payoff = changes.unused_repayment
+        repaid_after_payoff += changes.repaid_after_payment unless repaid_after_payment.positive?
+        row[:repaid_after_payoff] = repaid_after_payoff if repaid_after_payoff.positive?
         row[:accrual_factor] = accrual_rate if changes.any
         # The payment of this row is one the lender set, not one sized here.
         # The final row settles whatever is owed, so its principal cannot
@@ -433,6 +439,7 @@ class Loan
         folded = PeriodChanges.new(
           balance: balance, accrual_start: period_start, repaid_early: BigDecimal("0"),
           closing_reduction: BigDecimal("0"), repaid_after_payment: BigDecimal("0"), closing_balance: nil,
+          unused_repayment: BigDecimal("0"),
           payment: nil, payment_set_on: nil, resize: false, payment_next: nil, resize_next: false, any: false
         )
 
@@ -456,6 +463,8 @@ class Loan
           elsif change[:extra_repayment]
             if on_payment_date
               folded.repaid_after_payment += change[:extra_repayment]
+            elsif folded.balance.zero?
+              folded.unused_repayment += change[:extra_repayment]
             elsif folded.accrual_start == period_start && grace_day?(period_start, change[:date])
               repaid = [ change[:extra_repayment], folded.balance ].min
               folded.repaid_early += repaid

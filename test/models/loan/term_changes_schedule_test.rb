@@ -526,7 +526,7 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
 
   # That day's payment comes first and repays the loan, so the repayment has
   # nothing left to repay.
-  test "an extra repayment on the last payment date is refused" do
+  test "an extra repayment after the loan is repaid is refused" do
     loan = loan_with([])
 
     loan.term_change_rows = [ { effective_date: MATURITY.iso8601, extra_repayment: "500" } ]
@@ -538,6 +538,19 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
 
     loan.term_change_rows = [ { effective_date: APRIL.iso8601, extra_repayment: "20000" } ]
     assert loan.valid?, "a repayment that ends the loan on its date is read"
+
+    loan.term_change_rows = [
+      { effective_date: "2026-03-10", balance: "0" },
+      { effective_date: "2026-03-20", extra_repayment: "500" }
+    ]
+    assert_not loan.valid?, "a balance confirmed at zero earlier in the period left nothing to repay"
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_repayment_after_payoff")
+
+    loan.term_change_rows = [
+      { effective_date: "2026-03-10", balance: "0" },
+      { effective_date: "2026-03-20", payment: "100" }
+    ]
+    assert loan.valid?, loan.errors.full_messages.to_sentence
     assert_equal APRIL, loan.amortization_schedule.payoff_date
   end
 

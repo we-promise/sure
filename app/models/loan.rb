@@ -506,8 +506,9 @@ class Loan < ApplicationRecord
   #
   # The schedule ends on its last payment: the last of the term, or an earlier
   # one that repaid the loan. It does not read a row dated after that, nor an
-  # extra repayment on that date once the day's payment repaid the loan, so
-  # such a row is refused instead of stored without effect.
+  # extra repayment once the loan is repaid (by a balance confirmed at zero,
+  # or by that day's payment), so such a row is refused instead of stored
+  # without effect.
   private def term_change_schedule_refusal
     return if active_term_changes.empty?
     # The schedule reads the account, which a loan being created does not

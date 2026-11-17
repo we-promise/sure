@@ -18,7 +18,7 @@ nl:
           term_change_balance_after_last_payment: "Een bevestigd saldo op de laatste betaling van de looptijd moet nul zijn, omdat er geen betalingen meer volgen om het af te lossen. Verleng de looptijd van de lening om het vast te leggen."
           term_change_not_after_origination: "Een wijziging in de voorwaarden moet ingaan na de startdatum van de lening."
           term_change_payment_below_interest: "De betaling van een wijziging in de voorwaarden moet minstens de rente van de periode dekken."
-          term_change_repayment_after_payoff: "Een extra aflossing valt op de datum van de laatste betaling, die de lening al aflost. Zet de datum vóór die betaling, of verwijder de rij."
+          term_change_repayment_after_payoff: "Een extra aflossing ligt na het moment waarop de lening is afgelost, door de laatste betaling of door een saldo van nul. Zet de datum eerder, of verwijder de rij."
         loan/term_change:
           no_amount: "Een wijziging in de voorwaarden heeft een extra aflossing, een bevestigd saldo of een betaling nodig."
           in_the_future: "Een wijziging in de voorwaarden kan niet in de toekomst ingaan."

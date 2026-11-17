@@ -18,7 +18,7 @@ en:
           term_change_balance_after_last_payment: A balance confirmed for the last payment of the term must be zero, because no payments are left to repay it. Lengthen the loan's term to record it.
           term_change_not_after_origination: A term change must take effect after the day the loan originated.
           term_change_payment_below_interest: A term change's payment must at least cover the interest of its period.
-          term_change_repayment_after_payoff: An extra repayment falls on the date of the last payment, which already repays the loan. Date it before that payment, or remove it.
+          term_change_repayment_after_payoff: An extra repayment is dated after the loan is repaid, by the last payment or by a balance of zero. Date it before then, or remove it.
         loan/term_change:
           no_amount: A term change needs an extra repayment, a confirmed balance or a payment.
           in_the_future: A term change cannot take effect in the future.
