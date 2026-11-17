@@ -17,8 +17,15 @@ class Insight::Generators::NegativePositionGenerator < Insight::Generator
   # An acknowledged warning whose numbers have not changed gives its slot to
   # another account first, so dismissing two warnings does not hide a third.
   def generate
-    insights = affected_accounts.filter_map { |account| insight_for(account) }
-    quiet, fresh = insights.partition { |insight| acknowledged_unchanged?(insight) }
+    fresh = []
+    quiet = []
+
+    affected_accounts.each do |account|
+      insight = insight_for(account) or next
+      (acknowledged_unchanged?(insight) ? quiet : fresh) << insight
+      break if fresh.size >= MAX_INSIGHTS
+    end
+
     (fresh + quiet).first(MAX_INSIGHTS)
   end
 

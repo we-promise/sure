@@ -47,7 +47,8 @@ class Trade::CreateForm
       # can be picked this way. The sale limit checks the quantity.
       if security_id.present?
         traded = Trade.joins(:entry).where(entries: { account_id: account.id }).select(:security_id)
-        return Security.where(id: account.holdings.select(:security_id)).or(Security.where(id: traded)).find_by(id: security_id)
+        return Security.standard.where(id: account.holdings.select(:security_id))
+          .or(Security.standard.where(id: traded)).find_by(id: security_id)
       end
 
       parsed = ticker.present? ? Security.parse_combobox_id(ticker) : { ticker: manual_ticker }

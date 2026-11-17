@@ -21,7 +21,7 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal [ [ aapl, 5 ] ], account.held_securities_on(5.days.ago.to_date)
   end
 
-  test "held_securities_on takes a provider snapshot as a whole" do
+  test "held_securities_on takes a linked account's provider snapshot as a whole" do
     account = accounts(:investment)
     provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
     account.holdings.create!(security: securities(:aapl), date: 6.days.ago.to_date, qty: 7, price: 200, amount: 1400, currency: "USD", account_provider: provider)

@@ -49,8 +49,6 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
     assert_not @family.insights.visible.exists?(insight_type: "negative_position")
   end
 
-  # The provider's holdings are the truth there; the reverse calculator can
-  # carry a broker's short position back into rows without a provider id.
   test "an acknowledged warning gives its slot to another account" do
     @family.users.update_all(ai_enabled: false)
     users(:family_admin).update!(preferences: { "preview_features_enabled" => true })
@@ -70,6 +68,8 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
     end
   end
 
+  # The provider's holdings are the truth there; the reverse calculator can
+  # carry a broker's short position back into rows without a provider id.
   test "ignores linked accounts" do
     oversell_msft
     Account.any_instance.stubs(:linked?).returns(true)

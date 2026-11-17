@@ -897,15 +897,15 @@ class Account < ApplicationRecord
   end
 
   # Standard securities the account holds at the end of +date+, with their
-  # quantity, for the sale picker. Reads the synced holdings: with a provider
-  # snapshot on or before the date, that whole snapshot (as current_holdings
-  # does), otherwise the latest calculated row per security (today's rows may
-  # not be synced yet). For a date after today, trades dated between today and
+  # quantity, for the sale picker. Reads the synced holdings: on a linked
+  # account the provider snapshot on or before the date as a whole (as
+  # current_holdings does), otherwise the latest calculated row per security
+  # (today's rows may not be synced yet). For a date after today, trades dated between today and
   # that date are added, so a sale can follow a future-dated purchase.
   def held_securities_on(date)
     cutoff = [ date, Date.current ].min
     provider_rows = holdings.where.not(account_provider_id: nil).where(date: ..cutoff)
-    snapshot_date = provider_rows.maximum(:date)
+    snapshot_date = provider_rows.maximum(:date) if linked?
 
     rows = if snapshot_date
       provider_rows.where(date: snapshot_date)
@@ -917,7 +917,7 @@ class Account < ApplicationRecord
       )
     end
 
-    positions = rows.to_h { |holding| [ holding.security_id, holding.qty.to_d ] }
+    positions = rows.group(:security_id).sum(:qty).transform_values(&:to_d)
 
     if date > Date.current
       Trade.joins(:entry)
