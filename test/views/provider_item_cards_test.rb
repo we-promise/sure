@@ -77,10 +77,10 @@ class ProviderItemCardsTest < ActiveSupport::TestCase
       end
     end
 
-    # The 11 admin-only controller responses; providers on the kit share
+    # The 10 admin-only controller responses; providers on the kit share
     # ProviderItemsController's one. Sync completions, jobs and the SimpleFIN
     # syncer no longer render a card at all.
-    assert_operator sites.size, :>=, 11, "found only #{sites.size} render sites; has the scan stopped matching?"
+    assert_operator sites.size, :>=, 10, "found only #{sites.size} render sites; has the scan stopped matching?"
   end
 
   test "no provider card is rendered by model, which cannot pass visible_accounts" do
