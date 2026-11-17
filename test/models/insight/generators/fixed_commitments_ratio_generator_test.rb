@@ -163,6 +163,68 @@ class Insight::Generators::FixedCommitmentsRatioGeneratorTest < ActiveSupport::T
 
   # An annual bill's previous payment can sit beyond the backfilled history,
   # so one first seen two months ago is the edge of that history, not new.
+  test "a dismissed suggestion never counts six months ago" do
+    monthly_income(4_000)
+    commitment("Rent", 1_200, since: 2.years.ago)
+    commitment("Gym", 200, since: 2.months.ago)
+    dismissed = commitment("Detected club", 400, since: 2.years.ago, status: "ended",
+                           last_occurrence_date: 2.months.ago.to_date)
+    dismissed.recurring_occurrences.delete_all
+
+    insight = generate.sole
+
+    assert_equal "30.0", insight.facts[:previous_ratio]
+  end
+
+  # A pause records no date, and the last payment of an annual bill can sit
+  # months before the reference date while the bill was still in force.
+  test "a paused annual bill counts six months ago through the cycle its last payment covers" do
+    monthly_income(4_000)
+    commitment("Rent", 1_200, since: 2.years.ago)
+    commitment("Gym", 200, since: 2.months.ago)
+    insurance = commitment("Insurance", 2_400, since: 2.years.ago, status: "paused",
+                           last_occurrence_date: Date.new(2026, 1, 1))
+    RecurringTransaction::FrequencyPreset.apply(insurance, preset: "annual", day_of_month: "1", month_of_year: "1")
+    insurance.save!
+
+    # Six months ago 1,200 + 200 a month of insurance = 35%; today 1,400 = 35%.
+    assert_empty generate
+  end
+
+  test "prices six months ago on the last day of the earlier window, even in a shorter month" do
+    travel_to Date.new(2026, 5, 16)
+    monthly_income(4_000)
+    rent = commitment("Rent", 1_400, since: 2.years.ago)
+    # The earlier window ends on 31 October 2025; shifting 30 April back six
+    # months lands on 30 October instead.
+    rent.recurring_price_changes.create!(effective_on: Date.new(2025, 10, 31), previous_amount: 1_200,
+                                         new_amount: 1_400, currency: "USD", source: "user")
+
+    assert_empty generate
+  end
+
+  test "an acknowledged rise does not reopen when the ratio falls into a lower band" do
+    monthly_income(4_000)
+    commitment("Rent", 1_200, since: 2.years.ago)
+    commitment("Gym", 200, since: 2.months.ago)
+    @family.insights.create!(insight_type: "fixed_commitments_ratio", priority: "medium", status: "dismissed",
+                             title: "t", body: "b", dedup_key: "fixed_commitments_ratio",
+                             metadata: { "current_band" => 40 }, generated_at: 1.week.ago)
+
+    assert_equal 40, generate.sole.metadata[:current_band]
+  end
+
+  test "an expired rise starts again from the current band" do
+    monthly_income(4_000)
+    commitment("Rent", 1_200, since: 2.years.ago)
+    commitment("Gym", 200, since: 2.months.ago)
+    @family.insights.create!(insight_type: "fixed_commitments_ratio", priority: "medium", status: "expired",
+                             title: "t", body: "b", dedup_key: "fixed_commitments_ratio",
+                             metadata: { "current_band" => 40 }, generated_at: 1.month.ago)
+
+    assert_equal 35, generate.sole.metadata[:current_band]
+  end
+
   test "normalises annual and weekly cadences to a month" do
     monthly_income(4_000)
     commitment("Rent", 1_000, since: 2.years.ago)

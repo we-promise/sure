@@ -25,6 +25,7 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
   CEILING_PCT = 50
   WINDOW_MONTHS = 6
   MAX_CONTRIBUTORS = 3
+  DEDUP_KEY = "fixed_commitments_ratio"
 
   def generate
     return [] if family.recurring_transactions_disabled?
@@ -69,11 +70,11 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
         # next band is a new insight. One key for the family, so an acknowledged
         # rise is not raised again next month with the same numbers.
         metadata: {
-          current_band: (current_ratio / RISE_THRESHOLD_PP).floor * RISE_THRESHOLD_PP,
+          current_band: peak_band((current_ratio / RISE_THRESHOLD_PP).floor * RISE_THRESHOLD_PP),
           accounts_digest: shared_accounts_digest
         },
         period: income_window(months_back: 0),
-        dedup_key: "fixed_commitments_ratio"
+        dedup_key: DEDUP_KEY
       )
     ]
   end
@@ -97,11 +98,25 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
         .to_a
     end
 
+    # A series that is no longer active counts until it was cancelled or, as
+    # a pause records no date, through the cycle its last payment covered. One
+    # that never produced an occurrence was a suggestion dismissed straight to
+    # ended, never a commitment.
     def in_force_on_reference_date?(recurring)
       return false if started_after_reference_date?(recurring)
       return true if recurring.active?
+      return false unless first_due_on.key?(recurring.id)
 
-      (recurring.cancelled_on || recurring.last_occurrence_date) >= reference_date
+      ended_on = recurring.cancelled_on || recurring.last_occurrence_date + cycle_days(recurring)
+      ended_on >= reference_date
+    end
+
+    # The band a live insight last showed, so a ratio easing into a lower band
+    # does not read as a change and reopen an acknowledged warning. Once the
+    # insight has expired the rise is over and the band starts again.
+    def peak_band(band)
+      shown = family.insights.where.not(status: :expired).find_by(dedup_key: DEDUP_KEY)
+      [ band, shown&.metadata&.dig("current_band").to_i ].max
     end
 
     # Only a start Sure actually saw counts as new. A series known before the
@@ -143,11 +158,12 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
       end
     end
 
-    # The complete months ending `months_back` months before last month.
+    # The complete months ending `months_back` months before last month. The
+    # end is the day before the next month starts: shifting 30 April back six
+    # months would land on 30 October and drop the 31st.
     def income_window(months_back:)
-      last_month = Period.last_month_for(family)
-      Period.custom(start_date: last_month.start_date << (months_back + WINDOW_MONTHS - 1),
-                    end_date: last_month.end_date << months_back)
+      last_month_start = Period.last_month_for(family).start_date << months_back
+      Period.custom(start_date: last_month_start << (WINDOW_MONTHS - 1), end_date: (last_month_start >> 1) - 1)
     end
 
     def median_monthly_income(months_back:)
