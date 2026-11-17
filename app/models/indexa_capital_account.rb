@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class IndexaCapitalAccount < ApplicationRecord
-  include CurrencyNormalizable, Encryptable
+  include CurrencyNormalizable, Encryptable, IgnorableProviderAccount
   include IndexaCapitalAccount::DataHelpers
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
@@ -92,7 +92,13 @@ class IndexaCapitalAccount < ApplicationRecord
     )
   end
 
+  writes_unless_ignored :upsert_from_indexa_capital!, :upsert_holdings_snapshot!, :upsert_activities_snapshot!
+
   private
+
+    def ignored_snapshot_reset
+      { current_balance: nil, raw_payload: nil, raw_holdings_payload: [], raw_activities_payload: [] }
+    end
 
     def enqueue_connection_cleanup
       return unless indexa_capital_item
