@@ -93,16 +93,40 @@ en:
       smsf:
         short: SMSF
         long: Self-Managed Super Fund
-      # Europe
+      # France
       pea:
         short: PEA
         long: Plan d'Épargne en Actions
+      # Switzerland
       pillar_3a:
         short: Pillar 3a
         long: Private Pension (Pillar 3a)
+      # Germany
       riester:
         short: Riester
         long: Riester-Rente
+      # Sweden
+      isk:
+        short: ISK
+        long: Investeringssparkonto
+      kapitalforsakring:
+        short: KF
+        long: Kapitalförsäkring
+      aktie_och_fondkonto:
+        short: AF-konto
+        long: Aktie- och fondkonto
+      tjanstepension:
+        short: Tjänstepension
+        long: Tjänstepension
+      premiepension:
+        short: PPM
+        long: Premiepension
+      ips:
+        short: IPS
+        long: Individuellt pensionssparande
+      pensionsforsakring:
+        short: Pensionsförsäkring
+        long: Pensionsförsäkring
       # India
       nps:
         short: NPS

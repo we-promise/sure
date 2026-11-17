@@ -181,7 +181,10 @@ tr:
     subtype_regions:
       au: Avustralya
       ca: Kanada
-      eu: Avrupa
+      fr: Fransa
+      de: Almanya
+      ch: İsviçre
+      se: İsveç
       generic: Genel
       in: Hindistan
       uk: Birleşik Krallık
