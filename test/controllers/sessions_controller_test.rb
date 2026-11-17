@@ -1249,6 +1249,23 @@ class SessionsControllerTest < ActionDispatch::IntegrationTest
     Rails.cache = original_cache
   end
 
+  test "desktop SSO exchange refuses a lookalike Origin" do
+    original_cache = Rails.cache
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+    code, verifier = mint_desktop_sso_code
+
+    [ "http://www.example.com.evil.example", "http://www.example.com:8080" ].each do |origin|
+      assert_no_difference -> { Session.count }, origin do
+        post desktop_sso_exchange_path, params: { code: code, code_verifier: verifier },
+                                        headers: { "Origin" => origin }
+      end
+      assert_redirected_to new_session_path, origin
+      assert cookies[:session_token].blank?, origin
+    end
+  ensure
+    Rails.cache = original_cache
+  end
+
   test "desktop SSO exchange accepts the instance's own Origin" do
     original_cache = Rails.cache
     Rails.cache = ActiveSupport::Cache::MemoryStore.new
