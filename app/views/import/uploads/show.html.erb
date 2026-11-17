@@ -189,10 +189,12 @@
       <% end %>
     </div>
 
-    <div class="flex justify-center">
-      <span class="text-secondary text-sm">
-        <%= link_to t(".download_sample_csv"), "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false } %> <%= t(".to_see_format") %>
-      </span>
-    </div>
+    <% if @import.respond_to?(:csv_template) %>
+      <div class="flex justify-center">
+        <span class="text-secondary text-sm">
+          <%= link_to t(".download_sample_csv"), "/imports/#{@import.id}/upload/sample_csv", class: "text-primary underline", data: { turbo: false } %> <%= t(".to_see_format") %>
+        </span>
+      </div>
+    <% end %>
   </div>
 <% end %>

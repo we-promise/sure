@@ -80,7 +80,7 @@ id:
         type_builtin: Bawaan (LLM langsung)
         type_external: Eksternal (agen jarak jauh)
         type_mcp_only: Tidak ada di aplikasi (hubungkan agen Anda sendiri melalui MCP)
-        mcp_only_help: Asisten dalam aplikasi dinonaktifkan untuk semua orang di keluarga ini. Pintasan AI Tagihan dan teks wawasan yang ditulis AI juga berhenti. MCP dan kategorisasi latar belakang tetap tersedia; hubungkan agen eksternal di Pengaturan > MCP.
+        mcp_only_help: Asisten dalam aplikasi dinonaktifkan untuk semua orang di keluarga ini. Pintasan AI Tagihan dan Pelajari lebih lanjut bersama AI pada wawasan juga berhenti. MCP dan kategorisasi latar belakang tetap tersedia; hubungkan agen eksternal di Pengaturan > MCP.
         external_status: Endpoint asisten eksternal
         external_configured: Terkonfigurasi
         external_not_configured: Belum terkonfigurasi. Masukkan URL dan token di bawah, atau atur variabel lingkungan EXTERNAL_ASSISTANT_URL dan EXTERNAL_ASSISTANT_TOKEN.
