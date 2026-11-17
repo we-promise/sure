@@ -1,7 +1,6 @@
 require "test_helper"
 
-# The Bank sync drawer's Lunch Flow form, which the standalone upstream fix
-# covers with every affected provider in Settings::ProvidersControllerTest.
+# The Bank sync drawer's Lunch Flow form must not render the stored API key.
 class LunchflowItemsSecretFieldTest < ActionDispatch::IntegrationTest
   setup do
     sign_in users(:family_admin)
