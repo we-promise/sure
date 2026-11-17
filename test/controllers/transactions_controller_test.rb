@@ -12,13 +12,12 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
   # Bills has always linked out to transactions. Until now nothing linked back,
   # so a transaction that settled a bill was a dead end. The link-back is part
   # of the preview-gated bills surface, so the viewer needs the flag.
-  test "index loads the merchant list on demand and keeps selected merchants in the form" do
+  test "index lazy loads filters with selected merchants in the frame URL" do
     get transactions_url(q: { merchants: [ "Amazon" ] })
 
     assert_response :success
-    assert_select "#transactions-search turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
-      assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
-    end
+    assert_select "#transactions-search turbo-frame#transaction-filters[loading=lazy][src=?]",
+                  filters_transactions_path(q: { merchants: [ "Amazon" ] })
     assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
   end
 
@@ -218,21 +217,6 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-activity-label-quick-edit-target=badge]", text: /Transfer/, count: 0
     # The picker shows translated names but still submits the stored label.
     assert_select "button[data-label='Sweep In']", text: "Автоперевод (зачисление)"
-  end
-
-  test "index groups subcategories immediately after their parent in the category filter" do
-    get transactions_url
-    assert_response :success
-
-    doc = Nokogiri::HTML::Document.parse(response.body)
-    checkbox_values = doc.css("input[name='q[categories][]']").map { |node| node["value"] }
-
-    parent_index = checkbox_values.index(categories(:food_and_drink).name)
-    child_index = checkbox_values.index(categories(:subcategory).name)
-
-    assert_not_nil parent_index
-    assert_not_nil child_index
-    assert_equal parent_index + 1, child_index
   end
 
   # The form passes its own change action on the currency select; the money
@@ -2425,13 +2409,6 @@ end
     get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
 
     assert_response :success
-  end
-
-  test "index offers the attachment filter in the filter menu" do
-    get transactions_url
-
-    assert_response :success
-    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
   end
 
   test "index ignores unsupported attachment_status values without rendering a badge" do
