@@ -72,11 +72,12 @@ class TransactionImport < Import
             duplicate_entry.transaction.extra = duplicate_entry.transaction.extra.except("auto_generated_transfer_counterpart")
           end
 
-          # Update existing transaction instead of creating a new one
+          # Update existing transaction instead of creating a new one. It keeps
+          # its original import (if any): the entry belongs to whoever created
+          # it, so reverting or deleting this import must not destroy it.
           duplicate_entry.transaction.category = category if category.present?
           duplicate_entry.transaction.tags = tags if tags.any?
           duplicate_entry.notes = row.notes if row.notes.present?
-          duplicate_entry.import = self
           duplicate_entry.import_locked = true  # Protect from provider sync overwrites
           updated_entries << duplicate_entry
           claimed_entry_ids.add(duplicate_entry.id)

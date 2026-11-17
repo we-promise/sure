@@ -17,7 +17,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     @importer = EnableBankingItem::Importer.new(@enable_banking_item, enable_banking_provider: mock_provider)
   end
 
-  test "removes content-level duplicates with different entry_reference IDs" do
+  test "keeps booked transactions that differ only in entry_reference" do
     transactions = [
       {
         entry_reference: "ref_aaa",
@@ -41,8 +41,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 1, result.count
-    assert_equal "ref_aaa", result.first[:entry_reference]
+    assert_equal %w[ref_aaa ref_bbb], result.map { |tx| tx[:entry_reference] }
   end
 
   test "keeps transactions with different amounts" do
@@ -133,7 +132,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_booked",
@@ -153,6 +153,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
   end
 
   test "still deduplicates identical transactions that share the same counterparty iban" do
+    # A pending copy of a booked row: booked rows with distinct
+    # entry_references stay apart regardless of their IBAN.
     transactions = [
       {
         entry_reference: "ref_dup_1",
@@ -170,7 +172,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Miete" },
         creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
-        status: "BOOK"
+        status: "PDNG",
+        _pending: true
       }
     ]
 
@@ -197,7 +200,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Miete" },
         creditor_account: { iban: "de89.3704-0044/0532:0130'00" },
         credit_debit_indicator: "DBIT",
-        status: "BOOK"
+        status: "PDNG",
+        _pending: true
       }
     ]
 
@@ -222,7 +226,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Miete" },
         creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_booked_without_iban",
@@ -258,7 +263,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor_account_additional_identification: { identification: "landlord-ref-123" },
         creditor_agent: { name: "Sparkasse" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_booked_without_any_counterparty_data",
@@ -308,7 +314,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Same Payee" },
         creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_ambiguous_no_iban",
@@ -363,7 +370,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "50.00", currency: "EUR" },
         creditor: { name: "Same Payee" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_ambiguous_2",
@@ -418,8 +426,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     transactions = [
       base.merge(entry_reference: "ref_1"),
-      base.merge(entry_reference: "ref_2"),
-      base.merge(entry_reference: "ref_3")
+      base.merge(entry_reference: "ref_1"),
+      base.merge(entry_reference: nil)
     ]
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
@@ -438,6 +446,13 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         "status" => "BOOK"
       },
       {
+        "entry_reference" => "ref_aaa",
+        "booking_date" => "2026-02-07",
+        "transaction_amount" => { "amount" => "11.65", "currency" => "EUR" },
+        "creditor" => { "name" => "Spar" },
+        "status" => "BOOK"
+      },
+      {
         "entry_reference" => "ref_bbb",
         "booking_date" => "2026-02-07",
         "transaction_amount" => { "amount" => "11.65", "currency" => "EUR" },
@@ -448,7 +463,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 1, result.count
+    assert_equal %w[ref_aaa ref_bbb], result.map { |tx| tx["entry_reference"] }
   end
 
   test "differentiates by remittance_information" do
@@ -487,7 +502,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         status: "BOOK"
       },
       {
-        entry_reference: "ref_bbb",
+        entry_reference: "ref_aaa",
         booking_date: "2026-02-07",
         transaction_amount: { amount: "11.65", currency: "EUR" },
         creditor: { name: "Spar" },
@@ -527,7 +542,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
     assert_equal 2, result.count
   end
 
-  test "deduplicates same transaction_id even with different entry_references" do
+  test "keeps booked rows sharing a transaction_id that differ only in entry_reference" do
     transactions = [
       {
         entry_reference: "ref_aaa",
@@ -549,8 +564,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
 
     result = @importer.send(:deduplicate_api_transactions, transactions)
 
-    assert_equal 1, result.count
-    assert_equal "ref_aaa", result.first[:entry_reference]
+    assert_equal %w[ref_aaa ref_bbb], result.map { |tx| tx[:entry_reference] }
   end
 
   test "preserves transactions with same non-unique transaction_id but different content" do
@@ -591,7 +605,7 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         status: "BOOK"
       },
       {
-        entry_reference: "ref_2",
+        entry_reference: "ref_1",
         transaction_id: nil,
         value_date: "2026-02-10",
         transaction_amount: { amount: "1.50", currency: "EUR" },
@@ -669,7 +683,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       }
     ]
 
@@ -696,7 +711,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_a",
