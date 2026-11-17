@@ -1,44 +1,40 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# CI guard: the test suite must not open the network. VCR/WebMock already
-# enforce that at runtime (an unstubbed request raises VCR::Errors::
-# UnhandledHTTPRequestError); this script fails the build for any test file that
-# quietly disables those guards, which is the one edit that undoes them silently.
-# Keep it dependency-free; it runs before the test jobs' boot.
+# Fails when a test file switches off the VCR/WebMock refusal of unstubbed requests, the one-line
+# edit that would let a test reach a provider with a real key. Dependency-free so CI can run it
+# before the app boots; test/lib/ai_network_policy_test.rb runs it too.
 #
-# Exit 0 when clean, 1 with the offending files listed otherwise.
+#   ruby script/ci/deny_provider_http.rb [ROOT]   # exit 1, listing the files, on a violation
 
-ROOT = File.expand_path("../..", __dir__)
+ROOT = ARGV.first ? File.expand_path(ARGV.first) : File.expand_path("../..", __dir__)
 
-ALLOWED = %w[
-  test/support/ai_test_helper.rb
+ALLOWED = [
+  "test/support/ai_test_helper.rb",     # with_ai_live opens the network on purpose, only under AI_LIVE=1
+  "test/lib/ai_network_policy_test.rb"  # its examples are violations
 ].freeze
 
-NETWORK_PATTERNS = [
-  /allow_net_connect/,
-  /WebMock\.(allow|allow_net_connect|disable|disable!|enable)\b/,
-  /VCR\.(allow_http_connections_after_connect_failure|turned_off|turn_off!|eject_cassette)\b/,
-  /VCR\.configuration\.record=/
-].freeze
+NETWORK_OPENERS = {
+  "WebMock.allow_net_connect!" => /allow_net_connect/,
+  "disable_net_connect!(allow: host)" => /disable_net_connect!\s*\(?[^)\n]*\ballow:/,
+  "WebMock.disable!" => /WebMock\.disable!/,
+  "VCR.turned_off / VCR.turn_off!" => /VCR\.turn(ed)?_off/,
+  "VCR allow_http_connections_*" => /allow_http_connections/,
+  "VCR ignore_hosts" => /ignore_hosts/,
+  "a cassette recording live requests" => /record:\s*:(all|new_episodes)/
+}.freeze
 
-offenses = []
-Dir.glob(File.join(ROOT, "test", "**", "*.rb")).each do |file|
-  relative = file.delete_prefix("#{ROOT}/")
-  next if ALLOWED.include?(relative)
-  next if relative == "test/lib/ai_network_policy_test.rb"
-  next if relative.start_with?("test/fixtures/", "test/vcr_cassettes/")
+offenses = Dir.glob("test/**/*.rb", base: ROOT).sort.flat_map do |path|
+  next [] if ALLOWED.include?(path)
 
-  source = File.read(file)
-  NETWORK_PATTERNS.each do |pattern|
-    offenses << "#{relative}: /#{pattern.source}/" if source.match?(pattern)
-  end
+  source = File.read(File.join(ROOT, path))
+  NETWORK_OPENERS.filter_map { |name, pattern| "#{path}: #{name}" if source.match?(pattern) }
 end
 
 if offenses.any?
-  warn "Network policy violated; these test files re-enable the network:"
+  warn "These test files open the network:"
   offenses.each { warn "  #{_1}" }
-  warn "Live tests run only under AI_LIVE=1 / RECORD_CASSETTES=1 via test/support/ai_test_helper.rb."
+  warn "Live calls belong in with_ai_live (test/support/ai_test_helper.rb), under AI_LIVE=1."
   exit 1
 end
 

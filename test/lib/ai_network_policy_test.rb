@@ -1,27 +1,13 @@
 require "test_helper"
+require "open3"
 
-# Tests must never reach a provider or any other network service. VCR/WebMock
-# already refuse an unstubbed request (the first test pins what that looks like),
-# and the second test fails the build for any test file that quietly opens the
-# network instead. The live-cassette helper is the one exception:
-# test/support/ai_test_helper.rb's `with_ai_live` opens the network deliberately,
-# scoped to a block, outside of `AI_LIVE=1`/`RECORD_CASSETTES=1` it changes nothing.
 class AiNetworkPolicyTest < ActiveSupport::TestCase
-  # The files permitted to enable real network access. Everything else that
-  # mentions one of these patterns is bypassing the guard the whole suite
-  # relies on.
-  ALLOWED_FILES = %w[
-    test/support/ai_test_helper.rb
-  ].freeze
+  POLICY_SCRIPT = Rails.root.join("script/ci/deny_provider_http.rb").to_s
 
-  NETWORK_PATTERNS = [
-    /allow_net_connect/,
-    /WebMock\.(allow|allow_net_connect|disable|disable!|enable)\b/,
-    /VCR\.(allow_http_connections_after_connect_failure|turned_off|turn_off!|eject_cassette)\b/,
-    /VCR\.configuration\.record=/
-  ].freeze
+  setup { @scratch_root = Dir.mktmpdir }
+  teardown { FileUtils.remove_entry(@scratch_root) }
 
-  test "an unstubbed request to a provider is refused, and nothing reached the wire" do
+  test "an unstubbed request to a provider is refused" do
     error = assert_raises(VCR::Errors::UnhandledHTTPRequestError) do
       Net::HTTP.get(URI("https://api.openai.com/v1/models"))
     end
@@ -30,26 +16,39 @@ class AiNetworkPolicyTest < ActiveSupport::TestCase
   end
 
   test "no test file opens the network outside the live-cassette helper" do
-    offending = scan_test_files.flat_map do |path, source|
-      NETWORK_PATTERNS.filter_map do |pattern|
-        "#{path}: /#{pattern.source}/" if source.match?(pattern)
-      end
-    end
+    output, status = run_policy(Rails.root)
 
-    assert_empty offending, -> {
-      "Test files that open the network (the policy is no live calls outside AI_LIVE=1):\n#{offending.join("\n")}"
-    }
+    assert status.success?, output
+  end
+
+  test "a test file that opens the network fails the policy, named with what it did" do
+    {
+      "WebMock.allow_net_connect!" => "WebMock.allow_net_connect!",
+      "WebMock.disable_net_connect!(allow: \"api.openai.com\")" => "disable_net_connect!(allow: host)",
+      "VCR.turned_off { get_models }" => "VCR.turned_off / VCR.turn_off!",
+      "VCR.use_cassette(\"x\", record: :new_episodes) { }" => "a cassette recording live requests"
+    }.each do |line, reported|
+      output, status = run_policy(with_test_file(line))
+
+      assert_not status.success?, line
+      assert_includes output, "test/models/leaky_test.rb: #{reported}"
+    end
+  end
+
+  test "closing the network again is allowed" do
+    output, status = run_policy(with_test_file("WebMock.disable_net_connect!(allow_localhost: true)\nWebMock.reset!"))
+
+    assert status.success?, output
   end
 
   private
-    def scan_test_files
-      Dir.glob(Rails.root.join("test", "**", "*.rb")).filter_map do |file|
-        relative = Pathname.new(file).relative_path_from(Rails.root).to_s
-        next if ALLOWED_FILES.include?(relative)
-        next if relative == "test/lib/ai_network_policy_test.rb"
-        next if relative.start_with?("test/fixtures/", "test/vcr_cassettes/")
+    def run_policy(root)
+      Open3.capture2e(RbConfig.ruby, POLICY_SCRIPT, root.to_s)
+    end
 
-        [ relative, File.read(file) ]
-      end
+    def with_test_file(source)
+      FileUtils.mkdir_p(File.join(@scratch_root, "test/models"))
+      File.write(File.join(@scratch_root, "test/models/leaky_test.rb"), source)
+      @scratch_root
     end
 end
