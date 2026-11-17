@@ -618,6 +618,14 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the rules list labels a rule's action as the similar-rule notice does" do
+    rule = create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    get rules_url
+
+    assert_select "##{ActionView::RecordIdentifier.dom_id(rule)}", text: /Set transaction category to Similar groceries/
+  end
+
   test "switching a duplicate rule off from the list saves it" do
     create_similar_rule("Woolworths", "woolworths", category: groceries)
     duplicate = create_similar_rule("Woolworths again", "woolworths", category: groceries)

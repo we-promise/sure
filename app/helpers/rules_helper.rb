@@ -40,15 +40,19 @@ module RulesHelper
   # e.g. "If transaction name like woolworths · Set transaction category to
   # Groceries": the condition and action the rules list shows first.
   def rule_summary(rule)
-    action = rule.displayed_action
-    action_label = if action.nil?
+    "#{rule.primary_condition_title} · #{rule_action_label(rule.displayed_action)}"
+  end
+
+  # e.g. "Set transaction category to Groceries", as the rules list shows a
+  # rule's first action.
+  def rule_action_label(action)
+    if action.nil?
       t("rules.no_action")
     elsif action.value && action.options
       t("rules.rule.action_label_to", label: action.executor.label, value: action.value_display)
     else
       action.executor.label
     end
-    "#{rule.primary_condition_title} · #{action_label}"
   end
 
   # e.g. "category and merchant", for the fields a Rule::Health entry names.
