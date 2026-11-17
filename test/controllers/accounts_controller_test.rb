@@ -31,6 +31,43 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("accounts.reconciliation_indicator.needs_attention")
   end
 
+  test "show warns when a linked account's balance drifts from its transactions" do
+    account = accounts(:connected)
+    add_valuation(account, 10.days.ago.to_date, 1000)
+    (2..5).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "[data-testid=balance-gap-status]" do
+      assert_select "p", text: /#{Regexp.escape(I18n.t("accounts.show.balance_gap.title"))}/
+      assert_select "p", text: /#{Regexp.escape(Money.new(50, account.currency).format)} higher/
+      assert_select "a[href=?]", transactions_path(q: { account_ids: [ account.id ], start_date: 10.days.ago.to_date })
+    end
+  end
+
+  test "show has no balance warning while the bank and the transactions agree" do
+    account = accounts(:connected)
+    add_valuation(account, 10.days.ago.to_date, 1000)
+    add_valuation(account, 3.days.ago.to_date, 1000)
+
+    get account_url(account)
+
+    assert_response :success
+    assert_select "[data-testid=balance-gap-status]", count: 0
+  end
+
+  test "show warns the owner about a private account's balance gap" do
+    account = accounts(:connected)
+    account.account_shares.destroy_all
+    add_valuation(account, 10.days.ago.to_date, 1000)
+    (2..5).reverse_each { |days_ago| add_valuation(account, days_ago.days.ago.to_date, 1050) }
+
+    get account_url(account)
+
+    assert_select "[data-testid=balance-gap-status]", count: 1
+  end
+
   test "show points an unmatched transaction with a counterpart to the transfer matcher" do
     outflow = create_transaction(account: @account, name: "Hint outflow", amount: 500, date: Date.current)
     create_transaction(account: accounts(:credit_card), name: "Hint inflow", amount: -500, date: Date.current)
@@ -1899,6 +1936,13 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
   end
 
   private
+    def add_valuation(account, date, balance)
+      account.entries.create!(
+        name: "Valuation", date: date, amount: balance, currency: account.currency,
+        entryable: Valuation.new(kind: "reconciliation")
+      )
+    end
+
     def sidebar_sparkline_src(frame_id)
       css_select("turbo-frame##{frame_id}").first["src"]
     end

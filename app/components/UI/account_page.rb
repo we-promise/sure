@@ -74,6 +74,14 @@ class UI::AccountPage < ApplicationComponent
     base_tabs + [ :statements ]
   end
 
+  # The gap between the balance the bank reports and the account's
+  # transaction history, while it is open (Balance::IntegrityChecker).
+  def balance_gap
+    return @balance_gap if defined?(@balance_gap)
+
+    @balance_gap = Balance::IntegrityChecker.open_gap_for(account)
+  end
+
   def fx_coverage_start_date
     return @fx_coverage_start_date if defined?(@fx_coverage_start_date)
 

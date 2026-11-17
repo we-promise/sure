@@ -27,7 +27,6 @@ class Insight < ApplicationRecord
     budget_at_risk
     budget_on_track
     maintained_goal_depleted
-    balance_discrepancy
     bill_not_covered
     loan_payment_change
   ].freeze

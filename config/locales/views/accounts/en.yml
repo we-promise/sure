@@ -125,6 +125,11 @@ en:
         title: How would you like to add it?
       title: What would you like to add?
     show:
+      balance_gap:
+        body_higher: "The balance your bank reports has been %{difference} higher than your transactions add up to since %{since}. Usually a transaction is missing in Sure or was imported twice."
+        body_lower: "The balance your bank reports has been %{difference} lower than your transactions add up to since %{since}. Usually a transaction is missing in Sure or was imported twice."
+        review: "Review transactions since %{date}"
+        title: Balance doesn't match the bank
       limited_fx_history_warning: "Exchange rate history is only available from %{date} onwards. Transactions before this date use approximate currency conversions — this can happen when the FX provider only offers a limited historical window."
       tabs:
         activity: Activity

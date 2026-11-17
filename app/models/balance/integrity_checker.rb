@@ -4,7 +4,14 @@
 # the balance to the bank-reported value at every reconciliation waypoint,
 # neutralizing any drift from missing/duplicated transactions without
 # recording the difference anywhere. This class is the only place in the
-# system that surfaces that drift.
+# system that surfaces that drift; the account page shows it as a status.
+#
+# Known limitation: it needs 2+ Valuation waypoints to say anything at all.
+# Several linked providers (e.g. SimpleFin, Up, Fio, Monobank, Wise, Brex,
+# Mercury) update `accounts.balance` directly in their processors instead of
+# rotating an anchor via Account#set_current_balance, so their accounts never
+# accumulate waypoints and are never flagged: no coverage yet, not a false
+# positive.
 class Balance::IntegrityChecker
   TOLERANCE = 0.01.to_d
   MIN_DAYS_OPEN = 2 # a gap must persist longer than this before it's surfaced
@@ -17,6 +24,20 @@ class Balance::IntegrityChecker
   # latest_waypoint:     the most recent waypoint checked — defines current magnitude
   Gap = Data.define(:anchor_waypoint, :first_open_waypoint, :latest_waypoint, :implied_value, :actual_value, :difference)
 
+  ACCOUNT_TYPES = %w[Depository CreditCard].freeze
+
+  # The open gap to show for this account, or nil. Only linked bank and card
+  # accounts are checked: on a manual account a mismatch between balance and
+  # transactions is the user's own choice, not a data error. Accounts with
+  # entries in another currency are left out too, since exchange rates would
+  # be a second source of drift next to the gap itself.
+  def self.open_gap_for(account)
+    return unless account.linked? && account.accountable_type.in?(ACCOUNT_TYPES)
+    return if account.entries.excluding_pending.where.not(currency: account.currency).exists?
+
+    new(account).latest_flagged_gap
+  end
+
   def initialize(account, tolerance: TOLERANCE, min_days_open: MIN_DAYS_OPEN)
     @account = account
     @tolerance = tolerance
@@ -25,7 +46,7 @@ class Balance::IntegrityChecker
 
   # Can contain MULTIPLE entries per ongoing gap (one per waypoint while it
   # stays open) — not "one Gap per episode". latest_flagged_gap is what the
-  # generator actually calls.
+  # account page actually calls (via open_gap_for).
   def flagged_gaps
     # The walk starts from a snapshot it can trust exactly (see
     # exact_snapshot?), so no timing uncertainty is carried forward.

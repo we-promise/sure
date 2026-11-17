@@ -74,6 +74,11 @@ es:
         title: ¿Cómo te gustaría añadirla?
       title: ¿Qué te gustaría añadir?
     show:
+      balance_gap:
+        body_higher: "Desde el %{since}, el saldo que informa tu banco es %{difference} mayor que la suma de tus transacciones. Normalmente falta una transacción en Sure o se importó dos veces."
+        body_lower: "Desde el %{since}, el saldo que informa tu banco es %{difference} menor que la suma de tus transacciones. Normalmente falta una transacción en Sure o se importó dos veces."
+        review: "Revisar transacciones desde el %{date}"
+        title: El saldo no coincide con el banco
       limited_fx_history_warning: El historial de tipos de cambio solo está disponible desde %{date}. Las transacciones anteriores a esa fecha usan conversiones de divisa aproximadas; esto puede ocurrir cuando el proveedor de tipos de cambio solo ofrece una ventana histórica limitada.
       tabs:
         activity: Actividad

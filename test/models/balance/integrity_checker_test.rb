@@ -588,7 +588,56 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_in_delta gap.actual_value - gap.implied_value, gap.difference, 0.01
   end
 
+  test "open_gap_for returns the open gap of a linked depository account" do
+    account = accounts(:connected)
+    add_gap_waypoints(account)
+
+    gap = Balance::IntegrityChecker.open_gap_for(account)
+
+    assert gap
+    assert_in_delta 50, gap.difference, 0.01
+  end
+
+  test "open_gap_for ignores manual accounts" do
+    account = families(:dylan_family).accounts.create!(
+      name: "Manual Checking", accountable: Depository.new, currency: "USD",
+      balance: 0, cash_balance: 0, status: "active"
+    )
+    add_linked_entry(account, date: 11.days.ago.to_date, amount: 1000, kind: "opening_anchor")
+    add_gap_waypoints(account)
+    assert Balance::IntegrityChecker.new(account).latest_flagged_gap, "the mismatch itself is there"
+
+    assert_nil Balance::IntegrityChecker.open_gap_for(account)
+  end
+
+  test "open_gap_for ignores account types outside Depository and CreditCard" do
+    account = accounts(:connected)
+    add_gap_waypoints(account)
+    account.stubs(:accountable_type).returns("Investment")
+
+    assert_nil Balance::IntegrityChecker.open_gap_for(account)
+  end
+
+  test "open_gap_for ignores accounts with entries in another currency" do
+    account = accounts(:connected)
+    add_gap_waypoints(account)
+    account.entries.create!(
+      name: "Foreign txn", date: 6.days.ago.to_date, amount: -10, currency: "EUR",
+      entryable: Transaction.new
+    )
+
+    assert_nil Balance::IntegrityChecker.open_gap_for(account)
+  end
+
   private
+    # A 50 deposit (day 9) that was never imported, open for four days.
+    def add_gap_waypoints(account)
+      add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+      (2..5).reverse_each do |days_ago|
+        add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 1050, kind: "reconciliation")
+      end
+    end
+
     def add_linked_entry(account, date:, amount:, kind: nil)
       account.entries.create!(
         name: kind ? "Valuation" : "Purchase", date: date, amount: amount, currency: account.currency,

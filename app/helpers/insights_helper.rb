@@ -11,7 +11,6 @@ module InsightsHelper
     # Same shield the reserve panel uses on the goal page, so the two read as
     # the same object seen from two places.
     "maintained_goal_depleted" => "shield-alert",
-    "balance_discrepancy" => "scale",
     "bill_not_covered" => "calendar-x",
     "loan_payment_change" => "landmark"
   }.freeze
@@ -75,8 +74,6 @@ module InsightsHelper
       facts["amount"] && [ facts["amount"], t("insights.figures.days_overdue", count: facts["days_overdue"].to_i) ]
     when "idle_cash"
       facts["balance"] && [ facts["balance"], t("insights.figures.idle_days", count: facts["idle_days"].to_i) ]
-    when "balance_discrepancy"
-      facts["difference"] && [ facts["difference"], t("insights.figures.days_open", count: facts["days_open"].to_i) ]
     when "budget_at_risk"
       # Not budget_spent_pct: this card's headline is "N categories need
       # attention", and total consumption ("14% of budget") reads as reassurance
@@ -107,7 +104,7 @@ module InsightsHelper
         text: t("insights.actions.spending_anomaly", category: category.name),
         href: transactions_path(q: { categories: [ category.name ] })
       }
-    when "idle_cash", "bill_not_covered", "loan_payment_change", "balance_discrepancy"
+    when "idle_cash", "bill_not_covered", "loan_payment_change"
       account = insight_account(insight)
       account && { text: t("insights.actions.#{insight.insight_type}"), href: account_path(account) }
     when "subscription_audit"
@@ -195,11 +192,9 @@ module InsightsHelper
       :negative
     when "loan_payment_change"
       metadata["new_payment"].to_f < metadata["previous_payment"].to_f ? :positive : :warning
-    when "budget_at_risk", "maintained_goal_depleted", "balance_discrepancy"
-      # Warning, not negative: the reserve is short, not overdrawn (or, for a
-      # balance discrepancy, a missing or duplicated transaction, not money
-      # lost), and red is reserved here for money actually going the wrong
-      # side of zero.
+    when "budget_at_risk", "maintained_goal_depleted"
+      # Warning, not negative: the reserve is short, not overdrawn, and red is
+      # reserved here for money actually going the wrong side of zero.
       :warning
     else
       :neutral

@@ -118,7 +118,7 @@ class GenerateInsightsJob < ApplicationJob
             generated_at: Time.current,
             dedup_key: generated.dedup_key
           )
-        elsif !existing.expired? && existing.metadata != metadata && existing.currency == generated.currency &&
+        elsif !existing.expired? && existing.metadata != metadata &&
               existing.metadata.except(*ACCOUNT_SCOPE_KEYS) == metadata.except(*ACCOUNT_SCOPE_KEYS)
           # Only the accounts behind the insight changed (a share granted or
           # revoked, or a row written before these keys existed). The prose
@@ -127,10 +127,9 @@ class GenerateInsightsJob < ApplicationJob
           existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
                            facts: facts, generated_at: Time.current)
           nil
-        elsif existing.metadata != metadata || existing.currency != generated.currency
-          # The numbers (or the currency they're denominated in) changed
-          # materially: refresh the prose and resurface the insight even if
-          # the user had read or dismissed the stale version.
+        elsif existing.metadata != metadata
+          # The numbers changed materially: refresh the prose and resurface the
+          # insight even if the user had read or dismissed the stale version.
           existing.update!(
             priority: generated.priority,
             status: "active",
@@ -138,7 +137,6 @@ class GenerateInsightsJob < ApplicationJob
             body: writer.write(generated),
             metadata: metadata,
             facts: facts,
-            currency: generated.currency,
             period_start: generated.period_start,
             period_end: generated.period_end,
             generated_at: Time.current,
@@ -151,7 +149,6 @@ class GenerateInsightsJob < ApplicationJob
           # numbers. Expiry was the system's doing, not the user's, so the
           # insight resurfaces, with the body filled from the current facts.
           existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
-                           currency: generated.currency,
                            generated_at: Time.current, read_at: nil)
           existing
         else
@@ -167,8 +164,7 @@ class GenerateInsightsJob < ApplicationJob
           # current costs nothing — and a title naming a goal or a category
           # the user has since renamed is simply wrong on the page. Rename is
           # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, body: writer.write(generated), facts: facts, currency: generated.currency,
-                           generated_at: Time.current)
+          existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
           nil
         end
       rescue ActiveRecord::RecordNotUnique

@@ -98,7 +98,7 @@ class Insight::Generator
       @current_budget
     end
 
-    def build_insight(insight_type:, priority:, title:, template_key:, facts:, dedup_key:, metadata:, period: nil, currency: family.currency)
+    def build_insight(insight_type:, priority:, title:, template_key:, facts:, dedup_key:, metadata:, period: nil)
       GeneratedInsight.new(
         insight_type: insight_type,
         priority: priority,
@@ -106,7 +106,7 @@ class Insight::Generator
         template_key: template_key,
         facts: facts,
         metadata: metadata,
-        currency: currency,
+        currency: family.currency,
         period_start: period&.start_date,
         period_end: period&.end_date,
         dedup_key: dedup_key

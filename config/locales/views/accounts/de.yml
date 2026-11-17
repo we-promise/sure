@@ -114,6 +114,11 @@ de:
         statements: Auszüge
       header:
         complete_setup: Setup abschließen
+      balance_gap:
+        body_higher: "Der Kontostand laut Bank liegt seit %{since} um %{difference} höher als die Summe deiner Buchungen. Meist fehlt in Sure eine Buchung oder sie wurde doppelt importiert."
+        body_lower: "Der Kontostand laut Bank liegt seit %{since} um %{difference} niedriger als die Summe deiner Buchungen. Meist fehlt in Sure eine Buchung oder sie wurde doppelt importiert."
+        review: "Buchungen seit %{date} prüfen"
+        title: Kontostand stimmt nicht mit der Bank überein
       limited_fx_history_warning: Wechselkurse liegen erst ab %{date} vor. Transaktionen davor rechnen mit Näherungswerten, was vorkommt, wenn der Kursanbieter nur einen begrenzten Verlauf liefert.
       tabs:
         activity: Aktivität
