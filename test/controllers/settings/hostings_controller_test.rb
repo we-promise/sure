@@ -162,6 +162,30 @@ class Settings::HostingsControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "caps the Twelve Data usage bar at full width when usage exceeds the daily limit" do
+    @provider.stubs(:usage).returns(provider_success_response(
+      OpenStruct.new(used: 900, limit: 800, utilization: 112.5, plan: "free")
+    ))
+
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 100%;", bar["style"]
+    end
+  end
+
+  test "keeps the Twelve Data usage bar at the utilization when usage is within the daily limit" do
+    with_self_hosting do
+      get settings_hosting_url
+
+      assert_response :success
+      bar = css_select("div.w-52.bg-surface-inset > div.bg-green-500").sole
+      assert_equal "width: 10%;", bar["style"]
+    end
+  end
+
   test "renders OpenAI model and timeout guidance in German" do
     sign_in users(:sure_support_staff)
 
