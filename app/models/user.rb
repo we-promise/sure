@@ -683,6 +683,23 @@ class User < ApplicationRecord
     end
   end
 
+  # Accounts the user has hidden from the account sidebar. They still count
+  # toward net worth, reports and group totals; only the sidebar row is hidden.
+  def sidebar_hidden_account_ids
+    ids = preferences&.dig("sidebar_hidden_account_ids")
+    ids.is_a?(Array) ? ids.map(&:to_s) : []
+  end
+
+  def update_sidebar_hidden_account_ids(account_ids)
+    requested_ids = Array(account_ids).map(&:to_s).reject(&:blank?).uniq.first(MANUAL_ACCOUNT_ORDER_LIMIT)
+    accessible_ids = accessible_accounts.where(id: requested_ids).pluck(:id).map(&:to_s).to_set
+    hidden_ids = requested_ids.select { |id| accessible_ids.include?(id) }
+
+    with_locked_preferences do |prefs|
+      prefs["sidebar_hidden_account_ids"] = hidden_ids
+    end
+  end
+
   # Locked read-modify-write of the preferences JSONB: yields a copy of the
   # current preferences (re-read under a row lock) to change in place, then
   # saves it, so concurrent updates of other keys are not lost. Attributes set

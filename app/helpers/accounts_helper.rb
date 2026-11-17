@@ -94,7 +94,9 @@ module AccountsHelper
       # order, must re-render the sidebar right away rather than after the
       # 12h expiry.
       Current.user&.default_account_order,
-      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil
+      Current.user&.account_order&.manual? ? Digest::SHA256.hexdigest(Current.user.manual_account_order.to_json) : nil,
+      # Hiding or showing accounts in the sidebar settings must re-render too.
+      Digest::SHA256.hexdigest(Current.user&.sidebar_hidden_account_ids.to_a.sort.to_json)
     ]
   end
 

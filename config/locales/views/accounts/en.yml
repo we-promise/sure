@@ -197,6 +197,26 @@ en:
         start: Sort accounts
         hint: Drag accounts by their handle to reorder them.
         done: Done
+      settings:
+        title: Sidebar settings
+        sort_by: Sort accounts by
+        orders:
+          name_asc: Name (A–Z)
+          name_desc: Name (Z–A)
+          balance_desc: Balance (high to low)
+          balance_asc: Balance (low to high)
+          manual: Custom order
+        reorder: Reorder accounts…
+        hide_accounts: Hide accounts…
+        hide_accounts_count:
+          one: Hide accounts… (1 hidden)
+          other: Hide accounts… (%{count} hidden)
+    sidebar_visibility:
+      title: Show in sidebar
+      subtitle: Unchecked accounts are hidden from the account list.
+      empty: You have no accounts yet.
+      hint: Hidden accounts still count toward net worth, reports and group totals.
+      save: Save
     types:
       depository: Cash
       investment: Investment

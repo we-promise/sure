@@ -1,0 +1,34 @@
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title"), subtitle: t(".subtitle")) %>
+  <% dialog.with_body do %>
+    <%= form_with url: update_sidebar_visibility_accounts_path, method: :patch, data: { turbo_frame: "_top" }, class: "space-y-4" do |form| %>
+      <%# Sends an empty value so unchecking every account still submits. %>
+      <%= hidden_field_tag "shown_account_ids[]", "", id: nil %>
+
+      <% if @sidebar_accounts.empty? %>
+        <p class="text-sm text-secondary"><%= t(".empty") %></p>
+      <% end %>
+
+      <% @sidebar_accounts.sort_by { |type, _| Accountable::TYPES.index(type) || 99 }.each do |type, accounts| %>
+        <div>
+          <p class="text-xs font-medium text-secondary uppercase mb-1"><%= t("accounts.types_plural.#{type.underscore}", default: type) %></p>
+          <div class="space-y-0.5">
+            <% accounts.each do |account| %>
+              <label class="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-surface-hover cursor-pointer">
+                <%= check_box_tag "shown_account_ids[]", account.id, !@hidden_account_ids.include?(account.id.to_s), id: "sidebar_show_#{account.id}", class: "checkbox checkbox--light" %>
+                <span class="text-sm text-primary truncate grow"><%= account.name %></span>
+                <span class="text-sm text-secondary whitespace-nowrap privacy-sensitive"><%= format_money(account.balance_money) %></span>
+              </label>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <p class="text-xs text-secondary"><%= t(".hint") %></p>
+
+      <div class="flex justify-end gap-2">
+        <%= render DS::Button.new(variant: :primary, text: t(".save"), type: "submit") %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

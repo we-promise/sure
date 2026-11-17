@@ -264,6 +264,33 @@ class AccountsController < ApplicationController
     end
   end
 
+  # Sort order of the account sidebar, picked from the sidebar settings menu.
+  def sidebar_order
+    order = params[:order].to_s
+    if AccountOrder::ORDERS.key?(order) && Current.user.update(default_account_order: order)
+      redirect_back_or_to root_path, status: :see_other
+    else
+      head :unprocessable_entity
+    end
+  end
+
+  # Dialog listing every account with a "show in sidebar" checkbox.
+  def sidebar_visibility
+    @sidebar_accounts = Current.user.accessible_accounts
+      .visible
+      .includes(:accountable)
+      .order(:name)
+      .group_by(&:accountable_type)
+    @hidden_account_ids = Current.user.sidebar_hidden_account_ids.to_set
+  end
+
+  def update_sidebar_visibility
+    all_ids = Current.user.accessible_accounts.visible.pluck(:id).map(&:to_s)
+    shown_ids = Array(params[:shown_account_ids]).map(&:to_s)
+    Current.user.update_sidebar_hidden_account_ids(all_ids - shown_ids)
+    redirect_back_or_to root_path, status: :see_other
+  end
+
   def toggle_active
     if @account.active?
       @account.disable!

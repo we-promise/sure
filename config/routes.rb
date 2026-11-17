@@ -755,6 +755,9 @@ Rails.application.routes.draw do
       post :sync_all
       get :logo_options, action: :new_logo_options
       patch :reorder
+      patch :sidebar_order
+      get :sidebar_visibility
+      patch :update_sidebar_visibility
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
