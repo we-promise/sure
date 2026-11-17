@@ -21,6 +21,9 @@ class EnableBankingItem::Syncer
     # Phase 1: Import data from Enable Banking API
     sync.update!(status_text: "Importing accounts from Enable Banking...") if sync.respond_to?(:status_text)
     import_result = enable_banking_item.import_latest_enable_banking_data
+    # Before the failure check: a cut-short fetch is not retried, so it is
+    # reported even when another account fails in the same sync.
+    collect_truncated_history_warning(sync, import_result[:transactions_truncated].to_i)
 
     unless import_result[:success]
       # A session-level auth failure detected mid-import flips the item to
@@ -47,7 +50,7 @@ class EnableBankingItem::Syncer
     sync.update!(status_text: "Checking account configuration...") if sync.respond_to?(:status_text)
     collect_setup_stats(sync, provider_accounts: enable_banking_item.enable_banking_accounts.includes(:account_provider, :account))
 
-    unlinked_accounts = enable_banking_item.enable_banking_accounts.left_joins(:account_provider).where(account_providers: { id: nil })
+    unlinked_accounts = enable_banking_item.enable_banking_accounts.needs_setup
 
     if unlinked_accounts.any?
       enable_banking_item.update!(pending_account_setup: true)
@@ -88,4 +91,20 @@ class EnableBankingItem::Syncer
   def perform_post_sync
     # no-op
   end
+
+  private
+
+    # A full-history fetch that stopped early keeps its rows and the sync
+    # completes, so the sync summary shows that older history may be missing.
+    def collect_truncated_history_warning(sync, count)
+      return unless count.positive?
+
+      collect_data_quality_stats(sync,
+        warnings: count,
+        details: [ {
+          message: I18n.t("provider_warnings.enable_banking_history_truncated", count: count),
+          severity: "warning"
+        } ]
+      )
+    end
 end
