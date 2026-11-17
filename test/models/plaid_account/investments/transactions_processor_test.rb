@@ -318,6 +318,20 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Sell", process_plaid_transaction(trade_row("sell_2", "sell", "sell")).trade.investment_activity_label
   end
 
+  test "a fee row with subtype interest stays Fee" do
+    entry = process_plaid_transaction(fee_row("fee_int_1", "interest", "Margin interest"))
+
+    assert_equal "Fee", entry.transaction.investment_activity_label
+    assert_equal :fee, classify(entry)
+  end
+
+  test "a fee row with subtype dividend stays Fee" do
+    entry = process_plaid_transaction(fee_row("fee_div_1", "dividend", "Dividend charge"))
+
+    assert_equal "Fee", entry.transaction.investment_activity_label
+    assert_equal :fee, classify(entry)
+  end
+
   test "a missing subtype falls back to the type" do
     entry = process_plaid_transaction(trade_row("buy_2", "buy", nil))
 
@@ -336,6 +350,10 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
         "date" => Date.current,
         "name" => name
       }
+    end
+
+    def fee_row(id, subtype, name)
+      cash_row(id, subtype, name).merge("type" => "fee", "amount" => 10.25) # Positive, so money leaving the account
     end
 
     def trade_row(id, type, subtype)
