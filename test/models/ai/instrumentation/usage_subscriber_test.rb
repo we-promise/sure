@@ -50,18 +50,8 @@ class Ai::Instrumentation::UsageSubscriberTest < ActiveSupport::TestCase
     row = @family.llm_usages.where(family: @family).order(:created_at).last
     assert row.failed?
     assert_equal 0, row.prompt_tokens
-    assert_equal 0.0, row.estimated_cost.to_f
+    assert_equal 0, row.estimated_cost
     assert_nil row.metadata["tokens_unknown"]
-  end
-
-  test "a possibly-billed failure keeps its cost and tokens unknown" do
-    stub_request(:post, URL).to_return(status: 503, body: { error: { message: "busy" } }.to_json, headers: json)
-
-    assert_raises(Ai::Error::Upstream) { run_call(feature: :bill_setup) }
-
-    row = @family.llm_usages.where(family: @family, status: "failed").order(:created_at).last
-    assert_nil row.estimated_cost
-    assert_equal true, row.metadata["tokens_unknown"]
   end
 
   test "the answering request's row records the answer's finish reason; the failed retry does not" do

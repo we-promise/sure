@@ -341,4 +341,20 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_kind_of Ai::Error::Refused, generation(1).call(batches: 1).error
   end
+
+  test "every route marked down for a failure that needs a fix is refused, so the job doesn't retry a bad key" do
+    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    Ai::DownMarks.stubs(:state).returns(:failing)
+    stub_ai(:detect_merchants) { flunk "no route should be called" }
+
+    assert_kind_of Ai::Error::Refused, generation(1).call(batches: 1).error
+  end
+
+  test "routes all marked down for a passing failure stay unreachable, so the job retries" do
+    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    Ai::DownMarks.stubs(:state).returns(:passing)
+    stub_ai(:detect_merchants) { flunk "no route should be called" }
+
+    assert_kind_of Ai::Error::Unreachable, generation(1).call(batches: 1).error
+  end
 end

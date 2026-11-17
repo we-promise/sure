@@ -80,11 +80,13 @@ class RuleRun < ApplicationRecord
   end
 
   private
-    # Changes the run under its row lock and saves it. A failed save leaves its changes on the
-    # record, and Rails refuses to lock a record with unsaved changes, so they're discarded: the
-    # next update (often the failure's own) can still take the lock. In memory, not by reloading:
-    # after a deadlock the transaction is aborted, and a query would replace the retryable error.
+    # Changes the run under its row lock and saves it. A failed save, or a save whose enclosing
+    # transaction rolled back, leaves its changes on the record, and Rails refuses to lock a record
+    # with unsaved changes, so they're discarded: the next update (often the failure's own) can
+    # still take the lock. In memory, not by reloading: after a deadlock the transaction is
+    # aborted, and a query would replace the retryable error. with_lock reloads the row anyway.
     def save_locked
+      restore_attributes
       with_lock do
         yield
         save!

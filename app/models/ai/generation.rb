@@ -254,9 +254,10 @@ class Ai::Generation
 
       # A later route that couldn't fit the slice doesn't hide why the earlier ones failed: an unusable
       # answer still fails like one, and a failure that needs a fix (a bad key) reaches the requester
-      # instead of the slice being skipped (Ai::Generation#call_batched).
+      # instead of the slice being skipped (Ai::Generation#call_batched). With no route tried, a
+      # failure that needs a fix still ends the run rather than being retried as an outage.
       unfit = last_error.is_a?(Ai::Error::ContextTooLong)
-      raise passing || (unusable if unfit) || (needs_fix if unfit) || last_error ||
+      raise passing || (unusable if unfit) || (needs_fix if unfit) || last_error || needs_fix ||
             Ai::Error::Unreachable.new("every route for #{feature_key} is marked down")
     end
 

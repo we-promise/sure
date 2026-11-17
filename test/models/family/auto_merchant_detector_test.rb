@@ -372,6 +372,24 @@ class Family::AutoMerchantDetectorTest < ActiveSupport::TestCase
     assert_not txn.locked?(:merchant_id)
   end
 
+  test "a batch whose transaction rolls back is released when the job gives up, so the run can finish" do
+    txn = create_transaction(account: @account, name: "Chipotle burrito").transaction
+    rule_run = RuleRun.create!(rule: rules(:one), execution_type: "manual", status: "pending", pending_jobs_count: 1,
+                               transactions_queued: 1, executed_at: Time.current)
+    rule_run.await_ai!(1)
+    detector = Family::AutoMerchantDetector.new(@family, transaction_ids: [ txn.id ], rule_run:)
+    detector.ai_generation
+    answer = Ai::Result.new(value: { merchants: [ { transaction_id: txn.id, business_name: "Chipotle", business_url: "chipotle.com" } ] })
+
+    ActiveRecord::Base.transaction do
+      detector.apply_ai(answer)
+      raise ActiveRecord::Rollback   # the commit fails after the batch reported itself
+    end
+    detector.ai_failed(StandardError.new("the batch didn't commit"))
+
+    assert_equal 0, rule_run.reload.transactions_awaiting_ai
+  end
+
   private
     def detect(family, transaction_ids)
       Ai::GenerationJob.perform_now(:detect_merchants, { ids: transaction_ids, family_id: family.id })

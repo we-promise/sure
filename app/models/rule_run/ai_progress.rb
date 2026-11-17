@@ -5,11 +5,13 @@ module RuleRun::AiProgress
   def ai_correlation_id = @rule_run ? "rule_run:#{@rule_run.id}" : nil
 
   private
-    # From apply_ai: the batch's transactions are handled, and `modified` of them changed.
+    # From apply_ai, inside its transaction: the batch's transactions are handled, and `modified`
+    # of them changed. Counted as reported only once that commits; a batch that fails to record or
+    # rolls back is left for release_unhandled.
     def report_batch(result, modified:)
       handled = transaction_ids.size - result.remaining.size
       @rule_run&.ai_handled!(handled:, modified:)
-      @handled = handled   # only once recorded: if recording fails, release_unhandled still covers the batch
+      ActiveRecord.after_all_transactions_commit { @handled = handled }
     end
 
     # From ai_finished and ai_failed: this job's transactions that no batch reported.

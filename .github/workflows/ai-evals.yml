@@ -14,6 +14,10 @@ on:
       - "app/models/ai/transport/**"
       - "config/ai/**"
       - "test/vcr_cassettes/ai/evals/**"
+      - "app/models/eval/**"
+      - "lib/tasks/evals.rake"
+      - "db/eval_data/**"
+      - ".github/workflows/ai-evals.yml"
 
 permissions:
   contents: read
