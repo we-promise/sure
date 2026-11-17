@@ -1356,9 +1356,9 @@ class EnableBankingItem::Importer
     # banks issue new transaction identifiers in every session, so a second
     # longest fetch could import its history twice. Failures are retried while
     # the request is fresh, never fail the sync, and are captured as debug log
-    # entries.
+    # entries. Accounts the user ignored are not fetched.
     def fetch_unlinked_accounts_after_authorization
-      unlinked_accounts.where(raw_transactions_payload: nil).each do |enable_banking_account|
+      enable_banking_item.enable_banking_accounts.needs_setup.where(raw_transactions_payload: nil).each do |enable_banking_account|
         # Makes the rows purgeable while the account stays unlinked (see
         # purge_stale_unlinked_transactions). Set before the fetch, so stored
         # rows are never left without it.

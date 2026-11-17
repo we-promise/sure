@@ -280,6 +280,18 @@ class EnableBankingItem::ImporterEarlyFetchTest < ActiveSupport::TestCase
     assert_nil @item.reload.full_history_fetch_requested_at
   end
 
+  test "a re-authorization does not fetch an account the user ignored" do
+    @eba.ignore!
+    request_full_history!
+
+    build_importer(transactions: [ tx("old", "2019-01-01") ]).import
+
+    assert_empty @requests, "an ignored account was fetched"
+    assert_nil @eba.reload.raw_transactions_payload
+    assert_nil @eba.early_fetched_at
+    assert_nil @item.reload.full_history_fetch_requested_at
+  end
+
   test "a failed linked fetch does not keep the request" do
     link!
     @eba.update!(raw_transactions_payload: [ tx("a", 3.days.ago.to_date.iso8601) ])
