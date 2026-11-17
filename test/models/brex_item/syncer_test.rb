@@ -98,6 +98,23 @@ class BrexItem::SyncerTest < ActiveSupport::TestCase
     assert_equal I18n.t("brex_items.syncer.credentials_invalid"), error.message
   end
 
+  test "a failed sync records a debug log entry for support" do
+    sync = mock_sync(window_start_date: Date.new(2026, 2, 1))
+    @brex_item.expects(:import_latest_brex_data).raises(RuntimeError, "connection reset")
+    Sentry.stubs(:capture_exception)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "brex").count }, 1 do
+      assert_raises(BrexItem::Syncer::SafeSyncError) { @syncer.perform_sync(sync) }
+    end
+
+    entry = DebugLogEntry.where(provider_key: "brex").recent.first
+    assert_equal "provider_sync_error", entry.category
+    assert_equal "error", entry.level
+    assert_equal "BrexItem::Syncer", entry.source
+    assert_equal @brex_item.family, entry.family
+    assert_equal({ "brex_item_id" => @brex_item.id, "error_class" => "RuntimeError", "error_message" => "connection reset" }, entry.metadata)
+  end
+
   test "a rejected token fails the sync and flags the connection" do
     Provider::Brex.any_instance.stubs(:get_accounts)
                   .raises(Provider::Brex::BrexError.new("Unauthorized", :unauthorized, http_status: 401))
