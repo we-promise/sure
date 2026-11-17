@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_21_090100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2804,6 +2804,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
   end
 
   create_table "trade_republic_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.datetime "auto_login_planned_for"
+    t.string "auto_login_time"
+    t.string "auto_login_token"
     t.string "brokerage_account_id"
     t.datetime "created_at", null: false
     t.string "currency"
@@ -2814,6 +2817,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_20_100000) do
     t.boolean "pending_account_setup", default: false, null: false
     t.text "pending_login_state"
     t.string "phone_number"
+    t.text "pin"
     t.boolean "scheduled_for_deletion", default: false, null: false
     t.text "session_blob"
     t.datetime "session_expires_at"

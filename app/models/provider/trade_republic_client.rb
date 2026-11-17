@@ -355,6 +355,15 @@ class Provider::TradeRepublicClient
     raise_login_error(e.response)
   end
 
+  # True for a stored login that carries an end time which has passed. One
+  # that cannot be read says nothing about its age, so it does not count.
+  def self.pending_login_lapsed?(pending_login_b64)
+    expires_at = JSON.parse(Base64.strict_decode64(pending_login_b64.to_s))["expires_at"].presence
+    expires_at.present? && Time.iso8601(expires_at) <= Time.current
+  rescue JSON::ParserError, ArgumentError, TypeError, NoMethodError
+    false
+  end
+
   def login_method(pending_login_b64:)
     pending = decode_pending(pending_login_b64)
     pending["required_action"] == "AUTHENTICATOR_VERIFICATION" ? "authenticator" : "push"

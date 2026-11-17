@@ -1,0 +1,9 @@
+<h1><%= t(".greeting", name: @user.display_name) %></h1>
+
+<p><%= t(".intro", product: product_name) %></p>
+
+<p><%= t(".manual_login") %></p>
+
+<%= link_to t(".settings_button"), @settings_url, class: "button" %>
+
+<p class="footer"><%= t(".footer_note") %></p>

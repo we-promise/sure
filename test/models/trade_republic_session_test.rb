@@ -15,11 +15,13 @@ class TradeRepublicSessionTest < ActiveSupport::TestCase
   end
 
   test "names the device with the web app's model key instead of device and deviceType" do
-    payload = device_payload(Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234"))
+    with_env_overrides("TRADE_REPUBLIC_DEVICE_MODEL" => nil) do
+      payload = device_payload(Provider::TradeRepublicSession.new(phone_number: "+491701234567", pin: "1234"))
 
-    assert_equal "Sure", payload.fetch("model")
-    assert_not payload.key?("device")
-    assert_not payload.key?("deviceType")
+      assert_equal "Sure", payload.fetch("model")
+      assert_not payload.key?("device")
+      assert_not payload.key?("deviceType")
+    end
   end
 
   test "takes the device model from the environment" do

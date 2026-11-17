@@ -16,8 +16,9 @@ class TradeRepublicItem::Importer
   end
 
   def import
+    session_before = trade_republic_item.session_blob
     result = provider.sync(
-      session_txt: trade_republic_item.session_blob,
+      session_txt: session_before,
       known_newest_event_id: known_newest_event_id,
       timeline_cursors: force_full_timeline_fetch? ? {} : trade_republic_item.timeline_cursors,
       enrich_events: events_needing_detail_enrichment,
@@ -30,20 +31,28 @@ class TradeRepublicItem::Importer
     domain_statuses = normalized_domain_statuses(data)
 
     if data["status"] == "session_expired"
-      trade_republic_item.update!(status: :requires_update)
+      # A login that replaced the session meanwhile is not the one that expired.
+      trade_republic_item.update!(status: :requires_update) if session_unchanged_since?(session_before)
       raise Provider::TradeRepublicClient::AuthenticationRequired,
         "Trade Republic session expired. Re-authentication required."
     end
 
     capped_topics = []
-    ActiveRecord::Base.transaction do
+    # The row is locked and reloaded so that a login confirmed during the
+    # provider call is seen; its session stays, the refreshed cookies belong
+    # to the session this sync started with.
+    trade_republic_item.with_lock do
+      replaced = !session_unchanged_since?(session_before, reload: false)
       capped_topics = upsert_account(data, domain_statuses: domain_statuses)
-      trade_republic_item.update!(
-        status: :good,
+      attributes = {
         newest_event_id: timeline_cursor_for(data, domain_statuses),
-        timeline_cursors: timeline_cursors_for(data, domain_statuses, capped_topics: capped_topics),
-        session_blob: data["session_txt"].presence || trade_republic_item.session_blob
-      )
+        timeline_cursors: timeline_cursors_for(data, domain_statuses, capped_topics: capped_topics)
+      }
+      unless replaced
+        attributes[:status] = :good
+        attributes[:session_blob] = data["session_txt"].presence || trade_republic_item.session_blob
+      end
+      trade_republic_item.update!(attributes)
     end
 
     record_provider_warnings(Array(data["warnings"]) + importer_warnings(capped_topics: capped_topics))
@@ -56,6 +65,11 @@ class TradeRepublicItem::Importer
   end
 
   private
+
+    def session_unchanged_since?(session_before, reload: true)
+      current = reload ? trade_republic_item.class.where(id: trade_republic_item.id).pick(:session_blob) : trade_republic_item.session_blob
+      current == session_before
+    end
 
     # Returns the topics whose fetched events the size cap of the stored
     # timeline dropped.

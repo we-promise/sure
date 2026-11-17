@@ -39,6 +39,42 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
     assert_equal 1, account.raw_positions_payload.size
   end
 
+  test "import stores the refreshed cookies while the session it started with is current" do
+    @item.update_columns(session_blob: "# A")
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).returns(client_result(ok_sync("session_txt" => "# A2")))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal "# A2", @item.reload.session_blob
+  end
+
+  test "import keeps a session that a login stored while the sync ran, and still saves the rest" do
+    @item.update_columns(session_blob: "# A")
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { TradeRepublicItem.find(@item.id).update_columns(session_blob: "# B"); true }
+      .returns(client_result(ok_sync("session_txt" => "# A2")))
+
+    TradeRepublicItem::Importer.new(@item, provider: provider).import
+
+    assert_equal "# B", @item.reload.session_blob
+    assert_not_nil @item.trade_republic_accounts.find_by(trade_republic_account_id: "DE9998")
+  end
+
+  test "an expired old session reported after a login replaced it does not flag the new one" do
+    @item.update_columns(session_blob: "# A")
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { TradeRepublicItem.find(@item.id).update_columns(session_blob: "# B"); true }
+      .returns(client_result("status" => "session_expired"))
+
+    assert_raises(Provider::TradeRepublicClient::AuthenticationRequired) do
+      TradeRepublicItem::Importer.new(@item, provider: provider).import
+    end
+
+    assert_not_predicate @item.reload, :requires_update?
+    assert_equal "# B", @item.session_blob
+  end
+
   test "import creates a Crypto account valued at the crypto positions" do
     provider = mock("trade_republic_provider")
     provider.expects(:sync).returns(client_result(
@@ -1413,6 +1449,17 @@ class TradeRepublicItemImporterTest < ActiveSupport::TestCase
   end
 
   private
+
+    def ok_sync(overrides = {})
+      {
+        "status" => "ok",
+        "account" => { "brokerage_account_id" => "DE9998", "currency" => "EUR" },
+        "cash" => { "amount" => "1", "currency" => "EUR" },
+        "positions" => [],
+        "events" => [],
+        "warnings" => []
+      }.merge(overrides)
+    end
 
     def client_result(data)
       Provider::TradeRepublicClient::Result.new(data: data)

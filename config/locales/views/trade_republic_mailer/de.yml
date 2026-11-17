@@ -1,0 +1,10 @@
+---
+de:
+  trade_republic_mailer:
+    auto_login_failed:
+      subject: "%{product_name}: Automatischer Trade-Republic-Login fehlgeschlagen"
+      greeting: "Hallo %{name},"
+      intro: Der automatische tägliche Login bei Trade Republic in %{product} hat nicht geklappt. Die Push-Benachrichtigung wurde nicht rechtzeitig bestätigt oder Trade Republic hat den Login nicht akzeptiert.
+      manual_login: Bitte melde dich manuell in den Trade-Republic-Einstellungen an, damit die Synchronisierung weiterlaufen kann.
+      settings_button: Trade-Republic-Einstellungen öffnen
+      footer_note: Dies ist eine automatische Nachricht. Bitte antworte nicht direkt auf diese E-Mail.

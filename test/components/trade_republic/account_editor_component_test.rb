@@ -203,4 +203,22 @@ class TradeRepublic::AccountEditorComponentTest < ViewComponent::TestCase
     assert_text I18n.t("settings.providers.trade_republic_panel.login_expired")
     assert_button I18n.t("settings.providers.trade_republic_panel.qr_login")
   end
+  test "offers the auto login time next to the credentials" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pin: "1234", auto_login_time: "07:30")
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
+
+    assert_selector "input[type='time'][name='trade_republic_item[auto_login_time]'][value='07:30']"
+    assert_no_text "1234"
+  end
+
+  test "the auto login time is empty while auto login is off" do
+    item = trade_republic_items(:configured_item)
+
+    render_inline(TradeRepublic::AccountEditorComponent.new(items: [ item ], family: families(:dylan_family)))
+
+    assert_selector "input[type='time'][name='trade_republic_item[auto_login_time]']"
+    assert_no_selector "input[type='time'][value]"
+  end
 end

@@ -167,22 +167,16 @@ class TradeRepublicItemsController < ApplicationController
     if result.data["status"] == "pending"
       update_if_pending_login_current!(pending, pending_login_state: result.data.fetch("pending_login_b64")) if result.data["pending_login_b64"].present?
       login_poll_response(:no_content) { render_login_panel }
-    elsif duplicate_connection?(result)
-      return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil, status: :requires_update)
-
-      discard_duplicate_connection!
-      render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
     else
-      begin
-        unless update_if_pending_login_current!(pending, session_blob: result.data.fetch("session_txt"), pending_login_state: nil, status: :good, brokerage_account_id: account_id_from(result))
-          return render_superseded_push_login
-        end
-      rescue ActiveRecord::RecordNotUnique
-        discard_duplicate_connection!
-        return render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
+      case @trade_republic_item.finish_login(pending, result)
+      when :superseded
+        render_superseded_push_login
+      when :duplicate
+        render_login_panel(alert: t("trade_republic_items.duplicate_connection"), whole_panel: true)
+      else
+        @trade_republic_item.sync_later unless @trade_republic_item.syncing?
+        render_login_panel(success: true)
       end
-      @trade_republic_item.sync_later unless @trade_republic_item.syncing?
-      render_login_panel(success: true)
     end
   rescue Provider::TradeRepublicClient::LoginExpired, Provider::TradeRepublicClient::AuthenticationRequired
     return render_superseded_push_login unless update_if_pending_login_current!(pending, pending_login_state: nil)
@@ -278,6 +272,8 @@ class TradeRepublicItemsController < ApplicationController
     attrs = trade_republic_item_params.to_h
     # The form leaves the phone number blank to keep the current one.
     attrs.delete("phone_number") if attrs["phone_number"].blank?
+    # Blank keeps the stored PIN, as for the phone number.
+    attrs.delete("pin") if attrs["pin"].blank?
     login_pin = attrs["pin"]
     reauthentication_required = reauthentication_needed?(attrs)
 
@@ -546,7 +542,7 @@ class TradeRepublicItemsController < ApplicationController
     end
 
     def trade_republic_item_params
-      params.require(:trade_republic_item).permit(:phone_number, :pin, :currency)
+      params.require(:trade_republic_item).permit(:phone_number, :pin, :currency, :auto_login_time)
     end
 
     # Credentials changed → the stored session belongs to the old login.
@@ -618,40 +614,16 @@ class TradeRepublicItemsController < ApplicationController
       turbo_stream.replace("trade-republic-providers-panel", partial: "settings/providers/trade_republic_panel")
     end
 
-    # Connecting the same Trade Republic account through a second item would
-    # import its accounts twice.
     def account_id_from(result)
-      result.data.dig("account", "brokerage_account_id").presence
+      @trade_republic_item.login_account_id(result)
     end
 
-    def other_active_trade_republic_items
-      Current.family.trade_republic_items.active.where.not(id: @trade_republic_item.id)
-    end
-
-    # trade_republic_accounts rows only exist once the importer's first sync
-    # runs, so checking only those would let a second item finish login for
-    # the same account in the gap before that job runs (or truly
-    # concurrently). brokerage_account_id is written on the item itself the
-    # moment login succeeds and is backed by a unique index, so this is an
-    # early, user-facing check; the index (see discard_duplicate_connection!
-    # callers) is what actually closes the race.
     def duplicate_connection?(result)
-      account_id = account_id_from(result)
-      return false if account_id.blank?
-
-      other_active_trade_republic_items.exists?(brokerage_account_id: account_id) ||
-        other_active_trade_republic_items
-          .joins(:trade_republic_accounts)
-          .where(trade_republic_accounts: { trade_republic_account_id: [ account_id, "cash:#{account_id}" ] })
-          .exists?
+      @trade_republic_item.duplicate_connection?(result)
     end
 
     def discard_duplicate_connection!
-      # A failed unique-index write from the losing update! left brokerage_account_id
-      # dirty on the in-memory record with the other item's value; clear it
-      # explicitly or this update! would collide with the same index again.
-      @trade_republic_item.update!(session_blob: nil, pending_login_state: nil, status: :requires_update, brokerage_account_id: nil)
-      @trade_republic_item.destroy_later if @trade_republic_item.trade_republic_accounts.none?
+      @trade_republic_item.discard_duplicate_connection!
     end
 
     # Only the add-connection form's own unsaved item should replace its blank
@@ -693,14 +665,8 @@ class TradeRepublicItemsController < ApplicationController
       )
     end
 
-    # Cancellation or a newer QR login can replace the state while a poll is
-    # in flight; only the poll that started from the current state may write.
     def update_if_pending_login_current!(expected_pending, **attributes)
-      @trade_republic_item.with_lock do
-        current = @trade_republic_item.pending_login_state == expected_pending
-        @trade_republic_item.update!(attributes) if current
-        current
-      end
+      @trade_republic_item.update_if_pending_login_current!(expected_pending, **attributes)
     end
 
     # A newer login owns the card now; leave its state and poller alone.
