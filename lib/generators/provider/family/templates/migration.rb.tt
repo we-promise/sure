@@ -42,7 +42,7 @@ class Create<%= class_name %>ItemsAndAccounts < ActiveRecord::Migration<%= migra
 
       # Account identification
       t.string :name
-      t.string :<%= file_name %>_account_id
+      t.string :account_id
       t.string :account_number
 
       # Account details
@@ -76,7 +76,7 @@ class Create<%= class_name %>ItemsAndAccounts < ActiveRecord::Migration<%= migra
       t.timestamps
     end
 
-    add_index :<%= file_name %>_accounts, :<%= file_name %>_account_id, unique: true
+    add_index :<%= file_name %>_accounts, :account_id, unique: true
 <% if investment_provider? -%>
     add_index :<%= file_name %>_accounts, :<%= file_name %>_authorization_id
 <% end -%>
