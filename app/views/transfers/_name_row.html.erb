@@ -3,13 +3,14 @@
 <dl class="flex items-center gap-2 justify-between">
   <dt class="text-secondary"><%= t("transfers.show.transaction_name") %></dt>
   <dd class="min-w-0 flex-1">
-    <label for="<%= form.field_id(method) %>" class="flex items-center justify-end gap-1.5 cursor-text">
+    <label for="<%= form.field_id(method) %>" class="ml-auto flex w-fit max-w-full items-center justify-end gap-1.5 cursor-text">
       <%= form.text_field method,
             value: value,
+            size: [ value.to_s.length, 4 ].max,
             inline: true,
             required: true,
             autocomplete: "off",
-            class: "min-w-0 flex-1 bg-transparent border-0 p-0 text-right text-sm font-medium text-primary rounded-sm hover:bg-container-inset focus:bg-container-inset focus-ring",
+            class: "min-w-0 max-w-full field-sizing-content bg-transparent border-0 p-0 text-right text-sm font-medium text-primary rounded-sm hover:bg-container-inset focus:bg-container-inset focus-ring",
             aria: { label: t("transfers.show.transaction_name") },
             "data-auto-submit-form-target": "auto" %>
       <%= icon "pencil", size: "sm", color: "current", aria: { hidden: true } %>
