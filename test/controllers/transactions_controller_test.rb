@@ -2637,6 +2637,26 @@ end
     assert_not_includes response.body, "action_type=set_transaction_category"
   end
 
+  test "show offers editing a split only on an account the user can edit" do
+    parent = create_transaction(amount: 100, name: "Split", account: accounts(:credit_card))
+    parent.split!([
+      { name: "Part 1", amount: 60, category_id: nil },
+      { name: "Part 2", amount: 40, category_id: nil }
+    ])
+
+    get transaction_path(parent)
+    assert_select "a[href=?]", edit_transaction_split_path(parent)
+
+    account_shares(:credit_card_shared_with_member).update!(permission: "read_write")
+    user = users(:family_member)
+    user.update!(role: :super_admin)
+    sign_in user
+
+    get transaction_path(parent)
+    assert_response :success
+    assert_select "a[href=?]", edit_transaction_split_path(parent), count: 0
+  end
+
   private
     def create_immediate_rule
       @user.family.rules.create!(

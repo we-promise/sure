@@ -243,27 +243,29 @@
               </p>
             </div>
           <% end %>
-          <div class="flex items-center gap-3 pt-2">
-            <%= render DS::Link.new(
-              text: t("splits.child.edit_split"),
-              icon: "pencil",
-              variant: "ghost",
-              size: :sm,
-              href: edit_transaction_split_path(@entry),
-              frame: :modal
-            ) %>
-            <%= render DS::Button.new(
-              text: t("splits.show.unsplit_button"),
-              icon: "undo-2",
-              variant: "ghost",
-              size: :sm,
-              class: "text-destructive",
-              href: transaction_split_path(@entry),
-              method: :delete,
-              confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
-              frame: "_top"
-            ) %>
-          </div>
+          <% if can_edit_entry? %>
+            <div class="flex items-center gap-3 pt-2">
+              <%= render DS::Link.new(
+                text: t("splits.child.edit_split"),
+                icon: "pencil",
+                variant: "ghost",
+                size: :sm,
+                href: edit_transaction_split_path(@entry),
+                frame: :modal
+              ) %>
+              <%= render DS::Button.new(
+                text: t("splits.show.unsplit_button"),
+                icon: "undo-2",
+                variant: "ghost",
+                size: :sm,
+                class: "text-destructive",
+                href: transaction_split_path(@entry),
+                method: :delete,
+                confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
+                frame: "_top"
+              ) %>
+            </div>
+          <% end %>
         </div>
       <% end %>
     <% end %>
@@ -284,27 +286,29 @@
                   <%= format_money(-parent.amount_money) %>
                 </p>
               </div>
-              <div class="flex items-center gap-3 border-t border-primary pt-2">
-                <%= render DS::Link.new(
-                  text: t("splits.child.edit_split"),
-                  icon: "pencil",
-                  variant: "ghost",
-                  size: :sm,
-                  href: edit_transaction_split_path(parent),
-                  frame: :modal
-                ) %>
-                <%= render DS::Button.new(
-                  text: t("splits.child.unsplit"),
-                  icon: "undo-2",
-                  variant: "ghost",
-                  size: :sm,
-                  class: "text-destructive",
-                  href: transaction_split_path(parent),
-                  method: :delete,
-                  confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
-                  frame: "_top"
-                ) %>
-              </div>
+              <% if can_edit_entry? %>
+                <div class="flex items-center gap-3 border-t border-primary pt-2">
+                  <%= render DS::Link.new(
+                    text: t("splits.child.edit_split"),
+                    icon: "pencil",
+                    variant: "ghost",
+                    size: :sm,
+                    href: edit_transaction_split_path(parent),
+                    frame: :modal
+                  ) %>
+                  <%= render DS::Button.new(
+                    text: t("splits.child.unsplit"),
+                    icon: "undo-2",
+                    variant: "ghost",
+                    size: :sm,
+                    class: "text-destructive",
+                    href: transaction_split_path(parent),
+                    method: :delete,
+                    confirm: CustomConfirm.new(title: t("splits.show.unsplit_title"), body: t("splits.show.unsplit_confirm"), btn_text: t("splits.show.unsplit_button"), destructive: true),
+                    frame: "_top"
+                  ) %>
+                </div>
+              <% end %>
             </div>
           <% end %>
         </div>

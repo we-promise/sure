@@ -199,18 +199,23 @@ module TransactionsHelper
     @annotatable_account_ids.include?(account.id)
   end
 
-  # Whether the current user may cycle the manual reconciliation status.
-  # TransactionsController#reconcile requires write access (see
-  # require_account_permission! in AccountAuthorizable), so the badge must
-  # only be offered on accounts the user owns or holds full_control on --
-  # otherwise the click is rejected and the status never advances. Matches
-  # the "write" predicate rather than the annotate one, since reconciling is
-  # not an annotation. Memoized per request so list rows don't query per row.
-  def can_reconcile_account?(account)
+  # Whether the current user may edit entries on this account (split, delete,
+  # change the amount): accounts they own or hold full_control on, the write
+  # access require_account_permission! in AccountAuthorizable demands.
+  # Memoized per request so list rows don't query per row.
+  def can_edit_account?(account)
     return false unless Current.user
 
-    @reconcilable_account_ids ||= Account.writable_by(Current.user).pluck(:id).to_set
-    @reconcilable_account_ids.include?(account.id)
+    @writable_account_ids ||= Account.writable_by(Current.user).pluck(:id).to_set
+    @writable_account_ids.include?(account.id)
+  end
+
+  # Whether the current user may cycle the manual reconciliation status.
+  # TransactionsController#reconcile requires write access, so the badge is
+  # only offered where the click is not rejected. Reconciling is not an
+  # annotation, so this is the "write" predicate rather than the annotate one.
+  def can_reconcile_account?(account)
+    can_edit_account?(account)
   end
 
   # Memoized per request so reading the row cache key does not run one
