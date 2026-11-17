@@ -127,6 +127,7 @@ class ProviderItem::AccountFlow
 
   def select_existing_account_result(account:)
     return linked_account_result if account.account_providers.exists?
+    return unsupported_account_type_result(account.accountable_type) unless supported_account_type?(account.accountable_type)
 
     selection_result_for(
       scope: "#{i18n_scope}.select_existing_account",
@@ -155,6 +156,7 @@ class ProviderItem::AccountFlow
   def link_existing_account_result(account:, provider_account_id:)
     return navigation(:accounts, :alert, I18n.t("#{i18n_scope}.link_existing_account.missing_parameters")) if account.blank? || provider_account_id.blank?
     return navigation(:accounts, :alert, I18n.t("#{i18n_scope}.link_existing_account.account_already_linked")) if account.account_providers.exists?
+    return navigation(:accounts, :alert, I18n.t("#{i18n_scope}.link_accounts.invalid_account_type")) unless supported_account_type?(account.accountable_type)
     return navigation(:settings_providers, :alert, I18n.t("#{i18n_scope}.link_existing_account.select_connection")) unless selected?
 
     link_existing_account!(account: account, provider_account_id: provider_account_id)
@@ -382,6 +384,14 @@ class ProviderItem::AccountFlow
         available_accounts: [],
         accountable_type: nil,
         message: I18n.t("#{i18n_scope}.select_existing_account.account_already_linked")
+      )
+    end
+
+    def unsupported_account_type_result(accountable_type)
+      selection_result(
+        status: :empty,
+        accountable_type: accountable_type,
+        message: I18n.t("#{i18n_scope}.link_accounts.invalid_account_type")
       )
     end
 
