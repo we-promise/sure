@@ -26,7 +26,7 @@ class LunchflowItem::AccountFlow < ProviderItem::AccountFlow
       lunchflow_account.raw_payload.to_h.deep_stringify_keys != account_data.to_h.deep_stringify_keys
     end
 
-    # The app-wide translated subtype name, as Lunch Flow's setup page used.
+    # Lunch Flow labels subtypes with the app-wide translated name.
     def subtype_label_default(type_key, key, _value)
       type_key.camelize.constantize.long_subtype_label_for(key)
     end
