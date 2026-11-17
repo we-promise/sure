@@ -1,6 +1,8 @@
 class ReportsController < ApplicationController
   include Periodable
 
+  SIGN_AGNOSTIC_EXPENSE_KINDS = %w[loan_payment investment_contribution].freeze
+
   # Allow API key authentication for exports (for Google Sheets integration)
   # Note: We run authentication_for_export which handles both session and API key auth
   skip_authentication only: :export_transactions
@@ -460,12 +462,17 @@ class ReportsController < ApplicationController
     # the income statement.
     def build_biggest_expenses(limit)
       family_currency = Current.family.currency
+      # Loan payments and investment contributions are expenses whatever their
+      # sign (some importers store them negative), as in the income statement.
       expenses = report_transactions_scope(excluded_kinds: Current.family.analytics_excluded_kinds - [ "one_time" ])
-        .where("entries.amount > 0")
+        .where("entries.amount > 0 OR (entries.amount < 0 AND transactions.kind IN (?))", SIGN_AGNOSTIC_EXPENSE_KINDS)
+      expense_amount_sql = Arel.sql(ActiveRecord::Base.sanitize_sql_array([
+        "CASE WHEN transactions.kind IN (?) THEN ABS(entries.amount) ELSE entries.amount END DESC", SIGN_AGNOSTIC_EXPENSE_KINDS
+      ]))
 
       # The overall top `limit` is always among the top `limit` in the family
       # currency plus the foreign-currency rows, so only those get loaded.
-      candidates = expenses.where(entries: { currency: family_currency }).order("entries.amount DESC").limit(limit).to_a +
+      candidates = expenses.where(entries: { currency: family_currency }).order(expense_amount_sql).limit(limit).to_a +
         expenses.where.not(entries: { currency: family_currency }).to_a
 
       convert = report_amount_converter(family_currency)

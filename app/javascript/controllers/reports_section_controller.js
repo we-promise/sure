@@ -36,8 +36,15 @@ export default class extends Controller {
 
   // A control inside a section that saves one preference value (given as
   // Stimulus action params) and reloads the page to show its effect.
+  // Saves run one after another, so quick clicks reach the server in click
+  // order and the last choice is the one stored; only the last save reloads.
   async savePreferenceValue({ params: { key, value } }) {
-    if (await this.patchPreferences({ [key]: value })) {
+    const save = (this.pendingSave ?? Promise.resolve()).then(() =>
+      this.patchPreferences({ [key]: value }),
+    );
+    this.pendingSave = save;
+
+    if ((await save) && this.pendingSave === save) {
       window.Turbo.visit(window.location.href, { action: "replace" });
     }
   }

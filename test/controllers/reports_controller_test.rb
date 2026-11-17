@@ -1357,6 +1357,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Rent" ], biggest_expense_names
   end
 
+  # Some importers store loan payments and contributions as negative amounts;
+  # the income statement counts them as expenses either way.
+  test "biggest expenses keeps negative loan payments and contributions as expenses" do
+    @family.update!(investment_contributions_as_spending: true)
+    create_transaction(name: "Imported contribution", amount: -1_500, date: BIGGEST_MONTH + 1, kind: "investment_contribution")
+    create_transaction(name: "Imported loan payment", amount: -700, date: BIGGEST_MONTH + 1, kind: "loan_payment")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+    create_transaction(name: "Refund", amount: -2_000, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path
+
+    assert_equal [ "Imported contribution", "Rent", "Imported loan payment" ], biggest_expense_names
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /\$1,500\.00/
+  end
+
   test "biggest expenses ranks a foreign-currency expense by its converted amount" do
     eur = @family.accounts.create!(owner: @user, name: "Paris", balance: 0, currency: "EUR", accountable: Depository.new)
     ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: BIGGEST_MONTH + 2, rate: 2)
