@@ -159,9 +159,10 @@ class RulesController < ApplicationController
     # Advice, not a validation: the form lists the family's similar rules
     # until the user saves anyway. Rules written elsewhere (the assistant,
     # imports, Quick Categorize) are not checked. An invalid rule shows its
-    # errors first.
+    # errors first. The rules list's switch submits `active` alone, which
+    # changes no condition or action, so it is not checked either.
     def similar_rules_to_confirm?
-      return false if params[:confirm_similar].present? || !@rule.valid?
+      return false if params[:confirm_similar].present? || rule_params.keys == [ "active" ] || !@rule.valid?
 
       @similar_rules = Rule::Health.new(Current.family).similar_to(@rule)
       @similar_rules.any?

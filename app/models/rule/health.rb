@@ -15,9 +15,9 @@ class Rule::Health
   Shadowed = Data.define(:rule, :reason, :by, :attributes, :match_count)
   Overlap = Data.define(:rule, :other, :attributes, :shared_count, :match_count, :same_text)
   # wins: the rule runs before the one being saved and sets a field it sets
-  # or stops the rules below. wins and shared_count are nil for an inactive
-  # rule, which doesn't run on sync; shared_count is nil when a match query
-  # failed.
+  # or stops the rules below. wins and shared_count are nil when either rule
+  # is switched off, since it doesn't run on sync; shared_count is nil when a
+  # match query failed.
   Similar = Data.define(:rule, :position, :wins, :shared_count)
 
   attr_reader :rules
@@ -106,7 +106,7 @@ class Rule::Health
     rules.filter_map do |other|
       next if other.id == rule.id
       next unless similar?(rule, other)
-      next Similar.new(rule: other, position: position(other), wins: nil, shared_count: nil) unless other.active?
+      next Similar.new(rule: other, position: position(other), wins: nil, shared_count: nil) unless other.active? && runs?(rule)
 
       unless candidate_read
         candidate_matches = read_matches(unsaved_copy(rule))
@@ -124,6 +124,11 @@ class Rule::Health
     def matches_of(rule)
       @matches ||= {}
       @matches.fetch(rule.id) { @matches[rule.id] = read_matches(rule) }
+    end
+
+    # A new rule is saved inactive and switched on when the user confirms it.
+    def runs?(rule)
+      rule.new_record? || rule.active?
     end
 
     # Whether `other` runs before `rule` once `rule` is saved. A new rule goes

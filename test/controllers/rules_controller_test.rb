@@ -592,6 +592,42 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-similar-rule='#{above.id}'] [data-similar-rule-wins]", count: 0
   end
 
+  test "a similar rule above that stops processing wins although it sets no field the new rule sets" do
+    create_transaction(name: "Woolworths")
+    stop = @user.family.rules.create!(name: "Stop", resource_type: "transaction", active: true, stop_processing: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "woolworths") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_tags", value: [ tags(:one).id ]) ])
+
+    post rules_url, params: similar_rule_params("woolworths", category: groceries)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{stop.id}'] [data-similar-rule-wins]"
+  end
+
+  test "an inactive rule edited to repeat another shows it without a winner or shared count" do
+    create_transaction(name: "Woolworths")
+    existing = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = create_similar_rule("Hardware", "hardware", category: dining, active: false)
+
+    patch rule_url(edited), params: edit_params(edited, "woolworths", category: groceries)
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{existing.id}']" do
+      assert_select "[data-similar-rule-wins]", count: 0
+      assert_select "[data-similar-rule-shared]", count: 0
+    end
+  end
+
+  test "switching a duplicate rule off from the list saves it" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+    duplicate = create_similar_rule("Woolworths again", "woolworths", category: groceries)
+
+    patch rule_url(duplicate), params: { rule: { active: "0" } }
+
+    assert_redirected_to rules_url
+    assert_not duplicate.reload.active?
+  end
+
   test "the shared count is the transactions both rules match" do
     create_transaction(name: "Woolworths")
     create_transaction(name: "Woolworths Metro")
