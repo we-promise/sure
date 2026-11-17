@@ -44,13 +44,7 @@ class Insight::Generators::AccountReleaseGenerator < Insight::Generator
         ids: recipients.map(&:id)
       ).select(:id)
 
-      Account::ReleaseReminder.candidates(family.accounts).where(id: followed).where(id: visible_to_everyone)
-    end
-
-    # Accounts every active member can see (owned or shared with them). The
-    # name and balance in a reminder must not reach someone without access.
-    def visible_to_everyone
-      family.users.where(active: true).map { |user| family.accounts.accessible_by(user).pluck(:id) }.reduce(:&) || []
+      Account::ReleaseReminder.candidates(family.accounts.accessible_by_all_active_members).where(id: followed)
     end
 
     def insight_for(reminder)
@@ -64,7 +58,10 @@ class Insight::Generators::AccountReleaseGenerator < Insight::Generator
 
       build_insight(
         insight_type: "account_release",
-        priority: reminder.kind == "upcoming" ? "medium" : "high",
+        # Medium even for a release or renewal on the day: high-priority
+        # insights are also pushed to devices, and delivery beyond the feed
+        # waits for a shared notification preference.
+        priority: "medium",
         title: I18n.t("insights.titles.account_release.#{reminder.kind}", account: account.name),
         template_key: template_key(reminder),
         facts: facts,

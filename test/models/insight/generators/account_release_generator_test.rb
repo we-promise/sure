@@ -25,13 +25,13 @@ class Insight::Generators::AccountReleaseGeneratorTest < ActiveSupport::TestCase
     assert_equal 10, insight.facts[:days]
   end
 
-  test "a release on the day is high priority" do
+  test "a release on the day stays medium so it is not pushed" do
     enable(@admin)
     term_deposit(available_on: Date.new(2026, 10, 5))
 
     insight = generate.first
 
-    assert_equal "high", insight.priority
+    assert_equal "medium", insight.priority
     assert_equal "released", insight.metadata[:kind]
   end
 
