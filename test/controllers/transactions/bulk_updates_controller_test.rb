@@ -594,6 +594,48 @@ class Transactions::BulkUpdatesControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "Private", nil ], [ private_entry.reload.name, private_entry.notes ]
   end
 
+  test "bulk update locks the whole mixed selection before it writes" do
+    accounts(:credit_card).account_shares.find_by!(user: users(:family_member)).update!(permission: "read_write")
+    full_entry = create_transaction(account: accounts(:depository), name: "Full")
+    annotate_entry = create_transaction(account: accounts(:credit_card), name: "Annotate")
+
+    payloads = []
+    callback = ->(_name, _started, _finished, _unique_id, payload) { payloads << payload }
+
+    sign_in users(:family_member)
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      post transactions_bulk_update_url, params: {
+        bulk_update: { entry_ids: [ full_entry.id, annotate_entry.id ], notes: "bulk note" }
+      }
+    end
+
+    assert_equal "2 transactions updated", flash[:notice]
+
+    transaction_lock_index = payloads.index do |payload|
+      payload[:sql].include?("FOR UPDATE") && payload[:sql].include?('"transactions"')
+    end
+    entry_lock_indexes = payloads.each_index.select do |index|
+      payloads[index][:sql].include?("FOR UPDATE") && payloads[index][:sql].include?('"entries"')
+    end
+    first_update_index = payloads.index { |payload| payload[:sql].start_with?('UPDATE "entries"') }
+
+    assert transaction_lock_index, "expected a lock on the transactions"
+    assert entry_lock_indexes.any?, "expected a lock on the entries"
+    assert first_update_index, "expected an entry update"
+
+    first_entry_lock = payloads[entry_lock_indexes.first]
+    locked_ids = first_entry_lock[:binds].flat_map { |bind| Array(bind.value) }
+    assert_includes locked_ids, full_entry.id,
+      "the first entry lock must cover the full-control entry"
+    assert_includes locked_ids, annotate_entry.id,
+      "the first entry lock must cover the annotate-only entry"
+
+    assert_operator transaction_lock_index, :<, entry_lock_indexes.first,
+      "the transactions must be locked before the entries"
+    assert_operator entry_lock_indexes.first, :<, first_update_index,
+      "the whole selection must be locked before the first write"
+  end
+
   test "bulk update sets reconciled_status on manual accounts" do
     @user.family.update!(manual_reconciliation: true)
     manual_entry = create_transaction(account: accounts(:depository))

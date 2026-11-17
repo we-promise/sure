@@ -42,6 +42,10 @@ class Transactions::BulkUpdatesController < ApplicationController
     annotate_ids = rows.map(&:first).uniq - full_ids
 
     updated = Entry.transaction do
+      # The two groups below lock their rows in different orders. Lock the full
+      # selection first, so requests with opposite permissions cannot deadlock.
+      Entry.lock_for_bulk_update!(full_ids + annotate_ids)
+
       bulk_update_entries(full_ids, scoped_params) +
         bulk_update_entries(annotate_ids, scoped_params.slice(*AccountShare::ANNOTATE_ENTRY_ATTRIBUTES, *AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES))
     end

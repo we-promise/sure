@@ -693,6 +693,24 @@ class Entry < ApplicationRecord
       30.years.ago.to_date
     end
 
+    # Lock the selected entries before a bulk update. Lock the transactions
+    # first, then the entries. Order each set by id.
+    #
+    # Transfer::Matcher locks in the same order, so a concurrent match cannot
+    # deadlock with a bulk update. Callers that update several permission
+    # groups must lock the full selection here first: per-group locks use
+    # different orders across concurrent requests.
+    #
+    # The ids must already be authorized by the caller.
+    def lock_for_bulk_update!(entry_ids)
+      ids = Array.wrap(entry_ids).compact.uniq
+      return [] if ids.empty?
+
+      transaction_ids = unscoped.where(id: ids, entryable_type: "Transaction").distinct.pluck(:entryable_id)
+      Transaction.where(id: transaction_ids).order(:id).lock.pluck(:id)
+      unscoped.where(id: ids).reorder(:id).lock("FOR UPDATE OF entries").to_a
+    end
+
     # Bulk update entries with the given parameters.
     #
     # No authorization happens here: callers must scope the relation to entries
@@ -735,15 +753,10 @@ class Entry < ApplicationRecord
       rescheduled_ids = []
 
       transaction do
-        # Lock in the same order as Transfer::Matcher (transactions, then
-        # entries). A concurrent match cannot then turn a selected entry into a
-        # matched leg between the membership read and the update. Lock only
-        # entry rows: `all` may join accounts, and a plain FOR UPDATE would
-        # lock them too.
+        # Lock before reading membership. A concurrent match cannot then turn a
+        # selected entry into a matched leg between the read and the update.
         selected_entry_ids = all.except(:includes).pluck(:id)
-        transaction_ids = Entry.unscoped.where(id: selected_entry_ids, entryable_type: "Transaction").distinct.pluck(:entryable_id)
-        Transaction.where(id: transaction_ids).order(:id).lock.pluck(:id)
-        locked_entries = Entry.unscoped.where(id: selected_entry_ids).reorder(:id).lock("FOR UPDATE OF entries").to_a
+        locked_entries = lock_for_bulk_update!(selected_entry_ids)
         ActiveRecord::Associations::Preloader.new(
           records: locked_entries,
           associations: [ :account, :entryable ]
