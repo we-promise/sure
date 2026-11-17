@@ -2719,7 +2719,8 @@ Any release can carry breaking changes. Each ships with a migration and an upgra
 
 ## 19. Delivery
 
-Eight PRs after the spike, the first of them in five parts (2a to 2e). Each PR, and each part,
+Eight PRs after the spike, the first of them in five parts (2a to 2e) and the second in four
+(3a to 3d). Each PR, and each part,
 is its own PR into `main`, merged in order: 2a #4773, 2b #4774, 2c #4775, 2d #4765 and 2e #4771,
 each stacked on the one before. 2a to 2d first shared #4765, because the maintainer wanted fewer
 PRs; at about 18,000 changed lines that was too big to review, so they were split back at the
@@ -2877,13 +2878,22 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    page, and the web and the workers each build `Ai::Config` from their own ENV, as they resolve
    settings today, until PR 7 (call by @josh-sanders during development of PR #4440). The
    upgrade guide says to give the web and the workers the same AI variables.
-3. **Off the web thread.** Smart-fill and smart-configure through `RecurringTransaction::Suggestion`
-   and a Turbo Stream, non-PDF document embedding as a job, `Ai::ProbeJob` keeping #3155's cache,
-   and the two MCP AI tools' model calls through `Ai::ToolJob` and its result handoff; the one
-   change an MCP client sees is that `import_bank_statement` becomes idempotent (section 14). Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, and the
-   checks in the plumbing (section 12). Capsule-only enforcement, now that no AI call is left on a
-   web thread. Adds the capsule-only and completion-hook tests.
-   Built in parallel with PR 4, which starts from PR 3's first step; merged in order in the same release. Implementation plan: [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md).
+3. **Off the web thread**, in four parts, each its own PR into `main` (call by @josh-sanders,
+   2026-11-16):
+   - **3a. Capsule, shared state and probes.** `Ai::Capsule` and its job hook, `Ai::SharedState`
+     for what a job hands to the web, and `Ai::ProbeJob` keeping #3155's cache.
+   - **3b. Bill suggestions and stopping AI work.** Smart-fill and smart-configure through
+     `RecurringTransaction::Suggestion` and a Turbo Stream. Cancellation: the `cancelled`
+     statuses, `ai_cancelled?` on each requester, and the checks in the plumbing (section 12).
+   - **3c. Documents and MCP tools.** Non-PDF document embedding as a job, and the two MCP AI
+     tools' model calls through `Ai::ToolJob` and its result handoff; the one change an MCP client
+     sees is that `import_bank_statement` becomes idempotent (section 14).
+   - **3d. Capsule-only.** Enforcement, now that no AI call is left on a web thread, with the
+     capsule-only and completion-hook tests.
+
+   PR 4 starts from 3a and merges between 3a and 3b, so the interactive work 3b and 3c move into
+   jobs lands on the `ai_chat` thread instead of waiting behind background work. 3b and 3c are
+   built in parallel with PR 4. Implementation plan: [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md).
 4. **Sequencer.** The three lane queues replacing `ai_high_priority` and `ai_low_priority` (the
    `ai` capsule drains the old two for one release), the `ai_chat` capsule, one gate per local
    host in RubyLLM's instrumenter sized from the server, Rules 1 to 3 with streamed background and
@@ -2894,7 +2904,7 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    interactive lane around each provider request: a few temporary lines that PR 6 deletes. Chat's
    own requests can't be interrupted, and never need to be. Replaces #4444's fetch class. Adds the lane and
    gate tests and the sequencer cases of the escalation test.
-   Implementation plan: [`pr-4-sequencer.md`](pr-4-sequencer.md).
+   Merges after 3a and before 3b. Implementation plan: [`pr-4-sequencer.md`](pr-4-sequencer.md).
 5. **RubyLLM 2.2 — delivered.** 2.2.0 (`~> 2.2`) ships on the 2f stack (PR #4892, `28cd75e61`).
    The recorded tests replayed and the live ones recorded again; Jev on OpenRouter works again
    (#1264: `…/alpha/decisions`, verified live 2026-11-12 — STARBUCKS → Coffee Shops 0.67,

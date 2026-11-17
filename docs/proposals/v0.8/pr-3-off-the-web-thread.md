@@ -2,15 +2,22 @@
 
 **Companion to:** [`ai-plumbing-redesign.md`](ai-plumbing-redesign.md) §19 (PR 3), §7 (transports
 run only inside the AI capsules), §11 ("No LLM call on a web thread"), §12, §13, §14, §15 and §17,
-and [`pr-4-sequencer.md`](pr-4-sequencer.md), which is built at the same time.
+and [`pr-4-sequencer.md`](pr-4-sequencer.md), which merges between 3a and 3b.
 **Base:** `feat/ai-2f-review` @ `d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0). 2f's head now pins ruby_llm 2.2.2; rebase onto it before building.
-**Branch:** `feat/ai-3-off-web-thread`, worktree `~/src/sure-ai-3`. Step 1 is built first; PR 4's
-branch `feat/ai-4-sequencer` starts from that commit, and the rest of both PRs proceeds in parallel
-(calls by @josh-sanders, 2026-11-13).
-**Merge order:** PR 3 first, then PR 4 rebased onto it, **both in the same release**: until PR 4
-lands, the jobs PR 3 creates for interactive work share the single `ai` thread with background
-work (see [Coordination with PR 4](#coordination-with-pr-4)).
-**Status:** plan; every decision below was made by @josh-sanders on 2026-11-13.
+**Parts:** four PRs into `main`, each stacked on the one before (decision 9):
+
+| Part | Branch | Steps |
+|---|---|---|
+| 3a Capsule, shared state and probes | `feat/ai-3a-capsule-probes` | 1–2 |
+| 3b Bill suggestions and stopping AI work | `feat/ai-3b-bill-suggestions` | 3–5 |
+| 3c Documents and MCP tools | `feat/ai-3c-documents-mcp` | 6–7 |
+| 3d Capsule-only | `feat/ai-3d-capsule-only` | 8 |
+
+Worktree `~/src/sure-ai-3`. PR 4's branch `feat/ai-4-sequencer` starts from 3a; 3b and 3c are
+built from 3a while PR 4 is, and rebased onto PR 4 before review.
+**Merge order:** 3a, then PR 4, then 3b and 3c (neither depends on the other), then 3d. No part has
+to ship in the same release as another (see [Order with PR 4](#order-with-pr-4)).
+**Status:** plan; decisions 1–8 made by @josh-sanders on 2026-11-13, decision 9 on 2026-11-16.
 
 ## Context
 
@@ -33,7 +40,7 @@ also call generations outside any capsule, on purpose.
 Why it matters (§11, 02 A9): a call on the web thread holds a Puma thread for as long as the model
 takes, can't take the gate that puts chat first (drift bug 7), and on a slow local model can outlast
 a reverse proxy's timeout. Nothing stops a new feature from adding another such call (02 A9), so
-PR 3 ends with an executable check: **a transport called outside the AI capsules raises** in
+PR 3 ends (3d) with an executable check: **a transport called outside the AI capsules raises** in
 development and test.
 
 What 2c–2e already built and PR 3 reuses:
@@ -48,15 +55,15 @@ What 2c–2e already built and PR 3 reuses:
 
 ## Scope (§19, PR 3)
 
-1. Smart-fill and smart-configure through `RecurringTransaction::Suggestion` and a Turbo Stream.
-2. Non-PDF document embedding as a job.
-3. `Ai::ProbeJob`, keeping #3155's cache, "Run checks again" and "opening a tab triggers no AI request".
+1. Smart-fill and smart-configure through `RecurringTransaction::Suggestion` and a Turbo Stream (3b).
+2. Non-PDF document embedding as a job (3c).
+3. `Ai::ProbeJob`, keeping #3155's cache, "Run checks again" and "opening a tab triggers no AI request" (3a).
 4. The two MCP AI tools' model calls through `Ai::ToolJob` and its result handoff, with one
-   change an MCP client sees: `import_bank_statement` becomes idempotent (§14).
+   change an MCP client sees: `import_bank_statement` becomes idempotent (§14) (3c).
 5. Cancellation: the `cancelled` statuses, `ai_cancelled?` on each requester, the checks in the
-   plumbing (§12) and `DELETE` on the resource that started the work (§15).
-6. Capsule-only enforcement, now that no AI call is left on a web thread.
-7. The capsule-only and completion-hook tests.
+   plumbing (§12) and `DELETE` on the resource that started the work (§15) (3b).
+6. Capsule-only enforcement, now that no AI call is left on a web thread (3d).
+7. The capsule-only and completion-hook tests (3d).
 
 Not in PR 3: lanes, queues, the gate, interrupts and the typing hold (PR 4); chat's stop button
 (see decision 4); the health page redesign (PR 8); configuration (PR 7).
@@ -70,14 +77,14 @@ Not in PR 3: lanes, queues, the gate, interrupts and the typing hold (PR 4); cha
   `Chat#broadcast_pending_status`. Same dialog, same bounded charge history, nothing applied until
   the user checks it (§11).
 - Only the MCP tools' model call moves (§14). The one change an MCP client sees is that
-  `import_bank_statement` becomes idempotent per `PdfImport` (2026-11-13, step 6).
+  `import_bank_statement` becomes idempotent per `PdfImport` (2026-11-13, step 7).
   `search_family_files` waits up to 30 s, then answers "busy, try again"; `import_bank_statement`
   waits up to the route's time budget. The asynchronous `import_bank_statement` with a pending
   import (05 BC6) stays with the MCP work-pack.
 - `AiHealth::Probe` keeps its caching, redaction, debug logging and `confirming_tools_refusal`; only
   the probe itself moves into a job, whose result arrives by Turbo Stream (§13).
 - Cancellation is cooperative, as #2685's is: nothing is killed mid-write (§12).
-- Develop PR 3 and PR 4 on separate branches, PR 4 starting from PR 3's step 1 (2026-11-13).
+- Develop PR 3 and PR 4 on separate branches (2026-11-13); PR 4 starts from 3a (decision 9).
 
 **Decided by @josh-sanders, 2026-11-13** (each changes or settles the proposal):
 
@@ -142,6 +149,22 @@ Not in PR 3: lanes, queues, the gate, interrupts and the typing hold (PR 4); cha
    a `recurring_transaction_id`; smart-fill starts from an entry, before any bill exists. The table
    gets `entry_id` too, and exactly one of them is set (a check constraint).
 
+**Decided by @josh-sanders, 2026-11-16:**
+
+9. **PR 3 ships in four parts, and PR 4 merges between 3a and 3b.** Each part replaces something
+   whole (§19's principle):
+   - **3a** moves the probes into a job. That gives `Ai::Capsule`'s job hook and `Ai::SharedState`
+     their first caller, and it's everything PR 4 needs from PR 3: the hook, the queue list,
+     `Ai::SharedState`, and `Ai::ProbeJob` for the `Busy` re-enqueue.
+   - **3b** moves the bill suggestions and adds stopping, for suggestions and PDF imports together.
+   - **3c** moves document indexing and the MCP tools.
+   - **3d** turns the check on, so it comes last: it only passes once no web-thread call is left.
+
+   Smart-fill, smart-configure and the MCP search are interactive. Merged before PR 4, their jobs
+   would share the `ai` capsule's one thread with background work and wait behind it on a local
+   model, slower than today's web thread. After PR 4 they land on `ai_interactive` and the
+   `ai_chat` thread. So PR 3 and PR 4 no longer have to ship in the same release.
+
 ## How it fits together
 
 ```mermaid
@@ -161,23 +184,36 @@ flowchart LR
     PJ["Ai::ProbeJob"] --> SS
   end
   BR -.->|GET suggestion| SF
-  HO -.-> MCP
+  SS -.->|tool result| MCP
 ```
 
-| Work | Job | Lane (2f queue) | Requester / record | Cancel |
-|---|---|---|---|---|
-| Smart-fill | `Ai::GenerationJob(:bill_setup)` | interactive (`ai_high_priority`) | `RecurringTransaction::Suggestion` (`mode: fill`) | `DELETE` the suggestion |
-| Smart-configure | same | same | same (`mode: configure`) | same |
-| Document upload | `IndexFamilyDocumentJob` | `embed`'s, prompt (`ai_low_priority`) | `FamilyDocument` | — (short) |
-| MCP `search_family_files` | `Ai::ToolJob` | `search_documents`'s, interactive | — | the 30 s wait |
-| MCP `import_bank_statement` | `Ai::ToolJob` | `extract_pdf`'s, prompt | the `PdfImport` | `DELETE` its AI processing |
-| PDF import | `ProcessPdfJob` (unchanged queue) | prompt | `PdfImport` | `DELETE` its AI processing |
-| Probes | `Ai::ProbeJob` | background (`ai_low_priority`) | — | — |
+The parts, in merge order:
+
+```mermaid
+flowchart LR
+  F["2f #4892"] --> A["3a capsule, shared state,<br/>probes"] --> P4["PR 4 sequencer"]
+  P4 --> B["3b bill suggestions,<br/>stopping AI work"] --> D["3d capsule-only"]
+  P4 --> C["3c documents,<br/>MCP tools"] --> D
+```
+
+| Work | Part | Job | Lane (queue after PR 4) | Requester / record | Cancel |
+|---|---|---|---|---|---|
+| Probes | 3a | `Ai::ProbeJob` | background (`ai_background`) | — | — |
+| Smart-fill | 3b | `Ai::GenerationJob(:bill_setup)` | interactive (`ai_interactive`) | `RecurringTransaction::Suggestion` (`mode: fill`) | `DELETE` the suggestion |
+| Smart-configure | 3b | same | same | same (`mode: configure`) | same |
+| PDF import | 3b | `ProcessPdfJob` (unchanged queue) | prompt (`ai_prompt`) | `PdfImport` | `DELETE` its AI processing |
+| Document upload | 3c | `IndexFamilyDocumentJob` | `embed`'s, prompt (`ai_prompt`) | `FamilyDocument` | — (short) |
+| MCP `search_family_files` | 3c | `Ai::ToolJob` | `search_documents`'s, interactive (`ai_interactive`) | — | the 30 s wait |
+| MCP `import_bank_statement` | 3c | `Ai::ToolJob` | `extract_pdf`'s, prompt (`ai_prompt`) | the `PdfImport` | `DELETE` its AI processing |
 
 Every job picks its queue with `Ai::Routes.queue_for(feature)` or the lane's queue
 (`Ai::Routes::QUEUES`), never a queue name, so PR 4's new queues reach them without an edit.
 
-## Steps (one commit each, on `feat/ai-3-off-web-thread`)
+## Steps
+
+Each part is its own PR; each step is one commit.
+
+## 3a. Capsule, shared state and probes
 
 ### 1. `Ai::Capsule` and `Ai::SharedState`
 
@@ -193,13 +229,55 @@ Every job picks its queue with `Ai::Routes.queue_for(feature)` or the lane's que
   middleware, so it also runs under the test adapter (`perform_enqueued_jobs`) and
   `perform_now`. Sidekiq middleware never runs there, so every AI job test would raise once the
   check is on. In production an AI queue only runs in the AI capsule, so the queue name is enough.
-- `with_ai_capsule { }` in `test/support/ai_test_helper.rb` (§17), for model tests that call a
-  generation directly.
+- In `test/support/ai_test_helper.rb`: `with_ai_capsule { }` (§17), for a single call, and
+  `ai_capsule!`, a class-level line that enters the capsule in `setup` and leaves it in
+  `teardown`, for a test class whose tests call the plumbing directly. 3d uses the class-level
+  line, so turning the check on adds a line per test file instead of re-indenting every test body.
 - `app/models/ai/shared_state.rb` (decision 2), with its test.
-- Nothing calls `check!` yet. Steps 2–6 move each web-thread call into a job, and step 8 turns the
-  check on once none is left. All of that is inside this one PR, so no allowlist is needed.
+- Nothing calls `check!` yet. 3a–3c move each web-thread call into a job, and 3d turns the check
+  on once none is left, so no allowlist is needed.
 
-### 2. Bill suggestions as records and jobs
+### 2. `Ai::ProbeJob`
+
+- `Ai::ProbeJob` (`queue_as Ai::Routes::QUEUES.fetch(:background)`) runs the probes with
+  `AiHealth.new(force_probes: true, probe_cache: Ai::SharedState)` and records the `WorkerAiHealth`
+  snapshot with its process identity in the same store (decision 5). It then broadcasts a
+  replacement for the AI tab's lazy frame, with the same `src`, so the browser reloads the tab.
+  That's decision 3's pattern: the tab's "Run checks again" form renders in a request, with its
+  token. The job raises nothing, because a failed probe is a result. `Ai::SharedState` takes the
+  `fetch`/`read`/`delete` calls `AiHealth::Probe#run` makes on its cache, or the probe takes a
+  small adapter; pick whichever is less code.
+- On 2f, `AiHealth.new(run_probes: false)` reports every probe as "not checked" without reading
+  the cache (`AiHealth#load_probes`). So `AiHealth` gets a `stored_only:` mode: `Probe#run`
+  returns the stored result, or `Probe.not_checked` when there is none, and never yields.
+  `Admin::SystemHealthController#ai_status` uses it, and each result shows its age. "Run checks
+  again" enqueues the job and returns at once. Opening the tab still makes no AI request.
+- `chats/_worker_health_warning` moves to `shared/_ai_worker_health_warning`. The chat page and
+  the health tab render it, and 3b's skeletons do too, so with no worker polling the AI queues
+  the page says so instead of waiting forever.
+- **Closes #4866** (supersedes #4879). The PDF vision probe caps its answer at
+  `PDF_MAX_RESPONSE_TOKENS = 512` (`ai_health/probe.rb:24` and `:200` on 2f). A reasoning model
+  spends that on thinking, and the probe fails while real imports work. The probe's route model
+  takes the output limit `Ai::LegacyEnvConfig` gives production's model:
+  - on an OpenAI-compatible endpoint, `LLM_MAX_RESPONSE_TOKENS` or its setting, and none when
+    unset (as #4879 does on the old code);
+  - on Anthropic, `ANTHROPIC_MAX_TOKENS` or its default, since Anthropic requires one.
+
+  The constant goes. Test: no cap by default on a compatible endpoint, and the configured cap
+  when one is set. Probes are meant to exercise the production
+  path, which this cap didn't.
+- **Closes #3279.** The tab shows, next to each result's age, how long a result is kept
+  (`AI_HEALTH_PROBE_CACHE_TTL`, default 60 s), from `AiHealth::Probe`'s own `cache_ttl`, the
+  same way the probe timeout row works. With "Run checks again" always running fresh probes, the
+  age and the time kept answer #3279's question: why does it still show the old result?
+- `ai_lane_test.rb`: `Ai::ProbeJob` is an AI job on the background lane's queue;
+  `WorkerAiHealthCheckJob` is gone.
+- **Deletes:** `WorkerAiHealthCheckJob`, `verify_worker_ai` and its route and button, and the
+  `force_probes` request parameter.
+
+## 3b. Bill suggestions and stopping AI work
+
+### 3. Bill suggestions as records and jobs
 
 - Migration: `recurring_transaction_suggestions`: `family_id` (not null), `user_id` (not null; the
   feature's consent is the user's), `recurring_transaction_id` (nullable), `entry_id` (nullable),
@@ -221,10 +299,12 @@ Every job picks its queue with `Ai::Routes.queue_for(feature)` or the lane's que
     its dialog is closed, and that job already does the nightly deletes.
 - `Ai::Requesters::CLASSES` gains `bill_setup: "RecurringTransaction::Suggestion"`.
 - `ai_routing_matrix_test` already checks a requester declares its key.
+- 2f's e2e `bill_setup_test` drives `SmartFillsController` and `GenerationJob` instead of the
+  deleted suggester.
 - **Deletes:** `RecurringTransaction::AiSetupSuggester` and its test; their cases move to
   `recurring_transaction/suggestion_test.rb`.
 
-### 3. Smart-fill and smart-configure controllers, views and cancel
+### 4. Smart-fill and smart-configure controllers, views and cancel
 
 Routes: one resource per controller, with each suggestion addressed by its id. A singular
 `resource :smart_configuration` (§15's sketch) can't name the suggestion that `show` and `destroy`
@@ -249,9 +329,8 @@ end
 - `destroy` marks the suggestion `cancelled` and renders the form without a proposal.
 - Both keep `requires_ai :bill_setup` and `ensure_recurring_enabled`. Suggestions are found
   through `Current.family` and belong to `Current.user`.
-- `chats/_worker_health_warning` moves to `shared/_ai_worker_health_warning`. The chat page, both
-  skeletons and the health tab render it, so with no worker polling the AI queues the dialog says
-  so instead of spinning forever.
+- Both skeletons render `shared/_ai_worker_health_warning` (step 2), so with no worker polling
+  the AI queues the dialog says so instead of spinning forever.
 - A "Stop" button (`DS::Button`, `button_to … method: :delete`) while pending. Closing the dialog
   doesn't cancel: the answer is stored and harmless.
 - Strings through `t()`, in `config/locales/views/recurring_transactions/` and `…/bills/`.
@@ -259,7 +338,31 @@ end
   source entry's date) moves into `Suggestion#apply_to` with the rest. The suggestion's `entry`
   gives the date.
 
-### 4. Document upload as a job
+### 5. Cancellation
+
+- `Import`'s `status` enum gains `cancelled` (a string column, no migration). Every place that
+  lists import statuses handles it: the reaper (`Import.clean` and `presumed_lost?`), status badges,
+  filters, and the next-steps email (none for a cancelled import). A cancelled import has no
+  committed data, so #3717's and #3735's `directly_deletable?` allows deleting it.
+- `PdfImport#ai_cancelled?` → `reload.cancelled?`. `ProcessPdfJob` passes
+  `cancelled: -> { pdf_import.ai_cancelled? }` to `pdf_reading.read` and `#extract` (they already
+  take it) and checks between its steps (read → embed → extract → rows).
+- **Bug to avoid:** `ProcessPdfJob#process` rescues `StandardError` and writes `failed`. It must
+  rescue `Ai::Error::Cancelled` first and leave the status `cancelled`.
+- `PdfImports::AiProcessingsController#destroy` (§15): only while `importing`; the import's owner
+  or a statement manager, as the import's other actions require.
+- The import page shows "Stop" while processing, and after stopping: "Stopped. The model may still
+  finish this request" (§12).
+- `RecurringTransaction::Suggestion#ai_cancelled?` (step 3). `Ai::GenerationJob` already discards
+  `Cancelled`, and `Ai::Result` already reports it.
+- The per-chunk check and "before the request passes the host's gate" (§12) are PR 4's, merged
+  before this part, so the callables passed here reach them with no extra code.
+- The existing `ImportsController#cancel` (`force_fail!` on an import presumed lost) stays: it's
+  for work that died, not running work.
+
+## 3c. Documents and MCP tools
+
+### 6. Document upload as a job
 
 - `Family#upload_document_later(file)` (in `Family::VectorSearchable`, next to `upload_document`;
   `_later` as in `PdfImport#process_with_ai_later`): creates the document `pending` with the file
@@ -276,6 +379,8 @@ end
   store, size, extension, the PDF hand-off), and replaces the `upload_document` call with
   `upload_document_later`. It redirects with "Uploaded; it will be searchable once indexed". The
   documents list already shows `pending`, `processing`, `ready` and `error`.
+- `ai_lane_test.rb`: `IndexFamilyDocumentJob` is an AI job on `embed`'s lane's queue.
+- 2f's e2e `documents_test` adds a non-PDF upload through the job.
 - 06 F-R5 (vector documents out of `ImportsController`) isn't done here. That's a separate
   pure-move PR.
 - Whichever of #3717 and #3735 merges first adds a multi-file upload that calls `upload_document`
@@ -285,41 +390,7 @@ end
   duplicate when it creates the pending row, before indexing. Otherwise a second upload of the
   same file fails on the index.
 
-### 5. `Ai::ProbeJob`
-
-- `Ai::ProbeJob` (`queue_as Ai::Routes::QUEUES.fetch(:background)`) runs the probes with
-  `AiHealth.new(force_probes: true, probe_cache: Ai::SharedState)` and records the `WorkerAiHealth`
-  snapshot with its process identity in the same store (decision 5). It then broadcasts a
-  replacement for the AI tab's lazy frame, with the same `src`, so the browser reloads the tab.
-  That's decision 3's pattern: the tab's "Run checks again" form renders in a request, with its
-  token. The job raises nothing, because a failed probe is a result. `Ai::SharedState` takes the
-  `fetch`/`read`/`delete` calls `AiHealth::Probe#run` makes on its cache, or the probe takes a
-  small adapter; pick whichever is less code.
-- On 2f, `AiHealth.new(run_probes: false)` reports every probe as "not checked" without reading
-  the cache (`AiHealth#load_probes`). So `AiHealth` gets a `stored_only:` mode: `Probe#run`
-  returns the stored result, or `Probe.not_checked` when there is none, and never yields.
-  `Admin::SystemHealthController#ai_status` uses it, and each result shows its age. "Run checks
-  again" enqueues the job and returns at once. Opening the tab still makes no AI request.
-- With no worker polling the AI queues, the tab renders `shared/_ai_worker_health_warning`.
-- **Closes #4866** (supersedes #4879). The PDF vision probe caps its answer at
-  `PDF_MAX_RESPONSE_TOKENS = 512` (`ai_health/probe.rb:24` and `:200` on 2f). A reasoning model
-  spends that on thinking, and the probe fails while real imports work. The probe's route model
-  takes the output limit `Ai::LegacyEnvConfig` gives production's model:
-  - on an OpenAI-compatible endpoint, `LLM_MAX_RESPONSE_TOKENS` or its setting, and none when
-    unset (as #4879 does on the old code);
-  - on Anthropic, `ANTHROPIC_MAX_TOKENS` or its default, since Anthropic requires one.
-
-  The constant goes. Test: no cap by default on a compatible endpoint, and the configured cap
-  when one is set. Probes are meant to exercise the production
-  path, which this cap didn't.
-- **Closes #3279.** The tab shows, next to each result's age, how long a result is kept
-  (`AI_HEALTH_PROBE_CACHE_TTL`, default 60 s), from `AiHealth::Probe`'s own `cache_ttl`, the
-  same way the probe timeout row works. With "Run checks again" always running fresh probes, the
-  age and the time kept answer #3279's question: why does it still show the old result?
-- **Deletes:** `WorkerAiHealthCheckJob`, `verify_worker_ai` and its route and button, and the
-  `force_probes` request parameter.
-
-### 6. `Ai::ToolJob` for the MCP AI tools
+### 7. `Ai::ToolJob` for the MCP AI tools
 
 - `Assistant::Function` gains a class-level `ai_feature` (nil by default). `ImportBankStatement`
   declares `:extract_pdf` and `SearchFamilyFiles` declares `:search_documents`. 02 O-B1 asks for
@@ -342,14 +413,14 @@ end
 - `Ai::ToolJob` finds the function in the same list `tools/call` authorized it against
   (`Assistant.function_classes(user)` on 2f; `Assistant.mcp_function_classes` if #3025 lands
   first), and refuses a name that isn't there. A tool hidden from MCP can't run through the job.
-- #3580, #4182 and #4283 each rewrite `McpController`. Whichever lands first, step 6 rebases onto
+- #3580, #4182 and #4283 each rewrite `McpController`. Whichever lands first, step 7 rebases onto
   its `tools/call` result envelope (`resultType`, `_meta`), and the timeout answers use that
   envelope. `ai_feature` sits next to #3580's `read_only?` on `Assistant::Function`.
-- Step 6 doesn't decide which tokens see which tools. `Ai::ToolJob` runs only what `tools/call`
+- Step 7 doesn't decide which tokens see which tools. `Ai::ToolJob` runs only what `tools/call`
   already authorized. `read_only?` means "doesn't write", so `SearchFamilyFiles` is `true` when
   this branch sets it, and whether a `read` token may see documents is a scope check, as §14 has
   it (raised on #3580 and #4628). If #3580 lands with `read_only? = false` on `SearchFamilyFiles`,
-  step 6 works unchanged; only chat's approvals (#4440's PR 6) depend on the flag being accurate.
+  step 7 works unchanged; only chat's approvals (#4440's PR 6) depend on the flag being accurate.
 - Timeouts: `search_family_files` 30 s; `import_bank_statement` a flat 120 s, below common reverse
   proxy timeouts. The page count isn't known before reading, so a route budget can't be computed
   up front, and a client that times out can call again.
@@ -369,38 +440,19 @@ end
   - What an MCP client sees: a repeated call returns the same import, with
     `already_imported: true`, where it used to create another. The release note says so.
 - Chat keeps calling both tools inside its own job, which is already in the capsule.
+- `ai_lane_test.rb`: `Ai::ToolJob` is an AI job on each function's lane's queue.
 - Tests run the job with `perform_enqueued_jobs` and give `Ai::SharedState` a memory store
   (test has no shared Redis to rely on).
 
-### 7. Cancellation
-
-- `Import`'s `status` enum gains `cancelled` (a string column, no migration). Every place that
-  lists import statuses handles it: the reaper (`Import.clean` and `presumed_lost?`), status badges,
-  filters, and the next-steps email (none for a cancelled import). A cancelled import has no
-  committed data, so #3717's and #3735's `directly_deletable?` allows deleting it.
-- `PdfImport#ai_cancelled?` → `reload.cancelled?`. `ProcessPdfJob` passes
-  `cancelled: -> { pdf_import.ai_cancelled? }` to `pdf_reading.read` and `#extract` (they already
-  take it) and checks between its steps (read → embed → extract → rows).
-- **Bug to avoid:** `ProcessPdfJob#process` rescues `StandardError` and writes `failed`. It must
-  rescue `Ai::Error::Cancelled` first and leave the status `cancelled`.
-- `PdfImports::AiProcessingsController#destroy` (§15): only while `importing`; the import's owner
-  or a statement manager, as the import's other actions require.
-- The import page shows "Stop" while processing, and after stopping: "Stopped. The model may still
-  finish this request" (§12).
-- `RecurringTransaction::Suggestion#ai_cancelled?` (step 2). `Ai::GenerationJob` already discards
-  `Cancelled`, and `Ai::Result` already reports it.
-- The per-chunk check and "before the request passes the host's gate" (§12) land with PR 4,
-  which adds the gate and the streamed background calls.
-- The existing `ImportsController#cancel` (`force_fail!` on an import presumed lost) stays: it's
-  for work that died, not running work.
+## 3d. Capsule-only
 
 ### 8. Enforce, test and document
 
 - `Ai::Transport::Base#generate`, `#judge`, `#embed`, `#ocr` and `#probe` call
   `Ai::Capsule.check!` first. The test helper's `FakeTransport` overrides only the private
   `run_*` methods, so stubbed calls are checked too.
-- Model tests that call a generation directly are wrapped in `with_ai_capsule`. That's a long,
-  mechanical diff in `test/models/**`, so it's its own commit.
+- Model test classes that call the plumbing directly declare `ai_capsule!` (step 1); a test
+  that needs it for one call uses `with_ai_capsule`. Mechanical, so it's its own commit.
 - The evals run inside `Ai::Capsule.outside`, and the cop `Sure/AiOutsideCapsule`
   (`lib/rubocop/cop/sure/`) flags that call anywhere except `app/models/eval/**` and
   `lib/tasks/evals.rake` (decision 6).
@@ -410,23 +462,17 @@ end
 - `test/architecture/ai_completion_hook_test.rb` (§17): every requester's `apply_ai` result is
   reported once per applied batch, and `ai_finished` or `ai_failed` exactly once per run, for
   `bill_setup`, `categorize`, `detect_merchants` and `enhance_merchants`.
-- `ai_lane_test.rb`: `Ai::ToolJob`, `Ai::ProbeJob` and `IndexFamilyDocumentJob` are AI jobs on
-  their lanes' queues; `WorkerAiHealthCheckJob` is gone.
 - `mcp_ai_tools_test.rb`: "no MCP request calls a transport" (it would raise now).
-- 2f's e2e: `bill_setup_test` drives `SmartFillsController` and `GenerationJob` instead of the
-  deleted suggester; `documents_test` adds a non-PDF upload through the job. Run
-  `AI_E2E=1 … bin/rails test test/e2e/ai` before review (Chatwoot's 2.0 upgrade merged without a
-  live smoke check; this PR shouldn't).
 - `docs/llm-guides/ai-pipeline.md`: "every AI call runs in a job", how to add one (a requester, or
-  `Assistant::Function.ai_feature` for a tool), `with_ai_capsule`, `Ai::SharedState` for handing
-  results to the web, `Ai::Capsule.outside` for evals only.
+  `Assistant::Function.ai_feature` for a tool), `with_ai_capsule` and `ai_capsule!`,
+  `Ai::SharedState` for handing results to the web, `Ai::Capsule.outside` for evals only.
 
 ## Open issues and PRs (checked 2026-11-13)
 
 All 51 issues and PRs from the search, all open. PRs were compared by changed files and diff,
 issues by body.
 
-**What PR 3 stands on.** It stacks on #4892 (2f), which stacks on #4771 (2e), #4765 (2d),
+**What PR 3 stands on.** 3a stacks on #4892 (2f), which stacks on #4771 (2e), #4765 (2d),
 #4775 (2c), #4774 (2b) and #4773 (2a): a change made in review on any of them rebases this
 branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 `IndexAccountStatementJob`, `search_family_files` and `upload_document`. #3402 is the draft
@@ -436,19 +482,19 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 
 | PR | Interaction | Handling |
 |---|---|---|
-| #4425 Fill splits from a receipt | A **new model call on the web thread** (`SplitsController#itemize`, `Api::V1::SplitsController#itemize`), on the providers 2c–2e delete. The capsule check covers `Ai::Transport` only, so it wouldn't catch this call. | Asked on the PR (2026-11-13) to rebuild it on #4892: an `extract_receipt` generation, a requester record, `Ai::GenerationJob` and a frame reload, as in step 3. The API returns a pending result. |
-| #4776 Tools/AI onboarding | "Save and test" runs `AiHealth::Probe` (with a new `family:` argument) in the request, which raises once step 8 is on. It edits files steps 2, 4, 5 and 6 change or delete. Per-family keys are PR 9's scope. | Asked on the PR (2026-11-13): merge the onboarding on its own, enqueue a job for "Save and test", and move family provider settings to a follow-up (PR 7 and PR 9). |
-| #3717 PDF import management, #3735 upload flow | Multi-file upload looping `upload_document` on the web thread; "directly deletable" imports. | Step 4 (each file goes through `upload_document_later`), step 7 (cancelled imports are deletable). |
-| #4516 typed family documents | `content_sha256` with a unique index per family, and duplicate adoption in `upload_document`. | Step 4 (hash and adoption when the pending row is created). |
-| #3580, #4182, #4283 MCP | Rewrite `McpController`; #3580 adds `read_only?` and keeps `SearchFamilyFiles` from `read` tokens by setting it to `false`. §14 separates "writes" from "exposes documents" (suggested on #3580 and #4628). | Step 6 rebases on their envelope. It runs only what `tools/call` authorized, so it doesn't depend on how the document question is settled. |
-| #3025 MCP CRUD tools | `Assistant.mcp_function_classes` becomes the MCP list. | Step 6 (`Ai::ToolJob` uses the authorized list). |
-| #4975 "Once" frequency | Edits `apply_suggestion`. | Step 3 carries it into `Suggestion#apply_to`. |
-| #4879 PDF vision probe fix | Fixes the old probe code; 2f still caps at 512. | Step 5 includes the fix and closes #4866. |
+| #4425 Fill splits from a receipt | A **new model call on the web thread** (`SplitsController#itemize`, `Api::V1::SplitsController#itemize`), on the providers 2c–2e delete. The capsule check covers `Ai::Transport` only, so it wouldn't catch this call. | Asked on the PR (2026-11-13) to rebuild it on #4892: an `extract_receipt` generation, a requester record, `Ai::GenerationJob` and a frame reload, as in step 4. The API returns a pending result. |
+| #4776 Tools/AI onboarding | "Save and test" runs `AiHealth::Probe` (with a new `family:` argument) in the request, which raises once 3d turns the check on. It edits files steps 2, 3, 6 and 7 change or delete. Per-family keys are PR 9's scope. | Asked on the PR (2026-11-13): merge the onboarding on its own, enqueue a job for "Save and test", and move family provider settings to a follow-up (PR 7 and PR 9). |
+| #3717 PDF import management, #3735 upload flow | Multi-file upload looping `upload_document` on the web thread; "directly deletable" imports. | Step 6 in 3c (each file goes through `upload_document_later`), step 5 in 3b (cancelled imports are deletable). |
+| #4516 typed family documents | `content_sha256` with a unique index per family, and duplicate adoption in `upload_document`. | Step 6 in 3c (hash and adoption when the pending row is created). |
+| #3580, #4182, #4283 MCP | Rewrite `McpController`; #3580 adds `read_only?` and keeps `SearchFamilyFiles` from `read` tokens by setting it to `false`. §14 separates "writes" from "exposes documents" (suggested on #3580 and #4628). | Step 7 in 3c rebases on their envelope. It runs only what `tools/call` authorized, so it doesn't depend on how the document question is settled. |
+| #3025 MCP CRUD tools | `Assistant.mcp_function_classes` becomes the MCP list. | Step 7 in 3c (`Ai::ToolJob` uses the authorized list). |
+| #4975 "Once" frequency | Edits `apply_suggestion`. | Step 4 in 3b carries it into `Suggestion#apply_to`. |
+| #4879 PDF vision probe fix | Fixes the old probe code; 2f still caps at 512. | Step 2 in 3a includes the fix and closes #4866. |
 
 **Smaller interactions:**
 - #4512 (relink a statement) edits `AccountStatement`, whose `index_in_vector_store!` calls the
-  `upload_document` that step 4 splits.
-- #4403 adds an import type next to step 7's status value.
+  `upload_document` that step 6 splits.
+- #4403 adds an import type next to step 5's status value.
 - #3694 lists `/models` on the settings page with its own HTTP client. It's not a model call, so
   this plan allows it, but it skips `Ai::Transport::Http`'s proxy handling.
 - #4844 runs the Claude Code CLI inside `Provider::Anthropic`, which the stack deletes.
@@ -456,7 +502,7 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
   model call, no job).
 
 **Issues:**
-- **Closed by this PR:** #4866 and #3279 (step 5).
+- **Closed by 3a:** #4866 and #3279 (step 2).
 - **Helped:** #4779 (follow the No AI choice): every job this PR adds checks availability for its
   user when it runs, not only when it's queued. The web-thread calls in #4425 and #4776 would
   still be gaps.
@@ -470,30 +516,33 @@ branch. #3422 (statement vault → search) is in 2e's base. PR 3 extends its
 - **Chat, PR 6 and PR 8:** #4864.
 - **None:** #3003, #3140, #3682, #4472, #4725, #4926, #4398.
 
-## Coordination with PR 4
+## Order with PR 4
 
-PR 4's branch starts from this PR's step 1 commit, so the hook, the queue list and
-`Ai::SharedState` exist once. PR 3 merges first; PR 4 rebases onto it.
+PR 4's branch starts from 3a, so the hook, the queue list, `Ai::SharedState` and `Ai::ProbeJob`
+exist once. 3b and 3c are built from 3a while PR 4 is, and rebased onto PR 4 before review; 3d
+follows both.
 
 | Shared point | PR 3 | PR 4 | Agreement |
 |---|---|---|---|
-| Queue names | uses `Ai::Routes.queue_for` / `QUEUES` only | changes `QUEUES` to the three lane queues | no queue name in PR 3's code |
-| Which queues are "AI capsules" | `Ai::Capsule` reads `Ai::Routes.ai_queues` | adds `Ai::Routes::LEGACY_QUEUES` to it | queue names only in `Ai::Routes` |
+| Queue names | uses `Ai::Routes.queue_for` / `QUEUES` only | changes `QUEUES` to the three lane queues | no queue name in PR 3's code, so 3b's and 3c's jobs land on the new queues with no edit |
+| Which queues are "AI capsules" | 3a's `Ai::Capsule` reads `Ai::Routes.ai_queues` | adds `Ai::Routes::LEGACY_QUEUES` to it | queue names only in `Ai::Routes` |
 | Escape hatch | `Ai::Capsule.outside` | `Ai::Sequencer` has no capsule method | decision 1 |
-| Marking a running job | `ApplicationJob`'s `around_perform` → `Ai::Capsule.within` | sets the lane from the same queue name | PR 4 adds its lane to the same callback, not a Sidekiq middleware, so it runs under the test adapter too |
-| Shared web/worker state | `Ai::SharedState` | the gate state and the typing hold use it | one store over `Sidekiq.redis` |
+| Marking a running job | 3a's `ApplicationJob` `around_perform` → `Ai::Capsule.within` | sets the lane from the same queue name | PR 4 adds its lane to the same callback, not a Sidekiq middleware, so it runs under the test adapter too |
+| Shared web/worker state | 3a's `Ai::SharedState` | the gate state and the typing hold use it | one store over `Sidekiq.redis` |
+| `AiHealth::Probe`, `Ai::ProbeJob` | 3a: `stored_only:`, #4866's output limit | re-raises `Busy`; the job re-enqueues | separate methods |
 | `config/initializers/sidekiq.rb` | untouched | removes the fetch class | — |
-| `Ai::GenerationJob`, `Ai::Generation` | none expected (cancel already there) | `Busy` re-enqueue, `Preempted` retry | if PR 3 touches them, keep it to new rescue lines |
-| `ProcessPdfJob` | cancel checks, `Cancelled` rescue | none expected | — |
-| `test/support/ai_test_helper.rb` | `with_ai_capsule` | gate helpers | separate methods |
-| `ai_lane_test.rb`, `ai-pipeline.md` | new jobs | new queues, gate | rebase by hand |
+| `Ai::GenerationJob`, `Ai::Generation` | 3b: none expected (cancel already there) | `Busy` re-enqueue, `Preempted` retry | 3b rebases onto PR 4's rescues; if it touches them, new rescue lines only |
+| `ProcessPdfJob` | 3b: cancel checks, `Cancelled` rescue | none expected | — |
+| `test/support/ai_test_helper.rb` | 3a: `with_ai_capsule`, `ai_capsule!` | gate helpers | separate methods |
+| `ai_lane_test.rb`, `ai-pipeline.md` | 3a's and 3c's jobs; 3d's guide | new queues, gate | 3c and 3d rebase by hand |
 
-**Release risk if PR 3 ships without PR 4:** smart-fill, smart-configure and the MCP search job
-go to `ai_high_priority`, which shares the `ai` capsule's one thread with background work. Strict
-order puts them next, but they can't interrupt a running call: on a slow local model, smart-fill
-waits behind one categorize batch, and an MCP search can reach its 30 s and answer "busy". Both run
-at once on the web thread today, so shipping PR 3 alone would make them slower on local models.
-PR 4's `ai_chat` thread and gate fix that, so they ship together.
+**Why 3b and 3c come after PR 4.** Before PR 4, smart-fill, smart-configure and the MCP search
+jobs would go to `ai_high_priority`, which shares the `ai` capsule's one thread with background
+work. Strict order puts them next, but they can't interrupt a running call: on a slow local
+model, smart-fill would wait behind one categorize batch, and an MCP search could reach its 30 s
+and answer "busy". Both run at once on the web thread today, so that would be slower. After PR 4
+they go to `ai_interactive`, on the `ai_chat` thread, and interrupt background calls at the gate.
+3a's probes run on the background lane, so 3a merges first without that cost.
 
 ## Still on old code after PR 3
 
@@ -502,28 +551,37 @@ button. Configuration from the deprecated ENV, built per process. The probe time
 
 ## Upgrade notes and release notes
 
-- **Upgrade:** health checks, smart-fill, smart-configure, document indexing and the MCP AI tools now
-  need a worker running the AI capsule (`RAILS_AI_MAX_THREADS` ≥ 1 on at least one worker). With none,
-  the dialogs and the health tab say so.
+- **Upgrade:** these need a worker running the AI capsule (`RAILS_AI_MAX_THREADS` ≥ 1 on at least
+  one worker): health checks from 3a; smart-fill and smart-configure from 3b; document indexing
+  and the MCP AI tools from 3c. With none, the dialogs and the health tab say so.
 - **Release notes:**
-  - smart-fill and smart-configure answer in the dialog when ready, and can be stopped;
-  - documents index in the background, and their status shows until searchable;
-  - MCP `import_bank_statement` returns the existing import, with `already_imported: true`, when
-    the statement was already imported, instead of creating another;
-  - a PDF import can be stopped while it's being read;
-  - AI health checks run in the worker; "Run checks again" queues them, and each result shows its
-    age; "Verify from worker" is gone, since every check now runs there;
-  - MCP clients see one change: `import_bank_statement` is idempotent (above);
-  - the PDF vision health check no longer fails on reasoning models (#4866), and the AI tab shows
-    how long a result is kept (#3279).
+  - 3a: AI health checks run in the worker; "Run checks again" queues them, and each result shows
+    its age; "Verify from worker" is gone, since every check now runs there. The PDF vision health
+    check no longer fails on reasoning models (#4866), and the AI tab shows how long a result is
+    kept (#3279).
+  - 3b: smart-fill and smart-configure answer in the dialog when ready, and can be stopped; a PDF
+    import can be stopped while it's being read.
+  - 3c: documents index in the background, and their status shows until searchable. MCP clients
+    see one change: `import_bank_statement` returns the existing import, with
+    `already_imported: true`, when the statement was already imported, instead of creating another.
 
 ## Verification
 
-- `bin/rails test` green, `test/architecture` included, with the capsule check on.
-- `AI_E2E=1 DISABLE_PARALLELIZATION=true bin/rails test test/e2e/ai` green (Kilo, Jev, Cohere legs).
-- System tests: smart-fill (skeleton → prefilled form → save), smart-configure, stop on both, PDF
-  import stop, the health tab's "Run checks again".
-- On venus (sure-dev pod, local qwen): smart-fill with a categorize run queued; an MCP
-  `search_family_files` and `import_bank_statement` from a client, and the 30 s "busy" answer while
-  a long background call holds the one AI thread (expected until PR 4).
+Every part:
+
+- `bin/rails test` green, `test/architecture` included.
+- `AI_E2E=1 DISABLE_PARALLELIZATION=true bin/rails test test/e2e/ai` green (Kilo, Jev, Cohere legs)
+  before review (Chatwoot's 2.0 upgrade merged without a live smoke check; these parts shouldn't).
 - `bin/rubocop`, `bin/erb_lint`, Biome and Brakeman, as the pre-PR checklist requires.
+
+Per part:
+
+- **3a:** system test for the health tab's "Run checks again"; on venus, the tab with a worker and
+  with none.
+- **3b:** system tests for smart-fill (skeleton → prefilled form → save), smart-configure, stop
+  on both, and PDF import stop. On venus (sure-dev pod, local qwen): smart-fill with a categorize
+  run queued, answered without waiting for the batch (PR 4's gate interrupts it).
+- **3c:** on venus, an MCP `search_family_files` and `import_bank_statement` from a client,
+  including a search while a long background call holds the AI thread, and a repeated import
+  returning `already_imported: true`.
+- **3d:** the full suite green with the check on.

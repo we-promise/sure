@@ -4,13 +4,16 @@
 whole design), §12 (the gate's cancel point), §17 (`ai_gate_test`, `ai_lane_test`,
 `ai_nested_call_test`, the escalation cases), the spike's "Job runners and chat priority" and
 "Prompt cache and prompt reads on one slot" in [`rubyllm-spike-report.md`](rubyllm-spike-report.md),
-and [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md), which is built at the same time.
-**Base:** PR 3's step 1 commit on `feat/ai-3-off-web-thread`, which sits on `feat/ai-2f-review` @
-`d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0; 2f's head now pins 2.2.2). Step 1 gives PR 4 the `ApplicationJob` hook,
-`Ai::Capsule`'s queue list and `Ai::SharedState` without a copy of its own.
-**Branch:** `feat/ai-4-sequencer`, worktree `~/src/sure-ai-4`, started from that commit, then built in
-parallel with the rest of PR 3 (calls by @josh-sanders, 2026-11-13). Rebased onto PR 3 once that merges.
-**Merge order:** after PR 3, in the same release.
+and [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md), whose four parts (3a–3d) are
+built at the same time.
+**Base:** 3a (`feat/ai-3a-capsule-probes`), which sits on `feat/ai-2f-review` @
+`d55dc808a` (2a–2e plus 2f, ruby_llm 2.2.0; 2f's head now pins 2.2.2). 3a gives PR 4 the
+`ApplicationJob` hook, `Ai::Capsule`'s queue list, `Ai::SharedState` and `Ai::ProbeJob` without a
+copy of its own.
+**Branch:** `feat/ai-4-sequencer`, worktree `~/src/sure-ai-4`, started from 3a, then built in
+parallel with 3b and 3c (calls by @josh-sanders, 2026-11-13 and 2026-11-16).
+**Merge order:** after 3a, before 3b, 3c and 3d, which rebase onto it (PR 3's decision 9). It
+doesn't have to share a release with any part of PR 3.
 **Status:** plan; every decision below was made by @josh-sanders on 2026-11-13.
 
 ## Context
@@ -83,17 +86,18 @@ across processes (future work, §11); chat on RubyLLM (PR 6).
 - #4237's health signals carry over, adjusted to the new queues.
 - Small batches with re-enqueue for fairness (already in 2c's `Ai::GenerationJob`).
 - Chat has its own capsule (spike evidence), not 05 BC7's "one lane, optional chat capsule".
-- Develop PR 3 and PR 4 on separate branches, PR 4 starting from PR 3's step 1 (2026-11-13).
+- Develop PR 3 and PR 4 on separate branches (2026-11-13); PR 4 starts from 3a and merges before
+  3b (2026-11-16, PR 3's decision 9).
 
 **Decided by @josh-sanders, 2026-11-13** (each changes or settles the proposal):
 
 1. **The lane comes from the job's queue, set in `ApplicationJob`'s `around_perform`.** That's
-   the callback where PR 3 marks AI jobs as inside the capsule. A Sidekiq middleware would be
+   the callback where 3a marks AI jobs as inside the capsule. A Sidekiq middleware would be
    skipped under the test adapter. Each job's queue already comes from its lane, so
    `Ai::Routes.lane_for_queue` maps it back: `ai_interactive` → interactive, and during the drain
    `ai_high_priority` → interactive, `ai_low_priority` → background. No job class changes, which
-   keeps PR 4 out of PR 3's new jobs. `Ai::Sequencer.with_lane(lane) { }` covers the rest: evals
-   and the console, inside PR 3's `Ai::Capsule.outside`, take lane `:prompt`. So an eval never
+   keeps PR 4 out of 3b's and 3c's new jobs. `Ai::Sequencer.with_lane(lane) { }` covers the rest: evals
+   and the console, inside 3a's `Ai::Capsule.outside`, take lane `:prompt`. So an eval never
    interrupts background work, and never jumps ahead of chat. Like `Ai::CallContext`, the lane
    lives in `Fiber[...]`, so Jev's pool threads inherit it. In thread-local storage they wouldn't,
    and a background Jev request would count as interactive.
@@ -105,11 +109,11 @@ across processes (future work, §11); chat on RubyLLM (PR 6).
    bounded by the lane rules (chat's watchdog, Rule 3, the hold's cap), not by the budget.
 3. **During the typing hold, prompt calls wait; only background calls re-enqueue.** §11 says new
    background **and prompt** calls re-enqueue under the hold. A prompt call runs in the middle of a
-   job (`ProcessPdfJob` between pages, PR 3's `Ai::ToolJob` with an MCP client polling for it), and
+   job (`ProcessPdfJob` between pages, 3c's `Ai::ToolJob` with an MCP client polling for it), and
    re-enqueueing those would redo pages or leave the client waiting on a job that left. Waiting
    matches Rule 1, where prompt calls wait in lane order. Under the hold, a prompt call waits until
    the hold lapses or a chat request takes and frees the slot.
-4. **Gate state and the typing hold go in PR 3's `Ai::SharedState` (Sidekiq's Redis), not
+4. **Gate state and the typing hold go in 3a's `Ai::SharedState` (Sidekiq's Redis), not
    `Rails.cache`.** §11 puts `ai/gates/<host>` in `Rails.cache`. The worker writes it and the web
    reads it (chat's watchdog and bubble), but `Rails.cache` isn't shared between processes in
    development or on a production install without `REDIS_URL` (PR 3's decision 2). The typing
@@ -183,7 +187,7 @@ runs. The numbers go in the PR description.
   - `LEGACY_QUEUES = { "ai_high_priority" => :interactive, "ai_low_priority" => :background }`;
   - `lane_for_queue(name)`, and `ai_queues`, the names of both.
 
-  PR 3's `Ai::Capsule` reads `ai_queues`, so the capsule check covers the old queues during the
+  3a's `Ai::Capsule` reads `ai_queues`, so the capsule check covers the old queues during the
   drain with no list of its own.
 - `AssistantResponseJob`: `queue_as { Ai::Routes.queue_for(:chat) }`.
 - `config/sidekiq.yml`:
@@ -216,7 +220,7 @@ runs. The numbers go in the PR description.
 - `app/models/ai/sequencer.rb`: `lane` (in `Fiber[...]`, decision 1), `with_lane(lane) { }`,
   `gate_for(endpoint)` (nil for a cloud endpoint), and the per-process gate registry keyed by host
   (§11: host without port, path or scheme; two endpoints on one host share the larger size).
-- `ApplicationJob`'s `around_perform`, from PR 3, also runs the job in
+- `ApplicationJob`'s `around_perform`, from 3a, also runs the job in
   `Ai::Sequencer.with_lane(Ai::Routes.lane_for_queue(queue_name))` when the queue is an AI one
   (decision 1).
 - `ai_gate_test` covers a Jev judgement on a local host: its pool threads take the job's lane.
@@ -244,7 +248,8 @@ runs. The numbers go in the PR description.
   `Ai::Error::Preempted` when its holder was marked.
 - `Ai::Error::Busy` and `Ai::Error::Preempted` join `Ai::Error` (neither maps from HTTP).
 - The cancel point §12 asks for: before a request passes the gate, the generation's `cancelled:`
-  callable is checked (PR 3 passes it for PDF imports and bill suggestions).
+  callable is checked. Nothing passes one through a gate yet; 3b passes it for PDF imports and
+  bill suggestions.
 - **A short connect timeout on local endpoints.** RubyLLM 2.2's `config.connect_timeout` defaults
   to `nil`, so opening a connection may take the whole `request_timeout` (300 s on a local
   preset). The gate is held around the request, connecting included, so a powered-off or
@@ -280,7 +285,7 @@ runs. The numbers go in the PR description.
   `self.class.set(wait: rand(5..15).seconds).perform_later(*arguments)`: no retry count, no
   `ai_failed`.
 - **Probes:** `AiHealth::Probe#perform` rescues `StandardError` into a failing result, so a busy
-  host would show as a failed check. It re-raises `Busy`, and `Ai::ProbeJob` (PR 3) re-enqueues
+  host would show as a failed check. It re-raises `Busy`, and `Ai::ProbeJob` (3a) re-enqueues
   the same way. On a busy host a probe's result can be minutes old, and the page shows its age (§13).
 - Re-enqueue goes to the back of the queue, which is already 2c's fairness behaviour.
 
@@ -355,7 +360,7 @@ The step 0 runs again on the PR's head. Target (§11): chat's extra wait about 2
 
 The same 51 issues and PRs as PR 3's plan, compared by changed files and diff.
 
-**What PR 4 stands on.** The stack #4773 → #4774 → #4775 → #4765 → #4771 → #4892, then PR 3.
+**What PR 4 stands on.** The stack #4773 → #4774 → #4775 → #4765 → #4771 → #4892, then 3a.
 Review changes there rebase this branch. It edits the files PR 4 changes most
 (`Ai::Transport::Instrumenter`, `ruby_llm_adapter`, `http.rb`, `jev.rb`, `Ai::Generation`,
 `Ai::GenerationJob`, `Ai::Routes`).
@@ -369,8 +374,8 @@ moved its job to `embed`'s lane.
 | PR | Interaction | Handling |
 |---|---|---|
 | #4776 Tools/AI onboarding | Edits `Chat.default_model` and `Assistant::Responder`, which steps 6 and 7 change. Its family OpenRouter chat answers whole, without streaming. Families with their own provider are PR 9's scope. | Rebase step 6's temporary gate lines onto whichever lands first. A family's cloud endpoint has no gate, so its chat isn't affected. Its scope is PR 3's call. |
-| #4879 PDF vision probe fix | PR 3 step 5 brings this fix to 2f's `AiHealth::Probe`. Step 4 here edits the same file to re-raise `Busy`. | Rebase onto PR 3; separate methods. |
-| #4425 receipt splits | Today a web-thread call. Rebuilt on PR 3's pattern, it's an interactive feature: `ai_interactive`, the `ai_chat` thread, interrupting background calls on a local host. | Nothing here. Its routing-table row would set `lane: :interactive`. |
+| #4879 PDF vision probe fix | 3a (step 2) brings this fix to 2f's `AiHealth::Probe`. Step 4 here edits the same file to re-raise `Busy`. | PR 4 starts from 3a, which has it; separate methods. |
+| #4425 receipt splits | Today a web-thread call. Rebuilt on 3b's pattern, it's an interactive feature: `ai_interactive`, the `ai_chat` thread, interrupting background calls on a local host. | Nothing here. Its routing-table row would set `lane: :interactive`. |
 | #4844 Claude subscription | Runs the Claude Code CLI as a subprocess. The gate only sees HTTP requests through RubyLLM, so it never sees these calls. It's a cloud provider, so it needs no gate anyway. | None. |
 
 **Issues:**
@@ -384,21 +389,21 @@ moved its job to `embed`'s lane.
 
 ## Coordination with PR 3
 
-PR 3 merges first; PR 4 rebases onto it. What PR 4 relies on and avoids:
+PR 4 starts from 3a and merges after it; 3b, 3c and 3d rebase onto PR 4. What PR 4 relies on and
+avoids:
 
-- **Relies on:**
-  - every job choosing its queue through `Ai::Routes` (PR 3's jobs included);
+- **Relies on (all in 3a):**
+  - every job choosing its queue through `Ai::Routes`;
   - `Ai::Capsule` reading `Ai::Routes.ai_queues`;
-  - PR 3's `ApplicationJob` `around_perform` and `Ai::SharedState`;
-  - `Ai::ProbeJob` and `Ai::ToolJob` existing, for the `Busy` re-enqueue and the lane table.
-
-  The first three come with PR 3's step 1, which this branch starts from. `Ai::ProbeJob` and
-  `Ai::ToolJob` arrive in PR 3's later steps, so the probe re-enqueue and `ToolJob`'s lanes are
-  finished after the rebase.
+  - the `ApplicationJob` `around_perform` and `Ai::SharedState`;
+  - `Ai::ProbeJob`, for the `Busy` re-enqueue.
+- **Doesn't need 3b or 3c.** Their jobs pick queues through `Ai::Routes`, so they land on the lane
+  queues with no edit. `Ai::ToolJob` runs on the interactive and prompt lanes, which never raise
+  `Busy`, and `bill_setup` already goes through `Ai::GenerationJob`, which step 4 changes.
 - **Avoids:** any capsule or escape-hatch method on `Ai::Sequencer` (PR 3's decision 1); changing
   job classes to set lanes (decision 1 here).
-- **Expected rebase conflicts:** `app/jobs/application_job.rb`, `test/support/ai_test_helper.rb`,
-  `ai_lane_test.rb`, `ai-pipeline.md`.
+- **Expected rebase conflicts**, for 3b–3d onto PR 4: `ai_lane_test.rb`, `ai-pipeline.md`;
+  `Ai::GenerationJob`'s rescues if 3b touches them.
 
 ## Still on old code after PR 4
 
