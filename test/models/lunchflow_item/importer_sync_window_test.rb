@@ -17,13 +17,22 @@ class LunchflowItem::ImporterSyncWindowTest < ActiveSupport::TestCase
     import_transactions(sync_start_date: Date.new(2026, 9, 1))
   end
 
-  test "an explicit sync window sets where a first fetch starts, and records no history marker" do
+  test "an explicit sync window sets where a first fetch starts, and records it as where the history begins" do
     @item.update!(sync_start_date: Date.new(2026, 1, 15))
     expect_fetch_from(Date.new(2026, 9, 1))
 
     import_transactions(sync_start_date: Date.new(2026, 9, 1))
 
-    assert_nil @lunchflow_account.reload.history_synced_from
+    assert_equal Date.new(2026, 9, 1), @lunchflow_account.reload.history_synced_from.to_date
+  end
+
+  test "a windowed first fetch that returns data leaves the earlier history to fetch" do
+    @item.update!(sync_start_date: Date.new(2026, 1, 15))
+    expect_fetch_from(Date.new(2026, 9, 1), transactions: [ transaction("tx-1", "2026-09-10") ])
+    import_transactions(sync_start_date: Date.new(2026, 9, 1))
+
+    expect_fetch_from(Date.new(2026, 1, 15))
+    import_transactions(sync_start_date: nil)
   end
 
   test "the connection hands its import the sync window" do
@@ -35,10 +44,14 @@ class LunchflowItem::ImporterSyncWindowTest < ActiveSupport::TestCase
   end
 
   private
-    def expect_fetch_from(start_date)
+    def expect_fetch_from(start_date, transactions: [])
       @provider.expects(:get_account_transactions)
         .with("acct-1", has_entries(start_date: start_date))
-        .returns({ transactions: [] })
+        .returns({ transactions: transactions })
+    end
+
+    def transaction(id, date)
+      { "id" => id, "amount" => -10, "currency" => "EUR", "date" => date, "merchant" => "Rewe" }
     end
 
     def import_transactions(sync_start_date:)

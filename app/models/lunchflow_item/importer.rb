@@ -257,9 +257,7 @@ class LunchflowItem::Importer
     end
 
     def fetch_and_store_transactions(lunchflow_account)
-      # A windowed fetch doesn't start at the chosen start date, so it says
-      # nothing about how far back the account's history reaches.
-      fetches_history = sync_start_date.blank? && history_needed?(lunchflow_account)
+      fetches_history = history_needed?(lunchflow_account)
       start_date = determine_sync_start_date(lunchflow_account)
       fetch_started_at = Time.current
       include_pending = Rails.configuration.x.lunchflow.include_pending
