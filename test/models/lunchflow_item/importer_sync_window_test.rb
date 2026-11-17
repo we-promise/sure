@@ -35,6 +35,18 @@ class LunchflowItem::ImporterSyncWindowTest < ActiveSupport::TestCase
     import_transactions(sync_start_date: nil)
   end
 
+  test "a window that starts after the last fetch leaves where the next fetch resumes" do
+    travel_to Time.zone.parse("2026-11-17 12:00")
+    @lunchflow_account.upsert_lunchflow_transactions_snapshot!([ transaction("tx-1", "2026-10-08") ])
+    @lunchflow_account.update!(transactions_synced_through: Time.zone.parse("2026-10-10 06:00"), history_synced_from: nil)
+
+    expect_fetch_from(Date.new(2026, 10, 20))
+    import_transactions(sync_start_date: Date.new(2026, 10, 20))
+
+    expect_fetch_from(Date.new(2026, 10, 3))
+    import_transactions(sync_start_date: nil)
+  end
+
   test "the connection hands its import the sync window" do
     LunchflowItem::Importer.expects(:new)
       .with(@item, has_entries(sync_start_date: Date.new(2026, 9, 1)))
