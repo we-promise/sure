@@ -357,4 +357,16 @@ class Ai::GenerationTest < ActiveSupport::TestCase
 
     assert_kind_of Ai::Error::Unreachable, generation(1).call(batches: 1).error
   end
+
+  test "an item the answer leaves out is logged as unanswered, while the rest of the batch is kept" do
+    stub_ai(:detect_merchants) { |request| AiTestGeneration.answer(request).tap { _1[:merchants].pop } }
+
+    result = nil
+    assert_difference -> { DebugLogEntry.where(message: "Items no route could answer were left unanswered").count } do
+      result = generation(2).call
+    end
+
+    assert_equal %w[t0], answered_ids(result)
+    assert_equal [ "t1" ], DebugLogEntry.order(:created_at).last.metadata["item_ids"]
+  end
 end

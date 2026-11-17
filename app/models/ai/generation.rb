@@ -105,6 +105,7 @@ class Ai::Generation
 
     @usage = nil
     @failed_over_from = []
+    @logged_ids = Set.new
     batch_key ? call_batched(routes, batches:, cancelled:, answered_before:) : call_single(routes, cancelled:)
   rescue Ai::Error::Base => error
     Ai::Result.failure(error, usage: @usage, failed_over_from: @failed_over_from.presence, correlation_id: Ai::CallContext.correlation_id)
@@ -162,6 +163,7 @@ class Ai::Generation
           served = answered_by
           answered.concat(Array(value[merge_key]))
         end
+        log_omitted(slice - unanswered, answered)
         remaining = unanswered + (remaining - slice)
         done += 1
         break if unanswered.any?   # the routes failed over; a later job retries these
@@ -355,8 +357,18 @@ class Ai::Generation
       generation.coerce(response.json)
     end
 
-    # Ids only: the items themselves hold the family's data.
+    # Items the answer left out: an answer missing up to half of its items is still accepted.
+    def log_omitted(items, answered)
+      answered_ids = answered.map { _1[merge_by].to_s }
+      log_unanswered(items.reject { answered_ids.include?(_1[:id].to_s) })
+    end
+
+    # Ids only: the items themselves hold the family's data. Each item is logged once.
     def log_unanswered(items)
+      items = items.reject { @logged_ids.include?(_1[:id]) }
+      return if items.empty?
+
+      @logged_ids.merge(items.map { _1[:id] })
       DebugLogEntry.capture(
         category: "ai_generation", level: "warn", message: "Items no route could answer were left unanswered",
         source: self.class.name, family:, metadata: { feature: feature_key.to_s, item_ids: items.map { _1[:id] } }
