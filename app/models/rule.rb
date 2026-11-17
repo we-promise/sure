@@ -19,8 +19,13 @@ class Rule < ApplicationRecord
   accepts_nested_attributes_for :actions, allow_destroy: true
 
   # The non-admin who started the current run (Rule::Runner), or whose run a
-  # count previews. Not stored.
-  attr_accessor :run_by
+  # count previews. Not stored. An admin's run reaches the whole family, so
+  # setting an admin leaves it unset.
+  attr_reader :run_by
+
+  def run_by=(user)
+    @run_by = user unless user&.admin?
+  end
 
   # A name typed into the form's "new group" field. The rule joins that group,
   # which is created unless the family already has one with that name.
@@ -286,7 +291,7 @@ class Rule < ApplicationRecord
     # Collect all unique transaction IDs matched by any rule
     transaction_ids = Set.new
     rules.each do |rule|
-      rule.run_by = user if user && !user.admin?
+      rule.run_by = user
       transaction_ids.merge(rule.matching_scope.pluck(:id))
     rescue Rule::SafeRegex::TimeoutError
       next
@@ -332,7 +337,14 @@ class Rule < ApplicationRecord
   # admin's edit keeps a restriction a member left; widening the rule to the
   # family is a separate admin action (RulesController#widen).
   def restrict_to_editor(user)
-    self.restricted_to = user if user && !user.admin?
+    return if user.nil? || user.admin? || only_switched_off?
+
+    self.restricted_to = user
+  end
+
+  # Switching a rule off changes nothing it does, so it keeps its scope.
+  def only_switched_off?
+    !active? && changed == [ "active" ] && [ conditions, actions ].none? { |records| records.any?(&:changed_for_autosave?) }
   end
 
   # Users whose access bounds what the rule changes.

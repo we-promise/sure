@@ -8,6 +8,16 @@ class SureImportTest < ActiveSupport::TestCase
     @import = @family.imports.create!(type: "SureImport")
   end
 
+  test "rules it imports are restricted to the member who published it" do
+    member = users(:family_member)
+    attach_ndjson({ type: "Rule", data: { id: "rule-1", name: "Published by member", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }.to_json)
+    @import.update!(published_by: member)
+
+    @import.import!
+
+    assert_equal member, @family.rules.find_by!(name: "Published by member").restricted_to
+  end
+
   test "dry_run reflects attached ndjson content" do
     ndjson = [
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } },

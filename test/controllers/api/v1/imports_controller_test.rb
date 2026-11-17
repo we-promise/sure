@@ -1342,6 +1342,7 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_response :forbidden
+    assert_equal I18n.t("imports.publish.rules_admin_only"), JSON.parse(response.body)["message"]
     assert_equal "pending", Import.find(JSON.parse(response.body)["import_id"]).status
   ensure
     Redis.new.del("api_rate_limit:#{member_key.id}") if member_key

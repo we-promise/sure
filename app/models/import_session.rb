@@ -244,12 +244,10 @@ class ImportSession < ApplicationRecord
     user.admin? || (created_by_id.present? && created_by_id == user.id)
   end
 
-  # Every chunk passes the checks a single import's publish does.
-  def publishable_by?(user)
-    imports.all? { |import| import.publishable_by?(user) }
-  end
-
-  def publish_later
+  # user: who publishes. Every chunk must pass the checks a single import's
+  # publish does (Import#publish_refusal_for), under the lock chunks are
+  # attached with.
+  def publish_later(user: nil)
     previous_status = nil
     should_enqueue = false
 
@@ -259,6 +257,8 @@ class ImportSession < ApplicationRecord
       return if complete? || importing?
 
       validate_publishable_chunks!
+      refusal = user && imports.lazy.filter_map { |import| import.publish_refusal_for(user) }.first
+      raise Import::PublishNotAllowedError.new(refusal) if refusal
 
       previous_status = status
       update!(status: :importing, error_details: {})

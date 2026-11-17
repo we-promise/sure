@@ -59,17 +59,15 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
   end
 
   def publish
-    unless @import_session.publishable_by?(current_resource_owner)
-      return render_error("forbidden", "You aren't allowed to publish this import session.", :forbidden)
-    end
-
-    @import_session.publish_later
+    @import_session.publish_later(user: current_resource_owner)
     @import_session.reload
     render_import_session(status: :accepted)
   rescue Import::MaxRowCountExceededError
     render_error("max_row_count_exceeded", "Import session has too many rows to publish.", :unprocessable_entity)
   rescue ImportSession::EnqueueError
     render_error("import_enqueue_failed", "Import session could not be queued.", :service_unavailable)
+  rescue Import::PublishNotAllowedError => e
+    render_error("forbidden", e.message, :forbidden)
   rescue ImportSession::ConflictError => e
     render_import_session_conflict(e.message)
   end

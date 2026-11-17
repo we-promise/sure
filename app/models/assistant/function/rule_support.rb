@@ -107,9 +107,9 @@ module Assistant::Function::RuleSupport
     # returns a list of problems. The rule is not saved. A key that is absent
     # leaves that part of the rule unchanged.
     # Every create, update and draft preview goes through here, so the rule
-    # carries the user's restriction (Rule#restrict_to_editor) before it is counted or saved.
+    # carries the user's restriction (Rule#restrict_to_editor) before it is
+    # validated, counted or saved.
     def assign_definition(rule, params)
-      rule.restrict_to_editor(user)
       problems = []
 
       if params.key?("effective_date")
@@ -153,6 +153,9 @@ module Assistant::Function::RuleSupport
         end
       end
 
+      # After the changes, so a switch-off alone keeps the rule's scope, and
+      # before validation, which checks a transfer target against it.
+      rule.restrict_to_editor(user)
       problems
     end
 

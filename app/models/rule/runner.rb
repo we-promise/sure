@@ -28,7 +28,7 @@ class Rule::Runner
 
   def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, user: nil)
     @family = family
-    @restricting_user = user unless user.nil? || user.admin?
+    @user = user
     @rule_ids = rules.map(&:id).to_set
     @execution_type = execution_type
     @ignore_attribute_locks = ignore_attribute_locks
@@ -49,7 +49,7 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :restricting_user
+    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :user
 
     def run_rules
       rule_runs = []
@@ -58,7 +58,7 @@ class Rule::Runner
       family.rules.ordered.includes(:family, :restricted_to, :actions, conditions: :sub_conditions).each do |rule|
         break if remaining_ids.empty?
 
-        rule.run_by = restricting_user
+        rule.run_by = user
 
         if remaining_ids.delete?(rule.id)
           rule_runs << execute(rule, ignore_attribute_locks: ignore_attribute_locks)

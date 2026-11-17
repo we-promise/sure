@@ -5,6 +5,7 @@ class Import::ConfigurationsController < ApplicationController
 
   before_action :set_import
   before_action :require_import_editable!, only: :update
+  around_action :lock_changeable_import, only: :update
 
   def show
     # PDF imports are auto-configured from AI extraction, skip to clean step

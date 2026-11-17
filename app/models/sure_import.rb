@@ -135,7 +135,8 @@ class SureImport < Import
   def import!(import_session: nil)
     sync_ndjson_counts!
     before_counts = readback_count_snapshot
-    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self, user: import_session&.created_by)
+    # A session's rules belong to who wrote them, even when an admin publishes.
+    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self, user: import_session&.created_by || published_by)
     result = importer.import!
 
     Import.transaction do
@@ -163,14 +164,14 @@ class SureImport < Import
     raise
   end
 
-  def publish_later
+  def publish_later(user: nil)
     raise MaxRowCountExceededError if row_count_exceeded?
 
     validate_sure_preflight!
     raise NotPublishableError, "Import was uploaded but has no publishable records." unless publishable?
 
     previous_status = status
-    update! status: :importing
+    claim_for_publish!(user)
 
     begin
       ImportJob.perform_later(self)

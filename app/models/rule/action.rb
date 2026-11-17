@@ -40,10 +40,11 @@ class Rule::Action < ApplicationRecord
       (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
   }
 
-  # A transfer target must be an account the editing user may write (see
-  # SetAsTransferOrPayment#target_accounts).
-  validate :transfer_target_writable_by_user, if: -> {
-    action_type == "set_as_transfer_or_payment" && Current.user && value.present? &&
+  # A transfer target must be an account the rule's restricting user may
+  # write (SetAsTransferOrPayment#target_accounts). Every save path restricts
+  # the rule to its non-admin editor first (Rule#restrict_to_editor).
+  validate :transfer_target_writable, if: -> {
+    action_type == "set_as_transfer_or_payment" && value.present? &&
       (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
   }
 
@@ -162,7 +163,7 @@ class Rule::Action < ApplicationRecord
       errors.add(:value, :invalid)
     end
 
-    def transfer_target_writable_by_user
+    def transfer_target_writable
       errors.add(:value, :invalid) unless executor.actionable?(value)
     end
 

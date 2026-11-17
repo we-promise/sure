@@ -803,6 +803,29 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal member, rule.reload.restricted_to
   end
 
+  test "a member switching a family-wide rule off leaves it family-wide" do
+    rule = @user.family.rules.create!(resource_type: "transaction", active: true, actions_attributes: [ { action_type: "exclude_transaction" } ])
+    sign_in users(:family_member)
+
+    patch rule_url(rule), params: { rule: { active: "0" } }
+
+    assert_not rule.reload.active?
+    assert_nil rule.restricted_to
+  end
+
+  test "the confirm page counts what the member's run would change" do
+    create_transaction(account: accounts(:depository), name: "Confirm probe")
+    create_transaction(account: accounts(:investment), name: "Confirm probe")
+    rule = @user.family.rules.create!(resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Confirm probe" } ],
+      actions_attributes: [ { action_type: "exclude_transaction" } ])
+    sign_in users(:family_member)
+
+    get confirm_rule_url(rule)
+
+    assert_includes response.body, I18n.t("rules.confirm.apply_notice_html", count: 1, resource: "transactions")
+  end
+
   test "guest cannot create rule" do
     sign_in family_guest
 

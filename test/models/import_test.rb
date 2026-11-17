@@ -3,6 +3,21 @@ require "test_helper"
 class ImportTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
+  test "publish_later checks the publisher and records them" do
+    import = imports(:transaction)
+    import.update!(account: accounts(:credit_card))
+    import.stubs(:publishable?).returns(true)
+
+    error = assert_raises(Import::PublishNotAllowedError) { import.publish_later(user: users(:family_member)) }
+    assert_equal :accounts, error.reason
+    assert import.reload.pending?
+
+    import.update!(account: accounts(:depository))
+    import.publish_later(user: users(:family_member))
+    assert import.reload.importing?
+    assert_equal users(:family_member), import.published_by
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

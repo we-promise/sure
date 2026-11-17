@@ -1,13 +1,15 @@
 class ImportsController < ApplicationController
   include SettingsHelper
+  include ImportGuestGuardable
 
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
   before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
-  before_action :require_rules_publishable!, only: :publish
   before_action :reject_guest_family_config_import!, except: %i[index new show summary]
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
   before_action :reject_guest_new_categories_or_tags!, only: :publish
+  # A statement import's account can move until its data lands (PdfImport#reassignable?).
+  around_action :lock_changeable_import, only: %i[update apply_template], unless: -> { @import.is_a?(PdfImport) }
 
   def update
     # Handle both pdf_import[account_id] and import[account_id] param formats
@@ -43,11 +45,13 @@ class ImportsController < ApplicationController
     # step that needs a new choice.
     return redirect_to import_path(@import) if @import.failed? && !@import.publishable?
 
-    @import.publish_later
+    @import.publish_later(user: Current.user)
 
     redirect_to import_path(@import), notice: t(".started")
   rescue Import::MaxRowCountExceededError
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
+  rescue Import::PublishNotAllowedError => e
+    redirect_back_or_to import_path(@import), alert: e.message
   end
 
   # Statement imports only: what became of each extracted transaction. Without it
@@ -244,12 +248,6 @@ class ImportsController < ApplicationController
     # to all.
     def require_writable_import_accounts!
       return if @import.accounts_writable_by?(Current.user)
-
-      redirect_back_or_to import_path(@import), alert: t("accounts.not_authorized")
-    end
-
-    def require_rules_publishable!
-      return if @import.rules_publishable_by?(Current.user)
 
       redirect_back_or_to import_path(@import), alert: t("accounts.not_authorized")
     end

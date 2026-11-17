@@ -1,5 +1,15 @@
 class Import < ApplicationRecord
   MaxRowCountExceededError = Class.new(StandardError)
+  PUBLISH_LOCK_NAMESPACE = 4015
+  # reason is :accounts or :rules (see #publish_refusal_for).
+  class PublishNotAllowedError < StandardError
+    attr_reader :reason
+
+    def initialize(reason)
+      @reason = reason
+      super(I18n.t(reason == :rules ? "imports.publish.rules_admin_only" : "accounts.not_authorized"))
+    end
+  end
   MappingError = Class.new(StandardError)
 
   # A hard-killed worker (OOM, SIGKILL during deploy) loses its in-flight job
@@ -82,6 +92,7 @@ class Import < ApplicationRecord
   belongs_to :account, optional: true
   belongs_to :account_statement, optional: true
   belongs_to :import_session, optional: true
+  belongs_to :published_by, class_name: "User", optional: true
 
   before_validation :set_default_number_format
   before_validation :ensure_utf8_encoding
@@ -243,13 +254,46 @@ class Import < ApplicationRecord
     end
   end
 
-  def publish_later
+  # user: who publishes; checked and recorded with the status change.
+  def publish_later(user: nil)
     raise MaxRowCountExceededError if row_count_exceeded?
     raise "Import is not publishable" unless publishable?
 
-    update! status: :importing
+    claim_for_publish!(user)
 
     ImportJob.perform_later(self)
+  end
+
+  # Checks the publisher and marks the import importing under the publish
+  # lock. Edits take the same lock and need a pending or failed import
+  # (ImportGuestGuardable), so none lands between the check and the publish.
+  def claim_for_publish!(user)
+    with_publish_lock do
+      reload
+      refusal = user && publish_refusal_for(user)
+      raise PublishNotAllowedError.new(refusal) if refusal
+
+      update!(status: :importing, published_by: user)
+    end
+  end
+
+  # A session-level advisory lock rather than a row lock, so a change made
+  # under it keeps its own transactions instead of joining one around it.
+  def with_publish_lock
+    connection = self.class.lease_connection
+    key = [ PUBLISH_LOCK_NAMESPACE, id.to_s ]
+    connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", *key ]))
+    begin
+      yield
+    ensure
+      connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?, hashtext(?))", *key ]))
+    end
+  end
+
+  # Whether the import can still change: published imports are being, or
+  # have been, written into the family.
+  def changeable?
+    pending? || failed?
   end
 
   # Whether publishing would change existing records even when the dry run
@@ -498,7 +542,7 @@ class Import < ApplicationRecord
   def editable_by?(user)
     return true unless user&.guest?
 
-    (pending? || failed?) && !family_config?
+    changeable? && !family_config?
   end
 
   # Whether publishing would add new categories or tags to the family.
@@ -521,16 +565,15 @@ class Import < ApplicationRecord
     (ids - family.accounts.writable_by(user).where(id: ids).pluck(:id)).empty?
   end
 
-  # The checks a user's publish passes, in the web, the API and import sessions.
-  def publishable_by?(user)
-    accounts_writable_by?(user) && rules_publishable_by?(user)
-  end
+  # Why the user may not publish this import, or nil: :accounts when it
+  # writes into an account they can't write, :rules when it writes rules and
+  # they are not an admin. Imports are family records any member can reach,
+  # so importing rules stays an admin's job; the importer also restricts them
+  # to a non-admin publisher or session creator (Family::DataImporter).
+  def publish_refusal_for(user)
+    return :accounts unless accounts_writable_by?(user)
 
-  # An import records no user, so the rules it writes can't be restricted to
-  # one (Rule#restrict_to_editor): only an admin, whose rules are family-wide anyway,
-  # may publish them.
-  def rules_publishable_by?(user)
-    !writes_rules? || user&.admin?
+    :rules if writes_rules? && !user&.admin?
   end
 
   def writes_rules?

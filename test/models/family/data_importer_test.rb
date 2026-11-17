@@ -2290,6 +2290,16 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not unknown.active?
   end
 
+  test "a member's import restricts its rules to the member, whatever the file says" do
+    family = families(:dylan_family)
+    member = users(:family_member)
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { name: "Planted", resource_type: "transaction", active: true, restricted_to: users(:family_admin).email, actions: [ { action_type: "exclude_transaction" } ] } } ])
+
+    Family::DataImporter.new(family, ndjson, user: member).import!
+
+    assert_equal member, family.rules.find_by!(name: "Planted").restricted_to
+  end
+
   test "imports rule groups by name and keeps each group in one block" do
     existing = @family.rule_groups.create!(name: "Food")
     rule_record = ->(name, position, group) do

@@ -1523,7 +1523,8 @@ class Family::DataImporter
     # An exported restriction stays with its user. If that user isn't in this
     # family the rule comes in switched off, for an admin to review, rather
     # than acting on the whole family. Older exports carry no key, so an
-    # existing rule keeps its restriction.
+    # existing rule keeps its restriction. A non-admin importer replaces
+    # whatever the file says with themselves (Rule#restrict_to_editor).
     def assign_rule_restriction(rule, data)
       if data.key?("restricted_to")
         rule.restricted_to = data["restricted_to"].presence && @family.users.find_by(email: data["restricted_to"])

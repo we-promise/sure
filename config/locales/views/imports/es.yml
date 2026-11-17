@@ -215,6 +215,7 @@ es:
         hint_html: Sube el archivo <strong>all.ndjson</strong> del ZIP de tu exportación de datos
         ndjson_invalid: Debe ser un NDJSON válido con al menos un registro
   imports:
+    published_locked: Esta importación ya se ha publicado y no se puede cambiar.
     mapping_labels:
       account_type: Tipo de cuenta
       account: Cuenta
@@ -261,6 +262,7 @@ es:
     publish:
       started: Tu importación ha comenzado en segundo plano.
       max_rows_exceeded: Tu importación supera el número máximo de filas de %{max}.
+      rules_admin_only: Esta importación incluye reglas, que solo puede importar un administrador.
     revert:
       started: La importación se está revirtiendo en segundo plano.
     apply_template:

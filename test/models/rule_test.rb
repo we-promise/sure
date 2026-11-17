@@ -109,10 +109,13 @@ class RuleTest < ActiveSupport::TestCase
     source = create_transaction(account: accounts(:depository), name: "Transfer probe", amount: 50)
     family = families(:dylan_family)
     rule = family.rules.create!(
-      resource_type: "transaction", active: true, restricted_to: member,
+      resource_type: "transaction", active: true,
       conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Transfer probe" } ],
       actions_attributes: [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id } ]
     )
+    # Restricted after the target was set, as when a member later edits it.
+    rule.update_column(:restricted_to_id, member.id)
+    rule.reload
     executor = rule.actions.first.executor
 
     assert_not executor.actionable?(accounts(:investment).id)
@@ -138,13 +141,21 @@ class RuleTest < ActiveSupport::TestCase
     end
   end
 
-  test "a member can't pick, or see, a transfer target they cannot write" do
-    Current.stubs(:user).returns(users(:family_member))
-    rule = families(:dylan_family).rules.build(resource_type: "transaction")
+  test "a restricted rule can't target an account its user cannot write, whoever saves it" do
+    rule = families(:dylan_family).rules.build(resource_type: "transaction", restricted_to: users(:family_member))
     action = rule.actions.build(action_type: "set_as_transfer_or_payment", value: accounts(:investment).id)
 
     assert_not action.valid?
     assert action.errors.of_kind?(:value, :invalid)
+
+    action.value = accounts(:depository).id
+    assert action.valid?
+  end
+
+  test "a member editing a rule sees only transfer targets they can write" do
+    Current.stubs(:user).returns(users(:family_member))
+    action = families(:dylan_family).rules.build(resource_type: "transaction").actions.build(action_type: "set_as_transfer_or_payment")
+
     assert_not_includes action.executor.options.map(&:last), accounts(:investment).id
     assert_includes action.executor.options.map(&:last), accounts(:depository).id
   end
