@@ -274,6 +274,19 @@ class SophtronItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal Base64.strict_encode64("secret-key"), @item.access_key
   end
 
+  test "update with a new user ID and access key replaces the stored ones" do
+    stub_request(:get, "https://api.sophtron.com/api/Institution/HealthCheckAuth")
+      .to_return(status: 200, body: "")
+
+    patch sophtron_item_url(@item),
+          params: { sophtron_item: { user_id: "replacement-user", access_key: Base64.strict_encode64("new-secret-key") } },
+          as: :turbo_stream
+
+    @item.reload
+    assert_equal "replacement-user", @item.user_id
+    assert_equal Base64.strict_encode64("new-secret-key"), @item.access_key
+  end
+
   test "connection_status renders MFA challenge when Sophtron asks for security answers" do
     @item.update!(user_institution_id: "ui-1", current_job_id: "job-1")
     provider = mock
