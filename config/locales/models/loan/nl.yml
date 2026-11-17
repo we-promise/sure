@@ -10,6 +10,7 @@ nl:
     errors:
       models:
         loan:
+          duplicate_term_change_date: "Twee rijen met wijzigingen in de voorwaarden hebben dezelfde datum. Voeg ze samen tot één rij; een rij kan een extra aflossing en een nieuwe betaling samen bevatten."
           invalid_rate_change: "Rijen met rentewijzigingen hebben zowel een ingangsdatum als een rentepercentage nodig."
           invalid_term_change: "Rijen met wijzigingen in de voorwaarden hebben een ingangsdatum nodig en bedragen die getallen zijn."
           rate_change_before_origination: "Een rentewijziging kan niet ingaan vóór de startdatum van de lening."
