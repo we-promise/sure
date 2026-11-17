@@ -147,23 +147,24 @@ class GenerateInsightsJob < ApplicationJob
         elsif existing.expired?
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
-          # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(title: generated.title, status: "active", facts: facts,
+          # insight resurfaces, with the body filled from the current facts.
+          existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
                            generated_at: Time.current, read_at: nil)
           existing
         else
-          # Same signal, same numbers: don't rewrite the body and don't undo
-          # the user's read/dismissed state. Facts still
-          # refresh — they're display values (key figure, link labels), and
-          # keeping them current is exactly why they're not part of the
-          # material-change comparison.
+          # Same signal, same numbers: don't undo the user's read/dismissed
+          # state and don't notify again. Facts still refresh — they're
+          # display values (key figure, link labels), and keeping them current
+          # is exactly why they're not part of the material-change comparison.
+          # The body is the template filled with those facts, so it refreshes
+          # with them; otherwise the prose keeps last week's amounts.
           #
           # The title refreshes with them. It is built from I18n and the
           # generator's own data, not written by the model, so keeping it
           # current costs nothing — and a title naming a goal or a category
           # the user has since renamed is simply wrong on the page. Rename is
           # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, facts: facts, generated_at: Time.current)
+          existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
           nil
         end
       rescue ActiveRecord::RecordNotUnique

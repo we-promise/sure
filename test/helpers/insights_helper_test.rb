@@ -205,6 +205,21 @@ class InsightsHelperTest < ActionView::TestCase
     assert_nil insight_action(dangling)
   end
 
+  test "an uncovered bill renders destructive" do
+    assert_equal "destructive", insight_icon_color(build_insight("bill_not_covered", priority: "high"))
+  end
+
+  test "an uncovered bill leads with the shortfall and links to the paying account" do
+    account = accounts(:depository)
+    insight = build_insight("bill_not_covered",
+      metadata: { "account_id" => account.id },
+      facts: { "shortfall" => "$460.00", "due_on" => "Nov 23, 2026", "account" => "Checking Account" })
+
+    assert_equal [ "$460.00", "short on Nov 23, 2026" ], insight_key_figure(insight)
+    assert_equal account_path(account), insight_action(insight)[:href]
+    assert_equal "Bills · Checking Account", insight_meta_line(insight)
+  end
+
   test "maintained reserve metadata and action render in German" do
     family = families(:dylan_family)
     goal = family.goals.first
