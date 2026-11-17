@@ -63,7 +63,8 @@ en:
         investment_subtypes_title: Investment account types
         investment_subtypes_subtitle: Choose which countries' account types are offered when you add an investment account. General types are always available.
         investment_subtypes_automatic: Following your country. Turn on other countries if you hold accounts there.
-        investment_subtypes_custom: Using your own selection instead of your country's default.
+        investment_subtypes_custom: Using your own selection. Countries you turn on stay on if you change your country.
+        investment_subtypes_follow_country: Use my country's default
         sharing_title: "%{moniker} Sharing"
         sharing_subtitle: "Control how accounts are shared in your %{moniker}"
         sharing_default_label: Default sharing for new accounts
