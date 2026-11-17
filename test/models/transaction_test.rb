@@ -3,6 +3,19 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
+  test "with_any_tag returns transactions carrying any of the tags, each once" do
+    travel = families(:dylan_family).tags.create!(name: "Travel")
+    work = families(:dylan_family).tags.create!(name: "Work")
+    other = families(:dylan_family).tags.create!(name: "Other")
+    hotel = create_transaction(name: "Hotel", tags: [ travel ]).transaction
+    laptop = create_transaction(name: "Laptop", tags: [ work ]).transaction
+    lunch = create_transaction(name: "Airport lunch", tags: [ travel, work ]).transaction
+    create_transaction(name: "Rent", tags: [ other ])
+    create_transaction(name: "Untagged")
+
+    assert_equal [ hotel, laptop, lunch ].map(&:id).sort, Transaction.with_any_tag([ travel.id, work.id ]).pluck(:id).sort
+  end
+
   test "pending? is true when extra.simplefin.pending is truthy" do
     transaction = Transaction.new(extra: { "simplefin" => { "pending" => true } })
 
@@ -478,6 +491,79 @@ class TransactionTest < ActiveSupport::TestCase
     assert_equal [ tags(:one).id, tags(:two).id ].sort, transaction.reload.tag_ids.sort
   end
 
+  test "name_suggestions_for ranks names and each name's category by frequency" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+    # entries(:transaction) is named "Starbucks" and its transaction (transactions(:one)) is categorized as food_and_drink
+
+    # "Starbucks" ends up more frequent than "Star Market", and within "Starbucks",
+    # food_and_drink ends up more frequent than its one-off income-categorized occurrence.
+    2.times { create_transaction(name: "Starbucks", account: account, category: categories(:food_and_drink)) }
+    create_transaction(name: "Starbucks", account: account, category: categories(:income))
+    create_transaction(name: "Star Market", account: account, category: categories(:income))
+
+    suggestions = family.transactions.name_suggestions_for("star")
+
+    assert_equal [ "Starbucks", "Star Market" ], suggestions.map(&:name)
+    assert_equal categories(:food_and_drink), suggestions.first.category
+    assert_equal categories(:income), suggestions.second.category
+  end
+
+  test "name_suggestions_for counts each transaction once when the caller scope joins account_shares" do
+    # TransactionsController#name_suggestions calls this via
+    # `family.transactions.merge(Account.accessible_by(user))`. Account.accessible_by does
+    # left_joins(:account_shares), and for an account the user owns, its WHERE predicate
+    # matches every joined share row regardless of which share it is — so an owned account
+    # shared with multiple family members fans out to multiple rows per transaction. Without
+    # counting distinct transaction ids, that inflates a name's frequency by however many
+    # times its account is shared, letting a rarely-used name outrank a genuinely common one.
+    family = families(:dylan_family)
+    owner = users(:family_admin)
+    shared_account = accounts(:depository) # owned by family_admin; already shared with family_member (fixture)
+    unshared_account = accounts(:investment) # owned by family_admin; not shared with anyone
+
+    2.times do |i|
+      extra_member = User.create!(
+        family: family, email: "extra_member_#{i}@example.com", password: "password123456",
+        first_name: "Extra", last_name: "Member #{i}", role: "member"
+      )
+      AccountShare.create!(account: shared_account, user: extra_member, permission: "read_only", include_in_finances: true)
+    end
+    # shared_account now has 3 account_shares rows (1 fixture + 2 created above), so its
+    # accessible_by join fans out 3x — a single real transaction would inflate to a count of 3.
+
+    create_transaction(name: "Fanout Rare", account: shared_account, category: categories(:food_and_drink))
+    2.times { create_transaction(name: "Fanout Common", account: unshared_account, category: categories(:income)) }
+
+    suggestions = family.transactions
+      .merge(Account.accessible_by(owner))
+      .name_suggestions_for("Fanout")
+
+    assert_equal [ "Fanout Common", "Fanout Rare" ], suggestions.map(&:name)
+  end
+
+  test "name_suggestions_for returns an empty array when the query is too short" do
+    family = families(:dylan_family)
+    assert_equal [], family.transactions.name_suggestions_for("st")
+    assert_equal [], family.transactions.name_suggestions_for("  ")
+  end
+
+  test "name_suggestions_for returns an empty array when no past transaction matches" do
+    family = families(:dylan_family)
+    assert_equal [], family.transactions.name_suggestions_for("no such merchant")
+  end
+
+  test "name_suggestions_for caps results at 8" do
+    family = families(:dylan_family)
+    account = accounts(:depository)
+
+    9.times { |i| create_transaction(name: "Merchant #{i}", account: account) }
+
+    suggestions = family.transactions.name_suggestions_for("Merchant")
+
+    assert_equal 8, suggestions.size
+  end
+
   test "category_from finds categories still set by a given source" do
     family = families(:empty)
     account = family.accounts.create!(name: "Category from", balance: 0, currency: "USD", accountable: Depository.new)
@@ -496,6 +582,111 @@ class TransactionTest < ActiveSupport::TestCase
     assert_empty scope.category_from("ai", since: 1.minute.from_now).pluck(:id)
     assert_equal [ ai_guess.id ], scope.category_from("ai", metadata: { confidence: 0.9 }).pluck(:id)
     assert_empty scope.category_from("ai", metadata: { confidence: 0.5 }).pluck(:id)
+  end
+
+
+  test "a category changed away from the AI's and back again is no longer the AI's" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    assert Transaction.where(id: transaction.id).category_from("ai").exists?, "precondition: the AI's category"
+
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+
+    assert_not Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "an automatic categorizer's own change keeps its claim" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.enrich_attribute(:category_id, categories(:food_and_drink).id, source: "bayes", metadata: { locked_by_bayes: true })
+
+    assert Transaction.where(id: transaction.id).category_from("bayes", metadata: { locked_by_bayes: true }).exists?
+  end
+
+  test "an automatic categorizer setting its category again reclaims it" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+
+    assert Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "a category changed away from the AI's and back again stays in the AI history" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+    family = transaction.entry.account.family
+
+    assert_includes Transaction::Search.new(family, filters: { ai_status: [ "history" ] }).transactions_scope.ids, transaction.id
+    assert_not_includes Transaction::Search.new(family, filters: { ai_status: [ "current" ] }).transactions_scope.ids, transaction.id
+  end
+
+  test "clearing the AI cache keeps a lock on a category the user changed away from and back" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.lock_attr!(:category_id)
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+
+    transaction.reload.clear_ai_cache
+
+    assert transaction.reload.locked?(:category_id)
+  end
+
+  test "a category merge ends a claim the AI recorded on the category merged into" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    # A claim recorded before category changes ended claims: the category moved on without it.
+    transaction.update_column(:category_id, categories(:food_and_drink).id)
+
+    Transaction.reassign_category!(Transaction.where(id: transaction.id), categories(:income).id)
+
+    assert_equal categories(:income), transaction.reload.category
+    assert_not Transaction.where(id: transaction.id).category_from("ai").exists?
+  end
+
+  test "clearing the AI cache locks the transaction before its enrichments" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    transaction.update!(category: categories(:food_and_drink))
+    statements = []
+    subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") { |*, payload| statements << payload[:sql] }
+
+    begin
+      transaction.reload.clear_ai_cache
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
+    lock_at = statements.index { |sql| sql.match?(/FROM "transactions".*FOR UPDATE/m) }
+    delete_at = statements.index { |sql| sql.match?(/DELETE FROM "data_enrichments"/) }
+    assert lock_at, "locks the transaction"
+    assert delete_at, "deletes the AI's enrichments"
+    assert_operator lock_at, :<, delete_at
+  end
+
+  test "clearing the AI cache of a transaction deleted since it was loaded clears nothing" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "ai")
+    stale = Transaction.find(transaction.id)
+    Transaction.where(id: transaction.id).delete_all
+
+    assert_equal 0, stale.clear_ai_cache
+  end
+
+  test "clearing Bayes' locks keeps a lock on a category the user changed away from and back" do
+    transaction = transactions(:one)
+    transaction.enrich_attribute(:category_id, categories(:income).id, source: "bayes", metadata: { locked_by_bayes: true })
+    transaction.lock_attr!(:category_id)
+
+    transaction.update!(category: categories(:food_and_drink))
+    transaction.update!(category: categories(:income))
+    transaction.lock_attr!(:category_id)
+    transaction.entry.account.family.clear_bayes_locks!
+
+    assert transaction.reload.locked?(:category_id)
   end
 
   private

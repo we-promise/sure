@@ -136,6 +136,9 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
       key = [
         "balance_sheet_net_worth_breakdown_series",
         CACHE_VERSION,
+        ExchangeRate::CONVERSION_CACHE_VERSION,
+        # A rate stored later can bring back an account the series left out.
+        ExchangeRate.updated_at_version,
         user&.id,
         shares_version,
         period.start_date,

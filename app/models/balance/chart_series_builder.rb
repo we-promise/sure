@@ -170,8 +170,12 @@ class Balance::ChartSeriesBuilder
       favorable_direction == "down" ? -1 : 1
     end
 
+    # 1 for an account already in the target currency, else the rate the
+    # lateral join below found. NULL when the currency has no usable rate, so
+    # the account drops out of the day's sum rather than counting at 1.
+    # Strict conversion raises on that same gap instead (see missing_currency).
     def balance_rate_sql
-      @strict_currency_conversion ? "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END" : "COALESCE(er.rate, 1)"
+      "CASE WHEN accounts.currency = :target_currency THEN 1 WHEN er.rate > 0 THEN er.rate END"
     end
 
     def query
@@ -244,6 +248,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date <= d.date
+               AND er.rate > 0
              ORDER BY er.date DESC
              LIMIT 1),
             (SELECT er.rate
@@ -251,6 +256,7 @@ class Balance::ChartSeriesBuilder
              WHERE er.from_currency = accounts.currency
                AND er.to_currency = :target_currency
                AND er.date > d.date
+               AND er.rate > 0
              ORDER BY er.date ASC
              LIMIT 1)
           ) AS rate
@@ -295,7 +301,7 @@ class Balance::ChartSeriesBuilder
             COALESCE(SUM(
               CASE
                 WHEN last_basis.cost_basis IS NOT NULL
-                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * COALESCE(er.rate, 1) * accounts.viewer_fraction
+                THEN (last_h.amount - (last_basis.cost_basis * last_h.qty)) * CASE WHEN last_h.currency = :target_currency THEN 1 ELSE er.rate END * accounts.viewer_fraction
                 ELSE 0
               END
             ), 0) AS gains
@@ -334,6 +340,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date <= d.date
+                 AND er.rate > 0
                ORDER BY er.date DESC
                LIMIT 1),
               (SELECT er.rate
@@ -341,6 +348,7 @@ class Balance::ChartSeriesBuilder
                WHERE er.from_currency = last_h.currency
                  AND er.to_currency = :target_currency
                  AND er.date > d.date
+                 AND er.rate > 0
                ORDER BY er.date ASC
                LIMIT 1)
             ) AS rate

@@ -50,6 +50,7 @@ RSpec.describe 'API V1 Security Prices', type: :request do
   let(:account) do
     Account.create!(
       family: family,
+      owner: user,
       name: 'Investment Account',
       balance: 50_000,
       currency: 'USD',
@@ -138,6 +139,68 @@ RSpec.describe 'API V1 Security Prices', type: :request do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:security_id) { 'not-a-uuid' }
+
+        run_test!
+      end
+    end
+
+    post 'Import closing prices for a security no provider tracks' do
+      description <<~DESC.squish
+        Self-hosted instances only. Stores daily closes for an offline security no provider has
+        ever matched (no offline_reason, no price_provider) that is traded in an account the caller can write to, or held in a linked one. All rows
+        are validated first and stored together, or none are. A date already stored is replaced.
+        Security prices are shared, so the closes also value any other family holding the same
+        security. The caller's affected accounts are synced afterwards. Requires the read_write scope.
+      DESC
+      tags 'Security Prices'
+      security [ { apiKeyAuth: [] } ]
+      consumes 'application/json'
+      produces 'application/json'
+      parameter name: :body, in: :body, required: true, schema: { '$ref' => '#/components/schemas/SecurityPriceImportRequest' }
+
+      let(:offline_security) do
+        Security.create!(ticker: 'MYFUND', name: 'Private fund', offline: true).tap do |offline|
+          account.entries.create!(
+            date: Date.current, name: 'Buy', amount: 120, currency: 'USD',
+            entryable: Trade.new(security: offline, qty: 10, price: 12, currency: 'USD')
+          )
+        end
+      end
+      let(:body) do
+        { security_id: offline_security.id, prices: [ { date: Date.current.iso8601, price: '12.3400', currency: 'USD' } ] }
+      end
+
+      before do
+        allow(Rails.application.config).to receive(:app_mode).and_return('self_hosted'.inquiry)
+        allow_any_instance_of(ApplicationController).to receive(:redis_connected?).and_return(true)
+      end
+
+      response '200', 'closes imported' do
+        schema '$ref' => '#/components/schemas/SecurityPriceImportResult'
+
+        run_test!
+      end
+
+      response '403', 'insufficient scope, a guest, or a managed instance' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        before { allow(Rails.application.config).to receive(:app_mode).and_return('managed'.inquiry) }
+
+        run_test!
+      end
+
+      response '404', 'security not found among the caller\'s writable accounts' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:body) { { security_id: SecureRandom.uuid, prices: [ { date: Date.current.iso8601, price: '12', currency: 'USD' } ] } }
+
+        run_test!
+      end
+
+      response '422', 'online security or invalid rows; nothing was stored' do
+        schema '$ref' => '#/components/schemas/SecurityPriceImportError'
+
+        let(:body) { { security_id: offline_security.id, prices: [ { date: Date.current.iso8601, price: '-1', currency: 'USD' } ] } }
 
         run_test!
       end

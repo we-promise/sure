@@ -36,6 +36,25 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 50000 - 1000, BalanceSheet.new(@family).net_worth
   end
 
+  # Counted at 1, ¥1,000,000 added $1,000,000 to net worth (#3640).
+  test "an account in a currency with no rate at all is left out of totals" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    create_account(balance: 50000, accountable: Depository.new)
+    create_account(balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+
+    assert_equal 50000, BalanceSheet.new(@family).net_worth
+    assert_equal 50000, BalanceSheet.new(@family).assets.total
+  end
+
+  test "an account converts at the latest stored rate however old" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 60.days.ago.to_date, rate: 0.007)
+    create_account(balance: 50000, accountable: Depository.new)
+    create_account(balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+
+    assert_equal 57000, BalanceSheet.new(@family).net_worth
+  end
+
   test "disabled accounts do not affect totals" do
     create_account(balance: 1000, accountable: CreditCard.new)
     create_account(balance: 10000, accountable: Depository.new)
@@ -287,6 +306,66 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 2, liability_groups.size
     assert_equal 1000 + 2000, liability_groups.find { |ag| ag.name == CreditCard.display_name }.total
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == OtherLiability.display_name }.total
+  end
+
+  test "sorts accounts alphabetically ignoring case" do
+    user = users(:empty)
+    user.update!(default_account_order: "name_asc")
+    create_account(name: "cherry", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Banana", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "apple", balance: 0, accountable: Depository.new, owner: user)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[apple Banana cherry], names
+  end
+
+  test "sorts accounts by balance converted to the family currency" do
+    user = users(:empty)
+    user.update!(default_account_order: "balance_desc")
+    ExchangeRate.stubs(:rates_for).returns({ "EUR" => 2 })
+    create_account(name: "Dollars", balance: 150, currency: "USD", accountable: Depository.new, owner: user)
+    create_account(name: "Euros", balance: 100, currency: "EUR", accountable: Depository.new, owner: user)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[Euros Dollars], names
+  end
+
+  test "sorts by balance across family-currency and fractionally converted accounts" do
+    user = users(:empty)
+    ExchangeRate.stubs(:rates_for).returns({ "EUR" => BigDecimal("1.55") })
+    create_account(name: "Low", balance: 150, currency: "USD", accountable: Depository.new, owner: user)
+    create_account(name: "Euros", balance: 100, currency: "EUR", accountable: Depository.new, owner: user)
+    create_account(name: "High", balance: 160, currency: "USD", accountable: Depository.new, owner: user)
+
+    user.update!(default_account_order: "balance_asc")
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[Low Euros High], names
+
+    user.update!(default_account_order: "balance_desc")
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[High Euros Low], names
+  end
+
+  test "breaks balance and name ties by id so the order stays fixed" do
+    user = users(:empty)
+    accounts = 3.times.map do
+      create_account(name: "Same", balance: 100, accountable: Depository.new, owner: user)
+    end
+    expected = accounts.map(&:id).sort
+
+    %w[name_asc balance_asc].each do |order|
+      user.update!(default_account_order: order)
+      ids = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:id)
+      assert_equal expected, ids, "#{order} should tie-break by id"
+    end
+
+    %w[name_desc balance_desc].each do |order|
+      user.update!(default_account_order: order)
+      ids = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:id)
+      assert_equal expected.reverse, ids, "#{order} should tie-break by id"
+    end
   end
 
   test "sorts accounts in the user's manual order, new accounts last alphabetically" do

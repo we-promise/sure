@@ -17,6 +17,7 @@ class PagesController < ApplicationController
     "money_flow"         => { col_span: "single", grow: false, min_height: 0,   width_toggle: true },
     "spending_trend"     => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "outflows_donut"     => { col_span: "single", grow: false, min_height: 0 },
+    "cashflow_donut"     => { col_span: "single", grow: false, min_height: 0 },
     "investment_summary" => { col_span: "single", grow: false, min_height: 0, width_toggle: true },
     "net_worth_chart"    => { col_span: "single", grow: true,  min_height: 208, width_toggle: true },
     "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
@@ -30,7 +31,7 @@ class PagesController < ApplicationController
   # anywhere. Customize mode, the period picker and each widget's own month
   # links and filter forms carry them along, so changing one control doesn't
   # jump the other widgets back to their defaults.
-  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, { money_flow_account_ids: [], spending_category_ids: [] } ].freeze
+  DASHBOARD_VIEW_PARAMS = [ :start_date, :end_date, :money_flow_month, :spending_month, :cashflow_month, { money_flow_account_ids: [], spending_category_ids: [], cashflow_account_ids: [] } ].freeze
 
   # Selectable height presets (px) for grow widgets.
   DASHBOARD_HEIGHT_PRESETS = { "compact" => 208, "auto" => 288, "tall" => 416 }.freeze
@@ -47,6 +48,11 @@ class PagesController < ApplicationController
     @balance_sheet = Current.family.balance_sheet
     @investment_statement = Current.family.investment_statement
     @accounts = Current.user.accessible_accounts.visible.with_attached_logo
+    @reconciliation_indicators = if Current.family.manual_reconciliation?
+      Account::ReconciliationIndicator.for_accounts(@accounts)
+    else
+      {}
+    end
 
     @dashboard_view_params = dashboard_view_params
     @dashboard_sections, @hidden_dashboard_sections = build_dashboard_sections
@@ -62,8 +68,15 @@ class PagesController < ApplicationController
   end
 
   def update_preferences
-    if Current.user.update_dashboard_preferences(preferences_params, laid_out_order: ordered_dashboard_section_keys)
-      head :ok
+    saved = Current.user.update_dashboard_preferences(preferences_params, laid_out_order: ordered_dashboard_section_keys)
+
+    # Grouping, collapse, and layout save with a JSON PATCH and expect an empty
+    # 200. The comparison toggle is an HTML form so the dashboard can re-render
+    # the chart that the preference reveals.
+    if dashboard_preference_json_request?
+      head(saved ? :ok : :unprocessable_entity)
+    elsif saved
+      redirect_back fallback_location: root_path, status: :see_other
     else
       head :unprocessable_entity
     end
@@ -129,7 +142,14 @@ class PagesController < ApplicationController
         permitted["section_order"] = prefs[:section_order] if prefs[:section_order].is_a?(Array)
         permitted["dashboard_section_layout"] = prefs[:dashboard_section_layout].to_unsafe_h if prefs[:dashboard_section_layout].respond_to?(:to_unsafe_h)
         permitted["cashflow_sankey_group_by"] = prefs[:cashflow_sankey_group_by] if User::CASHFLOW_SANKEY_GROUPINGS.include?(prefs[:cashflow_sankey_group_by])
+        permitted["cashflow_preview_enabled"] = ActiveModel::Type::Boolean.new.cast(prefs[:cashflow_preview_enabled]) if prefs.key?(:cashflow_preview_enabled)
       end
+    end
+
+    # Fetch callers send JSON without an Accept header, which Rails would
+    # otherwise treat as HTML and redirect.
+    def dashboard_preference_json_request?
+      request.format.json? || request.media_type == "application/json"
     end
 
     # The spending filter is carried as the widget resolved it: a selection
@@ -207,6 +227,24 @@ class PagesController < ApplicationController
             layout: section_layout("outflows_donut"),
             locals: { outflows_data: outflows_data, period: @period },
             visible: @accounts.any? && outflows_data[:categories].present?,
+            collapsible: true
+          }
+        },
+        "cashflow_donut" => -> {
+          accounts = dashboard_income_statement.eligible_accounts
+          {
+            key: "cashflow_donut",
+            title: "pages.dashboard.cashflow_donut.title",
+            partial: "pages/dashboard/cashflow_donut",
+            layout: section_layout("cashflow_donut"),
+            locals: {
+              cashflow_data: build_cashflow_donut_data(dashboard_month_param(:cashflow_month), dashboard_account_ids_param(:cashflow_account_ids, accounts), accounts),
+              accounts: accounts,
+              accessible_account_ids: Current.user.accessible_accounts.pluck(:id).map(&:to_s),
+              view_params: @dashboard_view_params
+            },
+            # Stays visible with no data so the month picker can lead back out.
+            visible: @accounts.any?,
             collapsible: true
           }
         },
@@ -558,6 +596,105 @@ class PagesController < ApplicationController
       { categories: categories, total: total.to_f.round(2), currency: net_totals.currency, currency_symbol: currency_symbol }
     end
 
+    # Two rings on one scale, read like a budget gauge with income as the
+    # budget: unspent income is a muted track on the outflows ring, spending
+    # beyond income is an "over" slice on the inflows ring. Either way both
+    # rings close and the gap between them is the difference.
+    #
+    # Like money_flow, the widget has its own month (capped at today while in
+    # progress) and account filter, independent of the dashboard period.
+    # nil account_ids means every eligible account.
+    def build_cashflow_donut_data(month, account_ids, eligible_accounts)
+      period = Period.custom(start_date: month, end_date: [ month.end_of_month, Date.current ].min)
+      statement = account_ids ? Current.family.income_statement(accounts: eligible_accounts.where(id: account_ids)) : dashboard_income_statement
+      net_totals = statement.net_category_totals(period: period)
+
+      total_income = net_totals.total_net_income
+      total_expense = net_totals.total_net_expense
+      net = total_income - total_expense
+      ring_total = [ total_income, total_expense ].max
+
+      inflows = cashflow_donut_segments(net_totals.net_income_categories, "income", ring_total)
+      outflows = cashflow_donut_segments(net_totals.net_expense_categories, "expense", ring_total)
+      has_categories = inflows.any? || outflows.any?
+
+      # "unused"/"overage" are the donut controller's special segment ids:
+      # colours pass through untouched, unused sorts last and overage first.
+      if net.positive?
+        outflows << cashflow_donut_balance_segment("unused", t("pages.dashboard.cashflow_donut.left"), net, ring_total, "var(--budget-unused-fill)", "piggy-bank", net_totals.currency)
+      elsif net.negative?
+        inflows << cashflow_donut_balance_segment("overage", t("pages.dashboard.cashflow_donut.over"), net.abs, ring_total, "var(--color-destructive)", "trending-down", net_totals.currency)
+      end
+
+      {
+        inflows: inflows,
+        outflows: outflows,
+        has_categories: has_categories,
+        total_income: total_income.to_f.round(2),
+        total_expense: total_expense.to_f.round(2),
+        net: net.to_f.round(2),
+        currency: net_totals.currency,
+        month: month,
+        period: period,
+        account_ids: account_ids
+      }
+    end
+
+    # A widget's own month param, clamped to the current month: a future
+    # month would end before it starts once capped at Date.current, which
+    # Period.custom rejects.
+    def dashboard_month_param(key)
+      current_month = Date.current.beginning_of_month
+      month = Date.strptime(params[key], "%Y-%m-%d").beginning_of_month
+      month > current_month ? current_month : month
+    rescue ArgumentError, TypeError
+      current_month
+    end
+
+    # nil means all of the widget's eligible accounts (its unfiltered state)
+    def dashboard_account_ids_param(key, eligible_accounts)
+      ids = Array(params[key]).reject(&:blank?)
+      ids &= eligible_accounts.map { |a| a.id.to_s }
+      ids.presence
+    end
+
+    # Percentages are shares of the ring (the larger of income and spending),
+    # so they match the arc each segment draws and sum to 100 with the
+    # unused/overage segment.
+    def cashflow_donut_segments(category_totals, id_prefix, ring_total)
+      category_totals
+        .reject { |ct| ct.total.zero? }
+        .sort_by { |ct| -ct.total }
+        .map do |ct|
+          clickable = !ct.category.other_investments?
+          {
+            id: "#{id_prefix}_#{IncomeStatement::CategoryNetting.key(ct.category)}",
+            name: ct.category.name,
+            filter_value: clickable ? ct.category.filter_value : nil,
+            amount: ct.total.to_f.round(2),
+            currency: ct.currency,
+            percentage: ring_total.zero? ? 0 : (ct.total.to_f / ring_total.to_f * 100).round(1),
+            color: ct.category.color.presence || Category::UNCATEGORIZED_COLOR,
+            icon: ct.category.lucide_icon,
+            clickable: clickable
+          }
+        end
+    end
+
+    def cashflow_donut_balance_segment(id, name, amount, ring_total, color, icon, currency)
+      {
+        id: id,
+        name: name,
+        filter_value: nil,
+        amount: amount.to_f.round(2),
+        currency: currency,
+        percentage: ring_total.zero? ? 0 : (amount.to_f / ring_total.to_f * 100).round(1),
+        color: color,
+        icon: icon,
+        clickable: false
+      }
+    end
+
     def money_flow_month_param
       current_month = Date.current.beginning_of_month
       month = Date.strptime(params[:money_flow_month], "%Y-%m-%d").beginning_of_month
@@ -600,13 +737,15 @@ class PagesController < ApplicationController
     end
 
     # The selected month (capped at today while it's in progress) and the
-    # period the widget compares it against: the dashboard's time period.
-    # Memoized: the filter and the widget both need them.
+    # month before it, which the widget compares against. Memoized: the
+    # filter and the widget both need them.
     def spending_trend_periods(selected_month)
       month_start = selected_month.beginning_of_month
       (@spending_trend_periods ||= {})[month_start] ||= begin
         current_period = Period.custom(start_date: month_start, end_date: [ month_start.end_of_month, Date.current ].min)
-        [ current_period, @period ]
+        previous_month_start = (month_start - 1.month).beginning_of_month
+        previous_period = Period.custom(start_date: previous_month_start, end_date: previous_month_start.end_of_month)
+        [ current_period, previous_period ]
       end
     end
 
@@ -621,60 +760,59 @@ class PagesController < ApplicationController
     end
 
     # Cumulative daily spending for the selected month (capped at today while
-    # the month is in progress) against an average month drawn from the
-    # dashboard's time period (IncomeStatement#average_month_expense_series:
-    # MTD retraces this month, LM is last month's curve, 7D covers only its
-    # own days and leaves the rest blank), so the two lines share one
-    # day-of-month axis. The header compares the same number of elapsed days;
-    # only the chart draws the comparison out to its last day.
+    # the month is in progress) against the previous month's full curve, so
+    # the two lines share one day-of-month axis. The header totals compare the
+    # same number of elapsed days; only the chart draws the previous month out
+    # to its final day.
     #
     # The category filter (an IncomeStatement::ExpenseCategoryFilter) narrows
-    # both lines to the same categories, so the comparison stays
+    # both months to the same categories, so the comparison stays
     # like-for-like.
     def build_spending_trend_data(income_statement, selected_month, category_filter)
       month_start = selected_month.beginning_of_month
       month_end = month_start.end_of_month
-      current_period, comparison_period = spending_trend_periods(month_start)
+      current_period, previous_period = spending_trend_periods(month_start)
+      previous_month_start = previous_period.start_date
       category_ids = category_filter.category_ids
 
       current_daily = income_statement.daily_expense_series(period: current_period, category_ids: category_ids).index_by(&:date)
+      previous_daily = income_statement.daily_expense_series(period: previous_period, category_ids: category_ids).index_by(&:date)
 
-      # The selected month always owns the axis: days of the month past its
-      # end (an average's day 31 in a 30-day month) fold into the final
-      # visible point, so the curve still ends at the full average.
+      # The selected month always owns the axis: when the previous month is
+      # longer, its extra days fold into the final visible point so the curve
+      # still ends at the full-month total without the axis rolling into
+      # previous-month dates (e.g. a September view ends at "Sep 30", not
+      # "Aug 31").
       axis_days = month_end.day
-      axis_labels = spending_trend_axis_labels(month_start, axis_days)
 
       current_series = cumulative_spending_series(current_period, current_daily)
-      previous_header_series = income_statement.average_month_expense_series(period: comparison_period, category_ids: category_ids)
-        .map { |average_day| { day: average_day.day, value: average_day.total&.to_f&.round(2) } }
+      previous_header_series = cumulative_spending_series(previous_period, previous_daily)
       previous_series = fold_extra_days(previous_header_series, axis_days)
-        .map { |point| point.merge(date_formatted: axis_labels[point[:day] - 1]) }
 
-      # While the selected month is running, compare the same elapsed days;
-      # once it's over, the whole average. The comparison may have no point
-      # on that day (a 7D period, or YTD in January), so take its last point
-      # on or before it.
       current_total = current_series.last&.fetch(:value) || 0
-      compare_through = month_start == Date.current.beginning_of_month ? current_series.size : previous_header_series.size
-      compared_point = previous_header_series.first(compare_through).reverse.find { |point| point[:value] }
-      previous_total = compared_point ? compared_point[:value] : 0
-      final_point = previous_header_series.reverse.find { |point| point[:value] }
-      previous_comparison_day = compared_point[:day] if compared_point && compared_point != final_point
+      comparison_days = if month_start == Date.current.beginning_of_month
+        [ current_series.size, previous_header_series.size ].min
+      else
+        previous_header_series.size
+      end
+      previous_total = comparison_days.positive? ? previous_header_series[comparison_days - 1][:value] : 0
+      previous_comparison_day = comparison_days if comparison_days.positive? && comparison_days < previous_header_series.size
       currency = income_statement.family.currency
+
 
       {
         month: month_start,
         current_period: current_period,
+        previous_period: previous_period,
         days: axis_days,
         current_days: month_end.day,
-        axis_labels: axis_labels,
+        axis_labels: spending_trend_axis_labels(month_start, axis_days),
         current: current_series,
         previous: previous_series,
         current_total: Money.new(current_total, currency),
         previous_total: Money.new(previous_total, currency),
         delta: Money.new(current_total - previous_total, currency),
-        previous_label: t("pages.dashboard.spending_trend.average_label", period: comparison_period.key ? comparison_period.label : comparison_period.label_range),
+        previous_label: I18n.l(previous_month_start, format: :month_year).capitalize,
         previous_comparison_day: previous_comparison_day,
         date_range_short: spending_trend_compact_date_range(current_period),
         category_options: category_filter.options,
@@ -708,16 +846,21 @@ class PagesController < ApplicationController
       end
     end
 
-    # A comparison running past the axis (day 31 against a 30-day month) is
-    # clipped to it, with the rest folded into the final visible point, so
-    # the curve still ends at the full total shown in the header. A final
-    # point the period doesn't reach stays blank rather than carrying days
-    # beyond the axis.
+    # A longer previous month's curve is clipped to the axis, with the extra
+    # days' spend folded into the final visible point, so the curve still
+    # ends at the full-month total shown in the header. The folded point
+    # keeps its axis slot (day) for positioning but carries the true
+    # endpoint's date metadata, so the tooltip says what the value actually
+    # contains (e.g. "Jan 31" and the total through Jan 31).
     def fold_extra_days(series, axis_days)
       return series if series.size <= axis_days
 
       series.first(axis_days).tap do |folded|
-        folded[-1] = folded[-1].merge(value: series.last[:value]) unless folded[-1][:value].nil?
+        folded[-1] = folded[-1].merge(
+          value: series.last[:value],
+          date: series.last[:date],
+          date_formatted: series.last[:date_formatted]
+        )
       end
     end
 

@@ -18,6 +18,7 @@
      data-money-field-separator-currency-value="<%= currency.iso_code %>"
      <% if options[:precision].present? %> data-money-field-precision-value="<%= options[:precision] %>"<% end %>
      <% if options[:step].present? %> data-money-field-step-value="<%= options[:step] %>"<% end %>
+     <% if options[:currency_source].present? %> data-money-field-currency-source-value="<%= options[:currency_source] %>" data-action="change@document->money-field#followCurrencySource"<% end %>
      data-money-field-min-value="<%= amount_min %>"
      data-money-field-max-value="<%= amount_max %>"
      data-money-field-invalid-message-value="<%= t(".invalid_amount") %>"
@@ -28,7 +29,7 @@
       <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
-          <span class="text-red-500 ml-0.5">*</span>
+          <span class="text-destructive ml-0.5">*</span>
         <% end %>
       <% end %>
       <div class="form-field__actions">
@@ -47,7 +48,7 @@
       <%= form.label amount_method, class: class_names("form-field__label", options[:label_class]) do %>
         <%= options[:label] || t(".label") %>
         <% if options[:required] %>
-          <span class="text-red-500 ml-0.5">*</span>
+          <span class="text-destructive ml-0.5">*</span>
         <% end %>
       <% end %>
     <% end %>
@@ -78,6 +79,7 @@
             action: [ options.dig(:amount_data, :action), "paste->money-field#pasteAmount", "blur->money-field#normalizeAmount" ].compact.join(" ")
           }.compact),
           required: options[:required],
+          aria: options[:aria],
           **options.slice(:name) %>
       </div>
 

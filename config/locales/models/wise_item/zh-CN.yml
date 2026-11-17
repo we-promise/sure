@@ -1,0 +1,12 @@
+---
+zh-CN:
+  activerecord:
+    attributes:
+      wise_item:
+        sca_private_key: SCA 私钥
+    errors:
+      models:
+        wise_item:
+          attributes:
+            sca_private_key:
+              encryption_unavailable: 无法存储，因为当前安装未配置 Active Record 加密

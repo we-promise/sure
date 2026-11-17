@@ -1,11 +1,19 @@
 class EnableBankingItemsController < ApplicationController
   include EnableBankingItems::MapsHelper
+  include SafeProviderRedirect
   before_action :set_enable_banking_item, only: [ :update, :destroy, :sync, :select_bank, :authorize, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   before_action :require_admin!, only: [ :new, :create, :link_accounts, :select_existing_account, :link_existing_account, :update, :destroy, :sync, :select_bank, :authorize, :callback, :reauthorize, :setup_accounts, :complete_account_setup, :new_connection ]
   skip_before_action :verify_authenticity_token, only: [ :callback ]
 
   OAUTH_STATE_SESSION_KEY = :enable_banking_oauth_states
   MAX_PENDING_OAUTH_STATES = 5
+  # Authorization URLs from Enable Banking are followed only on these hosts
+  # (or their subdomains), over HTTPS. See SafeProviderRedirect.
+  TRUSTED_ENABLE_BANKING_HOSTS = %w[
+    enablebanking.com
+    api.enablebanking.com
+    auth.enablebanking.com
+  ].freeze
 
   def new
     @enable_banking_item = Current.family.enable_banking_items.build
@@ -120,8 +128,9 @@ class EnableBankingItemsController < ApplicationController
         language: language
       )
 
-      safe_redirect_to_enable_banking(
+      safe_redirect_to_provider(
         redirect_url,
+        trusted_hosts: TRUSTED_ENABLE_BANKING_HOSTS,
         fallback_path: settings_providers_path,
         fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
@@ -209,8 +218,9 @@ class EnableBankingItemsController < ApplicationController
         language: language
       )
 
-      safe_redirect_to_enable_banking(
+      safe_redirect_to_provider(
         redirect_url,
+        trusted_hosts: TRUSTED_ENABLE_BANKING_HOSTS,
         fallback_path: settings_providers_path,
         fallback_alert: t(".invalid_redirect", default: "Invalid authorization URL received. Please try again.")
       )
@@ -298,9 +308,7 @@ class EnableBankingItemsController < ApplicationController
 
   # Show setup accounts modal
   def setup_accounts
-    @enable_banking_accounts = @enable_banking_item.enable_banking_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
+    @enable_banking_accounts = @enable_banking_item.enable_banking_accounts.needs_setup
 
     @account_type_options = [
       [ "Skip this account", "skip" ],
@@ -344,22 +352,25 @@ class EnableBankingItemsController < ApplicationController
     account_types = params[:account_types] || {}
     account_subtypes = params[:account_subtypes] || {}
 
-    # Update sync start date from form if provided
-    if params[:sync_start_date].present?
-      @enable_banking_item.update!(sync_start_date: params[:sync_start_date])
+    # The modal's date field is optional: a blank one means no lower bound, so
+    # the first fetch imports as much history as the bank provides.
+    if params.key?(:sync_start_date)
+      @enable_banking_item.update!(sync_start_date: params[:sync_start_date].presence)
     end
 
     created_count = 0
     skipped_count = 0
 
     account_types.each do |enable_banking_account_id, selected_type|
-      # Skip accounts marked as "skip"
+      enable_banking_account = @enable_banking_item.enable_banking_accounts.find(enable_banking_account_id)
+
       if selected_type == "skip" || selected_type.blank?
+        # Persist the skip so the account stops resurfacing as "needs setup" and the
+        # importer stops fetching it.
+        enable_banking_account.ignore!
         skipped_count += 1
         next
       end
-
-      enable_banking_account = @enable_banking_item.enable_banking_accounts.find(enable_banking_account_id)
       selected_subtype = account_subtypes[enable_banking_account_id]
 
       # Default subtype for CreditCard since it only has one option
@@ -390,7 +401,7 @@ class EnableBankingItemsController < ApplicationController
     if created_count > 0
       flash[:notice] = t(".success", default: "%{count} account(s) created successfully!", count: created_count)
     elsif skipped_count > 0
-      flash[:notice] = t(".all_skipped", default: "All accounts were skipped. You can set them up later from the accounts page.")
+      flash[:notice] = t(".all_skipped")
     else
       flash[:notice] = t(".no_accounts", default: "No accounts to set up.")
     end
@@ -573,44 +584,5 @@ class EnableBankingItemsController < ApplicationController
 
     def enable_banking_callback_url
       helpers.enable_banking_callback_url
-    end
-
-    # Validate redirect URLs from Enable Banking API to prevent open redirect attacks
-    # Only allows HTTPS URLs from trusted Enable Banking domains
-    TRUSTED_ENABLE_BANKING_HOSTS = %w[
-      enablebanking.com
-      api.enablebanking.com
-      auth.enablebanking.com
-    ].freeze
-
-    def valid_enable_banking_redirect_url?(url)
-      return false if url.blank?
-
-      begin
-        uri = URI.parse(url)
-
-        # Must be HTTPS
-        return false unless uri.scheme == "https"
-
-        # Host must be present
-        return false if uri.host.blank?
-
-        # Check if host matches or is a subdomain of trusted domains
-        TRUSTED_ENABLE_BANKING_HOSTS.any? do |trusted_host|
-          uri.host == trusted_host || uri.host.end_with?(".#{trusted_host}")
-        end
-      rescue URI::InvalidURIError => e
-        Rails.logger.warn("Enable Banking invalid redirect URL: #{url.inspect} - #{e.message}")
-        false
-      end
-    end
-
-    def safe_redirect_to_enable_banking(redirect_url, fallback_path:, fallback_alert:)
-      if valid_enable_banking_redirect_url?(redirect_url)
-        redirect_to redirect_url, allow_other_host: true
-      else
-        Rails.logger.warn("Enable Banking redirect blocked - invalid URL: #{redirect_url.inspect}")
-        redirect_to fallback_path, alert: fallback_alert
-      end
     end
 end

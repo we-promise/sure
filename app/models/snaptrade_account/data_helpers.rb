@@ -247,12 +247,12 @@ module SnaptradeAccount::DataHelpers
     end
 
     def extract_underlying_data(symbol_data)
-      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"]
+      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"] || symbol_data[:underlying] || symbol_data["underlying"]
       raw.is_a?(Hash) ? raw.with_indifferent_access : nil
     end
 
     def extract_underlying_ticker(symbol_data)
-      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"]
+      raw = symbol_data[:underlying_symbol] || symbol_data["underlying_symbol"] || symbol_data[:underlying] || symbol_data["underlying"]
       if raw.is_a?(Hash)
         data = raw.with_indifferent_access
         data[:symbol] || data[:raw_symbol]
@@ -291,16 +291,21 @@ module SnaptradeAccount::DataHelpers
 
     # SnapTrade reports option `units` in contracts while quoting `price` per
     # underlying share. Standard options represent 100 underlying shares per
-    # contract; mini options (`is_mini_option: true`) represent 10.
+    # contract; mini options (`is_mini_option: true`) represent 10. Positions
+    # carry the contract's own `multiplier`.
     def contract_multiplier(symbol_data, option_data = nil)
       data = option_data.presence || symbol_data
       return 1 unless data.is_a?(Hash)
 
       data = data.with_indifferent_access
       is_option = option_data.present? ||
+                  data[:kind].to_s.casecmp?("option") ||
                   data[:option_type].present? ||
                   !data[:is_mini_option].nil?
       return 1 unless is_option
+
+      multiplier = parse_decimal(data[:multiplier])
+      return multiplier if multiplier&.positive?
 
       ActiveModel::Type::Boolean.new.cast(data[:is_mini_option]) ? 10 : 100
     end

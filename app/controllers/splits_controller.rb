@@ -34,7 +34,7 @@ class SplitsController < ApplicationController
     end
 
     set_form_options
-    @children = @entry.child_entries.includes(entryable: :tags)
+    @children = @entry.child_entries.in_split_order.includes(entryable: :tags)
   end
 
   def update
@@ -97,7 +97,7 @@ class SplitsController < ApplicationController
 
     def set_form_options
       @categories = grouped_categories
-      @merchants = Current.family.available_merchants_for(Current.user).alphabetically
+      @merchants = Current.family.available_merchants_for(Current.user).with_attached_logo.alphabetically
       @tags = Current.family.tags.alphabetically
     end
 

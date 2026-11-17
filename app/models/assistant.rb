@@ -41,7 +41,8 @@ module Assistant
     Function::CreateTag,
     Function::UpdateTag,
     Function::CreateCategory,
-    Function::UpdateCategory
+    Function::UpdateCategory,
+    Function::DeleteCategory
   ].freeze
 
   class << self
@@ -66,6 +67,7 @@ module Assistant
       classes = [
         Function::GetTransactions,
         Function::GetRecurringTransactions,
+        Function::GetUncategorizedTransactions,
         Function::GetAccounts,
         Function::GetHoldings,
         Function::GetBalanceSheet,
@@ -83,6 +85,7 @@ module Assistant
         Function::GetCategories,
         Function::CreateCategory,
         Function::UpdateCategory,
+        Function::DeleteCategory,
         Function::GetMerchants,
         Function::GetRules,
         Function::GetRuleOptions,
@@ -93,15 +96,22 @@ module Assistant
         Function::UpdateTransaction,
         Function::CreateTransaction,
         Function::DeleteTransaction,
+        Function::GetTransferMatchCandidates,
+        Function::MatchTransfer,
+        Function::ReviewTransfer,
         Function::UpdateBudget
       ]
 
       classes += PREVIEW_FUNCTION_CLASSES if user&.preview_features_enabled?
       classes -= FAMILY_CONFIG_FUNCTION_CLASSES if user&.guest?
-      classes
+      classes.select { |fn_class| ai_feature_available?(fn_class, user) }
     end
 
     private
+      def ai_feature_available?(fn_class, user)
+        feature = fn_class.ai_feature
+        feature.nil? || user.nil? || Ai.available?(feature, family: user.family, user:)
+      end
 
       def implementation_for(chat)
         raise Error, "chat is required" if chat.blank?

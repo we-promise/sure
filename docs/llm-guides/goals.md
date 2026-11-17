@@ -92,25 +92,29 @@ Locales:
 
 A goal records a name, target amount, optional target date, color, optional
 icon, optional notes, currency, and an AASM `state` (`active` / `paused` /
-`completed` / `archived`). It links cash and investment accounts via the join
-table `goal_accounts`.
+`completed` / `archived`). It links cash, investment and crypto accounts via the
+join table `goal_accounts`.
 
 The goal's *progress* is its allocated share of linked accounts, converted to
 its currency at request time. `Goal#current_balance` preserves native account
-allocations and shared-pool limits before conversion. Investment-backed goals
-default to contribution progress, excluding cumulative market gains from their
-backing; `market_value_money` separately shows the current market value.
+allocations and shared-pool limits before conversion. Investment- and
+crypto-backed goals default to contribution progress, excluding cumulative
+market gains from their backing; `market_value_money` separately shows the
+current market value. Market gains come from `balances.net_market_flows`,
+which is derived from holdings, so an account synced as a bare balance with
+no holdings (common for crypto wallets) has none: its contribution progress
+equals its balance and price moves still show up.
 
 A `GoalPledge` is an intent: amount, account, kind, status, expires_at.
 The status enum is `open` / `matched` / `cancelled` / `expired`. The kind
-enum is `transfer` / `manual_save`; kind is decided at create time from
-the selected account's connection state.
+enum is `transfer` / `manual_save`; kind is decided at create time by
+`Account#default_pledge_kind` (see "Connected vs manual accounts").
 
 ## Currencies and account allocations
 
-A goal can link cash and investment accounts in different currencies. New goals
-use the family's display currency, matching the target field; an existing goal's
-currency remains locked. Target, progress, consumed amount and pledges use goal
+A goal can link cash, investment and crypto accounts in different currencies.
+New goals use the family's display currency, matching the target field; an
+existing goal's currency remains locked. Target, progress, consumed amount and pledges use goal
 currency. Each `GoalAccount#allocated_amount` remains in its account's currency.
 Shared-pool allocation and pro-rata scaling happen before conversion, so goals
 with different currencies cannot double-count the same account.
@@ -138,6 +142,12 @@ balances and transactions are unchanged; no migration is required.
 
 - `:reached` when `progress_percent >= 100`.
 - `:no_target_date` when `target_date.nil?`.
+- `:pace_unknown` when the goal has a deadline but `pace_measurable?` is
+  false: at least one linked account gives no evidence of how its balance
+  moves (see below). It is neither on track nor behind, so it stays out of
+  the "behind" count and the on-track tile's denominator (whose subline
+  counts it instead), sorts beside `:no_target_date`, and has no index chip
+  of its own.
 - `:on_track` when the goal has a deadline and `monthly_target_amount <= pace`.
 - `:behind` otherwise.
 
@@ -162,6 +172,40 @@ divided by three. The query joins `entries` with `transactions`
 pending provider transactions via `Transaction.excluding_pending`. This
 last filter matters: a pending Plaid deposit that later reverses would
 otherwise quietly reshape pace.
+
+That reads cash transactions only, so an account maintained by balance
+updates (a manually tracked pension or superannuation fund) would always
+show 0. Each linked account therefore takes exactly one of four paths, in
+this order:
+
+1. **Transactions.** At least one counted transaction in the 90-day
+   window: the net inflow above, divided by three. Unchanged.
+2. **Balance.** Otherwise, a `reconciliation` or `current_anchor` valuation
+   in the trailing 365 days: the account's balance today minus the
+   `end_balance` of its latest balance row on or before a year ago,
+   divided by twelve. On the contributions basis the window's
+   `net_market_flows` are subtracted, so pace measures what progress does.
+   Stored balances include excluded entries, so excluded transactions in
+   the window are taken back out, as path 1 leaves them out. They are read
+   as `Balance::SyncCache` counts them: split parents skipped, amounts
+   converted to the account's currency, unconvertible entries skipped.
+   With no balance row a year back, the account is unmeasured; a missing
+   row is never read as a zero opening balance.
+3. **Dormant.** Otherwise, any transaction that is neither excluded nor
+   pending, at any date: a measured zero.
+   A savings account nobody has paid into lately is honestly behind.
+4. **Unmeasured.** Anything else (an opening balance and nothing since,
+   or valuations all older than a year).
+
+`Goal#pace_measurable?` is true only when every linked account is on path
+1, 2 or 3. `Goal#pace` stays numeric (an unmeasured account adds 0). When
+pace is unmeasurable, `projection_payload` sends `avg_monthly: nil` and no
+shortfall label, and the chart draws no projection line. The evidence is
+read by `Goal.pace_for` and `Goal.balance_pace_for`, both family-wide and
+injected by `Goal.inject_backing_math!`, so a page of goals costs no
+query per goal. That method reads the linked account ids once
+(`Goal.linked_account_ids_for`) and passes them to both, and to
+`Goal.market_flows_for`.
 
 `Goal#monthly_target_amount` is `(remaining_amount / months_remaining).ceil(2)`.
 `months_remaining` uses day precision: `(target_date - Date.current) / 30.0`,
@@ -212,14 +256,16 @@ would otherwise touch `updated_at` on every matched pledge and reset the
 `account_providers` association rows, no `plaid_account_id`, and no
 `simplefin_account_id`. This mirrors the `Account.manual` query scope.
 
-`Goal#any_connected_account?` returns true when *any* linked account is
-not manual. It drives the modal-title copy: connected accounts get
-"I just transferred…", manual-only goals get "I just saved…"
+`Account#default_pledge_kind` is per-account: manual cash accounts get
+`manual_save`; connected accounts and every investment or crypto account
+(`balance_type == :investment`, manual or not) get `transfer`, because a
+positive valuation delta there is usually a market move, not a deposit. A
+goal with one manual and one connected linked account works correctly; the
+kind reflects the specific account the user picked, not the goal as a whole.
 
-`GoalPledgesController#kind_for_account(account)` is per-account:
-manual → `manual_save`, connected → `transfer`. A goal with one manual
-and one connected linked account works correctly; the kind reflects the
-specific account the user picked, not the goal as a whole.
+`Goal#pledge_action_label_key` picks the modal copy from the same method:
+"I just transferred…" when any linked account uses `transfer`, "I just
+saved…" otherwise.
 
 ## Color map
 
@@ -264,11 +310,14 @@ state means touching:
 3. `Goals::StatusPillComponent::VARIANTS` to add the chip styling
    (classes + icon).
 4. `Goals::CardComponent#footer_line` if the footer copy depends.
-5. `GoalsController#kpi_payload` if the KPI strip counts it.
-6. `config/locales/views/goals/en.yml` under `goals.status.*` for the
+5. `GoalsController#kpi_payload` if the KPI strip counts it, and
+   `tracked_total` if it has no pace benchmark.
+6. `Goal::ACTIVE_DISPLAY_STATUS_RANK`, or it sorts below funded reserves.
+7. `config/locales/views/goals/en.yml` under `goals.status.*` for the
    pill label, plus chip and subtitle keys if the new status filters
    on the index.
-7. `Goals::StatusPillComponent#status_key` and the goal-filter Stimulus
+8. `Goal#status_callout_context` if the show page should explain it.
+9. `Goals::StatusPillComponent#status_key` and the goal-filter Stimulus
    controller (`data-status="..."` on chips) if the new status filters.
 
 ### Adding a new pledge kind

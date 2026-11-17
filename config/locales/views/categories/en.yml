@@ -48,8 +48,6 @@ en:
       sources_label: Categories to merge
       sources_hint: Selected categories will be deleted after their transactions and budget lines move to the target. Do not select the target as a source.
       submit: Merge selected
-    menu:
-      loading: Loading...
     new:
       new_category: New category
     perform_merge:

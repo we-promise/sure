@@ -1,0 +1,6 @@
+---
+en:
+  settings:
+    budget_shares:
+      update:
+        success: Budget sharing settings updated
