@@ -36,6 +36,49 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_nil lunchflow_items(:one).reload.sync_start_date
   end
 
+  test "the re-rendered panel leaves the API key field empty instead of echoing the stored key" do
+    item = lunchflow_items(:one)
+    item.update!(api_key: "lf-stored-key-5c1e")
+
+    patch lunchflow_item_url(item), params: { lunchflow_item: { name: "Renamed Lunch Flow" } }, as: :turbo_stream
+
+    assert_select "form[action=?] input[name=?]", lunchflow_item_path(item), "lunchflow_item[api_key]" do |inputs|
+      assert_nil inputs.first["value"]
+    end
+    assert_not_includes response.body, "lf-stored-key-5c1e"
+  end
+
+  test "update with the API key left blank changes the other fields and keeps the stored key" do
+    item = lunchflow_items(:one)
+    item.update!(api_key: "lf-stored-key-5c1e")
+
+    patch lunchflow_item_url(item),
+          params: { lunchflow_item: { name: "Renamed Lunch Flow", api_key: "", base_url: "https://lunchflow.app/api/v2" } },
+          as: :turbo_stream
+
+    item.reload
+    assert_equal "Renamed Lunch Flow", item.name
+    assert_equal "https://lunchflow.app/api/v2", item.base_url
+    assert_equal "lf-stored-key-5c1e", item.api_key
+  end
+
+  test "an edit with a whitespace-only API key keeps the stored one" do
+    item = lunchflow_items(:one)
+    item.update!(api_key: "lf-stored-key-5c1e")
+
+    patch lunchflow_item_url(item), params: { lunchflow_item: { api_key: "   " } }, as: :turbo_stream
+
+    assert_equal "lf-stored-key-5c1e", item.reload.api_key
+  end
+
+  test "update with a new API key replaces the stored key" do
+    item = lunchflow_items(:one)
+
+    patch lunchflow_item_url(item), params: { lunchflow_item: { api_key: "lf-rotated-key" } }, as: :turbo_stream
+
+    assert_equal "lf-rotated-key", item.reload.api_key
+  end
+
   test "invalid create from the page shows the error in the panel" do
     post lunchflow_items_url,
          params: { lunchflow_item: { name: "Second Lunch Flow", api_key: "" } },
