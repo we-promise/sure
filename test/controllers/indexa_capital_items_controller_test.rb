@@ -99,6 +99,19 @@ class IndexaCapitalItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "ix-stored-password-7a2d", @item.password
   end
 
+  test "update with a new password and a blank API token switches to username and password" do
+    assert_equal "test_api_token_123", @item.api_token
+
+    patch indexa_capital_item_url(@item),
+          params: { indexa_capital_item: { api_token: "", username: "new@example.com", document: "87654321B", password: "ix-new-password" } },
+          as: :turbo_stream
+
+    @item.reload
+    assert_nil @item.api_token
+    assert_equal "ix-new-password", @item.password
+    assert_equal "new@example.com", @item.username
+  end
+
   test "invalid create from the page shows the error in the panel" do
     post indexa_capital_items_url,
          params: { indexa_capital_item: { name: "New Connection" } },
