@@ -406,6 +406,16 @@ class FamilyTest < ActiveSupport::TestCase
     assert_nil family.reload.investment_subtype_regions
   end
 
+  test "changing country keeps a custom investment subtype selection" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
+
+    family.update!(country: "FR")
+    family.update!(country: "DE")
+
+    assert_equal [ "fr" ], family.reload.investment_subtype_region_codes
+  end
+
   test "enabled currencies always include the base currency" do
     family = families(:dylan_family)
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])

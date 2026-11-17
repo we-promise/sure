@@ -960,8 +960,10 @@ class Family < ApplicationRecord
       self.enabled_currencies = all_selected ? nil : normalized_codes
     end
 
+    # Only when the selection itself is assigned: a country change alone must
+    # not turn a custom selection into "follow country".
     def normalize_investment_subtype_regions!
-      return if investment_subtype_regions.nil?
+      return if investment_subtype_regions.nil? || !will_save_change_to_investment_subtype_regions?
 
       codes = Investment::REGIONS & Array(investment_subtype_regions)
       self.investment_subtype_regions = codes == Investment.default_regions_for_country(country) ? nil : codes
