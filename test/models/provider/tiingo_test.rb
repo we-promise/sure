@@ -262,4 +262,23 @@ class Provider::TiingoTest < ActiveSupport::TestCase
     assert_instance_of Provider::Tiingo::Error, result.error
     assert_match "Could not determine currency", result.error.message
   end
+
+  # The counter is written with `increment`, which stores a raw integer on Redis,
+  # so it can only be read back on a real RedisCacheStore; the test env's null
+  # store and a MemoryStore both hide a plain `read` returning nil.
+  test "usage reports the monthly symbol count on a real Redis cache" do
+    store = ActiveSupport::Cache::RedisCacheStore.new(
+      url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
+      namespace: "test:tiingo:#{SecureRandom.hex(8)}"
+    )
+    Rails.stubs(:cache).returns(store)
+    provider = Provider::Tiingo.new("test_api_key")
+
+    provider.send(:track_symbol, "AAPL")
+    provider.send(:track_symbol, "MSFT")
+
+    assert_equal 2, provider.usage.data.used
+  ensure
+    store&.clear
+  end
 end
