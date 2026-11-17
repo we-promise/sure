@@ -174,7 +174,7 @@
 
           <div data-loan-term-changes-target="rows" class="space-y-2">
             <% account.loan.term_change_rows.each do |row| %>
-              <%= render "loans/term_change_row", row: row, currency: account.currency %>
+              <%= render "loans/term_change_row", row: row %>
             <% end %>
           </div>
 
@@ -184,7 +184,7 @@
           </p>
 
           <template data-loan-term-changes-target="template">
-            <%= render "loans/term_change_row", row: {}, currency: account.currency %>
+            <%= render "loans/term_change_row", row: {} %>
           </template>
 
           <%= render DS::Button.new(text: t("loans.form.term_change_add"), icon: "plus", variant: "ghost", type: "button",
