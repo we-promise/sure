@@ -19,19 +19,20 @@
 </header>
 <div class="px-4 grow">
 <div class="space-y-4">
-<div class="flex items-start gap-3">
-<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary text-destructive mt-0.5">
+<div class="p-4 rounded-lg border bg-destructive/10 border-destructive-subtle">
+<div class="flex items-center gap-3">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-destructive -mt-0.5">
 <circle cx="12" cy="12" r="10">
 </circle>
-<line x1="12" x2="12" y1="8" y2="12">
-</line>
-<line x1="12" x2="12.01" y1="16" y2="16">
-</line>
+<path d="m15 9-6 6">
+</path>
+<path d="m9 9 6 6">
+</path>
 </svg>
-<div class="text-sm">
-<p class="font-medium text-primary mb-2">Unable to connect to Mercury</p>
-<p class="text-secondary">Unauthorized</p>
+<p id="DS-alert-title-ID" class="text-sm font-semibold text-primary flex-1 leading-5">
+<span class="sr-only">Error:</span>Unable to connect to Mercury</p>
 </div>
+<div class="text-sm text-primary mt-2 pl-7 space-y-1">Unauthorized</div>
 </div>
 <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
 <p class="font-medium text-primary">Common Issues:</p>
