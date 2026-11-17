@@ -6,10 +6,14 @@
 # ({ provider_account.id => { account_type:, depository_subtype: } }).
 # Messages come from the provider's own `<key>_items.setup_accounts.*` and
 # `<key>_items.subtype_select.*` keys.
+#
+# `variant: :classic` reproduces the markup Lunch Flow's and Mercury's setup
+# pages have: subtype selects hidden by an inline style rather than the
+# `hidden` class (the account-type selector clears both).
 class ProviderItem::AccountSetupComponent < ApplicationComponent
   attr_reader :item, :provider_accounts, :api_error, :account_type_options, :displayable_account_type_options, :subtype_options
 
-  def initialize(item:, provider_accounts:, api_error:, account_type_options:, displayable_account_type_options:, subtype_options:, defaults:)
+  def initialize(item:, provider_accounts:, api_error:, account_type_options:, displayable_account_type_options:, subtype_options:, defaults:, variant: :kit)
     @item = item
     @provider_accounts = provider_accounts
     @api_error = api_error
@@ -17,6 +21,11 @@ class ProviderItem::AccountSetupComponent < ApplicationComponent
     @displayable_account_type_options = displayable_account_type_options
     @subtype_options = subtype_options
     @defaults = defaults
+    @variant = variant
+  end
+
+  def classic?
+    @variant == :classic
   end
 
   def provider_key

@@ -1,0 +1,586 @@
+<turbo-frame id="modal">
+<dialog class="w-full h-full bg-transparent text-primary backdrop:bg-overlay pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] lg:p-1" role="dialog" aria-modal="true" aria-labelledby="dialog-title-ID" data-controller="DS--dialog hotkey" data-DS--dialog-auto-open-value="true" data-DS--dialog-reload-on-close-value="false" data-DS--dialog-disable-click-outside-value="false" data-action="click-&gt;DS--dialog#clickOutside" data-hotkey="esc:DS--dialog#close">
+<div class="flex h-full w-full items-center justify-center">
+<div class="flex flex-col bg-container rounded-xl shadow-border-xs mx-3 lg:mx-0 w-full max-h-full lg:max-w-[550px]" data-DS--dialog-target="content">
+<div class="grow py-4 space-y-4 flex flex-col overflow-auto">
+<header class="px-4 flex flex-col gap-2">
+<div class="flex items-center justify-between gap-2">
+<h2 id="dialog-title-ID" class="font-medium text-primary">Set Up Your Lunch Flow Accounts</h2>
+<button title="Close" type="button" aria-label="Close" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-md ml-auto shrink-0 justify-center w-7 h-7 pointer-coarse:w-11 pointer-coarse:h-11 hover:bg-container-inset-hover" data-action="DS--dialog#close">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary">
+<path d="M18 6 6 18">
+</path>
+<path d="m6 6 12 12">
+</path>
+</svg>
+</button>
+</div>
+<div class="flex items-center gap-2">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary text-primary">
+<path d="M10 12h4">
+</path>
+<path d="M10 8h4">
+</path>
+<path d="M14 21v-3a2 2 0 0 0-4 0v3">
+</path>
+<path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2">
+</path>
+<path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16">
+</path>
+</svg>
+<span class="text-primary">Choose the correct account types for your imported accounts</span>
+</div>
+</header>
+<div class="px-4 grow">
+<form class="space-y-6" data-controller="loading-button" data-action="submit-&gt;loading-button#showLoading" data-loading-button-loading-text-value="Creating Accounts..." data-turbo-frame="_top" action="/lunchflow_items/UUID/complete_account_setup" accept-charset="UTF-8" method="post">
+<div class="space-y-4">
+<div class="p-4 rounded-lg border bg-info/10 border-info/20">
+<div class="flex items-center gap-3">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-info -mt-0.5">
+<circle cx="12" cy="12" r="10">
+</circle>
+<path d="M12 16v-4">
+</path>
+<path d="M12 8h.01">
+</path>
+</svg>
+<p id="DS-alert-title-ID" class="text-sm font-semibold text-primary flex-1 leading-5">
+<span class="sr-only">Info:</span>Choose the correct account type for each Lunch Flow account:</p>
+</div>
+<div class="text-sm text-primary mt-2 pl-7 space-y-1">
+<ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+<li>
+<strong>Checking or Savings Account</strong>
+</li>
+<li>
+<strong>Credit Card</strong>
+</li>
+<li>
+<strong>Investment Account</strong>
+</li>
+<li>
+<strong>Loan or Mortgage</strong>
+</li>
+</ul>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Everyday Checking</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+<option value="CreditCard">Credit Card</option>
+<option value="Investment">Investment Account</option>
+<option value="Loan">Loan or Mortgage</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option selected="selected" value="checking">Checking</option>
+<option value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option value="money_market">Money Market</option>
+</select>
+</div>
+<div class="subtype-select" data-type="CreditCard" style="display: none;">
+<p class="text-sm text-secondary">Credit cards will be automatically set up as credit card accounts.</p>
+</div>
+<div class="subtype-select" data-type="Loan" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Loan Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="mortgage">Mortgage</option>
+<option value="student">Student Loan</option>
+<option value="auto">Auto Loan</option>
+<option value="home_equity">Home Equity Loan</option>
+<option value="line_of_credit">Line of Credit</option>
+<option value="business">Business Loan</option>
+<option value="other">Other Loan</option>
+</select>
+</div>
+<div class="subtype-select" data-type="Investment" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Investment Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="brokerage">Brokerage</option>
+<option value="cash_management">Cash Management Account</option>
+<option value="401k">401(k)</option>
+<option value="roth_401k">Roth 401(k)</option>
+<option value="403b">403(b)</option>
+<option value="457b">457(b)</option>
+<option value="tsp">Thrift Savings Plan</option>
+<option value="ira">Traditional IRA</option>
+<option value="roth_ira">Roth IRA</option>
+<option value="sep_ira">SEP IRA</option>
+<option value="simple_ira">SIMPLE IRA</option>
+<option value="529_plan">529 Plan</option>
+<option value="hsa">Health Savings Account</option>
+<option value="ugma">UGMA Custodial Account</option>
+<option value="utma">UTMA Custodial Account</option>
+<option value="isa">Individual Savings Account</option>
+<option value="lisa">Lifetime ISA</option>
+<option value="sipp">Self-Invested Personal Pension</option>
+<option value="workplace_pension_uk">Workplace Pension</option>
+<option value="tfsa">Tax-Free Savings Account</option>
+<option value="rrsp">Registered Retirement Savings Plan</option>
+<option value="non-registered">Non-Registered Investment Account</option>
+<option value="fhsa">First Home Savings Account</option>
+<option value="rdsp">Registered Disability Savings Plan</option>
+<option value="resp">Registered Education Savings Plan</option>
+<option value="dpsp">Deferred Profit Sharing Plan</option>
+<option value="prpp">Pooled Registered Pension Plan</option>
+<option value="lira">Locked-In Retirement Account</option>
+<option value="rrif">Registered Retirement Income Fund</option>
+<option value="lif">Life Income Fund</option>
+<option value="lrif">Locked-In Retirement Income Fund</option>
+<option value="prif">Prescribed Registered Retirement Income Fund</option>
+<option value="rlif">Restricted Life Income Fund</option>
+<option value="super">Superannuation</option>
+<option value="smsf">Self-Managed Super Fund</option>
+<option value="assurance_vie">Assurance Vie</option>
+<option value="pea">Plan d&#39;Épargne en Actions</option>
+<option value="pillar_3a">Private Pension (Pillar 3a)</option>
+<option value="riester">Riester-Rente</option>
+<option value="nps">National Pension System</option>
+<option value="apy">Atal Pension Yojana</option>
+<option value="life_insurance">Life Insurance</option>
+<option value="indian_stocks">Indian Stocks (Demat)</option>
+<option value="indian_equity">Indian Equity</option>
+<option value="indian_etf">Indian ETF</option>
+<option value="epf">Employees&#39; Provident Fund</option>
+<option value="ppf">Public Provident Fund</option>
+<option value="ssy">Sukanya Samriddhi Yojana</option>
+<option value="nsc">National Savings Certificate</option>
+<option value="scss">Senior Citizens&#39; Savings Scheme</option>
+<option value="fd">Fixed Deposit</option>
+<option value="rd">Recurring Deposit</option>
+<option value="pomis">Post Office Monthly Income Scheme</option>
+<option value="kvp">Kisan Vikas Patra</option>
+<option value="g_sec">Government Securities (G-Secs)</option>
+<option value="sdl">State Development Loans (SDLs)</option>
+<option value="corporate_bond">Corporate Bond</option>
+<option value="infrastructure_bond">Infrastructure Bond</option>
+<option value="tax_free_bond">Tax-Free Bond</option>
+<option value="gold_etf">Gold ETF</option>
+<option value="gold_mf">Gold Mutual Fund</option>
+<option value="sgb">Sovereign Gold Bond</option>
+<option value="pension">Pension</option>
+<option value="retirement">Retirement</option>
+<option value="mutual_fund">Mutual Fund</option>
+<option value="gold">Gold (physical or digital)</option>
+<option value="angel">Angel</option>
+<option value="trust">Trust</option>
+<option value="other">Other Investment</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Test Investment Account</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+<option value="CreditCard">Credit Card</option>
+<option value="Investment">Investment Account</option>
+<option value="Loan">Loan or Mortgage</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option value="checking">Checking</option>
+<option value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option value="money_market">Money Market</option>
+</select>
+</div>
+<div class="subtype-select" data-type="CreditCard" style="display: none;">
+<p class="text-sm text-secondary">Credit cards will be automatically set up as credit card accounts.</p>
+</div>
+<div class="subtype-select" data-type="Loan" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Loan Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="mortgage">Mortgage</option>
+<option value="student">Student Loan</option>
+<option value="auto">Auto Loan</option>
+<option value="home_equity">Home Equity Loan</option>
+<option value="line_of_credit">Line of Credit</option>
+<option value="business">Business Loan</option>
+<option value="other">Other Loan</option>
+</select>
+</div>
+<div class="subtype-select" data-type="Investment" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Investment Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="brokerage">Brokerage</option>
+<option value="cash_management">Cash Management Account</option>
+<option value="401k">401(k)</option>
+<option value="roth_401k">Roth 401(k)</option>
+<option value="403b">403(b)</option>
+<option value="457b">457(b)</option>
+<option value="tsp">Thrift Savings Plan</option>
+<option value="ira">Traditional IRA</option>
+<option value="roth_ira">Roth IRA</option>
+<option value="sep_ira">SEP IRA</option>
+<option value="simple_ira">SIMPLE IRA</option>
+<option value="529_plan">529 Plan</option>
+<option value="hsa">Health Savings Account</option>
+<option value="ugma">UGMA Custodial Account</option>
+<option value="utma">UTMA Custodial Account</option>
+<option value="isa">Individual Savings Account</option>
+<option value="lisa">Lifetime ISA</option>
+<option value="sipp">Self-Invested Personal Pension</option>
+<option value="workplace_pension_uk">Workplace Pension</option>
+<option value="tfsa">Tax-Free Savings Account</option>
+<option value="rrsp">Registered Retirement Savings Plan</option>
+<option value="non-registered">Non-Registered Investment Account</option>
+<option value="fhsa">First Home Savings Account</option>
+<option value="rdsp">Registered Disability Savings Plan</option>
+<option value="resp">Registered Education Savings Plan</option>
+<option value="dpsp">Deferred Profit Sharing Plan</option>
+<option value="prpp">Pooled Registered Pension Plan</option>
+<option value="lira">Locked-In Retirement Account</option>
+<option value="rrif">Registered Retirement Income Fund</option>
+<option value="lif">Life Income Fund</option>
+<option value="lrif">Locked-In Retirement Income Fund</option>
+<option value="prif">Prescribed Registered Retirement Income Fund</option>
+<option value="rlif">Restricted Life Income Fund</option>
+<option value="super">Superannuation</option>
+<option value="smsf">Self-Managed Super Fund</option>
+<option value="assurance_vie">Assurance Vie</option>
+<option value="pea">Plan d&#39;Épargne en Actions</option>
+<option value="pillar_3a">Private Pension (Pillar 3a)</option>
+<option value="riester">Riester-Rente</option>
+<option value="nps">National Pension System</option>
+<option value="apy">Atal Pension Yojana</option>
+<option value="life_insurance">Life Insurance</option>
+<option value="indian_stocks">Indian Stocks (Demat)</option>
+<option value="indian_equity">Indian Equity</option>
+<option value="indian_etf">Indian ETF</option>
+<option value="epf">Employees&#39; Provident Fund</option>
+<option value="ppf">Public Provident Fund</option>
+<option value="ssy">Sukanya Samriddhi Yojana</option>
+<option value="nsc">National Savings Certificate</option>
+<option value="scss">Senior Citizens&#39; Savings Scheme</option>
+<option value="fd">Fixed Deposit</option>
+<option value="rd">Recurring Deposit</option>
+<option value="pomis">Post Office Monthly Income Scheme</option>
+<option value="kvp">Kisan Vikas Patra</option>
+<option value="g_sec">Government Securities (G-Secs)</option>
+<option value="sdl">State Development Loans (SDLs)</option>
+<option value="corporate_bond">Corporate Bond</option>
+<option value="infrastructure_bond">Infrastructure Bond</option>
+<option value="tax_free_bond">Tax-Free Bond</option>
+<option value="gold_etf">Gold ETF</option>
+<option value="gold_mf">Gold Mutual Fund</option>
+<option value="sgb">Sovereign Gold Bond</option>
+<option value="pension">Pension</option>
+<option value="retirement">Retirement</option>
+<option value="mutual_fund">Mutual Fund</option>
+<option value="gold">Gold (physical or digital)</option>
+<option value="angel">Angel</option>
+<option value="trust">Trust</option>
+<option value="other">Other Investment</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Money Market Reserve</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+<option value="CreditCard">Credit Card</option>
+<option value="Investment">Investment Account</option>
+<option value="Loan">Loan or Mortgage</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option value="checking">Checking</option>
+<option value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option selected="selected" value="money_market">Money Market</option>
+</select>
+</div>
+<div class="subtype-select" data-type="CreditCard" style="display: none;">
+<p class="text-sm text-secondary">Credit cards will be automatically set up as credit card accounts.</p>
+</div>
+<div class="subtype-select" data-type="Loan" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Loan Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="mortgage">Mortgage</option>
+<option value="student">Student Loan</option>
+<option value="auto">Auto Loan</option>
+<option value="home_equity">Home Equity Loan</option>
+<option value="line_of_credit">Line of Credit</option>
+<option value="business">Business Loan</option>
+<option value="other">Other Loan</option>
+</select>
+</div>
+<div class="subtype-select" data-type="Investment" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Investment Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="brokerage">Brokerage</option>
+<option value="cash_management">Cash Management Account</option>
+<option value="401k">401(k)</option>
+<option value="roth_401k">Roth 401(k)</option>
+<option value="403b">403(b)</option>
+<option value="457b">457(b)</option>
+<option value="tsp">Thrift Savings Plan</option>
+<option value="ira">Traditional IRA</option>
+<option value="roth_ira">Roth IRA</option>
+<option value="sep_ira">SEP IRA</option>
+<option value="simple_ira">SIMPLE IRA</option>
+<option value="529_plan">529 Plan</option>
+<option value="hsa">Health Savings Account</option>
+<option value="ugma">UGMA Custodial Account</option>
+<option value="utma">UTMA Custodial Account</option>
+<option value="isa">Individual Savings Account</option>
+<option value="lisa">Lifetime ISA</option>
+<option value="sipp">Self-Invested Personal Pension</option>
+<option value="workplace_pension_uk">Workplace Pension</option>
+<option value="tfsa">Tax-Free Savings Account</option>
+<option value="rrsp">Registered Retirement Savings Plan</option>
+<option value="non-registered">Non-Registered Investment Account</option>
+<option value="fhsa">First Home Savings Account</option>
+<option value="rdsp">Registered Disability Savings Plan</option>
+<option value="resp">Registered Education Savings Plan</option>
+<option value="dpsp">Deferred Profit Sharing Plan</option>
+<option value="prpp">Pooled Registered Pension Plan</option>
+<option value="lira">Locked-In Retirement Account</option>
+<option value="rrif">Registered Retirement Income Fund</option>
+<option value="lif">Life Income Fund</option>
+<option value="lrif">Locked-In Retirement Income Fund</option>
+<option value="prif">Prescribed Registered Retirement Income Fund</option>
+<option value="rlif">Restricted Life Income Fund</option>
+<option value="super">Superannuation</option>
+<option value="smsf">Self-Managed Super Fund</option>
+<option value="assurance_vie">Assurance Vie</option>
+<option value="pea">Plan d&#39;Épargne en Actions</option>
+<option value="pillar_3a">Private Pension (Pillar 3a)</option>
+<option value="riester">Riester-Rente</option>
+<option value="nps">National Pension System</option>
+<option value="apy">Atal Pension Yojana</option>
+<option value="life_insurance">Life Insurance</option>
+<option value="indian_stocks">Indian Stocks (Demat)</option>
+<option value="indian_equity">Indian Equity</option>
+<option value="indian_etf">Indian ETF</option>
+<option value="epf">Employees&#39; Provident Fund</option>
+<option value="ppf">Public Provident Fund</option>
+<option value="ssy">Sukanya Samriddhi Yojana</option>
+<option value="nsc">National Savings Certificate</option>
+<option value="scss">Senior Citizens&#39; Savings Scheme</option>
+<option value="fd">Fixed Deposit</option>
+<option value="rd">Recurring Deposit</option>
+<option value="pomis">Post Office Monthly Income Scheme</option>
+<option value="kvp">Kisan Vikas Patra</option>
+<option value="g_sec">Government Securities (G-Secs)</option>
+<option value="sdl">State Development Loans (SDLs)</option>
+<option value="corporate_bond">Corporate Bond</option>
+<option value="infrastructure_bond">Infrastructure Bond</option>
+<option value="tax_free_bond">Tax-Free Bond</option>
+<option value="gold_etf">Gold ETF</option>
+<option value="gold_mf">Gold Mutual Fund</option>
+<option value="sgb">Sovereign Gold Bond</option>
+<option value="pension">Pension</option>
+<option value="retirement">Retirement</option>
+<option value="mutual_fund">Mutual Fund</option>
+<option value="gold">Gold (physical or digital)</option>
+<option value="angel">Angel</option>
+<option value="trust">Trust</option>
+<option value="other">Other Investment</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+<div class="border border-primary rounded-lg p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-medium text-primary">Joint Savings</h3>
+</div>
+</div>
+<div class="space-y-3" data-controller="account-type-selector" data-account-type-selector-account-id-value="UUID">
+<div>
+<label class="block text-sm font-medium text-primary mb-2" for="account_types_UUID">Account Type:</label>
+<select name="account_types[UUID]" id="account_types_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full" data-action="change-&gt;account-type-selector#updateSubtype">
+<option selected="selected" value="skip">Skip this account</option>
+<option value="Depository">Checking or Savings Account</option>
+<option value="CreditCard">Credit Card</option>
+<option value="Investment">Investment Account</option>
+<option value="Loan">Loan or Mortgage</option>
+</select>
+</div>
+<!-- Subtype dropdowns (shown/hidden based on account type) -->
+<div data-account-type-selector-target="subtypeContainer">
+<div class="subtype-select" data-type="Depository" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Account Subtype:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option value="">Select subtype</option>
+<option value="cash">Cash</option>
+<option value="checking">Checking</option>
+<option selected="selected" value="savings">Savings</option>
+<option value="hsa">Health Savings Account</option>
+<option value="cd">Certificate of Deposit</option>
+<option value="money_market">Money Market</option>
+</select>
+</div>
+<div class="subtype-select" data-type="CreditCard" style="display: none;">
+<p class="text-sm text-secondary">Credit cards will be automatically set up as credit card accounts.</p>
+</div>
+<div class="subtype-select" data-type="Loan" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Loan Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="mortgage">Mortgage</option>
+<option value="student">Student Loan</option>
+<option value="auto">Auto Loan</option>
+<option value="home_equity">Home Equity Loan</option>
+<option value="line_of_credit">Line of Credit</option>
+<option value="business">Business Loan</option>
+<option value="other">Other Loan</option>
+</select>
+</div>
+<div class="subtype-select" data-type="Investment" style="display: none;">
+<label class="block text-sm font-medium text-primary mb-2" for="account_subtypes_UUID">Investment Type:</label>
+<select name="account_subtypes[UUID]" id="account_subtypes_UUID" class="appearance-none bg-container border border-primary rounded-md px-3 py-2 text-sm leading-6 text-primary focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none w-full">
+<option selected="selected" value="">Select type</option>
+<option value="brokerage">Brokerage</option>
+<option value="cash_management">Cash Management Account</option>
+<option value="401k">401(k)</option>
+<option value="roth_401k">Roth 401(k)</option>
+<option value="403b">403(b)</option>
+<option value="457b">457(b)</option>
+<option value="tsp">Thrift Savings Plan</option>
+<option value="ira">Traditional IRA</option>
+<option value="roth_ira">Roth IRA</option>
+<option value="sep_ira">SEP IRA</option>
+<option value="simple_ira">SIMPLE IRA</option>
+<option value="529_plan">529 Plan</option>
+<option value="hsa">Health Savings Account</option>
+<option value="ugma">UGMA Custodial Account</option>
+<option value="utma">UTMA Custodial Account</option>
+<option value="isa">Individual Savings Account</option>
+<option value="lisa">Lifetime ISA</option>
+<option value="sipp">Self-Invested Personal Pension</option>
+<option value="workplace_pension_uk">Workplace Pension</option>
+<option value="tfsa">Tax-Free Savings Account</option>
+<option value="rrsp">Registered Retirement Savings Plan</option>
+<option value="non-registered">Non-Registered Investment Account</option>
+<option value="fhsa">First Home Savings Account</option>
+<option value="rdsp">Registered Disability Savings Plan</option>
+<option value="resp">Registered Education Savings Plan</option>
+<option value="dpsp">Deferred Profit Sharing Plan</option>
+<option value="prpp">Pooled Registered Pension Plan</option>
+<option value="lira">Locked-In Retirement Account</option>
+<option value="rrif">Registered Retirement Income Fund</option>
+<option value="lif">Life Income Fund</option>
+<option value="lrif">Locked-In Retirement Income Fund</option>
+<option value="prif">Prescribed Registered Retirement Income Fund</option>
+<option value="rlif">Restricted Life Income Fund</option>
+<option value="super">Superannuation</option>
+<option value="smsf">Self-Managed Super Fund</option>
+<option value="assurance_vie">Assurance Vie</option>
+<option value="pea">Plan d&#39;Épargne en Actions</option>
+<option value="pillar_3a">Private Pension (Pillar 3a)</option>
+<option value="riester">Riester-Rente</option>
+<option value="nps">National Pension System</option>
+<option value="apy">Atal Pension Yojana</option>
+<option value="life_insurance">Life Insurance</option>
+<option value="indian_stocks">Indian Stocks (Demat)</option>
+<option value="indian_equity">Indian Equity</option>
+<option value="indian_etf">Indian ETF</option>
+<option value="epf">Employees&#39; Provident Fund</option>
+<option value="ppf">Public Provident Fund</option>
+<option value="ssy">Sukanya Samriddhi Yojana</option>
+<option value="nsc">National Savings Certificate</option>
+<option value="scss">Senior Citizens&#39; Savings Scheme</option>
+<option value="fd">Fixed Deposit</option>
+<option value="rd">Recurring Deposit</option>
+<option value="pomis">Post Office Monthly Income Scheme</option>
+<option value="kvp">Kisan Vikas Patra</option>
+<option value="g_sec">Government Securities (G-Secs)</option>
+<option value="sdl">State Development Loans (SDLs)</option>
+<option value="corporate_bond">Corporate Bond</option>
+<option value="infrastructure_bond">Infrastructure Bond</option>
+<option value="tax_free_bond">Tax-Free Bond</option>
+<option value="gold_etf">Gold ETF</option>
+<option value="gold_mf">Gold Mutual Fund</option>
+<option value="sgb">Sovereign Gold Bond</option>
+<option value="pension">Pension</option>
+<option value="retirement">Retirement</option>
+<option value="mutual_fund">Mutual Fund</option>
+<option value="gold">Gold (physical or digital)</option>
+<option value="angel">Angel</option>
+<option value="trust">Trust</option>
+<option value="other">Other Investment</option>
+</select>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="flex gap-3">
+<button type="submit" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg flex-1 px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-loading-button-target="button">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-inverse">
+<path d="M5 12h14">
+</path>
+<path d="M12 5v14">
+</path>
+</svg>
+<span class="min-w-0 truncate">Create Accounts</span>
+</button>
+<a class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-primary bg-gray-200 theme-dark:bg-gray-700 hover:bg-gray-300 theme-dark:hover:bg-gray-600 disabled:bg-gray-200 theme-dark:disabled:bg-gray-600" href="/accounts">Cancel</a>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+</dialog>
+</turbo-frame>
