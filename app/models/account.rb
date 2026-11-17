@@ -897,22 +897,38 @@ class Account < ApplicationRecord
   end
 
   # Standard securities the account holds at the end of +date+, with their
-  # quantity, for the sale picker. Reads the synced holdings: the latest row on
-  # or before the date per security (today's rows may not be synced yet), and
-  # where a provider row and a calculated row share that day, the provider row.
+  # quantity, for the sale picker. Reads the synced holdings: with a provider
+  # snapshot on or before the date, that whole snapshot (as current_holdings
+  # does), otherwise the latest calculated row per security (today's rows may
+  # not be synced yet). For a date after today, trades dated between today and
+  # that date are added, so a sale can follow a future-dated purchase.
   def held_securities_on(date)
-    latest_ids = holdings
-      .where(date: ..[ date, Date.current ].min)
-      .select("DISTINCT ON (holdings.security_id) holdings.id")
-      .order("holdings.security_id, holdings.date DESC, holdings.account_provider_id NULLS LAST, holdings.id")
+    cutoff = [ date, Date.current ].min
+    provider_rows = holdings.where.not(account_provider_id: nil).where(date: ..cutoff)
+    snapshot_date = provider_rows.maximum(:date)
 
-    holdings
-      .where(id: latest_ids)
-      .where("holdings.qty > 0")
-      .joins(:security)
-      .merge(Security.standard)
-      .includes(:security)
-      .map { |holding| [ holding.security, holding.qty ] }
+    rows = if snapshot_date
+      provider_rows.where(date: snapshot_date)
+    else
+      holdings.where(
+        id: holdings.where(account_provider_id: nil).where(date: ..cutoff)
+          .select("DISTINCT ON (holdings.security_id) holdings.id")
+          .order("holdings.security_id, holdings.date DESC, holdings.id")
+      )
+    end
+
+    positions = rows.to_h { |holding| [ holding.security_id, holding.qty.to_d ] }
+
+    if date > Date.current
+      Trade.joins(:entry)
+        .where(entries: { account_id: id, date: Date.current.next_day..date })
+        .group(:security_id).sum(:qty)
+        .each { |security_id, qty| positions[security_id] = positions.fetch(security_id, 0) + qty.to_d }
+    end
+
+    held = positions.select { |_, qty| qty.positive? }
+    Security.standard.where(id: held.keys)
+      .map { |security| [ security, held[security.id] ] }
       .sort_by { |security, _| [ (security.name.presence || security.ticker).downcase, security.id ] }
   end
 

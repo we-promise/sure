@@ -75,7 +75,7 @@ de:
       cash_flow_warning:
         low: Nach deinen anstehenden wiederkehrenden Buchungen und deinen üblichen Ausgaben könnte dein Guthaben um den %{projected_low_date} auf %{projected_low} sinken.
         negative: Nach deinen anstehenden wiederkehrenden Buchungen und deinen üblichen Ausgaben könnte dein Guthaben um den %{projected_low_date} auf %{projected_low} fallen.
-      negative_position: "In %{account} ist %{security} (%{ticker}) seit %{date} unter null, bis %{qty}. Vermutlich fehlt ein Kauf oder Übertrag; betroffene Positionen: %{count}."
+      negative_position: "In %{account} ist %{security} (%{ticker}) am %{date} unter null gefallen, bis %{qty}. Vermutlich fehlt ein Kauf oder Übertrag; betroffene Positionen: %{count}."
       idle_cash: Auf %{account} liegen %{balance}, ohne Bewegung in den letzten %{idle_days} Tagen.
       maintained_goal_depleted: "Für %{goal} sind %{saved} von %{target} zurückgelegt. Bis zum Zielstand fehlen %{missing}."
       net_worth_milestone: Dein Nettovermögen hat %{milestone} überschritten und liegt jetzt bei %{net_worth}.

@@ -166,28 +166,68 @@ class Trade::SaleLimitTest < ActiveSupport::TestCase
     assert_not Trade::SaleLimit.new(build_sale(qty: 6, date: 1.day.from_now.to_date)).validate
   end
 
-  test "save! locks the account for a sale and raises when refused" do
+  test "prepare locks the account for a sale" do
     create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
     @account.expects(:lock!).once
 
-    assert_raises(ActiveRecord::RecordInvalid) { Trade::SaleLimit.save!(build_sale(qty: 11, date: Date.current)) }
+    assert_not Trade::SaleLimit.prepare(build_sale(qty: 11, date: Date.current)).validate
   end
 
   # Moving a purchase later can take a concurrently checked sale below zero.
-  test "save! locks the account when a purchase moves" do
+  test "prepare locks the account when a purchase moves" do
     purchase = create_trade(@security, account: @account, qty: 3, date: 2.days.ago.to_date, price: 100)
     purchase.date = 1.day.ago.to_date
     @account.expects(:lock!).once
 
-    Trade::SaleLimit.save!(purchase)
+    Trade::SaleLimit.prepare(purchase)
   end
 
-  test "save! takes no lock for an ordinary transaction" do
+  test "prepare takes no lock for an ordinary transaction" do
     entry = create_transaction(account: @account, amount: 10, date: 2.days.ago.to_date)
     entry.notes = "x"
     @account.expects(:lock!).never
 
-    Trade::SaleLimit.save!(entry)
+    Trade::SaleLimit.prepare(entry)
+  end
+
+  test "an edit compares with the stored sale, not the one loaded before the lock" do
+    create_trade(@security, account: @account, qty: 10, date: 5.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -8, date: 2.days.ago.to_date, price: 100)
+    sale.reload
+    # Another request shrinks the sale to 4 after this one loaded it at 8.
+    Trade.where(id: sale.entryable.id).update_all(qty: -4)
+    sale.entryable.qty = -7
+
+    assert Trade::SaleLimit.new(sale).checks?
+  end
+
+  test "a bulk edit checks sales against the batch's final state, whatever the row order" do
+    purchase = create_trade(@security, account: @account, qty: 10, date: 3.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -10, date: 2.days.ago.to_date, price: 100)
+    new_date = 4.days.ago.to_date
+
+    # The sale comes first: on its own it would find nothing held on the new date.
+    # (The custom row order would also reach the scheduling query, which has its own.)
+    EntryScheduledSyncJob.stubs(:schedule_for_entries)
+    Entry.where(id: [ sale.id, purchase.id ])
+      .order(Arel.sql(ActiveRecord::Base.sanitize_sql_array([ "entries.id = ? DESC", sale.id ])))
+      .bulk_update!({ date: new_date })
+
+    assert_equal [ new_date, new_date ], [ purchase.reload.date, sale.reload.date ]
+  end
+
+  test "a bulk edit that oversells rolls back the whole batch" do
+    purchase = create_trade(@security, account: @account, qty: 10, date: 3.days.ago.to_date, price: 100)
+    sale = create_trade(@security, account: @account, qty: -10, date: 2.days.ago.to_date, price: 100)
+
+    note = create_transaction(account: @account, amount: 10, date: 2.days.ago.to_date)
+
+    # Moving the sale before its purchase refuses it, and the other row stays as it was.
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Entry.where(id: [ note.id, sale.id ]).bulk_update!({ date: 4.days.ago.to_date })
+    end
+    assert_equal [ 2.days.ago.to_date, 2.days.ago.to_date, 3.days.ago.to_date ],
+      [ sale.reload.date, note.reload.date, purchase.reload.date ]
   end
 
   test "linked accounts never refuse a sale, because the provider's holdings stay the truth" do

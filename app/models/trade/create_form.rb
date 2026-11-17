@@ -42,9 +42,13 @@ class Trade::CreateForm
   private
     # Users can either look up a ticker from a provider or enter a manual, "offline" ticker (that we won't fetch prices for)
     def security
-      # The sale picker sends the id of a security the account holds; only
-      # those can be picked this way.
-      return Security.where(id: account.holdings.select(:security_id)).find_by(id: security_id) if security_id.present?
+      # The sale picker sends the id of a security the account holds or has
+      # bought (a purchase dated in the future has no holding yet); only those
+      # can be picked this way. The sale limit checks the quantity.
+      if security_id.present?
+        traded = Trade.joins(:entry).where(entries: { account_id: account.id }).select(:security_id)
+        return Security.where(id: account.holdings.select(:security_id)).or(Security.where(id: traded)).find_by(id: security_id)
+      end
 
       parsed = ticker.present? ? Security.parse_combobox_id(ticker) : { ticker: manual_ticker }
       return nil if parsed[:ticker].blank?

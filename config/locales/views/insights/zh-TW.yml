@@ -95,7 +95,7 @@ zh-TW:
         up: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 高出 %{change_pp} 個百分點。
         down: 您在%{month}存下了收入的 %{current_rate}%，比前一個月的 %{previous_rate}% 低了 %{change_pp} 個百分點。
         down_negative: 您在%{month}的支出超過收入：儲蓄率從前一個月的 %{previous_rate}% 降到 %{current_rate}%。
-      negative_position: "%{account} 中的 %{security} (%{ticker}) 自 %{date} 起低於零，最低為 %{qty}。可能缺少一筆買入或轉入；受影響的持倉：%{count}。"
+      negative_position: "%{account} 中的 %{security} (%{ticker}) 曾於 %{date} 低於零，最低為 %{qty}。可能缺少一筆買入或轉入；受影響的持倉：%{count}。"
       idle_cash: '%{account} 有 %{balance}，且在過去 %{idle_days} 天內沒有任何活動。'
       budget_at_risk:
         over: '%{categories} 這個月已超出預算。您目前已使用總預算的 %{budget_spent_pct}%。'

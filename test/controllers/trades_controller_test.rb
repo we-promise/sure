@@ -482,6 +482,21 @@ class TradesControllerTest < ActionDispatch::IntegrationTest
     assert_response :unprocessable_entity
   end
 
+  test "the sale picker accepts a security bought with a future date" do
+    security = Security.create!(ticker: "FUTBUY", name: "Future Buy")
+    account = Account.find(@entry.account_id)
+    account.entries.create!(
+      name: "Buy", date: 2.days.from_now.to_date, amount: 500, currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+
+    assert_difference "Trade.count", 1 do
+      post trades_url(account_id: account.id), params: {
+        model: { type: "sell", date: 3.days.from_now.to_date, security_id: security.id, qty: 5, price: 100, currency: "USD" }
+      }
+    end
+  end
+
   test "picking a holding from the sale picker records the sale" do
     assert_difference "Trade.count", 1 do
       post trades_url(account_id: @entry.account_id), params: {

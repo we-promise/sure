@@ -14,10 +14,18 @@ class Insight::Generators::NegativePositionGenerator < Insight::Generator
 
   MAX_INSIGHTS = 2
 
+  # An acknowledged warning whose numbers have not changed gives its slot to
+  # another account first, so dismissing two warnings does not hide a third.
   def generate
-    affected_accounts.lazy.filter_map do |account|
+    insights = affected_accounts.filter_map { |account| insight_for(account) }
+    quiet, fresh = insights.partition { |insight| acknowledged_unchanged?(insight) }
+    (fresh + quiet).first(MAX_INSIGHTS)
+  end
+
+  private
+    def insight_for(account)
       positions = account.negative_positions
-      next if positions.empty?
+      return if positions.empty?
 
       first = positions.first
       security = first.security
@@ -43,10 +51,14 @@ class Insight::Generators::NegativePositionGenerator < Insight::Generator
         },
         dedup_key: "negative_position:#{account.id}"
       )
-    end.first(MAX_INSIGHTS)
-  end
+    end
 
-  private
+    def acknowledged_unchanged?(insight)
+      @acknowledged_metadata ||= family.insights.acknowledged
+        .where(insight_type: "negative_position").pluck(:dedup_key, :metadata).to_h
+      @acknowledged_metadata[insight.dedup_key] == JSON.parse(insight.metadata.to_json)
+    end
+
     # The feed is shared by the whole family and names the account and the
     # security, so only accounts every active member can see qualify. Ordered
     # so the pick stays stable between nightly runs.

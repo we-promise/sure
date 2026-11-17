@@ -10,18 +10,38 @@ class AccountTest < ActiveSupport::TestCase
     @member = users(:family_member)
   end
 
-  test "held_securities_on lists positive standard holdings on that day, a provider row first" do
+  test "held_securities_on lists the latest calculated row per security on that day" do
     account = accounts(:investment)
     aapl = securities(:aapl)
     # Clear of the fixture rows (today and yesterday at load time), even when
     # the suite runs across midnight.
-    provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
-    account.holdings.create!(security: aapl, date: 5.days.ago.to_date, qty: 7, price: 200, amount: 1400, currency: "EUR", account_provider: provider)
     account.holdings.create!(security: aapl, date: 5.days.ago.to_date, qty: 5, price: 200, amount: 1000, currency: "USD")
     account.holdings.create!(security: securities(:msft), date: 5.days.ago.to_date, qty: 0, price: 400, amount: 0, currency: "USD")
 
-    assert_equal [ [ aapl, 7 ] ], account.held_securities_on(5.days.ago.to_date)
-    assert_equal [ [ aapl, 10 ] ], account.held_securities_on(1.year.from_now.to_date)
+    assert_equal [ [ aapl, 5 ] ], account.held_securities_on(5.days.ago.to_date)
+  end
+
+  test "held_securities_on takes a provider snapshot as a whole" do
+    account = accounts(:investment)
+    provider = AccountProvider.create!(account: account, provider: snaptrade_accounts(:fidelity_401k))
+    account.holdings.create!(security: securities(:aapl), date: 6.days.ago.to_date, qty: 7, price: 200, amount: 1400, currency: "USD", account_provider: provider)
+    account.holdings.create!(security: securities(:msft), date: 5.days.ago.to_date, qty: 3, price: 400, amount: 1200, currency: "USD", account_provider: provider)
+    account.holdings.create!(security: securities(:aapl), date: 5.days.ago.to_date, qty: 5, price: 200, amount: 1000, currency: "USD")
+
+    # The newer snapshot no longer lists AAPL, so it is not offered.
+    assert_equal [ [ securities(:msft), 3 ] ], account.held_securities_on(5.days.ago.to_date)
+  end
+
+  test "held_securities_on adds purchases dated after today for a future date" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "FUTBUY", name: "Future Buy")
+    account.entries.create!(
+      name: "Buy", date: 2.days.from_now.to_date, amount: 500, currency: "USD",
+      entryable: Trade.new(security: security, qty: 5, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+
+    assert_empty account.held_securities_on(1.day.from_now.to_date)
+    assert_equal [ [ security, 5 ] ], account.held_securities_on(3.days.from_now.to_date)
   end
 
   test "can destroy" do

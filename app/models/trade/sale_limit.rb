@@ -32,15 +32,14 @@ class Trade::SaleLimit
     end
   end
 
-  # Same as save, but raises ActiveRecord::RecordInvalid, for callers that
-  # update several entries in one transaction (bulk edit).
-  def self.save!(entry)
-    entry.account.transaction do
-      limit = new(entry)
-      entry.account.lock! if limit.guards_account?
-      raise ActiveRecord::RecordInvalid, entry unless limit.validate
-      entry.save!
-    end
+  # For a bulk edit: locks the account and decides whether the sale needs a
+  # check, before the entry is saved. Call #validate once the whole batch is
+  # saved, so each sale is checked against the batch's final state.
+  def self.prepare(entry)
+    limit = new(entry)
+    entry.account.lock! if limit.guards_account?
+    limit.checks?
+    limit
   end
 
   def initialize(entry)
@@ -68,13 +67,14 @@ class Trade::SaleLimit
   end
 
   # Whether this entry is a sale (or worsens one) that the limit applies to.
+  # Decided once, before the entry is saved: a bulk edit saves the whole batch
+  # first and validates afterwards.
   def checks?
-    return false unless trade.is_a?(Trade) && security.present? && account.present? && entry.date.present?
-    return false unless trade.qty.to_d.negative?
-    return false if security.cash?
-    return false if account.linked?
+    return @checks unless @checks.nil?
 
-    entry.new_record? || worsens_existing_sale?
+    @checks = trade.is_a?(Trade) && security.present? && account.present? && entry.date.present? &&
+      trade.qty.to_d.negative? && !security.cash? && !account.linked? &&
+      (entry.new_record? || worsens_existing_sale?)
   end
 
   private
@@ -97,11 +97,14 @@ class Trade::SaleLimit
     # An edit that only makes an existing sale smaller cannot take the position
     # lower than it already was, so it is not checked. That keeps old data,
     # which may already be oversold, editable (notes, price, a smaller qty).
+    # Compares with the stored row, read after the account lock, so an edit
+    # made meanwhile by another request is not missed.
     def worsens_existing_sale?
-      previous_qty = trade.qty_was.to_d
-      return true unless previous_qty.negative?
+      stored_date = Entry.unscoped.where(id: entry.id).pick(:date)
+      stored_qty, stored_security_id = Trade.where(id: trade.id).pick(:qty, :security_id)
+      return true if stored_date.nil? || stored_qty.nil? || !stored_qty.to_d.negative?
 
-      entry.date_changed? || trade.security_id_changed? || sold_qty > previous_qty.abs
+      entry.date != stored_date || trade.security_id != stored_security_id || sold_qty > stored_qty.to_d.abs
     end
 
     # [date, units on the sale date] for the day that leaves the least room,

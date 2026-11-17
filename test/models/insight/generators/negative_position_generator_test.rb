@@ -51,6 +51,25 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
 
   # The provider's holdings are the truth there; the reverse calculator can
   # carry a broker's short position back into rows without a provider id.
+  test "an acknowledged warning gives its slot to another account" do
+    @family.users.update_all(ai_enabled: false)
+    users(:family_admin).update!(preferences: { "preview_features_enabled" => true })
+    oversell_msft
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    @family.insights.find_by!(dedup_key: "negative_position:#{@account.id}").acknowledge!
+
+    other = @family.accounts.create!(
+      name: "Second Brokerage", owner: users(:family_admin), balance: 0, cash_balance: 0,
+      currency: "USD", accountable: Investment.new
+    )
+    other.account_shares.create!(user: users(:family_member), permission: "read_only")
+    oversell_msft(other)
+
+    with_max_insights(1) do
+      assert_equal [ "negative_position:#{other.id}" ], generate.map(&:dedup_key)
+    end
+  end
+
   test "ignores linked accounts" do
     oversell_msft
     Account.any_instance.stubs(:linked?).returns(true)
@@ -87,11 +106,20 @@ class Insight::Generators::NegativePositionGeneratorTest < ActiveSupport::TestCa
     end
 
     # An import that records a sale without its purchase, as a provider or CSV can.
-    def oversell_msft
-      @account.entries.create!(
+    def oversell_msft(account = @account)
+      account.entries.create!(
         name: "Sell 3 shares of MSFT", date: 3.days.ago.to_date, amount: -1200, currency: "USD",
         entryable: Trade.new(security: securities(:msft), qty: -3, price: 400, currency: "USD", investment_activity_label: "Sell")
       )
-      Holding::Materializer.new(@account, strategy: :forward).materialize_holdings
+      Holding::Materializer.new(account, strategy: :forward).materialize_holdings
+    end
+
+    def with_max_insights(value)
+      generator = Insight::Generators::NegativePositionGenerator
+      original = generator::MAX_INSIGHTS
+      silence_warnings { generator.const_set(:MAX_INSIGHTS, value) }
+      yield
+    ensure
+      silence_warnings { generator.const_set(:MAX_INSIGHTS, original) }
     end
 end
