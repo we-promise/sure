@@ -158,8 +158,9 @@ class Loan::AmortizationSchedule
     simulation.payments.any? { |row| row[:lender_payment_below_interest] }
   end
 
-  # Whether an extra repayment is dated on a payment date after that day's
-  # payment had already repaid the loan, so it has nothing to repay.
+  # Whether an extra repayment is dated after the loan was already repaid:
+  # after a balance confirmed at zero, or on a payment date whose payment
+  # repaid it. It has nothing to repay.
   def repayment_after_payoff?
     simulation.payments.any? { |row| row.key?(:repaid_after_payoff) }
   end
