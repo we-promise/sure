@@ -6,6 +6,13 @@ en:
       subtitle: Comprehensive insights into your financial health
       export: Export CSV
       print_report: Print Report
+      tag_filter:
+        all: All tags
+        selected:
+          one: "%{count} tag"
+          other: "%{count} tags"
+        search: Search tags
+        apply: Apply
       section_aria: "%{title} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
       sections_aria: Reports sections
       periods:

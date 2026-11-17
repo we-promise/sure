@@ -4,6 +4,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
   include SqlQueryCapture
 
+  TAGGED_MONTH = Date.new(2021, 3, 1)
+
   setup do
     sign_in @user = users(:family_admin)
     @family = @user.family
@@ -1228,7 +1230,157 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", settings_api_keys_path, count: 0
   end
 
+  test "google sheets instructions give an export URL with the selected tags" do
+    tag = @family.tags.create!(name: "Sheets tag")
+
+    get google_sheets_instructions_reports_url(period_type: :monthly, filter_tag_ids: [ tag.id ])
+
+    assert_response :success
+    assert_includes CGI.unescapeHTML(@response.body), export_transactions_reports_url(period_type: :monthly, filter_tag_ids: [ tag.id ], format: :csv)
+  end
+
+  test "the tag filter limits the summary, trends and breakdown to transactions with any of the tags" do
+    travel, work = seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ travel.id, work.id ])
+
+    assert_response :ok
+    # $30 travel + $50 work + $20 carrying both, counted once; the $1,000
+    # "Other" expense and the untagged $500 salary are left out.
+    assert_equal "$10.00", summary_value(I18n.t("reports.summary.total_income"))
+    assert_equal "$100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+    assert_select "[data-section-key=trends_insights] tbody tr", count: 1 do
+      assert_select "td", text: "$10.00"
+      assert_select "td", text: "$100.00"
+    end
+    breakdown = css_select("[data-section-key=transactions_breakdown]").text.squish
+    assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.income")}: $10.00"
+    assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.expense")}: $100.00"
+  end
+
+  test "without a tag filter every transaction is counted" do
+    seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month)
+
+    assert_response :ok
+    assert_equal "$510.00", summary_value(I18n.t("reports.summary.total_income"))
+    assert_equal "$1,100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+  end
+
+  test "the tag filter leaves trades out of the breakdown" do
+    tag = @family.tags.create!(name: "Filtered tag")
+    create_transaction(account: accounts(:depository), name: "Tagged spend", amount: 42, tags: [ tag ])
+    create_trade(securities(:aapl), account: accounts(:investment), qty: 1, date: Date.current, price: 100)
+
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    assert_select "[data-section-key=transactions_breakdown] tr[data-category]", count: 1
+    assert_select "tr[data-category='category-uncategorized']", text: /\$42\.00/
+    assert_select "tr[data-category='category-other_investments']", count: 0
+  end
+
+  test "tag ids that are not the family's are ignored" do
+    seed_tagged_month
+    foreign_tag = families(:empty).tags.create!(name: "Someone else's")
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ foreign_tag.id, "not-a-uuid" ])
+
+    assert_response :ok
+    assert_equal "$1,100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+    assert_select "button", text: I18n.t("reports.index.tag_filter.all")
+    assert_select "input[name='filter_tag_ids[]'][checked]", count: 0
+  end
+
+  test "the tag filter lists the family's tags and checks the selected ones" do
+    travel, work, other = seed_tagged_month
+
+    get reports_path(period_type: :monthly, filter_tag_ids: [ travel.id, work.id ])
+
+    assert_response :ok
+    assert_select "button", text: I18n.t("reports.index.tag_filter.selected", count: 2)
+    assert_select "input[name='filter_tag_ids[]'][value=?][checked]", travel.id
+    assert_select "input[name='filter_tag_ids[]'][value=?][checked]", work.id
+    assert_select "input[name='filter_tag_ids[]'][value=?]:not([checked])", other.id
+  end
+
+  test "period controls keep the tag filter" do
+    travel, = seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ travel.id ])
+
+    assert_response :ok
+    report_links = css_select("a[href^='/reports?']").map { |link| link["href"] }
+    assert_operator report_links.size, :>, 5
+    report_links.each { |href| assert_includes CGI.unescape(href), "filter_tag_ids[]=#{travel.id}", href }
+
+    get reports_path(period_type: :custom, filter_tag_ids: [ travel.id ])
+
+    assert_select "form[action='#{reports_path}'] input[type=date][name=start_date]" do |inputs|
+      form = inputs.first.ancestors("form").first
+      assert form.at_css("input[type=hidden][name='filter_tag_ids[]'][value='#{travel.id}']"), "custom range form drops the tag filter"
+    end
+  end
+
+  test "breakdown rows link to transactions filtered by category and the selected tags" do
+    tag = @family.tags.create!(name: "Linked tag")
+    category = @family.categories.create!(name: "Tagged groceries", color: "#ABCDEF")
+    create_transaction(account: accounts(:depository), name: "Groceries", amount: 42, category: category, tags: [ tag ])
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date, filter_tag_ids: [ tag.id ])
+
+    href = transactions_path(q: { categories: [ category.name ], start_date: start_date, end_date: end_date, tags: [ tag.name ] })
+    assert_select "tr[data-category='category-#{category.id}'] a[href=?]", href
+  end
+
+  test "export transactions keeps only the selected tags" do
+    tag = @family.tags.create!(name: "Export tag")
+    tagged = @family.categories.create!(name: "Export Tagged Spend", color: "#111111")
+    untagged = @family.categories.create!(name: "Export Untagged Spend", color: "#222222")
+    create_transaction(account: accounts(:depository), name: "Tagged", amount: 10, category: tagged, tags: [ tag ])
+    create_transaction(account: accounts(:depository), name: "Untagged", amount: 20, category: untagged)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly, start_date: Date.current.beginning_of_month,
+                                         end_date: Date.current.end_of_month, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    assert_match(/Export Tagged Spend/, @response.body)
+    assert_no_match(/Export Untagged Spend/, @response.body)
+  end
+
   private
+    # Travel, Work and Other tags on a month of their own, away from the
+    # fixture transactions, with expenses of $30 (travel), $50 (work), $20
+    # (both) and $1,000 (other), and income of $10 (travel) and $500 (none).
+    def seed_tagged_month
+      travel = @family.tags.create!(name: "Travel")
+      work = @family.tags.create!(name: "Work")
+      other = @family.tags.create!(name: "Other")
+      account = accounts(:depository)
+      date = TAGGED_MONTH + 9.days
+
+      create_transaction(account: account, date: date, name: "Hotel", amount: 30, tags: [ travel ])
+      create_transaction(account: account, date: date, name: "Laptop stand", amount: 50, tags: [ work ])
+      create_transaction(account: account, date: date, name: "Airport lunch", amount: 20, tags: [ travel, work ])
+      create_transaction(account: account, date: date, name: "Rent", amount: 1000, tags: [ other ])
+      create_transaction(account: account, date: date, name: "Refund", amount: -10, tags: [ travel ])
+      create_transaction(account: account, date: date, name: "Salary", amount: -500)
+
+      [ travel, work, other ]
+    end
+
+    # The figure on the summary card headed by label.
+    def summary_value(label)
+      heading = css_select("h3").find { |node| node.text.strip == label }
+      heading.ancestors("div.bg-container").first.at_css("p.text-2xl").text.strip
+    end
+
     # Takes every fixture investment account out of the card's scope, so an
     # account the test creates is the family's only one; otherwise the
     # fixtures satisfy the visible-accounts gate on their own.
