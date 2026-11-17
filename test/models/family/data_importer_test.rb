@@ -31,6 +31,201 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Depository", account.accountable_type
   end
 
+  test "round trips loan terms through full export" do
+    source_family = Family.create!(name: "Source Loan Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Land Loan",
+      balance: 18_000,
+      currency: "USD",
+      accountable: Loan.new(
+        subtype: "other",
+        interest_rate: 7.25,
+        rate_type: "variable",
+        term_months: 120,
+        start_date: Date.new(2025, 3, 1),
+        down_payment: 4_000,
+        initial_balance: 20_000,
+        insurance_rate: 0.35,
+        insurance_rate_type: "level_term",
+        day_count_convention: "actual_365",
+        principal_only_transfers: true,
+        variable_rate_schedule: { "2026-01-01" => "6.5" }
+      )
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    loan = @family.accounts.find_by!(name: "Round Trip Land Loan").accountable
+    assert_equal "other", loan.subtype
+    assert_equal BigDecimal("7.25"), loan.interest_rate
+    assert_equal "variable", loan.rate_type
+    assert_equal 120, loan.term_months
+    assert_equal Date.new(2025, 3, 1), loan.start_date
+    assert_equal BigDecimal("4000"), loan.down_payment
+    assert_equal BigDecimal("20000"), loan.initial_balance
+    assert_equal BigDecimal("0.35"), loan.insurance_rate
+    assert_equal "level_term", loan.insurance_rate_type
+    assert_equal "actual_365", loan.day_count_convention
+    assert loan.principal_only_transfers
+    assert_equal [ [ Date.new(2026, 1, 1), BigDecimal("6.5") ] ], loan.variable_rates
+  end
+
+  test "round trips credit card details through full export" do
+    source_family = Family.create!(name: "Source Card Family", currency: "EUR", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Card",
+      balance: 350,
+      currency: "EUR",
+      accountable: CreditCard.new(
+        subtype: "credit_card",
+        apr: 19.9,
+        annual_fee: 45,
+        minimum_payment: 25,
+        available_credit: 2_650,
+        due_day: 5,
+        statement_close_day: 20,
+        expiration_date: Date.new(2029, 8, 31)
+      )
+    )
+
+    Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
+
+    card = @family.accounts.find_by!(name: "Round Trip Card").accountable
+    assert_equal BigDecimal("19.9"), card.apr
+    assert_equal BigDecimal("45"), card.annual_fee
+    assert_equal BigDecimal("25"), card.minimum_payment
+    assert_equal BigDecimal("2650"), card.available_credit
+    assert_equal 5, card.due_day
+    assert_equal 20, card.statement_close_day
+    assert_equal Date.new(2029, 8, 31), card.expiration_date
+  end
+
+  test "imports loans and credit cards from an export without their details" do
+    ndjson = build_ndjson([
+      { type: "Account", data: { id: "old-loan", name: "Old Loan", balance: "1000", currency: "USD", subtype: "auto", accountable_type: "Loan", accountable: { subtype: "auto" } } },
+      { type: "Account", data: { id: "old-card", name: "Old Card", balance: "100", currency: "USD", accountable_type: "CreditCard", accountable: { subtype: "credit_card" } } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    loan = @family.accounts.find_by!(name: "Old Loan").accountable
+    assert_equal "auto", loan.subtype
+    assert_nil loan.interest_rate
+    assert_equal Loan::DEFAULT_DAY_COUNT_CONVENTION, loan.day_count_convention
+    assert_not loan.principal_only_transfers
+    assert_equal({}, loan.variable_rate_schedule)
+
+    card = @family.accounts.find_by!(name: "Old Card").accountable
+    assert_nil card.apr
+    assert_nil card.due_day
+  end
+
+  test "imports a loan whose detail columns are null in the export" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan", name: "Null Loan", balance: "1000", currency: "USD", accountable_type: "Loan",
+          accountable: { interest_rate: "5.0", day_count_convention: nil, principal_only_transfers: nil, variable_rate_schedule: nil, start_date: nil }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    loan = @family.accounts.find_by!(name: "Null Loan").accountable
+    assert_equal BigDecimal("5"), loan.interest_rate
+    assert_equal Loan::DEFAULT_DAY_COUNT_CONVENTION, loan.day_count_convention
+    assert_not loan.principal_only_transfers
+    assert_equal({}, loan.variable_rate_schedule)
+  end
+
+  test "rejects a loan rate schedule that cannot be read" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan", name: "Bad Schedule Loan", balance: "1000", currency: "USD", accountable_type: "Loan",
+          accountable: { rate_type: "variable", interest_rate: "5", variable_rate_schedule: { "not a date" => "6" } }
+        }
+      }
+    ])
+
+    assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
+    assert_not @family.accounts.exists?(name: "Bad Schedule Loan")
+  end
+
+  test "imports into existing accounts given as account targets" do
+    account = @family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+    ndjson = build_ndjson([
+      { type: "Transaction", data: { id: "old-txn", account_id: "old-account", date: "2024-01-02", amount: "10.00", name: "Grocer" } }
+    ])
+
+    result = Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
+
+    assert_empty result[:accounts]
+    assert_equal [ "Grocer" ], account.entries.pluck(:name)
+  end
+
+  test "keeps a transaction's own extra metadata and import lock" do
+    account = @family.accounts.create!(name: "Existing", balance: 0, currency: "USD", accountable: Depository.new)
+    ndjson = build_ndjson([
+      { type: "Transaction", data: { id: "old-txn", account_id: "old-account", date: "2024-01-02", amount: "10.00",
+        name: "Grocer", extra: { monarch: { transaction_id: "1" } }, import_locked: true } }
+    ])
+
+    Family::DataImporter.new(@family, ndjson, account_targets: { "old-account" => account }).import!
+
+    entry = account.entries.sole
+    assert_equal({ "monarch" => { "transaction_id" => "1" } }, entry.transaction.extra)
+    assert entry.import_locked?
+    assert_nil entry.external_id
+  end
+
+  test "restores the Brandfetch logo choice so no fetched icon replaces it" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          institution_domain: "tbank.ru",
+          logo_selection: "brandfetch",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+
+    assert account.reload.logo_brandfetch?
+    assert_not account.logo_auto_fetchable?
+  end
+
+  test "an unknown logo selection imports as the automatic one" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-account-1",
+          name: "Test Checking",
+          balance: "1500.00",
+          currency: "USD",
+          logo_selection: "some-future-source",
+          accountable_type: "Depository",
+          accountable: { subtype: "checking" }
+        }
+      }
+    ])
+
+    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+
+    assert account.reload.logo_automatic?
+  end
+
   test "imports non-destructive account status from ndjson" do
     ndjson = build_ndjson([
       {
@@ -1312,6 +1507,89 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert imported_holding.security_locked
   end
 
+  test "round trips property details and address through full export" do
+    source_family = Family.create!(name: "Source Property Family", currency: "USD", locale: "en", date_format: "%Y-%m-%d")
+    source_family.accounts.create!(
+      name: "Round Trip Land",
+      balance: 150_000_000,
+      currency: "PYG",
+      accountable: Property.new(
+        subtype: "plot",
+        year_built: 2001,
+        area_value: 12_000,
+        area_unit: "sqm",
+        address: Address.new(line1: "Ruta 2 km 40", locality: "Caacupe", region: "Cordillera", postal_code: "3000", country: "PY")
+      )
+    )
+
+    zip_data = Family::DataExporter.new(source_family).generate_export
+    ndjson = nil
+    Zip::File.open_buffer(zip_data) { |zip| ndjson = zip.read("all.ndjson") }
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Round Trip Land").accountable
+    assert_equal "plot", property.subtype
+    assert_equal 2001, property.year_built
+    assert_equal 12_000, property.area_value
+    assert_equal "sqm", property.area_unit
+
+    address = property.address
+    assert_not_nil address, "the address should survive a backup and restore"
+    assert_equal "Ruta 2 km 40", address.line1
+    assert_equal "Caacupe", address.locality
+    assert_equal "Cordillera", address.region
+    assert_equal "3000", address.postal_code
+    assert_equal "PY", address.country
+  end
+
+  test "imports property details from an export without an address" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-property-1",
+          name: "Imported Land",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Property",
+          accountable: { subtype: "agri_land", year_built: nil, area_value: 50, area_unit: "sqm", id: "ignored", avm_provider: "rentcast" }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Imported Land").accountable
+    assert_equal 50, property.area_value
+    assert_equal "sqm", property.area_unit
+    assert_nil property.year_built
+    assert_nil property.avm_provider, "provider links are not restored"
+    assert_nil property.address
+  end
+
+  test "an explicit null property detail keeps the default" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-property-2",
+          name: "Null Unit Land",
+          balance: "1000",
+          currency: "USD",
+          accountable_type: "Property",
+          accountable: { subtype: "plot", area_value: 50, area_unit: nil }
+        }
+      }
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    property = @family.accounts.find_by!(name: "Null Unit Land").accountable
+    assert_equal 50, property.area_value
+    assert_equal "sqft", property.area_unit
+  end
+
   test "round trips raw balance history through full export" do
     source_family = Family.create!(
       name: "Source Balance Family",
@@ -1987,6 +2265,128 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not @family.rules.find_by(name: "Second").stop_processing
   end
 
+  test "imports rule groups by name and keeps each group in one block" do
+    existing = @family.rule_groups.create!(name: "Food")
+    rule_record = ->(name, position, group) do
+      data = {
+        name: name,
+        resource_type: "transaction",
+        active: true,
+        position: position,
+        conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+        actions: [ { action_type: "exclude_transaction" } ]
+      }
+      data[:group] = group unless group == :absent
+      { type: "Rule", version: 1, data: data }
+    end
+    ndjson = build_ndjson([
+      rule_record.call("Loose", 1, nil),
+      rule_record.call("Groceries", 2, "Food"),
+      rule_record.call("Restaurants", 3, "Food"),
+      rule_record.call("Rent", 4, "Housing"),
+      rule_record.call("Old export", 5, :absent)
+    ])
+
+    Family::DataImporter.new(@family, ndjson).import!
+
+    rules = @family.rules.index_by(&:name)
+    assert_nil rules["Loose"].rule_group
+    assert_equal existing, rules["Groceries"].rule_group
+    assert_equal existing, rules["Restaurants"].rule_group
+    assert_equal "Housing", rules["Rent"].rule_group.name
+    assert_nil rules["Old export"].rule_group
+    # Rules joining a group that already exists run where that group stands.
+    assert_equal [ "Groceries", "Restaurants", "Loose", "Rent", "Old export" ], @family.rules.ordered.pluck(:name).last(5)
+  end
+
+  test "session rule reimport keeps the run order of rules leaving a group" do
+    group = @family.rule_groups.create!(name: "Food")
+    build_rule = ->(name) do
+      rule = @family.rules.build(name: name, resource_type: "transaction", active: true, rule_group: group)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: name)
+      rule.actions.build(action_type: "exclude_transaction")
+      rule.tap(&:save!)
+    end
+    first = build_rule.call("First")
+    second = build_rule.call("Second")
+    build_rule.call("Staying")
+
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    { "rule-1" => first, "rule-2" => second }.each do |source_id, rule|
+      session.source_mappings.create!(family: @family, source_type: "Rule", source_id: source_id, target: rule)
+    end
+    rule_record = ->(id, name, position) do
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: id,
+          name: name,
+          resource_type: "transaction",
+          active: true,
+          position: position,
+          group: nil,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    end
+    ndjson = build_ndjson([ rule_record.call("rule-1", "First", 1), rule_record.call("rule-2", "Second", 2) ])
+
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+
+    assert_nil first.reload.rule_group
+    assert_nil second.reload.rule_group
+    assert_equal [ "Staying", "First", "Second" ], @family.rules.ordered.pluck(:name).last(3)
+  end
+
+  test "session rule reimport keeps the run order of rules leaving a group across chunks" do
+    group = @family.rule_groups.create!(name: "Food")
+    build_rule = ->(name) do
+      rule = @family.rules.build(name: name, resource_type: "transaction", active: true, rule_group: group)
+      rule.conditions.build(condition_type: "transaction_name", operator: "like", value: name)
+      rule.actions.build(action_type: "exclude_transaction")
+      rule.tap(&:save!)
+    end
+    first = build_rule.call("First")
+    second = build_rule.call("Second")
+    third = build_rule.call("Third")
+    build_rule.call("Staying")
+
+    session = @family.import_sessions.create!(expected_chunks: 2)
+    { "rule-1" => first, "rule-2" => second, "rule-3" => third }.each do |source_id, rule|
+      session.source_mappings.create!(family: @family, source_type: "Rule", source_id: source_id, target: rule)
+    end
+    rule_record = ->(id, name, position) do
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          id: id,
+          name: name,
+          resource_type: "transaction",
+          active: true,
+          position: position,
+          group: nil,
+          conditions: [ { condition_type: "transaction_name", operator: "like", value: name } ],
+          actions: [ { action_type: "exclude_transaction" } ]
+        }
+      }
+    end
+
+    Family::DataImporter.new(@family, build_ndjson([ rule_record.call("rule-1", "First", 1) ]), import_session: session).import!
+    Family::DataImporter.new(
+      @family,
+      build_ndjson([ rule_record.call("rule-2", "Second", 2), rule_record.call("rule-3", "Third", 3) ]),
+      import_session: session
+    ).import!
+
+    assert_nil first.reload.rule_group
+    assert_nil second.reload.rule_group
+    assert_nil third.reload.rule_group
+    assert_equal [ "Staying", "First", "Second", "Third" ], @family.rules.ordered.pluck(:name).last(4)
+  end
+
   test "imports rules with conditions and actions" do
     ndjson = build_ndjson([
       {
@@ -2173,6 +2573,41 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     second_rule = @family.rules.find_by!(name: "Second coffee rule")
     assert_equal category.id, first_rule.actions.first.value
     assert_equal category.id, second_rule.actions.first.value
+  end
+
+  test "points imported merchant rules at a reused provider merchant" do
+    provider_merchant = ProviderMerchant.create!(name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer")
+    value_ref = { type: "Merchant", id: "old-provider-merchant", name: "Synced Grocer" }
+
+    ndjson = build_ndjson([
+      {
+        type: "ProviderMerchant",
+        data: { id: "old-provider-merchant", name: "Synced Grocer", source: "plaid", provider_merchant_id: "plaid_synced_grocer" }
+      },
+      {
+        type: "Rule",
+        version: 1,
+        data: {
+          name: "Grocer rule",
+          resource_type: "transaction",
+          active: true,
+          conditions: [
+            { condition_type: "transaction_merchant", operator: "=", value: "Synced Grocer", value_ref: value_ref }
+          ],
+          actions: [
+            { action_type: "set_transaction_merchant", value: "Synced Grocer", value_ref: value_ref }
+          ]
+        }
+      }
+    ])
+
+    assert_no_difference -> { @family.merchants.count } do
+      Family::DataImporter.new(@family, ndjson).import!
+    end
+
+    rule = @family.rules.find_by!(name: "Grocer rule")
+    assert_equal provider_merchant.id, rule.conditions.first.value
+    assert_equal provider_merchant.id, rule.actions.first.value
   end
 
   test "reuses a merchant created for an earlier rule within the same import" do
@@ -3071,6 +3506,12 @@ class Family::DataImporterTest < ActiveSupport::TestCase
 
     def build_ndjson(records)
       records.map(&:to_json).join("\n")
+    end
+
+    def full_export_ndjson(family)
+      ndjson = nil
+      Zip::File.open_buffer(Family::DataExporter.new(family).generate_export) { |zip| ndjson = zip.read("all.ndjson") }
+      ndjson
     end
 
     # A bill, one non-monthly rule, a settled occurrence, and the payment that

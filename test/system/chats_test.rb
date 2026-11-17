@@ -45,6 +45,78 @@ class ChatsTest < ApplicationSystemTestCase
     end
   end
 
+  test "the message box shows three lines before it scrolls" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: "test-token" do
+      chat = @user.chats.first
+      @user.update!(ai_enabled: true, last_viewed_chat: chat)
+
+      visit root_url
+
+      within "#chat-container" do
+        input = find("#chat-form textarea")
+        input.send_keys("One")
+        one_line = input.evaluate_script("this.clientHeight")
+        input.send_keys([ :shift, :enter ], "Two", [ :shift, :enter ], "Three")
+        assert_equal "hidden", input.evaluate_script("getComputedStyle(this).overflowY")
+        assert_equal input.evaluate_script("this.scrollHeight"), input.evaluate_script("this.clientHeight")
+
+        three_lines = input.evaluate_script("this.clientHeight")
+        assert_operator three_lines, :>, one_line, "the box grows with its lines rather than starting at the cap"
+        input.send_keys([ :shift, :enter ], "Four")
+        assert_equal "auto", input.evaluate_script("getComputedStyle(this).overflowY")
+        assert_equal three_lines, input.evaluate_script("this.clientHeight")
+        assert_operator input.evaluate_script("this.scrollHeight"), :>, input.evaluate_script("this.clientHeight")
+      end
+    end
+  end
+
+  test "the message box sizes its three lines from its own line height" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: "test-token" do
+      chat = @user.chats.first
+      @user.update!(ai_enabled: true, last_viewed_chat: chat)
+
+      visit root_url
+
+      within "#chat-container" do
+        input = find("#chat-form textarea")
+        input.execute_script("this.style.lineHeight = '30px'")
+        input.send_keys("One")
+        one_line = input.evaluate_script("this.clientHeight")
+        input.send_keys([ :shift, :enter ], "Two", [ :shift, :enter ], "Three")
+        assert_equal "hidden", input.evaluate_script("getComputedStyle(this).overflowY")
+        assert_equal input.evaluate_script("this.scrollHeight"), input.evaluate_script("this.clientHeight")
+
+        three_lines = input.evaluate_script("this.clientHeight")
+        assert_operator three_lines, :>, one_line
+        input.send_keys([ :shift, :enter ], "Four")
+        assert_equal three_lines, input.evaluate_script("this.clientHeight")
+        assert_operator input.evaluate_script("this.scrollHeight"), :>, input.evaluate_script("this.clientHeight")
+      end
+    end
+  end
+
+  test "the message box counts its own padding toward the three-line height" do
+    with_env_overrides OPENAI_ACCESS_TOKEN: "test-token" do
+      chat = @user.chats.first
+      @user.update!(ai_enabled: true, last_viewed_chat: chat)
+
+      visit root_url
+
+      within "#chat-container" do
+        input = find("#chat-form textarea")
+        input.execute_script("this.style.paddingTop = '20px'; this.style.paddingBottom = '20px'")
+        input.send_keys("One", [ :shift, :enter ], "Two", [ :shift, :enter ], "Three")
+        assert_equal "hidden", input.evaluate_script("getComputedStyle(this).overflowY")
+        assert_equal input.evaluate_script("this.scrollHeight"), input.evaluate_script("this.clientHeight")
+
+        three_lines = input.evaluate_script("this.clientHeight")
+        input.send_keys([ :shift, :enter ], "Four")
+        assert_equal three_lines, input.evaluate_script("this.clientHeight")
+        assert_operator input.evaluate_script("this.scrollHeight"), :>, input.evaluate_script("this.clientHeight")
+      end
+    end
+  end
+
   test "sidebar shows last viewed chat" do
     with_env_overrides OPENAI_ACCESS_TOKEN: "test-token" do
       chat = @user.chats.first

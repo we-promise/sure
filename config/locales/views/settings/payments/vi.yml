@@ -1,0 +1,24 @@
+---
+vi:
+  settings:
+    payments:
+      show:
+        page_title: Thanh toán
+        subscription_subtitle: Cập nhật thông tin thẻ tín dụng
+        subscription_title: Quản lý đóng góp
+        currently_on_plan: "Hiện đang dùng"
+        trialing: "Hiện đang dùng bản demo mở của %{product_name}"
+        trial_days_left:
+          one: "Dữ liệu sẽ bị xóa sau %{count} ngày"
+          other: "Dữ liệu sẽ bị xóa sau %{count} ngày"
+        not_contributing_prefix: "Bạn hiện"
+        not_contributing_emphasis: "chưa đóng góp"
+        contributions_note: "Đóng góp cho %{product_name} sẽ hiển thị ở đây."
+        manage: "Quản lý"
+        choose_level: "Chọn mức"
+        payment_via_stripe: "Thanh toán qua Stripe"
+  views:
+    settings:
+      payments:
+        renewal: "Đóng góp của bạn tiếp tục vào ngày %{date}."
+        cancellation: "Đóng góp của bạn kết thúc vào ngày %{date}."

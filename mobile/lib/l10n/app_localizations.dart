@@ -1388,6 +1388,12 @@ abstract class AppLocalizations {
   /// **'Failed to delete chats'**
   String get chatListDeleteFailed;
 
+  /// Banner on the chat list screen when some pages of chats failed to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Some chats may be missing. The list didn\'t finish loading.'**
+  String get chatListIncomplete;
+
   /// Error-state heading on the chat list screen.
   ///
   /// In en, this message translates to:

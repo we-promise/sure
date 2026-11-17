@@ -179,13 +179,22 @@ class IndexaCapitalItemsController < ApplicationController
     account_ids = Array(params[:account_ids]).reject(&:blank?)
     sync_start_dates = params[:sync_start_dates] || {}
 
+    # Accounts the form showed but the user left unchecked are skipped for good, so
+    # they stop resurfacing as "needs setup" and the importer stops fetching them.
+    skipped_ids = Array(params[:setup_account_ids]).reject(&:blank?) - account_ids
+    skipped_count = @indexa_capital_item.unlinked_indexa_capital_accounts.where(id: skipped_ids).to_a.count(&:ignore!)
+    @indexa_capital_item.update!(pending_account_setup: @indexa_capital_item.unlinked_accounts_count.positive?) if skipped_count > 0
+
     if account_ids.empty?
-      redirect_to setup_accounts_indexa_capital_item_path(@indexa_capital_item), alert: t(".no_accounts")
+      if skipped_count > 0
+        redirect_to accounts_path, notice: t(".all_skipped")
+      else
+        redirect_to setup_accounts_indexa_capital_item_path(@indexa_capital_item), alert: t(".no_accounts")
+      end
       return
     end
 
     created_count = 0
-    skipped_count = 0
 
     account_ids.each do |indexa_capital_account_id|
       indexa_capital_account = @indexa_capital_item.indexa_capital_accounts.find_by(id: indexa_capital_account_id)
@@ -314,28 +323,7 @@ class IndexaCapitalItemsController < ApplicationController
       provider = indexa_capital_item.indexa_capital_provider
       return unless provider
 
-      accounts_data = provider.list_accounts
-
-      accounts_data.each do |account_data|
-        account_number = account_data[:account_number].to_s
-        next if account_number.blank?
-
-        # Fetch current balance from performance endpoint
-        balance = provider.get_account_balance(account_number: account_number)
-        account_data[:current_balance] = balance
-      rescue => e
-        Rails.logger.warn "IndexaCapitalItemsController - Failed to fetch balance for #{account_number}: #{e.message}"
-      end
-
-      accounts_data.each do |account_data|
-        account_number = account_data[:account_number].to_s
-        next if account_number.blank?
-
-        indexa_capital_account = indexa_capital_item.indexa_capital_accounts.find_or_initialize_by(
-          indexa_capital_account_id: account_number
-        )
-        indexa_capital_account.upsert_from_indexa_capital!(account_data)
-      end
+      IndexaCapitalItem::Importer.new(indexa_capital_item, indexa_capital_provider: provider).import_accounts
     rescue Provider::IndexaCapital::AuthenticationError => e
       Rails.logger.error "IndexaCapitalItemsController - Auth failed during sync: #{e.message}"
       flash.now[:alert] = t("indexa_capital_items.select_accounts.api_error", message: e.message)
