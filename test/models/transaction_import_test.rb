@@ -405,7 +405,9 @@ class TransactionImportTest < ActiveSupport::TestCase
 
     fabricated_entry.reload
     assert_equal "Incoming payment", fabricated_entry.name
-    assert_equal @import.id, fabricated_entry.import_id
+    # Like any matched entry it keeps its original import (none here), so
+    # reverting this import does not delete a leg of the transfer.
+    assert_nil fabricated_entry.import_id
     assert_nil fabricated_entry.transaction.extra["auto_generated_transfer_counterpart"]
     assert_equal fabricated_entry.entryable_id, transfer.reload.inflow_transaction_id
     assert_equal 1, loan.entries.where(date: Date.new(2024, 1, 1), amount: -500).count
