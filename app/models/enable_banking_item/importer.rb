@@ -1015,7 +1015,9 @@ class EnableBankingItem::Importer
       # A completed first fetch always leaves a payload, even an empty one, so
       # the next fetch is incremental (nil means "never fetched").
       if enable_banking_account.raw_transactions_payload.nil?
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
+        write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
+        end
       end
 
       { success: true, transactions_count: transactions_count, truncated: truncated }

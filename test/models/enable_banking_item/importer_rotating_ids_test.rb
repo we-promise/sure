@@ -232,6 +232,16 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert_equal 1, entry_count
   end
 
+  test "an empty first fetch does not overwrite a snapshot another sync stored" do
+    stale_account = EnableBankingAccount.find(@enable_banking_account.id)
+    assert_nil stale_account.raw_transactions_payload
+
+    sync([ rotating_tx("aaa") ])
+    sync([], account: stale_account)
+
+    assert_equal [ "txn_aaa" ], @enable_banking_account.raw_transactions_payload.map { |t| t.with_indifferent_access[:transaction_id] }
+  end
+
   test "an unchanged response does not rewrite the snapshot" do
     sync([ rotating_tx("aaa") ])
 
