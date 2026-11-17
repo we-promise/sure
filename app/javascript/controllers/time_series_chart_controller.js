@@ -12,6 +12,10 @@ export default class extends Controller {
     useLabels: { type: Boolean, default: true },
     useTooltip: { type: Boolean, default: true },
     selectable: { type: Boolean, default: false },
+    // Optional second line drawn dashed under the main one (e.g. an
+    // investment account's principal): { label, values: [{ date, value,
+    // value_formatted, difference_label, difference_formatted }] }.
+    comparison: { type: Object, default: {} },
   };
 
   _d3SvgMemo = null;
@@ -73,12 +77,20 @@ export default class extends Controller {
   }
 
   _normalizeDataPoints() {
+    const comparisonByDate = new Map(
+      (this.comparisonValue.values || []).map((c) => [c.date, c]),
+    );
     this._normalDataPoints = (this.dataValue.values || []).map((d) => ({
       date: parseLocalDate(d.date),
       date_formatted: d.date_formatted,
       value: d.value,
       trend: d.trend,
+      comparison: comparisonByDate.get(d.date),
     }));
+  }
+
+  get _hasComparison() {
+    return this._normalDataPoints.some((d) => d.comparison);
   }
 
   _rememberInitialContainerSize() {
@@ -133,6 +145,7 @@ export default class extends Controller {
   }
 
   _drawChart() {
+    if (this._hasComparison) this._drawComparisonLine();
     this._drawTrendline();
 
     if (this.useLabelsValue) {
@@ -166,6 +179,24 @@ export default class extends Controller {
       // "no change", consistent across light and dark (#2137).
       .attr("stroke-width", this._isFlatSeries ? 1 : this.strokeWidthValue)
       .attr("stroke-opacity", this._isFlatSeries ? 0.4 : 1);
+  }
+
+  _drawComparisonLine() {
+    const points = this._normalDataPoints.filter((d) => d.comparison);
+    this._d3Group
+      .append("path")
+      .datum(points)
+      .attr("fill", "none")
+      .attr("stroke", "var(--color-gray-400)")
+      .attr("stroke-width", 1.5)
+      .attr("stroke-dasharray", "4 4")
+      .attr(
+        "d",
+        d3
+          .line()
+          .x((d) => this._d3XScale(d.date))
+          .y((d) => this._d3YScale(Number(d.comparison.value))),
+      );
   }
 
   get _isFlatSeries() {
@@ -575,6 +606,14 @@ export default class extends Controller {
         `
         }
       </div>
+      ${
+        datum.comparison
+          ? `<div class="text-xs text-secondary mt-1 tabular-nums">
+          ${this.comparisonValue.label}: ${datum.comparison.value_formatted}
+          · ${datum.comparison.difference_label}: ${datum.comparison.difference_formatted}
+        </div>`
+          : ""
+      }
     `;
   }
 
@@ -688,8 +727,17 @@ export default class extends Controller {
   }
 
   get _d3YScale() {
-    const dataMin = d3.min(this._normalDataPoints, this._getDatumValue);
-    const dataMax = d3.max(this._normalDataPoints, this._getDatumValue);
+    const comparisons = this._normalDataPoints
+      .filter((d) => d.comparison)
+      .map((d) => Number(d.comparison.value));
+    const dataMin = Math.min(
+      d3.min(this._normalDataPoints, this._getDatumValue),
+      ...comparisons,
+    );
+    const dataMax = Math.max(
+      d3.max(this._normalDataPoints, this._getDatumValue),
+      ...comparisons,
+    );
 
     // All values identical: fall back to a fixed pad so the line sits centered.
     if (dataMin === dataMax) {

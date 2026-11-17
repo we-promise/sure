@@ -1,0 +1,136 @@
+<%# locals: (account:) %>
+
+<% summary = Account::PrincipalSummary.new(account) %>
+<% can_edit = account.permission_for(Current.user).in?([ :owner, :full_control ]) %>
+<% contributions = account.account_contributions.includes(:account_statement).order(date: :desc, created_at: :desc).limit(500) %>
+<% ai_available = AccountStatement::InvestmentDataReader.available? %>
+
+<div class="space-y-4" data-testid="principal-tab">
+  <% if summary.available? %>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <%= summary_card title: t(".principal") do %>
+        <span class="privacy-sensitive"><%= format_money(summary.principal) %></span>
+        <span class="block text-sm text-secondary"><%= t(".principal_hint") %></span>
+      <% end %>
+      <%= summary_card title: t(".earnings") do %>
+        <span class="privacy-sensitive <%= summary.earnings.negative? ? "text-destructive" : "text-success" %>"><%= format_money(summary.earnings) %></span>
+        <% if (pct = summary.return_percent) %>
+          <span class="block text-sm text-secondary"><%= t(".return_percent", percent: number_with_precision(pct, precision: 1)) %></span>
+        <% end %>
+      <% end %>
+      <%= summary_card title: t(".flows") do %>
+        <span class="privacy-sensitive"><%= format_money(summary.total_in) %></span>
+        <span class="block text-sm text-secondary privacy-sensitive"><%= t(".taken_out", amount: format_money(summary.total_out)) %></span>
+      <% end %>
+    </div>
+    <% if summary.estimated? %>
+      <p class="text-xs text-secondary px-1"><%= t(".estimated_note") %></p>
+    <% end %>
+  <% else %>
+    <div class="rounded-xl bg-container-inset p-4">
+      <p class="text-sm font-medium text-primary"><%= t(".empty_title") %></p>
+      <p class="text-sm text-secondary"><%= t(".empty_description") %></p>
+    </div>
+  <% end %>
+
+  <% if can_edit %>
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="rounded-xl bg-container-inset p-4 space-y-3">
+        <div>
+          <p class="text-sm font-medium text-primary"><%= t(".documents_title") %></p>
+          <p class="text-xs text-secondary"><%= ai_available ? t(".documents_description") : t(".documents_no_ai") %></p>
+        </div>
+        <% if ai_available %>
+          <%= styled_form_with url: upload_account_account_contributions_path(account), multipart: true, class: "space-y-2", data: { turbo: false } do |form| %>
+            <%= form.file_field :files, multiple: true, accept: ".pdf", label: t(".statement_files") %>
+            <%= form.submit t(".upload_and_read") %>
+          <% end %>
+          <%= button_to t(".read_existing"), read_statements_account_account_contributions_path(account),
+                        class: "text-sm font-medium text-primary underline" %>
+        <% end %>
+        <%= styled_form_with url: import_account_account_contributions_path(account), multipart: true, class: "space-y-2 pt-2 border-t border-divider", data: { turbo: false } do |form| %>
+          <%= form.file_field :file, accept: ".csv", label: t(".csv_file") %>
+          <p class="text-xs text-secondary">
+            <%= t(".csv_hint") %>
+            <%= link_to t(".csv_template"), template_account_account_contributions_path(account), class: "underline" %>
+          </p>
+          <%= form.submit t(".import_csv") %>
+        <% end %>
+      </div>
+
+      <div class="rounded-xl bg-container-inset p-4 space-y-3">
+        <p class="text-sm font-medium text-primary"><%= t(".add_title") %></p>
+        <%= styled_form_with model: AccountContribution.new(date: Date.current), url: account_account_contributions_path(account), class: "space-y-2" do |form| %>
+          <div class="grid grid-cols-2 gap-2">
+            <%= form.date_field :date, label: t(".date"), required: true %>
+            <%= form.number_field :amount, label: t(".amount"), step: "0.01", required: true %>
+          </div>
+          <%= form.select :kind, AccountContribution::KINDS.map { |k| [ t(".kinds.#{k}"), k ] }, { label: t(".kind") } %>
+          <%= form.text_field :description, label: t(".description") %>
+          <%= form.number_field :principal_amount, label: t(".principal_amount"), step: "0.01" %>
+          <p class="text-xs text-secondary -mt-1"><%= t(".principal_amount_hint") %></p>
+          <%= form.submit t(".add") %>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="rounded-xl bg-container-inset p-1">
+    <div class="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-secondary uppercase">
+      <p><%= t(".history_title") %></p>
+      <span class="text-subdued">&middot;</span>
+      <p><%= contributions.size %></p>
+    </div>
+    <div class="bg-container rounded-lg shadow-border-xs overflow-x-auto">
+      <% if contributions.any? %>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs uppercase font-medium text-secondary border-b border-divider">
+              <th class="px-3 py-2 text-left"><%= t(".date") %></th>
+              <th class="px-3 py-2 text-left"><%= t(".kind") %></th>
+              <th class="px-3 py-2 text-left"><%= t(".description") %></th>
+              <th class="px-3 py-2 text-left"><%= t(".source") %></th>
+              <th class="px-3 py-2 text-right"><%= t(".amount") %></th>
+              <th class="px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% contributions.each do |contribution| %>
+              <tr id="<%= dom_id(contribution) %>" class="border-b border-subdued last:border-0">
+                <td class="px-3 py-2 whitespace-nowrap text-primary"><%= l(contribution.date, format: :long) %></td>
+                <td class="px-3 py-2 text-secondary"><%= t(".kinds.#{contribution.kind}") %></td>
+                <td class="px-3 py-2 text-secondary">
+                  <%= contribution.description %>
+                  <% if contribution.estimated? %><span class="text-xs text-subdued">(<%= t(".estimated") %>)</span><% end %>
+                </td>
+                <td class="px-3 py-2 text-secondary">
+                  <% if contribution.account_statement %>
+                    <%= link_to contribution.account_statement.filename, account_statement_path(contribution.account_statement), class: "underline", data: { turbo_frame: "_top" } %>
+                  <% else %>
+                    <%= t(".sources.#{contribution.source}") %>
+                  <% end %>
+                </td>
+                <td class="px-3 py-2 text-right whitespace-nowrap privacy-sensitive <%= contribution.outflow? ? "text-destructive" : "text-primary" %>">
+                  <%= format_money(contribution.amount_money) %>
+                  <% if contribution.principal_amount.present? %>
+                    <span class="block text-xs text-secondary"><%= t(".counts_as", amount: format_money(contribution.principal_amount_money)) %></span>
+                  <% end %>
+                </td>
+                <td class="px-3 py-2 text-right">
+                  <% if can_edit %>
+                    <%= button_to account_contribution_path(contribution), method: :delete, class: "inline-flex items-center",
+                                  aria: { label: t(".delete") }, data: { turbo_confirm: t(".delete_confirm") } do %>
+                      <%= icon("trash-2", size: "sm", color: "destructive") %>
+                    <% end %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% else %>
+        <p class="px-4 py-6 text-sm text-secondary text-center"><%= t(".no_records") %></p>
+      <% end %>
+    </div>
+  </div>
+</div>

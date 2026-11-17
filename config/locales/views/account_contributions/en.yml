@@ -1,0 +1,53 @@
+---
+en:
+  account_contributions:
+    create:
+      created: Contribution added
+    destroy:
+      deleted: Contribution deleted
+    tab:
+      add: Add
+      add_title: Add a contribution or withdrawal
+      amount: Amount
+      counts_as: "Counts as %{amount} contributed"
+      csv_file: CSV file
+      csv_hint: "Columns: date, amount (negative for money out), kind, description. Optional: principal."
+      csv_template: Download a template
+      date: Date
+      delete: Delete
+      delete_confirm: Delete this record?
+      description: Description
+      documents_description: Upload statements as PDFs and the AI provider reads the contributions, employer match, rollovers and withdrawals from them. Uploads also appear on the Statements tab.
+      documents_no_ai: Reading PDFs needs an AI provider (Settings → AI). Without one, import a CSV or add records by hand.
+      documents_title: Add from documents
+      earnings: Growth
+      empty_description: Add the money that went into and out of this account (contributions, employer match, rollovers, withdrawals) to see how much of its value you put in and how much is growth. Upload statements, import a CSV, or add records below.
+      empty_title: No contributions yet
+      estimated: estimated
+      estimated_note: Some records are estimates, so growth is approximate.
+      flows: Total put in
+      history_title: Contributions and withdrawals
+      import_csv: Import CSV
+      kind: Type
+      kinds:
+        contribution: Contribution
+        employer_contribution: Employer contribution
+        rollover: Rollover
+        transfer_in: Transfer in
+        transfer_out: Transfer out
+        withdrawal: Withdrawal
+      no_records: Nothing recorded yet.
+      principal: Contributed
+      principal_amount: Counts as contributed (optional)
+      principal_amount_hint: For a transfer from another account, the part that was contributed there. Leave blank to count the whole amount.
+      principal_hint: Net amount put in
+      read_existing: Read statements already uploaded to this account
+      return_percent: "%{percent}% on what was contributed"
+      source: Source
+      sources:
+        csv: CSV import
+        manual: Added by hand
+        statement: Statement
+      statement_files: Statement PDFs
+      taken_out: "%{amount} taken out"
+      upload_and_read: Upload and read

@@ -178,6 +178,8 @@ class Account < ApplicationRecord
   normalizes :institution_domain, with: ->(value) { normalize_institution_domain(value) }
   # No dependent: option; before_destroy captures IDs, after_destroy_commit moves statements back to inbox.
   has_many :account_statements
+  has_many :account_contributions, dependent: :destroy
+  has_many :equity_grants, dependent: :destroy
 
   delegated_type :accountable, types: Accountable::TYPES, dependent: :destroy
   delegate :subtype, to: :accountable, allow_nil: true

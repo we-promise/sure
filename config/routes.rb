@@ -759,6 +759,25 @@ Rails.application.routes.draw do
     end
 
     resource :sharing, only: [ :show, :update ], controller: "account_sharings"
+
+    resources :account_contributions, only: %i[create destroy] do
+      collection do
+        post :import
+        post :upload
+        post :read_statements
+        get :template
+      end
+    end
+
+    resources :equity_grants, only: %i[create update destroy] do
+      collection do
+        post :import
+        post :upload
+        post :read_statements
+        get :template
+      end
+      resources :equity_vests, only: %i[create destroy]
+    end
   end
 
   resources :account_statements, only: %i[index show create update destroy] do

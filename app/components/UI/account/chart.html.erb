@@ -112,7 +112,11 @@
           class="w-full h-full privacy-sensitive"
           data-controller="time-series-chart"
           data-time-series-chart-selectable-value="true"
-          data-time-series-chart-data-value="<%= series.to_json %>"></div>
+          data-time-series-chart-data-value="<%= series.to_json %>"
+          <% if (comparison = principal_comparison) %>
+          data-time-series-chart-comparison-value="<%= comparison.to_json %>"
+          <% end %>></div>
+
         <% else %>
           <div class="w-full h-full flex items-center justify-center">
             <p class="text-secondary text-sm"><%= t("UI.account.chart.no_data_available") %></p>

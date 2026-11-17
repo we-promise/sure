@@ -195,6 +195,33 @@ class UI::Account::Chart < ApplicationComponent
     @series ||= account.balance_series(period: period, view: view)
   end
 
+  # Principal under the balance line, for an investment account with recorded
+  # contributions. Nil for every other chart.
+  def principal_comparison
+    return @principal_comparison if defined?(@principal_comparison)
+
+    @principal_comparison = begin
+      summary = Account::PrincipalSummary.new(account)
+      if view == "balance" && account.investment&.tracks_contributions? && summary.available? && series.values.any?
+        points = summary.series_values(series.values.map(&:date))
+        by_date = points.index_by { |p| p[:date] }
+        {
+          label: I18n.t("UI.account.chart.contributed"),
+          values: series.values.map do |v|
+            principal = Money.new(by_date[v.date][:value], account.currency)
+            {
+              date: v.date.iso8601,
+              value: principal.amount.to_f,
+              value_formatted: principal.format,
+              difference_label: I18n.t("UI.account.chart.growth"),
+              difference_formatted: (v.value - principal).format
+            }
+          end
+        }
+      end
+    end
+  end
+
   # Current total unrealized gains, taken from the series so the main indicator
   # always matches the last point of the chart (there is no stored gains column).
   def gains_money

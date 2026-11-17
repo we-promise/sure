@@ -87,6 +87,8 @@ en:
           legend: Chart series
           since_start: since the loan started
         no_data_available: "No data available"
+        contributed: Contributed (dashed line)
+        growth: Growth
         title:
           balance: Balance
           cash_value: Cash value
