@@ -108,6 +108,34 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
     assert_equal [ @date ], @account.syncs.pluck(:window_start_date)
   end
 
+  # A trade that moves shares without cash (a transfer or split, imported at
+  # amount 0) still prices its security in the trade's currency for the
+  # holdings built from it, at 1:1 without a rate -- with no provider price
+  # and the holding kept in the account's currency, only the trade shows it.
+  test "an account with a zero-amount trade priced in the changed currency is synced" do
+    security = Security.create!(ticker: "EURT#{SecureRandom.hex(3)}", name: "EUR transfer")
+    trade_date = @date + 2.days
+    eur_share_transfer(account: @account, security: security, date: trade_date, qty: 10)
+    @account.holdings.create!(security: security, date: trade_date, qty: 10, price: 50, amount: 500, currency: "USD")
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
+
+    ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
+
+    assert_equal [ trade_date ], @account.syncs.pluck(:window_start_date)
+  end
+
+  # A trade with no shares (interest, a dividend) prices nothing: the holdings
+  # skip it, so a rate for its currency changes nothing it fed.
+  test "a zero-quantity trade in the changed currency does not sync its account" do
+    security = Security.create!(ticker: "EURI#{SecureRandom.hex(3)}", name: "EUR income")
+    eur_share_transfer(account: @account, security: security, date: @date, qty: 0)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
+
+    assert_no_difference "Sync.count" do
+      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @date, stored_at: Time.current } ])
+    end
+  end
+
   # A running sync cannot widen its window, so it is asked for a full resync
   # when it finishes rather than having the request dropped.
   test "an account already syncing is resynced in full after it finishes" do
@@ -175,6 +203,11 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
 
     def eur_deposit(account:, date:, amount:)
       account.entries.create!(name: "EUR deposit", date: date, amount: -amount, currency: "EUR", entryable: Transaction.new)
+    end
+
+    def eur_share_transfer(account:, security:, date:, qty:)
+      account.entries.create!(name: "EUR transfer", date: date, amount: 0, currency: "EUR",
+                              entryable: Trade.new(security: security, qty: qty, price: 50, currency: "EUR"))
     end
 
     def closing_balance(account)

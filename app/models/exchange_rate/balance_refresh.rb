@@ -9,11 +9,11 @@
 # something else happened to sync the account.
 #
 # Given the rates a write newly stored, this syncs every account with an entry,
-# or a holding priced in that currency, that had no usable rate before them:
-# every usable rate in its lookback is one of the new ones, or was stored after
-# them by another write, whose own refresh counts these as already there. A
-# rate following yesterday's, which the conversion already had, changes
-# nothing here. Synced from the earliest such date. Run from
+# a holding or a trade priced in that currency that had no usable rate before
+# them: every usable rate in its lookback is one of the new ones, or was stored
+# after them by another write, whose own refresh counts these as already
+# there. A rate following yesterday's, which the conversion already had,
+# changes nothing here. Synced from the earliest such date. Run from
 # ExchangeRateBalanceRefreshJob, never inside the write, which can sit in a
 # sync's open transaction.
 class ExchangeRate::BalanceRefresh
@@ -89,10 +89,12 @@ class ExchangeRate::BalanceRefresh
 
     # What a balance converted from `from` into an account kept in `to`: an
     # entry already applied (a day of headroom past today, since a sync reads
-    # today in the family's zone), or a holding whose security is priced in
-    # `from` -- at a date whose lookback holds a new rate and no other usable
-    # one stored before it, so the conversion found none before. A rate
-    # another write stored later is not one the balance had.
+    # today in the family's zone), a holding whose security is priced in
+    # `from`, or a trade priced in `from` with shares in it, which
+    # Holding::PortfolioCache prices the security from even at amount 0 (a
+    # transfer or split) -- at a date whose lookback holds a new rate and no
+    # other usable one stored before it, so the conversion found none before.
+    # A rate another write stored later is not one the balance had.
     def affected_accounts(from, to, dates, stored_at)
       sql = <<~SQL
         SELECT converted.account_id, MIN(converted.date)
@@ -106,6 +108,11 @@ class ExchangeRate::BalanceRefresh
             AND holdings.date BETWEEN :first_date AND :last_date
             AND (holdings.currency = :from OR EXISTS (
               SELECT 1 FROM security_prices sp WHERE sp.security_id = holdings.security_id AND sp.currency = :from))
+          UNION ALL
+          SELECT entries.account_id, entries.date FROM entries
+          JOIN trades ON entries.entryable_type = 'Trade' AND trades.id = entries.entryable_id
+          WHERE trades.currency = :from AND trades.qty <> 0
+            AND entries.date BETWEEN :first_date AND LEAST(:last_date, CAST(:today AS date))
         ) converted
         JOIN accounts ON accounts.id = converted.account_id AND accounts.currency = :to
         WHERE EXISTS (SELECT 1 FROM exchange_rates r
