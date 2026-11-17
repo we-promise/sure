@@ -68,6 +68,15 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert user.reload.preview_features_enabled?
   end
 
+  test "changing preview features syncs the manual loans" do
+    loan_account = accounts(:loan)
+    assert loan_account.manual?
+
+    assert_difference -> { loan_account.syncs.count }, 1 do
+      patch settings_preferences_url, params: { user: { preview_features_enabled: "1" } }
+    end
+  end
+
   test "update toggles preview_features_enabled off" do
     user = users(:family_admin)
     user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
@@ -106,5 +115,34 @@ class Settings::PreferencesControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_not_includes response.body, I18n.t("settings.preferences.show.household_budget_enabled")
     assert_not_includes response.body, I18n.t("settings.preferences.show.budget_sharing_title")
+  end
+
+  test "admins with preview access see the manual reconciliation toggle" do
+    user = users(:family_admin)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']"
+    assert_match I18n.t("settings.preferences.show.manual_reconciliation"), response.body
+  end
+
+  test "hides the manual reconciliation toggle without preview access" do
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']", count: 0
+  end
+
+  test "members with preview access do not see the manual reconciliation toggle" do
+    user = users(:family_member)
+    user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true))
+    sign_in user
+
+    get settings_preferences_url
+
+    assert_response :success
+    assert_select "input[name='user[family_attributes][manual_reconciliation]']", count: 0
   end
 end

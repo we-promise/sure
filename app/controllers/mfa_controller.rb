@@ -13,7 +13,8 @@ class MfaController < ApplicationController
   def create
     # A duplicate submit of the enrollment form lands here again after the
     # first one already enabled MFA; it (or any stray POST) must not fall
-    # through to disable_mfa! and tear a finished setup down.
+    # through to disable_mfa! and tear a finished setup down with no audit
+    # trail.
     return redirect_to root_path if Current.user.otp_required?
 
     unless password_confirmed?
@@ -26,7 +27,10 @@ class MfaController < ApplicationController
 
     case Current.user.verify_otp(params[:code])
     when :accepted
-      @backup_codes = Current.user.enable_mfa!
+      ActiveRecord::Base.transaction do
+        @backup_codes = Current.user.enable_mfa!
+        SecurityAuditLog.log_mfa_enabled!(user: Current.user, request: request, actor: Current.true_user)
+      end
       render :backup_codes
     when :replayed
       # Correct code, but its time step was already claimed by a concurrent
@@ -37,6 +41,8 @@ class MfaController < ApplicationController
       Current.user.disable_mfa!
       redirect_to new_mfa_path, alert: t(".invalid_code")
     end
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::ActiveRecordError
+    redirect_to new_mfa_path, alert: t(".setup_failed")
   end
 
   def verify
@@ -139,7 +145,20 @@ class MfaController < ApplicationController
     end
 
     Current.user.disable_mfa!
+
+    # Log-and-continue, not transactional: a security control the user is
+    # actively trying to turn off (e.g. because they believe it's
+    # compromised) shouldn't stay on just because the audit write failed.
+    # Mirrors Settings::ApiKeysController#destroy.
+    begin
+      SecurityAuditLog.log_mfa_disabled!(user: Current.user, request: request, actor: Current.true_user)
+    rescue ActiveRecord::ActiveRecordError => e
+      Rails.logger.error("[Mfa] Failed to write audit log for disabled MFA (user #{Current.user.id}): #{e.message}")
+    end
+
     redirect_to settings_security_path, notice: t(".success")
+  rescue ActiveRecord::RecordInvalid
+    redirect_to settings_security_path, alert: t(".failure")
   end
 
   private

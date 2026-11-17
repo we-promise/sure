@@ -1,5 +1,5 @@
 <%# Renders a breakdown table for income or expense groups %>
-<%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction, start_date, end_date %>
+<%# Local variables: groups, total, type (:income or :expense), amount_sort_params, current_sort_by, current_sort_direction, start_date, end_date, filter_tags %>
 
 <%
   color_class = type == :income ? "text-success" : "text-primary"
@@ -17,7 +17,7 @@
   <%
     rows = groups.flat_map do |group|
       [ group.merge(level: :category), *Array(group[:subcategories]).map { |subcategory| subcategory.merge(level: :subcategory) } ]
-    end.map { |item| item.merge(href: breakdown_transactions_path(item, start_date, end_date)) }
+    end.map { |item| item.merge(href: breakdown_transactions_path(item, start_date, end_date, tags: local_assigns[:filter_tags] || [])) }
     amount_header = link_to reports_path(amount_sort_params), class: "inline-flex items-center gap-1 hover:text-primary" do
       concat t("reports.transactions_breakdown.table.amount")
       concat icon(current_sort_direction == "desc" ? "chevron-down" : "chevron-up", class: "w-3 h-3") if current_sort_by == "amount"

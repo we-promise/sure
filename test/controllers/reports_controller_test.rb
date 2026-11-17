@@ -4,6 +4,8 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   include EntriesTestHelper
   include SqlQueryCapture
 
+  TAGGED_MONTH = Date.new(2021, 3, 1)
+
   setup do
     sign_in @user = users(:family_admin)
     @family = @user.family
@@ -22,6 +24,22 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal %w[transactions_breakdown trends_insights], keys.first(2)
     assert_select "[data-section-key=trends_insights][data-reports-section-collapsed-value=?]", "true"
     assert_select "[data-section-key=transactions_breakdown][data-reports-section-collapsed-value=?]", "false"
+    assert_select "[data-section-key=trends_insights] > details:not([open])"
+    assert_select "[data-section-key=transactions_breakdown] > details[open]"
+  end
+
+  # Reports renders the shared section list with its own endpoint, param and
+  # labels, and leaves the collapse control on its default endpoint.
+  test "the section list posts to the reports endpoint under the reports keys" do
+    get reports_path
+
+    assert_response :success
+    assert_select "[data-controller~=sortable-list][data-sortable-list-url-value=?][data-sortable-list-param-value=?][aria-label=?]",
+                  update_preferences_reports_path, "preferences.reports_section_order", I18n.t("reports.index.sections_aria")
+    assert_select "[data-section-key=net_worth][aria-label=?]",
+                  "#{I18n.t("reports.net_worth.title")} section. Press Enter or Space to grab for reordering, then use arrow keys to move."
+    assert_select "[data-section-key=net_worth] > details > summary h2", text: I18n.t("reports.net_worth.title")
+    assert_select "[data-reports-section-url-value], [data-reports-section-preference-key-value]", count: 0
   end
 
   test "the reports preferences endpoint stores order and collapse under the reports keys" do
@@ -35,6 +53,36 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     @user.reload
     assert_equal %w[trends_insights net_worth], @user.preferences["reports_section_order"]
     assert_equal({ "net_worth" => true, "trends_insights" => true }, @user.preferences["reports_collapsed_sections"])
+  end
+
+  test "a scalar section order is not stored and the page still renders" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_section_order" => %w[trends_insights net_worth]))
+
+    patch update_preferences_reports_path, params: { preferences: { reports_section_order: "x" } }, as: :json
+
+    assert_response :ok
+    assert_equal %w[trends_insights net_worth], @user.reload.preferences["reports_section_order"]
+
+    get reports_path
+    assert_response :success
+  end
+
+  test "a scalar collapsed set is not stored" do
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_collapsed_sections" => { "net_worth" => true }))
+
+    patch update_preferences_reports_path, params: { preferences: { reports_collapsed_sections: "net_worth" } }, as: :json
+
+    assert_response :ok
+    assert_equal({ "net_worth" => true }, @user.reload.preferences["reports_collapsed_sections"])
+  end
+
+  test "a preferences body that is not an object is refused and writes nothing" do
+    before = @user.reload.preferences
+
+    patch update_preferences_reports_path, params: { preferences: "x" }, as: :json
+
+    assert_response :bad_request
+    assert_equal before, @user.reload.preferences
   end
 
   # The per-trade line under the realised-gains card rendered
@@ -99,6 +147,102 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert line, "the disposal must be listed at all, or this proves nothing"
     assert_match "$50.00", line
     assert_no_match(/\$40\.00/, line, "$40.00 is the GBP figure converted at parity")
+  end
+
+  # No JPY->USD rate for the day of a disposal in a JPY account. The gain is
+  # ¥100,000 and there is nothing to convert it with: converted at 1 it read
+  # as $100,000.00 (#3640). It is left out of the total, its own line shows no
+  # figure, and the card says a gain is missing.
+  test "a disposal with no rate into family currency is left out and the card says so" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPX#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+    create_trade(security, account: account, qty: -2, date: date, price: 150_000, currency: "JPY")
+
+    get reports_path
+    assert_response :ok
+
+    line = css_select("[data-testid='realized-gain-line']").map(&:text)
+                                                           .find { |text| text.include?(security.ticker) }
+
+    assert line, "the disposal must be listed at all, or this proves nothing"
+    assert_no_match(/\$100,000\.00/, line, "$100,000.00 is the yen figure converted at parity")
+    assert_select "[data-testid='unconverted-gains-note']", text: /no exchange rate to USD/
+    assert_no_match(/\$100,000\.00/, response.body, "nor is it in any total")
+  end
+
+  # A sale priced in EUR from a USD position, with no EUR->USD rate on any
+  # date: Trade has no figure for it. The card used to skip it as though it
+  # had no cost basis, so its total was partial without saying so.
+  test "a sale with no rate between its own currencies is counted as left out" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    date = Date.current.beginning_of_month
+    account = @family.accounts.create!(name: "Brokerage USD", balance: 10_000,
+                                       currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "EUX#{SecureRandom.hex(3)}", name: "Euro Listed")
+    ExchangeRate.where(from_currency: "EUR", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: date, qty: 5, price: 150,
+                             amount: BigDecimal(750), currency: "USD", cost_basis: 100)
+    create_trade(security, account: account, qty: -2, date: date, price: 150, currency: "EUR")
+
+    get reports_path
+    assert_response :ok
+
+    assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
+  end
+
+  # The same for an open position: a JPY holding showing a ¥250,000 gain with
+  # no JPY->USD rate is not $250,000 of unrealised gain. At parity the gains
+  # card and the Total Return card both read $250,010.00, the yen figure plus
+  # the fixtures' $10, and Portfolio Value read $1,020,000.00.
+  test "a holding with no rate into family currency is left out of unrealised gains" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPX#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    account.holdings.create!(security: security, date: Date.current, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+
+    get reports_path
+    assert_response :ok
+
+    assert_no_match(/\$250,0\d\d\.\d\d/, response.body, "the yen gain is in a total, converted at parity")
+    assert_no_match(/\$1,020,000\.00/, response.body, "the yen account is in Portfolio Value, converted at parity")
+    assert_select "[data-testid='unconverted-gains-note']", text: /1 gain is not included/
+    assert_select "[data-testid='missing-exchange-rates']", text: /No exchange rate from JPY to USD is stored yet, so some totals may leave out amounts in JPY/
+  end
+
+  # Each holding's line under the card is the same arithmetic as the card's
+  # total: converted into family currency, or "no data" without a rate. It
+  # used to re-label the yen figure as dollars.
+  test "a holding's gain line is converted, or shows no data without a rate" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    account = @family.accounts.create!(name: "Brokerage JPY", balance: 1_000_000,
+                                       currency: "JPY", accountable: Investment.new)
+    security = Security.create!(ticker: "JPL#{SecureRandom.hex(3)}", name: "Tokyo Listed")
+    account.holdings.create!(security: security, date: Date.current, qty: 5, price: 150_000,
+                             amount: BigDecimal(750_000), currency: "JPY", cost_basis: 100_000)
+    ExchangeRate.where(from_currency: "JPY", to_currency: "USD").delete_all
+
+    get reports_path
+    line = css_select("div.pl-2").find { |div| div.text.include?(security.ticker) }
+    assert line, "the holding is listed"
+    assert_match(/#{Regexp.escape(I18n.t("reports.investment_performance.no_data"))}/, line.text)
+    assert_no_match(/\$250,000\.00/, line.text, "the yen gain re-labelled as dollars")
+
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0.0067)
+    get reports_path
+    line = css_select("div.pl-2").find { |div| div.text.include?(security.ticker) }
+    assert_match(/\$1,675\.00/, line.text, "250,000 JPY at 0.0067")
   end
 
   # The rates a page of disposals needs come from one query, not one per
@@ -695,6 +839,50 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_match(/\$100\.00/, other_investments_rows.first.text)
   end
 
+  # The summary leaves out an amount in a currency with no rate; the
+  # breakdown under it and the CSV export must leave it out too, not count
+  # ₩130,000 as $130,000.
+  test "the activity breakdown leaves out an expense in a currency with no rate" do
+    category = @family.categories.create!(name: "Won Rent", color: "#111111")
+    krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, name: "Rent", amount: 130_000, currency: "KRW", category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    assert_select "tr[data-category='category-#{category.id}']", count: 0
+    assert_no_match(/130,000/, @response.body)
+  end
+
+  test "the export leaves out an expense in a currency with no rate" do
+    category = @family.categories.create!(name: "Won Export Rent", color: "#111111")
+    krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, name: "Rent", amount: 130_000, currency: "KRW", category: category)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly,
+                                         start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    assert_response :ok
+
+    assert_no_match(/Won Export Rent/, @response.body)
+    assert_no_match(/130000/, @response.body)
+  end
+
+  # The summary uses the latest stored rate however old; the breakdown used
+  # Money#exchange_to, which looks back five days and then converts at 1.
+  test "the activity breakdown converts at a stored rate older than five days" do
+    category = @family.categories.create!(name: "Yen Rent", color: "#111111")
+    jpy = @family.accounts.create!(owner: @user, name: "Tokyo", balance: 0, currency: "JPY", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 30.days.ago.to_date, rate: 0.0067)
+    create_transaction(account: jpy, name: "Rent", amount: 10_000, currency: "JPY", category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+
+    row = css_select("tr[data-category='category-#{category.id}']").first
+    assert row, "the converted expense is listed"
+    assert_match(/\$67\.00/, row.text)
+  end
+
   test "monthly period navigation shows previous month link" do
     get reports_path(period_type: :monthly)
     assert_response :ok
@@ -792,6 +980,18 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     prev_start = Date.new(prev_year, 1, 1)
     prev_end   = Date.new(prev_year, 12, 31)
     assert_select "a[href=?]", reports_path(period_type: :ytd, start_date: prev_start, end_date: prev_end)
+  end
+
+  test "the category filter lists the category's transactions and leaves trades out" do
+    category = @family.categories.create!(name: "Filtered", color: "#123456")
+    create_transaction(account: accounts(:depository), name: "Filtered spend", amount: 42, category: category)
+    create_trade(securities(:aapl), account: accounts(:investment), qty: 1, date: Date.current, price: 100)
+
+    get reports_path(period_type: :monthly, filter_category_id: category.id)
+
+    assert_response :ok
+    assert_select "tr[data-category='category-#{category.id}']", text: /\$42\.00/
+    assert_select "tr[data-category='category-other_investments']", count: 0
   end
 
   test "ytd period navigation disables next arrow on current year" do
@@ -990,7 +1190,157 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", settings_api_keys_path, count: 0
   end
 
+  test "google sheets instructions give an export URL with the selected tags" do
+    tag = @family.tags.create!(name: "Sheets tag")
+
+    get google_sheets_instructions_reports_url(period_type: :monthly, filter_tag_ids: [ tag.id ])
+
+    assert_response :success
+    assert_includes CGI.unescapeHTML(@response.body), export_transactions_reports_url(period_type: :monthly, filter_tag_ids: [ tag.id ], format: :csv)
+  end
+
+  test "the tag filter limits the summary, trends and breakdown to transactions with any of the tags" do
+    travel, work = seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ travel.id, work.id ])
+
+    assert_response :ok
+    # $30 travel + $50 work + $20 carrying both, counted once; the $1,000
+    # "Other" expense and the untagged $500 salary are left out.
+    assert_equal "$10.00", summary_value(I18n.t("reports.summary.total_income"))
+    assert_equal "$100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+    assert_select "[data-section-key=trends_insights] tbody tr", count: 1 do
+      assert_select "td", text: "$10.00"
+      assert_select "td", text: "$100.00"
+    end
+    breakdown = css_select("[data-section-key=transactions_breakdown]").text.squish
+    assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.income")}: $10.00"
+    assert_includes breakdown, "#{I18n.t("reports.transactions_breakdown.table.expense")}: $100.00"
+  end
+
+  test "without a tag filter every transaction is counted" do
+    seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month)
+
+    assert_response :ok
+    assert_equal "$510.00", summary_value(I18n.t("reports.summary.total_income"))
+    assert_equal "$1,100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+  end
+
+  test "the tag filter leaves trades out of the breakdown" do
+    tag = @family.tags.create!(name: "Filtered tag")
+    create_transaction(account: accounts(:depository), name: "Tagged spend", amount: 42, tags: [ tag ])
+    create_trade(securities(:aapl), account: accounts(:investment), qty: 1, date: Date.current, price: 100)
+
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    assert_select "[data-section-key=transactions_breakdown] tr[data-category]", count: 1
+    assert_select "tr[data-category='category-uncategorized']", text: /\$42\.00/
+    assert_select "tr[data-category='category-other_investments']", count: 0
+  end
+
+  test "tag ids that are not the family's are ignored" do
+    seed_tagged_month
+    foreign_tag = families(:empty).tags.create!(name: "Someone else's")
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ foreign_tag.id, "not-a-uuid" ])
+
+    assert_response :ok
+    assert_equal "$1,100.00", summary_value(I18n.t("reports.summary.total_expenses"))
+    assert_select "button", text: I18n.t("reports.index.tag_filter.all")
+    assert_select "input[name='filter_tag_ids[]'][checked]", count: 0
+  end
+
+  test "the tag filter lists the family's tags and checks the selected ones" do
+    travel, work, other = seed_tagged_month
+
+    get reports_path(period_type: :monthly, filter_tag_ids: [ travel.id, work.id ])
+
+    assert_response :ok
+    assert_select "button", text: I18n.t("reports.index.tag_filter.selected", count: 2)
+    assert_select "input[name='filter_tag_ids[]'][value=?][checked]", travel.id
+    assert_select "input[name='filter_tag_ids[]'][value=?][checked]", work.id
+    assert_select "input[name='filter_tag_ids[]'][value=?]:not([checked])", other.id
+  end
+
+  test "period controls keep the tag filter" do
+    travel, = seed_tagged_month
+
+    get reports_path(period_type: :monthly, start_date: TAGGED_MONTH, end_date: TAGGED_MONTH.end_of_month,
+                     filter_tag_ids: [ travel.id ])
+
+    assert_response :ok
+    report_links = css_select("a[href^='/reports?']").map { |link| link["href"] }
+    assert_operator report_links.size, :>, 5
+    report_links.each { |href| assert_includes CGI.unescape(href), "filter_tag_ids[]=#{travel.id}", href }
+
+    get reports_path(period_type: :custom, filter_tag_ids: [ travel.id ])
+
+    assert_select "form[action='#{reports_path}'] input[type=date][name=start_date]" do |inputs|
+      form = inputs.first.ancestors("form").first
+      assert form.at_css("input[type=hidden][name='filter_tag_ids[]'][value='#{travel.id}']"), "custom range form drops the tag filter"
+    end
+  end
+
+  test "breakdown rows link to transactions filtered by category and the selected tags" do
+    tag = @family.tags.create!(name: "Linked tag")
+    category = @family.categories.create!(name: "Tagged groceries", color: "#ABCDEF")
+    create_transaction(account: accounts(:depository), name: "Groceries", amount: 42, category: category, tags: [ tag ])
+    start_date = Date.current.beginning_of_month
+    end_date = Date.current.end_of_month
+
+    get reports_path(period_type: :monthly, start_date: start_date, end_date: end_date, filter_tag_ids: [ tag.id ])
+
+    href = transactions_path(q: { categories: [ category.name ], start_date: start_date, end_date: end_date, tags: [ tag.name ] })
+    assert_select "tr[data-category='category-#{category.id}'] a[href=?]", href
+  end
+
+  test "export transactions keeps only the selected tags" do
+    tag = @family.tags.create!(name: "Export tag")
+    tagged = @family.categories.create!(name: "Export Tagged Spend", color: "#111111")
+    untagged = @family.categories.create!(name: "Export Untagged Spend", color: "#222222")
+    create_transaction(account: accounts(:depository), name: "Tagged", amount: 10, category: tagged, tags: [ tag ])
+    create_transaction(account: accounts(:depository), name: "Untagged", amount: 20, category: untagged)
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly, start_date: Date.current.beginning_of_month,
+                                         end_date: Date.current.end_of_month, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    assert_match(/Export Tagged Spend/, @response.body)
+    assert_no_match(/Export Untagged Spend/, @response.body)
+  end
+
   private
+    # Travel, Work and Other tags on a month of their own, away from the
+    # fixture transactions, with expenses of $30 (travel), $50 (work), $20
+    # (both) and $1,000 (other), and income of $10 (travel) and $500 (none).
+    def seed_tagged_month
+      travel = @family.tags.create!(name: "Travel")
+      work = @family.tags.create!(name: "Work")
+      other = @family.tags.create!(name: "Other")
+      account = accounts(:depository)
+      date = TAGGED_MONTH + 9.days
+
+      create_transaction(account: account, date: date, name: "Hotel", amount: 30, tags: [ travel ])
+      create_transaction(account: account, date: date, name: "Laptop stand", amount: 50, tags: [ work ])
+      create_transaction(account: account, date: date, name: "Airport lunch", amount: 20, tags: [ travel, work ])
+      create_transaction(account: account, date: date, name: "Rent", amount: 1000, tags: [ other ])
+      create_transaction(account: account, date: date, name: "Refund", amount: -10, tags: [ travel ])
+      create_transaction(account: account, date: date, name: "Salary", amount: -500)
+
+      [ travel, work, other ]
+    end
+
+    # The figure on the summary card headed by label.
+    def summary_value(label)
+      heading = css_select("h3").find { |node| node.text.strip == label }
+      heading.ancestors("div.bg-container").first.at_css("p.text-2xl").text.strip
+    end
+
     # Takes every fixture investment account out of the card's scope, so an
     # account the test creates is the family's only one; otherwise the
     # fixtures satisfy the visible-accounts gate on their own.
