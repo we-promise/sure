@@ -22,7 +22,8 @@ class ProviderItem::PanelComponent < ApplicationComponent
   end
 
   def panel_dom_id
-    "#{Settings::ProvidersController::FAMILY_PANELS_BY_KEY.fetch(provider_key)[:turbo_id]}-providers-panel"
+    panel = Provider::Factory.panel_declarations.find { |declaration| declaration[:key] == provider_key }
+    "#{panel.fetch(:turbo_id)}-providers-panel"
   end
 
   def form_scope
