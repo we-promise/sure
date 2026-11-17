@@ -29,6 +29,10 @@ class Ai::Comparison < ApplicationRecord
   def primary_endpoint = primary_route.to_h["endpoint"]
   def shadow_endpoint = shadow_route.to_h["endpoint"]
 
+  # What the shadow results show for each side: endpoint and model.
+  def primary_label = route_label(primary_route)
+  def shadow_label = route_label(shadow_route)
+
   # The family's category names for these categorize comparisons' values, by id.
   def self.category_names(comparisons, family)
     ids = comparisons.flat_map { [ _1.primary_value, _1.shadow_value ] }.compact
@@ -41,4 +45,7 @@ class Ai::Comparison < ApplicationRecord
     value = side == :primary ? primary_value : shadow_value
     names[value.to_s].presence || metadata.to_h["#{side}_category_name"].presence
   end
+
+  private
+    def route_label(route) = route.to_h.values_at("endpoint", "model").compact.join("/")
 end

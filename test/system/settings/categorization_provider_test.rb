@@ -75,7 +75,7 @@ class Settings::CategorizationProviderTest < ApplicationSystemTestCase
     visit settings_hosting_path
 
     assert_text "50.0% agreement across 2 sampled transactions"
-    assert_text "openai chose Groceries; jev chose Restaurants & Bars"
+    assert_text "openai/test-model chose Groceries; jev/test-model chose Restaurants & Bars"
     assert_text "confidence 0.52"
   end
 

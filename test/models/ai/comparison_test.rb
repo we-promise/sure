@@ -13,4 +13,11 @@ class Ai::ComparisonTest < ActiveSupport::TestCase
     assert_in_delta 66.67, rate, 0.01
     assert_nil family.ai_comparisons.for_feature(:detect_merchants).agreement_rate
   end
+
+  test "each side is labelled with its endpoint and model, so two models on one endpoint stay apart" do
+    comparison = Ai::Comparison.new(primary_route: { endpoint: "openrouter", model: "qwen3-8b" },
+                                    shadow_route: { endpoint: "openrouter", model: "gpt-4.1-mini" })
+
+    assert_equal [ "openrouter/qwen3-8b", "openrouter/gpt-4.1-mini" ], [ comparison.primary_label, comparison.shadow_label ]
+  end
 end
