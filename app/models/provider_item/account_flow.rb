@@ -8,7 +8,9 @@
 # connection model needs `active`, `with_credentials` and `ordered` scopes and
 # `credentials_configured?`; its provider account class stores the provider's
 # id in `account_id` and answers `name_for`, `currency_for` and
-# `default_accountable_attributes` for a payload.
+# `default_accountable_attributes` for a payload. Setup creates accounts from a
+# provider account's `name`, `current_balance` and `currency` columns and reads
+# its `account_provider` association.
 class ProviderItem::AccountFlow
   require_dependency "provider_item/account_flow/setup"
 
