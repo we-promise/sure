@@ -30,6 +30,18 @@ class Assistant::Function::GetAccountsTest < ActiveSupport::TestCase
     end
   end
 
+  test "says how available each account's money is" do
+    cd = accounts(:depository)
+    cd.update!(subtype: "cd", available_on: Date.current + 90)
+
+    payload = @fn.call[:accounts].find { |account| account[:id] == cd.id }
+
+    assert_equal "cd", payload[:subtype]
+    assert_equal "locked", payload[:liquidity]
+    assert_equal Date.current + 90, payload[:available_on]
+    assert_equal false, payload[:available_now]
+  end
+
   test "excludes hidden accounts" do
     hidden = @family.accounts.visible.first
     hidden.update!(status: "disabled")

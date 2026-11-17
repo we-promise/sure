@@ -42,6 +42,24 @@ class BalanceSheet
     net_worth_series_builder.net_worth_series(period: period)
   end
 
+  # The same accounts split by availability (Account::Liquidity), evaluated
+  # on the family's "today" unless a date is given.
+  def liquidity(date: Account.liquidity_today_for(family))
+    @liquidity ||= {}
+    @liquidity[date] ||= LiquidityOverview.new(
+      asset_rows: account_totals.asset_accounts,
+      liability_rows: account_totals.liability_accounts,
+      currency: family.currency,
+      date: date
+    )
+  end
+
+  # Available net worth over time: release dates are evaluated per day with
+  # today's classification.
+  def available_net_worth_series(period: Period.last_30_days)
+    net_worth_series_builder.available_net_worth_series(period: period)
+  end
+
   def currency
     family.currency
   end

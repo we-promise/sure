@@ -67,11 +67,34 @@ account.next_release_date(today)
 Assets and liabilities are separate scopes on purpose: a combined scope would
 count credit cards as available wealth.
 
+## Overview figures
+
+`BalanceSheet#liquidity(date:)` returns a `BalanceSheet::LiquidityOverview`
+built from the balance sheet's account rows (same accounts, same converted
+balances as net worth): available and locked assets, short-term liabilities,
+available net worth, assets per level, the release timeline buckets and the
+list of upcoming releases. `BalanceSheet#available_net_worth_series` is the
+history of available net worth; a locked account enters it on its release
+date (`Balance::ChartSeriesBuilder`'s `account_active_from_dates`).
+
+The dashboard widget (`pages/dashboard/_liquidity`), the reports section
+(`reports/_liquidity`), `GET /api/v1/balance_sheet` (`availability`) and the
+assistant's `get_balance_sheet` all read these two methods; shared view
+partials live in `app/views/liquidity/`.
+
+Budget, paycheck planner, idle-cash and cash-flow insights and goals with a
+reserve ask `immediate_assets_on` instead of "every depository account". The
+savings rate insight adds `IncomeStatement#savings_contributions_total`
+(outflows of kind `investment_contribution`) back to income minus expenses,
+so saving does not lower the savings rate.
+
 ## Preview gating
 
 The columns, the migration backfill and the defaults apply to everyone; they
 change no figure on their own. Code that answers "is this money available?"
 with the scopes above must read the viewer's `preview_features_enabled?` until
-the feature is released. The form section, the header badge and the Details
-tab already do. The API account fields (`liquidity`, `available_on`,
-`available_now`) are always returned (additive).
+the feature is released. The form section, the header badge, the Details tab,
+the budget's and paycheck planner's switch from "depository" to
+`immediate_assets_on`, the dashboard widget and the reports section already
+do. Insights run only for preview families. API and assistant fields are
+always returned (additive).

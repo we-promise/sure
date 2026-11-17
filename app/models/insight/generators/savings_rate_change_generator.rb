@@ -57,7 +57,10 @@ class Insight::Generators::SavingsRateChangeGenerator < Insight::Generator
       income = income_statement.income_totals(period: period).total.to_d
       return nil if income <= 0
 
+      # Transfers into savings accounts are budget expenses, but they are
+      # money saved, not spent.
       expense = income_statement.expense_totals(period: period).total.to_d
-      (income - expense) / income * 100
+      saved = income_statement.savings_contributions_total(period: period).to_d
+      (income - expense + saved) / income * 100
     end
 end

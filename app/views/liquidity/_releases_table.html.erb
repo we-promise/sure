@@ -1,0 +1,45 @@
+<%# locals: (overview:) %>
+
+<div class="bg-container-inset rounded-xl p-1 overflow-x-auto w-full">
+  <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
+    <table class="w-full" id="liquidity-releases">
+      <caption class="sr-only"><%= t(".caption") %></caption>
+      <thead class="bg-container-inset">
+        <tr class="uppercase text-xs font-medium text-secondary">
+          <th scope="col" class="px-4 py-2 text-left font-medium"><%= t(".account") %></th>
+          <th scope="col" class="px-4 py-2 text-left font-medium"><%= t(".released_on") %></th>
+          <th scope="col" class="px-4 py-2 text-right font-medium"><%= t(".remaining") %></th>
+          <th scope="col" class="px-4 py-2 text-right font-medium"><%= t(".amount") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if overview.releases.any? %>
+          <% by_year = overview.releases_by_year %>
+          <% overview.releases.group_by { |release| release.date.year }.each do |year, releases| %>
+            <% releases.each do |release| %>
+              <tr class="table-divider">
+                <td class="py-3 px-4 text-sm font-medium text-primary">
+                  <%= link_to release.account.name, account_path(release.account) %>
+                  <% if release.auto_renew %>
+                    <span class="block text-xs text-secondary font-normal"><%= t(".renews") %></span>
+                  <% end %>
+                </td>
+                <td class="py-3 px-4 text-sm text-secondary"><%= l(release.date, format: :long) %></td>
+                <td class="py-3 px-4 text-sm text-secondary text-right"><%= liquidity_release_remaining(release) %></td>
+                <td class="py-3 px-4 text-sm font-medium text-right text-primary privacy-sensitive"><%= format_money(release.amount) %></td>
+              </tr>
+            <% end %>
+            <tr class="bg-container-inset">
+              <th scope="row" colspan="3" class="py-2 px-4 text-xs font-medium text-secondary text-left"><%= t(".year_total", year: year) %></th>
+              <td class="py-2 px-4 text-sm font-medium text-right text-primary privacy-sensitive"><%= format_money(by_year[year]) %></td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="4" class="text-sm text-subdued py-3 px-4"><%= t(".empty") %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>

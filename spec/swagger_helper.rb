@@ -2064,7 +2064,34 @@ RSpec.configure do |config|
               currency: { type: :string, description: 'Family primary currency' },
               net_worth: { '$ref' => '#/components/schemas/Money' },
               assets: { '$ref' => '#/components/schemas/Money' },
-              liabilities: { '$ref' => '#/components/schemas/Money' }
+              liabilities: { '$ref' => '#/components/schemas/Money' },
+              availability: { '$ref' => '#/components/schemas/BalanceSheetAvailability' }
+            }
+          },
+          BalanceSheetAvailability: {
+            type: :object,
+            description: 'Wealth split by account availability, evaluated on the family\'s current date',
+            required: %w[as_of available_net_worth available_assets bound_assets short_term_liabilities upcoming_releases],
+            properties: {
+              as_of: { type: :string, format: :date },
+              available_net_worth: { '$ref' => '#/components/schemas/Money', description: 'Available assets minus short-term liabilities' },
+              available_assets: { '$ref' => '#/components/schemas/Money', description: 'Assets that can be reached at short notice today' },
+              bound_assets: { '$ref' => '#/components/schemas/Money', description: 'Assets that are locked today' },
+              short_term_liabilities: { '$ref' => '#/components/schemas/Money', description: 'Credit cards and overdraft lines' },
+              upcoming_releases: {
+                type: :array,
+                items: {
+                  type: :object,
+                  required: %w[account_id account_name date amount auto_renew],
+                  properties: {
+                    account_id: { type: :string, format: :uuid },
+                    account_name: { type: :string },
+                    date: { type: :string, format: :date },
+                    amount: { '$ref' => '#/components/schemas/Money' },
+                    auto_renew: { type: :boolean }
+                  }
+                }
+              }
             }
           },
           SuccessMessage: {
