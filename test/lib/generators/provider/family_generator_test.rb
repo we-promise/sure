@@ -59,11 +59,11 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   # A template rendered as the generator renders it, with the generator's predicate
   # helpers, which a Struct cannot name.
   def render_provider_template(name, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ],
-                               class_name: "Gocardless", file_name: "gocardless")
+                               class_name: "Gocardless", file_name: "gocardless", **extra_helpers)
     helpers = {
       class_name: class_name, file_name: file_name, parsed_fields: parsed_fields,
       banking_provider?: banking, investment_provider?: !banking
-    }
+    }.merge(extra_helpers)
     context = Object.new
     helpers.each { |helper, value| context.define_singleton_method(helper) { value } }
     template = Rails.root.join("lib/generators/provider/family/templates", name).read
@@ -106,6 +106,23 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # ProviderItem::AccountFlow plucks and indexes provider accounts by account_id,
+  # as the Brex, Lunch Flow and Mercury tables name it.
+  test "the generated migration stores the provider id in account_id" do
+    [ true, false ].each do |banking|
+      migration = render_provider_template("migration.rb.tt", banking: banking, table_name: "gocardless_items", migration_version: "[7.2]")
+      model = render_provider_template("account_model.rb.tt", banking: banking)
+      importer = render_provider_template("importer.rb.tt", banking: banking)
+
+      assert_parses migration
+      assert_includes migration, "      t.string :account_id\n"
+      assert_includes migration, "add_index :gocardless_accounts, :account_id, unique: true"
+      assert_match(/^      account_id: \(data\[:id\] \|\| data\[:account_id\]\)&\.to_s,$/, model)
+      assert_includes importer, ".where.not(account_id: upstream_account_ids)"
+      [ migration, model, importer ].each { |source| assert_not_includes source, "gocardless_account_id" }
+    end
+  end
+
   # ProviderItem::Syncer and ProviderItem::Unlinking replace both scaffolds.
   test "the generator writes no syncer or unlinking concern for the item" do
     Dir.mktmpdir do |dir|
@@ -135,9 +152,6 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     flow = flow_class.allocate
 
     assert_operator flow_class, :<, ProviderItem::AccountFlow
-    assert_equal flow_class.singleton_class, flow_class.method(:cache_sensitive_params).owner
-    error = assert_raises(NotImplementedError) { flow_class.cache_sensitive_params }
-    assert_includes error.message, "TODO"
     {
       fetch_accounts: [],
       resolve_item: [ "item-id" ],
@@ -147,8 +161,25 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     }.each do |hook, args|
       assert_equal flow_class, flow_class.instance_method(hook).owner, "#{hook} is not stubbed"
       error = assert_raises(NotImplementedError, hook.to_s) { flow.send(hook, *args) }
-      assert_includes error.message, "TODO", hook.to_s
+      assert_includes error.message, "TODO: GocardlessItem::AccountFlow##{hook}", hook.to_s
     end
+  ensure
+    GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
+  end
+
+  # ProviderItemsController#update asks the flow which params expire the cached
+  # account list before saving, so this hook works without being filled in.
+  test "the generated account flow expires the account cache on the declared fields" do
+    flow_source = render_provider_template("account_flow.rb.tt", parsed_fields: [
+      { name: "api_key", type: "string", secret: true, default: nil },
+      { name: "base_url", type: "string", secret: false, default: "https://api.example.com" }
+    ])
+    assert_parses flow_source
+    GeneratedFlows.module_eval(flow_source)
+    flow_class = GeneratedFlows::GocardlessItem::AccountFlow
+
+    assert_equal flow_class.singleton_class, flow_class.method(:cache_sensitive_params).owner
+    assert_equal %i[api_key base_url], flow_class.cache_sensitive_params
   ensure
     GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
   end
@@ -363,6 +394,38 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_equal "new", permitted.call(true, submitted.merge(api_key: "new"))[:api_key]
   ensure
     GeneratedControllers.send(:remove_const, :GocardlessItemsController) if GeneratedControllers.const_defined?(:GocardlessItemsController, false)
+  end
+
+  # ProviderItemsController#update hands item_params to the account flow, which
+  # decides whether the edit expires the cached account list before saving.
+  test "editing a generated provider's connection saves before any hook is filled in" do
+    fields = [ { name: "api_key", type: "string", secret: true, default: nil }, { name: "region", type: "string", secret: false, default: nil } ]
+    GeneratedControllers.module_eval(render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless", parsed_fields: fields))
+    GeneratedFlows.module_eval(render_provider_template("account_flow.rb.tt", parsed_fields: fields))
+    controller_class = GeneratedControllers::GocardlessItemsController
+    flow_class = GeneratedFlows::GocardlessItem::AccountFlow
+    flow_class.stubs(:provider_key).returns("gocardless")
+    family = families(:dylan_family)
+    item = mock("gocardless_item")
+    item.stubs(:id).returns("item-1")
+    item.stubs(:persisted?).returns(true)
+
+    update = lambda do |submitted|
+      controller = controller_class.new
+      controller.params = ActionController::Parameters.new(gocardless_item: submitted)
+      controller.instance_variable_set(:@gocardless_item, item)
+      attributes = controller.send(:item_params)
+      item.expects(:update).with(attributes).returns(true)
+      flow_class.update_item_with_cache_expiration(item, family: family, attributes: attributes)
+    end
+
+    # A new key expires the cached accounts; a rename with the key left blank does not.
+    Rails.cache.expects(:delete).with("gocardless_accounts_#{family.id}_item-1").once
+    assert update.call(name: "Main", api_key: "new-key")
+    assert update.call(name: "Renamed", api_key: "")
+  ensure
+    GeneratedControllers.send(:remove_const, :GocardlessItemsController) if GeneratedControllers.const_defined?(:GocardlessItemsController, false)
+    GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
   end
 
   # The generated routes use the provider_items concern, so they must follow its

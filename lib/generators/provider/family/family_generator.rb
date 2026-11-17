@@ -481,7 +481,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "     app/models/#{file_name}_item/importer.rb"
     say "     - Map API response fields to account fields"
     say "     app/models/#{file_name}_item/account_flow.rb"
-    say "     - Implement each hook; they raise NotImplementedError until then"
+    say "     - Implement each private hook; they raise NotImplementedError until then"
     say ""
     say "  4. Customize the Processors:"
     if investment_provider?

@@ -99,11 +99,11 @@ class <%= class_name %>Item::Importer
 
     def import_account(account_data, credentials)
       # TODO: Customize based on your provider's account ID field
-      # <%= file_name %>_account_id = account_data[:id].to_s
-      # return if <%= file_name %>_account_id.blank?
+      # account_id = account_data[:id].to_s
+      # return if account_id.blank?
 
       # <%= file_name %>_account = <%= file_name %>_item.<%= file_name %>_accounts.find_or_initialize_by(
-      #   <%= file_name %>_account_id: <%= file_name %>_account_id
+      #   account_id: account_id
       # )
 
       # Update from API data
@@ -131,7 +131,7 @@ class <%= class_name %>Item::Importer
 
       begin
         # TODO: Implement API call to fetch holdings
-        # holdings_data = <%= file_name %>_provider.get_holdings(account_id: <%= file_name %>_account.<%= file_name %>_account_id)
+        # holdings_data = <%= file_name %>_provider.get_holdings(account_id: <%= file_name %>_account.account_id)
         holdings_data = []
 
         stats["api_requests"] = stats.fetch("api_requests", 0) + 1
@@ -158,7 +158,7 @@ class <%= class_name %>Item::Importer
 
         # TODO: Implement API call to fetch activities
         # activities_data = <%= file_name %>_provider.get_activities(
-        #   account_id: <%= file_name %>_account.<%= file_name %>_account_id,
+        #   account_id: <%= file_name %>_account.account_id,
         #   start_date: start_date,
         #   end_date: end_date
         # )
@@ -239,7 +239,7 @@ class <%= class_name %>Item::Importer
 
         # TODO: Implement API call to fetch transactions
         # transactions_data = <%= file_name %>_provider.get_transactions(
-        #   account_id: <%= file_name %>_account.<%= file_name %>_account_id,
+        #   account_id: <%= file_name %>_account.account_id,
         #   start_date: start_date,
         #   end_date: end_date
         # )
@@ -297,7 +297,7 @@ class <%= class_name %>Item::Importer
 
       # Find accounts that exist locally but not upstream
       removed = <%= file_name %>_item.<%= file_name %>_accounts
-        .where.not(<%= file_name %>_account_id: upstream_account_ids)
+        .where.not(account_id: upstream_account_ids)
 
       if removed.any?
         Rails.logger.info "<%= class_name %>Item::Importer - Pruning #{removed.count} removed accounts"
