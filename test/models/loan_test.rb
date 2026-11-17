@@ -436,7 +436,6 @@ class LoanTest < ActiveSupport::TestCase
 
     loan.update!(term_change_rows: [
       { "effective_date" => (today - 2).iso8601, "extra_repayment" => "", "balance" => "70000" },
-      { effective_date: today.iso8601, payment: "950" },
       { effective_date: today.iso8601, payment: "975" }
     ])
 
@@ -445,7 +444,25 @@ class LoanTest < ActiveSupport::TestCase
     assert_equal kept_id, changes.first.id, "a stored row with the same date is updated in place"
     assert_nil changes.first.extra_repayment, "a blanked amount is cleared"
     assert_equal BigDecimal("70000"), changes.first.balance
-    assert_equal BigDecimal("975"), changes.last.payment, "re-entering a date replaces that row"
+    assert_equal BigDecimal("975"), changes.last.payment
+  end
+
+  # Both rows came from one submit, so neither replaces the other: the form
+  # comes back with both and the stored rows stay as they were.
+  test "two term change rows with one date are refused" do
+    loan = build_running_loan_account.loan
+    day = (Date.current - 1).iso8601
+
+    loan.term_change_rows = [
+      { effective_date: day, extra_repayment: "5000" },
+      { effective_date: day, payment: "900" }
+    ]
+
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.duplicate_term_change_date")
+    assert_equal [ "5000", "900" ], loan.term_change_rows.map { |row| row[:extra_repayment].presence || row[:payment] }
+    assert_not loan.save
+    assert_empty loan.reload.term_changes
   end
 
   test "term change rows drop the memoised schedule" do

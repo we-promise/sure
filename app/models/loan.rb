@@ -327,6 +327,11 @@ class Loan < ApplicationRecord
   # same reason as #invalid_rate_changes.
   attr_reader :invalid_term_changes
 
+  # Term change rows the form submitted with a date an earlier row in the
+  # same submit already has. Refused and kept for the form, so neither row
+  # is lost.
+  attr_reader :duplicate_term_changes
+
   validate :term_changes_must_be_valid
 
   # The recorded term changes as they will be after a save, oldest first: rows
@@ -341,13 +346,14 @@ class Loan < ApplicationRecord
 
   # Replaces the loan's term changes with the form's rows, as #rate_changes=
   # does for rate changes. Keyed by effective date: a stored row with the same
-  # date is updated, the others are removed on save, and re-entering a date
-  # replaces that row.
+  # date is updated and the others are removed on save. Two rows with one
+  # date in the same submit are refused.
   #
   # The form sends a bare `term_change_rows[]` sentinel, so removing every row
   # still calls this with an empty array and clears them.
   def term_change_rows=(rows)
     invalid = []
+    duplicates = []
 
     parsed = Array(rows).each_with_object({}) do |row, acc|
       # The form's blank sentinel is a String; an import can carry anything.
@@ -358,7 +364,12 @@ class Loan < ApplicationRecord
 
       begin
         date = parse_term_change_date(values[:effective_date])
-        acc[date] = TermChange::AMOUNTS.index_with { |amount| parse_term_change_amount(values[amount]) }
+        amounts = TermChange::AMOUNTS.index_with { |amount| parse_term_change_amount(values[amount]) }
+        if acc.key?(date)
+          duplicates << values.transform_values(&:to_s)
+        else
+          acc[date] = amounts
+        end
       rescue ArgumentError, TypeError, Date::Error, FloatDomainError
         invalid << values.transform_values(&:to_s)
       end
@@ -369,6 +380,7 @@ class Loan < ApplicationRecord
     association(:term_changes).reset if @term_changes_assigned
     @term_changes_assigned = true
     @invalid_term_changes = invalid
+    @duplicate_term_changes = duplicates
 
     stored = term_changes.index_by(&:effective_date)
     parsed.each do |date, amounts|
@@ -391,7 +403,7 @@ class Loan < ApplicationRecord
         effective_date: change.effective_date.iso8601,
         **TermChange::AMOUNTS.index_with { |amount| change[amount]&.to_s("F")&.delete_suffix(".0") }
       }
-    end + Array(invalid_term_changes)
+    end + Array(duplicate_term_changes) + Array(invalid_term_changes)
   end
 
   TERM_CHANGE_ROW_FIELDS = ([ :effective_date ] + TermChange::AMOUNTS).freeze
@@ -422,7 +434,8 @@ class Loan < ApplicationRecord
   # last validation failed. A form that comes back after a rejected submit
   # opens the section on them.
   def unsaved_term_changes?
-    @term_changes_dirty == true || invalid_term_changes.present? || @term_change_refused == true
+    @term_changes_dirty == true || invalid_term_changes.present? || duplicate_term_changes.present? ||
+      @term_change_refused == true
   end
 
   # A row that could not be read, then the first row that is invalid on its
@@ -470,6 +483,7 @@ class Loan < ApplicationRecord
   # `recheck` reads the stored rows although none was assigned.
   private def term_change_refusal(recheck: false)
     return :invalid_term_change if invalid_term_changes.present?
+    return :duplicate_term_change_date if duplicate_term_changes.present?
     return unless recheck || @term_changes_assigned || will_save_change_to_start_date?
 
     origin = origination_date_for_validation
@@ -599,6 +613,7 @@ class Loan < ApplicationRecord
     @term_changes_dirty = false
     @term_change_refused = false
     @invalid_term_changes = nil
+    @duplicate_term_changes = nil
     super
   end
 

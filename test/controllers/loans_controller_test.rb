@@ -588,6 +588,28 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1, @account.loan.reload.term_changes.count
   end
 
+  test "two term change rows with one date are rejected and both come back in the form" do
+    draw_down_loan_two_years_ago
+    day = (Date.current - 1.year).iso8601
+
+    patch loan_path(@account), params: {
+      account: { accountable_attributes: {
+        id: @account.loan.id,
+        term_change_rows: [
+          "",
+          { effective_date: day, extra_repayment: "750", balance: "", payment: "" },
+          { effective_date: day, extra_repayment: "", balance: "", payment: "2500" }
+        ]
+      } }
+    }
+
+    assert_response :unprocessable_entity
+    assert_match I18n.t("activerecord.errors.models.loan.duplicate_term_change_date"), response.body
+    assert_empty @account.loan.reload.term_changes
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][extra_repayment]'][value='750']", count: 1
+    assert_select "input[name='account[accountable_attributes][term_change_rows][][payment]'][value='2500']", count: 1
+  end
+
   test "an unreadable term change is rejected and comes back in the form" do
     draw_down_loan_two_years_ago
     stored = Date.current - 1.year
