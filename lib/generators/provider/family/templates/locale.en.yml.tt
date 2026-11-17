@@ -1,6 +1,7 @@
 ---
 en:
   <%= file_name %>_items:
+    default_connection_name: "<%= class_name %> Connection"
     # Model method strings (i18n for item_model.rb)
     sync_status:
       no_accounts: "No accounts found"
@@ -15,6 +16,7 @@ en:
         other: "%{count} institutions"
     errors:
       provider_not_configured: "<%= class_name %> provider is not configured"
+      unexpected_error: "An unexpected error occurred. Please try again later."
 
     # Sync status and error messages (ProviderItem::Syncer)
     syncer:
@@ -45,8 +47,6 @@ en:
       transactions_failed:
         one: "%{count} <%= class_name %> account had transaction import failures."
         other: "%{count} <%= class_name %> accounts had transaction import failures."
-    sync:
-      success: "Sync started"
 
     # Panel (settings view)
     panel:
@@ -97,9 +97,11 @@ en:
         other: "Cannot link %{count} accounts with blank names"
       link_failed: "Failed to link accounts"
       no_accounts_selected: "Please select at least one account"
-      no_api_key: "<%= class_name %> API key not found. Please configure it in Provider Settings."
+      invalid_account_type: "Unsupported <%= class_name %> account type"
+      no_api_token: "<%= class_name %> API key not found. Please configure it in Provider Settings."
       partial_invalid: "Successfully linked %{created_count} account(s), %{already_linked_count} were already linked, %{invalid_count} account(s) had invalid names"
       partial_success: "Successfully linked %{created_count} account(s). %{already_linked_count} account(s) were already linked: %{already_linked_names}"
+      select_connection: "Choose a <%= class_name %> connection before linking accounts."
       success:
         one: "Successfully linked %{count} account"
         other: "Successfully linked %{count} accounts"
@@ -137,10 +139,12 @@ en:
       description: "Select the accounts you want to link to your %{product_name} account."
       link_accounts: "Link selected accounts"
       no_accounts_found: "No accounts found. Please check your API key configuration."
-      no_api_key: "<%= class_name %> API key is not configured. Please configure it in Settings."
+      no_api_token: "<%= class_name %> API key is not configured. Please configure it in Settings."
       no_credentials_configured: "Please configure your <%= class_name %> credentials first in Provider Settings."
       no_name_placeholder: "(No name)"
+      select_connection: "Choose a <%= class_name %> connection in Provider Settings."
       title: "Select <%= class_name %> Accounts"
+      unexpected_error: "An unexpected error occurred. Please try again later."
 
     # Select existing account view
     select_existing_account:
@@ -160,12 +164,14 @@ en:
       no_account_specified: "No account specified"
       no_accounts: "No unlinked <%= class_name %> accounts found."
       no_accounts_found: "No <%= class_name %> accounts found. Please check your API key configuration."
-      no_api_key: "<%= class_name %> API key is not configured. Please configure it in Settings."
+      no_api_token: "<%= class_name %> API key is not configured. Please configure it in Settings."
       no_credentials_configured: "Please configure your <%= class_name %> credentials first in Provider Settings."
       no_name_placeholder: "(No name)"
+      select_connection: "Choose a <%= class_name %> connection in Provider Settings."
       settings_link: "Go to Provider Settings"
       subtitle: "Choose a <%= class_name %> account"
       title: "Link %{account_name} with <%= class_name %>"
+      unexpected_error: "An unexpected error occurred. Please try again later."
 
     # Link existing account
     link_existing_account:
@@ -175,7 +181,9 @@ en:
       provider_account_already_linked: "This <%= class_name %> account is already linked to another account"
       provider_account_not_found: "<%= class_name %> account not found"
       missing_parameters: "Missing required parameters"
-      no_api_key: "<%= class_name %> API key not found. Please configure it in Provider Settings."
+      no_account_specified: "No account specified"
+      no_api_token: "<%= class_name %> API key not found. Please configure it in Provider Settings."
+      select_connection: "Choose a <%= class_name %> connection before linking accounts."
       success: "Successfully linked %{account_name} with <%= class_name %>"
 
     # Setup accounts wizard
@@ -192,7 +200,7 @@ en:
       instructions: "Select the accounts you want to import from <%= class_name %>. You can choose multiple accounts."
       no_accounts: "No unlinked accounts found from this <%= class_name %> connection."
       no_accounts_to_setup: "No Accounts to Set Up"
-      no_api_key: "<%= class_name %> API key is not configured. Please check your connection settings."
+      no_api_token: "<%= class_name %> API key is not configured. Please check your connection settings."
       select_all: "Select all"
       account_types:
         skip: "Skip this account"
@@ -267,9 +275,9 @@ en:
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       creation_failed: "Failed to create accounts: %{error}"
+      creation_failed_count: "Failed to create %{count} account(s)."
       no_accounts: "No accounts to set up."
+      partial_skipped: "Successfully created %{created_count} account(s); %{skipped_count} account(s) were skipped."
+      partial_success: "Successfully created %{created_count} account(s), but %{failed_count} account(s) failed."
       success: "Successfully created %{count} account(s)."
-
-    # Preload accounts
-    preload_accounts:
-      no_credentials_configured: "Please configure your <%= class_name %> credentials first in Provider Settings."
+      unexpected_error: "An unexpected error occurred."
