@@ -67,6 +67,11 @@ en:
         title: Shadowed
         stopped_html: "%{rule} changes nothing: %{by} stops processing on all %{count} of its matches."
         claimed_html: "%{rule} changes nothing: the %{attributes} is already set by %{by} on all %{count} of its matches."
+      overlaps:
+        title: Overlaps
+        entry_html: "%{rule} and %{other}, which runs first, both set the %{attributes}."
+        shared: "%{shared} of its %{count} matches are also matched by the rule above."
+        same_text: Their conditions name the same or contained text.
       match_nothing:
         title: Match nothing today
       failed:

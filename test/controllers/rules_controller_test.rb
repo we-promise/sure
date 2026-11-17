@@ -433,18 +433,20 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_no_match other_family_rule.id, response.body
   end
 
-  test "health report renders conflicts and shadowed rules" do
+  test "health report renders conflicts, shadowed rules and overlaps" do
     family = @user.family
     account = family.accounts.create!(name: "Health", balance: 1000, currency: "USD", accountable: Depository.new)
     create_transaction(date: Date.current, account: account, name: "Health check shop zq")
     first = create_health_rule(family, "health check shop zq", action: category_action(categories(:food_and_drink)))
     second = create_health_rule(family, "health check shop zq", action: category_action(categories(:income)))
+    contained = create_health_rule(family, "health check shop zq extra", action: category_action(categories(:income)))
 
     get health_rules_url, headers: { "Turbo-Frame" => "rule_health_report" }
 
     assert_response :success
     assert_select "[data-rule-health-entry='conflicts'] a[href='#{edit_rule_path(first)}']"
     assert_select "[data-rule-health-entry='shadowed'] a[href='#{edit_rule_path(second)}']"
+    assert_select "[data-rule-health-entry='overlaps'] a[href='#{edit_rule_path(contained)}']"
   end
 
   test "a guest can read the health report but gets no edit links" do

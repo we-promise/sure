@@ -8,6 +8,9 @@ class Rule::Health
   # exactly as written: folding it would make `\d` and `\D` look alike.
   CASE_INSENSITIVE_OPERATORS = %w[like not_like starts_with ends_with].freeze
 
+  # Conditions whose text a match must contain, compared for overlaps.
+  TEXT_OPERATORS = %w[like = starts_with ends_with].freeze
+
   # The field each condition type reads that a rule's action can change.
   CONDITION_FIELDS = {
     "transaction_name" => :name,
@@ -19,6 +22,7 @@ class Rule::Health
 
   Conflict = Data.define(:rules, :attribute, :winner)
   Shadowed = Data.define(:rule, :reason, :by, :attributes, :match_count)
+  Overlap = Data.define(:rule, :other, :attributes, :shared_count, :match_count, :same_text)
 
   attr_reader :rules
 
@@ -66,6 +70,23 @@ class Rule::Health
   def shadowed
     dry_run
     @shadowed
+  end
+
+  # Active rules below another that sets the same field on transactions both
+  # match, or whose conditions name the same or contained text and are
+  # otherwise the same. Pairs already listed as duplicates or conflicts, and
+  # shadowed rules, are left out.
+  def overlaps
+    @overlaps ||= begin
+      skipped = shadowed.map { |entry| entry.rule.id }.to_set
+      active = rules.select(&:active?).reject { |rule| failed.include?(rule) }
+
+      active.each_with_index.flat_map do |rule, index|
+        next [] if skipped.include?(rule.id)
+
+        active.first(index).filter_map { |other| overlap(rule, other) }
+      end
+    end
   end
 
   def match_nothing
@@ -161,6 +182,61 @@ class Rule::Health
         by = attributes.flat_map { |attribute| unstopped.filter_map { |id| claimed_by[attribute][id] } }.uniq
         Shadowed.new(rule: rule, reason: :claimed, by: by.sort_by { |r| position(r) }, attributes: attributes,
           match_count: unstopped.size)
+      end
+    end
+
+    def overlap(rule, other)
+      return if listed_together?(rule, other)
+
+      attributes = field_values(rule).keys & field_values(other).keys
+      return if attributes.empty?
+
+      shared = matches[rule.id] & matches[other.id]
+      same_text = same_text?(rule, other)
+      return if shared.empty? && !same_text
+
+      Overlap.new(rule: rule, other: other, attributes: attributes, shared_count: shared.size,
+        match_count: matches[rule.id].size, same_text: same_text)
+    end
+
+    def listed_together?(rule, other)
+      (duplicates + conflicts.map(&:rules)).any? { |group| group.include?(rule) && group.include?(other) }
+    end
+
+    # Only when nothing else separates them: their other conditions are the same.
+    def same_text?(rule, other)
+      return false unless conditions_besides_text(rule) == conditions_besides_text(other)
+
+      texts(rule).any? { |text| texts(other).any? { |other_text| text.include?(other_text) || other_text.include?(text) } }
+    end
+
+    # The text a match must contain, case-folded, with a merchant condition
+    # read as its merchant's name.
+    def texts(rule)
+      @texts ||= {}
+      @texts[rule.id] ||= leaf_conditions(rule).filter_map do |condition|
+        next unless TEXT_OPERATORS.include?(condition.operator)
+
+        text = case condition.condition_type
+        when "transaction_name" then condition.value
+        when "transaction_merchant" then merchant_names[condition.value.to_s]
+        end
+        text.to_s.gsub(/\s+/, " ").strip.downcase.presence
+      end
+    end
+
+    # The conditions other than the compared text, with groups flattened.
+    def conditions_besides_text(rule)
+      condition_signature(leaf_conditions(rule).reject do |condition|
+        %w[transaction_name transaction_merchant].include?(condition.condition_type) && TEXT_OPERATORS.include?(condition.operator)
+      end)
+    end
+
+    def merchant_names
+      @merchant_names ||= begin
+        ids = rules.flat_map { |rule| leaf_conditions(rule) }
+          .select { |condition| condition.condition_type == "transaction_merchant" }.map(&:value).compact_blank.uniq
+        Merchant.where(id: ids.select { |id| UuidFormat.valid?(id) }).pluck(:id, :name).to_h { |id, name| [ id.to_s, name ] }
       end
     end
 
