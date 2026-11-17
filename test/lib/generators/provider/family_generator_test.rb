@@ -139,6 +139,31 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # A blank name from a form must fall back to the default, as Brex, Lunch Flow
+  # and Mercury do: an empty string fails the item's name presence validation.
+  test "the generated connectable concern defaults a blank connection name" do
+    namespace = Module.new
+    GeneratedImporters.const_set("Run#{GeneratedImporters.constants.size}", namespace)
+    namespace.const_set(:Family, Module.new)
+    namespace.module_eval(render_provider_template("connectable_concern.rb.tt"))
+
+    family_class = Class.new do
+      def self.has_many(*) = nil
+      attr_accessor :gocardless_items
+    end
+    family_class.include(namespace::Family::GocardlessConnectable)
+    family = family_class.new
+
+    [ nil, "" ].each do |blank|
+      item = mock("item")
+      item.expects(:sync_later)
+      family.gocardless_items = mock("items")
+      family.gocardless_items.expects(:create!).with(name: "Gocardless Connection", api_key: "key").returns(item)
+
+      assert_same item, family.create_gocardless_item!(api_key: "key", item_name: blank)
+    end
+  end
+
   test "the generated item model counts every connection as credentialed when it has no secret field" do
     model = render_provider_template("item_model.rb.tt", parsed_fields: [ { name: "region", type: "string", secret: false, default: nil } ])
 
