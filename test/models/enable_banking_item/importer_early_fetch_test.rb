@@ -74,6 +74,23 @@ class EnableBankingItem::ImporterEarlyFetchTest < ActiveSupport::TestCase
     assert_equal 1, @requests.size, "an unlinked account is fetched again on a routine sync"
   end
 
+  test "an early longest fetch keeps two booked rows that share a transaction_id apart once linked" do
+    request_full_history!
+    old_row = tx("shared", "2020-03-02", amount: "12.00").merge(entry_reference: "ref_2020")
+    new_row = tx("shared", 3.days.ago.to_date.iso8601, amount: "30.00").merge(entry_reference: "ref_now")
+
+    sync_import(build_importer(transactions: [ old_row, new_row ]))
+    assert_equal "longest", @requests.first[:strategy]
+    assert_equal 2, @eba.reload.raw_transactions_payload.size
+
+    account = link!
+    EnableBankingAccount::Transactions::Processor.new(@eba).process
+
+    assert_equal 2, account.entries.count, "a row sharing a transaction_id overwrote the other"
+    assert_equal [ 12, 30 ], account.entries.order(:date).map { |entry| entry.amount.to_i }
+    assert_equal 2, account.entries.distinct.count(:external_id)
+  end
+
   test "a routine sync does not fetch unlinked accounts" do
     Sync.create!(syncable: @item, status: "completed", completed_at: 60.days.ago, created_at: 60.days.ago)
 
