@@ -38,6 +38,16 @@ class Insight::GeneratorTest < ActiveSupport::TestCase
     assert_equal ruby_shared_accounts_digest(@family), @generator.digest
   end
 
+  # The digest describes the ids the figures were computed from, not the
+  # rows still there when it is taken.
+  test "an account deleted after the figures still counts in the digest" do
+    first_ids = @generator.figure_account_ids
+
+    accounts(:depository).destroy!
+
+    assert_equal Digest::SHA256.hexdigest(first_ids.sort.join(",")), @generator.digest
+  end
+
   test "the digest of no shared account is the hash of an empty string" do
     AccountShare.where(account: @family.accounts).delete_all
 

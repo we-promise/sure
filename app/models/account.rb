@@ -138,7 +138,7 @@ class Account < ApplicationRecord
     SQL
   }
 
-  # SHA-256 of the selected account ids, in id order, joined by commas. An
+  # SHA-256 of a set of account ids, in id order, joined by commas. An
   # aggregate over no rows still yields one value, the hash of "". Insight
   # generators store it with a total and Insight.about_shared_accounts
   # recomputes it on read, so both share this one expression.

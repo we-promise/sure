@@ -71,8 +71,15 @@ class Insight::Generator
     # writes the new digest and rewrites the body (see
     # GenerateInsightsJob#upsert_insights), so prose written from the old set
     # does not outlive it.
+    #
+    # Hashed from the captured ids rather than the account rows, so an account
+    # deleted after the figures were computed still counts. The ids are
+    # aliased as accounts.id so the shared expression applies unchanged.
     def shared_accounts_digest
-      @shared_accounts_digest ||= Account.where(id: shared_account_ids).pick(Account::ID_SET_DIGEST_SQL)
+      @shared_accounts_digest ||= Account.connection.select_value(Account.sanitize_sql_array([
+        "SELECT #{Account::ID_SET_DIGEST_SQL} FROM unnest(?::uuid[]) AS accounts(id)",
+        "{#{shared_account_ids.join(",")}}"
+      ]))
     end
 
     # Recurring series follow the same rule, matching
