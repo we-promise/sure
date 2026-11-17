@@ -850,7 +850,7 @@ class EnableBankingItem::Importer
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
-      all_transactions, book_truncated, book_window_start = fetch_paginated_transactions(
+      all_transactions, book_truncated = fetch_paginated_transactions(
         enable_banking_account,
         start_date: start_date,
         transaction_status: "BOOK",
@@ -879,27 +879,27 @@ class EnableBankingItem::Importer
       end
 
       pending_transactions = []
-      pending_truncated = false
-      pending_window_start = nil
       if include_pending
         # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled.
-        # Some ASPSPs refuse PDNG with either a 400 or 422. Keep syncing booked rows
-        # and retain stored pending rows when the pending fetch was refused.
+        # The BOOK fetch above used the same date_from/date_to and succeeded, so any 422 raised here is
+        # necessarily about the transaction_status param. Different ASPSPs reject it with different bodies
+        # (e.g. ImaginV2 returns WRONG_REQUEST_PARAMETERS; others mention "transactionStatus" verbatim),
+        # so we treat every validation_error on PDNG as "ASPSP doesn't support pending" and continue with
+        # the booked transactions only. (Issue #1805)
+        # Trade Republic rejects the same request with a 400 (:bad_request) instead of a
+        # 422 (:validation_error), so both error types are treated as "PDNG unsupported". (Issue #392)
         begin
           # Pending rows are only a few days old, so a first fetch without a
           # start date still sends a short, explicit window here.
-          pending_start_date = start_date || 30.days.ago.to_date
-          pending_transactions, pending_truncated, pending_window_start = fetch_paginated_transactions(
+          pending_transactions, _pending_truncated = fetch_paginated_transactions(
             enable_banking_account,
-            start_date: pending_start_date,
+            start_date: start_date || 30.days.ago.to_date,
             transaction_status: "PDNG",
             psu_headers: enable_banking_item.build_psu_headers
           )
-          pending_window_start ||= pending_start_date
         rescue Provider::EnableBanking::EnableBankingError => e
           raise unless [ :validation_error, :bad_request ].include?(e.error_type)
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
-          pending_truncated = true
           Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
           capture_pdng_unsupported_debug_log(enable_banking_account, error: e)
         end
@@ -980,22 +980,13 @@ class EnableBankingItem::Importer
           end
         end
 
-        windows = { false => { start: book_window_start || start_date, complete: !book_truncated } }
-        windows[true] = { start: pending_window_start, complete: !pending_truncated } if include_pending
-
-        in_window, retained_transactions = existing_transactions.partition do |tx|
-          window = windows[pending_row?(tx)]
-          window && in_fetched_window?(tx, window[:start])
-        end
-
-        # A truncated fetch cannot show that an unfetched row is gone, only that a
-        # fetched row is the same movement as a stored one.
+        # Only a fetched row describing the same movement supersedes a stored one.
+        # A row the response left out may lie outside the window the ASPSP served,
+        # or on a page that was never fetched.
         ids_by_row = external_ids_by_row(existing_transactions + all_transactions)
-        superseded_rows, partial_rows = in_window.partition { |tx| windows[pending_row?(tx)][:complete] }
-        paired = content_pairs(partial_rows, all_transactions, ids_by_row, ids_by_row).map(&:first)
-        paired_set = Set.new.compare_by_identity.merge(paired)
-        superseded_rows += paired
-        retained_transactions += partial_rows.reject { |tx| paired_set.include?(tx) }
+        superseded_rows = content_pairs(existing_transactions, all_transactions, ids_by_row, ids_by_row).map(&:first)
+        superseded_set = Set.new.compare_by_identity.merge(superseded_rows)
+        retained_transactions = existing_transactions.reject { |tx| superseded_set.include?(tx) }
 
         next_snapshot, incoming_transactions = merge_transaction_rows(
           existing_transactions, retained_transactions, all_transactions, ids_by_row
@@ -1116,13 +1107,11 @@ class EnableBankingItem::Importer
 
     class PaginationTruncatedError < StandardError; end
 
-    # Returns the rows fetched, whether the fetch stopped before the last page
-    # (page cap, repeated continuation key, or a 400/422 on a later page), and
-    # the date_from the ASPSP actually served, which can be later than start_date.
+    # Returns the rows fetched and whether the fetch stopped before the last
+    # page (page cap, repeated continuation key, or a 400/422 on a later page).
     def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {}, strategy: nil)
       all_transactions = []
       truncated = false
-      window_start = start_date
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
@@ -1181,7 +1170,6 @@ class EnableBankingItem::Importer
 
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)
-        window_start = [ window_start, transactions_data[:effective_date_from] ].compact.max
 
         previous_continuation_key = continuation_key
         continuation_key = transactions_data[:continuation_key]
@@ -1194,7 +1182,7 @@ class EnableBankingItem::Importer
         break if continuation_key.blank?
       end
 
-      [ all_transactions, truncated, window_start ]
+      [ all_transactions, truncated ]
     rescue PaginationTruncatedError => e
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
@@ -1202,7 +1190,7 @@ class EnableBankingItem::Importer
       if strategy.present?
         capture_longest_truncation_debug_log(enable_banking_account, transactions_kept: all_transactions.count, reason: e.message)
       end
-      [ all_transactions, true, window_start ]
+      [ all_transactions, true ]
     end
 
     # Ids are resolved over stored and fetched rows together so rows sharing a
@@ -1312,14 +1300,6 @@ class EnableBankingItem::Importer
           Rails.logger.info "EnableBankingItem::Importer - snapshot for account #{enable_banking_account.uid} changed during sync, skipping write"
         end
       end
-    end
-
-    # Undated rows are kept: they cannot be shown to be superseded.
-    def in_fetched_window?(transaction, start_date)
-      return true unless start_date
-
-      date = row_date(transaction)
-      date.present? && date >= start_date
     end
 
     # Dated as EnableBankingEntry::Processor dates the entry, in the family's zone.

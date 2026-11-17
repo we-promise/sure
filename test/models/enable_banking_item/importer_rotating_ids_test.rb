@@ -1,9 +1,7 @@
 require "test_helper"
 
 # Some ASPSPs re-issue transaction_id and entry_reference on every response, so
-# two fetches describe the same movement under different identifiers. The
-# snapshot must be replaced for the window fetched rather than appended to, and
-# the entries carried over to the new identifiers.
+# two fetches describe the same movement under different identifiers.
 class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
   setup do
     @family = families(:dylan_family)
@@ -47,9 +45,9 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     }
   end
 
-  def stub_fetch(booked, pending: [], pending_raises: nil, truncated: false, window_start: nil)
+  def stub_fetch(booked, pending: [], pending_raises: nil, truncated: false)
     @importer.stubs(:fetch_paginated_transactions)
-             .with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ booked, truncated, window_start ])
+             .with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ booked, truncated ])
     if pending_raises
       @importer.stubs(:fetch_paginated_transactions)
                .with(@enable_banking_account, has_entry(transaction_status: "PDNG")).raises(pending_raises)
@@ -131,7 +129,7 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert_equal "ref_new_b", Entry.find(entries_by_amount.fetch(BigDecimal("20.00"))).transaction.provider_entry_reference
   end
 
-  test "retains stored rows that predate the fetched window" do
+  test "retains stored rows that predate the fetch" do
     old_row = rotating_tx("old", date: 6.months.ago.to_date.to_s, amount: "999.00")
     @enable_banking_account.upsert_enable_banking_transactions_snapshot!([ old_row ])
 
@@ -142,7 +140,7 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert stored.any? { |t| t[:transaction_amount][:amount].to_s == "999.00" }
   end
 
-  test "an empty response does not wipe the stored window" do
+  test "an empty response does not wipe the snapshot" do
     sync([ rotating_tx("aaa") ])
     assert_equal 1, snapshot_count
 
@@ -150,19 +148,17 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert_equal 1, snapshot_count, "a transient empty fetch must not erase history"
   end
 
-  test "an unsupported PDNG fetch still reconciles the complete booked window" do
+  test "an unsupported PDNG fetch still reconciles booked rotations" do
     @importer.stubs(:include_pending?).returns(true)
     sync_and_process([ rotating_tx("aaa") ], pending: [])
     assert_equal 1, snapshot_count
     assert_equal 1, entry_count
 
-    # The BOOK request succeeded in full; only PDNG was refused. Declaring the
-    # whole fetch incomplete would leave the booked rotation unreconciled.
     unsupported = Provider::EnableBanking::EnableBankingError.new("PDNG unsupported", :validation_error)
     sync_and_process([ rotating_tx("bbb") ], pending_raises: unsupported)
 
     stored = @enable_banking_account.raw_transactions_payload.map(&:with_indifferent_access)
-    assert_equal 1, stored.count, "the complete booked window must still be replaced"
+    assert_equal 1, stored.count
     assert_equal "txn_bbb", stored.first[:transaction_id]
     assert_equal 1, entry_count, "a rotated identifier must not insert a second entry"
   end
@@ -210,11 +206,11 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert_equal 2, snapshot_count
   end
 
-  test "a window the ASPSP shortened only supersedes rows inside it" do
+  test "a complete fetch keeps stored rows it did not return" do
     older = [ 20, 10 ].map { |days| rotating_tx("old#{days}", date: days.days.ago.to_date.to_s, amount: "#{days}.00") }
     @enable_banking_account.upsert_enable_banking_transactions_snapshot!(older)
 
-    sync([ rotating_tx("fresh") ], window_start: 5.days.ago.to_date)
+    sync([ rotating_tx("fresh") ])
 
     stored = @enable_banking_account.raw_transactions_payload.map { |t| t.with_indifferent_access[:transaction_id] }
     assert_equal %w[txn_fresh txn_old10 txn_old20], stored.sort
@@ -262,7 +258,7 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert_equal 2, snapshot_count
   end
 
-  test "window dates are resolved in the family's timezone" do
+  test "row dates are resolved in the family's timezone" do
     @family.update!(timezone: "Pacific/Auckland")
     late_utc = Time.utc(2026, 10, 3, 12, 30)
     rows = [
@@ -296,10 +292,7 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
 
   test "a numeric timestamp is read as a timestamp, not as a four-digit year" do
     start_date = Date.new(2026, 9, 12)
-    # 1791072000 is 2026-10-04, well inside the window. Read as digits it is also
-    # a parseable date in the year 1791, so a plain Date.parse discards a recent
-    # transaction outright. Other epochs raise instead and are kept regardless of
-    # their age; both readings are wrong, and neither matches in_fetched_window?.
+    # 1791072000 is 2026-10-04; read as digits, Date.parse takes it for the year 1791.
     in_window = { transaction_id: "epoch_in", booking_date: 1791072000 }
     out_of_window = { transaction_id: "epoch_out", booking_date: Date.new(2026, 1, 5).to_time.to_i }
 
@@ -318,15 +311,5 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
 
     assert_equal old_external_id, entry.reload.external_id,
       "re-keying must not outlive the snapshot write it was paired with"
-  end
-
-  test "rows dated with a unix timestamp are matched to the window" do
-    epoch_row = rotating_tx("epoch").merge(booking_date: Time.current.to_i)
-    @enable_banking_account.upsert_enable_banking_transactions_snapshot!([ epoch_row ])
-
-    sync([ rotating_tx("fresh") ])
-
-    assert_equal 1, snapshot_count,
-      "a timestamp-dated row inside the window must be superseded, not duplicated"
   end
 end
