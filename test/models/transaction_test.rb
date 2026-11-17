@@ -3,6 +3,42 @@ require "test_helper"
 class TransactionTest < ActiveSupport::TestCase
   include EntriesTestHelper
 
+  test "refuses another family's category, merchant and tags" do
+    other = families(:empty)
+    transaction = create_transaction.transaction
+
+    transaction.category = other.categories.create!(name: "Elsewhere")
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:category, :invalid)
+
+    transaction.reload.merchant = other.merchants.create!(name: "Elsewhere")
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:merchant, :invalid)
+
+    foreign_tag = other.tags.create!(name: "Elsewhere")
+    assert_raises(ActiveRecord::RecordInvalid) { transaction.reload.tag_ids = [ foreign_tag.id ] }
+    assert_empty transaction.reload.tags
+  end
+
+  test "refuses another family's references on a new transaction" do
+    other = families(:empty)
+
+    assert_raises(ActiveRecord::RecordInvalid) { create_transaction(category: other.categories.create!(name: "Elsewhere")) }
+    assert_raises(ActiveRecord::RecordInvalid) { create_transaction(merchant: other.merchants.create!(name: "Elsewhere")) }
+    assert_raises(ActiveRecord::RecordInvalid) { create_transaction(tags: [ other.tags.create!(name: "Elsewhere") ]) }
+  end
+
+  test "accepts its own family's references and any provider merchant" do
+    transaction = create_transaction(
+      category: categories(:food_and_drink),
+      merchant: merchants(:netflix),
+      tags: [ tags(:one) ]
+    ).transaction
+
+    transaction.merchant = ProviderMerchant.create!(name: "Shared provider merchant", source: "synth", provider_merchant_id: "shared-provider-merchant")
+    assert transaction.valid?
+  end
+
   test "with_any_tag returns transactions carrying any of the tags, each once" do
     travel = families(:dylan_family).tags.create!(name: "Travel")
     work = families(:dylan_family).tags.create!(name: "Work")

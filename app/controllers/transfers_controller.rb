@@ -391,7 +391,8 @@ class TransfersController < ApplicationController
       # Confirming from the transaction list sends only the status; leave the
       # category and notes alone unless the form actually submitted them.
       if transfer_update_params.key?(:category_id)
-        @transfer.outflow_transaction.update!(category_id: transfer_update_params[:category_id])
+        category_id = transfer_update_params[:category_id].presence
+        @transfer.outflow_transaction.update!(category: category_id && Current.family.categories.find(category_id))
       end
       if transfer_update_params.key?(:notes)
         @transfer.update!(notes: transfer_update_params[:notes])

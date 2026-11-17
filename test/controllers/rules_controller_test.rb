@@ -687,6 +687,54 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to rules_url
   end
 
+  test "a rule a member applies changes only transactions in accounts the member can write" do
+    sign_in users(:family_member)
+    writable = create_transaction(account: accounts(:depository), name: "SecretProbe one")
+    read_only = create_transaction(account: accounts(:credit_card), name: "SecretProbe two")
+    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
+    rule = @user.family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ]
+    )
+
+    perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+
+    assert_equal "Renamed", writable.reload.name
+    assert_equal "SecretProbe two", read_only.reload.name
+    assert_equal "SecretProbe three", unshared.reload.name
+  end
+
+  test "rules a member applies all at once change only transactions in accounts the member can write" do
+    sign_in users(:family_member)
+    writable = create_transaction(account: accounts(:depository), name: "SecretProbe one")
+    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
+    @user.family.rules.create!(
+      resource_type: "transaction",
+      active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ]
+    )
+
+    perform_enqueued_jobs(only: ApplyAllRulesJob) { post apply_all_rules_url }
+
+    assert_equal "Renamed", writable.reload.name
+    assert_equal "SecretProbe three", unshared.reload.name
+  end
+
+  test "a rule an admin applies still changes every account in the family" do
+    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
+    rule = @user.family.rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ]
+    )
+
+    perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+
+    assert_equal "Renamed", unshared.reload.name
+  end
+
   test "guest cannot create rule" do
     sign_in family_guest
 

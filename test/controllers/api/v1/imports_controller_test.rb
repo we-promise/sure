@@ -1304,6 +1304,58 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "importing", json_response["data"]["status"]
   end
 
+  test "does not publish into an account the member cannot write" do
+    member = users(:family_member)
+    member_key = ApiKey.create!(user: member, name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
+    csv_content = "date,amount,name\n2023-01-01,-10.00,Test Transaction"
+
+    # credit_card is shared read-only with the member; investment is not shared.
+    [ accounts(:credit_card), accounts(:investment) ].each do |account|
+      assert_no_enqueued_jobs(only: ImportJob) do
+        post api_v1_imports_url,
+             params: {
+               raw_file_content: csv_content,
+               date_col_label: "date",
+               amount_col_label: "amount",
+               name_col_label: "name",
+               account_id: account.id,
+               date_format: "%Y-%m-%d",
+               publish: "true"
+             },
+             headers: api_headers(member_key)
+      end
+
+      assert_response :forbidden
+      import = Import.find(JSON.parse(response.body)["import_id"])
+      assert_equal "pending", import.status
+    end
+  ensure
+    Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
+  end
+
+  test "publishes into an account the member can write" do
+    member = users(:family_member)
+    member_key = ApiKey.create!(user: member, name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
+
+    assert_enqueued_with(job: ImportJob) do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: "date,amount,name\n2023-01-01,-10.00,Test Transaction",
+             date_col_label: "date",
+             amount_col_label: "amount",
+             name_col_label: "name",
+             account_id: accounts(:depository).id,
+             date_format: "%Y-%m-%d",
+             publish: "true"
+           },
+           headers: api_headers(member_key)
+    end
+
+    assert_response :created
+  ensure
+    Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
+  end
+
   test "should not create import for account in another family" do
     other_family = Family.create!(name: "Other Family", currency: "USD", locale: "en")
     other_depository = Depository.create!(subtype: "checking")

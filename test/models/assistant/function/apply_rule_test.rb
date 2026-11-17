@@ -31,6 +31,21 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal 1, @rule.rule_runs.count
   end
 
+  test "a member's apply leaves transactions in accounts the member cannot write" do
+    member = users(:family_member)
+    writable = create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    unshared = create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
+    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
+
+    result = perform_enqueued_jobs(only: RuleJob) do
+      Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+    end
+
+    assert result[:success], result.inspect
+    assert_equal @category, writable.entryable.reload.category
+    assert_nil unshared.entryable.reload.category
+  end
+
   # Activating a rule with an email action records its current matches as
   # delivered. If that times out the rule stays off (Rule#seed_notification_baseline),
   # and queuing the run anyway would email every past match.

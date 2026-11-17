@@ -24,6 +24,7 @@ class Transaction < ApplicationRecord
   ].freeze
 
   validate :validate_attachments, if: -> { attachments.attached? }
+  validate :references_belong_to_family
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
 
@@ -699,6 +700,18 @@ class Transaction < ApplicationRecord
       return posted_notes if posted_parts.each_cons(pending_parts.size).include?(pending_parts)
 
       "#{posted_notes}\n\n#{pending_notes}"
+    end
+
+    # Whatever sets them, the category and merchant are the entry's family's
+    # own; provider merchants are shared by every family. Tagging checks tags.
+    def references_belong_to_family
+      return unless category_id_changed? || merchant_id_changed?
+
+      family_id = entry&.account&.family_id
+      return if family_id.nil?
+
+      errors.add(:category, :invalid) if category_id_changed? && category && category.family_id != family_id
+      errors.add(:merchant, :invalid) if merchant_id_changed? && merchant.is_a?(FamilyMerchant) && merchant.family_id != family_id
     end
 
     def validate_attachments

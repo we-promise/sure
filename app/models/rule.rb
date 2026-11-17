@@ -317,8 +317,9 @@ class Rule < ApplicationRecord
     end
   end
 
-  def apply_later(ignore_attribute_locks: false)
-    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks)
+  # user: who asked for the run (see Rule::Runner).
+  def apply_later(ignore_attribute_locks: false, user: nil)
+    RuleJob.perform_later(self, ignore_attribute_locks: ignore_attribute_locks, user: user)
   end
 
   def primary_condition_title

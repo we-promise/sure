@@ -363,13 +363,7 @@ class Family < ApplicationRecord
   end
 
   def available_merchants
-    assigned_ids = transactions.where.not(merchant_id: nil).pluck(:merchant_id).uniq
-    recently_unlinked_ids = FamilyMerchantAssociation
-      .where(family: self)
-      .recently_unlinked
-      .pluck(:merchant_id)
-    family_merchant_ids = merchants.pluck(:id)
-    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+    merchants_with_provider_ids(transactions.where.not(merchant_id: nil).distinct.pluck(:merchant_id))
   end
 
   # Merchant names already associated with this family (via any provider, or a
@@ -407,12 +401,7 @@ class Family < ApplicationRecord
       .where.not(merchant_id: nil)
       .distinct
       .pluck(:merchant_id)
-    recently_unlinked_ids = FamilyMerchantAssociation
-      .where(family: self)
-      .recently_unlinked
-      .pluck(:merchant_id)
-    family_merchant_ids = merchants.pluck(:id)
-    Merchant.where(id: (assigned_ids + recently_unlinked_ids + family_merchant_ids).uniq)
+    merchants_with_provider_ids(assigned_ids)
   end
 
   def bayes_settings_object
@@ -857,6 +846,16 @@ class Family < ApplicationRecord
   private_constant :INVALID_TIMEZONE_LOG_INTERVAL
 
   private
+    # The family's own merchants, plus the provider merchants among the given
+    # ids and those recently unlinked from it. Another family's merchant never
+    # qualifies, even when one of these transactions carries it.
+    def merchants_with_provider_ids(provider_merchant_ids)
+      recently_unlinked_ids = FamilyMerchantAssociation.where(family: self).recently_unlinked.pluck(:merchant_id)
+
+      Merchant.where(id: merchants.select(:id))
+        .or(Merchant.where(type: "ProviderMerchant", id: (provider_merchant_ids + recently_unlinked_ids).uniq))
+    end
+
     # Currencies of the given visible accounts' balances, and of each
     # account's holdings on its latest holding date.
     def currencies_held_now(scope)
