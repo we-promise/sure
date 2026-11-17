@@ -150,9 +150,10 @@ class IncomeStatement
     daily_expense_by_category(period).map(&:category_id).uniq
   end
 
-  def totals_for(period, account_ids: nil)
+  def totals_for(period, account_ids: nil, tag_ids: nil)
     scope = family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period)
     scope = scope.where(entries: { account_id: account_ids }) if account_ids.present?
+    scope = scope.with_any_tag(tag_ids) if tag_ids.present?
 
     totals(transactions_scope: scope, date_range: period.date_range)
   end
@@ -340,13 +341,14 @@ class IncomeStatement
 
     # An IncomeStatement is a request-scoped reporting snapshot, like its memoized
     # period totals. Share these aggregate reads across totals and daily series.
-    # Rates, target currency and whether investing counts as spending can
-    # change without touching entries or accounts. Scheduled entries are
+    # Rates, target currency, tag membership and whether investing counts as
+    # spending can change without touching entries or accounts. Scheduled entries are
     # excluded as of "today", so the key also rolls over daily.
     def cache_freshness_key
       @cache_freshness_key ||= [
         Date.current,
         family.entries_cache_version,
+        family.tags_version,
         family.accounts_status_version,
         family.currency,
         ExchangeRate.maximum(:updated_at)&.to_i,
