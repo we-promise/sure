@@ -62,6 +62,15 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "lf-stored-key-5c1e", item.api_key
   end
 
+  test "an edit with a whitespace-only API key keeps the stored one" do
+    item = lunchflow_items(:one)
+    item.update!(api_key: "lf-stored-key-5c1e")
+
+    patch lunchflow_item_url(item), params: { lunchflow_item: { api_key: "   " } }, as: :turbo_stream
+
+    assert_equal "lf-stored-key-5c1e", item.reload.api_key
+  end
+
   test "update with a new API key replaces the stored key" do
     item = lunchflow_items(:one)
 
