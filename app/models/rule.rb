@@ -24,7 +24,7 @@ class Rule < ApplicationRecord
   attr_reader :run_by
 
   def run_by=(user)
-    @run_by = user unless user&.admin?
+    @run_by = user&.admin? ? nil : user
   end
 
   # A name typed into the form's "new group" field. The rule joins that group,
@@ -98,6 +98,8 @@ class Rule < ApplicationRecord
   # save then skips its own, which would run the query again and, on a timeout,
   # switch off a rule that has its baseline. Reset at the start of every save.
   before_save :reset_notification_baseline_taken
+  # Switching a rule on is the review a released rule waits for.
+  before_save -> { self.review_required = false }, if: -> { review_required? && active? }
 
   def notification_baseline_taken_in_this_save?
     @notification_baseline_taken == true
@@ -291,6 +293,8 @@ class Rule < ApplicationRecord
     # Collect all unique transaction IDs matched by any rule
     transaction_ids = Set.new
     rules.each do |rule|
+      next if rule.review_required?
+
       rule.run_by = user
       transaction_ids.merge(rule.matching_scope.pluck(:id))
     rescue Rule::SafeRegex::TimeoutError
@@ -535,7 +539,7 @@ class Rule < ApplicationRecord
     end
 
     def note_match_criteria_change
-      @match_criteria_changed = will_save_change_to_effective_date? ||
+      @match_criteria_changed = will_save_change_to_effective_date? || will_save_change_to_restricted_to_id? ||
         (association(:conditions).target.any?(&:match_criteria_changing?) && condition_criteria_changing?)
     end
 

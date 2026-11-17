@@ -57,6 +57,7 @@ class RuleTest < ActiveSupport::TestCase
     rule.reload
     assert_not rule.active?
     assert_nil rule.restricted_to_id
+    assert rule.review_required?
   end
 
   test "moving a user to another family switches their restricted rules off" do
@@ -158,6 +159,57 @@ class RuleTest < ActiveSupport::TestCase
 
     assert_not_includes action.executor.options.map(&:last), accounts(:investment).id
     assert_includes action.executor.options.map(&:last), accounts(:depository).id
+  end
+
+  test "assigning an admin as the run user clears a member set before" do
+    rule = families(:dylan_family).rules.build(resource_type: "transaction")
+    rule.run_by = users(:family_member)
+    rule.run_by = users(:family_admin)
+
+    assert_nil rule.run_by
+  end
+
+  test "a change of restriction re-takes an email rule's baseline" do
+    rule = families(:dylan_family).rules.create!(resource_type: "transaction", active: true, restricted_to: users(:family_member),
+      actions_attributes: [ { action_type: "send_email_notification" } ])
+    rule.expects(:seed_notification_baseline).once
+
+    rule.update!(restricted_to: nil)
+  end
+
+  test "a member editing a rule restricted to someone else sees the targets the save will allow" do
+    other = families(:dylan_family).users.create!(email: "other-member@example.com", password: user_password_test, role: "member", first_name: "Other", last_name: "Member")
+    rule = families(:dylan_family).rules.build(resource_type: "transaction", restricted_to: other)
+    action = rule.actions.build(action_type: "set_as_transfer_or_payment")
+    Current.stubs(:user).returns(users(:family_member))
+
+    assert_includes action.executor.options.map(&:last), accounts(:depository).id
+  end
+
+  test "rules listed together don't share transfer targets across restrictions" do
+    family = families(:dylan_family)
+    restricted = family.rules.create!(resource_type: "transaction", actions_attributes: [ { action_type: "set_as_transfer_or_payment", value: accounts(:depository).id } ])
+    restricted.update_column(:restricted_to_id, users(:family_member).id)
+    family_wide = family.rules.create!(resource_type: "transaction", actions_attributes: [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id } ])
+    rules = family.rules.where(id: [ restricted.id, family_wide.id ]).to_a
+    Rule.share_option_lists(rules)
+
+    rules.find { |r| r.id == restricted.id }.actions.first.options
+    assert_includes rules.find { |r| r.id == family_wide.id }.actions.first.options.map(&:last), accounts(:investment).id
+  end
+
+  test "a rule waiting for review doesn't run until switched on, which clears the review" do
+    family = families(:dylan_family)
+    create_transaction(account: accounts(:investment), name: "Review probe")
+    rule = family.rules.create!(resource_type: "transaction", review_required: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Review probe" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ])
+
+    ApplyAllRulesJob.perform_now(family)
+    assert_equal 0, family.transactions.joins(:entry).where(entries: { name: "Renamed" }).count
+
+    rule.update!(active: true)
+    assert_not rule.reload.review_required?
   end
 
   test "displayed_action skips an unsaved action and option lists reset on reload" do

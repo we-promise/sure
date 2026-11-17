@@ -57,6 +57,41 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_equal member, @rule.reload.restricted_to
   end
 
+  test "a member's apply reports what the member's run will change" do
+    member = users(:family_member)
+    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
+    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
+
+    result = Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+
+    assert_equal 1, result[:applied_to]
+  end
+
+  test "a member re-applying an active family-wide rule keeps it family-wide and runs within their accounts" do
+    member = users(:family_member)
+    @rule.update!(active: true)
+    unshared = create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
+    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
+
+    perform_enqueued_jobs(only: RuleJob) do
+      Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+    end
+
+    assert_nil @rule.reload.restricted_to
+    assert_nil unshared.entryable.reload.category
+  end
+
+  test "a preview stops being valid when the rule's restriction changes" do
+    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    token = preview_token
+    @rule.update_column(:restricted_to_id, users(:family_member).id)
+
+    result = @fn.call("rule_id" => @rule.id, "preview_token" => token)
+
+    assert_equal "preview_stale", result[:error]
+  end
+
   # Activating a rule with an email action records its current matches as
   # delivered. If that times out the rule stays off (Rule#seed_notification_baseline),
   # and queuing the run anyway would email every past match.

@@ -1107,9 +1107,7 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
 
     def create_name_pattern_entries(account:, name:, amount:, day:, entry_categories: [ categories(:food_and_drink) ] * 3)
       [ 0, 1, 2 ].each do |months_ago|
-        transaction = Transaction.create!(
-          category: entry_categories[months_ago]
-        )
+        transaction = Transaction.create!
         account.entries.create!(
           date: months_ago.months.ago.beginning_of_month + (day - 1).days,
           amount: amount,
@@ -1117,6 +1115,9 @@ class RecurringTransaction::IdentifierTest < ActiveSupport::TestCase
           name: name,
           entryable: transaction
         )
+        # Written past validation: another family's category can only be on
+        # entries saved before the check existed.
+        transaction.update_column(:category_id, entry_categories[months_ago]&.id)
       end
     end
 

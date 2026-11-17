@@ -166,7 +166,9 @@ class Family::DataExporter
 
         # Only export rules belonging to this family, in run order so an
         # import recreates them in the same order
-        @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
+        # The CSV has no column for a restriction (Rule#restricted_to), so a
+        # restricted rule would come back family-wide; all.ndjson carries it.
+        @family.rules.where(restricted_to_id: nil).includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
           csv << [
             rule.name,
             rule.resource_type,

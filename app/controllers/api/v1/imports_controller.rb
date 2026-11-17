@@ -204,7 +204,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
 
     # The import is kept: only the publish is refused, as in the web.
     def render_import_not_publishable(error)
-      render_json({ error: "forbidden", message: error.message, import_id: @import.id }, status: :forbidden)
+      render_json({ error: "forbidden", message: error.api_message, import_id: @import.id }, status: :forbidden)
     end
 
     def render_import_not_found

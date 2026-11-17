@@ -42,6 +42,31 @@ class TransactionTest < ActiveSupport::TestCase
     assert_no_queries(include_schema: false) { loaded.send(:references_belong_to_family) }
   end
 
+  test "refuses another family's new category, merchant and tag objects" do
+    other = families(:empty)
+    transaction = create_transaction.transaction
+
+    transaction.category = other.categories.build(name: "Elsewhere")
+    assert_not transaction.valid?
+    transaction.reload.merchant = other.merchants.build(name: "Elsewhere")
+    assert_not transaction.valid?
+    assert_not Tagging.new(taggable: transaction.reload, tag: other.tags.build(name: "Elsewhere")).valid?
+  end
+
+  test "a tagging whose tag is gone is invalid rather than raising" do
+    tagging = Tagging.new(taggable: create_transaction.transaction, tag_id: SecureRandom.uuid)
+    tagging.tag
+
+    assert_not tagging.valid?
+  end
+
+  test "attaching a saved transaction to another family's entry checks its references" do
+    transaction = Transaction.create!(category: families(:empty).categories.create!(name: "Elsewhere"))
+
+    entry = Entry.new(account: accounts(:depository), name: "Attach", date: Date.current, amount: 1, currency: "USD", entryable: transaction)
+    assert_not entry.valid?
+  end
+
   test "accepts its own family's references and any provider merchant" do
     transaction = create_transaction(
       category: categories(:food_and_drink),

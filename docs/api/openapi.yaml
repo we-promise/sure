@@ -7815,7 +7815,9 @@ paths:
     post:
       summary: Create import session
       description: Create or idempotently retrieve a multi-file SureImport session
-        keyed by client_session_id.
+        keyed by client_session_id. The session records the user who opened it; only
+        that user or an admin may reuse it, add chunks or publish it. Sessions opened
+        before creators were recorded are admin-only.
       tags:
       - Import Sessions
       security:
@@ -7842,6 +7844,12 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '409':
           description: client session conflict
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '404':
+          description: client_session_id belongs to a session another user opened
           content:
             application/json:
               schema:
@@ -8001,7 +8009,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: import session not found
+          description: import session not found, or opened by another user
           content:
             application/json:
               schema:
@@ -8022,8 +8030,10 @@ paths:
         type: string
     post:
       summary: Publish import session
-      description: Queue ordered chunk processing for a SureImport session. Later
-        chunks can reference source IDs mapped by earlier chunks.
+      description: 'Queue ordered chunk processing for a SureImport session. Later
+        chunks can reference source IDs mapped by earlier chunks. Every chunk must
+        pass the checks a single import publish does: write access to the accounts
+        it touches, and an admin for chunks that contain rules.'
       tags:
       - Import Sessions
       security:
@@ -8042,7 +8052,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
-          description: insufficient scope
+          description: insufficient scope, or the publish was refused (account access
+            or rules)
           content:
             application/json:
               schema:
@@ -8066,7 +8077,7 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
         '404':
-          description: import session not found
+          description: import session not found, or opened by another user
           content:
             application/json:
               schema:
@@ -8149,7 +8160,8 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ImportResponse"
         '403':
-          description: guest users cannot import family configuration
+          description: guest restriction, or publish refused (account access, rules,
+            guest categories or tags); a created import keeps its import_id
           content:
             application/json:
               schema:

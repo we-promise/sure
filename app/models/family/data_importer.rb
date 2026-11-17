@@ -1524,16 +1524,24 @@ class Family::DataImporter
     end
 
     # An exported restriction stays with its user. If that user isn't in this
-    # family the rule comes in switched off, for an admin to review, rather
-    # than acting on the whole family. Older exports carry no key, so an
+    # family the rule comes in switched off and waiting for an admin's review
+    # (Rule#review_required), rather than acting on the whole family. Older exports carry no key, so an
     # existing rule keeps its restriction. A non-admin importer replaces
     # whatever the file says with themselves (Rule#restrict_to_editor).
     def assign_rule_restriction(rule, data)
       if data.key?("restricted_to")
         rule.restricted_to = data["restricted_to"].presence && @family.users.find_by(email: data["restricted_to"])
-        rule.active = false if data["restricted_to"].present? && rule.restricted_to.nil?
+        hold_for_review(rule) if data["restricted_to"].present? && rule.restricted_to.nil?
       end
+      # A session records who opened it; without them (removed since, or a
+      # session from before creators were recorded) nobody can be restricted.
+      hold_for_review(rule) if @import_session && @user.nil?
       rule.restrict_to_editor(@user)
+    end
+
+    def hold_for_review(rule)
+      rule.active = false
+      rule.review_required = true
     end
 
     def find_or_create_rule_group(name)

@@ -60,7 +60,10 @@ class Rule::Runner
 
         rule.run_by = user
 
+        # A released rule waits for an admin to switch it on (Rule#review_required).
         if remaining_ids.delete?(rule.id)
+          next if rule.review_required?
+
           rule_runs << execute(rule, ignore_attribute_locks: ignore_attribute_locks)
         elsif rule.active?
           rule_runs << execute(rule, ignore_attribute_locks: false)

@@ -73,6 +73,16 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_not_includes response.body, import_path(chunk)
   end
 
+  test "the new import page doesn't offer an import session's chunk to resume" do
+    session = @user.family.import_sessions.create!(created_by: @user)
+    chunk = session.imports.create!(family: @user.family, type: "SureImport", sequence: 1, checksum: "0" * 64)
+    @user.family.imports.where.not(id: chunk.id).update_all(status: "complete")
+
+    get new_import_url
+
+    assert_not_includes response.body, import_path(chunk)
+  end
+
   test "uploads valid csv by copy and pasting" do
     patch import_upload_url(@import), params: {
       import: {

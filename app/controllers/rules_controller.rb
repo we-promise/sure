@@ -56,7 +56,8 @@ class RulesController < ApplicationController
   end
 
   def apply
-    @rule.restrict_to_editor(Current.user)
+    # Re-applying an active rule keeps its scope; the run stays the member's.
+    @rule.restrict_to_editor(Current.user) unless @rule.active?
     @rule.update!(active: true)
 
     # The rule stayed off, so running it now would only repeat the slow query.

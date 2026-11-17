@@ -67,7 +67,7 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
   rescue ImportSession::EnqueueError
     render_error("import_enqueue_failed", "Import session could not be queued.", :service_unavailable)
   rescue Import::PublishNotAllowedError => e
-    render_error("forbidden", e.message, :forbidden)
+    render_error("forbidden", e.api_message, :forbidden)
   rescue ImportSession::ConflictError => e
     render_import_session_conflict(e.message)
   end

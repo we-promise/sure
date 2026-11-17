@@ -170,16 +170,7 @@ class SureImport < Import
     validate_sure_preflight!
     raise NotPublishableError, "Import was uploaded but has no publishable records." unless publishable?
 
-    previous_status = status
-    previous_publisher = published_by
-    claim_for_publish!(user)
-
-    begin
-      ImportJob.perform_later(self)
-    rescue StandardError
-      update! status: previous_status, published_by: previous_publisher
-      raise
-    end
+    super
   end
 
   def publish

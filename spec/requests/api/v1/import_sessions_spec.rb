@@ -41,7 +41,7 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
 
   path '/api/v1/import_sessions' do
     post 'Create import session' do
-      description 'Create or idempotently retrieve a multi-file SureImport session keyed by client_session_id.'
+      description 'Create or idempotently retrieve a multi-file SureImport session keyed by client_session_id. The session records the user who opened it; only that user or an admin may reuse it, add chunks or publish it. Sessions opened before creators were recorded are admin-only.'
       tags 'Import Sessions'
       security [ { apiKeyAuth: [] } ]
       consumes 'application/json'
@@ -118,6 +118,23 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
             expected_chunks: 2
           }
         end
+
+        run_test!
+      end
+
+      response '404', 'client_session_id belongs to a session another user opened' do
+        schema '$ref' => '#/components/schemas/ErrorResponse'
+
+        let(:member_key) do
+          ApiKey.create!(user: users(:family_member), name: 'Docs member key', scopes: [ 'read_write' ], display_key: "docs_member_#{SecureRandom.hex(8)}", source: 'web')
+        end
+        let(:'X-Api-Key') { member_key.plain_key }
+
+        before do
+          users(:family_member).family.import_sessions.create!(client_session_id: 'docs-session-other', created_by: users(:family_admin))
+        end
+
+        let(:body) { { type: 'SureImport', client_session_id: 'docs-session-other' } }
 
         run_test!
       end
@@ -298,7 +315,7 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
         run_test!
       end
 
-      response '404', 'import session not found' do
+      response '404', 'import session not found, or opened by another user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }
@@ -324,7 +341,7 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
     let(:id) { import_session.id }
 
     post 'Publish import session' do
-      description 'Queue ordered chunk processing for a SureImport session. Later chunks can reference source IDs mapped by earlier chunks.'
+      description 'Queue ordered chunk processing for a SureImport session. Later chunks can reference source IDs mapped by earlier chunks. Every chunk must pass the checks a single import publish does: write access to the accounts it touches, and an admin for chunks that contain rules.'
       tags 'Import Sessions'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
@@ -353,7 +370,7 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
         run_test!
       end
 
-      response '403', 'insufficient scope' do
+      response '403', 'insufficient scope, or the publish was refused (account access or rules)' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:'X-Api-Key') { api_key_without_write_scope.plain_key }
@@ -418,7 +435,7 @@ RSpec.describe 'API V1 Import Sessions', type: :request do
         run_test!
       end
 
-      response '404', 'import session not found' do
+      response '404', 'import session not found, or opened by another user' do
         schema '$ref' => '#/components/schemas/ErrorResponse'
 
         let(:id) { SecureRandom.uuid }

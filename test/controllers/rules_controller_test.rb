@@ -826,6 +826,27 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, I18n.t("rules.confirm.apply_notice_html", count: 1, resource: "transactions")
   end
 
+  test "a member re-applying an active family-wide rule keeps it family-wide and runs within their accounts" do
+    unshared = create_transaction(account: accounts(:investment), name: "SecretProbe three")
+    rule = @user.family.rules.create!(resource_type: "transaction", active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "SecretProbe" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ])
+    sign_in users(:family_member)
+
+    perform_enqueued_jobs(only: RuleJob) { post apply_rule_url(rule) }
+
+    assert_nil rule.reload.restricted_to
+    assert_equal "SecretProbe three", unshared.reload.name
+  end
+
+  test "rules waiting for review say so" do
+    @user.family.rules.create!(resource_type: "transaction", review_required: true, actions_attributes: [ { action_type: "exclude_transaction" } ])
+
+    get rules_url
+
+    assert_includes response.body, I18n.t("rules.rule.review_required")
+  end
+
   test "guest cannot create rule" do
     sign_in family_guest
 

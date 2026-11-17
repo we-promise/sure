@@ -380,6 +380,30 @@ class Transaction < ApplicationRecord
     association(:entry).loaded? ? Account.where(id: entry&.account_id) : self.class.owning_accounts(id)
   end
 
+  # [category, merchant]: whether each belongs to another family than the
+  # entry's (provider merchants belong to none). Only changed references
+  # unless only_changed: false (Entry checks a transaction it is attached to).
+  # Compared in memory when the references are loaded, otherwise in one query.
+  def foreign_references(only_changed: true)
+    check_category = reference_to_check?(:category, only_changed)
+    check_merchant = reference_to_check?(:merchant, only_changed)
+    return [ false, false ] unless check_category || check_merchant
+
+    if (!check_category || association(:category).loaded?) && (!check_merchant || association(:merchant).loaded?)
+      family_id = loaded_family_id || owning_accounts.pick(:family_id)
+      return [ false, false ] if family_id.nil?
+
+      return [
+        check_category && category&.family_id != family_id,
+        check_merchant && merchant.is_a?(FamilyMerchant) && merchant.family_id != family_id
+      ]
+    end
+
+    category_sql = check_category ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> accounts.family_id)", category_id ]) : "FALSE"
+    merchant_sql = check_merchant ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> accounts.family_id)", merchant_id ]) : "FALSE"
+    owning_accounts.pick(Arel.sql(category_sql), Arel.sql(merchant_sql)) || [ false, false ]
+  end
+
   # The entry's family when its account is already loaded, else nil.
   def loaded_family_id
     entry.account.family_id if association(:entry).loaded? && entry&.association(:account)&.loaded? && entry.account
@@ -719,29 +743,17 @@ class Transaction < ApplicationRecord
     # Whatever sets them, the category and merchant are the entry's family's
     # own; provider merchants are shared by every family. Tagging checks tags.
     def references_belong_to_family
-      check_category = category_id_changed? && category_id.present?
-      check_merchant = merchant_id_changed? && merchant_id.present?
-      return unless check_category || check_merchant
-
-      foreign_category, foreign_merchant = foreign_references(check_category, check_merchant)
+      foreign_category, foreign_merchant = foreign_references
       errors.add(:category, :invalid) if foreign_category
       errors.add(:merchant, :invalid) if foreign_merchant
     end
 
-    # Compared in memory when the entry's account and the references are
-    # loaded, otherwise in one query.
-    def foreign_references(check_category, check_merchant)
-      family_id = loaded_family_id
-      if family_id && (!check_category || association(:category).loaded?) && (!check_merchant || association(:merchant).loaded?)
-        return [
-          check_category && category&.family_id != family_id,
-          check_merchant && merchant.is_a?(FamilyMerchant) && merchant.family_id != family_id
-        ]
-      end
-
-      category_sql = check_category ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> accounts.family_id)", category_id ]) : "FALSE"
-      merchant_sql = check_merchant ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> accounts.family_id)", merchant_id ]) : "FALSE"
-      owning_accounts.pick(Arel.sql(category_sql), Arel.sql(merchant_sql)) || [ false, false ]
+    # A reference set by id, or assigned as a record not saved yet. With
+    # only_changed: false, any the transaction carries.
+    def reference_to_check?(name, only_changed)
+      id_attribute = "#{name}_id"
+      set = self[id_attribute].present? && (!only_changed || attribute_changed?(id_attribute))
+      set || (association(name).loaded? && public_send(name)&.new_record?)
     end
 
     def validate_attachments

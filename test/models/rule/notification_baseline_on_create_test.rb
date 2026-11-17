@@ -135,12 +135,14 @@ class Rule::NotificationBaselineOnCreateTest < ActiveSupport::TestCase
   end
 
   test "an identical Sure re-import keeps the baseline, so a pending match is still emailed" do
-    session = @family.import_sessions.create!(expected_chunks: 2)
-    Family::DataImporter.new(@family, rule_ndjson("cafe"), import_session: session).import!
+    # An admin's session: one with no creator holds its rules for review.
+    admin = users(:empty)
+    session = @family.import_sessions.create!(expected_chunks: 2, created_by: admin)
+    Family::DataImporter.new(@family, rule_ndjson("cafe"), import_session: session, user: admin).import!
     rule = @family.rules.find_by!(name: "Cafe alerts")
     pending = create_transaction(date: Date.current, account: @account, amount: 5, name: "Cafe express").transaction
 
-    Family::DataImporter.new(@family, rule_ndjson("cafe"), import_session: session).import!
+    Family::DataImporter.new(@family, rule_ndjson("cafe"), import_session: session, user: admin).import!
 
     assert_equal rule.id, @family.rules.find_by!(name: "Cafe alerts").id, "the re-import should update the same rule"
     assert_not_includes delivered_ids(rule), pending.id

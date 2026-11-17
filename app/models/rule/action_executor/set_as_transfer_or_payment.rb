@@ -3,11 +3,15 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     "select"
   end
 
-  # The form also leaves out accounts the member editing it can't write: the
-  # save restricts the rule to them (Rule#restrict_to_editor).
+  # The form offers what the rule will allow once saved: a member editing it
+  # restricts it to themselves (Rule#restrict_to_editor), an admin keeps its
+  # restriction.
   def options
-    editor = Current.user unless Current.user.nil? || Current.user.admin?
-    rule.accounts_permitted_to([ *rule.restricting_users, editor ].compact.uniq, :write).alphabetically.pluck(:name, :id)
+    rule.accounts_permitted_to(option_users, :write).alphabetically.pluck(:name, :id)
+  end
+
+  def options_cache_key
+    option_users.map(&:id)
   end
 
   def claimed_attributes
@@ -42,6 +46,11 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     # every user bounding the rule can write.
     def target_accounts
       rule.accounts_permitted_to(rule.restricting_users, :write)
+    end
+
+    def option_users
+      editor = Current.user unless Current.user.nil? || Current.user.admin?
+      editor ? [ editor ] : rule.restricting_users
     end
 
     def build_transfer(target_account, entry)

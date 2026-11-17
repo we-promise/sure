@@ -7,11 +7,27 @@ class Import < ApplicationRecord
   PUBLISH_LOCK_NAMESPACE = 4015
   # reason is :accounts or :rules (see #publish_refusal_for).
   class PublishNotAllowedError < StandardError
+    MESSAGE_KEYS = {
+      accounts: "accounts.not_authorized",
+      rules: "imports.publish.rules_admin_only",
+      guest_categories_or_tags: "imports.publish.guest_new_categories_or_tags"
+    }.freeze
+    # The API answers in English whatever the request's locale.
+    API_MESSAGES = {
+      accounts: "You don't have write access to every account this import writes to",
+      rules: "This import includes rules, which only an admin can import",
+      guest_categories_or_tags: "Guests cannot create categories or tags"
+    }.freeze
+
     attr_reader :reason
 
     def initialize(reason)
       @reason = reason
-      super(I18n.t(reason == :rules ? "imports.publish.rules_admin_only" : "accounts.not_authorized"))
+      super(I18n.t(MESSAGE_KEYS.fetch(reason)))
+    end
+
+    def api_message
+      API_MESSAGES.fetch(reason)
     end
   end
   MappingError = Class.new(StandardError)
@@ -261,9 +277,14 @@ class Import < ApplicationRecord
   # user: who publishes; checked and recorded with the status change. nil
   # only for a publish no user asked for.
   def publish_later(user:)
-    claim_for_publish!(user)
+    previous = claim_for_publish!(user)
 
-    ImportJob.perform_later(self)
+    begin
+      ImportJob.perform_later(self)
+    rescue StandardError
+      release_publish_claim!(previous)
+      raise
+    end
   end
 
   # Re-checks the import and its publisher, and marks it importing, under
@@ -271,6 +292,7 @@ class Import < ApplicationRecord
   # (ImportGuestGuardable) and a statement's account change the row lock
   # (PdfImport#assign_account!), so none lands between the check and the
   # publish, and a second publish finds it importing.
+  # Returns the status and publisher it replaced, as read under the lock.
   def claim_for_publish!(user)
     with_publish_lock do
       with_lock do
@@ -281,8 +303,18 @@ class Import < ApplicationRecord
         refusal = user && publish_refusal_for(user)
         raise PublishNotAllowedError.new(refusal) if refusal
 
+        previous = { status: status, published_by_id: published_by_id }
         update!(status: :importing, published_by: user)
+        previous
       end
+    end
+  end
+
+  # A job that never got queued leaves nothing to finish the import, so it
+  # goes back to how the claim found it and can be published again.
+  def release_publish_claim!(previous)
+    with_publish_lock do
+      with_lock { update!(previous) if importing? }
     end
   end
 
@@ -568,13 +600,15 @@ class Import < ApplicationRecord
 
   # Why the user may not publish this import, or nil: :accounts when it
   # writes into an account they can't write, :rules when it writes rules and
-  # they are not an admin. Imports are family records any member can reach,
+  # they are not an admin, :guest_categories_or_tags when a guest's import
+  # would add categories or tags. Imports are family records any member can reach,
   # so importing rules stays an admin's job; the importer also restricts them
   # to a non-admin publisher or session creator (Family::DataImporter).
   def publish_refusal_for(user)
     return :accounts unless accounts_writable_by?(user)
+    return :rules if writes_rules? && !user&.admin?
 
-    :rules if writes_rules? && !user&.admin?
+    :guest_categories_or_tags if user&.guest? && creates_categories_or_tags?
   end
 
   def writes_rules?

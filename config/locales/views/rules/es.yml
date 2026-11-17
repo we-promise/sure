@@ -19,6 +19,7 @@ es:
       on_or_after: '%{resource} a partir del %{date}'
       restricted_to: Solo cambia las cuentas que %{name} puede editar
       widen: Aplicar a toda la familia
+      review_required: Se desactivó cuando se fue la persona a la que estaba limitada. Al activarla, se aplica a toda la familia.
     form:
       rule_name_label: Nombre de la regla (opcional)
       rule_name_placeholder: Introduce un nombre para esta regla

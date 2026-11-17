@@ -2288,6 +2288,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     unknown = family.rules.find_by!(name: "Unknown")
     assert_nil unknown.restricted_to
     assert_not unknown.active?
+    assert unknown.review_required?
   end
 
   test "a member's import restricts its rules to the member, whatever the file says" do
@@ -2330,6 +2331,18 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) do
       Family::DataImporter.new(family, ndjson, user: users(:family_member)).import!
     end
+  end
+
+  test "rules from an import session whose creator is gone wait for an admin's review" do
+    family = families(:dylan_family)
+    session = family.import_sessions.create!(expected_chunks: 1)
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { id: "orphan-1", name: "Orphan", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } } ])
+
+    Family::DataImporter.new(family, ndjson, import_session: session).import!
+
+    rule = family.rules.find_by!(name: "Orphan")
+    assert_not rule.active?
+    assert rule.review_required?
   end
 
   test "imports rule groups by name and keeps each group in one block" do

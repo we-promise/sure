@@ -25,6 +25,13 @@ class Rule::ActionExecutor
     nil
   end
 
+  # What options depends on besides the family and the current user, so
+  # rules listed together (Rule.share_option_lists) don't share lists that
+  # differ between them.
+  def options_cache_key
+    []
+  end
+
   # The option for a saved value that options leaves out (e.g. a merchant only
   # on accounts the current user can't see, or one no longer assigned), so
   # editing the rule keeps the value instead of silently switching to the

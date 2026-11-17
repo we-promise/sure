@@ -109,7 +109,7 @@ class Rule::Action < ApplicationRecord
   end
 
   def options
-    executor_options = rule.option_list([ :action, action_type ]) { executor.options }
+    executor_options = rule.option_list([ :action, action_type, *executor.options_cache_key ]) { executor.options }
     return executor_options if executor_options.nil? || value.blank?
     return executor_options if executor_options.any? { |_label, id| id.to_s == value.to_s }
 

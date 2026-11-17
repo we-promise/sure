@@ -83,8 +83,11 @@ class Assistant::Function::ApplyRule < Assistant::Function
       current = rule.matching_scope.count
       unchanged = definition_digest(rule) == token["definition"] && current == token["match_count"]
       if unchanged
-        rule.restrict_to_editor(user)
+        rule.restrict_to_editor(user) unless rule.active?
         rule.update!(active: true)
+        # What the user's run will change (Rule::Runner).
+        rule.run_by = user
+        current = rule.matching_scope.count
       end
     end
 

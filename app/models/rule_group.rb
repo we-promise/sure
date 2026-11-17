@@ -32,7 +32,7 @@ class RuleGroup < ApplicationRecord
   # themselves (Rule#restrict_to_editor).
   def switch_rules(active, user: nil)
     rules.ordered.to_a.reject do |rule|
-      rule.restrict_to_editor(user) if active
+      rule.restrict_to_editor(user) if active && !rule.active?
       rule.update(active: active) && !rule.notification_baseline_timed_out?
     end
   end

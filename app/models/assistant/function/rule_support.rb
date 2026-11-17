@@ -436,6 +436,7 @@ module Assistant::Function::RuleSupport
     # What the rule would do, independent of timestamps and display names.
     def definition_digest(rule)
       definition = {
+        restricted_to: rule.restricted_to_id,
         effective_date: rule.effective_date&.iso8601,
         conditions: rule.conditions.reject(&:marked_for_destruction?).select { |c| c.parent_id.nil? }
                         .map { |c| digest_condition(c) }.sort_by(&:to_json),

@@ -16,14 +16,17 @@ module SessionAdvisoryLockable
     connection = self.class.lease_connection
     key = [ namespace, id.to_s ]
 
-    connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", *key ]))
     sessions = (@advisory_lock_sessions ||= {})
     outermost = !sessions.key?(namespace)
-    sessions[namespace] ||= backend_pid(connection)
+    locked = false
     begin
+      connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", *key ]))
+      locked = true
+      # Inside the begin, so a failure after taking the lock still releases it.
+      sessions[namespace] ||= backend_pid(connection)
       yield
     ensure
-      release_session_advisory_lock(connection, key)
+      release_session_advisory_lock(connection, key) if locked
       sessions.delete(namespace) if outermost
     end
   end

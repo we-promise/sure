@@ -250,7 +250,7 @@ RSpec.describe 'API V1 Imports', type: :request do
         run_test!
       end
 
-      response '403', 'guest users cannot import family configuration' do
+      response '403', 'guest restriction, or publish refused (account access, rules, guest categories or tags); a created import keeps its import_id' do
         schema oneOf: [
           { '$ref' => '#/components/schemas/ErrorResponse' },
           { '$ref' => '#/components/schemas/ErrorResponseWithImportId' }

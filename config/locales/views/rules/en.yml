@@ -72,6 +72,7 @@ en:
       stop_processing_hint: Rules further down don't change transactions matched by this rule.
       restricted_to: Only changes accounts %{name} can edit
       widen: Apply to the whole family
+      review_required: Switched off when the person it was limited to left. Switching it on applies it to the whole family.
     form:
       rule_name_label: Rule name (optional)
       rule_name_placeholder: Enter a name for this rule

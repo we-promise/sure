@@ -33,6 +33,13 @@ class Entry < ApplicationRecord
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy, inverse_of: :entry
   accepts_nested_attributes_for :entryable
 
+  # A saved transaction attached to an entry, or moved with it to another
+  # account, keeps references it was given before: they must be the new
+  # family's too. A transaction saved with its entry checks itself.
+  validate :transaction_references_belong_to_family, if: -> {
+    entryable.is_a?(Transaction) && entryable.persisted? && (new_record? || will_save_change_to_account_id?)
+  }
+
   # Manual, Bluecoins-style reconciliation status. Distinct from Transaction#pending?
   # (which reflects the bank/provider's own pending-vs-posted status) and from the
   # sync-time duplicate-claim logic in Account::ProviderImportAdapter (which already
@@ -800,6 +807,15 @@ class Entry < ApplicationRecord
   end
 
   private
+    def transaction_references_belong_to_family
+      family_id = account&.family_id
+      return if family_id.nil?
+
+      foreign = entryable.foreign_references(only_changed: false).any? ||
+        entryable.tags.where.not(family_id: family_id).exists?
+      errors.add(:entryable, :invalid) if foreign
+    end
+
     # Takes FOR UPDATE on the transaction row, then on this entry (lock! also reloads both), always
     # in that order so the split methods can't deadlock each other. Yields the transaction, or nil
     # for other entryables.

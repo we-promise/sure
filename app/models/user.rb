@@ -435,9 +435,10 @@ class User < ApplicationRecord
   end
 
   # A rule restricted to a user who leaves the family is switched off and no
-  # longer restricted, so it runs again only once an admin switches it on.
+  # longer restricted, and no run uses it until an admin switches it on
+  # (Rule#review_required).
   def release_restricted_rules!
-    restricted_rules.update_all(active: false, restricted_to_id: nil, updated_at: Time.current)
+    restricted_rules.update_all(active: false, restricted_to_id: nil, review_required: true, updated_at: Time.current)
   end
 
   def transfer_to_family!(new_family, role: self.role)

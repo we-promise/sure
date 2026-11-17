@@ -39,6 +39,46 @@ class ImportTest < ActiveSupport::TestCase
     end
   end
 
+  test "a failed enqueue puts the import back as it was in the database" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    # This copy still reads importing; another one has since failed it.
+    import.update!(status: :importing)
+    Import.find(import.id).update!(status: :failed)
+    ImportJob.stubs(:perform_later).raises(StandardError, "queue down")
+
+    error = assert_raises(StandardError) { import.publish_later(user: users(:family_admin)) }
+    assert_equal "queue down", error.message
+
+    import.reload
+    assert import.failed?
+    assert_nil import.published_by
+  end
+
+  test "a guest can't publish an import that would create categories or tags" do
+    guest = family_guest
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+    import.stubs(:creates_categories_or_tags?).returns(true)
+
+    error = assert_raises(Import::PublishNotAllowedError) { import.publish_later(user: guest) }
+    assert_equal :guest_categories_or_tags, error.reason
+  end
+
+  test "the publish lock is released when setting it up fails after taking it" do
+    import = imports(:transaction)
+    import.stubs(:backend_pid).raises(ActiveRecord::QueryCanceled, "canceled")
+
+    assert_raises(ActiveRecord::QueryCanceled) { import.with_publish_lock { flunk "ran without a lock session" } }
+
+    held = Import.connection.select_value(Import.sanitize_sql_array([ <<~SQL.squish, Import::PUBLISH_LOCK_NAMESPACE, import.id.to_s ]))
+      SELECT count(*) FROM pg_locks
+      WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted AND objsubid = 2
+        AND classid = ? AND objid::bigint = (hashtext(?)::bigint & 4294967295)
+    SQL
+    assert_equal 0, held
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

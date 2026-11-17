@@ -85,7 +85,7 @@ class ImportsController < ApplicationController
   end
 
   def new
-    @pending_import = Current.family.imports.ordered.pending.first
+    @pending_import = Current.family.imports.where(import_session_id: nil).ordered.pending.first
     @document_upload_extensions = document_upload_supported_extensions
   end
 
