@@ -33,11 +33,12 @@ class Entry < ApplicationRecord
   delegated_type :entryable, types: Entryable::TYPES, dependent: :destroy, inverse_of: :entry
   accepts_nested_attributes_for :entryable
 
-  # A saved transaction attached to an entry, or moved with it to another
-  # account, keeps references it was given before: they must be the new
+  # A saved transaction attached to an entry (new, or replacing its
+  # transaction), or moved with it to another account, keeps references it was given before: they must be the new
   # family's too. A transaction saved with its entry checks itself.
   validate :transaction_references_belong_to_family, if: -> {
-    entryable.is_a?(Transaction) && entryable.persisted? && (new_record? || will_save_change_to_account_id?)
+    entryable.is_a?(Transaction) && entryable.persisted? &&
+      (new_record? || will_save_change_to_account_id? || will_save_change_to_entryable_id?)
   }
 
   # Manual, Bluecoins-style reconciliation status. Distinct from Transaction#pending?

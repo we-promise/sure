@@ -67,6 +67,30 @@ class TransactionTest < ActiveSupport::TestCase
     assert_not entry.valid?
   end
 
+  test "replacing an entry's transaction checks the new one's references" do
+    entry = create_transaction
+    replacement = Transaction.create!(category: families(:empty).categories.create!(name: "Elsewhere"))
+
+    entry.entryable = replacement
+    assert_not entry.valid?
+  end
+
+  test "checks a loaded reference and an id-only one together" do
+    other = families(:empty)
+    own_merchant = merchants(:netflix)
+    transaction = Transaction.find(create_transaction.transaction.id)
+    transaction.category = other.categories.build(name: "Elsewhere")
+    transaction.merchant_id = own_merchant.id
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:category, :invalid)
+
+    transaction = Transaction.find(create_transaction.transaction.id)
+    transaction.merchant = other.merchants.build(name: "Elsewhere")
+    transaction.category_id = categories(:food_and_drink).id
+    assert_not transaction.valid?
+    assert transaction.errors.of_kind?(:merchant, :invalid)
+  end
+
   test "accepts its own family's references and any provider merchant" do
     transaction = create_transaction(
       category: categories(:food_and_drink),

@@ -14,6 +14,12 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
     option_users.map(&:id)
   end
 
+  # A saved target the editor can't pick keeps a label, without the name of
+  # an account they can't write.
+  def option_for(value)
+    [ I18n.t("rule.actions.set_as_transfer_or_payment.not_accessible"), value ] if family.accounts.exists?(id: value)
+  end
+
   def claimed_attributes
     [ :transfer ]
   end

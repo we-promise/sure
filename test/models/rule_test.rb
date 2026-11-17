@@ -212,6 +212,27 @@ class RuleTest < ActiveSupport::TestCase
     assert_not rule.reload.review_required?
   end
 
+  test "a run asked for by someone no longer in the family changes nothing" do
+    family = families(:dylan_family)
+    create_transaction(account: accounts(:investment), name: "Moved probe")
+    family.rules.create!(resource_type: "transaction", active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Moved probe" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ])
+    outsider = users(:empty)
+
+    assert_empty Rule::Runner.new(family, rules: family.rules, execution_type: "manual", user: outsider).run
+    assert_equal 0, family.entries.where(name: "Renamed").count
+  end
+
+  test "a saved transfer target outside the editor's options keeps a label" do
+    other = families(:dylan_family).users.create!(email: "label-member@example.com", password: user_password_test, role: "member", first_name: "Label", last_name: "Member")
+    rule = families(:dylan_family).rules.build(resource_type: "transaction", restricted_to: users(:family_admin))
+    action = rule.actions.build(action_type: "set_as_transfer_or_payment", value: accounts(:investment).id)
+    Current.stubs(:user).returns(other)
+
+    assert action.value_display.present?
+  end
+
   test "displayed_action skips an unsaved action and option lists reset on reload" do
     rule = @family.rules.create!(resource_type: "transaction",
       actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ])

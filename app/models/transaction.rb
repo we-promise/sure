@@ -24,6 +24,13 @@ class Transaction < ApplicationRecord
   ].freeze
 
   validate :validate_attachments, if: -> { attachments.attached? }
+
+  # Per reference, whether the id points at another family's record
+  # (#foreign_references; provider merchants belong to no family).
+  FOREIGN_REFERENCE_SQL = {
+    category: "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> accounts.family_id)",
+    merchant: "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> accounts.family_id)"
+  }.freeze
   validate :references_belong_to_family
 
   accepts_nested_attributes_for :taggings, allow_destroy: true
@@ -385,23 +392,12 @@ class Transaction < ApplicationRecord
   # unless only_changed: false (Entry checks a transaction it is attached to).
   # Compared in memory when the references are loaded, otherwise in one query.
   def foreign_references(only_changed: true)
-    check_category = reference_to_check?(:category, only_changed)
-    check_merchant = reference_to_check?(:merchant, only_changed)
-    return [ false, false ] unless check_category || check_merchant
+    checks = %i[category merchant].select { |name| reference_to_check?(name, only_changed) }
+    return [ false, false ] if checks.empty?
 
-    if (!check_category || association(:category).loaded?) && (!check_merchant || association(:merchant).loaded?)
-      family_id = loaded_family_id || owning_accounts.pick(:family_id)
-      return [ false, false ] if family_id.nil?
-
-      return [
-        check_category && category&.family_id != family_id,
-        check_merchant && merchant.is_a?(FamilyMerchant) && merchant.family_id != family_id
-      ]
-    end
-
-    category_sql = check_category ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> accounts.family_id)", category_id ]) : "FALSE"
-    merchant_sql = check_merchant ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> accounts.family_id)", merchant_id ]) : "FALSE"
-    owning_accounts.pick(Arel.sql(category_sql), Arel.sql(merchant_sql)) || [ false, false ]
+    loaded, unloaded = checks.partition { |name| association(name).loaded? }
+    foreign = foreign_loaded_references(loaded).merge(foreign_unloaded_references(unloaded))
+    [ foreign.fetch(:category, false), foreign.fetch(:merchant, false) ]
   end
 
   # The entry's family when its account is already loaded, else nil.
@@ -746,6 +742,28 @@ class Transaction < ApplicationRecord
       foreign_category, foreign_merchant = foreign_references
       errors.add(:category, :invalid) if foreign_category
       errors.add(:merchant, :invalid) if foreign_merchant
+    end
+
+    # Loaded references (possibly not saved yet) are compared in memory.
+    def foreign_loaded_references(names)
+      return {} if names.empty?
+
+      family_id = loaded_family_id || owning_accounts.pick(:family_id)
+      return {} if family_id.nil?
+
+      names.index_with do |name|
+        record = public_send(name)
+        name == :merchant ? record.is_a?(FamilyMerchant) && record.family_id != family_id : record&.family_id != family_id
+      end
+    end
+
+    # The rest are checked by id, in one query.
+    def foreign_unloaded_references(names)
+      return {} if names.empty?
+
+      columns = names.map { |name| Arel.sql(self.class.sanitize_sql([ FOREIGN_REFERENCE_SQL.fetch(name), self["#{name}_id"] ])) }
+      values = Array.wrap(owning_accounts.pick(*columns))
+      names.zip(values).to_h { |name, value| [ name, value || false ] }
     end
 
     # A reference set by id, or assigned as a record not saved yet. With

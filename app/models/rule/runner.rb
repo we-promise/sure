@@ -40,6 +40,8 @@ class Rule::Runner
   # Returns the RuleRun records created, one per executed rule.
   def run
     return [] if rule_ids.empty?
+    # A queued run whose user has left the family since acts for no one.
+    return [] if user && user.family_id != family.id
 
     rule_runs = nil
     acquired = with_family_lock { rule_runs = run_rules }

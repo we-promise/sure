@@ -71,14 +71,18 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
   test "a member re-applying an active family-wide rule keeps it family-wide and runs within their accounts" do
     member = users(:family_member)
     @rule.update!(active: true)
+    writable = create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
     unshared = create_transaction(account: accounts(:investment), name: "ZXQ Coffee Bar")
     token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
+    assert token
 
-    perform_enqueued_jobs(only: RuleJob) do
+    result = perform_enqueued_jobs(only: RuleJob) do
       Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
     end
 
+    assert result[:success], result.inspect
     assert_nil @rule.reload.restricted_to
+    assert_equal @category, writable.entryable.reload.category
     assert_nil unshared.entryable.reload.category
   end
 

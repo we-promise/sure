@@ -18,6 +18,22 @@ class SureImportTest < ActiveSupport::TestCase
     assert_equal member, @family.rules.find_by!(name: "Published by member").restricted_to
   end
 
+  test "preflight runs under the publish lock" do
+    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Locked" } }.to_json)
+    held = nil
+    @import.define_singleton_method(:validate_sure_preflight!) do
+      held = Import.connection.select_value(Import.sanitize_sql_array([ <<~SQL.squish, Import::PUBLISH_LOCK_NAMESPACE, id.to_s ])).positive?
+        SELECT count(*) FROM pg_locks
+        WHERE locktype = 'advisory' AND pid = pg_backend_pid() AND granted AND objsubid = 2
+          AND classid = ? AND objid::bigint = (hashtext(?)::bigint & 4294967295)
+      SQL
+    end
+
+    @import.publish_later(user: users(:family_admin))
+
+    assert held
+  end
+
   test "dry_run reflects attached ndjson content" do
     ndjson = [
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } },
