@@ -261,7 +261,10 @@ en:
       uk: United Kingdom
       ca: Canada
       au: Australia
-      eu: Europe
+      fr: France
+      de: Germany
+      ch: Switzerland
+      se: Sweden
       in: India
       generic: General
     confirm_unlink:

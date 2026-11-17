@@ -183,7 +183,10 @@ zh-TW:
       uk: 英國
       ca: 加拿大
       au: 澳洲
-      eu: 歐洲
+      fr: 法國
+      de: 德國
+      ch: 瑞士
+      se: 瑞典
       in: 印度
       generic: 一般
     confirm_unlink:

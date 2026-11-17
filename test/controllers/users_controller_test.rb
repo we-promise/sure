@@ -47,6 +47,32 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "USD", "SGD" ], @user.family.reload.enabled_currency_codes
   end
 
+  test "admin can choose investment subtype countries" do
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @user.family.id, investment_subtype_regions: [ "", "se", "", "fr" ] }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    assert_equal [ "fr", "se" ], @user.family.reload.investment_subtype_regions
+  end
+
+  test "non-admin cannot choose investment subtype countries" do
+    sign_in @member = users(:family_member)
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @member.family.id, investment_subtype_regions: [ "se" ] }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_nil @member.family.reload.investment_subtype_regions
+  end
+
   test "rejects an unknown family currency" do
     patch user_url(@user), params: {
       user: {

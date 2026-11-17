@@ -234,7 +234,10 @@ zh-CN:
       uk: 英国
       ca: 加拿大
       au: 澳大利亚
-      eu: 欧洲
+      fr: 法国
+      de: 德国
+      ch: 瑞士
+      se: 瑞典
       in: 印度
       generic: 通用
     confirm_unlink:

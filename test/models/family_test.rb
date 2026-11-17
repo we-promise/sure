@@ -387,6 +387,25 @@ class FamilyTest < ActiveSupport::TestCase
     assert_includes family.available_merchants.map(&:name), "Recently Unlinked Merchant"
   end
 
+  test "investment subtype regions follow the country until customised" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: nil)
+    assert_equal [ "se" ], family.investment_subtype_region_codes
+
+    family.update!(investment_subtype_regions: [ "", "fr", "se", "xx" ])
+    assert_equal [ "fr", "se" ], family.reload.investment_subtype_regions
+
+    family.update!(investment_subtype_regions: [ "" ])
+    assert_equal [], family.reload.investment_subtype_region_codes
+  end
+
+  test "investment subtype regions matching the country default are stored as automatic" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: [ "", "se" ])
+
+    assert_nil family.reload.investment_subtype_regions
+  end
+
   test "enabled currencies always include the base currency" do
     family = families(:dylan_family)
     family.update!(currency: "SGD", enabled_currencies: [ "USD" ])

@@ -180,7 +180,10 @@ it:
       uk: Regno Unito
       ca: Canada
       au: Australia
-      eu: Europa
+      fr: Francia
+      de: Germania
+      ch: Svizzera
+      se: Svezia
       in: India
       generic: Generale
     confirm_unlink:
