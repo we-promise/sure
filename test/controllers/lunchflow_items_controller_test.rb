@@ -151,7 +151,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
   test "account setup localizes an unexpected error in German" do
     @user.update!(locale: "de")
     lunchflow_account = lunchflow_accounts(:investment_account)
-    Account.stubs(:create_and_sync).raises(StandardError, "Synthetic failure")
+    LunchflowItem::AccountFlow.any_instance.stubs(:complete_setup!).raises(StandardError, "Synthetic failure")
 
     post complete_account_setup_lunchflow_item_url(lunchflow_items(:one)), params: {
       account_types: { lunchflow_account.id => "Investment" },
@@ -165,7 +165,7 @@ class LunchflowItemsControllerTest < ActionDispatch::IntegrationTest
   test "account setup preserves the unexpected error in English" do
     @user.update!(locale: "en")
     lunchflow_account = lunchflow_accounts(:investment_account)
-    Account.stubs(:create_and_sync).raises(StandardError, "Synthetic failure")
+    LunchflowItem::AccountFlow.any_instance.stubs(:complete_setup!).raises(StandardError, "Synthetic failure")
 
     post complete_account_setup_lunchflow_item_url(lunchflow_items(:one)), params: {
       account_types: { lunchflow_account.id => "Investment" },
