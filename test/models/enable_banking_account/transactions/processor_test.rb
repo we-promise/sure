@@ -249,6 +249,71 @@ class EnableBankingAccount::Transactions::ProcessorTest < ActiveSupport::TestCas
     assert_equal 0, result[:failed]
   end
 
+  test "an identifierless copy in the batch does not split a movement that settles a pending entry" do
+    pending_entry = create_transaction(
+      account:     @account,
+      name:        "Card authorisation",
+      date:        3.days.ago.to_date,
+      amount:      25,
+      currency:    "EUR",
+      external_id: "enable_banking_B",
+      source:      "enable_banking"
+    )
+    pending_entry.transaction.update!(extra: { "enable_banking" => { "pending" => true } })
+
+    identifierless = raw_identifierless_transaction(amount: "25.00")
+    identified = identifierless.merge(transaction_id: "T", entry_reference: "B")
+    @enable_banking_account.update!(raw_transactions_payload: [ identifierless, identified ])
+
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal [ "enable_banking_T" ], @account.entries.where(source: "enable_banking").pluck(:external_id)
+  end
+
+  test "an unrelated identifierless row of the same amount does not take a pending entry before its settling row" do
+    pending_entry = create_transaction(
+      account:     @account,
+      name:        "Card authorisation",
+      date:        3.days.ago.to_date,
+      amount:      25,
+      currency:    "EUR",
+      external_id: "enable_banking_B",
+      source:      "enable_banking"
+    )
+    pending_entry.transaction.update!(extra: { "enable_banking" => { "pending" => true } })
+
+    unrelated = raw_identifierless_transaction(amount: "25.00").merge(remittance_information: [ "OTHER 0001234" ])
+    identified = raw_identifierless_transaction(amount: "25.00").merge(transaction_id: "T", entry_reference: "B")
+    @enable_banking_account.update!(raw_transactions_payload: [ unrelated, identified ])
+
+    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal "enable_banking_T", pending_entry.reload.external_id
+    assert_equal 2, @account.entries.where(source: "enable_banking").count
+  end
+
+  test "a settling row whose content key raises fails on its own" do
+    pending_entry = create_transaction(
+      account:     @account,
+      name:        "Card authorisation",
+      date:        3.days.ago.to_date,
+      amount:      25,
+      currency:    "EUR",
+      external_id: "enable_banking_B",
+      source:      "enable_banking"
+    )
+    pending_entry.transaction.update!(extra: { "enable_banking" => { "pending" => true } })
+
+    malformed = raw_identifierless_transaction.merge(transaction_id: "M", entry_reference: "B", transaction_amount: "25.00")
+    booked = raw_identifierless_transaction(amount: "9.00").merge(transaction_id: "OK")
+    @enable_banking_account.update!(raw_transactions_payload: [ malformed, booked ])
+
+    result = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+
+    assert_equal [ 0 ], result[:errors].map { |error| error[:index] }
+    assert @account.entries.exists?(external_id: "enable_banking_OK", source: "enable_banking")
+  end
+
   test "does not re-import a pending transaction whose external_id was auto-claimed" do
     # When a pending entry is automatically matched to a booked transaction by the
     # amount/date heuristic (find_pending_transaction), the old pending external_id

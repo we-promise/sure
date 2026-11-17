@@ -63,7 +63,31 @@ class Insight::Generators::NetWorthMilestoneGeneratorTest < ActiveSupport::TestC
     assert_empty dedup_keys
   end
 
+
+  test "a private account does not push the shared net worth over a milestone" do
+    shared_and_private_balances
+
+    assert_empty dedup_keys
+  end
+
+  test "counts every account once the only other member is inactive" do
+    shared_and_private_balances
+    users(:family_member).update_columns(active: false)
+
+    assert_equal [ "net_worth_milestone:10000" ], dedup_keys
+  end
+
   private
+    # `depository` is shared with family_member; `connected` is private to
+    # family_admin. Together they cross 10,000, the shared one alone does not.
+    def shared_and_private_balances
+      period = Period.last_30_days
+      create_balance(account: accounts(:depository), date: period.start_date, balance: 9_000)
+      create_balance(account: accounts(:depository), date: period.end_date, balance: 9_500)
+      create_balance(account: accounts(:connected), date: period.start_date, balance: 0)
+      create_balance(account: accounts(:connected), date: period.end_date, balance: 2_000)
+    end
+
     # Sets the family's net worth from N days ago onwards; each value holds
     # until the next one.
     def net_worth(values_by_days_ago)
