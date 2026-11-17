@@ -520,6 +520,13 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_not loan.valid?
     assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_after_last_payment")
 
+    loan.term_change_rows = [
+      { effective_date: "2027-02-01", extra_repayment: "500" },
+      { effective_date: "2026-06-10", extra_repayment: "500" }
+    ]
+    assert_not loan.valid?, "refused whatever the order of the rows"
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_after_last_payment")
+
     loan.term_change_rows = [ { effective_date: MATURITY.iso8601, payment: "1100" } ]
     assert loan.valid?, "a change on the last payment date is accepted"
   end
