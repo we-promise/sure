@@ -1878,6 +1878,50 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal Money.new(1_200, "USD"), series.monthly_equivalent_amount(on: 3.months.ago.to_date)
   end
 
+  test "editing the amount records the change from today, so the old price stays in history" do
+    rent = create_rent(1_200)
+
+    rent.update!(amount: 1_400)
+
+    change = rent.recurring_price_changes.sole
+    assert_equal [ Date.current, 1_200, 1_400, "USD" ], [ change.effective_on, change.previous_amount, change.new_amount, change.currency ]
+    assert change.recorded_by_user?
+    assert_equal 1_200, rent.amount_on(Date.yesterday)
+    assert_equal 1_400, rent.amount_on(Date.current)
+  end
+
+  test "a second edit on the same day moves that day's change, and undoing it removes the change" do
+    rent = create_rent(1_200)
+
+    rent.update!(amount: 1_300)
+    rent.update!(amount: 1_400)
+    assert_equal [ 1_200, 1_400 ], [ rent.recurring_price_changes.sole.previous_amount, rent.recurring_price_changes.sole.new_amount ]
+
+    rent.update!(amount: 1_200)
+    assert_empty rent.recurring_price_changes.reload
+  end
+
+  test "an amount the price history already reached records nothing more" do
+    rent = create_rent(1_200)
+    rent.recurring_price_changes.create!(effective_on: 1.week.ago.to_date, previous_amount: 1_200, new_amount: 1_400,
+                                         currency: "USD", source: "detected")
+
+    rent.update!(amount: 1_400)
+
+    assert_equal 1, rent.recurring_price_changes.count
+  end
+
+  test "a change of currency, sign or a suggestion's amount is not a price change" do
+    rent = create_rent(1_200)
+    rent.update!(amount: 1_000, currency: "EUR")
+    suggestion = create_rent(50, name: "Gym", status: "suggested")
+    suggestion.update!(amount: 60)
+    income = create_rent(-2_000, name: "Salary", bill_type: "income")
+    income.update!(amount: -2_200)
+
+    assert_empty RecurringPriceChange.where(recurring_transaction: [ rent, suggestion, income ])
+  end
+
   test "obligations keeps expenses and payments into the given debt types, whatever the status" do
     expense = build_recurring(name: "Rent", status: "paused").tap(&:save!)
     into_loan = create_transfer_series("Mortgage", accounts(:loan))
@@ -1909,6 +1953,13 @@ class RecurringTransactionTest < ActiveSupport::TestCase
   end
 
   private
+    def create_rent(amount, name: "Rent", **attributes)
+      @family.recurring_transactions.create!(
+        name: name, account: @account, amount: amount, currency: "USD",
+        expected_day_of_month: 1, last_occurrence_date: Date.current,
+        next_expected_date: 1.month.from_now.to_date, status: "active", manual: true, **attributes
+      )
+    end
 
     def create_transfer_series(name, destination)
       @family.recurring_transactions.create!(

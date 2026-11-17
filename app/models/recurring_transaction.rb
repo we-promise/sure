@@ -82,6 +82,7 @@ class RecurringTransaction < ApplicationRecord
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
+  after_update :record_price_change, if: :saved_change_to_amount?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
@@ -279,6 +280,29 @@ class RecurringTransaction < ApplicationRecord
       .find_each do |occurrence|
         occurrence.update!(expected_amount: occurrence.resolved_expected_amount(series_amount: was))
       end
+  end
+
+  # An edited amount is a price change from today, kept in the price history
+  # so anything reading an earlier date (see #amount_on) still sees the old
+  # price. Skipped when the history already reached the new amount: the
+  # PriceChangeDetector records its change before updating the series, and a
+  # manual series edited to a detected price is that same change. A second
+  # edit the same day moves that day's change rather than adding one.
+  # A suggestion was never a commitment, and a new currency or a change of
+  # sign (bill to income) is not a new price.
+  def record_price_change
+    was, now = saved_change_to_amount
+    return if suggested? || status_before_last_save == "suggested" || saved_change_to_currency?
+    return unless was.positive? && now.positive?
+    return if recurring_price_changes.order(:effective_on).last&.new_amount == now
+
+    today = recurring_price_changes.find_by(effective_on: Date.current)
+    if today.nil?
+      recurring_price_changes.create!(effective_on: Date.current, previous_amount: was, new_amount: now,
+                                      currency: currency, source: "user")
+    elsif today.recorded_by_user?
+      today.previous_amount == now ? today.destroy! : today.update!(new_amount: now)
+    end
   end
 
   # A destination account is the definition of a transfer, so the type derives

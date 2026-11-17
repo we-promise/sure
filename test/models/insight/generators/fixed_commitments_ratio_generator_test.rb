@@ -116,6 +116,17 @@ class Insight::Generators::FixedCommitmentsRatioGeneratorTest < ActiveSupport::T
     assert_includes insight.facts[:explanation], "Rent ($200.00 a month more)"
   end
 
+  test "a rent raised by editing the bill counts as a rise" do
+    monthly_income(4_000)
+    rent = commitment("Rent", 1_200, since: 2.years.ago)
+
+    rent.update!(amount: 1_400)
+
+    insight = generate.sole
+    assert_equal "35.0", insight.facts[:current_ratio]
+    assert_equal "30.0", insight.facts[:previous_ratio]
+  end
+
   test "a series that replaced another reads as raised, not new" do
     monthly_income(4_000)
     commitment("Rent", 1_000, since: 2.years.ago)
