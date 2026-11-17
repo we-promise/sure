@@ -18,7 +18,8 @@
 # gets the family's Investment Contributions category, as Transfer#confirm!
 # gives it. Legs from before that kind existed were stored as funds_movement
 # without a category, and would otherwise show up as uncategorized spending.
-# A category the user set, or a locked category, is never replaced.
+# A category the user set, or a locked category, is never replaced, and a
+# pending (unconfirmed) match is left alone.
 #
 # Entries created or matched through Transfer::Creator and the match dialog
 # are user_modified by design, so that flag does not mark a user's choice of
@@ -50,9 +51,8 @@ class Transfer::InvestmentKindReconciler
         repair!(transaction, expected) unless dry_run
       end
 
-      if needs_contribution_category?(transfer)
+      if needs_contribution_category?(transfer) && (dry_run || assign_contribution_category!(transfer))
         changed["category->investment_contributions"] += 1
-        assign_contribution_category!(transfer) unless dry_run
       end
     end
 
@@ -78,7 +78,10 @@ class Transfer::InvestmentKindReconciler
     def needs_contribution_category?(transfer)
       outflow = transfer.outflow_transaction
 
-      repairable?(outflow) &&
+      # A pending match gets the category from Transfer#confirm!, if the user
+      # confirms it.
+      transfer.confirmed? &&
+        repairable?(outflow) &&
         outflow.category_id.nil? &&
         !outflow.locked?(:category_id) &&
         transfer.kind_for_leg(outflow) == "investment_contribution"
@@ -89,10 +92,15 @@ class Transfer::InvestmentKindReconciler
       category = contribution_categories[family.id] ||= family.investment_contributions_category
       outflow = transfer.outflow_transaction
 
-      now = Time.current
       Transaction.transaction do
+        # The user may have set or locked a category since the batch was read.
+        outflow.lock!
+        next false unless outflow.category_id.nil? && !outflow.locked?(:category_id)
+
+        now = Time.current
         outflow.update_columns(category_id: category.id, updated_at: now)
         outflow.entry.update_columns(updated_at: now)
+        true
       end
     end
 
