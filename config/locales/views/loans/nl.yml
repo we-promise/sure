@@ -29,7 +29,7 @@ nl:
       rate_change_add: "Rentewijziging toevoegen"
       rate_change_remove: "Verwijderen"
       term_changes: "Wijzigingen in de voorwaarden"
-      term_changes_hint: "Leg vast wat uw geldverstrekker na de start van de lening heeft gewijzigd: een extra aflossing, een bevestigd saldo of een nieuwe betaling. Laat de betaling leeg om het nieuwe saldo over de resterende looptijd te verdelen, of vul het bedrag van uw geldverstrekker in. Het schema volgt deze rijen. Een datum opnieuw invoeren vervangt die rij."
+      term_changes_hint: "Leg vast wat uw geldverstrekker na de start van de lening heeft gewijzigd: een extra aflossing, een bevestigd saldo of een nieuwe betaling. Laat de betaling leeg om het nieuwe saldo over de resterende looptijd te verdelen, of vul het bedrag van uw geldverstrekker in. Het schema volgt deze rijen, het saldo niet: boek een extra aflossing ook als overboeking naar de lening, anders verandert het saldo niet. Elke datum heeft één rij."
       term_changes_empty: "Geen wijzigingen vastgelegd. Het schema loopt op de oorspronkelijke voorwaarden."
       term_change_effective_date: "Ingangsdatum"
       term_change_extra_repayment: "Extra aflossing"
