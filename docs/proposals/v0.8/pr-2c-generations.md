@@ -60,7 +60,7 @@ The drift is real:
 ```mermaid
 flowchart LR
   A["2a transports +<br/>instrumentation"] --> B["2b routing +<br/>consent"] --> C["2c generations"] --> D["2d Jev +<br/>shadow"] --> E["2e documents"]
-  E --> P3["PR 3"] --> P4["PR 4"] --> P5["PR 5"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
+  E --> P3A["3a capsule +<br/>probes"] --> P4["PR 4"] --> P3["3b–3d off the<br/>web thread"] --> P5["PR 5"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
   subgraph PR4765["we-promise/sure#4765"]
     A
     B
@@ -216,7 +216,7 @@ flowchart LR
     - `ollama` and `openrouter`: `none` as given.
   - Legacy endpoints have preset `:openai` or none, so the table waits for PR 7's presets, as
     the spike recorded.
-- **Bill setup stays on the web thread** until PR 3. `RecurringTransaction::AiSetupSuggester` is
+- **Bill setup stays on the web thread** until 3b. `RecurringTransaction::AiSetupSuggester` is
   its requester and calls the generation's `call!` directly.
 
 ## How it fits together
@@ -270,10 +270,10 @@ flowchart LR
 | Small batches re-enqueued; local 10, cloud 25 (register; §11) | Step 7 and `ai_batch_fairness_test`. Legacy models keep today's `LLM_MAX_ITEMS_PER_CALL` until presets (PR 7) |
 | Down marks: server, key or model (call; spike "Failover on a gateway") | Step 6 and `ai_escalation_test`, without the sequencer cases (PR 4) |
 | No RubyLLM `with_fallbacks` (register) | Sure's loop is the only failover layer |
-| Reasoning effort per route entry; `none` mapped per preset; settings a server can't honour are accepted silently (spike "Turning reasoning off") | Step 5. Checking effort in probes waits for PR 3's probe jobs |
+| Reasoning effort per route entry; `none` mapped per preset; settings a server can't honour are accepted silently (spike "Turning reasoning off") | Step 5. Checking effort in probes waits for 3a's probe jobs |
 | Live cassettes for Anthropic's and OpenAI's successful paths (§19; the spike's keys had no credits) | Step 13. Needs funded keys, which only @josh-sanders holds |
 | A row per request, failures included (§10; 2a) | Unchanged: the transports emit `generate.ai`, and `usage.ruby_llm` writes the rows, which fixes drift bug 2 |
-| Generations only in AI jobs (§8.1) | True for the three background features. `bill_setup` stays on the web thread until PR 3 (§19's "Still on old code") |
+| Generations only in AI jobs (§8.1) | True for the three background features. `bill_setup` stays on the web thread until 3b (§19's "Still on old code") |
 
 **RubyLLM API (rubyllm.com/api, `main`, checked against 2.1.1):**
 
@@ -567,7 +567,7 @@ flowchart LR
 - Jev's calls (`Provider::Jev`, `JevCall`) and the inline shadow run move in 2d.
 - The PDF and statement workers, the usage recorders and `preferred_llm_provider` move in 2e.
 - Chat moves in PR 6.
-- Bill setup runs on the web thread until PR 3.
+- Bill setup runs on the web thread until 3b.
 - Configuration stays on the hostings page until PR 7.
 
 ## Built on 2c afterwards

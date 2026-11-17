@@ -55,7 +55,7 @@ Shadow runs are also still today's code:
 ```mermaid
 flowchart LR
   A["2a transports +<br/>instrumentation"] --> B["2b routing +<br/>consent"] --> C["2c generations"] --> D["2d Jev +<br/>shadow"] --> E["2e documents"]
-  E --> P3["PR 3"] --> P4["PR 4 gate"] --> P5["PR 5 RubyLLM 2.2"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
+  E --> P3A["3a capsule +<br/>probes"] --> P4["PR 4 gate"] --> P3["3b–3d off the<br/>web thread"] --> P5["PR 5 RubyLLM 2.2"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
   subgraph PR4765["we-promise/sure#4765"]
     A
     B
@@ -489,7 +489,7 @@ The 2d commits on #4765 follow this plan, with these differences:
 - **The misconfigured-Jev debug entry records a `reason`** (`path`), not an error class: nothing
   raises any more, because the config leaves an unreachable endpoint out.
 - **The transport's probe refuses** ("Jev has no health probe yet"); Jev was never probed, and
-  PR 3's probe jobs can add one.
+  3a's probe jobs can add one.
 - **The live check was recorded, not left open**: OpenCode Zen's free Jev needs no funded key.
   Its cassette matches on the body, because the fan-out's two requests arrive in either order.
 - **Evals refuse an unreachable Jev endpoint** with an error naming it, as the config leaves it

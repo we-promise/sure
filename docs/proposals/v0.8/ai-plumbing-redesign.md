@@ -2259,7 +2259,7 @@ and a PDF import.
 
 - The record that started the work holds the status, so the plumbing takes a `cancelled:`
   callable, for example `-> { pdf_import.reload.cancelled? }`. There's no separate token to
-  expire. Today none of these records can say "cancelled", so PR 3 adds it:
+  expire. Today none of these records can say "cancelled", so PR 3 adds it (3b; chat's in PR 6):
 
   | Work | Record | Change |
   |---|---|---|
@@ -2349,7 +2349,7 @@ Qdrant embed the query, and the OpenAI adapter calls the vector store's search).
 call inside the MCP web request today. `McpController` counts each permitted tool call
 (`Usage.capture("mcp_call_served_daily")`, #4295) before running it; that stays in the controller,
 before a tool is run or handed to `Ai::ToolJob`. Their AI work moves into the `ai` capsule like every other
-AI call, in PR 3, with the other web-thread calls (section 19).
+AI call, in 3c, with the other web-thread calls (section 19).
 
 - An AI-dependent tool is listed only when `Ai.available?(feature)` is true for the token's user,
   so a client never sees a tool that can't work by setup. This replaces today's check in PR 2.
@@ -3007,9 +3007,9 @@ they annotate and says so. Each ends with **Still on old code**: what isn't repl
    test.
 
    **File retention**, on the AI features page's Documents row, set by a family admin
-   (call by @josh-sanders, 2026-11-13). Two switches, defaulting to PR 3's behaviour:
+   (call by @josh-sanders, 2026-11-13). Two switches, defaulting to 3c's behaviour:
    - **Keep uploaded documents after indexing** (default off). Off, the file of a non-PDF document
-     is purged once the vector store has it, as PR 3 does. On, it's kept, so PR 7's re-indexing
+     is purged once the vector store has it, as 3c does. On, it's kept, so PR 7's re-indexing
      (a new embedding model, Documents turned on) covers these documents too, without a new upload.
    - **Keep statement and PDF import files** (default on, as today). Off, a statement's or PDF
      import's file is purged once it's processed and indexed. The vault keeps the record, its
@@ -3143,8 +3143,8 @@ The other documents in `docs/proposals/v0.8/` are the evidence this plan draws o
 | [`pr-2d-jev-and-shadow-runs.md`](pr-2d-jev-and-shadow-runs.md) | PR 2d's implementation plan (#4765): the Jev transport, judgements and shadow runs |
 | [`pr-2e-documents.md`](pr-2e-documents.md) | PR 2e's implementation plan (#4771, after 2d and #3422): attachments, `embed`, `ocr`, PDF reading with its checks, and the vector store fixes |
 | [`pr-2f-release-e2e.md`](pr-2f-release-e2e.md) | PR 2f's release e2e plan (#4892): the AI features end to end on free live models on every `v*` tag |
-| [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md) | PR 3's implementation plan: smart-fill, smart-configure, document indexing, probes and the MCP AI tools in jobs, cancellation, and capsule-only enforcement |
-| [`pr-4-sequencer.md`](pr-4-sequencer.md) | PR 4's implementation plan: three lane queues, the `ai_chat` capsule, one gate per local host with interrupts, and #4444's typing hold in the gate |
+| [`pr-3-off-the-web-thread.md`](pr-3-off-the-web-thread.md) | PR 3's implementation plan, in four parts (3a–3d): smart-fill, smart-configure, document indexing, probes and the MCP AI tools in jobs, cancellation, and capsule-only enforcement |
+| [`pr-4-sequencer.md`](pr-4-sequencer.md) | PR 4's implementation plan, merged between 3a and 3b: three lane queues, the `ai_chat` capsule, one gate per local host with interrupts, and #4444's typing hold in the gate |
 
 **Terms this plan defines**, for readers and coding agents:
 

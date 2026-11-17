@@ -63,7 +63,7 @@ flowchart LR
   M --> V["#3422<br/>vault bridge (Holdner)"]
   A --> E["2e documents<br/>feat/ai-documents (new PR)"]
   V --> E
-  E --> P3["PR 3 off the web thread"] --> P4["PR 4 gate"] --> P5["PR 5 RubyLLM 2.2"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
+  E --> P3A["3a capsule +<br/>probes"] --> P4["PR 4 gate"] --> P3["3b–3d off the<br/>web thread"] --> P5["PR 5 RubyLLM 2.2"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
   classDef here fill:#fde68a,stroke:#b45309
   class E here
 ```
@@ -261,7 +261,7 @@ flowchart LR
   - **Threshold:** both use a 0.3 starting point. The spike's relevant hit was 0.84 and the wrong ones
     0.14–0.17, so it's a heuristic, noted in the docs.
 - **Off the web thread? Not in 2e.** The non-PDF document upload and both MCP tools still run on
-  the web thread, through the plumbing, until PR 3 (§19).
+  the web thread, through the plumbing, until 3c (§19).
 - **Health probe:** `AiHealth::Probe#pdf_processing` sends the synthetic PDF through
   `transport.probe(model, :documents)`, a new check, instead of building the deleted workers.
 
@@ -320,7 +320,7 @@ flowchart LR
 | #3422: lane, gate with the user's switch, metadata fallback, scan note (§5.5, §14) | Step 8 |
 | The usage recorders go; `UsageCost` stays for chat (§10) | Step 9. §10 is corrected |
 | `ai_documents_test` (§17) | Step 8 |
-| The `mcp_ai_tools_test` rows that apply before PR 3 (§17) | Step 8: listing and the fallback |
+| The `mcp_ai_tools_test` rows that apply before 3c (§17) | Step 8: listing and the fallback |
 
 Upstream PRs whose goals 2e keeps:
 

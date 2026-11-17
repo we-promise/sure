@@ -41,7 +41,7 @@ maintainer wants fewer PRs. §19 and the 2a plan's decision 1 say so.
 ```mermaid
 flowchart LR
   A["2a transports +<br/>instrumentation"] --> B["2b routing +<br/>consent"] --> C["2c generations"] --> D["2d Jev +<br/>shadow"] --> E["2e documents"]
-  E --> P3["PR 3"] --> P4["PR 4"] --> P5["PR 5"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
+  E --> P3A["3a capsule +<br/>probes"] --> P4["PR 4"] --> P3["3b–3d off the<br/>web thread"] --> P5["PR 5"] --> P6["PR 6 chat"] --> P7["PR 7 config in DB"]
   subgraph PR4765["we-promise/sure#4765"]
     A
     B

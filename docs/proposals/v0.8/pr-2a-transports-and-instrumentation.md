@@ -37,7 +37,7 @@ write rows with a null `call_id`, which count as calls of one request each.
 flowchart LR
   S["PR 1 spike (done)"] --> A["2a transports +<br/>instrumentation"]
   A --> B["2b routing +<br/>consent"] --> C["2c generations"] --> D["2d Jev +<br/>shadow"] --> E["2e documents"]
-  E --> P3["PR 3 off the<br/>web thread"] --> P4["PR 4 sequencer"] --> P5["PR 5 RubyLLM 2.2"] --> P6["PR 6 chat"]
+  E --> P3A["3a capsule +<br/>probes"] --> P4["PR 4 sequencer"] --> P3["3b–3d off the<br/>web thread"] --> P5["PR 5 RubyLLM 2.2"] --> P6["PR 6 chat"]
   classDef here fill:#fde68a,stroke:#b45309
   class A here
 ```
@@ -120,7 +120,7 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-  subgraph Web["Admin system health (web request, until PR 3)"]
+  subgraph Web["Admin system health (web request, until 3a)"]
     AH["AiHealth<br/>builds Ai::Config::Endpoint + Model"] --> PR["AiHealth::Probe<br/>cache, redaction, confirming_tools_refusal"]
   end
   PR -->|"probe(model, :models / :chat / :tools / :embedding)"| T["Ai::Transport.for(endpoint)<br/>Compatible | Anthropic"]
@@ -167,7 +167,7 @@ flowchart LR
 | The `.ai` event records each file's name and size, never its bytes | Step 6 (`Base#event_*`, unused until 2c and 2e) |
 | No `ruby_llm-monitoring`, which rewrites app-wide inflections | Step 1 note |
 | `pipelock:ignore` tags move with their lines; example keys are `${VAR}` | Steps 4 and 11; verification |
-| **Not in 2a:** probes as jobs on the endpoint's timeout (PR 3); live cassettes for Anthropic's and OpenAI's successful paths (2c); `previous_response_id`, the deadline in the stream callback, and the final round with `tool_choice: none` (PR 6) | Still on old code |
+| **Not in 2a:** probes as jobs (3a), on the endpoint's timeout (PR 7); live cassettes for Anthropic's and OpenAI's successful paths (2c); `previous_response_id`, the deadline in the stream callback, and the final round with `tool_choice: none` (PR 6) | Still on old code |
 
 ## RubyLLM from 2.1.1 to `main`: what lands with 2.2
 
@@ -316,7 +316,7 @@ Nothing here blocks 2a on 2.1.1.
     - Delete `openai_client`, `anthropic_client`, `embedding_client` and `openai_model_ids`.
     - Failure codes map from `Ai::Error`. The new codes `no_credit`, `unauthorized` and
       `unreachable` get i18n.
-    - The timeout stays `Probe.timeout`, because probes run on the web thread until PR 3.
+    - The timeout stays `Probe.timeout`, because probes run on the web thread until 3a.
 11. **Decision 2.**
     - `Provider::Openai#initialize` takes `Http`'s proxy and SSL block.
     - `Assistant::External::Client#resolve_proxy` becomes `Http.proxy_for`. This fixes its
@@ -325,8 +325,8 @@ Nothing here blocks 2a on 2.1.1.
     - `ai_endpoint` and `ai_model`, `with_ai_call_context`, `capture_ai_events`.
     - Later parts add their own: 2b `with_ai_routes`/`without_ai`; 2c `stub_ai`
       and `with_ai_cassette(preset, name)` (cassettes under
-      `test/vcr_cassettes/ai/<preset>/`, keys filtered, `RECORD_CASSETTES=1`); PR 3
-      `with_ai_capsule`.
+      `test/vcr_cassettes/ai/<preset>/`, keys filtered, `RECORD_CASSETTES=1`); 3a
+      `with_ai_capsule` and `ai_capsule!`.
 13. **Contract test** (`test/architecture/ai_transport_contract_test.rb`), run over every
     transport.
     - Error mapping: 401, 402, 403, a 404 naming the model, 408, 429, a 429
