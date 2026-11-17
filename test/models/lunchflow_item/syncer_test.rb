@@ -103,6 +103,20 @@ class LunchflowItem::SyncerTest < ActiveSupport::TestCase
                  sync.sync_stats["errors"].map { |e| e.values_at("message", "category") }
   end
 
+  test "a failed sync records a debug log entry for support" do
+    @lunchflow_item.expects(:import_latest_lunchflow_data).raises(RuntimeError, "connection reset")
+    Sentry.stubs(:capture_exception)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "lunchflow").count }, 1 do
+      assert_raises(LunchflowItem::Syncer::SafeSyncError) { @syncer.perform_sync(recording_sync) }
+    end
+
+    entry = DebugLogEntry.where(provider_key: "lunchflow").recent.first
+    assert_equal [ "provider_sync_error", "error", "LunchflowItem::Syncer" ], [ entry.category, entry.level, entry.source ]
+    assert_equal @lunchflow_item.family, entry.family
+    assert_equal({ "lunchflow_item_id" => @lunchflow_item.id, "error_class" => "RuntimeError", "error_message" => "connection reset" }, entry.metadata)
+  end
+
   test "linked accounts that fail to process or schedule are reported" do
     lunchflow_account = @lunchflow_item.lunchflow_accounts.first
     account = @lunchflow_item.family.accounts.create!(name: "Linked", balance: 0, currency: "USD", accountable: Depository.new)
