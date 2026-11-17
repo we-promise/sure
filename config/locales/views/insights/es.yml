@@ -47,6 +47,7 @@ es:
       budget_on_track: Presupuesto
       maintained_goal_depleted: Reserva
       bill_not_covered: Recibos
+      loan_payment_change: Cuota del préstamo
     meta:
       next_n_days:
         one: Próximo día
@@ -78,6 +79,7 @@ es:
       budget: Ver presupuesto
       maintained_goal_depleted: Ver reserva
       bill_not_covered: Ir a la cuenta
+      loan_payment_change: Ver préstamo
     titles:
       spending_anomaly:
         above: El gasto en %{category} va en aumento
@@ -97,6 +99,9 @@ es:
         other: "%{count} categorías necesitan atención en tu presupuesto"
       budget_on_track: Tu presupuesto va según lo previsto
       bill_not_covered: "%{account} podría no cubrir %{name}"
+      loan_payment_change:
+        up: La cuota de %{account} va a subir
+        down: La cuota de %{account} va a bajar
     templates:
       spending_anomaly:
         above: Vas camino de gastar %{projected_spend} en %{category} este mes, aproximadamente un %{deviation_pct}% más que tu promedio mensual reciente de %{baseline_spend}.
@@ -117,3 +122,6 @@ es:
         near: "%{categories} están cerca de sus límites este mes. Has usado el %{budget_spent_pct}% de tu presupuesto total hasta ahora."
       budget_on_track: Has gastado %{spent} de tu presupuesto de %{budgeted} (%{budget_spent_pct}%) y todo está dentro de su límite.
       bill_not_covered: "%{name}, de %{amount}, vence el %{due_on} y se paga desde %{account}. Contando los demás recibos e ingresos previstos en esa cuenta hasta entonces, faltarán unos %{shortfall}."
+      loan_payment_change:
+        up: "La cuota de %{account} pasa de %{previous_payment} a %{new_payment} el %{effective_on}, un %{change_pct}% más, según el cuadro de amortización y los tipos registrados."
+        down: "La cuota de %{account} pasa de %{previous_payment} a %{new_payment} el %{effective_on}, un %{change_pct}% menos, según el cuadro de amortización y los tipos registrados."

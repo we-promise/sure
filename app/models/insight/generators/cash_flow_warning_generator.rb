@@ -65,7 +65,8 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         # bucket of the low point are material; display values live in `facts`.
         metadata: {
           negative: low_point.negative?,
-          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250
+          projected_low_bucket: (round(low_point, 0).to_i / 250) * 250,
+          accounts_digest: shared_accounts_digest
         },
         period: Period.custom(start_date: Date.current, end_date: Date.current + HORIZON_DAYS),
         dedup_key: "cash_flow_warning:#{month_token}"
@@ -75,7 +76,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
 
   private
     def cash_accounts
-      family.accounts.visible.where(accountable_type: "Depository", currency: family.currency)
+      shared_accounts.visible.where(accountable_type: "Depository", currency: family.currency)
     end
 
     # Projected occurrences of known recurring transactions within the horizon.
@@ -103,6 +104,7 @@ class Insight::Generators::CashFlowWarningGenerator < Insight::Generator
         .open_status
         .joins(:recurring_transaction)
         .where(recurring_transactions: { status: :active, destination_account_id: nil })
+        .merge(shared_recurring_transactions)
         .where("recurring_transactions.amount > 0")
         .where(currency: family.currency)
         .where(due_on: Date.current..(Date.current + HORIZON_DAYS))
