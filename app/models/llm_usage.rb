@@ -33,8 +33,10 @@ class LlmUsage < ApplicationRecord
   end.freeze
 
   # Calculate cost for a model and token usage
-  # Provider is automatically inferred from the model using the pricing map
-  # Returns nil if pricing is not available for the model (e.g., custom/self-hosted providers)
+  # Provider is inferred from the model using the pricing map.
+  # Returns nil if pricing is not available for the model (e.g., custom/self-hosted providers).
+  # Removal rides with PR 7, which deletes it when presets carry model prices. A stored
+  # cost is never recalculated; the usage page sums what the request-time write recorded.
   # @param apply_long_context_pricing [Boolean] use per-request tiers; disable for aggregate batch estimates
   # @return [Float, nil] estimated USD cost
   def self.calculate_cost(model:, prompt_tokens:, completion_tokens:, cache_creation_tokens: 0, cache_read_tokens: 0,

@@ -149,6 +149,8 @@ class Ai::Transport::Base
 
     # One `.ai` event per call, carrying what subscribers need: the route, the
     # request (files by name and size, never their bytes), the output, usage and error class.
+    # `finish_reason` names the answering attempt's stop reason; the `usage.ruby_llm`
+    # events don't carry it, and the usage subscriber needs it for the row it writes.
     def instrument(name, model:, request:)
       call = Ai::CallContext.current
       payload = { feature: call&.feature, call_id: call&.call_id, correlation_id: call&.correlation_id,
@@ -158,8 +160,11 @@ class Ai::Transport::Base
       ActiveSupport::Notifications.instrument("#{name}.ai", payload) do
         result = yield
         payload[:output] = result.is_a?(Response) ? result.json : result
-        payload[:usage] = result.usage if result.is_a?(Response)
-        payload[:json_mode] = result.json_mode if result.is_a?(Response)
+        if result.is_a?(Response)
+          payload[:usage] = result.usage
+          payload[:json_mode] = result.json_mode
+          payload[:finish_reason] = result.finish_reason&.to_s
+        end
         result
       rescue Ai::Error::Base => error
         payload[:error] = error.class.name

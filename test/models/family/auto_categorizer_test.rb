@@ -51,6 +51,23 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal kept, groceries.reload.category
   end
 
+  test "re-applying the same result does not double-apply; the enrichment lock wins" do
+    category = @family.categories.create!(name: "Coffee")
+    txn = create_transaction(account: @account, name: "Blue Bottle").transaction
+    categorizer = Family::AutoCategorizer.new(@family, transaction_ids: [ txn.id ])
+    categorizer.ai_generation
+    result = Ai::Result.new(value: { categorizations: [ { transaction_id: txn.id, category_name: "Coffee" } ] })
+
+    assert_equal 1, categorizer.apply_ai(result)
+    enrichments = DataEnrichment.count
+
+    # A crash between the batch commit and the enqueue of the rest leaves this job
+    # to run again with the same ids; the lock is what makes it a no-op.
+    assert_equal 0, categorizer.apply_ai(result)
+    assert_equal enrichments, DataEnrichment.count
+    assert_equal category, txn.reload.category
+  end
+
   test "a batch locks the transactions it applies to until it commits" do
     category = @family.categories.create!(name: "Coffee")
     txn = create_transaction(account: @account, name: "Blue Bottle").transaction

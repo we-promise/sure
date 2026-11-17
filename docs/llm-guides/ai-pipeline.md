@@ -51,7 +51,9 @@ flowchart LR
 - **Wrap every call in `Ai::CallContext.call`.** RubyLLM's `usage.ruby_llm` event then carries
   the family (the usage owner) and the call (the workflow), and `UsageSubscriber` writes one
   `llm_usages` row per request. A failed request's row takes its own error from the
-  `request.ruby_llm` event (`Ai::Transport::Instrumenter`). A job opens
+  `request.ruby_llm` event (`Ai::Transport::Instrumenter`). The row for the request that
+  answered takes its `finish_reason` from the call's `.ai` event; every other request's stays
+  nil, which is what a failure means. A job opens
   `Ai::CallContext.job(correlation_id)` first, with the id from its arguments; the id reaches
   the usage rows, the Langfuse session and the OTel `session.id`.
 - **Never create `ruby_llm_usages`.** RubyLLM's ledger would then record every call a second time.

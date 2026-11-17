@@ -48,6 +48,15 @@ class LlmUsage::CallTest < ActiveSupport::TestCase
     assert_in_delta 0.02, stats[:avg_cost]
   end
 
+  test "stored costs are summed as stored; statistics never reprice a row" do
+    usage(estimated_cost: 3.21)
+    LlmUsage.stubs(:calculate_cost).raises("a stored cost is never recalculated")
+
+    stats = LlmUsage.statistics_for_family(@family)
+
+    assert_in_delta 3.21, stats[:total_cost], 0.001
+  end
+
   test "the average cost comes from the unrounded total, over priced calls only" do
     usage(estimated_cost: 0.002)
     usage(estimated_cost: nil)
