@@ -287,7 +287,8 @@ class RecurringTransaction < ApplicationRecord
   # price. Skipped when the history already reached the new amount: the
   # PriceChangeDetector records its change before updating the series, and a
   # manual series edited to a detected price is that same change. A second
-  # edit the same day moves that day's change rather than adding one.
+  # edit the same day moves that day's change rather than adding one; over a
+  # detected change it becomes the user's, as the charge no longer backs it.
   # A suggestion was never a commitment, and a new currency or a change of
   # sign (bill to income) is not a new price.
   def record_price_change
@@ -300,8 +301,10 @@ class RecurringTransaction < ApplicationRecord
     if today.nil?
       recurring_price_changes.create!(effective_on: Date.current, previous_amount: was, new_amount: now,
                                       currency: currency, source: "user")
-    elsif today.recorded_by_user?
-      today.previous_amount == now ? today.destroy! : today.update!(new_amount: now)
+    elsif today.previous_amount == now
+      today.destroy!
+    else
+      today.update!(new_amount: now, source: "user", entry: nil)
     end
   end
 

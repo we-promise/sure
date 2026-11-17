@@ -1901,6 +1901,22 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_empty rent.recurring_price_changes.reload
   end
 
+  test "an edit on the day of a detected change takes that change over" do
+    rent = create_rent(1_200)
+    rent.recurring_price_changes.create!(effective_on: Date.current, previous_amount: 1_200, new_amount: 1_300,
+                                         currency: "USD", source: "detected")
+    rent.update!(amount: 1_300)
+    rent.update!(amount: 1_400)
+
+    travel_to(Date.tomorrow) { rent.update!(amount: 1_300) }
+
+    today = rent.recurring_price_changes.find_by!(effective_on: Date.current)
+    assert_equal [ 1_200, 1_400 ], [ today.previous_amount, today.new_amount ]
+    assert today.recorded_by_user?
+    assert_equal 1_400, rent.reload.amount_on(Date.current)
+    assert_equal 1_300, rent.amount_on(Date.tomorrow)
+  end
+
   test "an amount the price history already reached records nothing more" do
     rent = create_rent(1_200)
     rent.recurring_price_changes.create!(effective_on: 1.week.ago.to_date, previous_amount: 1_200, new_amount: 1_400,
