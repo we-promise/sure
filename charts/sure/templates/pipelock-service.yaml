@@ -28,4 +28,10 @@ spec:
       port: {{ $mcpPort }}
       targetPort: mcp
       protocol: TCP
+    {{- if include "sure.pipelockMetricsEnabled" . }}
+    - name: metrics
+      port: {{ include "sure.pipelockMetricsPort" . }}
+      targetPort: metrics
+      protocol: TCP
+    {{- end }}
 {{- end }}
