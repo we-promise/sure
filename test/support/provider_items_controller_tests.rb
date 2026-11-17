@@ -42,10 +42,11 @@ module ProviderItemsControllerTests
       key = provider_item.provider_key
       item_path = provider_routes.public_send(:"#{key}_item_path", provider_item)
       requests = ACCOUNT_FLOW_ROUTES.map { |action, verb| [ verb, "/#{key}_items/#{action}" ] } +
+        [ [ :get, "/#{key}_items/new" ], [ :post, "/#{key}_items" ], [ :get, "#{item_path}/edit" ] ] +
         [ [ :post, "#{item_path}/sync" ], [ :patch, item_path ], [ :delete, item_path ],
           [ :get, "#{item_path}/setup_accounts" ], [ :post, "#{item_path}/complete_account_setup" ] ]
 
-      assert_no_difference [ "Account.count", "AccountProvider.count", "Sync.count" ] do
+      assert_no_difference [ "Account.count", "AccountProvider.count", "Sync.count", "#{provider_item.class.name}.count" ] do
         requests.each do |verb, path|
           public_send(verb, path, params: { account_id: provider_item.family.accounts.first&.id, "#{key}_item": { name: "Renamed" } })
 
