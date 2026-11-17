@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus";
+import { markLayoutAnimating } from "utils/layout_animating";
 
 // Connects to data-controller="dialog"
 export default class extends Controller {
@@ -44,6 +45,8 @@ export default class extends Controller {
   #toggleSidebarWidth(el, isCurrentlyOpen, side) {
     const expandedClasses = side === "left" ? [...this.expandedSidebarClasses, "border-r"] : [...this.expandedSidebarClasses, "border-l"];
     const collapsedClasses = side === "left" ? [...this.collapsedSidebarClasses, "border-r-0"] : [...this.collapsedSidebarClasses, "border-l-0"];
+
+    markLayoutAnimating(el);
 
     if (isCurrentlyOpen) {
       el.classList.remove(...expandedClasses);

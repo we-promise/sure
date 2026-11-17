@@ -1,5 +1,5 @@
 class EnableBankingAccount < ApplicationRecord
-  include CurrencyNormalizable, Encryptable, IbanNormalizable
+  include CurrencyNormalizable, Encryptable, IbanNormalizable, IgnorableProviderAccount
 
   # Encrypt raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
@@ -138,6 +138,13 @@ class EnableBankingAccount < ApplicationRecord
     propagate_iban_to_account!
   end
 
+  # Keeps the session-scoped identifiers current without storing anything else,
+  # so an ignored account can still sync once the user links it.
+  def refresh_session_identifiers!(account_snapshot)
+    snapshot = account_snapshot.with_indifferent_access
+    update!(account_id: snapshot[:uid], identification_hashes: snapshot[:identification_hashes] || identification_hashes)
+  end
+
   def upsert_enable_banking_transactions_snapshot!(transactions_snapshot)
     assign_attributes(
       raw_transactions_payload: transactions_snapshot
@@ -216,7 +223,13 @@ class EnableBankingAccount < ApplicationRecord
     previous_account.update_column(:iban, nil)
   end
 
+  writes_unless_ignored :upsert_enable_banking_snapshot!, :upsert_enable_banking_transactions_snapshot!
+
   private
+
+    def ignored_snapshot_reset
+      { current_balance: nil, raw_payload: nil, raw_transactions_payload: nil }
+    end
 
     def iban_taken_in_family?(target)
       target.family.accounts.where.not(id: target.id).exists?(iban: iban, currency: target.currency)

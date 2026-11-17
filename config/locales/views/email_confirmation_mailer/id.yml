@@ -1,0 +1,9 @@
+---
+id:
+  email_confirmation_mailer:
+    confirmation_email:
+      body: Anda baru saja meminta untuk mengubah alamat email Anda. Klik tombol di bawah ini untuk mengonfirmasi perubahan ini.
+      cta: Konfirmasi perubahan email
+      expiry_notice: Tautan ini akan kedaluwarsa dalam %{hours} jam.
+      greeting: Halo!
+      subject: '%{product_name}: Konfirmasi perubahan email Anda'
