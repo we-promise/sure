@@ -137,7 +137,7 @@ class BalanceSheet::NetWorthBreakdownSeriesBuilder
         CACHE_VERSION,
         ExchangeRate::CONVERSION_CACHE_VERSION,
         # A rate stored later can bring back an account the series left out.
-        ExchangeRate.cache_version,
+        ExchangeRate.updated_at_version,
         user&.id,
         shares_version,
         period.start_date,

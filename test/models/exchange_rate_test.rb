@@ -276,17 +276,31 @@ class ExchangeRateTest < ActiveSupport::TestCase
       "index_exchange_rates_on_to_currency_and_updated_at"
   end
 
-  test "cache_version changes when a rate is stored within the same second as the previous one" do
+  test "updated_at_version changes when a rate is stored within the same second as the previous one" do
     second = Time.zone.parse("2026-11-16 10:00:00")
     ExchangeRate.update_all(updated_at: second - 1.day)
     first = ExchangeRate.create!(from_currency: "KRW", to_currency: "USD", date: Date.current, rate: 0.00075)
     first.update_columns(updated_at: second + 0.1)
-    before = ExchangeRate.cache_version
+    before = ExchangeRate.updated_at_version
 
     later = ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: Date.current, rate: 0.0065)
     later.update_columns(updated_at: second + 0.6)
 
-    assert_not_equal before, ExchangeRate.cache_version
+    assert_not_equal before, ExchangeRate.updated_at_version
+  end
+
+  test "updated_at_version on a scope is that scope's newest update, read without counting rows" do
+    eur = ExchangeRate.create!(from_currency: "KRW", to_currency: "EUR", date: Date.current, rate: 0.00065)
+    eur.update_columns(updated_at: Time.zone.parse("2026-11-16 10:00:00.25"))
+    ExchangeRate.create!(from_currency: "KRW", to_currency: "GBP", date: Date.current, rate: 0.00055)
+    scope = ExchangeRate.where(to_currency: "EUR")
+
+    version = nil
+    assert_no_queries_match(/COUNT/i) do
+      version = scope.updated_at_version
+    end
+
+    assert_equal scope.maximum(:updated_at).to_f, version
   end
 
   private

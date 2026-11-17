@@ -27,8 +27,11 @@ class ExchangeRate < ApplicationRecord
   # Part of the cache key of figures that depend on which rates are stored: a
   # rate stored later can complete a total that left an amount out. Keeps the
   # fractional seconds so a rate stored within the same second as the previous
-  # one still changes the key.
-  def self.cache_version
+  # one still changes the key. Works on a scope too
+  # (`where(to_currency: ...).updated_at_version`). It is deliberately not named
+  # `cache_version`: on a relation that name resolves to Rails' collection
+  # version, which also counts every matching row.
+  def self.updated_at_version
     maximum(:updated_at)&.to_f
   end
 

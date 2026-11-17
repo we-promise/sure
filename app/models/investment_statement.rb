@@ -815,7 +815,7 @@ class InvestmentStatement
         "investment_statement", "totals_query/v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, family.currency,
         account_ids_hash, date_range.begin, date_range.end, family.entries_cache_version,
         # A rate stored later can complete totals that left an amount out.
-        ExchangeRate.cache_version
+        ExchangeRate.updated_at_version
       ]) { Totals.new(family, account_ids: account_ids, date_range: date_range).call }
     end
 

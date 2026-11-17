@@ -349,7 +349,7 @@ class IncomeStatement
         family.entries_cache_version,
         family.accounts_status_version,
         family.currency,
-        ExchangeRate.cache_version,
+        ExchangeRate.updated_at_version,
         family.investment_contributions_as_spending?
       ]
     end

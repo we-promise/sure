@@ -284,7 +284,7 @@ class Transaction::Search
       family.currency,
       Digest::SHA256.hexdigest(attributes.sort.to_h.to_json), # cached by filters
       family.entries_cache_version,
-      ExchangeRate.cache_version, # a rate stored later can complete the totals
+      ExchangeRate.updated_at_version, # a rate stored later can complete the totals
       Digest::SHA256.hexdigest(family.tax_advantaged_account_ids.sort.to_json), # stable across processes
       accessible_account_ids ? Digest::SHA256.hexdigest(accessible_account_ids.sort.to_json) : "all",
       Date.current # totals exclude scheduled entries as of "today" -- must roll over daily
