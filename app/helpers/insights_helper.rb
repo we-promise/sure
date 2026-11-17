@@ -112,7 +112,7 @@ module InsightsHelper
       account && { text: t("insights.actions.#{insight.insight_type}"), href: account_path(account) }
     when "bank_fees"
       account = insight_account(insight)
-      fee_names = insight.family.categories.fees(insight.family.locale).pluck(:name)
+      fee_names = insight.family.categories.fees.pluck(:name)
       return nil unless account && fee_names.any? && insight.period_start && insight.period_end
       { text: t("insights.actions.bank_fees"),
         href: transactions_path(q: { account_ids: [ account.id ], categories: fee_names,

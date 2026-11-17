@@ -105,11 +105,14 @@ class Insight::Generators::BankFeesGeneratorTest < ActiveSupport::TestCase
     assert_equal "$16.00", generate_for(@checking).facts[:amount]
   end
 
-  test "a category named Fees in a locale the family does not use is not the Fees category" do
+  # Transfer fees create the category in the locale of whoever made the
+  # transfer, which can be a member's own rather than the family's.
+  test "the Fees category is found under a member's locale too" do
     @fees.update!(name: I18n.t("models.category.defaults.fees", locale: :fr))
     fee(@checking, 40, 10.days.ago)
+    fee(@checking, 1, 100.days.ago)
 
-    assert_nil generate_for(@checking)
+    assert_equal "$40.00", generate_for(@checking).facts[:amount]
   end
 
   test "excluded, pending, transfer-kind and split-parent rows are ignored" do
@@ -145,15 +148,38 @@ class Insight::Generators::BankFeesGeneratorTest < ActiveSupport::TestCase
 
   test "a fee rolling out of the window does not change the material metadata" do
     fee(@checking, 12, 85.days.ago)
-    latest = fee(@checking, 12, 10.days.ago)
     fee(@checking, 1, 100.days.ago)
+    travel 1.second
+    latest = fee(@checking, 12, 10.days.ago)
     before = generate_for(@checking).metadata
 
     travel 10.days
     after = generate_for(@checking).metadata
 
     assert_equal before, after
-    assert_equal latest.date.iso8601, after[:last_fee_on]
+    assert_equal latest.id, after[:latest_fee_id]
+  end
+
+  test "another fee on the same day as the latest one changes the material metadata" do
+    fee(@checking, 12, 10.days.ago)
+    fee(@checking, 1, 100.days.ago)
+    before = generate_for(@checking).metadata
+
+    travel 1.second
+    fee(@checking, 12, 10.days.ago)
+
+    assert_not_equal before, generate_for(@checking).metadata
+  end
+
+  test "a fee imported late with an older date changes the material metadata" do
+    fee(@checking, 12, 10.days.ago)
+    fee(@checking, 1, 100.days.ago)
+    before = generate_for(@checking).metadata
+
+    travel 1.second
+    fee(@checking, 12, 40.days.ago)
+
+    assert_not_equal before, generate_for(@checking).metadata
   end
 
   private

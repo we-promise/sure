@@ -14,7 +14,7 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
   # trading, which the portfolio reports, not something the bank charged.
   ACCOUNT_TYPES = %w[Depository CreditCard Loan].freeze
 
-  FeeTotals = Data.define(:account_id, :total, :charges, :last_fee_on, :prior_charges, :first_fees) do
+  FeeTotals = Data.define(:account_id, :total, :charges, :latest_fee_id, :prior_charges, :first_fees) do
     alias_method :first_fees?, :first_fees
   end
 
@@ -44,10 +44,12 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
         },
         # The total drifts as old fees roll out of the window; only a new fee
         # (or the account turning from "first fees" into a repeat) is a change
-        # worth resurfacing an acknowledged card for.
+        # worth resurfacing an acknowledged card for. The fee recorded last
+        # (not the one dated last) catches a second fee on the same day and a
+        # fee imported late with an older date.
         metadata: {
           account_id: account.id,
-          last_fee_on: row.last_fee_on.iso8601,
+          latest_fee_id: row.latest_fee_id,
           new: row.first_fees?
         },
         period: Period.custom(start_date: window_start, end_date: Date.current),
@@ -70,7 +72,7 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
     end
 
     def fee_category_ids
-      fees = family.categories.fees(family.locale)
+      fees = family.categories.fees
       family.categories.where(id: fees).or(family.categories.where(parent_id: fees)).pluck(:id)
     end
 
@@ -96,7 +98,8 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
           Arel.sql("entries.account_id"),
           Arel.sql("COALESCE(SUM(entries.amount) FILTER (WHERE #{current}), 0)"),
           Arel.sql("COUNT(*) FILTER (WHERE #{current} AND entries.amount > 0)"),
-          Arel.sql("MAX(entries.date) FILTER (WHERE #{current} AND entries.amount > 0)"),
+          # Over both windows, so a fee moving from one to the other is not news.
+          Arel.sql("(ARRAY_AGG(entries.id ORDER BY entries.created_at DESC, entries.id DESC) FILTER (WHERE entries.amount > 0))[1]"),
           Arel.sql("COUNT(*) FILTER (WHERE NOT (#{current}) AND entries.amount > 0)")
         )
         .map { |values| FeeTotals.new(*values, false) }
