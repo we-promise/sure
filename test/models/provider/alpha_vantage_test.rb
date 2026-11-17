@@ -9,14 +9,16 @@ class Provider::AlphaVantageTest < ActiveSupport::TestCase
       url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
       namespace: "test:alpha_vantage:#{SecureRandom.hex(8)}"
     )
-    Rails.stubs(:cache).returns(store)
-    provider = Provider::AlphaVantage.new("test_api_key")
-    provider.stubs(:sleep)
+    travel_to Time.zone.local(2026, 8, 21, 12) do
+      Rails.stubs(:cache).returns(store)
+      provider = Provider::AlphaVantage.new("test_api_key")
+      provider.stubs(:sleep)
 
-    provider.send(:throttle_request)
-    provider.send(:throttle_request)
+      provider.send(:throttle_request)
+      provider.send(:throttle_request)
 
-    assert_equal 2, provider.usage.data.used
+      assert_equal 2, provider.usage.data.used
+    end
   ensure
     store&.clear
   end

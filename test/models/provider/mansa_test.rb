@@ -350,13 +350,15 @@ class Provider::MansaTest < ActiveSupport::TestCase
       url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
       namespace: "test:mansa:#{SecureRandom.hex(8)}"
     )
-    Rails.stubs(:cache).returns(store)
-    provider = Provider::Mansa.new("test_api_key")
+    travel_to Time.zone.local(2026, 8, 21, 12) do
+      Rails.stubs(:cache).returns(store)
+      provider = Provider::Mansa.new("test_api_key")
 
-    provider.send(:enforce_daily_limit!)
-    provider.send(:enforce_daily_limit!)
+      provider.send(:enforce_daily_limit!)
+      provider.send(:enforce_daily_limit!)
 
-    assert_equal 2, provider.usage.data.used
+      assert_equal 2, provider.usage.data.used
+    end
   ensure
     store&.clear
   end

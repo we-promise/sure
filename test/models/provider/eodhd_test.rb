@@ -473,16 +473,18 @@ class Provider::EodhdTest < ActiveSupport::TestCase
       url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
       namespace: "test:eodhd:#{SecureRandom.hex(8)}"
     )
-    Rails.stubs(:cache).returns(store)
-    stub_request(:get, %r{/api/user}).to_return(
-      status: 200,
-      body: { dailyRateLimit: 20, subscriptionType: "free" }.to_json
-    )
+    travel_to Time.zone.local(2026, 8, 21, 12) do
+      Rails.stubs(:cache).returns(store)
+      stub_request(:get, %r{/api/user}).to_return(
+        status: 200,
+        body: { dailyRateLimit: 20, subscriptionType: "free" }.to_json
+      )
 
-    @provider.send(:enforce_daily_limit!)
-    @provider.send(:enforce_daily_limit!)
+      @provider.send(:enforce_daily_limit!)
+      @provider.send(:enforce_daily_limit!)
 
-    assert_equal 2, @provider.usage.data.used
+      assert_equal 2, @provider.usage.data.used
+    end
   ensure
     store&.clear
   end

@@ -271,13 +271,15 @@ class Provider::TiingoTest < ActiveSupport::TestCase
       url: ENV.fetch("REDIS_URL", "redis://localhost:6379"),
       namespace: "test:tiingo:#{SecureRandom.hex(8)}"
     )
-    Rails.stubs(:cache).returns(store)
-    provider = Provider::Tiingo.new("test_api_key")
+    travel_to Time.zone.local(2026, 8, 21, 12) do
+      Rails.stubs(:cache).returns(store)
+      provider = Provider::Tiingo.new("test_api_key")
 
-    provider.send(:track_symbol, "AAPL")
-    provider.send(:track_symbol, "MSFT")
+      provider.send(:track_symbol, "AAPL")
+      provider.send(:track_symbol, "MSFT")
 
-    assert_equal 2, provider.usage.data.used
+      assert_equal 2, provider.usage.data.used
+    end
   ensure
     store&.clear
   end
