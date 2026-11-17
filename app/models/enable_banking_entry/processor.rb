@@ -146,6 +146,14 @@ class EnableBankingEntry::Processor
     data[:transaction_id].blank? && data[:entry_reference].blank?
   end
 
+  # External id of the movement's identifierless copy: its content hash, which
+  # a later identified row claims as its predecessor.
+  #
+  # @return [String, nil]
+  def self.content_external_id(raw_transaction_data)
+    compute_external_id(raw_transaction_data.with_indifferent_access.except(:transaction_id, :entry_reference))
+  end
+
   def self.party_name(data, key)
     value = data[key]
     nested = value.is_a?(Hash) ? value[:name] : (value if value.is_a?(String))
@@ -253,6 +261,25 @@ class EnableBankingEntry::Processor
     data[:_pending] == true || unidentified_hold?(data)
   end
 
+  # External id of the stored pending entry this payload settles, when the ASPSP
+  # identifies it: the payload's own external_id, or its entry_reference when a
+  # transaction_id assigned at booking changed the external_id.
+  #
+  # @param pending_external_ids [Set<String>] stored pending entries still open
+  # @param external_id [String, nil] the row's id from external_ids_for, when it
+  #   differs from compute_external_id because rows share a transaction_id
+  # @return [String, nil]
+  def self.settled_pending_external_id(raw_transaction_data, pending_external_ids, external_id: nil)
+    return if pending_external_ids.blank?
+
+    data = raw_transaction_data.with_indifferent_access
+    return if pending_payload?(data)
+
+    reference = data[:entry_reference].presence
+    candidates = [ external_id || compute_external_id(data), ("enable_banking_#{reference}" if reference) ]
+    candidates.compact.find { |id| pending_external_ids.include?(id) }
+  end
+
   # External ids of the rows stored under a synthesised content hash, which are
   # the only rows a later identifier can claim.
   #
@@ -287,15 +314,16 @@ class EnableBankingEntry::Processor
   # once per row -- same pattern as the shared import_adapter. Falls back to
   # fetching it lazily per-instance when not provided (e.g. in isolation/tests).
   #
-  # identifierless_external_ids / excluded_external_ids: the batch's live sets,
-  # same pattern again. Both are mutated as claims happen, so a row later in the
-  # same batch sees what earlier rows did -- excluded_ids in the batch processor
-  # is built once, before the loop, and would otherwise be stale.
+  # identifierless_external_ids / excluded_external_ids / pending_external_ids:
+  # the batch's live sets, same pattern again. All are mutated as claims happen,
+  # so a row later in the same batch sees what earlier rows did -- excluded_ids
+  # in the batch processor is built once, before the loop, and would otherwise
+  # be stale.
   #
   # external_id: this row's id from external_ids_for over the whole payload,
   # which can differ from compute_external_id when rows share a transaction_id.
   def initialize(enable_banking_transaction, enable_banking_account:, import_adapter: nil, known_merchant_names: nil,
-                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil)
+                 identifierless_external_ids: nil, excluded_external_ids: nil, external_id: nil, pending_external_ids: nil)
     @enable_banking_transaction = enable_banking_transaction
     @external_id = external_id
     @enable_banking_account = enable_banking_account
@@ -303,6 +331,7 @@ class EnableBankingEntry::Processor
     @known_merchant_names = known_merchant_names
     @identifierless_external_ids = identifierless_external_ids
     @excluded_external_ids = excluded_external_ids
+    @pending_external_ids = pending_external_ids
   end
 
   def process
@@ -326,6 +355,8 @@ class EnableBankingEntry::Processor
     first_hold_import = unidentified_hold? &&
       !account.entries.exists?(source: "enable_banking", external_id: safe_id)
 
+    settled_pending_id = self.class.settled_pending_external_id(data, pending_external_ids, external_id: @external_id)
+
     entry = begin
       import_adapter.import_transaction(
         external_id: external_id,
@@ -338,7 +369,10 @@ class EnableBankingEntry::Processor
         allow_heuristic_matching: !plain_sibling_pending_match?,
         notes: notes,
         extra: extra,
-        investment_activity_label: investment_activity_label
+        investment_activity_label: investment_activity_label,
+        # Claims that exact pending entry before the adapter falls back to
+        # matching any pending entry of the same amount.
+        pending_transaction_id: (settled_pending_id unless settled_pending_id == external_id)
       )
     rescue ArgumentError => e
       Rails.logger.error "EnableBankingEntry::Processor - Validation error for transaction #{safe_id}: #{e.message}"
@@ -354,6 +388,7 @@ class EnableBankingEntry::Processor
 
     store_entry_reference(entry) if import_adapter.skipped_entries.size == skips
     capture_unidentified_hold_diagnostic(entry, external_id: safe_id) if first_hold_import && entry
+    pending_external_ids.delete(settled_pending_id) if entry && settled_pending_id
 
     entry
   end
@@ -701,6 +736,10 @@ class EnableBankingEntry::Processor
       @excluded_external_ids ||= Set.new
     end
 
+    def pending_external_ids
+      @pending_external_ids ||= Set.new
+    end
+
     # Re-key the row this movement was already imported under, when the ASPSP has
     # since given it an identifier.
     #
@@ -729,7 +768,7 @@ class EnableBankingEntry::Processor
       incoming = @external_id || self.class.compute_external_id(data)
       return if incoming.blank?
 
-      content_id = self.class.compute_external_id(data.except(:transaction_id, :entry_reference))
+      content_id = self.class.content_external_id(data)
       return if content_id.blank? || !identifierless_external_ids.include?(content_id)
 
       # Already stored under its own identifier: nothing to claim, and re-keying
