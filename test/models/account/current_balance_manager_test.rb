@@ -334,6 +334,38 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     end
   end
 
+  test "records a partial-import reading without reusing an explained anchor" do
+    day_one = Date.current
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(1000).success?
+    stale_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Card payment",
+        amount: 400,
+        currency: "USD",
+        entryable: Transaction.new
+      )
+
+      result = Account::CurrentBalanceManager.new(@linked_account).set_current_balance(
+        600,
+        reuse_explained_anchor: false
+      )
+
+      assert result.success?
+      preserved = Valuation.find(stale_id)
+      assert_equal "reconciliation", preserved.kind
+      assert_equal 1000, preserved.entry.amount
+      assert_equal day_one, preserved.entry.date
+
+      anchors = @linked_account.valuations.current_anchor
+      assert_equal 1, anchors.count
+      assert_equal 600, anchors.first.entry.amount
+      assert_equal Date.current, anchors.first.entry.date
+    end
+  end
+
   # An anchor moved forward in place carries the flows dated on its new date inside its own
   # amount. Re-summing that date on the next sync counts them twice, makes the move look
   # unexplained, and freezes a mid-day reading as a waypoint - the #1492 / #1484 corruption

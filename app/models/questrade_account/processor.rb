@@ -26,11 +26,19 @@ class QuestradeAccount::Processor
       QuestradeAccount::HoldingsProcessor.new(questrade_account).process
     end
 
+    activities_ok = true
     if questrade_account.raw_activities_payload.present?
-      QuestradeAccount::ActivitiesProcessor.new(questrade_account).process
+      activities = QuestradeAccount::ActivitiesProcessor.new(questrade_account).process
+      activities_ok = activities[:failed].zero?
     end
 
-    account.set_current_balance(anchor_balance, date: date) if anchor_balance
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: activities_ok
+      )
+    end
 
     account.broadcast_sync_complete
     Rails.logger.info "QuestradeAccount::Processor - Broadcast sync complete for account #{account.id}"

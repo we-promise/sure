@@ -22,7 +22,11 @@ class PlaidAccount::Processor
     investments_ok = process_investments
     process_liabilities
 
-    anchor_account!(account, balance_info) if transactions_ok && investments_ok
+    anchor_account!(
+      account,
+      balance_info,
+      reuse_explained_anchor: transactions_ok && investments_ok
+    )
   end
 
   private
@@ -111,7 +115,7 @@ class PlaidAccount::Processor
       end
     end
 
-    def anchor_account!(account, balance_info)
+    def anchor_account!(account, balance_info, reuse_explained_anchor:)
       balance = balance_info[:balance]
       cash_balance = balance_info[:cash_balance]
       balance_date = balance_info[:balance_date]
@@ -124,7 +128,11 @@ class PlaidAccount::Processor
           account.update!(currency: plaid_account.currency)
         end
 
-        result = manager.set_current_balance(balance, date: balance_date)
+        result = manager.set_current_balance(
+          balance,
+          date: balance_date,
+          reuse_explained_anchor: reuse_explained_anchor
+        )
         raise BalanceError, "Failed to set current balance: #{result.error}" unless result.success?
 
         account.update!(cash_balance: cash_balance) unless result.historical?

@@ -47,10 +47,10 @@ class SophtronAccount::Processor
       raise
     end
 
-    return unless process_transactions
+    transactions_ok = process_transactions
 
     begin
-      anchor_account!(account, balance, currency, date)
+      anchor_account!(account, balance, currency, date, reuse_explained_anchor: transactions_ok)
     rescue StandardError => e
       Rails.logger.error "SophtronAccount::Processor - Failed to anchor account #{sophtron_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
@@ -65,7 +65,7 @@ class SophtronAccount::Processor
     account, balance, currency = balance_for_anchor
     return if account.nil?
 
-    anchor_account!(account, balance, currency, Date.current)
+    anchor_account!(account, balance, currency, Date.current, reuse_explained_anchor: true)
   end
 
   private
@@ -97,13 +97,18 @@ class SophtronAccount::Processor
 
     # Writes the anchor only after the transaction batch has been imported, so the
     # manager can judge the standing anchor against a complete ledger.
-    def anchor_account!(account, balance, currency, date)
+    def anchor_account!(account, balance, currency, date, reuse_explained_anchor:)
       # The anchor is what a later account sync reads. Write it here, without
       # queueing that sync, so the caller can schedule one sync after every
       # account has been updated.
       ActiveRecord::Base.transaction do
         account.update!(currency: currency)
-        result = account.set_current_balance(balance, date: date, schedule_sync: false)
+        result = account.set_current_balance(
+          balance,
+          date: date,
+          schedule_sync: false,
+          reuse_explained_anchor: reuse_explained_anchor
+        )
         raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
         account.update!(cash_balance: balance) unless result.historical?
       end

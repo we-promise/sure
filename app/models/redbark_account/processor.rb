@@ -36,7 +36,13 @@ class RedbarkAccount::Processor
       Rails.logger.warn "RedbarkAccount::Processor - No transactions payload to process"
     end
 
-    account.set_current_balance(anchor_balance, date: date) if anchor_balance && transactions_ok
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: transactions_ok
+      )
+    end
 
     # A loan's rate, read from what the bank reported. After transactions, so a
     # failure here cannot cost the user their entries; a raise would be caught

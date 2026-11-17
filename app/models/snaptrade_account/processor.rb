@@ -30,14 +30,22 @@ class SnaptradeAccount::Processor
     activities_count = snaptrade_account.raw_activities_payload&.size || 0
     Rails.logger.info "SnaptradeAccount::Processor - Activities payload has #{activities_count} items"
 
+    activities_ok = true
     if snaptrade_account.raw_activities_payload.present?
       Rails.logger.info "SnaptradeAccount::Processor - Processing activities..."
-      SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account).process
+      activities = SnaptradeAccount::ActivitiesProcessor.new(snaptrade_account).process
+      activities_ok = activities[:failed].zero?
     else
       Rails.logger.warn "SnaptradeAccount::Processor - No activities payload to process"
     end
 
-    account.set_current_balance(anchor_balance, date: date) if anchor_balance
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: activities_ok
+      )
+    end
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     # This is critical for fresh account links where the sync complete broadcast

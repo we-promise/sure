@@ -37,9 +37,13 @@ class Account::CurrentBalanceManager
   # as of a statement rather than of this moment. It only applies to a linked
   # account: a manual one has no statement, and its strategies reconcile against
   # today by design.
-  def set_current_balance(balance, date: nil)
+  def set_current_balance(balance, date: nil, reuse_explained_anchor: true)
     if account.linked?
-      set_current_balance_for_linked_account(balance, date || Date.current)
+      set_current_balance_for_linked_account(
+        balance,
+        date || Date.current,
+        reuse_explained_anchor: reuse_explained_anchor
+      )
     else
       result = set_current_balance_for_manual_account(balance)
 
@@ -103,7 +107,7 @@ class Account::CurrentBalanceManager
     # A stale anchor the imported ledger explains moves forward in place. Otherwise it is
     # preserved as a reconciliation waypoint (#1492, #1484). Gated on
     # BALANCE_REUSE_EXPLAINED_ANCHOR; when off, every stale anchor is preserved.
-    def set_current_balance_for_linked_account(balance, date)
+    def set_current_balance_for_linked_account(balance, date, reuse_explained_anchor: true)
       changes_made = false
       error = nil
       historical = false
@@ -126,7 +130,8 @@ class Account::CurrentBalanceManager
         else
           anchor = current_anchor_valuation
 
-          if anchor && anchor.entry.date < date && !ledger_explains?(anchor.entry, balance, date)
+          if anchor && anchor.entry.date < date &&
+              (!reuse_explained_anchor || !ledger_explains?(anchor.entry, balance, date))
             preserve_anchor_as_reconciliation_if_stale(date)
             anchor = nil
           end

@@ -35,14 +35,22 @@ class IndexaCapitalAccount::Processor
     activities_count = indexa_capital_account.raw_activities_payload&.size || 0
     Rails.logger.info "IndexaCapitalAccount::Processor - Activities payload has #{activities_count} items"
 
+    activities_ok = true
     if indexa_capital_account.raw_activities_payload.present?
       Rails.logger.info "IndexaCapitalAccount::Processor - Processing activities..."
-      IndexaCapitalAccount::ActivitiesProcessor.new(indexa_capital_account).process
+      activities = IndexaCapitalAccount::ActivitiesProcessor.new(indexa_capital_account).process
+      activities_ok = activities[:failed].zero?
     else
       Rails.logger.warn "IndexaCapitalAccount::Processor - No activities payload to process"
     end
 
-    account.set_current_balance(anchor_balance, date: date) if anchor_balance
+    if anchor_balance
+      account.set_current_balance(
+        anchor_balance,
+        date: date,
+        reuse_explained_anchor: activities_ok
+      )
+    end
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete

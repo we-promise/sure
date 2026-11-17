@@ -23,8 +23,12 @@ class EnableBankingAccount::Processor
       anchor_balance = process_account!
       transactions_ok = process_transactions
 
-      if anchor_balance && transactions_ok
-        result = enable_banking_account.current_account.set_current_balance(anchor_balance, date: date)
+      if anchor_balance
+        result = enable_banking_account.current_account.set_current_balance(
+          anchor_balance,
+          date: date,
+          reuse_explained_anchor: transactions_ok
+        )
         raise ProcessingError.new("Failed to set current balance: #{result.error}") unless result.success?
 
         enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)
