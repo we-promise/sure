@@ -371,7 +371,7 @@ namespace :evals do
       end
       config.filter_sensitive_data("<JEV_API_KEY>") { Provider::Jev.api_key.presence } # pipelock:ignore
     end
-    VCR.use_cassette(name, record: recording ? :all : :none, match_requests_on: %i[method uri], &block)
+    VCR.use_cassette(name, record: recording ? :all : :none, drop_unused_requests: recording, match_requests_on: %i[method uri], &block)
   end
 
   desc "Run CI regression test"

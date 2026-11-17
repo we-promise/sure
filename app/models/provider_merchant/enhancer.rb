@@ -104,6 +104,10 @@ class ProviderMerchant::Enhancer
     def hold_lock = Rails.cache.write(self.class.lock_key(@family), true, expires_in: LOCK_TTL)
 
     def deduplicate_by_website(target_merchant, website_url)
+      # Read under the lock, and another writer may have cleared it: a blank website would match
+      # every merchant that has none.
+      return 0 if website_url.blank?
+
       # Duplicate provider merchants assigned to this family with the same website. Family
       # merchants are user-curated and never touched by dedup.
       duplicates = @family.assigned_merchants

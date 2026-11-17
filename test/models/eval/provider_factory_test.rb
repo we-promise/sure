@@ -25,6 +25,17 @@ class Eval::ProviderFactoryTest < ActiveSupport::TestCase
     end
   end
 
+  test "a run on another server without its own token is refused, so the install's key never reaches it" do
+    endpoint = ai_endpoint(name: "openai_compatible", base_url: "https://gateway.example.test/v1", api_key: "installed-key")
+
+    error = assert_raises(Eval::ProviderFactory::Error) do
+      Ai::Config.with(AiTestHelper.build_ai_config([ ai_model(endpoint:, name: "qwen3") ], {})) do
+        Eval::ProviderFactory.build(provider: "openai", model: "qwen3", config: { uri_base: "https://other.example.test/v1" })
+      end
+    end
+    assert_equal "OpenAI access token not configured", error.message
+  end
+
   test "a run URL that differs from the install's only by a trailing slash is the install's server" do
     endpoint = ai_endpoint(name: "openai_compatible", base_url: "https://gateway.example.test/v1", extra_headers: { "X-Gateway-Key" => "tenant-1" })
 

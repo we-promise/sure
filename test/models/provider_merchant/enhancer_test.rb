@@ -107,6 +107,18 @@ class ProviderMerchant::EnhancerTest < ActiveSupport::TestCase
     assert_equal lunchflow.id, duplicate.reload.merchant_id
   end
 
+  test "a website cleared between the check and the lock merges nothing" do
+    lunchflow = provider_merchant("Walmart", website_url: "walmart.com")
+    blank = provider_merchant("Corner Shop")   # no website, like every unenhanced merchant
+    corner_purchase = blank.transactions.first
+    ProviderMerchant.any_instance.stubs(:with_lock).with { true }.yields
+    ProviderMerchant.any_instance.stubs(:website_url).returns(nil)   # another writer cleared it under the lock
+
+    ProviderMerchant::Enhancer.from_ai_job(family_id: @family.id, ids: [ lunchflow.id ]).ai_generation
+
+    assert_equal blank.id, corner_purchase.reload.merchant_id
+  end
+
   test "a second run isn't queued while one holds the lock" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
 

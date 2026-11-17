@@ -40,16 +40,17 @@ class Eval::ProviderFactory
     # generations; chat through Provider::Openai.
     def build_openai
       installed = Ai::Config.current.endpoints.find { _1.protocol == :compatible && _1.name.start_with?("openai") }
-      access_token = config[:access_token].presence || installed&.api_key
-      raise Error, "OpenAI access token not configured" unless access_token.present?
-
       # The configured URL even when the install has no token to build its endpoint with: a run
       # that brings its own token must still reach the gateway, not OpenAI.
       configured_url = Ai::LegacyEnvConfig.openai_uri_base
       uri_base = config[:uri_base].presence || installed&.base_url || configured_url
+      own_server = installed && same_server?(uri_base, installed.base_url)
+      # The install's key goes only to the install's server; a run on another one brings its own.
+      access_token = config[:access_token].presence || (installed.api_key if own_server)
+      raise Error, "OpenAI access token not configured" unless access_token.present?
+
       # A regional OpenAI host (us.api.openai.com) is native OpenAI, not a custom server (#4836).
       custom = Provider::Openai.custom_endpoint?(uri_base)
-      own_server = installed && same_server?(uri_base, installed.base_url)
       # The configured gateway without an installed endpoint still needs its static headers; a
       # server of the run's own never gets them.
       gateway_headers = installed.nil? && configured_url && same_server?(uri_base, configured_url) ? Ai::LegacyEnvConfig.static_openai_headers : {}

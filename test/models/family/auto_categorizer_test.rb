@@ -102,6 +102,22 @@ class Family::AutoCategorizerTest < ActiveSupport::TestCase
     assert_equal [ [ 1, 2, "pending" ], [ 0, 3, "success" ] ], progress
   end
 
+  test "each batch logs only its own transactions, not every one still left in the run" do
+    use_ai_model_settings(batch_size: 2)
+    category = @family.categories.create!(name: "Coffee")
+    ids = 3.times.map { |i| create_transaction(account: @account, name: "Coffee #{i}").transaction.id }
+    stub_ai(:categorize) do |request|
+      batch = request.schema.dig(:properties, :categorizations, :items, :properties, :transaction_id, :enum)
+      { categorizations: batch.map { { transaction_id: _1, category_name: category.name } } }
+    end
+
+    perform_enqueued_jobs { Ai::GenerationJob.perform_later(:categorize, { ids:, family_id: @family.id }) }
+
+    logged = DebugLogEntry.where(message: "AI categorization completed").order(:created_at).map { _1.metadata["requested_transaction_ids"] }
+    assert_equal [ 2, 1 ], logged.map(&:size)
+    assert_equal ids.sort, logged.flatten.sort
+  end
+
   test "a failed generation fails the rule run's job and is logged" do
     txn = create_transaction(account: @account, name: "Coffee shop").transaction
     @family.categories.create!(name: "Coffee")

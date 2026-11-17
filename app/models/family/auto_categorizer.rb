@@ -88,7 +88,7 @@ class Family::AutoCategorizer
       category: "auto_categorization", level: "info", message: "AI categorization completed",
       source: self.class.name, family:, provider: provider_key(result.route),
       metadata: {
-        requested_transaction_ids: transaction_ids,
+        requested_transaction_ids: transaction_ids - result.remaining_ids,
         categorized_transaction_ids:,
         cached_transaction_ids: @cached_ids,
         blocked_transaction_ids: @blocked_ids,
