@@ -19,12 +19,16 @@ class SsoIdentityBlock < ApplicationRecord
 
     def block_all!(identities, identity_label:)
       identities.find_each do |identity|
-        with_identity_lock(provider: identity.provider, uid: identity.uid) do
-          find_or_create_by!(
-            provider: identity.provider,
-            uid_digest: digest(identity.uid)
-          ) { |block| block.identity_label = identity_label }
-        end
+        block!(provider: identity.provider, uid: identity.uid, identity_label: identity_label)
+      end
+    end
+
+    def block!(provider:, uid:, identity_label:)
+      with_identity_lock(provider: provider, uid: uid) do
+        find_or_create_by!(
+          provider: provider,
+          uid_digest: digest(uid)
+        ) { |block| block.identity_label = identity_label }
       end
     end
 
