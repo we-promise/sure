@@ -509,6 +509,48 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transaction.exists?(fee.entryable_id)
   end
 
+  test "a later exact match replaces a pending guess holding its inflow" do
+    load_family_currency_rates
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    real_inflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: -400, currency: "GBP")
+    coincidental_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 680, currency: "CAD")
+    @family.auto_match_transfers!
+    guess = Transfer.find_by!(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: coincidental_outflow.entryable_id)
+    assert guess.pending?
+
+    outflow = create_transaction(date: Date.current, account: @depository, amount: 400, currency: "GBP")
+    assert displacing_candidate?(real_inflow, outflow)
+
+    @family.auto_match_transfers!
+
+    assert_not Transfer.exists?(guess.id)
+    assert Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
+  test "a later exact match replaces pending guesses holding both its legs" do
+    load_family_currency_rates
+    link_account!(@depository)
+    link_account!(@credit_card)
+
+    outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 400, currency: "GBP")
+    real_inflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: -400, currency: "GBP")
+    cad_inflow = create_transaction(date: 1.day.ago.to_date, account: @credit_card, amount: -680, currency: "CAD")
+    cad_outflow = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 690, currency: "CAD")
+    # Each leg held by its own guess. A run would pair the exact legs first, so
+    # the guesses are created directly, as an earlier run left them.
+    outflow_guess = Transfer.create!(inflow_transaction: cad_inflow.entryable, outflow_transaction: outflow.entryable)
+    inflow_guess = Transfer.create!(inflow_transaction: real_inflow.entryable, outflow_transaction: cad_outflow.entryable)
+    assert displacing_candidate?(real_inflow, outflow)
+
+    @family.auto_match_transfers!
+
+    assert_not Transfer.exists?(outflow_guess.id)
+    assert_not Transfer.exists?(inflow_guess.id)
+    assert Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+  end
+
   test "a leg held by a guess and by a confirmed transfer is not freed" do
     outflow, guess = pending_cross_currency_guess
 
@@ -1317,7 +1359,6 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       Transfer.create!(inflow_transaction: inflow.transaction, outflow_transaction: outflow.transaction, status: "confirmed")
     end
 
-    # Only rates to the family currency (USD) are synced; there is no direct GBP -> CAD rate
     # A GBP outflow auto-matched (pending) to an unrelated CAD credit inside
     # the FX band, the only candidate at the time. Returns [outflow, guess].
     def pending_cross_currency_guess
@@ -1341,6 +1382,7 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
       end
     end
 
+    # Only rates to the family currency (USD) are synced; there is no direct GBP -> CAD rate
     def load_family_currency_rates
       ExchangeRate.create!(from_currency: "GBP", to_currency: "USD", date: 1.day.ago.to_date, rate: 1.25)
       ExchangeRate.create!(from_currency: "CAD", to_currency: "USD", date: 1.day.ago.to_date, rate: 0.72)
