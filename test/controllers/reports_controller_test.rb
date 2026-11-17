@@ -855,6 +855,21 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/130,000/, @response.body)
   end
 
+  # Card authorisations post as 0.00; with no sign they are neither income nor expense.
+  test "the breakdown and export leave out zero-amount transactions" do
+    category = @family.categories.create!(name: "Zero Auth Streaming", color: "#111111")
+    create_transaction(account: accounts(:depository), name: "Card check", amount: 0, category: category)
+
+    get reports_path(period_type: :monthly)
+    assert_response :ok
+    assert_select "tr[data-category='category-#{category.id}']", count: 0
+
+    get export_transactions_reports_path(format: :csv, period_type: :monthly,
+                                         start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month)
+    assert_response :ok
+    assert_no_match(/Zero Auth Streaming/, @response.body)
+  end
+
   test "the export leaves out an expense in a currency with no rate" do
     category = @family.categories.create!(name: "Won Export Rent", color: "#111111")
     krw = @family.accounts.create!(owner: @user, name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
