@@ -521,7 +521,7 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_after_last_payment")
 
     loan.term_change_rows = [ { effective_date: MATURITY.iso8601, payment: "1100" } ]
-    assert loan.valid?, "a change on the last payment date is read"
+    assert loan.valid?, "a change on the last payment date is accepted"
   end
 
   # That day's payment comes first and repays the loan, so the repayment has

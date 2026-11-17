@@ -64,6 +64,18 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
                  "the Overview names the premium it adds, and adds it to the Schedule's figure"
   end
 
+  # The form refuses a balance left owing after the last payment. A row stored
+  # before the term was lowered can still leave one, and a total without it
+  # would understate the cost.
+  test "both total cost cards say unknown while a stored row leaves the loan owing" do
+    loan = @account.loan
+    loan.update!(interest_rate: 5, term_months: 12, rate_type: "fixed", start_date: 2.years.ago.to_date)
+    loan.term_changes.create!(effective_date: loan.start_date >> 12, balance: 500)
+
+    get account_path(@account)
+    assert_equal [ "Unknown", "Unknown" ], card_values("Total Cost")
+  end
+
   # A rate saved on a loan with no term has no schedule to project a premium
   # against. The card must still say a policy is recorded rather than vanish,
   # which read as though the save had been lost.
