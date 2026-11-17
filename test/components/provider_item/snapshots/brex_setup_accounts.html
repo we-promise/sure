@@ -34,9 +34,9 @@
 <div class="px-4 grow">
 <form class="space-y-6" data-controller="loading-button" data-action="submit-&gt;loading-button#showLoading" data-loading-button-loading-text-value="Creating Accounts..." data-turbo-frame="_top" action="/brex_items/UUID/complete_account_setup" accept-charset="UTF-8" method="post">
 <div class="space-y-4">
-<div class="bg-surface border border-primary p-4 rounded-lg">
-<div class="flex items-start gap-3">
-<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-secondary text-primary mt-0.5 flex-shrink-0">
+<div class="p-4 rounded-lg border bg-info/10 border-info/20">
+<div class="flex items-center gap-3">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-info -mt-0.5">
 <circle cx="12" cy="12" r="10">
 </circle>
 <path d="M12 16v-4">
@@ -44,10 +44,10 @@
 <path d="M12 8h.01">
 </path>
 </svg>
-<div>
-<p class="text-sm text-primary mb-2">
-<strong>Choose the correct account type for each Brex account:</strong>
-</p>
+<p id="DS-alert-title-ID" class="text-sm font-semibold text-primary flex-1 leading-5">
+<span class="sr-only">Info:</span>Choose the correct account type for each Brex account:</p>
+</div>
+<div class="text-sm text-primary mt-2 pl-7 space-y-1">
 <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
 <li>
 <strong>Checking or Savings Account</strong>
@@ -56,7 +56,6 @@
 <strong>Credit Card</strong>
 </li>
 </ul>
-</div>
 </div>
 </div>
 <div class="border border-primary rounded-lg p-4">
