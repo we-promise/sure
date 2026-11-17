@@ -268,15 +268,21 @@ module Family::AutoTransferMatchable
     # role (the inflow leg is always the negative-amount entry), so the inflow
     # leg can never be held as some transfer's outflow, nor the reverse.
     def displace_pending_cross_currency_guesses!(match)
-      # Selected FOR UPDATE, uncached: a confirm that holds the row lock
-      # (AutoMatchesController#bulk_update) finishes first, and PostgreSQL then
-      # re-checks the status on the confirmed row and leaves it out.
       Transfer.uncached do
-        Transfer.where(inflow_transaction_id: match.inflow_transaction_id)
+        # Lock every transfer holding either leg first. A confirm that holds a
+        # row lock (AutoMatchesController#bulk_update) finishes before this
+        # returns.
+        locked_ids = Transfer.where(inflow_transaction_id: match.inflow_transaction_id)
           .or(Transfer.where(outflow_transaction_id: match.outflow_transaction_id))
-          .where(displaceable_transfer_sql("transfers"))
           .order(:id)
           .lock
+          .pluck(:id)
+
+        # A new statement, so its snapshot sees what committed while the locks
+        # were awaited: a confirmed status, a changed kind, an attached fee.
+        Transfer.where(id: locked_ids)
+          .where(displaceable_transfer_sql("transfers"))
+          .order(:id)
           .each(&:destroy!)
       end
     end
