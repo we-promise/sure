@@ -259,6 +259,12 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Dividend", entry.transaction.investment_activity_label
   end
 
+  test "a subtype in mixed case is matched case-insensitively" do
+    entry = process_plaid_transaction(cash_row("div_case_1", "Qualified Dividend", "Qualified dividend AAPL"))
+
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
   test "a non-qualified dividend is labelled Dividend" do
     entry = process_plaid_transaction(cash_row("nqdiv_1", "non-qualified dividend", "Non-qualified dividend AAPL"))
 
