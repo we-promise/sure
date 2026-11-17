@@ -87,6 +87,58 @@ class Transfer::InvestmentKindReconcilerTest < ActiveSupport::TestCase
     assert_equal "investment_contribution", transfer.outflow_transaction.reload.kind
   end
 
+  test "gives a legacy contribution stored as a plain transfer the Investment Contributions category" do
+    transfer = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "funds_movement")
+
+    result = Transfer::InvestmentKindReconciler.new.run
+
+    outflow = transfer.outflow_transaction.reload
+    assert_equal "investment_contribution", outflow.kind
+    assert_equal @family.investment_contributions_category, outflow.category
+    assert_equal({ "funds_movement->investment_contribution" => 1, "category->investment_contributions" => 1 }, result.changed)
+    assert_empty Transfer::InvestmentKindReconciler.new.run.changed
+  end
+
+  test "categorizes a contribution whose kind is already right but has no category" do
+    transfer = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "investment_contribution")
+
+    result = Transfer::InvestmentKindReconciler.new.run
+
+    assert_equal @family.investment_contributions_category, transfer.outflow_transaction.reload.category
+    assert_equal({ "category->investment_contributions" => 1 }, result.changed)
+  end
+
+  test "keeps a category the user set or locked" do
+    chosen = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "funds_movement")
+    chosen.outflow_transaction.update_columns(category_id: categories(:income).id)
+    locked = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "investment_contribution")
+    locked.outflow_transaction.lock_attr!(:category_id)
+
+    Transfer::InvestmentKindReconciler.new.run
+
+    assert_equal categories(:income), chosen.outflow_transaction.reload.category
+    assert_nil locked.outflow_transaction.reload.category_id
+  end
+
+  test "does not categorize an investment-to-investment transfer" do
+    transfer = create_transfer(from: accounts(:crypto), to: accounts(:investment), outflow_kind: "investment_contribution")
+
+    Transfer::InvestmentKindReconciler.new.run
+
+    assert_nil transfer.outflow_transaction.reload.category_id
+  end
+
+  test "dry run reports a missing category without creating or assigning one" do
+    @family.categories.where(name: Category.all_investment_contributions_names).destroy_all
+    transfer = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "investment_contribution")
+
+    assert_no_difference -> { @family.categories.count } do
+      result = Transfer::InvestmentKindReconciler.new(dry_run: true).run
+      assert_equal({ "category->investment_contributions" => 1 }, result.changed)
+    end
+    assert_nil transfer.outflow_transaction.reload.category_id
+  end
+
   private
     def create_transfer(from:, to:, outflow_kind:, inflow_kind: "funds_movement", amount: 100)
       inflow = to.entries.create!(

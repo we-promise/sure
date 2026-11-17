@@ -252,7 +252,8 @@ namespace :data_migration do
   # investment/crypto accounts on a kind the current rules no longer give them
   # (see Transfer::InvestmentKindReconciler). Provider syncs only repair the
   # rows they replay. Idempotent; only transfer kinds are rewritten, standard
-  # and one_time are left alone. Report totals for affected periods can change,
+  # and one_time are left alone. Contribution outflows without a category get
+  # the family's Investment Contributions category. Report totals for affected periods can change,
   # and reverting the code later does not restore the previous kinds.
   #
   #   DRY_RUN=1    print what would change without writing

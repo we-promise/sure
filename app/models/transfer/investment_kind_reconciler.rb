@@ -14,6 +14,12 @@
 # - excluded entries and transactions with a locked kind are left alone;
 # - a second run finds nothing to change.
 #
+# An outflow that ends up as an investment_contribution with no category also
+# gets the family's Investment Contributions category, as Transfer#confirm!
+# gives it. Legs from before that kind existed were stored as funds_movement
+# without a category, and would otherwise show up as uncategorized spending.
+# A category the user set, or a locked category, is never replaced.
+#
 # Entries created or matched through Transfer::Creator and the match dialog
 # are user_modified by design, so that flag does not mark a user's choice of
 # kind here and is not a reason to skip a leg.
@@ -43,6 +49,11 @@ class Transfer::InvestmentKindReconciler
         changed["#{transaction.kind}->#{expected}"] += 1
         repair!(transaction, expected) unless dry_run
       end
+
+      if needs_contribution_category?(transfer)
+        changed["category->investment_contributions"] += 1
+        assign_contribution_category!(transfer) unless dry_run
+      end
     end
 
     Result.new(checked: checked, changed: changed)
@@ -62,6 +73,31 @@ class Transfer::InvestmentKindReconciler
       Transaction::TRANSFER_KINDS.include?(transaction.kind) &&
         !transaction.entry.excluded? &&
         !transaction.locked?(:kind)
+    end
+
+    def needs_contribution_category?(transfer)
+      outflow = transfer.outflow_transaction
+
+      repairable?(outflow) &&
+        outflow.category_id.nil? &&
+        !outflow.locked?(:category_id) &&
+        transfer.kind_for_leg(outflow) == "investment_contribution"
+    end
+
+    def assign_contribution_category!(transfer)
+      family = transfer.to_account.family
+      category = contribution_categories[family.id] ||= family.investment_contributions_category
+      outflow = transfer.outflow_transaction
+
+      now = Time.current
+      Transaction.transaction do
+        outflow.update_columns(category_id: category.id, updated_at: now)
+        outflow.entry.update_columns(updated_at: now)
+      end
+    end
+
+    def contribution_categories
+      @contribution_categories ||= {}
     end
 
     def repair!(transaction, kind)
