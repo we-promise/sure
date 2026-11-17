@@ -141,7 +141,7 @@ tr:
       fetch_failed: Hesaplar Getirilemedi
       historical_data_range: 'Geçmiş Veri Aralığı:'
       no_accounts_to_setup: Kurulacak Hesap Yok
-      no_api_key: Lunch Flow API anahtarı yapılandırılmamış. Lütfen bağlantı ayarlarınızı
+      no_api_token: Lunch Flow API anahtarı yapılandırılmamış. Lütfen bağlantı ayarlarınızı
         kontrol edin.
       subtitle: İçe aktarılan hesaplarınız için doğru hesap türlerini seçin
       subtype_labels:

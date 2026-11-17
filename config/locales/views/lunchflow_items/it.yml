@@ -101,7 +101,7 @@ it:
       api_error: "Errore API: %{message}"
       fetch_failed: "Recupero conti fallito"
       no_accounts_to_setup: "Nessun conto da configurare"
-      no_api_key: "La chiave API di Lunch Flow non è configurata. Controlla le impostazioni di connessione."
+      no_api_token: "La chiave API di Lunch Flow non è configurata. Controlla le impostazioni di connessione."
       account_types:
         skip: Salta questo conto
         depository: Conto corrente o risparmio

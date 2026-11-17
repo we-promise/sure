@@ -2,7 +2,7 @@
 
 class ProviderItem::AccountFlow
   module Setup
-    def import_accounts_from_api_if_needed
+    def import_accounts_from_api
       raise NoApiTokenError unless item&.credentials_configured?
 
       available_accounts = fetch_accounts
@@ -152,7 +152,7 @@ class ProviderItem::AccountFlow
     end
 
     def import_accounts_with_user_facing_error
-      import_accounts_from_api_if_needed
+      import_accounts_from_api
     rescue NoApiTokenError
       I18n.t("#{i18n_scope}.setup_accounts.no_api_token")
     rescue provider_error_class => e
@@ -207,10 +207,15 @@ class ProviderItem::AccountFlow
     def translate_subtypes(type_key, subtypes_hash)
       subtypes_hash.map do |key, value|
         [
-          I18n.t("#{i18n_scope}.setup_accounts.subtypes.#{type_key}.#{key}", default: value[:long] || key.to_s.humanize),
+          I18n.t("#{i18n_scope}.setup_accounts.subtypes.#{type_key}.#{key}", default: subtype_label_default(type_key, key, value)),
           key
         ]
       end
+    end
+
+    # The label for a subtype the provider's locale doesn't name.
+    def subtype_label_default(_type_key, key, value)
+      value[:long] || key.to_s.humanize
     end
 
     def selected_subtype_for(selected_type:, submitted_subtype:)
