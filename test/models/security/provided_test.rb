@@ -365,6 +365,31 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     end
   end
 
+  test "search under the fallback stores a Yahoo-suffixed listing by its bare ticker" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([
+      search_result("SAP.DE", mic: "XETR", country_code: "DE", currency: "EUR"),
+      search_result("BRK.B", mic: "XNYS")
+    ]))
+
+    without_securities_keys([ "twelve_data" ]) do
+      results = Security.search_provider("SAP").to_h { |s| [ s.exchange_operating_mic, s.ticker ] }
+
+      assert_equal({ "XETR" => "SAP", "XNYS" => "BRK.B" }, results)
+    end
+  end
+
+  test "an explicitly enabled Yahoo keeps its suffixed ticker" do
+    yahoo = stub_yahoo_finance
+    yahoo.stubs(:search_securities).returns(provider_success_response([
+      search_result("SAP.DE", mic: "XETR", country_code: "DE", currency: "EUR")
+    ]))
+
+    without_securities_keys([ "twelve_data", "yahoo_finance" ]) do
+      assert_equal [ "SAP.DE" ], Security.search_provider("SAP").map(&:ticker)
+    end
+  end
+
   test "a keyless provider beside the substitute keeps its stamp" do
     yahoo = stub_yahoo_finance
     yahoo.stubs(:search_securities).returns(provider_success_response([ search_result("AAPL") ]))
@@ -433,10 +458,10 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     with_env_overrides("TWELVE_DATA_API_KEY" => nil, "TIINGO_API_KEY" => nil, &block)
   end
 
-  def search_result(symbol)
+  def search_result(symbol, mic: "XNAS", country_code: "US", currency: "USD")
     Provider::SecurityConcept::Security.new(
       symbol: symbol, name: symbol, logo_url: nil,
-      exchange_operating_mic: "XNAS", country_code: "US", currency: "USD"
+      exchange_operating_mic: mic, country_code: country_code, currency: currency
     )
   end
 

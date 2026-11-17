@@ -98,19 +98,24 @@ module Security::Provided
         provider_key = provider_key_for(active_providers[idx])
         # The keyless substitute's key is never stored, so a security found
         # through it follows providers.first and moves to the configured
-        # provider once that can be built.
-        provider_key = nil if provider_key == KEYLESS_FALLBACK_PROVIDER && !Setting.enabled_securities_providers.include?(KEYLESS_FALLBACK_PROVIDER)
+        # provider once that can be built. Its ticker is stored without Yahoo's
+        # exchange suffix (SAP.DE becomes SAP on XETR), so that provider gets
+        # the symbol it expects; Yahoo re-adds the suffix from the MIC.
+        keyless_substitute = provider_key == KEYLESS_FALLBACK_PROVIDER && !Setting.enabled_securities_providers.include?(KEYLESS_FALLBACK_PROVIDER)
+        provider_key = nil if keyless_substitute
 
         provider_results.each do |ps|
+          ticker = keyless_substitute ? strip_yahoo_suffix(ps[:symbol], ps[:exchange_operating_mic]) : ps[:symbol]
+
           # Dedup key includes provider so the same ticker on the same exchange can
           # appear once per provider — the user picks which provider's price feed
           # they want and that choice is stored in price_provider.
-          dedup_key = "#{ps[:symbol]}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
+          dedup_key = "#{ticker}|#{ps[:exchange_operating_mic]}|#{provider_key}".upcase
           next if seen_keys.include?(dedup_key)
           seen_keys.add(dedup_key)
 
           security = Security.new(
-            ticker: ps[:symbol],
+            ticker: ticker,
             name: ps[:name],
             logo_url: ps[:logo_url],
             exchange_operating_mic: ps[:exchange_operating_mic],
@@ -135,6 +140,11 @@ module Security::Provided
         Provider::Registry.for_concept(:securities).get_provider(name.to_sym)
       rescue Provider::Registry::Error
         nil
+      end
+
+      def strip_yahoo_suffix(symbol, exchange_operating_mic)
+        suffix = Provider::YahooFinance::EXCHANGE_CONFIG.dig(exchange_operating_mic, :yahoo_suffix)
+        suffix && symbol.end_with?(suffix) ? symbol.delete_suffix(suffix) : symbol
       end
 
       def log_keyless_substitution(name)
