@@ -45,6 +45,17 @@ class Rule::Runner::ClaimsTest < ActiveSupport::TestCase
     assert_equal Set[@whole_foods.id, @other.id], @claims.stopped_ids
   end
 
+  test "a rule claims and stops every transaction it matched, not only the first" do
+    rule = create_rule(Rule::Action.new(action_type: "set_transaction_category", value: @groceries.id), stop_processing: true)
+    below = create_rule(Rule::Action.new(action_type: "set_transaction_category", value: @groceries.id), value: "")
+
+    @claims.record(rule, [ @whole_foods.id, @other.id ])
+
+    assert_equal Set[@whole_foods.id, @other.id], @claims.claimed_ids[:category_id]
+    assert_equal Set[@whole_foods.id, @other.id], @claims.stopped_ids
+    assert_empty @claims.unstopped_scope(below).pluck(:id)
+  end
+
   test "tags claim nothing" do
     rule = create_rule(Rule::Action.new(action_type: "set_transaction_tags", value: [ @tag.id ]))
 
