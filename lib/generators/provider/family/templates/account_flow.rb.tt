@@ -1,13 +1,13 @@
 # frozen_string_literal: true
 
 # Lists, links and sets up <%= class_name %> accounts. ProviderItem::AccountFlow does
-# the work; the hooks below supply what only <%= class_name %> knows, and each raises
-# until it is implemented. See BrexItem::AccountFlow for a complete example.
+# the work; the hooks below supply what only <%= class_name %> knows, and each private
+# one raises until it is implemented. See BrexItem::AccountFlow for a complete example.
 class <%= class_name %>Item::AccountFlow < ProviderItem::AccountFlow
-  # TODO: The <%= class_name %>Item params whose change makes the cached account list
-  # stale, usually the credentials and base URL.
+  # The <%= class_name %>Item params whose change makes the cached account list stale:
+  # the connection fields declared to the generator.
   def self.cache_sensitive_params
-    raise NotImplementedError, "TODO: <%= class_name %>Item::AccountFlow.cache_sensitive_params"
+    %i[<%= parsed_fields.map { |field| field[:name] }.join(" ") %>]
   end
 
   private

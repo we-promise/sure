@@ -85,6 +85,26 @@ class MercuryItemsSetupTest < ActionDispatch::IntegrationTest
     assert_equal "checking", @account.reload.account.accountable.subtype
   end
 
+  test "a chosen valid subtype is kept" do
+    post complete_account_setup_mercury_item_url(@item), params: {
+      account_types: { @account.id => "Depository" },
+      account_subtypes: { @account.id => "savings" }
+    }
+
+    assert_equal "savings", @account.reload.account.accountable.subtype
+  end
+
+  test "completing inside a Turbo frame streams the card and accounts" do
+    post complete_account_setup_mercury_item_url(@item),
+      params: { account_types: { @account.id => "Depository" } },
+      headers: { "Turbo-Frame" => "modal" }
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_turbo_stream action: "replace", target: ActionView::RecordIdentifier.dom_id(@item)
+    assert_turbo_stream action: "update", target: "manual-accounts"
+  end
+
   test "one account failing doesn't undo the others" do
     second = @item.mercury_accounts.create!(account_id: "acc_second", name: "Second", currency: "USD")
     original = Account.method(:create_and_sync)
