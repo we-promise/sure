@@ -213,6 +213,9 @@ class Transaction < ApplicationRecord
 
   # Transactions carrying any of the given tags. A subquery rather than a
   # join, so a transaction with several of them is returned once.
+  # Needs entries joined (e.g. with_entry).
+  scope :in_accounts_writable_by, ->(user) { where(entries: { account_id: Account.writable_by(user).select(:id) }) }
+
   scope :with_any_tag, ->(tag_ids) {
     where(id: Tagging.where(tag_id: tag_ids, taggable_type: "Transaction").select(:taggable_id))
   }

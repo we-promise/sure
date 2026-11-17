@@ -13,8 +13,7 @@
 # ignore_attribute_locks only applies to the requested rules.
 #
 # A run a member starts (user:) touches only transactions in accounts that
-# member can write, whoever wrote the rules. Admins and the scheduled run
-# (no user) reach every account in the family.
+# member can write, on top of each rule's own restriction (Rule#restricted_to).
 #
 # One run per family at a time, guarded by a PostgreSQL advisory lock. A busy
 # lock raises LockBusy so the calling job can retry instead of dropping the run.
@@ -29,7 +28,7 @@ class Rule::Runner
 
   def initialize(family, rules:, execution_type:, ignore_attribute_locks: false, user: nil)
     @family = family
-    @writable_account_ids = family.accounts.writable_by(user).select(:id) if user && !user.admin?
+    @restricting_user = user unless user.nil? || user.admin?
     @rule_ids = rules.map(&:id).to_set
     @execution_type = execution_type
     @ignore_attribute_locks = ignore_attribute_locks
@@ -50,7 +49,7 @@ class Rule::Runner
   end
 
   private
-    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :writable_account_ids
+    attr_reader :family, :rule_ids, :execution_type, :ignore_attribute_locks, :claimed_ids, :stopped_ids, :restricting_user
 
     def run_rules
       rule_runs = []
@@ -71,7 +70,7 @@ class Rule::Runner
 
     def unstopped_scope(rule)
       scope = rule.matching_scope
-      scope = scope.where(entries: { account_id: writable_account_ids }) if writable_account_ids
+      scope = scope.in_accounts_writable_by(restricting_user) if restricting_user
       Rule.excluding_transaction_ids(scope, stopped_ids)
     end
 

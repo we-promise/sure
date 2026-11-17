@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -2343,11 +2343,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.string "name"
     t.integer "position", default: 0, null: false
     t.string "resource_type", null: false
+    t.uuid "restricted_to_id"
     t.uuid "rule_group_id"
     t.boolean "stop_processing", default: false, null: false
     t.datetime "updated_at", null: false
     t.index ["family_id", "position"], name: "index_rules_on_family_id_and_position"
     t.index ["family_id"], name: "index_rules_on_family_id"
+    t.index ["restricted_to_id"], name: "index_rules_on_restricted_to_id"
     t.index ["rule_group_id"], name: "index_rules_on_rule_group_id"
   end
 
@@ -3293,6 +3295,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   add_foreign_key "rule_runs", "rules"
   add_foreign_key "rules", "families"
   add_foreign_key "rules", "rule_groups", on_delete: :nullify
+  add_foreign_key "rules", "users", column: "restricted_to_id"
   add_foreign_key "security_audit_logs", "users", on_delete: :nullify
   add_foreign_key "security_prices", "securities"
   add_foreign_key "security_splits", "securities", on_delete: :cascade

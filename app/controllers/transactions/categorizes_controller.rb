@@ -36,7 +36,8 @@ class Transactions::CategorizesController < ApplicationController
         Current.family,
         params[:grouping_key],
         category,
-        transaction_type: params[:transaction_type]
+        transaction_type: params[:transaction_type],
+        user: Current.user
       )
       flash[:alert] = t(".rule_creation_failed") if rule.nil?
     end

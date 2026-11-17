@@ -40,7 +40,8 @@ class Rule::Registry::TransactionResource < Rule::Registry
   end
 
   def resource_scope
-    family.transactions.visible.with_entry.merge(Entry.excluding_split_parents).where(entry: { date: rule.effective_date.. })
+    scope = family.transactions.visible.with_entry.merge(Entry.excluding_split_parents).where(entry: { date: rule.effective_date.. })
+    rule.restricted_to ? scope.in_accounts_writable_by(rule.restricted_to) : scope
   end
 
   def condition_filters

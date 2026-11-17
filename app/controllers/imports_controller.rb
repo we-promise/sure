@@ -4,6 +4,7 @@ class ImportsController < ApplicationController
   before_action :set_import, only: %i[show update publish destroy revert apply_template cancel summary]
   before_action :require_statement_import_permission!, only: %i[update publish destroy revert apply_template cancel]
   before_action :require_writable_import_accounts!, only: %i[publish revert destroy]
+  before_action :require_rules_publishable!, only: :publish
   before_action :reject_guest_family_config_import!, except: %i[index new show summary]
   before_action :require_guest_writable_created_accounts!, only: %i[revert destroy]
   before_action :reject_guest_new_categories_or_tags!, only: :publish
@@ -243,6 +244,12 @@ class ImportsController < ApplicationController
     # to all.
     def require_writable_import_accounts!
       return if @import.accounts_writable_by?(Current.user)
+
+      redirect_back_or_to import_path(@import), alert: t("accounts.not_authorized")
+    end
+
+    def require_rules_publishable!
+      return if @import.rules_publishable_by?(Current.user)
 
       redirect_back_or_to import_path(@import), alert: t("accounts.not_authorized")
     end

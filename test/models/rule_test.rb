@@ -10,6 +10,57 @@ class RuleTest < ActiveSupport::TestCase
     @groceries_category = @family.categories.create!(name: "Groceries")
   end
 
+  test "a rule restricted to a member changes only accounts the member can write, in every run" do
+    family = families(:dylan_family)
+    member = users(:family_member)
+    writable = create_transaction(account: accounts(:depository), name: "Scoped probe one")
+    read_only = create_transaction(account: accounts(:credit_card), name: "Scoped probe two")
+    unshared = create_transaction(account: accounts(:investment), name: "Scoped probe three")
+    rule = family.rules.create!(
+      resource_type: "transaction",
+      active: true,
+      restricted_to: member,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Scoped probe" } ],
+      actions_attributes: [ { action_type: "set_transaction_name", value: "Renamed" } ]
+    )
+
+    assert_equal [ writable.entryable_id ], rule.matching_resources.pluck(:id)
+
+    # The scheduled run, and a run an admin starts, keep to the same accounts.
+    Rule::Runner.new(family, rules: family.rules, execution_type: "scheduled").run
+    Rule::Runner.new(family, rules: [ rule ], execution_type: "manual", user: users(:family_admin)).run
+
+    assert_equal "Renamed", writable.reload.name
+    assert_equal "Scoped probe two", read_only.reload.name
+    assert_equal "Scoped probe three", unshared.reload.name
+  end
+
+  test "editing records the scope of a non-admin, and an admin's edit keeps it" do
+    rule = families(:dylan_family).rules.build(resource_type: "transaction")
+
+    rule.edited_by(users(:family_admin))
+    assert_nil rule.restricted_to
+
+    rule.edited_by(users(:family_member))
+    assert_equal users(:family_member), rule.restricted_to
+
+    rule.edited_by(users(:family_admin))
+    assert_equal users(:family_member), rule.restricted_to
+  end
+
+  test "a restricted rule is deleted with its user rather than widened to the family" do
+    member = users(:family_member)
+    rule = families(:dylan_family).rules.create!(
+      resource_type: "transaction",
+      restricted_to: member,
+      actions_attributes: [ { action_type: "exclude_transaction" } ]
+    )
+
+    member.destroy!
+
+    assert_not Rule.exists?(rule.id)
+  end
+
   test "displayed_action skips an unsaved action and option lists reset on reload" do
     rule = @family.rules.create!(resource_type: "transaction",
       actions: [ Rule::Action.new(action_type: "set_transaction_category", value: @groceries_category.id) ])

@@ -521,6 +521,17 @@ class Import < ApplicationRecord
     (ids - family.accounts.writable_by(user).where(id: ids).pluck(:id)).empty?
   end
 
+  # An import records no user, so the rules it writes can't be restricted to
+  # one (Rule#edited_by): only an admin, whose rules are family-wide anyway,
+  # may publish them.
+  def rules_publishable_by?(user)
+    !writes_rules? || user&.admin?
+  end
+
+  def writes_rules?
+    false
+  end
+
   # Existing family accounts the import resolves on its own at publish time
   # (e.g. by name). Subclasses that do this override it.
   def preexisting_target_account_ids

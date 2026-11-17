@@ -7,6 +7,10 @@ class Rule < ApplicationRecord
 
   belongs_to :family
   belongs_to :rule_group, optional: true
+  # Set when a non-admin saves the rule: it then acts only on transactions in
+  # accounts that user can write, in every run (see #edited_by). Null rules act
+  # on the whole family.
+  belongs_to :restricted_to, class_name: "User", optional: true
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
   has_many :rule_runs, dependent: :destroy
@@ -257,8 +261,9 @@ class Rule < ApplicationRecord
 
   # Creates a categorization rule for the Quick Categorize Wizard.
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
-  def self.create_from_grouping(family, grouping_key, category, transaction_type: nil)
+  def self.create_from_grouping(family, grouping_key, category, transaction_type: nil, user: nil)
     rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true)
+    rule.edited_by(user)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
     rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?
     rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
@@ -315,6 +320,12 @@ class Rule < ApplicationRecord
     else
       total_modified
     end
+  end
+
+  # Called by every path that saves a rule for a user. An admin's edit keeps a
+  # restriction a member left; widening a rule takes an admin recreating it.
+  def edited_by(user)
+    self.restricted_to = user if user && !user.admin?
   end
 
   # user: who asked for the run (see Rule::Runner).

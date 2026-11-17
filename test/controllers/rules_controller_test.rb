@@ -735,6 +735,42 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Renamed", unshared.reload.name
   end
 
+  test "a rule a member saves is restricted to the member, and stays so when an admin edits it" do
+    sign_in member = users(:family_member)
+    post rules_url, params: { rule: {
+      name: "Member rule",
+      resource_type: "transaction",
+      conditions_attributes: { "0" => { condition_type: "transaction_name", operator: "like", value: "member probe" } },
+      actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+    } }
+    rule = @user.family.rules.find_by!(name: "Member rule")
+    assert_equal member, rule.restricted_to
+
+    sign_in @user
+    patch rule_url(rule), params: { rule: { name: "Member rule, edited" } }
+    assert_equal member, rule.reload.restricted_to
+  end
+
+  test "a member editing a family-wide rule restricts it to the member" do
+    rule = @user.family.rules.create!(resource_type: "transaction", name: "Family rule", actions_attributes: [ { action_type: "exclude_transaction" } ])
+    assert_nil rule.restricted_to
+
+    sign_in users(:family_member)
+    patch rule_url(rule), params: { rule: { name: "Family rule, edited" } }
+
+    assert_equal users(:family_member), rule.reload.restricted_to
+  end
+
+  test "a rule an admin saves stays family-wide" do
+    post rules_url, params: { rule: {
+      name: "Admin rule",
+      resource_type: "transaction",
+      actions_attributes: { "0" => { action_type: "exclude_transaction" } }
+    } }
+
+    assert_nil @user.family.rules.find_by!(name: "Admin rule").restricted_to
+  end
+
   test "guest cannot create rule" do
     sign_in family_guest
 

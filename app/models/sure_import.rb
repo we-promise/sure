@@ -106,6 +106,10 @@ class SureImport < Import
     false
   end
 
+  def writes_rules?
+    ndjson_file.attached? && self.class.ndjson_line_type_counts(ndjson_blob_string)["Rule"].to_i.positive?
+  end
+
   def column_keys
     []
   end

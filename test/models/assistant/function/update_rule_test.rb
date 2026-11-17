@@ -35,6 +35,13 @@ class Assistant::Function::UpdateRuleTest < ActiveSupport::TestCase
     assert_equal hidden.id, @rule.reload.actions.find_by!(action_type: "set_transaction_merchant").value
   end
 
+  test "a member's update restricts the rule to the member" do
+    result = Assistant::Function::UpdateRule.new(users(:family_member)).call("rule_id" => @rule.id, "name" => "Member coffee")
+
+    assert result[:success], result.inspect
+    assert_equal users(:family_member), @rule.reload.restricted_to
+  end
+
   test "renaming keeps an active rule active" do
     result = @fn.call("rule_id" => @rule.id, "name" => "Morning coffee")
 

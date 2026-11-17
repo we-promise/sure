@@ -147,6 +147,7 @@ class RulesController < ApplicationController
     # A group typed into the form may be created by another request at the
     # same moment; the save then rolls back, and saving again finds it.
     def save_rule
+      @rule.edited_by(Current.user)
       @rule.save
     rescue ActiveRecord::RecordNotUnique
       raise unless @rule.rule_group&.new_record?

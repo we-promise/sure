@@ -132,7 +132,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
         if current_resource_owner.guest? && @import.creates_categories_or_tags?
           return render_json({ error: "forbidden", message: "Guests cannot create categories or tags", import_id: @import.id }, status: :forbidden)
         end
-        return render_import_accounts_not_writable unless @import.accounts_writable_by?(current_resource_owner)
+        return render_import_not_publishable unless publishable_by_owner?
 
         @import.publish_later
       end
@@ -199,10 +199,14 @@ class Api::V1::ImportsController < Api::V1::BaseController
       current_resource_owner.family.imports
     end
 
-    # The import is kept, as in the web flow, which refuses only the publish
-    # (ImportsController#require_writable_import_accounts!).
-    def render_import_accounts_not_writable
-      render_json({ error: "forbidden", message: "You don't have write access to every account this import writes to", import_id: @import.id }, status: :forbidden)
+    # The same checks as the web publish (ImportsController). The import is
+    # kept: only the publish is refused.
+    def publishable_by_owner?
+      @import.accounts_writable_by?(current_resource_owner) && @import.rules_publishable_by?(current_resource_owner)
+    end
+
+    def render_import_not_publishable
+      render_json({ error: "forbidden", message: "You aren't allowed to publish this import", import_id: @import.id }, status: :forbidden)
     end
 
     def render_import_not_found
@@ -268,9 +272,7 @@ class Api::V1::ImportsController < Api::V1::BaseController
         return
       end
 
-      if params[:publish] == "true" && !@import.accounts_writable_by?(current_resource_owner)
-        return render_import_accounts_not_writable
-      end
+      return render_import_not_publishable if params[:publish] == "true" && !publishable_by_owner?
 
       begin
         @import.publish_later if params[:publish] == "true"

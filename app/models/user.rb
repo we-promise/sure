@@ -37,6 +37,8 @@ class User < ApplicationRecord
   has_many :sso_audit_logs, dependent: :nullify
   has_many :owned_accounts, class_name: "Account", foreign_key: :owner_id
   has_many :account_shares, dependent: :destroy
+  # A rule restricted to a removed user goes too, rather than act on the whole family.
+  has_many :restricted_rules, class_name: "Rule", foreign_key: :restricted_to_id, inverse_of: :restricted_to, dependent: :destroy
   has_many :shared_accounts, through: :account_shares, source: :account
   has_many :budget_shares_given, class_name: "BudgetShare", foreign_key: :owner_id, inverse_of: :owner, dependent: :destroy
   has_many :budget_shares_received, class_name: "BudgetShare", foreign_key: :viewer_id, inverse_of: :viewer, dependent: :destroy

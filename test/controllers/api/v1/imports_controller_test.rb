@@ -1333,6 +1333,20 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
   end
 
+  test "a member cannot auto-publish a Sure import that writes rules" do
+    member_key = ApiKey.create!(user: users(:family_member), name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
+    ndjson = { type: "Rule", data: { id: "rule_1", name: "Imported", resource_type: "transaction", conditions: [], actions: [ { action_type: "exclude_transaction" } ] } }.to_json
+
+    assert_no_enqueued_jobs(only: ImportJob) do
+      post api_v1_imports_url, params: { type: "SureImport", raw_file_content: ndjson, publish: "true" }, headers: api_headers(member_key)
+    end
+
+    assert_response :forbidden
+    assert_equal "pending", Import.find(JSON.parse(response.body)["import_id"]).status
+  ensure
+    Redis.new.del("api_rate_limit:#{member_key.id}") if member_key
+  end
+
   test "publishes into an account the member can write" do
     member = users(:family_member)
     member_key = ApiKey.create!(user: member, name: "Member Key", scopes: [ "read_write" ], display_key: "test_member_#{SecureRandom.hex(8)}", source: "web")
