@@ -67,6 +67,17 @@ class Transactions::FiltersControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "filter menu loads the merchant list on demand and keeps selected merchants in the form" do
+    get filters_transactions_url(q: { merchants: [ "Amazon" ] }),
+        headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "turbo-frame#transaction-filters turbo-frame#merchant_filter_options[loading=lazy][data-action=?]", "turbo:frame-load->list-filter#filter" do
+      assert_select "input[type=hidden][name='q[merchants][]'][value=?]", "Amazon"
+    end
+    assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
+  end
+
   test "requires authentication" do
     delete session_url(sessions(:one)) rescue nil
     reset!
