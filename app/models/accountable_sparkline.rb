@@ -9,9 +9,18 @@ class AccountableSparkline
       .pluck(:accountable_type, *IDENTITY_COLUMNS)
       .group_by(&:first)
 
+    percentages = viewer_percentages(scope)
+
     accountables.to_h do |accountable|
       identity_rows = rows.fetch(accountable.name, []).map { |row| row.drop(1) }
-      [ accountable, new(accountable, account_identity_rows: identity_rows).version ]
+      [ accountable, new(accountable, account_identity_rows: identity_rows, viewer_percentages: percentages).version ]
+    end
+  end
+
+  # The share of each account the current user counts, by account id.
+  def self.viewer_percentages(accounts)
+    accounts.includes(:account_shares).to_h do |account|
+      [ account.id, account.ownership_percentage_for(Current.user) ]
     end
   end
 
@@ -22,9 +31,10 @@ class AccountableSparkline
     Current.accessible_accounts.visible.included_in_reports.included_in_finances_for(Current.user)
   end
 
-  def initialize(accountable, account_identity_rows: nil)
+  def initialize(accountable, account_identity_rows: nil, viewer_percentages: nil)
     @accountable = accountable
     @account_identity_rows = account_identity_rows
+    @viewer_percentages = viewer_percentages
   end
 
   def series
@@ -36,11 +46,13 @@ class AccountableSparkline
     Digest::SHA256.hexdigest("#{cache_key}_#{I18n.locale}").first(16)
   end
 
-  # The series is built from exactly these account rows, so the key carries a
-  # digest of them. A share count/timestamp version can stay the same while
-  # the counted set changes (ownership moved by update_all, shares replaced
-  # with older timestamps, report exclusion toggled); the row digest changes
-  # whenever the set does and never repeats for a different set.
+  # The series is built from exactly these account rows, scaled to the viewer's
+  # ownership share of each, so the key carries a digest of both. A share
+  # count/timestamp version can stay the same while the counted set changes
+  # (ownership moved by update_all, shares replaced with older timestamps,
+  # report exclusion toggled); the row digest changes whenever the set does
+  # and never repeats for a different set. The percentages are in it too, so a
+  # share edit changes #version and the browser fetches the new series.
   def cache_key
     @cache_key ||= family.build_cache_key(
       "#{@accountable.name}_sparkline_#{Account::Chartable::SPARKLINE_CACHE_VERSION}_#{Date.current}_#{account_rows_digest}",
@@ -75,7 +87,8 @@ class AccountableSparkline
         currency: family.currency,
         period: Period.last_30_days,
         favorable_direction: @accountable.favorable_direction,
-        interval: "1 day"
+        interval: "1 day",
+        user: Current.user
       ).balance_series
     end
 
@@ -97,11 +110,19 @@ class AccountableSparkline
         currency: family.currency,
         period: Period.last_30_days,
         favorable_direction: @accountable.favorable_direction,
-        interval: "1 day"
+        interval: "1 day",
+        user: Current.user
       )
     end
 
+    # Rows are shared by everyone with the same accessible set, but the series
+    # is not: a co-owner at 40% must never read the owner's 60% series.
     def account_rows_digest
-      Digest::SHA256.hexdigest(account_identity_rows.map { |row| row.join(":") }.sort.join(","))
+      rows = account_identity_rows.map { |row| [ *row, viewer_percentages[row.first] ].join(":") }
+      Digest::SHA256.hexdigest(rows.sort.join(","))
+    end
+
+    def viewer_percentages
+      @viewer_percentages ||= self.class.viewer_percentages(account_scope)
     end
 end
