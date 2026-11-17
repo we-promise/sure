@@ -27,7 +27,7 @@ class Insight < ApplicationRecord
     budget_at_risk
     budget_on_track
     maintained_goal_depleted
-    loan_payment_change
+    fixed_commitments_ratio
   ].freeze
 
   # How many the dashboard widget shows. Shared so PagesController (first render)
