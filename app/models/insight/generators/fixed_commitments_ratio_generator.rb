@@ -26,6 +26,8 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
   WINDOW_MONTHS = 6
   MAX_CONTRIBUTORS = 3
   DEDUP_KEY = "fixed_commitments_ratio"
+  # A nightly run plus slack for a late one.
+  LIVE_WITHIN = 36.hours
 
   def generate
     return [] if family.recurring_transactions_disabled?
@@ -113,9 +115,14 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
 
     # The band a live insight last showed, so a ratio easing into a lower band
     # does not read as a change and reopen an acknowledged warning. Once the
-    # insight has expired the rise is over and the band starts again.
+    # rise has cleared the band starts again. The job expires only unread and
+    # read rows, so for an acknowledged one "still live" means the job
+    # regenerated it on its last nightly run; a missed run errs towards
+    # showing the warning again.
     def peak_band(band)
-      shown = family.insights.where.not(status: :expired).find_by(dedup_key: DEDUP_KEY)
+      shown = family.insights.where.not(status: :expired)
+                    .where(generated_at: LIVE_WITHIN.ago..)
+                    .find_by(dedup_key: DEDUP_KEY)
       [ band, shown&.metadata&.dig("current_band").to_i ].max
     end
 

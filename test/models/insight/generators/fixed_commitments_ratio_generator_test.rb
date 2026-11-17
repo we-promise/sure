@@ -209,9 +209,26 @@ class Insight::Generators::FixedCommitmentsRatioGeneratorTest < ActiveSupport::T
     commitment("Gym", 200, since: 2.months.ago)
     @family.insights.create!(insight_type: "fixed_commitments_ratio", priority: "medium", status: "dismissed",
                              title: "t", body: "b", dedup_key: "fixed_commitments_ratio",
-                             metadata: { "current_band" => 40 }, generated_at: 1.week.ago)
+                             metadata: { "current_band" => 40 }, generated_at: 1.hour.ago)
 
     assert_equal 40, generate.sole.metadata[:current_band]
+  end
+
+  # An acknowledged row is not expired when its condition clears, so the
+  # last time the job regenerated it is what says whether the rise stayed live.
+  test "a rise that cleared after being acknowledged comes back visible at a lower band" do
+    monthly_income(4_000)
+    commitment("Rent", 1_200, since: 2.years.ago)
+    commitment("Gym", 200, since: 2.months.ago)
+    acknowledged = @family.insights.create!(insight_type: "fixed_commitments_ratio", priority: "medium",
+                                            status: "dismissed", title: "t", body: "b", dedup_key: "fixed_commitments_ratio",
+                                            metadata: { "current_band" => 40 }, generated_at: 3.days.ago)
+    @family.users.each { |user| user.update!(preferences: (user.preferences || {}).merge("preview_features_enabled" => true)) }
+
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert acknowledged.reload.active?
+    assert_equal 35, acknowledged.metadata["current_band"]
   end
 
   test "an expired rise starts again from the current band" do
