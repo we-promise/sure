@@ -4,11 +4,10 @@
 # alert, each connection with its sync, disconnect and edit form, and a form to
 # add a connection. A panel declared `shape: :single` instead shows one form for
 # `item:` (the provider passes an existing connection or a new one), which
-# creates or updates it. The
-# provider fills the `setup_steps` slot and supplies its credential fields as
-# `<key>_items/_credential_fields` (locals `form:`, `item:`, `editing:`),
-# rendered inside each form. Messages come from the provider's own keys under
-# `i18n_scope`, by default `<key>_items.provider_panel`.
+# creates or updates it. The provider fills the `setup_steps` slot and supplies
+# its credential fields as `<key>_items/_credential_fields` (locals `form:`,
+# `item:`, `editing:`), rendered inside each form. Messages come from the
+# provider's own keys under `i18n_scope`, by default `<key>_items.provider_panel`.
 class ProviderItem::PanelComponent < ApplicationComponent
   renders_one :setup_steps
 
