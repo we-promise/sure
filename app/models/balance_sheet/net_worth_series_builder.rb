@@ -56,7 +56,7 @@ class BalanceSheet::NetWorthSeriesBuilder
         "balance_sheet_net_worth_series_historical",
         ExchangeRate::CONVERSION_CACHE_VERSION,
         # A rate stored later can bring back an account the series left out.
-        ExchangeRate.maximum(:updated_at)&.to_i,
+        ExchangeRate.updated_at_version,
         user&.id,
         shares_version,
         accounts_digest,

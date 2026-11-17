@@ -351,7 +351,7 @@ class IncomeStatement
         family.tags_version,
         family.accounts_status_version,
         family.currency,
-        ExchangeRate.maximum(:updated_at)&.to_i,
+        ExchangeRate.updated_at_version,
         family.investment_contributions_as_spending?
       ]
     end
