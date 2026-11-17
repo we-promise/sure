@@ -401,6 +401,7 @@ en:
         category_filter: Category
         clear_filters: Clear filters
         date_filter: Date
+        loading: Loading filters...
         merchant_filter: Merchant
         reconcile_status_filter: Reconciliation
         status_filter: Status
