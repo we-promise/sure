@@ -70,6 +70,15 @@ class Provider::EnableBankingTest < ActiveSupport::TestCase
     assert_equal [], result[:transactions]
     assert_equal 6.months.ago.to_date.iso8601, requested_queries.first[:date_from]
     assert_equal 89.days.ago.to_date.iso8601, requested_queries.second[:date_from]
+    assert_equal 89.days.ago.to_date, result[:effective_date_from]
+  end
+
+  test "get_account_transactions reports no effective_date_from when the window was served as asked" do
+    Provider::EnableBanking.expects(:get).returns(OpenStruct.new(code: 200, body: { transactions: [] }.to_json))
+
+    result = @provider.get_account_transactions(account_id: "acct_123", date_from: 30.days.ago.to_date)
+
+    assert_not result.key?(:effective_date_from)
   end
 
   test "get_account_transactions skips fallback windows that do not advance the search" do

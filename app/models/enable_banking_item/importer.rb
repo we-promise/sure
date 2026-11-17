@@ -847,7 +847,7 @@ class EnableBankingItem::Importer
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
-      all_transactions, book_truncated = fetch_paginated_transactions(
+      all_transactions, book_truncated, book_window_start = fetch_paginated_transactions(
         enable_banking_account,
         start_date: start_date,
         transaction_status: "BOOK",
@@ -877,6 +877,7 @@ class EnableBankingItem::Importer
 
       pending_transactions = []
       pending_truncated = false
+      pending_window_start = nil
       if include_pending
         # Also fetch pending transactions (visible for 1-3 days before they become BOOK) if setting is enabled.
         # Some ASPSPs refuse PDNG with either a 400 or 422. Keep syncing booked rows
@@ -884,12 +885,14 @@ class EnableBankingItem::Importer
         begin
           # Pending rows are only a few days old, so a first fetch without a
           # start date still sends a short, explicit window here.
-          pending_transactions, pending_truncated = fetch_paginated_transactions(
+          pending_start_date = start_date || 30.days.ago.to_date
+          pending_transactions, pending_truncated, pending_window_start = fetch_paginated_transactions(
             enable_banking_account,
-            start_date: start_date || 30.days.ago.to_date,
+            start_date: pending_start_date,
             transaction_status: "PDNG",
             psu_headers: enable_banking_item.build_psu_headers
           )
+          pending_window_start ||= pending_start_date
         rescue Provider::EnableBanking::EnableBankingError => e
           raise unless [ :validation_error, :bad_request ].include?(e.error_type)
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
@@ -932,7 +935,8 @@ class EnableBankingItem::Importer
 
       transactions_count = all_transactions.count
 
-      existing_transactions = enable_banking_account.raw_transactions_payload.to_a
+      stored_payload = enable_banking_account.raw_transactions_payload.as_json
+      existing_transactions = enable_banking_account.raw_transactions_payload.to_a.dup
 
       removed_pending = false
 
@@ -971,25 +975,30 @@ class EnableBankingItem::Importer
           end
         end
 
-        # Replace a date window only when the fetch for that status completed.
-        # An incomplete fetch can still contribute rows with new identifiers.
-        superseded_rows, retained_transactions = existing_transactions.partition do |tx|
-          complete = pending_row?(tx) ? include_pending && !pending_truncated : !book_truncated
-          complete && in_fetched_window?(tx, start_date)
+        windows = { false => { start: book_window_start || start_date, complete: !book_truncated } }
+        windows[true] = { start: pending_window_start, complete: !pending_truncated } if include_pending
+
+        in_window, retained_transactions = existing_transactions.partition do |tx|
+          window = windows[pending_row?(tx)]
+          window && in_fetched_window?(tx, window[:start])
         end
 
+        # A truncated fetch cannot show that an unfetched row is gone, only that a
+        # fetched row is the same movement as a stored one.
+        ids_by_row = external_ids_by_row(existing_transactions + all_transactions)
+        superseded_rows, partial_rows = in_window.partition { |tx| windows[pending_row?(tx)][:complete] }
+        paired = content_pairs(partial_rows, all_transactions, ids_by_row, ids_by_row).map(&:first)
+        paired_set = Set.new.compare_by_identity.merge(paired)
+        superseded_rows += paired
+        retained_transactions += partial_rows.reject { |tx| paired_set.include?(tx) }
+
         next_snapshot, incoming_transactions = merge_transaction_rows(
-          existing_transactions, retained_transactions, all_transactions
+          existing_transactions, retained_transactions, all_transactions, ids_by_row
         )
 
-        if removed_pending || next_snapshot != existing_transactions
-          # One transaction: a re-key that outlived a failed snapshot write would
-          # leave the entry under an identifier the snapshot no longer mentions,
-          # and the next sync would insert a duplicate beside it.
-          ActiveRecord::Base.transaction do
-            # Carry the entries over to the identifiers the ASPSP now uses, or the
-            # processor keys each replaced row by its new identifier and inserts a
-            # second entry beside the first — the duplication users actually see.
+        if removed_pending || next_snapshot.as_json != existing_transactions.as_json
+          # The re-keys and the snapshot they describe commit or roll back together.
+          write_snapshot_unless_changed(enable_banking_account, stored_payload) do
             rekey_rotated_identifiers!(
               enable_banking_account, existing_transactions, next_snapshot, superseded_rows, incoming_transactions
             )
@@ -998,9 +1007,9 @@ class EnableBankingItem::Importer
           end
         end
       elsif removed_pending
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!(
-          existing_transactions
-        )
+        write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions)
+        end
       end
 
       # A completed first fetch always leaves a payload, even an empty one, so
@@ -1100,11 +1109,13 @@ class EnableBankingItem::Importer
 
     class PaginationTruncatedError < StandardError; end
 
-    # Returns the rows fetched and whether the fetch stopped before the last
-    # page (page cap, repeated continuation key, or a 400/422 on a later page).
+    # Returns the rows fetched, whether the fetch stopped before the last page
+    # (page cap, repeated continuation key, or a 400/422 on a later page), and
+    # the date_from the ASPSP actually served, which can be later than start_date.
     def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {}, strategy: nil)
       all_transactions = []
       truncated = false
+      window_start = start_date
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
@@ -1163,6 +1174,7 @@ class EnableBankingItem::Importer
 
         transactions = transactions_data[:transactions] || []
         all_transactions.concat(transactions)
+        window_start = [ window_start, transactions_data[:effective_date_from] ].compact.max
 
         previous_continuation_key = continuation_key
         continuation_key = transactions_data[:continuation_key]
@@ -1175,7 +1187,7 @@ class EnableBankingItem::Importer
         break if continuation_key.blank?
       end
 
-      [ all_transactions, truncated ]
+      [ all_transactions, truncated, window_start ]
     rescue PaginationTruncatedError => e
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
@@ -1183,21 +1195,22 @@ class EnableBankingItem::Importer
       if strategy.present?
         capture_longest_truncation_debug_log(enable_banking_account, transactions_kept: all_transactions.count, reason: e.message)
       end
-      [ all_transactions, true ]
+      [ all_transactions, true, window_start ]
     end
 
-    def merge_transaction_rows(existing_transactions, retained_transactions, fetched_transactions)
-      # Resolve IDs over both sets so rows sharing a transaction_id can still
-      # be distinguished by entry_reference.
-      rows = existing_transactions + fetched_transactions
-      ids_by_row = rows.zip(EnableBankingEntry::Processor.external_ids_for(rows)).to_h
+    # Ids are resolved over stored and fetched rows together so rows sharing a
+    # transaction_id can still be told apart by entry_reference.
+    def external_ids_by_row(rows)
+      rows.zip(EnableBankingEntry::Processor.external_ids_for(rows)).to_h
+    end
+
+    def merge_transaction_rows(existing_transactions, retained_transactions, fetched_transactions, ids_by_row)
       retained_ids = retained_transactions.map { |row| ids_by_row[row] }.compact.to_set
       incoming_transactions = fetched_transactions.select do |row|
         id = ids_by_row[row]
         id.present? && !retained_ids.include?(id)
       end
 
-      # Keep existing rows in their stored order even when the response is reordered.
       stored_positions = existing_transactions.map { |row| ids_by_row[row] }.each_with_index.to_h
       snapshot = (retained_transactions + incoming_transactions).sort_by.with_index do |row, index|
         [ stored_positions.fetch(ids_by_row[row], existing_transactions.size), index ]
@@ -1209,35 +1222,44 @@ class EnableBankingItem::Importer
       return transactions unless start_date
 
       transactions.reject do |tx|
-        tx = tx.with_indifferent_access
-        value = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
-        next false if value.blank?  # Keep if no date (cannot determine)
-
-        # parse_row_date, not Date.parse: a Unix timestamp read as digits is
-        # either rejected outright or, worse, accepted as a date in the 1700s,
-        # which discards a recent transaction. in_fetched_window? decides what
-        # the window holds using the same parser, and the two must agree.
-        parsed = parse_row_date(value)
-        parsed.present? && parsed < start_date  # Keep if unparseable
+        date = row_date(tx)
+        date.present? && date < start_date
       end
     end
 
-    # Point existing entries at the identifiers the ASPSP now uses for the same
-    # movements, so import_transaction upserts them instead of inserting beside
-    # them. Category, merchant, transfer links and attachments survive.
-    #
-    # Rows are paired within one content group: identifiers that did not rotate
-    # pair with themselves, and only what is left over is paired by position.
-    # Multiplicity is preserved either way — three identical movements on one day
-    # map one-to-one onto the three that came back, rather than collapsing into
-    # one. That is the difference between this and content-level deduplication,
-    # which #2720 shows drops distinct booked transactions.
-    #
-    # Only rows whose identifier actually changed are touched, and a new
-    # identifier already present on the account is skipped rather than
-    # collided with.
-    # Must run inside the transaction that writes the snapshot: the re-keys and
-    # the snapshot they correspond to have to commit or roll back together.
+    # Pairs stored rows with fetched rows describing the same movement. A row that
+    # kept its id pairs with itself first, so a reordered response cannot hand one
+    # movement's id to another; the rest pair by position, keeping multiplicity.
+    def content_pairs(stored_rows, fetched_rows, stored_ids, fetched_ids)
+      fetched_by_content = fetched_rows.group_by { |row| content_key(row) }
+
+      stored_rows.group_by { |row| content_key(row) }.flat_map do |key, old_rows|
+        new_rows = key && fetched_by_content[key]
+        next [] unless new_rows
+
+        unpaired_new = new_rows.dup
+        unchanged = []
+        rotated = []
+        old_rows.each do |old_row|
+          old_id = stored_ids[old_row]
+          index = old_id.present? && unpaired_new.index { |row| fetched_ids[row] == old_id }
+          index ? unchanged << [ old_row, unpaired_new.delete_at(index) ] : rotated << old_row
+        end
+
+        unchanged + rotated.zip(unpaired_new).select { |_old_row, new_row| new_row }
+      end
+    end
+
+    def content_key(transaction)
+      content_id = EnableBankingEntry::Processor.compute_external_id(
+        transaction.with_indifferent_access.except(:transaction_id, :entry_reference)
+      )
+      [ pending_row?(transaction), content_id ] if content_id.present?
+    end
+
+    # Points existing entries at the ids the ASPSP now uses for the same
+    # movements, so the processor updates them (keeping category, merchant,
+    # notes and transfer links) instead of inserting beside them.
     def rekey_rotated_identifiers!(enable_banking_account, existing_transactions, next_snapshot, superseded_rows, fetched_rows)
       account = enable_banking_account.current_account
       return if account.blank? || superseded_rows.empty?
@@ -1245,84 +1267,60 @@ class EnableBankingItem::Importer
       processor = EnableBankingEntry::Processor
       old_ids = existing_transactions.zip(processor.external_ids_for(existing_transactions, account: account)).to_h
       new_ids = next_snapshot.zip(processor.external_ids_for(next_snapshot, account: account)).to_h
-      content_key = ->(tx) {
-        content_id = processor.compute_external_id(
-          tx.with_indifferent_access.except(:transaction_id, :entry_reference)
-        )
-        [ pending_row?(tx), content_id ] if content_id.present?
-      }
 
-      incoming_by_content = fetched_rows.group_by(&content_key)
+      renames = content_pairs(superseded_rows, fetched_rows, old_ids, new_ids).filter_map do |old_row, new_row|
+        old_id = old_ids[old_row]
+        new_id = new_ids[new_row]
+        [ old_id, new_id, new_row ] if old_id.present? && new_id.present? && old_id != new_id
+      end
+      return if renames.empty?
 
-      superseded_rows.group_by(&content_key).each do |key, old_rows|
-        next if key.blank?
+      entries = account.entries.where(source: "enable_banking")
+      taken_ids = entries.where(external_id: renames.map(&:second)).pluck(:external_id).to_set
+      entries_by_old_id = entries.where(external_id: renames.map(&:first)).includes(:entryable).lock.index_by(&:external_id)
 
-        new_rows = incoming_by_content[key] or next
+      renames.each do |old_id, new_id, new_row|
+        next if taken_ids.include?(new_id)
 
-        # Settle the rows that kept their identifier first. Pairing a whole
-        # content group by position would otherwise hand one movement's
-        # identifier to another when the response order changes, moving the
-        # annotations with it.
-        unpaired_new = new_rows.dup
-        rotated_old = []
+        entry = entries_by_old_id[old_id]
+        next unless entry && entry.external_id == old_id
 
-        old_rows.each do |old_row|
-          old_id = old_ids[old_row]
-          index = old_id.present? ? unpaired_new.index { |row| new_ids[row] == old_id } : nil
-
-          if index
-            unpaired_new.delete_at(index)  # identifier unchanged: nothing to carry over
-          else
-            rotated_old << old_row
-          end
-        end
-
-        rotated_old.zip(unpaired_new).each do |old_row, new_row|
-          next if new_row.nil?
-
-          old_id = old_ids[old_row]
-          new_id = new_ids[new_row]
-          next if old_id.blank? || new_id.blank? || old_id == new_id
-          next if account.entries.exists?(source: "enable_banking", external_id: new_id)
-
-          entry = account.entries.find_by(source: "enable_banking", external_id: old_id) or next
-
-          entry.lock!
-          next unless entry.external_id == old_id
-
-          entry.update_column(:external_id, new_id)
-          if !pending_row?(new_row) && entry.entryable.is_a?(Transaction)
-            new_reference = new_row.with_indifferent_access[:entry_reference].to_s.presence
-            entry.transaction.update_column(:provider_entry_reference, new_reference)
-          end
+        entry.update_column(:external_id, new_id)
+        taken_ids << new_id
+        if !pending_row?(new_row) && entry.entryable.is_a?(Transaction)
+          new_reference = new_row.with_indifferent_access[:entry_reference].to_s.presence
+          entry.entryable.update_column(:provider_entry_reference, new_reference)
         end
       end
     end
 
-    # True when a stored row falls inside the window just fetched, so the fresh
-    # response supersedes it. Date resolution mirrors filter_transactions_by_date,
-    # which decides what the window contains. Undated rows are kept: they cannot
-    # be shown to be superseded.
+    # Skips the write when another sync replaced the snapshot after this one read
+    # it; re-keying against a stale snapshot would insert a duplicate entry.
+    def write_snapshot_unless_changed(enable_banking_account, stored_payload)
+      ActiveRecord::Base.transaction do
+        enable_banking_account.lock!
+        if enable_banking_account.raw_transactions_payload.as_json == stored_payload
+          yield
+        else
+          Rails.logger.info "EnableBankingItem::Importer - snapshot for account #{enable_banking_account.uid} changed during sync, skipping write"
+        end
+      end
+    end
+
+    # Undated rows are kept: they cannot be shown to be superseded.
     def in_fetched_window?(transaction, start_date)
-      return true unless start_date  # no lower bound: the fetch covers everything
+      return true unless start_date
 
-      tx = transaction.with_indifferent_access
-      value = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
-      return false if value.blank?
-
-      parsed = parse_row_date(value)
-      parsed.present? && parsed >= start_date
+      date = row_date(transaction)
+      date.present? && date >= start_date
     end
 
-    # Accepts the same shapes as EnableBankingEntry::Processor#date, including
-    # the Unix timestamps some ASPSPs send. Returns nil when unparseable.
-    def parse_row_date(value)
-      case value
-      when Integer, Float then Time.at(value).to_date
-      when Time, DateTime then value.to_date
-      when Date then value
-      else Date.parse(value.to_s)
-      end
+    # Dated as EnableBankingEntry::Processor dates the entry, in the family's zone.
+    def row_date(transaction)
+      tx = transaction.with_indifferent_access
+      return nil if (tx[:booking_date] || tx[:value_date] || tx[:transaction_date]).blank?
+
+      EnableBankingEntry::Processor.transaction_date(tx, enable_banking_item.family&.timezone)
     rescue ArgumentError, TypeError, RangeError
       nil
     end

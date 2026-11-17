@@ -173,7 +173,8 @@ class Provider::EnableBanking
   # @param psu_headers [Hash] Optional PSU context headers required by some ASPSPs
   # @param strategy [String, nil] "longest" asks Enable Banking for the longest period
   #   the ASPSP allows (date_from is still applied as a lower bound, date_to is ignored)
-  # @return [Hash] Transactions and continuation_key for pagination
+  # @return [Hash] Transactions and continuation_key for pagination, plus effective_date_from
+  #   when the ASPSP refused the requested period and a later date_from was used instead
   def get_account_transactions(account_id:, date_from: nil, date_to: nil,
                                continuation_key: nil, transaction_status: nil, psu_headers: {}, strategy: nil, retry_attempt: 0)
     encoded_id = CGI.escape(account_id.to_s)
@@ -190,7 +191,8 @@ class Provider::EnableBanking
       query: query_params.presence
     )
 
-    handle_response(response)
+    data = handle_response(response)
+    retry_attempt.positive? && date_from ? data.merge(effective_date_from: date_from.to_date) : data
   rescue EnableBankingError => e
     next_date_from = next_transactions_date_from(e, date_from, retry_attempt)
 

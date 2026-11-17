@@ -47,9 +47,9 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     }
   end
 
-  def stub_fetch(booked, pending: [], pending_raises: nil)
+  def stub_fetch(booked, pending: [], pending_raises: nil, truncated: false, window_start: nil)
     @importer.stubs(:fetch_paginated_transactions)
-             .with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ booked, false ])
+             .with(@enable_banking_account, has_entry(transaction_status: "BOOK")).returns([ booked, truncated, window_start ])
     if pending_raises
       @importer.stubs(:fetch_paginated_transactions)
                .with(@enable_banking_account, has_entry(transaction_status: "PDNG")).raises(pending_raises)
@@ -59,16 +59,18 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     end
   end
 
-  def sync(booked, **opts)
+  def sync(booked, account: @enable_banking_account, **opts)
     stub_fetch(booked, **opts)
-    @importer.send(:fetch_and_store_transactions, @enable_banking_account)
+    @importer.send(:fetch_and_store_transactions, account)
     @enable_banking_account.reload
   end
 
   def sync_and_process(booked, **opts)
     sync(booked, **opts)
-    EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
+    process
   end
+
+  def process = EnableBankingAccount::Transactions::Processor.new(@enable_banking_account).process
 
   def snapshot_count = @enable_banking_account.reload.raw_transactions_payload.count
   def entry_count = Entry.where(account_id: @account.id, source: "enable_banking").count
@@ -106,7 +108,7 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
     assert_equal 3, entry_count
 
     sync_and_process(%w[t4 t5 t6].map { |n| rotating_tx(n, amount: "10.00", counterparty: "Repeat") })
-    assert_equal 3, snapshot_count, "must not collapse distinct same-day movements (see #2720)"
+    assert_equal 3, snapshot_count, "must not collapse distinct same-day movements"
     assert_equal 3, entry_count
   end
 
@@ -178,22 +180,89 @@ class EnableBankingItem::ImporterRotatingIdsTest < ActiveSupport::TestCase
       "PDNG was never fetched, so stored pending rows cannot be shown to be gone"
   end
 
-  test "a truncated pagination run does not replace the window" do
-    sync([ rotating_tx("aaa") ])
-    assert_equal 1, snapshot_count
+  test "a truncated pagination run does not evict rows it never covered" do
+    sync([ rotating_tx("aaa", amount: "10.00"), rotating_tx("unfetched", amount: "20.00") ])
+    assert_equal 2, snapshot_count
 
-    # Real pagination this time: the ASPSP repeats its continuation_key, which
-    # fetch_paginated_transactions tolerates by returning the pages it did get.
+    # The ASPSP repeats its continuation_key, so fetch_paginated_transactions
+    # returns the pages it did get and reports the fetch as truncated.
     @importer.unstub(:fetch_paginated_transactions)
     @provider.stubs(:get_account_transactions)
-             .returns({ transactions: [ rotating_tx("bbb") ], continuation_key: "k1" })
+             .returns({ transactions: [ rotating_tx("bbb", amount: "10.00") ], continuation_key: "k1" })
              .then.returns({ transactions: [], continuation_key: "k1" })
 
     @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
-    stored = @enable_banking_account.reload.raw_transactions_payload.map(&:with_indifferent_access)
-    assert_equal 2, stored.count, "a partial page set must not evict rows it never covered"
-    assert stored.any? { |t| t[:transaction_id] == "txn_aaa" }, "the unfetched row must survive"
+    stored = @enable_banking_account.reload.raw_transactions_payload.map { |t| t.with_indifferent_access[:transaction_id] }
+    assert_equal %w[txn_bbb txn_unfetched], stored.sort
+  end
+
+  test "a truncated fetch from a rotating ASPSP re-keys the rows it did return" do
+    sync_and_process([ rotating_tx("aaa", amount: "10.00"), rotating_tx("unfetched", amount: "20.00") ])
+    assert_equal 2, entry_count
+
+    sync_and_process([ rotating_tx("bbb", amount: "10.00") ], truncated: true)
+    assert_equal 2, entry_count
+    assert_equal 2, snapshot_count
+
+    sync_and_process([ rotating_tx("ccc", amount: "10.00"), rotating_tx("unfetched2", amount: "20.00") ])
+    assert_equal 2, entry_count
+    assert_equal 2, snapshot_count
+  end
+
+  test "a window the ASPSP shortened only supersedes rows inside it" do
+    older = [ 20, 10 ].map { |days| rotating_tx("old#{days}", date: days.days.ago.to_date.to_s, amount: "#{days}.00") }
+    @enable_banking_account.upsert_enable_banking_transactions_snapshot!(older)
+
+    sync([ rotating_tx("fresh") ], window_start: 5.days.ago.to_date)
+
+    stored = @enable_banking_account.raw_transactions_payload.map { |t| t.with_indifferent_access[:transaction_id] }
+    assert_equal %w[txn_fresh txn_old10 txn_old20], stored.sort
+  end
+
+  test "a sync that read a snapshot another sync since replaced does not write" do
+    sync_and_process([ rotating_tx("aaa") ])
+    stale_account = EnableBankingAccount.find(@enable_banking_account.id)
+
+    sync_and_process([ rotating_tx("bbb") ])
+    sync([ rotating_tx("ccc") ], account: stale_account)
+    process
+
+    assert_equal [ "txn_bbb" ], @enable_banking_account.raw_transactions_payload.map { |t| t.with_indifferent_access[:transaction_id] }
+    assert_equal 1, entry_count
+  end
+
+  test "an unchanged response does not rewrite the snapshot" do
+    sync([ rotating_tx("aaa") ])
+
+    @enable_banking_account.expects(:upsert_enable_banking_transactions_snapshot!).never
+    sync([ rotating_tx("aaa") ])
+    assert_equal 1, snapshot_count
+  end
+
+  test "rotating pending rows are carried over with pending sync on" do
+    @importer.stubs(:include_pending?).returns(true)
+    pending_tx = ->(nonce) { rotating_tx(nonce, amount: "42.00", counterparty: "Hold Co").merge(status: "PDNG") }
+
+    sync_and_process([ rotating_tx("book_a") ], pending: [ pending_tx.("pend_a") ])
+    assert_equal 2, entry_count
+
+    sync_and_process([ rotating_tx("book_b") ], pending: [ pending_tx.("pend_b") ])
+    assert_equal 2, entry_count
+    assert_equal 2, snapshot_count
+  end
+
+  test "window dates are resolved in the family's timezone" do
+    @family.update!(timezone: "Pacific/Auckland")
+    late_utc = Time.utc(2026, 10, 3, 12, 30)
+    rows = [
+      { transaction_id: "iso", booking_date: late_utc.iso8601 },
+      { transaction_id: "epoch", booking_date: late_utc.to_i }
+    ]
+
+    kept = @importer.send(:filter_transactions_by_date, rows, Date.new(2026, 10, 4))
+
+    assert_equal %w[iso epoch], kept.map { |tx| tx[:transaction_id] }
   end
 
   test "a reordered response does not move annotations between repeated movements" do
