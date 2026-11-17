@@ -22,6 +22,8 @@ class LunchflowItemsConnectionTest < ActionDispatch::IntegrationTest
   end
 
   test "a sync started from the panel re-renders the panel" do
+    LunchflowItem.any_instance.expects(:sync_later).once
+
     post sync_lunchflow_item_url(@item), params: { source: "panel" }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
 
     assert_response :success
