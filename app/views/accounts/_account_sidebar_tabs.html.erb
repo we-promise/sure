@@ -9,7 +9,10 @@
     digesting. Bump that version suffix when changing this template or its
     sidebar dependencies. %>
 <% cache account_sidebar_tabs_cache_key(family: family, active_tab: active_tab, mobile: mobile), expires_in: 12.hours, skip_digest: true do %>
-<% sortable = Current.user&.account_order&.manual? %>
+<%# Every order can switch to the custom order in place (no page reload),
+    so the drag-and-drop markup is always rendered; handles stay hidden
+    until sort mode starts. %>
+<% sortable = Current.user.present? %>
 <% reconciliation_indicators = if family.manual_reconciliation?
      Account::ReconciliationIndicator.for_accounts(family.balance_sheet.account_groups.flat_map(&:accounts))
    else
@@ -18,7 +21,9 @@
 <%= tag.div id: "account-sidebar-tabs",
       data: sortable ? {
         controller: "account-sort-mode",
-        action: "turbo:morph@window->account-sort-mode#render"
+        account_sort_mode_order_value: Current.user.account_order.key,
+        account_sort_mode_url_value: sidebar_order_accounts_path,
+        action: "turbo:morph@window->account-sort-mode#render account-sort-mode:order@window->account-sort-mode#syncOrder"
       } : {} do %>
   <% if family.missing_data_provider? %>
     <div class="mb-3">
@@ -117,15 +122,8 @@
   // Event-delegated on document so it works for both the desktop and mobile
   // sidebar instances and survives Turbo re-renders. The menu panel is
   // positioned fixed but stays inside its tab panel in the DOM.
-  if (!window.__sidebarSetOpenBound) {
-    window.__sidebarSetOpenBound = true;
-    // Picking "Custom order" reloads the page; remember to open sort mode
-    // once the reloaded sidebar connects (account_sort_mode_controller).
-    document.addEventListener("click", function (e) {
-      if (!e.target.closest("[data-account-sidebar-start-sort]")) return;
-      try { sessionStorage.setItem("accountSidebarStartSort", "1"); } catch (_) {}
-    });
-
+  if (!window.__sidebarSetOpenBoundV2) {
+    window.__sidebarSetOpenBoundV2 = true;
     document.addEventListener("click", function (e) {
       var btn = e.target.closest("[data-account-sidebar-set-open]");
       if (!btn) return;

@@ -6,32 +6,13 @@ import { Controller } from "@hotwired/stimulus";
 // Visibility is set inline (not with Tailwind classes) because the Docker
 // image ships a precompiled CSS bundle, like the expand-all toggle.
 export default class extends Controller {
-  static targets = ["toggle", "bar", "handle"];
+  static targets = ["toggle", "bar", "handle", "orderOption", "reorderItem"];
+  static values = { order: String, url: String };
 
   // Also resets markup restored from Turbo's page cache in sort mode.
   connect() {
     this.sorting = false;
     this.render();
-    this.startIfRequested();
-  }
-
-  // The sidebar settings menu sets this flag when the user switches to the
-  // custom order, so sort mode is open as soon as the page reloads. The flag
-  // is cleared on the next tick so both sidebar instances (desktop and
-  // mobile) see it.
-  startIfRequested() {
-    let requested = false;
-    try {
-      requested = sessionStorage.getItem("accountSidebarStartSort") === "1";
-    } catch (_) {}
-    if (!requested || this.handleTargets.length === 0) return;
-
-    setTimeout(() => {
-      try {
-        sessionStorage.removeItem("accountSidebarStartSort");
-      } catch (_) {}
-    }, 0);
-    this.start();
   }
 
   toggle() {
@@ -53,7 +34,123 @@ export default class extends Controller {
     });
   }
 
+  // Picked in the sidebar settings menu. Re-sorts the rows in place (no
+  // reload, so open groups stay open), saves the order in the background,
+  // and opens sort mode right away when switching to the custom order.
+  setOrder(event) {
+    const order = event.params.order;
+    if (!order) return;
+
+    const switchingToManual = order === "manual" && this.orderValue !== "manual";
+    if (this.sorting && order !== "manual") this.stop();
+    this.applyOrder(order);
+    window.dispatchEvent(
+      new CustomEvent("account-sort-mode:order", { detail: { order, source: this } }),
+    );
+    this.saveOrder(order);
+    if (switchingToManual) this.start();
+  }
+
+  // Keeps the other sidebar instance (desktop vs mobile) in step.
+  syncOrder(event) {
+    if (event.detail?.source === this) return;
+    this.applyOrder(event.detail.order);
+  }
+
+  applyOrder(order) {
+    this.orderValue = order;
+    this.element
+      .querySelectorAll("[data-controller~='sortable-list']")
+      .forEach((list) => this.sortList(list, order));
+  }
+
+  orderValueChanged() {
+    const order = this.orderValue;
+    this.orderOptionTargets.forEach((option) => {
+      const selected = option.dataset.order === order;
+      option.setAttribute("aria-checked", selected ? "true" : "false");
+      const check = option.querySelector("[data-check]");
+      if (check) check.style.display = selected ? "" : "none";
+    });
+    this.reorderItemTargets.forEach((item) => {
+      item.style.display = order === "manual" ? "" : "none";
+    });
+  }
+
+  // Same rules as BalanceSheet#sorted on the server: plain code-point name
+  // order, balance order, and for the custom order the saved positions first,
+  // then the rest by name.
+  sortList(list, order) {
+    const items = Array.from(list.children).filter(
+      (el) => el.dataset.sortableListTarget === "item",
+    );
+    if (items.length < 2) return;
+
+    const name = (el) => el.dataset.sortName || "";
+    const balance = (el) => Number.parseFloat(el.dataset.sortBalance || "0");
+    const byName = (a, b) => (name(a) < name(b) ? -1 : name(a) > name(b) ? 1 : 0);
+    const position = (el) =>
+      el.dataset.manualPosition === undefined || el.dataset.manualPosition === ""
+        ? null
+        : Number.parseInt(el.dataset.manualPosition, 10);
+
+    const comparators = {
+      name_asc: byName,
+      name_desc: (a, b) => byName(b, a),
+      balance_asc: (a, b) => balance(a) - balance(b) || byName(a, b),
+      balance_desc: (a, b) => balance(b) - balance(a) || byName(a, b),
+      manual: (a, b) => {
+        const pa = position(a);
+        const pb = position(b);
+        if (pa !== null && pb !== null) return pa - pb;
+        if (pa !== null) return -1;
+        if (pb !== null) return 1;
+        return byName(a, b);
+      },
+    };
+    const compare = comparators[order];
+    if (!compare) return;
+
+    items.sort(compare).forEach((item) => list.appendChild(item));
+  }
+
+  async saveOrder(order) {
+    if (!this.urlValue) return;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    const headers = { "Content-Type": "application/json", Accept: "application/json" };
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+
+    try {
+      const response = await fetch(this.urlValue, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ order }),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+      console.error("[Account sort mode] Failed to save order:", error);
+      // Show the order that is actually saved.
+      window.Turbo?.visit(window.location.href, { action: "replace" });
+    }
+  }
+
+  // After dragging, the rows' DOM order is the custom order; record it so a
+  // later switch back to the custom order (without a reload) restores it.
+  recordManualPositions() {
+    this.element
+      .querySelectorAll("[data-controller~='sortable-list']")
+      .forEach((list) => {
+        Array.from(list.children)
+          .filter((el) => el.dataset.sortableListTarget === "item")
+          .forEach((item, index) => {
+            item.dataset.manualPosition = String(index);
+          });
+      });
+  }
+
   stop() {
+    if (this.sorting && this.orderValue === "manual") this.recordManualPositions();
+
     const active = document.activeElement;
     const focusWillHide =
       this.handleTargets.includes(active) ||

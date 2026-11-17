@@ -35,12 +35,16 @@
             action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
           } : {} do %>
       <% hidden_account_ids = Current.user&.sidebar_hidden_account_ids.to_a %>
+      <% manual_positions = Current.user ? Current.user.manual_account_order[account_group.key].to_a.map(&:to_s) : [] %>
       <% account_group.accounts.reject { |account| hidden_account_ids.include?(account.id.to_s) }.each do |account| %>
         <%# Rows become draggable only in sort mode (account-sort-mode). %>
         <%= tag.div class: "flex items-center gap-1 rounded-lg",
               data: sortable ? {
                 sortable_list_target: "item",
                 sortable_list_id: account.id,
+                sort_name: account.name,
+                sort_balance: account.balance.to_f,
+                manual_position: manual_positions.index(account.id.to_s),
                 action: "dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd"
               } : {} do %>
         <% if sortable %>

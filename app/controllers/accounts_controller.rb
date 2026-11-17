@@ -268,7 +268,10 @@ class AccountsController < ApplicationController
   def sidebar_order
     order = params[:order].to_s
     if AccountOrder::ORDERS.key?(order) && Current.user.update(default_account_order: order)
-      redirect_back_or_to root_path, status: :see_other
+      respond_to do |format|
+        format.html { redirect_back_or_to root_path, status: :see_other }
+        format.json { head :ok }
+      end
     else
       head :unprocessable_entity
     end
