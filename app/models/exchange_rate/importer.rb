@@ -121,7 +121,7 @@ class ExchangeRate::Importer
       @current_provider_name ||= (ENV["EXCHANGE_RATE_PROVIDER"].presence || Setting.exchange_rate_provider).to_s
     end
 
-    def upsert_rows(rows)
+    def upsert_rows(rows, on_duplicate: :update)
       batch_size = 200
 
       total_upsert_count = 0
@@ -130,6 +130,7 @@ class ExchangeRate::Importer
         upserted_ids = ExchangeRate.upsert_all(
           batch,
           unique_by: %i[from_currency to_currency date],
+          on_duplicate: on_duplicate,
           returning: [ "id" ]
         )
 
@@ -253,7 +254,9 @@ class ExchangeRate::Importer
         }
       end
 
-      upsert_rows(inverse_rows) if inverse_rows.any?
+      # Insert only: an inverse row stored by a concurrent import since the read
+      # above came from a newer forward rate and must not be overwritten.
+      upsert_rows(inverse_rows, on_duplicate: :skip) if inverse_rows.any?
     end
 
     # Inverses are stored to 12 decimal places, so a forward rate above 1e12

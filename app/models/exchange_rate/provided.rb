@@ -222,6 +222,9 @@ module ExchangeRate::Provided
       # next one finds the rates in place and returns without calling the provider.
       # After a wait, a fresh importer re-reads what the import it waited for stored.
       with_import_lock(from, to, start_date, account) do |waited|
+        # The check above may sit in the query cache; another worker can have
+        # stored the rates since, so the import must read them from Postgres.
+        lease_connection.clear_query_cache
         (waited ? build_importer.call : importer).import_provider_rates
       end
     end

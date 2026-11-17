@@ -35,7 +35,12 @@ class ExchangeRate::ImportLockTest < ActiveSupport::TestCase
     @lock_key = ExchangeRate.import_lock_key("EUR", "USD")
   end
 
-  teardown do
+  # After super, once the test transaction is rolled back and holds no row locks.
+  def after_teardown
+    super
+  ensure
+    # Rows the other worker committed live outside the test transaction.
+    @other_worker_rate_ids&.each { |id| @other_worker.exec_params("DELETE FROM exchange_rates WHERE id = $1", [ id ]) }
     @other_worker&.close
   end
 
@@ -130,6 +135,27 @@ class ExchangeRate::ImportLockTest < ActiveSupport::TestCase
     @provider.expects(:fetch_exchange_rates).never
 
     ExchangeRate.import_provider_rates(from: "EUR", to: "USD", start_date: @entry_date - 30.days, end_date: Date.current)
+  end
+
+  test "a queued import does not reuse the query cache's pre-wait coverage count" do
+    hold_lock_in_other_worker
+    ExchangeRate.expects(:sleep).with { |seconds|
+      # The other worker finishes the pair on its own connection while this one waits.
+      @other_worker_rate_ids = @entry_date.upto(Date.current).map do |d|
+        @other_worker.exec_params(
+          "INSERT INTO exchange_rates (from_currency, to_currency, date, rate, created_at, updated_at) " \
+          "VALUES ('EUR', 'USD', $1, 1.1, NOW(), NOW()) RETURNING id",
+          [ d.iso8601 ]
+        ).getvalue(0, 0)
+      end
+      seconds == 1 && release_lock_in_other_worker
+    }.once
+    @provider.expects(:fetch_exchange_rates).never
+
+    # Jobs run with the query cache on, so the pre-lock count would be cached.
+    ActiveRecord::Base.cache do
+      ExchangeRate.import_provider_rates(from: "EUR", to: "USD", start_date: @entry_date, end_date: Date.current)
+    end
   end
 
   private

@@ -230,6 +230,42 @@ class ExchangeRate::ImporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "inverse backfill keeps an inverse row a concurrent import stored after the backfill read" do
+    ExchangeRate.delete_all
+
+    (2.days.ago.to_date..Date.current).each do |date|
+      ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: date, rate: 0.9)
+    end
+    @provider.expects(:fetch_exchange_rates).never
+
+    importer = ExchangeRate::Importer.new(
+      exchange_rate_provider: @provider,
+      from: "USD",
+      to: "EUR",
+      start_date: 2.days.ago.to_date,
+      end_date: Date.current
+    )
+
+    # Another worker's clear_cache import lands between the backfill's reads and its write.
+    compute_inverse = importer.method(:inverse_rate)
+    concurrent_import_done = false
+    importer.define_singleton_method(:inverse_rate) do |rate|
+      unless concurrent_import_done
+        concurrent_import_done = true
+        ExchangeRate.where(from_currency: "USD", to_currency: "EUR", date: Date.current).update_all(rate: 0.8)
+        ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.25)
+      end
+      compute_inverse.call(rate)
+    end
+
+    importer.import_provider_rates
+
+    assert_equal 3, ExchangeRate.where(from_currency: "EUR", to_currency: "USD").count
+    assert_equal 1.25, ExchangeRate.find_by!(from_currency: "EUR", to_currency: "USD", date: Date.current).rate,
+                 "the newer inverse row must not be overwritten with one computed from the older forward rate"
+    assert_in_delta 1 / 0.9, ExchangeRate.find_by!(from_currency: "EUR", to_currency: "USD", date: 1.day.ago.to_date).rate.to_f, 0.0001
+  end
+
   test "logs error and imports nothing when provider returns only zero and nil rates" do
     ExchangeRate.delete_all
     ExchangeRatePair.delete_all
