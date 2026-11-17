@@ -20,6 +20,11 @@ class LunchflowItemsReturnToTest < ActionDispatch::IntegrationTest
     assert_equal new_account_path, cancel_href_for("//evil.example")
   end
 
+  test "a triple-slash return path is rejected" do
+    # URI.parse leaves host nil for ///host, so only the second-character check stops it.
+    assert_equal new_account_path, cancel_href_for("///evil.example")
+  end
+
   test "a backslash return path is rejected" do
     assert_equal new_account_path, cancel_href_for("/\\evil.example")
   end
@@ -57,6 +62,33 @@ class LunchflowItemsReturnToTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to accounts_path
     assert_equal I18n.t("lunchflow_items.link_existing_account.success", account_name: accounts(:depository).name), flash[:notice]
+  end
+
+  test "linking new accounts redirects to a rejected return path's fallback instead of off the site" do
+    assert_difference "AccountProvider.count", 1 do
+      post link_accounts_lunchflow_items_url, params: {
+        account_ids: [ "acc_1" ], accountable_type: "Depository", return_to: "//evil.example"
+      }
+    end
+
+    assert_redirected_to accounts_path
+  end
+
+  test "linking new accounts keeps an internal return path" do
+    post link_accounts_lunchflow_items_url, params: {
+      account_ids: [ "acc_1" ], accountable_type: "Depository", return_to: "/accounts?tab=all"
+    }
+
+    assert_redirected_to "/accounts?tab=all"
+  end
+
+  test "choosing an account to link drops a rejected return path from its cancel link and form" do
+    get select_existing_account_lunchflow_items_url(account_id: accounts(:depository).id, return_to: "//evil.example")
+    assert_response :success
+
+    page = Nokogiri::HTML(response.body)
+    assert_equal accounts_path, page.at_css("a[data-turbo-frame='_top']")["href"]
+    assert_equal "", page.at_css("input[name='return_to']")["value"].to_s
   end
 
   private
