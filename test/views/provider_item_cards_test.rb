@@ -43,6 +43,15 @@ class ProviderItemCardsTest < ActiveSupport::TestCase
     end
   end
 
+  # Cards on the provider kit render their accounts in the shared component.
+  test "the provider kit's card component lists only the accounts it is given" do
+    source = Rails.root.join("app/components/provider_item/card_component.html.erb").read
+    renders = source.scan(/render "accounts\/index\/account_groups", accounts: ([^%,]+)/).flatten
+
+    assert_not_empty renders, "the card component no longer renders account_groups; has the scan stopped matching?"
+    renders.each { |accounts| assert_equal "visible_accounts", accounts.strip, "the card component renders #{accounts.strip}" }
+  end
+
   # Every render of a card by partial name, including the provider generator's
   # template and ProviderItemsController's. Each must hand the card its accounts
   # explicitly.
