@@ -141,6 +141,7 @@ en:
         remaining_balance: Remaining Balance
         total_cost: Total Cost
         total_interest: Total Interest
+        unknown: Unknown
       overview:
         insurance_rate_only: "%{rate} a year"
         interest_rate: Interest Rate

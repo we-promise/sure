@@ -21,7 +21,8 @@
     <% end %>
 
     <%= summary_card title: t(".total_cost") do %>
-      <%= format_money schedule.total_paid %>
+      <% total_paid = schedule.total_paid %>
+      <%= total_paid ? format_money(total_paid) : t(".unknown") %>
     <% end %>
 
     <%# When the loan will actually be paid off: the projection from today's

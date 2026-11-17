@@ -97,13 +97,14 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
 
   test "an extra repayment with a new payment on a payment date sets the payment from the next one" do
     schedule = loan_with([
-      { effective_date: "2026-04-01", extra_repayment: "2000", payment: "1066.19" }
+      { effective_date: "2026-04-01", extra_repayment: "2000", payment: "1200" }
     ]).amortization_schedule
 
-    assert_equal BigDecimal("1066.19"), schedule.payment_for(APRIL).payment.amount
+    assert_equal BigDecimal("1066.19"), schedule.payment_for(APRIL).payment.amount, "that day's payment is behind the repayment"
     assert_equal BigDecimal("7132.95"), schedule.payment_for(APRIL).ending_balance.amount
-    assert schedule.payments[3..-2].all? { |payment| payment.payment.amount == BigDecimal("1066.19") }
-    assert_operator schedule.payoff_date, :<, MATURITY, "the held payment shortens the loan"
+    assert_equal BigDecimal("1200"), schedule.payment_for(APRIL >> 1).payment.amount
+    assert_equal BigDecimal("1200"), schedule.payment_in_force(APRIL + 1).amount
+    assert_operator schedule.payoff_date, :<, MATURITY, "the higher payment shortens the loan"
   end
 
   test "a confirmed balance part-way through a period charges the rest of it on that balance" do
@@ -360,6 +361,8 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_equal BigDecimal("500"), schedule.payments.last.ending_balance.amount
     assert_nil schedule.payoff_date
     assert_nil schedule.payment_in_force(MATURITY + 1)
+    assert_nil schedule.total_paid, "a total without the balance owed would understate the cost"
+    assert_nil loan.total_cost
   end
 
   # The factor is the period's own, not one read back from rounded interest:
@@ -517,8 +520,25 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_not loan.valid?
     assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_after_last_payment")
 
-    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, extra_repayment: "500" } ]
+    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, payment: "1100" } ]
     assert loan.valid?, "a change on the last payment date is read"
+  end
+
+  # That day's payment comes first and repays the loan, so the repayment has
+  # nothing left to repay.
+  test "an extra repayment on the last payment date is refused" do
+    loan = loan_with([])
+
+    loan.term_change_rows = [ { effective_date: MATURITY.iso8601, extra_repayment: "500" } ]
+    assert_not loan.valid?
+    assert_includes loan.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_repayment_after_payoff")
+
+    loan.term_change_rows = [ { effective_date: (MATURITY << 1).iso8601, extra_repayment: "500" } ]
+    assert loan.valid?, loan.errors.full_messages.to_sentence
+
+    loan.term_change_rows = [ { effective_date: APRIL.iso8601, extra_repayment: "20000" } ]
+    assert loan.valid?, "a repayment that ends the loan on its date is read"
+    assert_equal APRIL, loan.amortization_schedule.payoff_date
   end
 
   # No payment is left to repay what the lender confirmed, so the schedule
@@ -716,7 +736,6 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_equal MATURITY, projection.payoff_date
     assert_equal 0, projection.months_saved
   end
-
 
   # An interest-free loan of 12,000 repays 1,000 a month. The lender pauses
   # the April payment and asks 1,100 from May, which repays the loan by its
