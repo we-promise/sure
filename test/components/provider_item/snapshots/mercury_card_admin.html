@@ -1,0 +1,95 @@
+<div id="mercury_item_UUID">
+<details class="group bg-container p-4 shadow-border-xs rounded-xl" open="open">
+<summary class="list-none cursor-pointer focus-ring rounded-xl">
+<div class="w-full">
+<div class="flex items-center justify-between gap-2">
+<div class="flex items-center gap-2">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary group-open:rotate-90 motion-safe:transition-transform motion-safe:duration-150">
+<path d="m9 18 6-6-6-6">
+</path>
+</svg>
+<span class="relative block overflow-hidden shrink-0 w-8 h-8 rounded-full">
+<span class="absolute inset-0" aria-hidden="true">
+<div style="background-color: color-mix(in oklab, #0891b2 10%, transparent); border-color: color-mix(in oklab, #0891b2 10%, transparent); color: #0891b2;" class="flex justify-center items-center shrink-0 w-8 h-8 rounded-full border w-full h-full" aria-hidden="true">
+<span class="text-center font-medium uppercase text-xs">ME</span>
+</div>
+</span>
+</span>
+<div class="pl-1 text-sm">
+<div class="flex items-center gap-2">
+<p class="font-medium text-primary">Test Mercury Connection</p>
+</div>
+<p class="text-secondary">Last synced about 3 hours ago - 0 synced, 1 need setup</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<div data-controller="DS--menu" data-DS--menu-placement-value="bottom-end" data-DS--menu-offset-value="12" data-DS--menu-mobile-fullwidth-value="true">
+<button aria-haspopup="menu" aria-expanded="false" aria-controls="menu-ID" aria-label="More horizontal" type="button" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg justify-center w-9 h-9 pointer-coarse:w-11 pointer-coarse:h-11 hover:bg-container-inset-hover" data-DS--menu-target="button">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<circle cx="12" cy="12" r="1">
+</circle>
+<circle cx="19" cy="12" r="1">
+</circle>
+<circle cx="5" cy="12" r="1">
+</circle>
+</svg>
+</button>
+<div id="menu-ID" data-DS--menu-target="content" class="fixed px-2 lg:px-0 max-w-full hidden z-50" role="menu">
+<div class="mx-auto min-w-[200px] shadow-border-lg bg-container rounded-lg">
+<div class="py-1">
+<div class="px-1" role="none">
+<a class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover" data-turbo-frame="modal" role="menuitem" tabindex="-1" href="/sync_schedule/edit?syncable_id=UUID&amp;syncable_type=MercuryItem">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-secondary">
+<path d="M12 6v6l4 2">
+</path>
+<circle cx="12" cy="12" r="10">
+</circle>
+</svg>
+<span class="text-sm text-primary">Sync frequency</span>
+</a>
+</div>
+<div class="px-1" role="none">
+<form class="button_to" method="post" action="/mercury_items/UUID">
+<input type="hidden" name="_method" value="delete" />
+<button class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-red-tint-5 theme-dark:hover:bg-red-tint-10" data-turbo-confirm="{&quot;title&quot;:&quot;Delete Test Mercury Connection?&quot;,&quot;body&quot;:&quot;Are you sure you want to delete test mercury connection? This is not reversible.&quot;,&quot;confirmText&quot;:&quot;Delete Test Mercury Connection&quot;,&quot;variant&quot;:&quot;destructive&quot;}" role="menuitem" tabindex="-1" type="submit">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-destructive">
+<path d="M10 11v6">
+</path>
+<path d="M14 11v6">
+</path>
+<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6">
+</path>
+<path d="M3 6h18">
+</path>
+<path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+<span class="text-sm text-destructive">Delete connection</span>
+</button>
+</form>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</summary>
+<div class="mt-2">
+<div class="space-y-4 mt-4">
+<div class="p-4 flex flex-col gap-3 items-center justify-center">
+<p class="text-primary font-medium text-sm">New accounts ready to set up</p>
+<p class="text-secondary text-sm">0 of 1 accounts linked. Choose account types for your newly imported Mercury accounts.</p>
+<a class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-turbo-frame="modal" href="/mercury_items/UUID/setup_accounts">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-5 h-5 text-inverse">
+<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915">
+</path>
+<circle cx="12" cy="12" r="3">
+</circle>
+</svg>Set Up New Accounts</a>
+</div>
+</div>
+</div>
+</details>
+</div>
