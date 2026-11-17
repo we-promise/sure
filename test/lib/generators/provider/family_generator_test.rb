@@ -138,11 +138,35 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
       assert_parses migration
       assert_includes migration, "      t.string :account_id\n"
-      assert_includes migration, "add_index :gocardless_accounts, :account_id, unique: true"
+      # Two connections may see the same provider account, so the id is unique
+      # per item, as Brex and Mercury index it, not across the table.
+      assert_includes migration, <<~RUBY.indent(4)
+        add_index :gocardless_accounts,
+                  [ :gocardless_item_id, :account_id ],
+                  unique: true,
+                  name: "index_gocardless_accounts_on_item_and_account_id"
+      RUBY
+      assert_no_match(/add_index :gocardless_accounts, :account_id/, migration)
       assert_match(/^      account_id: \(data\[:id\] \|\| data\[:account_id\]\)&\.to_s,$/, model)
       assert_includes importer, ".where.not(account_id: upstream_account_ids)"
       [ migration, model, importer ].each { |source| assert_not_includes source, "gocardless_account_id" }
     end
+  end
+
+  # Postgres caps an index name at 63 characters, and Rails raises on an explicit
+  # name past that instead of shortening it as it does the names it derives.
+  test "the generated migration names the item and account id index only when the name fits" do
+    long_key = "a" * 26
+    migration = render_provider_template("migration.rb.tt", file_name: long_key, table_name: "#{long_key}_items", migration_version: "[7.2]")
+
+    assert_parses migration
+    assert_includes migration, "[ :#{long_key}_item_id, :account_id ],\n              unique: true\n"
+    assert_not_includes migration, "_on_item_and_account_id"
+
+    fits = "a" * 25
+    migration = render_provider_template("migration.rb.tt", file_name: fits, table_name: "#{fits}_items", migration_version: "[7.2]")
+    name = migration[/name: "(index_a+_accounts_on_item_and_account_id)"/, 1]
+    assert_equal 63, name.length
   end
 
   # ProviderItem::Syncer and ProviderItem::Unlinking replace both scaffolds.
