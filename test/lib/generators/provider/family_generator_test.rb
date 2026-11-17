@@ -302,6 +302,15 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_equal [ "transaction_import_error" ], syncer.send(:import_result_errors, failed).map { |error| error[:category] }
   end
 
+  test "the summary gives the account flow its own step after the importer" do
+    generator = Provider::FamilyGenerator.new([ "gocardless" ], {}, destination_root: Dir.tmpdir)
+    summary = capture_io { generator.show_summary }.first
+    importer_step = summary[/  3\. Customize the Importer class:.*?(?=\n\n)/m]
+
+    assert_includes summary, "  4. Implement the account flow:\n     app/models/gocardless_item/account_flow.rb\n"
+    assert_not_includes importer_step, "account_flow.rb"
+  end
+
   # ProviderItem::Syncer reads its status and error messages from <key>_items.syncer.*.
   # Brex's are the reference set: the generated locale defines the same keys, plural
   # forms and interpolations.
