@@ -304,7 +304,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
       status: "BOOK"
     }
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ resynced_tx ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ resynced_tx ], false ])
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)
 
@@ -330,7 +330,7 @@ class EnableBankingItem::ImporterPdngTest < ActiveSupport::TestCase
     @enable_banking_account.update!(raw_transactions_payload: [ stored_tx ])
     @enable_banking_account.reload
 
-    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ stored_tx.deep_dup ])
+    @importer.stubs(:fetch_paginated_transactions).with(@enable_banking_account, has_entries(transaction_status: "BOOK")).returns([ [ stored_tx.deep_dup ], false ])
     @enable_banking_account.expects(:upsert_enable_banking_transactions_snapshot!).never
 
     result = @importer.send(:fetch_and_store_transactions, @enable_banking_account)

@@ -132,7 +132,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_booked",
@@ -152,6 +153,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
   end
 
   test "still deduplicates identical transactions that share the same counterparty iban" do
+    # A pending copy of a booked row: booked rows with distinct
+    # entry_references stay apart regardless of their IBAN.
     transactions = [
       {
         entry_reference: "ref_dup_1",
@@ -169,7 +172,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Miete" },
         creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
-        status: "BOOK"
+        status: "PDNG",
+        _pending: true
       }
     ]
 
@@ -196,7 +200,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Miete" },
         creditor_account: { iban: "de89.3704-0044/0532:0130'00" },
         credit_debit_indicator: "DBIT",
-        status: "BOOK"
+        status: "PDNG",
+        _pending: true
       }
     ]
 
@@ -221,7 +226,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Miete" },
         creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_booked_without_iban",
@@ -257,7 +263,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor_account_additional_identification: { identification: "landlord-ref-123" },
         creditor_agent: { name: "Sparkasse" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_booked_without_any_counterparty_data",
@@ -307,7 +314,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         creditor: { name: "Same Payee" },
         creditor_account: { iban: "DE89370400440532013000" }, # pipelock:ignore IBAN
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_ambiguous_no_iban",
@@ -362,7 +370,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "50.00", currency: "EUR" },
         creditor: { name: "Same Payee" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_ambiguous_2",
@@ -674,7 +683,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       }
     ]
 
@@ -701,7 +711,8 @@ class EnableBankingItem::ImporterDedupTest < ActiveSupport::TestCase
         transaction_amount: { amount: "850.00", currency: "EUR" },
         creditor: { name: "Miete" },
         credit_debit_indicator: "DBIT",
-        status: "PDNG"
+        status: "PDNG",
+        _pending: true
       },
       {
         entry_reference: "ref_a",
