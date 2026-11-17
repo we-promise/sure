@@ -1,0 +1,44 @@
+<div id="mercury-providers-panel" class="space-y-4">
+<div class="bg-surface-inset rounded-xl p-4">
+<p class="text-xs font-medium uppercase text-subdued tracking-wider mb-2">Setup</p>
+<ol class="list-none p-0 m-0 space-y-2">
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">1</span>Visit<a target="_blank" rel="noopener noreferrer" class="text-link underline" href="https://mercury.com">Mercury</a>and log in to the account you want to connect</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">2</span>Go to Settings &gt; Developer &gt; API Tokens</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">3</span>Create a new API token with &quot;Read Only&quot; access</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">4</span>
+<strong>Important:</strong>Add your server's IP address to the token's whitelist</li>
+<li class="relative pl-6 text-sm leading-relaxed text-primary wrap-anywhere">
+<span class="absolute left-0 top-0.5 w-4 text-center font-mono text-xs tabular-nums text-subdued">5</span>Copy the<strong>full token</strong>(including the<code>secret-token:</code>prefix) and add it as a named connection below</li>
+</ol>
+</div>
+<form class="space-y-3" data-turbo="true" action="/mercury_items" accept-charset="UTF-8" method="post">
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_name">Connection name</label>
+<input class="form-field__input" placeholder="Business checking" type="text" value="Mercury Connection" name="mercury_item[name]" id="mercury_item_name" />
+</div>
+</div>
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_token">Token</label>
+<input class="form-field__input" placeholder="Paste token here" type="password" name="mercury_item[token]" id="mercury_item_token" />
+</div>
+</div>
+<div class="form-field">
+<div class="form-field__body">
+<label class="form-field__label" for="mercury_item_base_url">Base URL (optional)</label>
+<input class="form-field__input" placeholder="https://api.mercury.com/api/v1 (default)" type="text" name="mercury_item[base_url]" id="mercury_item_base_url" />
+</div>
+</div>
+<p class="text-xs text-secondary px-1 -mt-1">Use a separate named connection for each Mercury login/API token you want to sync. For sandbox testing, use<code>https://api-sandbox.mercury.com/api/v1</code>as the Base URL. Mercury requires IP whitelisting - make sure to add your IP in the Mercury dashboard.</p>
+<div class="flex justify-end">
+<button type="submit" class="font-medium whitespace-nowrap focus-ring disabled:cursor-not-allowed aria-disabled:cursor-not-allowed aria-disabled:opacity-50 inline-flex items-center gap-1 rounded-lg w-full justify-center px-3 py-2 text-sm text-inverse bg-inverse hover:bg-inverse-hover disabled:bg-gray-500 theme-dark:disabled:bg-gray-400" data-turbo-submits-with="Submitting...">
+<span class="min-w-0 truncate">Add Mercury connection</span>
+</button>
+</div>
+</form>
+</div>
