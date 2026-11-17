@@ -81,11 +81,11 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
 
   # A template rendered as the generator renders it, with the generator's predicate
   # helpers, which a Struct cannot name.
-  def render_provider_template(name, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ])
+  def render_provider_template(name, banking: true, parsed_fields: [ { name: "api_key", type: "string", secret: true, default: nil } ], **extra_helpers)
     helpers = {
       class_name: "Gocardless", file_name: "gocardless", parsed_fields: parsed_fields,
       banking_provider?: banking, investment_provider?: !banking
-    }
+    }.merge(extra_helpers)
     context = Object.new
     helpers.each { |helper, value| context.define_singleton_method(helper) { value } }
     template = Rails.root.join("lib/generators/provider/family/templates", name).read
@@ -125,6 +125,23 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
       # ProviderAccount defines the link and #current_account.
       assert_not_includes model, "has_one :account_provider"
       assert_not_includes model, "def current_account"
+    end
+  end
+
+  # ProviderItem::AccountFlow plucks and indexes provider accounts by account_id,
+  # as the Brex, Lunch Flow and Mercury tables name it.
+  test "the generated migration stores the provider id in account_id" do
+    [ true, false ].each do |banking|
+      migration = render_provider_template("migration.rb.tt", banking: banking, table_name: "gocardless_items", migration_version: "[7.2]")
+      model = render_provider_template("account_model.rb.tt", banking: banking)
+      importer = render_provider_template("importer.rb.tt", banking: banking)
+
+      assert_parses migration
+      assert_includes migration, "      t.string :account_id\n"
+      assert_includes migration, "add_index :gocardless_accounts, :account_id, unique: true"
+      assert_match(/^      account_id: \(data\[:id\] \|\| data\[:account_id\]\)&\.to_s,$/, model)
+      assert_includes importer, ".where.not(account_id: upstream_account_ids)"
+      [ migration, model, importer ].each { |source| assert_not_includes source, "gocardless_account_id" }
     end
   end
 

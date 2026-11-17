@@ -51,7 +51,7 @@ class <%= class_name %>Account < ProviderAccount
 
     # TODO: Customize this mapping based on your provider's API response
     update!(
-      <%= file_name %>_account_id: (data[:id] || data[:account_id])&.to_s,
+      account_id: (data[:id] || data[:account_id])&.to_s,
       name: data[:name] || data[:account_name],
       current_balance: parse_decimal(data[:balance] || data[:current_balance]),
       currency: extract_currency(data, fallback: "USD"),
