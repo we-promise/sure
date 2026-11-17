@@ -19,7 +19,7 @@ class LunchflowItemsController < ApplicationController
         return
       end
 
-      cache_key = "lunchflow_accounts_#{Current.family.id}"
+      cache_key = lunchflow_accounts_cache_key(credentialed_lunchflow_item)
 
       # Check if already cached
       cached_accounts = Rails.cache.read(cache_key)
@@ -72,7 +72,7 @@ class LunchflowItemsController < ApplicationController
         return
       end
 
-      cache_key = "lunchflow_accounts_#{Current.family.id}"
+      cache_key = lunchflow_accounts_cache_key(credentialed_lunchflow_item)
 
       # Try to get cached accounts first
       @available_accounts = Rails.cache.read(cache_key)
@@ -273,7 +273,7 @@ class LunchflowItemsController < ApplicationController
     end
 
     begin
-      cache_key = "lunchflow_accounts_#{Current.family.id}"
+      cache_key = lunchflow_accounts_cache_key(credentialed_lunchflow_item)
 
       # Try to get cached accounts first
       @available_accounts = Rails.cache.read(cache_key)
@@ -427,7 +427,9 @@ class LunchflowItemsController < ApplicationController
   end
 
   def update
-    if @lunchflow_item.update(lunchflow_params)
+    permitted = lunchflow_params
+    if @lunchflow_item.update(permitted)
+      Rails.cache.delete(lunchflow_accounts_cache_key(@lunchflow_item)) if permitted.key?(:api_key) || permitted.key?(:base_url)
       render_provider_panel("lunchflow", notice: t(".success"), fallback_path: accounts_path)
     else
       render_provider_panel("lunchflow", alert: @lunchflow_item.errors.full_messages.join(", "))
@@ -702,6 +704,16 @@ class LunchflowItemsController < ApplicationController
 
     def lunchflow_params
       params.require(:lunchflow_item).permit(:name, :sync_start_date, :api_key, :base_url)
+    end
+
+    # The accounts list is cached per connection, under the provider kit's key.
+    def lunchflow_accounts_cache_key(lunchflow_item)
+      "lunchflow_accounts_#{Current.family.id}_#{lunchflow_item.id}"
+    end
+
+    # The connection whose API key lists accounts, as Provider::LunchflowAdapter.build_provider picks it.
+    def credentialed_lunchflow_item
+      Current.family.lunchflow_items.where.not(api_key: nil).first
     end
 
     # Sanitize return_to parameter to prevent XSS attacks
