@@ -9,8 +9,11 @@ WORKDIR /rails
 
 # Install base packages
 # poppler-utils provides pdftoppm, required for the PDF vision processing path
+# tzdata is listed so each build takes the distribution's latest zone rules
+# (e.g. British Columbia's year-round UTC-7 from tzdata 2026b) rather than
+# whatever the base image shipped with
 RUN apt-get update -qq \
-    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps libjemalloc2 poppler-utils \
+    && apt-get install --no-install-recommends -y curl libvips postgresql-client libyaml-0-2 procps libjemalloc2 poppler-utils tzdata \
     && rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Set production environment

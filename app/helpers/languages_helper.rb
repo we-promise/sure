@@ -400,6 +400,12 @@ module LanguagesHelper
   # both, and TZInfo cannot tell they are the same zone.
   RENAMED_TIMEZONES = { "Europe/Kiev" => "Europe/Kyiv", "Asia/Rangoon" => "Asia/Yangon" }.freeze
 
+  # Official names of zones whose IANA identifier does not say what people call
+  # them, so the searchable select also finds them by that name. British
+  # Columbia's year-round UTC-7 time is "Pacific Time" (PCT); tzdata 2026b and
+  # later model it as America/Vancouver.
+  TIMEZONE_NAMES = { "America/Vancouver" => "Pacific Time (PCT)" }.freeze
+
   # One option per IANA zone, since Family#timezone stores the identifier and
   # several of Rails' friendly names share one (e.g. Moscow and St. Petersburg).
   # A saved identifier outside the list (e.g. an old spelling) is added, in
@@ -432,6 +438,9 @@ module LanguagesHelper
 
   def self.timezone_option_row(identifier, zone)
     offset = zone.utc_offset
-    { identifier: identifier, offset: offset, label: "(#{ActiveSupport::TimeZone.seconds_to_utc_offset(offset)}) #{identifier.tr("_", " ")}" }
+    label = "(#{ActiveSupport::TimeZone.seconds_to_utc_offset(offset)}) #{identifier.tr("_", " ")}"
+    label += " - #{TIMEZONE_NAMES[identifier]}" if TIMEZONE_NAMES.key?(identifier)
+
+    { identifier: identifier, offset: offset, label: label }
   end
 end

@@ -53,6 +53,23 @@ class LanguagesHelperTest < ActionView::TestCase
     end
   end
 
+  test "timezone options name British Columbia's Pacific Time" do
+    vancouver = timezone_options.select { |_, value| value == "America/Vancouver" }
+
+    assert_equal 1, vancouver.size
+    assert_match(/\A\([+-]\d{2}:\d{2}\) America\/Vancouver - Pacific Time \(PCT\)\z/, vancouver.first.first)
+  end
+
+  test "Pacific Time (PCT) is labelled with British Columbia's year-round UTC-7 offset" do
+    skip "host tzdata predates 2026b" unless ActiveSupport::TimeZone["America/Vancouver"].tzinfo.period_for_utc(Time.utc(2027, 1, 15)).utc_total_offset == -7.hours
+
+    travel_to Time.utc(2027, 1, 15, 12) do
+      LanguagesHelper.instance_variable_set(:@timezone_option_rows, nil)
+
+      assert_includes timezone_options, [ "(-07:00) America/Vancouver - Pacific Time (PCT)", "America/Vancouver" ]
+    end
+  end
+
   test "timezone options show a saved old spelling in place of its renamed zone" do
     base = timezone_options
     # Hosts without tzdata's legacy names cannot resolve "Europe/Kiev".
