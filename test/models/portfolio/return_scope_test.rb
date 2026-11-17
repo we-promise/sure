@@ -97,10 +97,25 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert batch.trade_tracked?, "and the batch path reads it the same way"
   end
 
-  # The other side: a zero-quantity trade that moved no cash either records
-  # nothing paid in, labelled Contribution or not, and an unlabelled one is
-  # internal to the classifier. Neither earns a money-weighted return.
-  test "a zero-quantity trade that moved no cash does not make an account trade tracked" do
+  # The withdrawal side: money out is stored as a positive amount, so a check
+  # that read only money in would withhold the return from this account.
+  test "an account whose only flow is a cash-only withdrawal trade is trade tracked" do
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 500, cash_flow: -500
+    income_trade(account: @account, date: @day_two, amount: -500, label: "Withdrawal")
+
+    direct = Portfolio::ReturnScope.new(account: @account, period: @period)
+    batch = Portfolio::ReturnScope.resolve_all(accounts: [ @account ], period: @period).fetch(@account.id)
+
+    assert direct.trade_tracked?, "a recorded withdrawal is a known flow"
+    assert batch.trade_tracked?, "and the batch path reads it the same way"
+  end
+
+  # The other side: a zero-quantity trade that moved no cash records nothing
+  # paid in, labelled Contribution or not, and one labelled Other moved cash
+  # but has no rule in FlowClassifier::LABEL_RULES, so the classifier reads it
+  # as internal. Neither earns a money-weighted return.
+  test "a cashless contribution trade or an Other trade does not make an account trade tracked" do
     lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
     lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_100, revaluation: 100
     income_trade(account: @account, date: @day_two, amount: 0, label: "Contribution")
@@ -361,12 +376,11 @@ class Portfolio::ReturnScopeTest < ActiveSupport::TestCase
     assert_equal 4, queries.size, "cut-offs are part of the balance query, not one more per account\n#{queries.join("\n")}"
   end
 
-  # The batch path's actual cost, pinned so a claim about it can be settled by
-  # a number. Four round trips: the account load, then the three resolution
-  # queries. The account load is not avoidable here -- `resolve_all` returns
-  # `ReturnScope` objects that hold the record, and `Portfolio::Performance`
-  # carries only ids -- and what the batch path buys is that the four do not
-  # grow with the number of accounts.
+  # The batch path's cost is four round trips: the account load, then the
+  # three resolution queries. The account load is not avoidable here --
+  # `resolve_all` returns `ReturnScope` objects that hold the record, and
+  # `Portfolio::Performance` carries only ids -- and the four do not grow with
+  # the number of accounts.
   test "resolve_all asks the same number of queries however many accounts it is given" do
     second = create_portfolio_account(family: @family)
     third = create_portfolio_account(family: @family)

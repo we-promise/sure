@@ -46,10 +46,10 @@ class Portfolio::ReturnScope
   # the series never sees. nil means no cut-off.
   #
   # `resolved` carries the three inputs when a caller has already fetched them
-  # for a set of accounts. Everything below still derives `kind` from those three
-  # by the same rules, so the batch path cannot mean something different from
-  # the lazy one -- it only skips the fetching. Built directly, the instance
-  # queries for each input as before.
+  # for a set of accounts. `kind` is derived from those three by the same rules
+  # either way, so the batch path cannot mean something different from the lazy
+  # one -- it only skips the fetching. Without it, the instance queries for each
+  # input itself.
   def initialize(account:, period:, active_until_date: nil, resolved: nil)
     @account = account
     @period = period
@@ -65,13 +65,11 @@ class Portfolio::ReturnScope
   # Eligibility for a set of accounts, keyed by account id, in a fixed number of
   # round trips rather than up to three per account.
   #
-  # Four, not three: loading the accounts, then the three resolution queries.
-  # The load is part of the work, because the resolver hands back ReturnScope
+  # Four queries: loading the accounts, then the three resolution queries. The
+  # load is part of the work, because the resolver hands back ReturnScope
   # objects that hold the record and `Portfolio::Performance` carries only ids,
-  # so nothing earlier in the call has already fetched them. What the batch path buys is
-  # that the four do not grow with the number of accounts -- pinned by
-  # "resolve_all asks the same number of queries however many accounts it is
-  # given".
+  # so nothing earlier in the call has already fetched them. The four do not
+  # grow with the number of accounts.
   #
   # Takes Account RECORDS -- a relation, or an array of them, which may include
   # closed and disabled accounts; Performance passes
