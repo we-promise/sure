@@ -72,7 +72,7 @@ es:
       description: Selecciona las cuentas que deseas vincular a tu cuenta de %{product_name}.
       link_accounts: Vincular cuentas seleccionadas
       no_accounts_found: No se encontraron cuentas. Por favor, verifica la configuración de tu clave API.
-      no_api_key: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
+      no_api_token: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
       no_name_placeholder: (Sin nombre)
       title: Seleccionar cuentas de Lunch Flow
     select_existing_account:
@@ -84,17 +84,16 @@ es:
       description: Selecciona una cuenta de Lunch Flow para vincular con esta cuenta. Las transacciones se sincronizarán y desduplicarán automáticamente.
       link_account: Vincular cuenta
       no_account_specified: No se especificó ninguna cuenta
-      no_accounts_found: No se encontraron cuentas de Lunch Flow. Por favor, verifica la configuración de tu clave API.
-      no_api_key: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
+      no_api_token: La clave API de Lunch Flow no está configurada. Por favor, configúrala en Configuración.
       no_name_placeholder: (Sin nombre)
       title: Vincular %{account_name} con Lunch Flow
     link_existing_account:
       account_already_linked: Esta cuenta ya está vinculada a un proveedor
       api_error: 'Error de API: %{message}'
       invalid_account_name: No se puede vincular una cuenta con el nombre en blanco
-      lunchflow_account_already_linked: Esta cuenta de Lunch Flow ya está vinculada a otra cuenta
-      lunchflow_account_not_found: Cuenta de Lunch Flow no encontrada
       missing_parameters: Faltan parámetros requeridos
+      provider_account_already_linked: Esta cuenta de Lunch Flow ya está vinculada a otra cuenta
+      provider_account_not_found: Cuenta de Lunch Flow no encontrada
       success: '%{account_name} vinculada con Lunch Flow con éxito'
     setup_accounts:
       account_type_label: 'Tipo de cuenta:'

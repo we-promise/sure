@@ -72,7 +72,7 @@ hu:
       description: "Válaszd ki azokat a számlákat, amelyeket össze szeretnél kapcsolni a(z) %{product_name} fiókkal."
       link_accounts: Kiválasztott számlák összekapcsolása
       no_accounts_found: Nem találhatók számlák. Kérlek ellenőrizd az API-kulcs konfigurációdat.
-      no_api_key: A Lunch Flow API-kulcs nincs beállítva. Kérlek állítsd be a Beállításokban.
+      no_api_token: A Lunch Flow API-kulcs nincs beállítva. Kérlek állítsd be a Beállításokban.
       no_name_placeholder: "(Nincs név)"
       title: Lunch Flow számlák kiválasztása
     select_existing_account:
@@ -84,17 +84,16 @@ hu:
       description: Válassz egy Lunch Flow számlát, amelyet ehhez a számlához szeretnél kapcsolni. A tranzakciók automatikusan szinkronizálásra és deduplikálásra kerülnek.
       link_account: Számla összekapcsolása
       no_account_specified: Nem lett megadva számla
-      no_accounts_found: Nem találhatók Lunch Flow számlák. Kérlek ellenőrizd az API-kulcs konfigurációdat.
-      no_api_key: A Lunch Flow API-kulcs nincs beállítva. Kérlek állítsd be a Beállításokban.
+      no_api_token: A Lunch Flow API-kulcs nincs beállítva. Kérlek állítsd be a Beállításokban.
       no_name_placeholder: "(Nincs név)"
       title: "%{account_name} összekapcsolása a Lunch Flow-val"
     link_existing_account:
       account_already_linked: Ez a számla már össze van kapcsolva egy szolgáltatóval
       api_error: "API hiba: %{message}"
       invalid_account_name: Nem lehet összekapcsolni üres nevű számlát
-      lunchflow_account_already_linked: Ez a Lunch Flow számla már össze van kapcsolva egy másik számlával
-      lunchflow_account_not_found: Lunch Flow számla nem található
       missing_parameters: Hiányzó kötelező paraméterek
+      provider_account_already_linked: Ez a Lunch Flow számla már össze van kapcsolva egy másik számlával
+      provider_account_not_found: Lunch Flow számla nem található
       success: "%{account_name} sikeresen összekapcsolva a Lunch Flow-val"
     setup_accounts:
       account_type_label: "Számla típusa:"

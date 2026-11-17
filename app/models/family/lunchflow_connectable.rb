@@ -21,8 +21,4 @@ module Family::LunchflowConnectable
 
     lunchflow_item
   end
-
-  def has_lunchflow_credentials?
-    lunchflow_items.where.not(api_key: nil).exists?
-  end
 end

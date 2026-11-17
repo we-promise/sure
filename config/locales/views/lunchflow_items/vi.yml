@@ -72,7 +72,7 @@ vi:
       description: Chọn tài khoản bạn muốn liên kết với tài khoản %{product_name} của bạn.
       link_accounts: Liên kết tài khoản đã chọn
       no_accounts_found: Không tìm thấy tài khoản. Vui lòng kiểm tra cấu hình khóa API.
-      no_api_key: Khóa API Lunchflow chưa được cấu hình. Vui lòng cấu hình trong Cài đặt.
+      no_api_token: Khóa API Lunchflow chưa được cấu hình. Vui lòng cấu hình trong Cài đặt.
       no_name_placeholder: "(Không có tên)"
       title: Chọn tài khoản Lunchflow
     select_existing_account:
@@ -84,17 +84,16 @@ vi:
       description: Chọn tài khoản Lunchflow để liên kết với tài khoản này. Giao dịch sẽ được đồng bộ và loại bỏ trùng lặp tự động.
       link_account: Liên kết tài khoản
       no_account_specified: Chưa chỉ định tài khoản
-      no_accounts_found: Không tìm thấy tài khoản Lunchflow. Vui lòng kiểm tra cấu hình khóa API.
-      no_api_key: Khóa API Lunchflow chưa được cấu hình. Vui lòng cấu hình trong Cài đặt.
+      no_api_token: Khóa API Lunchflow chưa được cấu hình. Vui lòng cấu hình trong Cài đặt.
       no_name_placeholder: "(Không có tên)"
       title: "Liên kết %{account_name} với Lunchflow"
     link_existing_account:
       account_already_linked: Tài khoản này đã được liên kết với nhà cung cấp
       api_error: "Lỗi API: %{message}"
       invalid_account_name: Không thể liên kết tài khoản không có tên
-      lunchflow_account_already_linked: Tài khoản Lunchflow này đã được liên kết với tài khoản khác
-      lunchflow_account_not_found: Không tìm thấy tài khoản Lunchflow
       missing_parameters: Thiếu tham số bắt buộc
+      provider_account_already_linked: Tài khoản Lunchflow này đã được liên kết với tài khoản khác
+      provider_account_not_found: Không tìm thấy tài khoản Lunchflow
       success: "Đã liên kết thành công %{account_name} với Lunchflow"
     setup_accounts:
       account_type_label: "Loại tài khoản:"

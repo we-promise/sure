@@ -17,6 +17,20 @@ class LunchflowAccount < ProviderAccount
   validates :name, :currency, presence: true
   validates :account_id, uniqueness: { scope: :lunchflow_item_id, allow_nil: true }
 
+  # The name an account is linked under: the payload's own name.
+  def self.name_for(account_data)
+    account_data.with_indifferent_access[:name]
+  end
+
+  # Only a fallback: linking uses the currency the snapshot upsert settled on.
+  def self.currency_for(account_data)
+    account_data.with_indifferent_access[:currency].presence || "USD"
+  end
+
+  def self.default_accountable_attributes(_accountable_type)
+    {}
+  end
+
   def upsert_lunchflow_snapshot!(account_snapshot)
     # Convert to symbol keys or handle both string and symbol keys
     snapshot = account_snapshot.with_indifferent_access
