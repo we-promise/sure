@@ -15,6 +15,26 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "select_existing_account shows the last four IBAN digits to tell accounts apart" do
+    checking = @item.enable_banking_accounts.create!(name: "Jane Doe", uid: "eb_checking", currency: "EUR", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    savings = @item.enable_banking_accounts.create!(name: "Jane Doe", uid: "eb_savings", currency: "EUR", iban: "DE02120300000000202051") # pipelock:ignore IBAN
+
+    get select_existing_account_enable_banking_items_url, params: { account_id: accounts(:depository).id }
+
+    assert_response :success
+    label_for = ->(eba) { css_select("label").find { |label| label.at_css("input[type=radio][value='#{eba.id}']") } }
+
+    checking_label = label_for.call(checking)
+    savings_label = label_for.call(savings)
+    assert checking_label, "Expected a selectable entry for the checking account"
+    assert savings_label, "Expected a selectable entry for the savings account"
+    assert_match(/•\s*3000/, checking_label.text)
+    assert_match(/•\s*2051/, savings_label.text)
+    assert_no_match(/2051/, checking_label.text)
+    assert_no_match(/3000/, savings_label.text)
+    assert_no_match(/DE89370400440532013000/, @response.body, "Only the last four digits should be shown") # pipelock:ignore IBAN
+  end
+
   test "select_bank exposes ASPSP BIC in the searchable data attribute" do
     Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
       aspsps: [
