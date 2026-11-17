@@ -37,7 +37,9 @@ class RecurringTransaction
 
     private
       # The latest RECENT_LIMIT paid occurrences per series, newest first,
-      # grouped by series id. `id DESC` breaks same-day ties deterministically.
+      # grouped by series id. Same-day ties go to the most recently created
+      # occurrence (the later correction wins); `id DESC` is only a final
+      # tiebreaker for identical created_at values.
       def recent_paid_occurrences_for(series_ids)
         return {} if series_ids.empty?
 
@@ -47,13 +49,14 @@ class RecurringTransaction
                    .select(
                      "recurring_occurrences.*",
                      "ROW_NUMBER() OVER (PARTITION BY recurring_occurrences.recurring_transaction_id " \
-                     "ORDER BY recurring_occurrences.due_on DESC, recurring_occurrences.id DESC) AS recency_rank"
+                     "ORDER BY recurring_occurrences.due_on DESC, recurring_occurrences.created_at DESC, " \
+                     "recurring_occurrences.id DESC) AS recency_rank"
                    )
 
         RecurringOccurrence
           .from(ranked, :recurring_occurrences)
           .where("recurring_occurrences.recency_rank <= ?", RECENT_LIMIT)
-          .order(:recurring_transaction_id, due_on: :desc, id: :desc)
+          .order(:recurring_transaction_id, due_on: :desc, created_at: :desc, id: :desc)
           .includes(:allocations)
           .to_a
           .group_by(&:recurring_transaction_id)
