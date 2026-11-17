@@ -132,77 +132,6 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_empty health.shadowed
   end
 
-  test "a rule that sets a field on some matches a rule above also sets is an overlap" do
-    above = create_rule(name_condition("like", "woolworths"), category: @groceries)
-    below = create_rule(
-      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "metro"), name_condition("like", "hardware") ]),
-      category: @dining
-    )
-
-    overlap = health.overlaps.sole
-    assert_equal [ below, above ], [ overlap.rule, overlap.other ]
-    assert_equal [ 1, 2 ], [ overlap.shared_count, overlap.match_count ]
-    assert_equal [ :category_id ], overlap.attributes
-    assert_empty health.shadowed
-  end
-
-  test "rules that set different fields on shared transactions do not overlap" do
-    create_rule(name_condition("like", "woolworths"), category: @groceries)
-    create_rule(
-      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "metro"), name_condition("like", "hardware") ]),
-      tags: [ @tag ]
-    )
-
-    assert_empty health.overlaps
-  end
-
-  test "rules whose text is the same or contained overlap even without shared transactions" do
-    above = create_rule(name_condition("like", "uber"), category: @groceries)
-    below = create_rule(name_condition("=", "UBER EATS"), category: @dining)
-
-    overlap = health.overlaps.sole
-    assert_equal [ below, above ], [ overlap.rule, overlap.other ]
-    assert overlap.same_text
-    assert_equal 0, overlap.shared_count
-  end
-
-  test "contained text with contradicting amount conditions is not an overlap" do
-    create_rule(name_condition("like", "uber"), amount_condition(">", "100"), category: @groceries)
-    create_rule(name_condition("like", "uber"), amount_condition("<", "10"), category: @dining)
-
-    assert_empty health.overlaps
-  end
-
-  test "contained text inside an OR group is still the same text" do
-    above = create_rule(name_condition("like", "uber"), category: @groceries)
-    below = create_rule(
-      Rule::Condition.new(condition_type: "compound", operator: "or", sub_conditions: [ name_condition("like", "uber eats zz"), name_condition("like", "deliveroo") ]),
-      category: @dining
-    )
-
-    overlap = health.overlaps.sole
-    assert_equal [ below, above, true ], [ overlap.rule, overlap.other, overlap.same_text ]
-  end
-
-  test "a merchant condition is compared by the merchant's name" do
-    merchant = @family.merchants.create!(name: "Uber Eats")
-    above = create_rule(Rule::Condition.new(condition_type: "transaction_merchant", operator: "=", value: merchant.id), category: @groceries)
-    below = create_rule(name_condition("like", "uber"), category: @dining)
-
-    assert_equal [ [ below, above ] ], health.overlaps.map { |overlap| [ overlap.rule, overlap.other ] }
-
-    merchant.update!(name: "Deliveroo")
-
-    assert_empty health.overlaps
-  end
-
-  test "rules with contained text that set different fields do not overlap" do
-    create_rule(name_condition("like", "uber"), category: @groceries)
-    create_rule(name_condition("=", "UBER EATS"), tags: [ @tag ])
-
-    assert_empty health.overlaps
-  end
-
   test "a rule whose conditions read a field a rule above changes gets no shadowed or match-nothing verdict" do
     create_transaction(account: @account, name: "Uber ride", amount: 77)
     rename = create_rule(name_condition("like", "uber ride"), name: "Taxi")
@@ -299,16 +228,6 @@ class Rule::HealthTest < ActiveSupport::TestCase
     report = health
     assert_equal [ broken ], report.failed
     assert_equal [ nothing ], report.match_nothing
-  end
-
-  test "a rule below with the same conditions that sets the same value and does more is an overlap" do
-    above = create_rule(name_condition("like", "woolworths"), category: @groceries)
-    below = create_rule(name_condition("like", "woolworths"), category: @groceries, tags: [ @tag ])
-
-    report = health
-    assert_empty report.duplicates
-    assert_empty report.conflicts
-    assert_equal [ [ below, above, 2 ] ], report.overlaps.map { |overlap| [ overlap.rule, overlap.other, overlap.shared_count ] }
   end
 
   test "a rule with an action that cannot be resolved is not reported as shadowed" do

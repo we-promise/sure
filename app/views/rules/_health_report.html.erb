@@ -5,7 +5,6 @@
   duplicates: health.duplicates,
   conflicts: health.conflicts,
   shadowed: health.shadowed,
-  overlaps: health.overlaps,
   match_nothing: health.match_nothing,
   failed: health.failed
 } %>
@@ -39,14 +38,6 @@
                 <%= t("rules.health.shadowed.#{entry.reason}_html", rule: ref.(entry.rule), by: refs.(entry.by),
                       attributes: rule_health_attributes(entry.attributes), count: entry.match_count) %>
               </p>
-            <% when :overlaps %>
-              <p><%= t("rules.health.overlaps.entry_html", rule: ref.(entry.rule), other: ref.(entry.other), attributes: rule_health_attributes(entry.attributes)) %></p>
-              <% if entry.shared_count.positive? %>
-                <p class="text-secondary"><%= t("rules.health.overlaps.shared", shared: entry.shared_count, count: entry.match_count) %></p>
-              <% end %>
-              <% if entry.same_text %>
-                <p class="text-secondary"><%= t("rules.health.overlaps.same_text") %></p>
-              <% end %>
             <% else %>
               <p><%= ref.(entry) %></p>
             <% end %>
