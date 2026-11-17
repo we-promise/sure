@@ -332,6 +332,37 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_includes keys, "spending_by_merchant"
   end
 
+  test "spending by merchant follows the Reports tag filter" do
+    tag = @family.tags.create!(name: "Trip")
+    create_transaction(date: Date.current, amount: 12, merchant: @family.merchants.create!(name: "Corner Bakery"), tags: [ tag ])
+    create_transaction(date: Date.current, amount: 40, merchant: @family.merchants.create!(name: "Hardware Store"))
+
+    get reports_path(period_type: :monthly, filter_tag_ids: [ tag.id ])
+
+    assert_response :ok
+    href = transactions_path(q: { merchants: [ "Corner Bakery" ], start_date: Date.current.beginning_of_month, end_date: Date.current.end_of_month, tags: [ "Trip" ] })
+    assert_select "[data-section-key=spending_by_merchant] a[href=?]", href, text: "Corner Bakery"
+    assert_select "[data-section-key=spending_by_merchant] a", text: "Hardware Store", count: 0
+  end
+
+  test "spending by merchant shows ten merchants and puts the rest behind the disclosure" do
+    11.times do |i|
+      create_transaction(date: Date.new(2001, 1, 15), amount: 100 - i, merchant: @family.merchants.create!(name: "Shop #{i + 1}"))
+    end
+
+    # A month with no fixture spending, so these eleven are the only merchants.
+    get reports_path(period_type: :custom, start_date: "2001-01-01", end_date: "2001-01-31")
+
+    assert_response :ok
+    # The section card is itself a <details>; the overflow disclosure nests inside it.
+    section = css_select("[data-section-key=spending_by_merchant]").first
+    hidden = section.css("details details a").map { |link| link.text.strip }
+    shown = section.css("a").map { |link| link.text.strip } - hidden
+    assert_equal (1..10).map { |n| "Shop #{n}" }, shown
+    assert_equal [ "Shop 11" ], hidden
+    assert_equal I18n.t("reports.spending_by_merchant.show_all", count: 1), section.css("details details > summary").text.squish
+  end
+
   test "spending by merchant is hidden for a period with no spending" do
     get reports_path(period_type: :custom, start_date: "2001-01-01", end_date: "2001-01-31")
 

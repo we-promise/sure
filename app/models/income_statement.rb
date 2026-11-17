@@ -147,10 +147,13 @@ class IncomeStatement
   # Spending per merchant in the period, largest net spending first and the
   # no-merchant row last. Merchants whose net isn't spending (refunds or
   # income only) are left out.
-  def merchant_totals(period: Period.current_month)
+  def merchant_totals(period: Period.current_month, tag_ids: nil)
+    scope = family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period)
+    scope = scope.with_any_tag(tag_ids) if tag_ids.present?
+
     rows = MerchantTotals.new(
       family,
-      transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled).in_period(period),
+      transactions_scope: scope,
       date_range: period.date_range,
       included_account_ids: included_account_ids
     ).call.select { |row| row.net.positive? }

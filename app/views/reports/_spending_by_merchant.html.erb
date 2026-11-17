@@ -1,15 +1,15 @@
-<%# locals: (merchant_totals:, start_date:, end_date:) %>
+<%# locals: (merchant_totals:, start_date:, end_date:, filter_tags:) %>
 <%
   named, no_merchant = merchant_totals.partition(&:name)
   shown = named.first(10) + no_merchant
   rest = named.drop(10)
 %>
 <div class="space-y-3">
-  <%= render "reports/merchant_spending_table", rows: shown, start_date: start_date, end_date: end_date %>
+  <%= render "reports/merchant_spending_table", rows: shown, start_date: start_date, end_date: end_date, filter_tags: filter_tags %>
 
   <% if rest.any? %>
     <%= render DS::Disclosure.new(title: t("reports.spending_by_merchant.show_all", count: rest.size), align: :left) do %>
-      <%= render "reports/merchant_spending_table", rows: rest, start_date: start_date, end_date: end_date %>
+      <%= render "reports/merchant_spending_table", rows: rest, start_date: start_date, end_date: end_date, filter_tags: filter_tags %>
     <% end %>
   <% end %>
 </div>

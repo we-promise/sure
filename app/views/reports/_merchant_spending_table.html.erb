@@ -1,8 +1,8 @@
-<%# locals: (rows:, start_date:, end_date:) %>
+<%# locals: (rows:, start_date:, end_date:, filter_tags:) %>
 <%= render DS::Table.new(rows: rows, inset: true, label: t("reports.spending_by_merchant.title")) do |table| %>
   <% table.with_column(t("reports.spending_by_merchant.table.merchant")) do |row| %>
     <%= link_to row.name || Merchant.no_merchant_name,
-          transactions_path(q: { merchants: [ row.name || Merchant::NO_MERCHANT_FILTER_VALUE ], start_date: start_date, end_date: end_date }),
+          transactions_path(q: { merchants: [ row.name || Merchant::NO_MERCHANT_FILTER_VALUE ], start_date: start_date, end_date: end_date, tags: filter_tags.map(&:filter_value).presence }.compact),
           class: class_names("font-medium hover:underline", row.name ? "text-primary" : "text-secondary"),
           data: { turbo_frame: "_top", turbo_prefetch: false } %>
   <% end %>

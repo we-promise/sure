@@ -140,7 +140,7 @@ class ReportsController < ApplicationController
       @transactions = build_transactions_breakdown
 
       # Spending by merchant
-      @merchant_totals = @income_statement.merchant_totals(period: @period)
+      @merchant_totals = @income_statement.merchant_totals(period: @period, tag_ids: filter_tags.map(&:id))
 
       # Investment metrics
       @investment_metrics = build_investment_metrics
@@ -215,7 +215,7 @@ class ReportsController < ApplicationController
           key: "spending_by_merchant",
           title: "reports.spending_by_merchant.title",
           partial: "reports/spending_by_merchant",
-          locals: { merchant_totals: @merchant_totals, start_date: @start_date, end_date: @end_date },
+          locals: { merchant_totals: @merchant_totals, start_date: @start_date, end_date: @end_date, filter_tags: filter_tags },
           visible: @has_accounts && @merchant_totals.any?,
           collapsible: true
         },
