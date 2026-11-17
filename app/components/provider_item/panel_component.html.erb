@@ -77,20 +77,22 @@
     <%= helpers.render "settings/providers/add_connection_heading", label: panel_t("add_connection") %>
   <% end %>
 
-  <%= helpers.styled_form_with model: new_item,
-                               url: items_path,
+  <%= helpers.styled_form_with model: form_item,
+                               url: form_url,
                                scope: form_scope,
-                               method: :post,
+                               method: form_method,
                                data: { turbo: true },
                                class: "space-y-3" do |form| %>
-    <%= form.text_field :name,
-                        label: panel_t("connection_name_label"),
-                        placeholder: panel_t("connection_name_placeholder") %>
+    <% unless single_connection? %>
+      <%= form.text_field :name,
+                          label: panel_t("connection_name_label"),
+                          placeholder: panel_t("connection_name_placeholder") %>
+    <% end %>
 
-    <%= credential_fields(form, new_item, editing: false) %>
+    <%= credential_fields(form, form_item, editing: form_item.persisted?) %>
 
     <div class="flex justify-end">
-      <%= form.submit panel_t("add_connection") %>
+      <%= form.submit form_submit_label %>
     </div>
   <% end %>
 </div>

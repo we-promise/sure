@@ -2,28 +2,58 @@
 
 # A provider's panel under Settings > Providers: its setup steps, an error
 # alert, each connection with its sync, disconnect and edit form, and a form to
-# add a connection. The provider fills the `setup_steps` slot and supplies its
-# credential fields as `<key>_items/_credential_fields` (locals `form:`,
+# add a connection. A panel declared `shape: :single` instead shows one form for
+# `item:` (the provider passes an existing connection or a new one), which
+# creates or updates it. The provider fills the `setup_steps` slot and supplies
+# its credential fields as `<key>_items/_credential_fields` (locals `form:`,
 # `item:`, `editing:`), rendered inside each form. Messages come from the
-# provider's own `<key>_items.provider_panel.*` keys.
+# provider's own keys under `i18n_scope`, by default `<key>_items.provider_panel`.
 class ProviderItem::PanelComponent < ApplicationComponent
   renders_one :setup_steps
 
-  attr_reader :items, :new_item, :error_message
+  attr_reader :items, :new_item, :item, :error_message
 
-  def initialize(items:, new_item:, error_message: nil)
+  def initialize(items: [], new_item: nil, item: nil, error_message: nil, i18n_scope: nil)
     @items = items
     @new_item = new_item
+    @item = item
     @error_message = error_message
+    @i18n_scope = i18n_scope
   end
 
   def provider_key
-    new_item.provider_key
+    (item || new_item).provider_key
+  end
+
+  def panel_declaration
+    @panel_declaration ||= Provider::Factory.panel_declarations.find { |declaration| declaration[:key] == provider_key }
   end
 
   def panel_dom_id
-    panel = Provider::Factory.panel_declarations.find { |declaration| declaration[:key] == provider_key }
-    "#{panel.fetch(:turbo_id)}-providers-panel"
+    "#{panel_declaration[:turbo_id]}-providers-panel"
+  end
+
+  def single_connection?
+    panel_declaration[:shape] == :single
+  end
+
+  # The bottom form: a new connection for a list, else the single connection.
+  def form_item
+    single_connection? ? item : new_item
+  end
+
+  def form_url
+    form_item.new_record? ? items_path : item_path(form_item)
+  end
+
+  def form_method
+    form_item.new_record? ? :post : :patch
+  end
+
+  def form_submit_label
+    return panel_t("add_connection") unless single_connection?
+
+    panel_t(form_item.new_record? ? "save_and_connect" : "update_connection")
   end
 
   def form_scope
@@ -51,6 +81,6 @@ class ProviderItem::PanelComponent < ApplicationComponent
   end
 
   def panel_t(key, **options)
-    t("#{provider_key}_items.provider_panel.#{key}", **options)
+    t("#{@i18n_scope || "#{provider_key}_items.provider_panel"}.#{key}", **options)
   end
 end
