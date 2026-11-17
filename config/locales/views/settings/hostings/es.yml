@@ -129,7 +129,7 @@ es:
         high_res_description: Cuando está habilitado, los logotipos se obtendrán a una resolución de 120x120 en lugar de 40x40. Esto ofrece imágenes más nítidas en pantallas de alta densidad de píxeles (DPI).
       llm_provider_selector:
         title: Proveedor de IA
-        description: Elige qué LLM impulsa el chat de IA. Las operaciones por lotes (categorización de transacciones, detección de comercios y procesamiento de PDF) actualmente siempre usan OpenAI.
+        description: Elige qué LLM se usa para el chat de IA, la detección de comercios y el procesamiento de PDF. La categorización de transacciones se configura aparte, más abajo.
         env_configured_message: Configurado correctamente mediante la variable de entorno LLM_PROVIDER.
         provider_label: Proveedor LLM activo
         provider_openai: OpenAI
