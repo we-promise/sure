@@ -509,6 +509,35 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal [], response.data
   end
 
+  test "search_securities ignores cached results written with the six-member Security layout" do
+    concept = Provider::SecurityConcept
+    current = concept::Security
+    legacy_members = current.members - [ :isin ]
+
+    # Write a cache entry the way the previous release did: with a Security
+    # that has no isin member, under the key that release used.
+    legacy = Data.define(*legacy_members)
+    concept.send(:remove_const, :Security)
+    concept.const_set(:Security, legacy)
+    begin
+      stale = [ legacy.new(symbol: "STALE", name: "Stale", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US", currency: nil) ]
+      @cache.write("yahoo_finance_search_ABC__", stale, expires_in: 5.minutes)
+    ensure
+      concept.send(:remove_const, :Security)
+      concept.const_set(:Security, current)
+    end
+
+    mock_response = mock
+    mock_response.stubs(:body).returns({ quotes: [ { symbol: "ABC", longname: "Abc Inc", exchange: "NMS", exchDisp: "NASDAQ" } ] }.to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("ABC")
+
+    assert response.success?, "stale entry should not break the search: #{response.error&.message}"
+    assert_equal [ "ABC" ], response.data.map(&:symbol)
+  end
+
   test "search_securities returns canonical Colombian identity for Yahoo BVC listings" do
     mock_response = mock
     mock_response.stubs(:body).returns({
