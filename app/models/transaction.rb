@@ -26,10 +26,11 @@ class Transaction < ApplicationRecord
   validate :validate_attachments, if: -> { attachments.attached? }
 
   # Per reference, whether the id points at another family's record
-  # (#foreign_references; provider merchants belong to no family).
+  # (#foreign_references; provider merchants belong to no family), given the
+  # column holding the entry's family.
   FOREIGN_REFERENCE_SQL = {
-    category: "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> accounts.family_id)",
-    merchant: "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> accounts.family_id)"
+    category: "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> %{family})",
+    merchant: "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> %{family})"
   }.freeze
   validate :references_belong_to_family
 
@@ -758,11 +759,15 @@ class Transaction < ApplicationRecord
     end
 
     # The rest are checked by id, in one query.
+    # The family comes from the entry's account in memory when loaded (it may
+    # not be saved yet), otherwise from its row.
     def foreign_unloaded_references(names)
       return {} if names.empty?
 
-      columns = names.map { |name| Arel.sql(self.class.sanitize_sql([ FOREIGN_REFERENCE_SQL.fetch(name), self["#{name}_id"] ])) }
-      values = Array.wrap(owning_accounts.pick(*columns))
+      family_id = loaded_family_id
+      source, family = family_id ? [ Family.where(id: family_id), "families.id" ] : [ owning_accounts, "accounts.family_id" ]
+      columns = names.map { |name| Arel.sql(self.class.sanitize_sql([ format(FOREIGN_REFERENCE_SQL.fetch(name), family: family), self["#{name}_id"] ])) }
+      values = Array.wrap(source.pick(*columns))
       names.zip(values).to_h { |name, value| [ name, value || false ] }
     end
 

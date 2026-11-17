@@ -91,6 +91,16 @@ class TransactionTest < ActiveSupport::TestCase
     assert transaction.errors.of_kind?(:merchant, :invalid)
   end
 
+  test "checks id-only references on an entry whose account isn't saved yet" do
+    family = families(:dylan_family)
+    account = family.accounts.build(name: "Unsaved", balance: 0, currency: "USD", accountable: Depository.new)
+    foreign = families(:empty).categories.create!(name: "Elsewhere")
+    entry = account.entries.build(name: "New", date: Date.current, amount: 1, currency: "USD", entryable: Transaction.new(category_id: foreign.id))
+
+    assert_not entry.entryable.valid?
+    assert entry.entryable.errors.of_kind?(:category, :invalid)
+  end
+
   test "accepts its own family's references and any provider merchant" do
     transaction = create_transaction(
       category: categories(:food_and_drink),
