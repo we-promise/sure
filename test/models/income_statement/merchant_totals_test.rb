@@ -116,6 +116,22 @@ class IncomeStatement::MerchantTotalsTest < ActiveSupport::TestCase
     assert_equal statement.expense_totals(period: @period).total, all_rows.sum(&:purchases)
   end
 
+  # A merchant whose refunds cover its purchases is not listed, so the listed
+  # rows add up to the headline less that merchant's purchases.
+  test "the listed rows fall short of the headline by a dropped merchant's purchases" do
+    refund_shop = @family.merchants.create!(name: "Refund Shop")
+    spend(40, merchant: @amazon)
+    spend(25)
+    spend(8, merchant: refund_shop)
+    spend(-12, merchant: refund_shop)
+
+    headline = IncomeStatement.new(@family, user: @user).expense_totals(period: @period).total
+
+    assert_equal 73, headline
+    assert_equal [ "Amazon", nil ], merchant_totals.map(&:name)
+    assert_equal headline - 8, merchant_totals.sum(&:purchases)
+  end
+
   test "leaves out transfers, card payments and one-time kinds" do
     spend(10, merchant: @amazon)
     Transaction::BUDGET_EXCLUDED_KINDS.each do |kind|
