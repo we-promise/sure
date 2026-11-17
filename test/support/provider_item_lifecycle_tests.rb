@@ -223,6 +223,25 @@ module ProviderItemLifecycleTests
       assert_equal [ 0, 0 ], [ again.created_count, again.failed_count ]
     end
 
+    test "lifecycle: setup keeps the accounts it created when a later one raises" do
+      provider_item.class.any_instance.expects(:sync_later).once
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "raise-1", "raise-2" ]))
+      account_flow.import_accounts_with_user_facing_error
+      first, second = provider_item.provider_accounts.where(account_id: %w[raise-1 raise-2]).order(:account_id).to_a
+      provider_item.provider_accounts.klass.any_instance.stubs(:current_balance).returns(10).then.raises(RuntimeError, "unexpected")
+
+      result = assert_difference([ "Account.count", "AccountProvider.count" ], 1) do
+        account_flow.complete_setup!(
+          account_types: { first.id.to_s => selectable_accountable_type, second.id.to_s => selectable_accountable_type },
+          account_subtypes: {}
+        )
+      end
+
+      assert_equal [ 1, 1 ], [ result.created_count, result.failed_count ]
+      assert first.reload.account_provider.present?
+      assert_nil second.reload.account_provider
+    end
+
     test "lifecycle: setup leaves an imported account alone when the provider reports it unchanged" do
       account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "unchanged-1" ]))
       account_flow.import_accounts_with_user_facing_error
