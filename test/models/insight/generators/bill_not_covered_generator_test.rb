@@ -47,8 +47,36 @@ class Insight::Generators::BillNotCoveredGeneratorTest < ActiveSupport::TestCase
   end
 
   test "a scheduled transfer into the account before the due date covers the bill" do
+    savings = accounts(:connected)
+    AccountShare.create!(account: savings, user: users(:family_member), permission: :read_only)
     scheduled("Rent", 1460, 7.days.from_now)
-    scheduled("Top up", 500, 2.days.from_now, account: accounts(:connected), destination: @checking)
+    scheduled("Top up", 500, 2.days.from_now, account: savings, destination: @checking)
+
+    assert_empty generate
+  end
+
+  # The same rule as RecurringTransaction.accessible_by: a series with an
+  # endpoint some member cannot open is not theirs to see, in name or amount.
+  test "a payment to an account private to one member is not reported" do
+    account_shares(:credit_card_shared_with_member).destroy!
+    scheduled("Payment to private card", 1460, 7.days.from_now, destination: accounts(:credit_card))
+
+    assert_empty generate
+
+    users(:family_member).update_columns(active: false)
+    assert_equal 1, generate.size, "with only the owner active, the card payment is everyone's"
+  end
+
+  test "a transfer in from an account private to one member is not counted" do
+    rent = scheduled("Rent", 1460, 7.days.from_now)
+    scheduled("Top up from private savings", 500, 2.days.from_now, account: accounts(:connected), destination: @checking)
+
+    assert_equal rent.id, only_insight.metadata[:recurring_occurrence_id]
+  end
+
+  test "nothing is generated when the family turned recurring transactions off" do
+    scheduled("Rent", 1460, 7.days.from_now)
+    @family.update!(recurring_transactions_disabled: true)
 
     assert_empty generate
   end

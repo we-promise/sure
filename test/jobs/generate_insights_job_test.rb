@@ -162,7 +162,9 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_equal original_body, insight.reload.body
   end
 
-  test "persists display facts and refreshes them without a body rewrite when metadata is unchanged" do
+  # The body is the i18n template filled with the facts, so it refreshes with
+  # them; an unchanged metadata still means no resurfacing and no new push.
+  test "refreshes display facts and the body in place when metadata is unchanged" do
     stub_generated([ generated_insight ])
     GenerateInsightsJob.perform_now(family_id: @family.id)
 
@@ -176,8 +178,31 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
 
     insight.reload
     assert_equal "$5040", insight.facts["balance"]
-    assert_equal original_body, insight.body
+    assert_not_equal original_body, insight.body
+    assert_includes insight.body, "$5040"
     assert insight.read?
+  end
+
+  test "a body refreshed in place is not notified again" do
+    stub_generated([ generated_insight(priority: "high") ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    DeliverInsightNotificationJob.expects(:enqueue_for).never
+    stub_generated([ generated_insight(priority: "high", display_balance: 5040) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+  end
+
+  test "an expired insight that returns with new display facts gets a fresh body" do
+    stub_generated([ generated_insight ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    insight = @family.insights.find_by(dedup_key: "idle_cash:test-account:2026-07")
+
+    stub_generated([], succeeded_types: [ "idle_cash" ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+    stub_generated([ generated_insight(display_balance: 5040) ])
+    GenerateInsightsJob.perform_now(family_id: @family.id)
+
+    assert_includes insight.reload.body, "$5040"
   end
 
   # The title is built from I18n and the generator's own data, not written by

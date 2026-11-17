@@ -21,6 +21,11 @@ class Insight::Generators::BillNotCoveredGenerator < Insight::Generator
   Flow = Data.define(:occurrence, :due_on, :amount, :bill)
 
   def generate
+    # The bill schedule is the whole subject here, as in SubscriptionAuditGenerator:
+    # with recurring transactions off, occurrences stop being generated and
+    # what is left is a stale schedule.
+    return [] if family.recurring_transactions_disabled?
+
     accounts = paying_accounts
     return [] if accounts.empty?
 
@@ -160,6 +165,13 @@ class Insight::Generators::BillNotCoveredGenerator < Insight::Generator
               .joins(:recurring_transaction)
               .where(recurring_transactions: { status: :active })
               .where("recurring_transactions.account_id IN (:ids) OR recurring_transactions.destination_account_id IN (:ids)", ids: account_ids)
+              # Both endpoints every member can open, as RecurringTransaction.accessible_by
+              # requires per user: a card payment to a private card is not the
+              # family's to read, in name or in amount.
+              .where(
+                "array_remove(ARRAY[recurring_transactions.account_id, recurring_transactions.destination_account_id], NULL) <@ ARRAY(?)",
+                family.accounts.accessible_by_all_active_members.select(:id)
+              )
               .where("#{RecurringOccurrence::EFFECTIVE_DUE_ON_SQL} BETWEEN ? AND ?", Date.current, Date.current + HORIZON_DAYS)
               .includes(recurring_transaction: :merchant)
               .to_a
