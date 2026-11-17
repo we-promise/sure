@@ -1,5 +1,5 @@
-class LunchflowItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
+class LunchflowItem < ProviderItem
+  include Provided, Encryptable, DestroyableLater
 
   DEFAULT_BASE_URL = "https://lunchflow.app/api/v1".freeze
 

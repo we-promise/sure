@@ -2,7 +2,6 @@
 
 module EnableBankingItem::Unlinking
   # Concern that encapsulates unlinking logic for an Enable Banking item.
-  # Mirrors the LunchflowItem::Unlinking behavior.
   extend ActiveSupport::Concern
 
   # Idempotently remove all connections between this Enable Banking item and local accounts.
