@@ -57,6 +57,21 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_empty health.duplicates
   end
 
+  test "a stop rule and a rule that does not stop are not duplicates" do
+    create_rule(name_condition("like", "woolworths"), category: @groceries, stop_processing: true)
+    create_rule(name_condition("like", "woolworths"), category: @groceries)
+
+    assert_empty health.duplicates
+  end
+
+  test "an additional detail condition keeps its key's case and folds only a contains value" do
+    upper = create_rule(detail_condition("like", "MCC=ABC"), category: @groceries)
+    lower = create_rule(detail_condition("like", "MCC=abc"), category: @dining)
+    create_rule(detail_condition("like", "mcc=abc"), category: @groceries)
+
+    assert_equal [ [ upper, lower ] ], health.conflicts.map(&:rules)
+  end
+
   test "rules with the same conditions that set a field to different values conflict, and the higher active one wins" do
     higher = create_rule(name_condition("like", "woolworths"), category: @groceries)
     lower = create_rule(name_condition("like", "Woolworths"), category: @dining)
@@ -151,6 +166,13 @@ class Rule::HealthTest < ActiveSupport::TestCase
     assert_equal 0, overlap.shared_count
   end
 
+  test "equals conditions whose text differs only in case are not the same text" do
+    create_rule(name_condition("=", "Uber"), category: @groceries)
+    create_rule(name_condition("=", "uber"), category: @dining)
+
+    assert_empty health.overlaps
+  end
+
   test "contained text with contradicting amount conditions is not an overlap" do
     create_rule(name_condition("like", "uber"), amount_condition(">", "100"), category: @groceries)
     create_rule(name_condition("like", "uber"), amount_condition("<", "10"), category: @dining)
@@ -186,6 +208,77 @@ class Rule::HealthTest < ActiveSupport::TestCase
     create_rule(name_condition("=", "UBER EATS"), tags: [ @tag ])
 
     assert_empty health.overlaps
+  end
+
+  test "a rule whose conditions read a field a rule above changes gets no shadowed or match-nothing verdict" do
+    create_transaction(account: @account, name: "Uber ride", amount: 77)
+    rename = create_rule(name_condition("like", "uber ride"), name: "Taxi")
+    create_rule(name_condition("like", "uber ride"), category: @groceries)
+    by_amount = create_rule(amount_condition("=", "77"), category: @dining)
+    taxi = create_rule(name_condition("like", "taxi"), category: @groceries)
+
+    report = health
+    assert_empty report.shadowed
+    assert_empty report.match_nothing
+
+    rename.update!(active: false)
+
+    report = health
+    assert_equal [ by_amount ], report.shadowed.map(&:rule)
+    assert_equal [ taxi ], report.match_nothing
+  end
+
+  test "a rule that may match more after a rename is not reported as shadowed" do
+    create_transaction(account: @account, name: "Uber ride", amount: 77)
+    rename = create_rule(name_condition("like", "hardware"), name: "Uber ride two")
+    create_rule(amount_condition("=", "77"), category: @groceries)
+    by_name = create_rule(name_condition("like", "uber ride"), category: @dining)
+
+    assert_empty health.shadowed
+
+    rename.update!(active: false)
+
+    assert_equal [ by_name ], health.shadowed.map(&:rule)
+  end
+
+  test "a rule that may match more after a rename passes the doubt to the rules reading what it sets" do
+    create_transaction(account: @account, name: "Uber ride", amount: 77)
+    rename = create_rule(name_condition("like", "uber ride"), name: "Taxi")
+    taxi = create_rule(name_condition("like", "taxi"), category: @groceries)
+    by_category = create_rule(select_condition("transaction_category", @groceries.id), tags: [ @tag ])
+    by_tag = create_rule(select_condition("transaction_tag", @tag.id), category: @dining)
+
+    assert_empty health.match_nothing
+
+    rename.update!(active: false)
+
+    assert_equal [ taxi, by_category, by_tag ], health.match_nothing
+  end
+
+  test "a rule above that matches nothing leaves the verdicts below it standing" do
+    create_rule(name_condition("like", "no such shop"), category: @groceries)
+    below = create_rule(select_condition("transaction_category", @groceries.id), tags: [ @tag ])
+
+    assert_includes health.match_nothing, below
+  end
+
+  test "the verdicts left after a rename agree with a real run" do
+    create_transaction(account: @account, name: "Uber ride", amount: 77)
+    create_rule(name_condition("like", "uber ride"), name: "Taxi")
+    create_rule(name_condition("like", "uber ride"), category: @groceries)
+    create_rule(amount_condition("=", "77"), category: @dining)
+    create_rule(name_condition("like", "taxi"), tags: [ @tag ])
+
+    report = health
+    shadowed = report.shadowed.map(&:rule)
+    nothing = report.match_nothing
+
+    runs = Rule::Runner.new(@family, rules: @family.rules.where(active: true), execution_type: "manual").run
+    unchanged = runs.select { |run| run.transactions_queued.positive? && run.transactions_modified.zero? }.map(&:rule)
+    matched_nothing = runs.select { |run| run.transactions_queued.zero? }.map(&:rule)
+
+    assert_empty shadowed - unchanged
+    assert_empty nothing - matched_nothing
   end
 
   test "lists the rules that match nothing today" do
@@ -293,8 +386,9 @@ class Rule::HealthTest < ActiveSupport::TestCase
       Rule::Health.new(@family)
     end
 
-    def create_rule(*conditions, category: nil, tags: nil, active: true, stop_processing: false, effective_date: nil)
+    def create_rule(*conditions, category: nil, tags: nil, name: nil, active: true, stop_processing: false, effective_date: nil)
       actions = []
+      actions << Rule::Action.new(action_type: "set_transaction_name", value: name) if name
       actions << Rule::Action.new(action_type: "set_transaction_category", value: category.id) if category
       actions << Rule::Action.new(action_type: "set_transaction_tags", value: tags.map(&:id)) if tags
       @family.rules.create!(resource_type: "transaction", active: active, stop_processing: stop_processing,
@@ -303,6 +397,14 @@ class Rule::HealthTest < ActiveSupport::TestCase
 
     def name_condition(operator, value)
       Rule::Condition.new(condition_type: "transaction_name", operator: operator, value: value)
+    end
+
+    def select_condition(condition_type, value)
+      Rule::Condition.new(condition_type: condition_type, operator: "=", value: value)
+    end
+
+    def detail_condition(operator, value)
+      Rule::Condition.new(condition_type: "transaction_additional_detail", operator: operator, value: value)
     end
 
     def amount_condition(operator = ">", value = "10")
