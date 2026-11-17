@@ -221,9 +221,10 @@ class Loan
 
         # Two rates on the row, named for what each did: `interest_rate` is
         # the one the interest column was computed with, so a reader who
-        # recomputes the charge from beginning_balance, this rate and the
-        # period's day count (a flat twelfth under thirty_360) gets this row's
-        # figure;
+        # recomputes the charge from beginning_balance, this rate, the
+        # period's day count (a twelfth of a year under thirty_360) and the
+        # loan's compounding (`AmortizationMath.accrual_factor`) gets this
+        # row's figure;
         # `sizing_rate` is the one the payment was sized at. They differ only
         # on a row whose period straddles a rate change.
         payments << {

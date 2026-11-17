@@ -92,6 +92,50 @@ class Loan::InterestCompoundingTest < ActiveSupport::TestCase
     assert_equal BigDecimal("370.33"), payments.first[:interest_payment], "January charges its 31 days"
   end
 
+  # On a variable loan both rates run through the compounding: the period that
+  # straddles a change accrues at the opening rate's compounded factor, and the
+  # payment is re-sized once at the new rate's, told what that period charged.
+  test "a compounded variable loan re-sizes once across a rate change" do
+    change = Date.new(2026, 6, 15)
+    rows = Loan::Simulator.new(
+      starting_balance: BALANCE,
+      accrual_start_date: Date.new(2026, 1, 1),
+      payment_schedule: (1..MONTHS).map { |n| Date.new(2026, 1, 1) >> n },
+      accrual_rate_for: ->(date) { date < change ? RATE : 6 },
+      currency_precision: 2,
+      compounding: :semi_annual
+    ).run.payments
+    straddle = rows.index { |row| row[:payment_date] == Date.new(2026, 7, 1) }
+    opening = rows[straddle][:beginning_balance]
+    old_rate = Loan::AmortizationMath.monthly_rate(RATE, compounding: :semi_annual)
+    new_rate = Loan::AmortizationMath.monthly_rate(6, compounding: :semi_annual)
+
+    assert_equal BigDecimal("625.13"), rows.first[:payment_amount]
+    assert_equal (opening * old_rate).round(2), rows[straddle][:interest_payment],
+                 "June accrues at the opening 4.40%, compounded half-yearly"
+    resized = Loan::AmortizationMath.level_payment(balance: opening, monthly_rate: new_rate,
+                                                   remaining_payments: MONTHS - straddle, currency_precision: 2,
+                                                   first_period_interest: rows[straddle][:interest_payment])
+    assert_equal resized, rows[straddle][:payment_amount], "the re-sized payment covers what June actually charged"
+    assert_not_equal Loan::AmortizationMath.level_payment(balance: opening, monthly_rate: BigDecimal("6") / 100 / 12,
+                                                          remaining_payments: MONTHS - straddle, currency_precision: 2,
+                                                          first_period_interest: rows[straddle][:interest_payment]),
+                     resized, "the new rate was sized per period instead of compounded"
+    assert_equal [ resized ], rows[straddle...-1].map { |row| row[:payment_amount] }.uniq,
+                 "no row after the change is re-sized again"
+    assert_equal (rows[straddle + 1][:beginning_balance] * new_rate).round(2), rows[straddle + 1][:interest_payment],
+                 "July accrues at 6%, compounded half-yearly"
+  end
+
+  # A compounded factor is computed once per rate, compounding and length.
+  test "a compounded factor is computed once and then reused" do
+    first = Loan::AmortizationMath.monthly_rate(BigDecimal("3.17"), compounding: :semi_annual)
+    BigMath.expects(:log).never
+
+    assert_equal first, Loan::AmortizationMath.monthly_rate(BigDecimal("3.17"), compounding: :semi_annual)
+    assert_equal first, Loan::AmortizationMath.monthly_rate(BigDecimal("3.170"), compounding: "semi_annual")
+  end
+
   test "an unsupported compounding is refused rather than silently defaulted" do
     error = assert_raises(ArgumentError) { simulate(:quarterly) }
     assert_match(/unsupported compounding/, error.message)

@@ -34,6 +34,15 @@ class Loan
     # leave the cent untouched on any balance a loan can hold.
     COMPOUNDING_PRECISION = 30
 
+    # Compounded factors, by rate, compounding and length of period. Each one
+    # costs a 30-digit logarithm and exponential, about 50 microseconds, and a
+    # simulation asks for the same few again and again: the monthly rate twice
+    # a period, and on a day count the 28-, 29-, 30- and 31-day months. The
+    # factor depends on nothing else, so it is computed once per process. The
+    # cap keeps a long-running process from growing it without bound.
+    COMPOUNDED_RATES = Concurrent::Map.new
+    COMPOUNDED_RATES_LIMIT = 10_000
+
     module_function
 
     # The rate for one twelfth of a year: what a month charges under 30/360,
@@ -52,15 +61,30 @@ class Loan
     # How much of a year one period charges, under the loan's day-count
     # convention and compounding.
     #
-    # Under 30/360 a full scheduled period is a flat twelfth. A period cut
-    # short by a valuation is not a full month, so it charges its own 30/360
-    # days. `full_period` keeps the contracted schedule bit-identical while
-    # letting a partial period charge the days it actually covers.
+    # Under 30/360 a full scheduled period is a twelfth of a year: a flat
+    # twelfth of the rate per period, or `(1 + r/m)^(m/12) - 1` compounded. A
+    # period cut short by a valuation is not a full month, so it charges its
+    # own 30/360 days. `full_period` keeps the contracted schedule
+    # bit-identical while letting a partial period charge the days it
+    # actually covers.
     #
     # The day count measures the period; the compounding turns that measure
     # into a charge. A full 30/360 period returns `monthly_rate` itself, so a
     # loan on the default day count charges exactly what its payment was sized
     # at, whatever its compounding.
+    #
+    # ## Splitting a period
+    #
+    # Per period, the factor is additive: two windows of a period, charged on
+    # the same balance, sum to the whole period's charge. Compounded, it is
+    # not: `(1 + r/m)^(m * t) - 1` is convex in `t`, so the windows' factors
+    # sum to slightly less than the whole period's (0.62 less on 100,000 at
+    # 4.40% half-yearly, for a 30-day month on actual/365 charged as 30 daily
+    # windows). A caller that splits
+    # a period must therefore compound across its windows rather than add
+    # them: on an unchanged balance, `(1 + f1) * (1 + f2) - 1` is exactly the
+    # whole period's factor. Today nothing splits a scheduled period: the
+    # schedule and the ledger replay each charge it in one call.
     def accrual_factor(annual_percentage:, period_start:, period_end:, day_count_convention:, full_period: true,
                        compounding: DEFAULT_COMPOUNDING)
       if period_end < period_start
@@ -106,8 +130,13 @@ class Loan
       rate = BigDecimal(annual_percentage.to_s) / PERCENT
       return BigDecimal("0") if rate.zero? || years.zero?
 
-      base = 1 + rate / per_year
-      BigMath.exp(BigMath.log(base, COMPOUNDING_PRECISION) * (per_year * years), COMPOUNDING_PRECISION) - 1
+      key = "#{rate}|#{per_year}|#{BigDecimal(years.to_s)}"
+      COMPOUNDED_RATES.fetch(key) do
+        COMPOUNDED_RATES.clear if COMPOUNDED_RATES.size >= COMPOUNDED_RATES_LIMIT
+        base = 1 + rate / per_year
+        COMPOUNDED_RATES[key] =
+          BigMath.exp(BigMath.log(base, COMPOUNDING_PRECISION) * (per_year * years), COMPOUNDING_PRECISION) - 1
+      end
     end
 
     def per_period?(compounding)

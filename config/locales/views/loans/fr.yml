@@ -30,11 +30,11 @@ fr:
       day_count_convention_actual_actual: Exact/exact
       day_count_convention_hint: La façon dont votre prêteur rapporte chaque période à une année. Exact/365 facture selon la durée réelle du mois et constitue la norme pour les crédits immobiliers au Royaume-Uni et en Australie. 30/360 facture un douzième fixe, la base que Sure a toujours utilisée.
       day_count_convention_thirty_360: 30/360 (un douzième fixe)
-      interest_compounding: Capitalisation
-      interest_compounding_annual: Annuelle
-      interest_compounding_hint: La fréquence à laquelle votre prêteur capitalise le taux indiqué. « À chaque période » facture le taux pour la part de l'année que couvre la période, la base que Sure a toujours utilisée. Les prêts hypothécaires canadiens à taux fixe sont capitalisés semestriellement.
-      interest_compounding_per_period: À chaque période (taux divisé par la période)
-      interest_compounding_semi_annual: Semestrielle
+      interest_compounding: "Capitalisation"
+      interest_compounding_annual: "Annuelle"
+      interest_compounding_hint: "La fréquence à laquelle votre prêteur capitalise le taux indiqué. La plupart des prêts sont capitalisés à chaque paiement, y compris ceux dont les intérêts sont calculés au jour et facturés au mois, comme en Australie et au Royaume-Uni : laissez « À chaque paiement ». Les prêts hypothécaires canadiens à taux fixe sont capitalisés semestriellement."
+      interest_compounding_per_period: "À chaque paiement"
+      interest_compounding_semi_annual: "Semestrielle"
       rate_changes: Changements de taux
       rate_changes_hint: Chaque ligne définit le taux applicable de sa date d'effet jusqu'à la suivante. Saisir à nouveau une date remplace cette ligne au lieu d'en ajouter une seconde.
       rate_changes_empty: Aucun changement de taux enregistré. Le prêt utilise le taux d'intérêt indiqué ci-dessus.

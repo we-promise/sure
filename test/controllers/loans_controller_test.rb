@@ -260,6 +260,22 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     assert_enqueued_jobs 1, only: SyncJob
   end
 
+  # The compounding moves every period's interest, so the ledger replay has to
+  # run again. It reaches the sync through SCHEDULE_INPUTS and BALANCE_INPUTS.
+  test "saving the compounding queues a balance sync" do
+    patch loan_path(@account), params: {
+      account: {
+        accountable_attributes: {
+          id: @account.accountable_id,
+          interest_compounding: "semi_annual"
+        }
+      }
+    }
+
+    assert_equal "semi_annual", @account.loan.reload.interest_compounding
+    assert_enqueued_jobs 1, only: SyncJob
+  end
+
   test "saving an unrelated loan field does not queue a balance sync" do
     assert_no_enqueued_jobs(only: SyncJob) do
       patch loan_path(@account), params: { account: { name: "Renamed Loan" } }
