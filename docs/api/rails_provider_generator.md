@@ -249,7 +249,11 @@ class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :my_bank_accounts, :account_id, unique: true
+    # Unique per item: two connections can see the same provider account.
+    add_index :my_bank_accounts,
+              [ :my_bank_item_id, :account_id ],
+              unique: true,
+              name: "index_my_bank_accounts_on_item_and_account_id"
     add_index :my_bank_accounts, :my_bank_item_id
   end
 end
