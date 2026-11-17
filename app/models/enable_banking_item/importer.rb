@@ -303,13 +303,16 @@ class EnableBankingItem::Importer
       # DBIT indicates a negative balance (money owed/withdrawn).
       parsed_amount = -parsed_amount if indicator == "DBIT"
 
-      enable_banking_account.update!(
-        current_balance: parsed_amount,
-        currency: balance_currency(balance) || enable_banking_account.currency,
-        balance_evidence_verified: tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage)
-      )
+      # Skipped when the account was unlinked and ignored during the fetch.
+      written = enable_banking_account.write_unless_ignored do
+        enable_banking_account.update!(
+          current_balance: parsed_amount,
+          currency: balance_currency(balance) || enable_banking_account.currency,
+          balance_evidence_verified: tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage)
+        )
+      end
       # Only now is the chosen-currency balance known to be the one in use.
-      capture_skipped_currency_balances(enable_banking_account, currency, skipped)
+      capture_skipped_currency_balances(enable_banking_account, currency, skipped) if written
 
       true
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -935,7 +938,9 @@ class EnableBankingItem::Importer
 
       transactions_count = all_transactions.count
 
-      existing_transactions = enable_banking_account.raw_transactions_payload.to_a
+      # A copy: pruning the stored array in place would leave the record dirty,
+      # and the guarded write below cannot lock a record with unsaved changes.
+      existing_transactions = enable_banking_account.raw_transactions_payload.to_a.dup
 
       removed_pending = false
 
