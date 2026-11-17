@@ -238,6 +238,72 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_not Rails.root.join("lib/generators/provider/family/templates/unlinking_concern.rb.tt").exist?
   end
 
+  module GeneratedFlows
+    GocardlessItem = Class.new
+  end
+
+  # ProviderItem::AccountFlow raises for a hook a provider has not defined, so the
+  # generated flow is checked to define every hook itself, as a stub that names
+  # what is left to do.
+  test "the generated account flow stubs every hook the provider kit needs" do
+    flow_source = render_provider_template("account_flow.rb.tt")
+    assert_parses flow_source
+    GeneratedFlows.module_eval(flow_source)
+    flow_class = GeneratedFlows::GocardlessItem::AccountFlow
+    flow = flow_class.allocate
+
+    assert_operator flow_class, :<, ProviderItem::AccountFlow
+    {
+      fetch_accounts: [],
+      resolve_item: [ "item-id" ],
+      provider_error_class: [],
+      upsert_provider_account!: [ "acc_1", {} ],
+      provider_account_snapshot_changed?: [ Object.new, {} ]
+    }.each do |hook, args|
+      assert_equal flow_class, flow_class.instance_method(hook).owner, "#{hook} is not stubbed"
+      error = assert_raises(NotImplementedError, hook.to_s) { flow.send(hook, *args) }
+      assert_includes error.message, "TODO: GocardlessItem::AccountFlow##{hook}", hook.to_s
+    end
+  ensure
+    GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
+  end
+
+  # ProviderItemsController#update asks the flow which params expire the cached
+  # account list before saving, so this hook works without being filled in.
+  test "the generated account flow expires the account cache on the declared fields" do
+    flow_source = render_provider_template("account_flow.rb.tt", parsed_fields: [
+      { name: "api_key", type: "string", secret: true, default: nil },
+      { name: "base_url", type: "string", secret: false, default: "https://api.example.com" }
+    ])
+    assert_parses flow_source
+    GeneratedFlows.module_eval(flow_source)
+    flow_class = GeneratedFlows::GocardlessItem::AccountFlow
+
+    assert_equal flow_class.singleton_class, flow_class.method(:cache_sensitive_params).owner
+    assert_equal %i[api_key base_url], flow_class.cache_sensitive_params
+  ensure
+    GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
+  end
+
+  test "the generator writes the account flow" do
+    Dir.mktmpdir do |dir|
+      generator = Provider::FamilyGenerator.new([ "gocardless" ], {}, destination_root: dir)
+      capture_io { Dir.chdir(dir) { generator.send(:create_item_concerns) } }
+
+      assert_includes File.read(File.join(dir, "app/models/gocardless_item/account_flow.rb")), "class GocardlessItem::AccountFlow < ProviderItem::AccountFlow"
+    end
+  end
+
+  # The account flow reads a payload's name and currency through the account class.
+  test "the generated account model answers the account flow's payload questions" do
+    model = render_provider_template("account_model.rb.tt")
+
+    assert_parses model
+    assert_includes model, "  def self.name_for(account_data)\n    account_data.with_indifferent_access[:name]\n"
+    assert_includes model, "  def self.currency_for(account_data)\n"
+    assert_includes model, "  def self.default_accountable_attributes(_accountable_type)\n    {}\n"
+  end
+
   # ProviderItem::Syncer treats anything but a Hash with success: as a failed import,
   # so the generated importer has to return one, counting the failures it rescued.
   test "the generated importer's result reads as a clean or failed import to the kit syncer" do
@@ -259,6 +325,15 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
       importer.stubs(:calculate_start_date).raises(StandardError, "activities unavailable")
     end
     assert_equal [ "transaction_import_error" ], syncer.send(:import_result_errors, failed).map { |error| error[:category] }
+  end
+
+  test "the summary gives the account flow its own step after the importer" do
+    generator = Provider::FamilyGenerator.new([ "gocardless" ], {}, destination_root: Dir.tmpdir)
+    summary = capture_io { generator.show_summary }.first
+    importer_step = summary[/  3\. Customize the Importer class:.*?(?=\n\n)/m]
+
+    assert_includes summary, "  4. Implement the account flow:\n     app/models/gocardless_item/account_flow.rb\n"
+    assert_not_includes importer_step, "account_flow.rb"
   end
 
   # ProviderItem::Syncer reads its status and error messages from <key>_items.syncer.*.
