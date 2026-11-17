@@ -80,6 +80,30 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
     end
   end
 
+  # $3,000 saved at $280 a month ends about $280 short, so the end dot sits a
+  # few pixels under the target line and both right-aligned labels share the
+  # chart's right edge.
+  test "a projection ending just short of the target keeps its shortfall label clear of the target label" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, pace: 280)
+
+      assert_operator (shortfall_dot_y - target_line_y).abs, :<, COLLISION_PX, "premise: the projection ends beside the target line"
+      target = target_label
+      shortfall = shortfall_label
+      assert_not boxes_overlap?(target, shortfall), "the shortfall label overlaps the target label: #{[ target, shortfall ].inspect}"
+      assert_operator shortfall["y"], :>, shortfall_dot_y, "the shortfall label moves below its dot"
+    end
+  end
+
+  test "a projection ending well short of the target keeps its shortfall label above the dot" do
+    travel_to TODAY do
+      visit_goal(target: 10_000, saved: 3_000, pace: 200)
+
+      assert_operator (shortfall_dot_y - target_line_y).abs, :>=, COLLISION_PX, "premise: the projection ends clear of the target line"
+      assert_operator shortfall_label["y"] + shortfall_label["height"], :<=, shortfall_dot_y, "the shortfall label stays above its dot"
+    end
+  end
+
   # $3,000 saved at $200 a month: the projection falls short (a halo'd
   # shortfall label), and the 50% and 75% milestones are drawn before the
   # target date (hollow dots and halo'd labels).
@@ -295,6 +319,25 @@ class GoalProjectionChartTest < ApplicationSystemTestCase
       labels = chart_texts.select { |t| t["text"].start_with?("Target") }
       assert_equal 1, labels.size, "expected one target label, got #{labels.inspect}"
       labels.first
+    end
+
+    def shortfall_label
+      labels = chart_texts.select { |t| t["text"].end_with?(" short") }
+      assert_equal 1, labels.size, "expected one shortfall label, got #{labels.inspect}"
+      labels.first
+    end
+
+    # The end dot of a projection that falls short.
+    def shortfall_dot_y
+      page.evaluate_script(<<~JS)
+        Number(Array.from(document.querySelectorAll("[data-controller='goal-projection-chart'] svg circle"))
+          .find((c) => c.getAttribute("fill") === "var(--color-yellow-600)").getAttribute("cy"))
+      JS
+    end
+
+    def boxes_overlap?(a, b)
+      a["x"] < b["x"] + b["width"] && b["x"] < a["x"] + a["width"] &&
+        a["y"] < b["y"] + b["height"] && b["y"] < a["y"] + a["height"]
     end
 
     # Solid horizontal lines across the plot: the y-axis gridlines.

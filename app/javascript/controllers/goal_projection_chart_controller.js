@@ -382,10 +382,15 @@ export default class extends Controller {
           ? data.projection_end_label
           : (data.projection_shortfall_label ? `${data.projection_shortfall_label} short` : "");
         if (labelText) {
+          // Only a shortfall gets here with a collision (an on-track label
+          // was suppressed above): its dot sits just under the target line,
+          // and both labels end at the right edge. Above the dot it would
+          // overlap the target label, so it goes below instead.
+          const labelY = collidesWithTargetLabel ? projDotY + 16 : projDotY - 8;
           svg
             .append("text")
             .attr("x", x(target) - 8)
-            .attr("y", y(projectionEnd) - 8)
+            .attr("y", labelY)
             .attr("text-anchor", "end")
             .attr("font-size", 12)
             .attr("fill", textSecondary)
