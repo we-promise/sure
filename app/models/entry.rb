@@ -86,6 +86,10 @@ class Entry < ApplicationRecord
   before_destroy :prevent_individual_child_deletion, if: :split_child?
   after_save :track_earliest_saved_date, if: :saved_change_to_date?
 
+  # Split rows in the order they were entered. Without an ORDER BY PostgreSQL
+  # returns them in physical order, which shifts as rows are rewritten.
+  scope :in_split_order, -> { order(:created_at, :id) }
+
   scope :visible, -> {
     joins(:account).where(accounts: { status: [ "draft", "active" ] })
   }

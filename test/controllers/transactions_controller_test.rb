@@ -22,6 +22,24 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][name='q[merchants][]']", count: 0
   end
 
+  test "show lists split rows in the order they were entered" do
+    entry = create_transaction(amount: 100, name: "Split parent", account: accounts(:depository))
+    entry.split!([ { name: "Part 1", amount: 60 }, { name: "Part 2", amount: 40 } ])
+
+    queries = []
+    ActiveSupport::Notifications.subscribed(->(*, payload) { queries << payload[:sql] }, "sql.active_record") do
+      get transaction_url(entry), headers: { "Turbo-Frame" => "drawer" }
+    end
+
+    assert_response :success
+    # Without an ORDER BY PostgreSQL returns the rows in physical order.
+    row_reads = queries.select { |sql| sql.include?('"entries"."parent_entry_id" =') && !sql.include?("SELECT 1 AS one") }
+    assert row_reads.any?, "expected the split rows to be read"
+    assert row_reads.all? { |sql| sql.include?('ORDER BY "entries"."created_at" ASC, "entries"."id" ASC') }, row_reads.join("\n")
+    names = css_select("p.font-medium").map(&:text).select { |text| text.start_with?("Part ") }
+    assert_equal [ "Part 1", "Part 2" ], names
+  end
+
   test "a German transaction shows the bill it paid with localized copy" do
     @user.update!(locale: "de")
     @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
