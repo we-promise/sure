@@ -120,6 +120,27 @@ class Transfer::InvestmentKindReconcilerTest < ActiveSupport::TestCase
     assert_nil locked.outflow_transaction.reload.category_id
   end
 
+  test "leaves a pending match uncategorized" do
+    transfer = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "investment_contribution")
+    transfer.update_columns(status: "pending")
+
+    result = Transfer::InvestmentKindReconciler.new.run
+
+    assert_nil transfer.outflow_transaction.reload.category_id
+    assert_not_includes result.changed.keys, "category->investment_contributions"
+  end
+
+  test "keeps a category set after the batch was read" do
+    transfer = create_transfer(from: accounts(:depository), to: accounts(:investment), outflow_kind: "investment_contribution")
+    stale = Transfer.includes(outflow_transaction: :entry).find(transfer.id)
+    Transaction.where(id: transfer.outflow_transaction_id).update_all(category_id: categories(:food_and_drink).id)
+
+    assigned = Transfer::InvestmentKindReconciler.new.send(:assign_contribution_category!, stale)
+
+    assert_not assigned
+    assert_equal categories(:food_and_drink), transfer.outflow_transaction.reload.category
+  end
+
   test "does not categorize an investment-to-investment transfer" do
     transfer = create_transfer(from: accounts(:crypto), to: accounts(:investment), outflow_kind: "investment_contribution")
 
