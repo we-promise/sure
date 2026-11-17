@@ -22,6 +22,10 @@ class MercuryItem::AccountFlow < ProviderItem::AccountFlow
       provider.get_accounts[:accounts] || []
     end
 
+    def provider_account_snapshot_changed?(mercury_account, account_data)
+      mercury_account.raw_payload.to_h.deep_stringify_keys != account_data.to_h.deep_stringify_keys
+    end
+
     def upsert_provider_account!(account_id, account_data)
       mercury_account = item.mercury_accounts.find_or_initialize_by(account_id: account_id.to_s)
       mercury_account.upsert_mercury_snapshot!(account_data)

@@ -201,8 +201,12 @@ en:
     complete_account_setup:
       all_skipped: "All accounts were skipped. No accounts were created."
       creation_failed: "Failed to create accounts: %{error}"
+      creation_failed_count: "Failed to create %{count} account(s)."
       no_accounts: "No accounts to set up."
+      partial_skipped: "Successfully created %{created_count} account(s); %{skipped_count} account(s) were skipped."
+      partial_success: "Successfully created %{created_count} account(s), but %{failed_count} account(s) failed."
       success: "Successfully created %{count} account(s)."
+      unexpected_error: An unexpected error occurred
     sync:
       success: Sync started
     syncer:
