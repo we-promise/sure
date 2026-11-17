@@ -32,11 +32,21 @@ class Family::DataImporter
   end
 
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  PROPERTY_DETAIL_ATTRIBUTES = %w[year_built area_value area_unit].freeze
+  PROPERTY_ADDRESS_ATTRIBUTES = %w[line1 line2 locality region county postal_code country].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
     "CreditCard" => CreditCard, "Loan" => Loan, "OtherLiability" => OtherLiability
   }.freeze
+
+  # What the loan and credit card forms edit, restored on import. The loan's
+  # rate schedule is restored separately (see assign_liability_details).
+  LOAN_DETAIL_ATTRIBUTES = %w[
+    interest_rate rate_type term_months start_date down_payment initial_balance
+    insurance_rate insurance_rate_type day_count_convention principal_only_transfers
+  ].freeze
+  CREDIT_CARD_DETAIL_ATTRIBUTES = %w[apr annual_fee minimum_payment available_credit due_day statement_close_day expiration_date].freeze
 
   def self.accountable_class_for(type)
     ACCOUNTABLE_TYPE_CLASSES[type.to_s]
@@ -285,6 +295,25 @@ class Family::DataImporter
       account.entries.find_by(source: session_entry_source, external_id: external_id)
     end
 
+    # A missing or null value keeps the column's default, so older exports,
+    # which carry none of these, still import.
+    def assign_liability_details(accountable, accountable_data)
+      attributes = case accountable
+      when Loan then LOAN_DETAIL_ATTRIBUTES
+      when CreditCard then CREDIT_CARD_DETAIL_ATTRIBUTES
+      end
+      return unless attributes
+
+      accountable.assign_attributes(accountable_data.slice(*attributes).compact)
+
+      # Through the form's own parser, so a schedule the loan could not read
+      # back is rejected instead of stored.
+      schedule = accountable_data["variable_rate_schedule"]
+      if accountable.is_a?(Loan) && schedule.is_a?(Hash)
+        accountable.rate_changes = schedule.map { |date, rate| { "effective_date" => date, "rate" => rate } }
+      end
+    end
+
     def import_accounts(records)
       records.each do |record|
         data = record["data"]
@@ -310,6 +339,7 @@ class Family::DataImporter
           # Build accountable
           accountable = accountable_class.new
           accountable.subtype = accountable_data["subtype"] if accountable.respond_to?(:subtype=) && accountable_data["subtype"]
+          assign_liability_details(accountable, accountable_data)
 
           # Copy any other accountable attributes
           safe_accountable_attrs = %w[subtype locked_attributes]
@@ -318,6 +348,8 @@ class Family::DataImporter
               accountable.send("#{attr}=", accountable_data[attr])
             end
           end
+
+          assign_property_details(accountable, accountable_data) if accountable.is_a?(Property)
 
           account = @family.accounts.build(accountable: accountable)
         end
@@ -354,6 +386,16 @@ class Family::DataImporter
         @created_accounts << account if created
         increment_summary("Account", created ? :created : :updated)
       end
+    end
+
+    # What the property form edits. Provider links (avm_*) are left out: the
+    # restored family has to link its own provider. A missing or null value
+    # keeps the model's default, such as the area unit.
+    def assign_property_details(property, accountable_data)
+      property.assign_attributes(accountable_data.slice(*PROPERTY_DETAIL_ATTRIBUTES).compact)
+
+      address_data = accountable_data["address"]
+      property.build_address(address_data.slice(*PROPERTY_ADDRESS_ATTRIBUTES)) if address_data.is_a?(Hash)
     end
 
     def importable_account_status(status)

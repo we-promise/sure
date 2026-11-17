@@ -36,6 +36,50 @@ class HoldingTest < ActiveSupport::TestCase
     assert_in_delta 0.75, foreign_holding.weight, 0.001
   end
 
+  # A missing deposit leaves the account's cash negative, so its
+  # balance is below the holdings value. Weights must still stay at or below 100%.
+  test "weight does not exceed 100 percent when account cash is negative" do
+    @account.update!(balance: 3000, cash_balance: 3000 - (3240 + 3720))
+
+    assert_in_delta 3240.0 / (3240 + 3720) * 100, @amzn.weight, 0.001
+    assert_in_delta 3720.0 / (3240 + 3720) * 100, @nvda.weight, 0.001
+  end
+
+  test "weight sums the account holdings once per account instance" do
+    holdings = @account.current_holdings.to_a
+
+    Holding.uncached { assert_queries_count(2) { holdings.each { |holding| 3.times { holding.weight } } } }
+  end
+
+  test "weight sees holdings added before an account reload" do
+    @account.update!(balance: 0)
+    assert_in_delta 3240.0 / (3240 + 3720) * 100, @amzn.weight, 0.001
+
+    @account.holdings.create!(security: Security.create!(ticker: "W1", name: "W1"), date: Date.current, qty: 1, price: 3040, amount: 3040, currency: "USD")
+    @amzn.account.reload
+
+    assert_in_delta 3240.0 / 10_000 * 100, @amzn.weight, 0.001
+  end
+
+  test "weight of a holding outside the current holdings does not exceed 100 percent" do
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: Date.current, rate: 1.5)
+    eur = @account.holdings.create!(security: Security.create!(ticker: "ASML", name: "ASML"), date: Date.current, qty: 1, price: 10_000, amount: 10_000, currency: "EUR")
+    @account.update!(balance: 50, cash_balance: 50 - 6960)
+
+    assert_in_delta 100, eur.weight, 0.001
+  end
+
+  test "a holding with no exchange rate does not shrink the other holdings' weights" do
+    # Only a provider snapshot lists holdings in other currencies.
+    provider = AccountProvider.create!(account: @account, provider: plaid_accounts(:one))
+    @account.holdings.update_all(account_provider_id: provider.id)
+    @account.holdings.create!(security: Security.create!(ticker: "7203", name: "Toyota"), date: Date.current, qty: 1, price: 1_000_000, amount: 1_000_000,
+                              currency: "JPY", account_provider_id: provider.id)
+    @account.update!(balance: 7000, cash_balance: 40)
+
+    assert_in_delta 3240.0 / 7000 * 100, @amzn.weight, 0.001
+  end
+
   test "calculates average cost basis" do
     create_trade(@amzn.security, account: @account, qty: 10, price: 212.00, date: 1.day.ago.to_date)
     create_trade(@amzn.security, account: @account, qty: 15, price: 216.00, date: Date.current)
@@ -827,4 +871,13 @@ class HoldingTest < ActiveSupport::TestCase
 
         assert_not_nil holding.avg_cost
       end
+
+    test "weight stays finite for a short holding when the balance and holdings are not positive" do
+      account = families(:empty).accounts.create!(name: "Short only", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+      holding = account.holdings.create!(security: Security.create!(ticker: "SHRT", name: "Short"), date: Date.current,
+                                         qty: 1, price: 1, amount: 1, currency: "USD")
+      holding.update_columns(qty: -1, price: 500, amount: -500)
+
+      assert_equal 1, holding.reload.weight
+    end
 end
