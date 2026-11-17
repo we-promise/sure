@@ -614,4 +614,86 @@ class Balance::LinkedInvestmentSeriesNormalizerTest < ActiveSupport::TestCase
     assert_equal [ holdings_start_date, Date.current ], normalized.values.map(&:date)
     assert_equal Money.new(5000, "USD"), normalized.values.first.value
   end
+
+  test "user-entered reconciliation history before provider activity is supported history" do
+    account = linked_investment_account("Linked With Imported History")
+    valuation_date = 2.years.ago.to_date
+    activity_date = 10.days.ago.to_date
+
+    account.entries.create!(
+      date: valuation_date,
+      name: "Imported balance",
+      amount: 1_000,
+      currency: "USD",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+    account.entries.create!(
+      date: activity_date,
+      name: "Provider Transaction",
+      amount: 100,
+      currency: "USD",
+      source: "simplefin",
+      entryable: Transaction.new
+    )
+
+    assert_equal valuation_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
+    assert_equal valuation_date, Balance::LinkedInvestmentSeriesNormalizer
+      .send(:common_supported_history_start_date, [ account.id ])
+
+    raw_series = Series.new(
+      start_date: 3.years.ago.to_date,
+      end_date: Date.current,
+      interval: "1 month",
+      values: [
+        Series::Value.new(date: 3.years.ago.to_date, date_formatted: "", value: Money.new(0, "USD")),
+        Series::Value.new(date: valuation_date, date_formatted: "", value: Money.new(1_000, "USD")),
+        Series::Value.new(date: 1.year.ago.to_date, date_formatted: "", value: Money.new(1_200, "USD")),
+        Series::Value.new(date: Date.current, date_formatted: "", value: Money.new(1_500, "USD"))
+      ],
+      favorable_direction: account.favorable_direction
+    )
+
+    normalized = Balance::LinkedInvestmentSeriesNormalizer.new(account: account, series: raw_series).normalize
+
+    assert_equal [ valuation_date, 1.year.ago.to_date, Date.current ], normalized.values.map(&:date)
+    assert_equal Money.new(1_000, "USD"), normalized.values.first.value
+  end
+
+  test "provider-created reconciliation valuations do not extend supported history" do
+    account = linked_investment_account("Linked With Provider Valuation")
+    activity_date = 10.days.ago.to_date
+
+    account.entries.create!(
+      date: 1.year.ago.to_date,
+      name: "Provider balance",
+      amount: 1_000,
+      currency: "USD",
+      source: "simplefin",
+      entryable: Valuation.new(kind: "reconciliation")
+    )
+    account.entries.create!(
+      date: activity_date,
+      name: "Provider Transaction",
+      amount: 100,
+      currency: "USD",
+      source: "simplefin",
+      entryable: Transaction.new
+    )
+
+    assert_equal activity_date, Balance::LinkedInvestmentSeriesNormalizer.supported_history_start_date(account)
+  end
+
+  private
+    def linked_investment_account(name)
+      account = families(:empty).accounts.create!(
+        name: name,
+        balance: 0,
+        currency: "USD",
+        accountable: Investment.new
+      )
+      coinstats_item = account.family.coinstats_items.create!(name: "CoinStats", api_key: "test-key")
+      coinstats_account = coinstats_item.coinstats_accounts.create!(name: "Provider", currency: "USD")
+      account.account_providers.create!(provider: coinstats_account)
+      account
+    end
 end
