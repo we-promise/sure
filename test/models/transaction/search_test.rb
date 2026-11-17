@@ -594,13 +594,15 @@ class Transaction::SearchTest < ActiveSupport::TestCase
     create_transaction(account: @checking_account, amount: 100, kind: "standard")
     create_transaction(account: @checking_account, amount: 200, kind: "standard", excluded: true)
     create_transaction(account: @checking_account, amount: -50, kind: "standard") # income row, outside the expense sum
+    krw = @family.accounts.create!(name: "Seoul", balance: 0, currency: "KRW", accountable: Depository.new)
+    create_transaction(account: krw, amount: 130_000, currency: "KRW", kind: "standard") # no KRW rate, outside the expense sum
 
     totals = Transaction::Search.new(@family).totals
 
     assert_equal Money.new(100, "USD"), totals.expense_money
     assert_equal 1, totals.expense_count
-    # The count still matches the list: all three rows.
-    assert_equal 3, totals.count
+    # The count still matches the list: all four rows.
+    assert_equal 4, totals.count
   end
 
   test "totals excludes excluded transfers" do

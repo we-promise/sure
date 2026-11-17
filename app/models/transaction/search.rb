@@ -255,9 +255,10 @@ class Transaction::Search
         # and tax-advantaged exclusions above. transfer_count lets the summary
         # tell a transfer-only result set from one whose sums are all zero
         # because its entries are excluded, and expense_count counts the rows
-        # the expense sum covers, so a per-purchase average divides by
-        # purchases rather than listed rows. entries.excluded is nullable and
-        # a NULL row is live, hence IS NOT TRUE rather than = false.
+        # the expense sum covers, leaving out a row with no rate, so a
+        # per-purchase average divides by purchases rather than listed rows.
+        # entries.excluded is nullable and a NULL row is live, hence IS NOT
+        # TRUE rather than = false.
         result = scope
                   .select(
                     ActiveRecord::Base.sanitize_sql_array([
@@ -265,7 +266,7 @@ class Transaction::Search
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
-                      "COUNT(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) AND entries.excluded IS NOT TRUE THEN entries.id END) as expense_count",
+                      "COUNT(CASE WHEN entries.amount >= 0 AND transactions.kind NOT IN (?) AND entries.excluded IS NOT TRUE AND #{rate} IS NOT NULL THEN entries.id END) as expense_count",
                       Transaction::TRANSFER_KINDS
                     ]),
                     ActiveRecord::Base.sanitize_sql_array([
