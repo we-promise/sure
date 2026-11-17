@@ -5,6 +5,7 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
   include SqlQueryCapture
 
   TAGGED_MONTH = Date.new(2021, 3, 1)
+  BIGGEST_MONTH = Date.new(2020, 6, 1)
 
   setup do
     sign_in @user = users(:family_admin)
@@ -1314,7 +1315,128 @@ class ReportsControllerTest < ActionDispatch::IntegrationTest
     assert_no_match(/Export Untagged Spend/, @response.body)
   end
 
+  test "biggest expenses lists the period's largest expenses first and marks one-time ones" do
+    category = @family.categories.create!(name: "Big Repairs", color: "#222222")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+    create_transaction(name: "Garage invoice", amount: 1_200, date: BIGGEST_MONTH + 2, category: category, kind: "one_time")
+    create_transaction(name: "Coffee", amount: 4, date: BIGGEST_MONTH + 3)
+    create_transaction(name: "Salary", amount: -3_000, date: BIGGEST_MONTH + 4)
+    create_transaction(name: "Hidden refund", amount: 2_000, date: BIGGEST_MONTH + 5).update!(excluded: true)
+    create_transaction(name: "Move to savings", amount: 2_500, date: BIGGEST_MONTH + 6, kind: "funds_movement")
+    create_transaction(name: "Card payoff", amount: 2_600, date: BIGGEST_MONTH + 7, kind: "cc_payment")
+
+    get biggest_expenses_reports_path
+
+    assert_response :ok
+    assert_equal [ "Garage invoice", "Rent", "Coffee" ], biggest_expense_names
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /One-time/
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /Big Repairs/
+    assert_select "[data-section-key=biggest_expenses] tbody tr:nth-child(2)", text: /One-time/, count: 0
+  end
+
+  test "biggest expenses leaves out trades" do
+    security = securities(:aapl)
+    create_trade(security, account: accounts(:investment), qty: 100, date: BIGGEST_MONTH + 1, price: 500)
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path
+
+    assert_equal [ "Rent" ], biggest_expense_names
+  end
+
+  test "biggest expenses follows the count investing as spending setting" do
+    create_transaction(name: "Brokerage deposit", amount: 1_000, date: BIGGEST_MONTH + 1, kind: "investment_contribution")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    @family.update!(investment_contributions_as_spending: true)
+    get biggest_expenses_reports_path
+    assert_equal [ "Brokerage deposit", "Rent" ], biggest_expense_names
+
+    @family.update!(investment_contributions_as_spending: false)
+    get biggest_expenses_reports_path
+    assert_equal [ "Rent" ], biggest_expense_names
+  end
+
+  test "biggest expenses ranks a foreign-currency expense by its converted amount" do
+    eur = @family.accounts.create!(owner: @user, name: "Paris", balance: 0, currency: "EUR", accountable: Depository.new)
+    ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: BIGGEST_MONTH + 2, rate: 2)
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+    create_transaction(account: eur, name: "Paris hotel", amount: 600, currency: "EUR", date: BIGGEST_MONTH + 2)
+
+    get biggest_expenses_reports_path
+
+    assert_equal [ "Paris hotel", "Rent" ], biggest_expense_names
+    assert_select "[data-section-key=biggest_expenses] tbody tr:first-child", text: /\$1,200\.00/
+  end
+
+  test "biggest expenses shows as many rows as the user chose" do
+    12.times { |i| create_transaction(name: "Expense #{i}", amount: 100 + i, date: BIGGEST_MONTH + 1) }
+
+    get biggest_expenses_reports_path
+    assert_equal 10, biggest_expense_names.size
+    assert_select "[data-section-key=biggest_expenses] summary [aria-pressed=true]", text: "10"
+
+    @user.update_columns(preferences: (@user.preferences || {}).merge("reports_biggest_expenses_limit" => 5))
+    get biggest_expenses_reports_path
+    assert_equal (7..11).map { |i| "Expense #{i}" }.reverse, biggest_expense_names
+  end
+
+  test "biggest expenses applies the tag filter" do
+    tag = @family.tags.create!(name: "Holiday")
+    create_transaction(name: "Flight", amount: 400, date: BIGGEST_MONTH + 1, tags: [ tag ])
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path(filter_tag_ids: [ tag.id ])
+
+    assert_equal [ "Flight" ], biggest_expense_names
+  end
+
+  test "biggest expenses is hidden when the period has no expenses" do
+    create_transaction(name: "Salary", amount: -3_000, date: BIGGEST_MONTH + 1)
+
+    get biggest_expenses_reports_path
+
+    assert_response :ok
+    assert_select "[data-section-key=biggest_expenses]", count: 0
+  end
+
+  test "the printed report lists the biggest expenses" do
+    create_transaction(name: "Garage invoice", amount: 1_200, date: BIGGEST_MONTH + 2, kind: "one_time")
+    create_transaction(name: "Rent", amount: 900, date: BIGGEST_MONTH + 1)
+
+    get print_reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month)
+
+    assert_response :ok
+    section = css_select("section").find { |node| node.text.include?(I18n.t("reports.print.biggest_expenses.title")) }
+    assert section, "the biggest expenses section is printed"
+    rows = section.css("tbody tr").map(&:text)
+    assert_match(/Garage invoice\s+One-time/, rows.first)
+    assert_match(/Rent/, rows.second)
+  end
+
+  test "the reports preferences endpoint stores an offered biggest expenses limit only" do
+    patch update_preferences_reports_path, params: { preferences: { reports_biggest_expenses_limit: 25 } }, as: :json
+    assert_response :ok
+    assert_equal 25, @user.reload.reports_biggest_expenses_limit
+
+    patch update_preferences_reports_path, params: { preferences: { reports_biggest_expenses_limit: 7 } }, as: :json
+    assert_response :ok
+    assert_equal 25, @user.reload.preferences["reports_biggest_expenses_limit"]
+
+    patch update_preferences_reports_path, params: { preferences: { reports_biggest_expenses_limit: "abc" } }, as: :json
+    assert_response :ok
+    assert_equal 25, @user.reload.preferences["reports_biggest_expenses_limit"]
+  end
+
   private
+    def biggest_expenses_reports_path(**params)
+      reports_path(period_type: :custom, start_date: BIGGEST_MONTH, end_date: BIGGEST_MONTH.end_of_month, **params)
+    end
+
+    def biggest_expense_names
+      css_select("[data-section-key=biggest_expenses] tbody tr td:first-child a").map { |node| node.text.strip }
+    end
+
     # Travel, Work and Other tags on a month of their own, away from the
     # fixture transactions, with expenses of $30 (travel), $50 (work), $20
     # (both) and $1,000 (other), and income of $10 (travel) and $500 (none).
