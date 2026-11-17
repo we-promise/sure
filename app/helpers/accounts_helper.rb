@@ -1,4 +1,34 @@
 module AccountsHelper
+  # Options for the availability select: "automatic" first, naming the level
+  # the subtype would give, then the four levels.
+  def liquidity_choice_options(account)
+    automatic = t("accounts.liquidity.form.automatic", level: t("accounts.liquidity.levels.#{account.default_liquidity}"))
+
+    [ [ automatic, Account::Liquidity::AUTOMATIC ] ] +
+      Account::Liquidity::LEVELS.map { |level| [ t("accounts.liquidity.levels.#{level}"), level ] }
+  end
+
+  # Subtype => default level for the account's type, so the form can follow a
+  # subtype change made before saving. "" stands for "no subtype".
+  def liquidity_defaults_by_subtype(account)
+    klass = account.accountable_class
+    return {} if klass.nil?
+
+    subtypes = klass.const_defined?(:SUBTYPES) ? klass::SUBTYPES.keys : []
+    ([ "" ] + subtypes).index_with { |subtype| klass.rules_for(subtype).liquidity }
+  end
+
+  # Badge text for the account header, nil when nothing needs saying: an
+  # immediately available account carries no badge.
+  def liquidity_badge_label(account, date = account.liquidity_today)
+    case account.effective_liquidity(date)
+    when "short_term" then t("accounts.liquidity.badge.short_term")
+    when "long_term" then t("accounts.liquidity.badge.long_term")
+    when "locked"
+      release = account.next_release_date(date)
+      release ? t("accounts.liquidity.badge.locked_until", date: l(release, format: :long)) : t("accounts.liquidity.badge.locked")
+    end
+  end
   def summary_card(title:, &block)
     content = capture(&block)
     render "accounts/summary_card", title: title, content: content

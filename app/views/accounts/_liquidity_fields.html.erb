@@ -1,0 +1,36 @@
+<%# locals: (form:, account:) %>
+<%# Availability (Account::Liquidity). Preview only. The release
+    fields only mean something on a locked account; the controller hides them
+    otherwise and the model clears them on save. %>
+<%= tag.div class: "space-y-2", data: {
+      controller: "liquidity-fields",
+      liquidity_fields_default_level_value: account.default_liquidity,
+      liquidity_fields_defaults_value: liquidity_defaults_by_subtype(account).to_json,
+      liquidity_fields_labels_value: Account::Liquidity::LEVELS.index_with { |level| t("accounts.liquidity.levels.#{level}") }.to_json,
+      liquidity_fields_automatic_template_value: t("accounts.liquidity.form.automatic", level: "__LEVEL__")
+    } do %>
+  <div class="flex items-center gap-2">
+    <p class="text-sm text-primary"><%= t("accounts.liquidity.form.heading") %></p>
+    <%= render DS::Pill.new(label: t("accounts.liquidity.preview")) %>
+  </div>
+
+  <%= form.select :liquidity_choice,
+                  liquidity_choice_options(account),
+                  { label: t("accounts.liquidity.form.level_label"), selected: account.liquidity_choice_for_form },
+                  { data: { liquidity_fields_target: "level", action: "change->liquidity-fields#refresh" } } %>
+  <p class="text-xs text-secondary"><%= t("accounts.liquidity.form.level_hint") %></p>
+
+  <div class="space-y-2" data-liquidity-fields-target="lockedFields">
+    <%= form.date_field :available_on, label: t("accounts.liquidity.form.available_on_label") %>
+
+    <div class="flex items-center justify-between gap-2">
+      <span class="text-sm"><%= t("accounts.liquidity.form.auto_renew_label") %></span>
+      <%= form.toggle :auto_renew %>
+    </div>
+
+    <%= form.number_field :renewal_term_months,
+                          label: t("accounts.liquidity.form.renewal_term_months_label"),
+                          min: 1,
+                          max: Account::Liquidity::MAX_RENEWAL_TERM_MONTHS %>
+  </div>
+<% end %>

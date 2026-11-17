@@ -28,12 +28,14 @@ Stored on `accounts.liquidity`:
   subtype brings: default liquidity and tax treatment. Each accountable class
   overrides `default_liquidity_for(subtype)` (and `default_tax_treatment_for`
   where it has one). Add a new subtype there, not in a new constant elsewhere.
+- `Account::RuleDetails` lists the rules for the account page's "Details" tab,
+  with where each value comes from.
 
 ## Defaults and manual choices
 
 New accounts, and accounts whose subtype changes, take the subtype default.
-A manual choice arrives as `liquidity_choice` (the Sure data import sets it
-from an exported lock): a level locks
+The form's "availability" select writes `liquidity_choice` (the Sure data
+import sets it from an exported lock): a level locks
 `liquidity` in `locked_attributes`, so later subtype changes and provider syncs
 leave it alone; `automatic` unlocks it and restores the default. Provider code
 that changes `accountable.subtype` directly is covered by a callback on the
@@ -70,5 +72,6 @@ count credit cards as available wealth.
 The columns, the migration backfill and the defaults apply to everyone; they
 change no figure on their own. Code that answers "is this money available?"
 with the scopes above must read the viewer's `preview_features_enabled?` until
-the feature is released. The API account fields (`liquidity`, `available_on`,
+the feature is released. The form section, the header badge and the Details
+tab already do. The API account fields (`liquidity`, `available_on`,
 `available_now`) are always returned (additive).
