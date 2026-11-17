@@ -1,0 +1,12 @@
+---
+de:
+  activerecord:
+    errors:
+      models:
+        trade_republic_item:
+          attributes:
+            auto_login_time:
+              invalid: muss eine Uhrzeit wie 07:30 sein
+              pin_required: braucht eine gespeicherte PIN, bitte die PIN ebenfalls eingeben
+              phone_number_required: braucht eine gespeicherte Telefonnummer, bitte die Telefonnummer ebenfalls eingeben
+              encryption_unavailable: kann nicht verwendet werden, weil Active Record Encryption auf dieser Installation nicht sicher eingerichtet ist (fehlt oder stammt von einem veröffentlichten Standardgeheimnis) und die PIN daher nicht gespeichert werden kann

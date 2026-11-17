@@ -30,6 +30,22 @@ class TradeRepublicItemSyncerTest < ActiveSupport::TestCase
     assert_match(/expired/, sync.reload.sync_stats.dig("errors", 0, "message").to_s)
   end
 
+  test "an authentication error of a session a login replaced meanwhile does not flag the new one" do
+    @item.update_columns(session_blob: "# A")
+    sync = Sync.create!(syncable: @item)
+    provider = mock("trade_republic_provider")
+    provider.expects(:sync).with { TradeRepublicItem.find(@item.id).update_columns(session_blob: "# B"); true }
+      .returns(client_result("status" => "session_expired"))
+    @item.stubs(:trade_republic_provider).returns(provider)
+
+    assert_raises(Provider::TradeRepublicClient::AuthenticationRequired) do
+      TradeRepublicItem::Syncer.new(@item).perform_sync(sync)
+    end
+
+    assert_predicate @item.reload, :good?
+    assert_equal "# B", @item.session_blob
+  end
+
   test "successful sync imports data and collects health stats" do
     sync = Sync.create!(syncable: @item)
 

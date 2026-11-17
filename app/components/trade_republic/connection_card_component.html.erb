@@ -102,6 +102,10 @@
         </div>
       <% end %>
 
+      <% if item.auto_login_rejected_at? %>
+        <%= render DS::Alert.new(message: translation("auto_login_rejected"), variant: :error) %>
+      <% end %>
+
       <% if item.pending_login_state.blank? %>
         <%= helpers.styled_form_with model: item,
                              url: helpers.trade_republic_item_path(item),
@@ -120,6 +124,11 @@
                               placeholder: translation("pin_placeholder_existing"),
                               type: :password,
                               value: nil %>
+
+          <%= form.time_field :auto_login_time,
+                              label: translation("auto_login_time_label"),
+                              help_text: translation("auto_login_time_help"),
+                              value: item.auto_login_time %>
 
           <div class="flex flex-wrap justify-end gap-2">
             <%= form.submit(item.session_configured? ? translation("update_configuration") : translation("save_configuration")) %>

@@ -49,13 +49,14 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     assert_not_includes items, trade_republic_items(:no_session_item)
   end
 
-  test "syncable scope excludes reauthentication and pending login states" do
+  test "syncable scope excludes reauthentication but not a login pending beside a valid session" do
     item = trade_republic_items(:configured_item)
     item.update!(status: :requires_update)
     assert_not_includes TradeRepublicItem.syncable, item
 
     item.update!(status: :good, pending_login_state: "pending")
-    assert_not_includes TradeRepublicItem.syncable, item
+    assert_includes TradeRepublicItem.syncable, item
+    assert_predicate item, :ready_for_sync?
   end
 
   test "syncable scope excludes an ended session but keeps one without a known end" do
@@ -92,13 +93,52 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     assert_predicate item, :credentials_configured?
   end
 
-  test "PIN is transient and is not a persisted attribute" do
+  test "PIN is persisted encrypted so scheduled logins can use it" do
     item = trade_republic_items(:configured_item)
 
-    assert_not_includes TradeRepublicItem.column_names, "pin"
-    item.pin = "1234"
+    assert_includes TradeRepublicItem.column_names, "pin"
+    item.update!(pin: "1234", auto_login_time: "07:30")
+
+    assert_equal "1234", item.reload.pin
+    assert_not_equal "1234", item.read_attribute_before_type_cast("pin")
+  end
+
+  test "the PIN is never stored unencrypted" do
+    item = trade_republic_items(:configured_item)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(false)
+
+    item.update!(pin: "1234")
 
     assert_nil item.reload.pin
+  end
+
+  test "the PIN is not stored under keys derived from a known compromised secret" do
+    item = trade_republic_items(:configured_item)
+    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(false)
+    ActiveRecordEncryptionConfig.stubs(:using_known_compromised_secret_key_base?).returns(true)
+
+    item.pin = "1234"
+    item.auto_login_time = "07:30"
+
+    assert_not item.valid?
+    assert_predicate item.errors[:auto_login_time], :present?
+  end
+
+  test "the PIN is only kept while auto login is on" do
+    item = trade_republic_items(:configured_item)
+
+    item.update!(pin: "1234")
+    assert_nil item.reload.pin
+
+    item.update!(pin: "1234", auto_login_time: "07:30")
+    assert_equal "1234", item.reload.pin
+
+    item.update!(auto_login_time: nil)
+    assert_nil item.reload.pin
+  end
+
+  test "an item stored without a PIN has none" do
+    assert_nil trade_republic_items(:configured_item).pin
   end
 
   test "sync_status_summary counts linked and unlinked accounts" do
@@ -285,5 +325,138 @@ class TradeRepublicItemTest < ActiveSupport::TestCase
     item.update!(session_blob: nil, status: :requires_update)
 
     assert_nil item.reload.session_expires_at
+  end
+  test "setting an auto login time plans the daily login and stores the schedule token" do
+    item = trade_republic_items(:configured_item)
+
+    assert_enqueued_with(job: TradeRepublicReloginJob) do
+      item.update!(pin: "1234", auto_login_time: "07:30")
+    end
+
+    assert_predicate item.reload.auto_login_token, :present?
+  end
+
+  test "changing the auto login time replaces the schedule so earlier jobs go stale" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pin: "1234", auto_login_time: "07:30")
+    first_token = item.reload.auto_login_token
+
+    item.update!(auto_login_time: "08:00")
+
+    assert_not_equal first_token, item.reload.auto_login_token
+  end
+
+  test "clearing the auto login time cancels the schedule and plans nothing" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pin: "1234", auto_login_time: "07:30")
+
+    assert_no_enqueued_jobs only: TradeRepublicReloginJob do
+      item.update!(auto_login_time: "")
+    end
+
+    assert_nil item.reload.auto_login_time
+    assert_nil item.auto_login_token
+  end
+
+  test "a new session no longer plans a login by itself" do
+    item = trade_republic_items(:configured_item)
+
+    assert_no_enqueued_jobs only: TradeRepublicReloginJob do
+      item.update!(session_blob: trade_republic_session_blob(expires_at: 24.hours.from_now))
+    end
+  end
+
+  test "the auto login time must be a time of day" do
+    item = trade_republic_items(:configured_item)
+    item.pin = "1234"
+
+    item.auto_login_time = "25:00"
+    assert_not item.valid?
+
+    item.auto_login_time = "7:30"
+    assert_not item.valid?
+
+    item.auto_login_time = "07:30"
+    assert_predicate item, :valid?
+  end
+
+  test "duplicate cleanup leaves a login alone that replaced the pending state meanwhile" do
+      item = trade_republic_items(:configured_item)
+      item.update!(pending_login_state: "newer-b64")
+
+      assert_not item.discard_duplicate_connection!("older-b64")
+
+      item.reload
+      assert_equal "newer-b64", item.pending_login_state
+      assert_predicate item, :session_configured?
+    end
+
+  test "auto login needs a phone number" do
+    item = trade_republic_items(:configured_item)
+    item.update_columns(phone_number: nil)
+    item.pin = "1234"
+    item.auto_login_time = "07:30"
+
+    assert_not item.valid?
+    assert_predicate item.errors[:auto_login_time], :present?
+
+    item.auto_login_time = nil
+    assert_predicate item, :valid?
+  end
+
+  test "auto login needs a stored PIN" do
+    item = trade_republic_items(:configured_item)
+    item.update!(pin: nil)
+
+    item.auto_login_time = "07:30"
+
+    assert_not item.valid?
+    assert_predicate item.errors[:auto_login_time], :present?
+  end
+
+  test "the next auto login is at the time of day in the family's zone" do
+    families(:dylan_family).update!(timezone: "Europe/Berlin")
+    item = trade_republic_items(:configured_item)
+    item.pin = "1234"
+    item.auto_login_time = "07:30"
+
+    travel_to Time.utc(2026, 11, 17, 5, 0) do
+      assert_equal Time.utc(2026, 11, 17, 6, 30), item.next_auto_login_at
+    end
+    travel_to Time.utc(2026, 11, 17, 7, 0) do
+      assert_equal Time.utc(2026, 11, 18, 6, 30), item.next_auto_login_at
+    end
+  end
+
+  test "the next auto login keeps the local time across the change to summer time" do
+    families(:dylan_family).update!(timezone: "Europe/Berlin")
+    item = trade_republic_items(:configured_item)
+    item.pin = "1234"
+    item.auto_login_time = "07:30"
+
+    travel_to Time.utc(2027, 3, 27, 12, 0) do
+      assert_equal Time.utc(2027, 3, 28, 5, 30), item.next_auto_login_at
+    end
+  end
+
+  test "a time that does not exist on the day the clocks go forward moves to the next valid time" do
+    families(:dylan_family).update!(timezone: "Europe/Berlin")
+    item = trade_republic_items(:configured_item)
+    item.pin = "1234"
+    item.auto_login_time = "02:30"
+
+    travel_to Time.utc(2027, 3, 27, 12, 0) do
+      assert_equal Time.utc(2027, 3, 28, 1, 30), item.next_auto_login_at
+    end
+  end
+
+  test "an unknown family zone falls back to the app's zone" do
+    families(:dylan_family).update_columns(timezone: "Nowhere/Land")
+    item = trade_republic_items(:configured_item)
+    item.update_columns(auto_login_time: "07:30")
+
+    travel_to Time.utc(2026, 11, 17, 5, 0) do
+      assert_equal Time.zone.local(2026, 11, 17, 7, 30), item.reload.next_auto_login_at
+    end
   end
 end
