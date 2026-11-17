@@ -605,6 +605,26 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     end
   end
 
+  # ProviderItem::AccountFlow::Setup labels each account type the adapter supports, and
+  # its subtype picker or message, from <key>_items.setup_accounts.
+  test "the generated locale names every setup option the account flow reads for a supported type" do
+    kit_types = %w[Depository CreditCard Investment Loan OtherAsset]
+    messaged_types = %w[CreditCard OtherAsset]
+
+    [ true, false ].each do |banking|
+      setup = YAML.safe_load(render_provider_template("locale.en.yml.tt", banking: banking)).dig("en", "gocardless_items", "setup_accounts")
+      supported = render_adapter(skip_view: false, banking: banking)[/def self\.supported_account_types.*?%w\[([^\]]*)\]/m, 1].split
+
+      assert_not_empty supported & kit_types, "banking: #{banking}"
+      (supported & kit_types).each do |type|
+        key = type.underscore
+        assert setup.dig("account_types", key).present?, "banking: #{banking}: no setup_accounts.account_types.#{key}"
+        assert setup.fetch("subtype_labels", {}).key?(key), "banking: #{banking}: no setup_accounts.subtype_labels.#{key}"
+        assert setup.dig("subtype_messages", key).present?, "banking: #{banking}: no setup_accounts.subtype_messages.#{key}" if type.in?(messaged_types)
+      end
+    end
+  end
+
   # Bank sync lists a provider through FAMILY_PANELS, which reads the adapter's
   # panel: declaration, and every account provider has a panel, so the generated
   # adapter declares one even when the item views are skipped.
