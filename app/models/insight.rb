@@ -9,7 +9,7 @@
 # "Acknowledged" rather than "dismissed" because that is what the state has
 # always actually meant. GenerateInsightsJob resurfaces a row whose bucketed
 # metadata changes materially even if the user acknowledged the stale version,
-# and 6 of 8 generators scope `dedup_key` to a month, so acknowledging July's
+# and most generators scope `dedup_key` to a month, so acknowledging July's
 # budget card says nothing about August's. The contract is: acknowledgement
 # covers the numbers you saw; new numbers are a new insight. The DB value stays
 # `"dismissed"` (and the `dismissed_at` column keeps its name) so this needed no
@@ -27,6 +27,8 @@ class Insight < ApplicationRecord
     budget_at_risk
     budget_on_track
     maintained_goal_depleted
+    bill_not_covered
+    loan_payment_change
     bank_fees
   ].freeze
 
@@ -66,6 +68,27 @@ class Insight < ApplicationRecord
         END
       SQL
     where("NOT (insights.metadata ? 'account_id')").or(where(shared_account.arel.exists))
+      .about_shared_recurring_transactions
+  }
+
+  # A recurring series can move to another account after its insight was
+  # written, so the stored account_id may be stale. An insight that names a
+  # series (metadata recurring_transaction_id) also checks the series' current
+  # account: it shows only while that series exists and has no account or one
+  # every active member can see.
+  scope :about_shared_recurring_transactions, -> {
+    shared_account = Account.visible.accessible_by_all_active_members
+      .where("accounts.id = recurring_transactions.account_id")
+    current_series = RecurringTransaction
+      .where("recurring_transactions.family_id = insights.family_id")
+      .where(<<~SQL.squish)
+        recurring_transactions.id = CASE
+          WHEN insights.metadata->>'recurring_transaction_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          THEN (insights.metadata->>'recurring_transaction_id')::uuid
+        END
+      SQL
+      .where("recurring_transactions.account_id IS NULL OR EXISTS (#{shared_account.to_sql})")
+    where("NOT (insights.metadata ? 'recurring_transaction_id')").or(where(current_series.arel.exists))
   }
 
   scope :ordered, -> {

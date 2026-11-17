@@ -20,7 +20,7 @@ en:
       success: Successfully connected to your bank. Your accounts are syncing.
       unexpected_error: An unexpected error occurred. Please try again.
     complete_account_setup:
-      all_skipped: All accounts were skipped. You can set them up later on the accounts page.
+      all_skipped: All accounts were skipped. Link one to an account later to start syncing it.
       no_accounts: No accounts available to set up.
       success: Successfully created %{count} accounts!
     create:
@@ -66,6 +66,7 @@ en:
       title: Set Up Your Enable Banking Accounts
       header_subtitle: Choose the correct account types for your imported accounts
       choose_account_type: "Choose the correct account type for each Enable Banking account:"
+      skip_notice: "Skipped accounts are remembered: Sure stops importing them until you link them to an account."
       historical_data_range: "Historical Data Range:"
       sync_start_date_label: "Start syncing transactions from:"
       sync_start_date_help: Optional. Leave it blank to import as much history as your bank provides; how far back that goes depends on the bank. If you pick a date, transactions before it are not imported.
