@@ -66,8 +66,7 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
     # The insight names the account and its fees to the whole family, so only
     # accounts every active member can see qualify.
     def eligible_accounts
-      family.accounts.visible.accessible_by_all_active_members
-        .where(accountable_type: ACCOUNT_TYPES, currency: family.currency)
+      shared_accounts.visible.where(accountable_type: ACCOUNT_TYPES, currency: family.currency)
     end
 
     def fee_category_ids
