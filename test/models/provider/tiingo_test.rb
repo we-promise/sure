@@ -284,4 +284,21 @@ class Provider::TiingoTest < ActiveSupport::TestCase
     store&.delete("tiingo:symbol_count:#{month}")
     %w[AAPL MSFT].each { |symbol| store&.delete("tiingo:symbol:#{month}:#{symbol}") }
   end
+
+  test "client sets explicit open and read timeouts" do
+    options = @provider.send(:client).options
+
+    assert_equal 5, options.open_timeout
+    assert_equal 20, options.timeout
+  end
+
+  test "a timed-out request returns a failed response with the provider's Error" do
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    stub_request(:get, %r{\Ahttps://api\.tiingo\.com/}).to_timeout
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::Tiingo::Error, response.error
+  end
 end

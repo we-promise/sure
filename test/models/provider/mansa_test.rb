@@ -400,6 +400,23 @@ class Provider::MansaTest < ActiveSupport::TestCase
     assert_equal 101, store.read("mansa:daily:#{Date.current}")
   end
 
+  test "client sets explicit open and read timeouts" do
+    options = @provider.send(:client).options
+
+    assert_equal 5, options.open_timeout
+    assert_equal 20, options.timeout
+  end
+
+  test "a timed-out request returns a failed response with the provider's Error" do
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    stub_request(:get, %r{\Ahttps://mansaapi\.com/}).to_timeout
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::Mansa::Error, response.error
+  end
+
   private
     def stub_search_response(*listings)
       mock_response = mock

@@ -588,6 +588,25 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     store&.delete(provider&.send(:daily_cache_key))
   end
 
+  test "client sets explicit open and read timeouts" do
+    options = @provider.send(:client).options
+
+    assert_equal 5, options.open_timeout
+    assert_equal 20, options.timeout
+  end
+
+  test "a timed-out request returns a failed response with the provider's Error" do
+    @provider.stubs(:enforce_daily_limit!)
+    @provider.stubs(:throttle_request)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    stub_request(:get, %r{\Ahttps://eodhd\.com/}).to_timeout
+
+    response = @provider.search_securities("TEST")
+
+    assert_not response.success?
+    assert_instance_of Provider::Eodhd::Error, response.error
+  end
+
   private
     # The real client routes every HTTP attempt through count_request_attempt!;
     # these tests stub the client, so the hook is stubbed off the request path
