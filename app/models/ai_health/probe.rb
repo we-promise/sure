@@ -5,9 +5,10 @@ require "timeout"
 
 class AiHealth
   # Performs bounded, non-destructive checks against the exact services used
-  # by Sure. Results are cached briefly because this runs in an admin request,
-  # and a failed check is recorded once per cache fill in both operator-facing
-  # debug logs and the application log.
+  # by Sure. Ai::ProbeJob runs them in a worker and stores each result briefly
+  # in Ai::SharedState, where the admin page reads it (`stored_only:`) without
+  # calling a model. A failed check is recorded in both operator-facing debug
+  # logs and the application log.
   #
   # The checks go through the AI transports (Ai::Transport#probe) and the
   # clients Ai::Transport::Http builds, so a probe exercises the same client
@@ -24,6 +25,11 @@ class AiHealth
     PDF_MAX_RESPONSE_TOKENS = 512
 
     Result = Data.define(:status, :checked_at, :failure_code, :http_status) do
+      def self.from_json(json)
+        new(status: json["status"].to_sym, checked_at: json["checked_at"] && Time.zone.parse(json["checked_at"]),
+            failure_code: json["failure_code"]&.to_sym, http_status: json["http_status"])
+      end
+
       def passing?
         status == :passing
       end
@@ -31,6 +37,25 @@ class AiHealth
       def failing?
         status == :failing
       end
+
+      def not_checked?
+        status == :not_checked
+      end
+    end
+
+    # The probe cache in Ai::SharedState, so the web reads what a worker probed. It takes the
+    # ActiveSupport::Cache calls #run makes.
+    class Store
+      def read(key)
+        json = Ai::SharedState.read(key)
+        Result.from_json(json) if json
+      end
+
+      def fetch(key, expires_in:)
+        read(key) || yield.tap { Ai::SharedState.write(key, _1, expires_in:) }
+      end
+
+      def delete(key) = Ai::SharedState.delete(key)
     end
 
     class Failure < StandardError
@@ -61,8 +86,17 @@ class AiHealth
       seconds.positive? ? seconds : DEFAULT_TIMEOUT
     end
 
-    def initialize(force: false, cache: Rails.cache)
+    # How long a result is kept (AI_HEALTH_PROBE_CACHE_TTL): the page shows "not checked" after.
+    def self.cache_ttl
+      seconds = ENV.fetch("AI_HEALTH_PROBE_CACHE_TTL", DEFAULT_CACHE_TTL.to_i).to_i
+      seconds.positive? ? seconds.seconds : DEFAULT_CACHE_TTL
+    end
+
+    # force: probe even when a result is stored. stored_only: never probe; answer each check with
+    # its stored result, or not_checked (the admin page, which makes no AI request).
+    def initialize(force: false, stored_only: false, cache: Store.new)
       @force = force
+      @stored_only = stored_only
       @cache = cache
     end
 
@@ -179,7 +213,7 @@ class AiHealth
     end
 
     private
-      attr_reader :cache, :force
+      attr_reader :cache, :force, :stored_only
 
       # The synthetic statement through ReadPdf on a one-entry plan, the production path:
       # its text layer, or for the vision check the page as an image (the PDF itself on Anthropic,
@@ -231,6 +265,8 @@ class AiHealth
 
       def run(component:, provider_key:, endpoint: nil, model: nil, credential: nil, dimensions: nil, verification: nil)
         key = cache_key(component:, provider_key:, endpoint:, model:, credential:, dimensions:, verification:)
+        return stored(key) if stored_only
+
         cache.delete(key) if force
 
         result = nil
@@ -240,6 +276,13 @@ class AiHealth
       rescue StandardError => error
         record_cache_failure(error)
         result || perform(component:, provider_key:, endpoint:, model:) { yield }
+      end
+
+      def stored(key)
+        cache.read(key) || self.class.not_checked
+      rescue StandardError => error
+        record_cache_failure(error)
+        self.class.not_checked
       end
 
       def perform(component:, provider_key:, endpoint:, model:)
@@ -326,10 +369,7 @@ class AiHealth
         "#{CACHE_NAMESPACE}/#{fingerprint}"
       end
 
-      def cache_ttl
-        seconds = ENV.fetch("AI_HEALTH_PROBE_CACHE_TTL", DEFAULT_CACHE_TTL.to_i).to_i
-        seconds.positive? ? seconds.seconds : DEFAULT_CACHE_TTL
-      end
+      def cache_ttl = self.class.cache_ttl
 
       def timeout
         self.class.timeout

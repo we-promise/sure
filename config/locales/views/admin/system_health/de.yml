@@ -103,8 +103,8 @@ de:
       push_notification:
         title: "Sure-Testbenachrichtigung"
         body: "Dies ist eine Testbenachrichtigung für dein Sure-Konto."
-      verify_worker_ai:
-        queued: Die Worker-Prüfung wurde in die Warteschlange gestellt. Das Ergebnis erscheint unten, sobald ein Worker-Prozess die Prüfung übernimmt – normalerweise innerhalb weniger Sekunden.
+      run_ai_checks:
+        queued: KI-Prüfungen in die Warteschlange gestellt. Ein Worker führt sie aus, und die Ergebnisse erscheinen unten, sobald er fertig ist – normalerweise innerhalb einer Minute.
       optional_services:
         title: Optionale Dienste
         description: "Optionale Betreiber-Integrationen. Nicht konfigurierte Dienste sind Hinweise. Diese Prüfungen lesen nur Einstellungen; sie testen keine Verbindungen, senden keine Testereignisse und ändern keine Analytics-Einwilligung. Öffne einen Dienst für Einrichtungshinweise."
@@ -254,9 +254,11 @@ de:
           no_queues: Es sind keine Warteschlangen registriert. Möglicherweise läuft der Worker nicht.
         ai:
           run_checks: Prüfungen erneut ausführen
-          last_checked: "Live-Prüfungen vor %{time_ago} abgeschlossen. Die Ergebnisse werden kurz zwischengespeichert."
-          not_checked_help: Öffne die KI-Status-URL direkt oder führ die Prüfungen aus, um die Erreichbarkeit der Dienste zu bestätigen.
-          loading: "Live-Prüfungen laufen…"
+          last_checked_in_worker: "Ein Worker hat die Prüfungen zuletzt vor %{time_ago} ausgeführt."
+          run_checks_help: "Führ die Prüfungen aus, um die Erreichbarkeit der Dienste zu bestätigen. Ein Worker führt sie aus, so wie er auch die KI-Aufgaben ausführt."
+          loading_results: "Die neuesten Prüfergebnisse werden geladen…"
+          checked_ago: "vor %{time_ago} geprüft"
+          worker_unhealthy_warning: "KI-Prüfungen laufen gerade möglicherweise nicht – der Hintergrund-Worker scheint ausgefallen oder überlastet zu sein. Prüfe, ob dein Sidekiq-Worker läuft."
           alerts:
             custom_openai:
               title: Die Prüfung des gehosteten Vektorspeichers ist an diesem benutzerdefinierten Endpunkt fehlgeschlagen
@@ -325,6 +327,7 @@ de:
             pdf_vision_processing: PDF-Bild- bzw. native Verarbeitung
             llm_request_timeout: Zeitlimit für LLM-Anfragen
             probe_request_timeout: Zeitlimit für Statusprüfungen
+            probe_cache_ttl: Ergebnisse aufbewahrt für
             openai_credentials: OpenAI-Zugangsdaten
             openai_compatible_credentials: Zugangsdaten für die OpenAI-kompatible API
             anthropic_credentials: Anthropic-Zugangsdaten
@@ -405,13 +408,12 @@ de:
             request_failed: Die Anfrage an den Dienst ist fehlgeschlagen
             unsupported_provider: Der Anbieter unterstützt diese Prüfung nicht
           worker:
-            title: Worker-Verifikation
-            description: Die obigen Prüfungen wurden in diesem Web-Prozess ausgeführt. Die meisten KI-Aufgaben – Antworten des Assistenten, PDF-Verarbeitung, Embeddings, automatische Kategorisierung und Händlererkennung – laufen jedoch in einem Sidekiq-Worker-Prozess. Dessen Netzwerkzugriff, DNS, Proxy-Regeln oder geladene Zugangsdaten können abweichen. Stell eine Prüfung in die Warteschlange, um die Konfiguration und Erreichbarkeit aus Sicht eines Workers zu prüfen.
-            verify_button: Worker-Konfiguration prüfen
-            coverage_notice: Jede Prüfung erfasst genau einen Worker-Prozess – denjenigen, der sie aus der Warteschlange übernimmt. Bei mehreren Worker-Replikaten bestätigt ein erfolgreiches Ergebnis nicht, dass alle Worker funktionsfähig sind. Stell die Prüfung erneut in die Warteschlange, um eine weitere Stichprobe zu erhalten.
+            ran_by_title: Worker, der die Prüfungen ausgeführt hat
+            ran_by_description: Die obigen Prüfungen laufen in einem Sidekiq-Worker-Prozess, in dem auch die KI-Aufgaben laufen – Antworten des Assistenten, PDF-Verarbeitung, Embeddings, automatische Kategorisierung und Händlererkennung. Jeder Lauf hält fest, welcher Prozess ihn ausgeführt hat und ob dieser dieselbe Konfiguration wie dieser Web-Prozess verwendet.
+            run_coverage_notice: Jeder Lauf erfasst genau einen Worker-Prozess – denjenigen, der ihn aus der Warteschlange übernimmt. Bei mehreren Worker-Replikaten bestätigt ein erfolgreiches Ergebnis nicht, dass alle Worker funktionsfähig sind. Führ die Prüfungen erneut aus, um eine weitere Stichprobe zu erhalten.
             empty:
               title: Bisher hat kein Worker ein Prüfergebnis gemeldet
-              description: Klicke auf „Worker-Konfiguration prüfen“, um eine asynchrone Prüfung in die Warteschlange zu stellen. Das Ergebnis erscheint hier, sobald ein Worker-Prozess die Prüfung übernimmt.
+              run_description: Klicke auf „Prüfungen erneut ausführen“, um die Prüfungen in die Warteschlange zu stellen. Das Ergebnis erscheint hier, sobald ein Worker-Prozess sie ausgeführt hat.
             labels:
               process: Worker-Prozess
               checked_at: Geprüft

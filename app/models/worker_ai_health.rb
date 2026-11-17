@@ -2,26 +2,19 @@
 
 require "socket"
 
-# Stores and reads short-lived, worker-originated AI configuration/liveness
-# results so System health -> AI status can show what a Sidekiq worker
-# actually resolves and can reach, not just the web process (#3169).
+# Which worker process ran the AI checks, and the configuration it resolved,
+# so System health -> AI status can show whether it matches the web
+# process's (#3169). Ai::ProbeJob records one snapshot per run in
+# Ai::SharedState, beside the probe results it stores.
 #
-# AiHealth (and the page built on it) proves only that the `web` process
-# resolved a valid-looking configuration and could reach the provider from
-# its own network context. Most AI workloads -- assistant responses, PDF
-# processing, embeddings, auto-categorization, merchant detection -- run in
-# Sidekiq `worker` processes instead, which can differ in environment, DNS,
-# proxy, network policy, credentials, or model availability. A passing web
-# check says nothing about whether those actually work.
-#
-# A single queued WorkerAiHealthCheckJob only verifies whichever one worker
-# process dequeues it -- Sidekiq doesn't broadcast to every process, so this
-# is explicitly *not* full-fleet coverage. #recent keeps a small bounded
-# history keyed by process identity so an operator who runs the check a few
+# A single queued Ai::ProbeJob only checks whichever one worker process
+# dequeues it -- Sidekiq doesn't broadcast to every process, so this is
+# explicitly *not* full-fleet coverage. #recent keeps a small bounded
+# history keyed by process identity so an operator who runs the checks a few
 # times (or across a few replicas) can see more than one process's result,
 # but a `passing` entry only ever describes the process named on it.
 class WorkerAiHealth
-  CACHE_KEY = "worker_ai_health/results/v1"
+  STORE_KEY = "ai/worker_health/v2"
 
   # How long a recorded result is kept in the shared store at all. Chosen to
   # comfortably outlive an operator clicking through a few checks in one
@@ -49,6 +42,39 @@ class WorkerAiHealth
     :llm_status, :vector_store_status,
     :failure_codes
   ) do
+    def self.of(ai_health)
+      new(
+        process_identity: WorkerAiHealth.current_process_identity,
+        hostname: Socket.gethostname,
+        pid: Process.pid,
+        checked_at: Time.current,
+        effective_provider: ai_health.effective_llm_provider,
+        llm_model: ai_health.llm_model,
+        llm_endpoint: ai_health.llm_endpoint,
+        llm_request_timeout: ai_health.llm_request_timeout,
+        function_calling_status: ai_health.function_calling_status,
+        vector_store_adapter: ai_health.vector_store_adapter,
+        embedding_model: ai_health.embedding_model,
+        embedding_endpoint: ai_health.embedding_endpoint,
+        embedding_dimensions: ai_health.embedding_dimensions,
+        llm_status: ai_health.llm_status,
+        vector_store_status: ai_health.vector_store_status,
+        failure_codes: [ ai_health.llm_probe, ai_health.function_calling_probe, ai_health.pdf_text_extraction_probe,
+                         ai_health.pdf_vision_processing_probe, ai_health.vector_store_probe, ai_health.embedding_probe ]
+                         .filter_map(&:failure_code).uniq
+      )
+    end
+
+    SYMBOLS = %i[effective_provider function_calling_status vector_store_adapter llm_status vector_store_status].freeze
+
+    def self.from_json(json)
+      values = json.symbolize_keys.slice(*members)
+      SYMBOLS.each { |name| values[name] = values[name]&.to_sym }
+      values[:failure_codes] = Array(values[:failure_codes]).map(&:to_sym)
+      values[:checked_at] = Time.zone.parse(values[:checked_at])
+      new(**values)
+    end
+
     def stale?
       checked_at.nil? || checked_at < WorkerAiHealth::STALE_AFTER.ago
     end
@@ -98,11 +124,11 @@ class WorkerAiHealth
     # result is dropped for that round. Acceptable here: this is an
     # operator-triggered, low-frequency action, not a hot path, and a
     # dropped write just means running the check again.
-    def record!(snapshot, cache: Rails.cache)
-      results = recent(cache: cache).reject { |r| r.process_identity == snapshot.process_identity }
+    def record!(snapshot)
+      results = recent.reject { |r| r.process_identity == snapshot.process_identity }
       results = [ snapshot, *results ].first(MAX_RESULTS)
-      # Don't set expires_in here; let individual entries expire via checked_at time
-      cache.write(CACHE_KEY, results)
+      # Each write keeps the list for RETENTION; older entries drop by their checked_at.
+      Ai::SharedState.write(STORE_KEY, results, expires_in: RETENTION)
       snapshot
     end
 
@@ -110,8 +136,8 @@ class WorkerAiHealth
     # RETENTION age out of the cache entirely; entries within it but past
     # STALE_AFTER are still returned (status: :stale) so an operator can see
     # a worker went quiet rather than the section going empty.
-    def recent(cache: Rails.cache)
-      results = Array(cache.read(CACHE_KEY))
+    def recent
+      results = Array(Ai::SharedState.read(STORE_KEY)).map { Snapshot.from_json(_1) }
       # Filter out entries older than RETENTION
       results = results.select { |r| r.checked_at && r.checked_at > RETENTION.ago }
       results.sort_by { |r| r.checked_at || Time.at(0) }.reverse
@@ -124,11 +150,6 @@ class WorkerAiHealth
     # display.
     def current_process_identity
       "#{Socket.gethostname}:#{Process.pid}"
-    end
-
-    # Enqueues an asynchronous worker-side check without blocking the caller.
-    def request_check!
-      WorkerAiHealthCheckJob.perform_later
     end
   end
 end
