@@ -238,6 +238,22 @@ class EnableBankingItem::Importer
                      .update_all(raw_transactions_payload: nil, early_fetched_at: nil)
   rescue => e
     Rails.logger.warn "EnableBankingItem::Importer - Failed to purge unlinked account transactions: #{e.message}"
+    # Raw rows stay past their retention until a later sync purges them; show
+    # that in /settings/debug. The sync carries on.
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "warn",
+      message: "Enable Banking purge of stale early-fetched transactions failed; unlinked accounts keep their raw transactions until a later sync succeeds",
+      source: self.class.name,
+      provider_key: "enable_banking",
+      family: enable_banking_item.family,
+      metadata: {
+        enable_banking_item_id: enable_banking_item.id,
+        retention_days: UNLINKED_TRANSACTIONS_RETENTION.in_days.to_i,
+        error_class: e.class.name,
+        error_message: e.message.to_s.truncate(500)
+      }
+    )
   end
 
   private

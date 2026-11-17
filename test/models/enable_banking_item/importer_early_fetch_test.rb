@@ -244,6 +244,22 @@ class EnableBankingItem::ImporterEarlyFetchTest < ActiveSupport::TestCase
     assert_equal "forbidden", entry.metadata.dig("provider_error", "error_type")
   end
 
+  test "a failing purge is captured in provider diagnostics and does not raise" do
+    @eba.update_columns(raw_transactions_payload: [ tx("a", "2020-01-01") ], early_fetched_at: 10.days.ago)
+    ActiveRecord::Relation.any_instance.stubs(:update_all).raises(ActiveRecord::StatementInvalid, "lock timeout")
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "enable_banking", category: "provider_sync_error").count }, 1 do
+      assert_nothing_raised { build_importer.purge_stale_unlinked_transactions }
+    end
+
+    entry = DebugLogEntry.where(provider_key: "enable_banking").order(:created_at).last
+    assert_equal @family, entry.family
+    assert_equal "EnableBankingItem::Importer", entry.source
+    assert_equal @item.id, entry.metadata["enable_banking_item_id"]
+    assert_equal "ActiveRecord::StatementInvalid", entry.metadata["error_class"]
+    assert_not_nil @eba.reload.raw_transactions_payload
+  end
+
   test "a re-authorization does not refetch accounts that already have rows" do
     Sync.create!(syncable: @item, status: "completed", completed_at: 1.day.ago, created_at: 1.day.ago)
     link!
