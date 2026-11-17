@@ -438,9 +438,9 @@ class Loan < ApplicationRecord
       @term_change_refused == true
   end
 
-  # A row that could not be read, then the first row that is invalid on its
-  # own or not dated after the loan began, then a payment that does not cover
-  # its period's interest or a row dated after the schedule's last payment.
+  # A row that could not be read, then two rows with one date, then the first
+  # row that is invalid on its own or not dated after the loan began, then
+  # the checks that read the schedule (#term_change_schedule_refusal).
   # Checked when rows were assigned or the start date moves, which can leave
   # a stored row behind it; any other save has nothing new to check and skips
   # the query.
@@ -497,15 +497,16 @@ class Loan < ApplicationRecord
     term_change_schedule_refusal
   end
 
-  # The two checks that read the schedule.
+  # The checks that read the schedule.
   #
   # A payment below the interest would let the balance grow. The schedule
   # would charge interest on that growth and the ledger replay would not, so
   # the two could not agree.
   #
   # The schedule ends on its last payment: the last of the term, or an earlier
-  # one that repaid the loan. It does not read a row dated after that, so the
-  # row is refused instead of stored without effect.
+  # one that repaid the loan. It does not read a row dated after that, nor an
+  # extra repayment on that date once the day's payment repaid the loan, so
+  # such a row is refused instead of stored without effect.
   private def term_change_schedule_refusal
     return if active_term_changes.empty?
     # The schedule reads the account, which a loan being created does not
@@ -520,6 +521,7 @@ class Loan < ApplicationRecord
 
     last_payment_date = schedule.payments.last&.date
     return :term_change_after_last_payment if last_payment_date && active_term_changes.last.effective_date > last_payment_date
+    return :term_change_repayment_after_payoff if schedule.repayment_after_payoff?
 
     # Only a balance confirmed for the last payment date can leave the loan
     # owing: the final payment otherwise settles whatever is left.
@@ -634,12 +636,10 @@ class Loan < ApplicationRecord
   # its parts, so with no premium the two figures are the same figure. Nil when
   # there is no schedule to read an interest figure from, because a cost
   # without interest in it would understate the loan rather than decline to
-  # answer.
+  # answer. Nil too when the schedule ends with the loan still owing.
   def total_cost
-    schedule = amortization_schedule
-    return nil if schedule.nil?
-
-    schedule.total_paid + total_insurance
+    total_paid = amortization_schedule&.total_paid
+    total_paid && total_paid + total_insurance
   end
 
   # How far into the term the loan is, measured from origination rather than

@@ -114,6 +114,7 @@ nl:
         remaining_balance: "Resterend saldo"
         total_cost: "Totale kosten"
         total_interest: "Totale rente"
+        unknown: "Onbekend"
       overview:
         insurance_rate_only: "%{rate} per jaar"
         interest_rate: "Rentepercentage"

@@ -341,6 +341,9 @@ class Loan
         # 2,000 was still repaid.
         row[:repaid_outside_payment] = repaid_outside_payment if repaid_outside_payment.positive?
         row[:repaid_after_charge] = closing_reduction if closing_reduction.positive?
+        # An extra repayment on a payment date that the day's payment had
+        # already repaid the loan before. Only the last row can carry it.
+        row[:repaid_after_payoff] = changes.repaid_after_payment if changes.repaid_after_payment.positive? && !repaid_after_payment.positive?
         row[:accrual_factor] = accrual_rate if changes.any
         # The payment of this row is one the lender set, not one sized here.
         # The final row settles whatever is owed, so its principal cannot

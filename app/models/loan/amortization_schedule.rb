@@ -124,8 +124,11 @@ class Loan::AmortizationSchedule
   # here. A confirmed balance above the schedule's is not a payment and is
   # left out; the instalments after it repay it. Nor does it offset a
   # repayment recorded in the same period, which is why the rows' net
-  # adjustments are not what is summed.
+  # adjustments are not what is summed. Nil when the schedule ends with the
+  # loan still owing, because the sum would leave out what is owed.
   def total_paid
+    return nil if payments.any? && payoff_date.nil?
+
     repaid_outside_payments = row_figures(:repaid_outside_payment).values.sum(BigDecimal("0"), &:amount)
 
     money(payments.sum(BigDecimal("0")) { |payment| payment.payment.amount } + repaid_outside_payments)
@@ -153,6 +156,12 @@ class Loan::AmortizationSchedule
   # itself can fall a little short in a 31-day period.
   def lender_payment_below_interest?
     simulation.payments.any? { |row| row[:lender_payment_below_interest] }
+  end
+
+  # Whether an extra repayment is dated on a payment date after that day's
+  # payment had already repaid the loan, so it has nothing to repay.
+  def repayment_after_payoff?
+    simulation.payments.any? { |row| row.key?(:repaid_after_payoff) }
   end
 
   # The share of its balance the period of a payment charged as interest,
