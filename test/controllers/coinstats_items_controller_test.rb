@@ -151,6 +151,7 @@ class CoinstatsItemsControllerTest < ActionDispatch::IntegrationTest
 
     @coinstats_item.reload
     assert_equal "Updated Name", @coinstats_item.name
+    assert_equal "new_valid_api_key", @coinstats_item.api_key
   end
 
   test "should not update coinstats item with invalid api key" do
