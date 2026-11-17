@@ -11,7 +11,7 @@ module ProviderItemSnapshots
 
   UUID = /\h{8}-\h{4}-\h{4}-\h{4}-\h{12}/
   RANDOM_ID = /\b([a-z]+)-\h{8}\b/
-  CSRF = /(name="authenticity_token" value=|name="csrf-token" content=)"[^"]*"/
+  CSRF = /(name="authenticity_token" value=|name="csrf-token" content=)"[^"]+"/
 
   private
     def assert_matches_provider_item_snapshot(name, html)
