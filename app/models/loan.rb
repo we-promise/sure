@@ -297,12 +297,13 @@ class Loan < ApplicationRecord
   #
   # Assigned term change rows count as a change even when they equal the
   # stored ones. A loan is saved before its account on create, when the term
-  # change checks that need the account cannot run. The form's create and the
-  # family import run them through #term_changes_fit_account?; for a loan
-  # created any other way they run on the first form save, whatever it
-  # changes. The assignment counts until the loan has saved once: a later save
-  # of the account in the same request must not save the loan again, which
-  # would clear the saved changes `lock_saved_attributes!` reads.
+  # change checks that need the account cannot run. The form's create and a
+  # family import outside a chunked session run them through
+  # #term_changes_fit_account?; for a loan created any other way they run on
+  # the first form save, whatever it changes. The assignment counts until the
+  # loan has saved once: a later save of the account in the same request must
+  # not save the loan again, which would clear the saved changes
+  # `lock_saved_attributes!` reads.
   def changed_for_autosave?
     super || invalid_rate_changes.present? || rate_changes_precede_origination? || @term_changes_assigned == true
   end

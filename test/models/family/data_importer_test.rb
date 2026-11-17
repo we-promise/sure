@@ -267,6 +267,12 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     error = assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
     assert_includes error.record.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
     assert_not @family.accounts.exists?(name: "Short Payment Loan")
+
+    # A later chunk of a session can still bring the loan's opening history,
+    # so a chunk does not judge the rows against a schedule without it.
+    session = @family.import_sessions.create!(expected_chunks: 1)
+    Family::DataImporter.new(@family, ndjson, import_session: session).import!
+    assert_equal [ Date.new(2025, 6, 10) ], @family.accounts.find_by!(name: "Short Payment Loan").loan.term_changes.map(&:effective_date)
   end
 
   test "skips loan term changes that are not rows" do
