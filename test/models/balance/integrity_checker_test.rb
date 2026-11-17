@@ -560,6 +560,34 @@ class Balance::IntegrityCheckerTest < ActiveSupport::TestCase
     assert_in_delta 30, gap.difference, 0.01
   end
 
+  test "a gap that partly closes on busy days reports the smaller figure" do
+    freeze_time
+    account = accounts(:connected)
+    account.entries.destroy_all
+
+    add_linked_entry(account, date: 10.days.ago.to_date, amount: 1000, kind: "reconciliation")
+    # A 40 charge (day 9) was never imported.
+    (6..8).reverse_each do |days_ago|
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 960, kind: "reconciliation")
+    end
+
+    # A 30 refund (day 5) was never imported either, so 10 is left. Every
+    # later day has a 50 purchase that the snapshot already includes.
+    ledger = 1000
+    (1..4).reverse_each do |days_ago|
+      ledger -= 50
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: 50)
+      add_linked_entry(account, date: days_ago.days.ago.to_date, amount: ledger - 10, kind: "reconciliation")
+    end
+
+    gap = Balance::IntegrityChecker.new(account).latest_flagged_gap
+
+    assert gap
+    assert_equal 8.days.ago.to_date, gap.first_open_waypoint.date
+    assert_in_delta(-10, gap.difference, 0.01)
+    assert_in_delta gap.actual_value - gap.implied_value, gap.difference, 0.01
+  end
+
   private
     def add_linked_entry(account, date:, amount:, kind: nil)
       account.entries.create!(

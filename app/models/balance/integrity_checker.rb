@@ -8,6 +8,7 @@
 class Balance::IntegrityChecker
   TOLERANCE = 0.01.to_d
   MIN_DAYS_OPEN = 2 # a gap must persist longer than this before it's surfaced
+  MAX_SUBSET_FLOWS = 10 # same-day amounts listed as subsets (2^10 sums at most)
 
   Waypoint = Data.define(:date, :value, :kind)
   # anchor_waypoint:     last waypoint where the ledger matched the reported balance
@@ -56,30 +57,28 @@ class Balance::IntegrityChecker
         next
       end
 
-      # A busy day's snapshot that the day's own activity can explain never
-      # opens an episode, and the anchor stays, so a gap smaller than the
-      # day's activity still shows on the next exact snapshot. It closes an
-      # open episode only when the open gap can no longer explain it (see
-      # gap_closed?); otherwise the episode keeps its start and the residual
-      # last measured outside the timing range.
-      if same_day_timing?(b, residual)
-        next unless first_open_waypoint
-
-        if gap_closed?(b, residual, open_residual)
+      if exact_snapshot?(b)
+        # An exact snapshot measures the gap itself.
+        first_open_waypoint ||= b
+        open_residual = residual
+      elsif first_open_waypoint
+        # A busy day can keep, change or close an open gap (see busy_day_gap).
+        gap = busy_day_gap(b, residual, open_residual)
+        if gap == :closed
           first_open_waypoint = nil
           open_residual = nil
           next
         end
+        open_residual = gap
+      elsif same_day_timing?(b, residual)
+        # A busy day's snapshot that the day's own activity can explain never
+        # opens an episode, and the anchor stays, so a gap smaller than the
+        # day's activity still shows on the next exact snapshot.
+        next
       else
-        first_open_waypoint ||= b
-        # An exact snapshot measures the gap itself. On a busy day only the
-        # part beyond the timing range is certain, so that is reported until
-        # an exact snapshot settles it; either keeps the figure stable.
-        if exact_snapshot?(b)
-          open_residual = residual
-        elsif open_residual.nil?
-          open_residual = beyond_timing(b, residual)
-        end
+        # Only the part beyond the timing range is certain on a busy day.
+        first_open_waypoint = b
+        open_residual = beyond_timing(b, residual)
       end
 
       next unless (b.date - first_open_waypoint.date).to_i > min_days_open
@@ -164,6 +163,33 @@ class Balance::IntegrityChecker
     def timing_range(waypoint)
       flows = same_day_flows(waypoint.date)
       [ flows.select(&:negative?).sum, flows.select(&:positive?).sum ]
+    end
+
+    # A busy day's snapshot can miss any subset of the day's bookings and
+    # pending amounts, so the gap it shows is the residual minus one of their
+    # subset sums. If the open gap is among those candidates, it stands. If
+    # not, the gap changed: a candidate of zero means it closed, otherwise the
+    # smallest candidate is the least the day proves. With more amounts than
+    # MAX_SUBSET_FLOWS the subsets are too many to list, and only the outer
+    # bounds of the timing range are used.
+    def busy_day_gap(waypoint, residual, open_residual)
+      sums = subset_sums(same_day_flows(waypoint.date))
+      if sums.nil?
+        closed = same_day_timing?(waypoint, residual) && gap_closed?(waypoint, residual, open_residual)
+        return closed ? :closed : open_residual
+      end
+
+      candidates = sums.map { |sum| residual - sum }
+      return open_residual if candidates.any? { |gap| (gap - open_residual).abs <= tolerance }
+      return :closed if candidates.any? { |gap| gap.abs <= tolerance }
+
+      candidates.min_by(&:abs)
+    end
+
+    def subset_sums(flows)
+      return nil if flows.size > MAX_SUBSET_FLOWS
+
+      flows.reduce(Set[0.to_d]) { |sums, flow| sums | sums.map { |sum| sum + flow } }
     end
 
     # Whether a busy day's residual shows that an open gap has gone, e.g. a
