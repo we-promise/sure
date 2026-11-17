@@ -248,6 +248,27 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     end
   end
 
+  # The checks that read the schedule need the account and its opening
+  # balance, which the loan is saved before.
+  test "rejects a loan term change the schedule refuses" do
+    ndjson = build_ndjson([
+      {
+        type: "Account",
+        data: {
+          id: "old-loan", name: "Short Payment Loan", balance: "10000", currency: "USD", accountable_type: "Loan",
+          accountable: {
+            rate_type: "fixed", interest_rate: "12", term_months: 120, start_date: "2025-01-01", initial_balance: "10000",
+            term_changes: [ { effective_date: "2025-06-10", payment: "10" } ]
+          }
+        }
+      }
+    ])
+
+    error = assert_raises(ActiveRecord::RecordInvalid) { Family::DataImporter.new(@family, ndjson).import! }
+    assert_includes error.record.errors.full_messages, I18n.t("activerecord.errors.models.loan.term_change_payment_below_interest")
+    assert_not @family.accounts.exists?(name: "Short Payment Loan")
+  end
+
   test "skips loan term changes that are not rows" do
     ndjson = build_ndjson([
       {
