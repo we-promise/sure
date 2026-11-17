@@ -268,15 +268,23 @@ module Family::AutoTransferMatchable
     # role (the inflow leg is always the negative-amount entry), so the inflow
     # leg can never be held as some transfer's outflow, nor the reverse.
     def displace_pending_cross_currency_guesses!(match)
-      Transfer.where(inflow_transaction_id: match.inflow_transaction_id)
-        .or(Transfer.where(outflow_transaction_id: match.outflow_transaction_id))
-        .where(displaceable_transfer_sql("transfers"))
-        .each(&:destroy!)
+      # Selected FOR UPDATE, uncached: a confirm that holds the row lock
+      # (AutoMatchesController#bulk_update) finishes first, and PostgreSQL then
+      # re-checks the status on the confirmed row and leaves it out.
+      Transfer.uncached do
+        Transfer.where(inflow_transaction_id: match.inflow_transaction_id)
+          .or(Transfer.where(outflow_transaction_id: match.outflow_transaction_id))
+          .where(displaceable_transfer_sql("transfers"))
+          .order(:id)
+          .lock
+          .each(&:destroy!)
+      end
     end
 
     # A genuine auto-match suggestion (both legs still "standard", as
     # AutoMatchesController#cleanup_pending_auto_matches! defines it) that is
-    # pending and whose legs are in different currencies, for the transfer at
+    # pending, whose legs are in different currencies and that carries no fee
+    # (a fee the user added would be destroyed with it), for the transfer at
     # `transfers_alias`.
     def displaceable_transfer_sql(transfers_alias)
       <<~SQL.squish
@@ -299,6 +307,10 @@ module Family::AutoTransferMatchable
               displaced_inflows.kind = 'standard' AND
               displaced_outflows.kind = 'standard' AND
               displaced_inflow_entries.currency <> displaced_outflow_entries.currency
+          ) AND
+          NOT EXISTS (
+            SELECT 1 FROM transactions displaced_fees
+            WHERE displaced_fees.transfer_id = #{transfers_alias}.id
           )
         )
       SQL

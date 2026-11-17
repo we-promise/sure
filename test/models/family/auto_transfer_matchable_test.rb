@@ -509,6 +509,39 @@ class Family::AutoTransferMatchableTest < ActiveSupport::TestCase
     assert Transaction.exists?(fee.entryable_id)
   end
 
+  test "a pending cross-currency guess carrying a fee is not displaced" do
+    outflow, guess = pending_cross_currency_guess
+    # A fee added through TransfersController#update without confirming: the
+    # legs stay "standard".
+    fee = create_transaction(date: 1.day.ago.to_date, account: @depository, amount: 5, currency: "GBP")
+    fee.entryable.update_columns(transfer_id: guess.id)
+
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+    assert_not displacing_candidate?(real_inflow, outflow)
+
+    assert_no_difference -> { Transfer.count } do
+      @family.auto_match_transfers!
+    end
+
+    assert guess.reload.pending?
+    assert Transaction.exists?(fee.entryable_id)
+  end
+
+  test "displaced guesses are selected under a row lock" do
+    outflow, guess = pending_cross_currency_guess
+    real_inflow = create_transaction(date: Date.current, account: @credit_card, amount: -400, currency: "GBP")
+
+    locking_selects = []
+    callback = ->(*, payload) { locking_selects << payload[:sql] if payload[:sql].match?(/FROM "transfers".*FOR UPDATE/m) }
+    ActiveSupport::Notifications.subscribed(callback, "sql.active_record") do
+      @family.auto_match_transfers!
+    end
+
+    assert_not Transfer.exists?(guess.id)
+    assert Transfer.exists?(inflow_transaction_id: real_inflow.entryable_id, outflow_transaction_id: outflow.entryable_id)
+    assert locking_selects.any?, "expected the displaced guess to be selected FOR UPDATE"
+  end
+
   test "a later exact match replaces a pending guess holding its inflow" do
     load_family_currency_rates
     link_account!(@depository)
