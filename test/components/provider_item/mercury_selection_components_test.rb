@@ -5,6 +5,10 @@ require "test_helper"
 class ProviderItem::MercurySelectionComponentsTest < ActiveSupport::TestCase
   include ProviderItemSnapshots
 
+  # Mercury's form writes its own authenticity token field, whose
+  # attributes put an id between the name and the value.
+  AUTHENTICITY_TOKEN = /(id="authenticity_token" value=)"[^"]+"/
+
   setup do
     @item = mercury_items(:one)
     Current.stubs(:user).returns(users(:family_admin))
@@ -55,11 +59,14 @@ class ProviderItem::MercurySelectionComponentsTest < ActiveSupport::TestCase
     ApplicationController.render(partial: "mercury_items/setup_required")
   end
 
+  test "the form's own token field treats a blank token as a difference" do
+    assert_equal %(id="authenticity_token" value=""), %(id="authenticity_token" value="").gsub(AUTHENTICITY_TOKEN, '\1"CSRF"')
+    assert_equal %(id="authenticity_token" value="CSRF"), %(id="authenticity_token" value="abc123").gsub(AUTHENTICITY_TOKEN, '\1"CSRF"')
+  end
+
   private
-    # Mercury's form writes its own authenticity token field, whose
-    # attributes put an id between the name and the value.
     def render_template(template, **assigns)
       ApplicationController.render(template: template, assigns: assigns, layout: false)
-                           .gsub(/(id="authenticity_token" value=)"[^"]*"/, '\1"CSRF"')
+                           .gsub(AUTHENTICITY_TOKEN, '\1"CSRF"')
     end
 end
