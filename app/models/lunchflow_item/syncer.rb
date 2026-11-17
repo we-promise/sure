@@ -82,6 +82,15 @@ class LunchflowItem::Syncer
     safe_message = user_safe_error_message(e)
     Rails.logger.error "#{self.class.name} - sync failed for #{lunchflow_item.class.name} #{lunchflow_item.id}: #{e.class} - #{e.message}"
     Rails.logger.error Array(e.backtrace).first(10).join("\n")
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Sync failed",
+      source: self.class.name,
+      provider_key: "lunchflow",
+      family: lunchflow_item.family,
+      metadata: { lunchflow_item_id: lunchflow_item.id, error_class: e.class.name, error_message: e.message }
+    )
     Sentry.capture_exception(e) do |scope|
       scope.set_tags(lunchflow_item_id: lunchflow_item.id)
     end

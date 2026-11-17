@@ -50,9 +50,7 @@
           </div>
 
           <div class="flex gap-2 justify-end pt-4">
-            <%= link_to selection_t("cancel"), cancel_path,
-                class: "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-lg text-primary button-bg-secondary hover:button-bg-secondary-hover",
-                data: { turbo_frame: "_top" } %>
+            <%= render DS::Link.new(text: selection_t("cancel"), href: cancel_path, variant: :secondary, frame: "_top") %>
             <%= render DS::Button.new(
               text: selection_t(existing_account? ? "link_account" : "link_accounts"),
               variant: :primary,
