@@ -47,6 +47,17 @@ class Loan < ApplicationRecord
   normalizes :insurance_rate_type, with: ->(value) { value.presence }
   validates :insurance_rate_type, inclusion: { in: Loan::Insurance::RATE_TYPES }, allow_nil: true
 
+  # The asset a loan can be linked to as the thing it paid for. Display only:
+  # the link moves no balance and no net-worth figure.
+  FINANCEABLE_TYPES = %w[Property Vehicle].freeze
+
+  belongs_to :financed_account, class_name: "Account", optional: true
+  # Only when the link changes, so an asset that later stops qualifying does
+  # not block every other edit of the loan. A loan being created through its
+  # account has no account to compare families with yet, so Account repeats
+  # the family check for that case.
+  validate :financed_account_financeable, if: :will_save_change_to_financed_account_id?
+
   # How much was borrowed for every unit the borrower put in. Nil without a
   # down payment recorded: a loan with no deposit is not infinitely leveraged,
   # it is a loan whose leverage nobody has told us.
@@ -558,6 +569,13 @@ class Loan < ApplicationRecord
     return Money.new(recorded_principal, account.currency) if recorded_principal&.positive?
 
     Money.new(account.first_valuation_amount, account.currency)
+  end
+
+  private def financed_account_financeable
+    return if financed_account_id.nil?
+    return errors.add(:financed_account, :invalid) unless financed_account && FINANCEABLE_TYPES.include?(financed_account.accountable_type)
+
+    errors.add(:financed_account, :invalid) if account&.family_id && financed_account.family_id != account.family_id
   end
 
   private def payment_ratios(payment, premium, total)

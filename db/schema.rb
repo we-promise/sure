@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_130000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1626,6 +1626,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.datetime "created_at", null: false
     t.string "day_count_convention", default: "thirty_360", null: false
     t.decimal "down_payment", precision: 19, scale: 4
+    t.uuid "financed_account_id"
     t.decimal "initial_balance", precision: 19, scale: 4
     t.decimal "insurance_rate", precision: 8, scale: 4
     t.string "insurance_rate_type"
@@ -1638,6 +1639,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
     t.integer "term_months"
     t.datetime "updated_at", null: false
     t.jsonb "variable_rate_schedule", default: {}, null: false
+    t.index ["financed_account_id"], name: "index_loans_on_financed_account_id"
     t.check_constraint "day_count_convention::text = ANY (ARRAY['thirty_360'::character varying, 'actual_365'::character varying, 'actual_actual'::character varying]::text[])", name: "chk_loans_day_count_convention"
     t.check_constraint "down_payment IS NULL OR down_payment >= 0::numeric", name: "chk_loans_down_payment_non_negative"
     t.check_constraint "insurance_rate IS NULL OR insurance_rate >= 0::numeric", name: "chk_loans_insurance_rate_non_negative"
@@ -3244,6 +3246,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_16_120000) do
   add_foreign_key "kraken_accounts", "kraken_items"
   add_foreign_key "kraken_items", "families"
   add_foreign_key "llm_usages", "families"
+  add_foreign_key "loans", "accounts", column: "financed_account_id", on_delete: :nullify
   add_foreign_key "lunchflow_accounts", "lunchflow_items"
   add_foreign_key "lunchflow_items", "families"
   add_foreign_key "merchants", "families"

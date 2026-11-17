@@ -1282,6 +1282,69 @@ class LoansControllerTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "the form offers the family's properties and vehicles to link" do
+    get edit_loan_path(@account)
+    assert_response :success
+
+    assert_select "select[name='account[accountable_attributes][financed_account_id]']" do
+      assert_select "option[value='#{accounts(:property).id}']", count: 1
+      assert_select "option[value='#{accounts(:vehicle).id}']", count: 1
+      assert_select "option[value='#{accounts(:depository).id}']", count: 0
+    end
+  end
+
+  test "updates the asset a loan finances, and clears it" do
+    property = accounts(:property)
+
+    patch loan_path(@account), params: {
+      account: { accountable_type: "Loan", accountable_attributes: { id: @account.accountable_id, financed_account_id: property.id } }
+    }
+    assert_redirected_to @account
+    assert_equal property.id, @account.loan.reload.financed_account_id
+
+    patch loan_path(@account), params: {
+      account: { accountable_type: "Loan", accountable_attributes: { id: @account.accountable_id, financed_account_id: "" } }
+    }
+    assert_redirected_to @account
+    assert_nil @account.loan.reload.financed_account_id
+  end
+
+  test "cannot link an account the user cannot see" do
+    other_family = families(:empty).accounts.create!(name: "Elsewhere", balance: 1, currency: "USD", accountable: Property.new)
+    unshared = @user.family.accounts.create!(name: "Not mine", balance: 1, currency: "USD", accountable: Property.new, owner: users(:family_member))
+
+    [ other_family, unshared ].each do |target|
+      patch loan_path(@account), params: {
+        account: { accountable_type: "Loan", accountable_attributes: { id: @account.accountable_id, financed_account_id: target.id } }
+      }
+      assert_response :not_found
+      assert_nil @account.loan.reload.financed_account_id
+    end
+  end
+
+  test "cannot link an asset the form does not offer: pending deletion or disabled" do
+    property = accounts(:property)
+
+    %w[pending_deletion disabled].each do |status|
+      property.update_columns(status: status)
+      patch loan_path(@account), params: {
+        account: { accountable_type: "Loan", accountable_attributes: { id: @account.accountable_id, financed_account_id: property.id } }
+      }
+      assert_response :not_found
+      assert_nil @account.loan.reload.financed_account_id
+    end
+  end
+
+  test "the edit form still lists a linked asset that was disabled, so the link can be cleared" do
+    property = accounts(:property)
+    @account.loan.update!(financed_account: property)
+    property.update_columns(status: "disabled")
+
+    get edit_loan_path(@account)
+    assert_response :success
+    assert_select "select[name='account[accountable_attributes][financed_account_id]'] option[value='#{property.id}']"
+  end
+
   private
     # The query of every period link in the chart card's picker.
     def period_link_queries

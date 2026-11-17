@@ -10,6 +10,21 @@
                 { label: true, prompt: t("loans.form.subtype_prompt"), include_blank: t("loans.form.none") } %>
     </div>
 
+    <%# The property or vehicle the loan paid for. A link to an asset no longer
+        shared with this user is left out of the form, and so kept as it is.
+        The current link stays listed even if its asset was disabled, so it can be cleared. %>
+    <% financed_id = account.loan.financed_account_id %>
+    <% accessible_assets = Current.user.accessible_accounts.where(accountable_type: Loan::FINANCEABLE_TYPES) %>
+    <% financeable = accessible_assets.visible.or(accessible_assets.where(id: financed_id)).alphabetically %>
+    <% if financed_id.nil? || financeable.any? { |asset| asset.id == financed_id } %>
+      <div>
+        <%= loan_form.select :financed_account_id,
+                  financeable.map { |asset| [ asset.name, asset.id ] },
+                  { label: t("loans.form.financed_account"), include_blank: t("loans.form.none") } %>
+        <p class="text-xs text-secondary mt-1"><%= t("loans.form.financed_account_hint") %></p>
+      </div>
+    <% end %>
+
     <%= render "shared/ruler", classes: "my-4" %>
 
     <div class="space-y-2"

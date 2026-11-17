@@ -4,6 +4,8 @@ en:
     edit:
       edit: Edit %{account}
     form:
+      financed_account: Finances
+      financed_account_hint: The property or vehicle this loan paid for.
       interest_rate: Interest rate
       interest_rate_placeholder: '5.25'
       initial_balance: Original loan balance
