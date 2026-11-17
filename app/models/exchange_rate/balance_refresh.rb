@@ -31,7 +31,15 @@ class ExchangeRate::BalanceRefresh
   # rescue.
   def self.enqueue(rates, source:, provider: nil)
     ActiveRecord.after_all_transactions_commit do
-      ExchangeRateBalanceRefreshJob.perform_later(rates)
+      attempted_job = nil
+      ExchangeRateBalanceRefreshJob.perform_later(rates) { |job| attempted_job = job }
+
+      # perform_later returns false rather than raising when the adapter raises
+      # ActiveJob::EnqueueError or a callback aborts the enqueue, so the job's
+      # own state is what says the refresh never reached the queue.
+      if attempted_job && !attempted_job.successfully_enqueued?
+        raise attempted_job.enqueue_error || ActiveJob::EnqueueError.new("ExchangeRateBalanceRefreshJob was not enqueued")
+      end
     rescue StandardError => e
       Rails.logger.error("Could not queue the balance refresh for #{rates.size} exchange rate(s): #{e.message}")
       Sentry.capture_exception(e)
