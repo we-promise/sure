@@ -3,17 +3,7 @@
     <% dialog.with_header(title: dialog_t("title")) %>
     <% dialog.with_body do %>
       <div class="space-y-4">
-        <% if notice == :alert %>
-          <%= render DS::Alert.new(title: heading, message: error_message, variant: :error) %>
-        <% else %>
-          <div class="flex items-start gap-3">
-            <%= helpers.icon("alert-circle", class: "text-destructive w-5 h-5 shrink-0 mt-0.5") %>
-            <div class="text-sm">
-              <p class="font-medium text-primary mb-2"><%= heading %></p>
-              <p class="text-secondary"><%= error_message %></p>
-            </div>
-          </div>
-        <% end %>
+        <%= render DS::Alert.new(title: heading, message: error_message, variant: :error) %>
 
         <div class="bg-surface rounded-lg p-4 space-y-2 text-sm">
           <p class="font-medium text-primary"><%= dialog_t("common_issues") %></p>
