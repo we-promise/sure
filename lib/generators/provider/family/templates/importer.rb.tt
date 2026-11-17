@@ -13,12 +13,11 @@ class <%= class_name %>Item::Importer
   MINIMUM_HISTORY_FOR_INCREMENTAL = 10
 <% end -%>
 
-  attr_reader :<%= file_name %>_item, :<%= file_name %>_provider, :sync
+  attr_reader :<%= file_name %>_item, :<%= file_name %>_provider
 
-  def initialize(<%= file_name %>_item, <%= file_name %>_provider:, sync: nil)
+  def initialize(<%= file_name %>_item, <%= file_name %>_provider:)
     @<%= file_name %>_item = <%= file_name %>_item
     @<%= file_name %>_provider = <%= file_name %>_provider
-    @sync = sync
   end
 
   class CredentialsError < StandardError; end
@@ -49,6 +48,11 @@ class <%= class_name %>Item::Importer
 
     # Update raw payload on the item
     <%= file_name %>_item.upsert_<%= file_name %>_snapshot!(stats)
+
+    # ProviderItem::Syncer reads this Hash: anything else counts as a failed import.
+    accounts_failed = stats.fetch("accounts_skipped", 0)
+    transactions_failed = stats.fetch("transactions_failed", 0)
+    { success: accounts_failed.zero? && transactions_failed.zero?, accounts_failed: accounts_failed, transactions_failed: transactions_failed }
   rescue Provider::<%= class_name %>::AuthenticationError => e
     <%= file_name %>_item.update!(status: :requires_update)
     raise
@@ -58,12 +62,6 @@ class <%= class_name %>Item::Importer
 
     def stats
       @stats ||= {}
-    end
-
-    def persist_stats!
-      return unless sync&.respond_to?(:sync_stats)
-      merged = (sync.sync_stats || {}).merge(stats)
-      sync.update_columns(sync_stats: merged)
     end
 
     def import_accounts(credentials)
@@ -90,8 +88,6 @@ class <%= class_name %>Item::Importer
           register_error(e, account_data: account_data)
         end
       end
-
-      persist_stats!
 
       # Clean up accounts that no longer exist upstream
       prune_removed_accounts(upstream_account_ids)
@@ -145,6 +141,7 @@ class <%= class_name %>Item::Importer
       rescue => e
         Rails.logger.warn "<%= class_name %>Item::Importer - Failed to fetch holdings: #{e.message}"
         register_error(e, context: "holdings", account_id: <%= file_name %>_account.id)
+        stats["transactions_failed"] = stats.fetch("transactions_failed", 0) + 1
       end
     end
 
@@ -179,6 +176,7 @@ class <%= class_name %>Item::Importer
       rescue => e
         Rails.logger.warn "<%= class_name %>Item::Importer - Failed to fetch activities: #{e.message}"
         register_error(e, context: "activities", account_id: <%= file_name %>_account.id)
+        stats["transactions_failed"] = stats.fetch("transactions_failed", 0) + 1
       end
     end
 
@@ -257,6 +255,7 @@ class <%= class_name %>Item::Importer
       rescue => e
         Rails.logger.warn "<%= class_name %>Item::Importer - Failed to fetch transactions: #{e.message}"
         register_error(e, context: "transactions", account_id: <%= file_name %>_account.id)
+        stats["transactions_failed"] = stats.fetch("transactions_failed", 0) + 1
       end
     end
 

@@ -41,7 +41,7 @@ module ProviderItemLifecycleTests
     end
 
     test "lifecycle: selection offers nothing for a type the provider does not support" do
-      unsupported_type = (Accountable::TYPES - "Provider::#{provider_item.provider_key.camelize}Adapter".constantize.supported_account_types).first
+      unsupported_type = unsupported_accountable_type
       account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "any-account" ]))
 
       with_memory_cache do
@@ -75,6 +75,25 @@ module ProviderItemLifecycleTests
 
         account_flow_class.any_instance.stubs(:fetch_accounts).returns([])
         assert_equal false, account_flow_class.new(family: provider_item.family, item: second_item).preload_payload[:has_accounts]
+      end
+    end
+
+    test "lifecycle: changing any one cache-sensitive field alone expires the connection's cached accounts" do
+      key = account_flow_class.cache_key(provider_item.family, provider_item)
+
+      with_memory_cache do
+        Rails.cache.write(key, [ "cached" ])
+        assert account_flow_class.update_item_with_cache_expiration(provider_item, family: provider_item.family, attributes: { name: "Renamed" })
+        assert_equal [ "cached" ], Rails.cache.read(key)
+
+        # Every kit provider takes a base URL, so it is checked even if a provider's list drops it.
+        (account_flow_class.cache_sensitive_params | [ :base_url ]).each do |param|
+          Rails.cache.write(key, [ "cached" ])
+          value = provider_item.public_send(param).presence || "rotated-#{param}"
+
+          assert account_flow_class.update_item_with_cache_expiration(provider_item, family: provider_item.family, attributes: { param => value })
+          assert_nil Rails.cache.read(key), "updating only #{param} should expire the cached accounts"
+        end
       end
     end
 
@@ -193,6 +212,44 @@ module ProviderItemLifecycleTests
       account_flow_class.any_instance.expects(:upsert_provider_account!).never
       assert_nil account_flow.import_accounts_with_user_facing_error
     end
+
+    test "lifecycle: linking an existing account refuses one already linked elsewhere" do
+      provider_item.class.any_instance.expects(:sync_later).once
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "taken-1", "free-1" ]))
+      first = provider_item.family.accounts.create!(name: "First", balance: 0, currency: "USD", accountable: Depository.new)
+      second = provider_item.family.accounts.create!(name: "Second", balance: 0, currency: "USD", accountable: Depository.new)
+
+      with_memory_cache do
+        account_flow.link_existing_account!(account: first, provider_account_id: "taken-1")
+
+        navigation = assert_no_difference("AccountProvider.count") do
+          account_flow.link_existing_account_result(account: first, provider_account_id: "free-1")
+        end
+        assert_equal I18n.t("#{provider_item.provider_key}_items.link_existing_account.account_already_linked"), navigation.message
+
+        navigation = assert_no_difference("AccountProvider.count") do
+          account_flow.link_existing_account_result(account: second, provider_account_id: "taken-1")
+        end
+        assert_equal I18n.t("#{provider_item.provider_key}_items.link_existing_account.provider_account_already_linked"), navigation.message
+      end
+    end
+
+    test "lifecycle: an existing account of a type the provider does not support is neither offered nor linked" do
+      provider_item.class.any_instance.expects(:sync_later).never
+      account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "unsupported-1" ]))
+      account = provider_item.family.accounts.create!(name: "Unsupported", balance: 0, currency: "USD", accountable: unsupported_accountable_type.constantize.new)
+      invalid_type = I18n.t("#{provider_item.provider_key}_items.link_accounts.invalid_account_type")
+
+      with_memory_cache do
+        result = account_flow.select_existing_account_result(account: account)
+        assert_equal [ :empty, invalid_type ], [ result.status, result.message ]
+
+        navigation = assert_no_difference("AccountProvider.count") do
+          account_flow.link_existing_account_result(account: account, provider_account_id: "unsupported-1")
+        end
+        assert_equal invalid_type, navigation.message
+      end
+    end
   end
 
   private
@@ -202,6 +259,10 @@ module ProviderItemLifecycleTests
 
     def account_flow
       account_flow_class.new(family: provider_item.family, item: provider_item)
+    end
+
+    def unsupported_accountable_type
+      (Accountable::TYPES - "Provider::#{provider_item.provider_key.camelize}Adapter".constantize.supported_account_types).first
     end
 
     def offered_account_ids

@@ -483,10 +483,12 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
     say "  3. Customize the Importer class:"
     say "     app/models/#{file_name}_item/importer.rb"
     say "     - Map API response fields to account fields"
+    say ""
+    say "  4. Implement the account flow:"
     say "     app/models/#{file_name}_item/account_flow.rb"
     say "     - Implement each private hook; they raise NotImplementedError until then"
     say ""
-    say "  4. Customize the Processors:"
+    say "  5. Customize the Processors:"
     if investment_provider?
       say "     app/models/#{file_name}_account/holdings_processor.rb"
       say "     app/models/#{file_name}_account/activities_processor.rb"
@@ -497,7 +499,7 @@ class Provider::FamilyGenerator < Rails::Generators::NamedBase
       say "     - Map provider transaction format to Sure entries"
     end
     say ""
-    say "  5. Test the integration:"
+    say "  6. Test the integration:"
     say "     Visit /settings/providers and configure credentials"
     say ""
     say "  📚 See docs/PER_FAMILY_PROVIDER_GUIDE.md for detailed documentation"
