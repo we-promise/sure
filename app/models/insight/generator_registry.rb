@@ -12,8 +12,7 @@ class Insight::GeneratorRegistry
     Insight::Generators::SavingsRateChangeGenerator,
     Insight::Generators::IdleCashGenerator,
     Insight::Generators::BudgetInsightGenerator,
-    Insight::Generators::MaintainedGoalDepletedGenerator,
-    Insight::Generators::AccountReleaseGenerator
+    Insight::Generators::MaintainedGoalDepletedGenerator
   ].freeze
 
   Result = Data.define(:insights, :succeeded_types)

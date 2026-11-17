@@ -243,7 +243,7 @@ class Transfer::Creator
     end
 
     def outflow_transaction_kind
-      Transfer.kind_for_account(destination_account, from_account: source_account, date: date)
+      Transfer.kind_for_account(destination_account, from_account: source_account)
     end
 
     def name_prefix

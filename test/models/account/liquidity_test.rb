@@ -195,23 +195,6 @@ class Account::LiquidityTest < ActiveSupport::TestCase
     assert_nil account.renewal_term_months
   end
 
-  test "details separate budget transactions from budget cash" do
-    account = create_account(Depository, "money_market")
-    rows = Account::RuleDetails.new(account, date: @today).rows.index_by(&:key)
-
-    assert_equal "short_term", rows[:liquidity].value
-    assert_equal :subtype, rows[:liquidity].source
-    assert rows[:counts_in_budget].value
-    assert_not rows[:counts_as_budget_cash].value
-    assert_nil rows[:release]
-
-    account.update!(liquidity_choice: "immediate")
-    rows = Account::RuleDetails.new(account, date: @today).rows.index_by(&:key)
-
-    assert_equal :user, rows[:liquidity].source
-    assert rows[:counts_as_budget_cash].value
-  end
-
   test "scopes split assets by availability on a date" do
     checking = create_account(Depository, "checking")
     brokerage = create_account(Investment, "brokerage")

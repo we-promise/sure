@@ -37,8 +37,7 @@ RSpec.describe 'API V1 Balance Sheet', type: :request do
     get 'Show balance sheet' do
       tags 'Balance Sheet'
       description 'Returns the family balance sheet including net worth, total assets, and total liabilities ' \
-                  'with amounts converted to the family\'s primary currency. The availability object splits ' \
-                  'the assets into available and locked wealth and lists upcoming release dates of locked accounts.'
+                  'with amounts converted to the family\'s primary currency.'
       security [ { apiKeyAuth: [] } ]
       produces 'application/json'
 

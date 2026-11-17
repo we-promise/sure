@@ -71,13 +71,7 @@ class UI::AccountPage < ApplicationComponent
       [ :activity ]
     end
 
-    base_tabs + [ :statements ] + preview_tabs
-  end
-
-  # "Details" lists the rules that apply to the account (Account::RuleDetails).
-  # Preview only.
-  def preview_tabs
-    Current.user&.preview_features_enabled? ? [ :details ] : []
+    base_tabs + [ :statements ]
   end
 
   def fx_coverage_start_date
@@ -131,8 +125,6 @@ class UI::AccountPage < ApplicationComponent
              extra_repayment: extra_repayment
     when :statements
       render_statement_tab
-    when :details
-      render "accounts/show/details", account: account
     end
   end
 

@@ -31,17 +31,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
     t.index ["provider_type", "provider_id"], name: "index_account_providers_on_provider_type_and_provider_id", unique: true
   end
 
-  create_table "account_release_notices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "account_id", null: false
-    t.datetime "created_at", null: false
-    t.string "kind", null: false
-    t.date "release_on", null: false
-    t.datetime "updated_at", null: false
-    t.uuid "user_id", null: false
-    t.index ["account_id", "user_id", "kind", "release_on"], name: "index_account_release_notices_uniqueness", unique: true
-    t.index ["user_id"], name: "index_account_release_notices_on_user_id"
-  end
-
   create_table "account_shares", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.datetime "created_at", null: false
@@ -3150,8 +3139,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_14_233000) do
   end
 
   add_foreign_key "account_providers", "accounts", on_delete: :cascade
-  add_foreign_key "account_release_notices", "accounts", on_delete: :cascade
-  add_foreign_key "account_release_notices", "users", on_delete: :cascade
   add_foreign_key "account_shares", "accounts"
   add_foreign_key "account_shares", "users"
   add_foreign_key "account_statements", "accounts", column: "suggested_account_id", on_delete: :nullify
