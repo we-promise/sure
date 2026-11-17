@@ -149,6 +149,7 @@ class Family::DataImporter
       import_budgets(records["Budget"] || [])
       import_budget_categories(records["BudgetCategory"] || [])
       import_rules(records["Rule"] || [])
+      check_imported_term_changes
     end
 
     recompute_rollover_chains
@@ -429,6 +430,19 @@ class Family::DataImporter
     # default, such as the mileage unit.
     def assign_vehicle_details(vehicle, accountable_data)
       vehicle.assign_attributes(accountable_data.slice(*VEHICLE_DETAIL_ATTRIBUTES).compact)
+    end
+
+    # As Account.create_and_sync does once an account has its opening balance:
+    # the term change checks that read the schedule need the account, its
+    # valuations and its origination date, so they run after everything else.
+    def check_imported_term_changes
+      @created_accounts.select(&:loan?).each do |account|
+        loan = account.accountable
+        next if loan.term_changes_fit_account?
+
+        loan.errors.full_messages.each { |message| account.errors.add(:base, message) }
+        raise ActiveRecord::RecordInvalid.new(account)
+      end
     end
 
     def importable_account_status(status)
