@@ -159,7 +159,8 @@ class Rule::Health
     end
 
     def moving_group(rule)
-      return rule.rule_group if rule.new_record?
+      # A group typed into the form is built unsaved, so rule_group_id stays as it was.
+      return rule.rule_group if rule.new_record? || rule.rule_group&.new_record?
       return unless rule.rule_group_id_changed?
 
       rule.rule_group || family.rule_groups.find_by(id: rule.rule_group_id_was)

@@ -6,7 +6,7 @@
 <li data-controller="rule--conditions"
     data-rule--conditions-condition-filters-value="<%= rule.condition_filters.to_json %>"
     data-rule--conditions-valueless-operators-value="<%= Rule::ConditionFilter::VALUELESS_OPERATORS.to_json %>"
-    class="flex items-center gap-3">
+    class="<%= class_names("flex items-center gap-3", hidden: condition.marked_for_destruction?) %>">
 
   <%# Conditionally render the prefix %>
   <%# Condition groups pass in show_prefix: false for subconditions since the ANY/ALL selector makes that clear %>
@@ -17,7 +17,7 @@
   <% end %>
 
   <div class="grid grid-cols-2 gap-2 items-center h-full">
-    <%= form.hidden_field :_destroy, value: false, data: { rule__conditions_target: "destroyField" } %>
+    <%= form.hidden_field :_destroy, value: condition.marked_for_destruction?, data: { rule__conditions_target: "destroyField" } %>
 
     <div class="w-full">
       <%= form.select :condition_type, rule.condition_filters.map { |filter| [ filter.label, filter.key ] }, {}, data: { action: "rule--conditions#handleConditionTypeChange" } %>

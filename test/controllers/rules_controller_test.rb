@@ -653,6 +653,64 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_select "[data-similar-rule='#{existing.id}'] [data-similar-rule-shared]", text: /2 transactions/
   end
 
+  test "the similar-rule warning keeps a new group's conditions in the form" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+
+    post rules_url, params: similar_rule_params(nil, category: groceries, conditions: { "0" => woolworths_or_metro_group })
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule]"
+    assert_new_group_conditions_rendered
+  end
+
+  test "an invalid rule keeps a new group's conditions in the form" do
+    conditions = { "0" => woolworths_or_metro_group, "1" => { condition_type: "transaction_name", operator: "like", value: "" } }
+
+    assert_no_difference "Rule.count" do
+      post rules_url, params: similar_rule_params(nil, category: groceries, conditions: conditions)
+    end
+
+    assert_response :unprocessable_entity
+    assert_new_group_conditions_rendered
+  end
+
+  test "the similar-rule warning keeps a removed condition and action removed" do
+    create_similar_rule("Woolworths", "woolworths", category: groceries)
+    edited = @user.family.rules.create!(name: "Woolworths over 10", resource_type: "transaction", active: true,
+      conditions: [ Rule::Condition.new(condition_type: "transaction_name", operator: "like", value: "woolworths"),
+                    Rule::Condition.new(condition_type: "transaction_amount", operator: ">", value: "10") ],
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: groceries.id),
+                 Rule::Action.new(action_type: "set_transaction_tags", value: [ tags(:one).id ]) ])
+    amount, tag_action = edited.conditions.find_by(condition_type: "transaction_amount"), edited.actions.find_by(action_type: "set_transaction_tags")
+
+    patch rule_url(edited), params: { rule: {
+      conditions_attributes: { "1" => { id: amount.id, _destroy: "1" } },
+      actions_attributes: { "1" => { id: tag_action.id, _destroy: "1" } }
+    } }
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule]"
+    assert_select "li.hidden input[name$='[_destroy]'][value='true']", count: 2
+  end
+
+  test "a similar rule wins over a rule moved into a new group, which runs after it" do
+    edited = create_similar_rule("Woolworths dining", "woolworths", category: dining)
+    below = create_similar_rule("Woolworths", "woolworths", category: groceries)
+    keys = @user.family.rules.ordered.map { |rule| "rule:#{rule.id}" } - [ "rule:#{edited.id}" ]
+    Rule::Layout.new(@user.family).reorder!(keys.insert(keys.index("rule:#{below.id}"), "rule:#{edited.id}"))
+    params = edit_params(edited, "woolworths", category: dining)
+
+    patch rule_url(edited), params: params
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{below.id}'] [data-similar-rule-wins]", count: 0
+
+    patch rule_url(edited), params: params.deep_merge(rule: { new_rule_group_name: "Fresh food" })
+
+    assert_response :unprocessable_entity
+    assert_select "[data-similar-rule='#{below.id}'] [data-similar-rule-wins]"
+  end
+
   test "editing a rule without changes saves it without a notice" do
     rule = create_similar_rule("Woolworths", "woolworths", category: groceries)
 
@@ -1408,6 +1466,19 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
       { rule: { resource_type: "transaction",
                 conditions_attributes: conditions || { "0" => { condition_type: "transaction_name", operator: "like", value: value } },
                 actions_attributes: actions } }
+    end
+
+    def woolworths_or_metro_group
+      { condition_type: "compound", operator: "or", sub_conditions_attributes: {
+        "0" => { condition_type: "transaction_name", operator: "like", value: "woolworths" },
+        "1" => { condition_type: "transaction_name", operator: "like", value: "metro express" }
+      } }
+    end
+
+    def assert_new_group_conditions_rendered
+      assert_select "input[name='rule[conditions_attributes][0][sub_conditions_attributes][0][value]'][value='woolworths']"
+      assert_select "input[name='rule[conditions_attributes][0][sub_conditions_attributes][1][value]'][value='metro express']"
+      assert_select "[name^='rule[conditions_attributes][0][sub_conditions_attributes][2]']", count: 0
     end
 
     def edit_params(rule, value, category:)
