@@ -24,7 +24,8 @@ class Insight::Generators::FixedCommitmentsRatioGeneratorTest < ActiveSupport::T
     assert_equal "fixed_commitments_ratio", insight.insight_type
     assert_equal "fixed_commitments_ratio", insight.dedup_key
     assert_equal "medium", insight.priority
-    assert_equal({ current_band: 35 }, insight.metadata)
+    assert_equal 35, insight.metadata[:current_band]
+    assert insight.metadata[:accounts_digest].present?
     assert_equal "35.0", insight.facts[:current_ratio]
     assert_equal "30.0", insight.facts[:previous_ratio]
     assert_includes insight.facts[:explanation], "Gym (new"

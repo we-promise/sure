@@ -308,9 +308,7 @@ class EnableBankingItemsController < ApplicationController
 
   # Show setup accounts modal
   def setup_accounts
-    @enable_banking_accounts = @enable_banking_item.enable_banking_accounts
-      .left_joins(:account_provider)
-      .where(account_providers: { id: nil })
+    @enable_banking_accounts = @enable_banking_item.enable_banking_accounts.needs_setup
 
     @account_type_options = [
       [ "Skip this account", "skip" ],
@@ -364,13 +362,15 @@ class EnableBankingItemsController < ApplicationController
     skipped_count = 0
 
     account_types.each do |enable_banking_account_id, selected_type|
-      # Skip accounts marked as "skip"
+      enable_banking_account = @enable_banking_item.enable_banking_accounts.find(enable_banking_account_id)
+
       if selected_type == "skip" || selected_type.blank?
+        # Persist the skip so the account stops resurfacing as "needs setup" and the
+        # importer stops fetching it.
+        enable_banking_account.ignore!
         skipped_count += 1
         next
       end
-
-      enable_banking_account = @enable_banking_item.enable_banking_accounts.find(enable_banking_account_id)
       selected_subtype = account_subtypes[enable_banking_account_id]
 
       # Default subtype for CreditCard since it only has one option
@@ -401,7 +401,7 @@ class EnableBankingItemsController < ApplicationController
     if created_count > 0
       flash[:notice] = t(".success", default: "%{count} account(s) created successfully!", count: created_count)
     elsif skipped_count > 0
-      flash[:notice] = t(".all_skipped", default: "All accounts were skipped. You can set them up later from the accounts page.")
+      flash[:notice] = t(".all_skipped")
     else
       flash[:notice] = t(".no_accounts", default: "No accounts to set up.")
     end

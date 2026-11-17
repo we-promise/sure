@@ -1,4 +1,7 @@
 class GenerateInsightsJob < ApplicationJob
+  # Metadata that says which accounts an insight is about, not what it found.
+  ACCOUNT_SCOPE_KEYS = %w[accounts_digest account_id].freeze
+
   queue_as :scheduled
   sidekiq_options lock: :until_executed, on_conflict: :log
 
@@ -115,6 +118,15 @@ class GenerateInsightsJob < ApplicationJob
             generated_at: Time.current,
             dedup_key: generated.dedup_key
           )
+        elsif !existing.expired? && existing.metadata != metadata &&
+              existing.metadata.except(*ACCOUNT_SCOPE_KEYS) == metadata.except(*ACCOUNT_SCOPE_KEYS)
+          # Only the accounts behind the insight changed (a share granted or
+          # revoked, or a row written before these keys existed). The prose
+          # may quote figures from the old set, so it is rewritten, but the
+          # signal itself did not change: read and dismissed state stay.
+          existing.update!(title: generated.title, body: writer.write(generated), metadata: metadata,
+                           facts: facts, generated_at: Time.current)
+          nil
         elsif existing.metadata != metadata
           # The numbers changed materially: refresh the prose and resurface the
           # insight even if the user had read or dismissed the stale version.
@@ -135,23 +147,24 @@ class GenerateInsightsJob < ApplicationJob
         elsif existing.expired?
           # The condition cleared earlier and has now returned with the same
           # numbers. Expiry was the system's doing, not the user's, so the
-          # insight resurfaces; the body is still accurate, so no rewrite.
-          existing.update!(title: generated.title, status: "active", facts: facts,
+          # insight resurfaces, with the body filled from the current facts.
+          existing.update!(title: generated.title, body: writer.write(generated), status: "active", facts: facts,
                            generated_at: Time.current, read_at: nil)
           existing
         else
-          # Same signal, same numbers: don't rewrite the body and don't undo
-          # the user's read/dismissed state. Facts still
-          # refresh — they're display values (key figure, link labels), and
-          # keeping them current is exactly why they're not part of the
-          # material-change comparison.
+          # Same signal, same numbers: don't undo the user's read/dismissed
+          # state and don't notify again. Facts still refresh — they're
+          # display values (key figure, link labels), and keeping them current
+          # is exactly why they're not part of the material-change comparison.
+          # The body is the template filled with those facts, so it refreshes
+          # with them; otherwise the prose keeps last week's amounts.
           #
           # The title refreshes with them. It is built from I18n and the
           # generator's own data, not written by the model, so keeping it
           # current costs nothing — and a title naming a goal or a category
           # the user has since renamed is simply wrong on the page. Rename is
           # not a reason to resurface, so status and read state stay untouched.
-          existing.update!(title: generated.title, facts: facts, generated_at: Time.current)
+          existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
           nil
         end
       rescue ActiveRecord::RecordNotUnique

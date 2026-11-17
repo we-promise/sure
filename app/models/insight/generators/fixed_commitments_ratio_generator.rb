@@ -69,7 +69,8 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
         # next band is a new insight. One key for the family, so an acknowledged
         # rise is not raised again next month with the same numbers.
         metadata: {
-          current_band: (current_ratio / RISE_THRESHOLD_PP).floor * RISE_THRESHOLD_PP
+          current_band: (current_ratio / RISE_THRESHOLD_PP).floor * RISE_THRESHOLD_PP,
+          accounts_digest: shared_accounts_digest
         },
         period: income_window(months_back: 0),
         dedup_key: "fixed_commitments_ratio"
@@ -84,20 +85,14 @@ class Insight::Generators::FixedCommitmentsRatioGenerator < Insight::Generator
       @reference_date ||= income_window(months_back: WINDOW_MONTHS).end_date
     end
 
-    def shared_accounts
-      family.accounts.visible.accessible_by_all_active_members
-    end
-
-    def income_statement
-      @income_statement ||= IncomeStatement.new(family, accounts: shared_accounts)
-    end
-
-    # Every outflow series that was ever confirmed. Suggestions were never in force.
+    # Every outflow series that was ever confirmed. Suggestions were never in
+    # force. Both endpoints must be shared, not just the paying account: a
+    # payment into a loan only one member can see stays out too.
     def series
       @series ||= family.recurring_transactions
         .where.not(status: :suggested)
         .obligations(%w[Loan])
-        .within_accounts(shared_accounts)
+        .within_accounts(shared_accounts.visible)
         .includes(:merchant, :recurrence_rules, :recurring_price_changes)
         .to_a
     end

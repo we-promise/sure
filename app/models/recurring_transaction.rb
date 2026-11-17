@@ -355,7 +355,11 @@ class RecurringTransaction < ApplicationRecord
   # An active recurring expense you owe someone: transfers are internal moves and
   # income is not owed, so neither belongs on a list of things to pay. No minimum
   # amount, since any threshold is wrong in some currency; pause handles the rest.
-  scope :bills, -> { active.where(destination_account_id: nil).where("amount > 0") }
+  scope :bills, -> { active.outflows }
+
+  # Money leaving the family: not a transfer between its own accounts, and not
+  # income.
+  scope :outflows, -> { where(destination_account_id: nil).where(arel_table[:amount].gt(0)) }
 
   # Everything the Bills page owes an answer for: expense bills and
   # subscriptions, PLUS recurring transfers into liability accounts -- a
