@@ -270,10 +270,27 @@ Each part is its own PR; each step is one commit.
   (`AI_HEALTH_PROBE_CACHE_TTL`, default 60 s), from `AiHealth::Probe`'s own `cache_ttl`, the
   same way the probe timeout row works. With "Run checks again" always running fresh probes, the
   age and the time kept answer #3279's question: why does it still show the old result?
-- `ai_lane_test.rb`: `Ai::ProbeJob` is an AI job on the background lane's queue;
-  `WorkerAiHealthCheckJob` is gone.
+- `test/config/sidekiq_config_test.rb`'s `AI_JOBS`: `Ai::ProbeJob` is an AI job on the background
+  lane's queue; `WorkerAiHealthCheckJob` is gone. (PR 4's `ai_lane_test.rb`, which finds AI jobs
+  from the code, comes after 3a.)
 - **Deletes:** `WorkerAiHealthCheckJob`, `verify_worker_ai` and its route and button, and the
   `force_probes` request parameter.
+
+**As built (2026-11-17, `feat/ai-3a-capsule-probes`):**
+
+- `Ai::SharedState` writes through a store with `ActiveSupport::Cache`'s `write`/`read`/`delete`:
+  `RedisStore` over `Sidekiq.redis`, and a `MemoryStore` per test (`AiTestHelper`), so 3c's
+  `Ai::ToolJob` tests need no setup of their own.
+- `AiHealth::Probe::Store` is the probe's adapter over it; `Probe#run` is unchanged apart from
+  `stored_only`. Results carry `checked_at`, so the age needs nothing new.
+- "Run checks again" posts to `run_ai_checks`. The broadcast frame's `src` carries no `?locale=`
+  override (the job has no request); the user's own locale applies.
+- The job's extra `ai_health_worker` debug entry went with `WorkerAiHealthCheckJob`: each failing
+  probe already writes one, now from the worker.
+- `ApplicationJob`'s hook reads `queue_name` before `perform`, so a test that runs a job for an
+  unregistered feature with `perform_now` sets the queue a queued job would carry.
+- Strings whose meaning changed were renamed; the old keys were dropped from every locale, and the
+  new ones are in English and German.
 
 ## 3b. Bill suggestions and stopping AI work
 
