@@ -418,6 +418,38 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     GeneratedControllers.send(:remove_const, :GocardlessItemsController) if GeneratedControllers.const_defined?(:GocardlessItemsController, false)
   end
 
+  # ProviderItemsController#update hands item_params to the account flow, which
+  # decides whether the edit expires the cached account list before saving.
+  test "editing a generated provider's connection saves before any hook is filled in" do
+    fields = [ { name: "api_key", type: "string", secret: true, default: nil }, { name: "region", type: "string", secret: false, default: nil } ]
+    GeneratedControllers.module_eval(render_template("controller.rb.tt", class_name: "Gocardless", file_name: "gocardless", parsed_fields: fields))
+    GeneratedFlows.module_eval(render_provider_template("account_flow.rb.tt", parsed_fields: fields))
+    controller_class = GeneratedControllers::GocardlessItemsController
+    flow_class = GeneratedFlows::GocardlessItem::AccountFlow
+    flow_class.stubs(:provider_key).returns("gocardless")
+    family = families(:dylan_family)
+    item = mock("gocardless_item")
+    item.stubs(:id).returns("item-1")
+    item.stubs(:persisted?).returns(true)
+
+    update = lambda do |submitted|
+      controller = controller_class.new
+      controller.params = ActionController::Parameters.new(gocardless_item: submitted)
+      controller.instance_variable_set(:@gocardless_item, item)
+      attributes = controller.send(:item_params)
+      item.expects(:update).with(attributes).returns(true)
+      flow_class.update_item_with_cache_expiration(item, family: family, attributes: attributes)
+    end
+
+    # A new key expires the cached accounts; a rename with the key left blank does not.
+    Rails.cache.expects(:delete).with("gocardless_accounts_#{family.id}_item-1").once
+    assert update.call(name: "Main", api_key: "new-key")
+    assert update.call(name: "Renamed", api_key: "")
+  ensure
+    GeneratedControllers.send(:remove_const, :GocardlessItemsController) if GeneratedControllers.const_defined?(:GocardlessItemsController, false)
+    GeneratedFlows::GocardlessItem.send(:remove_const, :AccountFlow) if GeneratedFlows::GocardlessItem.const_defined?(:AccountFlow, false)
+  end
+
   # The generated routes use the provider_items concern, so they must follow its
   # definition in config/routes.rb, and give the kit's controller every route it serves.
   test "the generated routes use the provider_items concern after it is defined" do
