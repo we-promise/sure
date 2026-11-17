@@ -37,20 +37,6 @@ class Insight::Generators::BudgetInsightGenerator < Insight::Generator
       income_statement.eligible_accounts.where(id: shared_accounts.select(:id))
     end
 
-    # The household budget only: a personal budget is visible to its owner and
-    # whoever they shared it with, not to the whole feed. Its spending is read
-    # from the accounts every member may see; left alone, the budget would
-    # fall back to `Current.user` (nil here) and count every account.
-    def current_budget
-      budget = family.budgets
-        .where(user_id: nil)
-        .includes(budget_categories: :category)
-        .where("start_date <= ? AND end_date >= ?", Date.current, Date.current)
-        .first
-      budget&.income_statement_accounts = shared_accounts
-      budget
-    end
-
     def at_risk_insight(budget, over, near)
       flagged = over + near
       category_names = flagged.first(MAX_LISTED_CATEGORIES).map { |bc| bc.category.name }

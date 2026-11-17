@@ -14,11 +14,34 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
     assert_equal I18n.t("insights.templates.idle_cash", **generated_insight.facts.symbolize_keys), body
   end
 
+  # In every locale that translates the template: a translation left on an
+  # old interpolation would otherwise raise only for the users who read it.
   test "every template key interpolates with its generator's facts" do
     TEMPLATE_FACTS.each do |template_key, facts|
-      body = I18n.t!("insights.templates.#{template_key}", **facts)
+      I18n.available_locales.each do |locale|
+        key = "insights.templates.#{template_key}"
+        next unless I18n.exists?(key, locale, fallback: false)
 
-      assert body.present?, "insights.templates.#{template_key} produced a blank body"
+        body = I18n.t!(key, locale: locale, **facts)
+
+        assert body.present?, "#{locale}: #{key} produced a blank body"
+      end
+    end
+  end
+
+  # A translation that drops a placeholder still interpolates, so it would
+  # pass the test above while losing a figure from the sentence.
+  test "translated savings-rate copy keeps the English placeholders" do
+    %w[templates.savings_rate_change.up templates.savings_rate_change.down
+       templates.savings_rate_change.down_negative titles.savings_rate_change.up
+       titles.savings_rate_change.down].each do |key|
+      expected = placeholders(I18n.t!("insights.#{key}", locale: :en))
+
+      I18n.available_locales.each do |locale|
+        next unless I18n.exists?("insights.#{key}", locale, fallback: false)
+
+        assert_equal expected, placeholders(I18n.t!("insights.#{key}", locale: locale)), "#{locale}: insights.#{key}"
+      end
     end
   end
 
@@ -33,14 +56,18 @@ class Insight::BodyWriterTest < ActiveSupport::TestCase
       "cash_flow_warning.negative" => { projected_low: "-$412.00", projected_low_date: "Jul 28, 2026", current_balance: "$800.00", horizon_days: 30 },
       "net_worth_milestone" => { milestone: "$500,000", net_worth: "$878,578.56" },
       "subscription_audit" => { name: "Netflix", amount: "$15.49", days_overdue: 48, expected_on: "May 24, 2026" },
-      "savings_rate_change.up" => { month: "June", current_rate: 32.5, previous_rate: 20.1, change_pp: 12.4 },
-      "savings_rate_change.down" => { month: "June", current_rate: "12.1", previous_rate: "45.2", change_pp: 33.1 },
-      "savings_rate_change.down_negative" => { month: "June", current_rate: "−5.4", previous_rate: "45.2", change_pp: 50.6 },
+      "savings_rate_change.up" => { from_month: "April", to_month: "June", current_rate: 32.5, previous_rate: 20.1, change_pp: 12.4 },
+      "savings_rate_change.down" => { from_month: "April", to_month: "June", current_rate: "12.1", previous_rate: "45.2", change_pp: 33.1 },
+      "savings_rate_change.down_negative" => { from_month: "April", to_month: "June", current_rate: "−5.4", previous_rate: "45.2", change_pp: 50.6 },
       "idle_cash" => { account: "Emergency fund", balance: "$28,400.00", idle_days: 60 },
       "budget_at_risk.over" => { categories: "Food & Drink and Travel", count: 2, budget_spent_pct: 84 },
       "budget_at_risk.near" => { categories: "Shopping", count: 1, budget_spent_pct: 72 },
       "budget_on_track" => { spent: "$2,948.00", budgeted: "$5,200.00", budget_spent_pct: 57 }
     }.freeze
+
+    def placeholders(text)
+      text.scan(/%\{(\w+)\}/).flatten.sort
+    end
 
     def generated_insight
       @generated_insight ||= Insight::Generator::GeneratedInsight.new(

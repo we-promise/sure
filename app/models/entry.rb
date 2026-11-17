@@ -153,6 +153,10 @@ class Entry < ApplicationRecord
     SQL
   }
 
+  # The entries in `ids` and the children of any of them that was split, which
+  # stand in for their excluded parent wherever money is counted.
+  scope :with_split_children, ->(ids) { where(id: ids).or(where(parent_entry_id: ids)) }
+
   # Future-dated entries haven't happened yet, so "actual" reporting (budgets,
   # income statement, insights) should not count them until their date
   # arrives -- see Entry#scheduled?.

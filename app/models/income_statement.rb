@@ -44,6 +44,28 @@ class IncomeStatement
     @expense_totals_by_period[key] = build_period_total(classification: "expense", period: period)
   end
 
+  # The part of expense_totals that paid the family's bills: the same
+  # filters, currency conversion and roll-up into parent categories, so the
+  # two subtract cleanly. A payment counts once at its entry's amount, however
+  # many occurrences it settles. A payment that was split counts through its
+  # children, so only the parts that are spending, each in its own category.
+  def bill_expense_totals(period: Period.current_month)
+    key = period_cache_key(period)
+    @bill_expense_totals_by_period ||= {}
+    return @bill_expense_totals_by_period[key] if @bill_expense_totals_by_period.key?(key)
+
+    paying_bills = Entry.where(entryable_type: "Transaction")
+                        .with_split_children(RecurringAllocation.to_family_bills(family).select(:entry_id))
+                        .select(:entryable_id)
+    rows = totals_query(
+      transactions_scope: family.transactions.visible.excluding_pending.merge(Entry.excluding_scheduled)
+                                .in_period(period).where(id: paying_bills),
+      date_range: period.date_range,
+      freshness: bill_allocations_version
+    )
+    @bill_expense_totals_by_period[key] = build_period_total(classification: "expense", period: period, rows: rows)
+  end
+
   def income_totals(period: Period.current_month)
     key = period_cache_key(period)
     @income_totals_by_period ||= {}
@@ -209,9 +231,9 @@ class IncomeStatement
       [ period.start_date, period.end_date ]
     end
 
-    def build_period_total(classification:, period:)
+    def build_period_total(classification:, period:, rows: totals_for_period(period))
       # Exclude pending transactions from budget calculations
-      totals = totals_for_period(period).select { |t| t.classification == classification }
+      totals = rows.select { |t| t.classification == classification }
       classification_total = totals.sum(&:total)
 
       uncategorized_category = family.categories.uncategorized
@@ -344,6 +366,19 @@ class IncomeStatement
     # Rates, target currency, tag membership and whether investing counts as
     # spending can change without touching entries or accounts. Scheduled entries are
     # excluded as of "today", so the key also rolls over daily.
+    # Linking or unlinking a payment doesn't touch its entry, so the bill
+    # totals' cache key also tracks the allocations and series they read.
+    def bill_allocations_version
+      @bill_allocations_version ||= begin
+        count, allocated_at, series_at = RecurringAllocation.to_family_bills(family).pick(
+          Arel.sql("COUNT(*)"),
+          Arel.sql("MAX(recurring_allocations.updated_at)"),
+          Arel.sql("MAX(recurring_transactions.updated_at)")
+        )
+        [ count, allocated_at&.to_f, series_at&.to_f ]
+      end
+    end
+
     def cache_freshness_key
       @cache_freshness_key ||= [
         Date.current,
@@ -356,11 +391,13 @@ class IncomeStatement
       ]
     end
 
-    def totals_query(transactions_scope:, date_range:)
+    # `freshness` adds whatever else the scope reads beyond the entries the
+    # default key already tracks.
+    def totals_query(transactions_scope:, date_range:, freshness: nil)
       sql_hash = Digest::MD5.hexdigest(transactions_scope.to_sql)
 
       Rails.cache.fetch([
-        "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key
+        "income_statement", "totals_query", "v2", ExchangeRate::CONVERSION_CACHE_VERSION, family.id, user&.id, included_account_ids_hash, sql_hash, date_range.begin, date_range.end, *cache_freshness_key, *freshness
       ]) { Totals.new(family, transactions_scope: transactions_scope, date_range: date_range, included_account_ids: included_account_ids).call }
     end
 

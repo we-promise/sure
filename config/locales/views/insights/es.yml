@@ -56,7 +56,7 @@ es:
         other: Últimos %{count} días
       date_range: "%{from} a %{to}"
     figures:
-      vs_previous: frente al mes anterior
+      vs_previous_three_months: frente a los tres meses anteriores
       today: hoy
       on_pace: al ritmo previsto
       of_budget: del presupuesto
@@ -72,7 +72,7 @@ es:
       cash_flow_warning: Revisar transacciones recurrentes
       net_worth_milestone: Ver informe de patrimonio neto
       subscription_audit: Revisar transacciones recurrentes
-      savings_rate_change: Ver transacciones de ese mes
+      savings_rate_change: Ver las transacciones de esos meses
       idle_cash: Ir a la cuenta
       budget: Ver presupuesto
       maintained_goal_depleted: Ver reserva
@@ -88,8 +88,8 @@ es:
       maintained_goal_depleted: "%{goal} está por debajo del saldo que debe mantener"
       subscription_audit: "¿%{name} sigue activa?"
       savings_rate_change:
-        up: Tu tasa de ahorro mejoró en %{month}
-        down: Tu tasa de ahorro bajó en %{month}
+        up: Tu tasa de ahorro mejoró en los últimos tres meses
+        down: Tu tasa de ahorro bajó en los últimos tres meses
       idle_cash: Efectivo inactivo en %{account}
       budget_at_risk:
         one: Una categoría necesita atención en tu presupuesto
@@ -109,9 +109,9 @@ es:
       maintained_goal_depleted: "%{goal} tiene %{saved} de los %{target} que debe mantener. Le faltan %{missing}."
       subscription_audit: "%{name} (%{amount}) no aparece desde que se esperaba el %{expected_on}. Puede haberse cancelado o el cargo puede haber cambiado de fecha."
       savings_rate_change:
-        up: Ahorraste el %{current_rate}% de tus ingresos en %{month}, %{change_pp} puntos porcentuales más que el %{previous_rate}% del mes anterior.
-        down: Ahorraste el %{current_rate}% de tus ingresos en %{month}, %{change_pp} puntos porcentuales menos que el %{previous_rate}% del mes anterior.
-        down_negative: "Gastaste más de lo que ingresaste en %{month}: tu tasa de ahorro cayó al %{current_rate}%, desde el %{previous_rate}% del mes anterior."
+        up: De %{from_month} a %{to_month} tu tasa de ahorro sobre tus ingresos mensuales habituales fue del %{current_rate}%, %{change_pp} puntos porcentuales más que el %{previous_rate}% de los tres meses anteriores.
+        down: De %{from_month} a %{to_month} tu tasa de ahorro sobre tus ingresos mensuales habituales fue del %{current_rate}%, %{change_pp} puntos porcentuales menos que el %{previous_rate}% de los tres meses anteriores.
+        down_negative: "De %{from_month} a %{to_month} gastaste más de lo que ingresaste: tu tasa de ahorro cayó al %{current_rate}%, desde el %{previous_rate}% de los tres meses anteriores."
       idle_cash: "%{account} tiene %{balance} sin actividad en los últimos %{idle_days} días."
       budget_at_risk:
         over: "%{categories} superaron el presupuesto este mes. Has usado el %{budget_spent_pct}% de tu presupuesto total hasta ahora."
