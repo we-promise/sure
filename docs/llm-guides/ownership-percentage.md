@@ -57,18 +57,21 @@ Rules:
 
 ## Where the share is applied
 
-- Dashboard / balance sheet: `BalanceSheet::AccountTotals#converted_balance_for`
-  (`BalanceSheet#sorted` sorts by the scaled value).
+- Dashboard / balance sheet: `BalanceSheet::AccountTotals#converted_balance_for`.
+  Rows carry both `converted_balance` (the viewer's share, used for totals) and
+  `full_converted_balance` (the whole account). `BalanceSheet#sorted` sorts by the
+  full one, so the order matches the balance each row shows.
 - Net worth charts: `Balance::ChartSeriesBuilder` takes `user:` and multiplies each
   account by `viewer_fraction` in SQL. `BalanceSheet::NetWorthSeriesBuilder` and
   `NetWorthBreakdownSeriesBuilder` pass the user. Callers without `user:` (for
   example single-account charts) count accounts in full.
-- Account group sparklines (`AccountableSparklinesController`) pass the viewer so
-  the trend matches the group total. Their cache key digests the viewer's
-  percentages. Per-account sparklines stay whole-account, like the row balance.
+- Account group sparklines (`AccountableSparkline`) pass the viewer so the trend
+  matches the group total. The cache key, and the `version` the sidebar puts in
+  the frame URL, digest the viewer's percentages, so a share edit fetches a new
+  series. Per-account sparklines stay whole-account, like the row balance.
 - Sidebar rows show a small `DS::Pill` with the viewer's percentage when it is
   below 100 (`AccountsHelper#ownership_badge_label`); the row balance stays whole.
-  The sidebar fragment cache version (`account_sidebar_tabs_v4`) must be bumped
+  The sidebar fragment cache version (`account_sidebar_tabs_v8`) must be bumped
   when that template changes.
 - Chart caches key on `accounts.updated_at` (owner column) and on the viewer's
   `AccountShare.updated_at` (co-owner column).
@@ -80,6 +83,11 @@ Rules:
 - Assistant / MCP: `get_balance_sheet` (current totals and history) is
   share-weighted; `get_accounts` returns whole-account balances. The tool
   descriptions state this.
+
+The share is computed twice: in Ruby (`Account#ownership_percentage_for`,
+`owned_balance_for`) and in SQL (`ChartSeriesBuilder#viewer_fraction_sql`).
+`test/models/ownership_parity_test.rb` pins them to the same figure; change both
+together.
 
 ## Permissions
 
