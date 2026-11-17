@@ -16,12 +16,15 @@ class EnableBankingAccount::Processor
 
     Rails.logger.info "EnableBankingAccount::Processor - Processing enable_banking_account #{enable_banking_account.id} (uid #{enable_banking_account.uid})"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     begin
       anchor_balance = process_account!
       transactions_ok = process_transactions
 
       if anchor_balance && transactions_ok
-        result = enable_banking_account.current_account.set_current_balance(anchor_balance)
+        result = enable_banking_account.current_account.set_current_balance(anchor_balance, date: date)
         raise ProcessingError.new("Failed to set current balance: #{result.error}") unless result.success?
 
         enable_banking_account.update!(balance_verified: enable_banking_account.balance_evidence_verified?)

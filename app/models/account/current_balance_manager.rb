@@ -194,13 +194,18 @@ class Account::CurrentBalanceManager
       return false unless older_entry.currency == account.currency
 
       # Ignore entries the anchor already included: its own timestamp is the watermark.
+      # A split child inherits its parent's timestamp; the parent was the flow the anchor
+      # could have seen, and the child rows are created later by the split.
       flows = account.entries
         .excluding_pending
         .excluding_split_parents
         .where(date: older_entry.date..date)
         .where.not(entryable_type: "Valuation")
-        .where("entries.date > :anchor_date OR entries.created_at > :anchor_written_at",
-               anchor_date: older_entry.date, anchor_written_at: older_entry.updated_at)
+        .where(
+          "entries.date > :anchor_date OR " \
+          "COALESCE((SELECT pe.created_at FROM entries pe WHERE pe.id = entries.parent_entry_id), entries.created_at) > :anchor_written_at",
+          anchor_date: older_entry.date, anchor_written_at: older_entry.updated_at
+        )
         .pluck(:currency, :amount)
 
       return false unless flows.all? { |currency, _| currency == account.currency }

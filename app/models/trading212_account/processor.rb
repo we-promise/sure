@@ -8,13 +8,16 @@ class Trading212Account::Processor
   def process
     return unless account.present?
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     total_balance = update_account_balance!
     Trading212Account::HoldingsProcessor.new(trading212_account).process
     Trading212Account::ActivitiesProcessor.new(trading212_account).process
 
     # Anchor the reported balance AFTER importing, so the previous reading can be judged
     # against a complete ledger. See Account::CurrentBalanceManager.
-    account.set_current_balance(total_balance)
+    account.set_current_balance(total_balance, date: date)
 
     account.broadcast_sync_complete
   end

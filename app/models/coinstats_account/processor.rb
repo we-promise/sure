@@ -20,6 +20,9 @@ class CoinstatsAccount::Processor
 
     Rails.logger.info "CoinstatsAccount::Processor - Processing coinstats_account #{coinstats_account.id}"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     begin
       process_holdings
     rescue StandardError => e
@@ -42,7 +45,7 @@ class CoinstatsAccount::Processor
 
     # Anchor the reported balance AFTER importing, so the previous reading can be judged
     # against a complete ledger. See Account::CurrentBalanceManager.
-    coinstats_account.current_account.set_current_balance(anchor_balance) if anchor_balance
+    coinstats_account.current_account.set_current_balance(anchor_balance, date: date) if anchor_balance
   end
 
   private

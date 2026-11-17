@@ -13,6 +13,9 @@ class SnaptradeAccount::Processor
 
     Rails.logger.info "SnaptradeAccount::Processor - Processing account #{snaptrade_account.id} -> Sure account #{account.id}"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     anchor_balance = update_account_balance(account)
 
     # Process holdings
@@ -34,7 +37,7 @@ class SnaptradeAccount::Processor
       Rails.logger.warn "SnaptradeAccount::Processor - No activities payload to process"
     end
 
-    account.set_current_balance(anchor_balance) if anchor_balance
+    account.set_current_balance(anchor_balance, date: date) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     # This is critical for fresh account links where the sync complete broadcast

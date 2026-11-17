@@ -411,6 +411,50 @@ class Account::CurrentBalanceManagerTest < ActiveSupport::TestCase
     end
   end
 
+  # A split replaces a transaction already inside the anchor with child rows created
+  # afterwards. The children must use the parent's timestamp, not their own, or an
+  # unchanged reading looks unexplained and the stale anchor is preserved.
+  test "a split of a transaction already inside the anchor does not make an unchanged reading look unexplained" do
+    day_one = Date.current
+    parent = @linked_account.entries.create!(
+      date: day_one,
+      name: "Split purchase",
+      amount: 25,
+      currency: "USD",
+      entryable: Transaction.new
+    )
+    assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(100).success?
+    anchor_id = @linked_account.valuations.current_anchor.first.id
+
+    travel_to day_one + 1.day do
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Split A",
+        amount: 10,
+        currency: "USD",
+        entryable: Transaction.new,
+        parent_entry: parent
+      )
+      @linked_account.entries.create!(
+        date: day_one,
+        name: "Split B",
+        amount: 15,
+        currency: "USD",
+        entryable: Transaction.new,
+        parent_entry: parent
+      )
+
+      assert Account::CurrentBalanceManager.new(@linked_account).set_current_balance(100).success?
+
+      moved = Valuation.find(anchor_id)
+      assert_equal "current_anchor", moved.kind
+      assert_equal 100, moved.entry.amount
+      assert_equal day_one + 1.day, moved.entry.date
+      assert_empty @linked_account.valuations.reconciliation
+      assert_equal 1, @linked_account.valuations.current_anchor.count
+    end
+  end
+
   # `current_anchor_valuation` picks the newest of several anchor rows, but max_by over an
   # unordered query needs an explicit tiebreak to resolve a same-date tie. Duplicates are
   # reachable: the only guard is Entry's app-level date uniqueness validation (no DB index).

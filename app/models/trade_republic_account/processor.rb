@@ -10,13 +10,16 @@ class TradeRepublicAccount::Processor
 
     exchange_securities = TradeRepublicAccount::SecurityPrefetcher.new(trade_republic_account).prefetch
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     ActiveRecord::Base.transaction do
       total_balance = update_account_balance!
       TradeRepublicAccount::HoldingsProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
       TradeRepublicAccount::ActivitiesProcessor.new(trade_republic_account, exchange_securities: exchange_securities).process
 
       # TradeRepublicItem schedules account syncs after every account is processed.
-      account.set_current_balance(total_balance, schedule_sync: false)
+      account.set_current_balance(total_balance, date: date, schedule_sync: false)
     end
 
     account.broadcast_sync_complete

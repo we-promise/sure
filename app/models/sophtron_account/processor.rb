@@ -34,6 +34,10 @@ class SophtronAccount::Processor
     end
 
     Rails.logger.info "SophtronAccount::Processor - Processing sophtron_account #{sophtron_account.id} (account #{sophtron_account.account_id})"
+
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     begin
       account, balance, currency = balance_for_anchor
     rescue StandardError => e
@@ -46,7 +50,7 @@ class SophtronAccount::Processor
     return unless process_transactions
 
     begin
-      anchor_account!(account, balance, currency)
+      anchor_account!(account, balance, currency, date)
     rescue StandardError => e
       Rails.logger.error "SophtronAccount::Processor - Failed to anchor account #{sophtron_account.id}: #{e.message}"
       Rails.logger.error "Backtrace: #{e.backtrace.join("\n")}"
@@ -61,7 +65,7 @@ class SophtronAccount::Processor
     account, balance, currency = balance_for_anchor
     return if account.nil?
 
-    anchor_account!(account, balance, currency)
+    anchor_account!(account, balance, currency, Date.current)
   end
 
   private
@@ -93,13 +97,13 @@ class SophtronAccount::Processor
 
     # Writes the anchor only after the transaction batch has been imported, so the
     # manager can judge the standing anchor against a complete ledger.
-    def anchor_account!(account, balance, currency)
+    def anchor_account!(account, balance, currency, date)
       # The anchor is what a later account sync reads. Write it here, without
       # queueing that sync, so the caller can schedule one sync after every
       # account has been updated.
       ActiveRecord::Base.transaction do
         account.update!(currency: currency)
-        result = account.set_current_balance(balance, schedule_sync: false)
+        result = account.set_current_balance(balance, date: date, schedule_sync: false)
         raise StandardError, "Failed to set current balance: #{result.error}" unless result.success?
         account.update!(cash_balance: balance) unless result.historical?
       end

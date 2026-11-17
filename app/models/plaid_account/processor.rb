@@ -146,7 +146,11 @@ class PlaidAccount::Processor
 
     def process_investments
       PlaidAccount::Investments::TransactionsProcessor.new(plaid_account, security_resolver: security_resolver).process
-      PlaidAccount::Investments::HoldingsProcessor.new(plaid_account, security_resolver: security_resolver).process
+      PlaidAccount::Investments::HoldingsProcessor.new(
+        plaid_account,
+        security_resolver: security_resolver,
+        currency: plaid_account.currency
+      ).process
       true
     rescue => e
       report_exception(e)

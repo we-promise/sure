@@ -15,6 +15,9 @@ class IndexaCapitalAccount::Processor
 
     Rails.logger.info "IndexaCapitalAccount::Processor - Processing account #{indexa_capital_account.id} -> Sure account #{account.id}"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     anchor_balance = update_account_balance(account)
 
     # Process holdings
@@ -39,7 +42,7 @@ class IndexaCapitalAccount::Processor
       Rails.logger.warn "IndexaCapitalAccount::Processor - No activities payload to process"
     end
 
-    account.set_current_balance(anchor_balance) if anchor_balance
+    account.set_current_balance(anchor_balance, date: date) if anchor_balance
 
     # Trigger immediate UI refresh so entries appear in the activity feed
     account.broadcast_sync_complete

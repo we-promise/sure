@@ -15,6 +15,9 @@ class QuestradeAccount::Processor
 
     Rails.logger.info "QuestradeAccount::Processor - Processing account #{questrade_account.id} -> Sure account #{account.id}"
 
+    # Capture the reading's date before the import can cross midnight.
+    date = Date.current
+
     # Store the reported total (cash + holdings) and the primary-currency cash.
     # Non-primary cash is surfaced as holdings below.
     anchor_balance = update_account_balance(account)
@@ -27,7 +30,7 @@ class QuestradeAccount::Processor
       QuestradeAccount::ActivitiesProcessor.new(questrade_account).process
     end
 
-    account.set_current_balance(anchor_balance) if anchor_balance
+    account.set_current_balance(anchor_balance, date: date) if anchor_balance
 
     account.broadcast_sync_complete
     Rails.logger.info "QuestradeAccount::Processor - Broadcast sync complete for account #{account.id}"
