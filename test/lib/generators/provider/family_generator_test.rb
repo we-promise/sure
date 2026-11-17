@@ -9,6 +9,10 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
   module GeneratedControllers
   end
 
+  # Holds each evaluated importer template, apart from the app's own constants.
+  module GeneratedImporters
+  end
+
   def append(content, name = "gocardless")
     Provider::FamilyGenerator.append_source_enum_entry(content, name)
   end
@@ -90,6 +94,32 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     helpers.each { |helper, value| context.define_singleton_method(helper) { value } }
     template = Rails.root.join("lib/generators/provider/family/templates", name).read
     ERB.new(template, trim_mode: "-").result(context.instance_eval { binding })
+  end
+
+  # Evaluates the importer template in its own module, with one linked account, and
+  # returns what #import returns.
+  def run_generated_importer(banking:)
+    namespace = Module.new
+    GeneratedImporters.const_set("Run#{GeneratedImporters.constants.size}", namespace)
+    namespace.const_set(:GocardlessItem, Class.new)
+    namespace.const_set(:GocardlessAccount, Module.new)
+    namespace::GocardlessAccount.const_set(:DataHelpers, Module.new)
+    namespace.module_eval(render_provider_template("importer.rb.tt", banking: banking))
+
+    linked_account = OpenStruct.new(id: "account-1", sync_start_date: nil, last_activities_sync: 1.day.ago, raw_transactions_payload: [], raw_activities_payload: [])
+    relation = mock("linked_accounts")
+    relation.stubs(:joins).returns(relation)
+    relation.stubs(:count).returns(1)
+    relation.stubs(:each).yields(linked_account)
+    namespace::GocardlessAccount.stubs(:where).returns(relation)
+
+    item = mock("item")
+    item.stubs(id: "item-1", gocardless_credentials: { api_key: "key" }, upsert_gocardless_snapshot!: true, last_synced_at: nil)
+    item.stubs(:gocardless_accounts).returns(stub(where: stub(not: [])))
+
+    importer = namespace::GocardlessItem::Importer.new(item, gocardless_provider: Object.new)
+    yield importer if block_given?
+    importer.import
   end
 
   # The provider kit's base class supplies syncing, the syncer and unlinking, so a
@@ -247,6 +277,29 @@ class Provider::FamilyGeneratorTest < ActiveSupport::TestCase
     assert_includes model, "  def self.name_for(account_data)\n    account_data.with_indifferent_access[:name]\n"
     assert_includes model, "  def self.currency_for(account_data)\n"
     assert_includes model, "  def self.default_accountable_attributes(_accountable_type)\n    {}\n"
+  end
+
+  # ProviderItem::Syncer treats anything but a Hash with success: as a failed import,
+  # so the generated importer has to return one, counting the failures it rescued.
+  test "the generated importer's result reads as a clean or failed import to the kit syncer" do
+    syncer = BrexItem::Syncer.new(brex_items(:one))
+
+    [ true, false ].each do |banking|
+      clean = run_generated_importer(banking: banking)
+      assert_equal({ success: true, accounts_failed: 0, transactions_failed: 0 }, clean)
+      assert_empty syncer.send(:import_result_errors, clean)
+    end
+
+    failed = run_generated_importer(banking: true) do |importer|
+      importer.stubs(:calculate_transaction_start_date).raises(StandardError, "transactions unavailable")
+    end
+    assert_equal({ success: false, accounts_failed: 0, transactions_failed: 1 }, failed)
+    assert_equal [ "transaction_import_error" ], syncer.send(:import_result_errors, failed).map { |error| error[:category] }
+
+    failed = run_generated_importer(banking: false) do |importer|
+      importer.stubs(:calculate_start_date).raises(StandardError, "activities unavailable")
+    end
+    assert_equal [ "transaction_import_error" ], syncer.send(:import_result_errors, failed).map { |error| error[:category] }
   end
 
   # ProviderItem::Syncer reads its status and error messages from <key>_items.syncer.*.
