@@ -27,6 +27,15 @@ class ProviderItem::SelectionComponentsTest < ActiveSupport::TestCase
     assert_matches_provider_item_snapshot("brex_select_accounts_without_names", html)
   end
 
+  # One account named, one not: the named one stays selectable.
+  test "brex_select_accounts_mixed_names renders as before" do
+    BrexAccount.stubs(:name_for).returns("Brex Operating")
+    BrexAccount.stubs(:name_for).with { |data| data[:id] == "card_acc_1" }.returns("")
+    html = render_template("brex_items/select_accounts", brex_item: @item, available_accounts: @accounts, accountable_type: "Depository", return_to: nil)
+
+    assert_matches_provider_item_snapshot("brex_select_accounts_mixed_names", html)
+  end
+
   test "brex_select_existing_account renders as before" do
     account = @item.family.accounts.create!(name: "Manual checking", balance: 0, currency: "USD", accountable: Depository.new)
     html = render_template("brex_items/select_existing_account", brex_item: @item, available_accounts: @accounts, account: account, return_to: nil)
@@ -38,6 +47,12 @@ class ProviderItem::SelectionComponentsTest < ActiveSupport::TestCase
     html = ApplicationController.render(partial: "brex_items/api_error", locals: { error_message: "Unauthorized", return_path: "/accounts/new" })
 
     assert_matches_provider_item_snapshot("brex_api_error", html)
+  end
+
+  test "the API error dialog links to provider settings when there is no return path" do
+    html = ApplicationController.render(partial: "brex_items/api_error", locals: { error_message: "Unauthorized", return_path: nil })
+
+    assert_includes html, %(href="#{Rails.application.routes.url_helpers.settings_providers_path}")
   end
 
   test "brex_setup_required renders as before" do
