@@ -285,8 +285,9 @@ runs. The numbers go in the PR description.
   `self.class.set(wait: rand(5..15).seconds).perform_later(*arguments)`: no retry count, no
   `ai_failed`.
 - **Probes:** `AiHealth::Probe#perform` rescues `StandardError` into a failing result, so a busy
-  host would show as a failed check. It re-raises `Busy`, and `Ai::ProbeJob` (3a) re-enqueues
-  the same way. On a busy host a probe's result can be minutes old, and the page shows its age (§13).
+  host would show as a failed check. It re-raises `Busy`, which nothing else in `Probe#run`
+  catches (3a), and `Ai::ProbeJob` re-enqueues the same way. On a busy host a probe's result can
+  be minutes old, and the page shows its age (§13).
 - Re-enqueue goes to the back of the queue, which is already 2c's fairness behaviour.
 
 ### 5. The typing hold in the gate
@@ -402,6 +403,9 @@ avoids:
   `Busy`, and `bill_setup` already goes through `Ai::GenerationJob`, which step 4 changes.
 - **Avoids:** any capsule or escape-hatch method on `Ai::Sequencer` (PR 3's decision 1); changing
   job classes to set lanes (decision 1 here).
+- **Already shaped for PR 4 in 3a:** the capsule's mark is fiber storage, like the lane;
+  `ApplicationJob`'s callback is a named method; `sidekiq_config_test` accepts any AI capsule
+  that polls `Ai::Routes.ai_queues`; `Ai::SharedState` takes sub-second expiries.
 - **Expected rebase conflicts**, for 3b–3d onto PR 4: `ai_lane_test.rb`, `ai-pipeline.md`;
   `Ai::GenerationJob`'s rescues if 3b touches them.
 

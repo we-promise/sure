@@ -231,10 +231,10 @@ Each part is its own PR; each step is one commit.
   middleware, so it also runs under the test adapter (`perform_enqueued_jobs`) and
   `perform_now`. Sidekiq middleware never runs there, so every AI job test would raise once the
   check is on. In production an AI queue only runs in the AI capsule, so the queue name is enough.
-- In `test/support/ai_test_helper.rb`: `with_ai_capsule { }` (§17), for a single call, and
+- In `test/support/ai_test_helper.rb`: `with_ai_capsule { }` (§17), for a single call. 3d adds
   `ai_capsule!`, a class-level line that enters the capsule in `setup` and leaves it in
-  `teardown`, for a test class whose tests call the plumbing directly. 3d uses the class-level
-  line, so turning the check on adds a line per test file instead of re-indenting every test body.
+  `teardown`, so turning the check on adds a line per test file instead of re-indenting every
+  test body.
 - `app/models/ai/shared_state.rb` (decision 2), with its test.
 - Nothing calls `check!` yet. 3a–3c move each web-thread call into a job, and 3d turns the check
   on once none is left, so no allowlist is needed.
@@ -284,8 +284,7 @@ Each part is its own PR; each step is one commit.
 - `Ai::SharedState` writes through a store with `ActiveSupport::Cache`'s `write`/`read`/`delete`:
   `RedisStore` over `Sidekiq.redis`, and a `MemoryStore` per test (`AiTestHelper`), so 3c's
   `Ai::ToolJob` tests need no setup of their own.
-- `AiHealth::Probe::Store` is the probe's adapter over it; `Probe#run` is unchanged apart from
-  `stored_only`. Results carry `checked_at`, so the age needs nothing new.
+- Results carry `checked_at`, so the age needs nothing new.
 - "Run checks again" posts to `run_ai_checks`. The broadcast frame's `src` carries no `?locale=`
   override (the job has no request); the user's own locale applies.
 - The job's extra `ai_health_worker` debug entry went with `WorkerAiHealthCheckJob`: each failing
@@ -294,6 +293,25 @@ Each part is its own PR; each step is one commit.
   unregistered feature with `perform_now` sets the queue a queued job would carry.
 - Strings whose meaning changed were renamed; the old keys were dropped from every locale, and the
   new ones are in English and German.
+
+**Editor's pass (2026-11-17), so 3b and PR 4 both start from 3a:**
+
+- The capsule's mark is fiber storage (`Fiber[:ai_capsule]`), like `Ai::CallContext` and PR 4's
+  lane, so threads a job starts (Jev's parallel requests) are inside too. `Ai::Capsule` has no
+  `QUEUES` copy: `within` reads `Ai::Routes.ai_queues`, which PR 4 extends.
+- `ApplicationJob` names its callback (`around_perform :run_in_ai_capsule`), so PR 4 adds its lane
+  there in one line.
+- `AiHealth` has two modes: `AiHealth.new` reads what's stored and never probes;
+  `AiHealth.new(run_probes: true)` probes, then stores every result at once (`Probe#store!`), so a
+  slow run's first result doesn't expire before its last is written. `Probe#run` has no cache
+  path and no outer rescue, so PR 4's `Busy` leaves `Probe#perform` straight to the job.
+- `Ai::SharedState.write` refuses a value without a positive expiry, and the Redis store writes
+  `PX` milliseconds, so a sub-second expiry works (PR 4's gate state refreshes short ones).
+- A Redis outage shows no worker results instead of failing the tab.
+- `Ai::ProbeJob` takes `lock: :until_executed`: a click while a run is queued adds nothing.
+- `sidekiq_config_test` checks that the AI capsules, whichever they are, poll exactly
+  `Ai::Routes.ai_queues`, so PR 4's `ai_chat` capsule passes it unchanged.
+- `ai_capsule!` is left to 3d, its first user; 3a keeps `with_ai_capsule`.
 
 ## 3b. Bill suggestions and stopping AI work
 
@@ -549,11 +567,11 @@ follows both.
 | Escape hatch | `Ai::Capsule.outside` | `Ai::Sequencer` has no capsule method | decision 1 |
 | Marking a running job | 3a's `ApplicationJob` `around_perform` → `Ai::Capsule.within` | sets the lane from the same queue name | PR 4 adds its lane to the same callback, not a Sidekiq middleware, so it runs under the test adapter too |
 | Shared web/worker state | 3a's `Ai::SharedState` | the gate state and the typing hold use it | one store over `Sidekiq.redis` |
-| `AiHealth::Probe`, `Ai::ProbeJob` | 3a: `stored_only:`, #4866's output limit | re-raises `Busy`; the job re-enqueues | separate methods |
+| `AiHealth::Probe`, `Ai::ProbeJob` | 3a: stored or `run_probes:` modes, #4866's output limit | `Probe#perform` re-raises `Busy`; the job re-enqueues | separate methods |
 | `config/initializers/sidekiq.rb` | untouched | removes the fetch class | — |
 | `Ai::GenerationJob`, `Ai::Generation` | 3b: none expected (cancel already there) | `Busy` re-enqueue, `Preempted` retry | 3b rebases onto PR 4's rescues; if it touches them, new rescue lines only |
 | `ProcessPdfJob` | 3b: cancel checks, `Cancelled` rescue | none expected | — |
-| `test/support/ai_test_helper.rb` | 3a: `with_ai_capsule`, `ai_capsule!` | gate helpers | separate methods |
+| `test/support/ai_test_helper.rb` | 3a: `with_ai_capsule`; 3d: `ai_capsule!` | gate helpers | separate methods |
 | Job lists, `ai-pipeline.md` | 3a's job in `sidekiq_config_test.rb`'s `AI_JOBS`; 3c's in `ai_lane_test.rb`; 3d's guide | creates `ai_lane_test.rb`, new queues, gate | 3c and 3d rebase by hand |
 
 **Why 3b and 3c come after PR 4.** Before PR 4, smart-fill, smart-configure and the MCP search
