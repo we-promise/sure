@@ -34,17 +34,20 @@
 <div class="px-4 grow">
 <form class="space-y-6" data-controller="loading-button" data-action="submit-&gt;loading-button#showLoading" data-loading-button-loading-text-value="Creating Accounts..." data-turbo-frame="_top" action="/brex_items/UUID/complete_account_setup" accept-charset="UTF-8" method="post">
 <div class="space-y-4">
-<div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
-<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-6 h-6 text-secondary text-destructive">
+<div class="p-4 rounded-lg border bg-destructive/10 border-destructive-subtle">
+<div class="flex items-center gap-3">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 w-4 h-4 text-destructive -mt-0.5">
 <circle cx="12" cy="12" r="10">
 </circle>
-<line x1="12" x2="12" y1="8" y2="12">
-</line>
-<line x1="12" x2="12.01" y1="16" y2="16">
-</line>
+<path d="m15 9-6 6">
+</path>
+<path d="m9 9 6 6">
+</path>
 </svg>
-<p class="text-primary font-medium">Failed to Fetch Accounts</p>
-<p class="text-destructive text-sm">Unauthorized</p>
+<p id="DS-alert-title-ID" class="text-sm font-semibold text-primary flex-1 leading-5">
+<span class="sr-only">Error:</span>Failed to Fetch Accounts</p>
+</div>
+<div class="text-sm text-primary mt-2 pl-7 space-y-1">Unauthorized</div>
 </div>
 </div>
 <div class="flex gap-3">
