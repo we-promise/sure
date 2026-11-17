@@ -105,7 +105,7 @@ module InsightsHelper
         href: transactions_path(q: { categories: [ category.name ] })
       }
     when "idle_cash", "bill_not_covered", "loan_payment_change"
-      account = insight.family.accounts.visible.find_by(id: metadata["account_id"])
+      account = insight_account(insight)
       account && { text: t("insights.actions.#{insight.insight_type}"), href: account_path(account) }
     when "subscription_audit"
       { text: t("insights.actions.subscription_audit"), href: recurring_transactions_path }
