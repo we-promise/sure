@@ -193,6 +193,24 @@ class ExchangeRateTest < ActiveSupport::TestCase
     assert_equal 1.2, rate.rate
   end
 
+  # perform_later turns an adapter's ActiveJob::EnqueueError into a false
+  # return rather than raising it, so the dropped refresh is logged all the
+  # same.
+  test "a refresh the queue adapter rejects is logged" do
+    ExchangeRate.delete_all
+    @provider.expects(:fetch_exchange_rate).returns(provider_success_response(
+      OpenStruct.new(from: "USD", to: "EUR", date: Date.current, rate: 1.2)
+    ))
+    ExchangeRateBalanceRefreshJob.queue_adapter.stubs(:enqueue).raises(ActiveJob::EnqueueError, "queue unavailable")
+
+    rate = nil
+    assert_difference -> { DebugLogEntry.where(category: "exchange_rates").count }, 1 do
+      rate = ExchangeRate.find_or_fetch_rate(from: "USD", to: "EUR", date: Date.current, cache: true)
+    end
+
+    assert_equal 1.2, rate.rate
+  end
+
   test "returns nil on provider error" do
     provider_response = provider_error_response(StandardError.new("Test error"))
 
