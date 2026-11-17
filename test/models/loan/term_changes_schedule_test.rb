@@ -78,14 +78,32 @@ class Loan::TermChangesScheduleTest < ActiveSupport::TestCase
     assert_equal BigDecimal("100.98"), outside.payment_for(APRIL).interest.amount
   end
 
-  test "an extra repayment on a payment date comes off after that period's interest" do
+  # The lender collected that day's instalment before the repayment, so the
+  # repayment comes off after it and the instalment changes from the next one,
+  # as with a balance confirmed for a payment date.
+  test "an extra repayment on a payment date comes off after that day's payment" do
     schedule = loan_with([ { effective_date: "2026-04-01", extra_repayment: "2000" } ]).amortization_schedule
     april = schedule.payment_for(APRIL)
+    may = schedule.payments[3]
 
     assert_equal BigDecimal("100.98"), april.interest.amount
-    assert_equal BigDecimal("857.11"), april.payment.amount, "the payment on the effective date is the new one"
-    assert_equal BigDecimal("7342.03"), april.ending_balance.amount
-    assert_equal BigDecimal("73.42"), schedule.payments[3].interest.amount
+    assert_equal BigDecimal("1066.19"), april.payment.amount, "that day's payment is behind the repayment"
+    assert_equal BigDecimal("-2000"), schedule.balance_adjustment_for(april).amount
+    assert_equal BigDecimal("7132.95"), april.ending_balance.amount
+    assert_equal BigDecimal("71.33"), may.interest.amount
+    assert_equal BigDecimal("832.70"), may.payment.amount, "re-amortised from the next payment"
+    assert_equal MATURITY, schedule.payoff_date
+  end
+
+  test "an extra repayment with a new payment on a payment date sets the payment from the next one" do
+    schedule = loan_with([
+      { effective_date: "2026-04-01", extra_repayment: "2000", payment: "1066.19" }
+    ]).amortization_schedule
+
+    assert_equal BigDecimal("1066.19"), schedule.payment_for(APRIL).payment.amount
+    assert_equal BigDecimal("7132.95"), schedule.payment_for(APRIL).ending_balance.amount
+    assert schedule.payments[3..-2].all? { |payment| payment.payment.amount == BigDecimal("1066.19") }
+    assert_operator schedule.payoff_date, :<, MATURITY, "the held payment shortens the loan"
   end
 
   test "a confirmed balance part-way through a period charges the rest of it on that balance" do
