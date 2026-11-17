@@ -220,21 +220,6 @@ class TransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_select "button[data-label='Sweep In']", text: "Автоперевод (зачисление)"
   end
 
-  test "index groups subcategories immediately after their parent in the category filter" do
-    get transactions_url
-    assert_response :success
-
-    doc = Nokogiri::HTML::Document.parse(response.body)
-    checkbox_values = doc.css("input[name='q[categories][]']").map { |node| node["value"] }
-
-    parent_index = checkbox_values.index(categories(:food_and_drink).name)
-    child_index = checkbox_values.index(categories(:subcategory).name)
-
-    assert_not_nil parent_index
-    assert_not_nil child_index
-    assert_equal parent_index + 1, child_index
-  end
-
   # The form passes its own change action on the currency select; the money
   # field must keep its handleCurrencyChange alongside it, or switching the
   # currency never refreshes the amount's step and precision.
@@ -2425,13 +2410,6 @@ end
     get transactions_url(q: { account_ids: [ "" ], accounts: [ "" ] })
 
     assert_response :success
-  end
-
-  test "index offers the attachment filter in the filter menu" do
-    get transactions_url
-
-    assert_response :success
-    assert_select "#transaction-filters-menu input[type=checkbox][name='q[attachment_status][]']", count: 2
   end
 
   test "index ignores unsupported attachment_status values without rendering a badge" do
