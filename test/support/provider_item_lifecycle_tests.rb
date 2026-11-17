@@ -78,6 +78,25 @@ module ProviderItemLifecycleTests
       end
     end
 
+    test "lifecycle: changing any one cache-sensitive field alone expires the connection's cached accounts" do
+      key = account_flow_class.cache_key(provider_item.family, provider_item)
+
+      with_memory_cache do
+        Rails.cache.write(key, [ "cached" ])
+        assert account_flow_class.update_item_with_cache_expiration(provider_item, family: provider_item.family, attributes: { name: "Renamed" })
+        assert_equal [ "cached" ], Rails.cache.read(key)
+
+        # Every kit provider takes a base URL, so it is checked even if a provider's list drops it.
+        (account_flow_class.cache_sensitive_params | [ :base_url ]).each do |param|
+          Rails.cache.write(key, [ "cached" ])
+          value = provider_item.public_send(param).presence || "rotated-#{param}"
+
+          assert account_flow_class.update_item_with_cache_expiration(provider_item, family: provider_item.family, attributes: { param => value })
+          assert_nil Rails.cache.read(key), "updating only #{param} should expire the cached accounts"
+        end
+      end
+    end
+
     test "lifecycle: linking new accounts creates one linked account per selected provider account" do
       provider_item.class.any_instance.expects(:sync_later).once
       account_flow_class.any_instance.stubs(:fetch_accounts).returns(api_accounts_for([ "linked-new-1" ]))

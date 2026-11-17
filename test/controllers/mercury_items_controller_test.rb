@@ -146,6 +146,17 @@ class MercuryItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  test "update expires selected mercury account cache when only the base URL changes" do
+    Rails.cache.expects(:delete).with(mercury_cache_key(@existing_item)).never
+    Rails.cache.expects(:delete).with(mercury_cache_key(@second_item)).once
+
+    patch mercury_item_url(@second_item), params: {
+      mercury_item: { base_url: "https://api.mercury.com/api/v1" }
+    }
+
+    assert_redirected_to accounts_path
+  end
+
   test "update does not expire selected mercury account cache for name-only changes" do
     Rails.cache.expects(:delete).never
 
