@@ -250,7 +250,12 @@ class IndexaCapitalItemsController < ApplicationController
         :password
       )
       if @indexa_capital_item&.persisted?
-        permitted.delete(:api_token) if permitted[:api_token].blank?
+        if permitted[:api_token].blank?
+          permitted.delete(:api_token)
+          # A stored token takes precedence over username/password, so a new
+          # password without a token clears it to make the switch take effect.
+          permitted[:api_token] = nil if permitted[:password].present?
+        end
         permitted.delete(:password) if permitted[:password].blank?
       end
       permitted
