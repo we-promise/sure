@@ -44,6 +44,23 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal [ [ security, 5 ] ], account.held_securities_on(3.days.from_now.to_date)
   end
 
+  test "held_securities_on converts a future split before adding later trades" do
+    account = families(:empty).accounts.create!(name: "Brokerage", balance: 0, cash_balance: 0, currency: "USD", accountable: Investment.new)
+    security = Security.create!(ticker: "SPLITFUT", name: "Split Future")
+    account.entries.create!(
+      name: "Buy", date: 1.day.from_now.to_date, amount: 1000, currency: "USD",
+      entryable: Trade.new(security: security, qty: 10, price: 100, currency: "USD", investment_activity_label: "Buy")
+    )
+    Security::Split.create!(security: security, ex_date: 2.days.from_now.to_date, numerator: 2, denominator: 1, source: "manual")
+    account.entries.create!(
+      name: "Sell", date: 3.days.from_now.to_date, amount: -750, currency: "USD",
+      entryable: Trade.new(security: security, qty: -15, price: 50, currency: "USD", investment_activity_label: "Sell")
+    )
+
+    # 10 bought before a 2-for-1 split are 20 after it; selling 15 leaves 5.
+    assert_equal [ [ security, 5 ] ], account.held_securities_on(4.days.from_now.to_date)
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy

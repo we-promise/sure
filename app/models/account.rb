@@ -920,10 +920,24 @@ class Account < ApplicationRecord
     positions = rows.group(:security_id).sum(:qty).transform_values(&:to_d)
 
     if date > Date.current
-      Trade.joins(:entry)
+      future = Trade.joins(:entry)
         .where(entries: { account_id: id, date: Date.current.next_day..date })
-        .group(:security_id).sum(:qty)
-        .each { |security_id, qty| positions[security_id] = positions.fetch(security_id, 0) + qty.to_d }
+        .group(:security_id, "entries.date").sum(:qty)
+      splits = Security::Split
+        .where(security_id: positions.keys | future.keys.map(&:first), ex_date: Date.current.next_day..date)
+        .group_by(&:security_id)
+
+      # Today's position and each future trade, in units of +date+, so a split
+      # in between scales them the way the sale limit does.
+      in_date_units = lambda do |security_id, qty, day|
+        ratio = splits.fetch(security_id, []).select { |split| split.ex_date > day }.map(&:ratio).reduce(Rational(1), :*)
+        Security::Split.scale(qty, ratio)
+      end
+
+      positions = positions.to_h { |security_id, qty| [ security_id, in_date_units.(security_id, qty, Date.current) ] }
+      future.each do |(security_id, day), qty|
+        positions[security_id] = positions.fetch(security_id, 0) + in_date_units.(security_id, qty.to_d, day)
+      end
     end
 
     held = positions.select { |_, qty| qty.positive? }
