@@ -109,9 +109,11 @@ class EnableBankingAccount::Transactions::Processor
       Set.new
     end
 
-    enable_banking_account.raw_transactions_payload.each_with_index do |transaction_data, index|
+    pending_external_ids = open_pending_external_ids
+
+    rows_in_settlement_order(pending_external_ids).each do |transaction_data, index|
       begin
-        ext_id = EnableBankingEntry::Processor.compute_external_id(transaction_data)
+        ext_id = external_ids[index]
 
         if ext_id && excluded_ids.include?(ext_id)
           Rails.logger.info("EnableBankingAccount::Transactions::Processor - Skipping re-import of manually merged pending transaction: #{ext_id}")
@@ -125,7 +127,9 @@ class EnableBankingAccount::Transactions::Processor
           import_adapter: shared_adapter,
           known_merchant_names: shared_known_merchant_names,
           identifierless_external_ids: shared_identifierless_external_ids,
-          excluded_external_ids: excluded_ids
+          excluded_external_ids: excluded_ids,
+          external_id: ext_id,
+          pending_external_ids: pending_external_ids
         ).process
 
         if result.nil?
@@ -177,4 +181,77 @@ class EnableBankingAccount::Transactions::Processor
 
     result
   end
+
+  private
+
+    def external_ids
+      @external_ids ||= EnableBankingEntry::Processor.external_ids_for(
+        enable_banking_account.raw_transactions_payload, account: enable_banking_account.current_account
+      )
+    end
+
+    # Rows keeping their plain id go first, so a pending entry under a shared
+    # transaction_id settles into the row that keeps that id, not a same-amount sibling.
+    def rows_in_import_order
+      enable_banking_account.raw_transactions_payload.each_with_index.sort_by do |data, index|
+        [ external_ids[index] == EnableBankingEntry::Processor.compute_external_id(data) ? 0 : 1, index ]
+      end
+    end
+
+    # External ids of the account's stored pending entries.
+    #
+    # @return [Set<String>]
+    def open_pending_external_ids
+      account = enable_banking_account.current_account
+      return Set.new if account.blank?
+
+      Transaction.pending
+                 .joins(:entry)
+                 .where(entries: { account_id: account.id, source: "enable_banking" })
+                 .pluck("entries.external_id")
+                 .compact
+                 .to_set
+    end
+
+    # A booked row that identifies a stored pending entry, by its own external_id
+    # or by its entry_reference, settles that entry. Importing those rows first
+    # keeps another booked row of the same amount from claiming the entry
+    # through ProviderImportAdapter's amount-based pending match, which would
+    # move the pending entry's notes and edits onto the wrong operation.
+    #
+    # An identifierless booked copy of a settling row still goes ahead of it, so
+    # the settling row claims that copy's entry as its predecessor instead of
+    # the copy importing as a second entry.
+    #
+    # A settling row whose content key raises is left out of that match:
+    # processing it raises again inside its own rescue, which records the
+    # failure against that row. Within each group, rows keep
+    # rows_in_import_order. Indexes remain those of the stored payload, for
+    # error reporting.
+    #
+    # @return [Array<Array(Hash, Integer)>]
+    def rows_in_settlement_order(pending_external_ids)
+      rows = rows_in_import_order
+      return rows if pending_external_ids.empty?
+
+      settling, others = rows.partition do |transaction_data, index|
+        EnableBankingEntry::Processor.settled_pending_external_id(
+          transaction_data, pending_external_ids, external_id: external_ids[index]
+        ).present?
+      end
+      return rows if settling.empty?
+
+      settling_content_ids = settling.filter_map do |transaction_data, _index|
+        EnableBankingEntry::Processor.content_external_id(transaction_data)
+      rescue StandardError
+        nil
+      end.to_set
+
+      predecessors, others = others.partition do |transaction_data, _index|
+        EnableBankingEntry::Processor.identifierless?(transaction_data) &&
+          !EnableBankingEntry::Processor.pending_payload?(transaction_data) &&
+          settling_content_ids.include?(EnableBankingEntry::Processor.content_external_id(transaction_data))
+      end
+      predecessors + settling + others
+    end
 end
