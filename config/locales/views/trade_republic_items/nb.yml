@@ -15,6 +15,7 @@ nb:
     trade_republic_item:
       syncing: "Synkroniserer"
       requires_update: "Ny autentisering kreves"
+      session_expires_in: "Påloggingen utløper om %{time} (%{at})."
       error: "Feil"
       synced: "Synkronisert for %{time} siden. %{summary}."
       setup_accounts: "Konfigurer kontoer"

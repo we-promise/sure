@@ -5,6 +5,10 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
   include FinancekitTestHelper
   setup do
     @user = users(:family_admin)
+    # Registry-driven provider forms (Plaid) edit instance-wide credentials and
+    # are only shown to a super admin; promote the fixture admin so the family
+    # panels below keep using dylan_family.
+    @user.update!(role: :super_admin)
     @family = families(:dylan_family)
     login_as @user
   end
@@ -143,6 +147,9 @@ class Settings::ProvidersTest < ApplicationSystemTestCase
 
   test "connected providers are grouped under Your connections in alphabetical title order" do
     SimplefinItem.create!(family: @family, name: "Test SimpleFIN", access_url: "https://bridge.simplefin.org/simplefin/access")
+    # A connection that needs attention is listed first, so keep the Trade
+    # Republic one logged in and let only the alphabetical order count.
+    trade_republic_items(:requires_update_item).update!(status: :good)
 
     visit settings_providers_path
 

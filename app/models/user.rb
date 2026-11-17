@@ -54,6 +54,10 @@ class User < ApplicationRecord
   # SSO JIT users have password_digest = nil and authenticate via OIDC only.
   validates :password, presence: true, on: :create, unless: :skip_password_validation?
   validates :password, length: { minimum: 8 }, allow_nil: true
+  # `validations: false` above also drops Rails' confirmation and current-password
+  # (password_challenge) checks, so restore both here.
+  validates :password, confirmation: true, allow_blank: true
+  validate :password_challenge_matches, unless: -> { password_challenge.nil? }
   normalizes :email, with: ->(email) { email.strip.downcase }
   normalizes :unconfirmed_email, with: ->(email) { email&.strip&.downcase }
   normalizes :locale, with: ->(locale) { locale.presence }
@@ -93,6 +97,52 @@ class User < ApplicationRecord
 
     User.exists? ? fallback_role : :super_admin
   end
+
+  # Deterministic lookups like `find_by(email:)` and `authenticate_by` miss
+  # rows whose email is still legacy plaintext (stored before encryption was
+  # active and not yet re-encrypted by `bin/rails security:backfill_encryption`):
+  # extend_queries does not cover attributes that also use `normalizes`. The
+  # fallback matches those rows by their literal column value.
+  def self.find_by_email_with_legacy_fallback(email)
+    normalized = email.to_s.strip.downcase
+    return nil if normalized.blank?
+
+    find_by(email: normalized) || find_by_legacy_plaintext_email(normalized)
+  end
+
+  # Takes the legacy path only for a plaintext row; every other case goes
+  # through authenticate_by, which stays timing-safe for wrong passwords and
+  # unknown emails. The legacy lookup runs first on every login (one indexed
+  # query) so that legacy and encrypted rows cost the same single password
+  # check. Nil and empty passwords are rejected up front, as authenticate_by does.
+  # A user without a local password (SSO only) still costs one hash, so
+  # response time does not reveal such accounts. A non-String password (a
+  # JSON number) is checked as text instead of raising.
+  def self.authenticate_by_email(email:, password:)
+    return nil if password.nil? || password.to_s.empty?
+
+    password = password.to_s
+    normalized = email.to_s.strip.downcase
+    legacy_user = find_by_legacy_plaintext_email(normalized)
+    user = legacy_user || find_by(email: normalized)
+    if user && user.password_digest.blank?
+      new(password: password)
+      return nil
+    end
+    return authenticate_by(email: normalized, password: password) unless legacy_user
+
+    legacy_user if legacy_user.authenticate(password)
+  end
+
+  # Legacy rows were always stored normalized (`normalizes :email` predates
+  # encryption), so an exact match uses the unique index. Only well-formed
+  # emails are looked up, so a pasted ciphertext can never match its own row.
+  def self.find_by_legacy_plaintext_email(normalized_email)
+    return nil unless normalized_email.match?(URI::MailTo::EMAIL_REGEXP)
+
+    find_by([ "email = ?", normalized_email ])
+  end
+  private_class_method :find_by_legacy_plaintext_email
 
   class << self
     def human_attribute_name(attribute, options = {})
@@ -161,6 +211,22 @@ class User < ApplicationRecord
     super_admin? || role == "admin"
   end
 
+  # Setting values are shared by every family on the instance, so changing them
+  # is a super admin's job: a family admin is anyone who signed up. A
+  # self-hosted instance with a single real family has no other tenant to
+  # protect. Generated demo households must neither revoke that family's access
+  # nor grant instance access to demo users. Use the generator's synthetic
+  # subscription marker, never an editable family name or user email.
+  def manages_instance_settings?
+    return true if super_admin?
+    return false unless admin? && Rails.application.config.app_mode.self_hosted?
+    return false if family.subscription&.synthetic?
+    return true if Family.count == 1
+
+    demo_family_ids = Subscription.where(stripe_id: Subscription::DEMO_STRIPE_ID).select(:family_id)
+    Family.where.not(id: demo_family_ids).limit(2).pluck(:id) == [ family_id ]
+  end
+
   def accessible_accounts
     family.accounts.accessible_by(self)
   end
@@ -196,9 +262,9 @@ class User < ApplicationRecord
   end
 
   def ai_available?
+    effective_type = family&.effective_assistant_type || "builtin"
+    return false if effective_type == "mcp_only"
     return true unless Rails.application.config.app_mode.self_hosted?
-
-    effective_type = ENV["ASSISTANT_TYPE"].presence || family&.assistant_type.presence || "builtin"
 
     case effective_type
     when "external"
@@ -515,6 +581,25 @@ class User < ApplicationRecord
     end
   end
 
+  # Same answer as verify_otp, but spends nothing: lets a passkey registration
+  # refuse a bad code before the browser creates a credential the server would
+  # then throw away. The code is still consumed by verify_otp when it is saved.
+  def otp_code_status(code)
+    return :invalid if otp_secret.blank?
+
+    normalized_code = normalize_mfa_code(code)
+    return :invalid if normalized_code.blank?
+
+    return :accepted if totp.verify(normalized_code, drift_behind: 15, after: otp_last_used_at)
+
+    if backup_code_input?(normalized_code)
+      matched = Array(otp_backup_codes).any? { |stored_code| backup_code_matches?(stored_code, normalized_code) }
+      return matched ? :accepted : :invalid
+    end
+
+    totp.verify(normalized_code, drift_behind: 15) ? :replayed : :invalid
+  end
+
   def verify_otp?(code)
     verify_otp(code) == :accepted
   end
@@ -573,6 +658,44 @@ class User < ApplicationRecord
     AccountOrder.find(default_account_order) || AccountOrder.default
   end
 
+  MANUAL_ACCOUNT_ORDER_LIMIT = 500
+
+  # Drag-and-drop order of accounts per account group, keyed by accountable
+  # key (e.g. "depository") with account ids in display order.
+  def manual_account_order
+    order = preferences&.dig("manual_account_order")
+    order.is_a?(Hash) ? order : {}
+  end
+
+  # Stores the order of one account group. Ids the user cannot access are
+  # dropped so the stored preference never references foreign accounts.
+  def update_manual_account_order(group_key, account_ids)
+    group_key = group_key.to_s
+    return false unless Accountable::TYPES.map(&:underscore).include?(group_key)
+    return false unless account_ids.is_a?(Array)
+
+    requested_ids = account_ids.map(&:to_s).uniq.first(MANUAL_ACCOUNT_ORDER_LIMIT)
+    accessible_ids = accessible_accounts.where(id: requested_ids, accountable_type: group_key.camelize).pluck(:id).to_set
+    ordered_ids = requested_ids.select { |id| accessible_ids.include?(id) }
+
+    with_locked_preferences do |prefs|
+      prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids)
+    end
+  end
+
+  # Locked read-modify-write of the preferences JSONB: yields a copy of the
+  # current preferences (re-read under a row lock) to change in place, then
+  # saves it, so concurrent updates of other keys are not lost. Attributes set
+  # on the user inside the block are saved with it.
+  def with_locked_preferences
+    transaction do
+      lock!
+      updated_prefs = (preferences || {}).deep_dup
+      yield updated_prefs
+      update!(preferences: updated_prefs)
+    end
+  end
+
   def default_account_for_transactions
     return nil unless default_account_id.present?
 
@@ -614,7 +737,7 @@ class User < ApplicationRecord
   def parsed_release_tag_version!(tag)
     raise ArgumentError, "invalid release tag" unless tag.to_s.match?(/\Av\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.-]+)?\z/)
 
-    Semver.from_release_tag(tag).version
+    Calver.from_release_tag(tag).version
   end
 
   def parsed_release_tag_version(tag)
@@ -639,12 +762,10 @@ class User < ApplicationRecord
   # Adds or removes one key rather than taking the whole list, so a stale tab
   # hiding one widget can't bring back another hidden elsewhere.
   def update_dashboard_section_hidden(section_key, hidden)
-    transaction do
-      lock!
-
+    with_locked_preferences do |prefs|
       keys = dashboard_hidden_sections - [ section_key ]
       keys << section_key if hidden
-      update!(preferences: (preferences || {}).merge("hidden_sections" => keys))
+      prefs["hidden_sections"] = keys
     end
   end
 
@@ -669,12 +790,8 @@ class User < ApplicationRecord
   # laid_out_order is the order the dashboard laid its widgets out in, which
   # also places widgets the saved order doesn't list yet.
   def update_dashboard_preferences(prefs, laid_out_order: nil)
-    # Use pessimistic locking to ensure atomic read-modify-write
-    # This prevents race conditions when multiple sections are collapsed quickly
-    transaction do
-      lock! # Acquire row-level lock (SELECT FOR UPDATE)
-
-      updated_prefs = (preferences || {}).deep_dup
+    # Locked so sections collapsed in quick succession don't overwrite each other.
+    with_locked_preferences do |updated_prefs|
       if prefs["section_order"]
         prefs = prefs.merge("section_order" => keep_hidden_sections_in_order(prefs["section_order"], laid_out_order || dashboard_section_order))
       end
@@ -688,37 +805,77 @@ class User < ApplicationRecord
           updated_prefs[key] = value
         end
       end
+    end
+  end
 
-      update!(preferences: updated_prefs)
+  # Section preferences for the pages built on the Reports section
+  # framework (Reports, the portfolio hub). Each page is a namespace; its
+  # order lives under "<namespace>_section_order" and its collapsed set under
+  # "<namespace>_collapsed_sections", so two pages never read or write each
+  # other's keys. Reports' original keys are the "reports" namespace, so
+  # nothing already stored changes meaning. Each namespace maps to its
+  # default order; the portfolio's is read from its registry so the two
+  # lists cannot drift.
+  SECTION_DEFAULT_ORDERS = {
+    "reports" => %w[trends_insights transactions_breakdown].freeze,
+    "portfolio" => Portfolio::SectionRegistry::KEYS
+  }.freeze
+
+  def section_order(namespace)
+    prefix = section_namespace!(namespace)
+    stored = preferences&.[]("#{prefix}_section_order")
+    stored.is_a?(Array) ? stored.map(&:to_s).uniq : SECTION_DEFAULT_ORDERS.fetch(prefix).dup
+  end
+
+  def section_collapsed?(namespace, section_key)
+    prefix = section_namespace!(namespace)
+    collapsed = preferences&.[]("#{prefix}_collapsed_sections")
+    collapsed.is_a?(Hash) && collapsed[section_key] == true
+  end
+
+  # `order` replaces the namespace's order; `collapsed` merges into the
+  # namespace's collapsed set (one key per toggle, so quick successive
+  # toggles keep each other's state). The namespace decides which keys are
+  # written: a caller cannot reach another page's keys through this method.
+  # Only an array of keys (deduplicated) and a hash of key => flag are stored;
+  # any other shape is dropped, since the readers index into them.
+  def update_section_preferences(namespace, order: nil, collapsed: nil)
+    prefix = section_namespace!(namespace)
+    prefs = {}
+    prefs["#{prefix}_section_order"] = order.map(&:to_s).uniq if order.is_a?(Array)
+    collapsed = collapsed.to_unsafe_h if collapsed.respond_to?(:to_unsafe_h)
+    if collapsed.is_a?(Hash)
+      prefs["#{prefix}_collapsed_sections"] = collapsed.to_h { |key, flag| [ key.to_s, ActiveModel::Type::Boolean.new.cast(flag) == true ] }
+    end
+    return true if prefs.empty?
+
+    with_locked_preferences do |updated_prefs|
+      prefs.each do |key, value|
+        if value.is_a?(Hash)
+          stored = updated_prefs[key]
+          updated_prefs[key] = (stored.is_a?(Hash) ? stored : {}).merge(value)
+        else
+          updated_prefs[key] = value
+        end
+      end
     end
   end
 
   # Reports preferences management
   def reports_section_collapsed?(section_key)
-    preferences&.dig("reports_collapsed_sections", section_key) == true
+    section_collapsed?("reports", section_key)
   end
 
   def reports_section_order
-    preferences&.[]("reports_section_order") || default_reports_section_order
+    section_order("reports")
   end
 
   def update_reports_preferences(prefs)
-    # Use pessimistic locking to ensure atomic read-modify-write
-    transaction do
-      lock!
-
-      updated_prefs = (preferences || {}).deep_dup
-      prefs.each do |key, value|
-        if value.is_a?(Hash)
-          updated_prefs[key] ||= {}
-          updated_prefs[key] = updated_prefs[key].merge(value)
-        else
-          updated_prefs[key] = value
-        end
-      end
-
-      update!(preferences: updated_prefs)
-    end
+    update_section_preferences(
+      "reports",
+      order: prefs["reports_section_order"],
+      collapsed: prefs["reports_collapsed_sections"]
+    )
   end
 
   # Transactions preferences management
@@ -751,6 +908,13 @@ class User < ApplicationRecord
 
   def preview_features_enabled?
     preferences&.dig("preview_features_enabled") == true
+  end
+
+  # The experimental Sankey comparison chart (and its feedback prompt) is
+  # opt-in on top of preview features, so a user can keep preview features
+  # enabled without a second chart rendering underneath the cash flow widget.
+  def cashflow_preview_enabled?
+    preferences&.dig("cashflow_preview_enabled") == true
   end
 
   private
@@ -795,6 +959,13 @@ class User < ApplicationRecord
       skip_password_validation == true
     end
 
+    def password_challenge_matches
+      digest_was = password_digest_was
+      return if digest_was.present? && BCrypt::Password.new(digest_was).is_password?(password_challenge)
+
+      errors.add(:password_challenge)
+    end
+
     # The dashboard only sends the order of the widgets it rendered, so put
     # each hidden widget back after the one it followed before.
     def keep_hidden_sections_in_order(new_order, old_order)
@@ -809,8 +980,11 @@ class User < ApplicationRecord
       %w[insights_feed cashflow_sankey outflows_donut net_worth_chart balance_sheet]
     end
 
-    def default_reports_section_order
-      %w[trends_insights transactions_breakdown]
+    def section_namespace!(namespace)
+      namespace = namespace.to_s
+      raise ArgumentError, "unknown section namespace #{namespace.inspect}" unless SECTION_DEFAULT_ORDERS.key?(namespace)
+
+      namespace
     end
     def ensure_valid_profile_image
       return unless profile_image.attached?

@@ -1,0 +1,94 @@
+---
+id:
+  family_merchants:
+    create:
+      error: 'Terjadi kesalahan saat membuat merchant: %{error}'
+      success: Merchant baru berhasil dibuat
+    destroy:
+      success: Merchant berhasil dihapus
+      unlinked_success: Merchant dihapus dari transaksi Anda
+    edit:
+      title: Edit merchant
+    form:
+      name_placeholder: Nama merchant
+      website_placeholder: Situs web (mis., starbucks.com)
+      website_hint: Masukkan situs web merchant untuk menampilkan logo mereka secara otomatis
+      logo_label: Logo
+      logo_hint: Menggantikan logo situs web. JPEG, PNG, atau WebP, hingga %{max_megabytes}MB.
+      remove_logo_label: Hapus logo yang diunggah
+    index:
+      empty: Belum ada merchant
+      new: Merchant baru
+      import: Impor merchant
+      merge: Gabungkan merchant
+      title: Merchant
+      family_title: "Merchant %{moniker}"
+      family_empty: "Belum ada merchant %{moniker}"
+      provider_title: Merchant penyedia
+      provider_empty: "Belum ada merchant penyedia yang ditautkan ke %{moniker} ini"
+      provider_read_only: Merchant penyedia disinkronkan dari lembaga Anda yang terhubung. Merchant tersebut tidak dapat diedit di sini.
+      provider_info: Merchant ini terdeteksi secara otomatis oleh koneksi bank atau AI Anda. Anda dapat mengeditnya untuk membuat salinan sendiri, atau menghapusnya untuk memutuskan tautan dari transaksi Anda.
+      enhance_info:
+        one: "%{count} merchant penyedia tidak memiliki informasi situs web. Tingkatkan dengan AI untuk mendeteksi situs web, menampilkan logo, dan menggabungkan merchant duplikat."
+        other: "%{count} merchant penyedia tidak memiliki informasi situs web. Tingkatkan dengan AI untuk mendeteksi situs web, menampilkan logo, dan menggabungkan merchant duplikat."
+      enhance_button: Tingkatkan dengan AI
+      search_family_merchants: Cari merchant keluarga...
+      search_provider_merchants: Cari merchant penyedia...
+      no_family_merchants_found: Tidak ada merchant keluarga yang cocok
+      no_provider_merchants_found: Tidak ada merchant penyedia yang cocok
+      per_page: per halaman
+      unlinked_title: Baru-baru ini diputuskan tautannya
+      unlinked_info: Merchant ini baru-baru ini dihapus dari transaksi Anda. Merchant tersebut akan hilang dari daftar ini setelah 30 hari kecuali jika ditetapkan kembali ke transaksi.
+      table:
+        merchant: Merchant
+        actions: Tindakan
+        source: Sumber
+    family_merchant:
+      edit: Edit
+      delete: Hapus
+    merchant:
+      confirm_accept: Hapus merchant
+      confirm_body: Apakah Anda yakin ingin menghapus merchant ini? Menghapus merchant ini
+        akan memutuskan tautan semua transaksi terkait dan dapat memengaruhi laporan Anda.
+      confirm_title: Hapus merchant?
+      delete: Hapus merchant
+      edit: Edit merchant
+    merge:
+      title: Gabungkan merchant
+      description: Pilih merchant target dan merchant yang akan digabungkan ke dalamnya. Semua transaksi dari merchant yang digabungkan akan dialihkan ke target.
+      target_label: Gabungkan ke (target)
+      select_target: Pilih merchant target...
+      sources_label: Merchant yang akan digabungkan
+      sources_search_placeholder: Cari merchant...
+      no_merchants_found: Tidak ada merchant yang cocok
+      sources_hint: Merchant yang dipilih akan digabungkan ke dalam target. Merchant keluarga akan dihapus, merchant penyedia akan diputuskan tautannya.
+      submit: Gabungkan yang dipilih
+    new:
+      title: Merchant baru
+    perform_merge:
+      success:
+        one: Berhasil menggabungkan %{count} merchant
+        other: Berhasil menggabungkan %{count} merchant
+      no_merchants_selected: Tidak ada merchant yang dipilih untuk digabungkan
+      target_not_found: Merchant target tidak ditemukan
+      invalid_merchants: Merchant yang dipilih tidak valid
+    provider_merchant:
+      edit: Edit
+      remove: Putuskan tautan
+      remove_confirm_title: Putuskan tautan merchant?
+      remove_confirm_body: Apakah Anda yakin ingin memutuskan tautan %{name}? Tindakan ini akan memutuskan tautan semua transaksi terkait dari merchant ini, tetapi tidak akan menghapus merchant itu sendiri.
+    enhance:
+      success: Peningkatan merchant penyedia dimulai. Merchant akan segera ditingkatkan dan duplikat akan digabungkan.
+      already_running: Peningkatan sedang berlangsung. Harap tunggu hingga selesai.
+    update:
+      success: Merchant berhasil diperbarui
+      converted_success: Merchant berhasil dikonversi dan diperbarui
+  merchants:
+    show:
+      average_transaction: Rata-rata transaksi
+      edit: Edit merchant
+      first_transaction: Transaksi pertama
+      last_transaction: Transaksi terakhir
+      summary: Ringkasan
+      total_spending: Total pengeluaran
+      total_transactions: Total transaksi

@@ -15,6 +15,7 @@ ca:
     trade_republic_item:
       syncing: "S'està sincronitzant"
       requires_update: "Cal tornar a autenticar-se"
+      session_expires_in: "La sessió caduca d'aquí a %{time} (%{at})."
       error: "Error"
       synced: "Sincronitzat fa %{time}. %{summary}."
       setup_accounts: "Configura els comptes"

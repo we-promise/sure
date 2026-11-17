@@ -194,4 +194,76 @@ class Provider::Openai::BankStatementExtractorTest < ActiveSupport::TestCase
     # Should return empty transactions on parse error
     assert_equal [], result[:transactions]
   end
+
+  test "omits response_format entirely when json_mode is none" do
+    @client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.returns(chat_response)
+
+    extractor = build_extractor(json_mode: "none")
+
+    extractor.extract
+
+    assert_equal "none", extractor.json_mode
+  end
+
+  test "asks for json_object by default, preserving pre-fix behaviour" do
+    @client.expects(:chat).with do |request|
+      request[:parameters][:response_format] == { type: "json_object" }
+    end.returns(chat_response)
+
+    build_extractor.extract
+  end
+
+  test "resolves json_mode from LLM_JSON_MODE when none is passed" do
+    @client.expects(:chat).with do |request|
+      !request[:parameters].key?(:response_format)
+    end.returns(chat_response)
+
+    with_env_overrides("LLM_JSON_MODE" => "none") do
+      build_extractor.extract
+    end
+  end
+
+  test "an explicit json_mode wins over LLM_JSON_MODE" do
+    @client.expects(:chat).with do |request|
+      request[:parameters][:response_format] == { type: "json_object" }
+    end.returns(chat_response)
+
+    with_env_overrides("LLM_JSON_MODE" => "none") do
+      build_extractor(json_mode: "json_object").extract
+    end
+  end
+
+  test "strips a markdown fenced reply so none mode still parses" do
+    fenced = "```json\n" + { "transactions" => [ { "date" => "2024-01-15", "description" => "Coffee", "amount" => -5.50 } ] }.to_json + "\n```"
+    @client.expects(:chat).returns(chat_response(content: fenced))
+
+    result = build_extractor(json_mode: "none").extract
+
+    assert_equal 1, result[:transactions].size
+    assert_equal "Coffee", result[:transactions][0][:name]
+  end
+
+  private
+    def chat_response(content: nil)
+      {
+        "choices" => [ {
+          "message" => {
+            "content" => content || { "transactions" => [] }.to_json
+          }
+        } ]
+      }
+    end
+
+    def build_extractor(json_mode: nil)
+      extractor = Provider::Openai::BankStatementExtractor.new(
+        client: @client,
+        pdf_content: "dummy",
+        model: @model,
+        json_mode: json_mode
+      )
+      extractor.stubs(:extract_pages_from_pdf).returns([ "Page 1 text" ])
+      extractor
+    end
 end

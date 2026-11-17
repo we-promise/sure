@@ -5,6 +5,19 @@ class EnableBankingItem::Importer
   # Enable Banking typically returns ~100 transactions per page, so 100 pages = ~10,000 transactions
   MAX_PAGINATION_PAGES = 100
 
+  # A first fetch with strategy=longest can span many years, and Enable Banking
+  # says it may return empty pages with a continuation key, so it gets a larger
+  # budget. Hitting the cap keeps the partial result and reports the fetch as
+  # truncated (see fetch_and_store_transactions).
+  MAX_LONGEST_PAGINATION_PAGES = 1000
+
+  # Under PSD2, access without a fresh SCA covers the last 90 days, and some
+  # ASPSPs reject a date_from at exactly 90 days. The newest stored row only
+  # pulls an incremental fetch back this far, the same 89 days the provider's
+  # WRONG_TRANSACTIONS_PERIOD fallback starts with (see
+  # incremental_sync_start_date).
+  STORED_ROW_LOOKBACK_LIMIT = Provider::EnableBanking::FALLBACK_TRANSACTIONS_DATE_FROM_DAYS.first.days
+
   # Prefer booked ledger balances for net worth/current_balance. Available balances
   # can include an arranged overdraft facility for some ASPSPs (for example CGD PT),
   # so they are only a last-resort fallback.
@@ -27,6 +40,16 @@ class EnableBankingItem::Importer
     ITAV interimAvailable
   ].freeze
 
+  # With "Balance is available credit" on for a credit card, the bank's figure
+  # is the available credit, so available types come first. Some cards report
+  # the credit limit as the booked balance (mBank PL: ITBD = limit, ITAV =
+  # available credit). XPCD (expected) keeps its place after the booked types:
+  # it is a projected booked balance, not an available-credit figure.
+  AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY = (%w[
+    CLAV closingAvailable
+    ITAV interimAvailable
+  ] + BALANCE_TYPE_PRIORITY).uniq.freeze
+
   PERIOD_BOUNDARY_TYPES = %w[opbd openingbooked prcd previouslyclosedbooked].freeze
 
   # Only these types may outrank OPBD/PRCD on freshness (see fresher_balance) —
@@ -37,6 +60,16 @@ class EnableBankingItem::Importer
   # codes and Enable Banking's descriptive spellings are listed here pre-normalized,
   # mirroring BALANCE_TYPE_PRIORITY's own XPCD/CLAV/ITAV entries above.
   FRESHNESS_BALANCE_TYPES = %w[xpcd expected clav closingavailable itav interimavailable].freeze
+
+  # Two same-type balances within this distance of each other (or of an expected
+  # value) are treated as equal when breaking a tie (see resolve_same_type_balances).
+  BALANCE_TIEBREAK_TOLERANCE = BigDecimal("0.01")
+
+  # Tiebreak stages backed by evidence rather than a heuristic. A balance chosen
+  # this way (or without any tiebreak) is stored as balance_evidence_verified;
+  # the processor promotes that to balance_verified only once the balance has
+  # been written as the anchor, which lets the next sync trust that anchor.
+  VERIFIED_TIEBREAK_STAGES = %i[last_committed_transaction credit_limit anchor].freeze
 
   NETWORK_ERRORS = [
     ::SocketError,
@@ -122,17 +155,17 @@ class EnableBankingItem::Importer
     # must not prevent transaction sync for the same account.
     transactions_imported = 0
     transactions_failed = 0
+    transactions_truncated = 0
     balances_failed = 0
 
     linked_accounts_query = enable_banking_item.enable_banking_accounts.joins(:account_provider).joins(:account).merge(Account.visible)
 
     linked_accounts_query.each do |enable_banking_account|
       begin
-        balances_failed += 1 unless fetch_and_update_balance(enable_banking_account)
-
         result = fetch_and_store_transactions(enable_banking_account)
         if result[:success]
           transactions_imported += result[:transactions_count]
+          transactions_truncated += 1 if result[:truncated]
         else
           transactions_failed += 1
           @sync_error = promote_session_invalid(@sync_error, result[:error])
@@ -142,6 +175,17 @@ class EnableBankingItem::Importer
         @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
         Rails.logger.error "EnableBankingItem::Importer - Failed to process account #{enable_banking_account.uid}: #{e.message}"
       end
+
+      # Runs after the transaction fetch so a same-type balance tie can be checked
+      # against this sync's booked transactions (see resolve_same_type_balances),
+      # and in its own rescue so a failed transaction fetch never skips it.
+      begin
+        balances_failed += 1 unless fetch_and_update_balance(enable_banking_account)
+      rescue => e
+        balances_failed += 1
+        @sync_error = promote_session_invalid(@sync_error, handle_sync_error(e))
+        Rails.logger.error "EnableBankingItem::Importer - Failed to update balance for account #{enable_banking_account.uid}: #{e.message}"
+      end
     end
 
     result = {
@@ -150,7 +194,8 @@ class EnableBankingItem::Importer
       accounts_failed: accounts_failed,
       transactions_imported: transactions_imported,
       transactions_failed: transactions_failed,
-      balances_failed: balances_failed
+      balances_failed: balances_failed,
+      transactions_truncated: transactions_truncated
     }
 
     result[:error] = @sync_error || I18n.t("enable_banking_items.errors.unexpected") if !result[:success]
@@ -235,7 +280,9 @@ class EnableBankingItem::Importer
       end
 
       currency, kept, skipped = split_balances_by_currency(balances, enable_banking_account)
-      balance = select_current_balance(kept)
+      balance, tiebreak_stage = select_current_balance(
+        kept, enable_banking_account, prefer_available: prefer_available_balance?(enable_banking_account)
+      )
 
       unless balance.present?
         mark_balance_unavailable(enable_banking_account)
@@ -258,7 +305,8 @@ class EnableBankingItem::Importer
 
       enable_banking_account.update!(
         current_balance: parsed_amount,
-        currency: balance_currency(balance) || enable_banking_account.currency
+        currency: balance_currency(balance) || enable_banking_account.currency,
+        balance_evidence_verified: tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage)
       )
       # Only now is the chosen-currency balance known to be the one in use.
       capture_skipped_currency_balances(enable_banking_account, currency, skipped)
@@ -282,7 +330,7 @@ class EnableBankingItem::Importer
     # under the same balance type (EUR, CAD, USD, ...). Keep the balances in
     # the currency the accounts endpoint reports for the account, else in the
     # first currency listed, which is the wallet's primary one. Otherwise
-    # select_current_balance takes the last entry of each type, so an empty
+    # the same-type tiebreak would choose between currencies, so an empty
     # USD balance replaced the EUR one and switched the account to USD.
     # Returns the chosen currency, the balances in it and the ones left out.
     def split_balances_by_currency(balances, enable_banking_account)
@@ -337,23 +385,279 @@ class EnableBankingItem::Importer
       )
     end
 
-    def select_current_balance(balances)
-      by_type = balances.index_by { |balance| normalize_balance_type(balance[:balance_type]) }
+    # The flag only changes how a credit card's balance is read (see
+    # EnableBankingAccount::Processor#process_account!), so any other linked
+    # account stays booked-first even if the flag is still set from an earlier link.
+    def prefer_available_balance?(enable_banking_account)
+      enable_banking_account.treat_balance_as_available_credit? &&
+        enable_banking_account.current_account&.accountable_type == "CreditCard"
+    end
 
-      BALANCE_TYPE_PRIORITY.each do |type|
+    # Returns [balance, tiebreak_stage]. tiebreak_stage is nil unless the chosen
+    # type was reported more than once (see resolve_same_type_balances).
+    def select_current_balance(balances, enable_banking_account, prefer_available: false)
+      by_type = balances.group_by { |balance| normalize_balance_type(balance[:balance_type]) }
+      priority = prefer_available ? AVAILABLE_CREDIT_BALANCE_TYPE_PRIORITY : BALANCE_TYPE_PRIORITY
+
+      priority.each do |type|
         normalized_type = normalize_balance_type(type)
-        balance = by_type[normalized_type]
-        next unless balance.present?
+        candidates = by_type[normalized_type]
+        next if candidates.blank?
 
         if PERIOD_BOUNDARY_TYPES.include?(normalized_type)
-          fresher = fresher_balance(balance, balances)
-          return fresher if fresher
+          # Checked before the tiebreak, so a tie among OPBD/PRCD entries that a
+          # fresher balance replaces anyway is neither resolved nor logged.
+          newest = candidates.max_by { |candidate| parse_reference_date(candidate[:reference_date]) || Date.new(0) }
+          fresher = fresher_balance(newest, balances)
+          if fresher
+            # fresher_balance takes the first entry of the newest date, so
+            # same-type entries of that date go through the same tiebreak.
+            # Older entries of that type still make the pick unverified.
+            same_type = by_type[normalize_balance_type(fresher[:balance_type])]
+            fresher_date = parse_reference_date(fresher[:reference_date])
+            same_day = same_type.select { |candidate| parse_reference_date(candidate[:reference_date]) == fresher_date }
+            fresher, fresher_stage = resolve_same_type_balances(same_day, enable_banking_account)
+            return [ fresher, same_day.size == same_type.size ? fresher_stage : :fresher ]
+          end
         end
 
-        return balance
+        return resolve_same_type_balances(candidates, enable_banking_account)
       end
 
-      balances.first
+      # No known type: response order decides, which is no evidence once there
+      # is more than one entry.
+      [ balances.first, balances.one? ? nil : :first ]
+    end
+
+    # Some ASPSPs report the same balance_type twice with different amounts, e.g.
+    # two CLBD entries where one includes the arranged overdraft (#3188). Stages,
+    # strongest evidence first:
+    #   :credit_limit               (depository) gap equals the credit limit; lower wins
+    #   :last_committed_transaction candidates point to different bookings; newest wins
+    #   :anchor / :anchor_timestamp (depository) matches the previous anchor minus
+    #                               booked flows since, if that anchor was verified
+    #   :lowest                     (depository) an included overdraft only ever raises it
+    #   :first                      (other accounts) first entry in response order
+    def resolve_same_type_balances(candidates, enable_banking_account)
+      return [ candidates.first, nil ] if candidates.one?
+
+      usable = candidates.select { |balance| signed_balance_amount(balance) }
+      return [ candidates.first, nil ] if usable.empty?
+      return [ usable.first, nil ] if usable.one?
+      # The same amount reported twice is no ambiguity.
+      return [ usable.first, nil ] if usable.map { |balance| signed_balance_amount(balance) }.uniq.one?
+
+      balance, stage = tiebreak_same_type_balances(usable, enable_banking_account)
+      capture_balance_tiebreak_debug_log(enable_banking_account, candidates, balance, stage)
+      [ balance, stage ]
+    end
+
+    def tiebreak_same_type_balances(candidates, enable_banking_account)
+      account = enable_banking_account.current_account
+      depository = account&.accountable_type == "Depository"
+
+      # A gap equal to the arranged overdraft is direct evidence of #3188, so it
+      # decides before the booking references, which say nothing about overdrafts.
+      if depository
+        winner = balance_by_credit_limit(candidates, enable_banking_account)
+        return [ winner, :credit_limit ] if winner
+      end
+
+      booked = booked_raw_transactions(enable_banking_account)
+      winner = balance_by_last_committed_transaction(candidates, booked)
+      return [ winner, :last_committed_transaction ] if winner
+
+      return [ candidates.first, :first ] unless depository
+
+      winner, stage = balance_by_anchor(candidates, enable_banking_account, account, booked)
+      return [ winner, stage ] if winner
+
+      [ candidates.min_by { |balance| signed_balance_amount(balance) }, :lowest ]
+    end
+
+    # last_committed_transaction is the entry_reference of the last booking the
+    # balance includes. Only decides when every candidate points to a different,
+    # known booking; equal references say nothing about which amount is right.
+    def balance_by_last_committed_transaction(candidates, booked)
+      references = candidates.map { |balance| balance[:last_committed_transaction].presence }
+      return nil if references.any?(&:nil?) || references.uniq.size != references.size
+
+      # A reference reused with different dates cannot say which booking is
+      # newer, and this stage counts as verified, so such a reference abstains.
+      booking_dates = booked.each_with_object({}) do |tx, dates|
+        reference = tx[:entry_reference].presence
+        date = raw_transaction_date(tx)
+        (dates[reference] ||= Set.new) << date if reference && date
+      end
+
+      dates = references.map { |reference| booking_dates[reference] }
+      return nil unless dates.all? { |reference_dates| reference_dates&.one? }
+
+      dated = candidates.zip(dates.map(&:first))
+
+      latest = dated.map(&:last).max
+      newest = dated.select { |_, date| date == latest }
+      newest.one? ? newest.first.first : nil
+    end
+
+    # An arranged overdraft counted into one of the balances shifts it up by the
+    # credit limit, so a gap matching the limit identifies the lower one as real.
+    def balance_by_credit_limit(candidates, enable_banking_account)
+      credit_limit = enable_banking_account.credit_limit
+      return nil unless credit_limit.present? && credit_limit.positive?
+
+      amounts = candidates.map { |balance| signed_balance_amount(balance) }
+      return nil unless ((amounts.max - amounts.min) - credit_limit).abs <= BALANCE_TIEBREAK_TOLERANCE
+
+      candidates.min_by { |balance| signed_balance_amount(balance) }
+    end
+
+    # Expected balance = previous anchor minus booked flows since (asset account,
+    # positive amount = outflow, mirroring Balance::ForwardCalculator). Skipped
+    # unless the current anchor was verified when it was written: an anchor that
+    # already came from the wrong candidate would otherwise confirm itself.
+    #
+    # Bookings dated on the anchor day may or may not be in the anchor (it was
+    # taken at some point that day), so the expectation is computed both ways and
+    # only an answer both agree on counts.
+    def balance_by_anchor(candidates, enable_banking_account, account, booked)
+      return nil unless enable_banking_account.balance_verified? && account.has_current_anchor?
+      return nil unless anchor_written_by_this_link?(account, enable_banking_account)
+
+      anchor_date = account.current_anchor_date
+      flows = booked.map { |tx| [ raw_transaction_date(tx), tx ] }
+      # A booking without a usable date may fall after the anchor: abstain.
+      return nil if flows.any? { |date, _| date.nil? }
+
+      dated = flows.filter_map do |date, tx|
+        [ date, signed_transaction_amount(tx) ] if date >= anchor_date && date <= Date.current
+      end
+      # An unparseable amount makes the expected balance unknowable: abstain.
+      return nil if dated.any? { |_, amount| amount.nil? }
+      later_flows = dated.sum { |date, amount| date > anchor_date ? amount : 0 }
+      all_flows = dated.sum { |_, amount| amount }
+
+      closest = matching_balances(candidates, account.current_anchor_balance - later_flows)
+      return nil if closest.empty?
+      return nil unless closest == matching_balances(candidates, account.current_anchor_balance - all_flows)
+      return [ closest.first, :anchor ] if closest.one?
+
+      latest = closest.filter_map { |balance| [ balance, parse_balance_timestamp(balance[:last_change_date_time]) ] }
+        .select { |_, time| time }
+      return nil unless latest.size == closest.size
+
+      newest_time = latest.map(&:last).max
+      newest = latest.select { |_, time| time == newest_time }
+      newest.one? ? [ newest.first.first, :anchor_timestamp ] : nil
+    end
+
+    # balance_verified lives on the provider account, so after a relink it would
+    # otherwise vouch for an anchor the new account got elsewhere.
+    def anchor_written_by_this_link?(account, enable_banking_account)
+      linked_at = enable_banking_account.account_provider&.created_at
+      anchor_written_at = account.valuations.current_anchor.joins(:entry).pick(Arel.sql("entries.updated_at"))
+      linked_at.present? && anchor_written_at.present? && anchor_written_at >= linked_at
+    end
+
+    # Only candidates that actually match the expectation count: the closest of
+    # several far-off amounts is no evidence for any of them.
+    def matching_balances(candidates, expected)
+      candidates.select { |balance| (signed_balance_amount(balance) - expected).abs <= BALANCE_TIEBREAK_TOLERANCE }
+    end
+
+    # Same dates as the entries get (EnableBankingEntry::Processor#date); nil
+    # when the row has no usable date.
+    def raw_transaction_date(tx)
+      return nil if tx.values_at(:booking_date, :value_date, :transaction_date).all?(&:blank?)
+
+      EnableBankingEntry::Processor.transaction_date(tx, enable_banking_item.family.timezone)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def booked_raw_transactions(enable_banking_account)
+      enable_banking_account.raw_transactions_payload.to_a.map(&:with_indifferent_access).select do |tx|
+        tx[:status] != "PDNG" && !tx[:_pending] && !tx.dig(:extra, :enable_banking, :pending) &&
+          !EnableBankingEntry::Processor.unidentified_hold?(tx)
+      end
+    end
+
+    # Same sign convention as EnableBankingEntry::Processor#amount_value:
+    # DBIT (outflow) positive, CRDT (inflow) negative.
+    def signed_transaction_amount(tx)
+      amount = tx.dig(:transaction_amount, :amount) || tx[:amount]
+      absolute = BigDecimal(amount.to_s).abs
+      tx[:credit_debit_indicator] == "CRDT" ? -absolute : absolute
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def signed_balance_amount(balance)
+      amount = balance.dig(:balance_amount, :amount) || balance[:amount]
+      return nil if amount.blank?
+
+      parsed = BigDecimal(amount.to_s)
+      balance[:credit_debit_indicator].to_s.upcase == "DBIT" ? -parsed : parsed
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    def parse_balance_timestamp(value)
+      return nil if value.blank?
+      Time.zone.parse(value.to_s)
+    rescue ArgumentError, TypeError
+      nil
+    end
+
+    # Banks that always report the duplicate would otherwise add the same warning
+    # on every sync; log again only when the candidates or the outcome change.
+    # Amounts, not positions, so a bank reordering the same entries stays quiet.
+    def capture_balance_tiebreak_debug_log(enable_banking_account, candidates, chosen, stage)
+      amount_key = ->(balance) { signed_balance_amount(balance)&.to_s("F").to_s }
+      fingerprint = Digest::SHA256.hexdigest(
+        [ stage, amount_key.call(chosen), candidates.map(&amount_key).sort ].to_json
+      )
+      return if last_balance_tiebreak_fingerprint(enable_banking_account) == fingerprint
+
+      DebugLogEntry.capture(
+        category: "provider_sync_warning",
+        level: "warn",
+        message: "Enable Banking reported the same balance type more than once; resolved by #{stage}",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          balance_type: chosen[:balance_type],
+          stage: stage.to_s,
+          fingerprint: fingerprint,
+          chosen_index: candidates.index(chosen),
+          previous_balance_verified: enable_banking_account.balance_verified?,
+          credit_limit: enable_banking_account.credit_limit&.to_s("F"),
+          candidates: candidates.map do |balance|
+            {
+              amount: balance.dig(:balance_amount, :amount) || balance[:amount],
+              currency: balance_currency(balance),
+              credit_debit_indicator: balance[:credit_debit_indicator],
+              last_change_date_time: balance[:last_change_date_time],
+              reference_date: balance[:reference_date],
+              last_committed_transaction: balance[:last_committed_transaction].present?
+            }
+          end
+        }
+      )
+    end
+
+    def last_balance_tiebreak_fingerprint(enable_banking_account)
+      account_provider = enable_banking_account.account_provider
+      return nil unless account_provider
+
+      DebugLogEntry
+        .where(account_provider: account_provider, category: "provider_sync_warning", source: self.class.name)
+        .order(created_at: :desc, id: :desc)
+        .first&.metadata&.dig("fingerprint")
     end
 
     # Guards the OPBD/PRCD priority (see BALANCE_TYPE_PRIORITY) against picking a
@@ -451,6 +755,28 @@ class EnableBankingItem::Importer
       )
     end
 
+    # A strategy=longest fetch that stops at the page cap or on a repeated
+    # continuation key keeps its rows and is not retried, so the missing
+    # history is surfaced here.
+    def capture_longest_truncation_debug_log(enable_banking_account, transactions_kept:, reason:)
+      DebugLogEntry.capture(
+        category: "provider_sync_error",
+        level: "warn",
+        message: "Enable Banking strategy=longest transaction fetch stopped early; kept partial history",
+        source: self.class.name,
+        provider_key: "enable_banking",
+        family: enable_banking_item.family,
+        account_provider: enable_banking_account.account_provider,
+        metadata: {
+          enable_banking_item_id: enable_banking_item.id,
+          enable_banking_account_id: enable_banking_account.id,
+          uid: enable_banking_account.uid,
+          transactions_kept: transactions_kept,
+          reason: reason
+        }
+      )
+    end
+
     # Surfaces "ASPSP doesn't support PDNG" as a support-visible diagnostic, same
     # rationale as capture_pagination_truncation_debug_log: this is a partial
     # degradation (booked transactions still sync, pending transactions are
@@ -517,27 +843,35 @@ class EnableBankingItem::Importer
     end
 
     def fetch_and_store_transactions(enable_banking_account)
+      first_fetch = first_transactions_fetch?(enable_banking_account)
       start_date = determine_sync_start_date(enable_banking_account)
       include_pending = include_pending?
 
-      all_transactions = fetch_paginated_transactions(
+      all_transactions, book_truncated = fetch_paginated_transactions(
         enable_banking_account,
         start_date: start_date,
         transaction_status: "BOOK",
-        psu_headers: enable_banking_item.build_psu_headers
+        psu_headers: enable_banking_item.build_psu_headers,
+        strategy: first_fetch ? "longest" : nil
       )
+      truncated = first_fetch && book_truncated
+      if truncated
+        Rails.logger.warn "EnableBankingItem::Importer - strategy=longest fetch for account #{enable_banking_account.uid} was cut short; the stored history may be incomplete"
+      end
 
       if include_pending
-        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG) with _pending: true
+        # Tag any transaction in all_transactions (fetched as BOOK but actually PDNG or an unidentified hold) with _pending: true
         all_transactions = all_transactions.map do |tx|
           tx_ia = tx.with_indifferent_access
-          tx_ia[:status] == "PDNG" ? tx_ia.merge(_pending: true) : tx_ia
+          is_pending = tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
+          is_pending ? tx_ia.merge(_pending: true) : tx_ia
         end
       else
         # If include_pending is false, we must filter out any pending transactions
-        # that were returned (e.g. if the bank ignores transaction_status="BOOK").
+        # that were returned (e.g. if the bank ignores transaction_status="BOOK" or returns unfinalized holds).
         all_transactions = all_transactions.reject do |tx|
-          tx.with_indifferent_access[:status] == "PDNG"
+          tx_ia = tx.with_indifferent_access
+          tx_ia[:status] == "PDNG" || EnableBankingEntry::Processor.unidentified_hold?(tx_ia)
         end
       end
 
@@ -552,9 +886,11 @@ class EnableBankingItem::Importer
         # Trade Republic rejects the same request with a 400 (:bad_request) instead of a
         # 422 (:validation_error), so both error types are treated as "PDNG unsupported". (Issue #392)
         begin
-          pending_transactions = fetch_paginated_transactions(
+          # Pending rows are only a few days old, so a first fetch without a
+          # start date still sends a short, explicit window here.
+          pending_transactions, _pending_truncated = fetch_paginated_transactions(
             enable_banking_account,
-            start_date: start_date,
+            start_date: start_date || 30.days.ago.to_date,
             transaction_status: "PDNG",
             psu_headers: enable_banking_item.build_psu_headers
           )
@@ -606,7 +942,7 @@ class EnableBankingItem::Importer
       unless include_pending
         removed_pending = existing_transactions.reject! do |tx|
           tx = tx.with_indifferent_access
-          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
         end
       end
 
@@ -632,7 +968,7 @@ class EnableBankingItem::Importer
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
-            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending]
+            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
             next false unless pending_flag
 
             fp = EnableBankingEntry::Processor.compute_external_id(tx)
@@ -642,14 +978,16 @@ class EnableBankingItem::Importer
           end
         end
 
-        existing_ids = existing_transactions.map { |tx|
-          EnableBankingEntry::Processor.compute_external_id(tx)
-        }.compact.to_set
+        # Ids are computed over stored + fetched rows together so a fetched row
+        # sharing a stored row's transaction_id, but not its entry_reference, is
+        # recognised as new (see EnableBankingEntry::Processor.external_ids_for).
+        ids = EnableBankingEntry::Processor.external_ids_for(existing_transactions + all_transactions)
+        existing_ids = ids.first(existing_transactions.size).compact.to_set
 
-        new_transactions = all_transactions.select do |tx|
-          ext_id = EnableBankingEntry::Processor.compute_external_id(tx)
+        new_transactions = all_transactions.each_with_index.select { |_tx, index|
+          ext_id = ids[existing_transactions.size + index]
           ext_id.present? && !existing_ids.include?(ext_id)
-        end
+        }.map(&:first)
 
         if new_transactions.any? || removed_pending
           enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
@@ -660,7 +998,13 @@ class EnableBankingItem::Importer
         )
       end
 
-      { success: true, transactions_count: transactions_count }
+      # A completed first fetch always leaves a payload, even an empty one, so
+      # the next fetch is incremental (nil means "never fetched").
+      if enable_banking_account.raw_transactions_payload.nil?
+        enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
+      end
+
+      { success: true, transactions_count: transactions_count, truncated: truncated }
     rescue Provider::EnableBanking::EnableBankingError => e
       Rails.logger.error "EnableBankingItem::Importer - Error fetching transactions for account #{enable_banking_account.uid}: #{e.message}"
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
@@ -669,22 +1013,36 @@ class EnableBankingItem::Importer
       { success: false, transactions_count: 0, error: handle_sync_error(e) }
     end
 
-    # Deduplicate transactions from the Enable Banking API response.
-    # Some banks return the same logical transaction multiple times with different
-    # entry_reference IDs. We build a composite content key that includes
-    # transaction_id (when present) alongside date, amount, currency, creditor,
-    # debtor, remittance_information, and status. Per the Enable Banking API docs
-    # transaction_id is not guaranteed to be unique, so it cannot be used as
-    # the sole dedup criterion. Including it in the composite key preserves
-    # legitimately distinct transactions with identical content but different
-    # transaction_ids (e.g. two laundromat payments on the same day). (Issue #954)
+    # Collapse rows the API returns more than once for the same movement.
+    #
+    # Two real same-day payments, with no transaction_id or a shared one (it is
+    # not guaranteed unique), can match on every content field and differ only
+    # in entry_reference, which Enable Banking documents as the per-account
+    # identifier of a booked entry. Booked rows with distinct references
+    # therefore stay apart, while pending and reference-less copies of the same
+    # content still collapse into them.
     def deduplicate_api_transactions(transactions)
+      reference_groups = transactions.each_with_object(Set.new) do |tx, groups|
+        tx = tx.with_indifferent_access
+        groups.add(build_transaction_content_key(tx)) if distinct_booked_reference?(tx)
+      end
+
       seen = {}
       duplicates_removed = 0
 
       result = transactions.select do |tx|
         tx = tx.with_indifferent_access
         key = build_transaction_content_key(tx)
+
+        if reference_groups.include?(key)
+          # Prefer booked rows over their otherwise identical pending/ID-less
+          # copies, regardless of which appears first in the response.
+          unless distinct_booked_reference?(tx)
+            duplicates_removed += 1
+            next false
+          end
+          key = [ key, tx[:entry_reference] ]
+        end
 
         if seen[key]
           duplicates_removed += 1
@@ -705,9 +1063,12 @@ class EnableBankingItem::Importer
       result
     end
 
-    # Build a composite key for deduplication. Two transactions with different
-    # entry_reference values but identical content fields (including
-    # transaction_id and credit_debit_indicator) are considered duplicates.
+    def distinct_booked_reference?(tx)
+      tx[:entry_reference].present? && !EnableBankingEntry::Processor.pending_payload?(tx)
+    end
+
+    # Build the content key for deduplication. Different entry_reference values
+    # can share it; deduplicate_api_transactions decides whether they stay apart.
     # transaction_id is included as one component — not a standalone key —
     # because the Enable Banking API docs state it is not guaranteed to be
     # unique. credit_debit_indicator (CRDT/DBIT) is included because
@@ -715,12 +1076,9 @@ class EnableBankingItem::Importer
     # and a same-day refund of the same amount would produce identical keys.
     # status (BOOK/PDNG) is intentionally excluded: the same logical transaction
     # may appear as PDNG then BOOK across imports and must not create duplicates.
-    # Known limitation: when transaction_id is nil for both, pure content
-    # comparison applies. This means two genuinely distinct transactions
-    # with identical content (same date, amount, direction, creditor, etc.)
-    # and no transaction_id would collapse to one. In practice, banks that
-    # omit transaction_id rarely produce such exact duplicates in the same
-    # API response; timestamps or remittance info usually differ. (Issue #954)
+    # Identical real operations share this key; their booked references tell
+    # them apart (EnableBankingEntry::Processor.external_ids_for gives rows
+    # sharing a transaction_id their own ids).
     def build_transaction_content_key(tx)
       date = tx[:booking_date].presence || tx[:value_date].presence || tx[:transaction_date]
       amount = tx.dig(:transaction_amount, :amount).presence || tx[:amount]
@@ -737,17 +1095,21 @@ class EnableBankingItem::Importer
 
     class PaginationTruncatedError < StandardError; end
 
-    def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {})
+    # Returns the rows fetched and whether the fetch stopped before the last
+    # page (page cap, repeated continuation key, or a 400/422 on a later page).
+    def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {}, strategy: nil)
       all_transactions = []
+      truncated = false
       continuation_key = nil
       previous_continuation_key = nil
       page_count = 0
+      max_pages = strategy.present? ? MAX_LONGEST_PAGINATION_PAGES : MAX_PAGINATION_PAGES
 
       loop do
         page_count += 1
 
-        if page_count > MAX_PAGINATION_PAGES
-          msg = "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid} (status=#{transaction_status}). Stopped after #{MAX_PAGINATION_PAGES} pages."
+        if page_count > max_pages
+          msg = "EnableBankingItem::Importer - Pagination limit exceeded for account #{enable_banking_account.uid} (status=#{transaction_status}). Stopped after #{max_pages} pages."
           raise PaginationTruncatedError, msg
         end
 
@@ -757,7 +1119,8 @@ class EnableBankingItem::Importer
             date_from: start_date,
             continuation_key: continuation_key,
             transaction_status: transaction_status,
-            psu_headers: psu_headers
+            psu_headers: psu_headers,
+            strategy: strategy
           )
         rescue Provider::EnableBanking::EnableBankingError => e
           # Some ASPSPs (e.g. Trade Republic via Enable Banking) issue a continuation_key
@@ -789,6 +1152,7 @@ class EnableBankingItem::Importer
             transactions_kept: all_transactions.count,
             error: e
           )
+          truncated = true
           break
         end
 
@@ -806,12 +1170,15 @@ class EnableBankingItem::Importer
         break if continuation_key.blank?
       end
 
-      all_transactions
+      [ all_transactions, truncated ]
     rescue PaginationTruncatedError => e
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
       Rails.logger.warn(e.message)
-      all_transactions
+      if strategy.present?
+        capture_longest_truncation_debug_log(enable_banking_account, transactions_kept: all_transactions.count, reason: e.message)
+      end
+      [ all_transactions, true ]
     end
 
     def filter_transactions_by_date(transactions, start_date)
@@ -864,22 +1231,52 @@ class EnableBankingItem::Importer
       end
     end
 
+    # nil means this account's transactions were never fetched. A completed
+    # fetch always stores an array, even an empty one.
+    def first_transactions_fetch?(enable_banking_account)
+      enable_banking_account.raw_transactions_payload.nil?
+    end
+
     def determine_sync_start_date(enable_banking_account)
-      has_stored_transactions = enable_banking_account.raw_transactions_payload.to_a.any?
-
-      # Use user-configured sync_start_date if set, otherwise default
-      user_start_date = enable_banking_item.sync_start_date
-
-      if has_stored_transactions
-        # For incremental syncs, get transactions from 7 days before last sync
-        if enable_banking_item.last_synced_at
-          enable_banking_item.last_synced_at.to_date - 7.days
-        else
-          30.days.ago.to_date
-        end
+      if first_transactions_fetch?(enable_banking_account)
+        # The first fetch asks for strategy=longest. The user's start date, when
+        # set, is the lower bound (never after today); without one the ASPSP
+        # returns all it allows.
+        [ enable_banking_item.sync_start_date, Date.current ].min if enable_banking_item.sync_start_date
       else
-        # Initial sync: use user's configured date or default to 3 months
-        user_start_date || 3.months.ago.to_date
+        incremental_sync_start_date(enable_banking_account)
       end
+    end
+
+    # 7 days before the older of the last completed sync and the newest stored
+    # row. The stored rows cover an account that was not fetched while the item
+    # kept syncing (for example linked again after being unlinked, or linked to
+    # an existing account), so its incremental fetch doesn't leave a gap. The
+    # stored-row term never goes past STORED_ROW_LOOKBACK_LIMIT, overlap
+    # included, so a dormant account doesn't ask for more than the ASPSP serves
+    # without SCA on every sync. An account with no stored rows has no anchor,
+    # so it uses that limit. The last-sync term is not clamped, so a long
+    # outage is handled as before. Nothing before the user's start date is
+    # requested, and nothing after today.
+    def incremental_sync_start_date(enable_banking_account)
+      newest_stored = newest_stored_transaction_date(enable_banking_account)
+      stored_row_start = [ newest_stored && newest_stored - 7.days, STORED_ROW_LOOKBACK_LIMIT.ago.to_date ].compact.max
+
+      start = [
+        enable_banking_item.last_synced_at && (enable_banking_item.last_synced_at.to_date - 7.days),
+        stored_row_start
+      ].compact.min
+
+      [ [ start, enable_banking_item.sync_start_date ].compact.max, Date.current ].min
+    end
+
+    def newest_stored_transaction_date(enable_banking_account)
+      newest = enable_banking_account.raw_transactions_payload.to_a.filter_map do |tx|
+        tx = tx.with_indifferent_access
+        date_str = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
+        Date.parse(date_str.to_s) if date_str.present?
+      rescue ArgumentError
+        nil
+      end.max
     end
 end

@@ -5,64 +5,15 @@ on:
   pull_request:
     paths:
       - 'charts/**'
-      - '.sure-version'
       - '.github/workflows/chart-ci.yml'
   push:
     branches:
       - main
     paths:
       - 'charts/**'
-      - '.sure-version'
       - '.github/workflows/chart-ci.yml'
 
 jobs:
-  version-sync:
-    name: Verify Helm ↔ Rails version sync
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-        with:
-          persist-credentials: false
-
-      - name: Check version alignment
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          RAILS_VERSION=$(cat .sure-version | tr -d '[:space:]')
-          if [ -z "$RAILS_VERSION" ]; then
-            echo "::error::Could not read version from .sure-version"
-            exit 1
-          fi
-          CHART_VERSION=$(sed -n 's/^version: //p' charts/sure/Chart.yaml | head -n 1)
-          APP_VERSION=$(sed -n 's/^appVersion: "\{0,1\}\([^"]*\)"\{0,1\}/\1/p' charts/sure/Chart.yaml | head -n 1)
-
-          echo "App version (.sure-version):     $RAILS_VERSION"
-          echo "Helm chart version (Chart.yaml): $CHART_VERSION"
-          echo "Helm appVersion (Chart.yaml):    $APP_VERSION"
-
-          ERRORS=0
-
-          if [ "$RAILS_VERSION" != "$CHART_VERSION" ]; then
-            echo "::error::Chart version ($CHART_VERSION) does not match Rails version ($RAILS_VERSION)"
-            ERRORS=$((ERRORS + 1))
-          fi
-
-          if [ "$RAILS_VERSION" != "$APP_VERSION" ]; then
-            echo "::error::Chart appVersion ($APP_VERSION) does not match Rails version ($RAILS_VERSION)"
-            ERRORS=$((ERRORS + 1))
-          fi
-
-          if [ "$ERRORS" -gt 0 ]; then
-            echo ""
-            echo "To fix: ensure version in .sure-version matches"
-            echo "both 'version' and 'appVersion' in charts/sure/Chart.yaml"
-            exit 1
-          fi
-
-          echo "All versions are in sync."
-
   helm-checks:
     runs-on: ubuntu-latest
     steps:

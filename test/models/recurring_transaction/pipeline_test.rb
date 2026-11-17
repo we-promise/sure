@@ -1,6 +1,7 @@
 require "test_helper"
 
 class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
+  include FamilyLockTestHelper
   Pipeline = RecurringTransaction::Pipeline
 
   def setup
@@ -114,25 +115,49 @@ class RecurringTransaction::PipelineTest < ActiveSupport::TestCase
   end
 
   test "run_with_lock! refuses to stack on a held family lock" do
-    key = Pipeline.advisory_lock_key(@family.id)
-    # Transactional tests hand every checkout the same shared fixture
-    # connection, and a session can always re-take its own advisory lock, so
-    # holding the lock needs a genuinely separate PG session.
-    config = ActiveRecord::Base.connection_pool.db_config.configuration_hash
-    other = PG.connect({
-      dbname: config[:database], host: config[:host], port: config[:port],
-      user: config[:username], password: config[:password]
-    }.compact)
-    other.exec("SELECT pg_advisory_lock(#{key})")
-
-    result = Pipeline.new(@family).run_with_lock!
+    result = with_family_lock_held_elsewhere(@family.id) { Pipeline.new(@family).run_with_lock! }
 
     assert_nil result, "a held lock reports nil rather than running"
-  ensure
-    other&.close
+  end
+
+  test "run! preloads recurrence rules for occurrence generation instead of querying per series" do
+    travel_to Date.new(2026, 8, 10) do
+      series = 3.times.map { |i| create_series(name: "PRELOAD SERIES #{i}", amount: 10 + i, day_offset: i + 1) }
+      RecurringOccurrence.where(recurring_transaction: series).delete_all
+
+      # Isolate the occurrence-generation stage: the other stages have their
+      # own query profiles and are covered by their own tests.
+      RecurringTransaction::Identifier.any_instance.stubs(:identify_recurring_patterns).returns(0)
+      RecurringTransaction::Matcher.any_instance.stubs(:repair_orphans!)
+      RecurringTransaction::Matcher.any_instance.stubs(:run!)
+      RecurringTransaction::PriceChangeDetector.any_instance.stubs(:detect!)
+
+      statements = capture_sql { Pipeline.new(@family).run! }
+
+      rule_loads = statements.grep(/FROM "recurrence_rules"/)
+      assert_equal 1, rule_loads.size,
+        "occurrence generation must load recurrence_rules in one batch, not once per series:\n#{rule_loads.join("
+")}"
+
+      series.each do |s|
+        assert s.recurring_occurrences.exists?, "generation still materializes occurrences for #{s.name}"
+      end
+    end
   end
 
   private
+
+    def capture_sql
+      statements = []
+      subscriber = ActiveSupport::Notifications.subscribe("sql.active_record") do |*args|
+        payload = args.last
+        statements << payload[:sql] unless payload[:name].to_s =~ /SCHEMA|TRANSACTION/
+      end
+      yield
+      statements
+    ensure
+      ActiveSupport::Notifications.unsubscribe(subscriber)
+    end
 
     def create_series(amount:, day_offset:, name: nil, merchant: nil)
       due = Date.current + day_offset

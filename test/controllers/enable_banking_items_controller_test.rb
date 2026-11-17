@@ -307,6 +307,98 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to accounts_path
   end
 
+  # The orphan cleanup's enqueue runs once the relink transaction commits. If it
+  # ran inside that transaction, its error would escape the action's rescue
+  # after the relink had committed, and the request would fail.
+  test "link_existing_account still succeeds when the orphan's destroy enqueue fails" do
+    orphan = Account.create!(
+      family: @family,
+      name: "Old Checking",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    target = Account.create!(
+      family: @family,
+      name: "Manual Checking",
+      balance: 0,
+      currency: "EUR",
+      accountable: Depository.create!(subtype: "checking")
+    )
+    eb_account = @item.enable_banking_accounts.create!(
+      name: "Checking",
+      uid: "eb_relink_1",
+      currency: "EUR",
+      current_balance: 0
+    )
+    AccountProvider.create!(account: orphan, provider: eb_account)
+    DestroyJob.queue_adapter.expects(:enqueue).once.raises(RedisClient::CannotConnectError, "Connection refused")
+
+    post link_existing_account_enable_banking_items_path, params: {
+      account_id: target.id,
+      enable_banking_account_id: eb_account.id
+    }
+
+    assert_response :see_other
+    assert_equal target, AccountProvider.find_by!(provider: eb_account).account
+    assert_equal "active", orphan.reload.status
+  end
+
+  # The modal's form is a plain form_with, so the date field's label and help
+  # must be rendered as elements rather than passed as builder options (which
+  # end up as unknown attributes on the input).
+  test "setup modal shows the start date label and help and leaves the date blank by default" do
+    @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_setup_1", currency: "EUR", current_balance: 0)
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_response :success
+    assert_select "label[for=sync_start_date]", text: I18n.t("enable_banking_items.setup_accounts.sync_start_date_label")
+    assert_select "p#sync_start_date_help", text: I18n.t("enable_banking_items.setup_accounts.sync_start_date_help")
+    assert_select "input[type=date][name=sync_start_date][aria-describedby=sync_start_date_help]" do |inputs|
+      assert inputs.first["value"].blank?, "A first setup must not prefill a date, or it would cap the first fetch"
+      assert_nil inputs.first["label"]
+      assert_nil inputs.first["help_text"]
+    end
+  end
+
+  test "setup modal shows a start date that is already set" do
+    @item.update!(sync_start_date: Date.new(2024, 1, 15))
+    @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_setup_1", currency: "EUR", current_balance: 0)
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_select "input[type=date][name=sync_start_date][value='2024-01-15']"
+  end
+
+  test "complete_account_setup stores a chosen start date" do
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_start_date: "2024-01-15" }
+
+    assert_equal Date.new(2024, 1, 15), @item.reload.sync_start_date
+  end
+
+  test "complete_account_setup with a blank start date leaves it unset" do
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_start_date: "" }
+
+    assert_nil @item.reload.sync_start_date
+  end
+
+  test "complete_account_setup with a cleared start date removes the stored one" do
+    @item.update!(sync_start_date: Date.new(2024, 1, 15))
+
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_start_date: "" }
+
+    assert_nil @item.reload.sync_start_date
+  end
+
+  test "complete_account_setup without the date field keeps the stored start date" do
+    @item.update!(sync_start_date: Date.new(2024, 1, 15))
+
+    post complete_account_setup_enable_banking_item_url(@item), params: { account_types: {} }
+
+    assert_equal Date.new(2024, 1, 15), @item.reload.sync_start_date
+  end
+
   private
 
     def stub_authorization_start

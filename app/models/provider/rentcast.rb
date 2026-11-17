@@ -28,10 +28,16 @@ class Provider::Rentcast < Provider
     @api_key = api_key # pipelock:ignore
   end
 
+  def self.accepts_square_footage?
+    true
+  end
+
   # Fetches the value estimate and the subject property's attributes in a
   # single request — `lookupSubjectAttributes` enriches the AVM response with
   # the property record, so a separate /v1/properties call isn't needed.
-  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil)
+  # A given `square_footage` overrides the record's living area, which can be
+  # wrong (e.g. when it counts a converted garage).
+  def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil, square_footage: nil)
     with_provider_response do
       throttle_request
       record_monthly_request!
@@ -39,6 +45,7 @@ class Provider::Rentcast < Provider
       response = client.get("#{base_url}/v1/avm/value") do |req|
         req.params["address"] = [ line1, locality, region, postal_code ].map { |part| part.to_s.strip }.reject(&:empty?).join(", ")
         req.params["lookupSubjectAttributes"] = true
+        req.params["squareFootage"] = square_footage if square_footage.present?
       end
 
       parsed = JSON.parse(response.body)

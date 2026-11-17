@@ -7,7 +7,7 @@ class Provider::Anthropic::MessageFormatter
   #   the current user message (UserMessage / AssistantMessage)
   # - function_results: tool-result entries for the in-flight follow-up call
   #   (the responder feeds these back after executing the tool_use blocks
-  #   returned by the previous request)
+  #   returned by the previous requests, tagging each with its :round)
   def initialize(prompt:, conversation_history: [], function_results: [])
     @prompt = prompt
     @conversation_history = conversation_history
@@ -28,12 +28,12 @@ class Provider::Anthropic::MessageFormatter
 
     messages << { role: "user", content: @prompt.to_s }
 
-    if @function_results.present?
-      tool_use_blocks = @function_results.map { |fr| tool_use_block_from_result(fr) }
-      tool_result_blocks = @function_results.map { |fr| tool_result_block(fr) }
-
-      messages << { role: "assistant", content: tool_use_blocks }
-      messages << { role: "user", content: tool_result_blocks }
+    # One assistant tool_use turn plus its user tool_result turn per round, in
+    # order, so each follow-up request extends the previous one and prompt
+    # caching keeps working.
+    Assistant::Responder.group_by_round(@function_results).each do |round_results|
+      messages << { role: "assistant", content: round_results.map { |fr| tool_use_block_from_result(fr) } }
+      messages << { role: "user", content: round_results.map { |fr| tool_result_block(fr) } }
     end
 
     messages

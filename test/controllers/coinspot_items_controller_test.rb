@@ -130,6 +130,15 @@ class CoinspotItemsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "Choose a CoinSpot connection in Provider Settings.", flash[:alert]
   end
 
+  test "select accounts leaves the Add Account modal for Settings at the top level" do
+    get select_accounts_coinspot_items_url, params: { accountable_type: "Crypto" }, headers: { "Turbo-Frame" => "modal" }
+
+    # A redirect would be followed inside the frame and the flash lost.
+    assert_response :success
+    assert_select "turbo-frame#modal turbo-stream[action=redirect][target=?]", settings_providers_path
+    assert_equal I18n.t("coinspot_items.select_accounts.select_connection"), flash[:alert]
+  end
+
   test "select accounts targets selected coinspot item" do
     get select_accounts_coinspot_items_url, params: {
       coinspot_item_id: @second_item.id,

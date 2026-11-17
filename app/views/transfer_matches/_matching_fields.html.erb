@@ -1,5 +1,7 @@
 <%# locals: (form:, entry:, candidates:, accounts:) %>
 
+<% account_items = accounts.map { |account| { value: account.id, label: account.name, object: account } } %>
+
 <% if candidates.any? %>
   <div data-controller="transfer-match" class="space-y-2">
     <p class="text-sm text-secondary">
@@ -15,17 +17,26 @@
               data: { action: "change->transfer-match#update" } %>
 
     <div data-transfer-match-target="existingSelect">
-      <%= form.select :matched_entry_id,
-                candidates.map { |entry|
-                  [entry_name_detailed(entry), entry.id]
-                },
-                { label: t(".matching_transaction") } %>
+      <%= render DS::Select.new(
+            form: form,
+            method: :matched_entry_id,
+            items: candidates.map { |candidate| { value: candidate.id, label: entry_name_detailed(candidate), object: candidate.account } },
+            selected: candidates.first.id,
+            variant: :logo,
+            label: t(".matching_transaction")
+          ) %>
     </div>
 
     <div data-transfer-match-target="newSelect" class="hidden">
-      <%= form.select :target_account_id,
-                accounts.map { |account| [account.name, account.id] },
-                { label: t(".target_account") } %>
+      <%= render DS::Select.new(
+            form: form,
+            method: :target_account_id,
+            items: account_items,
+            selected: account_items.first&.dig(:value),
+            variant: :logo,
+            searchable: true,
+            label: t(".target_account")
+          ) %>
     </div>
   </div>
 <% else %>
@@ -35,9 +46,13 @@
 
   <%= form.hidden_field :method, value: "new" %>
 
-  <div>
-    <%= form.select :target_account_id,
-                accounts.map { |account| [account.name, account.id] },
-                { label: t(".target_account") } %>
-  </div>
+  <%= render DS::Select.new(
+        form: form,
+        method: :target_account_id,
+        items: account_items,
+        selected: account_items.first&.dig(:value),
+        variant: :logo,
+        searchable: true,
+        label: t(".target_account")
+      ) %>
 <% end %>

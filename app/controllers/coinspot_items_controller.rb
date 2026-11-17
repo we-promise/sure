@@ -69,7 +69,8 @@ class CoinspotItemsController < ApplicationController
     coinspot_item = account_flow[:coinspot_item]
 
     unless coinspot_item
-      redirect_to settings_providers_path, alert: coinspot_item_selection_message(account_flow[:credentialed_items])
+      message = coinspot_item_selection_message(account_flow[:credentialed_items])
+      frame_redirect_to(settings_providers_path, alert: message)
       return
     end
 

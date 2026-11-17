@@ -95,6 +95,33 @@ class IncomeStatement::SankeyTest < ActiveSupport::TestCase
     assert_equal graph, graph
   end
 
+  test "investment contributions get their own invested node when they are not spending" do
+    @family.update!(investment_contributions_as_spending: false)
+    transaction(-1000, @family.categories.create!(name: "Salary", color: "#33FF57"))
+    transaction(300, @parent)
+    create_transaction(account: @account, amount: 500, category: nil, date: @month, kind: "investment_contribution")
+    result = graph
+    assert_equal "1000.0", result[:income]
+    assert_equal "300.0", result[:spending]
+    assert_equal "500.0", result[:invested]
+    assert_equal "700.0", result[:net_savings]
+    invested = node(result, "invested_node")
+    assert_equal "invested", invested[:kind]
+    assert_equal "500.0", invested[:value]
+    assert_equal "200.0", node(result, "surplus_node")[:value]
+    assert_balanced(result)
+  end
+
+  test "investment contributions stay in spending by default" do
+    transaction(-1000, @family.categories.create!(name: "Salary", color: "#33FF57"))
+    create_transaction(account: @account, amount: 500, category: nil, date: @month, kind: "investment_contribution")
+    result = graph
+    assert_equal "500.0", result[:spending]
+    assert_equal "0.0", result[:invested]
+    assert_nil node(result, "invested_node")
+    assert_balanced(result)
+  end
+
   private
     def transaction(amount, category)
       create_transaction(account: @account, amount: amount, category: category, date: @month)

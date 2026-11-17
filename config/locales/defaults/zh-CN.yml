@@ -7,6 +7,15 @@ zh-CN:
       close: 关闭
   global:
     expand: 展开
+  mcp:
+    errors:
+      invalid_session_id: 无效的 MCP 会话 ID
+      unsupported_protocol_version: "不支持的 MCP 协议版本：%{version}"
+  oauth:
+    registration:
+      invalid_redirect_uris: redirect_uris 必须使用 https、本地回环 http 或原生应用 URI 方案
+      invalid_client_name: client_name 不能包含双向控制字符
+      reserved_client_name: client_name 保留给第一方应用使用
   activerecord:
     errors:
       messages:

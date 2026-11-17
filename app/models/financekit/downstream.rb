@@ -34,9 +34,9 @@ class Financekit::Downstream
       # health, which the recovery sweep then skipped because it only looks for
       # incomplete batches. Scheduling outside it was no better: a failed health
       # write rolled the batch back after the jobs were already queued, so
-      # recovery ran the same rules again and RuleJob records a RuleRun per run.
+      # recovery ran the same rules again and recorded a second RuleRun per rule.
       # Enqueueing from inside is safe here because ApplicationJob sets
-      # enqueue_after_transaction_commit, so SyncJob and RuleJob are deferred to
+      # enqueue_after_transaction_commit, so SyncJob and ApplyRulesJob are deferred to
       # the commit and dropped outright if it rolls back.
       #
       # The fan-out itself costs the same whether one capture or fifty just
@@ -51,7 +51,7 @@ class Financekit::Downstream
         # Anything failing after it is the publisher's, so drop the attribution.
         account_provider = nil
         @item.family.auto_match_transfers!
-        @item.family.rules.where(active: true).find_each(&:apply_later)
+        ApplyRulesJob.perform_later(@item.family)
 
         FinancekitBatch.where(id: pending)
           .update_all(downstream_completed_at: completed_at, updated_at: completed_at)

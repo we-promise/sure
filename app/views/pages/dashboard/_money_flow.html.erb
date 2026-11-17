@@ -1,4 +1,4 @@
-<%# locals: (money_flow_data:, accounts:, accessible_account_ids:, col_span: "single") %>
+<%# locals: (money_flow_data:, accounts:, accessible_account_ids:, view_params:, col_span: "single") %>
 <%
   pill_button_class = "inline-flex items-center gap-1.5 bg-container border border-secondary font-medium rounded-lg pl-3 pr-2 py-2 text-sm cursor-pointer text-primary hover:bg-container-inset-hover focus:outline-hidden focus:ring-0 whitespace-nowrap"
   selected_account_ids = money_flow_data[:account_ids] || accounts.map { |a| a.id.to_s }
@@ -13,6 +13,9 @@
   # At full width the chart and summary sit side by side; at single/half width
   # they stack so the chart gets the full column and the month labels don't crowd.
   stacked = col_span != "full"
+  # The other widgets' months and filters, carried through this widget's
+  # links and form so changing it doesn't reset them.
+  other_view_params = view_params.except(:money_flow_month, :money_flow_account_ids)
 %>
 <div id="money-flow-section" class="px-4 space-y-4">
   <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
@@ -34,44 +37,28 @@
           <% menu.with_item(
                variant: :link,
                text: I18n.l(month, format: :month_year).capitalize,
-               href: root_path({ money_flow_month: month.iso8601, money_flow_account_ids: money_flow_data[:account_ids] }.compact),
+               href: root_path(other_view_params.merge(money_flow_month: month.iso8601, money_flow_account_ids: money_flow_data[:account_ids]).compact),
                frame: "dashboard_sections",
-               selected: month == money_flow_data[:month]
+               selected: month == money_flow_data[:month],
+               data: { turbo_action: "advance" }
              ) %>
         <% end %>
       <% end %>
 
-      <%= render DS::Popover.new(variant: :button, no_padding: true) do |popover| %>
-        <% popover.with_button(
-             type: "button",
-             text: all_accounts_selected ? t(".filter_accounts_all") : t(".filter_accounts", count: selected_account_ids.size),
-             variant: "outline",
-             icon: "list-filter"
-           ) %>
-
-        <% popover.with_custom_content do %>
-          <%= form_with url: root_path, method: :get, data: { turbo_frame: "dashboard_sections" }, class: "p-3 w-56 space-y-2" do %>
-            <%= hidden_field_tag :money_flow_month, money_flow_data[:month].iso8601 %>
-
-            <div data-controller="list-filter">
-              <%= render DS::SearchInput.new(
-                    variant: :embedded,
-                    placeholder: t(".search_accounts"),
-                    aria_label: t(".search_accounts"),
-                    data: { list_filter_target: "input", action: "input->list-filter#filter" }
-                  ) %>
-
-              <div class="my-2 max-h-64 overflow-y-auto space-y-1" data-list-filter-target="list">
-                <% accounts.each do |account| %>
-                  <label class="filterable-item flex items-center gap-2 p-1.5 rounded-md hover:bg-container-inset-hover cursor-pointer" data-filter-name="<%= account.name %>">
-                    <%= check_box_tag "money_flow_account_ids[]", account.id, selected_account_ids.include?(account.id.to_s), id: nil, class: "checkbox checkbox--light" %>
-                    <span class="text-sm text-primary truncate"><%= account.name %></span>
-                  </label>
-                <% end %>
-              </div>
-            </div>
-
-            <%= render DS::Button.new(type: "submit", text: t(".apply"), variant: "primary", full_width: true) %>
+      <%= render layout: "pages/dashboard/filter_popover", locals: {
+            button_text: all_accounts_selected ? t(".filter_accounts_all") : t(".filter_accounts", count: selected_account_ids.size),
+            search_label: t(".search_accounts"),
+            apply_text: t(".apply"),
+            hidden_fields: other_view_params.merge(money_flow_month: money_flow_data[:month].iso8601)
+          } do %>
+        <% accounts.each do |account| %>
+          <%= render layout: "pages/dashboard/filter_popover_option", locals: {
+                name: "money_flow_account_ids[]",
+                value: account.id,
+                checked: selected_account_ids.include?(account.id.to_s),
+                filter_name: account.name
+              } do %>
+            <span class="text-sm text-primary truncate"><%= account.name %></span>
           <% end %>
         <% end %>
       <% end %>

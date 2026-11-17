@@ -36,6 +36,25 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 50000 - 1000, BalanceSheet.new(@family).net_worth
   end
 
+  # Counted at 1, ¥1,000,000 added $1,000,000 to net worth (#3640).
+  test "an account in a currency with no rate at all is left out of totals" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    create_account(balance: 50000, accountable: Depository.new)
+    create_account(balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+
+    assert_equal 50000, BalanceSheet.new(@family).net_worth
+    assert_equal 50000, BalanceSheet.new(@family).assets.total
+  end
+
+  test "an account converts at the latest stored rate however old" do
+    ExchangeRate.stubs(:provider).returns(nil)
+    ExchangeRate.create!(from_currency: "JPY", to_currency: "USD", date: 60.days.ago.to_date, rate: 0.007)
+    create_account(balance: 50000, accountable: Depository.new)
+    create_account(balance: 1_000_000, currency: "JPY", accountable: Depository.new)
+
+    assert_equal 57000, BalanceSheet.new(@family).net_worth
+  end
+
   test "disabled accounts do not affect totals" do
     create_account(balance: 1000, accountable: CreditCard.new)
     create_account(balance: 10000, accountable: Depository.new)
@@ -97,6 +116,54 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal BalanceSheet.new(@family).net_worth, values_by_date.fetch(period.end_date).value.amount
   end
 
+  # A failed delete restores the account to disabled. Its history must still
+  # stop where it was disabled, not run on to the failure.
+  test "a failed destroy of a disabled account keeps its net worth cutoff" do
+    period = Period.custom(start_date: Date.current - 3.days, end_date: Date.current)
+    active_account = create_account(balance: 1_000, accountable: Depository.new)
+    disabled_account = create_account(balance: 0, accountable: Depository.new)
+    create_balance(account: active_account, date: period.start_date, balance: 1_000)
+    create_balance(account: active_account, date: period.end_date, balance: 1_000)
+    create_balance(account: disabled_account, date: period.start_date, balance: 20_000)
+    disabled_account.update_columns(status: "disabled", disabled_at: 10.days.ago)
+
+    start_value = -> { BalanceSheet.new(@family).net_worth_series(period: period).values.index_by(&:date).fetch(period.start_date).value.amount }
+    assert_equal 1_000, start_value.call
+
+    disabled_account.mark_for_deletion!
+    disabled_account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+    assert_raises(StandardError) { disabled_account.destroy }
+    assert disabled_account.reload.disabled?
+    Rails.cache.clear
+
+    assert_equal 1_000, start_value.call
+  end
+
+  # An active account can still carry a disabled_at from being disabled and
+  # enabled again before enable cleared it. A failed delete must not turn that
+  # stale date into its cutoff and drop the stretch in which it was active.
+  test "a failed destroy of an active account with a stale disabled_at keeps its history" do
+    period = Period.custom(start_date: Date.current - 3.days, end_date: Date.current)
+    other_account = create_account(balance: 1_000, accountable: Depository.new)
+    deleted_account = create_account(balance: 20_000, accountable: Depository.new)
+    create_balance(account: other_account, date: period.start_date, balance: 1_000)
+    create_balance(account: other_account, date: period.end_date, balance: 1_000)
+    create_balance(account: deleted_account, date: period.start_date, balance: 20_000)
+    deleted_account.update_columns(status: "active", disabled_at: 10.days.ago)
+
+    start_value = -> { BalanceSheet.new(@family).net_worth_series(period: period).values.index_by(&:date).fetch(period.start_date).value.amount }
+    before = start_value.call
+    assert_equal 21_000, before
+
+    deleted_account.reload.mark_for_deletion!
+    deleted_account.stubs(:cleanup_transfers).raises(StandardError, "destroy failed")
+    assert_raises(StandardError) { deleted_account.destroy }
+    assert deleted_account.reload.disabled?
+    Rails.cache.clear
+
+    assert_equal before, start_value.call
+  end
+
   test "historical account scope respects shared-account finance settings" do
     member = users(:new_email)
     included_account = create_account(balance: 0, accountable: Depository.new)
@@ -111,6 +178,21 @@ class BalanceSheetTest < ActiveSupport::TestCase
 
     assert_includes account_ids, included_account.id
     assert_not_includes account_ids, excluded_account.id
+  end
+
+  test "group totals skip shared accounts not included in the member's finances" do
+    member = users(:new_email)
+    included_account = create_account(balance: 1000, accountable: Depository.new)
+    excluded_account = create_account(balance: 2000, accountable: Depository.new)
+    included_account.share_with!(member, include_in_finances: true)
+    excluded_account.share_with!(member, include_in_finances: false)
+
+    assets = BalanceSheet.new(@family, user: member).assets
+    depository_group = assets.account_groups.find { |ag| ag.name == Depository.display_name }
+
+    assert_includes depository_group.accounts.map(&:id), excluded_account.id
+    assert_equal 1000, depository_group.total
+    assert_equal assets.total, assets.account_groups.sum(&:total)
   end
 
   test "calculates asset group totals" do
@@ -140,6 +222,84 @@ class BalanceSheetTest < ActiveSupport::TestCase
     assert_equal 2, liability_groups.size
     assert_equal 1000 + 2000, liability_groups.find { |ag| ag.name == CreditCard.display_name }.total
     assert_equal 3000 + 5000, liability_groups.find { |ag| ag.name == OtherLiability.display_name }.total
+  end
+
+  test "sorts accounts alphabetically ignoring case" do
+    user = users(:empty)
+    user.update!(default_account_order: "name_asc")
+    create_account(name: "cherry", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Banana", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "apple", balance: 0, accountable: Depository.new, owner: user)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[apple Banana cherry], names
+  end
+
+  test "sorts accounts by balance converted to the family currency" do
+    user = users(:empty)
+    user.update!(default_account_order: "balance_desc")
+    ExchangeRate.stubs(:rates_for).returns({ "EUR" => 2 })
+    create_account(name: "Dollars", balance: 150, currency: "USD", accountable: Depository.new, owner: user)
+    create_account(name: "Euros", balance: 100, currency: "EUR", accountable: Depository.new, owner: user)
+
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+
+    assert_equal %w[Euros Dollars], names
+  end
+
+  test "sorts by balance across family-currency and fractionally converted accounts" do
+    user = users(:empty)
+    ExchangeRate.stubs(:rates_for).returns({ "EUR" => BigDecimal("1.55") })
+    create_account(name: "Low", balance: 150, currency: "USD", accountable: Depository.new, owner: user)
+    create_account(name: "Euros", balance: 100, currency: "EUR", accountable: Depository.new, owner: user)
+    create_account(name: "High", balance: 160, currency: "USD", accountable: Depository.new, owner: user)
+
+    user.update!(default_account_order: "balance_asc")
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[Low Euros High], names
+
+    user.update!(default_account_order: "balance_desc")
+    names = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[High Euros Low], names
+  end
+
+  test "breaks balance and name ties by id so the order stays fixed" do
+    user = users(:empty)
+    accounts = 3.times.map do
+      create_account(name: "Same", balance: 100, accountable: Depository.new, owner: user)
+    end
+    expected = accounts.map(&:id).sort
+
+    %w[name_asc balance_asc].each do |order|
+      user.update!(default_account_order: order)
+      ids = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:id)
+      assert_equal expected, ids, "#{order} should tie-break by id"
+    end
+
+    %w[name_desc balance_desc].each do |order|
+      user.update!(default_account_order: order)
+      ids = BalanceSheet.new(@family, user: user).assets.account_groups.first.accounts.map(&:id)
+      assert_equal expected.reverse, ids, "#{order} should tie-break by id"
+    end
+  end
+
+  test "sorts accounts in the user's manual order, new accounts last alphabetically" do
+    user = users(:empty)
+    user.update!(default_account_order: "manual")
+    checking = create_account(name: "Checking", balance: 0, accountable: Depository.new, owner: user)
+    savings = create_account(name: "Savings", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Brokerage", balance: 0, accountable: Depository.new, owner: user)
+    create_account(name: "Another", balance: 0, accountable: Depository.new, owner: user)
+    card = create_account(name: "Card", balance: 0, accountable: CreditCard.new, owner: user)
+
+    user.update_manual_account_order("depository", [ savings.id, checking.id ])
+    user.update_manual_account_order("credit_card", [ card.id ])
+
+    balance_sheet = BalanceSheet.new(@family, user: user)
+
+    assert_equal %w[Savings Checking Another Brokerage], balance_sheet.assets.account_groups.first.accounts.map(&:name)
+    assert_equal %w[Card], balance_sheet.liabilities.account_groups.first.accounts.map(&:name)
   end
 
   private

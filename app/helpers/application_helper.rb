@@ -1,6 +1,12 @@
 module ApplicationHelper
   include Pagy::Frontend
 
+  # Whether an AI feature (a key in Ai::Routes::MATRIX) can run for the current family and user,
+  # so a view shows its AI affordance only then.
+  def ai_feature_available?(feature)
+    Ai.available?(feature, family: Current.family, user: Current.user)
+  end
+
   def product_name
     Rails.configuration.x.product_name
   end
@@ -12,6 +18,14 @@ module ApplicationHelper
   def styled_form_with(**options, &block)
     options[:builder] = StyledFormBuilder
     form_with(**options, &block)
+  end
+
+  # Masks a sensitive identifier (IBAN, account number, ...) down to its last
+  # 4 characters for display, e.g. "•••1234". Returns nil for blank input.
+  def mask_last4(value)
+    return nil if value.blank?
+
+    "•••#{value.to_s.last(4)}"
   end
 
   # Locale-aware ordinal label for integers.
@@ -57,7 +71,7 @@ module ApplicationHelper
 
   # The chevron for a DS::Disclosure summary_content slot; it turns as the disclosure opens.
   def disclosure_chevron
-    icon "chevron-right", size: "sm", class: "motion-safe:transition-transform group-open:rotate-90"
+    icon "chevron-right", size: "sm", class: "[details[open]>summary_&]:rotate-90 motion-safe:transition-transform motion-safe:duration-150"
   end
 
   # Convert alpha (0-1) to 8-digit hex (00-FF)
@@ -138,6 +152,24 @@ module ApplicationHelper
     end
   end
 
+  # The family-wide investment hub. Preview-gated (hidden entirely without the
+  # flag) and desktop-only: the bottom bar already carries five entries at the
+  # width it has, and the hub is a wide, multi-section page. `desktop_only`
+  # is filtered out of the mobile bar in the layout, the mirror of the
+  # `mobile_only` flag the Assistant entry uses.
+  def portfolio_nav_item
+    preview_gated_nav_item(
+      {
+        name: t("layouts.application.nav.portfolio"),
+        path: portfolio_path,
+        icon: "briefcase",
+        icon_custom: false,
+        active: page_active?(portfolio_path),
+        desktop_only: true
+      }
+    )
+  end
+
   # Wrapper around I18n.l to support custom date formats
   def format_date(object, format = :default, options = {})
     date = object.to_date
@@ -207,7 +239,7 @@ module ApplicationHelper
   end
 
   def assistant_icon
-    type = ENV["ASSISTANT_TYPE"].presence || Current.family&.assistant_type.presence || "builtin"
+    type = Current.family&.effective_assistant_type || "builtin"
     type == "external" ? "claw" : "ai"
   end
 
@@ -249,6 +281,13 @@ module ApplicationHelper
     return callback_enable_banking_items_url if Rails.env.production?
 
     ENV.fetch("DEV_WEBHOOKS_URL", root_url).chomp("/") + "/enable_banking_items/callback"
+  end
+
+  # The redirect URI registered on the TrueLayer app. TRUELAYER_REDIRECT_URI
+  # overrides it for instances behind a proxy that doesn't forward the
+  # public host; it must exactly match one registered on the TrueLayer app.
+  def truelayer_callback_url
+    ENV["TRUELAYER_REDIRECT_URI"].presence || callback_truelayer_items_url
   end
 
   # Formats a holding quantity with adaptive precision based on the value size.

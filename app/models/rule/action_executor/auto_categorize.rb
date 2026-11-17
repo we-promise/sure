@@ -3,7 +3,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     base_label = "Auto-categorize transactions with AI"
 
     if rule.family.self_hoster?
-      selected_model = rule.family.categorization_model_name
+      selected_model = Ai.plan(:categorize, family: rule.family)&.model&.name
 
       if selected_model.present?
         # Estimate cost for typical batch of 20 transactions
@@ -27,6 +27,16 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     end
   end
 
+  def claimed_attributes
+    [ :category_id ]
+  end
+
+  # The AI runs later and only fills fields it can classify, so it leaves
+  # them to rules further down, as it did before rules had an order.
+  def reserves_claimed_attributes?
+    false
+  end
+
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
     protected_scope = protected_transactions(transaction_scope)
     cached_transaction_ids = cached_transaction_ids(protected_scope)
@@ -42,7 +52,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
       return 0
     end
 
-    batch_size = 20
+    batch_size = Provider::LlmConcept.max_items_per_call
     jobs_count = 0
 
     enrichable_transactions.in_batches(of: batch_size).each_with_index do |transactions, idx|
@@ -68,12 +78,7 @@ class Rule::ActionExecutor::AutoCategorize < Rule::ActionExecutor
     end
 
     def cached_transaction_ids(protected_scope)
-      protected_scope
-        .joins(:data_enrichments)
-        .where(data_enrichments: { attribute_name: "category_id", source: "ai" })
-        .where(Arel.sql("data_enrichments.value = to_jsonb(transactions.category_id::text)"))
-        .distinct
-        .pluck(:id)
+      protected_scope.category_from("ai").pluck(:id)
     end
 
     def log_cache_usage(transaction_ids)

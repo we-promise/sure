@@ -1,5 +1,5 @@
 class DS::CategorySelect < DesignSystemComponent
-  attr_reader :form, :categories, :selected_id, :disabled, :auto_submit, :blank_label
+  attr_reader :form, :categories, :selected_id, :disabled, :auto_submit, :blank_label, :locked
 
   def initialize(
     form:,
@@ -8,7 +8,8 @@ class DS::CategorySelect < DesignSystemComponent
     selected_category: nil,
     disabled: false,
     auto_submit: false,
-    blank_label: nil
+    blank_label: nil,
+    locked: false
   )
     @form = form
     @categories = categories
@@ -17,6 +18,7 @@ class DS::CategorySelect < DesignSystemComponent
     @disabled = disabled
     @auto_submit = auto_submit
     @blank_label = blank_label
+    @locked = locked
   end
 
   # A category shown as the selection without being one of `categories`,

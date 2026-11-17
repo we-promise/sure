@@ -15,6 +15,7 @@ vi:
     trade_republic_item:
       syncing: "Đang đồng bộ"
       requires_update: "Cần xác thực lại"
+      session_expires_in: "Phiên đăng nhập hết hạn sau %{time} (%{at})."
       error: "Lỗi"
       synced: "Đã đồng bộ %{time} trước. %{summary}."
       setup_accounts: "Thiết lập tài khoản"

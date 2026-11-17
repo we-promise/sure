@@ -42,6 +42,19 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  # The insights page, the card's "Dig in with AI" button and the push
+  # notification all read this tree, so a gap shows Spanish users English
+  # copy, and for the dig-in prompt, an English message in their chat box.
+  def test_spanish_insights_keys_and_placeholders_match_english
+    en = view_leaves("insights", "en")
+    es = view_leaves("insights", "es")
+
+    assert_equal en.keys.sort, es.keys.sort, "insights in views/insights/es.yml must carry every key en.yml does"
+    en.each do |key, value|
+      assert_equal value.scan(/%\{\w+\}/).sort, es.fetch(key).to_s.scan(/%\{\w+\}/).sort, "placeholders differ for #{key}"
+    end
+  end
+
   def test_no_missing_keys
     skip "Skipping missing keys test"
     missing_keys = @i18n.missing_keys(locales: [ :en ])
@@ -132,6 +145,55 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The All bills default status option. Every bills locale must translate it,
+  # or the default filter falls back to English.
+  def test_bills_current_bills_label_exists_for_each_bills_locale
+    locales = Dir[File.expand_path("../config/locales/views/bills/*.yml", __dir__)].map { |file| File.basename(file, ".yml") }
+    missing = locales.sort.reject do |locale|
+      I18n.t("bills.all.current_bills", locale: locale, fallback: false, default: nil)
+    end
+
+    assert_empty missing, "bills.all.current_bills is missing for: #{missing.join(", ")}"
+  end
+
+  # The family setting that fills a blank transaction name and the form
+  # placeholder that explains it. Fallbacks would show English, so each locale
+  # that translates the neighbouring key must translate these too.
+  def test_auto_generate_transaction_name_keys_exist_beside_their_siblings
+    {
+      "settings.appearances.show.split_grouped_title" => %w[
+        settings.appearances.show.auto_generate_transaction_names_title
+        settings.appearances.show.auto_generate_transaction_names_description
+      ],
+      "transactions.form.description_placeholder" => %w[transactions.form.description_placeholder_optional]
+    }.each do |sibling, keys|
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
+
+      locales.each do |locale|
+        missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
+        assert_empty missing, "missing in #{locale}: #{missing.join(", ")}"
+      end
+    end
+  end
+
+  # A placeholder the English string does not have is never passed by the
+  # caller, so I18n raises MissingInterpolationArgument and the page or flash
+  # breaks for Dutch users only. Plural forms always receive %{count}, so the
+  # Dutch "one" form may use it where English spells out "1".
+  def test_dutch_strings_use_no_placeholders_english_lacks
+    english = locale_leaves("en")
+    extra = locale_leaves("nl").filter_map do |key, value|
+      next unless value.is_a?(String) && english[key].is_a?(String)
+
+      unknown = value.scan(/%\{\w+\}/) - english[key].scan(/%\{\w+\}/)
+      unknown -= [ "%{count}" ] if key.match?(/\.(zero|one|two|few|many|other)\z/)
+      "#{key}: #{unknown.uniq.join(", ")}" if unknown.any?
+    end
+
+    assert_empty extra, "nl placeholders missing from en:\n#{extra.join("\n")}"
+  end
+
   def test_trade_republic_activity_labels_exist_for_each_locale
     required_labels = %w[
       contribution withdrawal interest dividend card_payment cash_withdrawal
@@ -154,9 +216,21 @@ class I18nTest < ActiveSupport::TestCase
   private
     # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
     def loan_chart_leaves(locale)
-      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/components/#{locale}.yml"), aliases: true)
-        .dig(locale, "UI", "account", "chart", "loan") || {}
+      view_leaves("components", locale, "UI", "account", "chart", "loan")
+    end
+
+    # Leaves of config/locales/views/<dir>/<locale>.yml under the given keys.
+    def view_leaves(dir, locale, *keys)
+      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/#{dir}/#{locale}.yml"), aliases: true)
+        .dig(locale, *keys) || {}
       flatten_leaves(tree)
+    end
+
+    def locale_leaves(locale)
+      Dir[Pathname.pwd.join("config/locales/**/*#{locale}.yml")].each_with_object({}) do |path, leaves|
+        tree = YAML.load_file(path, aliases: true)&.fetch(locale, nil)
+        leaves.merge!(flatten_leaves(tree)) if tree.is_a?(Hash)
+      end
     end
 
     def flatten_leaves(tree, prefix = nil)

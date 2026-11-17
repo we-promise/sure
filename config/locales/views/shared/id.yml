@@ -1,0 +1,65 @@
+---
+id:
+  concerns:
+    self_hostable:
+      redis_configured: "Redis sekarang telah dikonfigurasi dengan benar! Anda kini dapat menyiapkan aplikasi Sure Anda."
+  shared:
+    preview: Pratinjau
+    dot_separator: "·"
+    sync_toast:
+      message: "Data baru tersedia"
+      refresh: "Muat ulang"
+    confirm_modal:
+      accept: Konfirmasi
+      body_html: "<p>Tindakan ini tidak dapat dibatalkan</p>"
+      cancel: Batal
+      title: Apakah Anda yakin?
+    money_field:
+      above_max: Masukkan jumlah maksimal %{max}.
+      below_min: Masukkan jumlah minimal %{min}.
+      invalid_amount: Masukkan jumlah atau rumus yang valid.
+      label: Jumlah
+      operator_add: Tambah
+      operator_subtract: Kurang
+      operator_multiply: Kali
+      operator_divide: Bagi
+    exchange_rate_tabs:
+      calculate_rate_tab: Hitung kurs valas
+      convert_tab: Konversi dengan kurs valas
+      destination_amount: Jumlah tujuan
+      exchange_rate: Kurs valas
+      exchange_rate_help: Pilih cara memasukkan jumlah.
+    syncing_notice:
+      syncing: Menyinkronkan data rekening...
+    require_admin: "Hanya admin yang dapat melakukan tindakan ini"
+    require_non_guest: "Tamu tidak dapat melakukan tindakan ini"
+    require_connector_owner: "Anda hanya dapat mengelola koneksi yang Anda tambahkan"
+    custom_confirm:
+      default_title: "Apakah Anda yakin?"
+      default_body: "Tindakan ini tidak dapat dibatalkan."
+      default_btn_text: "Konfirmasi"
+      resource_deletion_title: "Hapus %{resource}?"
+      resource_deletion_body: "Apakah Anda yakin ingin menghapus %{resource}? Tindakan ini tidak dapat dibatalkan."
+      resource_deletion_btn_text: "Hapus %{resource}"
+    family_moniker:
+      group_plural: Grup
+      group_singular: Grup
+      plural: Keluarga
+      singular: Keluarga
+    trend_change:
+      no_change: "tidak ada perubahan"
+    cancel: Batal
+    transaction_tabs:
+      expense: Pengeluaran
+      income: Pemasukan
+      transfer: Transfer
+    sidekiq_health_banner:
+      title: Sebagian data mungkin belum diperbarui
+      body: "Tugas latar belakang tidak sedang diproses, sehingga saldo, kekayaan bersih, dan sinkronisasi rekening mungkin usang atau belum muncul."
+      cta: Lihat kesehatan sistem
+      reasons:
+        redis_unreachable: "Aplikasi tidak dapat terhubung ke Redis. Periksa REDIS_URL Anda dan pastikan Redis sedang berjalan."
+        no_worker_processes: "Tidak ada proses worker Sidekiq yang terhubung. Mulai kontainer worker atau unit systemd."
+        stale_heartbeat: "Worker Sidekiq tidak melaporkan heartbeat baru-baru ini. Proses mungkin macet atau berhenti."
+        ai_queues_not_polled: "Tidak ada worker yang memproses antrean AI (obrolan, deteksi merchant, kategorisasi). Pastikan worker memuat config/sidekiq.yml."
+        queue_backed_up: "Tugas terlama dalam antrean telah menunggu melebihi batas latensi. Worker aktif tetapi tertinggal."

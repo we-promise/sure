@@ -5,6 +5,14 @@ en:
       redis_configured: "Redis is now configured properly! You can now setup your Sure application."
   shared:
     preview: Preview
+    exchange_rate_notes:
+      missing:
+        one: "No exchange rate from %{currencies} to %{currency} is stored yet, so some totals may leave out amounts in %{currencies}."
+        other: "No exchange rates from %{currencies} to %{currency} are stored yet, so some totals may leave out amounts in those currencies."
+      stale:
+        one: "The latest exchange rate to %{currency} is out of date: %{rates}. Today's totals use it."
+        other: "The latest exchange rates to %{currency} are out of date: %{rates}. Today's totals use them."
+      stale_rate: "%{from} from %{date}"
     dot_separator: "·"
     sync_toast:
       message: "New data available"
@@ -15,7 +23,14 @@ en:
       cancel: Cancel
       title: Are you sure?
     money_field:
+      above_max: Enter an amount of at most %{max}.
+      below_min: Enter an amount of at least %{min}.
+      invalid_amount: Enter a valid amount or expression.
       label: Amount
+      operator_add: Add
+      operator_subtract: Subtract
+      operator_multiply: Multiply
+      operator_divide: Divide
     exchange_rate_tabs:
       calculate_rate_tab: Calculate FX rate
       convert_tab: Convert with FX rate
@@ -54,4 +69,5 @@ en:
         redis_unreachable: "The app can't reach Redis. Check your REDIS_URL and that Redis is running."
         no_worker_processes: "No Sidekiq worker process is connected. Start the worker container or systemd unit."
         stale_heartbeat: "The Sidekiq worker hasn't reported a heartbeat recently. It may be stuck or crashed."
+        ai_queues_not_polled: "No worker is processing the AI queues (chat, merchant detection, categorization). Check that the worker loads config/sidekiq.yml."
         queue_backed_up: "The oldest enqueued job has been waiting beyond the latency budget. The worker is alive but falling behind."

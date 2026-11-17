@@ -27,7 +27,7 @@ class Provider::Openai::BillSetupSuggester
     Suggestion = Provider::LlmConcept::BillSetupSuggestion
 
     def suggest_with_format(response_format)
-      span = langfuse_trace&.span(name: "suggest_bill_setup_api_call", input: {
+      span = langfuse_trace&.generation(name: "suggest_bill_setup_api_call", model: model, input: {
         model: model,
         charges: charges,
         configure_mode: current_config.present?

@@ -209,6 +209,47 @@ class AccountStatementTest < ActiveSupport::TestCase
     assert_not_includes @family.account_statements.unmatched, accountless_statement
   end
 
+  test "inbox holds every accountless statement, including rejected suggestions" do
+    linked_statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "linked.csv", content_type: "text/csv", content: "date,amount\n2024-01-01,1\n")
+    )
+    unmatched_statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(filename: "unmatched.csv", content_type: "text/csv", content: "date,amount\n2024-01-02,2\n")
+    )
+    rejected_statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(filename: "rejected.csv", content_type: "text/csv", content: "date,amount\n2024-01-03,3\n")
+    )
+    accountless_linked_statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: nil,
+      file: uploaded_file(filename: "accountless_linked.csv", content_type: "text/csv", content: "date,amount\n2024-01-04,4\n")
+    )
+    accountless_linked_statement.update_columns(review_status: "linked")
+    rejected_with_account_statement = AccountStatement.create_from_upload!(
+      family: @family,
+      account: @account,
+      file: uploaded_file(filename: "rejected_with_account.csv", content_type: "text/csv", content: "date,amount\n2024-01-05,5\n")
+    )
+    rejected_with_account_statement.update_columns(review_status: "rejected")
+
+    assert_includes @family.account_statements.inbox, rejected_statement
+    rejected_statement.reject_match!
+
+    assert rejected_statement.reload.rejected?
+    assert_not_includes @family.account_statements.unmatched, rejected_statement
+    assert_includes @family.account_statements.inbox, rejected_statement
+    assert_includes @family.account_statements.inbox, unmatched_statement
+    assert_not_includes @family.account_statements.inbox, linked_statement
+    assert_not_includes @family.account_statements.inbox, accountless_linked_statement
+    assert_not_includes @family.account_statements.inbox, rejected_with_account_statement
+  end
+
   test "allows same checksum in different families" do
     file_content = "date,description,amount\n2024-01-01,Coffee,-5.00\n"
 

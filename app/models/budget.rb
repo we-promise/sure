@@ -14,13 +14,13 @@ class Budget < ApplicationRecord
   belongs_to :family
   belongs_to :user, optional: true
 
-  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy
+  has_many :budget_categories, -> { includes(:category) }, dependent: :destroy, inverse_of: :budget
 
   validates :start_date, :end_date, presence: true
   validates :start_date, :end_date, uniqueness: { scope: [ :family_id, :user_id ] }
 
   monetize :available_cash, :earmarked_for_goals, :free_cash
-  monetize :budgeted_spending, :expected_income, :allocated_spending,
+  monetize :budgeted_spending, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
            :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income,
            :total_rolled_over
@@ -235,9 +235,15 @@ class Budget < ApplicationRecord
         # a USD budget would read 1,200 available, 1,000 earmarked and 200
         # free, when none of it is free.
         Goal.prepared_for(family, scope: family.goals.where.not(state: Goal::RELEASED_STATES))
-            .sum { |goal| convert_to_budget_currency(goal.backing_within(ids), goal.currency) }
+            .sum { |goal| goal.backing_within(ids, currency: currency) }
       end
     end
+  end
+
+  # Currencies whose balances available_cash left out for want of a rate.
+  def missing_cash_currencies
+    available_cash
+    @missing_cash_currencies ||= Set.new
   end
 
   def free_cash
@@ -416,6 +422,33 @@ class Budget < ApplicationRecord
     [ expense - refund, 0 ].max
   end
 
+  # Open bill occurrences due in this period, by category id, loaded once so
+  # each BudgetCategory#bills_reserved reads its slice instead of querying.
+  def open_bill_occurrences_by_category_id
+    @open_bill_occurrences_by_category_id ||= begin
+      occurrences = RecurringOccurrence
+                      .open_status
+                      .joins(:recurring_transaction)
+                      .where(recurring_transactions: {
+                               family_id: family_id,
+                               status: :active,
+                               destination_account_id: nil
+                             })
+                      .where("recurring_transactions.amount > 0")
+                      .where(due_on: start_date..end_date)
+                      .includes(:recurring_transaction)
+                      .to_a
+
+      sums = RecurringAllocation.confirmed
+                                .where(recurring_occurrence_id: occurrences.map(&:id))
+                                .group(:recurring_occurrence_id)
+                                .sum(:allocated_amount)
+      occurrences.each { |occurrence| occurrence.cached_confirmed_allocated = sums.fetch(occurrence.id, 0) }
+
+      occurrences.group_by { |occurrence| occurrence.recurring_transaction.category_id }
+    end
+  end
+
   def category_median_monthly_expense(category)
     income_statement.median_expense(category: category)
   end
@@ -481,34 +514,40 @@ class Budget < ApplicationRecord
     income_statement.income_totals(period: self.period).total
   end
 
+  def expected_income_money
+    return nil if monetizable_currency.nil?
+
+    Money.new(expected_income || 0, monetizable_currency)
+  end
+
   def actual_income_percent
-    return 0 unless expected_income > 0
+    return 0 unless expected_income && expected_income > 0
 
     (actual_income / expected_income.to_f) * 100
   end
 
   def remaining_expected_income
-    expected_income - actual_income
+    (expected_income || 0) - actual_income
   end
 
   def surplus_percent
     return 0 unless remaining_expected_income.negative?
+    return 100 unless expected_income && expected_income > 0
 
     remaining_expected_income.abs / expected_income.to_f * 100
   end
 
   private
-    # `find_or_fetch_rate`, not `find_rate` — the latter does not exist, and
-    # every multi-currency family opening this page hit a NoMethodError.
-    #
-    # No rate for the day leaves the amount as it stands. A cash panel that
-    # renders with one figure unconverted is wrong by the spread; one that
-    # raises takes the whole budget page down with it.
+    # Use the same known-subtotal policy as goal backing. A foreign balance
+    # without a rate is unavailable, never newly "free" cash at a 1:1 rate.
     def convert_to_budget_currency(amount, from_currency)
-      return amount.to_d if from_currency == currency
+      return amount.to_d if from_currency == currency || amount.to_d.zero?
 
       rate = ExchangeRate.find_or_fetch_rate(from: from_currency, to: currency, date: Date.current)&.rate
-      rate ? amount.to_d * rate : amount.to_d
+      return amount.to_d * rate if rate && rate.to_d.positive?
+
+      (@missing_cash_currencies ||= Set.new) << from_currency
+      0.to_d
     end
     def income_statement
       @income_statement ||= family.income_statement(user: current_user, accounts: income_statement_accounts)

@@ -14,6 +14,7 @@ tr:
     trade_republic_item:
       syncing: "Senkronize ediliyor"
       requires_update: "Yeniden kimlik doğrulama gerekli"
+      session_expires_in: "Girişin süresi %{time} içinde doluyor (%{at})."
       error: "Hata"
       synced: "%{time} önce senkronize edildi. %{summary}."
       setup_accounts: "Hesapları kur"

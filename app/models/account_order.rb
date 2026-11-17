@@ -22,6 +22,13 @@ class AccountOrder
       label: "Balance (High to Low)",
       label_short: "Balance ↓",
       sql_order: "balance DESC"
+    },
+    # Per-user drag-and-drop order, stored in users.preferences. SQL callers
+    # fall back to alphabetical; BalanceSheet applies the stored order.
+    "manual" => {
+      label: "Manual (drag to reorder)",
+      label_short: "Manual",
+      sql_order: "name ASC"
     }
   }.freeze
 
@@ -42,6 +49,10 @@ class AccountOrder
 
   def sql_order
     ORDERS.dig(key, :sql_order)
+  end
+
+  def manual?
+    key == "manual"
   end
 
   class << self

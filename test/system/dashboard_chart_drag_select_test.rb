@@ -11,7 +11,7 @@ class DashboardChartDragSelectTest < ApplicationSystemTestCase
     original_order = page.all("[data-section-key]").map { |el| el["data-section-key"] }
 
     # The net worth chart sits inside a `<section draggable="true">` used by
-    # dashboard-sortable for card reordering. Without an explicit
+    # sortable-list for card reordering. Without an explicit
     # `draggable="false"` on the chart container, this same gesture would be
     # hijacked by the native HTML5 drag-and-drop instead of the chart's brush.
     drag_across find("#netWorthChart .drag-select-brush .overlay", visible: :all)

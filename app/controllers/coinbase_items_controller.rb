@@ -66,8 +66,29 @@ class CoinbaseItemsController < ApplicationController
     redirect_to settings_providers_path
   end
 
+  # Add Account -> Crypto -> Coinbase lands here. The connection's sync is what
+  # finds the wallets, so open that connection's wallet setup, as Kraken does.
   def select_accounts
-    redirect_to settings_providers_path
+    coinbase_items = Current.family.coinbase_items.active.ordered.select(&:credentials_configured?)
+    coinbase_item = if params[:coinbase_item_id].present?
+      coinbase_items.find { |item| item.id.to_s == params[:coinbase_item_id].to_s }
+    elsif coinbase_items.one?
+      coinbase_items.first
+    end
+
+    unless coinbase_item
+      message_key = if params[:coinbase_item_id].present? && coinbase_items.any?
+        ".connection_unavailable"
+      elsif coinbase_items.many?
+        ".select_connection"
+      else
+        ".no_credentials_configured"
+      end
+      frame_redirect_to(settings_providers_path, alert: t(message_key))
+      return
+    end
+
+    redirect_to setup_accounts_coinbase_item_path(coinbase_item, return_to: safe_return_to(params[:return_to])), status: :see_other
   end
 
   def link_accounts
@@ -121,6 +142,7 @@ class CoinbaseItemsController < ApplicationController
     end
 
     # Relink behavior: detach any existing link and point provider link at the chosen account
+    orphaned_account = nil
     Account.transaction do
       coinbase_account.lock!
 
@@ -136,12 +158,22 @@ class CoinbaseItemsController < ApplicationController
         begin
           previous_account.reload
           if previous_account.account_providers.none?
-            previous_account.destroy_later if previous_account.may_mark_for_deletion?
+            orphaned_account = previous_account if previous_account.may_mark_for_deletion?
           end
         rescue => e
           Rails.logger.warn("Failed orphan cleanup for account ##{previous_account&.id}: #{e.class} - #{e.message}")
         end
       end
+    end
+
+    # Queue the orphan for deletion only after the relink commits. destroy_later
+    # pushes DestroyJob only once every open transaction commits, so called in
+    # the block above, an enqueue error would leave it from the commit, past
+    # the rescue inside it.
+    begin
+      orphaned_account&.destroy_later
+    rescue => e
+      Rails.logger.warn("Failed orphan cleanup for account ##{orphaned_account.id}: #{e.class} - #{e.message}")
     end
 
     if turbo_frame_request?
@@ -151,7 +183,7 @@ class CoinbaseItemsController < ApplicationController
 
       @manual_accounts = Account.uncached {
         Current.family.accounts
-          .visible_manual
+          .visible_manual_for(Current.user)
           .order(:name)
           .to_a
       }
@@ -170,10 +202,11 @@ class CoinbaseItemsController < ApplicationController
       end
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(item),
           partial: "coinbase_items/coinbase_item",
-          locals: { coinbase_item: item }
+          locals: { coinbase_item: item, visible_accounts: item.accounts }
         ),
         manual_accounts_stream,
         *Array(flash_notification_stream_items)
@@ -184,6 +217,9 @@ class CoinbaseItemsController < ApplicationController
   end
 
   def setup_accounts
+    # Where Add Account was opened from, carried through the form so finishing
+    # or cancelling goes back there.
+    @return_to = safe_return_to(params[:return_to])
     # Only show unlinked accounts
     @coinbase_accounts = @coinbase_item.coinbase_accounts
       .left_joins(:account_provider)
@@ -253,14 +289,15 @@ class CoinbaseItemsController < ApplicationController
       @coinbase_items = Current.family.coinbase_items.ordered.includes(:syncs)
 
       render turbo_stream: [
+        # Admin-only action (require_admin!), so the card lists every account.
         turbo_stream.replace(
           ActionView::RecordIdentifier.dom_id(@coinbase_item),
           partial: "coinbase_items/coinbase_item",
-          locals: { coinbase_item: @coinbase_item }
+          locals: { coinbase_item: @coinbase_item, visible_accounts: @coinbase_item.accounts }
         )
       ] + Array(flash_notification_stream_items)
     else
-      redirect_to accounts_path, status: :see_other
+      redirect_to safe_return_to(params[:return_to]) || accounts_path, status: :see_other
     end
   end
 

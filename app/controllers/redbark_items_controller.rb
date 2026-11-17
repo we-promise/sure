@@ -163,8 +163,9 @@ class RedbarkItemsController < ApplicationController
       ActiveRecord::Base.transaction do
         account = create_account_from_redbark(redbark_account, accountable_type, config)
         redbark_account.ensure_account_provider!(account)
-        redbark_account.update!(ignored: false)
-        redbark_account.update!(sync_start_date: config[:sync_start_date]) if config[:sync_start_date].present?
+        attributes = { ignored: false }
+        attributes[:sync_start_date] = config[:sync_start_date] if config[:sync_start_date].present?
+        redbark_account.update!(attributes)
       end
       created_count += 1
     rescue => e

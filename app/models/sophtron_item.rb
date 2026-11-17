@@ -12,35 +12,27 @@
 # @attr [Boolean] scheduled_for_deletion Whether the item is scheduled for deletion
 # @attr [DateTime] last_synced_at When the last successful sync occurred
 class SophtronItem < ApplicationRecord
-  include Syncable, Provided, Unlinking, DestroyableLater
+  include Syncable, Provided, Unlinking, Encryptable, DestroyableLater
 
   INITIAL_LOAD_LOOKBACK_DAYS = 120
   MAX_TRANSACTION_HISTORY_YEARS = 3
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
-  # Helper to detect if ActiveRecord Encryption is configured for this app.
-  #
-  # Checks both Rails credentials and environment variables for encryption keys.
-  #
-  # @return [Boolean] true if encryption is properly configured
-  def self.encryption_ready?
-    creds_ready = Rails.application.credentials.active_record_encryption.present?
-    env_ready = ENV["ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY"].present? &&
-                ENV["ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT"].present?
-    creds_ready || env_ready
-  end
-
   # Encrypt sensitive credentials if ActiveRecord encryption is configured (credentials OR env vars)
   if encryption_ready?
     encrypts :user_id, deterministic: true
     encrypts :access_key, deterministic: true
+    encrypts :raw_payload
+    encrypts :raw_institution_payload
+    encrypts :raw_customer_payload
+    encrypts :raw_job_payload
   end
 
   validates :name, presence: true
   validates :user_id, presence: true, on: :create
   validates :access_key, presence: true, on: :create
+  validate :base_url_must_be_an_official_host, if: :will_save_change_to_base_url?
 
   belongs_to :family
   belongs_to :current_job_sophtron_account, class_name: "SophtronAccount", optional: true
@@ -372,7 +364,7 @@ class SophtronItem < ApplicationRecord
   end
 
   def effective_base_url
-    base_url.presence || Provider::Sophtron::DEFAULT_BASE_URL
+    Provider::Sophtron.normalize_base_url(base_url) || Provider::Sophtron::DEFAULT_BASE_URL
   end
 
   def generated_customer_unique_id
@@ -407,5 +399,13 @@ class SophtronItem < ApplicationRecord
 
       customer_payload = customer_payload.with_indifferent_access
       customer_payload[:CustomerName] || customer_payload[:customer_name] || customer_payload[:name]
+    end
+
+    # The value an operator typed decides where the app sends their key, so it
+    # is checked against the provider's allow-list rather than used as given.
+    def base_url_must_be_an_official_host
+      return if base_url.blank? || Provider::Sophtron.allowed_base_url?(base_url)
+
+      errors.add(:base_url, :official_hosts_only)
     end
 end

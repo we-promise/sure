@@ -70,6 +70,8 @@
                         <p class="text-sm font-medium text-primary"><%= statement.suggested_account.name %></p>
                         <p class="text-xs text-secondary"><%= t(".confidence", confidence: number_to_percentage(statement.match_confidence.to_d * 100, precision: 0)) %></p>
                       </div>
+                    <% elsif statement.rejected? %>
+                      <%= account_statement_status_badge(statement) %>
                     <% else %>
                       <span class="text-sm text-secondary"><%= t(".no_suggestion") %></span>
                     <% end %>

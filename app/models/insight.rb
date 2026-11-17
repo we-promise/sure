@@ -1,7 +1,7 @@
 # A proactive, typed observation about a family's finances, produced nightly
 # by GenerateInsightsJob. The financial logic lives in Insight::Generators::*;
-# the LLM (when configured) only writes the `body` prose from pre-computed
-# numbers, so rows are safe to render verbatim.
+# the `body` prose is an i18n template filled with pre-computed numbers, so
+# rows are safe to render verbatim.
 #
 # Status semantics: `read` and `acknowledged` are user actions; `expired` is the
 # system's — set when a signal stops being generated (the condition cleared).

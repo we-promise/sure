@@ -190,6 +190,12 @@ ca:
       bridge_label: Abans del teu proper cobrament
       bridge_amount: · %{amount} per pagar
       bridge_split: Venç abans del %{date} i queda cobert pels %{cash} dels teus comptes.
+      bridge_left: "%{amount} disponibles després de les factures"
+      bridge_show_more:
+        one: Mostra 1 més
+        other: "Mostra %{count} més"
+      bridge_allocation_aria: "Dels %{cash} dels teus comptes, %{due} vencen abans del teu proper cobrament i en queden %{left}."
+      item_overdue: Vençuda
       shortfall_label: Falta abans del teu proper cobrament
       shortfall_amount: · %{amount}
       shortfall_split: '%{obligations} vencen abans del %{date} i els teus comptes tenen %{cash}.'
@@ -210,7 +216,8 @@ ca:
       empty_month: Aquest mes no venç cap factura.
     all:
       search_placeholder: Cerca factures
-      any_status: Qualsevol estat
+      current_bills: Factures actuals
+      dismissed_hidden_description: Les factures descartades estan ocultes.
       status_filters:
         overdue: Vençudes
         due: Vencen aviat
@@ -230,12 +237,8 @@ ca:
       no_matches_title: Cap resultat
       no_matches_description: Prova de treure un filtre o la cerca.
       col_name: Nom
-      col_type: Tipus
-      col_frequency: Freqüència
       col_amount: Import
       col_next: Proper venciment
-      next_short: 'proper: %{date}'
-      col_status: Estat
       col_actions: Accions
       monthly_equivalent: '%{amount}/mes'
       types:

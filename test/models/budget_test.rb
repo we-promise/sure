@@ -376,6 +376,41 @@ class BudgetTest < ActiveSupport::TestCase
     assert_equal 150, spending_without_refund - spending_with_refund
   end
 
+  test "actual_spending excludes scheduled (future-dated) entries" do
+    travel_to Date.current.beginning_of_month do
+      family = families(:dylan_family)
+      budget = Budget.find_or_bootstrap(family, start_date: Date.current.beginning_of_month)
+      account = accounts(:depository)
+
+      healthcare = Category.create!(
+        name: "Healthcare #{Time.now.to_f}",
+        family: family,
+        color: "#e74c3c"
+      )
+
+      budget.sync_budget_categories
+      budget_category = budget.budget_categories.find_by(category: healthcare)
+      budget_category.update!(budgeted_spending: 200)
+
+      # A bill scheduled for later this month -- hasn't happened yet
+      Entry.create!(
+        account: account,
+        entryable: Transaction.create!(category: healthcare),
+        date: Date.current + 10.days,
+        name: "Scheduled dentist bill",
+        amount: 150,
+        currency: "USD"
+      )
+
+      budget = Budget.find(budget.id)
+      budget.sync_budget_categories
+
+      assert_equal 0, budget.budget_category_actual_spending(
+        budget.budget_categories.find_by(category: healthcare)
+      )
+    end
+  end
+
   test "most_recent_initialized_budget returns latest initialized budget before this one" do
     family = families(:dylan_family)
 
@@ -566,5 +601,36 @@ class BudgetTest < ActiveSupport::TestCase
     travel_to budget.end_date + 1.day do
       assert_equal 0, budget.days_remaining
     end
+  end
+
+  test "income methods treat a nil expected_income as zero" do
+    budget = budgets(:one)
+    budget.update!(expected_income: nil)
+    budget.stubs(:actual_income).returns(BigDecimal("1200"))
+
+    assert budget.initialized?
+    assert_equal Money.new(0, budget.currency), budget.expected_income_money
+    assert_equal 0, budget.actual_income_percent
+    assert_equal(-1200, budget.remaining_expected_income)
+    assert_equal Money.new(-1200, budget.currency), budget.remaining_expected_income_money
+    assert_equal 100, budget.surplus_percent
+  end
+
+  test "surplus_percent is 100 when nothing was expected and income came in" do
+    budget = budgets(:one)
+    budget.update!(expected_income: 0)
+    budget.stubs(:actual_income).returns(BigDecimal("50"))
+
+    assert_equal 100, budget.surplus_percent
+  end
+
+  test "income methods with no expected_income and no income show nothing earned" do
+    budget = budgets(:one)
+    budget.update!(expected_income: nil)
+    budget.stubs(:actual_income).returns(BigDecimal("0"))
+
+    assert_equal 0, budget.actual_income_percent
+    assert_equal 0, budget.remaining_expected_income
+    assert_equal 0, budget.surplus_percent
   end
 end

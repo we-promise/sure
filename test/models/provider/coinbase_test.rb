@@ -98,4 +98,79 @@ class Provider::CoinbaseTest < ActiveSupport::TestCase
     assert public_key.verify(OpenSSL::Digest::SHA256.new, der_sig, message),
       "JWT signature must verify against the EC public key"
   end
+
+  test "parse_ec_private_key accepts PEM with newlines collapsed to spaces" do
+    spaced = @test_key_multiline.strip.gsub("\n", " ")
+    key = @provider.send(:parse_ec_private_key, spaced)
+    assert_instance_of OpenSSL::PKey::EC, key
+  end
+
+  # --- Ed25519 keys (CDP default for new API keys) ---
+
+  def ed25519_provider
+    @ed_key = OpenSSL::PKey.generate_key("ED25519")
+    secret = Base64.strict_encode64(@ed_key.raw_private_key + @ed_key.raw_public_key)
+    Provider::Coinbase.new(api_key: "6a3c8f1e-0000-4000-8000-000000000000", api_secret: secret)
+  end
+
+  test "generate_jwt uses EdDSA for an Ed25519 secret" do
+    jwt = ed25519_provider.send(:generate_jwt, "GET", "/v2/user")
+    header = JSON.parse(jwt_decode_part(jwt.split(".").first))
+    assert_equal "EdDSA", header["alg"]
+  end
+
+  test "generate_jwt Ed25519 signature is verifiable with the public key" do
+    jwt = ed25519_provider.send(:generate_jwt, "GET", "/v2/accounts")
+    encoded_header, encoded_payload, encoded_sig = jwt.split(".")
+    sig_bytes = jwt_decode_part(encoded_sig)
+
+    assert_equal 64, sig_bytes.bytesize
+    assert @ed_key.verify(nil, sig_bytes, "#{encoded_header}.#{encoded_payload}"),
+      "JWT signature must verify against the Ed25519 public key"
+    assert_equal "GET api.coinbase.com/v2/accounts", JSON.parse(jwt_decode_part(encoded_payload))["uri"]
+  end
+
+  test "generate_jwt accepts a bare 32-byte Ed25519 seed" do
+    key = OpenSSL::PKey.generate_key("ED25519")
+    provider = Provider::Coinbase.new(api_key: TEST_API_KEY, api_secret: Base64.strict_encode64(key.raw_private_key))
+    jwt = provider.send(:generate_jwt, "GET", "/v2/user")
+    encoded_header, encoded_payload, encoded_sig = jwt.split(".")
+    assert key.verify(nil, jwt_decode_part(encoded_sig), "#{encoded_header}.#{encoded_payload}")
+  end
+
+  test "PEM keys are not mistaken for Ed25519 secrets" do
+    refute @provider.send(:ed25519_secret?, @test_key_multiline)
+    refute @provider.send(:ed25519_secret?, @test_key_single_line)
+  end
+
+  # --- paginated_get: rate limits mid-pagination ---
+
+  test "paginated_get preserves earlier pages when a later page is rate limited" do
+    stub_request(:get, "https://api.coinbase.com/v2/accounts/acct_1/transactions")
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          "data" => [ { "id" => "txn_1" } ],
+          "pagination" => { "next_uri" => "/v2/accounts/acct_1/transactions?starting_after=txn_1" }
+        }.to_json
+      )
+    stub_request(:get, "https://api.coinbase.com/v2/accounts/acct_1/transactions?starting_after=txn_1")
+      .to_return(status: 429, headers: { "Content-Type" => "application/json" }, body: { "error" => "rate limited" }.to_json)
+
+    error = assert_raises(Provider::Coinbase::PartialResultError) do
+      @provider.get_transactions("acct_1", limit: 100)
+    end
+
+    assert_equal [ { "id" => "txn_1" } ], error.partial_results
+  end
+
+  test "paginated_get raises a plain RateLimitError when the very first page is rate limited" do
+    stub_request(:get, "https://api.coinbase.com/v2/accounts/acct_1/transactions")
+      .to_return(status: 429, headers: { "Content-Type" => "application/json" }, body: { "error" => "rate limited" }.to_json)
+
+    assert_raises(Provider::Coinbase::RateLimitError) do
+      @provider.get_transactions("acct_1", limit: 100)
+    end
+  end
 end

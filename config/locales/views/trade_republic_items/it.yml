@@ -15,6 +15,7 @@ it:
     trade_republic_item:
       syncing: "Sincronizzazione"
       requires_update: "Nuova autenticazione richiesta"
+      session_expires_in: "L'accesso scade tra %{time} (%{at})."
       error: "Errore"
       synced: "Sincronizzato %{time} fa. %{summary}."
       setup_accounts: "Configura i conti"

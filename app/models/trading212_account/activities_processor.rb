@@ -4,7 +4,7 @@ class Trading212Account::ActivitiesProcessor
   # T212 transaction types that map to cash flows
   DEPOSIT_TYPE = "DEPOSIT".freeze
   WITHDRAW_TYPE = "WITHDRAW".freeze
-  INTEREST_TYPES = %w[INTEREST INTEREST_ON_FREE_CASH].freeze
+  INTEREST_TYPES = %w[INTEREST INTEREST_ON_FREE_CASH LENDING_INTEREST].freeze
   FEE_TYPE = "FEE".freeze
 
   def initialize(trading212_account)
@@ -54,10 +54,10 @@ class Trading212Account::ActivitiesProcessor
       t212_ticker = instrument[:ticker].presence || order[:ticker].to_s
       return false if t212_ticker.blank?
 
-      filled_quantity = parse_decimal(fill[:quantity])
+      # T212 reports the fill quantity signed (negative for sells), so the
+      # direction comes from the order side alone.
+      filled_quantity = parse_decimal(fill[:quantity])&.abs
       fill_price      = parse_decimal(fill[:price])
-      net_value       = parse_decimal(fill.dig(:walletImpact, :netValue)) ||
-                        parse_decimal(order[:filledValue])
 
       return false unless filled_quantity && fill_price
       return false if filled_quantity.zero?
@@ -71,10 +71,11 @@ class Trading212Account::ActivitiesProcessor
       is_buy         = order[:side].to_s.upcase == "BUY"
       activity_label = is_buy ? "Buy" : "Sell"
       signed_quantity = is_buy ? filled_quantity : -filled_quantity
-      amount = net_value ? net_value.abs : (fill_price * filled_quantity.abs)
+
+      instrument_ccy, fill_price = normalize_minor_units(instrument[:currency].presence || currency, fill_price)
+      amount, exchange_rate = trade_amount_and_rate(order, fill, instrument_ccy, fill_price * filled_quantity)
       amount = is_buy ? amount : -amount
 
-      instrument_ccy = instrument[:currency].presence || currency
       date           = parse_date(fill[:filledAt] || order[:createdAt]) || Date.current
       order_id       = (fill[:id] || order[:id]).to_s
       external_id    = "trading212_order_#{order_id}"
@@ -89,7 +90,8 @@ class Trading212Account::ActivitiesProcessor
         date:           date,
         name:           build_order_name(security.ticker, signed_quantity),
         source:         "trading212",
-        activity_label: activity_label
+        activity_label: activity_label,
+        exchange_rate:  exchange_rate
       )
 
       true
@@ -195,6 +197,23 @@ class Trading212Account::ActivitiesProcessor
         metadata: { reference: transaction[:reference], trading212_account_id: @trading212_account.id }
       )
       false
+    end
+
+    # The trade is stored in the instrument's currency, like its price. T212
+    # reports what the fill moved in the wallet (walletImpact.netValue, fees
+    # included) in the account currency, so that figure becomes the exchange
+    # rate and the cash balance changes by exactly the amount T212 booked.
+    # Returns the unsigned amount and the rate into the account currency.
+    def trade_amount_and_rate(order, fill, instrument_ccy, gross_value)
+      wallet     = (fill[:walletImpact] || {}).with_indifferent_access
+      net_value  = (parse_decimal(wallet[:netValue]) || parse_decimal(order[:filledValue]))&.abs
+      wallet_ccy = wallet[:currency].presence || order[:currency].presence || currency
+
+      return [ gross_value, nil ] if net_value.nil? || net_value.zero?
+      return [ net_value, nil ] if wallet_ccy == instrument_ccy
+      return [ gross_value, nil ] if wallet_ccy != currency || gross_value.zero?
+
+      [ gross_value, (net_value / gross_value).to_f ]
     end
 
     def classify_transaction(type, amount)
