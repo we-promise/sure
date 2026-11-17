@@ -1,5 +1,8 @@
 ---
 ro:
+  mcp:
+    errors:
+      insufficient_scope: "Acest token nu permite accesul la MCP. Autorizează din nou cu domeniul mcp:read_write sau adaugă din nou acest conector."
   activerecord:
     errors:
       messages:

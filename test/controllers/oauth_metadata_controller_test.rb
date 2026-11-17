@@ -13,7 +13,7 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal @base, json["resource"]
     assert_equal [ @base ], json["authorization_servers"]
-    assert_equal [ "read_write" ], json["scopes_supported"]
+    assert_equal [ "mcp:read_write" ], json["scopes_supported"]
     assert_equal [ "header" ], json["bearer_methods_supported"]
   end
 
@@ -25,7 +25,7 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     json = JSON.parse(response.body)
     assert_equal "#{@base}/mcp", json["resource"]
     assert_equal [ @base ], json["authorization_servers"]
-    assert_equal [ "read_write" ], json["scopes_supported"]
+    assert_equal [ "mcp:read_write" ], json["scopes_supported"]
     assert_equal [ "header" ], json["bearer_methods_supported"]
   end
 
@@ -41,6 +41,6 @@ class OauthMetadataControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "code" ], json["response_types_supported"]
     assert_equal [ "authorization_code" ], json["grant_types_supported"]
     assert_equal [ "S256" ], json["code_challenge_methods_supported"]
-    assert_equal [ "read_write" ], json["scopes_supported"]
+    assert_equal [ "mcp:read_write" ], json["scopes_supported"]
   end
 end

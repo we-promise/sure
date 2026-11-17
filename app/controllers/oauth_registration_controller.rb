@@ -83,10 +83,10 @@ class OauthRegistrationController < ApplicationController
       name: client_name,
       redirect_uri: redirect_uris.join("\n"),
       confidential: false,
-      # MCP requires the read_write scope. Without assigning it to the
-      # dynamically registered client, Doorkeeper falls back to the provider's
-      # default read scope and the token is rejected by McpController.
-      scopes: "read_write"
+      # Dynamic client registration is public, so issue an MCP-only scope
+      # rather than the global API read_write scope. McpController accepts this
+      # scope, while /api/v1 keeps rejecting it for normal JSON API access.
+      scopes: "mcp:read_write"
     )
 
     if app.save

@@ -19,6 +19,9 @@ fr:
             scopes:
               not_match_configured: ne correspond pas à ceux configurés sur le serveur.
   doorkeeper:
+    scopes:
+      "mcp:read_write": "Lire et modifier vos données financières via MCP"
+
     applications:
       buttons:
         authorize: Autoriser

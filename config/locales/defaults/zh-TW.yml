@@ -7,6 +7,9 @@ zh-TW:
       close: 關閉
   global:
     expand: 展開
+  mcp:
+    errors:
+      insufficient_scope: "此權杖沒有 MCP 存取權限。請使用 mcp:read_write 權限範圍重新授權，或重新新增此連接器。"
   activerecord:
     errors:
       messages:
