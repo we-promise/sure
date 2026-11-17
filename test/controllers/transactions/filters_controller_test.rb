@@ -57,6 +57,16 @@ class Transactions::FiltersControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[name='q[ai_status][]'][value='current'][checked]", count: 0
   end
 
+  test "clear filters navigates the whole page outside the lazy frame" do
+    get filters_transactions_url(q: { attachment_status: [ "with" ] }),
+        headers: { "Turbo-Frame" => "transaction-filters" }
+
+    assert_response :success
+    assert_select "turbo-frame#transaction-filters" do
+      assert_select "a[href=?][data-turbo-frame='_top']", transactions_path(clear_filters: true)
+    end
+  end
+
   test "requires authentication" do
     delete session_url(sessions(:one)) rescue nil
     reset!
