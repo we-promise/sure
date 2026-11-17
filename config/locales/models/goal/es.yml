@@ -34,3 +34,5 @@ es:
               below_consumed: No puedes fijar una meta por debajo de lo que este objetivo ya ha registrado como gastado.
             currency:
               locked_after_linked: No se puede cambiar la moneda cuando el objetivo ya está vinculado a cuentas.
+            progress_basis:
+              locked_once_completed: Reabre o restaura este objetivo antes de cambiar lo que se tiene en cuenta.
