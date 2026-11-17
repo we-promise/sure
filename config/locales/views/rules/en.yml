@@ -70,6 +70,8 @@ en:
       on_or_after: "%{resource} on or after %{date}"
       stop_processing: Stop
       stop_processing_hint: Rules further down don't change transactions matched by this rule.
+      restricted_to: Only changes accounts %{name} can edit
+      widen: Apply to the whole family
     form:
       rule_name_label: Rule name (optional)
       rule_name_placeholder: Enter a name for this rule
@@ -139,6 +141,8 @@ en:
           other: "%{count} splits"
     update:
       success: Rule updated
+    widen:
+      success: The rule now applies to the whole family
     destroy:
       success: Rule deleted
     destroy_all:

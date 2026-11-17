@@ -17,6 +17,8 @@ es:
       action_label_to: '%{label} a %{value}'
       all_past_and_future: Todas las %{resource} pasadas y futuras
       on_or_after: '%{resource} a partir del %{date}'
+      restricted_to: Solo cambia las cuentas que %{name} puede editar
+      widen: Aplicar a toda la familia
     form:
       rule_name_label: Nombre de la regla (opcional)
       rule_name_placeholder: Introduce un nombre para esta regla
@@ -50,6 +52,8 @@ es:
       value_placeholder: Introduce un valor
     update:
       success: Regla actualizada
+    widen:
+      success: La regla se aplica ahora a toda la familia
     destroy:
       success: Regla eliminada
     destroy_all:

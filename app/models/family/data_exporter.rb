@@ -550,7 +550,7 @@ class Family::DataExporter
       end
 
       # Export rules with versioned schema, in run order
-      @family.rules.includes(:rule_group, conditions: :sub_conditions, actions: []).ordered.each do |rule|
+      @family.rules.includes(:rule_group, :restricted_to, conditions: :sub_conditions, actions: []).ordered.each do |rule|
         lines << {
           type: "Rule",
           version: 1,
@@ -766,6 +766,7 @@ class Family::DataExporter
         effective_date: rule.effective_date&.iso8601,
         position: rule.position,
         stop_processing: rule.stop_processing,
+        restricted_to: rule.restricted_to&.email,
         group: rule.rule_group&.name,
         conditions: rule.conditions.where(parent_id: nil).map { |condition| serialize_condition(condition) },
         actions: rule.actions.map { |action| serialize_action(action) }

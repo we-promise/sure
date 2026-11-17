@@ -6,13 +6,15 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
   # Import sessions only carry Sure imports, which write family configuration.
   before_action :reject_guest_writes!, only: [ :create, :create_chunk, :publish ]
   before_action :set_import_session, only: [ :show, :create_chunk, :publish ]
+  before_action :require_session_manager!, only: [ :create_chunk, :publish ]
 
   def create
     @import_session = ImportSession.create_or_find_for!(
       family: current_resource_owner.family,
       import_type: params[:type].to_s,
       client_session_id: params[:client_session_id].presence,
-      expected_chunks: expected_chunks_param
+      expected_chunks: expected_chunks_param,
+      created_by: current_resource_owner
     )
 
     render_import_session(status: :created)
@@ -57,6 +59,10 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
   end
 
   def publish
+    unless @import_session.publishable_by?(current_resource_owner)
+      return render_error("forbidden", "You aren't allowed to publish this import session.", :forbidden)
+    end
+
     @import_session.publish_later
     @import_session.reload
     render_import_session(status: :accepted)
@@ -71,6 +77,10 @@ class Api::V1::ImportSessionsController < Api::V1::BaseController
   private
     def set_import_session
       @import_session = current_resource_owner.family.import_sessions.find(params[:id])
+    end
+
+    def require_session_manager!
+      raise ActiveRecord::RecordNotFound unless @import_session.managed_by?(current_resource_owner)
     end
 
     def ensure_read_scope

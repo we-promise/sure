@@ -521,8 +521,13 @@ class Import < ApplicationRecord
     (ids - family.accounts.writable_by(user).where(id: ids).pluck(:id)).empty?
   end
 
+  # The checks a user's publish passes, in the web, the API and import sessions.
+  def publishable_by?(user)
+    accounts_writable_by?(user) && rules_publishable_by?(user)
+  end
+
   # An import records no user, so the rules it writes can't be restricted to
-  # one (Rule#edited_by): only an admin, whose rules are family-wide anyway,
+  # one (Rule#restrict_to_editor): only an admin, whose rules are family-wide anyway,
   # may publish them.
   def rules_publishable_by?(user)
     !writes_rules? || user&.admin?

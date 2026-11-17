@@ -135,7 +135,7 @@ class SureImport < Import
   def import!(import_session: nil)
     sync_ndjson_counts!
     before_counts = readback_count_snapshot
-    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self)
+    importer = Family::DataImporter.new(family, ndjson_blob_string, import_session: import_session, import: self, user: import_session&.created_by)
     result = importer.import!
 
     Import.transaction do

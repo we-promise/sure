@@ -82,7 +82,10 @@ class Assistant::Function::ApplyRule < Assistant::Function
       # previewed with no matches would then compare equal and be activated.
       current = rule.matching_scope.count
       unchanged = definition_digest(rule) == token["definition"] && current == token["match_count"]
-      rule.update!(active: true) if unchanged
+      if unchanged
+        rule.restrict_to_editor(user)
+        rule.update!(active: true)
+      end
     end
 
     unless unchanged

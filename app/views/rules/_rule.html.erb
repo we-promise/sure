@@ -73,6 +73,9 @@
         </p>
       </div>
     </div>
+    <% if rule.restricted_to %>
+      <p class="m-0 text-xs text-secondary"><%= t(".restricted_to", name: rule.restricted_to.display_name) %></p>
+    <% end %>
   </div>
   <div class="col-start-2 row-start-1 flex items-center gap-4 self-start sm:self-center <%= "sm:row-span-2" if has_title %>">
     <%= styled_form_with model: rule, namespace: "rule_#{rule.id}", data: { controller: "auto-submit-form" } do |f| %>
@@ -82,6 +85,9 @@
       <%= render DS::Menu.new do |menu| %>
         <% menu.with_item(variant: "link", text: t(".edit"), href: edit_rule_path(rule), icon: "pencil", data: { turbo_frame: "modal" }) %>
         <% menu.with_item(variant: "link", text: t(".re_apply_rule"), href: confirm_rule_path(rule), icon: "refresh-cw", data: { turbo_frame: "modal" }) %>
+        <% if rule.restricted_to && Current.user&.admin? %>
+          <% menu.with_item(variant: "button", text: t(".widen"), href: widen_rule_path(rule), icon: "users", method: :patch) %>
+        <% end %>
         <% menu.with_item(
           variant: "button",
           text: t(".delete"),

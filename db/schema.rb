@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
+ActiveRecord::Schema[8.1].define(version: 2026_11_17_200000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -1347,6 +1347,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
   create_table "import_sessions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "client_session_id", limit: 255
     t.datetime "created_at", null: false
+    t.uuid "created_by_id"
     t.jsonb "error_details", default: {}, null: false
     t.integer "expected_chunks"
     t.uuid "family_id", null: false
@@ -1354,6 +1355,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
     t.string "status", default: "pending", null: false
     t.jsonb "summary", default: {}, null: false
     t.datetime "updated_at", null: false
+    t.index ["created_by_id"], name: "index_import_sessions_on_created_by_id"
     t.index ["family_id", "client_session_id"], name: "idx_import_sessions_on_family_client_session", unique: true, where: "(client_session_id IS NOT NULL)"
     t.index ["family_id", "status"], name: "index_import_sessions_on_family_id_and_status"
     t.index ["family_id"], name: "index_import_sessions_on_family_id"
@@ -3233,6 +3235,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_190000) do
   add_foreign_key "impersonation_sessions", "users", column: "impersonator_id"
   add_foreign_key "import_rows", "imports"
   add_foreign_key "import_sessions", "families"
+  add_foreign_key "import_sessions", "users", column: "created_by_id", on_delete: :nullify
   add_foreign_key "import_source_mappings", "families"
   add_foreign_key "import_source_mappings", "import_sessions", column: ["import_session_id", "family_id"], primary_key: ["id", "family_id"], name: "fk_import_source_mappings_session_family", on_delete: :cascade
   add_foreign_key "imports", "account_statements", on_delete: :nullify

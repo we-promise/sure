@@ -38,27 +38,115 @@ class RuleTest < ActiveSupport::TestCase
   test "editing records the scope of a non-admin, and an admin's edit keeps it" do
     rule = families(:dylan_family).rules.build(resource_type: "transaction")
 
-    rule.edited_by(users(:family_admin))
+    rule.restrict_to_editor(users(:family_admin))
     assert_nil rule.restricted_to
 
-    rule.edited_by(users(:family_member))
+    rule.restrict_to_editor(users(:family_member))
     assert_equal users(:family_member), rule.restricted_to
 
-    rule.edited_by(users(:family_admin))
+    rule.restrict_to_editor(users(:family_admin))
     assert_equal users(:family_member), rule.restricted_to
   end
 
-  test "a restricted rule is deleted with its user rather than widened to the family" do
+  test "removing a user switches their restricted rules off for an admin to review" do
     member = users(:family_member)
-    rule = families(:dylan_family).rules.create!(
-      resource_type: "transaction",
-      restricted_to: member,
-      actions_attributes: [ { action_type: "exclude_transaction" } ]
-    )
+    rule = restricted_rule_for(member)
 
     member.destroy!
 
-    assert_not Rule.exists?(rule.id)
+    rule.reload
+    assert_not rule.active?
+    assert_nil rule.restricted_to_id
+  end
+
+  test "moving a user to another family switches their restricted rules off" do
+    member = users(:family_member)
+    rule = restricted_rule_for(member)
+
+    member.transfer_to_family!(Family.create!(name: "Elsewhere"), role: "member")
+
+    rule.reload
+    assert_not rule.active?
+    assert_nil rule.restricted_to_id
+  end
+
+  test "a member's rule that only annotates reaches accounts shared with them read_write" do
+    member = users(:family_member)
+    accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
+    category = categories(:food_and_drink)
+    shared = create_transaction(account: accounts(:credit_card), name: "Annotate probe")
+    annotating = families(:dylan_family).rules.create!(
+      resource_type: "transaction", restricted_to: member,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Annotate probe" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: category.id } ]
+    )
+    renaming = families(:dylan_family).rules.create!(
+      resource_type: "transaction", restricted_to: member,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Annotate probe" } ],
+      actions_attributes: [ { action_type: "set_transaction_category", value: category.id }, { action_type: "set_transaction_name", value: "Renamed" } ]
+    )
+
+    assert_equal [ shared.entryable_id ], annotating.matching_resources.pluck(:id)
+    assert_empty renaming.matching_resources
+  end
+
+  test "the affected count of rules a member applies all at once counts only what the member's run would touch" do
+    member = users(:family_member)
+    create_transaction(account: accounts(:depository), name: "Count probe")
+    create_transaction(account: accounts(:investment), name: "Count probe")
+    rule = families(:dylan_family).rules.create!(
+      resource_type: "transaction",
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Count probe" } ],
+      actions_attributes: [ { action_type: "exclude_transaction" } ]
+    )
+
+    assert_equal 2, Rule.total_affected_resource_count([ rule ])
+    assert_equal 1, Rule.total_affected_resource_count([ rule ], user: member)
+  end
+
+  test "a transfer action targets only accounts its restricting user can write" do
+    member = users(:family_member)
+    source = create_transaction(account: accounts(:depository), name: "Transfer probe", amount: 50)
+    family = families(:dylan_family)
+    rule = family.rules.create!(
+      resource_type: "transaction", active: true, restricted_to: member,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Transfer probe" } ],
+      actions_attributes: [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id } ]
+    )
+    executor = rule.actions.first.executor
+
+    assert_not executor.actionable?(accounts(:investment).id)
+    assert executor.actionable?(accounts(:depository).id)
+
+    assert_no_difference -> { accounts(:investment).entries.count } do
+      Rule::Runner.new(family, rules: [ rule ], execution_type: "manual").run
+    end
+    assert_not source.entryable.reload.transfer?
+  end
+
+  test "a family-wide transfer rule applied by a member leaves accounts the member cannot write" do
+    family = families(:dylan_family)
+    create_transaction(account: accounts(:depository), name: "Transfer probe", amount: 50)
+    rule = family.rules.create!(
+      resource_type: "transaction", active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "Transfer probe" } ],
+      actions_attributes: [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id } ]
+    )
+
+    assert_no_difference -> { accounts(:investment).entries.count } do
+      Rule::Runner.new(family, rules: [ rule ], execution_type: "manual", user: users(:family_member)).run
+    end
+  end
+
+  test "a member can't pick, or see, a transfer target they cannot write" do
+    Current.stubs(:user).returns(users(:family_member))
+    rule = families(:dylan_family).rules.build(resource_type: "transaction")
+    action = rule.actions.build(action_type: "set_as_transfer_or_payment", value: accounts(:investment).id)
+
+    assert_not action.valid?
+    assert action.errors.of_kind?(:value, :invalid)
+    assert_not_includes action.executor.options.map(&:last), accounts(:investment).id
+    assert_includes action.executor.options.map(&:last), accounts(:depository).id
   end
 
   test "displayed_action skips an unsaved action and option lists reset on reload" do
@@ -642,5 +730,12 @@ class RuleTest < ActiveSupport::TestCase
   private
     def create_exclude_rule
       @family.rules.create!(resource_type: "transaction", actions: [ Rule::Action.new(action_type: "exclude_transaction") ])
+    end
+
+    def restricted_rule_for(user)
+      families(:dylan_family).rules.create!(
+        resource_type: "transaction", active: true, restricted_to: user,
+        actions_attributes: [ { action_type: "exclude_transaction" } ]
+      )
     end
 end

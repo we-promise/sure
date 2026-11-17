@@ -2,10 +2,11 @@ class RulesController < ApplicationController
   include StreamExtensions
 
   before_action :require_non_guest!, except: %i[index]
-  before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm ]
+  before_action :require_admin!, only: :widen
+  before_action :set_rule, only: [  :edit, :update, :destroy, :apply, :confirm, :widen ]
 
   def index
-    @rules = Current.family.rules.includes(:actions, conditions: :sub_conditions).ordered.to_a
+    @rules = Current.family.rules.includes(:restricted_to, :actions, conditions: :sub_conditions).ordered.to_a
     Rule.share_option_lists(@rules)
     @layout = Rule::Layout.new(Current.family, rules: @rules)
     @list_filter = Rule::ListFilter.new(@rules)
@@ -55,6 +56,7 @@ class RulesController < ApplicationController
   end
 
   def apply
+    @rule.restrict_to_editor(Current.user)
     @rule.update!(active: true)
 
     # The rule stayed off, so running it now would only repeat the slow query.
@@ -97,6 +99,13 @@ class RulesController < ApplicationController
     end
   end
 
+  # A member's rule acts only on accounts the member may change; an admin can
+  # make it act on the whole family.
+  def widen
+    @rule.update!(restricted_to: nil)
+    redirect_back_or_to rules_path, notice: t(".success")
+  end
+
   def destroy
     @rule.destroy
     redirect_to rules_path, notice: t(".success")
@@ -122,7 +131,7 @@ class RulesController < ApplicationController
 
   def confirm_all
     @rules = Current.family.rules
-    @total_affected_count = Rule.total_affected_resource_count(@rules)
+    @total_affected_count = Rule.total_affected_resource_count(@rules, user: Current.user)
 
     # Compute AI cost estimation if any rule has auto_categorize action
     if @rules.any? { |r| r.actions.any? { |a| a.action_type == "auto_categorize" } }
@@ -147,7 +156,7 @@ class RulesController < ApplicationController
     # A group typed into the form may be created by another request at the
     # same moment; the save then rolls back, and saving again finds it.
     def save_rule
-      @rule.edited_by(Current.user)
+      @rule.restrict_to_editor(Current.user)
       @rule.save
     rescue ActiveRecord::RecordNotUnique
       raise unless @rule.rule_group&.new_record?

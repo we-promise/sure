@@ -388,6 +388,17 @@ class Transactions::CategorizesControllerTest < ActionDispatch::IntegrationTest
       assert_equal member, @family.rules.find_by!(name: "Member grouping").restricted_to
     end
 
+    test "a guest categorizing creates no rule" do
+      entry = create_transaction(account: @account, name: "Guest grouping")
+      sign_in family_guest
+
+      assert_no_difference "Rule.count" do
+        post transactions_categorize_url,
+          params: { position: 0, grouping_key: "Guest grouping", entry_ids: [], all_entry_ids: [ entry.id ], category_id: @category.id, create_rule: "1" },
+          headers: { "Accept" => "text/vnd.turbo-stream.html" }
+      end
+    end
+
     test "create falls back to html redirect without turbo stream header" do
       entry = create_transaction(account: @account, name: "Starbucks")
 

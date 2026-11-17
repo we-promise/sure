@@ -2265,6 +2265,31 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_not @family.rules.find_by(name: "Second").stop_processing
   end
 
+  test "restricts imported rules to the importing member" do
+    family = families(:dylan_family)
+    member = users(:family_member)
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: { name: "Member import", resource_type: "transaction", actions: [ { action_type: "exclude_transaction" } ] } } ])
+
+    Family::DataImporter.new(family, ndjson, user: member).import!
+
+    assert_equal member, family.rules.find_by!(name: "Member import").restricted_to
+  end
+
+  test "keeps an exported rule's restriction, and leaves it off when its user is not in the family" do
+    family = families(:dylan_family)
+    record = ->(name, email) { { type: "Rule", version: 1, data: { name: name, resource_type: "transaction", active: true, restricted_to: email, actions: [ { action_type: "exclude_transaction" } ] } } }
+    ndjson = build_ndjson([ record.call("Known", users(:family_member).email), record.call("Unknown", "nobody@example.com") ])
+
+    Family::DataImporter.new(family, ndjson).import!
+
+    known = family.rules.find_by!(name: "Known")
+    assert_equal users(:family_member), known.restricted_to
+    assert known.active?
+    unknown = family.rules.find_by!(name: "Unknown")
+    assert_nil unknown.restricted_to
+    assert_not unknown.active?
+  end
+
   test "imports rule groups by name and keeps each group in one block" do
     existing = @family.rule_groups.create!(name: "Food")
     rule_record = ->(name, position, group) do

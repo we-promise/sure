@@ -12,8 +12,8 @@
 # Inactive rules above are skipped because they don't run nightly either.
 # ignore_attribute_locks only applies to the requested rules.
 #
-# A run a member starts (user:) touches only transactions in accounts that
-# member can write, on top of each rule's own restriction (Rule#restricted_to).
+# A run a member starts (user:) keeps to accounts that member may change, on
+# top of each rule's own restriction (Rule#permitted_accounts).
 #
 # One run per family at a time, guarded by a PostgreSQL advisory lock. A busy
 # lock raises LockBusy so the calling job can retry instead of dropping the run.
@@ -55,8 +55,10 @@ class Rule::Runner
       rule_runs = []
       remaining_ids = rule_ids.dup
 
-      family.rules.ordered.includes(:family, :actions, conditions: :sub_conditions).each do |rule|
+      family.rules.ordered.includes(:family, :restricted_to, :actions, conditions: :sub_conditions).each do |rule|
         break if remaining_ids.empty?
+
+        rule.run_by = restricting_user
 
         if remaining_ids.delete?(rule.id)
           rule_runs << execute(rule, ignore_attribute_locks: ignore_attribute_locks)
@@ -69,9 +71,7 @@ class Rule::Runner
     end
 
     def unstopped_scope(rule)
-      scope = rule.matching_scope
-      scope = scope.in_accounts_writable_by(restricting_user) if restricting_user
-      Rule.excluding_transaction_ids(scope, stopped_ids)
+      Rule.excluding_transaction_ids(rule.matching_scope, stopped_ids)
     end
 
     def record_claims(rule, matched_ids)

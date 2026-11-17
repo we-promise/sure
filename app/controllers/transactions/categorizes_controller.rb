@@ -31,7 +31,8 @@ class Transactions::CategorizesController < ApplicationController
     entries  = Current.annotatable_entries.excluding_split_parents.where(id: entry_ids)
     count    = entries.bulk_update!({ category_id: category.id })
 
-    if params[:create_rule] == "1" && (count.positive? || entry_ids.empty?)
+    # Rules are family configuration, which guests may not change.
+    if params[:create_rule] == "1" && !Current.user.guest? && (count.positive? || entry_ids.empty?)
       rule = Rule.create_from_grouping(
         Current.family,
         params[:grouping_key],

@@ -107,9 +107,9 @@ module Assistant::Function::RuleSupport
     # returns a list of problems. The rule is not saved. A key that is absent
     # leaves that part of the rule unchanged.
     # Every create, update and draft preview goes through here, so the rule
-    # carries the user's restriction (Rule#edited_by) before it is counted or saved.
+    # carries the user's restriction (Rule#restrict_to_editor) before it is counted or saved.
     def assign_definition(rule, params)
-      rule.edited_by(user)
+      rule.restrict_to_editor(user)
       problems = []
 
       if params.key?("effective_date")

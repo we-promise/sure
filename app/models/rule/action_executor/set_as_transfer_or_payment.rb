@@ -4,7 +4,7 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   end
 
   def options
-    family.accounts.alphabetically.pluck(:name, :id)
+    target_accounts.alphabetically.pluck(:name, :id)
   end
 
   def claimed_attributes
@@ -12,11 +12,11 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   end
 
   def actionable?(value)
-    family.accounts.exists?(id: value)
+    target_accounts.exists?(id: value)
   end
 
   def execute(transaction_scope, value: nil, ignore_attribute_locks: false, rule_run: nil)
-    target_account = family.accounts.find_by_id(value)
+    target_account = target_accounts.find_by(id: value)
     return 0 unless target_account
     scope = transaction_scope.with_entry
 
@@ -35,6 +35,13 @@ class Rule::ActionExecutor::SetAsTransferOrPayment < Rule::ActionExecutor
   end
 
   private
+    # The action writes an entry into the target, so it must be an account
+    # every user bounding the rule can write, and the non-admin editing it.
+    def target_accounts
+      editor = Current.user unless Current.user.nil? || Current.user.admin?
+      rule.accounts_permitted_to([ *rule.restricting_users, editor ].compact.uniq, :write)
+    end
+
     def build_transfer(target_account, entry)
       missing_transaction = Transaction.new(
         entry: target_account.entries.build(

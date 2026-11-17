@@ -447,6 +447,15 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  test "exports the user a rule is restricted to" do
+    @rule.update!(restricted_to: users(:family_member))
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      rule_data = zip.read("all.ndjson").split("\n").map { |line| JSON.parse(line) }.find { |record| record["type"] == "Rule" && record["data"]["id"] == @rule.id }
+      assert_equal users(:family_member).email, rule_data["data"]["restricted_to"]
+    end
+  end
+
   test "exports the rule group name in CSV and NDJSON" do
     @rule.update!(rule_group: @family.rule_groups.create!(name: "Food"))
 

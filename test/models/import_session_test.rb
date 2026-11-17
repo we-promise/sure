@@ -131,7 +131,7 @@ class ImportSessionTest < ActiveSupport::TestCase
     )
     processed_sequences = []
 
-    importer_factory = lambda do |_family, _content, import_session:, import:|
+    importer_factory = lambda do |_family, _content, import_session:, import:, user: nil|
       processed_sequences << import.sequence
       flunk "completed chunk was reprocessed" if import.sequence == 1
       assert_equal session, import_session

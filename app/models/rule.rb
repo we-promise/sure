@@ -7,9 +7,9 @@ class Rule < ApplicationRecord
 
   belongs_to :family
   belongs_to :rule_group, optional: true
-  # Set when a non-admin saves the rule: it then acts only on transactions in
-  # accounts that user can write, in every run (see #edited_by). Null rules act
-  # on the whole family.
+  # Set when a non-admin saves or switches on the rule (#restrict_to_editor):
+  # every run then keeps to accounts that user may change (#permitted_accounts).
+  # Null rules act on the whole family.
   belongs_to :restricted_to, class_name: "User", optional: true
   has_many :conditions, dependent: :destroy
   has_many :actions, dependent: :destroy
@@ -17,6 +17,10 @@ class Rule < ApplicationRecord
 
   accepts_nested_attributes_for :conditions, allow_destroy: true
   accepts_nested_attributes_for :actions, allow_destroy: true
+
+  # The non-admin who started the current run (Rule::Runner), or whose run a
+  # count previews. Not stored.
+  attr_accessor :run_by
 
   # A name typed into the form's "new group" field. The rule joins that group,
   # which is created unless the family already has one with that name.
@@ -263,7 +267,7 @@ class Rule < ApplicationRecord
   # Returns the saved rule, or nil if a duplicate or invalid rule already exists.
   def self.create_from_grouping(family, grouping_key, category, transaction_type: nil, user: nil)
     rule = family.rules.build(name: grouping_key, resource_type: "transaction", active: true)
-    rule.edited_by(user)
+    rule.restrict_to_editor(user)
     rule.conditions.build(condition_type: "transaction_name", operator: "like", value: grouping_key)
     rule.conditions.build(condition_type: "transaction_type", operator: "=", value: transaction_type) if transaction_type.present?
     rule.actions.build(action_type: "set_transaction_category", value: category.id.to_s)
@@ -275,12 +279,14 @@ class Rule < ApplicationRecord
 
   # Calculates total unique resources affected across multiple rules
   # This handles overlapping rules by deduplicating transaction IDs
-  def self.total_affected_resource_count(rules)
+  # user: who would run them, as Rule::Runner limits a member's run.
+  def self.total_affected_resource_count(rules, user: nil)
     return 0 if rules.empty?
 
     # Collect all unique transaction IDs matched by any rule
     transaction_ids = Set.new
     rules.each do |rule|
+      rule.run_by = user if user && !user.admin?
       transaction_ids.merge(rule.matching_scope.pluck(:id))
     rescue Rule::SafeRegex::TimeoutError
       next
@@ -322,10 +328,35 @@ class Rule < ApplicationRecord
     end
   end
 
-  # Called by every path that saves a rule for a user. An admin's edit keeps a
-  # restriction a member left; widening a rule takes an admin recreating it.
-  def edited_by(user)
+  # Called by every path that saves or switches on a rule for a user. An
+  # admin's edit keeps a restriction a member left; widening the rule to the
+  # family is a separate admin action (RulesController#widen).
+  def restrict_to_editor(user)
     self.restricted_to = user if user && !user.admin?
+  end
+
+  # Users whose access bounds what the rule changes.
+  def restricting_users
+    [ restricted_to, run_by ].compact.uniq
+  end
+
+  # Family accounts the rule may change: those each restricting user may
+  # annotate when every action only annotates (AccountShare::ANNOTATE_*), or
+  # write otherwise. The whole family when nobody restricts it.
+  def permitted_accounts
+    accounts_permitted_to(restricting_users, annotation_only? ? :annotate : :write)
+  end
+
+  # Family accounts every given user may change at the level (:annotate or :write).
+  def accounts_permitted_to(users, level)
+    users.reduce(family.accounts) do |accounts, user|
+      allowed = level == :annotate ? family.accounts.annotatable_by(user) : family.accounts.writable_by(user)
+      accounts.where(id: allowed.select(:id))
+    end
+  end
+
+  def annotation_only?
+    actions.any? && actions.all?(&:annotation?)
   end
 
   # user: who asked for the run (see Rule::Runner).

@@ -46,6 +46,17 @@ class Assistant::Function::ApplyRuleTest < ActiveSupport::TestCase
     assert_nil unshared.entryable.reload.category
   end
 
+  test "a member activating a family-wide rule restricts it to the member" do
+    member = users(:family_member)
+    create_transaction(account: accounts(:depository), name: "ZXQ Coffee Shop")
+    token = Assistant::Function::PreviewRule.new(member).call("rule_id" => @rule.id)[:preview][:preview_token]
+
+    result = Assistant::Function::ApplyRule.new(member).call("rule_id" => @rule.id, "preview_token" => token)
+
+    assert result[:success], result.inspect
+    assert_equal member, @rule.reload.restricted_to
+  end
+
   # Activating a rule with an email action records its current matches as
   # delivered. If that times out the rule stays off (Rule#seed_notification_baseline),
   # and queuing the run anyway would email every past match.

@@ -40,6 +40,13 @@ class Rule::Action < ApplicationRecord
       (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
   }
 
+  # A transfer target must be an account the editing user may write (see
+  # SetAsTransferOrPayment#target_accounts).
+  validate :transfer_target_writable_by_user, if: -> {
+    action_type == "set_as_transfer_or_payment" && Current.user && value.present? &&
+      (new_record? || will_save_change_to_value? || will_save_change_to_action_type?)
+  }
+
   # Pre-seed (watermark): when an EMAIL_NOTIFICATION action is created — on a
   # new rule OR added to an existing one — record all currently-matching
   # transactions as already-delivered WITHOUT sending, so the rule only ever
@@ -136,6 +143,14 @@ class Rule::Action < ApplicationRecord
     rule.registry.get_executor!(action_type)
   end
 
+  # An action this resource doesn't offer (e.g. an unknown type from an
+  # import) is treated as writing, the stricter of the two.
+  def annotation?
+    executor.annotation?
+  rescue Rule::Registry::UnsupportedActionError
+    false
+  end
+
   def email_notification?
     action_type == EMAIL_NOTIFICATION
   end
@@ -145,6 +160,10 @@ class Rule::Action < ApplicationRecord
       return if UuidFormat.valid?(value) && rule&.family&.assignable_merchants_for(Current.user)&.exists?(id: value)
 
       errors.add(:value, :invalid)
+    end
+
+    def transfer_target_writable_by_user
+      errors.add(:value, :invalid) unless executor.actionable?(value)
     end
 
     def execution_value

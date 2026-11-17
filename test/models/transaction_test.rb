@@ -28,6 +28,20 @@ class TransactionTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordInvalid) { create_transaction(tags: [ other.tags.create!(name: "Elsewhere") ]) }
   end
 
+  test "the family check on a reference costs at most one query" do
+    transaction = Transaction.find(create_transaction.transaction.id)
+    transaction.category_id = categories(:food_and_drink).id
+    assert_queries_count(1, include_schema: false) { transaction.send(:references_belong_to_family) }
+
+    tagged = Transaction.find(create_transaction.transaction.id)
+    tagging = tagged.taggings.build(tag_id: tags(:one).id)
+    assert_queries_count(1, include_schema: false) { tagging.send(:tag_belongs_to_taggable_family) }
+
+    loaded = create_transaction.transaction
+    loaded.category = categories(:food_and_drink)
+    assert_no_queries(include_schema: false) { loaded.send(:references_belong_to_family) }
+  end
+
   test "accepts its own family's references and any provider merchant" do
     transaction = create_transaction(
       category: categories(:food_and_drink),

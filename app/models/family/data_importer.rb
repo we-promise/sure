@@ -90,8 +90,11 @@ class Family::DataImporter
 
   # account_targets maps source account IDs to existing accounts that the
   # import's records go into instead of accounts it creates.
-  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {})
+  # user: who imports, so the rules they bring are restricted to them
+  # (Rule#restrict_to_editor).
+  def initialize(family, ndjson_content, import_session: nil, import: nil, account_targets: {}, user: nil)
     @family = family
+    @user = user
     @ndjson_content = ndjson_content
     @import_session = import_session
     @import = import
@@ -1463,6 +1466,7 @@ class Family::DataImporter
         # Exports from before rule groups have no group key; an existing rule
         # then keeps its group.
         rule.rule_group = find_or_create_rule_group(data["group"]) if data.key?("group")
+        assign_rule_restriction(rule, data)
 
         # An email action replacing the rule's own keeps the baseline it recorded
         # (see Rule::Action#keep_notification_baseline), as stored before this
@@ -1514,6 +1518,18 @@ class Family::DataImporter
       return unless index
 
       items.drop(index + 1).take_while { |item| !item.group? && session_rule_ids.include?(item.rule.id) }.last&.rule
+    end
+
+    # An exported restriction stays with its user. If that user isn't in this
+    # family the rule comes in switched off, for an admin to review, rather
+    # than acting on the whole family. Older exports carry no key, so an
+    # existing rule keeps its restriction.
+    def assign_rule_restriction(rule, data)
+      if data.key?("restricted_to")
+        rule.restricted_to = data["restricted_to"].presence && @family.users.find_by(email: data["restricted_to"])
+        rule.active = false if data["restricted_to"].present? && rule.restricted_to.nil?
+      end
+      rule.restrict_to_editor(@user)
     end
 
     def find_or_create_rule_group(name)

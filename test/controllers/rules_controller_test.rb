@@ -771,6 +771,38 @@ class RulesControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.family.rules.find_by!(name: "Admin rule").restricted_to
   end
 
+  test "a member switching on a family-wide rule restricts it to the member" do
+    rule = @user.family.rules.create!(resource_type: "transaction", actions_attributes: [ { action_type: "exclude_transaction" } ])
+    sign_in users(:family_member)
+
+    post apply_rule_url(rule)
+
+    assert rule.reload.active?
+    assert_equal users(:family_member), rule.restricted_to
+  end
+
+  test "rules show who they are restricted to, and an admin can widen one to the family" do
+    member = users(:family_member)
+    rule = @user.family.rules.create!(resource_type: "transaction", restricted_to: member, actions_attributes: [ { action_type: "exclude_transaction" } ])
+
+    get rules_url
+    assert_includes response.body, I18n.t("rules.rule.restricted_to", name: member.display_name)
+
+    patch widen_rule_url(rule)
+    assert_redirected_to rules_url
+    assert_nil rule.reload.restricted_to
+  end
+
+  test "a member cannot widen a rule to the family" do
+    member = users(:family_member)
+    rule = @user.family.rules.create!(resource_type: "transaction", restricted_to: member, actions_attributes: [ { action_type: "exclude_transaction" } ])
+    sign_in member
+
+    patch widen_rule_url(rule)
+
+    assert_equal member, rule.reload.restricted_to
+  end
+
   test "guest cannot create rule" do
     sign_in family_guest
 

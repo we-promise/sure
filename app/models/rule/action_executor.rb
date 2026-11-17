@@ -41,6 +41,18 @@ class Rule::ActionExecutor
     []
   end
 
+  # Transaction attributes the action writes. Additive actions that claim
+  # nothing (tags) list theirs here.
+  def written_attributes
+    claimed_attributes
+  end
+
+  # Whether the action changes only what an annotate-only share may change
+  # (AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES); see Rule#permitted_accounts.
+  def annotation?
+    written_attributes.any? && (written_attributes - AccountShare::ANNOTATE_TRANSACTION_ATTRIBUTES).empty?
+  end
+
   # Whether matching this action keeps rules further down from setting
   # claimed_attributes. False for actions that only fill a field later and not
   # for every match, so a broad one doesn't silently block the rules below it.

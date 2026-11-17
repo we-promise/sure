@@ -719,6 +719,7 @@ Rails.application.routes.draw do
     member do
       get :confirm
       post :apply
+      patch :widen
     end
 
     collection do

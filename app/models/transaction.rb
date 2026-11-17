@@ -213,9 +213,6 @@ class Transaction < ApplicationRecord
 
   # Transactions carrying any of the given tags. A subquery rather than a
   # join, so a transaction with several of them is returned once.
-  # Needs entries joined (e.g. with_entry).
-  scope :in_accounts_writable_by, ->(user) { where(entries: { account_id: Account.writable_by(user).select(:id) }) }
-
   scope :with_any_tag, ->(tag_ids) {
     where(id: Tagging.where(tag_id: tag_ids, taggable_type: "Transaction").select(:taggable_id))
   }
@@ -372,6 +369,20 @@ class Transaction < ApplicationRecord
     matching_names.map do |name|
       Transaction::NameSuggestion.new(name: name, category: categories_by_id[category_id_by_name[name]])
     end
+  end
+
+  # The account of this transaction's entry, as a relation for one query.
+  def self.owning_accounts(transaction_id)
+    Account.where(id: Entry.where(entryable_type: name, entryable_id: transaction_id).select(:account_id))
+  end
+
+  def owning_accounts
+    association(:entry).loaded? ? Account.where(id: entry&.account_id) : self.class.owning_accounts(id)
+  end
+
+  # The entry's family when its account is already loaded, else nil.
+  def loaded_family_id
+    entry.account.family_id if association(:entry).loaded? && entry&.association(:account)&.loaded? && entry.account
   end
 
   # Overarching grouping method for all transfer-type transactions
@@ -708,13 +719,29 @@ class Transaction < ApplicationRecord
     # Whatever sets them, the category and merchant are the entry's family's
     # own; provider merchants are shared by every family. Tagging checks tags.
     def references_belong_to_family
-      return unless category_id_changed? || merchant_id_changed?
+      check_category = category_id_changed? && category_id.present?
+      check_merchant = merchant_id_changed? && merchant_id.present?
+      return unless check_category || check_merchant
 
-      family_id = entry&.account&.family_id
-      return if family_id.nil?
+      foreign_category, foreign_merchant = foreign_references(check_category, check_merchant)
+      errors.add(:category, :invalid) if foreign_category
+      errors.add(:merchant, :invalid) if foreign_merchant
+    end
 
-      errors.add(:category, :invalid) if category_id_changed? && category && category.family_id != family_id
-      errors.add(:merchant, :invalid) if merchant_id_changed? && merchant.is_a?(FamilyMerchant) && merchant.family_id != family_id
+    # Compared in memory when the entry's account and the references are
+    # loaded, otherwise in one query.
+    def foreign_references(check_category, check_merchant)
+      family_id = loaded_family_id
+      if family_id && (!check_category || association(:category).loaded?) && (!check_merchant || association(:merchant).loaded?)
+        return [
+          check_category && category&.family_id != family_id,
+          check_merchant && merchant.is_a?(FamilyMerchant) && merchant.family_id != family_id
+        ]
+      end
+
+      category_sql = check_category ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM categories WHERE categories.id = ? AND categories.family_id <> accounts.family_id)", category_id ]) : "FALSE"
+      merchant_sql = check_merchant ? self.class.sanitize_sql([ "EXISTS (SELECT 1 FROM merchants WHERE merchants.id = ? AND merchants.type = 'FamilyMerchant' AND merchants.family_id <> accounts.family_id)", merchant_id ]) : "FALSE"
+      owning_accounts.pick(Arel.sql(category_sql), Arel.sql(merchant_sql)) || [ false, false ]
     end
 
     def validate_attachments
