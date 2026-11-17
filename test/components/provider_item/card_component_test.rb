@@ -61,6 +61,11 @@ class ProviderItem::CardComponentTest < ActiveSupport::TestCase
     assert_includes some_unlinked, ERB::Util.html_escape(I18n.t("brex_items.brex_item.setup_description", linked: 2, total: 7))
   end
 
+  test "snapshots treat a blank CSRF token as a difference" do
+    assert_equal %(<input name="authenticity_token" value="">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="">))
+    assert_equal %(<input name="authenticity_token" value="CSRF">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="abc123">))
+  end
+
   private
     def render_card(options)
       Current.stubs(:user).returns(users(options[:user]))
