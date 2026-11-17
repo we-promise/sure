@@ -6,6 +6,8 @@ class ReportsController < ApplicationController
   skip_authentication only: :export_transactions
   before_action :authenticate_for_export, only: :export_transactions
 
+  helper_method :filter_tags
+
   def index
     setup_report_data(show_flash: true)
 
@@ -81,7 +83,8 @@ class ReportsController < ApplicationController
       start_date: params[:start_date],
       end_date: params[:end_date],
       sort_by: params[:sort_by],
-      sort_direction: params[:sort_direction]
+      sort_direction: params[:sort_direction],
+      filter_tag_ids: filter_tags.map(&:id).presence
     }.compact
 
     # The CSV URL the instructions tell people to add their API key to
@@ -112,6 +115,9 @@ class ReportsController < ApplicationController
       # Build the period
       @period = Period.custom(start_date: @start_date, end_date: @end_date)
       @previous_period = build_previous_period
+
+      @tags = Current.family.tags.alphabetically
+      @filter_tags = filter_tags
 
       # Get aggregated data
       @income_statement = Current.family.income_statement(user: Current.user)
@@ -210,7 +216,8 @@ class ReportsController < ApplicationController
             transactions: @transactions,
             period_type: @period_type,
             start_date: @start_date,
-            end_date: @end_date
+            end_date: @end_date,
+            filter_tags: filter_tags
           },
           visible: @has_accounts,
           collapsible: true
@@ -296,12 +303,18 @@ class ReportsController < ApplicationController
 
     def build_summary_metrics
       # Ensure we always have Money objects
-      current_income = ensure_money(@current_income_totals.total)
-      current_expenses = ensure_money(@current_expense_totals.total)
+      if filter_tags.any?
+        current = @income_statement.totals_for(@period, tag_ids: filter_tags.map(&:id))
+        previous = @income_statement.totals_for(@previous_period, tag_ids: filter_tags.map(&:id))
+        current_income, current_expenses = current.income_money, current.expense_money
+        previous_income, previous_expenses = previous.income_money, previous.expense_money
+      else
+        current_income = ensure_money(@current_income_totals.total)
+        current_expenses = ensure_money(@current_expense_totals.total)
+        previous_income = ensure_money(@previous_income_totals.total)
+        previous_expenses = ensure_money(@previous_expense_totals.total)
+      end
       net_savings = current_income - current_expenses
-
-      previous_income = ensure_money(@previous_income_totals.total)
-      previous_expenses = ensure_money(@previous_expense_totals.total)
 
       # Calculate percentage changes
       income_change = calculate_percentage_change(previous_income, current_income)
@@ -365,8 +378,14 @@ class ReportsController < ApplicationController
 
         period = Period.custom(start_date: month_start, end_date: month_end)
 
-        income = income_statement.income_totals(period: period).total
-        expenses = income_statement.expense_totals(period: period).total
+        if filter_tags.any?
+          totals = income_statement.totals_for(period, tag_ids: filter_tags.map(&:id))
+          income = totals.income_money.amount
+          expenses = totals.expense_money.amount
+        else
+          income = income_statement.income_totals(period: period).total
+          expenses = income_statement.expense_totals(period: period).total
+        end
 
         trends << {
           month: month_start.strftime("%b %Y"),
@@ -767,12 +786,19 @@ class ReportsController < ApplicationController
     def apply_transaction_filters(scope)
       scope = apply_entry_filters(scope)
 
-      # Filter by tag (Transaction-specific — trades don't have taggings)
-      if params[:filter_tag_id].present?
-        scope = scope.joins(:taggings).where(taggings: { tag_id: params[:filter_tag_id] })
-      end
+      scope = scope.with_any_tag(filter_tags.map(&:id)) if filter_tags.any?
 
       scope
+    end
+
+    def filter_tag_ids
+      @filter_tag_ids ||= params[:filter_tag_ids].is_a?(Array) ? params[:filter_tag_ids].grep(String).compact_blank : []
+    end
+
+    # The family's tags among filter_tag_ids. Ids that match none of them
+    # (another family's tag, a deleted one) are ignored.
+    def filter_tags
+      @filter_tags ||= filter_tag_ids.any? ? Current.family.tags.where(id: filter_tag_ids).alphabetically.to_a : []
     end
 
     def exclude_tax_advantaged_accounts(scope)
@@ -797,6 +823,9 @@ class ReportsController < ApplicationController
         # Trades have no category, so a category filter leaves them out.
         scope = scope.model == Trade ? scope.none : scope.where(category_id: all_category_ids)
       end
+
+      # Trades carry no tags, so a tag filter leaves them out.
+      scope = scope.none if scope.model == Trade && filter_tags.any?
 
       # Filter by account
       if params[:filter_account_id].present?
