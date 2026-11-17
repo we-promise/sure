@@ -54,7 +54,9 @@ module Ai::Transport::RubyLlmAdapter
       chat.add_message(role: :user, content: Ai::Transport::Base::PROBE_TOOL_PROMPT)
       message = mapping_errors { chat.generate }
       check_answering_model!(model.name, message.model)
-      tool_calls(message).any? { _1.name == Ai::Transport::Base::PROBE_TOOL_NAME }
+      tool_calls(message).any? do |call|
+        call.name == Ai::Transport::Base::PROBE_TOOL_NAME && call.arguments == { "status" => "ok" }
+      end
     end
 
     # A Hash keyed by call id on 2.1.1, a collection of ToolCall on 2.2 (RubyLLM #1380).
