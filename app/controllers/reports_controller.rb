@@ -857,35 +857,6 @@ class ReportsController < ApplicationController
       scope
     end
 
-    def build_transactions_breakdown_for_export
-      # Get flat transactions list (not grouped) for export
-      # Exclude transfers, one-time, and CC payments (matching income_statement logic)
-      transactions = Transaction
-        .joins(:entry)
-        .joins(entry: :account)
-        .where(accounts: { family_id: Current.family.id, status: [ "draft", "active" ] })
-        .merge(Account.included_in_reports)
-        .where(entries: { entryable_type: "Transaction", excluded: false, date: @period.date_range })
-        .where.not(kind: Current.family.analytics_excluded_kinds)
-        .includes(entry: :account, category: [])
-      transactions = exclude_tax_advantaged_accounts(transactions)
-
-      transactions = apply_transaction_filters(transactions)
-
-      sort_by = params[:sort_by] || "date"
-      # Whitelist sort_direction to prevent SQL injection
-      sort_direction = %w[asc desc].include?(params[:sort_direction]&.downcase) ? params[:sort_direction].upcase : "DESC"
-
-      case sort_by
-      when "date"
-        transactions.order("entries.date #{sort_direction}")
-      when "amount"
-        transactions.order("entries.amount #{sort_direction}")
-      else
-        transactions.order("entries.date DESC")
-      end
-    end
-
     def build_monthly_breakdown_for_export
       # Generate list of months in the period
       months = []
