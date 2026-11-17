@@ -107,6 +107,48 @@ class MercuryItemsSelectionTest < ActionDispatch::IntegrationTest
     assert_equal "Mercury account not found", flash[:alert]
   end
 
+  test "choosing a Mercury account for an existing account of an unsupported type says so" do
+    stub_accounts([ { id: "acc_1", name: "Checking" } ])
+
+    get select_existing_account_mercury_items_url(account_id: accounts(:credit_card).id)
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("mercury_items.link_accounts.invalid_account_type"), flash[:alert]
+  end
+
+  test "linking an existing account of a type Mercury does not support is refused" do
+    stub_accounts([ { id: "acc_1", name: "Checking" } ])
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_mercury_items_url, params: { account_id: accounts(:credit_card).id, mercury_account_id: "acc_1" }
+    end
+
+    assert_redirected_to accounts_path
+    assert_equal I18n.t("mercury_items.link_accounts.invalid_account_type"), flash[:alert]
+  end
+
+  test "linking an existing account links it once and refuses a second link either way" do
+    stub_accounts([ { id: "acc_1", name: "Checking" }, { id: "acc_2", name: "Savings" } ])
+    MercuryItem.any_instance.expects(:sync_later).once
+    other = @family.accounts.create!(name: "Other", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_difference "AccountProvider.count", 1 do
+      post link_existing_account_mercury_items_url, params: { account_id: accounts(:depository).id, mercury_account_id: "acc_1" }
+    end
+    assert_equal I18n.t("mercury_items.link_existing_account.success", account_name: accounts(:depository).name), flash[:notice]
+    assert_equal accounts(:depository), @item.mercury_accounts.find_by!(account_id: "acc_1").account_provider.account
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_mercury_items_url, params: { account_id: accounts(:depository).id, mercury_account_id: "acc_2" }
+    end
+    assert_equal I18n.t("mercury_items.link_existing_account.account_already_linked"), flash[:alert]
+
+    assert_no_difference "AccountProvider.count" do
+      post link_existing_account_mercury_items_url, params: { account_id: other.id, mercury_account_id: "acc_1" }
+    end
+    assert_equal I18n.t("mercury_items.link_existing_account.provider_account_already_linked"), flash[:alert]
+  end
+
   test "a connection whose token is blank doesn't count as a second connection" do
     MercuryItem.create!(family: @family, name: "Blanked", token: "temporary").update_column(:token, " ")
     stub_accounts([ { id: "acc_1", name: "Checking" } ])
