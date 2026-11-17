@@ -239,6 +239,11 @@ class Family < ApplicationRecord
     super
   end
 
+  def reload(*)
+    @investment_subtype_regions_assigned = false
+    super
+  end
+
   # Country groups offered when picking an investment account subtype. nil
   # means "follow the family's country", so a country change carries over.
   def investment_subtype_region_codes
