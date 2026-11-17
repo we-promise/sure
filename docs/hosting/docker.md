@@ -62,8 +62,10 @@ In order to configure the app, you will need to create a file called `.env`, whi
 To do this, you should get our .env.example as a starting point:
 
 ```bash
-curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example
+[ -e .env ] || (umask 077 && curl --fail --location --silent --show-error --output .env https://raw.githubusercontent.com/we-promise/sure/main/.env.example)
 ```
+
+The command does nothing if `.env` already exists, and creates it readable only by you. An existing `.env` keeps its permissions; run `chmod 600 .env` to restrict it. Upgrading an install that is already running? Don't download `.env.example`; see [Upgrading an install that is already running](#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
 
 #### Generate the app secret key
 
@@ -331,6 +333,9 @@ curl --fail --location --silent --show-error --output compose.yml https://raw.gi
 curl --fail --location --silent --show-error --output compose.ai.yml https://raw.githubusercontent.com/we-promise/sure/main/compose.example.ai.yml
 curl --fail --location --silent --show-error --output pipelock.example.yaml https://raw.githubusercontent.com/we-promise/sure/main/pipelock.example.yaml
 
+# Set SECRET_KEY_BASE in .env first, as in Step 3 above. Existing install: keep the key
+# it runs with (see "Upgrading an install that is already running" below)
+
 # Run with Pipelock (no local LLM)
 docker compose -f compose.ai.yml up -d
 
@@ -469,7 +474,21 @@ docker compose up -d # Restart on the new version; database migrations run autom
 
 ### Upgrading an install that is already running: keep your `SECRET_KEY_BASE`
 
-Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Current ones don't, so after refreshing `compose.yml` from the example, `docker compose up` stops with "Set SECRET_KEY_BASE in your .env file". **Do not generate a new value for an existing install.** Put the value your install already runs with into `.env` first (if you never set one, it is the `SECRET_KEY_BASE` default in your previous `compose.yml`).
+Older example compose files shipped a built-in `SECRET_KEY_BASE` default. Current ones don't, so after refreshing `compose.yml` from the example, `docker compose up` stops with "Set SECRET_KEY_BASE in your .env file". **Do not generate a new value for an existing install.** Put the value your install already runs with into `.env` first (if you never set one, it is the old default shown below).
+
+To read that value, run this while the old version is still running, before you refresh `compose.yml`:
+
+```bash
+docker compose exec web printenv SECRET_KEY_BASE
+```
+
+If it prints the old default below, your install ran on it. This value is public and must be treated as compromised: keep it only until you have moved your data to new keys as described below.
+
+```txt
+SECRET_KEY_BASE="a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13"
+```
+
+Don't download `.env.example` onto an existing install: its `POSTGRES_USER` and `POSTGRES_PASSWORD` (`postgres`) differ from the compose defaults (`sure_user` and `sure_password`) your database was created with. If the install has no `.env` yet, create an empty one with `(umask 077 && touch .env)`.
 
 Why: unless `ACTIVE_RECORD_ENCRYPTION_*` are set explicitly, your encryption keys are derived from `SECRET_KEY_BASE`. Changing it makes everything already encrypted under the old keys (provider tokens, API keys in settings, user emails and other encrypted fields) impossible to decrypt, which breaks logins and syncs. It also signs everyone out.
 
