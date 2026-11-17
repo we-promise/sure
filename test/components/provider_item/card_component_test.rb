@@ -31,6 +31,41 @@ class ProviderItem::CardComponentTest < ActiveSupport::TestCase
     end
   end
 
+  # The accounts page passes counts, institutions and sync stats precomputed per
+  # connection. Values that differ from the model's own show which one the card read.
+  test "the card reads the accounts page's precomputed counts over the model's" do
+    stats = { "total_accounts" => 9, "linked_accounts" => 2, "unlinked_accounts" => 7 }
+    model_unlinked = @item.unlinked_accounts_count
+    assert_operator model_unlinked, :>, 0
+
+    all_linked = render_card(user: :family_admin, visible: :all) do |visible|
+      ProviderItem::CardComponent.new(
+        item: @item, visible_accounts: visible,
+        sync_stats_map: { @item.id => stats },
+        account_counts_map: { @item.id => { linked: 3, unlinked: 0, total: 3 } },
+        institutions_count_map: { @item.id => 5 }
+      )
+    end
+    assert_not_includes all_linked, I18n.t("brex_items.brex_item.setup_needed")
+    assert_includes all_linked, I18n.t("provider_sync_summary.accounts.total", count: 9)
+    assert_includes all_linked, I18n.t("provider_sync_summary.accounts.institutions", count: 5)
+
+    some_unlinked = render_card(user: :family_admin, visible: :all) do |visible|
+      ProviderItem::CardComponent.new(
+        item: @item, visible_accounts: visible,
+        sync_stats_map: { @item.id => stats },
+        account_counts_map: { @item.id => { linked: 2, unlinked: 5, total: 7 } },
+        institutions_count_map: { @item.id => 5 }
+      )
+    end
+    assert_includes some_unlinked, ERB::Util.html_escape(I18n.t("brex_items.brex_item.setup_description", linked: 2, total: 7))
+  end
+
+  test "snapshots treat a blank CSRF token as a difference" do
+    assert_equal %(<input name="authenticity_token" value="">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="">))
+    assert_equal %(<input name="authenticity_token" value="CSRF">\n), normalise_provider_item_html(%(<input name="authenticity_token" value="abc123">))
+  end
+
   private
     def render_card(options)
       Current.stubs(:user).returns(users(options[:user]))

@@ -139,7 +139,7 @@ class ProviderItem::AccountFlow
             AccountProvider.create!(account: account, provider: provider_account)
             created_accounts << account
           end
-        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotSaved => e
+        rescue StandardError => e
           failed_count += 1
           Rails.logger.error("#{provider_name} account setup failed for #{provider_account_id}: #{e.class} - #{e.message}")
           Rails.logger.error(Array(e.backtrace).first(10).join("\n"))
