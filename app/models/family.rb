@@ -232,22 +232,16 @@ class Family < ApplicationRecord
     normalize_currency_codes([ *selected_codes, *Array(extra) ])
   end
 
-  # Flags an explicit assignment, even of the stored value, so that saving a
-  # selection that matches the country default switches back to automatic.
-  def investment_subtype_regions=(value)
-    @investment_subtype_regions_assigned = true
-    super
-  end
-
-  def reload(*)
-    @investment_subtype_regions_assigned = false
-    super
-  end
-
   # Country groups offered when picking an investment account subtype. nil
-  # means "follow the family's country", so a country change carries over.
+  # means "follow the family's country", so a country change carries over;
+  # any saved selection, even one matching that default, is kept as chosen.
   def investment_subtype_region_codes
     investment_subtype_regions.nil? ? Investment.default_regions_for_country(country) : investment_subtype_regions
+  end
+
+  # Form-facing switch back to following the family's country.
+  def follow_country_for_investment_subtypes=(value)
+    self.investment_subtype_regions = nil if ActiveModel::Type::Boolean.new.cast(value)
   end
 
   def enabled_currency_objects(extra: [])
@@ -972,16 +966,10 @@ class Family < ApplicationRecord
       self.enabled_currencies = all_selected ? nil : normalized_codes
     end
 
-    # Only when the selection itself is assigned: a country change alone must
-    # not turn a custom selection into "follow country".
     def normalize_investment_subtype_regions!
-      return unless @investment_subtype_regions_assigned
-
-      @investment_subtype_regions_assigned = false
       return if investment_subtype_regions.nil?
 
-      codes = Investment::REGIONS & Array(investment_subtype_regions)
-      self[:investment_subtype_regions] = codes == Investment.default_regions_for_country(country) ? nil : codes
+      self.investment_subtype_regions = Investment::REGIONS & Array(investment_subtype_regions)
     end
 
     def normalize_currency

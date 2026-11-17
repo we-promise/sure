@@ -320,6 +320,14 @@
         <% end %>
       </div>
     <% end %>
+    <% unless @user.family.investment_subtype_regions.nil? %>
+      <%= styled_form_with model: @user, class: "flex justify-end" do |form| %>
+        <%= form.hidden_field :redirect_to, value: "preferences" %>
+        <%= hidden_field_tag "user[family_attributes][id]", @user.family.id %>
+        <%= hidden_field_tag "user[family_attributes][follow_country_for_investment_subtypes]", "1" %>
+        <%= render DS::Button.new(text: t(".investment_subtypes_follow_country"), type: :submit, variant: :outline, size: :sm) %>
+      <% end %>
+    <% end %>
   <% end %>
   <%= settings_section title: t(".sharing_title", moniker: family_moniker), subtitle: t(".sharing_subtitle", moniker: family_moniker_downcase) do %>
     <div>

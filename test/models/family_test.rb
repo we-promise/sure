@@ -399,33 +399,25 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal [], family.reload.investment_subtype_region_codes
   end
 
-  test "investment subtype regions matching the country default are stored as automatic" do
+  test "a saved investment subtype selection matching the country default stays custom" do
     family = families(:dylan_family)
     family.update!(country: "SE", investment_subtype_regions: [ "", "se" ])
-
-    assert_nil family.reload.investment_subtype_regions
-  end
-
-  test "re-saving the stored selection when it matches the new country switches to automatic" do
-    family = families(:dylan_family)
-    family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
-
-    family.update!(country: "FR", investment_subtype_regions: [ "fr" ])
-    assert_nil family.reload.investment_subtype_regions
+    assert_equal [ "se" ], family.reload.investment_subtype_regions
 
     family.update!(country: "DE")
-    assert_equal [ "de" ], family.reload.investment_subtype_region_codes
+    assert_equal [ "se" ], family.reload.investment_subtype_region_codes
   end
 
-  test "an investment subtype selection discarded by reload is not normalised later" do
+  test "following the country again clears a custom investment subtype selection" do
     family = families(:dylan_family)
     family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
 
-    family.investment_subtype_regions = [ "se" ]
-    family.reload
-    family.update!(country: "FR")
-
+    family.update!(follow_country_for_investment_subtypes: "0")
     assert_equal [ "fr" ], family.reload.investment_subtype_regions
+
+    family.update!(follow_country_for_investment_subtypes: "1")
+    assert_nil family.reload.investment_subtype_regions
+    assert_equal [ "se" ], family.investment_subtype_region_codes
   end
 
   test "changing country keeps a custom investment subtype selection" do

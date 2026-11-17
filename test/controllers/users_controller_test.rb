@@ -59,6 +59,35 @@ class UsersControllerTest < ActionDispatch::IntegrationTest
     assert_equal [ "fr", "se" ], @user.family.reload.investment_subtype_regions
   end
 
+  test "admin can switch investment subtype countries back to following the country" do
+    @user.family.update!(investment_subtype_regions: [ "fr" ])
+
+    patch user_url(@user), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @user.family.id, follow_country_for_investment_subtypes: "1" }
+      }
+    }
+
+    assert_redirected_to settings_preferences_url
+    assert_nil @user.family.reload.investment_subtype_regions
+  end
+
+  test "non-admin cannot switch investment subtype countries back to following the country" do
+    sign_in @member = users(:family_member)
+    @member.family.update!(investment_subtype_regions: [ "fr" ])
+
+    patch user_url(@member), params: {
+      user: {
+        redirect_to: "preferences",
+        family_attributes: { id: @member.family.id, follow_country_for_investment_subtypes: "1" }
+      }
+    }
+
+    assert_redirected_to settings_profile_url
+    assert_equal [ "fr" ], @member.family.reload.investment_subtype_regions
+  end
+
   test "non-admin cannot choose investment subtype countries" do
     sign_in @member = users(:family_member)
 
