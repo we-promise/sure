@@ -117,23 +117,4 @@
     <% end %>
   <% end %>
 <% end %>
-<script nonce="<%= content_security_policy_nonce %>">
-  // "Expand all" / "Collapse all" in the account sidebar settings menu.
-  // Event-delegated on document so it works for both the desktop and mobile
-  // sidebar instances and survives Turbo re-renders. The menu panel is
-  // positioned fixed but stays inside its tab panel in the DOM.
-  if (!window.__sidebarSetOpenBoundV2) {
-    window.__sidebarSetOpenBoundV2 = true;
-    document.addEventListener("click", function (e) {
-      var btn = e.target.closest("[data-account-sidebar-set-open]");
-      if (!btn) return;
-      var panel = btn.closest("[role=tabpanel]");
-      if (!panel) return;
-      var open = btn.dataset.accountSidebarSetOpen === "true";
-      Array.prototype.slice.call(panel.querySelectorAll("details")).forEach(function (d) {
-        d.open = open;
-      });
-    });
-  }
-</script>
 <% end %>

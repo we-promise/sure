@@ -13,7 +13,14 @@
       <% if icon %>
         <%= helpers.icon(icon, color: destructive? ? :destructive : :default) %>
       <% end %>
-      <%= tag.span(text, class: text_classes) %>
+      <% if description.present? %>
+        <span class="flex flex-col items-start text-left min-w-0">
+          <%= tag.span(text, class: text_classes) %>
+          <%= tag.span(description, class: "text-xs text-secondary") %>
+        </span>
+      <% else %>
+        <%= tag.span(text, class: text_classes) %>
+      <% end %>
     <% end %>
   </div>
 <% end %>

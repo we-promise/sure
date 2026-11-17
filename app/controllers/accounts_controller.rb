@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
   include FilterClearable
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter toggle_sidebar_hidden]
   before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
@@ -292,6 +292,16 @@ class AccountsController < ApplicationController
     shown_ids = Array(params[:shown_account_ids]).map(&:to_s)
     Current.user.update_sidebar_hidden_account_ids(all_ids - shown_ids)
     redirect_back_or_to root_path, status: :see_other
+  end
+
+  # Hides or shows one account in the current user's sidebar, from the
+  # account menu on the accounts page.
+  def toggle_sidebar_hidden
+    hidden_ids = Current.user.sidebar_hidden_account_ids
+    account_id = @account.id.to_s
+    hidden_ids = hidden_ids.include?(account_id) ? hidden_ids - [ account_id ] : hidden_ids + [ account_id ]
+    Current.user.update_sidebar_hidden_account_ids(hidden_ids)
+    redirect_to accounts_path
   end
 
   def toggle_active

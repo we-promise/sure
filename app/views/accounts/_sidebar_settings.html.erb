@@ -26,7 +26,7 @@
             icon: "chevrons-up-down",
             text: t("accounts.sidebar.expand_all"),
             class: "flex-1 justify-center",
-            data: { account_sidebar_set_open: "true", action: "DS--popover#close" }
+            data: { account_sort_mode_open_param: "true", action: "account-sort-mode#setGroupsOpen DS--popover#close" }
           ) %>
           <%= render DS::Button.new(
             variant: :outline,
@@ -34,7 +34,7 @@
             icon: "chevrons-down-up",
             text: t("accounts.sidebar.collapse_all"),
             class: "flex-1 justify-center",
-            data: { account_sidebar_set_open: "false", action: "DS--popover#close" }
+            data: { account_sort_mode_open_param: "false", action: "account-sort-mode#setGroupsOpen DS--popover#close" }
           ) %>
         </div>
 

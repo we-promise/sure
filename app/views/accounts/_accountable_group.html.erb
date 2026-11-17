@@ -49,8 +49,8 @@
               data: sortable ? {
                 sortable_list_target: "item",
                 sortable_list_id: account.id,
-                sort_name: account.name,
-                sort_balance: account.balance.to_f,
+                sort_name: account.name.to_s.downcase,
+                sort_balance: (account.respond_to?(:converted_balance) ? account.converted_balance : account.balance).to_f,
                 manual_position: manual_positions.index(account.id.to_s),
                 action: "dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd"
               } : {} do %>

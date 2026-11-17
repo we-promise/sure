@@ -1888,14 +1888,35 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_nil @user.reload.manual_account_order["not_a_type"]
   end
 
-  test "sidebar shows drag handles only with the manual account order" do
-    get account_url(@account)
-    assert_select "[data-controller~='sortable-list']", count: 0
+  # Any order can switch to the custom order in place, so the drag markup is
+  # always rendered and its handles stay hidden until sort mode starts.
+  test "sidebar renders hidden drag handles with every account order" do
+    %w[name_asc manual].each do |order|
+      @user.update!(default_account_order: order)
+      get account_url(@account)
 
-    @user.update!(default_account_order: "manual")
-    get account_url(@account)
-    assert_select "[data-controller~='sortable-list'][data-sortable-list-url-value=?]", reorder_accounts_path(group: "depository")
-    assert_select "[data-sortable-list-target='item'][data-sortable-list-id=?]", @account.id
+      assert_select "[data-controller~='sortable-list'][data-sortable-list-url-value=?]", reorder_accounts_path(group: "depository")
+      assert_select "[data-sortable-list-target='item'][data-sortable-list-id=?][data-sort-name=?]", @account.id, @account.name.downcase
+      assert_select "[data-account-sort-mode-target='handle'][style*='display:none']"
+    end
+  end
+
+  test "toggle_sidebar_hidden hides and shows an account in the user's sidebar" do
+    patch toggle_sidebar_hidden_account_url(@account)
+    assert_redirected_to accounts_path
+    assert_includes @user.reload.sidebar_hidden_account_ids, @account.id
+
+    patch toggle_sidebar_hidden_account_url(@account)
+    assert_redirected_to accounts_path
+    assert_not_includes @user.reload.sidebar_hidden_account_ids, @account.id
+  end
+
+  test "accounts page explains the account options and confirms disabling" do
+    get accounts_url
+
+    assert_select "button", text: /#{I18n.t("accounts.account.hide_from_sidebar")}/
+    assert_select "span", text: I18n.t("accounts.account.disable_description")
+    assert_select "form[action=?] button[data-turbo-confirm]", toggle_active_account_path(@account)
   end
 
   private

@@ -100,15 +100,36 @@
             <% menu.with_item(variant: "divider") %>
 
             <% if account.active? %>
-              <% menu.with_item(variant: "button", text: t("accounts.account.disable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-right", data: { turbo_frame: :_top }) %>
+              <% menu.with_item(
+                variant: "button",
+                text: t("accounts.account.disable"),
+                description: t("accounts.account.disable_description"),
+                href: toggle_active_account_path(account),
+                method: :patch,
+                icon: "toggle-right",
+                confirm: CustomConfirm.new(
+                  title: t("accounts.account.disable_confirm.title", account: account.name),
+                  body: t("accounts.account.disable_confirm.body"),
+                  btn_text: t("accounts.account.disable_confirm.button")
+                ),
+                data: { turbo_frame: :_top }
+              ) %>
             <% elsif account.disabled? %>
-              <% menu.with_item(variant: "button", text: t("accounts.account.enable"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.enable"), description: t("accounts.account.enable_description"), href: toggle_active_account_path(account), method: :patch, icon: "toggle-left", data: { turbo_frame: :_top }) %>
             <% end %>
 
             <% if account.exclude_from_reports? %>
-              <% menu.with_item(variant: "button", text: t("accounts.account.include_in_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye", data: { turbo_frame: :_top }) %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.include_in_reports"), description: t("accounts.account.include_in_reports_description"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye", data: { turbo_frame: :_top }) %>
             <% else %>
-              <% menu.with_item(variant: "button", text: t("accounts.account.exclude_from_reports"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye-off", data: { turbo_frame: :_top }) %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.exclude_from_reports"), description: t("accounts.account.exclude_from_reports_description"), href: toggle_exclude_from_reports_account_path(account), method: :patch, icon: "eye-off", data: { turbo_frame: :_top }) %>
+            <% end %>
+          <% end %>
+
+          <% if account.active? %>
+            <% if Current.user&.sidebar_hidden_account_ids&.include?(account.id.to_s) %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.show_in_sidebar"), description: t("accounts.account.show_in_sidebar_description"), href: toggle_sidebar_hidden_account_path(account), method: :patch, icon: "panel-left-open", data: { turbo_frame: :_top }) %>
+            <% else %>
+              <% menu.with_item(variant: "button", text: t("accounts.account.hide_from_sidebar"), description: t("accounts.account.hide_from_sidebar_description"), href: toggle_sidebar_hidden_account_path(account), method: :patch, icon: "panel-left-close", data: { turbo_frame: :_top }) %>
             <% end %>
           <% end %>
 
