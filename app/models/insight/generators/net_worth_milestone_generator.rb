@@ -50,7 +50,8 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
         # the ~30 days the crossing stays in the series window — storing it
         # here would rewrite the body and resurrect dismissals every night.
         metadata: {
-          milestone: milestone
+          milestone: milestone,
+          accounts_digest: shared_accounts_digest
         },
         period: window,
         dedup_key: "net_worth_milestone:#{milestone}"
@@ -63,7 +64,8 @@ class Insight::Generators::NetWorthMilestoneGenerator < Insight::Generator
     # of the window can still be checked against the days that preceded it.
     def net_worth_history(window)
       period = Period.custom(start_date: window.start_date - QUIET_PERIOD, end_date: window.end_date)
-      balance_sheet.net_worth_series(period: period).values.map do |value|
+      BalanceSheet::NetWorthSeriesBuilder.new(family, accounts: shared_accounts)
+                                         .net_worth_series(period: period).values.map do |value|
         Point.new(date: value.date, amount: money_amount(value.value))
       end
     end
