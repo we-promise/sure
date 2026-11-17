@@ -20,7 +20,12 @@
               <label class="flex items-center gap-3 p-2 rounded border border-secondary hover:border-primary cursor-pointer">
                 <%= radio_button_tag :enable_banking_account_id, eba.id, false %>
                 <div class="flex flex-col">
-                  <span class="text-sm text-primary font-medium"><%= eba.name.presence || eba.account_id %></span>
+                  <span class="text-sm text-primary font-medium">
+                    <%= eba.name.presence || eba.account_id %>
+                    <% if eba.iban.present? %>
+                      <span class="text-secondary font-normal">• <%= eba.iban.last(4) %></span>
+                    <% end %>
+                  </span>
                   <span class="text-xs text-secondary">
                     <%= eba.currency %> • <%= t(".balance") %>: <%= number_to_currency((eba.current_balance || 0), unit: eba.currency) %>
                   </span>

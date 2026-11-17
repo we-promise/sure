@@ -32,6 +32,8 @@ class Family::DataImporter
   end
 
   SUPPORTED_TYPES = %w[Account Balance Category Tag Merchant ProviderMerchant RecurringTransaction RecurrenceRule RecurringOccurrence RecurringAllocation RecurringPriceChange RecurringMatchRejection Transaction Transfer RejectedTransfer Trade Holding Valuation Budget BudgetCategory Rule].freeze
+  PROPERTY_DETAIL_ATTRIBUTES = %w[year_built area_value area_unit].freeze
+  PROPERTY_ADDRESS_ATTRIBUTES = %w[line1 line2 locality region county postal_code country].freeze
   ACCOUNTABLE_TYPE_CLASSES = {
     "Depository" => Depository, "Investment" => Investment, "Crypto" => Crypto,
     "Property" => Property, "Vehicle" => Vehicle, "OtherAsset" => OtherAsset,
@@ -356,6 +358,8 @@ class Family::DataImporter
             end
           end
 
+          assign_property_details(accountable, accountable_data) if accountable.is_a?(Property)
+
           account = @family.accounts.build(accountable: accountable)
         end
 
@@ -391,6 +395,16 @@ class Family::DataImporter
         @created_accounts << account if created
         increment_summary("Account", created ? :created : :updated)
       end
+    end
+
+    # What the property form edits. Provider links (avm_*) are left out: the
+    # restored family has to link its own provider. A missing or null value
+    # keeps the model's default, such as the area unit.
+    def assign_property_details(property, accountable_data)
+      property.assign_attributes(accountable_data.slice(*PROPERTY_DETAIL_ATTRIBUTES).compact)
+
+      address_data = accountable_data["address"]
+      property.build_address(address_data.slice(*PROPERTY_ADDRESS_ATTRIBUTES)) if address_data.is_a?(Hash)
     end
 
     def importable_account_status(status)
