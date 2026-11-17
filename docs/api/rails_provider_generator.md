@@ -95,8 +95,8 @@ This single command generates:
 - ✅ `Family::MyBankConnectable`, jobs and processor tests
 
 The generated provider does not run until its TODOs are written: the adapter's
-`build_provider` and every `AccountFlow` hook raise `NotImplementedError` until then (see
-[Customization](#customization)).
+`build_provider` and each of the five private `AccountFlow` hooks raise
+`NotImplementedError` until then (see [Customization](#customization)).
 
 The kit's card renders the provider's logo with `ProviderLogo`. That reads the
 provider's `Provider::Metadata::REGISTRY` entry, which comes from the adapter's
@@ -223,7 +223,6 @@ class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :my_bank_items, :family_id
     add_index :my_bank_items, :status
 
     # Create provider accounts table (stores individual account data from provider)
@@ -254,7 +253,6 @@ class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[8.1]
               [ :my_bank_item_id, :account_id ],
               unique: true,
               name: "index_my_bank_accounts_on_item_and_account_id"
-    add_index :my_bank_accounts, :my_bank_item_id
   end
 end
 ```
@@ -508,6 +506,9 @@ the old output, a generated provider:
 - does not set `status: :requires_update` on an authentication error. A
   `MyBankItem::Syncer < ProviderItem::Syncer` that answers `credentials_error?` stores a
   translated `credentials_invalid` message instead, as Brex and Mercury do;
+- keeps the importer's counters (`api_requests`, `holdings_found`, `accounts_skipped`) on the
+  item's raw payload only, not on the sync. `Importer#import` returns
+  `{ success:, accounts_failed:, transactions_failed: }`, which the syncer turns into errors;
 - has `unlink_all!(dry_run:)` with no `disposition:` argument; unlinking always retains.
 
 ---
