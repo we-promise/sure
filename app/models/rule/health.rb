@@ -11,6 +11,15 @@ class Rule::Health
   # Conditions whose text a match must contain, compared for overlaps.
   TEXT_OPERATORS = %w[like = starts_with ends_with].freeze
 
+  # The field each condition type reads that a rule's action can change.
+  CONDITION_FIELDS = {
+    "transaction_name" => :name,
+    "transaction_merchant" => :merchant_id,
+    "transaction_category" => :category_id,
+    "transaction_type" => :transfer,
+    "transaction_tag" => :tags
+  }.freeze
+
   Conflict = Data.define(:rules, :attribute, :winner)
   Shadowed = Data.define(:rule, :reason, :by, :attributes, :match_count)
   Overlap = Data.define(:rule, :other, :attributes, :shared_count, :match_count, :same_text)
@@ -29,9 +38,10 @@ class Rule::Health
     @positions[rule.id]
   end
 
-  # Groups of rules with the same conditions, effective date and actions.
+  # Groups of rules with the same conditions, effective date, actions and
+  # stop_processing.
   def duplicates
-    @duplicates ||= rules.group_by { |rule| [ condition_key(rule), action_signature(rule) ] }
+    @duplicates ||= rules.group_by { |rule| [ condition_key(rule), action_signature(rule), rule.stop_processing? ] }
       .values.select { |group| group.size > 1 }
   end
 
@@ -54,6 +64,9 @@ class Rule::Health
 
   # Active rules that match transactions but change nothing: every match is
   # stopped by a rule above, or every field they set is already claimed above.
+  # Matches are read before any rule runs, so a rule whose conditions read a
+  # field a rule above changes gets no verdict, nor do the rules it would
+  # shadow (see #dry_run).
   def shadowed
     dry_run
     @shadowed
@@ -77,7 +90,8 @@ class Rule::Health
   end
 
   def match_nothing
-    rules.select { |rule| matches[rule.id]&.empty? }
+    dry_run
+    rules.select { |rule| matches[rule.id]&.empty? && !@uncertain.include?(rule.id) }
   end
 
   # Rules whose matches could not be read, e.g. a pattern that timed out.
@@ -109,6 +123,8 @@ class Rule::Health
       return if @shadowed
 
       @shadowed = []
+      @uncertain = Set.new
+      changed_above = Set.new
       claims = Rule::Runner::Claims.new
       claimed_by = Hash.new { |hash, attribute| hash[attribute] = {} }
       stopped_by = {}
@@ -117,8 +133,17 @@ class Rule::Health
         matched = matches[rule.id]
         next if matched.nil?
 
+        # The real run re-reads matches after the rules above apply, so a rule
+        # reading a field one of them changes may match other transactions.
+        @uncertain << rule.id if read_fields(rule).intersect?(changed_above)
+        changed_above.merge(changed_fields(rule)) if matched.any? || @uncertain.include?(rule.id)
+
         unstopped = matched - claims.stopped_ids
-        @shadowed << shadow(rule, matched, unstopped, claims, claimed_by, stopped_by) if matched.any? && no_effect?(rule, unstopped, claims)
+        if matched.any? && !@uncertain.include?(rule.id) && no_effect?(rule, unstopped, claims)
+          entry = shadow(rule, matched, unstopped, claims, claimed_by, stopped_by)
+          involved = entry.by + matched.filter_map { |id| stopped_by[id] }
+          @shadowed << entry if involved.none? { |other| @uncertain.include?(other.id) }
+        end
 
         claims.record(rule, unstopped)
         unstopped.each { |id| stopped_by[id] ||= rule } if rule.stop_processing?
@@ -137,6 +162,15 @@ class Rule::Health
         claimed = attributes.map { |attribute| claims.claimed_ids.fetch(attribute, Set.new) }.reduce(Set.new, :|)
         (unstopped - claimed).empty?
       end
+    end
+
+    def read_fields(rule)
+      leaf_conditions(rule).filter_map { |condition| CONDITION_FIELDS[condition.condition_type] }.to_set
+    end
+
+    # Tags claim nothing, but a tag condition below still reads them.
+    def changed_fields(rule)
+      rule.actions.flat_map { |action| action.action_type == "set_transaction_tags" ? [ :tags ] : claimed_attributes(action).to_a }
     end
 
     def shadow(rule, matched, unstopped, claims, claimed_by, stopped_by)
@@ -257,6 +291,17 @@ class Rule::Health
       value = condition.value.to_s
       return value if condition.regex?
 
+      # The key before the first "=" is looked up exactly; only the value
+      # after it is compared as text.
+      if condition.condition_type == "transaction_additional_detail"
+        key, separator, target = value.partition(Rule::ConditionFilter::TransactionAdditionalDetail::KEY_VALUE_SEPARATOR)
+        return [ key.strip, separator, text_value(condition, target) ].join
+      end
+
+      text_value(condition, value)
+    end
+
+    def text_value(condition, value)
       value = value.gsub(/\s+/, " ").strip if condition.filter.type == "text"
       CASE_INSENSITIVE_OPERATORS.include?(condition.operator) ? value.downcase : value
     end
