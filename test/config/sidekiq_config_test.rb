@@ -25,6 +25,11 @@ class SidekiqConfigTest < ActiveSupport::TestCase
     assert_equal sidekiq_config.dig(:capsules, :ai, :queues), SidekiqHealth::AI_QUEUES
   end
 
+  # Ai::Capsule trusts the queue name: a job on these queues runs only in the ai capsule.
+  test "Ai::Capsule's queues are the ai capsule's queues" do
+    assert_equal sidekiq_config.dig(:capsules, :ai, :queues).sort, Ai::Capsule::QUEUES.sort
+  end
+
   private
     def sidekiq_config
       erb = ERB.new(Rails.root.join("config/sidekiq.yml").read, trim_mode: "-")
