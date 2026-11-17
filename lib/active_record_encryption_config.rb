@@ -7,16 +7,23 @@ module ActiveRecordEncryptionConfig
     ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
   ].freeze
 
-  # SECRET_KEY_BASE values ever shipped as a working default in
-  # compose.example.yml / compose.example.ai.yml. Self-hosted installs that
-  # deployed from one of those files without overriding it are running with
-  # a publicly known secret. Since the auto-derived encryption keys
+  # Publicly known SECRET_KEY_BASE values: the working default once shipped in
+  # compose.example.yml / compose.example.ai.yml, the .env.example value, the
+  # placeholders in the Docker, PetHost and Helm guides, and the literal
+  # `$(openssl rand -hex 64)` the Hetzner guide has users write into .env
+  # (Compose does not run it). Installs that kept one of these are running
+  # with a secret anyone can look up. Since the auto-derived encryption keys
   # (config/initializers/active_record_encryption.rb) are a deterministic
   # function of SECRET_KEY_BASE, anyone with this value can compute the same
   # encryption keys, so `ready?` alone is not a meaningful signal of safety
   # for these installs even though it makes `runtime_configured?` true.
-  KNOWN_COMPROMISED_SECRET_KEY_BASES = %w[
-    a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13
+  KNOWN_COMPROMISED_SECRET_KEY_BASES = [
+    "a7523c3d0ae56415046ad8abae168d71074a79534a7062258f8d1d51ac2f76d3c3bc86d86b6b0b307df30d9a6a90a2066a3fa9e67c5e6f374dbd7dd4e0778e13",
+    "secret-value",
+    "$(openssl rand -hex 64)",
+    "replacemewiththegeneratedstringfromthepriorstep",
+    "replacemewiththegeneratedstring",
+    "__SET_SECRET__"
   ].freeze
 
   # Set only for the one-off commands of a key rotation (see the Docker
@@ -70,7 +77,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 10
+  CURRENT_BACKFILL_VERSION = 11
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -155,7 +162,7 @@ module ActiveRecordEncryptionConfig
     wise_accounts: [ "WiseAccount", %i[raw_payload raw_transactions_payload] ],
     api_keys: [ "ApiKey", %i[display_key] ],
     sso_providers: [ "SsoProvider", %i[client_secret] ],
-    sso_identity_blocks: [ "SsoIdentityBlock", %i[identity_label] ],
+    sso_identity_blocks: [ "SsoIdentityBlock", %i[identity_label uid legacy_digest_key] ],
     security_audit_logs: [ "SecurityAuditLog", %i[user_email ip_address user_agent] ]
   }.freeze
 

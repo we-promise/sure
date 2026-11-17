@@ -1,9 +1,9 @@
 # Encryption key rotation (self-hosted)
 
-If your `SECRET_KEY_BASE` was ever shipped as a default in this project's
-example Compose files (the boot log warns about this explicitly), or your
-Active Record Encryption keys leaked for any other reason, the keys must be
-rotated. Data already encrypted under the old keys has to stay readable
+If your `SECRET_KEY_BASE` is a publicly known value (a default or
+placeholder from this project's example files or hosting guides; the boot
+log warns about this explicitly), or your Active Record Encryption keys
+leaked for any other reason, the keys must be rotated. Data already encrypted under the old keys has to stay readable
 while it moves to the new ones, so the old keys are given to the backfill
 task as a `previous` scheme
 ([Rails key rotation](https://guides.rubyonrails.org/active_record_encryption.html#key-rotation))
@@ -12,6 +12,25 @@ for that one command only.
 Take a database backup before starting and stop the app (web and worker)
 for the duration. Docker users: the same steps with `docker compose`
 commands are in the [Docker guide](docker.md#upgrading-an-install-that-is-already-running-keep-your-secret_key_base).
+
+## Before you start: find the values in use
+
+You need the `SECRET_KEY_BASE` your data was encrypted with, and the three
+`ACTIVE_RECORD_ENCRYPTION_*` values if you set them. They are in your
+`.env`, or for an install that never set them, in the `SECRET_KEY_BASE`
+default of the `compose.yml` it was started with. If that file was already
+replaced, read the value from the old container instead. This works without
+a Compose file and also while the container is stopped:
+
+```sh
+docker ps -a --filter "name=web" --format "{{.Names}}"   # find the web container
+read -r WEB_CONTAINER   # paste its name
+docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$WEB_CONTAINER" | grep '^SECRET_KEY_BASE='
+```
+
+`docker compose exec web printenv SECRET_KEY_BASE` does not help here: it
+reads the new `compose.yml` first and stops with the same "Set
+SECRET_KEY_BASE" error.
 
 ## 1. Set new keys
 
@@ -76,3 +95,33 @@ unset OLD_SECRET_KEY_BASE
 ```
 
 Re-enter any key the task lists under `not_decryptable`.
+
+## What a new `SECRET_KEY_BASE` invalidates
+
+Data in the database is covered by the steps above, including blocked SSO
+identities of removed users (on installs where Active Record encryption was
+configured when they updated to the version that encrypts them). These signed values are not stored and simply
+stop working:
+
+- Every session: everyone has to sign in again.
+- Password reset and email confirmation links that were already sent.
+- Subscribed bill calendar links. Copy the link again from the bills
+  calendar page and update the subscription.
+- Connection flows that were in progress, such as a pending Wise login.
+
+## Rolling back
+
+If a step fails and you cannot fix the listed rows, go back to the state
+before the rotation:
+
+1. Stop the app (web and worker).
+2. Restore the database backup you took before step 1.
+3. Put the old values back: `SECRET_KEY_BASE`, and the old
+   `ACTIVE_RECORD_ENCRYPTION_*` values if you had set any (remove the new
+   ones otherwise). Unset every `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*`
+   variable and `OLD_SECRET_KEY_BASE`.
+4. Start the app and check a login and a provider sync.
+
+Do not roll back by only putting the old keys back without the backup: rows
+the write pass already moved are encrypted with the new keys and would no
+longer decrypt.
