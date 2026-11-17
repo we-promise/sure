@@ -2,7 +2,7 @@ class Security < ApplicationRecord
   include Provided, PlanRestrictionTracker
 
   # Transient attribute for search results -- not persisted
-  attr_accessor :search_currency
+  attr_accessor :search_currency, :search_isin
 
   # ISO 10383 MIC codes mapped to user-friendly exchange names
   # Source: https://www.iso20022.org/market-identifier-codes
@@ -12,7 +12,11 @@ class Security < ApplicationRecord
   # Legacy non-ISO values previously persisted as exchange_operating_mic
   # (e.g. raw EODHD exchange codes) mapped to their ISO MIC.
   MIC_ALIASES = {
-    "WAR" => "XWAR"
+    "WAR" => "XWAR",
+    "GER" => "XETR", # Yahoo search code for Xetra, stored before it was mapped
+    # Raw EODHD codes that Provider::Eodhd still accepts for rows stored before it mapped them
+    "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB",
+    "BE" => "XBER", "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU"
   }.freeze
 
   KINDS = %w[standard cash].freeze
@@ -153,13 +157,15 @@ class Security < ApplicationRecord
   # - With no domain, a stored provider logo (e.g. T-Invest's CDN for MOEX
   #   instruments) is authoritative and beats the ticker-only Brandfetch
   #   lettermark placeholder.
+  # A stored Brandfetch logo_url is rewritten to the current size and client
+  # id, since holdings and the API render this value without transforming it.
   def display_logo_url
     if crypto?
-      self.class.brandfetch_crypto_url(crypto_base_asset).presence || logo_url.presence
+      self.class.brandfetch_crypto_url(crypto_base_asset).presence || stored_logo_url
     elsif website_url.present?
-      brandfetch_icon_url.presence || logo_url.presence
+      brandfetch_icon_url.presence || stored_logo_url
     else
-      logo_url.presence || brandfetch_icon_url.presence
+      stored_logo_url || brandfetch_icon_url.presence
     end
   end
 
@@ -275,7 +281,8 @@ class Security < ApplicationRecord
       exchange_operating_mic: exchange_operating_mic,
       country_code: country_code,
       price_provider: price_provider,
-      currency: search_currency
+      currency: search_currency,
+      isin: search_isin
     )
   end
 
@@ -288,6 +295,10 @@ class Security < ApplicationRecord
 
   private
 
+    def stored_logo_url
+      Setting.transform_brand_fetch_url(logo_url).presence
+    end
+
     def extract_domain(url)
       uri = URI.parse(url)
       host = uri.host || url
@@ -298,7 +309,12 @@ class Security < ApplicationRecord
 
     def upcase_symbols
       self.ticker = ticker.upcase
-      self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic) if exchange_operating_mic.present?
+      # Only canonicalize a MIC being written. A stored legacy alias is upgraded by
+      # find_by_ticker_and_exchange, which checks for a canonical twin first;
+      # rewriting it on an unrelated save would collide with that twin.
+      if exchange_operating_mic.present? && will_save_change_to_exchange_operating_mic?
+        self.exchange_operating_mic = self.class.canonical_exchange_operating_mic(exchange_operating_mic)
+      end
     end
 
     def should_generate_logo?

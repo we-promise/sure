@@ -176,6 +176,40 @@ class SecurityTest < ActiveSupport::TestCase
     assert_equal "XWAR", found.reload.exchange_operating_mic
   end
 
+  test "find_by_ticker_and_exchange upgrades legacy GER to XETR and avoids duplicates" do
+    legacy = Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
+    legacy.update_columns(exchange_operating_mic: "GER")
+
+    found = Security.find_by_ticker_and_exchange(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
+
+    assert_equal legacy.id, found.id
+    assert_equal "XETR", found.reload.exchange_operating_mic
+  end
+
+  test "find_by_ticker_and_exchange reuses legacy rows stored under raw EODHD codes" do
+    { "F" => "XFRA", "BR" => "XBRU", "LS" => "XLIS", "VI" => "XWBO", "IR" => "XDUB", "BE" => "XBER",
+      "DU" => "XDUS", "HM" => "XHAM", "HA" => "XHAN", "MU" => "XMUN", "STU" => "XSTU" }.each do |raw, mic|
+      legacy = Security.create!(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+      legacy.update_columns(exchange_operating_mic: raw)
+
+      found = Security.find_by_ticker_and_exchange(ticker: "ABC#{raw}", exchange_operating_mic: mic)
+
+      assert_equal legacy.id, found&.id, "#{raw} row should be found for #{mic}"
+      assert_equal mic, found.reload.exchange_operating_mic
+    end
+  end
+
+  test "saving a legacy GER row keeps its MIC when an XETR row already exists" do
+    Security.create!(ticker: "SXR8.DE", exchange_operating_mic: "XETR")
+    legacy = Security.new(ticker: "SXR8.DE", exchange_operating_mic: "GER")
+    legacy.save!(validate: false)
+
+    # e.g. Security::HealthChecker bumping its counters on the legacy row
+    legacy.reload.update!(failed_fetch_count: 1)
+
+    assert_equal "GER", legacy.reload.exchange_operating_mic
+  end
+
   test "cash_for lazily creates a per-account synthetic cash security" do
     account = accounts(:investment)
 
@@ -331,6 +365,22 @@ class SecurityTest < ActiveSupport::TestCase
     )
 
     assert_equal "https://invest-brands.cdn-tinkoff.ru/SBERx160.png", sec.display_logo_url
+  end
+
+  test "display_logo_url rewrites a stored Brandfetch logo to the current client id" do
+    Setting.stubs(:brand_fetch_client_id).returns("new-client-id")
+    Setting.stubs(:brand_fetch_logo_size).returns(120)
+
+    sec = Security.new(
+      ticker: "AAPL",
+      exchange_operating_mic: "XNAS",
+      logo_url: "https://cdn.brandfetch.io/AAPL/icon/fallback/lettermark/w/40/h/40?c=old-client-id"
+    )
+
+    assert_equal(
+      "https://cdn.brandfetch.io/AAPL/icon/fallback/lettermark/w/120/h/120?c=new-client-id",
+      sec.display_logo_url
+    )
   end
 
   test "before_save writes the /crypto/{base} URL to logo_url for new crypto securities" do
