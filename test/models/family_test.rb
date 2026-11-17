@@ -406,6 +406,17 @@ class FamilyTest < ActiveSupport::TestCase
     assert_nil family.reload.investment_subtype_regions
   end
 
+  test "re-saving the stored selection when it matches the new country switches to automatic" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
+
+    family.update!(country: "FR", investment_subtype_regions: [ "fr" ])
+    assert_nil family.reload.investment_subtype_regions
+
+    family.update!(country: "DE")
+    assert_equal [ "de" ], family.reload.investment_subtype_region_codes
+  end
+
   test "changing country keeps a custom investment subtype selection" do
     family = families(:dylan_family)
     family.update!(country: "SE", investment_subtype_regions: [ "fr" ])

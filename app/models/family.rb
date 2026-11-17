@@ -232,6 +232,13 @@ class Family < ApplicationRecord
     normalize_currency_codes([ *selected_codes, *Array(extra) ])
   end
 
+  # Flags an explicit assignment, even of the stored value, so that saving a
+  # selection that matches the country default switches back to automatic.
+  def investment_subtype_regions=(value)
+    @investment_subtype_regions_assigned = true
+    super
+  end
+
   # Country groups offered when picking an investment account subtype. nil
   # means "follow the family's country", so a country change carries over.
   def investment_subtype_region_codes
@@ -963,10 +970,13 @@ class Family < ApplicationRecord
     # Only when the selection itself is assigned: a country change alone must
     # not turn a custom selection into "follow country".
     def normalize_investment_subtype_regions!
-      return if investment_subtype_regions.nil? || !will_save_change_to_investment_subtype_regions?
+      return unless @investment_subtype_regions_assigned
+
+      @investment_subtype_regions_assigned = false
+      return if investment_subtype_regions.nil?
 
       codes = Investment::REGIONS & Array(investment_subtype_regions)
-      self.investment_subtype_regions = codes == Investment.default_regions_for_country(country) ? nil : codes
+      self[:investment_subtype_regions] = codes == Investment.default_regions_for_country(country) ? nil : codes
     end
 
     def normalize_currency
