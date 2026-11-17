@@ -18,7 +18,7 @@ class LunchflowItem::Syncer
 
     # Phase 1: Import data from the Lunch Flow API
     update_status(sync, :importing_accounts)
-    import_result = lunchflow_item.import_latest_lunchflow_data
+    import_result = lunchflow_item.import_latest_lunchflow_data(sync_start_date: sync.window_start_date)
     sync_errors.concat(import_result_errors(import_result))
 
     # Phase 2: Collect setup statistics
