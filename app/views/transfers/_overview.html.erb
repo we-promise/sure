@@ -13,11 +13,10 @@
     </dd>
   </dl>
   <% if can_rename %>
-    <%= form.text_field :outflow_name,
-          value: transfer.outflow_transaction.entry.name,
-          label: t("transfers.show.transaction_name"),
-          required: true,
-          "data-auto-submit-form-target": "auto" %>
+    <%= render "transfers/name_row",
+          form: form,
+          method: :outflow_name,
+          value: transfer.outflow_transaction.entry.name %>
   <% end %>
   <dl class="flex items-center gap-2 justify-between">
     <dt class="text-secondary"><%= t("transfers.show.date") %></dt>
@@ -52,11 +51,10 @@
     </dd>
   </dl>
   <% if can_rename %>
-    <%= form.text_field :inflow_name,
-          value: transfer.inflow_transaction.entry.name,
-          label: t("transfers.show.transaction_name"),
-          required: true,
-          "data-auto-submit-form-target": "auto" %>
+    <%= render "transfers/name_row",
+          form: form,
+          method: :inflow_name,
+          value: transfer.inflow_transaction.entry.name %>
   <% end %>
   <dl class="flex items-center gap-2 justify-between">
     <dt class="text-secondary"><%= t("transfers.show.date") %></dt>
