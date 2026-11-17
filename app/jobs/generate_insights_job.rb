@@ -18,7 +18,7 @@ class GenerateInsightsJob < ApplicationJob
   private
     # Insights are a preview feature, so the nightly sweep only visits families
     # with an opted-in member. Unlike a job that moves existing data around,
-    # this one manufactures data per family — seven generators over the income
+    # this one manufactures data per family — every generator, most of them over the income
     # statement and balance sheet — so running it for
     # families who can't see the result is pure waste. Scoped in SQL rather
     # than checked per family to keep the fan-out a single indexed query.

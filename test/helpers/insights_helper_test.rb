@@ -240,6 +240,19 @@ class InsightsHelperTest < ActionView::TestCase
     assert_not insight_dig_in_available?(insight)
   end
 
+  test "loan payment change reads its direction for sentiment and leads with the new payment" do
+    up = build_insight("loan_payment_change",
+                       metadata: { "account_id" => accounts(:loan).id, "previous_payment" => 1424.0, "new_payment" => 1616.0 },
+                       facts: { "new_payment" => "$1,616.00", "effective_on" => "Dec 10", "account" => "Mortgage" })
+    down = build_insight("loan_payment_change", metadata: { "previous_payment" => 1616.0, "new_payment" => 1424.0 })
+
+    assert_equal :warning, insight_sentiment(up)
+    assert_equal :positive, insight_sentiment(down)
+    assert_equal [ "$1,616.00", "Dec 10" ], insight_key_figure(up)
+    assert_equal account_path(accounts(:loan)), insight_action(up)[:href]
+    assert_equal "Loan payment · Mortgage", insight_meta_line(up)
+  end
+
   private
     def build_insight(insight_type, priority: "medium", metadata: {}, facts: {}, period_start: nil, period_end: nil)
       Insight.new(
