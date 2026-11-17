@@ -22,7 +22,8 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
     category_ids = fee_category_ids
     return [] if category_ids.empty?
 
-    totals = with_first_fees(fee_totals(category_ids)).select { |row| reportable?(row) }
+    fees = fee_entries(category_ids)
+    totals = with_first_fees(fee_totals(fees)).select { |row| reportable?(row) }
     return [] if totals.empty?
 
     accounts = eligible_accounts.where(id: totals.map(&:account_id)).index_by(&:id)
@@ -46,7 +47,8 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
         # (or the account turning from "first fees" into a repeat) is a change
         # worth resurfacing an acknowledged card for. The fee recorded last
         # (not the one dated last) catches a second fee on the same day and a
-        # fee imported late with an older date.
+        # fee imported late with an older date; it is read without a date
+        # window, so a fee ageing out never passes for a new one.
         metadata: {
           account_id: account.id,
           latest_fee_id: row.latest_fee_id,
@@ -76,33 +78,43 @@ class Insight::Generators::BankFeesGenerator < Insight::Generator
       family.categories.where(id: fees).or(family.categories.where(parent_id: fees)).pluck(:id)
     end
 
-    # One grouped query over both windows: the current one is summed (so a
-    # refunded fee nets out), the prior one only needs to know whether any fee
-    # was charged at all.
-    def fee_totals(category_ids)
-      current = ActiveRecord::Base.sanitize_sql_array([ "entries.date >= ?", window_start ])
-
+    # Fee rows as the insight counts them, on accounts it may name.
+    def fee_entries(category_ids)
       Transaction.joins(:entry)
         .excluding_pending
         .merge(Entry.excluding_split_parents)
         .where(category_id: category_ids)
         .where.not(kind: Transaction::TRANSFER_KINDS)
-        .where(entries: {
-          account_id: eligible_accounts.select(:id),
-          excluded: false,
-          currency: family.currency,
-          date: (window_start - WINDOW_DAYS)..Date.current
-        })
+        .where(entries: { account_id: eligible_accounts.select(:id), excluded: false, currency: family.currency })
+        .where("entries.date <= ?", Date.current)
+    end
+
+    # One grouped query over both windows: the current one is summed (so a
+    # refunded fee nets out), the prior one only needs to know whether any fee
+    # was charged at all.
+    def fee_totals(fees)
+      current = ActiveRecord::Base.sanitize_sql_array([ "entries.date >= ?", window_start ])
+      latest_fee_ids = latest_fee_ids(fees)
+
+      fees.where("entries.date >= ?", window_start - WINDOW_DAYS)
         .group("entries.account_id")
         .pluck(
           Arel.sql("entries.account_id"),
           Arel.sql("COALESCE(SUM(entries.amount) FILTER (WHERE #{current}), 0)"),
           Arel.sql("COUNT(*) FILTER (WHERE #{current} AND entries.amount > 0)"),
-          # Over both windows, so a fee moving from one to the other is not news.
-          Arel.sql("(ARRAY_AGG(entries.id ORDER BY entries.created_at DESC, entries.id DESC) FILTER (WHERE entries.amount > 0))[1]"),
           Arel.sql("COUNT(*) FILTER (WHERE NOT (#{current}) AND entries.amount > 0)")
         )
-        .map { |values| FeeTotals.new(*values, false) }
+        .map do |account_id, total, charges, prior_charges|
+          FeeTotals.new(account_id, total, charges, latest_fee_ids[account_id], prior_charges, false)
+        end
+    end
+
+    # Each account's fee recorded last, whatever its date.
+    def latest_fee_ids(fees)
+      fees.where("entries.amount > 0")
+        .group("entries.account_id")
+        .pluck(Arel.sql("entries.account_id"), Arel.sql("(ARRAY_AGG(entries.id ORDER BY entries.created_at DESC, entries.id DESC))[1]"))
+        .to_h
     end
 
     # "None in the 90 days before" only means something if the account was

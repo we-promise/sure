@@ -171,6 +171,18 @@ class Insight::Generators::BankFeesGeneratorTest < ActiveSupport::TestCase
     assert_not_equal before, generate_for(@checking).metadata
   end
 
+  test "the fee recorded last ageing out of both windows does not change the material metadata" do
+    fee(@checking, 12, 10.days.ago)
+    fee(@checking, 1, 100.days.ago)
+    travel 1.second
+    fee(@checking, 2, 175.days.ago)
+    before = generate_for(@checking).metadata
+
+    travel 6.days
+
+    assert_equal before, generate_for(@checking).metadata
+  end
+
   test "a fee imported late with an older date changes the material metadata" do
     fee(@checking, 12, 10.days.ago)
     fee(@checking, 1, 100.days.ago)
