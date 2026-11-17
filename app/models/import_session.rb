@@ -247,7 +247,7 @@ class ImportSession < ApplicationRecord
   # user: who publishes. Every chunk must pass the checks a single import's
   # publish does (Import#publish_refusal_for), under the lock chunks are
   # attached with.
-  def publish_later(user: nil)
+  def publish_later(user:)
     previous_status = nil
     should_enqueue = false
 

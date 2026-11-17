@@ -209,7 +209,7 @@ class ImportSessionTest < ActiveSupport::TestCase
     )
 
     error = assert_raises(ImportSession::ConflictError) do
-      session.publish_later
+      session.publish_later(user: users(:family_admin))
     end
 
     expected_message = "import session chunks do not match expected sequences " \
@@ -245,7 +245,7 @@ class ImportSessionTest < ActiveSupport::TestCase
 
     ImportSessionJob.stub(:perform_later, ->(_import_session) { raise StandardError, "queue offline" }) do
       error = assert_raises(ImportSession::EnqueueError) do
-        session.publish_later
+        session.publish_later(user: users(:family_admin))
       end
 
       assert_equal "Import session could not be queued.", error.message
@@ -267,7 +267,7 @@ class ImportSessionTest < ActiveSupport::TestCase
     session.imports.update_all(rows_count: 0)
 
     SureImport.stub(:max_row_count, 1) do
-      assert_raises(Import::MaxRowCountExceededError) { session.publish_later }
+      assert_raises(Import::MaxRowCountExceededError) { session.publish_later(user: users(:family_admin)) }
     end
 
     assert session.reload.pending?

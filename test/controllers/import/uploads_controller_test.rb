@@ -56,6 +56,23 @@ class Import::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal accounts(:depository), @import.reload.account
   end
 
+  test "an import session's chunk can't be changed or listed in the web wizard" do
+    sign_in users(:family_member)
+    session = @user.family.import_sessions.create!(created_by: @user, status: :importing)
+    chunk = session.imports.create!(family: @user.family, type: "SureImport", sequence: 1, checksum: "0" * 64)
+    chunk.ndjson_file.attach(io: StringIO.new({ type: "Tag", data: { id: "tag-1", name: "Harmless" } }.to_json), filename: "all.ndjson", content_type: "application/x-ndjson")
+    original = chunk.ndjson_file.blob.id
+
+    rule = { type: "Rule", data: { id: "rule-1", name: "Swapped", resource_type: "transaction", active: true, actions: [ { action_type: "exclude_transaction" } ] } }
+    patch import_upload_url(chunk), params: { import: { ndjson_file: Rack::Test::UploadedFile.new(StringIO.new(rule.to_json), "application/x-ndjson", original_filename: "all.ndjson") } }
+
+    assert_redirected_to import_path(chunk)
+    assert_equal original, chunk.reload.ndjson_file.blob.id
+
+    get imports_url
+    assert_not_includes response.body, import_path(chunk)
+  end
+
   test "uploads valid csv by copy and pasting" do
     patch import_upload_url(@import), params: {
       import: {

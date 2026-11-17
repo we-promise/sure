@@ -1466,7 +1466,6 @@ class Family::DataImporter
         # Exports from before rule groups have no group key; an existing rule
         # then keeps its group.
         rule.rule_group = find_or_create_rule_group(data["group"]) if data.key?("group")
-        assign_rule_restriction(rule, data)
 
         # An email action replacing the rule's own keeps the baseline it recorded
         # (see Rule::Action#keep_notification_baseline), as stored before this
@@ -1487,6 +1486,10 @@ class Family::DataImporter
         (data["actions"] || []).each do |action_data|
           build_rule_action(rule, action_data).keep_notification_baseline = had_email_action
         end
+
+        # After the rebuild, so a switch-off alone keeps the rule's scope
+        # (Rule#only_switched_off?), and before the save validates against it.
+        assign_rule_restriction(rule, data)
 
         left_group_id = rule.rule_group_id_was if rule.will_save_change_to_rule_group_id? && rule.rule_group.nil?
 

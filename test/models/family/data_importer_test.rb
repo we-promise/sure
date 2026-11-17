@@ -2300,6 +2300,38 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal member, family.rules.find_by!(name: "Planted").restricted_to
   end
 
+  test "a member's reimport that switches a rule off and changes what it does restricts it" do
+    family = families(:dylan_family)
+    member = users(:family_member)
+    rule = family.rules.create!(name: "Mapped", resource_type: "transaction", active: true,
+      conditions_attributes: [ { condition_type: "transaction_name", operator: "like", value: "old" } ],
+      actions_attributes: [ { action_type: "exclude_transaction" } ])
+    session = family.import_sessions.create!(expected_chunks: 1)
+    session.source_mappings.create!(family: family, source_type: "Rule", source_id: "rule-1", target: rule)
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: {
+      id: "rule-1", name: "Mapped", resource_type: "transaction", active: false, position: rule.position, stop_processing: false,
+      effective_date: nil, group: nil,
+      conditions: [ { condition_type: "transaction_name", operator: "like", value: "new" } ],
+      actions: [ { action_type: "exclude_transaction" } ]
+    } } ])
+
+    Family::DataImporter.new(family, ndjson, import_session: session, user: member).import!
+
+    assert_equal member, rule.reload.restricted_to
+  end
+
+  test "a restricted rule can't be imported with a transfer target its user cannot write" do
+    family = families(:dylan_family)
+    ndjson = build_ndjson([ { type: "Rule", version: 1, data: {
+      name: "Transfer", resource_type: "transaction",
+      actions: [ { action_type: "set_as_transfer_or_payment", value: accounts(:investment).id } ]
+    } } ])
+
+    assert_raises(ActiveRecord::RecordInvalid) do
+      Family::DataImporter.new(family, ndjson, user: users(:family_member)).import!
+    end
+  end
+
   test "imports rule groups by name and keeps each group in one block" do
     existing = @family.rule_groups.create!(name: "Food")
     rule_record = ->(name, position, group) do

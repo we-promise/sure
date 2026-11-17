@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class WiseAccount < ApplicationRecord
-  include Encryptable
+  include Encryptable, SessionAdvisoryLockable
 
   # Kept from the stored snapshot when a new one lacks them: the recipient
   # ids that decide transfer direction (a failed lookup must not flip it)
@@ -134,42 +134,19 @@ class WiseAccount < ApplicationRecord
   end
 
   # Serializes everything that books or deletes this balance's entries, such
-  # as an item sync's processing and a balance processed on its own. It is a
-  # session-level advisory lock, not a row lock or a transaction: saving an
-  # Account locks its owner's users row, so a transaction held across a whole
-  # payload would stall every other account save of that user meanwhile.
-  # Rows still commit one by one. Re-entrant on the same connection.
-  #
-  # Never inside a caller's transaction: its rows would not commit one by
-  # one, and an error aborting it would make the unlock fail, leaving the
-  # lock with the pooled connection, where every later processing of the
-  # balance would wait for it for good.
-  def with_processing_lock
-    if self.class.current_transaction.open?
-      raise ProcessingInTransaction, "WiseAccount #{id} must not be processed inside a transaction"
-    end
-
-    connection = self.class.lease_connection
-    key = [ PROCESSING_LOCK_NAMESPACE, id.to_s ]
-
-    connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", *key ]))
-    outermost = @processing_lock_session.nil?
-    @processing_lock_session ||= backend_pid(connection)
-    begin
-      yield
-    ensure
-      release_processing_lock(connection, key)
-      @processing_lock_session = nil if outermost
-    end
+  # as an item sync's processing and a balance processed on its own. A
+  # session-level advisory lock (SessionAdvisoryLockable), not a row lock or a
+  # transaction: saving an Account locks its owner's users row, so a
+  # transaction held across a whole payload would stall every other account
+  # save of that user meanwhile.
+  def with_processing_lock(&)
+    with_session_advisory_lock(PROCESSING_LOCK_NAMESPACE, error: ProcessingInTransaction, &)
   end
 
-  # The session that took the processing lock ended while the block ran: a
-  # broken connection that Rails opened again on the next query, on a new
-  # session that holds no lock, so another processor may hold it now. What
-  # deletes entries (WiseAccount::Transactions::Processor) waits for the
-  # next sync then. false outside the lock.
+  # What deletes entries (WiseAccount::Transactions::Processor) waits for the
+  # next sync when the lock ended with its session.
   def processing_lock_lost?
-    @processing_lock_session.present? && backend_pid(self.class.lease_connection) != @processing_lock_session
+    session_advisory_lock_lost?(PROCESSING_LOCK_NAMESPACE)
   end
 
   def account_subtype
@@ -237,26 +214,6 @@ class WiseAccount < ApplicationRecord
     def locked_raw_payload
       stored = self.class.lock.select(:id, :raw_payload).find(id).raw_payload
       stored.is_a?(Hash) ? stored : {}
-    end
-
-    # An unlock that does not run (the connection broke, the thread was
-    # interrupted) would leave the lock with the connection; throwing the
-    # connection away ends its session, which releases the lock. A session
-    # that ended took the lock with it, and the new one has none to release.
-    def release_processing_lock(connection, key)
-      released = false
-      if processing_lock_lost?
-        Rails.logger.warn "WiseAccount #{id} - The processing lock ended with its database session while the balance was processed"
-      else
-        connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?, hashtext(?))", *key ]))
-      end
-      released = true
-    ensure
-      connection.throw_away! unless released
-    end
-
-    def backend_pid(connection)
-      connection.select_value("SELECT pg_backend_pid()")
     end
 
     def parse_utc(raw)

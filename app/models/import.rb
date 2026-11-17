@@ -1,5 +1,9 @@
 class Import < ApplicationRecord
+  include SessionAdvisoryLockable
+
   MaxRowCountExceededError = Class.new(StandardError)
+  AlreadyPublishedError = Class.new(StandardError)
+  PublishLockInTransaction = Class.new(StandardError)
   PUBLISH_LOCK_NAMESPACE = 4015
   # reason is :accounts or :rules (see #publish_refusal_for).
   class PublishNotAllowedError < StandardError
@@ -254,46 +258,43 @@ class Import < ApplicationRecord
     end
   end
 
-  # user: who publishes; checked and recorded with the status change.
-  def publish_later(user: nil)
-    raise MaxRowCountExceededError if row_count_exceeded?
-    raise "Import is not publishable" unless publishable?
-
+  # user: who publishes; checked and recorded with the status change. nil
+  # only for a publish no user asked for.
+  def publish_later(user:)
     claim_for_publish!(user)
 
     ImportJob.perform_later(self)
   end
 
-  # Checks the publisher and marks the import importing under the publish
-  # lock. Edits take the same lock and need a pending or failed import
-  # (ImportGuestGuardable), so none lands between the check and the publish.
+  # Re-checks the import and its publisher, and marks it importing, under
+  # the publish lock and the row lock: edits take the publish lock
+  # (ImportGuestGuardable) and a statement's account change the row lock
+  # (PdfImport#assign_account!), so none lands between the check and the
+  # publish, and a second publish finds it importing.
   def claim_for_publish!(user)
     with_publish_lock do
-      reload
-      refusal = user && publish_refusal_for(user)
-      raise PublishNotAllowedError.new(refusal) if refusal
+      with_lock do
+        raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
+        raise MaxRowCountExceededError if row_count_exceeded?
+        raise "Import is not publishable" unless publishable?
 
-      update!(status: :importing, published_by: user)
+        refusal = user && publish_refusal_for(user)
+        raise PublishNotAllowedError.new(refusal) if refusal
+
+        update!(status: :importing, published_by: user)
+      end
     end
   end
 
-  # A session-level advisory lock rather than a row lock, so a change made
-  # under it keeps its own transactions instead of joining one around it.
-  def with_publish_lock
-    connection = self.class.lease_connection
-    key = [ PUBLISH_LOCK_NAMESPACE, id.to_s ]
-    connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_lock(?, hashtext(?))", *key ]))
-    begin
-      yield
-    ensure
-      connection.execute(self.class.sanitize_sql_array([ "SELECT pg_advisory_unlock(?, hashtext(?))", *key ]))
-    end
+  def with_publish_lock(&)
+    with_session_advisory_lock(PUBLISH_LOCK_NAMESPACE, error: PublishLockInTransaction, &)
   end
 
-  # Whether the import can still change: published imports are being, or
-  # have been, written into the family.
+  # Whether the web wizard may still change the import: one published is
+  # being, or has been, written into the family, and an import session's
+  # chunk changes only through its session (ImportSession#attach_chunk!).
   def changeable?
-    pending? || failed?
+    (pending? || failed?) && import_session_id.nil?
   end
 
   # Whether publishing would change existing records even when the dry run

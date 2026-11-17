@@ -18,6 +18,27 @@ class ImportTest < ActiveSupport::TestCase
     assert_equal users(:family_member), import.published_by
   end
 
+  test "publish_later refuses an import that is already published" do
+    import = imports(:transaction)
+    import.stubs(:publishable?).returns(true)
+
+    assert_enqueued_jobs(1, only: ImportJob) do
+      import.publish_later(user: users(:family_admin))
+      assert_raises(Import::AlreadyPublishedError) { Import.find(import.id).publish_later(user: users(:family_admin)) }
+    end
+
+    import.update!(status: :complete)
+    assert_raises(Import::AlreadyPublishedError) { import.publish_later(user: users(:family_admin)) }
+  end
+
+  test "the publish lock refuses to run inside a caller's transaction" do
+    import = imports(:transaction)
+
+    Import.transaction do
+      assert_raises(Import::PublishLockInTransaction) { import.with_publish_lock { flunk "ran inside a transaction" } }
+    end
+  end
+
   test "publish skips imports in terminal statuses" do
     import = imports(:transaction)
     import.update_columns(status: "complete")

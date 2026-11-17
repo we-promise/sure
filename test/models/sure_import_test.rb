@@ -511,7 +511,7 @@ class SureImportTest < ActiveSupport::TestCase
     ]))
 
     assert_enqueued_with job: ImportJob, args: [ @import ] do
-      @import.publish_later
+      @import.publish_later(user: users(:family_admin))
     end
 
     assert_equal "importing", @import.status
@@ -523,7 +523,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       error = assert_raises SureImport::NotPublishableError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
       assert_equal "Import was uploaded but has no publishable records.", error.message
     end
@@ -544,7 +544,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       error = assert_raises StandardError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
       assert_equal "queue down", error.message
     end
@@ -563,7 +563,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       assert_raises SureImport::PreflightError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
     end
 
@@ -578,7 +578,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       assert_raises SureImport::PreflightError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
     end
 
@@ -759,7 +759,7 @@ class SureImportTest < ActiveSupport::TestCase
 
     assert_no_enqueued_jobs do
       assert_raises SureImport::PreflightError do
-        @import.publish_later
+        @import.publish_later(user: users(:family_admin))
       end
     end
     assert_equal "failed", @import.reload.status

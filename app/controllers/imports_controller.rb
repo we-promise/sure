@@ -52,6 +52,8 @@ class ImportsController < ApplicationController
     redirect_back_or_to import_path(@import), alert: t(".max_rows_exceeded", max: @import.max_row_count)
   rescue Import::PublishNotAllowedError => e
     redirect_back_or_to import_path(@import), alert: e.message
+  rescue Import::AlreadyPublishedError
+    redirect_to import_path(@import), alert: t("imports.published_locked")
   end
 
   # Statement imports only: what became of each extracted transaction. Without it
@@ -71,7 +73,8 @@ class ImportsController < ApplicationController
   end
 
   def index
-    @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES).ordered, limit: safe_per_page)
+    # An import session's chunks are managed through the API that made them.
+    @pagy, @imports = pagy(Current.family.imports.where(type: Import::TYPES, import_session_id: nil).ordered, limit: safe_per_page)
     @breadcrumbs = [
       [ t("breadcrumbs.home"), root_path ],
       [ t("breadcrumbs.imports"), imports_path ]
