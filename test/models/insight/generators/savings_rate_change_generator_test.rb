@@ -21,7 +21,7 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
       insight = generate.sole
 
       assert_equal "savings_rate_change.up", insight.template_key
-      assert_equal({ current_rate: 40.0, previous_rate: 20.0 }, insight.metadata)
+      assert_equal({ current_rate: 40.0, previous_rate: 20.0 }, insight.metadata.except(:accounts_digest))
       assert_equal @months[3], insight.period_start
       assert_equal @months[5].end_of_month, insight.period_end
       assert_equal I18n.l(@months[3], format: "%B"), insight.facts[:from_month]
@@ -114,7 +114,7 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
       record(@months[3], income: 5_000, spending: 5_500)
       @months.last(2).each { |month| record(month, income: 5_000, spending: 4_000) }
 
-      assert_equal({ current_rate: 10.0, previous_rate: 20.0 }, generate.sole.metadata)
+      assert_equal({ current_rate: 10.0, previous_rate: 20.0 }, generate.sole.metadata.except(:accounts_digest))
     end
   end
 
@@ -181,6 +181,20 @@ class Insight::Generators::SavingsRateChangeGeneratorTest < ActiveSupport::TestC
   test "titles need no interpolation in any locale" do
     I18n.available_locales.product(%w[up down]).each do |locale, direction|
       assert_no_match(/%\{/, I18n.t!("insights.titles.savings_rate_change.#{direction}", locale: locale), locale)
+    end
+  end
+
+  # Both windows save half of a 1,000 monthly income on the shared
+  # `depository`. The extra spend sits on `connected`, private to
+  # family_admin, so the shared feed must not read it as a drop in the
+  # family's savings rate.
+  test "ignores spending on an account private to one member" do
+    travel_to @today do
+      @months.each { |month| record(month, income: 1_000, spending: 500) }
+      create_transaction(amount: 1_200, date: @months[5] + 8.days, name: "Private spend",
+                         account: accounts(:connected))
+
+      assert_empty generate
     end
   end
 

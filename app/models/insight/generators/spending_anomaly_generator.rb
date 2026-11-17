@@ -75,7 +75,8 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         metadata: {
           category_id: anomaly[:category_id],
           direction: direction,
-          deviation_bucket: (round(anomaly[:deviation_pct].abs, 0).to_i / 25) * 25
+          deviation_bucket: (round(anomaly[:deviation_pct].abs, 0).to_i / 25) * 25,
+          accounts_digest: shared_accounts_digest
         },
         period: period,
         dedup_key: "spending_anomaly:#{anomaly[:category_id]}:#{month_token(period.start_date)}"
@@ -185,11 +186,11 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     # What bills still expect this month, by parent category, in the family's
     # currency. Filed under the bill's own category, since there is no entry
     # yet to take one from. One with no rate is left out, as unplanned spending
-    # would be.
+    # would be. Only bills on shared accounts, like the spending they join.
     def bills_still_due(dates)
       parent_ids = family.categories.pluck(:id, :parent_id).to_h
 
-      RecurringOccurrence.open_bills_due(family, dates).each_with_object(Hash.new(0.to_d)) do |occurrence, sums|
+      RecurringOccurrence.open_bills_due(family, dates, series: shared_recurring_transactions).each_with_object(Hash.new(0.to_d)) do |occurrence, sums|
         category_id = occurrence.recurring_transaction.category_id
         sums[parent_ids[category_id] || category_id] += occurrence.remaining_spending_money.exchange_to(family.currency).amount
       rescue Money::ConversionError

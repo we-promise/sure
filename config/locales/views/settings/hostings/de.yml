@@ -279,7 +279,7 @@ de:
         type_builtin: Integriert (direktes LLM)
         type_external: Extern (entfernter Agent)
         type_mcp_only: Keiner in der App (eigenen Agenten über MCP verbinden)
-        mcp_only_help: Der Assistent in der App ist für alle in diesem Haushalt ausgeschaltet. Auch die KI-Kurzbefehle bei Rechnungen und die von der KI geschriebenen Insight-Texte entfallen. MCP und die Kategorisierung im Hintergrund bleiben verfügbar; externe Agenten verbindest du unter Einstellungen > MCP.
+        mcp_only_help: Der Assistent in der App ist für alle in diesem Haushalt ausgeschaltet. Auch die KI-Kurzbefehle bei Rechnungen und „Mit KI nachhaken“ bei Insights entfallen. MCP und die Kategorisierung im Hintergrund bleiben verfügbar; externe Agenten verbindest du unter Einstellungen > MCP.
         type_label: Art des Assistenten
         url_help: Die vollständige URL zum API-Endpunkt deines Agenten. Die bekommst du von deinem Anbieter.
         url_label: Endpunkt-URL

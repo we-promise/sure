@@ -66,6 +66,19 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
     end
   end
 
+  # The same spike as above, but booked on `connected`, which is private to
+  # family_admin. The shared feed must not report a category total built
+  # from it.
+  test "ignores spending on an account private to one member" do
+    travel_to anchor do
+      3.times { |i| spend(month_start(i + 1), 1_000) }
+      create_transaction(category: @category, amount: 1_000, date: anchor.beginning_of_month.change(day: 3),
+                         name: "private spike", account: accounts(:connected))
+
+      assert_empty generate
+    end
+  end
+
   # Fixed charges that landed early (a gym fee and a medical plan, the same
   # every month) are already the whole month. Projecting them by pace doubled
   # them on day 15 and reported the category as trending up about 100%.
@@ -108,6 +121,31 @@ class Insight::Generators::SpendingAnomalyGeneratorTest < ActiveSupport::TestCas
       assert_equal "below", insights.first.metadata[:direction]
       assert_equal "medium", insights.first.priority
       assert_equal Money.new(1_500, "USD").format, insights.first.facts[:projected_spend]
+    end
+  end
+
+  # The same month as above, but the insurance sits on `connected`, private
+  # to family_admin. Its payments are out of the baseline, so its instalment
+  # still due must stay out of the projection too: counted, it would lift the
+  # month to 1,500 against a usual 1,600 and hide the drop.
+  test "ignores a bill still due on an account private to one member" do
+    rent = create_bill(category: @category, amount: 1_000, name: "Rent", day: 3)
+    insurance = create_bill(category: @category, amount: 500, name: "Insurance", day: 20,
+                            account: accounts(:connected))
+
+    travel_to anchor do
+      baseline_months.each do |month|
+        pay_bill(rent, date: month.change(day: 3))
+        pay_bill(insurance, date: month.change(day: 20))
+        spend(month, 600, day: 12)
+      end
+      pay_bill(rent, date: current_month.change(day: 3))
+      expect_bill(insurance, due_on: current_month.change(day: 20))
+
+      insights = generate
+
+      assert_equal [ "below" ], insights.map { |insight| insight.metadata[:direction] }
+      assert_equal Money.new(1_000, "USD").format, insights.first.facts[:projected_spend]
     end
   end
 

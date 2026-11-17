@@ -36,11 +36,13 @@ class RecurringOccurrence < ApplicationRecord
 
   # The family's open bill occurrences due within `dates`, with their confirmed
   # allocation sums and their series' spending shares loaded in grouped
-  # queries so remaining_spending_money on each row issues none.
-  def self.open_bills_due(family, dates)
+  # queries so remaining_spending_money on each row issues none. `series`
+  # narrows the bills read, e.g. to those the whole family may see.
+  def self.open_bills_due(family, dates, series: RecurringTransaction.all)
     occurrences = open_status
                     .joins(:recurring_transaction)
                     .merge(RecurringTransaction.bills)
+                    .merge(series)
                     .where(recurring_transactions: { family_id: family.id })
                     .where(due_on: dates)
                     .includes(:recurring_transaction)

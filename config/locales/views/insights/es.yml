@@ -2,8 +2,8 @@
 es:
   insights:
     notification:
-      title: Nuevo análisis financiero
-      body: Abre Sure para revisar tu análisis de IA más reciente.
+      title: Nuevo insight
+      body: Abre Sure para ver tu último insight.
     index:
       title: Insights
       subtitle: Qué está pasando en tus finanzas, actualizado cada noche.
@@ -19,6 +19,18 @@ es:
       acknowledge: Entendido
       acknowledge_title: Ocultar esto hasta que cambien los números
       new: Nuevo
+      dig_in: Profundizar con IA
+    dig_in:
+      prompt: |-
+        Ayúdame a profundizar en este insight.
+
+        Insight: %{title}
+        Qué ha encontrado Sure: %{body}
+        Periodo: %{period}
+        Cifras:
+        %{facts}
+
+        ¿A qué se debe y debería hacer algo al respecto?
     feed:
       view_all: Ver todos los insights
       header: Últimos
@@ -33,6 +45,7 @@ es:
       idle_cash: Efectivo inactivo
       budget_at_risk: Presupuesto
       budget_on_track: Presupuesto
+      maintained_goal_depleted: Reserva
     meta:
       next_n_days:
         one: Próximo día
@@ -61,6 +74,7 @@ es:
       savings_rate_change: Ver las transacciones de esos meses
       idle_cash: Ir a la cuenta
       budget: Ver presupuesto
+      maintained_goal_depleted: Ver reserva
     titles:
       spending_anomaly:
         above: El gasto en %{category} va en aumento
@@ -69,6 +83,7 @@ es:
         low: Tu saldo de efectivo podría bajar demasiado
         negative: Tu saldo de efectivo podría volverse negativo
       net_worth_milestone: "Hito de patrimonio neto: %{milestone}"
+      maintained_goal_depleted: "%{goal} está por debajo del saldo que debe mantener"
       subscription_audit: "¿%{name} sigue activa?"
       savings_rate_change:
         up: Tu tasa de ahorro mejoró en los últimos tres meses
@@ -86,6 +101,7 @@ es:
         low: Según tus próximas transacciones recurrentes y tu gasto habitual, tu saldo de efectivo podría bajar a %{projected_low} alrededor del %{projected_low_date}.
         negative: Según tus próximas transacciones recurrentes y tu gasto habitual, tu saldo de efectivo podría caer hasta %{projected_low} alrededor del %{projected_low_date}.
       net_worth_milestone: Tu patrimonio neto superó %{milestone} y ahora está en %{net_worth}.
+      maintained_goal_depleted: "%{goal} tiene %{saved} de los %{target} que debe mantener. Le faltan %{missing}."
       subscription_audit: "%{name} (%{amount}) no aparece desde que se esperaba el %{expected_on}. Puede haberse cancelado o el cargo puede haber cambiado de fecha."
       savings_rate_change:
         up: De %{from_month} a %{to_month} tu tasa de ahorro sobre tus ingresos mensuales habituales fue del %{current_rate}%, %{change_pp} puntos porcentuales más que el %{previous_rate}% de los tres meses anteriores.

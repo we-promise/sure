@@ -2,6 +2,9 @@
 en:
   provider_warnings:
     limited_investment_data: "Investment data from this provider is limited. Activity labels (Buy, Sell, Dividend) are not available, which may affect budget accuracy. Consider creating rules to exclude or categorize investment transactions."
+    enable_banking_history_truncated:
+      one: "Enable Banking: the full transaction history of %{count} account could not be fetched, so older transactions may be missing"
+      other: "Enable Banking: the full transaction history of %{count} accounts could not be fetched, so older transactions may be missing"
     lunchflow_accounts_failed:
       one: "Lunchflow import: %{count} account failed to update"
       other: "Lunchflow import: %{count} accounts failed to update"

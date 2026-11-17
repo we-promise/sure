@@ -59,7 +59,7 @@ pl:
         one: Następny dzień
         other: Następnych %{count} dni
     notification:
-      body: Otwórz Sure, aby przejrzeć najnowszą analizę AI.
+      body: Otwórz Sure, aby przejrzeć najnowszą analizę.
       title: Nowa analiza finansowa
     refresh:
       checking: Sprawdzanie...
