@@ -65,8 +65,9 @@ class Rule::Health
   end
 
   # Active rules below another that sets the same field on transactions both
-  # match, or whose conditions name the same or contained text. Pairs already
-  # listed as duplicates or conflicts, and shadowed rules, are left out.
+  # match, or whose conditions name the same or contained text and are
+  # otherwise the same. Pairs already listed as duplicates or conflicts, and
+  # shadowed rules, are left out.
   def overlaps
     @overlaps ||= begin
       skipped = shadowed.map { |entry| entry.rule.id }.to_set
@@ -216,7 +217,7 @@ class Rule::Health
         attributes = rule.actions.flat_map { |action| claimed_attributes(action).to_a }.uniq
         by = attributes.flat_map { |attribute| unstopped.filter_map { |id| claimed_by[attribute][id] } }.uniq
         Shadowed.new(rule: rule, reason: :claimed, by: by.sort_by { |r| position(r) }, attributes: attributes,
-          match_count: matched.size)
+          match_count: unstopped.size)
       end
     end
 
@@ -238,7 +239,10 @@ class Rule::Health
       (duplicates + conflicts.map(&:rules)).any? { |group| group.include?(rule) && group.include?(other) }
     end
 
+    # Only when nothing else separates them: their other conditions are the same.
     def same_text?(rule, other)
+      return false unless conditions_besides_text(rule) == conditions_besides_text(other)
+
       texts(rule).any? { |text| texts(other).any? { |other_text| text.include?(other_text) || other_text.include?(text) } }
     end
 
@@ -255,6 +259,13 @@ class Rule::Health
         end
         text.to_s.gsub(/\s+/, " ").strip.downcase.presence
       end
+    end
+
+    # The conditions other than the compared text, with groups flattened.
+    def conditions_besides_text(rule)
+      condition_signature(leaf_conditions(rule).reject do |condition|
+        %w[transaction_name transaction_merchant].include?(condition.condition_type) && TEXT_OPERATORS.include?(condition.operator)
+      end)
     end
 
     def merchant_names

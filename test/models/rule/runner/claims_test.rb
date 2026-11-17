@@ -34,6 +34,17 @@ class Rule::Runner::ClaimsTest < ActiveSupport::TestCase
     assert_equal [ @other.id ], @claims.unstopped_scope(below).pluck(:id)
   end
 
+  test "claims and stops from several rules add up" do
+    first = create_rule(Rule::Action.new(action_type: "set_transaction_category", value: @groceries.id), stop_processing: true)
+    second = create_rule(Rule::Action.new(action_type: "set_transaction_category", value: @groceries.id), value: "Hardware", stop_processing: true)
+
+    @claims.record(first, [ @whole_foods.id ])
+    @claims.record(second, [ @other.id ])
+
+    assert_equal Set[@whole_foods.id, @other.id], @claims.claimed_ids[:category_id]
+    assert_equal Set[@whole_foods.id, @other.id], @claims.stopped_ids
+  end
+
   test "tags claim nothing" do
     rule = create_rule(Rule::Action.new(action_type: "set_transaction_tags", value: [ @tag.id ]))
 
