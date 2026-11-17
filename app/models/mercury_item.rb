@@ -28,7 +28,7 @@ class MercuryItem < ApplicationRecord
   # This method should fetch the latest data from the provider and import it.
   # May need provider-specific validation (e.g., session validity checks).
   # See LunchflowItem#import_latest_lunchflow_data or EnableBankingItem#import_latest_enable_banking_data for examples.
-  def import_latest_mercury_data
+  def import_latest_mercury_data(sync_start_date: nil)
     provider = mercury_provider
     unless provider
       Rails.logger.error "MercuryItem #{id} - Cannot import: provider is not configured"
@@ -36,7 +36,7 @@ class MercuryItem < ApplicationRecord
     end
 
     # TODO: Add any provider-specific validation here (e.g., session checks)
-    MercuryItem::Importer.new(self, mercury_provider: provider).import
+    MercuryItem::Importer.new(self, mercury_provider: provider, sync_start_date: sync_start_date).import
   rescue => e
     Rails.logger.error "MercuryItem #{id} - Failed to import data: #{e.message}"
     raise
