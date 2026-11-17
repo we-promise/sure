@@ -42,10 +42,11 @@ module ProviderItemsControllerTests
       key = provider_item.provider_key
       item_path = provider_routes.public_send(:"#{key}_item_path", provider_item)
       requests = ACCOUNT_FLOW_ROUTES.map { |action, verb| [ verb, "/#{key}_items/#{action}" ] } +
+        [ [ :get, "/#{key}_items/new" ], [ :post, "/#{key}_items" ], [ :get, "#{item_path}/edit" ] ] +
         [ [ :post, "#{item_path}/sync" ], [ :patch, item_path ], [ :delete, item_path ],
           [ :get, "#{item_path}/setup_accounts" ], [ :post, "#{item_path}/complete_account_setup" ] ]
 
-      assert_no_difference [ "Account.count", "AccountProvider.count", "Sync.count" ] do
+      assert_no_difference [ "Account.count", "AccountProvider.count", "Sync.count", "#{provider_item.class.name}.count" ] do
         requests.each do |verb, path|
           public_send(verb, path, params: { account_id: provider_item.family.accounts.first&.id, "#{key}_item": { name: "Renamed" } })
 
@@ -104,14 +105,19 @@ module ProviderItemsControllerTests
       own = provider_item.provider_accounts.first
       unsupported = own.dup.tap { |account| account.update!(account_id: "#{own.account_id}-unsupported") }
       foreign = foreign_provider_account
-      supported_type = provider_item.class::AccountFlow.adapter_class.supported_account_types.first
-      unsupported_type = (Accountable::TYPES - provider_item.class::AccountFlow.adapter_class.supported_account_types).first
+      supported_types = provider_item.class::AccountFlow.adapter_class.supported_account_types
+      supported_type = supported_types.first
+      unsupported_type = (Accountable::TYPES - supported_types).first
+      # A real subtype, but of a type this provider cannot create, such as an Investment's roth_ira.
+      subtypes_of = ->(types) { types.flat_map { |type| type.constantize::SUBTYPES.keys.map(&:to_s) } }
+      foreign_subtype = (subtypes_of.(Accountable::TYPES - supported_types) - subtypes_of.(supported_types)).first
+      default_subtype = supported_type.constantize.const_defined?(:DEFAULT_SUBTYPE) ? supported_type.constantize::DEFAULT_SUBTYPE : nil
 
       assert_difference [ "Account.count", "AccountProvider.count" ], 1 do
         post provider_routes.public_send(:"complete_account_setup_#{provider_item.provider_key}_item_path", provider_item),
              params: {
                account_types: { own.id => supported_type, unsupported.id => unsupported_type, foreign.id => supported_type },
-               account_subtypes: { own.id => "not-a-subtype" }
+               account_subtypes: { own.id => foreign_subtype }
              },
              headers: { "Turbo-Frame" => "modal" }
       end
@@ -120,7 +126,7 @@ module ProviderItemsControllerTests
       assert_includes response.body, %(target="#{ActionView::RecordIdentifier.dom_id(provider_item)}")
       account = own.reload.account
       assert_equal supported_type, account.accountable_type
-      assert_not_equal "not-a-subtype", account.accountable.subtype
+      assert_equal default_subtype.to_s, account.accountable.subtype.to_s
       assert_nil unsupported.reload.account_provider
       assert_nil foreign.reload.account_provider
     end
