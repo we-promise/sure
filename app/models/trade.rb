@@ -156,8 +156,10 @@ class Trade < ApplicationRecord
     sale_order = [ entry.date, entry.created_at || Time.current ]
 
     lots.select { |lot| stored.key?(lot.id) && ([ lot.date, lot.created_at ] <=> sale_order) <= 0 }.to_h do |lot|
-      left = Security::Split.unscale(stored[lot.id], split_factor(splits, entry.date, synced_on)) +
-        taken.fetch(lot.id, []).sum(BigDecimal("0")) { |_, date, qty| Security::Split.unscale(qty, split_factor(splits, entry.date, date)) }
+      # A reverse split stores a repeating decimal, so undoing it is off in the
+      # last places (10 reads 10.000000000000000001); drop those places.
+      left = (Security::Split.unscale(stored[lot.id], split_factor(splits, entry.date, synced_on)) +
+        taken.fetch(lot.id, []).sum(BigDecimal("0")) { |_, date, qty| Security::Split.unscale(qty, split_factor(splits, entry.date, date)) }).round(16)
       size = Security::Split.scale(lot.trade.qty, split_factor(splits, lot.date, entry.date))
       [ lot.id, LotShares.new(left: left, size: size) ]
     end

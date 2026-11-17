@@ -425,6 +425,21 @@ class HoldingLotDisposalTest < ActiveSupport::TestCase
     end
   end
 
+  # A reverse split leaves the stored lot a repeating decimal, so restating it
+  # gives back a hair over or under what the lot held.
+  test "a lot choice reads whole shares back across a reverse split" do
+    travel_to TODAY do
+      setup_account(method: "fifo")
+      security = priced_security("NAMZ", 30)
+      lot = trade(security, 10, 12, 2)
+      sale = trade(security, -5, 25, 4)
+      Security::Split.create!(security: security, ex_date: d(6), numerator: 1, denominator: 3, source: "manual")
+      materialize(:forward)
+
+      assert_equal [ 10, 10 ], shares_left(sale, lot)
+    end
+  end
+
   # A split goes ex at the open, so a sale on its ex-date is already in the
   # new shares: the split restates the purchase, not the sale's own figures.
   test "a split on the sale's own date counts toward the purchase size only" do

@@ -74,25 +74,13 @@
         <% end %>
         <% lot_choices = trade.lot_choices.includes(:entryable).to_a %>
         <% if lot_choices.any? %>
-          <% lot_shares = trade.lot_shares(lot_choices) %>
-          <% lot_options = lot_choices.map do |lot|
-               date = l(lot.date, format: :long)
-               price = lot.trade.price_money.format
-               shares = lot_shares[lot.id]
-               label = if shares
-                 t(".lot_option_left", date: date, left: format_quantity(shares.left, exact: true), size: format_quantity(shares.size, exact: true), price: price)
-               else
-                 t(".lot_option", date: date, qty: format_quantity(lot.trade.qty, exact: true), price: price)
-               end
-               [ label, lot.id ]
-             end %>
           <%= styled_form_with model: @entry,
                 url: trade_path(@entry),
                 class: "mt-2",
                 data: { controller: "auto-submit-form" } do |f| %>
             <%= f.fields_for :entryable do |ef| %>
               <%= ef.select :lot_source_entry_id,
-                    lot_options,
+                    lot_select_options(trade, lot_choices),
                     { label: t(".lot_label"), include_blank: t(".lot_oldest_first") },
                     { "data-auto-submit-form-target": "auto" } %>
             <% end %>
