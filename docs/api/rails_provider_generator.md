@@ -249,7 +249,7 @@ class CreateMyBankTablesAndAccounts < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :my_bank_accounts, :account_id
+    add_index :my_bank_accounts, :account_id, unique: true
     add_index :my_bank_accounts, :my_bank_item_id
   end
 end
@@ -287,6 +287,7 @@ class MyBankItem < ProviderItem
   has_many :accounts, through: :my_bank_accounts
 
   scope :active, -> { where(scheduled_for_deletion: false) }
+  scope :ordered, -> { order(created_at: :desc) }
   scope :syncable, -> { active }
   # The connections the account flow can list accounts from.
   scope :with_credentials, -> { where.not(api_key: [ nil, *BLANK_TOKEN_SENTINELS ]).where.not(refresh_token: [ nil, *BLANK_TOKEN_SENTINELS ]) }
@@ -336,20 +337,22 @@ end
 **File:** `app/models/my_bank_item/account_flow.rb`
 
 `ProviderItem::AccountFlow` lists, links and sets up accounts. The generated subclass
-stubs each hook it needs; each stub raises `NotImplementedError` naming itself, under a TODO
-saying what it must return:
+defines each hook it needs. `.cache_sensitive_params` returns the fields given to the
+generator; each other hook is a stub that raises `NotImplementedError` naming itself, under
+a TODO saying what it must return:
 
 | Hook | What it returns |
 |------|-----------------|
-| `.cache_sensitive_params` | the item params whose change makes the cached account list stale, usually the credentials and base URL |
+| `.cache_sensitive_params` | the item params whose change makes the cached account list stale; generated as the declared fields |
 | `#fetch_accounts` | the API's account payloads for the connection, as hashes with at least an id; raises `NoApiTokenError` without usable credentials |
 | `#resolve_item(item_id)` | the family's credentialed connection with that id, or its only one when no id is given |
 | `#provider_error_class` | the error class the API client raises |
 | `#upsert_provider_account!(account_id, account_data)` | the created or updated `MyBankAccount` |
 | `#provider_account_snapshot_changed?(provider_account, account_data)` | whether the stored account differs from the payload, so setup refreshes it |
 
-`.cache_sensitive_params` is read on **every** edit of a connection, so editing one fails
-until it is written. See `BrexItem::AccountFlow` for a complete example.
+`.cache_sensitive_params` is read on **every** edit of a connection, so the generated
+version lets editing work before the stubs are written. See `BrexItem::AccountFlow` for a
+complete example.
 
 **File:** `app/models/my_bank_item/provided.rb`
 
@@ -409,8 +412,9 @@ end
 
 ### 4. Views
 
-The settings panel and the credential fields are always written; the other views are skipped
-with `--skip-view`. Each view renders a provider kit component from `app/components/provider_item/`.
+The settings panel and the credential fields are always written; the other views, and the
+`MyBankItemsHelper` they use, are skipped with `--skip-view`. Each view renders a provider kit
+component from `app/components/provider_item/`.
 
 | File | Renders |
 |------|---------|
@@ -528,10 +532,9 @@ end
 
 ### 2. Implement the Account Flow
 
-Write each hook in `app/models/my_bank_item/account_flow.rb` (see the table above), starting
-with `.cache_sensitive_params`, which editing a connection needs. Match `name_for` and
-`currency_for` in `MyBankAccount`, and the helper in `app/helpers/my_bank_items_helper.rb`,
-to the API's fields.
+Write each stubbed hook in `app/models/my_bank_item/account_flow.rb` (see the table above).
+Match `name_for` and `currency_for` in `MyBankAccount`, and the helper in
+`app/helpers/my_bank_items_helper.rb`, to the API's fields.
 
 ### 3. Update the Model
 
