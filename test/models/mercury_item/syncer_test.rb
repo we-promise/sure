@@ -90,6 +90,20 @@ class MercuryItem::SyncerTest < ActiveSupport::TestCase
     assert_equal 1, reported.count { |exception| exception.equal?(error) }
   end
 
+  test "a failed sync records a debug log entry for support" do
+    @mercury_item.expects(:import_latest_mercury_data).raises(RuntimeError, "connection reset")
+    Sentry.stubs(:capture_exception)
+
+    assert_difference -> { DebugLogEntry.where(provider_key: "mercury").count }, 1 do
+      assert_raises(MercuryItem::Syncer::SafeSyncError) { @syncer.perform_sync(recording_sync) }
+    end
+
+    entry = DebugLogEntry.where(provider_key: "mercury").recent.first
+    assert_equal [ "provider_sync_error", "error", "MercuryItem::Syncer" ], [ entry.category, entry.level, entry.source ]
+    assert_equal @mercury_item.family, entry.family
+    assert_equal({ "mercury_item_id" => @mercury_item.id, "error_class" => "RuntimeError", "error_message" => "connection reset" }, entry.metadata)
+  end
+
   test "linked accounts that fail to process or schedule are reported" do
     mercury_account = mercury_accounts(:checking_account)
     account = @mercury_item.family.accounts.create!(name: "Linked", balance: 0, currency: "USD", accountable: Depository.new)
