@@ -30,6 +30,15 @@ class ProviderItem::PanelComponentTest < ActiveSupport::TestCase
     render_panel(items: :one)
   end
 
+  test "the panel takes its turbo id from the provider's panel declaration" do
+    declarations = Provider::Factory.panel_declarations.map do |panel|
+      panel[:key] == "brex" ? panel.merge(turbo_id: "declared-brex") : panel
+    end
+    Provider::Factory.stubs(:panel_declarations).returns(declarations)
+
+    assert_includes render_panel(items: :one), %(id="declared-brex-providers-panel")
+  end
+
   private
     def render_panel(options)
       @item.class.any_instance.stubs(:syncing?).returns(true) if options[:syncing]

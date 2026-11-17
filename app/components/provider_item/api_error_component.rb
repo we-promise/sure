@@ -3,18 +3,16 @@
 # The dialog shown when a provider's API fails while listing accounts.
 # Messages come from the provider's own `<key>_items.api_error.*` keys. A
 # provider whose dialog words things differently passes its own `heading:`,
-# `issues:` (label and description pairs) and `link_text:`, and `notice: :alert`
-# shows the heading and error in an alert instead of beside an icon.
+# `issues:` (label and description pairs) and `link_text:`.
 class ProviderItem::ApiErrorComponent < ApplicationComponent
   ISSUES = %w[invalid_token expired_credentials permissions network service].freeze
 
-  attr_reader :provider_key, :error_message, :return_path, :notice
+  attr_reader :provider_key, :error_message, :return_path
 
-  def initialize(provider_key:, error_message:, return_path:, notice: :icon, heading: nil, issues: nil, link_text: nil)
+  def initialize(provider_key:, error_message:, return_path:, heading: nil, issues: nil, link_text: nil)
     @provider_key = provider_key
     @error_message = error_message
     @return_path = return_path
-    @notice = notice
     @heading = heading
     @issues = issues
     @link_text = link_text

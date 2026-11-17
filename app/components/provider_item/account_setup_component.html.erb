@@ -20,33 +20,17 @@
 
       <div class="space-y-4">
         <% if api_error.present? %>
-          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
-            <%= helpers.icon "alert-circle", size: "lg", class: "text-destructive" %>
-            <p class="text-primary font-medium"><%= setup_t("fetch_failed") %></p>
-            <p class="text-destructive text-sm"><%= api_error %></p>
-          </div>
+          <%= render DS::Alert.new(title: setup_t("fetch_failed"), message: api_error, variant: :error) %>
         <% elsif provider_accounts.empty? %>
-          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
-            <%= helpers.icon "check-circle", size: "lg", class: "text-success" %>
-            <p class="text-primary font-medium"><%= setup_t("no_accounts_to_setup") %></p>
-            <p class="text-secondary text-sm"><%= setup_t("all_accounts_linked") %></p>
-          </div>
+          <%= render DS::EmptyState.new(icon: "check-circle", title: setup_t("no_accounts_to_setup"), description: setup_t("all_accounts_linked")) %>
         <% else %>
-          <div class="bg-surface border border-primary p-4 rounded-lg">
-            <div class="flex items-start gap-3">
-              <%= helpers.icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
-              <div>
-                <p class="text-sm text-primary mb-2">
-                  <strong><%= setup_t("choose_account_type") %></strong>
-                </p>
-                <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
-                  <% displayable_account_type_options.each do |label, type| %>
-                    <li><strong><%= label %></strong></li>
-                  <% end %>
-                </ul>
-              </div>
-            </div>
-          </div>
+          <%= render DS::Alert.new(title: setup_t("choose_account_type"), variant: :info) do %>
+            <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+              <% displayable_account_type_options.each do |label, type| %>
+                <li><strong><%= label %></strong></li>
+              <% end %>
+            </ul>
+          <% end %>
 
           <% provider_accounts.each do |provider_account| %>
           <div class="border border-primary rounded-lg p-4">
