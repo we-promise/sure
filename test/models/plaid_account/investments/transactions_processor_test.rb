@@ -259,6 +259,12 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Dividend", entry.transaction.investment_activity_label
   end
 
+  test "a non-qualified dividend is labelled Dividend" do
+    entry = process_plaid_transaction(cash_row("nqdiv_1", "non-qualified dividend", "Non-qualified dividend AAPL"))
+
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
   test "a Plaid interest payment is labelled Interest and classified as income" do
     entry = process_plaid_transaction(cash_row("int_1", "interest", "Interest earned"))
 
