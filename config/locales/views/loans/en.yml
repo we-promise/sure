@@ -32,7 +32,7 @@ en:
       rate_change_add: Add rate change
       rate_change_remove: Remove
       term_changes: Term changes
-      term_changes_hint: "Record what your lender changed after the loan started: an extra repayment, a balance they confirmed or a new payment. Leave the payment blank to spread the new balance over the remaining term, or enter your lender's figure. The schedule follows these rows, the balance does not: also record an extra repayment as a transfer to the loan, or the balance won't change. Each date takes one row."
+      term_changes_hint: "Record what your lender changed after the loan started: an extra repayment, a balance they confirmed or a new payment. Leave the payment blank to spread the new balance over the remaining term, or enter your lender's figure. The schedule follows these rows; the loan's balance does not. Also record an extra repayment as a transfer to the loan, and a confirmed balance as a balance update. Each date takes one row."
       term_changes_empty: No term changes recorded. The schedule runs on the original terms.
       term_change_effective_date: Effective date
       term_change_extra_repayment: Extra repayment
