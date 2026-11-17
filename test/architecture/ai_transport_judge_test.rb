@@ -59,7 +59,8 @@ class AiTransportJudgeTest < ActiveSupport::TestCase
     peak = Concurrent::AtomicFixnum.new
     both_in = Concurrent::CountDownLatch.new(2)   # the first two requests wait for each other
     stub_request(:post, URL).to_return(lambda do |_request|
-      peak.update { [ _1, in_flight.increment ].max }
+      now = in_flight.increment
+      peak.update { [ _1, now ].max }   # update may run its block twice, so the block only compares
       both_in.count_down
       both_in.wait(2)   # bounded, so a serial transport fails the assertion instead of hanging
       in_flight.decrement

@@ -343,7 +343,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "every route marked down for a failure that needs a fix is refused, so the job doesn't retry a bad key" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:failing)
     stub_ai(:detect_merchants) { flunk "no route should be called" }
 
@@ -351,7 +351,7 @@ class Ai::GenerationTest < ActiveSupport::TestCase
   end
 
   test "routes all marked down for a passing failure stay unreachable, so the job retries" do
-    use_merchant_routes("gpu/qwen3-8b", "openai/gpt-4.1-mini")
+    use_ai_routes(detect_merchants: %w[gpu/qwen3-8b openai/gpt-4.1-mini])
     Ai::DownMarks.stubs(:state).returns(:passing)
     stub_ai(:detect_merchants) { flunk "no route should be called" }
 
