@@ -44,7 +44,10 @@ module Ai::Transport::RubyLlmAdapter
       chat.add_message(role: :user, content: Ai::Transport::Base::PROBE_PROMPT)
       message = mapping_errors { chat.generate }
       check_answering_model!(model.name, message.model)
-      message.content.to_s
+      text = message.content.to_s
+      raise Ai::Error::InvalidOutput, "the chat probe returned no text" if text.blank?
+
+      text
     end
 
     def probe_tools(model, timeout: endpoint.timeout_seconds)
