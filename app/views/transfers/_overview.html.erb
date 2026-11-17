@@ -1,0 +1,79 @@
+<%# locals: (transfer:, form:, can_rename:) %>
+
+<% if can_rename %>
+  <p class="text-xs text-secondary"><%= t("transfers.show.transaction_name_help") %></p>
+<% end %>
+
+<div class="space-y-3">
+  <dl class="flex items-center gap-2 justify-between">
+    <dt class="text-secondary"><%= t("transfers.show.from") %></dt>
+    <dd class="flex items-center gap-2 font-medium">
+      <%= render "accounts/logo", account: transfer.from_account, size: "sm" %>
+      <%= link_to transfer.from_account.name, account_path(transfer.from_account), data: { turbo_frame: "_top" } %>
+    </dd>
+  </dl>
+  <% if can_rename %>
+    <%= form.text_field :outflow_name,
+          value: transfer.outflow_transaction.entry.name,
+          label: t("transfers.show.transaction_name"),
+          required: true,
+          "data-auto-submit-form-target": "auto" %>
+  <% end %>
+  <dl class="flex items-center gap-2 justify-between">
+    <dt class="text-secondary"><%= t("transfers.show.date") %></dt>
+    <dd class="font-medium"><%= l(transfer.outflow_transaction.entry.date, format: :long) %></dd>
+  </dl>
+  <dl class="flex items-center gap-2 justify-between">
+    <dt class="text-secondary"><%= t("transfers.show.transfer_amount") %></dt>
+    <dd class="font-medium text-destructive privacy-sensitive"><%= format_money transfer.outflow_transaction.entry.amount_money * -1 %></dd>
+  </dl>
+  <% if transfer.has_source_fee? %>
+    <dl class="flex items-center gap-2 justify-between">
+      <dt class="text-secondary"><%= t("transfers.show.source_fee") %></dt>
+      <dd class="font-medium text-destructive privacy-sensitive"><%= format_money Money.new(transfer.derived_source_fee_amount, transfer.from_account.currency) * -1 %></dd>
+    </dl>
+    <dl class="flex items-center gap-2 justify-between pt-1 border-t border-alpha-black-50">
+      <dt class="text-secondary font-medium"><%= t("transfers.show.total") %></dt>
+      <dd class="font-medium text-destructive privacy-sensitive">
+        <%= format_money (transfer.outflow_transaction.entry.amount_money + Money.new(transfer.derived_source_fee_amount, transfer.from_account.currency)) * -1 %>
+      </dd>
+    </dl>
+  <% end %>
+</div>
+
+<%= render "shared/ruler", classes: "my-2" %>
+
+<div class="space-y-3">
+  <dl class="flex items-center gap-2 justify-between">
+    <dt class="text-secondary"><%= t("transfers.show.to") %></dt>
+    <dd class="flex items-center gap-2 font-medium">
+      <%= render "accounts/logo", account: transfer.to_account, size: "sm" %>
+      <%= link_to transfer.to_account.name, account_path(transfer.to_account), data: { turbo_frame: "_top" } %>
+    </dd>
+  </dl>
+  <% if can_rename %>
+    <%= form.text_field :inflow_name,
+          value: transfer.inflow_transaction.entry.name,
+          label: t("transfers.show.transaction_name"),
+          required: true,
+          "data-auto-submit-form-target": "auto" %>
+  <% end %>
+  <dl class="flex items-center gap-2 justify-between">
+    <dt class="text-secondary"><%= t("transfers.show.date") %></dt>
+    <dd class="font-medium"><%= l(transfer.inflow_transaction.entry.date, format: :long) %></dd>
+  </dl>
+  <dl class="flex items-center gap-2 justify-between">
+    <dt class="text-secondary"><%= t("transfers.show.transfer_amount") %></dt>
+    <dd class="font-medium text-success privacy-sensitive">+<%= format_money transfer.inflow_transaction.entry.amount_money * -1 %></dd>
+  </dl>
+  <% if transfer.has_destination_fee? %>
+    <dl class="flex items-center gap-2 justify-between">
+      <dt class="text-secondary"><%= t("transfers.show.destination_fee") %></dt>
+      <dd class="font-medium text-destructive privacy-sensitive"><%= format_money Money.new(transfer.derived_destination_fee_amount, transfer.to_account.currency) * -1 %></dd>
+    </dl>
+    <dl class="flex items-center gap-2 justify-between pt-1 border-t border-alpha-black-50">
+      <dt class="text-secondary font-medium"><%= t("transfers.show.total") %></dt>
+      <dd class="font-medium text-success privacy-sensitive">+<%= format_money (transfer.inflow_transaction.entry.amount_money * -1) - Money.new(transfer.derived_destination_fee_amount, transfer.to_account.currency) %></dd>
+    </dl>
+  <% end %>
+</div>

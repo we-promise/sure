@@ -43,8 +43,8 @@ en:
       mark_recurring_title: Mark transfer as recurring
       note_label: Notes
       note_placeholder: Add a note to this transfer
-      outflow_name: Name in %{account}
-      inflow_name: Name in %{account}
+      transaction_name: Transaction name
+      transaction_name_help: Each account's transaction can have its own name.
       overview: Overview
       settings: Settings
       from: From

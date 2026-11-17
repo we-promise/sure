@@ -36,6 +36,7 @@ class TransfersTest < ApplicationSystemTestCase
     find("a", text: transfer.outflow_transaction.entry.name, match: :first).click
 
     assert_selector "details[open] input[name='transfer[outflow_name]']"
+    assert_text I18n.t("transfers.show.transaction_name_help")
     find("input[name='transfer[outflow_name]']").set("Rent")
     find("input[name='transfer[inflow_name]']").set("Rent")
     find("input[name='transfer[inflow_name]']").send_keys(:tab)

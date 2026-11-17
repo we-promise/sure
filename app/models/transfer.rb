@@ -85,16 +85,26 @@ class Transfer < ApplicationRecord
   end
 
   # A shared name means the user (or the importer) gave both legs the same
-  # label; otherwise the derived account-based title is the useful summary.
-  def display_name
+  # label; otherwise use a contextual type so neither leg's name looks like the
+  # name for both.
+  def shared_name
     outflow_name = outflow_transaction&.entry&.name
     inflow_name = inflow_transaction&.entry&.name
 
-    if outflow_name.present? && outflow_name == inflow_name
-      outflow_name
-    else
-      name
-    end
+    outflow_name if outflow_name.present? && outflow_name == inflow_name
+  end
+
+  def display_name
+    shared_name || contextual_name
+  end
+
+  def contextual_name
+    return "Credit card payment" if to_account&.credit_card?
+    return "Loan payment" if to_account&.loan?
+    return "Investment contribution" if investment_contribution?
+    return "Payment" if to_account&.liability?
+
+    "Transfer"
   end
 
   # Renames both legs. Returns false when either name is blank (the controller

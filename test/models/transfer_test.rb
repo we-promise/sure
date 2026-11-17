@@ -460,14 +460,21 @@ class TransferTest < ActiveSupport::TestCase
     assert_equal "Rent", entry.reload.name
   end
 
-  test "display_name uses a shared leg name and otherwise falls back to the derived title" do
+  test "display_name uses a shared leg name" do
     transfer = transfers(:one)
-    assert_equal transfer.name, transfer.display_name
 
     transfer.outflow_transaction.entry.update!(name: "Rent")
     transfer.inflow_transaction.entry.update!(name: "Rent")
 
     assert_equal "Rent", transfer.display_name
+  end
+
+  test "display_name uses the destination type when the leg names differ" do
+    assert_equal "Credit card payment", transfers(:one).display_name
+    assert_equal "Loan payment", contextual_name_for(accounts(:loan))
+    assert_equal "Investment contribution", contextual_name_for(accounts(:investment))
+    assert_equal "Payment", contextual_name_for(accounts(:other_liability))
+    assert_equal "Transfer", contextual_name_for(accounts(:other_asset))
   end
 
   test "name stays derived after renaming the entries" do
@@ -480,6 +487,13 @@ class TransferTest < ActiveSupport::TestCase
   end
 
   private
+    def contextual_name_for(to)
+      transfer = create_pending_transfer(from: accounts(:depository), to:)
+      transfer.outflow_transaction.entry.update!(name: "Source")
+      transfer.inflow_transaction.entry.update!(name: "Destination")
+      transfer.display_name
+    end
+
     def create_pending_transfer(from:, to:)
       outflow_entry = create_transaction(date: Date.current, account: from, amount: 500)
       inflow_entry = create_transaction(date: Date.current, account: to, amount: -500)

@@ -727,8 +727,9 @@ class TransfersControllerTest < ActionDispatch::IntegrationTest
     assert_select "details[open] input[name='transfer[inflow_name]']"
     assert_select "input[name='transfer[outflow_name]'][value=?]", transfer.outflow_transaction.entry.name
     assert_select "input[name='transfer[inflow_name]'][value=?]", transfer.inflow_transaction.entry.name
-    assert_select "label", text: /Name in #{Regexp.escape(transfer.from_account.name)}/
-    assert_select "label", text: /Name in #{Regexp.escape(transfer.to_account.name)}/
+    assert_select "label", text: /Transaction name/, count: 2
+    assert_select "p", text: I18n.t("transfers.show.transaction_name_help")
+    assert_select "#display_name_transfer_#{transfer.id}", text: "Credit card payment"
   end
 
   test "show hides transfer names without write access to both sides" do
