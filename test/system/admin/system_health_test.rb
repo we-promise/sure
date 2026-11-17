@@ -1,7 +1,9 @@
 require "application_system_test_case"
+require "turbo/broadcastable/test_helper"
 
 class Admin::SystemHealthTest < ApplicationSystemTestCase
   include ActiveJob::TestHelper
+  include Turbo::Broadcastable::TestHelper
 
   setup do
     sign_in users(:sure_support_staff)
@@ -17,7 +19,7 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
     AiHealth::Probe.any_instance.stubs(:openai_vector_store).returns(probe_result(:passing))
   end
 
-  test "selecting AI status runs live probes" do
+  test "selecting AI status shows the stored results" do
     with_openai_access_token do
       visit admin_system_health_path
 
@@ -31,19 +33,6 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
       assert_text "PDF vision/native path"
       assert_text "Synthetic PDF check passed", count: 2
       assert_text "Live checks passed"
-    end
-  end
-
-  test "running the checks again stays on the AI tab and forces fresh probes" do
-    with_openai_access_token do
-      visit admin_system_health_path(tab: "ai")
-      assert_text "Live check passed"
-
-      click_on "Run checks again"
-
-      assert_current_path admin_system_health_path(tab: "ai", refresh_ai_health: "1")
-      assert_selector "turbo-frame#ai_status[src$='?refresh_ai_health=1']"
-      assert_text "Live check passed"
     end
   end
 
@@ -63,24 +52,37 @@ class Admin::SystemHealthTest < ApplicationSystemTestCase
   end
 
   # The redirect comes back to this page, which the button's `replace` action
-  # turns into a morphing refresh even after a tab switch. The button has to
-  # leave the frame for the flash to show, and the frame has to keep its status
-  # through the morph instead of taking the new page's loading placeholder.
-  test "queueing a worker check keeps the AI status on screen" do
+  # turns into a morphing refresh even after a tab switch: the flash shows and
+  # the status stays. The worker's results arrive as a frame that reloads
+  # itself; the test adapter doesn't deliver broadcasts, so the test hands the
+  # job's stream to Turbo the way Action Cable would.
+  test "running the checks queues them in a worker, whose results replace the tab" do
+    AiHealth::Probe.any_instance.unstub(:llm, :function_calling, :pdf_text_extraction, :pdf_vision_processing, :openai_vector_store)
+    AiHealth::Probe.any_instance.stubs(:perform).returns(probe_result(:passing))
+
     with_openai_access_token do
       visit admin_system_health_path
       click_button "AI"
-      assert_text "Live check passed"
+      assert_selector "[data-testid='function-calling-status']", text: "Not checked"
       page.execute_script(<<~JS)
         document.addEventListener("turbo:morph", () => {
           window.aiStatusAfterMorph = document.getElementById("ai_status").textContent
         }, { once: true })
       JS
 
-      click_button "Verify worker configuration"
+      assert_enqueued_jobs 1, only: Ai::ProbeJob do
+        click_button "Run checks again"
+        assert_text "AI checks queued"
+      end
+      assert_match "Not checked", page.evaluate_script("window.aiStatusAfterMorph")
 
-      assert_text "Worker check queued"
-      assert_match "Live check passed", page.evaluate_script("window.aiStatusAfterMorph")
+      streams = capture_turbo_stream_broadcasts(Ai::ProbeJob::STREAM) { perform_enqueued_jobs(only: Ai::ProbeJob) }
+      page.execute_script("Turbo.renderStreamMessage(arguments[0])", streams.sole.to_html)
+
+      assert_selector "[data-testid='function-calling-status']", text: "Live tool call succeeded"
+      assert_text "A worker last ran the checks less than a minute ago."
+      assert_selector "[data-testid='worker-process-identity']", text: WorkerAiHealth.current_process_identity
+      assert_current_path admin_system_health_path(tab: "ai")
     end
   end
 

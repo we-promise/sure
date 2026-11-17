@@ -22,14 +22,12 @@ class AiHealth
               :function_calling_probe, :pdf_text_extraction_probe,
               :pdf_vision_processing_probe, :vector_store_probe, :embedding_probe
 
-  # probe_cache lets a caller isolate where probe results are cached. The web
-  # admin page shares the default `Rails.cache`-backed probe cache so repeat
-  # page loads within the TTL don't re-hit providers; worker-originated
-  # verification (see WorkerAiHealthCheckJob) passes an isolated store so its
-  # results can never be served back to a web request, and vice versa (#3169).
-  def initialize(run_probes: true, force_probes: false, probe_cache: Rails.cache)
-    @run_probes = run_probes
+  # Ai::ProbeJob runs the probes in a worker (`force_probes: true`) and stores
+  # the results; the admin page reads them (`stored_only: true`) and calls no
+  # model. A check with no stored result reads as not checked.
+  def initialize(force_probes: false, stored_only: false, probe_cache: Probe::Store.new)
     @force_probes = force_probes
+    @stored_only = stored_only
     @probe_cache = probe_cache
     load_llm_status
     load_vector_store_status
@@ -60,7 +58,7 @@ class AiHealth
   # is only ever blamed for a refusal the service actually made.
   def function_calling_status
     return :unavailable unless llm_configured?
-    return :not_checked unless run_probes?
+    return :not_checked if function_calling_probe.not_checked?
     return :supported if function_calling_probe.passing?
     return :not_used if function_calling_probe.failure_code == :no_tool_call
     return :unsupported if function_calling_probe.failure_code == :tools_refused
@@ -99,10 +97,11 @@ class AiHealth
   def vector_store_status
     return :missing if vector_store_adapter.nil?
     return :scaffolded if vector_store_adapter == :qdrant
-    return :not_checked unless run_probes?
     return :failing if vector_store_probe.failing?
     return :not_configured unless vector_store_configured?
+    return :not_checked if vector_store_probe.not_checked?
     return :failing unless vector_store_probe.passing?
+    return :not_checked if vector_store_adapter == :pgvector && embedding_probe.not_checked?
     return :failing if vector_store_adapter == :pgvector && !embedding_probe.passing?
 
     :passing
@@ -126,6 +125,9 @@ class AiHealth
   def openai_vector_store_uses_custom_endpoint?
     vector_store_adapter == :openai && @openai_custom_endpoint
   end
+
+  # How long a probe result is kept before the page shows it as not checked.
+  def probe_cache_ttl = Probe.cache_ttl
 
   def last_checked_at
     [ llm_probe, function_calling_probe, pdf_text_extraction_probe, pdf_vision_processing_probe, vector_store_probe,
@@ -188,9 +190,8 @@ class AiHealth
       @pdf_vision_processing_probe = llm_configured? && @pdf_vision_processing_capable ? Probe.not_checked : Probe.not_configured
       @vector_store_probe = vector_store_adapter.present? ? Probe.not_checked : Probe.not_configured
       @embedding_probe = vector_store_adapter == :pgvector ? Probe.not_checked : Probe.not_configured
-      return unless run_probes?
 
-      probe = Probe.new(force: @force_probes, cache: @probe_cache)
+      probe = Probe.new(force: @force_probes, stored_only: @stored_only, cache: @probe_cache)
       if llm_configured?
         @llm_probe = probe.llm(
           provider: @effective_llm_protocol,
@@ -244,14 +245,10 @@ class AiHealth
       end
     end
 
-    def run_probes?
-      @run_probes
-    end
-
     def pdf_probe_status(probe, capable:)
       return :unavailable unless llm_configured?
       return :unsupported unless capable
-      return :not_checked unless run_probes?
+      return :not_checked if probe.not_checked?
 
       probe.passing? ? :supported : :failing
     end

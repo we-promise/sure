@@ -1,0 +1,4 @@
+<%# locals: (probe:) %>
+<% if probe.checked_at %>
+  <span class="block text-xs font-normal text-secondary"><%= t("admin.system_health.show.ai.checked_ago", time_ago: time_ago_in_words(probe.checked_at)) %></span>
+<% end %>
