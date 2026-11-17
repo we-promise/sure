@@ -39,6 +39,7 @@ en:
         only_manual: Only manual accounts can be linked
         invalid_enable_banking_account: Invalid Enable Banking account selected
     enable_banking_item:
+      connect_bank: Connect bank
       deletion_in_progress: Deletion in progress
       provider_name: Enable Banking
       syncing: Syncing...

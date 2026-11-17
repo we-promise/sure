@@ -44,7 +44,7 @@
 
         <% if Current.user&.admin? %>
           <div class="flex items-center gap-2">
-            <% if enable_banking_item.requires_update? %>
+            <% if enable_banking_item.requires_update? && enable_banking_item.aspsp_name.present? %>
               <%= button_to reauthorize_enable_banking_item_path(enable_banking_item),
                             method: :post,
                             class: "inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg text-inverse bg-warning hover:opacity-90 transition-colors",
@@ -62,7 +62,18 @@
 
             <%= render DS::Menu.new do |menu| %>
               <% sync_schedule_menu_item(menu, enable_banking_item) %>
-              <% unless enable_banking_item.requires_update? %>
+              <% if enable_banking_item.aspsp_name.blank? %>
+                <%# Reauthorization needs the stored bank; without one, let the user
+                    pick it again on this same item so its linked accounts are kept. %>
+                <% menu.with_item(
+                  variant: "link",
+                  text: t(".connect_bank"),
+                  icon: "landmark",
+                  href: select_bank_enable_banking_item_path(enable_banking_item),
+                  data: { turbo_frame: :modal }
+                ) %>
+                <% menu.with_item(variant: "divider") %>
+              <% elsif !enable_banking_item.requires_update? %>
                 <%# Always-available manual reconnect, independent of the automatic
                     requires_update detection above. Enable Banking sometimes rejects
                     individual account requests (401 Invalid credentials or expired JWT)

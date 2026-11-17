@@ -238,17 +238,39 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
   test "reauthorize without a stored bank redirects with an alert instead of raising" do
     assert_nil @item.aspsp_name
 
-    post reauthorize_enable_banking_item_url(@item)
+    assert_difference -> { DebugLogEntry.where(provider_key: "enable_banking", family: @family).count }, 1 do
+      post reauthorize_enable_banking_item_url(@item)
+    end
 
     assert_redirected_to settings_providers_url
     assert_equal I18n.t("enable_banking_items.reauthorize.bank_required"), flash[:alert]
+  end
+
+  test "begin_authorization! raises a typed error when no bank is stored" do
+    assert_raises(EnableBankingItem::BankNotSelectedError) do
+      @item.begin_authorization!(redirect_url: "https://example.com/callback", state: "state")
+    end
+  end
+
+  # Reconnect would only hit the same missing-bank error, so an expired item
+  # without a stored bank offers the bank picker on the same item instead.
+  test "the panel offers Connect bank instead of Reconnect for an expired item without a bank" do
+    @item.update!(session_id: "expired-session", session_expires_at: 1.day.ago)
+
+    get connect_form_settings_providers_url(provider_key: "enable_banking")
+
+    assert_response :success
+    assert_includes response.body, select_bank_enable_banking_item_path(@item)
+    assert_not_includes response.body, reauthorize_enable_banking_item_path(@item)
   end
 
   test "reauthorize redirects with an alert on unexpected errors" do
     @item.update!(aspsp_name: "Test Bank")
     EnableBankingItem.any_instance.stubs(:begin_authorization!).raises(StandardError, "boom")
 
-    post reauthorize_enable_banking_item_url(@item)
+    assert_difference -> { DebugLogEntry.where(provider_key: "enable_banking", level: "error").count }, 1 do
+      post reauthorize_enable_banking_item_url(@item)
+    end
 
     assert_redirected_to settings_providers_url
     assert_equal I18n.t("enable_banking_items.reauthorize.unexpected_error"), flash[:alert]

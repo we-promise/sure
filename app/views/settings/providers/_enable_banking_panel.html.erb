@@ -155,7 +155,7 @@
                 method: :post,
                 disabled: item.syncing?
               ) %>
-            <% elsif item.session_expired? %>
+            <% elsif item.session_expired? && item.aspsp_name.present? %>
               <%= render DS::Button.new(
                 text: t("settings.providers.enable_banking_panel.reconnect"),
                 variant: :primary,

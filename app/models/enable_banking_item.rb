@@ -3,6 +3,11 @@ class EnableBankingItem < ApplicationRecord
 
   enum :status, { good: "good", requires_update: "requires_update" }, default: :good
 
+  # Raised when authorization is started without a bank (ASPSP) to authorize
+  # against, e.g. reauthorizing an item whose initial authorization never
+  # recorded one. The user has to pick the bank again via select_bank.
+  class BankNotSelectedError < StandardError; end
+
   # Encrypt sensitive credentials and raw payloads if ActiveRecord encryption is configured
   if encryption_ready?
     encrypts :client_certificate, deterministic: true
@@ -149,7 +154,7 @@ class EnableBankingItem < ApplicationRecord
   # @return [String] Redirect URL for the user
   def begin_authorization!(redirect_url:, state:, language: nil, psu_type: nil, aspsp_name: nil)
     name = aspsp_name.presence || self.aspsp_name
-    raise StandardError.new("No bank selected for this connection") if name.blank?
+    raise BankNotSelectedError, "No bank selected for this connection" if name.blank?
 
     start_authorization(
       aspsp_name: name,
