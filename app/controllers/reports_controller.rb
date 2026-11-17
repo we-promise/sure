@@ -6,6 +6,8 @@ class ReportsController < ApplicationController
   skip_authentication only: :export_transactions
   before_action :authenticate_for_export, only: :export_transactions
 
+  helper_method :filter_tags
+
   def index
     setup_report_data(show_flash: true)
 
@@ -81,7 +83,8 @@ class ReportsController < ApplicationController
       start_date: params[:start_date],
       end_date: params[:end_date],
       sort_by: params[:sort_by],
-      sort_direction: params[:sort_direction]
+      sort_direction: params[:sort_direction],
+      filter_tag_ids: filter_tags.map(&:id).presence
     }.compact
 
     # The CSV URL the instructions tell people to add their API key to
@@ -112,6 +115,9 @@ class ReportsController < ApplicationController
       # Build the period
       @period = Period.custom(start_date: @start_date, end_date: @end_date)
       @previous_period = build_previous_period
+
+      @tags = Current.family.tags.alphabetically
+      @filter_tags = filter_tags
 
       # Get aggregated data
       @income_statement = Current.family.income_statement(user: Current.user)
@@ -210,7 +216,8 @@ class ReportsController < ApplicationController
             transactions: @transactions,
             period_type: @period_type,
             start_date: @start_date,
-            end_date: @end_date
+            end_date: @end_date,
+            filter_tags: filter_tags
           },
           visible: @has_accounts,
           collapsible: true
@@ -296,12 +303,18 @@ class ReportsController < ApplicationController
 
     def build_summary_metrics
       # Ensure we always have Money objects
-      current_income = ensure_money(@current_income_totals.total)
-      current_expenses = ensure_money(@current_expense_totals.total)
+      if filter_tags.any?
+        current = @income_statement.totals_for(@period, tag_ids: filter_tags.map(&:id))
+        previous = @income_statement.totals_for(@previous_period, tag_ids: filter_tags.map(&:id))
+        current_income, current_expenses = current.income_money, current.expense_money
+        previous_income, previous_expenses = previous.income_money, previous.expense_money
+      else
+        current_income = ensure_money(@current_income_totals.total)
+        current_expenses = ensure_money(@current_expense_totals.total)
+        previous_income = ensure_money(@previous_income_totals.total)
+        previous_expenses = ensure_money(@previous_expense_totals.total)
+      end
       net_savings = current_income - current_expenses
-
-      previous_income = ensure_money(@previous_income_totals.total)
-      previous_expenses = ensure_money(@previous_expense_totals.total)
 
       # Calculate percentage changes
       income_change = calculate_percentage_change(previous_income, current_income)
@@ -365,8 +378,14 @@ class ReportsController < ApplicationController
 
         period = Period.custom(start_date: month_start, end_date: month_end)
 
-        income = income_statement.income_totals(period: period).total
-        expenses = income_statement.expense_totals(period: period).total
+        if filter_tags.any?
+          totals = income_statement.totals_for(period, tag_ids: filter_tags.map(&:id))
+          income = totals.income_money.amount
+          expenses = totals.expense_money.amount
+        else
+          income = income_statement.income_totals(period: period).total
+          expenses = income_statement.expense_totals(period: period).total
+        end
 
         trends << {
           month: month_start.strftime("%b %Y"),
@@ -380,6 +399,28 @@ class ReportsController < ApplicationController
       end
 
       trends
+    end
+
+    # An entry's amount in family currency at the rate the summary totals use:
+    # ExchangeRate.rate_sql, the stored rate nearest the entry's date, however
+    # old, as IncomeStatement::ScopedTransactionsQuery reads it. Nil when there
+    # is none, so the entry is left out, as the summary leaves it out, rather
+    # than counted at 1. No provider is called.
+    def report_amount_converter(family_currency)
+      rates = {}
+      rate_query = "SELECT #{ExchangeRate.rate_sql(from: ':from', to: ':to', on: 'CAST(:on AS date)')}"
+      lambda do |entry|
+        amount = entry.amount.abs
+        next amount if entry.currency == family_currency
+
+        key = [ entry.date, entry.currency ]
+        unless rates.key?(key)
+          sql = ExchangeRate.sanitize_sql_array([ rate_query, { from: entry.currency, to: family_currency, on: entry.date } ])
+          value = ExchangeRate.connection.select_value(sql)
+          rates[key] = value && BigDecimal(value.to_s)
+        end
+        rates[key] && amount * rates[key]
+      end
     end
 
     def build_transactions_breakdown
@@ -454,13 +495,11 @@ class ReportsController < ApplicationController
       end
 
       # Helper to process an entry (transaction or trade)
+      convert = report_amount_converter(family_currency)
       process_entry = ->(category, entry, is_trade) do
         type = entry.amount > 0 ? "expense" : "income"
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        converted_amount = convert.call(entry)
+        next if converted_amount.nil?
 
         if category.nil?
           # Uncategorized or Other Investments (for trades)
@@ -580,11 +619,18 @@ class ReportsController < ApplicationController
       to_numeric = ->(value) { value.is_a?(Money) ? value.amount : value }
 
       # Unrealized gains mark holdings to market, so convert at today's FX.
+      # Both conversions return nil when there is no rate, since converting
+      # at 1 would report a ¥1,000,000 gain as $1,000,000. A figure that
+      # cannot be converted is left out of the total and counted, so the card
+      # can say the total is partial.
       foreign_holding_currencies = current_holdings.map(&:currency).compact.uniq.reject { |c| c == currency }
       holding_rates = ExchangeRate.rates_for(foreign_holding_currencies, to: currency, date: Date.current)
       convert_current = ->(amount, from) {
         numeric = to_numeric.call(amount)
-        from == currency ? numeric : numeric * (holding_rates[from] || 1)
+        next numeric if from == currency
+
+        rate = holding_rates[from]
+        rate && numeric * rate
       }
 
       # Realized gains are locked at trade time, so convert each at its own
@@ -606,7 +652,10 @@ class ReportsController < ApplicationController
       end
       convert_trade = ->(amount, from, date) {
         numeric = to_numeric.call(amount)
-        from == currency ? numeric : numeric * (rates_by_trade_date.dig(date, from) || 1)
+        next numeric if from == currency
+
+        rate = rates_by_trade_date.dig(date, from)
+        rate && numeric * rate
       }
 
       # Build metrics per treatment
@@ -614,19 +663,37 @@ class ReportsController < ApplicationController
         holdings = holdings_by_treatment[treatment] || []
         trades = trades_by_treatment[treatment] || []
 
-        # Sum unrealized gains from holdings (only those with known cost basis)
+        # Sum unrealized gains from holdings (only those with known cost basis
+        # and a rate into family currency)
+        unconverted = 0
+        unrealized_by_holding = {}
         unrealized = holdings.sum do |h|
           trend = h.trend
-          trend ? convert_current.call(trend.value, h.currency) : 0
+          next 0 unless trend
+
+          converted = convert_current.call(trend.value, h.currency)
+          unconverted += 1 if converted.nil?
+          unrealized_by_holding[h.id] = Money.new(converted, currency) if converted
+          converted || 0
         end
 
         # Sum realized gains from sell trades, each converted from the currency
         # its own figure carries.
         realized_by_trade = trades.each_with_object({}) do |t, memo|
           gain = t.realized_gain_loss
-          next if gain.nil?
+          if gain.nil?
+            # A sale with no rate between its own two currencies is left out
+            # too, and counted; one with no cost basis never had a figure.
+            unconverted += 1 if t.realized_gain_unconvertible?
+            next
+          end
 
           converted = convert_trade.call(gain.value, gain.value.currency.iso_code, t.entry.date)
+          if converted.nil?
+            unconverted += 1
+            next
+          end
+
           memo[t.id] = Money.new(converted, currency)
         end
 
@@ -644,6 +711,11 @@ class ReportsController < ApplicationController
           # and the card's own total are the same arithmetic. The partial used
           # to re-label `gain.value` as family currency without converting it.
           realized_gain_by_trade: realized_by_trade,
+          # The same for each holding's unrealised gain; one with no rate has
+          # no entry, and its line says so.
+          unrealized_gain_by_holding: unrealized_by_holding,
+          # Holdings and sells left out of the totals for want of a rate.
+          unconverted_count: unconverted,
           total_gain: Money.new(unrealized + realized, currency)
         }
       end
@@ -714,12 +786,19 @@ class ReportsController < ApplicationController
     def apply_transaction_filters(scope)
       scope = apply_entry_filters(scope)
 
-      # Filter by tag (Transaction-specific — trades don't have taggings)
-      if params[:filter_tag_id].present?
-        scope = scope.joins(:taggings).where(taggings: { tag_id: params[:filter_tag_id] })
-      end
+      scope = scope.with_any_tag(filter_tags.map(&:id)) if filter_tags.any?
 
       scope
+    end
+
+    def filter_tag_ids
+      @filter_tag_ids ||= params[:filter_tag_ids].is_a?(Array) ? params[:filter_tag_ids].grep(String).compact_blank : []
+    end
+
+    # The family's tags among filter_tag_ids. Ids that match none of them
+    # (another family's tag, a deleted one) are ignored.
+    def filter_tags
+      @filter_tags ||= filter_tag_ids.any? ? Current.family.tags.where(id: filter_tag_ids).alphabetically.to_a : []
     end
 
     def exclude_tax_advantaged_accounts(scope)
@@ -741,8 +820,12 @@ class ReportsController < ApplicationController
         # Scope to family's categories to prevent cross-family data access
         subcategory_ids = Current.family.categories.where(parent_id: category_id).pluck(:id)
         all_category_ids = [ category_id ] + subcategory_ids
-        scope = scope.where(category_id: all_category_ids)
+        # Trades have no category, so a category filter leaves them out.
+        scope = scope.model == Trade ? scope.none : scope.where(category_id: all_category_ids)
       end
+
+      # Trades carry no tags, so a tag filter leaves them out.
+      scope = scope.none if scope.model == Trade && filter_tags.any?
 
       # Filter by account
       if params[:filter_account_id].present?
@@ -831,6 +914,7 @@ class ReportsController < ApplicationController
       # Group by category, type, and month
       breakdown = {}
       family_currency = Current.family.currency
+      convert = report_amount_converter(family_currency)
 
       # Process transactions
       transactions.each do |transaction|
@@ -840,12 +924,9 @@ class ReportsController < ApplicationController
         category_name = transaction.category&.name || "Uncategorized"
         month_key = entry.date.beginning_of_month
 
-        # Convert to family currency
-        begin
-          converted_amount = Money.new(entry.amount.abs, entry.currency).exchange_to(family_currency).amount
-        rescue Money::ConversionError
-          converted_amount = entry.amount.abs
-        end
+        # Convert to family currency, leaving out what has no rate
+        converted_amount = convert.call(entry)
+        next if converted_amount.nil?
 
         key = [ category_name, type ]
         breakdown[key] ||= { category: category_name, type: type, months: {}, total: 0 }

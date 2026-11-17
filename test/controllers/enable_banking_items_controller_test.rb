@@ -15,6 +15,26 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "select_existing_account shows the last four IBAN digits to tell accounts apart" do
+    checking = @item.enable_banking_accounts.create!(name: "Jane Doe", uid: "eb_checking", currency: "EUR", iban: "DE89370400440532013000") # pipelock:ignore IBAN
+    savings = @item.enable_banking_accounts.create!(name: "Jane Doe", uid: "eb_savings", currency: "EUR", iban: "DE02120300000000202051") # pipelock:ignore IBAN
+
+    get select_existing_account_enable_banking_items_url, params: { account_id: accounts(:depository).id }
+
+    assert_response :success
+    label_for = ->(eba) { css_select("label").find { |label| label.at_css("input[type=radio][value='#{eba.id}']") } }
+
+    checking_label = label_for.call(checking)
+    savings_label = label_for.call(savings)
+    assert checking_label, "Expected a selectable entry for the checking account"
+    assert savings_label, "Expected a selectable entry for the savings account"
+    assert_match(/•\s*3000/, checking_label.text)
+    assert_match(/•\s*2051/, savings_label.text)
+    assert_no_match(/2051/, checking_label.text)
+    assert_no_match(/3000/, savings_label.text)
+    assert_no_match(/DE89370400440532013000/, @response.body, "Only the last four digits should be shown") # pipelock:ignore IBAN
+  end
+
   test "select_bank exposes ASPSP BIC in the searchable data attribute" do
     Provider::EnableBanking.any_instance.stubs(:get_aspsps).returns(
       aspsps: [
@@ -449,6 +469,86 @@ class EnableBankingItemsControllerTest < ActionDispatch::IntegrationTest
     assert_response :see_other
     assert_equal target, AccountProvider.find_by!(provider: eb_account).account
     assert_equal "active", orphan.reload.status
+  end
+
+  test "setup_accounts does not offer an ignored account" do
+    mine = @item.enable_banking_accounts.create!(name: "Mine", uid: "hash_mine", currency: "EUR")
+    theirs = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR")
+    theirs.ignore!
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_response :success
+    assert_select "select[name=?]", "account_types[#{mine.id}]"
+    assert_select "select[name=?]", "account_types[#{theirs.id}]", count: 0
+  end
+
+  test "complete_account_setup remembers a skipped account as ignored" do
+    theirs = @item.enable_banking_accounts.create!(name: "Theirs", uid: "hash_theirs", currency: "EUR", current_balance: 50)
+
+    assert_no_difference "Account.count" do
+      post complete_account_setup_enable_banking_item_url(@item), params: { account_types: { theirs.id => "skip" } }
+    end
+
+    assert_redirected_to accounts_path
+    assert theirs.reload.ignored?
+    assert_nil theirs.current_balance
+    assert_not @item.reload.pending_account_setup?
+  end
+
+  # The modal's form is a plain form_with, so the date field's label and help
+  # must be rendered as elements rather than passed as builder options (which
+  # end up as unknown attributes on the input).
+  test "setup modal shows the start date label and help and leaves the date blank by default" do
+    @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_setup_1", currency: "EUR", current_balance: 0)
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_response :success
+    assert_select "label[for=sync_start_date]", text: I18n.t("enable_banking_items.setup_accounts.sync_start_date_label")
+    assert_select "p#sync_start_date_help", text: I18n.t("enable_banking_items.setup_accounts.sync_start_date_help")
+    assert_select "input[type=date][name=sync_start_date][aria-describedby=sync_start_date_help]" do |inputs|
+      assert inputs.first["value"].blank?, "A first setup must not prefill a date, or it would cap the first fetch"
+      assert_nil inputs.first["label"]
+      assert_nil inputs.first["help_text"]
+    end
+  end
+
+  test "setup modal shows a start date that is already set" do
+    @item.update!(sync_start_date: Date.new(2024, 1, 15))
+    @item.enable_banking_accounts.create!(name: "Checking", uid: "eb_setup_1", currency: "EUR", current_balance: 0)
+
+    get setup_accounts_enable_banking_item_url(@item)
+
+    assert_select "input[type=date][name=sync_start_date][value='2024-01-15']"
+  end
+
+  test "complete_account_setup stores a chosen start date" do
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_start_date: "2024-01-15" }
+
+    assert_equal Date.new(2024, 1, 15), @item.reload.sync_start_date
+  end
+
+  test "complete_account_setup with a blank start date leaves it unset" do
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_start_date: "" }
+
+    assert_nil @item.reload.sync_start_date
+  end
+
+  test "complete_account_setup with a cleared start date removes the stored one" do
+    @item.update!(sync_start_date: Date.new(2024, 1, 15))
+
+    post complete_account_setup_enable_banking_item_url(@item), params: { sync_start_date: "" }
+
+    assert_nil @item.reload.sync_start_date
+  end
+
+  test "complete_account_setup without the date field keeps the stored start date" do
+    @item.update!(sync_start_date: Date.new(2024, 1, 15))
+
+    post complete_account_setup_enable_banking_item_url(@item), params: { account_types: {} }
+
+    assert_equal Date.new(2024, 1, 15), @item.reload.sync_start_date
   end
 
   private
