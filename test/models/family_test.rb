@@ -417,6 +417,17 @@ class FamilyTest < ActiveSupport::TestCase
     assert_equal [ "de" ], family.reload.investment_subtype_region_codes
   end
 
+  test "an investment subtype selection discarded by reload is not normalised later" do
+    family = families(:dylan_family)
+    family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
+
+    family.investment_subtype_regions = [ "se" ]
+    family.reload
+    family.update!(country: "FR")
+
+    assert_equal [ "fr" ], family.reload.investment_subtype_regions
+  end
+
   test "changing country keeps a custom investment subtype selection" do
     family = families(:dylan_family)
     family.update!(country: "SE", investment_subtype_regions: [ "fr" ])
