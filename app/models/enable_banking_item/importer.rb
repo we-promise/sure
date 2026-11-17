@@ -246,7 +246,8 @@ class EnableBankingItem::Importer
       message: "Enable Banking purge of stale early-fetched transactions failed; unlinked accounts keep their raw transactions until a later sync succeeds",
       source: self.class.name,
       provider_key: "enable_banking",
-      family: enable_banking_item.family,
+      # An id, resolved inside capture's own rescue: the database may be what failed.
+      family_id: enable_banking_item.family_id,
       metadata: {
         enable_banking_item_id: enable_banking_item.id,
         retention_days: UNLINKED_TRANSACTIONS_RETENTION.in_days.to_i,
