@@ -79,6 +79,15 @@ class MercuryItem::Syncer
     safe_message = user_safe_error_message(e)
     Rails.logger.error "#{self.class.name} - sync failed for #{mercury_item.class.name} #{mercury_item.id}: #{e.class} - #{e.message}"
     Rails.logger.error Array(e.backtrace).first(10).join("\n")
+    DebugLogEntry.capture(
+      category: "provider_sync_error",
+      level: "error",
+      message: "Sync failed",
+      source: self.class.name,
+      provider_key: "mercury",
+      family: mercury_item.family,
+      metadata: { mercury_item_id: mercury_item.id, error_class: e.class.name, error_message: e.message }
+    )
     Sentry.capture_exception(e) do |scope|
       scope.set_tags(mercury_item_id: mercury_item.id)
     end
