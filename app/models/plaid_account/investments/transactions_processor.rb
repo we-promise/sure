@@ -10,13 +10,23 @@ class PlaidAccount::Investments::TransactionsProcessor
     "cash" => "Other",
     "fee" => "Fee",
     "transfer" => "Transfer",
-    "dividend" => "Dividend",
     "interest" => "Interest",
     "contribution" => "Contribution",
     "withdrawal" => "Withdrawal",
-    "dividend reinvestment" => "Reinvestment",
     "spin off" => "Other",
     "split" => "Other"
+  }.freeze
+
+  # Plaid reports dividends, reinvestments and interest as subtypes of a broader
+  # type (a cash dividend is type "cash"), so these are checked before the type.
+  # Kept narrow on purpose: subtypes such as "contribution" also appear under
+  # "buy", where the type's label is the right one.
+  PLAID_SUBTYPE_TO_LABEL = {
+    "dividend" => "Dividend",
+    "qualified dividend" => "Dividend",
+    "non-qualified dividend" => "Dividend",
+    "dividend reinvestment" => "Reinvestment",
+    "interest" => "Interest"
   }.freeze
 
   def initialize(plaid_account, security_resolver:)
@@ -93,8 +103,8 @@ class PlaidAccount::Investments::TransactionsProcessor
     end
 
     def label_from_plaid_type(transaction)
-      plaid_type = transaction["type"]&.downcase
-      PLAID_TYPE_TO_LABEL[plaid_type] || "Other"
+      PLAID_SUBTYPE_TO_LABEL[transaction["subtype"]&.downcase] ||
+        PLAID_TYPE_TO_LABEL[transaction["type"]&.downcase] || "Other"
     end
 
     def transactions

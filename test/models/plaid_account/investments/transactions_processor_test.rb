@@ -245,4 +245,125 @@ class PlaidAccount::Investments::TransactionsProcessorTest < ActiveSupport::Test
     assert_equal "Bank Transfer", entry.name
     assert_instance_of Transaction, entry.entryable
   end
+
+  test "a Plaid cash dividend is labelled Dividend and classified as income" do
+    entry = process_plaid_transaction(cash_row("div_1", "dividend", "Dividend AAPL"))
+
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+    assert_equal :income, classify(entry)
+  end
+
+  test "a qualified dividend is labelled Dividend" do
+    entry = process_plaid_transaction(cash_row("qdiv_1", "qualified dividend", "Qualified dividend AAPL"))
+
+    assert_equal "Dividend", entry.transaction.investment_activity_label
+  end
+
+  test "a Plaid interest payment is labelled Interest and classified as income" do
+    entry = process_plaid_transaction(cash_row("int_1", "interest", "Interest earned"))
+
+    assert_equal "Interest", entry.transaction.investment_activity_label
+    assert_equal :income, classify(entry)
+  end
+
+  test "a Plaid dividend reinvestment trade is labelled Reinvestment" do
+    entry = process_plaid_transaction(trade_row("drip_1", "buy", "dividend reinvestment"))
+
+    assert_equal "Reinvestment", entry.trade.investment_activity_label
+    assert_equal :internal, classify(entry)
+  end
+
+  test "re-syncing a DRIP stored as Buy relabels it Reinvestment" do
+    entry = process_plaid_transaction(trade_row("drip_2", "buy", "dividend reinvestment"))
+    entry.trade.update_columns(investment_activity_label: "Buy")
+
+    assert_changes -> { entry.trade.reload.investment_activity_label }, from: "Buy", to: "Reinvestment" do
+      PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+    end
+  end
+
+  test "a buy with subtype contribution stays a Buy" do
+    entry = process_plaid_transaction(trade_row("buy_contrib_1", "buy", "contribution"))
+
+    assert_equal "Buy", entry.trade.investment_activity_label
+    assert_equal :internal, classify(entry)
+  end
+
+  test "a cash contribution keeps its label and kind" do
+    entry = process_plaid_transaction(cash_row("cash_contrib_1", "contribution", "401k Contribution"))
+
+    assert_equal [ "Other", "standard" ], [ entry.transaction.investment_activity_label, entry.transaction.kind ]
+
+    PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+    entry.transaction.reload
+    assert_equal [ "Other", "standard" ], [ entry.transaction.investment_activity_label, entry.transaction.kind ]
+  end
+
+  test "a split under transfer stays Transfer" do
+    row = cash_row("split_1", "split", "Stock split")
+    row["type"] = "transfer"
+    entry = process_plaid_transaction(row)
+
+    assert_equal "Transfer", entry.transaction.investment_activity_label
+    assert_equal "funds_movement", entry.transaction.kind
+  end
+
+  test "an unmapped subtype falls back to the type" do
+    fee = cash_row("fee_2", "miscellaneous fee", "Miscellaneous fee")
+    fee["type"] = "fee"
+    fee["amount"] = 10.25
+
+    assert_equal "Fee", process_plaid_transaction(fee).transaction.investment_activity_label
+    assert_equal "Sell", process_plaid_transaction(trade_row("sell_2", "sell", "sell")).trade.investment_activity_label
+  end
+
+  test "a missing subtype falls back to the type" do
+    entry = process_plaid_transaction(trade_row("buy_2", "buy", nil))
+
+    assert_equal "Buy", entry.trade.investment_activity_label
+  end
+
+  private
+
+    def cash_row(id, subtype, name)
+      {
+        "investment_transaction_id" => id,
+        "type" => "cash",
+        "subtype" => subtype,
+        "amount" => -12.5, # Negative, so money arriving in the account
+        "iso_currency_code" => "USD",
+        "date" => Date.current,
+        "name" => name
+      }
+    end
+
+    def trade_row(id, type, subtype)
+      sell = type == "sell"
+      {
+        "investment_transaction_id" => id,
+        "security_id" => "123",
+        "type" => type,
+        "subtype" => subtype,
+        "quantity" => sell ? -0.1 : 0.1,
+        "price" => 125,
+        "amount" => sell ? -12.5 : 12.5,
+        "iso_currency_code" => "USD",
+        "date" => Date.current,
+        "name" => "#{type} AAPL"
+      }
+    end
+
+    def process_plaid_transaction(row)
+      @plaid_account.update!(raw_holdings_payload: { transactions: [ row ] })
+      @security_resolver.stubs(:resolve).returns(OpenStruct.new(security: securities(:aapl)))
+
+      PlaidAccount::Investments::TransactionsProcessor.new(@plaid_account, security_resolver: @security_resolver).process
+
+      Entry.find_by!(external_id: row["investment_transaction_id"], source: "plaid")
+    end
+
+    def classify(entry)
+      Portfolio::FlowClassifier.new(scope_account_ids: [ entry.account_id ]).classify(entry)
+    end
 end
