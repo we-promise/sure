@@ -619,6 +619,9 @@ class Security::ProvidedTest < ActiveSupport::TestCase
     ]))
 
     Security.stubs(:providers).returns([ without_isin, with_isin ])
+    # Yahoo is listed because it is enabled, not standing in for a keyless
+    # provider, so its ticker keeps the exchange suffix.
+    Setting.stubs(:enabled_securities_providers).returns([ "yahoo_finance", "eodhd" ])
 
     results = Security.search_provider("IE00B579F325")
 
