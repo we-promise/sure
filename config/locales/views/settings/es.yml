@@ -7,6 +7,8 @@ es:
       advanced_section_title: Avanzado
       ai_prompts_label: Indicaciones de IA
       auto_matches_label: Coincidencias automáticas
+      classifier_label: Clasificador
+      background_jobs_label: Tareas en segundo plano
       api_key_label: Clave API
       payment_label: Pago
       categories_label: Categorías
@@ -29,6 +31,7 @@ es:
       self_hosting_label: Autoalojamiento
       sso_providers_label: Proveedores SSO
       statement_vault_label: Archivo de extractos
+      system_health_label: Estado del sistema
       tags_label: Etiquetas
       transactions_section_title: Transacciones
       users_label: Usuarios
