@@ -270,7 +270,13 @@ class Transfer < ApplicationRecord
       return unless inflow_transaction&.extra&.dig("auto_generated_transfer_counterpart") == true
 
       entry = Entry.find_by(entryable_type: "Transaction", entryable_id: inflow_transaction_id)
-      return if entry.nil?
+      if entry.nil?
+        # The user deleted the stand-in itself: without this the next sync
+        # would fabricate it again for the same outflow.
+        outflow = Transaction.find_by(id: outflow_transaction_id)
+        outflow&.dismiss_counterparty_transfer_suggestion!
+        return
+      end
 
       account = entry.account
       entry.destroy!
