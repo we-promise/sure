@@ -33,6 +33,7 @@ class AiSchemasTest < ActiveSupport::TestCase
       node = node.deep_stringify_keys
       assert_empty node.keys - ALLOWED, "#{path} uses keywords strict mode refuses: #{(node.keys - ALLOWED).join(", ")}"
       if Array(node["type"]).include?("object")
+        assert node["properties"].is_a?(Hash), "#{path}: an object needs properties"
         assert_equal node["properties"].keys.sort, Array(node["required"]).sort, "#{path}: every property must be required"
         assert_equal false, node["additionalProperties"], "#{path}: additionalProperties must be false"
         node["properties"].each { |key, child| assert_strict(child, "#{path}.#{key}") }
