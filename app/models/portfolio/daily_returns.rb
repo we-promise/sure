@@ -27,14 +27,20 @@ class Portfolio::DailyReturns
   Row = Data.define(
     :date, :value_open, :value_close, :external_flow, :composition_flow,
     :income, :fees, :market, :revaluations, :fx_effect,
-    :rate_missing, :suppressed, :unvalued_journal
+    :rate_missing, :suppressed, :unvalued_journal,
+    :contribution_rate_missing, :contribution_journal_unpriced
   ) do
     # unvalued_journal says WHY a day is suppressed when the reason is a
     # journal the series could not value, as opposed to a non-positive
     # denominator: its flow is missing while its value moved, which matters
     # to a reader that sums flows (a money-weighted return), not only to one
     # that chains returns. Defaults to false for a Row built by hand.
-    def initialize(unvalued_journal: false, **fields)
+    #
+    # The contribution_ flags narrow rate_missing and unvalued_journal to the
+    # deposits and withdrawals external_flow counts: a reader of net
+    # contributions is not short of anything when an internal move, a
+    # dividend or a fee could not be valued.
+    def initialize(unvalued_journal: false, contribution_rate_missing: false, contribution_journal_unpriced: false, **fields)
       super
     end
 
@@ -148,7 +154,9 @@ class Portfolio::DailyReturns
           # missing from the denominator while its value is present in the
           # close, so the day would read as return the portfolio did not earn.
           suppressed: !denominator.positive? || raw["journal_unpriced"] == true,
-          unvalued_journal: raw["journal_unpriced"] == true
+          unvalued_journal: raw["journal_unpriced"] == true,
+          contribution_rate_missing: raw["contribution_rate_missing"] == true,
+          contribution_journal_unpriced: raw["contribution_journal_unpriced"] == true
         )
       end
     end
@@ -522,21 +530,10 @@ class Portfolio::DailyReturns
             -- because the predicate compares `trades` columns, and a trade
             -- with no label makes it NULL; NOT NULL is NULL, which would
             -- drop the row from this check rather than keep it.
-            COALESCE(BOOL_OR(((entry_fx.rate IS NULL OR fx.rate IS NULL)
-                              AND (entries.amount <> 0 OR #{trade_commission_sql})
-                              AND NOT COALESCE((#{fragment(:journal_predicate)}), false)
-                              AND #{fragment(:flow_class_sql)} IS NOT NULL)
-                             OR (journal_fx.rate IS NULL
-                                 AND journal_holdings.price > 0
-                                 AND trades.qty <> 0
-                                 AND #{fragment(:journal_predicate)}
-                                 AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))
-                             OR (journal_prior_fx.rate IS NULL
-                                 AND journal_prior.currency IS NOT NULL
-                                 AND journal_prior.price > 0
-                                 AND #{journal_out_unpriced_sql}
-                                 AND #{fragment(:journal_predicate)}
-                                 AND #{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow'))), false) AS flow_rate_missing,
+            COALESCE(BOOL_OR((#{entry_rate_missing_sql} AND #{fragment(:flow_class_sql)} IS NOT NULL)
+                             OR (#{journal_rate_missing_sql} AND #{external_flow_class_sql})), false) AS flow_rate_missing,
+            COALESCE(BOOL_OR((#{entry_rate_missing_sql} OR #{journal_rate_missing_sql})
+                             AND #{external_flow_class_sql}), false) AS contribution_rate_missing,
             -- The journal suppression condition, and it keys on the PRICE rather
             -- than on the row. When Holding::PortfolioCache#load_prices finds no
             -- other price for a journal date -- an instance with no feed, a
@@ -573,14 +570,8 @@ class Portfolio::DailyReturns
             -- A quantity of 0 moves no units and has nothing to value, as the
             -- carried pass also reads it, so it never suppresses the day. A
             -- NULL quantity is unknown and does.
-            COALESCE(BOOL_OR(#{fragment(:journal_predicate)}
-                             AND (trades.qty IS NULL
-                                  OR (trades.qty <> 0
-                                      AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
-                                                       OR (#{journal_out_unpriced_sql}
-                                                           AND journal_holdings.qty = 0
-                                                           AND journal_prior.price IS NOT NULL
-                                                           AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false)))), false) AS journal_unpriced
+            COALESCE(BOOL_OR(#{journal_unpriced_sql}), false) AS journal_unpriced,
+            COALESCE(BOOL_OR(#{journal_unpriced_sql} AND #{external_flow_class_sql}), false) AS contribution_journal_unpriced
           FROM entries
           JOIN accounts entry_accounts ON entry_accounts.id = entries.account_id
           -- The same active-until window the balances use: a flow dated after
@@ -809,7 +800,11 @@ class Portfolio::DailyReturns
             COALESCE(SUM(per_row.carried_qty * per_row.price * per_row.rate), 0) AS carried_flow,
             BOOL_OR(per_row.rate IS NULL AND per_row.carried_qty > 0) AS carry_rate_missing,
             COALESCE(BOOL_OR(per_row.zero_qty > per_row.carried_qty
-                             OR (per_row.zero_qty IS NULL AND (per_row.netted OR per_row.qty_unknown))), false) AS carry_incomplete
+                             OR (per_row.zero_qty IS NULL AND (per_row.netted OR per_row.qty_unknown))), false) AS carry_incomplete,
+            -- The part of carry_incomplete that is the external journals' own
+            -- shortfall: a journal with no quantity (always external, since no
+            -- counterpart can match it) or a netted arrival.
+            COALESCE(BOOL_OR(per_row.qty_unknown OR (per_row.zero_qty IS NULL AND per_row.netted)), false) AS carry_contribution_incomplete
           FROM (
             SELECT
               cj.date,
@@ -838,6 +833,13 @@ class Portfolio::DailyReturns
           b.revaluations,
           b.fx_effect,
           (b.rate_missing OR COALESCE(f.flow_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)) AS rate_missing,
+          -- Only the deposits and withdrawals external_flow counts. A carry
+          -- settles external journals alone, so its missing rate is one; of
+          -- what else it repriced from zero, only the external journals' own
+          -- shortfall is.
+          (COALESCE(f.contribution_rate_missing, false) OR COALESCE(cj.carry_rate_missing, false)) AS contribution_rate_missing,
+          (COALESCE(f.contribution_journal_unpriced, false)
+           OR COALESCE(cj.carry_contribution_incomplete, false)) AS contribution_journal_unpriced,
           COALESCE(arr.arrived_value, 0) AS arrived_value,
           COALESCE(dep.departed_value, 0) AS departed_value,
           -- A first priced day that repriced units other than an external
@@ -1034,6 +1036,48 @@ class Portfolio::DailyReturns
           AND trades.currency = entries.currency
           AND ABS(entries.amount - (trades.qty * trades.price + trades.fee)) < trades.fee / 2)
       SQL
+    end
+
+    # The conditions flow_rate_missing and journal_unpriced test, kept apart
+    # from the flow class so each column and its contribution_ twin narrow the
+    # same expression (see #query).
+    def entry_rate_missing_sql
+      <<~SQL.squish
+        ((entry_fx.rate IS NULL OR fx.rate IS NULL)
+          AND (entries.amount <> 0 OR #{trade_commission_sql})
+          AND NOT COALESCE((#{fragment(:journal_predicate)}), false))
+      SQL
+    end
+
+    def journal_rate_missing_sql
+      <<~SQL.squish
+        ((journal_fx.rate IS NULL
+           AND journal_holdings.price > 0
+           AND trades.qty <> 0
+           AND #{fragment(:journal_predicate)})
+         OR (journal_prior_fx.rate IS NULL
+           AND journal_prior.currency IS NOT NULL
+           AND journal_prior.price > 0
+           AND #{journal_out_unpriced_sql}
+           AND #{fragment(:journal_predicate)}))
+      SQL
+    end
+
+    def journal_unpriced_sql
+      <<~SQL.squish
+        (#{fragment(:journal_predicate)}
+          AND (trades.qty IS NULL
+               OR (trades.qty <> 0
+                   AND NOT COALESCE((journal_holdings.price > 0 AND journal_fx.rate IS NOT NULL)
+                                    OR (#{journal_out_unpriced_sql}
+                                        AND journal_holdings.qty = 0
+                                        AND journal_prior.price IS NOT NULL
+                                        AND (journal_prior.price = 0 OR journal_prior_fx.rate IS NOT NULL)), false))))
+      SQL
+    end
+
+    def external_flow_class_sql
+      "#{fragment(:flow_class_sql)} IN ('external_inflow', 'external_outflow')"
     end
 
     def journal_out_unpriced_sql
