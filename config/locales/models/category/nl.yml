@@ -2,6 +2,28 @@
 nl:
   models:
     category:
-      uncategorized: Ongecategoriseerd
-      other_investments: Overige beleggingen
-      investment_contributions: Investeringsbijdragen
+      uncategorized: "Ongecategoriseerd"
+      other_investments: "Overige beleggingen"
+      investment_contributions: "Investeringsbijdragen"
+      defaults:
+        income: "Inkomsten"
+        food_and_drink: "Eten en drinken"
+        groceries: "Boodschappen"
+        shopping: "Winkelen"
+        transportation: "Vervoer"
+        travel: "Reizen"
+        entertainment: "Entertainment"
+        healthcare: "Gezondheidszorg"
+        personal_care: "Persoonlijke verzorging"
+        home_improvement: "Huis en verbouwing"
+        mortgage_rent: "Hypotheek / huur"
+        utilities: "Gas, water en licht"
+        subscriptions: "Abonnementen"
+        insurance: "Verzekeringen"
+        sports_and_fitness: "Sport en fitness"
+        gifts_and_donations: "Cadeaus en donaties"
+        taxes: "Belastingen"
+        loan_payments: "Leningaflossingen"
+        services: "Diensten"
+        fees: "Kosten"
+        savings_and_investments: "Sparen en beleggen"

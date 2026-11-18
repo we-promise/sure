@@ -91,6 +91,7 @@ ru:
         few: '%{count} платежа не учтены: нет обменного курса'
         many: '%{count} платежей не учтено: нет обменного курса'
         other: '%{count} платежа не учтены: нет обменного курса'
+      pulse_until: "до %{date}"
     summary:
       remaining: Осталось %{amount}
       paid_headline: Оплачено %{amount}
@@ -248,7 +249,8 @@ ru:
       empty_month: В этом месяце нет платежей к оплате.
     all:
       search_placeholder: Поиск платежей
-      any_status: Любой статус
+      current_bills: Текущие платежи
+      dismissed_hidden_description: Завершённые платежи скрыты.
       status_filters:
         overdue: Просроченные
         due: Скоро к оплате

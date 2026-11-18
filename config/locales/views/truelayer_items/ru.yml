@@ -1,0 +1,119 @@
+---
+ru:
+  truelayer_items:
+    default_name: "Подключение TrueLayer"
+    redirect_blocked: "Не удалось открыть TrueLayer. Попробуйте снова."
+    create:
+      success: "Учётные данные TrueLayer сохранены. Теперь можно подключить банк."
+    update:
+      success: "Учётные данные TrueLayer обновлены."
+    destroy:
+      success: "Подключение TrueLayer запланировано к удалению."
+    connect:
+      credentials_required: "Сначала добавьте идентификатор клиента и секрет TrueLayer."
+    sync:
+      not_connected: "Подключите банк перед синхронизацией."
+    callback:
+      authorization_error: "Ошибка авторизации TrueLayer: %{error}"
+      authorization_failed: "Не удалось завершить подключение TrueLayer: %{message}"
+      invalid_callback: "Вход в TrueLayer истёк или не соответствует этому сеансу. Начните снова."
+      success: "Банк подключён. Ваши счета импортируются; настройте их после завершения синхронизации."
+    truelayer_item:
+      consent_expiring: "Доступ к банку истекает %{date}"
+      delete: "Удалить подключение"
+      deletion_in_progress: "идёт удаление…"
+      error: "Ошибка"
+      history_missed: "Более ранняя история не импортирована. Переподключитесь, чтобы получить её."
+      no_accounts_description: "В этом подключении пока нет связанных счетов."
+      no_accounts_title: "Нет счетов"
+      reconnect: "Переподключить"
+      requires_update: "Переподключите этот банк для продолжения синхронизации"
+      setup_action: "Настроить новые счета"
+      setup_description: "Связано %{linked} из %{total} счетов. Выберите типы для недавно импортированных счетов TrueLayer."
+      setup_needed: "Новые счета готовы к настройке"
+      status: "Синхронизировано %{timestamp} назад"
+      status_never: "Синхронизация ещё не выполнялась"
+      status_with_summary: "Последняя синхронизация %{timestamp} назад • %{summary}"
+      syncing: "Синхронизация…"
+      sync_status:
+        no_accounts: "Счета не найдены"
+        synced:
+          one: "Синхронизирован %{count} счёт"
+          other: "Синхронизировано %{count} счетов"
+          few: "Синхронизировано %{count} счёта"
+          many: "Синхронизировано %{count} счетов"
+        partial_setup:
+          one: "Синхронизирован %{linked}, %{unlinked} требует настройки"
+          other: "Синхронизировано %{linked}, %{unlinked} требуют настройки"
+          few: "Синхронизировано %{linked}, %{unlinked} требуют настройки"
+          many: "Синхронизировано %{linked}, %{unlinked} требуют настройки"
+    subtype_select:
+      placeholder:
+        subtype: "Выберите подтип"
+        type: "Выберите тип"
+    setup_accounts:
+      account_type_label: "Тип счёта:"
+      all_accounts_linked: "Все ваши счета TrueLayer уже настроены."
+      cancel: "Отмена"
+      choose_account_type: "Выберите правильный тип для каждого счёта TrueLayer:"
+      create_accounts: "Создать счета"
+      creating_accounts: "Создание счетов…"
+      kind_account: "Банковский счёт"
+      kind_card: "Карта"
+      no_accounts_to_setup: "Нет счетов для настройки"
+      page_title: "Настройка счетов TrueLayer"
+      subtitle: "Выберите правильный тип для импортированных счетов"
+      sync_start_date_help: "Операции до этой даты не импортируются. Оставьте поле пустым, чтобы сохранить всё, что предоставил банк."
+      sync_start_date_label: "Импортировать операции с"
+      title: "Настройте счета TrueLayer"
+      account_types:
+        skip: "Пропустить этот счёт"
+        depository: "Расчётный или сберегательный счёт"
+        credit_card: "Кредитная карта"
+        loan: "Кредит или ипотека"
+      subtype_labels:
+        depository: "Подтип счёта:"
+        credit_card: ""
+        loan: "Тип кредита:"
+      subtype_messages:
+        credit_card: "Кредитные карты будут автоматически настроены как счета кредитных карт."
+    complete_account_setup:
+      all_skipped: "Все счета пропущены. Счета не созданы."
+      creation_failed: "Не удалось создать счета: %{error}"
+      success:
+        one: "Создан %{count} счёт."
+        other: "Создано %{count} счетов."
+        few: "Создано %{count} счёта."
+        many: "Создано %{count} счетов."
+    select_existing_account:
+      cancel: "Отмена"
+      description: "Выберите счёт TrueLayer для связи. Его операции будут синхронизироваться с этим счётом."
+      link_account: "Связать счёт"
+      no_accounts: "Несвязанных счетов TrueLayer нет. Сначала подключите банк в «Настройки → Провайдеры»."
+      title: "Связать %{account_name} с TrueLayer"
+    link_existing_account:
+      already_linked: "Этот счёт TrueLayer уже связан с другим счётом."
+      only_manual: "С TrueLayer можно связать только ручные счета."
+      success: "%{account_name} связан с TrueLayer."
+  settings:
+    providers:
+      truelayer_panel:
+        client_id_label: "Идентификатор клиента"
+        client_id_placeholder: "например, sure-abc123 (sandbox-... для Mock Bank)"
+        client_secret_label: "Секрет клиента"
+        client_secret_placeholder_new: "Вставьте секрет клиента"
+        client_secret_placeholder_update: "Оставьте пустым, чтобы сохранить текущий секрет"
+        connect_bank: "Подключить банк"
+        consent_expires: "Доступ к банку истекает %{date}"
+        reconnect: "Переподключить"
+        reconnect_required: "Требуется переподключение"
+        remove: "Удалить"
+        remove_confirm: "Удалить это подключение к банку? Связанные счета сохранят историю, но перестанут синхронизироваться."
+        save_credentials: "Сохранить учётные данные"
+        step_1_html: "Создайте приложение на %{link} и скопируйте его идентификатор клиента и секрет."
+        step_2_html: "Добавьте %{callback_url} в разрешённые URI перенаправления приложения."
+        step_3: "Сохраните учётные данные ниже, затем подключите банк. Sure импортирует полную историю в первые несколько минут после подтверждения доступа."
+        step_4: "Банки Великобритании просят переподключаться каждые 90 дней; Sure покажет кнопку «Переподключить» до истечения доступа."
+        sync: "Синхронизировать"
+        syncing: "Синхронизация…"
+        update_credentials: "Обновить учётные данные"

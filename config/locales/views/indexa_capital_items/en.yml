@@ -185,6 +185,7 @@ en:
       fetch_failed: "Failed to Fetch Accounts"
       import_selected: "Import selected accounts"
       instructions: "Select the accounts you want to import from IndexaCapital. You can choose multiple accounts."
+      skip_notice: "Unchecked accounts are skipped: Sure stops fetching them until you link them to an account."
       no_accounts: "No unlinked accounts found from this IndexaCapital connection."
       no_accounts_to_setup: "No Accounts to Set Up"
       no_api_key: "IndexaCapital credentials are not configured. Please check your connection settings."

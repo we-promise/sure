@@ -1,5 +1,13 @@
 ---
 ru:
+  activerecord:
+    errors:
+      models:
+        family_merchant:
+          attributes:
+            logo:
+              invalid_content_type: "должен быть изображением JPEG, PNG или WebP"
+              invalid_file_size: "размер файла должен быть меньше %{max_megabytes} МБ"
   models:
     merchant:
       no_merchant: Без продавца

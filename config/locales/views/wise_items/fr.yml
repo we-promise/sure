@@ -24,6 +24,7 @@ fr:
     entries:
       default_name: Transaction Wise
       fee_name: Frais Wise
+      refund_name: Remboursement Wise
     generate_sca_keypair:
       failed: Impossible de générer une nouvelle paire de clés SCA. Veuillez réessayer.
       success: Nouvelle paire de clés SCA générée. Enregistrez la clé publique auprès de Wise pour terminer l'activation.
@@ -32,9 +33,12 @@ fr:
       not_found: Solde Wise introuvable.
       success: Solde Wise lié au compte avec succès.
     link_existing_account:
+      account_already_linked: Ce compte est déjà lié à un fournisseur.
+      currency_mismatch: "Ce solde Wise est en %{balance_currency}, mais le compte est en %{account_currency}. Choisissez un solde dans la devise du compte."
       failed: Échec de la liaison du compte. Veuillez réessayer.
       not_found: Compte ou solde Wise introuvable.
       success: "Liaison de %{account_name} à Wise réussie"
+      unsupported_account_type: Les soldes Wise ne peuvent être liés qu'à des comptes de liquidités.
     link_profiles:
       already_connected: Tous les profils sélectionnés sont déjà connectés.
       no_profiles_selected: Veuillez sélectionner au moins un profil.
@@ -68,7 +72,7 @@ fr:
       sync_start_date_label: Importer les transactions à partir de
       sync_start_date_help: Les relevés Wise sont importés à partir de cette date. Conservez la valeur par défaut pour importer jusqu'à un an d'historique.
       import_all_history_label: Importer tout l'historique des transactions
-      import_all_history_help: Récupère tous les relevés Wise historiques au lieu de seulement la dernière année.
+      import_all_history_help: Importe tout l'historique Wise (virements, activités et relevés) au lieu de seulement la dernière année. Chaque solde commence alors à 0 le jour où Wise l'a ouvert.
       disconnect: Déconnecter
       disconnect_confirm: Voulez-vous vraiment déconnecter %{name} ? Cela supprimera
         toutes les données de compte synchronisées.
@@ -154,6 +158,9 @@ fr:
       checking_account_configuration: Vérification de la configuration du compte…
       credentials_invalid: Jeton API Wise invalide ou autorisations insuffisantes
       failed: Échec de la synchronisation. Veuillez réessayer ou contacter le support.
+      fetch_failed:
+        one: "%{count} requête Wise a échoué. La prochaine synchronisation la relancera."
+        other: "%{count} requêtes Wise ont échoué. La prochaine synchronisation les relancera."
       import_failed: Échec de l'importation Wise.
       importing_accounts: Importation des comptes depuis Wise…
       processing_transactions: Traitement des transactions…

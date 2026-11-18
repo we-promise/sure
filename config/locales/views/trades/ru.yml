@@ -72,3 +72,6 @@ ru:
       invalid_activity_label: Недопустимая метка инвестиционной операции
       invalid_type: Недопустимый тип
       supported_types: 'type должен быть одним из: %{types}'
+    trade:
+      scheduled: "Запланировано"
+      scheduled_tooltip: "Дата в будущем — до неё не влияет на баланс"

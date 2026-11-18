@@ -64,6 +64,16 @@ ru:
       toggle_section: Переключить видимость раздела
       sections_aria: Разделы отчётов
       shortcut_hint: '%{action} (%{key})'
+      tag_filter:
+        all: "Все теги"
+        selected:
+          one: "%{count} тег"
+          few: "%{count} тега"
+          many: "%{count} тегов"
+          other: "%{count} тегов"
+        search: "Поиск тегов"
+        apply: "Применить"
+      section_aria: "Раздел «%{title}». Нажмите Enter или пробел, чтобы захватить для изменения порядка, затем используйте клавиши со стрелками для перемещения."
     invalid_date_range: Дата окончания не может быть раньше даты начала. Даты были
       поменяны местами.
     investment_flows:
@@ -108,6 +118,11 @@ ru:
       view_details: Посмотреть детали
       weight: Доля
       withdrawals: Выводы за период
+      unconverted_note:
+        one: "%{count} доход не включён: нет обменного курса в %{currency}"
+        few: "%{count} дохода не включены: нет обменного курса в %{currency}"
+        many: "%{count} доходов не включено: нет обменного курса в %{currency}"
+        other: "%{count} доходов не включено: нет обменного курса в %{currency}"
     net_worth:
       assets_vs_liabilities: Активы и долги
       current_net_worth: 'Текущий капитал'
@@ -167,6 +182,14 @@ ru:
         net: Чистый
         savings_rate: Норма сбережений
         title: Ежемесячные тренды
+      biggest_expenses:
+        title: "Наибольшие расходы"
+        date: "Дата"
+        name: "Название"
+        category: "Категория"
+        account: "Счёт"
+        amount: "Сумма"
+        one_time: "Разовые"
     summary:
       budget_performance: Выполнение бюджета
       income_minus_expenses: Доход минус расходы
@@ -278,3 +301,11 @@ ru:
         slightly_more: На 15–50% больше
         more: На 50–100% больше
         much_more: Более чем на 100% больше
+    biggest_expenses:
+      title: "Наибольшие расходы"
+      one_time: "Разовые"
+      limit_aria: "Количество отображаемых расходов"
+      table:
+        name: "Название"
+        category: "Категория"
+        amount: "Сумма"

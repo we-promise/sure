@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 json.id transaction.id
+# Web routes for a single transaction (/transactions/:id) take the entry id,
+# not the transaction id, so expose it for clients that link back into the app.
+json.entry_id transaction.entry.id
 json.date transaction.entry.date
 json.amount transaction.entry.amount_money.format
 

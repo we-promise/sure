@@ -119,6 +119,8 @@ ru:
         valuation_source: 'Оценка от %{provider}; последнее обновление — %{date}'
         link_valuation: 'Автоматически обновлять стоимость через %{provider}'
         link_valuation_description: 'Стоимость этого объекта обновляется только вручную.'
+        trend_in_currency: "Динамика в %{currency}"
+        rate_unavailable: "Обменный курс недоступен"
     avm_providers:
       rentcast: RentCast
       realie: Realie

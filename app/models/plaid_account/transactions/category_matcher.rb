@@ -102,7 +102,12 @@ class PlaidAccount::Transactions::CategoryMatcher
       end
     end
 
+    # Default categories are created in the family's locale ("Lebensmittel",
+    # "Restaurants & Bars"), and the ASCII-only normalisation below would blank or
+    # mangle those names. Compare them by their English default name instead, so the
+    # English aliases in the taxonomy still match. Custom names pass through as-is.
     def normalize_user_category_name(name)
-      name.to_s.downcase.gsub(/[^a-z0-9]/, " ").strip
+      english_name = I18n.with_locale(:en) { Category.localized_default_name_for(name) }
+      english_name.to_s.downcase.gsub(/[^a-z0-9]/, " ").strip
     end
 end

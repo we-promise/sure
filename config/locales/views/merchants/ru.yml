@@ -1,5 +1,14 @@
 ---
 ru:
+  merchants:
+    show:
+      average_transaction: "Средняя транзакция"
+      edit: "Редактировать продавца"
+      first_transaction: "Первая транзакция"
+      last_transaction: "Последняя транзакция"
+      summary: "Сводка"
+      total_spending: "Общие расходы"
+      total_transactions: "Всего транзакций"
   family_merchants:
     create:
       error: 'Ошибка при создании продавца: %{error}'
@@ -19,6 +28,9 @@ ru:
       name_placeholder: Имя продавца
       website_hint: Введите веб-сайт продавца, чтобы автоматически отобразить его
         логотип
+      logo_hint: "Заменяет логотип сайта. JPEG, PNG или WebP, до %{max_megabytes} МБ."
+      logo_label: "Логотип"
+      remove_logo_label: "Удалить загруженный логотип"
       website_placeholder: Веб-сайт (например, starbucks.com)
     index:
       empty: Пока нет продавцов

@@ -9,6 +9,9 @@ zh-CN:
     new:
       title: 请输入账户余额
     subtypes:
+      cash:
+        long: 现金
+        short: 现金
       cd:
         long: 定期存单
         short: 定期存单

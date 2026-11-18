@@ -1,0 +1,14 @@
+---
+ru:
+  activerecord:
+    attributes:
+      account/accountable:
+        purchase_date: Дата покупки
+      vehicle:
+        purchase_date: Дата покупки
+    errors:
+      models:
+        vehicle:
+          attributes:
+            purchase_date:
+              must_precede_entries: должна быть раньше самой ранней операции счёта

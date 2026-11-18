@@ -55,6 +55,7 @@ ru:
         target_balance_pending: Рассчитается при сохранении
         target_balance_hint: По медиане ваших ежемесячных расходов за указанное выше число месяцев. Обновляется каждый месяц.
         currency_conversion_hint: 'Счета могут быть в разных валютах. Итоги пересчитываются в %{currency}, а зарезервированные суммы остаются в валюте каждого счёта.'
+        progress_basis: Что засчитывается в эту цель
       save: Сохранить изменения
       subtypes:
         cd: Срочный вклад
@@ -81,6 +82,14 @@ ru:
         whole_balance: Этот счёт будет пополнять цель всем остатком после других резервирований.
         whole_balance_alone: Эта цель будет использовать весь баланс этого счёта.
         converted: 'Резерв: ≈ {amount}.'
+      progress_basis_locked: Прогресс этой цели был зафиксирован при её выполнении. Чтобы изменить, что в неё засчитывается, сначала откройте её снова или восстановите.
+      progress_bases:
+        balance:
+          label: Текущая стоимость счетов
+          hint: Рыночная стоимость. Инвестиционные прибыли и убытки засчитываются в цель.
+        contributions:
+          label: Только мои взносы
+          hint: Чистые пополнения. Рыночные прибыли и убытки не учитываются.
     goal_card:
       accounts:
         one: "%{count} счёт"
@@ -123,6 +132,8 @@ ru:
       footer_reserve_intact: Резерв в норме
       footer_reserve_short: Пополнить на %{amount}
       partial_total: 'Некоторые остатки не учтены: пока нет курса обмена.'
+      pace_unknown_with_target: "Темп неизвестен · цель %{target}/мес."
+      pace_unknown: "Темп неизвестен"
     index:
       archived_section:
         heading: Архив
@@ -170,6 +181,11 @@ ru:
             few: "%{count} достигнуты"
             many: "%{count} достигнуты"
             other: "%{count} достигнуты"
+          pace_unknown:
+            one: "1 с неизвестным темпом"
+            other: "%{count} с неизвестным темпом"
+            few: "%{count} с неизвестным темпом"
+            many: "%{count} с неизвестным темпом"
         on_track_value: "%{on_track} из %{total}"
         velocity_delta_down: "↓ %{percent}%% к предыдущим 30 дн."
         velocity_delta_flat: к предыдущим 30 дн.
@@ -279,12 +295,19 @@ ru:
         to_go: Осталось %{amount}
         including_used: Включая уже потраченные %{amount}
         aria_label_with_used: Выполнено %{percent}%. %{amount} из %{target}, включая уже потраченные %{used}.
+        basis:
+          balance: Учитывается текущая стоимость счетов
+          contributions: Учитываются только ваши взносы
+        basis_at_completion:
+          balance: Учитывалась стоимость счетов на момент выполнения цели
+          contributions: Учитывались только ваши взносы на момент выполнения цели
       status_callout:
         behind: откладывайте %{amount}/мес. больше
         behind_covered: ожидаемые пополнения покроют разницу
         no_target_date: укажите дату
         on_track: 'цель будет достигнута около %{date}'
         depleted: на %{amount} ниже целевого баланса — пополните, чтобы восстановить резерв
+        pace_unknown: "Пока нельзя определить темп по этим счетам: за последний год нужно хотя бы одно обновление баланса и история балансов за год."
       unarchive: Восстановить
       consume: Я потратил часть этих денег
       reserve_shortfall:
@@ -323,6 +346,7 @@ ru:
         tooltip_projected: 'Прогноз: %{amount}'
         tooltip_saved: 'Накоплено: %{amount}'
         tooltip_target_relation: '%{percent}% от цели %{target}'
+        pace_unknown: "Пока недостаточно истории по этим счетам, чтобы определить темп, поэтому прогноз недоступен."
     states:
       active: Активна
       archived: В архиве
@@ -338,6 +362,7 @@ ru:
       reached: Достигнута
       funded: Резерв в норме
       depleted: Нужно пополнить
+      pace_unknown: "Темп неизвестен"
     unarchive:
       invalid_transition: Нельзя восстановить цель в текущем состоянии.
       success: Цель восстановлена.

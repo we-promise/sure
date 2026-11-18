@@ -1,0 +1,9 @@
+---
+ru:
+  activerecord:
+    errors:
+      models:
+        sophtron_item:
+          attributes:
+            base_url:
+              official_hosts_only: "должен быть пустым или иметь значение https://api.sophtron.com/api"

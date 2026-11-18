@@ -6,7 +6,6 @@ hu:
       subtitle: Átfogó betekintés a pénzügyi helyzetedbe
       export: CSV exportálása
       print_report: Jelentés nyomtatása
-      toggle_section: "Szakasz láthatóságának váltása"
       periods:
         monthly: Havi
         quarterly: Negyedéves

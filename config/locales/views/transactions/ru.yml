@@ -56,6 +56,9 @@ ru:
         save: Сохранить
         tags_label: Теги
         transactions_section: Операции
+        no_change: "(без изменений)"
+        reconciled_status_hint: "Применимо только к счетам с ручным вводом (без синхронизации с банком)."
+        reconciled_status_label: "Статус сверки"
     categorizes:
       create:
         categorized:
@@ -246,6 +249,7 @@ ru:
         type: Тип
         ai: 'ИИ'
         attachment: 'Вложение'
+        reconcile_status: "Сверка"
     searches:
       filters:
         account_filter:
@@ -307,6 +311,8 @@ ru:
         status_filter: Статус
         tag_filter: Тег
         type_filter: Тип
+        loading: "Загрузка фильтров..."
+        reconcile_status_filter: "Сверка"
       search:
         equal_to: равно
         greater_than: больше чем
@@ -315,6 +321,7 @@ ru:
       duplicate: Дублировать
       edit: Редактировать
       selected: выбрано
+      reconcile: "Сверить"
     show:
       account_label: Счёт
       activity_type: Тип активности
@@ -407,6 +414,11 @@ ru:
       inflow: Поступления
       outflow: Отток
       total_transactions: Всего операций
+      scheduled_count:
+        one: "включая %{count} запланированную"
+        few: "включая %{count} запланированные"
+        many: "включая %{count} запланированных"
+        other: "включая %{count} запланированных"
     toggle_recurring_section: Переключить предстоящие регулярные операции
     transaction:
       activity_type_tooltip: Тип инвестиционной активности
@@ -421,6 +433,12 @@ ru:
       split: Разделена
       split_child_tooltip: Часть разделенной операции
       split_tooltip: Эта операция была разделена на несколько записей
+      transfer_hint: Перевод?
+      transfer_hint_dismiss: Это не перевод
+      transfer_hint_tooltip: В другом счёте есть похожая встречная операция — нажмите, чтобы сопоставить их как перевод
+      scheduled: "Запланировано"
+      scheduled_tooltip: "Дата в будущем — до неё не влияет на баланс"
+      view_merchant: "Посмотреть продавца"
     transfer_match:
       auto_matched: Автоматически сопоставлено
       auto_matched_short: А/С
@@ -428,8 +446,23 @@ ru:
       payment_confirmed: Платеж подтвержден
       reject_match: Отклонить сопоставление
       transfer_confirmed: Перевод подтвержден
+      auto_matched_tooltip_html: "%{amount} на счёте %{account} от %{date}. Нажмите для проверки."
+      auto_matched_tooltip_hidden: "Операция на счёте, который вы не можете видеть."
     unknown_name: Неизвестная операция
     update:
       updated: Операция обновлена
     transaction_category:
       set_on_outflow: 'Категория задана для исходящей части этого перевода; изменить её можно только там.'
+    reconcile:
+      success: "Отмечено как %{status}"
+      failure: "Не удалось обновить статус сверки"
+      unavailable: "Сверка не включена для этой семьи"
+      not_manual_account: "Статус сверки применим только к счетам с ручным вводом (без синхронизации с банком)"
+      statuses:
+        unreconciled: "Не сверено"
+        cleared: "Проведено"
+        reconciled: "Сверено"
+      badge:
+        unreconciled_tooltip: "Ещё не проверено по выписке. Нажмите, чтобы отметить как проведённое."
+        cleared_tooltip: "Подтверждено выпиской, но ещё не полностью сверено. Нажмите, чтобы отметить как сверенное."
+        reconciled_tooltip: "Период выписки полностью сверён. Нажмите, чтобы сбросить статус на «Не сверено»."

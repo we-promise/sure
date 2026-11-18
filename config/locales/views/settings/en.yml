@@ -1,10 +1,5 @@
 ---
 en:
-  views:
-    settings:
-      payments:
-        renewal: "Your contribution continues on %{date}."
-        cancellation: "Your contribution ends on %{date}."
   settings:
     background_jobs:
       show:
@@ -370,6 +365,7 @@ en:
         revoke_confirm: Revoke access for this client?
       revoke:
         revoked: Connection revoked.
+    encryption_migration_guide: Encryption setup and migration guide
     settings_nav:
       accounts_label: Accounts
       advanced_section_title: Advanced

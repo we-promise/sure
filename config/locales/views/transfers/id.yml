@@ -1,0 +1,55 @@
+---
+id:
+  transfers:
+    create:
+      success: Transfer berhasil dibuat
+      exchange_rate_unavailable: Kurs valas tidak tersedia untuk mata uang dan tanggal yang dipilih
+      date_invalid: tidak valid
+      stale_form: Formulir ini telah dikirimkan sebelumnya dengan rincian yang berbeda. Silakan muat ulang halaman dan coba lagi.
+    destroy:
+      success: Transfer berhasil dihapus
+    form:
+      amount: Jumlah
+      bank_charges: Biaya Bank
+      outgoing_fee: Biaya transfer keluar
+      incoming_fee: Biaya transfer masuk
+      date: Tanggal
+      destination_amount: Jumlah tujuan
+      destination_amount_display: "Jumlah tujuan: %{amount}"
+      exchange_rate_display: "Kurs valas: %{rate}"
+      expense: Pengeluaran
+      from: Dari
+      income: Pemasukan
+      select_account: Pilih rekening
+      source_amount: Jumlah sumber
+      submit: Buat transfer
+      to: Ke
+      transfer: Transfer
+    new:
+      title: Transfer baru
+    show:
+      delete: Hapus transfer
+      delete_subtitle: Tindakan ini akan menghapus transfer. Transaksi yang mendasarinya tidak akan dihapus.
+      delete_title: Hapus transfer?
+      details: Detail
+      investment_contribution_subtitle: Hitung transfer ini sebagai pengeluaran dalam anggaran dan laporan. Nonaktifkan jika rekening sekuritas atau kripto hanya mengonversi uang ke mata uang lain.
+      investment_contribution_title: Setoran investasi
+      mark_recurring: Tandai sebagai berulang
+      mark_recurring_subtitle: Lacak transfer ini sebagai pola berulang di umpan mendatang dan halaman berulang.
+      mark_recurring_title: Tandai transfer sebagai berulang
+      note_label: Catatan
+      note_placeholder: Tambahkan catatan pada transfer ini
+      overview: Ringkasan
+      settings: Pengaturan
+      from: Dari
+      to: Ke
+      date: Tanggal
+      transfer_amount: Jumlah transfer
+      total: Total
+      bank_charges: Biaya Bank
+      source_fee: Biaya sumber
+      destination_fee: Biaya tujuan
+      category: Kategori
+      uncategorized: Tanpa kategori
+    update:
+      success: Transfer berhasil diperbarui

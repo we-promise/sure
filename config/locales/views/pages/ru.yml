@@ -29,6 +29,8 @@ ru:
         sort_auto: Автоматически
         sort_ascending: Сначала меньшие
         sort_descending: Сначала большие
+        opt_in_title: "Показать новую диаграмму"
+        opt_in_description: "Сравните экспериментальную диаграмму Санки с диаграммой выше. Эту функцию можно отключить в любой момент."
       balance_sheet:
         add_accounts: Добавьте счета %{name}, чтобы увидеть разбивку
         add_asset_accounts: Добавьте счета активов
@@ -139,6 +141,25 @@ ru:
         none_hidden: Все виджеты показаны. Чтобы скрыть виджет, нажмите на значок глаза.
         all_hidden_title: Все виджеты скрыты
         all_hidden_description: Откройте настройки главной страницы, чтобы вернуть виджеты.
+      cashflow_donut:
+        title: "Кольца денежного потока"
+        date_range: "%{start_date}–%{end_date}"
+        month_picker_aria_label: "Выбрать месяц"
+        filter_accounts: "Фильтр счетов (%{count})"
+        filter_accounts_all: "Все счета"
+        period_scope_hint: "Показывает выбранный здесь месяц независимо от периода панели вверху."
+        search_accounts: "Поиск счетов"
+        apply: "Применить"
+        no_data: "Нет денежного потока за этот месяц"
+        spent: "Потрачено"
+        of_income: "из дохода %{amount}"
+        left_amount: "Осталось %{amount}"
+        over_amount: "Превышение на %{amount}"
+        left: "Осталось потратить"
+        over: "Превышает доход"
+        inflows: "Поступления"
+        outflows: "Оттоки"
+        weight: "Доля"
     feedback:
       bug_report: Сообщить об ошибке
       description: Сообщите нам, если у вас есть замечания. Можно приложить ссылки

@@ -1,0 +1,5 @@
+---
+ru:
+  models:
+    investment_statement:
+      cash: Денежные средства

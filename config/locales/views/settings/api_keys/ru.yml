@@ -4,6 +4,7 @@ ru:
     api_keys:
       create:
         success: Ваш API-ключ успешно создан
+        creation_failed: "Не удалось создать API-ключ. Попробуйте ещё раз."
       created:
         continue: Перейти к настройкам API-ключа
         copy_key: Скопировать API-ключ

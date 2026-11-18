@@ -11,9 +11,7 @@
         <%= render partial: "shared/color_avatar", locals: { name: family_merchant.name, color: family_merchant.color } %>
       <% end %>
 
-      <p class="font-medium truncate">
-        <%= family_merchant.name %>
-      </p>
+      <%= link_to family_merchant.name, merchant_path(family_merchant), class: "font-medium truncate hover:underline" %>
     </div>
   </td>
   <% unless Current.user&.guest? %>

@@ -95,6 +95,8 @@ ca:
       success: La configuració d'Interactive Brokers s'ha actualitzat correctament.
   providers:
     ibkr:
+      named_connection: "Interactive Brokers (%{name})"
+      named_connection_description: "Vincula els comptes de la teva consulta Flex %{name}"
       connection_description: Connecta un informe de Flex Web Service d'Interactive
         Brokers
       institution_name: Interactive Brokers

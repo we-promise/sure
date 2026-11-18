@@ -125,6 +125,7 @@ class SureImport::Preflight
     validate_references
     validate_provider_merchant_diffs
     validate_duplicate_valuations
+    validate_duplicate_budget_categories
     Result.new(
       errors: @errors,
       warnings: @warnings,
@@ -374,6 +375,21 @@ class SureImport::Preflight
         key = [ account_id.to_s, date.to_s ]
         if seen.key?(key)
           add_error(:duplicate_valuation, "Line #{record[:line_number]} duplicates valuation for account #{account_id.inspect} on #{date}; first seen on line #{seen[key]}.")
+        else
+          seen[key] = record[:line_number]
+        end
+      end
+    end
+
+    def validate_duplicate_budget_categories
+      seen = {}
+      @records["BudgetCategory"].each do |record|
+        budget_id = record[:data]["budget_id"]
+        category_id = record[:data]["category_id"]
+        next if budget_id.blank? || category_id.blank?
+        key = [ budget_id.to_s, category_id.to_s ]
+        if seen.key?(key)
+          add_error(:duplicate_budget_category, "Line #{record[:line_number]} duplicates budget category for budget #{budget_id.inspect} and category #{category_id.inspect}; first seen on line #{seen[key]}.")
         else
           seen[key] = record[:line_number]
         end

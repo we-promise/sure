@@ -3,7 +3,7 @@ ru:
   insights:
     notification:
       title: Новый финансовый инсайт
-      body: Откройте Sure, чтобы посмотреть свежий инсайт от ИИ.
+      body: Откройте Sure, чтобы посмотреть свежий инсайт.
     index:
       title: Инсайты
       subtitle: Что происходит с вашими финансами. Обновляется каждую ночь.
@@ -35,6 +35,9 @@ ru:
       budget_at_risk: Бюджет
       budget_on_track: Бюджет
       maintained_goal_depleted: Резерв
+      bill_not_covered: "Платежи"
+      loan_payment_change: "Платёж по кредиту"
+      bank_fees: "Комиссии"
     meta:
       next_n_days:
         one: Следующий %{count} день
@@ -48,7 +51,7 @@ ru:
         other: Последние %{count} дня
       date_range: '%{from} – %{to}'
     figures:
-      vs_previous: к прошлому месяцу
+      vs_previous_three_months: к трём предыдущим месяцам
       today: сегодня
       on_pace: по текущему темпу
       of_budget: от бюджета
@@ -63,15 +66,24 @@ ru:
         few: без движения %{count} дня
         many: без движения %{count} дней
         other: без движения %{count} дня
+      short_on: "не хватает к %{date}"
+      fee_charges:
+        one: "%{count} комиссия"
+        other: "%{count} комиссий"
+        few: "%{count} комиссии"
+        many: "%{count} комиссий"
     actions:
       spending_anomaly: Операции в категории «%{category}»
       cash_flow_warning: Проверить регулярные операции
       net_worth_milestone: 'Открыть отчёт о капитале'
       subscription_audit: Проверить регулярные операции
-      savings_rate_change: Операции за тот месяц
+      savings_rate_change: Операции за эти месяцы
       idle_cash: Перейти к счёту
       budget: Открыть бюджет
       maintained_goal_depleted: Открыть резерв
+      bill_not_covered: "Перейти к счёту"
+      loan_payment_change: "Открыть кредит"
+      bank_fees: "Посмотреть комиссии"
     titles:
       spending_anomaly:
         above: Расходы в категории «%{category}» растут
@@ -83,8 +95,8 @@ ru:
       maintained_goal_depleted: Резерв «%{goal}» опустился ниже целевого уровня
       subscription_audit: Подписка %{name} всё ещё активна?
       savings_rate_change:
-        up: Норма сбережений выросла (%{month})
-        down: Норма сбережений снизилась (%{month})
+        up: Норма сбережений за последние три месяца выросла
+        down: Норма сбережений за последние три месяца снизилась
       idle_cash: Неработающие деньги на счёте %{account}
       budget_at_risk:
         one: '%{count} категория бюджета требует внимания'
@@ -92,6 +104,11 @@ ru:
         many: '%{count} категорий бюджета требуют внимания'
         other: '%{count} категории бюджета требуют внимания'
       budget_on_track: Бюджет идёт по плану
+      bill_not_covered: "На счёте «%{account}» может не хватить средств на %{name}"
+      loan_payment_change:
+        up: "Платёж по счёту «%{account}» увеличится"
+        down: "Платёж по счёту «%{account}» уменьшится"
+      bank_fees: "Комиссии по счёту «%{account}»"
     templates:
       spending_anomaly:
         above: При текущем темпе вы потратите в этом месяце %{projected_spend} в категории «%{category}» — примерно на %{deviation_pct}% больше вашего обычного среднемесячного уровня %{baseline_spend}.
@@ -103,14 +120,21 @@ ru:
       maintained_goal_depleted: 'Резерв «%{goal}» содержит %{saved} из необходимых %{target}. Не хватает %{missing}.'
       subscription_audit: 'Платёж %{name} (%{amount}) не появлялся с ожидаемой даты %{expected_on}. Возможно, подписка отменена или дата списания изменилась.'
       savings_rate_change:
-        up: Вы сберегли %{current_rate}% дохода (%{month}) — на %{change_pp} п. п. больше, чем %{previous_rate}% месяцем ранее.
-        down: Вы сберегли %{current_rate}% дохода (%{month}) — на %{change_pp} п. п. меньше, чем %{previous_rate}% месяцем ранее.
-        down_negative: 'Вы потратили больше, чем заработали (%{month}): норма сбережений упала до %{current_rate}% с %{previous_rate}% месяцем ранее.'
+        up: За период %{from_month} — %{to_month} норма сбережений от вашего обычного месячного дохода составила %{current_rate}% — на %{change_pp} п. п. больше, чем %{previous_rate}% за три месяца до этого.
+        down: За период %{from_month} — %{to_month} норма сбережений от вашего обычного месячного дохода составила %{current_rate}% — на %{change_pp} п. п. меньше, чем %{previous_rate}% за три месяца до этого.
+        down_negative: "За период %{from_month} — %{to_month} вы потратили больше, чем заработали: норма сбережений упала до %{current_rate}% с %{previous_rate}% за три месяца до этого."
       idle_cash: На счёте %{account} лежит %{balance} без движения последние %{idle_days} дн.
       budget_at_risk:
         over: 'Превышен бюджет в этом месяце: %{categories}. Вы уже использовали %{budget_spent_pct}% общего бюджета.'
         near: 'Близки к лимиту в этом месяце: %{categories}. Вы уже использовали %{budget_spent_pct}% общего бюджета.'
       budget_on_track: Вы потратили %{spent} из бюджета %{budgeted} (%{budget_spent_pct}%), и все категории в пределах лимита.
+      bill_not_covered: "Платёж %{name} на сумму %{amount} со счёта «%{account}» нужно внести %{due_on}. С учётом других платежей и поступлений, запланированных по этому счёту до этой даты, будет не хватать примерно %{shortfall}."
+      loan_payment_change:
+        up: "Платёж по счёту «%{account}» изменится с %{previous_payment} до %{new_payment} %{effective_on}: это на %{change_pct}% больше согласно графику кредита и сохранённым ставкам."
+        down: "Платёж по счёту «%{account}» изменится с %{previous_payment} до %{new_payment} %{effective_on}: это на %{change_pct}% меньше согласно графику кредита и сохранённым ставкам."
+      bank_fees:
+        recurring: "За последние %{days} дн. по счёту «%{account}» списано комиссий на %{amount}."
+        new: "За последние %{days} дн. по счёту «%{account}» списано комиссий на %{amount}, а в предыдущие %{days} дн. комиссий не было."
     dig_in:
       prompt: |-
         Помоги разобраться с этим инсайтом.

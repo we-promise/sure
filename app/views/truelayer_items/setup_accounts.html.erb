@@ -1,0 +1,117 @@
+<% content_for :title, t(".page_title") %>
+
+<%= render DS::Dialog.new do |dialog| %>
+  <% dialog.with_header(title: t(".title")) do %>
+    <div class="flex items-center gap-2">
+      <%= icon "building-2", class: "text-primary" %>
+      <span class="text-primary"><%= t(".subtitle") %></span>
+    </div>
+  <% end %>
+
+  <% dialog.with_body do %>
+    <%= form_with url: complete_account_setup_truelayer_item_path(@truelayer_item),
+                  method: :post,
+                  local: true,
+                  data: {
+                    controller: "loading-button",
+                    action: "submit->loading-button#showLoading",
+                    loading_button_loading_text_value: t(".creating_accounts"),
+                    turbo_frame: "_top"
+                  },
+                  class: "space-y-6" do |form| %>
+
+      <div class="space-y-4">
+        <% if @truelayer_accounts.empty? %>
+          <div class="p-8 flex flex-col gap-3 items-center justify-center text-center">
+            <%= icon "check-circle", size: "lg", class: "text-success" %>
+            <p class="text-primary font-medium"><%= t(".no_accounts_to_setup") %></p>
+            <p class="text-secondary text-sm"><%= t(".all_accounts_linked") %></p>
+          </div>
+        <% else %>
+          <div class="bg-surface border border-primary p-4 rounded-lg">
+            <div class="flex items-start gap-3">
+              <%= icon "info", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+              <div>
+                <p class="text-sm text-primary mb-2">
+                  <strong><%= t(".choose_account_type") %></strong>
+                </p>
+                <ul class="text-xs text-secondary space-y-1 list-disc list-inside">
+                  <% @account_type_options.reject { |_, type| type == "skip" }.each do |label, type| %>
+                    <li><strong><%= label %></strong></li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-surface border border-primary p-4 rounded-lg">
+            <div class="flex items-start gap-3">
+              <%= icon "calendar", size: "sm", class: "text-primary mt-0.5 flex-shrink-0" %>
+              <div class="flex-1">
+                <%= form.date_field :sync_start_date,
+                      label: t(".sync_start_date_label"),
+                      value: @truelayer_item.sync_start_date&.to_date,
+                      max: Date.current,
+                      help_text: t(".sync_start_date_help") %>
+              </div>
+            </div>
+          </div>
+
+          <% @truelayer_accounts.each do |truelayer_account| %>
+          <div class="border border-primary rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="font-medium text-primary">
+                  <%= truelayer_account.name %>
+                </h3>
+                <p class="text-xs text-secondary">
+                  <%= truelayer_account.card? ? t(".kind_card") : t(".kind_account") %> • <%= truelayer_account.currency %>
+                </p>
+              </div>
+            </div>
+
+            <%# DS::Select fires a bubbling change event from its hidden field,
+                so the controller element listens for the account type. %>
+            <div class="space-y-3"
+                 data-controller="account-type-selector"
+                 data-account-type-selector-account-id-value="<%= truelayer_account.id %>"
+                 data-action="change->account-type-selector#updateSubtype">
+              <%= render DS::Select.new(
+                form: form,
+                method: "account_types[#{truelayer_account.id}]",
+                items: @account_type_options.map { |label, value| { label: label, value: value } },
+                selected: "skip",
+                label: t(".account_type_label")
+              ) %>
+
+              <%# Subtype select for the chosen account type %>
+              <div data-account-type-selector-target="subtypeContainer">
+                <% @subtype_options.each do |account_type, subtype_config| %>
+                  <%= render "truelayer_items/subtype_select", form: form, account_type: account_type, subtype_config: subtype_config, truelayer_account: truelayer_account %>
+                <% end %>
+              </div>
+            </div>
+          </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="flex gap-3">
+        <%= render DS::Button.new(
+          text: t(".create_accounts"),
+          variant: "primary",
+          icon: "plus",
+          type: "submit",
+          class: "flex-1",
+          disabled: @truelayer_accounts.empty?,
+          data: { loading_button_target: "button" }
+        ) %>
+        <%= render DS::Link.new(
+          text: t(".cancel"),
+          variant: "secondary",
+          href: accounts_path
+        ) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

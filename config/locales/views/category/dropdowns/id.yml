@@ -1,0 +1,18 @@
+---
+id:
+  category:
+    dropdowns:
+      row:
+        delete: Hapus kategori
+        edit: Edit kategori
+      show:
+        assign_error: Kategori berhasil dibuat tetapi tidak dapat ditetapkan. Pilih Buat lagi untuk mencoba kembali.
+        back: Kembali
+        choose_parent: 'Buat "%{name}" di bawah:'
+        clear: Kosongkan kategori
+        create: Buat "%{name}"
+        create_as_subcategory: Tambahkan sebagai subkategori…
+        create_error: Gagal membuat kategori tersebut. Silakan coba lagi.
+        no_categories: Kategori tidak ditemukan
+        recent: Terbaru
+        search_placeholder: Cari

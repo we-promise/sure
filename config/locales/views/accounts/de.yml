@@ -117,6 +117,7 @@ de:
       limited_fx_history_warning: Wechselkurse liegen erst ab %{date} vor. Transaktionen davor rechnen mit Näherungswerten, was vorkommt, wenn der Kursanbieter nur einen begrenzten Verlauf liefert.
       tabs:
         activity: Aktivität
+        extra_repayments: Sondertilgungen
         holdings: Bestände
         overview: Übersicht
         schedule: Tilgungsplan
