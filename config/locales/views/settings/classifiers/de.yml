@@ -28,7 +28,7 @@ de:
         lock_results: Von Bayes gesetzte Kategorien sperren
         lock_results_hint: Verhindert, dass Regeln die Kategorien von Bayes ändern, außer du klickst bei einer Regel auf „Anwenden“. Die KI ändert die Kategorien von Bayes nie, ob gesperrt oder nicht.
         rule: Kategorien mit Bayes zuordnen
-        rule_hint: Die Regel „Kategorie-Zuordnung (Bayes)“, die sich mit dieser Einstellung in den Regeln ein- und ausschaltet. Sie kategorisiert nach jedem Sync nicht kategorisierte Transaktionen, an ihrer Stelle in deiner Regelreihenfolge; worüber sie sich nicht sicher ist, bleibt für eine Regel zur KI-Kategorisierung.
+        rule_hint: Die zugehörige Regel, die sich mit dieser Einstellung in den Regeln ein- und ausschaltet. Sie kategorisiert nach jedem Sync nicht kategorisierte Transaktionen, an ihrer Stelle in deiner Regelreihenfolge; worüber sie sich nicht sicher ist, bleibt für eine Regel zur KI-Kategorisierung.
         threshold: Schwellenwert
         threshold_hint: Niedrigster Wert, ab dem Bayes handelt (0,05–0,99). Niedriger kategorisiert mehr, mit mehr Fehlern.
       clear_locks:
@@ -79,7 +79,7 @@ de:
         lock_similar_merchants: Von der Händlererkennung gesetzte Händler sperren
         lock_similar_merchants_hint: Verhindert, dass Regeln, KI und Syncs sie ändern, außer du klickst bei einer Regel auf „Anwenden“. Ihre eigenen Sperren zählen nicht als bestätigt (Feinabstimmung der Händlererkennung).
         rule: Fehlende Händler aus fast gleichen Transaktionen ergänzen
-        rule_hint: "Die Regel „Händlererkennung“, die sich mit dieser Einstellung in den Regeln ein- und ausschaltet. An ihrer Stelle in deiner Regelreihenfolge bekommt eine Transaktion ohne Händler den Händler, den alle fast gleichen Transaktionen haben, etwa „NETFLIX.COM 8812“ und „Netflix com“. Umbuchungen bleiben außen vor."
+        rule_hint: "Die zugehörige Regel, die sich mit dieser Einstellung in den Regeln ein- und ausschaltet. An ihrer Stelle in deiner Regelreihenfolge bekommt eine Transaktion ohne Händler den Händler, den alle fast gleichen Transaktionen haben, etwa „NETFLIX.COM 8812“ und „Netflix com“. Umbuchungen bleiben außen vor."
         similar_threshold: Ähnlichkeit
         similar_threshold_hint: Niedrigste Ähnlichkeit der Beschreibungen, ohne Zahlen und Referenzcodes (0,5–0,99). Niedriger ergänzt mehr, mit mehr Fehlern. „Anwenden“ bei der automatischen Abstimmung stellt sie ebenfalls ein.
       matcher_tuning:
@@ -123,7 +123,7 @@ de:
         clear_locks_confirm_title: Sperren von Bayes aufheben?
         description: Das Bayes-Verfahren lernt aus deinen kategorisierten Transaktionen und ordnet neuen eine Kategorie zu, bevor ein KI-Anbieter zum Zug kommt. Änderungen an diesen Einstellungen wirken ab dem nächsten Kategorisierungslauf; bereits kategorisierte Transaktionen behalten ihre Kategorien.
         matcher: Händlererkennung
-        matcher_description: Ergänzt fehlende Händler aus fast gleichen Transaktionen, als Regel „Händlererkennung“ (nach jedem Sync) und über „Ausführen“. Dabei werden die gespeicherten Händler geändert.
+        matcher_description: Ergänzt fehlende Händler aus fast gleichen Transaktionen, über die zugehörige Regel (nach jedem Sync) und über „Ausführen“. Dabei werden die gespeicherten Händler geändert.
         matcher_tuning: Feinabstimmung Händlererkennung
         merchant: Feinabstimmung Händler
         run: Ausführen
