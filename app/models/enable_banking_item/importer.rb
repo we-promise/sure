@@ -61,6 +61,18 @@ class EnableBankingItem::Importer
   # mirroring BALANCE_TYPE_PRIORITY's own XPCD/CLAV/ITAV entries above.
   FRESHNESS_BALANCE_TYPES = %w[xpcd expected clav closingavailable itav interimavailable].freeze
 
+  # Balances that already count pending transactions. Sure keeps pending entries
+  # out of balance history, so the pending amounts are added back before such a
+  # balance becomes the current anchor (see pending_balance_adjustment). An
+  # interim available balance deducts authorised card payments and other holds,
+  # but not pending incoming money: Revolut reports only ITAV, and it counts its
+  # pending card payments. Expected balances count pending items in both
+  # directions. A closing available balance (CLAV) is left out: it can be as of
+  # the previous close, before today's authorisations.
+  # Pre-normalized like FRESHNESS_BALANCE_TYPES.
+  AVAILABLE_BALANCE_TYPES = %w[itav interimavailable].freeze
+  EXPECTED_BALANCE_TYPES = %w[xpcd expected].freeze
+
   # Two same-type balances within this distance of each other (or of an expected
   # value) are treated as equal when breaking a tie (see resolve_same_type_balances).
   BALANCE_TIEBREAK_TOLERANCE = BigDecimal("0.01")
@@ -303,12 +315,40 @@ class EnableBankingItem::Importer
       # DBIT indicates a negative balance (money owed/withdrawn).
       parsed_amount = -parsed_amount if indicator == "DBIT"
 
+      # Without this sync's pending rows a pending-inclusive balance cannot be
+      # made posted-only. Storing the bank's figure would replace a correct
+      # anchor and, the next day, leave it behind as a waypoint that includes
+      # pending, so the previous anchor is kept until a sync gets both.
+      if pending_adjustment_unknown?(enable_banking_account, balance)
+        Rails.logger.warn "EnableBankingItem::Importer - Keeping the previous balance for account #{enable_banking_account.uid}: the transaction fetch failed, so the pending payments in its #{balance[:balance_type]} balance are unknown"
+        mark_balance_unavailable(enable_banking_account)
+        return false
+      end
+
+      # pending_total is what the processor checks before the anchor becomes a
+      # waypoint: the size of every pending row returned in the balance's
+      # currency, counted or not. Inflows an available balance leaves out still
+      # move the posted balance once they book, and an inflow and an outflow that
+      # cancel out still count. nil when the pending rows are not known,
+      # including when the ASPSP rejected the PDNG request or a transaction
+      # fetch stopped before its last page: the rows returned are still added
+      # back, but others may be missing.
+      pending_flows = pending_balance_flows(enable_banking_account, balance, counted_only: false)
+      pending_total = pending_flows&.sum(BigDecimal("0"), &:abs)
+      # Such a balance is not vouched for either, so the next sync's tiebreak
+      # does not start from it (see balance_by_anchor).
+      pending_unknown = pending_adjusted?(enable_banking_account, balance) && pending_set_incomplete.include?(enable_banking_account.id)
+      pending_total = nil if pending_unknown
+
+      current_balance = parsed_amount + pending_balance_adjustment(enable_banking_account, balance).to_d
+
       # Skipped when the account was unlinked and ignored during the fetch.
       written = enable_banking_account.write_unless_ignored do
         enable_banking_account.update!(
-          current_balance: parsed_amount,
+          current_balance: current_balance,
+          pending_total: pending_total,
           currency: balance_currency(balance) || enable_banking_account.currency,
-          balance_evidence_verified: tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage)
+          balance_evidence_verified: !pending_unknown && (tiebreak_stage.nil? || VERIFIED_TIEBREAK_STAGES.include?(tiebreak_stage))
         )
       end
       # Only now is the chosen-currency balance known to be the one in use.
@@ -386,6 +426,74 @@ class EnableBankingItem::Importer
           other_balances: funded
         }
       )
+    end
+
+    def pending_rows_by_account
+      @pending_rows_by_account ||= {}
+    end
+
+    # Balance history is built from posted entries only (pending ones are
+    # excluded from balance flows), so the current anchor has to be a posted-only
+    # figure too. Returns what to add to an interim available or expected
+    # balance to get there (see pending_balance_flows).
+    def pending_balance_adjustment(enable_banking_account, balance)
+      pending_balance_flows(enable_banking_account, balance)&.sum(BigDecimal("0"))
+    end
+
+    # The pending rows this sync's transaction fetch returned that the balance
+    # counts (or, with counted_only: false, all of them in its currency), with
+    # the sign their entries get (see pending_flow_amount). A pending outflow
+    # adds its amount back. A pending inflow subtracts it, for expected balances
+    # only. Empty for a balance that does not count pending:
+    # booked balances and liability accounts. nil when it does but the pending
+    # rows are not fetched, with pending sync off (see pending_adjustment_unknown?
+    # for a failed transaction fetch).
+    def pending_balance_flows(enable_banking_account, balance, counted_only: true)
+      return [] unless pending_adjusted?(enable_banking_account, balance)
+      return nil unless include_pending?
+
+      # The currency the balance is stored in, and each row's entry is recorded
+      # in (see EnableBankingEntry::Processor#currency).
+      currency = balance_currency(balance) || enable_banking_account.currency
+      flows = pending_rows_by_account[enable_banking_account.id].to_a.filter_map do |tx|
+        tx_currency = parse_currency(tx.dig(:transaction_amount, :currency)) || parse_currency(tx[:currency])
+        next unless currency.nil? || tx_currency.nil? || tx_currency == currency
+
+        pending_flow_amount(tx)
+      end
+      return flows unless counted_only && AVAILABLE_BALANCE_TYPES.include?(normalize_balance_type(balance[:balance_type]))
+
+      flows.select(&:positive?)
+    end
+
+    # True when the balance would be adjusted but this sync has no pending rows
+    # to adjust it with, because its transaction fetch did not succeed. With
+    # pending sync off the rows are never fetched, so the bank's figure is used.
+    def pending_adjustment_unknown?(enable_banking_account, balance)
+      include_pending? &&
+        pending_adjusted?(enable_banking_account, balance) &&
+        !pending_rows_by_account.key?(enable_banking_account.id)
+    end
+
+    # An interim available or expected balance of an asset account.
+    def pending_adjusted?(enable_banking_account, balance)
+      pending_adjusted_type?(balance) &&
+        enable_banking_account.current_account&.accountable&.classification == "asset"
+    end
+
+    def pending_adjusted_type?(balance)
+      type = normalize_balance_type(balance[:balance_type])
+      AVAILABLE_BALANCE_TYPES.include?(type) || EXPECTED_BALANCE_TYPES.include?(type)
+    end
+
+    # The amount a pending row's entry gets (EnableBankingEntry::Processor#amount_value):
+    # outflows positive, inflows negative. An unidentified card hold is an
+    # outflow even when the ASPSP labels it CRDT.
+    def pending_flow_amount(tx)
+      amount = signed_transaction_amount(tx)
+      return amount unless amount && EnableBankingEntry::Processor.unidentified_hold?(tx)
+
+      amount.abs
     end
 
     # The flag only changes how a credit card's balance is read (see
@@ -523,9 +631,14 @@ class EnableBankingItem::Importer
     # Bookings dated on the anchor day may or may not be in the anchor (it was
     # taken at some point that day), so the expectation is computed both ways and
     # only an answer both agree on counts.
+    #
+    # Also skipped when the anchor counted pending rows (anchor_pending_total
+    # above zero): one that has since booked dated before the anchor's day is
+    # in neither sum, so the expectation would be off by it.
     def balance_by_anchor(candidates, enable_banking_account, account, booked)
       return nil unless enable_banking_account.balance_verified? && account.has_current_anchor?
       return nil unless anchor_written_by_this_link?(account, enable_banking_account)
+      return nil if enable_banking_account.anchor_pending_total&.positive?
 
       anchor_date = account.current_anchor_date
       flows = booked.map { |tx| [ raw_transaction_date(tx), tx ] }
@@ -540,9 +653,18 @@ class EnableBankingItem::Importer
       later_flows = dated.sum { |date, amount| date > anchor_date ? amount : 0 }
       all_flows = dated.sum { |_, amount| amount }
 
-      closest = matching_balances(candidates, account.current_anchor_balance - later_flows)
+      # The anchor is posted-only, the candidates are the bank's figures: the
+      # same type, so the same pending adjustment applies to each of them.
+      adjustment = pending_balance_adjustment(enable_banking_account, candidates.first).to_d
+      # An anchor with an unknown total may be the bank's own figure (written
+      # before the upgrade, or with pending sync off), which already deducts
+      # pending: the adjustment would count it twice.
+      return nil if enable_banking_account.anchor_pending_total.nil? && adjustment.nonzero?
+
+      expected = account.current_anchor_balance - adjustment
+      closest = matching_balances(candidates, expected - later_flows)
       return nil if closest.empty?
-      return nil unless closest == matching_balances(candidates, account.current_anchor_balance - all_flows)
+      return nil unless closest == matching_balances(candidates, expected - all_flows)
       return [ closest.first, :anchor ] if closest.one?
 
       latest = closest.filter_map { |balance| [ balance, parse_balance_timestamp(balance[:last_change_date_time]) ] }
@@ -899,6 +1021,9 @@ class EnableBankingItem::Importer
           )
         rescue Provider::EnableBanking::EnableBankingError => e
           raise unless [ :validation_error, :bad_request ].include?(e.error_type)
+          # The pending set is unknown, so the balance's pending total is too
+          # (see fetch_and_update_balance).
+          pending_set_incomplete << enable_banking_account.id
           api_error = e.response_data.is_a?(Hash) ? (e.response_data[:error] || e.response_data["error"]) : nil
           Rails.logger.warn "EnableBankingItem::Importer - ASPSP does not support PDNG transaction status for account #{enable_banking_account.uid}, skipping pending transactions. API error: #{api_error || e.message}"
           capture_pdng_unsupported_debug_log(enable_banking_account, error: e)
@@ -932,6 +1057,21 @@ class EnableBankingItem::Importer
       # transaction with different entry_reference IDs in the same response.
       # Remove content-level duplicates before storing. (Issue #954)
       all_transactions = deduplicate_api_transactions(all_transactions)
+
+      # The pending rows the bank reports right now, which pending_balance_adjustment
+      # adds back to a pending-inclusive balance. Taken before the date filter:
+      # the bank's balance counts every one of them. Rows are tagged _pending
+      # only when pending sync is on. A pending row from the booked response
+      # whose booked row came back too has settled, as for the PDNG rows above.
+      # Recorded below, once the transactions are stored.
+      pending_rows =
+        all_transactions.map(&:with_indifferent_access).select do |tx|
+          next false unless tx[:_pending]
+
+          fp = EnableBankingEntry::Processor.compute_external_id(tx)
+          entry_ref = tx[:entry_reference].presence
+          !((fp.present? && book_fingerprints.include?(fp)) || (entry_ref.present? && book_entry_refs.include?(entry_ref)))
+        end
 
       # Post-fetch safety filter: some ASPSPs ignore date_from or return extra transactions
       all_transactions = filter_transactions_by_date(all_transactions, start_date)
@@ -1008,6 +1148,10 @@ class EnableBankingItem::Importer
       if enable_banking_account.raw_transactions_payload.nil?
         enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
       end
+
+      # Only now: a fetch or snapshot write that raised leaves no rows for the
+      # account, so its balance is withheld (see pending_adjustment_unknown?).
+      pending_rows_by_account[enable_banking_account.id] = pending_rows
 
       { success: true, transactions_count: transactions_count, truncated: truncated }
     rescue Provider::EnableBanking::EnableBankingError => e
@@ -1102,6 +1246,7 @@ class EnableBankingItem::Importer
 
     # Returns the rows fetched and whether the fetch stopped before the last
     # page (page cap, repeated continuation key, or a 400/422 on a later page).
+    # A partial result also leaves the account's pending set incomplete.
     def fetch_paginated_transactions(enable_banking_account, start_date:, transaction_status:, psu_headers: {}, strategy: nil)
       all_transactions = []
       truncated = false
@@ -1157,6 +1302,7 @@ class EnableBankingItem::Importer
             transactions_kept: all_transactions.count,
             error: e
           )
+          pending_set_incomplete << enable_banking_account.id
           truncated = true
           break
         end
@@ -1180,10 +1326,17 @@ class EnableBankingItem::Importer
       # Log as warning and return collected partial data instead of failing entirely.
       # This ensures accounts with huge history don't lose all synced data.
       Rails.logger.warn(e.message)
+      pending_set_incomplete << enable_banking_account.id
       if strategy.present?
         capture_longest_truncation_debug_log(enable_banking_account, transactions_kept: all_transactions.count, reason: e.message)
       end
       [ all_transactions, true ]
+    end
+
+    # Accounts whose pending rows this sync may not all have seen: the ASPSP
+    # rejected the PDNG request, or a transaction fetch kept a partial result.
+    def pending_set_incomplete
+      @pending_set_incomplete ||= Set.new
     end
 
     def filter_transactions_by_date(transactions, start_date)
