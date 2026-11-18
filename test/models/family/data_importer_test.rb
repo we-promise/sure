@@ -53,7 +53,8 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    gift_card = Family::DataImporter.new(@family, ndjson).import![:accounts].first.accountable
+    account_id = Family::DataImporter.new(@family, ndjson).import![:account_ids].first
+    gift_card = Account.find(account_id).accountable
 
     assert_instance_of GiftCard, gift_card
     assert_equal "digital", gift_card.card_format
