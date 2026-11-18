@@ -99,8 +99,6 @@ module ActiveRecordEncryptionConfig
     invitations: [ "Invitation", %i[token email] ],
     invite_codes: [ "InviteCode", %i[token] ],
     accounts: [ "Account", %i[iban] ],
-    merchants: [ "Merchant", %i[iban] ],
-    transactions: [ "Transaction", %i[counterparty_iban counterparty_account_id] ],
     mobile_devices: [ "MobileDevice", %i[device_id] ],
     plaid_items: [ "PlaidItem", %i[access_token raw_payload raw_institution_payload] ],
     simplefin_items: [ "SimplefinItem", %i[access_url raw_payload raw_institution_payload] ],

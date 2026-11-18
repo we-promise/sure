@@ -145,6 +145,23 @@ class I18nTest < ActiveSupport::TestCase
     assert_empty missing, "bills.index.notices_heading is missing for: #{missing.join(", ")}"
   end
 
+  # The below-zero warning speaks wherever the holdings tab is translated.
+  def test_negative_position_keys_exist_wherever_the_holdings_tab_is_translated
+    {
+      "holdings.index.new_holding" => %w[
+        holdings.index.negative_position holdings.index.negative_positions_hint holdings.index.negative_positions_title
+      ]
+    }.each do |sibling, keys|
+      locales = I18n.available_locales.select { |locale| I18n.t(sibling, locale: locale, fallback: false, default: nil) }
+      assert_includes locales, :de
+
+      locales.each do |locale|
+        missing = keys.reject { |key| I18n.t(key, locale: locale, fallback: false, default: nil) }
+        assert_empty missing, "#{locale} translates #{sibling} but is missing #{missing.join(", ")}"
+      end
+    end
+  end
+
   # The All bills default status option. Every bills locale must translate it,
   # or the default filter falls back to English.
   def test_bills_current_bills_label_exists_for_each_bills_locale
@@ -213,12 +230,11 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
-  # The IBAN form strings sit next to the institution domain and merchant
-  # website strings, so every locale that translates those translates them too.
+  # The IBAN form strings sit next to the institution domain strings, so
+  # every locale that translates those translates them too.
   def test_iban_form_keys_exist_wherever_their_sibling_keys_do
     {
-      "accounts" => [ "institution_domain_label", %w[iban_label iban_placeholder iban_set_placeholder iban_remove_label] ],
-      "merchants" => [ "website_hint", %w[iban_placeholder iban_set_placeholder iban_hint iban_remove_label] ]
+      "accounts" => [ "institution_domain_label", %w[iban_label iban_placeholder iban_set_placeholder iban_remove_label] ]
     }.each do |dir, (sibling, keys)|
       checked = 0
       Dir[Rails.root.join("config/locales/views/#{dir}/*.yml")].each do |path|

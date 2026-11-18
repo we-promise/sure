@@ -43,31 +43,12 @@ module AccountableResource
     end || (Time.zone.today - 2.years)
     create_params = account_params.except(:return_to, :opening_balance_date)
     create_params = resolve_write_only_iban(create_params, clear_flag: create_params[:remove_iban]).except(:remove_iban)
-    begin
-      Account.transaction do
-        @account = Current.family.accounts.create_and_sync(
-          create_params.merge(owner: Current.user, logo_chosen: logo_chosen?),
-          opening_balance_date: opening_balance_date
-        )
-        @account.lock_saved_attributes!
-      end
-    rescue ActiveRecord::RecordNotUnique
-      # A raw DB-level race on the partial unique index: two concurrent
-      # requests both passed the Rails uniqueness validation before either
-      # committed, so it surfaces from the adapter instead of being caught
-      # above. Same user-facing outcome, just a different failure point.
-      # create_and_sync itself would have built an accountable from
-      # accountable_attributes; building @account directly from create_params
-      # here does not, so the type-specific fields_for :accountable block in
-      # the re-rendered form (e.g. loans/_form.html.erb's rate fields) would
-      # otherwise silently disappear instead of showing what the user typed.
-      @account = Current.family.accounts.build(create_params)
-      @account.accountable ||= accountable_type.new
-      @account.errors.add(:iban, :taken)
-      @error_message = @account.errors.full_messages.join(", ")
-      set_link_options
-      render :new, status: :unprocessable_entity
-      return
+    Account.transaction do
+      @account = Current.family.accounts.create_and_sync(
+        create_params.merge(owner: Current.user, logo_chosen: logo_chosen?),
+        opening_balance_date: opening_balance_date
+      )
+      @account.lock_saved_attributes!
     end
     apply_logo_choice
 
@@ -144,12 +125,6 @@ module AccountableResource
       true
     rescue ActiveRecord::RecordInvalid => e
       @error_message = e.record.errors.full_messages.join(", ").presence || e.message
-      raise ActiveRecord::Rollback
-    rescue ActiveRecord::RecordNotUnique
-      # Same raw DB-level race as #create: another request's iban committed
-      # between our validation check and this update's own commit.
-      @account.errors.add(:iban, :taken)
-      @error_message = @account.errors.full_messages.join(", ")
       raise ActiveRecord::Rollback
     end
 
