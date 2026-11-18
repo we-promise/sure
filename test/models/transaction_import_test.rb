@@ -305,6 +305,29 @@ class TransactionImportTest < ActiveSupport::TestCase
     assert_includes @import.errors.full_messages, I18n.t("imports.errors.debit_credit_columns_must_differ")
   end
 
+  test "leaves the amount blank when a configured debit or credit column is not in the file" do
+    import = <<~CSV
+      date,name,withdrawals,credit
+      01/01/2024,Renamed Debit Column,25,0
+      01/02/2024,Salary,,2000
+    CSV
+
+    @import.update!(
+      account: accounts(:depository),
+      raw_file_str: import,
+      date_col_label: "date",
+      date_format: "%m/%d/%Y",
+      name_col_label: "name",
+      amount_type_strategy: "debit_credit_columns",
+      debit_col_label: "debit",
+      credit_col_label: "credit"
+    )
+
+    @import.generate_rows_from_csv
+
+    assert_equal [ "", "" ], @import.rows.order(:source_row_number).map(&:amount)
+  end
+
   test "debit and credit column imports require both columns" do
     @import.assign_attributes(amount_type_strategy: "debit_credit_columns", debit_col_label: "debit", credit_col_label: nil)
 

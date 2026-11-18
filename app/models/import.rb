@@ -804,7 +804,11 @@ class Import < ApplicationRecord
     # row amount is credit minus debit: positive for money in. A row with
     # neither stays blank so the clean step flags it, and so does a row where
     # a filled cell is not a number: counting that cell as zero would hide it.
+    # The same goes for a configured column the file does not have, which can
+    # happen when a template is applied to a file with renamed headers.
     def debit_credit_amount(row)
+      return "" unless header_for(debit_col_label) && header_for(credit_col_label)
+
       raw_debit = csv_value(row, debit_col_label)
       raw_credit = csv_value(row, credit_col_label)
       debit = sanitize_number(raw_debit)
