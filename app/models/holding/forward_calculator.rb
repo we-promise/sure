@@ -130,7 +130,8 @@ class Holding::ForwardCalculator
           end
         else
           price = manual_cost || effective_trade_price(trade, date: trade_entry.date)
-          @lot_books[security_id].apply(price, trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date)
+          @lot_books[security_id].apply(price, trade.qty, source_id: trade_entry.id, acquired_on: trade_entry.date,
+            lot_source_id: trade.lot_source_entry_id)
         end
 
         portfolio[security_id] = previous_quantity + trade.qty
