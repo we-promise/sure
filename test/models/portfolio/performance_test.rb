@@ -498,19 +498,15 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
                "a period under a year has no annualised money-weighted return"
   end
 
-  # The triage plan named this case for the `growth <= 0` guard in #annualize.
-  # It is reached, but only on the time-weighted side, and the difference is
-  # worth writing down rather than asserting a shared nil and moving on:
+  # A total loss annualises differently on each side:
   #
-  #   twr  -> -1 exactly, so growth is 0 and the root of it is not a return;
-  #           the guard fires.
+  #   twr  -> -1 exactly, so growth is 0, its root is 0, and the annualised
+  #           figure is -1 too: everything lost over any span is still
+  #           everything lost.
   #   mwr  -> nil before annualisation is even reached. A total loss leaves no
   #           terminal value, so the flow series never changes sign and XIRR
   #           has nothing to solve. The `chained.nil?` branch answers first.
-  #
-  # So the guard is unreachable through the money-weighted path, and a test
-  # claiming otherwise would be asserting a mechanism that does not run.
-  test "a total loss has no annualised return on either side, for two different reasons" do
+  test "a total loss annualises to -1 on the time-weighted side and to nothing on the money-weighted" do
     start_date = Date.new(2026, 1, 1)
     end_date = Date.new(2026, 12, 31)
 
@@ -521,9 +517,24 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     result = performance(start_date: start_date, end_date: end_date)
 
     assert_equal BigDecimal(-1), result.twr, "everything was lost"
-    assert_nil result.annualized_twr, "growth is zero, and its root is not a return"
+    assert_equal BigDecimal(-1), result.annualized_twr, "growth is zero, and its root is zero"
     assert_nil result.mwr, "no terminal value means no sign change for XIRR to solve"
     assert_nil result.annualized_mwr
+  end
+
+  # A day that closes below zero chains past -1: growth is negative, and a
+  # negative has no real fractional root.
+  test "a loss of more than everything has no annualised time-weighted return" do
+    start_date = Date.new(2026, 1, 1)
+    end_date = Date.new(2026, 12, 31)
+
+    lay_balance account: @account, date: start_date, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: end_date, opening: 1_000, closing: -500, market_flow: -1_500
+
+    result = performance(start_date: start_date, end_date: end_date)
+
+    assert_equal BigDecimal("-1.5"), result.twr, "precondition: the chain passed -1"
+    assert_nil result.annualized_twr
   end
 
   # The money-weighted figure is "the return over the period", and for capital present throughout it

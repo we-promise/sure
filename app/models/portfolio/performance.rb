@@ -288,9 +288,9 @@ class Portfolio::Performance
 
       years = period.days / DAYS_PER_YEAR
       growth = (1 + chained).to_f
-      # A total loss leaves nothing to annualise; the root of a negative is not
-      # a return.
-      return nil if growth <= 0
+      # A total loss (growth 0) annualises to -1. Losing more than everything
+      # has no real root, so it has no annualised figure.
+      return nil if growth.negative?
 
       BigDecimal(((growth**(1.0 / years)) - 1).to_s)
     end
