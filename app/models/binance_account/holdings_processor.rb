@@ -36,7 +36,7 @@ class BinanceAccount::HoldingsProcessor
     attr_reader :binance_account
 
     def target_currency
-      binance_account.binance_item.family.currency
+      account.currency
     end
 
     def account

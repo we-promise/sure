@@ -28,7 +28,7 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     )
   end
 
-  test "converts USD balance to family currency when exact rate exists" do
+  test "converts USD balance to account currency when exact rate exists" do
     ExchangeRate.create!(from_currency: "USD", to_currency: "EUR",
                          date: Date.current, rate: 0.92)
 
@@ -54,15 +54,24 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal true, @ba.extra.dig("binance", "stale_rate")
   end
 
-  test "falls back to USD amount and sets stale flag when no rate available" do
+  test "keeps the last balance and currency when no rate is available" do
+    @account.update!(balance: 850, cash_balance: 25)
+    @ba.update!(extra: { "previous_sync" => "preserved" })
     ExchangeRate.expects(:find_or_fetch_rate).returns(nil)
 
-    BinanceAccount::Processor.new(@ba).process
+    assert_raises(Money::ConversionError) do
+      BinanceAccount::Processor.new(@ba).process
+    end
 
     @account.reload
     @ba.reload
-    assert_in_delta 1000.0, @account.balance, 0.01
-    assert_equal true, @ba.extra.dig("binance", "stale_rate")
+    assert_equal "EUR", @account.currency
+    assert_equal 850.to_d, @account.balance
+    assert_equal 25.to_d, @account.cash_balance
+    assert_equal({ "previous_sync" => "preserved" }, @ba.extra)
+    diagnostic = DebugLogEntry.where(source: "BinanceAccount::Processor", provider_key: "binance").order(:created_at).last
+    assert_equal @account.account_providers.sole.id, diagnostic.account_provider_id
+    assert_equal "EUR", diagnostic.metadata["to_currency"]
   end
 
   test "clears stale flag on subsequent sync when exact rate found" do
@@ -77,8 +86,9 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert_equal false, @ba.extra.dig("binance", "stale_rate")
   end
 
-  test "does not convert when family uses USD" do
-    @family.update!(currency: "USD")
+  test "preserves a USD account when the family uses a different currency" do
+    @account.update!(currency: "USD")
+    ExchangeRate.expects(:find_or_fetch_rate).never
 
     BinanceAccount::Processor.new(@ba).process
 
@@ -87,8 +97,21 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
     assert_in_delta 1000.0, @account.balance, 0.01
   end
 
+  test "uses the account exchange rate instead of the family exchange rate" do
+    @account.update!(currency: "AED")
+    ExchangeRate.create!(from_currency: "USD", to_currency: "AED", date: Date.current, rate: 3.67)
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.92)
+
+    BinanceAccount::Processor.new(@ba).process
+
+    assert_equal "AED", @account.reload.currency
+    assert_equal 3670.to_d, @account.balance
+    assert_equal "EUR", @family.reload.currency
+  end
+
   test "processes futures trades correctly" do
     @family.update!(currency: "USD")
+    @account.update!(currency: "USD")
     @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] })
 
     provider = mock
@@ -116,6 +139,7 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "initial futures sync walks multiple 7-day windows from sync_start_date" do
     @family.update!(currency: "USD")
+    @account.update!(currency: "USD")
     @item.update!(sync_start_date: 20.days.ago)
     @ba.update!(raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] })
 
@@ -147,6 +171,7 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
 
   test "incremental sync paginates by fromId across full pages" do
     @family.update!(currency: "USD")
+    @account.update!(currency: "USD")
     @ba.update!(
       raw_payload: { "assets" => [ { "symbol" => "BTC", "total" => "1.0" } ] },
       raw_transactions_payload: {
@@ -275,6 +300,7 @@ class BinanceAccount::ProcessorTest < ActiveSupport::TestCase
   # the same repair: history older than the anchor leaves the account starting
   # after entries it is supposed to precede.
   test "moves the opening anchor before the first entry" do
+    ExchangeRate.create!(from_currency: "USD", to_currency: "EUR", date: Date.current, rate: 0.92)
     Account::OpeningBalanceManager.new(@account).set_opening_balance(balance: 0, date: 2.years.ago.to_date)
     @account.entries.create!(
       date: 3.years.ago.to_date,

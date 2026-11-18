@@ -40,6 +40,15 @@ class BinanceAccount::Processor
 
     begin
       process_account!
+    rescue Money::ConversionError => e
+      DebugLogEntry.capture(
+        category: "provider_sync", level: "error", message: e.message,
+        source: self.class.name, provider_key: "binance",
+        family: binance_account.current_account.family,
+        account_provider: binance_account.account_provider,
+        metadata: { from_currency: e.from_currency, to_currency: e.to_currency, date: e.date }
+      )
+      raise
     rescue StandardError => e
       Rails.logger.error "BinanceAccount::Processor - account update failed for #{binance_account.id}: #{e.message}"
       raise
@@ -55,7 +64,7 @@ class BinanceAccount::Processor
   private
 
     def target_currency
-      binance_account.binance_item.family.currency
+      binance_account.current_account.currency
     end
 
     def process_account!

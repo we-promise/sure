@@ -29,7 +29,7 @@ class BinanceAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     AccountProvider.create!(account: @account, provider: @ba)
   end
 
-  test "converts holding amount to family currency when exact rate exists" do
+  test "converts holding amount to account currency when exact rate exists" do
     ExchangeRate.create!(from_currency: "USD", to_currency: "EUR",
                          date: Date.current, rate: 0.92)
 
@@ -50,7 +50,7 @@ class BinanceAccount::HoldingsProcessorTest < ActiveSupport::TestCase
     BinanceAccount::HoldingsProcessor.new(@ba).process
   end
 
-  test "uses raw USD amount when no rate is available" do
+  test "does not import an unconverted holding when no rate is available" do
     ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
 
     Security.find_or_create_by!(ticker: "CRYPTO:BTC") do |s|
@@ -62,12 +62,40 @@ class BinanceAccount::HoldingsProcessorTest < ActiveSupport::TestCase
       .stubs(:fetch_price).with("BTC").returns(60_000.0)
 
     import_adapter = mock
-    import_adapter.expects(:import_holding).with(
-      has_entries(currency: "EUR", amount: 30_000.0)
-    )
+    import_adapter.expects(:import_holding).never
     Account::ProviderImportAdapter.stubs(:new).returns(import_adapter)
 
     BinanceAccount::HoldingsProcessor.new(@ba).process
+    assert_empty @account.holdings
+  end
+
+  test "preserves an existing holding when its new value cannot be converted" do
+    seed_rate_and_securities
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+    holding = @account.holdings.sole
+    previous = holding.attributes.slice("qty", "price", "amount", "currency")
+    ExchangeRate.stubs(:find_or_fetch_rate).returns(nil)
+    write_payload([ btc_asset.merge("total" => "2") ])
+
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+
+    assert_equal previous, holding.reload.attributes.slice("qty", "price", "amount", "currency")
+    assert_equal 1, @account.holdings.count
+  end
+
+  test "keeps holding values in the linked USD account currency" do
+    @account.update!(currency: "USD")
+    ExchangeRate.expects(:find_or_fetch_rate).never
+    security = Security.create!(ticker: "CRYPTO:BTC", name: "BTC", exchange_operating_mic: "XBNC")
+    BinanceAccount::SecurityResolver.stubs(:resolve).returns(security)
+    BinanceAccount::HoldingsProcessor.any_instance.stubs(:fetch_price).with("BTC").returns(60_000.to_d)
+    adapter = mock
+    adapter.expects(:import_holding).with(has_entries(currency: "USD", amount: 30_000.to_d, price: 60_000.to_d))
+    Account::ProviderImportAdapter.stubs(:new).returns(adapter)
+
+    BinanceAccount::HoldingsProcessor.new(@ba).process
+    assert_equal "EUR", @family.reload.currency
+    assert_equal "USD", @account.reload.currency
   end
   # The reported bug. The processor wrote whatever Binance returned and never
   # removed what it stopped returning, so an asset sold between two syncs kept
