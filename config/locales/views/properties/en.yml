@@ -26,6 +26,7 @@ en:
       rentcast: RentCast
       realie: Realie
       chimnie: Chimnie
+      propertiesapi: PropertiesAPI
     new:
       title: Enter property manually
       next: "Next"
@@ -53,6 +54,7 @@ en:
         medium: "Medium"
         low: "Low"
       avm_attribution_chimnie: "Valuation data from Chimnie. Contains OS data © Crown copyright and database right, Royal Mail data © Royal Mail copyright and database right, and HM Land Registry data © Crown copyright and database right, licensed under the Open Government Licence v3.0."
+      avm_attribution_propertiesapi: "This value is Zillow's Zestimate as shown on the home's public Zillow page, looked up by PropertiesAPI, an independent service not affiliated with Zillow. A Zestimate is an estimate, not an appraisal."
       avm_preview_confirm: "Add property"
     address:
       title: "Enter property manually"

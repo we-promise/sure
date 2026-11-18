@@ -372,6 +372,32 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
     assert_match "1878", response.body
   end
 
+  test "PropertiesAPI preview says the value is Zillow's Zestimate from an unaffiliated service" do
+    provider = mock
+    provider.expects(:fetch_property_valuation).once.returns(successful_avm_response)
+    Provider::Registry.stubs(:propertiesapi).returns(provider)
+
+    assert_no_difference "Account.count" do
+      post properties_path, params: {
+        avm_provider: "propertiesapi",
+        account: {
+          name: "AVM Home",
+          accountable_type: "Property",
+          address: {
+            line1: "5500 Grand Lake Dr",
+            locality: "San Antonio",
+            region: "TX",
+            postal_code: "78244"
+          }
+        }
+      }
+    end
+
+    assert_response :success
+    assert_match "Confirm property details", response.body
+    assert_match "not affiliated with Zillow", response.body
+  end
+
   test "AVM preview warns when no property record was found" do
     no_record = Provider::Response.new(
       success?: true,

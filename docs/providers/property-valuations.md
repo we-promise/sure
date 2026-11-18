@@ -7,6 +7,7 @@ Sure can look up a property's estimated market value when you add it, and refres
 | [RentCast](https://www.rentcast.io/api) | United States | Address | 50 requests/month | `RENTCAST_API_KEY` |
 | [Realie](https://www.realie.ai/) | United States | Address | 25 requests/month | `REALIE_API_KEY` |
 | [Chimnie](https://www.chimnie.com/) | United Kingdom (residential) | UPRN | Free valuations by UPRN (1 request/second) | `CHIMNIE_API_KEY` |
+| [PropertiesAPI](https://propertiesapi.com/) | United States | Address | One-time trial of 50 lookups, then prepaid credits or a paid plan | `PROPERTIESAPI_API_KEY` |
 
 Each self-hosted instance needs its own API keys. Enter them under **Settings → Self-Hosting → Property valuation providers**, or set the environment variables on the web and worker services. A key set in the environment overrides the one saved in Settings.
 
@@ -25,18 +26,29 @@ Sure only requests Chimnie's free valuation fields (estimated value, range and c
 
 Chimnie only covers residential properties. Commercial or mixed-use UPRNs, and properties without an estimate, are reported as errors and no property is created.
 
+## Zillow's Zestimate (PropertiesAPI)
+
+RentCast and Realie return their own estimates. If you would rather track the Zestimate you see on Zillow, PropertiesAPI returns the Zestimate shown on a home's public Zillow page. PropertiesAPI is an independent paid service and is not affiliated with Zillow.
+
+1. Create an account at [propertiesapi.com](https://propertiesapi.com) and copy an API key from its dashboard. New accounts get a one-time trial of 50 free lookups, and a free account is never charged automatically. After the trial, lookups need prepaid credits or a paid plan; until then PropertiesAPI declines them and Sure shows the reason.
+2. Paste the key into **Settings → Self-Hosting → PropertiesAPI**, or set `PROPERTIESAPI_API_KEY`.
+3. Add a property, choose **Add via PropertiesAPI**, and enter the full US address. Include the unit number for a condo or apartment.
+4. Review the Zestimate and the home details, then confirm.
+
+Zillow doesn't show a Zestimate for every home. When there is none, the lookup reports an error and no property is created; Sure never uses the listing price instead. Sure caps PropertiesAPI at 50 lookups a month by default; raise or lower it with `PROPERTIESAPI_MAX_REQUESTS_PER_MONTH`. The cap limits how many lookups Sure makes, not what they cost: on a paid plan, lookups past the plan's included ones are charged at its overage rate. To cap spending, set a monthly spending limit in your PropertiesAPI dashboard.
+
 ## Refreshes
 
 `SyncPropertyValuationsJob` runs on the 1st of each month. For each linked property it:
 
-- skips the property if it was refreshed within the provider's minimum interval (one day for RentCast and Realie, one month for Chimnie)
+- skips the property if it was refreshed within the provider's minimum interval (one day for RentCast, Realie and PropertiesAPI, one month for Chimnie)
 - skips it when the address, UPRN or currency no longer fit the provider
 - stops calling a provider for the rest of the run once that provider reports a rate limit
 - records the new value as that day's balance valuation, named after the provider (e.g. "Chimnie valuation"). Refreshing twice on the same day updates that valuation instead of adding a second one.
 
 On a property's overview tab, **Refresh valuation** requests a new value straight away. It skips the minimum interval but still counts against the provider's monthly request cap.
 
-Every provider has a monthly request cap enforced by Sure. Raise it with `RENTCAST_MAX_REQUESTS_PER_MONTH`, `REALIE_MAX_REQUESTS_PER_MONTH` or `CHIMNIE_MAX_REQUESTS_PER_MONTH`. Chimnie's cap defaults to 1,000 requests a month because its UPRN valuations are free.
+Every provider has a monthly request cap enforced by Sure. Raise it with `RENTCAST_MAX_REQUESTS_PER_MONTH`, `REALIE_MAX_REQUESTS_PER_MONTH`, `CHIMNIE_MAX_REQUESTS_PER_MONTH` or `PROPERTIESAPI_MAX_REQUESTS_PER_MONTH`. Chimnie's cap defaults to 1,000 requests a month because its UPRN valuations are free.
 
 Failed and skipped refreshes are recorded in the debug log under the `provider_sync_error` category.
 

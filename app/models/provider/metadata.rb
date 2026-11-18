@@ -33,7 +33,8 @@ class Provider
       # Property valuation (AVM) providers
       rentcast:       { region: "US",      kinds: %w[Property],        maturity: :beta,   logo_text: "RC", logo_color: "#2563eb", domain: "rentcast.io", name: "RentCast" },
       realie:         { region: "US",      kinds: %w[Property],        maturity: :beta,   logo_text: "RE", logo_color: "#0d9488", domain: "realie.ai" },
-      chimnie:        { region: "UK",      kinds: %w[Property],        maturity: :beta,   logo_text: "CH", logo_color: "#db2777", domain: "chimnie.com" }
+      chimnie:        { region: "UK",      kinds: %w[Property],        maturity: :beta,   logo_text: "CH", logo_color: "#db2777", domain: "chimnie.com" },
+      propertiesapi:  { region: "US",      kinds: %w[Property],        maturity: :beta,   logo_text: "PA", logo_color: "#7c3aed", domain: "propertiesapi.com", name: "PropertiesAPI" }
     }.freeze
 
     def self.for(provider_key)

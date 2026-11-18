@@ -66,6 +66,10 @@
       <% if provider_key.to_s == "chimnie" %>
         <p class="text-xs text-secondary"><%= t("properties.new.avm_attribution_chimnie") %></p>
       <% end %>
+
+      <% if provider_key.to_s == "propertiesapi" %>
+        <p class="text-xs text-secondary"><%= t("properties.new.avm_attribution_propertiesapi") %></p>
+      <% end %>
     </div>
 
     <%# The confirm step rebuilds everything from the signed token, proving
