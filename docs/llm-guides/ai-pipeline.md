@@ -311,9 +311,11 @@ flowchart LR
   model without `vision` and a PDF to one without `documents`, and a generation skips such a route
   (`Ai::Generation#needs`). RubyLLM sends a PDF as a file part to every compatible server, and most
   refuse it; llama.cpp answers an image it can't read with a 500.
-- **Files go inline.** `auto_upload_large_files` stays off, so a statement never stays in a
-  provider's Files API; the preset's inline limit (`Ai::Config::Endpoint::PDF_LIMITS`) sends a
-  bigger PDF another way.
+- **Files go inline for extraction.** `auto_upload_large_files` stays off, so reading a statement
+  never leaves it in a provider's Files API; the preset's inline limit
+  (`Ai::Config::Endpoint::PDF_LIMITS`) sends a bigger PDF another way. Indexing is separate: with
+  OpenAI's vector store, a statement's search copy is uploaded to the Files API (purpose
+  `assistants`) and stays there until the document is removed.
 - **Files never enter a `.ai` event.** Events record each file's name and size.
 - **A new way of reading** is a key in `Ai::PdfReading::WAYS`, a reason in `reason_for`, units in
   `units_for`, a "Read as" label in `config/locales/views/imports/en.yml`, and a row in

@@ -6,6 +6,9 @@ module VectorStore
 
   DEFAULT_EMBEDDING_MODEL = "mxbai-embed-large".freeze
   DEFAULT_EMBEDDING_DIMENSIONS = 1024
+  # What a document records as the store that accepted it: "openai", "pgvector" or "qdrant".
+  def self.backend_name(adapter) = adapter.class.name.demodulize.underscore
+
   DEFAULT_EMBEDDING_URI_BASE = "https://api.openai.com/v1/".freeze
 
   def self.adapter

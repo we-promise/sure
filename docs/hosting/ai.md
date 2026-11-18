@@ -1701,8 +1701,9 @@ one page image per request) has been tested live; Mistral's hasn't. A llama.cpp 
   on the usage page under `embed` and `search_documents`). pgvector's column size comes from
   `EMBEDDING_DIMENSIONS`, as before.
 - Searches drop matches scoring under 0.3, the default threshold, on OpenAI's vector store and
-  on pgvector, so a question about one statement no longer gets another as context on OpenAI's
-  store. **The threshold is calibrated on OpenAI's store** (a relevant hit scored 0.84, wrong ones
+  on pgvector. It's a score cutoff, not a guarantee: in the example measured on OpenAI's store it
+  removed the other statements a question about one statement used to get as context, but a
+  passage from another document can still score above it. **The threshold is calibrated on OpenAI's store** (a relevant hit scored 0.84, wrong ones
   0.14–0.17). pgvector's scores depend on the embedding model: in testing, unrelated text scored
   0.47 on Gemini's `gemini-embedding-001` and 0.77 on `granite-embedding-small-english-r2`, so
   0.3 rarely filters there. **From a later release the threshold is a setting per embedding

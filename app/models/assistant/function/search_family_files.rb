@@ -1,7 +1,8 @@
 # Always listed: it searches documents' contents when `search_documents` is
 # available, and otherwise falls back to #3422's metadata search over the vault, saying why with
-# the router's reason, never "no documents have been uploaded". The query's embedding is an
-# `embed.ai` call, traced and recorded like any other.
+# the router's reason, never "no documents have been uploaded". On pgvector and Qdrant the query's
+# embedding is an `embed.ai` call, traced and recorded like any other; OpenAI's store embeds the
+# query itself, inside its search API, so that path has no `embed.ai` event.
 class Assistant::Function::SearchFamilyFiles < Assistant::Function
   class << self
     def name
@@ -191,15 +192,19 @@ class Assistant::Function::SearchFamilyFiles < Assistant::Function
       when "no_vector_store"
         "No document has been indexed for full-text search yet, so only stored statements are listed."
       when "not_configured"
-        "No vector store is configured, so documents cannot be searched by their contents. " \
-        "Set VECTOR_STORE_PROVIDER (openai | pgvector | qdrant), or for an Anthropic-only install " \
-        "enable the pgvector adapter and point EMBEDDING_URI_BASE at an embeddings endpoint."
+        if availability
+          "Searching documents by their contents isn't set up: #{availability.message_for(user)}"
+        else
+          "No vector store is configured, so documents cannot be searched by their contents. " \
+          "Set VECTOR_STORE_PROVIDER (openai | pgvector | qdrant), or for an Anthropic-only install " \
+          "enable the pgvector adapter and point EMBEDDING_URI_BASE at an embeddings endpoint."
+        end
       else
         "Searching documents by their contents isn't available for this user (#{reason}): " \
         "#{availability&.message_for(user) || reason}."
       end
 
-      return "#{base} No statement is stored either, so there is genuinely nothing on file." if count.zero?
+      return "#{base} No stored statement is available to this user either." if count.zero?
 
       listing = if matched
         "#{count} stored statement(s) match the query by filename or institution"

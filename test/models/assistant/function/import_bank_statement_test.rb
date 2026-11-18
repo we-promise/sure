@@ -73,6 +73,17 @@ class Assistant::Function::ImportBankStatementTest < ActiveSupport::TestCase
     assert result[:message].present?, "the refusal carries the reason worded for the user"
   end
 
+  test "read_as left out is Auto, whatever the import was saved with" do
+    @import.update!(read_as: "text")
+    reading = Ai::PdfReading.any_instance
+    reading.expects(:extract).with { |read_as:, **| read_as == :auto }.raises(Ai::Error::Unavailable, :no_text_layer)
+
+    result = @fn.call("pdf_import_id" => @import.id, "account_id" => @account.id)
+
+    assert_equal "no_text_layer", result[:reason]
+    assert_equal "No way to read this PDF is available (no_text_layer).", result[:message], "model-facing, not localized"
+  end
+
   private
     def statement(opening: 44_079.83, closing: 44_079.83 - 24.5 + 2575.0)
       { bank_name: "YourBank", account_holder: nil, account_number: nil, currency: "GBP", opening_balance: opening, closing_balance: closing,

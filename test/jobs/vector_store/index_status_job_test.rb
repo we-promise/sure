@@ -63,6 +63,16 @@ class VectorStore::IndexStatusJobTest < ActiveJob::TestCase
     @family.send(:delete_vector_store)
   end
 
+  test "a poll by another store than the one that accepted the document errors instead of calling it ready" do
+    @document.update_column(:metadata, { "vector_store" => "openai" })
+    @adapter.expects(:file_status).never
+    VectorStore.stubs(:backend_name).returns("pgvector")
+
+    VectorStore::IndexStatusJob.perform_now(@document)
+
+    assert_equal "error", @document.reload.status
+  end
+
   private
     def expect_status(status, error: nil)
       @adapter.expects(:file_status).with(store_id: "vs_abc123", file_id: "file-xyz")

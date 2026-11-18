@@ -105,7 +105,7 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
     availability = Ai.availability(:extract_pdf, family:, user:)
     return ai_unavailable(availability) unless availability.available?
 
-    read_as = params["read_as"].presence_in(PdfImport::READ_AS) || pdf_import.read_as || "auto"
+    read_as = params["read_as"].presence_in(PdfImport::READ_AS) || "auto"   # omitted is Auto, as the tool says
     reading = Ai::PdfReading.new(content: pdf_import.pdf_file_content, filename: pdf_import.pdf_filename, family:, user:)
     outcome = reading.extract(read_as: read_as.to_sym, start: PdfImport.last_passing_way(account:, model: reading.model&.name))
     result = Ai::Generations::ExtractBankStatement.statement(outcome.value)
@@ -151,7 +151,8 @@ class Assistant::Function::ImportBankStatement < Assistant::Function
                "Review and publish when ready."
     }
   rescue Ai::Error::Unavailable => e
-    { success: false, error: "unavailable", reason: e.reason.to_s, message: PdfImport.unavailable_message(e.reason) }
+    # Model-facing and not localized: the assistant words it for the user.
+    { success: false, error: "unavailable", reason: e.reason.to_s, message: "No way to read this PDF is available (#{e.reason})." }
   rescue Ai::Error::Base, Pdf::PageImages::Error, Timeout::Error, RuntimeError => e
     Rails.logger.error("ImportBankStatement error: #{e.class.name} - #{e.message}")
     Rails.logger.error(e.backtrace.first(10).join("\n"))

@@ -67,7 +67,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     assert_equal "no_vector_store", result[:reason]
   end
 
-  test "degrades to metadata search when no adapter is available and says why" do
+  test "the router's refusal falls back with the router's own message" do
     @user.family.update!(vector_store_id: "vs_test123")
     use_no_ai
 
@@ -75,7 +75,17 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
 
     assert_equal true, result[:success]
     assert_equal "not_configured", result[:reason], "the router's reason"
+    assert_match(/isn't set up/, result[:message])
+  end
 
+  test "a search route with no vector store adapter falls back and says how to set one up" do
+    @user.family.update!(vector_store_id: "vs_test123")
+    VectorStore.stubs(:adapter).returns(nil)
+
+    result = @function.call("query" => "tax return")
+
+    assert_equal "metadata_only", result[:search_mode]
+    assert_equal "not_configured", result[:reason]
     assert_match(/VECTOR_STORE_PROVIDER/, result[:message])
   end
 
@@ -243,7 +253,7 @@ class Assistant::Function::SearchFamilyFilesTest < ActiveSupport::TestCase
     result = Assistant::Function::SearchFamilyFiles.new(@user).call("query" => "anything")
 
     assert_equal 0, result[:result_count]
-    assert_match(/genuinely nothing on file/, result[:message])
+    assert_match(/No stored statement is available to this user/, result[:message])
   end
 
   # The fallback returns the most recent statements when nothing matches, which

@@ -66,6 +66,7 @@ class VectorStore::Pgvector < VectorStore::Base
       raise VectorStore::Error, "No chunks produced from #{filename}" if chunks.empty?
 
       vectors = Ai::Embeddings.index(chunks, family:)
+      vectors.each { check_dimensions!(_1) }
       file_id = SecureRandom.uuid
       now = Time.current
 
@@ -119,6 +120,7 @@ class VectorStore::Pgvector < VectorStore::Base
     with_response do
       ensure_schema!
       query_vector = Ai::Embeddings.query(query, family:, user:)
+      check_dimensions!(query_vector)
       vector_literal = "[#{query_vector.join(',')}]"
 
       results = connection.exec_query(
@@ -157,6 +159,22 @@ class VectorStore::Pgvector < VectorStore::Base
     # (bin/docker-entrypoint), which marks conditional migrations as applied
     # without running them — and the table can't live in schema.rb because it
     # requires the vector extension. Idempotent; memoized per instance.
+    # The chunks table's column fixes the size; a model that returns another one would only fail in
+    # PostgreSQL, with nothing saying why.
+    def check_dimensions!(vector)
+      expected = column_dimensions
+      return if expected.nil? || vector.size == expected
+
+      raise Ai::Error::InvalidOutput, "expected #{expected} dimensions, got #{vector.size}"
+    end
+
+    def column_dimensions
+      @column_dimensions ||= connection.select_value(<<~SQL).to_i.nonzero?
+        SELECT atttypmod FROM pg_attribute
+        WHERE attrelid = '#{TABLE_NAME}'::regclass AND attname = 'embedding' AND NOT attisdropped
+      SQL
+    end
+
     def ensure_schema!
       return if @schema_ensured
       if connection.table_exists?(TABLE_NAME)

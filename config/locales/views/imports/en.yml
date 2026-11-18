@@ -626,7 +626,7 @@ en:
           default: No model set up on this instance can read this PDF.
           not_configured: PDF import needs an AI provider. Ask your administrator to set one up.
           capability_missing: The AI model set up on this instance can't read documents.
-          no_text_layer: This PDF is a scan with no text, and no model set up here can read scanned pages. Read it as images with a vision model, or as OCR once an OCR model is set up.
+          no_text_layer: This PDF is a scan with no text, so it can't be read as text. Read it as Auto, Images or OCR if a model set up here can read scanned pages.
           needs_documents: The AI model set up here can't read a PDF file itself. Read it as text or images instead.
           needs_vision: The AI model set up here can't read page images. Read it as text instead.
           needs_ocr_route: No OCR model is set up on this instance.

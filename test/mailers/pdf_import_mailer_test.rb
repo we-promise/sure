@@ -22,4 +22,22 @@ class PdfImportMailerTest < ActionMailer::TestCase
 
     assert_match @pdf_import.ai_summary, mail.body.encoded
   end
+  test "the email describes the reading that queued it, not one a reread made since" do
+    reading = { document_type: "bank_statement", summary: "February statement", failed_checks: %w[reconciles] }
+    @pdf_import.update!(ai_summary: "a later reading")
+
+    body = PdfImportMailer.with(user: @user, pdf_import: @pdf_import, reading:).next_steps.body.encoded
+
+    assert_match "February statement", body
+    assert_match I18n.t("pdf_import_mailer.next_steps.review_flag_note").first(40), body
+  end
+
+  test "a statement whose balances weren't found is unchecked, not failed" do
+    reading = { document_type: "bank_statement", summary: "s", failed_checks: %w[balances] }
+
+    body = PdfImportMailer.with(user: @user, pdf_import: @pdf_import, reading:).next_steps.body.encoded
+
+    assert_match I18n.t("pdf_import_mailer.next_steps.unchecked_note").first(40), body
+    assert_no_match I18n.t("pdf_import_mailer.next_steps.review_flag_note").first(40), body
+  end
 end

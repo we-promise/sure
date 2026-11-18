@@ -62,7 +62,7 @@ class AiDocumentsTest < ActiveSupport::TestCase
     use_ai_routes
     requests = stub_ai
     VectorStore::Pgvector.any_instance.stubs(:ensure_schema!)
-    VectorStore::Pgvector.any_instance.stubs(:connection).returns(stub(exec_query: []))
+    VectorStore::Pgvector.any_instance.stubs(:connection).returns(stub(exec_query: [], select_value: nil))
     VectorStore::Registry.stubs(:adapter).returns(VectorStore::Pgvector.new)
     @family.update!(vector_store_id: "store-1")
 

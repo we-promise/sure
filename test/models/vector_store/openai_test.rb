@@ -99,6 +99,16 @@ class VectorStore::OpenaiTest < ActiveSupport::TestCase
     assert_kind_of VectorStore::Error, response.error
   end
 
+  test "a long filename is shortened before its extension, which says what the file is" do
+    long = "#{"a" * 250}.pdf"
+    upload = stub_request(:post, "#{BASE}/files").with { _1.body.include?("filename=\"#{"a" * 196}.pdf\"") }
+                                                  .to_return(status: 200, headers: JSON_HEADERS, body: { id: "file-xyz" }.to_json)
+    stub_json(:post, "/vector_stores/vs_abc123/files", { id: "file-xyz", status: "in_progress" })
+
+    assert @adapter.upload_file(store_id: "vs_abc123", file_content: "%PDF-1.4", filename: long).success?
+    assert_requested upload
+  end
+
   private
     def stub_json(method, path, body)
       stub_request(method, "#{BASE}#{path}").to_return(status: 200, headers: JSON_HEADERS, body: body.to_json)

@@ -63,7 +63,8 @@ class ImportsController < ApplicationController
   # "Read again as…" on a PDF import: reads the statement another way, before
   # anything is published.
   def reread
-    read_as = params.dig(:import, :read_as).to_s
+    import_params = params[:import]
+    read_as = import_params.is_a?(ActionController::Parameters) ? import_params[:read_as].to_s : ""
     if @import.is_a?(PdfImport) && PdfImport::READ_AS.include?(read_as) && @import.reread!(read_as)
       redirect_to import_path(@import), notice: t("imports.pdf_import.reread.success")
     else

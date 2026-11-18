@@ -362,6 +362,16 @@ class PdfImportTest < ActiveSupport::TestCase
     assert import.errors[:account_statement].present?
   end
 
+  test "a duplicate upload doesn't change the way a claimed import is being read" do
+    statement = create_pdf_statement
+    import = PdfImport.create_from_statement!(statement:, read_as: "text")
+    import.update!(status: :importing)
+
+    PdfImport.create_from_statement!(statement:, read_as: "images")
+
+    assert_equal "text", import.reload.read_as
+  end
+
   private
 
     def create_pdf_statement(account: accounts(:depository))

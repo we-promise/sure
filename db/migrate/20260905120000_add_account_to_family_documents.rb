@@ -2,8 +2,9 @@ class AddAccountToFamilyDocuments < ActiveRecord::Migration[8.1]
   # Who may read a document is decided by its account, so the account moves out of `metadata`
   # into a column that can be joined and indexed. Nullable: a tax return or a contract has none.
   def up
-    # A document whose account is deleted becomes the whole family's, rather than blocking the
-    # account's deletion.
+    # Deleting the account clears a document's account rather than blocking the deletion. A
+    # statement's document keeps its statement link in metadata, so FamilyDocument.readable_by's
+    # statement-role check still applies to it.
     add_reference :family_documents, :account, type: :uuid, null: true, index: true,
                   foreign_key: { on_delete: :nullify }
 

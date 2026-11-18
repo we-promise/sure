@@ -100,7 +100,7 @@ module Family::VectorSearchable
 
     return nil unless response.success?
 
-    metadata = metadata || {}
+    metadata = (metadata || {}).merge("vector_store" => VectorStore.backend_name(adapter))
 
     # An OpenAI store indexes in the background: the document is `processing` until
     # VectorStore::IndexStatusJob records the outcome, not `ready` before it can be found.

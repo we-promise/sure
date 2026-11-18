@@ -460,7 +460,8 @@ class FamilyTest < ActiveSupport::TestCase
     )
 
     assert_not_nil document
-    assert_equal({ "type" => "financial_document" }, document.metadata)
+    assert_equal "financial_document", document.metadata["type"]
+    assert document.metadata.key?("vector_store"), "the store that accepted it, for its index poll"
     assert_equal "vs_test123", family.reload.vector_store_id
   end
 

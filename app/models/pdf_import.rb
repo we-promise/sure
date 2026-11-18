@@ -85,7 +85,8 @@ class PdfImport < Import
       reusable_import = statement.latest_reusable_pdf_import
       if reusable_import && reusable_import.account_id == statement.account_id &&
          reusable_import.date_format == statement.family.date_format
-        reusable_import.update!(read_as:) if read_as && !reusable_import.ai_processed?
+        # Under its lock, and only while unclaimed: a job already reading it keeps its way.
+        reusable_import.with_lock { reusable_import.update!(read_as:) if reusable_import.pending? && !reusable_import.ai_processed? } if read_as
         return reusable_import
       end
 
@@ -440,10 +441,13 @@ class PdfImport < Import
     already_recorded_count.positive?
   end
 
+  # The reading that queued the email goes with it: a reread before it's delivered would otherwise
+  # change what it says.
   def send_next_steps_email(user)
     PdfImportMailer.with(
       user: user,
-      pdf_import: self
+      pdf_import: self,
+      reading: { document_type:, summary: ai_summary, failed_checks: }
     ).next_steps.deliver_later
   end
 

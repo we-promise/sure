@@ -855,6 +855,16 @@ class ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_select 'select[name="import[account_id]"] option', text: "Plaid Depository Account", count: 0
   end
 
+  test "a reread whose import param isn't a form is refused, not an error" do
+    use_ai_routes
+    import = imports(:pdf_with_rows)
+
+    post reread_import_url(import), params: { import: "text" }
+
+    assert_redirected_to import_url(import)
+    assert_equal I18n.t("imports.pdf_import.reread.not_allowed"), flash[:alert]
+  end
+
   private
     def qif_import_with_embedded_account(name)
       import = QifImport.create!(family: families(:dylan_family))

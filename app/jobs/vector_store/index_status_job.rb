@@ -17,6 +17,12 @@ class VectorStore::IndexStatusJob < ApplicationJob
     adapter = VectorStore.adapter
     return document.mark_error!("vector store no longer configured") if adapter.nil? || family.vector_store_id.blank?
 
+    # Another store can't speak for this one's file (pgvector would call any id ready).
+    accepted_by = document.metadata.to_h["vector_store"]
+    if accepted_by && accepted_by != VectorStore.backend_name(adapter)
+      return document.mark_error!("the vector store changed from #{accepted_by} while it indexed")
+    end
+
     response = adapter.file_status(store_id: family.vector_store_id, file_id: document.provider_file_id)
     status = response.success? ? response.data[:status] : "processing"
 

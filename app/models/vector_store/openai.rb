@@ -110,8 +110,11 @@ class VectorStore::Openai < VectorStore::Base
       Rails.logger.warn("[VectorStore::Openai] couldn't delete file #{file_id}: #{e.class}")
     end
 
+    # 200 characters at most, the extension kept: OpenAI tells a file's type by it.
     def safe_filename(filename)
-      name = File.basename(filename.to_s).gsub(/[^\w.\- ]/, "_").first(200)
-      name.presence || "document"
+      name = File.basename(filename.to_s).gsub(/[^\w.\- ]/, "_")
+      extension = File.extname(name).first(20)
+      stem = File.basename(name, extension).first(200 - extension.size)
+      stem.present? ? "#{stem}#{extension}" : "document#{extension}"
     end
 end
