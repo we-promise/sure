@@ -35,6 +35,15 @@
               checked: !@user.rule_prompts_disabled, checked_value: "false", unchecked_value: "true",
               "aria-labelledby": "rule_suggestions_label", data: { auto_submit_form_target: "auto" }) %>
       </div>
+      <div class="flex items-center justify-between gap-4">
+        <div class="space-y-1">
+          <p class="text-sm" id="show_balance_updates_label"><%= t(".show_balance_updates") %></p>
+          <p class="text-secondary text-sm"><%= t(".show_balance_updates_hint") %></p>
+        </div>
+        <%= render DS::Toggle.new(id: "user_show_balance_updates", name: "user[show_balance_updates]",
+              checked: @user.show_balance_updates?, checked_value: "true", unchecked_value: "false",
+              "aria-labelledby": "show_balance_updates_label", data: { auto_submit_form_target: "auto" }) %>
+      </div>
     <% end %>
   </div>
 <% end %>
