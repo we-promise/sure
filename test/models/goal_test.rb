@@ -1455,6 +1455,7 @@ class GoalTest < ActiveSupport::TestCase
     end
     goal.stubs(:current_balance).returns(BigDecimal("400"))
     goal.stubs(:pace).returns(BigDecimal(pace.to_s))
+    goal.stubs(:pace_measurable?).returns(true)
     goal
   end
 
@@ -1571,6 +1572,17 @@ class GoalTest < ActiveSupport::TestCase
 
     # 400 saved plus 50 a month for the months from `today` to the target date.
     assert_in_delta 400 + 50 * months, payload[:projection_end_value], 0.001
+  end
+
+  # With part of the money unmeasured the pace covers only the measured part,
+  # so it dates no milestone, as it calls no goal on track or behind.
+  test "while the pace is not measurable no milestone ahead has a date" do
+    goal = milestone_goal
+    goal.stubs(:pace_measurable?).returns(false)
+    list = goal.milestones(as_of: Date.new(2026, 3, 15))
+
+    assert_equal [ [ 25, true ], [ 50, false ], [ 75, false ] ], list.map { |m| m.values_at(:percent, :reached) }
+    assert_equal [ nil, nil ], list.drop(1).map { |m| m[:date] }
   end
 
   test "a negative pace dates no milestone ahead" do
