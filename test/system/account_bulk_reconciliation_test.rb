@@ -26,11 +26,9 @@ class AccountBulkReconciliationTest < ApplicationSystemTestCase
     click_on I18n.t("accounts.show.menu.reconcile_all.reconciled")
     confirm_dialog
 
-    assert_text I18n.t(
-      "accounts.reconcile_all.success",
-      count: @entries.size,
-      status: I18n.t("transactions.reconcile.statuses.reconciled")
-    )
+    # Wait for the redirect and the re-rendered row before reading the DB. The
+    # flash is not a reliable signal: the page's morph refresh can clear it.
+    assert_selector "##{dom_id(@entries.first)} a[aria-label='#{I18n.t("transactions.reconcile.statuses.reconciled")}']"
 
     @entries.each do |entry|
       assert_equal "reconciled", entry.reload.reconciled_status
@@ -46,12 +44,9 @@ class AccountBulkReconciliationTest < ApplicationSystemTestCase
     click_on I18n.t("accounts.show.menu.reconcile_all.unreconciled")
     confirm_dialog
 
-    # Wait for Turbo to finish the request and redirect before reading the rows.
-    assert_text I18n.t(
-      "accounts.reconcile_all.success",
-      count: @entries.size,
-      status: I18n.t("transactions.reconcile.statuses.unreconciled")
-    )
+    # Wait for the redirect and the re-rendered row before reading the DB. The
+    # flash is not a reliable signal: the page's morph refresh can clear it.
+    assert_selector "##{dom_id(@entries.first)} a[aria-label='#{I18n.t("transactions.reconcile.statuses.unreconciled")}']"
 
     @entries.each do |entry|
       assert_equal "unreconciled", entry.reload.reconciled_status
