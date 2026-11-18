@@ -11,6 +11,72 @@ class AccountsHelperTest < ActionView::TestCase
 
   teardown { Current.session = nil }
 
+  test "a sidebar logo's wrapper id stays the same through the day, as its stored logo's URL does" do
+    account = accounts(:depository)
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+    ActiveStorage.stubs(:urls_expire_in).returns(7.days)
+
+    first_url = first_id = nil
+    travel_to Time.zone.local(2026, 11, 10, 9) do
+      first_url, first_id = account.logo_url, sidebar_logo_wrapper_id("asset_depository", account, "#000")
+
+      travel 8.hours
+      assert_equal first_url, Account.find(account.id).logo_url
+      assert_equal first_id, sidebar_logo_wrapper_id("asset_depository", Account.find(account.id), "#000")
+    end
+
+    account.logo.attach(io: file_fixture("profile_image.png").open, filename: "other.png", content_type: "image/png")
+    assert_not_equal first_id, sidebar_logo_wrapper_id("asset_depository", account.reload, "#000"), "another image is another logo"
+  end
+
+  # The wrapper is carried across visits as it is, reconciliation dot included,
+  # so a changed status has to replace it.
+  test "a sidebar logo's wrapper id changes with its reconciliation status" do
+    account = accounts(:depository)
+    ids = [ nil, :needs_attention, :matched ].map { |status| sidebar_logo_wrapper_id("asset_depository", account, "#000", status) }
+
+    assert_equal 3, ids.uniq.size
+  end
+
+  # A kept logo keeps the URL it was rendered with. One that hasn't loaded yet
+  # (in a closed group) must not be kept past that URL's expiry.
+  test "a sidebar logo's wrapper id changes from one day to the next where stored logo URLs expire" do
+    account = accounts(:depository)
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+    ActiveStorage.stubs(:urls_expire_in).returns(7.days)
+
+    travel_to Time.zone.local(2026, 11, 10, 9) do
+      morning = sidebar_logo_wrapper_id("asset_depository", Account.find(account.id), "#000")
+
+      travel 8.hours
+      assert_equal morning, sidebar_logo_wrapper_id("asset_depository", Account.find(account.id), "#000")
+
+      travel 1.day
+      assert_not_equal morning, sidebar_logo_wrapper_id("asset_depository", Account.find(account.id), "#000")
+    end
+  end
+
+  # The same image uploaded again is a new blob, and the old one is purged: a
+  # kept wrapper would point at the purged blob.
+  test "a sidebar logo's wrapper id changes when the same image is uploaded again" do
+    account = accounts(:depository)
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+    first_id = sidebar_logo_wrapper_id("asset_depository", account.reload, "#000")
+
+    account.logo.attach(io: file_fixture("square-placeholder.png").open, filename: "logo.png", content_type: "image/png")
+
+    assert_not_equal first_id, sidebar_logo_wrapper_id("asset_depository", account.reload, "#000")
+  end
+
+  # The reconciliation dot's tooltip is in the page's language, so a wrapper
+  # kept across a change of language would keep the old text.
+  test "a sidebar logo's wrapper id changes with the language" do
+    account = accounts(:depository)
+    ids = %i[en fr].map { |locale| I18n.with_locale(locale) { sidebar_logo_wrapper_id("asset_depository", account, "#000", :needs_attention) } }
+
+    assert_equal 2, ids.uniq.size
+  end
+
   test "sidebar cache key changes with the Brandfetch client id" do
     Setting.stubs(:brand_fetch_client_id).returns(nil)
     without_key = account_sidebar_tabs_cache_key(family: @family, active_tab: "all", mobile: false)
