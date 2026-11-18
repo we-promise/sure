@@ -191,6 +191,9 @@ class EnableBankingAccount < ApplicationRecord
     return if iban.blank? || previous_account.iban != iban
 
     previous_account.update_column(:iban, nil)
+    # update_column skips Account's commit callback; transactions linked to
+    # the previous account by this IBAN must be relinked all the same.
+    RematchCounterpartyAccountsJob.perform_later(previous_account.family)
   end
 
   writes_unless_ignored :upsert_enable_banking_snapshot!, :upsert_enable_banking_transactions_snapshot!
