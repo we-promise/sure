@@ -109,6 +109,36 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     assert_equal account_path(@account), account_link["href"]
   end
 
+  test "index shows the excluded-from-reports indicator with its explanation" do
+    @account.update!(exclude_from_reports: true)
+
+    get accounts_url
+
+    assert_response :success
+    doc = Nokogiri::HTML::Document.parse(response.body)
+    frame = doc.at_css("turbo-frame##{dom_id(@account)}")
+    text = I18n.t("accounts.account.excluded_from_reports_indicator")
+    panel = frame.css("[role='tooltip']").find { |node| node.text.strip == text }
+    assert panel, "expected a tooltip panel with the indicator text"
+    assert_nil panel.at_css("svg"), "the tooltip panel should show text, not the icon"
+
+    trigger = frame.at_css("[aria-describedby='#{panel["id"]}']")
+    assert_equal "button", trigger.name
+    assert_equal eye_off_icon_paths, trigger.css("svg path").map { |path| path["d"] }, "the trigger should be the eye-off icon"
+  end
+
+  test "index omits the excluded-from-reports indicator for included accounts" do
+    @account.update!(exclude_from_reports: false)
+
+    get accounts_url
+
+    assert_response :success
+    frame = Nokogiri::HTML::Document.parse(response.body).at_css("turbo-frame##{dom_id(@account)}")
+    text = I18n.t("accounts.account.excluded_from_reports_indicator")
+    assert_empty frame.css("[role='tooltip']").select { |node| node.text.strip == text }
+    assert_not_includes frame.text, text
+  end
+
   test "index localizes the Plaid add accounts action" do
     ensure_tailwind_build
     @user.update!(locale: "de")
@@ -2030,6 +2060,11 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
 
     def logo_icon(key, source, size, name: nil, body: "\x89PNG".b)
       Account::LogoFetcher::Icon.new(key:, source:, name:, body:, size:, content_type: "image/png", extension: "png")
+    end
+
+    # Lucide SVGs carry no icon-name class, so an icon is identified by its path data.
+    def eye_off_icon_paths
+      Nokogiri::HTML::DocumentFragment.parse(ApplicationController.helpers.icon("eye-off")).css("path").map { |path| path["d"] }
     end
 
     # #3630. Links a shared and an unshared account to +item+ through two fresh
