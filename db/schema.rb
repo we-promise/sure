@@ -103,6 +103,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_090000) do
     t.decimal "balance", precision: 19, scale: 4
     t.decimal "cash_balance", precision: 19, scale: 4, default: "0.0"
     t.virtual "classification", type: :string, as: "\nCASE\n    WHEN ((accountable_type)::text = ANY (ARRAY[('Loan'::character varying)::text, ('CreditCard'::character varying)::text, ('OtherLiability'::character varying)::text])) THEN 'liability'::text\n    ELSE 'asset'::text\nEND", stored: true
+    t.string "cost_basis_method", default: "average", null: false
     t.datetime "created_at", null: false
     t.string "currency"
     t.datetime "disabled_at"
@@ -136,6 +137,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_090000) do
     t.index ["plaid_account_id"], name: "index_accounts_on_plaid_account_id"
     t.index ["simplefin_account_id"], name: "index_accounts_on_simplefin_account_id"
     t.index ["status"], name: "index_accounts_on_status"
+    t.check_constraint "cost_basis_method::text = ANY (ARRAY['average'::character varying, 'fifo'::character varying]::text[])", name: "accounts_cost_basis_method_known"
   end
 
   create_table "active_storage_attachments", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -1193,12 +1195,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_090000) do
     t.check_constraint "target_mode::text = ANY (ARRAY['fixed'::character varying::text, 'months_of_expenses'::character varying::text])", name: "chk_goals_target_mode_enum"
   end
 
+  create_table "holding_lot_disposals", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "account_id", null: false
+    t.datetime "created_at", null: false
+    t.string "currency", null: false
+    t.uuid "lot_source_entry_id"
+    t.decimal "qty", precision: 34, scale: 18, null: false
+    t.uuid "sale_entry_id", null: false
+    t.decimal "unit_cost", precision: 25, scale: 10
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_holding_lot_disposals_on_account_id"
+    t.index ["lot_source_entry_id"], name: "index_holding_lot_disposals_on_lot_source_entry_id"
+    t.index ["sale_entry_id"], name: "index_holding_lot_disposals_on_sale_entry_id"
+    t.check_constraint "qty > 0::numeric", name: "holding_lot_disposals_qty_positive"
+  end
+
   create_table "holding_lots", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "account_id", null: false
     t.date "acquired_on"
     t.boolean "clamped", default: false, null: false
     t.datetime "created_at", null: false
     t.string "currency", null: false
+    t.decimal "manual_total_cost", precision: 19, scale: 4
     t.uuid "origin_security_id"
     t.decimal "qty", precision: 34, scale: 18, null: false
     t.uuid "security_id", null: false
@@ -1210,6 +1228,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_090000) do
     t.index ["origin_security_id"], name: "index_holding_lots_on_origin_security_id"
     t.index ["security_id"], name: "index_holding_lots_on_security_id"
     t.index ["source_entry_id"], name: "index_holding_lots_on_source_entry_id"
+    t.check_constraint "manual_total_cost >= 0::numeric", name: "holding_lots_manual_total_cost_non_negative"
     t.check_constraint "qty >= 0::numeric", name: "holding_lots_qty_non_negative"
   end
 
@@ -2009,7 +2028,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_090000) do
     t.datetime "updated_at", null: false
     t.integer "year_built"
     t.index ["avm_last_synced_on"], name: "index_properties_on_avm_provider_sync", order: "NULLS FIRST", where: "(avm_provider IS NOT NULL)"
-    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying]::text[]))", name: "properties_avm_provider_check"
+    t.check_constraint "avm_provider IS NULL OR (avm_provider::text = ANY (ARRAY['rentcast'::character varying, 'realie'::character varying, 'chimnie'::character varying, 'terrascoutx'::character varying]::text[]))", name: "properties_avm_provider_check"
   end
 
   create_table "provider_request_counts", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -3230,6 +3249,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_18_090000) do
   add_foreign_key "goal_pledges", "goals", on_delete: :cascade
   add_foreign_key "goal_pledges", "transactions", column: "matched_transaction_id", on_delete: :nullify
   add_foreign_key "goals", "families", on_delete: :cascade
+  add_foreign_key "holding_lot_disposals", "accounts", on_delete: :cascade
+  add_foreign_key "holding_lot_disposals", "entries", column: "lot_source_entry_id", on_delete: :nullify
+  add_foreign_key "holding_lot_disposals", "entries", column: "sale_entry_id", on_delete: :cascade
   add_foreign_key "holding_lots", "accounts", on_delete: :cascade
   add_foreign_key "holding_lots", "entries", column: "source_entry_id", on_delete: :cascade
   add_foreign_key "holding_lots", "securities", column: "origin_security_id", on_delete: :nullify

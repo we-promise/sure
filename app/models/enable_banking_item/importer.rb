@@ -1078,6 +1078,7 @@ class EnableBankingItem::Importer
 
       transactions_count = all_transactions.count
 
+      stored_payload = enable_banking_account.raw_transactions_payload.as_json
       # A copy: pruning the stored array in place would leave the record dirty,
       # and the guarded write below cannot lock a record with unsaved changes.
       existing_transactions = enable_banking_account.raw_transactions_payload.to_a.dup
@@ -1085,10 +1086,7 @@ class EnableBankingItem::Importer
       removed_pending = false
 
       unless include_pending
-        removed_pending = existing_transactions.reject! do |tx|
-          tx = tx.with_indifferent_access
-          tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
-        end
+        removed_pending = existing_transactions.reject! { |tx| pending_row?(tx) }
       end
 
       if all_transactions.any?
@@ -1113,8 +1111,7 @@ class EnableBankingItem::Importer
         if include_pending
           removed_pending ||= existing_transactions.reject! do |tx|
             tx = tx.with_indifferent_access
-            pending_flag = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
-            next false unless pending_flag
+            next false unless pending_row?(tx)
 
             fp = EnableBankingEntry::Processor.compute_external_id(tx)
             entry_ref = tx[:entry_reference].presence
@@ -1123,30 +1120,40 @@ class EnableBankingItem::Importer
           end
         end
 
-        # Ids are computed over stored + fetched rows together so a fetched row
-        # sharing a stored row's transaction_id, but not its entry_reference, is
-        # recognised as new (see EnableBankingEntry::Processor.external_ids_for).
-        ids = EnableBankingEntry::Processor.external_ids_for(existing_transactions + all_transactions)
-        existing_ids = ids.first(existing_transactions.size).compact.to_set
+        # Only a fetched row describing the same movement supersedes a stored one.
+        # A row the response left out may lie outside the window the ASPSP served,
+        # or on a page that was never fetched.
+        ids_by_row = external_ids_by_row(existing_transactions + all_transactions)
+        superseded_rows = content_pairs(existing_transactions, all_transactions, ids_by_row, ids_by_row).map(&:first)
+        superseded_set = Set.new.compare_by_identity.merge(superseded_rows)
+        retained_transactions = existing_transactions.reject { |tx| superseded_set.include?(tx) }
 
-        new_transactions = all_transactions.each_with_index.select { |_tx, index|
-          ext_id = ids[existing_transactions.size + index]
-          ext_id.present? && !existing_ids.include?(ext_id)
-        }.map(&:first)
+        next_snapshot, incoming_transactions = merge_transaction_rows(
+          existing_transactions, retained_transactions, all_transactions, ids_by_row
+        )
 
-        if new_transactions.any? || removed_pending
-          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions + new_transactions)
+        if removed_pending || next_snapshot.as_json != existing_transactions.as_json
+          # The re-keys and the snapshot they describe commit or roll back together.
+          write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+            rekey_rotated_identifiers!(
+              enable_banking_account, existing_transactions, next_snapshot, superseded_rows, incoming_transactions
+            )
+
+            enable_banking_account.upsert_enable_banking_transactions_snapshot!(next_snapshot)
+          end
         end
       elsif removed_pending
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!(
-          existing_transactions
-        )
+        write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!(existing_transactions)
+        end
       end
 
       # A completed first fetch always leaves a payload, even an empty one, so
       # the next fetch is incremental (nil means "never fetched").
       if enable_banking_account.raw_transactions_payload.nil?
-        enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
+        write_snapshot_unless_changed(enable_banking_account, stored_payload) do
+          enable_banking_account.upsert_enable_banking_transactions_snapshot!([])
+        end
       end
 
       # Only now: a fetch or snapshot write that raised leaves no rows for the
@@ -1339,20 +1346,131 @@ class EnableBankingItem::Importer
       @pending_set_incomplete ||= Set.new
     end
 
+    # Ids are resolved over stored and fetched rows together so rows sharing a
+    # transaction_id can still be told apart by entry_reference.
+    def external_ids_by_row(rows)
+      rows.zip(EnableBankingEntry::Processor.external_ids_for(rows)).to_h
+    end
+
+    def merge_transaction_rows(existing_transactions, retained_transactions, fetched_transactions, ids_by_row)
+      retained_ids = retained_transactions.map { |row| ids_by_row[row] }.compact.to_set
+      incoming_transactions = fetched_transactions.select do |row|
+        id = ids_by_row[row]
+        id.present? && !retained_ids.include?(id)
+      end
+
+      stored_positions = existing_transactions.map { |row| ids_by_row[row] }.each_with_index.to_h
+      snapshot = (retained_transactions + incoming_transactions).sort_by.with_index do |row, index|
+        [ stored_positions.fetch(ids_by_row[row], existing_transactions.size), index ]
+      end
+      [ snapshot, incoming_transactions ]
+    end
+
     def filter_transactions_by_date(transactions, start_date)
       return transactions unless start_date
 
       transactions.reject do |tx|
-        tx = tx.with_indifferent_access
-        date_str = tx[:booking_date] || tx[:value_date] || tx[:transaction_date]
-        next false if date_str.blank?  # Keep if no date (cannot determine)
+        date = row_date(tx)
+        date.present? && date < start_date
+      end
+    end
 
-        begin
-          Date.parse(date_str.to_s) < start_date
-        rescue ArgumentError
-          false  # Keep if date is unparseable
+    # Pairs stored rows with fetched rows describing the same movement. A row that
+    # kept its id pairs with itself first, so a reordered response cannot hand one
+    # movement's id to another; the rest pair by position, keeping multiplicity.
+    def content_pairs(stored_rows, fetched_rows, stored_ids, fetched_ids)
+      fetched_by_content = fetched_rows.group_by { |row| content_key(row) }
+
+      stored_rows.group_by { |row| content_key(row) }.flat_map do |key, old_rows|
+        new_rows = key && fetched_by_content[key]
+        next [] unless new_rows
+
+        unpaired_new = new_rows.dup
+        unchanged = []
+        rotated = []
+        old_rows.each do |old_row|
+          old_id = stored_ids[old_row]
+          index = old_id.present? && unpaired_new.index { |row| fetched_ids[row] == old_id }
+          index ? unchanged << [ old_row, unpaired_new.delete_at(index) ] : rotated << old_row
+        end
+
+        unchanged + rotated.zip(unpaired_new).select { |_old_row, new_row| new_row }
+      end
+    end
+
+    def content_key(transaction)
+      content_id = EnableBankingEntry::Processor.compute_external_id(
+        transaction.with_indifferent_access.except(:transaction_id, :entry_reference)
+      )
+      [ pending_row?(transaction), content_id ] if content_id.present?
+    end
+
+    # Points existing entries at the ids the ASPSP now uses for the same
+    # movements, so the processor updates them (keeping category, merchant,
+    # notes and transfer links) instead of inserting beside them.
+    def rekey_rotated_identifiers!(enable_banking_account, existing_transactions, next_snapshot, superseded_rows, fetched_rows)
+      account = enable_banking_account.current_account
+      return if account.blank? || superseded_rows.empty?
+
+      processor = EnableBankingEntry::Processor
+      old_ids = existing_transactions.zip(processor.external_ids_for(existing_transactions, account: account)).to_h
+      new_ids = next_snapshot.zip(processor.external_ids_for(next_snapshot, account: account)).to_h
+
+      renames = content_pairs(superseded_rows, fetched_rows, old_ids, new_ids).filter_map do |old_row, new_row|
+        old_id = old_ids[old_row]
+        new_id = new_ids[new_row]
+        [ old_id, new_id, new_row ] if old_id.present? && new_id.present? && old_id != new_id
+      end
+      return if renames.empty?
+
+      entries = account.entries.where(source: "enable_banking")
+      taken_ids = entries.where(external_id: renames.map(&:second)).pluck(:external_id).to_set
+      entries_by_old_id = entries.where(external_id: renames.map(&:first)).includes(:entryable).lock.index_by(&:external_id)
+
+      renames.each do |old_id, new_id, new_row|
+        next if taken_ids.include?(new_id)
+
+        entry = entries_by_old_id[old_id]
+        next unless entry && entry.external_id == old_id
+
+        entry.update_column(:external_id, new_id)
+        taken_ids << new_id
+        if !pending_row?(new_row) && entry.entryable.is_a?(Transaction)
+          new_reference = new_row.with_indifferent_access[:entry_reference].to_s.presence
+          entry.entryable.update_column(:provider_entry_reference, new_reference)
         end
       end
+    end
+
+    # Skips the write when another sync replaced the snapshot after this one read
+    # it; re-keying against a stale snapshot would insert a duplicate entry.
+    def write_snapshot_unless_changed(enable_banking_account, stored_payload)
+      ActiveRecord::Base.transaction do
+        enable_banking_account.lock!
+        if enable_banking_account.raw_transactions_payload.as_json == stored_payload
+          yield
+        else
+          Rails.logger.info "EnableBankingItem::Importer - snapshot for account #{enable_banking_account.uid} changed during sync, skipping write"
+        end
+      end
+    end
+
+    # Dated as EnableBankingEntry::Processor dates the entry, in the family's zone.
+    def row_date(transaction)
+      tx = transaction.with_indifferent_access
+      return nil if (tx[:booking_date] || tx[:value_date] || tx[:transaction_date]).blank?
+
+      EnableBankingEntry::Processor.transaction_date(tx, enable_banking_item.family&.timezone)
+    rescue ArgumentError, TypeError, RangeError
+      nil
+    end
+
+    # A row is pending either as stored (extra.enable_banking.pending, written by
+    # the processor) or as freshly tagged by tag_as_pending during this fetch.
+    def pending_row?(transaction)
+      tx = transaction.with_indifferent_access
+      pending = tx.dig(:extra, :enable_banking, :pending) || tx[:_pending] || EnableBankingEntry::Processor.unidentified_hold?(tx)
+      pending ? true : false
     end
 
     def tag_as_pending(transactions)
