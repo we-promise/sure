@@ -183,7 +183,7 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     Zip::File.open_buffer(@exporter.generate_export) { |zip| ndjson = zip.read("all.ndjson") }
     result = Family::DataImporter.new(@other_family, ndjson).import!
 
-    restored = result[:accounts].find { |account| account.name == @account.name }
+    restored = Account.where(id: result[:account_ids]).find { |account| account.name == @account.name }
     assert_not_nil restored, "the exported account should be imported"
     assert_equal 60, restored.ownership_percentage
   end
