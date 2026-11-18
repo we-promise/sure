@@ -7,7 +7,7 @@ class AnnualFeesController < ApplicationController
   # Looks for each card's fee in its own transactions and fills in what's missing.
   def detect
     updated = cards.count do |card|
-      next false unless card.account.permission_for(Current.user).in?([ :owner, :full_control ])
+      next false unless can_edit_card?(card)
 
       before = card.attributes.slice("annual_fee", "annual_fee_month", "annual_fee_day")
       CreditCard::AnnualFeeDetector.new(card).apply!
@@ -17,6 +17,11 @@ class AnnualFeesController < ApplicationController
   end
 
   private
+    def can_edit_card?(card)
+      card.account.permission_for(Current.user).in?([ :owner, :full_control ])
+    end
+    helper_method :can_edit_card?
+
     def cards
       @cards_scope ||= CreditCard.joins(:account)
         .merge(Current.user.accessible_accounts.visible)

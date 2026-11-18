@@ -1,5 +1,6 @@
-<%# locals: (title:, total:) %>
+<%# locals: (title:, total:, testid:) %>
 
+<div data-testid="<%= testid %>">
 <%= summary_card title: title do %>
   <span class="privacy-sensitive"><%= total.money ? format_money(total.money) : t("annual_fees.index.none") %></span>
   <span class="block text-sm text-secondary"><%= t("annual_fees.index.cards_with_fee", count: total.card_count) %></span>
@@ -7,3 +8,4 @@
     <span class="block text-xs text-secondary"><%= t("annual_fees.index.unconverted", count: total.unconverted_count) %></span>
   <% end %>
 <% end %>
+</div>

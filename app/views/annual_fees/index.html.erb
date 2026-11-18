@@ -9,8 +9,8 @@
 
 <div class="space-y-4">
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-    <%= render "annual_fees/total_card", title: t(".per_year"), total: yearly %>
-    <%= render "annual_fees/total_card", title: t(".next_60_days"), total: upcoming %>
+    <%= render "annual_fees/total_card", title: t(".per_year"), total: yearly, testid: "annual-fees-yearly" %>
+    <%= render "annual_fees/total_card", title: t(".next_60_days"), total: upcoming, testid: "annual-fees-upcoming" %>
     <%= summary_card title: t(".next_fee") do %>
       <% if next_fee %>
         <%= l(next_fee.next_date, format: :long) %>
@@ -43,7 +43,9 @@
         <% end %>
       <% end %>
       <% table.with_column(t(".actions"), numeric: true) do |row| %>
-        <%= link_to t(".edit"), edit_credit_card_path(row.card.account), data: { turbo_frame: :modal }, class: "text-sm text-primary underline" %>
+        <% if can_edit_card?(row.card) %>
+          <%= link_to t(".edit"), edit_credit_card_path(row.card.account), data: { turbo_frame: :modal }, class: "text-sm text-primary underline" %>
+        <% end %>
       <% end %>
     <% end %>
   <% else %>

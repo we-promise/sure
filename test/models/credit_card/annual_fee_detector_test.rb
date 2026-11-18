@@ -73,8 +73,42 @@ class CreditCard::AnnualFeeDetectorTest < ActiveSupport::TestCase
     assert_nil CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).detect
   end
 
+  test "a waived charge doesn't hide a later fee that stuck" do
+    charge("Annual Fee", 550, Date.new(2025, 11, 20))
+    charge("Annual Fee Refund", -550, Date.new(2025, 12, 5))
+    charge("Annual Fee", 95, Date.new(2026, 11, 15))
+
+    result = CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).apply!
+
+    assert_not result.refunded
+    assert_equal [ 95, 11, 15 ], [ @card.reload.annual_fee, @card.annual_fee_month, @card.annual_fee_day ]
+  end
+
+  test "a refund of a different fee doesn't waive the annual fee" do
+    charge("Annual Fee", 95, Date.new(2026, 7, 3))
+    charge("Late Fee Refund", -50, Date.new(2026, 7, 20))
+
+    assert_not CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).detect.refunded
+  end
+
+  test "pending charges are ignored" do
+    charge("Annual Fee", 95, Date.new(2026, 11, 10), extra: { "plaid" => { "pending" => true } })
+
+    assert_nil CreditCard::AnnualFeeDetector.new(@card, as_of: Date.new(2026, 11, 17)).detect
+  end
+
+  test "keeps a value saved after the card was loaded" do
+    charge("Annual Fee", 250, Date.new(2026, 9, 8))
+    stale = CreditCard.find(@card.id)
+    @card.update!(annual_fee_month: 6)
+
+    CreditCard::AnnualFeeDetector.new(stale, as_of: Date.new(2026, 11, 17)).apply!
+
+    assert_equal [ 250, 6, 8 ], [ @card.reload.annual_fee, @card.annual_fee_month, @card.annual_fee_day ]
+  end
+
   private
-    def charge(name, amount, date)
-      @account.entries.create!(name: name, amount: amount, currency: "USD", date: date, entryable: Transaction.new)
+    def charge(name, amount, date, extra: {})
+      @account.entries.create!(name: name, amount: amount, currency: "USD", date: date, entryable: Transaction.new(extra: extra))
     end
 end

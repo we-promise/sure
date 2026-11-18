@@ -5,7 +5,9 @@
 class AnnualFeeSummary
   UPCOMING_DAYS = 60
 
-  Row = Data.define(:card, :next_date, :days_until) do
+  # converted_fee is the fee in the family currency, or nil when it couldn't
+  # be converted. It's worked out once so every total agrees.
+  Row = Data.define(:card, :next_date, :days_until, :converted_fee) do
     def fee? = card.annual_fee.to_d.positive?
     def upcoming? = fee? && days_until.present? && days_until <= UPCOMING_DAYS
   end
@@ -21,7 +23,7 @@ class AnnualFeeSummary
     @currency = currency
     @rows = cards.map do |card|
       date = card.next_annual_fee_date(as_of: as_of)
-      Row.new(card: card, next_date: date, days_until: date && (date - as_of).to_i)
+      Row.new(card: card, next_date: date, days_until: date && (date - as_of).to_i, converted_fee: convert(card))
     end
     # Cards with a renewal date first, soonest first; the rest by name.
     @rows.sort_by! { |row| [ row.next_date ? 0 : 1, row.next_date || Date.new(9999, 12, 31), row.card.account.name ] }
@@ -36,14 +38,17 @@ class AnnualFeeSummary
   def next_fee = with_fee.find(&:next_date)
 
   private
+    def convert(card)
+      return nil unless card.annual_fee.to_d.positive?
+
+      card.annual_fee_money.exchange_to(currency, date: as_of)
+    rescue Money::ConversionError
+      nil
+    end
+
     def total(selected)
-      unconverted = 0
-      sum = selected.sum(Money.new(0, currency)) do |row|
-        row.card.annual_fee_money.exchange_to(currency, date: as_of)
-      rescue Money::ConversionError
-        unconverted += 1
-        Money.new(0, currency)
-      end
+      unconverted = selected.count { |row| row.converted_fee.nil? }
+      sum = selected.filter_map(&:converted_fee).sum(Money.new(0, currency))
       # With nothing convertible there is no total to show, only the count.
       money = unconverted == selected.size && selected.any? ? nil : sum
       Total.new(money: money, card_count: selected.size, unconverted_count: unconverted)

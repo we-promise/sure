@@ -67,7 +67,19 @@ class AnnualFeesControllerTest < ActionDispatch::IntegrationTest
 
     get annual_fees_url
 
-    assert_select ".privacy-sensitive", text: "$100.00"
-    assert_match "1 card left out, no exchange rate", response.body
+    assert_select "[data-testid='annual-fees-yearly']" do
+      assert_select ".privacy-sensitive", text: "$100.00"
+      assert_select "span", text: "1 card left out, no exchange rate"
+    end
+  end
+
+  test "read-only shares get no edit link" do
+    sign_in users(:family_member)
+    @account.credit_card.update!(annual_fee: 95, annual_fee_month: 3, annual_fee_day: 1)
+
+    get annual_fees_url
+
+    assert_select "[data-testid='annual-fees-table']", text: /#{@account.name}/
+    assert_select "a[href=?]", edit_credit_card_path(@account), count: 0
   end
 end
