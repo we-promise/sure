@@ -70,7 +70,7 @@ module ActiveRecordEncryptionConfig
   # older, narrower version back into "not complete" until they re-run the
   # task - otherwise the legacy-plaintext fallback would get disabled for
   # models the install's last backfill never actually covered.
-  CURRENT_BACKFILL_VERSION = 10
+  CURRENT_BACKFILL_VERSION = 11
 
   # Single source of truth for which models/fields security:backfill_encryption
   # covers, keyed by the same symbol the task's `results` hash uses. Model
@@ -122,6 +122,7 @@ module ActiveRecordEncryptionConfig
     snaptrade_items: [ "SnaptradeItem", %i[client_id consumer_key snaptrade_user_secret oauth_access_token oauth_refresh_token raw_payload raw_institution_payload] ],
     sharesight_items: [ "SharesightItem", %i[client_id client_secret] ],
     sophtron_items: [ "SophtronItem", %i[user_id access_key raw_payload raw_institution_payload raw_customer_payload raw_job_payload] ],
+    stashaway_items: [ "StashawayItem", %i[email api_token pending_login_token password] ],
     trade_republic_items: [ "TradeRepublicItem", %i[phone_number session_blob pending_login_state] ],
     trading212_items: [ "Trading212Item", %i[api_key api_secret raw_instruments_payload] ],
     up_items: [ "UpItem", %i[access_token raw_payload raw_institution_payload] ],
@@ -149,6 +150,7 @@ module ActiveRecordEncryptionConfig
     redbark_accounts: [ "RedbarkAccount", %i[raw_payload raw_transactions_payload raw_account_details_payload] ],
     sharesight_accounts: [ "SharesightAccount", %i[raw_payload raw_holdings_payload raw_trades_payload raw_payouts_payload raw_cash_transactions_payload] ],
     sophtron_accounts: [ "SophtronAccount", %i[raw_payload raw_transactions_payload] ],
+    stashaway_accounts: [ "StashawayAccount", %i[raw_goals_payload] ],
     trade_republic_accounts: [ "TradeRepublicAccount", %i[raw_positions_payload raw_timeline_payload] ],
     trading212_accounts: [ "Trading212Account", %i[raw_positions_payload raw_orders_payload raw_dividends_payload raw_transactions_payload] ],
     up_accounts: [ "UpAccount", %i[raw_payload raw_transactions_payload] ],

@@ -1,0 +1,9 @@
+general:
+  stashaway_item: connected
+  group_key: "general investing|PERSONAL|CUSTOM"
+  name: "General Investing"
+  goal_type: CUSTOM
+  funding_source: PERSONAL
+  currency: SGD
+  current_balance: 1020.0000
+  raw_goals_payload: []
