@@ -157,6 +157,21 @@ class RecurringTransaction::MatcherTest < ActiveSupport::TestCase
     assert_empty first_occurrence(add_on).allocations
   end
 
+  # The subscription is 16.00, so the parent scores below the exact 5.00 child.
+  # Confidence alone would hand the charge to the add-on, where matching
+  # before the split pays the subscription.
+  test "a split parent pays its bill even when a child outscores it" do
+    subscription = create_series(merchant: merchants(:netflix), amount: 16, day_offset: 0)
+    add_on = create_series(merchant: merchants(:netflix), amount: 5, day_offset: 0, dedup_scope: "add-on")
+    entry = create_entry(amount: 15.99, date: Date.current, merchant: merchants(:netflix))
+    entry.split!([ { name: "Add-on", amount: 5 }, { name: "Plan", amount: 10.99 } ])
+
+    @matcher.run!
+
+    assert_equal [ entry.id ], first_occurrence(subscription).allocations.map(&:entry_id)
+    assert_empty first_occurrence(add_on).allocations
+  end
+
   # Siblings are different money: each part can pay its own bill.
   test "the parts of a split charge can each pay their own bill" do
     subscription = create_series(merchant: merchants(:netflix), amount: 15.99, day_offset: 0)

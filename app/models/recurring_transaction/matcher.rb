@@ -114,12 +114,15 @@ class RecurringTransaction
         written = 0
 
         # Highest confidence claims first; each entry and occurrence is assigned
-        # at most once per run. On a tie the bank's own charge goes before a
-        # split child, so a split before matching ends where a split after it
-        # does. The id tiebreak only makes equally confident candidates resolve
-        # deterministically, since sort_by is not stable.
+        # at most once per run. A split child whose parent is also a candidate
+        # waits until every other candidate had its turn: the parent claims its
+        # bill as if the split came after matching, and the Allocator then
+        # refuses the child. The id tiebreak only makes equally confident
+        # candidates resolve deterministically, since sort_by is not stable.
+        candidate_entry_ids = candidates.to_set { |candidate| candidate.entry.id }
         ordered = candidates.sort_by do |candidate|
-          [ -candidate.confidence, candidate.entry.split_child? ? 1 : 0, candidate.occurrence.id, candidate.entry.id ]
+          parent_competes = candidate_entry_ids.include?(candidate.entry.parent_entry_id)
+          [ parent_competes ? 1 : 0, -candidate.confidence, candidate.occurrence.id, candidate.entry.id ]
         end
 
         ordered.each do |candidate|

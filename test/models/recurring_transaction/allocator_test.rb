@@ -415,6 +415,27 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_equal({ other_child.id => 0 }, Allocator.remaining_by_entry([ other_child ]))
   end
 
+  # The guard ignores ended series, so the drawer must too: a deleted bill
+  # that a child paid leaves the parent free.
+  test "remaining_by_entry ignores what an ended bill took, on the entry or its counterpart" do
+    parent = entry_for(1612.50)
+    rent, = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+    @allocator.allocate!(entry: rent, amount: 400)
+    @rent.update!(status: "ended")
+
+    assert_empty Allocator.remaining_by_entry([ parent, rent ])
+  end
+
+  # Different locks would let a parent and a child pass their counterpart
+  # checks at once, each blind to the other's uncommitted allocation.
+  test "a split parent and its children share one entry lock" do
+    parent = entry_for(1612.50)
+    children = parent.split!([ { name: "Rent", amount: 1000 }, { name: "Parking", amount: 612.50 } ])
+
+    assert_equal [ Allocator.entry_lock_id(parent) ], children.map { |child| Allocator.entry_lock_id(child) }.uniq
+    assert_not_equal Allocator.entry_lock_id(parent), Allocator.entry_lock_id(entry_for(10))
+  end
+
   test "remaining_by_entry treats an unmeasurable entry as used up" do
     ExchangeRate.delete_all
     entry = foreign_entry(amount: 100, currency: "EUR")

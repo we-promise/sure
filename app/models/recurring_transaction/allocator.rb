@@ -45,8 +45,19 @@ class RecurringTransaction
       )
     end
 
+    # Keyed on the split root, so a split parent and its children share one
+    # lock: their counterpart checks then see each other's committed writes.
     def self.entry_lock_id(entry)
-      Digest::MD5.hexdigest(entry.id.to_s).to_i(16) % (2**31)
+      Digest::MD5.hexdigest((entry.parent_entry_id || entry.id).to_s).to_i(16) % (2**31)
+    end
+
+    # Allocations that count toward an entry's capacity: everything except
+    # tombstones from ended series (a deleted or dismissed bill). Counting
+    # those would permanently consume the entry and block re-use on a new
+    # bill (see #3592). Defined once so the capacity checks stay in sync.
+    def self.active_allocations(allocations = RecurringAllocation.all)
+      allocations.joins(recurring_occurrence: :recurring_transaction)
+                 .where.not(recurring_transactions: { status: "ended" })
     end
 
     # What guard_entry_capacity! would leave of each entry for another bill,
@@ -59,7 +70,7 @@ class RecurringTransaction
     # other side has nothing left.
     def self.remaining_by_entry(entries, allocations: RecurringAllocation.all)
       by_id = entries.index_by(&:id)
-      scope = allocations.joins(:entry)
+      scope = active_allocations(allocations).joins(:entry)
 
       rows = scope.where(entry_id: by_id.keys + entries.filter_map(&:parent_entry_id))
                   .or(scope.where(entries: { parent_entry_id: by_id.keys }))
@@ -370,15 +381,8 @@ class RecurringTransaction
         allocation
       end
 
-      # Allocations that count toward an entry's capacity: everything except
-      # tombstones from ended series (a deleted or dismissed bill). Counting
-      # those would permanently consume the entry and block re-use on a new
-      # bill (see #3592). Defined once so the capacity checks stay in sync.
       def active_allocations_for(entry)
-        RecurringAllocation
-          .where(entry: entry)
-          .joins(recurring_occurrence: :recurring_transaction)
-          .where.not(recurring_transactions: { status: "ended" })
+        self.class.active_allocations.where(entry: entry)
       end
 
       # True once any allocation on this entry (excluding those from ended
