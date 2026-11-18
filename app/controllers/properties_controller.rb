@@ -293,6 +293,7 @@ class PropertiesController < ApplicationController
               :institution_name,
               :institution_domain,
               :notes,
+              :liquidity_choice, :available_on, :auto_renew, :renewal_term_months,
               accountable_attributes: [ :id, :subtype, :year_built, :area_unit, :area_value ]
             )
     end
