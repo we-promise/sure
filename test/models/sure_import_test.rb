@@ -48,6 +48,18 @@ class SureImportTest < ActiveSupport::TestCase
     assert_not rule.active?
   end
 
+  test "publishing takes the publish lock once" do
+    attach_ndjson({ type: "Tag", data: { id: "tag-1", name: "Once" } }.to_json)
+    locks = 0
+    counter = ->(*, payload) { locks += 1 if payload[:sql].include?("pg_advisory_lock(") }
+
+    ActiveSupport::Notifications.subscribed(counter, "sql.active_record") do
+      @import.publish_later(user: users(:family_admin))
+    end
+
+    assert_equal 1, locks
+  end
+
   test "dry_run reflects attached ndjson content" do
     ndjson = [
       { type: "Account", data: { id: "uuid-1", name: "Test", balance: "1000", currency: "USD", accountable_type: "Depository" } },

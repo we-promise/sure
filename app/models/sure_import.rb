@@ -171,17 +171,13 @@ class SureImport < Import
 
   # Preflight reads the file and may mark the import failed, so it runs
   # under the publish lock edits take, on the import as stored now.
-  def publish_later(user:)
-    with_publish_lock do
-      reload
-      raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
-      raise MaxRowCountExceededError if row_count_exceeded?
+  def check_before_publish_claim!
+    reload
+    raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
+    raise MaxRowCountExceededError if row_count_exceeded?
 
-      validate_sure_preflight!
-      raise NotPublishableError, "Import was uploaded but has no publishable records." unless publishable?
-
-      super
-    end
+    validate_sure_preflight!
+    raise NotPublishableError, "Import was uploaded but has no publishable records." unless publishable?
   end
 
   def publish

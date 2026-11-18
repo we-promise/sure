@@ -295,6 +295,7 @@ class Import < ApplicationRecord
   # Returns the status and publisher it replaced, as read under the lock.
   def claim_for_publish!(user)
     with_publish_lock do
+      check_before_publish_claim!
       with_lock do
         raise AlreadyPublishedError, "Import #{id} is #{status}" unless changeable?
         raise MaxRowCountExceededError if row_count_exceeded?
@@ -308,6 +309,11 @@ class Import < ApplicationRecord
         previous
       end
     end
+  end
+
+  # Checks a subclass runs under the publish lock before the claim, outside
+  # its row-lock transaction so what they write stays (SureImport's preflight).
+  def check_before_publish_claim!
   end
 
   # A job that never got queued leaves nothing to finish the import, so it
