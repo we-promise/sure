@@ -1313,6 +1313,114 @@ class Family::DataExporterTest < ActiveSupport::TestCase
     end
   end
 
+  # CSV formula injection (CWE-1236) -------------------------------------------
+  #
+  # These assert on the emitted CSV rather than on the helper. Sanitizing field
+  # by field is how fields get missed, so each generator is checked for the
+  # columns a user controls.
+
+  test "every CSV in the export escapes formula-triggering user content" do
+    security = Security.create!(ticker: "=SUM(A1)", name: "Formula Security", exchange_operating_mic: "XNAS")
+    account = @family.accounts.create!(
+      name: "@evil account",
+      accountable: Depository.new(subtype: "=cmd"),
+      balance: 500,
+      currency: "USD"
+    )
+    account.entries.create!(
+      date: Date.parse("2024-05-18"), amount: 1500, name: "Formula Trade", currency: "USD",
+      entryable: Trade.new(security: security, qty: 10, price: 150, currency: "USD")
+    )
+    category = @family.categories.create!(name: "+cmd|calc", color: "#123456", lucide_icon: "@icon")
+    account.entries.create!(
+      date: Date.parse("2024-05-19"), amount: 10, currency: "USD",
+      name: "=SUM(B1)", notes: "-1.5x leverage",
+      entryable: Transaction.new(category: category)
+    )
+    @family.merchants.create!(name: "-2+3", color: "#123456")
+    @family.rules.create!(
+      name: "@rule",
+      resource_type: "transaction",
+      actions: [ Rule::Action.new(action_type: "set_transaction_category", value: category.id) ]
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = CSV.parse(zip.read("accounts.csv"), headers: true)
+      row = accounts.find { |r| r["name"] == "'@evil account" }
+      assert row, "account name must be escaped"
+      assert_equal "'=cmd", row["subtype"], "account subtype must be escaped"
+
+      trades = CSV.parse(zip.read("trades.csv"), headers: true)
+      assert trades.any? { |r| r["ticker"] == "'=SUM(A1)" }, "trade ticker must be escaped"
+      assert_not trades.any? { |r| r["ticker"] == "=SUM(A1)" }, "raw formula ticker must not appear"
+
+      categories = CSV.parse(zip.read("categories.csv"), headers: true)
+      row = categories.find { |r| r["name"] == "'+cmd|calc" }
+      assert row, "category name must be escaped"
+      assert_equal "'@icon", row["lucide_icon"], "category lucide_icon must be escaped"
+
+      transactions = CSV.parse(zip.read("transactions.csv"), headers: true)
+      row = transactions.find { |r| r["name"] == "'=SUM(B1)" }
+      assert row, "transaction name must be escaped"
+      assert_equal "'-1.5x leverage", row["notes"], "transaction notes must be escaped"
+
+      merchants = CSV.parse(zip.read("merchants.csv"), headers: true)
+      assert merchants.any? { |r| r["name"] == "'-2+3" }, "merchant name must be escaped"
+
+      rules = CSV.parse(zip.read("rules.csv"), headers: true)
+      assert rules.any? { |r| r["name"] == "'@rule" }, "rule name must be escaped"
+    end
+  end
+
+  # A bare number cannot run anything, and escaping it would turn every income
+  # amount, negative balance and sale quantity into text in the spreadsheet.
+  test "CSV export leaves negative numbers as numbers" do
+    account = @family.accounts.create!(name: "Overdrawn", accountable: Depository.new, balance: -250.5, currency: "USD")
+    account.entries.create!(
+      date: Date.parse("2024-05-19"), amount: -1200, currency: "USD", name: "Salary",
+      entryable: Transaction.new
+    )
+    security = Security.create!(ticker: "SELLME", name: "Sold Security", exchange_operating_mic: "XNAS")
+    account.entries.create!(
+      date: Date.parse("2024-05-20"), amount: -300, name: "Sell", currency: "USD",
+      entryable: Trade.new(security: security, qty: -2, price: 150, currency: "USD")
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      accounts = CSV.parse(zip.read("accounts.csv"), headers: true)
+      assert_equal "-250.5", accounts.find { |r| r["name"] == "Overdrawn" }["balance"]
+
+      transactions = CSV.parse(zip.read("transactions.csv"), headers: true)
+      assert_equal "-1200.0", transactions.find { |r| r["name"] == "Salary" }["amount"]
+
+      trade = CSV.parse(zip.read("trades.csv"), headers: true).find { |r| r["ticker"] == "SELLME" }
+      assert_equal "-2.0", trade["quantity"]
+      assert_equal "-300.0", trade["amount"]
+    end
+  end
+
+  test "NDJSON keeps formula-prefixed values verbatim so export and import round-trip" do
+    name  = "=SUM(A1)"
+    notes = "-1.5x leverage"
+    entry = @account.entries.create!(
+      date: Date.current, name: name, amount: 10, currency: "USD", notes: notes,
+      entryable: Transaction.new
+    )
+
+    Zip::File.open_buffer(@exporter.generate_export) do |zip|
+      line = zip.read("all.ndjson").each_line.find do |l|
+        parsed = JSON.parse(l)
+        parsed["type"] == "Transaction" && parsed.dig("data", "entry_id") == entry.id
+      end
+
+      assert line, "the transaction must be in all.ndjson"
+      data = JSON.parse(line)["data"]
+      assert_equal name, data["name"]
+      assert_equal notes, data["notes"]
+    end
+  end
+
+
   private
 
     def create_transaction_entry(account, amount:, date:, name:)

@@ -16,6 +16,9 @@ nb:
       holdings: Beholdninger
       name: Navn
       new_holding: Ny transaksjon
+      negative_position: "%{name} (%{ticker}): under null fra %{date}, lavest %{qty}."
+      negative_positions_hint: "Sannsynligvis mangler et kjøp eller en overføring. Legg det til, eller rett transaksjonene som tok beholdningen under null."
+      negative_positions_title: "Noen beholdninger gikk under null"
       no_holdings: Ingen beholdninger å vise.
       return: Total avkastning
       weight: Vekt

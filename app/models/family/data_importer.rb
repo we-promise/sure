@@ -111,8 +111,8 @@ class Family::DataImporter
     account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
-    @created_accounts = []
-    @created_entries = []
+    @created_account_ids = []
+    @created_entry_ids = []
     @summary = Hash.new { |hash, key| hash[key] = empty_summary_bucket }
   end
 
@@ -148,7 +148,7 @@ class Family::DataImporter
       import_rules(records["Rule"] || [])
     end
 
-    { accounts: @created_accounts, entries: @created_entries, summary: compact_summary }
+    { account_ids: @created_account_ids, entry_ids: @created_entry_ids, summary: compact_summary }
   end
 
   private
@@ -194,11 +194,21 @@ class Family::DataImporter
       return unless @import_session
 
       source_type = MAPPING_TYPES.fetch(mapping_key)
-      mapping = @import_session.source_mappings.find_or_initialize_by(
-        family: @family,
+      # The session outlives every chunk, so nothing here may append the mapping
+      # (and, through its target, the imported record) to one of its
+      # associations, or memory grows with the file. That rules out building
+      # through @import_session.source_mappings, and also assigning
+      # `import_session:`/`family:` objects, which only avoids it while the
+      # belongs_to has no inverse_of. Ids plus association(...).target= never
+      # inverse, and keep the loaded owners so validations don't reload them.
+      mapping = ImportSourceMapping.find_or_initialize_by(
+        import_session_id: @import_session.id,
+        family_id: @family.id,
         source_type: source_type,
         source_id: source_id
       )
+      mapping.association(:import_session).target = @import_session
+      mapping.association(:family).target = @family
       mapping.target = target
       mapping.save!
     end
@@ -375,6 +385,8 @@ class Family::DataImporter
           status: importable_account_status(data["status"])
         )
         account.ownership_percentage = ownership_percentage if ownership_percentage
+        # A file from before the setting existed leaves the account's own.
+        account.cost_basis_method = data["cost_basis_method"] if Account.cost_basis_methods.key?(data["cost_basis_method"])
         # Older exports predate the choice and keep the account's own.
         account.logo_selection = data["logo_selection"] if Account.logo_selections.key?(data["logo_selection"])
 
@@ -393,7 +405,7 @@ class Family::DataImporter
         end
 
         map_source!(:accounts, old_id, account)
-        @created_accounts << account if created
+        @created_account_ids << account.id if created
         increment_summary("Account", created ? :created : :updated)
       end
     end
@@ -1018,7 +1030,7 @@ class Family::DataImporter
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
-          @created_entries << entry if created
+          @created_entry_ids << entry.id if created
           import_split_lines!(entry, split_rows, fallback_tag_ids: new_tag_ids)
         else
           transaction.taggings.destroy_all unless created
@@ -1026,7 +1038,7 @@ class Family::DataImporter
             transaction.taggings.create!(tag_id: tag_id)
           end
 
-          @created_entries << entry if created
+          @created_entry_ids << entry.id if created
         end
 
         increment_summary("Transaction", created ? :created : :updated)
@@ -1092,7 +1104,7 @@ class Family::DataImporter
         end
 
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
-        @created_entries << child_entry
+        @created_entry_ids << child_entry.id
       end
     end
 
@@ -1168,6 +1180,8 @@ class Family::DataImporter
     end
 
     def import_trades(records)
+      imported = {}
+
       records.each do |record|
         data = record["data"]
         old_id = data["id"]
@@ -1218,9 +1232,80 @@ class Family::DataImporter
         end
 
         entry.save!
-        @created_entries << entry if created
+        imported[old_id] = entry
+        import_lot_total_cost(entry, data["lot_total_cost"])
+        @created_entry_ids << entry.id if created
         increment_summary("Trade", created ? :created : :updated)
       end
+
+      import_lot_sources(records, imported)
+    end
+
+    # The lot is rebuilt from its trade on the next sync, which keeps a cost
+    # already on the row, so the user's cost is seeded on the row now. A file
+    # without one clears a cost an earlier import of this trade set. A value
+    # the lot cannot hold drops the cost, not the trade.
+    def import_lot_total_cost(entry, raw)
+      trade = entry.trade
+      # Only a buy's entry keys a lot (source_entry_id is the acquiring
+      # trade's entry), so a sell never queries. A buy's lookup is per row
+      # and indexed, with no chunk-wide load.
+      lot = trade.qty.positive? ? HoldingLot.find_by(account_id: entry.account_id, source_entry_id: entry.id) : nil
+
+      if raw.blank?
+        lot.unlock_cost! if lot&.manual_cost?
+        return
+      end
+
+      total = BigDecimal(raw.to_s, exception: false)
+      return invalid_record!("Trade", "lot_total_cost", raw) unless total&.finite? && !total.negative? && trade.qty.positive?
+
+      lot ||= HoldingLot.new(account_id: entry.account_id, source_entry: entry, security: trade.security,
+                             acquired_on: entry.date, qty: trade.qty, currency: entry.account.currency)
+      lot.manual_total_cost = total
+      invalid_record!("Trade", "lot_total_cost", raw) unless lot.save
+    end
+
+    # A sale names its lot by the acquiring trade, which the export writes
+    # ahead of it: in this file, or in an earlier chunk of the same session.
+    # The choice is restored as stored, whatever the account's method, since
+    # an average account keeps but ignores it (Trade#lot_choices); it must
+    # still be a sale, not a transfer out, naming an acquisition of its
+    # security, in its account, that replays before it: an earlier date, or
+    # the same date and entered no later. Entries are stamped in file order,
+    # so a same-day lot listed after its sale is refused. A file without one
+    # clears an earlier import's choice.
+    def import_lot_sources(records, imported)
+      unnamed = []
+
+      records.each do |record|
+        data = record["data"]
+        row = imported[data["id"]]
+        next unless row
+
+        source_id = data["lot_source_trade_id"]
+        if source_id.blank?
+          unnamed << row.entryable_id
+          next
+        end
+
+        source = imported[source_id] || session_imported_entry(row.account, "Trade", source_id)
+        if source && lot_source_for?(row, source)
+          Trade.where(id: row.entryable_id).update_all(lot_source_entry_id: source.id)
+        else
+          invalid_record!("Trade", "lot_source_trade_id", source_id)
+        end
+      end
+
+      Trade.where(id: unnamed).where.not(lot_source_entry_id: nil).update_all(lot_source_entry_id: nil) if unnamed.any?
+    end
+
+    # The rule Trade#lot_choices applies to a sale and its lot, short of the
+    # account's method and of whether the lot is still open.
+    def lot_source_for?(sale, source)
+      sale.trade.qty.negative? && !sale.trade.internal_movement? && source.trade.qty.positive? &&
+        source.account_id == sale.account_id && source.trade.security_id == sale.trade.security_id &&
+        ([ source.date, source.created_at ] <=> [ sale.date, sale.created_at ]) <= 0
     end
 
     def import_holdings(records)
@@ -1305,7 +1390,7 @@ class Family::DataImporter
         end
 
         entry.save!
-        @created_entries << entry if created
+        @created_entry_ids << entry.id if created
         increment_summary("Valuation", created ? :created : :updated)
       end
     end

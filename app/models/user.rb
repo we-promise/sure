@@ -382,9 +382,7 @@ class User < ApplicationRecord
   # provider+uid) are not gated on #active?, so they must be torn down here for
   # revocation to be immediate; the async purge would otherwise leave a window.
   def revoke_all_credentials!
-    Doorkeeper::AccessToken
-      .where(resource_owner_id: id, revoked_at: nil)
-      .update_all(revoked_at: Time.current)
+    revoke_oauth_tokens!
     sessions.destroy_all
     api_keys.destroy_all
     mobile_devices.destroy_all
@@ -513,6 +511,18 @@ class User < ApplicationRecord
     Array(provider.public_send(item_association.name)) if item_association
   end
 
+  # Revokes every Doorkeeper access token issued to this user (mobile app and
+  # third-party OAuth clients; a revoked token's refresh token is refused too)
+  # and every authorization grant not yet exchanged for one. Returns the
+  # number of tokens and grants revoked.
+  def revoke_oauth_tokens!
+    now = Time.current
+    [
+      Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now),
+      Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: now)
+    ]
+  end
+
   # Revokes mobile/third-party API access alongside the web-session
   # invalidation above. Without this, a deactivated user's existing
   # Doorkeeper tokens and API keys stay valid on the wire — currently
@@ -524,8 +534,7 @@ class User < ApplicationRecord
   # before deactivation could otherwise be exchanged for a fresh token
   # afterward.
   def revoke_all_access_tokens
-    tokens_revoked = Doorkeeper::AccessToken.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
-    grants_revoked = Doorkeeper::AccessGrant.where(resource_owner_id: id, revoked_at: nil).update_all(revoked_at: Time.current)
+    tokens_revoked, grants_revoked = revoke_oauth_tokens!
     keys_revoked = api_keys.active.visible.update_all(revoked_at: Time.current)
 
     if tokens_revoked > 0 || grants_revoked > 0 || keys_revoked > 0
@@ -656,6 +665,20 @@ class User < ApplicationRecord
 
   def account_order
     AccountOrder.find(default_account_order) || AccountOrder.default
+  end
+
+  # Whether the activity feed of a linked account always lists the balance
+  # updates its syncs leave behind (see Account#hides_balance_updates_by_default?).
+  # Off until turned on in Settings > Preferences. The activity Filter menu can
+  # show them for one view without changing this.
+  def show_balance_updates?
+    preferences&.dig("show_balance_updates") == true
+  end
+
+  # @param value [Boolean, String] a form value such as "true" or "false"
+  def update_show_balance_updates(value)
+    shown = ActiveModel::Type::Boolean.new.cast(value) == true
+    with_locked_preferences { |prefs| prefs["show_balance_updates"] = shown }
   end
 
   MANUAL_ACCOUNT_ORDER_LIMIT = 500

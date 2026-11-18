@@ -37,9 +37,11 @@ es:
       new:
         title: Añadir proveedor de SSO
         description: Configura un nuevo proveedor de autenticación de inicio de sesión único
+        provider_configuration: Configuración del proveedor
       edit:
         title: Editar proveedor de SSO
         description: Actualizar configuración para %{label}
+        provider_configuration: Configuración del proveedor
       create:
         success: El proveedor de SSO se ha creado correctamente.
       update:
