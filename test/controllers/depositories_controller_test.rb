@@ -112,6 +112,8 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update stores a manual availability with its release date" do
+    set_preview(true)
+
     patch depository_path(@account), params: {
       account: { liquidity_choice: "locked", available_on: "2030-03-31" }
     }
@@ -123,12 +125,24 @@ class DepositoriesControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "update can hand availability back to the subtype" do
+    set_preview(true)
     @account.update!(liquidity_choice: "long_term")
 
     patch depository_path(@account), params: { account: { liquidity_choice: "automatic" } }
 
     assert_equal "immediate", @account.reload.liquidity
     assert_not @account.liquidity_manual?
+  end
+
+  test "update ignores availability fields without preview features" do
+    set_preview(false)
+
+    patch depository_path(@account), params: { account: { liquidity_choice: "locked", available_on: "2030-03-31" } }
+
+    @account.reload
+    assert_equal "immediate", @account.liquidity
+    assert_not @account.liquidity_manual?
+    assert_nil @account.available_on
   end
 
   test "the availability fields are preview only" do

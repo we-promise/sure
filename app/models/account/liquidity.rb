@@ -29,6 +29,10 @@ module Account::Liquidity
   # Form value for "follow the subtype again".
   AUTOMATIC = "automatic".freeze
 
+  # Form fields for the availability choice; web forms permit them only
+  # where they show them (AccountableResource#liquidity_form_attributes).
+  FORM_ATTRIBUTES = %i[liquidity_choice available_on auto_renew renewal_term_months].freeze
+
   MAX_RENEWAL_TERM_MONTHS = 600
 
   included do
