@@ -29,6 +29,7 @@ class Insight < ApplicationRecord
     maintained_goal_depleted
     bill_not_covered
     loan_payment_change
+    bank_fees
   ].freeze
 
   # How many the dashboard widget shows. Shared so PagesController (first render)
