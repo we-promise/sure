@@ -77,15 +77,16 @@ class RecurringTransaction < ApplicationRecord
   # restore brings its own occurrences and allocations.
   attr_accessor :restoring_from_export
 
+  # A bill declared by hand is born active, so it never makes the activation
+  # transition below. Ahead of generation, for the same reason activation runs
+  # ahead of regeneration. A restore brings its own occurrences and allocations.
+  after_commit :reconstruct_history_on_declaration, on: :create, if: :declared_active?
   after_commit :generate_occurrences, on: :create
   # Ahead of regeneration: activation changes status, so both run, and with
   # load_defaults 7.1+ these run in the order defined. An exception in one
   # stops the rest, so a failed regeneration must not cost the bill its
   # history; reconstruct_history! generates the upcoming rows itself.
   after_commit :reconstruct_history_on_activation, on: :update, if: :activated_from_suggestion?
-  # A bill declared by hand is born active, so it never makes that transition.
-  # A restore brings its own occurrences and allocations.
-  after_commit :reconstruct_history_on_declaration, on: :create, if: :declared_active?
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?

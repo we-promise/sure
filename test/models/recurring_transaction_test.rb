@@ -1959,6 +1959,40 @@ class RecurringTransactionTest < ActiveSupport::TestCase
     assert_equal 3, confirmed_allocations_for(series)
   end
 
+  test "a declared bill keeps a first due date the weekend moved before its anchor" do
+    # 2026-11-22 is a Sunday; "before" moves it to Friday 2026-11-20, which
+    # is past and unpaid by the Saturday in between. It is the bill's first
+    # real obligation, not a cycle before the bill existed.
+    travel_to Date.new(2026, 11, 21) do
+      series = @family.recurring_transactions.create!(
+        name: "STORAGE UNIT", account: @account, amount: 80, currency: "USD",
+        expected_day_of_month: 22, anchor_date: Date.new(2026, 11, 22),
+        last_occurrence_date: Date.new(2026, 10, 22), next_expected_date: Date.new(2026, 11, 22),
+        weekend_adjust: "before", status: "active", manual: true
+      )
+
+      first = series.recurring_occurrences.find_by(original_due_on: Date.new(2026, 11, 22))
+      assert first, "the first occurrence must survive the prune"
+      assert_equal Date.new(2026, 11, 20), first.due_on
+    end
+  end
+
+  test "declaring a bill still queues its history when generating its occurrences fails" do
+    RecurringTransaction::OccurrenceGenerator.any_instance.stubs(:generate!).raises(StandardError, "boom")
+
+    assert_enqueued_jobs 1, only: BackfillRecurringHistoryJob do
+      error = assert_raises(StandardError) do
+        @family.recurring_transactions.create!(
+          name: "CITY WATER", account: @account, amount: 80, currency: "USD",
+          expected_day_of_month: 9, anchor_date: Date.current.next_month.change(day: 9),
+          last_occurrence_date: Date.current, next_expected_date: Date.current.next_month.change(day: 9),
+          status: "active", manual: true
+        )
+      end
+      assert_equal "boom", error.message
+    end
+  end
+
   private
     # Monthly charges on the 9th, the most recent one a month ago.
     def past_payments(name, count)
