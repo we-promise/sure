@@ -108,7 +108,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       name: "Round Trip Car",
       balance: 18_500,
       currency: "EUR",
-      accountable: Vehicle.new(subtype: "car", make: "Toyota", model: "Camry", year: 2024, mileage_value: 15_000, mileage_unit: "mi")
+      accountable: Vehicle.new(subtype: "car", make: "Toyota", model: "Camry", year: 2024, mileage_value: 15_000, mileage_unit: "km")
     )
 
     Family::DataImporter.new(@family, full_export_ndjson(source_family)).import!
@@ -119,7 +119,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     assert_equal "Camry", vehicle.model
     assert_equal 2024, vehicle.year
     assert_equal 15_000, vehicle.mileage_value
-    assert_equal "mi", vehicle.mileage_unit
+    assert_equal "km", vehicle.mileage_unit
   end
 
   test "imports vehicles from an export without their details or with null details" do
