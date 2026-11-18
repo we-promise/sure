@@ -248,7 +248,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account = @family.accounts.find(Family::DataImporter.new(@family, ndjson).import![:account_ids].first)
 
     assert_equal "locked", account.liquidity
     assert account.liquidity_manual?
@@ -275,7 +275,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       }
     ])
 
-    account = Family::DataImporter.new(@family, ndjson).import![:accounts].first
+    account = @family.accounts.find(Family::DataImporter.new(@family, ndjson).import![:account_ids].first)
 
     assert_equal "locked", account.liquidity
     assert_not account.liquidity_manual?
@@ -296,7 +296,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     first = build_ndjson([ { type: "Account", data: account_data.merge(
       liquidity: "locked", available_on: "2027-03-31", auto_renew: true, renewal_term_months: 12
     ) } ])
-    account = Family::DataImporter.new(@family, first, import_session: session).import![:accounts].first
+    account = @family.accounts.find(Family::DataImporter.new(@family, first, import_session: session).import![:account_ids].first)
 
     Family::DataImporter.new(@family, build_ndjson([ { type: "Account", data: account_data } ]), import_session: session).import!
 
@@ -320,7 +320,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     first = build_ndjson([ { type: "Account", data: account_data.merge(
       liquidity: "long_term", locked_attributes: { liquidity: "2026-10-01T00:00:00Z" }
     ) } ])
-    account = Family::DataImporter.new(@family, first, import_session: session).import![:accounts].first
+    account = @family.accounts.find(Family::DataImporter.new(@family, first, import_session: session).import![:account_ids].first)
     assert account.liquidity_manual?
 
     second = build_ndjson([ { type: "Account", data: account_data.merge(liquidity: "immediate") } ])
@@ -345,7 +345,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
     first = build_ndjson([ { type: "Account", data: account_data.merge(
       available_on: "2027-03-31", auto_renew: true, renewal_term_months: 12
     ) } ])
-    account = Family::DataImporter.new(@family, first, import_session: session).import![:accounts].first
+    account = @family.accounts.find(Family::DataImporter.new(@family, first, import_session: session).import![:account_ids].first)
 
     second = build_ndjson([ { type: "Account", data: account_data.merge(
       available_on: "someday", renewal_term_months: "invalid"
@@ -370,7 +370,7 @@ class Family::DataImporterTest < ActiveSupport::TestCase
       accountable: { subtype: "cd" }
     }
     first = build_ndjson([ { type: "Account", data: account_data.merge(auto_renew: true, renewal_term_months: 12) } ])
-    account = Family::DataImporter.new(@family, first, import_session: session).import![:accounts].first
+    account = @family.accounts.find(Family::DataImporter.new(@family, first, import_session: session).import![:account_ids].first)
     assert account.auto_renew?
 
     second = build_ndjson([ { type: "Account", data: account_data.merge(renewal_term_months: nil) } ])
