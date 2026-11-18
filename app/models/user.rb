@@ -908,12 +908,26 @@ class User < ApplicationRecord
     section_order("reports")
   end
 
+  REPORTS_BIGGEST_EXPENSES_LIMITS = [ 5, 10, 25 ].freeze
+  DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT = 10
+
+  def reports_biggest_expenses_limit
+    stored = preferences&.[]("reports_biggest_expenses_limit")
+    REPORTS_BIGGEST_EXPENSES_LIMITS.include?(stored) ? stored : DEFAULT_REPORTS_BIGGEST_EXPENSES_LIMIT
+  end
+
   def update_reports_preferences(prefs)
-    update_section_preferences(
+    return false unless update_section_preferences(
       "reports",
       order: prefs["reports_section_order"],
       collapsed: prefs["reports_collapsed_sections"]
     )
+
+    # A limit outside the offered choices is dropped, like any other bad value.
+    limit = Integer(prefs["reports_biggest_expenses_limit"].to_s, exception: false)
+    return true unless REPORTS_BIGGEST_EXPENSES_LIMITS.include?(limit)
+
+    with_locked_preferences { |updated_prefs| updated_prefs["reports_biggest_expenses_limit"] = limit }
   end
 
   # Transactions preferences management
