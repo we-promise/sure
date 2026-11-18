@@ -68,14 +68,19 @@ class ExchangeRate::BalanceRefreshTest < ActiveSupport::TestCase
   # went without, so it cannot stand in for one that was.
   test "rates stored by separate writes do not cancel each other's refresh" do
     eur_deposit(account: @account, date: @date + 1.day, amount: 100)
+    Balance::Materializer.new(@account, strategy: :forward).materialize_balances
+    before = closing_balance(@account)
+
     first = ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date, rate: 1.1)
     travel 1.second
     second = ExchangeRate.create!(from_currency: "EUR", to_currency: "USD", date: @date + 1.day, rate: 1.1)
 
     ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: first.date, stored_at: first.created_at } ])
     ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: second.date, stored_at: second.created_at } ])
+    perform_enqueued_jobs
 
-    assert_operator @account.syncs.count, :>=, 1, "the entry that had no rate is rebuilt by one of the two refreshes"
+    assert_equal [ @date + 1.day ], @account.syncs.pluck(:window_start_date), "one refresh syncs the entry's account from its date"
+    assert_equal before + 110, closing_balance(@account), "the 100 EUR deposit is now in the balance at 1.1"
   end
 
   # Several pairs at once: the account syncs from the earliest date any of
