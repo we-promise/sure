@@ -181,9 +181,9 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     income_queries = capture_sql_queries { subject.income }
 
     assert_empty metric_queries.grep(/AS security_id/), "reading a return must not run the by-security query"
-    assert_equal 1, income_queries.grep(/AS security_id/).size,
-                 "asking for income runs it once, over rows the metrics already loaded"
-    assert_empty income_queries.grep(/AS value_close/), "and does not read the daily rows a second time"
+    assert_equal 1, income_queries.grep(/AS security_id/).size, "asking for income runs it once"
+    assert_equal 1, income_queries.grep(/AS value_close/).size,
+                 "beside one read of the daily rows of its own, so the total and the attribution are one snapshot"
   end
 
   # The same withholding for the fee ratio. Fees and income are money and are
@@ -221,10 +221,10 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 10 / 995.0, result.income[:fee_ratio].to_f, 0.000001
   end
 
-  # A rate stored after an instance read its returns does not mix snapshots:
-  # that instance's income is still the one its returns came from, and the
-  # rows it read are not cached under the key a later instance reads, which
-  # computes the income from rows that have the rate.
+  # A rate stored after an instance read its returns: the rows it read are not
+  # cached under the key a later instance reads, which computes the income
+  # from rows that have the rate. The instance's own income is read at its
+  # miss too, so it has the rate -- data newer than its key, never older.
   test "an income read after a rate is stored is not cached under the newer key" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
     eur = eur_account_with_fee
@@ -237,7 +237,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
       set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.0
     end
 
-    assert_nil earlier.income[:fee_ratio], "one instance reports one snapshot"
+    assert_in_delta 10 / 995.0, earlier.income[:fee_ratio].to_f, 0.000001, "read at the miss, not from the returns' rows"
     later = performance(account_ids: [ eur.id ])
     assert_in_delta 10 / 995.0, later.income[:fee_ratio].to_f, 0.000001
     warm = performance(account_ids: [ eur.id ])
@@ -266,10 +266,29 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_in_delta 10 / 995.0, warm.income[:fee_ratio].to_f, 0.000001, "a later instance reads the cached entry, which has the rate"
   end
 
-  # A guard rather than a test of a fix: under one key the two entries share
-  # one series, so the income after the returns does not run the series query
-  # again.
-  test "the returns and the income under one key build the series once" do
+  # A dividend booked after this instance read its returns, with no sync to
+  # move the key: the income's total and its attribution have to come from one
+  # read, or the cached entry pairs a total without the dividend with an
+  # attribution that has it, and says -10 of the income named no security.
+  test "the income's total and its attribution come from one read of the data" do
+    Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    lay_balance account: @account, date: @day_one, opening: 1_000, closing: 1_000
+    lay_balance account: @account, date: @day_two, opening: 1_000, closing: 1_000
+    result = performance
+    result.twr
+
+    income_trade account: @account, date: @day_two, amount: 10
+    income = result.income
+    by_security = Portfolio::IncomeBySecurity.new(amounts: income[:by_security], total: income[:total])
+
+    assert_equal BigDecimal(10), by_security.amount_for(security_under_test)
+    assert_equal BigDecimal(0), by_security.unattributed, "the total and the attribution read the same entries"
+  end
+
+  # The income does not reuse the series the returns read, even under one
+  # key and with nothing changed: its total and its attribution have to be
+  # read together, and the query cache would hand back the returns' rows.
+  test "the income after the returns reads the series again" do
     eur = eur_account_with_fee
     set_rate from: "EUR", to: "USD", date: @day_one, rate: 1.0
     set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.0
@@ -280,7 +299,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
       result.income
     end
 
-    assert_equal 1, queries.count { |sql| sql.include?("balances_by_date") }
+    assert_equal 2, queries.count { |sql| sql.include?("balances_by_date") }
   end
 
   # #income is its own cache entry so that asking for it does not pay for the
