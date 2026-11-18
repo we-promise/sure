@@ -28,6 +28,12 @@ class UI::Account::ActivityFeed < ApplicationComponent
     feed_data.entries_by_date
   end
 
+  # The Filter menu offers to show synced balance updates on accounts that
+  # hide them by default, once they have any.
+  def balance_updates_filter?
+    account.hides_balance_updates_by_default? && account.entries.balance_updates.exists?
+  end
+
   private
     def account
       feed_data.account

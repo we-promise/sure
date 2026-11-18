@@ -1,0 +1,7 @@
+---
+nl:
+  activerecord:
+    errors:
+      models:
+        api_key:
+          cannot_destroy_demo_key: "Kan de API-sleutel voor demomonitoring niet verwijderen"

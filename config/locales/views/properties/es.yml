@@ -3,6 +3,7 @@ es:
   properties:
     edit:
       edit: Editar %{account}
+      title: Introducir propiedad manualmente
     form:
       address_line1: Dirección
       address_line1_placeholder: Calle Principal 123
@@ -21,9 +22,38 @@ es:
       subtype_prompt: Seleccione el tipo de propiedad
       year_built: Año de construcción
       year_built_placeholder: '2000'
+    avm_providers:
+      rentcast: RentCast
+      realie: Realie
+      chimnie: Chimnie
     new:
       title: Introduzca los detalles de la propiedad
       next: Siguiente
+      avm_option: Añadir con %{provider}
+      avm_title: Añadir propiedad con %{provider}
+      avm_description: Introduce un nombre para la propiedad y su dirección. %{provider} buscará los datos de la propiedad y su valor de mercado estimado.
+      avm_us_only: "%{provider} solo admite propiedades situadas en Estados Unidos."
+      avm_uk_only: "%{provider} solo admite propiedades residenciales situadas en el Reino Unido."
+      avm_uprn_label: UPRN
+      avm_uprn_placeholder: '100023336956'
+      avm_uprn_help: El Unique Property Reference Number (hasta 12 dígitos) identifica cada dirección del Reino Unido. Búscalo en findmyaddress.co.uk de GeoPlace o pregunta a tu ayuntamiento. %{provider} lo usa para valorar la propiedad gratis.
+      avm_county_label: Condado (opcional)
+      avm_town_label: Localidad
+      avm_postcode_label: Código postal
+      avm_submit: Buscar propiedad
+      avm_preview_title: Confirmar datos de la propiedad
+      avm_preview_description: Esto es lo que ha encontrado %{provider}. Revisa los datos antes de añadir la propiedad; todavía no se ha creado nada.
+      avm_preview_no_record: "%{provider} no ha encontrado ningún registro de propiedad en esta dirección, así que el valor mostrado es una estimación basada en la zona. Comprueba la dirección antes de continuar."
+      avm_preview_back: Atrás
+      avm_preview_uprn: UPRN
+      avm_preview_range: Rango estimado
+      avm_preview_confidence: Fiabilidad
+      avm_confidence:
+        high: Alta
+        medium: Media
+        low: Baja
+      avm_attribution_chimnie: Datos de valoración de Chimnie. Contiene datos de OS © Crown copyright and database right, datos de Royal Mail © Royal Mail copyright and database right y datos de HM Land Registry © Crown copyright and database right, con licencia Open Government Licence v3.0.
+      avm_preview_confirm: Añadir propiedad
     address:
       title: Introducir propiedad manualmente
       address_line1_label: Dirección (línea 1)
@@ -68,9 +98,23 @@ es:
         market_value: Valor de mercado
         purchase_price: Precio de compra
         trend: Tendencia
+        trend_in_currency: Tendencia en %{currency}
+        rate_unavailable: Tipo de cambio no disponible
         unknown: Desconocido
         year_built: Año de construcción
         edit_account_details: Editar detalles de la cuenta
+        refresh_valuation: Actualizar valoración
+        valuation_source: Valorada por %{provider}, actualizada el %{date}
+        link_valuation: Actualizar el valor automáticamente con %{provider}
+        link_valuation_description: El valor de esta propiedad solo se actualiza manualmente.
+    refresh_valuation:
+      queued: Se ha iniciado la actualización de la valoración. El nuevo valor aparecerá en breve.
+      not_linked: Esta propiedad no está vinculada a ningún proveedor de valoración.
+      not_configured: "%{provider} no está configurado. Añade su clave API en Ajustes → Autoalojamiento para actualizar esta valoración."
+    link_valuation:
+      linked: Vinculada a %{provider} y valor de la propiedad actualizado.
+      link_failed: "%{provider} no ha podido valorar esta propiedad, así que no se ha vinculado. Comprueba que la dirección sea correcta e inténtalo de nuevo."
+      not_linkable: Esta propiedad no se puede vincular a ese proveedor. Comprueba que la dirección esté completa y en un país compatible, y que la divisa de la cuenta coincida con la del proveedor.
     subtypes:
       apartment:
         short: Piso
@@ -87,3 +131,7 @@ es:
       agri_land:
         short: Terreno agrícola
         long: Terreno agrícola
+    form_tabs:
+      address: Dirección
+      overview: Resumen
+      value: Valor

@@ -216,7 +216,8 @@ tr:
       empty_month: Bu ay vadesi gelen fatura yok.
     all:
       search_placeholder: Faturalarda ara
-      any_status: Tüm durumlar
+      current_bills: Mevcut faturalar
+      dismissed_hidden_description: Yok sayılan faturalar gizlidir.
       status_filters:
         overdue: Gecikmiş
         due: Vadesi yaklaşan

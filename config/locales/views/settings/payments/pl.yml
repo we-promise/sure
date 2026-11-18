@@ -1,0 +1,26 @@
+---
+pl:
+  settings:
+    payments:
+      show:
+        choose_level: Wybierz poziom
+        contributions_note: Tutaj pojawią się wpłaty na rzecz %{product_name}.
+        currently_on_plan: Obecnie na planie
+        manage: Zarządzaj
+        not_contributing_emphasis: nie wpłaca
+        not_contributing_prefix: Obecnie
+        page_title: Płatności
+        payment_via_stripe: Płatność przez Stripe
+        subscription_subtitle: Zaktualizuj dane swojej karty kredytowej
+        subscription_title: Zarządzaj wpłatami
+        trial_days_left:
+          few: Dane zostaną usunięte za %{count} dni
+          many: Dane zostaną usunięte za %{count} dni
+          one: Dane zostaną usunięte za %{count} dzień
+          other: Dane zostaną usunięte za %{count} dni
+        trialing: Obecnie korzystasz z otwartego demo %{product_name}
+  views:
+    settings:
+      payments:
+        cancellation: Twoje wsparcie kończy się %{date}.
+        renewal: Twoje wsparcie będzie kontynuowane %{date}.

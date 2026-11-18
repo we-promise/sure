@@ -4,6 +4,14 @@ de:
     name:
       custom_range: "%{start} - %{end_date}"
       month_year: "%{month}"
+    available_cash:
+      heading: Verfügbares Geld
+      subtitle: Neben dem Plan oben, aber kein Teil davon.
+      available: Auf Bankkonten verfügbar
+      earmarked: Bereits für Ziele vorgemerkt
+      free: Wirklich frei
+      goals_link: Ziele anzeigen
+      currency_warning: "Kontostände in %{currencies} sind nicht enthalten, weil noch kein Wechselkurs zu %{currency} verfügbar ist."
     show:
       categories:
         amount: Betrag
@@ -26,6 +34,9 @@ de:
     actuals_summary:
       expenses: Ausgaben
       income: Einnahmen
+    switcher:
+      aria_label: Budget wechseln
+      household: Haushalt
     budget_donut:
       new_budget: Neues Budget
       of_budget: von %{amount}
@@ -64,6 +75,10 @@ de:
       fix_allocations: Zuweisungen korrigieren
       over_allocated_message: Du hast mehr verplant, als dein Budget hergibt. Bitte korrigiere die Zuweisungen.
   budget_categories:
+    bills_reserved: "%{amount} für Rechnungen reserviert"
+    bills_reserved_unconvertible:
+      one: 1 Rechnung ist nicht reserviert, kein Wechselkurs verfügbar
+      other: "%{count} Rechnungen sind nicht reserviert, kein Wechselkurs verfügbar"
     allocation_progress:
       budget_exceeded_html: Budget überschritten um <span class="text-red-500 privacy-sensitive">%{amount}</span>
       left_to_allocate: noch zu verteilen
@@ -79,6 +94,24 @@ de:
       shared_title: Leer lassen, um das Budget der Oberkategorie zu teilen
     confirm_button:
       confirm: Bestätigen
+    move:
+      button_title: Geld aus dieser Kategorie verschieben
+      cancel: Abbrechen
+      dialog_title: Geld verschieben
+      no_destination: Gerade gibt es keinen anderen Umschlag, in den du Geld verschieben kannst – eine Kategorie kann nichts an ihre eigene Ober- oder Unterkategorie abgeben.
+      submit: Verschieben
+      amount_label: Betrag
+      available: "%{amount} verfügbar"
+      from_label: Von
+      to_label: Nach
+      success: Geld verschoben.
+      errors:
+        different_budgets: Beide Kategorien müssen zum selben Budget gehören.
+        insufficient_funds: Das ist mehr, als dieser Kategorie zugewiesen ist.
+        non_positive_amount: Gib einen Betrag größer als null ein.
+        parent_child: Zwischen einer Kategorie und ihrer eigenen Unterkategorie lässt sich kein Geld verschieben – pass die Unterkategorie direkt an.
+        same_category: Wähl eine andere Kategorie als Ziel für das Geld.
+        uncategorized: „Nicht kategorisiert“ ist kein echter Umschlag, daher lässt sich dort kein Geld hinein- oder herausschieben.
     index:
       description: Passe die Kategoriebudgets an, um Ausgabengrenzen zu setzen. Nicht verteilte Mittel gelten automatisch als nicht kategorisiert.
       title: Kategoriebudgets bearbeiten

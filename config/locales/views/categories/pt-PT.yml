@@ -41,8 +41,6 @@ pt-PT:
       sources_label: Categorias a unir
       sources_hint: As categorias selecionadas serão eliminadas depois de as suas transações e linhas de orçamento serem movidas para o destino. Não selecione o destino como origem.
       submit: Unir selecionadas
-    menu:
-      loading: A carregar...
     new:
       new_category: Nova categoria
     perform_merge:

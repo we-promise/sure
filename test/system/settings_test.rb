@@ -95,6 +95,95 @@ class SettingsTest < ApplicationSystemTestCase
     assert_current_path settings_api_keys_path
   end
 
+  test "searching settings finds a setting by its own text and opens its page with the keyboard" do
+    visit settings_profile_path
+
+    fill_in I18n.t("settings.settings_search.placeholder"), with: "two-fa"
+
+    mfa_title = I18n.t("settings.securities.show.mfa_title")
+    assert_selector "[role=option][aria-selected=true]", text: mfa_title
+    assert_selector "[role=option][aria-selected=true]", text: I18n.t("settings.settings_nav.security_label")
+    assert_selector "[role=option][aria-selected=true][href*='#:~:text='][data-turbo=false]"
+
+    page.send_keys(:enter)
+
+    assert_current_path settings_security_path
+    assert_selector "h2", text: mfa_title
+  end
+
+  test "settings search lists what a setting is called, not the text that describes it" do
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: "two-fa"
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.securities.show.mfa_title")
+
+    search.fill_in with: I18n.t("settings.securities.show.mfa_description")
+    assert_selector "[data-settings-search-target=empty]", text: I18n.t("settings.settings_search.no_results")
+    assert_no_selector "[data-settings-search-target=results] [role=option]"
+  end
+
+  test "settings search finds the name of a toggle but not its description" do
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.preferences.show.investment_contributions_as_spending")
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.preferences.show.investment_contributions_as_spending")
+
+    search.fill_in with: I18n.t("settings.preferences.show.investment_contributions_as_spending_hint")
+    assert_selector "[data-settings-search-target=empty]"
+  end
+
+  test "settings search names a preview toggle without its badge" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.preferences.show.personal_budgets")
+    assert_selector "[data-settings-search-target=results] [data-slot=title]", exact_text: I18n.t("settings.preferences.show.personal_budgets")
+  end
+
+  test "settings search skips the body of a closed disclosure but keeps its summary" do
+    @user.setup_mfa!
+    @user.enable_mfa!
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: I18n.t("settings.securities.show.disable_mfa")
+    assert_selector "[data-settings-search-target=results] [role=option]", text: I18n.t("settings.securities.show.disable_mfa")
+
+    search.fill_in with: I18n.t("settings.securities.show.disable_mfa_password_label")
+    assert_selector "[data-settings-search-target=empty]"
+  end
+
+  test "settings search lists pages first when their name matches and reports when nothing matches" do
+    visit settings_profile_path
+    search = find_field(I18n.t("settings.settings_search.placeholder"))
+
+    search.fill_in with: "sec"
+    assert_selector "[role=option][aria-selected=true]", text: I18n.t("settings.settings_nav.security_label")
+
+    search.fill_in with: "zzzz"
+    assert_selector "[data-settings-search-target=empty]", text: I18n.t("settings.settings_search.no_results")
+    assert_no_selector "[data-settings-search-target=results] [role=option]"
+  end
+
+  test "slash focuses settings search and Escape clears it before leaving the field" do
+    visit settings_profile_path
+
+    # Selenium treats a lone "/" as a file path, so send the keydown directly.
+    page.execute_script('document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "/", bubbles: true }))')
+    assert_selector "input[type=search]:focus"
+
+    page.send_keys("tags")
+    assert_selector "[data-settings-search-target=item]:not(.hidden)", text: I18n.t("settings.settings_nav.tags_label")
+
+    page.send_keys(:escape)
+    assert_field I18n.t("settings.settings_search.placeholder"), with: ""
+    assert_current_path settings_profile_path
+    assert_selector "nav", text: I18n.t("settings.settings_nav.tags_label")
+  end
+
   test "does not show admin settings to non-admin users" do
     VCR.use_cassette("git_repository_provider/fetch_latest_release_notes") do
       # Visit accounts path directly as non-admin user to avoid user menu issues
