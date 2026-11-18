@@ -195,12 +195,21 @@ module AccountableResource
       require_account_permission!(@account)
     end
 
+    # Only where the form offers the availability fields (preview features,
+    # an asset type with a choice) may the request set them. Liabilities keep
+    # their level from the type; imports and the API set it on purpose.
+    def liquidity_form_attributes
+      selectable = accountable_type.classification == "asset" && accountable_type.liquidity_selectable?
+      preview_features_enabled? && selectable ? Account::Liquidity::FORM_ATTRIBUTES : []
+    end
+
     def account_params
       params.require(:account).permit(
         :name, :balance, :subtype, :currency, :accountable_type, :return_to,
         :opening_balance_date,
         :institution_name, :institution_domain, :notes, :exclude_from_reports,
         :enable_category_matcher, :logo,
+        *liquidity_form_attributes,
         accountable_attributes: self.class.permitted_accountable_attributes
       )
     end

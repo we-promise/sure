@@ -89,6 +89,40 @@ class PropertiesControllerTest < ActionDispatch::IntegrationTest
   end
 
   # Tab view tests
+  test "the overview tab offers the availability choice with preview features" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    get edit_property_path(@account)
+
+    assert_response :success
+    assert_select "select[name='account[liquidity_choice]']", 1
+  end
+
+  test "the overview tab has no availability choice without preview features" do
+    get edit_property_path(@account)
+
+    assert_response :success
+    assert_select "select[name='account[liquidity_choice]']", 0
+  end
+
+  test "updating the overview saves a chosen availability" do
+    @user.update!(preferences: (@user.preferences || {}).merge("preview_features_enabled" => true))
+
+    patch property_path(@account), params: {
+      account: {
+        name: @account.name,
+        liquidity_choice: "locked",
+        available_on: "2030-06-30",
+        accountable_attributes: { id: @account.accountable.id, subtype: @account.subtype }
+      }
+    }
+
+    @account.reload
+    assert_equal "locked", @account.liquidity
+    assert_equal Date.new(2030, 6, 30), @account.available_on
+    assert_includes @account.locked_attributes.keys, "liquidity"
+  end
+
   test "shows balances tab" do
     get balances_property_path(@account)
     assert_response :success
