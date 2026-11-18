@@ -2,6 +2,7 @@ require "digest"
 
 class PushSubscription < ApplicationRecord
   belongs_to :user
+  has_many :push_deliveries, as: :subscription, dependent: :destroy
 
   enum :environment, { sandbox: "sandbox", production: "production" }, validate: true
 

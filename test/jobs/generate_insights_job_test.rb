@@ -148,7 +148,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       end
     end
     assert_equal [ subscription.id ],
-      PushDelivery.apns.joins(:subscription).where(insights: { id: @family.insights }).pluck("push_subscriptions.id")
+      PushDelivery.apns.where(insight: @family.insights).pluck(:subscription_id)
   end
 
   test "browser push uses new and materially resurfaced insights but not routine refreshes" do
