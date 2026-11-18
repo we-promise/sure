@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::AlphaVantageTest < ActiveSupport::TestCase
+  OVERVIEW_URL = "https://www.alphavantage.co/query".freeze
+
   setup do
     @provider = Provider::AlphaVantage.new("test_api_key")
   end
@@ -26,48 +28,39 @@ class Provider::AlphaVantageTest < ActiveSupport::TestCase
 
   test "every attempt of a request is counted against the daily limit, including retries" do
     Rails.stubs(:cache).returns(ActiveSupport::Cache::MemoryStore.new)
+    @provider.stubs(:sleep)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
 
-    attempts = 0
-    provider = @provider
-    # Stands in for the retry middleware: it runs the per-attempt hook before
-    # each attempt, the way BeforeEachAttempt does on the real client.
-    client = Object.new
-    client.define_singleton_method(:get) do |*|
-      provider.send(:throttle_request)
-      attempts += 1
-      raise Faraday::TimeoutError if attempts < 3
-
-      Struct.new(:body).new({ "Name" => "Apple Inc", "Symbol" => "AAPL" }.to_json)
-    end
-    @provider.stubs(:client).returns(client)
+    stub_request(:get, OVERVIEW_URL)
+      .with(query: hash_including("function" => "OVERVIEW"))
+      .to_raise(Faraday::TimeoutError).then
+      .to_raise(Faraday::TimeoutError).then
+      .to_return(status: 200, body: { "Name" => "Apple Inc", "Symbol" => "AAPL" }.to_json)
 
     assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
 
-    assert_equal 3, attempts
+    assert_requested :get, OVERVIEW_URL, query: hash_including("function" => "OVERVIEW"), times: 3
     assert_equal 3, Rails.cache.read("alpha_vantage:daily:#{Date.current}")
   end
 
   test "a retry that would exceed the daily limit is refused before reaching Alpha Vantage" do
     store = ActiveSupport::Cache::MemoryStore.new
     Rails.stubs(:cache).returns(store)
+    @provider.stubs(:sleep)
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
     store.write("alpha_vantage:daily:#{Date.current}", 24)
 
-    attempts = 0
-    provider = @provider
-    client = Object.new
-    client.define_singleton_method(:get) do |*|
-      provider.send(:throttle_request)
-      attempts += 1
-      raise Faraday::TimeoutError
-    end
-    @provider.stubs(:client).returns(client)
+    stub_request(:get, OVERVIEW_URL)
+      .with(query: hash_including("function" => "OVERVIEW"))
+      .to_raise(Faraday::TimeoutError)
 
     result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
 
     assert_not result.success?
     assert_kind_of Provider::AlphaVantage::RateLimitError, result.error
-    # The first attempt is counted (24 -> 25), the second is refused before the wire
-    assert_equal 2, attempts
-    assert_equal 25, store.read("alpha_vantage:daily:#{Date.current}")
+    # The first attempt is counted (24 -> 25) and reaches the wire; the retry is counted
+    # past the limit (25 -> 26) and refused before it
+    assert_requested :get, OVERVIEW_URL, query: hash_including("function" => "OVERVIEW"), times: 1
+    assert_equal 26, store.read("alpha_vantage:daily:#{Date.current}")
   end
 end

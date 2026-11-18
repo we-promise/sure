@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Provider::EodhdTest < ActiveSupport::TestCase
+  FUNDAMENTALS_URL = "https://eodhd.com/api/fundamentals/AAPL.US".freeze
+
   setup do
     @provider = Provider::Eodhd.new("test_api_key")
     stub_quota_hook(@provider)
@@ -345,8 +347,6 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     with_fresh_cache do
       Rails.cache.write("eodhd:daily:#{Date.current}", 15)
       @provider.unstub(:count_request_attempt!)
-      @provider.stubs(:client).returns(mock_client = mock)
-      mock_client.expects(:get).never
 
       with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
         result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
@@ -354,6 +354,7 @@ class Provider::EodhdTest < ActiveSupport::TestCase
         assert_not result.success?
         assert_kind_of Provider::Eodhd::RateLimitError, result.error
       end
+      assert_not_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json")
     end
   end
 
@@ -432,6 +433,7 @@ class Provider::EodhdTest < ActiveSupport::TestCase
   test "taking a refused request back off the count never makes it negative" do
     store = ActiveSupport::Cache::MemoryStore.new
     with_fresh_cache(store) do
+      @provider.unstub(:count_request_attempt!)
       key = "eodhd:daily:#{Date.current}"
       store.write(key, 15)
       # The counter is evicted (or the cache cleared) between the increment and the refund
@@ -442,9 +444,9 @@ class Provider::EodhdTest < ActiveSupport::TestCase
       end
 
       with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
-        @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
         assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
       end
+      assert_not_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json")
       assert_equal 0, store.read(key).to_i
     end
   end
@@ -469,8 +471,11 @@ class Provider::EodhdTest < ActiveSupport::TestCase
   test "a 403 that arrives after midnight is refunded to the day it was counted on" do
     with_fresh_cache do
       test_case = self
+      provider = @provider
       client = Object.new
       client.define_singleton_method(:get) do |*|
+        # The attempt is reserved on the day it starts, then midnight passes
+        provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
         test_case.travel_to Time.zone.local(2026, 8, 22, 0, 0, 1)
         # Price requests already counted on the new day
         Rails.cache.write("eodhd:daily:2026-08-22", 5)
@@ -479,7 +484,6 @@ class Provider::EodhdTest < ActiveSupport::TestCase
       @provider.stubs(:client).returns(client)
 
       travel_to Time.zone.local(2026, 8, 21, 23, 59, 59)
-      @provider.send(:reserve_daily_limit!, cost: Provider::Eodhd::FUNDAMENTALS_REQUEST_COST)
       assert_not @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
 
       assert_equal 1, Rails.cache.read("eodhd:daily:2026-08-21")
@@ -491,26 +495,19 @@ class Provider::EodhdTest < ActiveSupport::TestCase
     store = ActiveSupport::Cache::MemoryStore.new
     with_fresh_cache(store) do
       @provider.unstub(:count_request_attempt!)
-      attempts = 0
-      provider = @provider
-      # Stands in for the retry middleware: it runs the per-attempt hook before
-      # each attempt, the way BeforeEachAttempt does on the real client.
-      client = Object.new
-      client.define_singleton_method(:get) do |*|
-        provider.send(:count_request_attempt!)
-        attempts += 1
-        raise Faraday::TimeoutError if attempts < 3
-
-        Struct.new(:body).new({ "General" => { "Name" => "Apple Inc" } }.to_json)
-      end
-      @provider.stubs(:client).returns(client)
+      Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+      stub_request(:get, FUNDAMENTALS_URL)
+        .with(query: hash_including("fmt" => "json"))
+        .to_raise(Faraday::TimeoutError).then
+        .to_raise(Faraday::TimeoutError).then
+        .to_return(status: 200, body: { "General" => { "Name" => "Apple Inc" } }.to_json)
 
       # Three attempts at ten calls each need a paid limit to fit
       with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => "100") do
         assert @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS").success?
       end
 
-      assert_equal 3, attempts
+      assert_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json"), times: 3
       assert_equal 30, store.read("eodhd:daily:#{Date.current}")
     end
   end
@@ -518,18 +515,12 @@ class Provider::EodhdTest < ActiveSupport::TestCase
   test "a retried fundamentals request that would exceed the daily limit is refused before reaching EODHD" do
     store = ActiveSupport::Cache::MemoryStore.new
     with_fresh_cache(store) do
-      store.write("eodhd:daily:#{Date.current}", 15)
+      store.write("eodhd:daily:#{Date.current}", 5)
       @provider.unstub(:count_request_attempt!)
-
-      attempts = 0
-      provider = @provider
-      client = Object.new
-      client.define_singleton_method(:get) do |*|
-        provider.send(:count_request_attempt!)
-        attempts += 1
-        raise Faraday::TimeoutError
-      end
-      @provider.stubs(:client).returns(client)
+      Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+      stub_request(:get, FUNDAMENTALS_URL)
+        .with(query: hash_including("fmt" => "json"))
+        .to_raise(Faraday::TimeoutError)
 
       with_env_overrides("EODHD_MAX_REQUESTS_PER_DAY" => nil) do
         result = @provider.fetch_security_info(symbol: "AAPL", exchange_operating_mic: "XNYS")
@@ -538,8 +529,9 @@ class Provider::EodhdTest < ActiveSupport::TestCase
         assert_kind_of Provider::Eodhd::RateLimitError, result.error
       end
 
-      # The first attempt is reserved (10 -> 25), the second is refused before the wire
-      assert_equal 2, attempts
+      # The first attempt is reserved (5 -> 15) and reaches the wire; the retry
+      # (15 -> 25) is refused before it and taken back off the count.
+      assert_requested :get, FUNDAMENTALS_URL, query: hash_including("fmt" => "json"), times: 1
       assert_equal 15, store.read("eodhd:daily:#{Date.current}")
     end
   end
