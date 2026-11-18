@@ -2,7 +2,7 @@ class AccountsController < ApplicationController
   include StreamExtensions
   include FilterClearable
 
-  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter]
+  before_action :set_account, only: %i[show sparkline sync set_default remove_default clear_filter toggle_sidebar_hidden]
   before_action :set_manageable_account, only: %i[logo_options toggle_active toggle_exclude_from_reports destroy unlink confirm_unlink select_provider]
   before_action :ensure_linked_account, only: %i[confirm_unlink unlink]
   include Periodable
@@ -266,6 +266,45 @@ class AccountsController < ApplicationController
     else
       head :unprocessable_entity
     end
+  end
+
+  # Sort order of the account sidebar, picked from the sidebar settings menu.
+  def sidebar_order
+    order = params[:order].to_s
+    if AccountOrder::ORDERS.key?(order) && Current.user.update(default_account_order: order)
+      respond_to do |format|
+        format.html { redirect_back_or_to root_path, status: :see_other }
+        format.json { head :ok }
+      end
+    else
+      head :unprocessable_entity
+    end
+  end
+
+  # Dialog listing every account with a "show in sidebar" checkbox.
+  def sidebar_visibility
+    @sidebar_accounts = Current.user.accessible_accounts
+      .visible
+      .includes(:accountable)
+      .order(:name)
+      .group_by(&:accountable_type)
+    @hidden_account_ids = Current.user.sidebar_hidden_account_ids.to_set
+  end
+
+  def update_sidebar_visibility
+    # Only the accounts the dialog listed change; hidden accounts it doesn't
+    # list (disabled ones) stay hidden.
+    listed_ids = Current.user.accessible_accounts.visible.pluck(:id).map(&:to_s)
+    shown_ids = Array(params[:shown_account_ids]).map(&:to_s) & listed_ids
+    Current.user.change_sidebar_hidden_accounts(hide: listed_ids - shown_ids, show: shown_ids)
+    redirect_back_or_to root_path, status: :see_other
+  end
+
+  # Hides or shows one account in the current user's sidebar, from the
+  # account menu on the accounts page.
+  def toggle_sidebar_hidden
+    Current.user.toggle_sidebar_hidden_account(@account.id)
+    redirect_to accounts_path
   end
 
   def toggle_active

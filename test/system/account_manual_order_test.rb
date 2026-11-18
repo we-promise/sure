@@ -18,7 +18,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
       assert_equal [ checking.id, plaid.id ], visible_depository_ids.first(2)
       assert_no_selector "[data-sortable-list-target='item'] button", visible: true
 
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+      start_sort_mode
 
       handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
       handle.send_keys(:enter)
@@ -50,7 +50,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     visit account_path(checking)
 
     within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+      start_sort_mode
 
       handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
       handle.send_keys(:enter)
@@ -69,7 +69,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     visit account_path(checking)
 
     within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+      start_sort_mode
 
       handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
       handle.send_keys(:enter)
@@ -89,7 +89,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     visit account_path(accounts(:depository))
 
     within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+      start_sort_mode
     end
 
     # Like a tab that renders no sort toggle: nothing visible to return to.
@@ -130,7 +130,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     JS
 
     within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+      start_sort_mode
 
       handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
       handle.send_keys(:enter)
@@ -156,7 +156,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     visit account_path(checking)
 
     within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+      start_sort_mode
 
       handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
       handle.send_keys(:enter)
@@ -179,7 +179,7 @@ class AccountManualOrderTest < ApplicationSystemTestCase
     visit account_path(checking)
 
     within_testid("account-sidebar-tabs") do
-      find("button[aria-label='#{I18n.t("accounts.sidebar.sort_mode.start")}']", visible: true).click
+      start_sort_mode
 
       handle = find("[data-sortable-list-target='item'][data-sortable-list-id='#{plaid.id}'] button")
       handle.send_keys(:enter)
@@ -245,5 +245,11 @@ class AccountManualOrderTest < ApplicationSystemTestCase
         sleep 0.1
       end
       pass
+    end
+
+    # Sort mode starts from the sidebar settings menu.
+    def start_sort_mode
+      find("button[aria-label='#{I18n.t("accounts.sidebar.settings.title")}']", visible: true).click
+      click_button I18n.t("accounts.sidebar.settings.reorder")
     end
 end

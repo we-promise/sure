@@ -23,9 +23,21 @@ en:
       change_simplefin_account: Change SimpleFIN account
       troubleshoot: Troubleshoot
       enable: Enable account
+      enable_description: Counts in net worth and reports again
       disable: Disable account
+      disable_description: Removes it from net worth, reports and the sidebar
+      disable_confirm:
+        title: Disable %{account}?
+        body: A disabled account no longer counts toward your net worth, totals, budgets or reports, and it leaves the sidebar. Its history is kept, and you can enable it again from this page at any time. To keep it in net worth but out of spending reports, use "Exclude from all reports". To only tidy the sidebar, use "Hide from sidebar".
+        button: Disable account
       exclude_from_reports: Exclude from all reports
+      exclude_from_reports_description: Still counts in net worth, not in reports or budgets
       include_in_reports: Include in reports
+      include_in_reports_description: Counts in reports and budgets again
+      hide_from_sidebar: Hide from sidebar
+      hide_from_sidebar_description: Only hides it from your sidebar; totals don't change
+      show_in_sidebar: Show in sidebar
+      show_in_sidebar_description: Lists it in your sidebar again
       excluded_from_reports_indicator: Excluded from reports
       set_default: Set as default
       remove_default: Unset default
@@ -197,6 +209,26 @@ en:
         start: Sort accounts
         hint: Drag accounts by their handle to reorder them.
         done: Done
+      settings:
+        title: Sidebar settings
+        sort_by: Sort accounts by
+        orders:
+          name_asc: Name (A–Z)
+          name_desc: Name (Z–A)
+          balance_desc: Balance (high to low)
+          balance_asc: Balance (low to high)
+          manual: Custom order
+        reorder: Reorder accounts…
+        hide_accounts: Hide accounts…
+        hide_accounts_count:
+          one: Hide accounts… (1 hidden)
+          other: Hide accounts… (%{count} hidden)
+    sidebar_visibility:
+      title: Show in sidebar
+      subtitle: Unchecked accounts are hidden from the account list.
+      empty: You have no accounts yet.
+      hint: Hidden accounts still count toward net worth, reports and group totals.
+      save: Save
     types:
       depository: Cash
       investment: Investment

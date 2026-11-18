@@ -1,6 +1,14 @@
 <%# locals: (account_group:, mobile: false, all_tab: false, open: nil, sortable: false, reconciliation_indicators: {}, **args) %>
 
-<div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>" data-group-key="<%= account_group.key %>">
+<% hidden_account_ids = Current.user&.sidebar_hidden_account_ids.to_a %>
+<% visible_accounts = account_group.accounts.reject { |account| hidden_account_ids.include?(account.id.to_s) } %>
+<%# A group whose accounts are all hidden in the sidebar settings is hidden too. %>
+<% if visible_accounts.any? %>
+<div id="<%= account_group.dom_id(tab: all_tab ? :all : nil, mobile: mobile) %>"
+     data-group-key="<%= account_group.key %>"
+     data-controller="sidebar-group-state"
+     data-sidebar-group-state-key-value="<%= all_tab ? "all" : account_group.classification %>:<%= account_group.key %>"
+     data-action="toggle->sidebar-group-state#save:capture turbo:morph@window->sidebar-group-state#restore">
   <% is_open = open.nil? ? (account_group.accounts.any? { |account| page_active?(account_path(account)) } || Current.user.always_expanded_account_group?(account_group.key)) : open %>
   <%= render DS::Disclosure.new(align: :left, open: is_open) do |disclosure| %>
     <% disclosure.with_summary_content do %>
@@ -34,12 +42,16 @@
             sortable_list_mirror_lists_value: true,
             action: "dragover->sortable-list#dragOver drop->sortable-list#drop account-sort-mode:stop@window->sortable-list#releaseKeyboardGrab turbo:before-visit@window->sortable-list#saveBeforeVisit"
           } : {} do %>
-      <% account_group.accounts.each do |account| %>
+      <% manual_positions = Current.user ? Current.user.manual_account_order[account_group.key].to_a.map(&:to_s) : [] %>
+      <% visible_accounts.each do |account| %>
         <%# Rows become draggable only in sort mode (account-sort-mode). %>
         <%= tag.div class: "flex items-center gap-1 rounded-lg",
               data: sortable ? {
                 sortable_list_target: "item",
                 sortable_list_id: account.id,
+                sort_name: account.name.to_s.downcase,
+                sort_balance: (account.respond_to?(:converted_balance) ? account.converted_balance : account.balance).to_f,
+                manual_position: manual_positions.index(account.id.to_s),
                 action: "dragstart->sortable-list#dragStart dragend->sortable-list#dragEnd"
               } : {} do %>
         <% if sortable %>
@@ -106,3 +118,4 @@
     </div>
   <% end %>
 </div>
+<% end %>

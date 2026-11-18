@@ -1,0 +1,93 @@
+<%# locals: (has_groups:) %>
+
+<%# Settings menu of the account sidebar: expand/collapse all groups, the
+    account sort order, custom (drag) ordering, and hiding accounts. %>
+<% current_order = Current.user&.account_order&.key || "name_asc" %>
+<% hidden_count = Current.user&.sidebar_hidden_account_ids&.size.to_i %>
+
+<%= render DS::Popover.new(variant: "button", placement: "bottom-end", mobile_fullwidth: false) do |popover| %>
+  <% popover.with_button(
+    variant: :outline,
+    size: :md,
+    icon: "settings-2",
+    class: "shrink-0",
+    title: t("accounts.sidebar.settings.title"),
+    aria: { label: t("accounts.sidebar.settings.title") },
+    data: { account_sort_mode_target: "toggle" }
+  ) %>
+
+  <% popover.with_custom_content do %>
+    <div class="w-64 p-1 space-y-1">
+      <% if has_groups %>
+        <div class="flex gap-1 p-1">
+          <%= render DS::Button.new(
+            variant: :outline,
+            size: :sm,
+            icon: "chevrons-up-down",
+            text: t("accounts.sidebar.expand_all"),
+            class: "flex-1 justify-center",
+            data: { account_sort_mode_open_param: "true", action: "account-sort-mode#setGroupsOpen DS--popover#close" }
+          ) %>
+          <%= render DS::Button.new(
+            variant: :outline,
+            size: :sm,
+            icon: "chevrons-down-up",
+            text: t("accounts.sidebar.collapse_all"),
+            class: "flex-1 justify-center",
+            data: { account_sort_mode_open_param: "false", action: "account-sort-mode#setGroupsOpen DS--popover#close" }
+          ) %>
+        </div>
+
+        <%= render "shared/ruler", classes: "my-1" %>
+      <% end %>
+
+      <p class="px-2 pt-1 pb-0.5 text-xs font-medium text-secondary"><%= t("accounts.sidebar.settings.sort_by") %></p>
+      <%# Sorting happens in place (account-sort-mode#setOrder) and is saved in
+          the background, so open groups stay open. Check marks and the
+          reorder item are shown with inline display for the same reason as
+          the sort-mode handles (precompiled CSS). %>
+      <% %w[name_asc name_desc balance_desc balance_asc manual].each do |order_key| %>
+        <div class="px-1">
+          <button type="button"
+                  role="menuitemradio"
+                  aria-checked="<%= current_order == order_key %>"
+                  class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover"
+                  data-account-sort-mode-target="orderOption"
+                  data-order="<%= order_key %>"
+                  data-account-sort-mode-order-param="<%= order_key %>"
+                  data-action="account-sort-mode#setOrder DS--popover#close">
+            <span class="flex items-center justify-center w-5 h-5 shrink-0" aria-hidden="true">
+              <span data-check style="<%= "display:none" unless current_order == order_key %>"><%= icon("check") %></span>
+            </span>
+            <span class="text-sm text-primary"><%= t("accounts.sidebar.settings.orders.#{order_key}") %></span>
+          </button>
+        </div>
+      <% end %>
+
+      <% if has_groups %>
+        <div class="px-1"
+             data-account-sort-mode-target="reorderItem"
+             style="<%= "display:none" unless current_order == "manual" %>">
+          <button type="button"
+                  class="flex items-center gap-2 p-2 rounded-md w-full focus-ring hover:bg-container-hover"
+                  data-action="account-sort-mode#start DS--popover#close">
+            <span class="w-5 shrink-0"></span>
+            <%= icon("grip-vertical") %>
+            <span class="text-sm text-primary"><%= t("accounts.sidebar.settings.reorder") %></span>
+          </button>
+        </div>
+      <% end %>
+
+      <%= render "shared/ruler", classes: "my-1" %>
+
+      <%= render DS::MenuItem.new(
+        variant: :link,
+        text: hidden_count.positive? ? t("accounts.sidebar.settings.hide_accounts_count", count: hidden_count) : t("accounts.sidebar.settings.hide_accounts"),
+        icon: "eye-off",
+        href: sidebar_visibility_accounts_path,
+        frame: :modal,
+        roving: false
+      ) %>
+    </div>
+  <% end %>
+<% end %>

@@ -702,8 +702,79 @@ class User < ApplicationRecord
     ordered_ids = requested_ids.select { |id| accessible_ids.include?(id) }
 
     with_locked_preferences do |prefs|
-      prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids)
+      ordered_ids = keep_sidebar_hidden_positions(manual_account_order[group_key].to_a.map(&:to_s), ordered_ids)
+      prefs["manual_account_order"] = manual_account_order.merge(group_key => ordered_ids.first(MANUAL_ACCOUNT_ORDER_LIMIT))
     end
+  end
+
+  # Accounts the user has hidden from the account sidebar. They still count
+  # toward net worth, reports and group totals; only the sidebar row is hidden.
+  def sidebar_hidden_account_ids
+    ids = preferences&.dig("sidebar_hidden_account_ids")
+    ids.is_a?(Array) ? ids.map(&:to_s) : []
+  end
+
+  # Covers every account group, so it isn't capped like one group's order;
+  # requests beyond this are rejected rather than cut short.
+  SIDEBAR_HIDDEN_ACCOUNTS_LIMIT = 10_000
+
+  def update_sidebar_hidden_account_ids(account_ids)
+    requested_ids = Array(account_ids).map(&:to_s).reject(&:blank?).uniq
+    return false if requested_ids.size > SIDEBAR_HIDDEN_ACCOUNTS_LIMIT
+
+    accessible_ids = accessible_accounts.where(id: requested_ids).pluck(:id).map(&:to_s).to_set
+    hidden_ids = requested_ids.select { |id| accessible_ids.include?(id) }
+
+    with_locked_preferences do |prefs|
+      prefs["sidebar_hidden_account_ids"] = hidden_ids
+    end
+  end
+
+  # Hides and shows accounts in one locked read-modify-write, so two requests
+  # changing different accounts can't drop each other's change. Accounts in
+  # neither list keep their current state (e.g. a disabled account the
+  # visibility dialog doesn't list).
+  def change_sidebar_hidden_accounts(hide: [], show: [])
+    hide = Array(hide).map(&:to_s).reject(&:blank?).uniq
+    show = Array(show).map(&:to_s).reject(&:blank?)
+    hide = accessible_accounts.where(id: hide).pluck(:id).map(&:to_s) if hide.any?
+
+    with_locked_preferences do |prefs|
+      current = Array(prefs["sidebar_hidden_account_ids"]).map(&:to_s)
+      updated = (current - show) | hide
+      raise ArgumentError, "too many hidden accounts" if updated.size > SIDEBAR_HIDDEN_ACCOUNTS_LIMIT
+
+      prefs["sidebar_hidden_account_ids"] = updated
+    end
+  rescue ArgumentError
+    false
+  end
+
+  def toggle_sidebar_hidden_account(account_id)
+    account_id = account_id.to_s
+    with_locked_preferences do |prefs|
+      current = Array(prefs["sidebar_hidden_account_ids"]).map(&:to_s)
+      prefs["sidebar_hidden_account_ids"] = current.include?(account_id) ? current - [ account_id ] : current + [ account_id ]
+    end
+  end
+
+  # The sidebar only drags its visible rows, so a saved order arrives without
+  # the hidden ones. Hidden accounts keep their saved slots and the visible ids
+  # fill the remaining slots in their new order.
+  def keep_sidebar_hidden_positions(saved_ids, visible_ids)
+    hidden = sidebar_hidden_account_ids.to_set
+    kept = saved_ids.select { |id| hidden.include?(id) && !visible_ids.include?(id) }
+    return visible_ids if kept.empty?
+
+    remaining = visible_ids.dup
+    merged = saved_ids.filter_map do |id|
+      if kept.include?(id)
+        id
+      else
+        remaining.shift
+      end
+    end
+    merged + remaining
   end
 
   # Locked read-modify-write of the preferences JSONB: yields a copy of the

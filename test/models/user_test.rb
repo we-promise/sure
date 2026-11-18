@@ -1679,6 +1679,36 @@ class UserTest < ActiveSupport::TestCase
     assert_equal({}, @user.reload.manual_account_order)
   end
 
+  test "update_manual_account_order keeps hidden accounts in their saved slots" do
+    depository = accounts(:depository)
+    connected = accounts(:connected)
+    hidden = families(:dylan_family).accounts.create!(name: "Hidden", currency: "USD", balance: 0, accountable: Depository.new, owner: @user)
+    @user.update_manual_account_order("depository", [ depository.id, hidden.id, connected.id ])
+    @user.update_sidebar_hidden_account_ids([ hidden.id ])
+
+    # The sidebar sends only its visible rows after a drag.
+    assert @user.update_manual_account_order("depository", [ connected.id, depository.id ])
+
+    assert_equal [ connected.id, hidden.id, depository.id ], @user.reload.manual_account_order["depository"]
+  end
+
+  test "update_sidebar_hidden_account_ids keeps every accessible account, beyond one group's order limit" do
+    ids = Array.new(User::MANUAL_ACCOUNT_ORDER_LIMIT) { SecureRandom.uuid } + [ accounts(:depository).id ]
+
+    assert @user.update_sidebar_hidden_account_ids(ids)
+
+    assert_equal [ accounts(:depository).id ], @user.reload.sidebar_hidden_account_ids
+  end
+
+  test "update_sidebar_hidden_account_ids rejects an oversized list" do
+    @user.update_sidebar_hidden_account_ids([ accounts(:depository).id ])
+    ids = Array.new(User::SIDEBAR_HIDDEN_ACCOUNTS_LIMIT + 1) { SecureRandom.uuid }
+
+    assert_not @user.update_sidebar_hidden_account_ids(ids)
+
+    assert_equal [ accounts(:depository).id ], @user.reload.sidebar_hidden_account_ids
+  end
+
   test "reports biggest expenses limit defaults to 10 and only returns an offered choice" do
     @user.update_columns(preferences: {})
     assert_equal 10, @user.reports_biggest_expenses_limit
@@ -1699,5 +1729,13 @@ class UserTest < ActiveSupport::TestCase
 
     assert @user.update_reports_preferences("reports_biggest_expenses_limit" => "1000")
     assert_equal 5, @user.reload.preferences["reports_biggest_expenses_limit"]
+  end
+
+  test "changing hidden sidebar accounts only touches the accounts named" do
+    @user.update_sidebar_hidden_account_ids([ accounts(:depository).id ])
+
+    @user.change_sidebar_hidden_accounts(hide: [ accounts(:credit_card).id ], show: [])
+
+    assert_equal [ accounts(:depository).id, accounts(:credit_card).id ].sort, @user.reload.sidebar_hidden_account_ids.sort
   end
 end
