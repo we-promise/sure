@@ -74,7 +74,7 @@ outflow leg gets the existing kind `investment_contribution` and the family's
 `investment_contributions_category` ("Investment Contributions"), so
 budgets show it as money set aside. Rules:
 
-- The decision lives in `Transfer.kind_for_account(destination, source:, date:)`
+- The decision lives in `Transfer.kind_for_account(destination, from_account:, date:)`
   and `Transfer.saving_into?`. Every path that creates or matches a transfer
   passes the source account and the booking date: `Transfer::Creator`, the
   automatic matcher, the manual match dialog, the "set as transfer" rule
