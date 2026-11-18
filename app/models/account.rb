@@ -138,6 +138,14 @@ class Account < ApplicationRecord
     SQL
   }
 
+  # SHA-256 of a set of account ids, in id order, joined by commas. An
+  # aggregate over no rows still yields one value, the hash of "". Insight
+  # generators store it with a total and Insight.about_shared_accounts
+  # recomputes it on read, so both share this one expression.
+  ID_SET_DIGEST_SQL = Arel.sql(<<~SQL.squish)
+    encode(sha256(convert_to(coalesce(string_agg(accounts.id::text, ',' ORDER BY accounts.id), ''), 'UTF8')), 'hex')
+  SQL
+
   # Accounts a user can write to (owned or shared with full_control)
   WRITABLE_BY_CONDITION = "accounts.owner_id = :uid OR (account_shares.user_id = :uid AND account_shares.permission = 'full_control')".freeze
 
@@ -711,6 +719,12 @@ class Account < ApplicationRecord
       manual?
   end
 
+  # Only an account linked to a goal can hold a goal pledge, so callers use
+  # this to skip pledge reconciliation for every other account.
+  def linked_to_goal?
+    goal_accounts.exists?
+  end
+
   # True when the account has no live sync provider attached. Mirrors the
   # `Account.manual` scope so per-instance checks don't drift from the query.
   def manual?
@@ -920,6 +934,16 @@ class Account < ApplicationRecord
     else
       raise "Unknown account type: #{accountable_type}"
     end
+  end
+
+  # Whether the activity feed hides balance updates unless asked to show them.
+  #
+  # A linked account gets one from almost every daily sync, and users can't add
+  # their own there, so they bury the transactions they sit between. Property,
+  # vehicle, loan and other non-cash accounts are valued by those entries, so
+  # they keep showing them.
+  def hides_balance_updates_by_default?
+    linked? && balance_type != :non_cash
   end
 
   def owned_by?(user)

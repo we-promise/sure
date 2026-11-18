@@ -1,5 +1,11 @@
 # Flags parent categories whose current-month spending pace deviates from
 # their average over the previous three full months.
+#
+# Bills are planned spending. What they already took this month counts once at
+# face value and what they still expect this month is added as it stands; only
+# the rest is projected at the month's pace. A category is flagged only when
+# its spending outside bills moves too, so a bill that changes the month (an
+# annual premium, a payment that fell in the previous month) is not a trend.
 class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
   produces "spending_anomaly"
 
@@ -15,7 +21,8 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     elapsed_days = (Date.current - period.start_date).to_i + 1
     return [] if elapsed_days < MIN_ELAPSED_DAYS
 
-    current = category_spend(period)
+    @current_spend = spend_by_category(period)
+    current = parents_only(@current_spend)
     return [] if current.empty?
 
     baseline = baseline_spend(period)
@@ -23,19 +30,21 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
     # #days is the elapsed count and dividing by it would make the projection a
     # no-op. Take the month's true length from its start date, which is also
     # correct for families on a custom month start.
-    month_days = ((period.start_date + 1.month) - period.start_date).to_i
-    pace_factor = month_days.to_f / elapsed_days
+    month_end = period.start_date + 1.month - 1.day
+    pace_factor = (month_end - period.start_date + 1).to_f / elapsed_days
+    bills_due = bills_still_due(period.start_date..month_end)
 
     anomalies = current.filter_map do |category_id, data|
-      baseline_amount = baseline[category_id]
-      next unless baseline_amount && baseline_amount >= MIN_BASELINE
+      usual = baseline[category_id]
+      next unless usual && usual[:total] >= MIN_BASELINE
 
-      projected = data[:total] * pace_factor
-      deviation_pct = (projected - baseline_amount) / baseline_amount * 100
-      next if deviation_pct.abs < DEVIATION_THRESHOLD_PCT
+      due = bills_due.fetch(category_id, 0)
+      projected, deviation_pct, unplanned_deviation_pct = project(data, data[:bills], due, usual, pace_factor)
+      next unless significant?(deviation_pct, unplanned_deviation_pct)
+      next if deviation_pct.positive? && paid_from_rollover?(category_id, data, due, usual, pace_factor)
 
       { category_id: category_id, name: data[:name], projected: projected,
-        baseline: baseline_amount, deviation_pct: deviation_pct }
+        baseline: usual[:total], deviation_pct: deviation_pct }
     end
 
     anomalies
@@ -66,37 +75,126 @@ class Insight::Generators::SpendingAnomalyGenerator < Insight::Generator
         metadata: {
           category_id: anomaly[:category_id],
           direction: direction,
-          deviation_bucket: (round(anomaly[:deviation_pct].abs, 0).to_i / 25) * 25
+          deviation_bucket: (round(anomaly[:deviation_pct].abs, 0).to_i / 25) * 25,
+          accounts_digest: shared_accounts_digest
         },
         period: period,
         dedup_key: "spending_anomaly:#{anomaly[:category_id]}:#{month_token(period.start_date)}"
       )
     end
 
-    # { category_id => { name:, total: } } for persisted parent categories only.
-    # Subcategory spend is already rolled into its parent's total, and synthetic
-    # categories (uncategorized / other investments) are too noisy to flag.
-    def category_spend(period)
+    # Both the whole projection and its unplanned part have to clear the
+    # threshold in the same direction.
+    def significant?(deviation_pct, unplanned_deviation_pct)
+      [ deviation_pct, unplanned_deviation_pct ].all? { |pct| pct.abs >= DEVIATION_THRESHOLD_PCT } &&
+        deviation_pct.positive? == unplanned_deviation_pct.positive?
+    end
+
+    # [projected, deviation_pct, unplanned_deviation_pct]. `planned` counts
+    # once at face value and `due` is added as it stands; only the rest of the
+    # month-to-date spend is projected at the month's pace.
+    def project(data, planned, due, usual, pace_factor)
+      unplanned = (data[:total] - planned) * pace_factor
+      projected = planned + due + unplanned
+      [
+        projected,
+        (projected - usual[:total]) / usual[:total] * 100,
+        (unplanned - (usual[:total] - usual[:bills])) / usual[:total] * 100
+      ]
+    end
+
+    # Money saved up in a rollover envelope is there to be spent in a lump.
+    # Counted as planned, like a bill, does the rise still stand? The envelope
+    # may be the parent's or a ring-fenced subcategory's (Insurance under
+    # Home), as long as it isn't overspent. Only the household budget counts.
+    def paid_from_rollover?(category_id, data, due, usual, pace_factor)
+      return false unless current_budget&.initialized?
+
+      envelopes = current_budget.budget_categories.select do |bc|
+        (bc.category_id == category_id || bc.category.parent_id == category_id) &&
+          bc.rollover_enabled? && !bc.inherits_parent_budget? && !bc.over_budget?
+      end
+      saved = envelopes.sum { |bc| drawn_from_savings(bc, pace_factor) }
+      return false unless saved.positive?
+
+      planned = [ data[:bills] + saved, data[:total] ].min
+      deviation_pct, unplanned_deviation_pct = project(data, planned, due, usual, pace_factor).drop(1)
+      !(deviation_pct.positive? && significant?(deviation_pct, unplanned_deviation_pct))
+    end
+
+    # What an envelope has spent outside bills beyond its own allocation to
+    # date, up to what it carried over: the part that came out of savings.
+    # Spending within the month's allocation is ordinary spending, whatever
+    # cushion sits behind it. Bills are already planned in `data[:bills]`, and
+    # a parent leaves its ring-fenced subcategories to their own envelopes.
+    # Spending is read gross of refunds, as the category's own is.
+    def drawn_from_savings(envelope, pace_factor)
+      spent, allocated = outside_bills(envelope)
+      envelope.subcategories.reject(&:inherits_parent_budget?).each do |fenced|
+        fenced_spent, fenced_allocated = outside_bills(fenced)
+        spent -= fenced_spent
+        allocated -= fenced_allocated
+      end
+
+      (spent - allocated.clamp(0, nil) / pace_factor).clamp(0, envelope.rolled_over_amount.to_d)
+    end
+
+    # [spent, allocated] for a budget line this month, less the bills it paid.
+    def outside_bills(budget_category)
+      spend = @current_spend.fetch(budget_category.category_id, { total: 0, bills: 0 })
+      [ spend[:total], budget_category.budgeted_spending.to_d ].map { |amount| amount - spend[:bills] }
+    end
+
+    # { category_id => { name:, parent_id:, total:, bills: } } for persisted
+    # categories, gross of refunds. Synthetic categories (uncategorized / other
+    # investments) are too noisy to flag. `bills` is the part of `total` that
+    # paid bills.
+    def spend_by_category(period)
+      bills = income_statement.bill_expense_totals(period: period).category_totals.to_h { |ct| [ ct.category.id, ct.total.to_d ] }
+
       income_statement.expense_totals(period: period).category_totals.each_with_object({}) do |ct, totals|
-        next if ct.category.synthetic? || ct.category.parent_id.present?
+        next if ct.category.synthetic?
         next unless ct.total.positive?
 
-        totals[ct.category.id] = { name: ct.category.name, total: ct.total.to_d }
+        totals[ct.category.id] = { name: ct.category.name, parent_id: ct.category.parent_id,
+                                   total: ct.total.to_d, bills: bills.fetch(ct.category.id, 0) }
       end
     end
 
+    # Only parent categories are flagged: subcategory spend is already rolled
+    # into its parent's total.
+    def parents_only(spend)
+      spend.reject { |_, data| data[:parent_id] }
+    end
+
     def baseline_spend(current_period)
-      sums = Hash.new { |h, k| h[k] = 0.to_d }
+      sums = Hash.new { |h, k| h[k] = { total: 0.to_d, bills: 0.to_d } }
 
       BASELINE_MONTHS.times do |i|
         start_date = current_period.start_date - (i + 1).months
         month = Period.custom(start_date: start_date, end_date: start_date + 1.month - 1.day)
 
-        category_spend(month).each do |category_id, data|
-          sums[category_id] += data[:total]
+        parents_only(spend_by_category(month)).each do |category_id, data|
+          sums[category_id][:total] += data[:total]
+          sums[category_id][:bills] += data[:bills]
         end
       end
 
-      sums.transform_values { |total| total / BASELINE_MONTHS }
+      sums.transform_values { |usual| usual.transform_values { |amount| amount / BASELINE_MONTHS } }
+    end
+
+    # What bills still expect this month, by parent category, in the family's
+    # currency. Filed under the bill's own category, since there is no entry
+    # yet to take one from. One with no rate is left out, as unplanned spending
+    # would be. Only bills on shared accounts, like the spending they join.
+    def bills_still_due(dates)
+      parent_ids = family.categories.pluck(:id, :parent_id).to_h
+
+      RecurringOccurrence.open_bills_due(family, dates, series: shared_recurring_transactions).each_with_object(Hash.new(0.to_d)) do |occurrence, sums|
+        category_id = occurrence.recurring_transaction.category_id
+        sums[parent_ids[category_id] || category_id] += occurrence.remaining_spending_money.exchange_to(family.currency).amount
+      rescue Money::ConversionError
+        next
+      end
     end
 end

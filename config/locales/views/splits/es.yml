@@ -15,6 +15,9 @@ es:
       amount_label: Importe
       category_label: Categoría
       uncategorized: "(sin categoría)"
+      merchant_label: Comercio
+      no_merchant: "(comercio de la transacción)"
+      tags_label: Etiquetas
       original_name: "Nombre:"
       original_date: "Fecha:"
       original_amount: "Importe"

@@ -16,7 +16,9 @@ es:
     budgets: Presupuestos
     categories: Categorías
     categorize: Categorizar
+    changelog: Novedades
     chats: Chats
+    classifier: Clasificador
     coinbase_items: Coinbase
     coinstats_items: CoinStats
     credit_cards: Tarjetas de crédito
@@ -29,6 +31,7 @@ es:
     exports: Exportaciones
     family_exports: Exportaciones
     family_merchants: Comercios
+    feedback: Comentarios
     guides: Guías
     holdings: Posiciones
     home: Inicio
@@ -51,6 +54,7 @@ es:
     mercury_items: Mercury
     messages: Mensajes
     mfa: Autenticación de dos factores
+    monobank_items: Monobank
     oidc_accounts: Cuentas SSO
     onboardings: Primeros pasos
     other_assets: Otros activos
@@ -58,12 +62,15 @@ es:
     payments: Pagos
     pending_duplicate_merges: Revisión de duplicados
     plaid_items: Plaid
+    plan: Plan
+    portfolio: Cartera
     preferences: Preferencias
     profile: Datos del perfil
     profiles: Datos del perfil
     properties: Inmuebles
     providers: Proveedores
     recurring_transactions: Recurrentes
+    redbark_items: Redbark
     registrations: Registro
     reports: Informes
     rules: Reglas
@@ -78,6 +85,7 @@ es:
     sso_identities: Conexiones SSO
     sso_providers: Proveedores SSO
     subscriptions: Suscripción
+    system_health: Estado del sistema
     tags: Etiquetas
     trades: Operaciones
     transactions: Transacciones

@@ -7,7 +7,7 @@ pl:
       idle_cash: Przejdź do konta
       maintained_goal_depleted: Zobacz rezerwę
       net_worth_milestone: Zobacz raport wartości netto
-      savings_rate_change: Zobacz transakcje z tego miesiąca
+      savings_rate_change: Zobacz transakcje z tych miesięcy
       spending_anomaly: Zobacz transakcje %{category}
       subscription_audit: Przejrzyj cykliczne transakcje
     card:
@@ -37,7 +37,7 @@ pl:
       of_budget: z budżetu
       on_pace: zgodnie z tempem
       today: dzisiaj
-      vs_previous: vs. poprzedni miesiąc
+      vs_previous_three_months: vs. poprzednie trzy miesiące
     index:
       empty:
         description: Analizy pojawią się tutaj, gdy na kontach będzie wystarczająco
@@ -59,7 +59,7 @@ pl:
         one: Następny dzień
         other: Następnych %{count} dni
     notification:
-      body: Otwórz Sure, aby przejrzeć najnowszą analizę AI.
+      body: Otwórz Sure, aby przejrzeć najnowszą analizę.
       title: Nowa analiza finansowa
     refresh:
       checking: Sprawdzanie...
@@ -84,13 +84,9 @@ pl:
       net_worth_milestone: Twoja wartość netto przekroczyła %{milestone} i wynosi
         teraz %{net_worth}.
       savings_rate_change:
-        down: Zaoszczędziłeś %{current_rate}% swojego dochodu w ciągu %{month}, spadek
-          o %{change_pp} punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
-        down_negative: 'Wydałeś więcej niż zarobiłeś w ciągu %{month}: Twoja stopa
-          oszczędności spadła do %{current_rate}% z %{previous_rate}% w poprzednim
-          miesiącu.'
-        up: Zaoszczędziłeś %{current_rate}% swojego dochodu w ciągu %{month}, wzrost
-          o %{change_pp} punktów procentowych z %{previous_rate}% w poprzednim miesiącu.
+        down: Od %{from_month} do %{to_month} Twoja stopa oszczędności względem zwykłego miesięcznego dochodu wyniosła %{current_rate}%, o %{change_pp} punktów procentowych mniej niż %{previous_rate}% w poprzednich trzech miesiącach.
+        down_negative: "Od %{from_month} do %{to_month} wydałeś więcej, niż zarobiłeś: Twoja stopa oszczędności spadła do %{current_rate}% z %{previous_rate}% w poprzednich trzech miesiącach."
+        up: Od %{from_month} do %{to_month} Twoja stopa oszczędności względem zwykłego miesięcznego dochodu wyniosła %{current_rate}%, o %{change_pp} punktów procentowych więcej niż %{previous_rate}% w poprzednich trzech miesiącach.
       spending_anomaly:
         above: Jesteś na dobrej drodze, aby wydać %{projected_spend} na %{category}
           w tym miesiącu, około %{deviation_pct}% więcej niż Twoja średnia miesięczna
@@ -114,8 +110,8 @@ pl:
       maintained_goal_depleted: "%{goal} spadł poniżej swojego poziomu"
       net_worth_milestone: 'Kamień milowy wartości netto: %{milestone}'
       savings_rate_change:
-        down: Twoja stopa oszczędności spadła w ciągu %{month}
-        up: Twoja stopa oszczędności poprawiła się w ciągu %{month}
+        down: Twoja stopa oszczędności spadła w ostatnich trzech miesiącach
+        up: Twoja stopa oszczędności poprawiła się w ostatnich trzech miesiącach
       spending_anomaly:
         above: Wydatki w kategorii %{category} rosną
         below: Wydatki w kategorii %{category} spadają
