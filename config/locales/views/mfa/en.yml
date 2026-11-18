@@ -1,6 +1,7 @@
 ---
 en:
   mfa:
+    demo_family_restricted: MFA enrollment is disabled for the shared demo family to keep demo access available to everyone.
     local_password_required: Two-factor authentication needs a local password.
       Yours is managed through your identity provider.
     backup_codes:
