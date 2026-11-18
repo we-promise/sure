@@ -111,8 +111,8 @@ class Family::DataImporter
     account_targets.each { |source_id, account| @id_mappings[:accounts][source_id] = account.id }
     @security_cache = {}
     @pending_replacements = {}
-    @created_accounts = []
-    @created_entries = []
+    @created_account_ids = []
+    @created_entry_ids = []
     @summary = Hash.new { |hash, key| hash[key] = empty_summary_bucket }
   end
 
@@ -148,7 +148,7 @@ class Family::DataImporter
       import_rules(records["Rule"] || [])
     end
 
-    { accounts: @created_accounts, entries: @created_entries, summary: compact_summary }
+    { account_ids: @created_account_ids, entry_ids: @created_entry_ids, summary: compact_summary }
   end
 
   private
@@ -194,11 +194,21 @@ class Family::DataImporter
       return unless @import_session
 
       source_type = MAPPING_TYPES.fetch(mapping_key)
-      mapping = @import_session.source_mappings.find_or_initialize_by(
-        family: @family,
+      # The session outlives every chunk, so nothing here may append the mapping
+      # (and, through its target, the imported record) to one of its
+      # associations, or memory grows with the file. That rules out building
+      # through @import_session.source_mappings, and also assigning
+      # `import_session:`/`family:` objects, which only avoids it while the
+      # belongs_to has no inverse_of. Ids plus association(...).target= never
+      # inverse, and keep the loaded owners so validations don't reload them.
+      mapping = ImportSourceMapping.find_or_initialize_by(
+        import_session_id: @import_session.id,
+        family_id: @family.id,
         source_type: source_type,
         source_id: source_id
       )
+      mapping.association(:import_session).target = @import_session
+      mapping.association(:family).target = @family
       mapping.target = target
       mapping.save!
     end
@@ -383,7 +393,7 @@ class Family::DataImporter
         end
 
         map_source!(:accounts, old_id, account)
-        @created_accounts << account if created
+        @created_account_ids << account.id if created
         increment_summary("Account", created ? :created : :updated)
       end
     end
@@ -1008,7 +1018,7 @@ class Family::DataImporter
         split_rows = importable_split_rows(data)
 
         if split_rows.any?
-          @created_entries << entry if created
+          @created_entry_ids << entry.id if created
           import_split_lines!(entry, split_rows, fallback_tag_ids: new_tag_ids)
         else
           transaction.taggings.destroy_all unless created
@@ -1016,7 +1026,7 @@ class Family::DataImporter
             transaction.taggings.create!(tag_id: tag_id)
           end
 
-          @created_entries << entry if created
+          @created_entry_ids << entry.id if created
         end
 
         increment_summary("Transaction", created ? :created : :updated)
@@ -1082,7 +1092,7 @@ class Family::DataImporter
         end
 
         map_source!(:transactions, row[:old_id], transaction) if row[:old_id].present?
-        @created_entries << child_entry
+        @created_entry_ids << child_entry.id
       end
     end
 
@@ -1208,7 +1218,7 @@ class Family::DataImporter
         end
 
         entry.save!
-        @created_entries << entry if created
+        @created_entry_ids << entry.id if created
         increment_summary("Trade", created ? :created : :updated)
       end
     end
@@ -1295,7 +1305,7 @@ class Family::DataImporter
         end
 
         entry.save!
-        @created_entries << entry if created
+        @created_entry_ids << entry.id if created
         increment_summary("Valuation", created ? :created : :updated)
       end
     end

@@ -48,6 +48,7 @@ es:
       maintained_goal_depleted: Reserva
       bill_not_covered: Recibos
       loan_payment_change: Cuota del préstamo
+      bank_fees: Comisiones
       fixed_commitments_ratio: Gastos fijos
     meta:
       next_n_days:
@@ -71,6 +72,9 @@ es:
         one: "%{count} día inactivo"
         other: "%{count} días inactivos"
       short_on: faltarán el %{date}
+      fee_charges:
+        one: "%{count} cargo"
+        other: "%{count} cargos"
     actions:
       spending_anomaly: Ver transacciones de %{category}
       cash_flow_warning: Revisar transacciones recurrentes
@@ -82,6 +86,7 @@ es:
       maintained_goal_depleted: Ver reserva
       bill_not_covered: Ir a la cuenta
       loan_payment_change: Ver préstamo
+      bank_fees: Ver comisiones
       fixed_commitments_ratio: Revisar transacciones recurrentes
     titles:
       spending_anomaly:
@@ -105,6 +110,7 @@ es:
       loan_payment_change:
         up: La cuota de %{account} va a subir
         down: La cuota de %{account} va a bajar
+      bank_fees: Comisiones en %{account}
       fixed_commitments_ratio:
         up: Tus gastos fijos pesan más en tus ingresos
         over_half: Tus gastos fijos ya se llevan la mitad o más de tus ingresos
@@ -131,6 +137,9 @@ es:
       loan_payment_change:
         up: "La cuota de %{account} pasa de %{previous_payment} a %{new_payment} el %{effective_on}, un %{change_pct}% más, según el cuadro de amortización y los tipos registrados."
         down: "La cuota de %{account} pasa de %{previous_payment} a %{new_payment} el %{effective_on}, un %{change_pct}% menos, según el cuadro de amortización y los tipos registrados."
+      bank_fees:
+        recurring: "%{account} acumula %{amount} en comisiones en los últimos %{days} días."
+        new: "%{account} acumula %{amount} en comisiones en los últimos %{days} días, y ninguna en los %{days} días anteriores."
       fixed_commitments_ratio: "Tus pagos recurrentes, %{commitments} al mes, se llevan el %{current_ratio}% de tus ingresos mensuales habituales (%{income}), frente al %{previous_ratio}% de hace seis meses. %{explanation}"
     fixed_commitments_ratio:
       contributors: "Lo que más ha cambiado: %{list}."

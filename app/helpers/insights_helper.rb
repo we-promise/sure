@@ -13,6 +13,7 @@ module InsightsHelper
     "maintained_goal_depleted" => "shield-alert",
     "bill_not_covered" => "calendar-x",
     "loan_payment_change" => "landmark",
+    "bank_fees" => "receipt",
     "fixed_commitments_ratio" => "scale"
   }.freeze
 
@@ -88,6 +89,8 @@ module InsightsHelper
       facts["shortfall"] && [ facts["shortfall"], t("insights.figures.short_on", date: facts["due_on"]) ]
     when "loan_payment_change"
       facts["new_payment"] && [ facts["new_payment"], facts["effective_on"] ]
+    when "bank_fees"
+      facts["amount"] && [ facts["amount"], t("insights.figures.fee_charges", count: facts["count"].to_i) ]
     when "fixed_commitments_ratio"
       facts["current_ratio"] && [ "#{facts["current_ratio"]}%", t("insights.figures.of_income") ]
     end
@@ -110,6 +113,13 @@ module InsightsHelper
     when "idle_cash", "bill_not_covered", "loan_payment_change"
       account = insight_account(insight)
       account && { text: t("insights.actions.#{insight.insight_type}"), href: account_path(account) }
+    when "bank_fees"
+      account = insight_account(insight)
+      fee_names = insight.family.categories.fees.pluck(:name)
+      return nil unless account && fee_names.any? && insight.period_start && insight.period_end
+      { text: t("insights.actions.bank_fees"),
+        href: transactions_path(q: { account_ids: [ account.id ], categories: fee_names, status: [ "confirmed" ], types: [ "expense", "income" ],
+                                     start_date: insight.period_start.to_s, end_date: insight.period_end.to_s }) }
     when "subscription_audit"
       { text: t("insights.actions.subscription_audit"), href: recurring_transactions_path }
     when "cash_flow_warning", "fixed_commitments_ratio"
@@ -195,7 +205,7 @@ module InsightsHelper
       :negative
     when "loan_payment_change"
       metadata["new_payment"].to_f < metadata["previous_payment"].to_f ? :positive : :warning
-    when "budget_at_risk", "maintained_goal_depleted", "fixed_commitments_ratio"
+    when "budget_at_risk", "maintained_goal_depleted", "bank_fees", "fixed_commitments_ratio"
       # Warning, not negative: the reserve is short, not overdrawn, and red is
       # reserved here for money actually going the wrong side of zero.
       :warning

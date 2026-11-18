@@ -48,6 +48,7 @@ en:
       maintained_goal_depleted: Reserve
       bill_not_covered: Bills
       loan_payment_change: Loan payment
+      bank_fees: Fees
       fixed_commitments_ratio: Fixed commitments
     meta:
       next_n_days:
@@ -71,6 +72,9 @@ en:
         one: idle %{count} day
         other: idle %{count} days
       short_on: short on %{date}
+      fee_charges:
+        one: "%{count} charge"
+        other: "%{count} charges"
     actions:
       spending_anomaly: View %{category} transactions
       cash_flow_warning: Review recurring transactions
@@ -82,6 +86,7 @@ en:
       maintained_goal_depleted: View reserve
       bill_not_covered: Go to account
       loan_payment_change: View loan
+      bank_fees: View fees
       fixed_commitments_ratio: Review recurring transactions
     titles:
       spending_anomaly:
@@ -105,6 +110,7 @@ en:
       loan_payment_change:
         up: "%{account} payment is going up"
         down: "%{account} payment is going down"
+      bank_fees: Fees on %{account}
       fixed_commitments_ratio:
         up: Fixed commitments are taking more of your income
         over_half: Fixed commitments now take half your income or more
@@ -131,6 +137,9 @@ en:
       loan_payment_change:
         up: "Your %{account} payment changes from %{previous_payment} to %{new_payment} on %{effective_on}, %{change_pct}% more, according to the loan's schedule and its recorded rates."
         down: "Your %{account} payment changes from %{previous_payment} to %{new_payment} on %{effective_on}, %{change_pct}% less, according to the loan's schedule and its recorded rates."
+      bank_fees:
+        recurring: "%{account} had %{amount} in fees over the last %{days} days."
+        new: "%{account} had %{amount} in fees over the last %{days} days, after none in the %{days} days before."
       fixed_commitments_ratio: "Recurring commitments of %{commitments} a month take %{current_ratio}% of your typical monthly income of %{income}, up from %{previous_ratio}% six months ago. %{explanation}"
     fixed_commitments_ratio:
       contributors: "Main changes: %{list}."
