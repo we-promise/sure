@@ -9,19 +9,46 @@ class Provider::TwelveDataTest < ActiveSupport::TestCase
   #            Usage Tests
   # ================================
 
-  test "usage reports fractional utilization below the daily limit" do
+  def stub_usage(body)
     mock_response = mock
-    mock_response.stubs(:body).returns({ "plan_category" => "basic", "daily_usage" => 400, "plan_daily_limit" => 800 }.to_json)
+    mock_response.stubs(:body).returns(body.to_json)
 
     @provider.stubs(:client).returns(mock_client = mock)
     mock_client.stubs(:get).returns(mock_response)
+  end
+
+  test "usage reports utilization as a percentage of the daily limit" do
+    stub_usage("plan_category" => "basic", "daily_usage" => 400, "plan_daily_limit" => 800)
 
     result = @provider.usage
 
     assert result.success?
     assert_equal 400, result.data.used
     assert_equal 800, result.data.limit
-    assert_in_delta 50.0, result.data.utilization, 0.001
+    assert_equal 50.0, result.data.utilization
+  end
+
+  test "usage keeps a fractional utilization below one percent" do
+    stub_usage("plan_category" => "basic", "daily_usage" => 1, "plan_daily_limit" => 800)
+
+    assert_equal 0.1, @provider.usage.data.utilization
+  end
+
+  test "usage fails when the daily limit is zero" do
+    stub_usage("plan_category" => "basic", "daily_usage" => 5, "plan_daily_limit" => 0)
+
+    result = @provider.usage
+
+    assert_not result.success?
+    assert_instance_of Provider::TwelveData::Error, result.error
+  end
+
+  test "usage fails when daily_usage is missing or not a number" do
+    [ {}, { "daily_usage" => "abc" } ].each do |figures|
+      stub_usage({ "plan_category" => "basic", "plan_daily_limit" => 800 }.merge(figures))
+
+      assert_not @provider.usage.success?
+    end
   end
 
   # ================================
