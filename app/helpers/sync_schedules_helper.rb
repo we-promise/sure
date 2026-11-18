@@ -21,8 +21,10 @@ module SyncSchedulesHelper
   def sync_schedule_interval_label(minutes)
     if minutes < 60
       t("sync_schedules.intervals.minutes", count: minutes)
-    else
+    elsif minutes < SyncSchedule::DAILY_MINUTES
       t("sync_schedules.intervals.hours", count: minutes / 60)
+    else
+      t("sync_schedules.intervals.days", count: minutes / SyncSchedule::DAILY_MINUTES)
     end
   end
 
