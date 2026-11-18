@@ -2,6 +2,7 @@ require "test_helper"
 
 class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
   include PortfolioReturnsTestHelper
+  include ActiveJob::TestHelper
 
   setup do
     @family = families(:empty) # currency USD
@@ -786,6 +787,28 @@ class Portfolio::DailyReturnsTest < ActiveSupport::TestCase
 
     assert returns.rate_missing?
     assert_equal BigDecimal("0"), returns.rows.last.external_flow
+  end
+
+  # The rate arriving after the balance dropped the deposit: the flow finds it
+  # at once, so the balance has to be rebuilt with the deposit or the day reads
+  # as a loss of the whole flow. ExchangeRate::BalanceRefresh does that.
+  test "a rate stored after the balance dropped a foreign deposit leaves the day flat" do
+    @account.set_opening_anchor_balance(balance: 1_000, date: @day_one)
+    deposit account: @account, date: @day_two, amount: 100, currency: "EUR"
+    perform_enqueued_jobs # the anchor's own sync, before the rate exists
+    assert_equal BigDecimal("1000"), @account.balances.find_by!(date: @day_two).end_balance,
+                 "precondition: the balance dropped the deposit it had no rate for"
+
+    set_rate from: "EUR", to: "USD", date: @day_two, rate: 1.1
+    perform_enqueued_jobs do
+      ExchangeRate::BalanceRefresh.schedule([ { from: "EUR", to: "USD", date: @day_two, stored_at: Time.current } ])
+    end
+
+    second = daily_returns.rows.last
+
+    assert_equal BigDecimal("110"), second.external_flow
+    assert_equal second.change, second.external_flow, "the balance moved by the flow and nothing else"
+    assert_in_delta 0.0, daily_returns.returns.to_h.fetch(@day_two).to_f, 0.000001
   end
 
   # An entry can carry its own rate (extra["exchange_rate"]), which
