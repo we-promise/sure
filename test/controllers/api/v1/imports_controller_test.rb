@@ -723,6 +723,79 @@ class Api::V1::ImportsControllerTest < ActionDispatch::IntegrationTest
     assert_empty data["errors"]
   end
 
+  test "should create import with separate debit and credit columns" do
+    csv_content = "date,name,debit,credit\n2023-01-01,Coffee,4.20,\n2023-01-02,Salary,,2000.00"
+
+    assert_difference("Import.count") do
+      post api_v1_imports_url,
+           params: {
+             raw_file_content: csv_content,
+             date_col_label: "date",
+             name_col_label: "name",
+             date_format: "%Y-%m-%d",
+             amount_type_strategy: "debit_credit_columns",
+             debit_col_label: "debit",
+             credit_col_label: "credit",
+             account_id: @account.id
+           },
+           headers: api_headers(@api_key)
+    end
+
+    assert_response :created
+    data = JSON.parse(response.body)["data"]
+    import = Import.find(data["id"])
+
+    assert_equal "debit_credit_columns", import.amount_type_strategy
+    assert_equal [ 4.2, -2000 ], import.rows.order(:source_row_number).map(&:signed_amount)
+    assert_equal "debit_credit_columns", data["configuration"]["amount_type_strategy"]
+    assert_equal "debit", data["configuration"]["debit_col_label"]
+    assert_equal "credit", data["configuration"]["credit_col_label"]
+  end
+
+  test "should preflight CSV import with separate debit and credit columns" do
+    csv_content = "date,name,debit,credit\n2023-01-01,Coffee,4.20,"
+
+    post preflight_api_v1_imports_url,
+         params: {
+           raw_file_content: csv_content,
+           date_col_label: "date",
+           name_col_label: "name",
+           amount_type_strategy: "debit_credit_columns",
+           debit_col_label: "debit",
+           credit_col_label: "credit",
+           account_id: @account.id
+         },
+         headers: api_headers(@api_key)
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal true, data["valid"]
+    assert_empty data["missing_required_headers"]
+  end
+
+  test "should report a missing debit or credit column during preflight" do
+    csv_content = "date,name,debit\n2023-01-01,Coffee,4.20"
+
+    post preflight_api_v1_imports_url,
+         params: {
+           raw_file_content: csv_content,
+           date_col_label: "date",
+           name_col_label: "name",
+           amount_type_strategy: "debit_credit_columns",
+           debit_col_label: "debit",
+           credit_col_label: "credit",
+           account_id: @account.id
+         },
+         headers: api_headers(@api_key)
+
+    assert_response :success
+    data = JSON.parse(response.body)["data"]
+
+    assert_equal false, data["valid"]
+    assert_equal [ "credit" ], data["missing_required_headers"]
+  end
+
   test "should report missing required CSV headers during preflight" do
     csv_content = "name\nMissing Amount"
 

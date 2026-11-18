@@ -1210,7 +1210,10 @@ RSpec.configure do |config|
               account_col_label: { type: :string, nullable: true },
               date_format: { type: :string, nullable: true },
               number_format: { type: :string, nullable: true },
-              signage_convention: { type: :string, nullable: true }
+              signage_convention: { type: :string, nullable: true },
+              amount_type_strategy: { type: :string, nullable: true },
+              debit_col_label: { type: :string, nullable: true },
+              credit_col_label: { type: :string, nullable: true }
             }
           },
           ImportStats: {
