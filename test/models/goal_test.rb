@@ -1482,6 +1482,18 @@ class GoalTest < ActiveSupport::TestCase
     assert_nil list[0][:label]
   end
 
+  # Nothing saved yet, so the 25% milestone is still ahead and carries a label.
+  test "German milestone labels space the percent sign like the other German goal labels" do
+    goal = milestone_goal
+    goal.stubs(:current_balance).returns(BigDecimal("0"))
+
+    german = I18n.with_locale(:de) { goal.milestones(as_of: Date.new(2026, 3, 15)).first[:label] }
+    english = I18n.with_locale(:en) { goal.milestones(as_of: Date.new(2026, 3, 15)).first[:label] }
+
+    assert german.start_with?("25 % · "), "expected #{german.inspect} to start with \"25 % · \""
+    assert english.start_with?("25% · "), "expected #{english.inspect} to start with \"25% · \""
+  end
+
   test "a balance exactly on a milestone has reached it" do
     goal = milestone_goal
     goal.stubs(:current_balance).returns(BigDecimal("500"))
