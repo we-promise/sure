@@ -54,7 +54,7 @@ class RemovePlaidHoldingsAheadOfTheirSnapshot < ActiveRecord::Migration[8.1]
     Class.new(ActiveRecord::Base) do
       self.table_name = "plaid_accounts"
       def self.name = "RemovePlaidHoldingsAheadOfTheirSnapshot::PlaidAccountPayload"
-      encrypts :raw_holdings_payload if ActiveRecordEncryptionConfig.explicitly_configured?
+      encrypts :raw_holdings_payload if ActiveRecordEncryptionConfig.ready?
     end
   end
 

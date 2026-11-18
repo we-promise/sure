@@ -111,7 +111,7 @@ class RemovePlaidHoldingsAheadOfTheirSnapshotMigrationTest < ActiveSupport::Test
   # payload, so a raw read sees ciphertext and no price dates. The migration
   # reads it as the model does.
   test "an encrypted payload is read through encryption" do
-    ActiveRecordEncryptionConfig.stubs(:explicitly_configured?).returns(true)
+    ActiveRecordEncryptionConfig.stubs(:ready?).returns(true)
     write_encrypted_payload("holdings" => @payload)
     plaid_row(@aapl, @snapshot_date, 10)
     stale = plaid_row(@msft, Date.current, 9)
