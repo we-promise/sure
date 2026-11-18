@@ -28,6 +28,9 @@ class AiNetworkPolicyTest < ActiveSupport::TestCase
       "VCR.turned_off { get_models }" => "VCR.turned_off / VCR.turn_off!",
       "VCR.use_cassette(\"x\", record: :new_episodes) { }" => "a cassette recording live requests",
       "VCR.use_cassette(\"x\", record: :once) { }" => "a cassette recording live requests",
+      "VCR.use_cassette(\"x\", :record => :all) { }" => "a cassette recording live requests",
+      "WebMock.disable_net_connect!(\n  allow: \"api.openai.com\"\n)" => "disable_net_connect!(allow: host)",
+      "WebMock.disable_net_connect!(:allow => \"api.openai.com\")" => "disable_net_connect!(allow: host)",
       "VCR.configure { _1.ignore_request { |r| r.uri.include?(\"anthropic\") } }" => "VCR ignore_request"
     }.each do |line, reported|
       output, status = run_policy(with_test_file(line))

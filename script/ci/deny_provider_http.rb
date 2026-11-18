@@ -16,13 +16,13 @@ ALLOWED = [
 
 NETWORK_OPENERS = {
   "WebMock.allow_net_connect!" => /allow_net_connect/,
-  "disable_net_connect!(allow: host)" => /disable_net_connect!\s*\(?[^)\n]*\ballow:/,
+  "disable_net_connect!(allow: host)" => /disable_net_connect!\s*\(?[^)]*\ballow(?::|\s*=>)/,
   "WebMock.disable!" => /WebMock\.disable!/,
   "VCR.turned_off / VCR.turn_off!" => /VCR\.turn(ed)?_off/,
   "VCR allow_http_connections_*" => /allow_http_connections/,
   "VCR ignore_hosts" => /ignore_hosts/,
   "VCR ignore_request" => /ignore_request/,
-  "a cassette recording live requests" => /record:\s*:(all|new_episodes|once)/
+  "a cassette recording live requests" => /(?:\brecord:|:record\s*=>)\s*:(all|new_episodes|once)/
 }.freeze
 
 # Openers a file may use this many times: test_helper.rb's ignore_request lets the system tests
