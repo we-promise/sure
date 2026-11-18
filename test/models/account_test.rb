@@ -61,6 +61,22 @@ class AccountTest < ActiveSupport::TestCase
     assert_equal [ [ security, 5 ] ], account.held_securities_on(4.days.from_now.to_date)
   end
 
+  test "linked cash and investment accounts hide balance updates by default" do
+    assert accounts(:connected).hides_balance_updates_by_default?
+
+    investment = accounts(:investment)
+    investment.stubs(:linked?).returns(true)
+    assert investment.hides_balance_updates_by_default?
+  end
+
+  test "manual accounts and linked non-cash accounts show balance updates" do
+    assert_not accounts(:depository).hides_balance_updates_by_default?
+
+    property = accounts(:property)
+    property.stubs(:linked?).returns(true)
+    assert_not property.hides_balance_updates_by_default?
+  end
+
   test "can destroy" do
     assert_difference "Account.count", -1 do
       @account.destroy
@@ -1374,6 +1390,16 @@ class AccountTest < ActiveSupport::TestCase
 
     accounts(:credit_card).account_shares.find_by!(user: member).update!(permission: "read_write")
     assert_includes Account.annotatable_by(member).pluck(:id), accounts(:credit_card).id, "read_write share"
+  end
+
+  test "linked_to_goal? is true only for an account linked to a goal" do
+    account = @family.accounts.create!(name: "Goal savings", balance: 0, currency: "USD", accountable: Depository.new)
+
+    assert_not account.linked_to_goal?
+
+    goals(:vacation_italy).goal_accounts.create!(account: account)
+
+    assert account.linked_to_goal?
   end
 
   test "institution_domain is normalized to a bare host" do

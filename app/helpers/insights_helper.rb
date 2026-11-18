@@ -11,7 +11,10 @@ module InsightsHelper
     # Same shield the reserve panel uses on the goal page, so the two read as
     # the same object seen from two places.
     "maintained_goal_depleted" => "shield-alert",
-    "negative_position" => "alert-triangle"
+    "negative_position" => "alert-triangle",
+    "bill_not_covered" => "calendar-x",
+    "loan_payment_change" => "landmark",
+    "bank_fees" => "receipt"
   }.freeze
 
   def insight_icon_key(insight)
@@ -62,7 +65,7 @@ module InsightsHelper
     when "savings_rate_change"
       return nil unless facts["change_pp"]
       sign = insight_sentiment(insight) == :positive ? "+" : "−"
-      [ "#{sign}#{facts["change_pp"]} pp", t("insights.figures.vs_previous") ]
+      [ "#{sign}#{facts["change_pp"]} pp", t("insights.figures.vs_previous_three_months") ]
     when "net_worth_milestone"
       facts["net_worth"] && [ facts["net_worth"], t("insights.figures.today") ]
     when "spending_anomaly"
@@ -84,6 +87,12 @@ module InsightsHelper
     when "budget_on_track"
       # Still the right figure here, where overall usage *is* the subject.
       facts["budget_spent_pct"] && [ "#{facts["budget_spent_pct"]}%", t("insights.figures.of_budget") ]
+    when "bill_not_covered"
+      facts["shortfall"] && [ facts["shortfall"], t("insights.figures.short_on", date: facts["due_on"]) ]
+    when "loan_payment_change"
+      facts["new_payment"] && [ facts["new_payment"], facts["effective_on"] ]
+    when "bank_fees"
+      facts["amount"] && [ facts["amount"], t("insights.figures.fee_charges", count: facts["count"].to_i) ]
     end
   end
 
@@ -101,9 +110,16 @@ module InsightsHelper
         text: t("insights.actions.spending_anomaly", category: category.name),
         href: transactions_path(q: { categories: [ category.name ] })
       }
-    when "idle_cash"
-      account = insight.family.accounts.visible.find_by(id: metadata["account_id"])
-      account && { text: t("insights.actions.idle_cash"), href: account_path(account) }
+    when "idle_cash", "bill_not_covered", "loan_payment_change"
+      account = insight_account(insight)
+      account && { text: t("insights.actions.#{insight.insight_type}"), href: account_path(account) }
+    when "bank_fees"
+      account = insight_account(insight)
+      fee_names = insight.family.categories.fees.pluck(:name)
+      return nil unless account && fee_names.any? && insight.period_start && insight.period_end
+      { text: t("insights.actions.bank_fees"),
+        href: transactions_path(q: { account_ids: [ account.id ], categories: fee_names, status: [ "confirmed" ], types: [ "expense", "income" ],
+                                     start_date: insight.period_start.to_s, end_date: insight.period_end.to_s }) }
     when "subscription_audit"
       { text: t("insights.actions.subscription_audit"), href: recurring_transactions_path }
     when "cash_flow_warning"
@@ -187,7 +203,12 @@ module InsightsHelper
       metadata["direction"] == "below" ? :positive : :warning
     when "cash_flow_warning"
       metadata["negative"] ? :negative : :warning
-    when "budget_at_risk", "maintained_goal_depleted", "negative_position"
+    when "bill_not_covered"
+      # Paying the bill would take the account below zero.
+      :negative
+    when "loan_payment_change"
+      metadata["new_payment"].to_f < metadata["previous_payment"].to_f ? :positive : :warning
+    when "budget_at_risk", "maintained_goal_depleted", "bank_fees", "negative_position"
       # Warning, not negative: the reserve is short, not overdrawn, and red is
       # reserved here for money actually going the wrong side of zero.
       :warning
@@ -197,6 +218,10 @@ module InsightsHelper
   end
 
   private
+    def insight_account(insight)
+      insight.family.accounts.visible.find_by(id: (insight.metadata || {})["account_id"])
+    end
+
     # "June" for month-aligned periods, "Next 30 days" / "Last 30 days" for
     # rolling windows, an explicit range otherwise; subject name (account,
     # merchant) for insights without a period.
@@ -215,8 +240,9 @@ module InsightsHelper
       elsif rolling_period_insight?(insight) && end_date >= Date.current - 1
         t("insights.meta.last_n_days", count: days)
       elsif start_date == start_date.beginning_of_month && end_date == start_date.end_of_month
-        format = start_date.year == Date.current.year ? "%B" : "%B %Y"
-        I18n.l(start_date, format: format)
+        insight_month_name(start_date)
+      elsif start_date == start_date.beginning_of_month && end_date == end_date.end_of_month
+        t("insights.meta.date_range", from: insight_month_name(start_date), to: insight_month_name(end_date))
       elsif start_date >= Date.current - 1
         t("insights.meta.next_n_days", count: days)
       elsif end_date >= Date.current - 1
@@ -224,6 +250,10 @@ module InsightsHelper
       else
         t("insights.meta.date_range", from: I18n.l(start_date, format: :short), to: I18n.l(end_date, format: :short))
       end
+    end
+
+    def insight_month_name(date)
+      I18n.l(date, format: date.year == Date.current.year ? "%B" : "%B %Y")
     end
 
     def rolling_period_insight?(insight)

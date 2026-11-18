@@ -3,7 +3,7 @@ fr:
   insights:
     notification:
       title: Nouvelle analyse financière
-      body: Ouvrez Sure pour consulter votre dernière analyse par IA.
+      body: Ouvrez Sure pour consulter votre dernière analyse.
     actions:
       budget: Voir le budget
       cash_flow_warning: Vérifier les transactions récurrentes
@@ -11,7 +11,7 @@ fr:
       idle_cash: Aller au compte
       maintained_goal_depleted: Voir la réserve
       net_worth_milestone: Voir le rapport de patrimoine net
-      savings_rate_change: Voir les transactions de ce mois
+      savings_rate_change: Voir les transactions de ces mois
       spending_anomaly: Voir les transactions de %{category}
       subscription_audit: Vérifier les transactions récurrentes
     card:
@@ -38,7 +38,7 @@ fr:
       of_budget: du budget
       on_pace: au rythme actuel
       today: aujourd'hui
-      vs_previous: vs mois précédent
+      vs_previous_three_months: vs les trois mois précédents
     index:
       empty:
         description: Les analyses apparaissent ici dès qu'il y a suffisamment d'activité
@@ -80,14 +80,9 @@ fr:
       net_worth_milestone: Votre patrimoine net a franchi %{milestone} et s'élève
         désormais à %{net_worth}.
       savings_rate_change:
-        down: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit
-          %{change_pp} points de pourcentage de moins que %{previous_rate}% le mois
-          précédent.
-        down_negative: "Vous avez dépensé plus que vous n'avez gagné en %{month}
-          : votre taux d'épargne est tombé à %{current_rate}%, contre %{previous_rate}%
-          le mois précédent."
-        up: Vous avez épargné %{current_rate}% de vos revenus en %{month}, soit %{change_pp}
-          points de pourcentage de plus que %{previous_rate}% le mois précédent.
+        down: Entre %{from_month} et %{to_month}, votre taux d'épargne rapporté à vos revenus mensuels habituels était de %{current_rate}%, soit %{change_pp} points de pourcentage de moins que les %{previous_rate}% des trois mois précédents.
+        down_negative: "Entre %{from_month} et %{to_month}, vous avez dépensé plus que vous n'avez gagné : votre taux d'épargne est tombé à %{current_rate}%, contre %{previous_rate}% les trois mois précédents."
+        up: Entre %{from_month} et %{to_month}, votre taux d'épargne rapporté à vos revenus mensuels habituels était de %{current_rate}%, soit %{change_pp} points de pourcentage de plus que les %{previous_rate}% des trois mois précédents.
       spending_anomaly:
         above: Vous êtes en voie de dépenser %{projected_spend} pour %{category}
           ce mois-ci, soit environ %{deviation_pct}% de plus que votre moyenne mensuelle
@@ -111,8 +106,8 @@ fr:
       idle_cash: Liquidités inactives sur %{account}
       net_worth_milestone: "Étape de patrimoine net : %{milestone}"
       savings_rate_change:
-        down: Votre taux d'épargne a baissé en %{month}
-        up: Votre taux d'épargne s'est amélioré en %{month}
+        down: Votre taux d'épargne a baissé sur les trois derniers mois
+        up: Votre taux d'épargne s'est amélioré sur les trois derniers mois
       spending_anomaly:
         above: Les dépenses de %{category} sont en hausse
         below: Les dépenses de %{category} sont en baisse

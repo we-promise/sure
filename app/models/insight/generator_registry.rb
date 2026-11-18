@@ -13,7 +13,10 @@ class Insight::GeneratorRegistry
     Insight::Generators::IdleCashGenerator,
     Insight::Generators::BudgetInsightGenerator,
     Insight::Generators::MaintainedGoalDepletedGenerator,
-    Insight::Generators::NegativePositionGenerator
+    Insight::Generators::NegativePositionGenerator,
+    Insight::Generators::BillNotCoveredGenerator,
+    Insight::Generators::LoanRepaymentChangeGenerator,
+    Insight::Generators::BankFeesGenerator
   ].freeze
 
   Result = Data.define(:insights, :succeeded_types)

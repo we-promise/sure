@@ -509,6 +509,35 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal [], response.data
   end
 
+  test "search_securities ignores cached results written with the six-member Security layout" do
+    concept = Provider::SecurityConcept
+    current = concept::Security
+    legacy_members = current.members - [ :isin ]
+
+    # Write a cache entry the way the previous release did: with a Security
+    # that has no isin member, under the key that release used.
+    legacy = Data.define(*legacy_members)
+    concept.send(:remove_const, :Security)
+    concept.const_set(:Security, legacy)
+    begin
+      stale = [ legacy.new(symbol: "STALE", name: "Stale", logo_url: nil, exchange_operating_mic: "XNAS", country_code: "US", currency: nil) ]
+      @cache.write("yahoo_finance_search_ABC__", stale, expires_in: 5.minutes)
+    ensure
+      concept.send(:remove_const, :Security)
+      concept.const_set(:Security, current)
+    end
+
+    mock_response = mock
+    mock_response.stubs(:body).returns({ quotes: [ { symbol: "ABC", longname: "Abc Inc", exchange: "NMS", exchDisp: "NASDAQ" } ] }.to_json)
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("ABC")
+
+    assert response.success?, "stale entry should not break the search: #{response.error&.message}"
+    assert_equal [ "ABC" ], response.data.map(&:symbol)
+  end
+
   test "search_securities returns canonical Colombian identity for Yahoo BVC listings" do
     mock_response = mock
     mock_response.stubs(:body).returns({
@@ -531,6 +560,55 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
     assert_equal "XBOG", security.exchange_operating_mic
     assert_equal "CO", security.country_code
   end
+
+  test "search_securities maps Yahoo's Xetra exchange code to XETR" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [
+        { symbol: "SXR8.DE", shortname: "iShares Core S&P 500", exchange: "GER", exchDisp: "XETRA" },
+        { symbol: "SXR8.AS", shortname: "iShares Core S&P 500", exchange: "AMS", exchDisp: "Amsterdam" }
+      ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("SXR8")
+
+    assert response.success?
+    xetra = response.data.index_by(&:symbol).fetch("SXR8.DE")
+    assert_equal "XETR", xetra.exchange_operating_mic
+    assert_equal "DE", xetra.country_code
+    assert_equal "EUR", @provider.send(:default_currency_for_exchange, "GER")
+  end
+
+  test "search_securities maps Yahoo's Canadian exchange codes to their MICs" do
+    mock_response = mock
+    mock_response.stubs(:body).returns({
+      quotes: [
+        { symbol: "XRE.TO", shortname: "iShares S&P/TSX Capped REIT", exchange: "TOR", exchDisp: "Toronto" },
+        { symbol: "BTCW.V", shortname: "Bitcoin Well Inc.", exchange: "VAN", exchDisp: "CDNX" },
+        { symbol: "LOBE.CN", shortname: "Lobe Sciences Ltd.", exchange: "CNQ", exchDisp: "CNQ" },
+        { symbol: "CHE-UN.NE", shortname: "Chemtrade Logistics Income Fund", exchange: "NEO", exchDisp: "NEO" }
+      ]
+    }.to_json)
+
+    @provider.stubs(:client).returns(mock_client = mock)
+    mock_client.stubs(:get).returns(mock_response)
+
+    response = @provider.search_securities("canada")
+
+    assert response.success?
+    by_symbol = response.data.index_by(&:symbol)
+    { "XRE.TO" => "XTSE", "BTCW.V" => "XTSX", "LOBE.CN" => "XCNQ", "CHE-UN.NE" => "NEOE" }.each do |symbol, mic|
+      assert_equal mic, by_symbol.fetch(symbol).exchange_operating_mic, symbol
+      assert_equal "CA", by_symbol.fetch(symbol).country_code, symbol
+    end
+    %w[TOR VAN CNQ NEO].each do |code|
+      assert_equal "CAD", @provider.send(:default_currency_for_exchange, code), code
+    end
+  end
+
 
   test "search_securities preserves catalog countries and display-name fallback" do
     mock_response = mock
@@ -707,6 +785,41 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
       assert_equal "CIBEST.CL", price.symbol
       assert_equal "COP", price.currency
       assert_equal "XBOG", price.exchange_operating_mic
+    end
+  end
+
+  test "fetch_security_prices asks Yahoo for the Toronto listing with CAD fallback" do
+    date = Date.new(2024, 1, 15)
+    chart_response = mock
+    chart_response.stubs(:body).returns({
+      chart: {
+        result: [ {
+          meta: { exchangeName: "TOR" },
+          timestamp: [ Time.utc(2024, 1, 15).to_i ],
+          indicators: { quote: [ { close: [ 21.22 ] } ] }
+        } ]
+      }
+    }.to_json)
+    chart_client = mock
+    chart_client.expects(:get).with(regexp_matches(%r{/v8/finance/chart/CSH-UN\.TO$})).times(3).returns(chart_response)
+    @provider.stubs(:client).returns(chart_client)
+    @provider.stubs(:throttle_request)
+
+    responses = [ "CSH.UN", "CSH-UN", "CSH-UN.TO" ].map do |symbol|
+      @provider.fetch_security_prices(
+        symbol: symbol,
+        exchange_operating_mic: "XTSE",
+        start_date: date,
+        end_date: date
+      )
+    end
+
+    responses.each do |response|
+      assert response.success?
+      price = response.data.sole
+      assert_equal "CSH-UN.TO", price.symbol
+      assert_equal "CAD", price.currency
+      assert_equal "XTSE", price.exchange_operating_mic
     end
   end
 
@@ -1070,7 +1183,7 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
 
   test "normalize_symbol leaves unconfigured MIC symbols unchanged" do
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", "XNAS")
-    assert_equal "SHOP", @provider.send(:normalize_symbol, "SHOP", "XTSE")
+    assert_equal "BHP", @provider.send(:normalize_symbol, "BHP", "XASX")
     assert_equal "AAPL", @provider.send(:normalize_symbol, "AAPL", nil)
   end
 
@@ -1090,6 +1203,25 @@ class Provider::YahooFinanceTest < ActiveSupport::TestCase
   test "normalize_symbol does not double-suffix a European symbol stored with its suffix" do
     assert_equal "IUSQ.DE", @provider.send(:normalize_symbol, "IUSQ.DE", "XETR")
     assert_equal "BARC.L",  @provider.send(:normalize_symbol, "BARC.L", "XLON")
+  end
+
+  # Sent bare, "XRE" is a different instrument at Yahoo, with no price; units
+  # and share classes take a dash there ("CSH.UN.TO" is a 404, "CSH-UN.TO" is not).
+  test "normalize_symbol appends the Yahoo suffix for Canadian exchanges" do
+    assert_equal "XRE.TO",    @provider.send(:normalize_symbol, "XRE", "XTSE")
+    assert_equal "BTCW.V",    @provider.send(:normalize_symbol, "BTCW", "XTSX")
+    assert_equal "LOBE.CN",   @provider.send(:normalize_symbol, "LOBE", "XCNQ")
+    assert_equal "TSLA.NE",   @provider.send(:normalize_symbol, "TSLA", "NEOE")
+  end
+
+  test "normalize_symbol writes Canadian units and share classes with a dash, suffixed once" do
+    assert_equal "CSH-UN.TO", @provider.send(:normalize_symbol, "CSH.UN", "XTSE")
+    assert_equal "CSH-UN.TO", @provider.send(:normalize_symbol, "CSH-UN", "XTSE")
+    assert_equal "CSH-UN.TO", @provider.send(:normalize_symbol, "CSH-UN.TO", "XTSE")
+    assert_equal "CSH-UN.TO", @provider.send(:normalize_symbol, "CSH.UN.TO", "XTSE")
+    assert_equal "CCL-B.TO",  @provider.send(:normalize_symbol, "CCL.B", "XTSE")
+    assert_equal "CHE-UN.NE", @provider.send(:normalize_symbol, "CHE.UN", "NEOE")
+    assert_equal "XRE.TO",    @provider.send(:normalize_symbol, "XRE.TO", "XTSE")
   end
 
   test "default_currency_for_exchange knows the European venues Yahoo names" do

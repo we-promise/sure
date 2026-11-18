@@ -10860,6 +10860,13 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/Transaction"
+        '403':
+          description: account is shared with you without permission to change this
+            transaction
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:
@@ -10935,6 +10942,12 @@ paths:
             application/json:
               schema:
                 "$ref": "#/components/schemas/DeleteResponse"
+        '403':
+          description: account is shared with you without full control
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
         '404':
           description: transaction not found
           content:

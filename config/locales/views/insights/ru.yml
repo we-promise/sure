@@ -3,7 +3,7 @@ ru:
   insights:
     notification:
       title: Новый финансовый инсайт
-      body: Откройте Sure, чтобы посмотреть свежий инсайт от ИИ.
+      body: Откройте Sure, чтобы посмотреть свежий инсайт.
     index:
       title: Инсайты
       subtitle: Что происходит с вашими финансами. Обновляется каждую ночь.
@@ -48,7 +48,7 @@ ru:
         other: Последние %{count} дня
       date_range: '%{from} – %{to}'
     figures:
-      vs_previous: к прошлому месяцу
+      vs_previous_three_months: к трём предыдущим месяцам
       today: сегодня
       on_pace: по текущему темпу
       of_budget: от бюджета
@@ -68,7 +68,7 @@ ru:
       cash_flow_warning: Проверить регулярные операции
       net_worth_milestone: Открыть отчёт о чистой стоимости
       subscription_audit: Проверить регулярные операции
-      savings_rate_change: Операции за тот месяц
+      savings_rate_change: Операции за эти месяцы
       negative_position: "Проверить позиции"
       idle_cash: Перейти к счёту
       budget: Открыть бюджет
@@ -84,8 +84,8 @@ ru:
       maintained_goal_depleted: Резерв «%{goal}» опустился ниже целевого уровня
       subscription_audit: Подписка %{name} всё ещё активна?
       savings_rate_change:
-        up: Норма сбережений выросла (%{month})
-        down: Норма сбережений снизилась (%{month})
+        up: Норма сбережений за последние три месяца выросла
+        down: Норма сбережений за последние три месяца снизилась
       negative_position: "Позиции на счёте %{account} ушли ниже нуля"
       idle_cash: Неработающие деньги на счёте %{account}
       budget_at_risk:
@@ -105,9 +105,9 @@ ru:
       maintained_goal_depleted: В резерве «%{goal}» %{saved} из %{target}, которые он должен поддерживать. Не хватает %{missing}.
       subscription_audit: Платёж %{name} (%{amount}) не поступал с ожидаемой даты %{expected_on}. Возможно, подписка отменена или дата списания изменилась.
       savings_rate_change:
-        up: Вы сберегли %{current_rate}% дохода (%{month}) — на %{change_pp} п. п. больше, чем %{previous_rate}% месяцем ранее.
-        down: Вы сберегли %{current_rate}% дохода (%{month}) — на %{change_pp} п. п. меньше, чем %{previous_rate}% месяцем ранее.
-        down_negative: 'Вы потратили больше, чем заработали (%{month}): норма сбережений упала до %{current_rate}% с %{previous_rate}% месяцем ранее.'
+        up: За период %{from_month} — %{to_month} норма сбережений от вашего обычного месячного дохода составила %{current_rate}% — на %{change_pp} п. п. больше, чем %{previous_rate}% за три месяца до этого.
+        down: За период %{from_month} — %{to_month} норма сбережений от вашего обычного месячного дохода составила %{current_rate}% — на %{change_pp} п. п. меньше, чем %{previous_rate}% за три месяца до этого.
+        down_negative: "За период %{from_month} — %{to_month} вы потратили больше, чем заработали: норма сбережений упала до %{current_rate}% с %{previous_rate}% за три месяца до этого."
       negative_position: "На счёте %{account} позиция %{security} (%{ticker}) ушла ниже нуля %{date}, до %{qty}. Вероятно, не хватает покупки или перевода; затронуто позиций: %{count}."
       idle_cash: На счёте %{account} лежит %{balance} без движения последние %{idle_days} дн.
       budget_at_risk:
