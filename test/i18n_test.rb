@@ -74,6 +74,19 @@ class I18nTest < ActiveSupport::TestCase
     end
   end
 
+  # The insights page, the card's "Dig in with AI" button and the push
+  # notification all read this tree, so a gap shows Spanish users English
+  # copy, and for the dig-in prompt, an English message in their chat box.
+  def test_spanish_insights_keys_and_placeholders_match_english
+    en = view_leaves("insights", "en")
+    es = view_leaves("insights", "es")
+
+    assert_equal en.keys.sort, es.keys.sort, "insights in views/insights/es.yml must carry every key en.yml does"
+    en.each do |key, value|
+      assert_equal value.scan(/%\{\w+\}/).sort, es.fetch(key).to_s.scan(/%\{\w+\}/).sort, "placeholders differ for #{key}"
+    end
+  end
+
   def test_no_missing_keys
     skip "Skipping missing keys test"
     missing_keys = @i18n.missing_keys(locales: [ :en ])
@@ -235,8 +248,13 @@ class I18nTest < ActiveSupport::TestCase
   private
     # { "months_saved.one" => "...", ... } for UI.account.chart.loan in one locale.
     def loan_chart_leaves(locale)
-      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/components/#{locale}.yml"), aliases: true)
-        .dig(locale, "UI", "account", "chart", "loan") || {}
+      view_leaves("components", locale, "UI", "account", "chart", "loan")
+    end
+
+    # Leaves of config/locales/views/<dir>/<locale>.yml under the given keys.
+    def view_leaves(dir, locale, *keys)
+      tree = YAML.load_file(Pathname.pwd.join("config/locales/views/#{dir}/#{locale}.yml"), aliases: true)
+        .dig(locale, *keys) || {}
       flatten_leaves(tree)
     end
 
