@@ -126,7 +126,7 @@ class Ai::LegacyEnvConfig
         vector_store:, json_mode: openai_json_mode
       )
       name = Provider::Openai.effective_model
-      flag = env("OPENAI_SUPPORTS_PDF_PROCESSING")
+      flag = ENV["OPENAI_SUPPORTS_PDF_PROCESSING"]   # raw: set but empty was an opt-out, and stays one
       vision = (flag.nil? || flag.downcase.in?(%w[true 1 yes])) &&
                (custom || Provider::Openai::VISION_CAPABLE_MODEL_PREFIXES.any? { name.start_with?(_1) })
       model = provider && llm_model(endpoint, provider, name, context_window: custom ? context_window : explicit_context_window,
@@ -142,7 +142,7 @@ class Ai::LegacyEnvConfig
       base_url = env("ANTHROPIC_BASE_URL") || Setting.anthropic_base_url.presence
       provider = buildable(:anthropic) { Provider::Registry.get_provider(:anthropic) }
       endpoint = Ai::Config::Endpoint.new(
-        name: "anthropic", protocol: :anthropic, preset: (:anthropic unless base_url), base_url:, api_key: token,
+        name: "anthropic", protocol: :anthropic, preset: (:anthropic if anthropic_native?(base_url)), base_url:, api_key: token,
         location: location_for(base_url), timeout_seconds: ENV.fetch("ANTHROPIC_REQUEST_TIMEOUT", 600).to_i
       )
       name = Provider::Anthropic.effective_model
@@ -246,9 +246,17 @@ class Ai::LegacyEnvConfig
     end
 
     # The default embedding server is OpenAI's, which needs a key: an Anthropic-only install
-    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server.
+    # has none, so it gets no `embed` route until EMBEDDING_URI_BASE names a server. Compared as
+    # the transport sends them, so a trailing slash doesn't make it another server.
     def usable_embedding_server?(model)
-      model.endpoint.base_url != VectorStore::DEFAULT_EMBEDDING_URI_BASE || model.endpoint.api_key.present?
+      model.endpoint.base_url.to_s.chomp("/") != VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/") || model.endpoint.api_key.present?
+    end
+
+    # Anthropic's own API, written out or not: it keeps the preset, and with it the PDF limits.
+    def anthropic_native?(url)
+      url.blank? || URI.parse(url.to_s).host.to_s.casecmp?("api.anthropic.com")
+    rescue URI::InvalidURIError
+      false
     end
 
     # The URL and key fall back to the OpenAI values saved in Settings too. The URL is used as

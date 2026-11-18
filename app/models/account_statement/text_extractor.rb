@@ -57,9 +57,9 @@ class AccountStatement
       # What PDF import's "Read as" can do with a scan for this family and user.
       def scan_hint
         reasons = Ai::PdfReading.route_reasons(family: @statement.family, user: @user)
-        way = %i[images ocr].find { reasons[_1].nil? }
+        way = %i[pdf images ocr].find { reasons[_1].nil? }
         if way
-          "Importing it as a statement with \"Read as\" set to #{way == :images ? "Images" : "OCR"} can read the " \
+          "Importing it as a statement with \"Read as\" set to #{{ pdf: "PDF", images: "Images", ocr: "OCR" }.fetch(way)} can read the " \
             "scanned pages; suggest that, or ask the user for the figures. Don't guess."
         else
           "No model set up on this install can read scanned pages. Ask the user for the figures directly rather than guessing."

@@ -656,6 +656,29 @@ class AiHealth::ProbeTest < ActiveSupport::TestCase
     assert_no_match(/(OpenAI::Client|Anthropic::Client|Faraday)\.new\b/, source)
   end
 
+  test "the PDF vision probe reports a missing renderer as such, not as a failed request" do
+    Pdf::PageImages.stubs(:render).raises(Pdf::PageImages::Error.new("pdftoppm is not installed (poppler-utils)", code: :missing_binary))
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+
+    result = @probe.pdf_vision_processing(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                                          model: "vision-model", openai_compatible: true)
+
+    assert result.failing?
+    assert_equal :missing_binary, result.failure_code
+  end
+
+  test "a PDF probe neither skips nor marks down production's routes" do
+    stub_ai(:extract_pdf, raises: Ai::Error::Timeout.new("slow"))
+    Rails.logger.stubs(:error)
+    DebugLogEntry.stubs(:capture)
+    Ai::DownMarks.expects(:mark).never
+    Ai::DownMarks.expects(:state).never
+
+    @probe.pdf_text_extraction(provider: :openai, endpoint: "https://api.cloudflare.example.test/v1", access_token: "token",
+                               model: "text-model", openai_compatible: true)
+  end
+
   private
     def stub_tools_request(endpoint)
       stub_request(:post, "#{endpoint}/chat/completions").with { |request| JSON.parse(request.body).key?("tools") }

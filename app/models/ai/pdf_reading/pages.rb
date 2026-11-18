@@ -39,11 +39,13 @@ module Ai::PdfReading::Pages
     case way
     when :pdf then [ Ai::Attachment.pdf(content, filename:) ]
     when :images
-      wanted = items.flat_map { (_1.first_page.._1.last_page).to_a }
-      pages = wanted.min..wanted.max
-      Pdf::PageImages.render(content, pages:).each_with_index.filter_map do |png, i|
-        page = pages.first + i
-        Ai::Attachment.png(png, filename: "page-#{page}.png") if wanted.include?(page)
+      # One render per run of consecutive pages: a page between two of the batch's is never
+      # rendered, so it can't fail the batch (a page too large, say).
+      wanted = items.flat_map { (_1.first_page.._1.last_page).to_a }.uniq.sort
+      wanted.slice_when { |a, b| b != a + 1 }.flat_map do |run|
+        Pdf::PageImages.render(content, pages: run.first..run.last).each_with_index.map do |png, i|
+          Ai::Attachment.png(png, filename: "page-#{run.first + i}.png")
+        end
       end
     else []
     end

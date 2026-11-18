@@ -206,7 +206,9 @@ class AiHealth
             end
 
           value = Timeout.timeout(timeout) do
-            Ai::Generations::ReadPdf.new(units:, content: SyntheticPdf.bytes, family: nil).call(batches: 1, plan:).value!
+            Ai::Generations::ReadPdf.new(units:, content: SyntheticPdf.bytes, family: nil).call(batches: 1, plan:, down_marks: false).value!
+          rescue Pdf::PageImages::Error => error
+            raise Failure, error.code   # :missing_binary and the like, not a generic request failure
           end
           raise Failure, :invalid_response unless SyntheticPdf.valid_result?(value)
         end

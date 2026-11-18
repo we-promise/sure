@@ -136,7 +136,10 @@ class Ai::Generation
 
   # answered_before: an earlier call in the same run answered a batch (Ai::GenerationJob's chain).
   # shadow: false when the caller samples the shadow itself, once its answer is applied.
-  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false, shadow: true)
+  # down_marks: false for a diagnostic, which must neither skip a route production marked down nor
+  # mark one down for production.
+  def call(batches: nil, cancelled: nil, plan: nil, answered_before: false, shadow: true, down_marks: true)
+    @down_marks = down_marks ? Ai::DownMarks : Ai::DownMarks::Ignored
     plan ||= Ai::Router.new(family:, user:).resolve(feature_key)
     return Ai::Result.unavailable(plan) unless plan.is_a?(Ai::Plan)
 
@@ -199,7 +202,7 @@ class Ai::Generation
       while remaining.any? && (batches.nil? || done < batches)
         raise Ai::Error::Cancelled, "cancelled" if cancelled&.call
 
-        route = routes.find { !Ai::DownMarks.down?(_1) } || routes.first
+        route = routes.find { !@down_marks.down?(_1) } || routes.first
         slice = Ai::Batch.first_slice(remaining, model: route.model, fixed_tokens: fixed_tokens(route), cost: method(:item_cost))
         answers, unanswered = begin
           on_routes(routes, slice)
@@ -217,7 +220,7 @@ class Ai::Generation
           values << value
         end
         log_omitted(slice - unanswered, values)
-        remaining = unanswered + (remaining - slice)
+        remaining = unanswered + (remaining[slice.size..] || [])   # by position: two equal units are two inputs
         done += 1
         break if unanswered.any?   # the routes failed over; a later job retries these
       end
@@ -256,7 +259,7 @@ class Ai::Generation
       end
 
       routes.each do |route|
-        state = Ai::DownMarks.state(route)
+        state = @down_marks.state(route)
         unless state == :up
           transient = true
           down = "#{route.endpoint.name}/#{route.model.name} is marked down"
@@ -284,7 +287,7 @@ class Ai::Generation
       # A route found the answer unusable and none answered the rest: one odd transaction can derail
       # a model, so look for it by halving on that route, rather than lose the whole batch. A later
       # route that couldn't fit the batch doesn't change that.
-      if unusable_on && pending && pending.size > 1 && Ai::DownMarks.state(route = unusable_on) == :up
+      if unusable_on && pending && pending.size > 1 && @down_marks.state(route = unusable_on) == :up
         begin
           done, pending = bisect(route, pending)
           answers.concat(done.map { [ route, _1 ] })
@@ -317,7 +320,7 @@ class Ai::Generation
     end
 
     def fail_over(route, error)
-      Ai::DownMarks.mark(route, error)
+      @down_marks.mark(route, error)
       @failed_over_from << route
       error
     end

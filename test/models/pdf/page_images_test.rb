@@ -102,6 +102,30 @@ class Pdf::PageImagesTest < ActiveSupport::TestCase
     assert_equal :missing_binary, error.code, "the size check passed; only the missing binary stopped it"
   end
 
+  test "a render that writes fewer pages than asked for fails instead of sending a partial batch" do
+    Dir.mktmpdir do |dir|
+      binary = fake_pdftoppm(dir, "exit 0")   # succeeds without writing a page
+
+      error = assert_raises(Pdf::PageImages::Error) { Pdf::PageImages.render(statement("bac_ocr"), binary:) }
+
+      assert_equal :failed, error.code
+      assert_match "rendered 0 of 1 pages", error.message
+    end
+  end
+
+  test "a render interrupted from outside kills its process group too" do
+    Dir.mktmpdir do |dir|
+      pids = File.join(dir, "pids")
+      binary = fake_pdftoppm(dir, "sleep 60 & echo $! > #{pids}; echo $$ >> #{pids}; wait")
+
+      assert_raises(Timeout::Error) { Timeout.timeout(1) { Pdf::PageImages.render(statement("bac_ocr"), binary:, timeout: 30) } }
+
+      File.read(pids).split.map(&:to_i).each do |pid|
+        assert dead_within?(pid, 2), "process #{pid} survived the interruption"
+      end
+    end
+  end
+
   private
     def statement(name) = file_fixture("statements/#{name}.pdf").binread
 

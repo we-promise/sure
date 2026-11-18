@@ -209,7 +209,7 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     end
   end
 
-  test "a statement without balances stops at the first way that passes the other checks, flagged" do
+  test "a scan whose balances weren't found still tries OCR, which might read them" do
     skip_without_pdftoppm
     requests = stub_ai(:extract_pdf) do |request|
       next "1 February Cardpayment 24.50" if request.is_a?(Ai::Transport::Base::OcrRequest)
@@ -220,12 +220,12 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     with_reading_routes(vision_model, ocr_model) do
       outcome = reading(@scan).extract
 
-      assert_equal :images, outcome.way
+      assert_equal :images, outcome.way, "OCR was tried, as images had no text to show the balances aren't printed; images' extraction stays the better one"
       assert outcome.flagged?
       assert_equal [ :balances ], outcome.checks.failed
-      assert_equal [ :images ], outcome.attempts.map { _1[:way] }
+      assert_equal %i[images ocr], outcome.attempts.map { _1[:way] }
     end
-    assert_empty requests.grep(Ai::Transport::Base::OcrRequest), "OCR, the next way, never ran"
+    assert requests.grep(Ai::Transport::Base::OcrRequest).any?
   end
 
   test "read gives what the document is, from the first batch" do
@@ -284,6 +284,14 @@ class Ai::PdfReadingTest < ActiveSupport::TestCase
     with_reading_routes(text_model.with(batch_size: 1)) do
       assert_equal "bank_statement", reader.read.value[:document_type]
     end
+  end
+
+  test "an OCR route marked down after the check ends that way before any page is rendered" do
+    reader = reading(@scan)
+    reader.stubs(:ocr_route).returns(nil)
+    Pdf::PageImages.expects(:render).never
+
+    assert_raises(Ai::Error::Unavailable) { reader.send(:transcribe) }
   end
 
   private

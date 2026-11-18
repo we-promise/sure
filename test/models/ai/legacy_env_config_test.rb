@@ -346,4 +346,26 @@ class Ai::LegacyEnvConfigTest < ActiveSupport::TestCase
 
     assert_equal :openai, config.vector_store_backend
   end
+  test "OPENAI_SUPPORTS_PDF_PROCESSING set but empty keeps PDF import off, as it always has" do
+    config = build("OPENAI_ACCESS_TOKEN" => "sk-test", "OPENAI_URI_BASE" => "http://llama:8080/v1",
+                   "OPENAI_MODEL" => "qwen3", "OPENAI_SUPPORTS_PDF_PROCESSING" => "")
+
+    assert_empty config.routes_for(:extract_pdf)
+  end
+
+  test "Anthropic's own URL written out keeps the preset and its PDF limits" do
+    config = build("ANTHROPIC_API_KEY" => "sk-ant", "LLM_PROVIDER" => "anthropic", "ANTHROPIC_BASE_URL" => "https://api.anthropic.com")
+
+    assert_equal :anthropic, config.endpoint(:anthropic).preset
+    assert config.endpoint(:anthropic).pdf_limits.present?
+  end
+
+  test "the default embedding URL with a trailing slash or without is still the server that needs a key" do
+    VectorStore::Pgvector.stubs(:available?).returns(true)
+    without_slash = VectorStore::DEFAULT_EMBEDDING_URI_BASE.chomp("/")
+
+    config = build("VECTOR_STORE_PROVIDER" => "pgvector", "EMBEDDING_URI_BASE" => without_slash)
+
+    assert_empty config.routes_for(:embed)
+  end
 end

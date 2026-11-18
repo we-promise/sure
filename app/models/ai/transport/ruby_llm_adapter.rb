@@ -166,7 +166,9 @@ module Ai::Transport::RubyLlmAdapter
         when RubyLLM::RateLimitError then Ai::Error.for_status(429, error.message, body:)
         when RubyLLM::ContextLengthExceededError then Ai::Error::ContextTooLong
         when RubyLLM::ServerError, RubyLLM::ServiceUnavailableError, RubyLLM::OverloadedError
-          Ai::Error.for_status(status || 500, error.message, body:)
+          # The provider's own message only: a diagnostic field elsewhere in the body can quote an
+          # earlier "image input is not supported" and turn a retryable 503 into a refusal.
+          Ai::Error.for_status(status || 500, error.message)
         when RubyLLM::CancelledError then Ai::Error::Cancelled
         when RubyLLM::ModelNotFoundError then Ai::Error::ModelMissing   # not a RubyLLM::Error
         end

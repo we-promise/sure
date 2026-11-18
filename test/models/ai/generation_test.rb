@@ -383,4 +383,13 @@ class Ai::GenerationTest < ActiveSupport::TestCase
     assert result.success?
     assert_equal "openai", result.route.endpoint.name
   end
+  test "two equal items are two inputs: answering one doesn't drop the other" do
+    item = { id: "t0", description: "SHOP", merchant: nil }
+    use_ai_model_settings(batch_size: 1)
+    requests = stub_ai(:detect_merchants) { AiTestGeneration.answer(_1) }
+
+    AiTestGeneration.new(transactions: [ item, item ], family: @family).call
+
+    assert_equal 2, requests.size
+  end
 end

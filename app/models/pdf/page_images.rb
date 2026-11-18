@@ -49,13 +49,23 @@ module Pdf::PageImages
       pid = Process.spawn({}, executable, "-png", "-r", dpi.to_s, "-f", first.to_s, "-l", last.to_s, pdf, File.join(dir, "page"),
                           unsetenv_others: true, pgroup: true, chdir: dir, in: File::NULL, out: File::NULL, err: File::NULL,
                           rlimit_cpu: limits[:cpu_seconds], rlimit_as: limits[:memory])
-      status = wait(pid, limits[:timeout])
+      status = nil
+      begin
+        status = wait(pid, limits[:timeout])
+      ensure
+        kill_group(pid) unless status   # interrupted from outside (a probe's deadline): poppler doesn't outlive it
+      end
       raise Error.new("pdftoppm took longer than #{limits[:timeout]}s", code: :timeout) unless status
       unless status.success?
         raise Error.new("pdftoppm failed (#{status.signaled? ? "signal #{status.termsig}" : "exit #{status.exitstatus}"})", code: :failed)
       end
 
-      Dir[File.join(dir, "page-*.png")].sort_by { _1[/-(\d+)\.png\z/, 1].to_i }.map { File.binread(_1) }.each_with_index do |png, i|
+      pngs = Dir[File.join(dir, "page-*.png")].sort_by { _1[/-(\d+)\.png\z/, 1].to_i }.map { File.binread(_1) }
+      if pngs.size != last - first + 1
+        raise Error.new("pdftoppm rendered #{pngs.size} of #{last - first + 1} pages", code: :failed)
+      end
+
+      pngs.each_with_index do |png, i|
         width, height = png.byteslice(16, 8).to_s.unpack("NN")
         if width.to_i < MIN_SIDE || height.to_i < MIN_SIDE
           raise Error.new("pdftoppm rendered page #{first + i} as #{width.to_i}x#{height.to_i}", code: :blank_page)
@@ -75,9 +85,8 @@ module Pdf::PageImages
   # From the pages' MediaBox, read by pdf-reader, which already parses every upload in process
   # for its text layer. A file it can't open is refused before poppler sees it.
   def check_size!(pdf, first:, last:, dpi:)
-    pages = readable { pdf.pages[(first - 1)..(last - 1)] }
-    pages.each_with_index do |page, i|
-      box = readable { page.rectangles[:MediaBox] }   # resolved, even when the PDF stores it as a reference
+    (first..last).each_with_index do |number, i|
+      box = readable { pdf.page(number).rectangles[:MediaBox] }   # the page asked for only, not every page object   # resolved, even when the PDF stores it as a reference
       pixels = (box.width.abs * dpi / 72.0) * (box.height.abs * dpi / 72.0)
       if pixels > MAX_PIXELS
         raise Error.new("page #{first + i} would be #{(pixels / 1e6).round} million pixels at #{dpi} dpi", code: :too_large)
@@ -89,7 +98,7 @@ module Pdf::PageImages
 
   def readable
     yield
-  rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError, ArgumentError => error
+  rescue PDF::Reader::MalformedPDFError, PDF::Reader::UnsupportedFeatureError, PDF::Reader::InvalidPageError, ArgumentError => error
     raise Error.new("unreadable PDF: #{error.message}", code: :unreadable)
   end
 
@@ -103,11 +112,15 @@ module Pdf::PageImages
 
       sleep 0.02
     end
+    kill_group(pid)
+    nil
+  end
+
+  def kill_group(pid)
     Process.kill("KILL", -pid)
     Process.wait(pid)
-    nil
   rescue Errno::ESRCH, Errno::ECHILD
     nil
   end
-  private_class_method :range_for, :check_size!, :reader, :readable, :wait
+  private_class_method :range_for, :check_size!, :reader, :readable, :wait, :kill_group
 end

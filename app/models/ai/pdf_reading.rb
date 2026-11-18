@@ -90,7 +90,7 @@ class Ai::PdfReading
                                                     .with(complete: result.skipped.empty? && result.remaining.empty?)
       outcome = Outcome.new(value: result.value, way:, model: result.route&.model&.name, checks:, usage: result.usage, attempts:)
       attempts << { way:, checks: checks.to_h }
-      return outcome unless checks.worth_another_way?
+      return outcome unless checks.worth_another_way? || balances_unknown?(checks, source)
 
       best = outcome if best.nil? || checks.score > best.checks.score
       nil
@@ -231,6 +231,9 @@ class Ai::PdfReading
     # keeps within the endpoint's timeout, and Mistral and Cohere bill per page anyway.
     def transcribe
       route = ocr_route
+      # Marked down by another worker since reason_for(:ocr) found it: this way ends, before rendering.
+      raise Ai::Error::Unavailable, :needs_ocr_route unless route
+
       (1..page_count).map do |page|
         png = Pdf::PageImages.render(content, pages: page..page).first
         request = Ai::Transport::Base::OcrRequest.new(feature: :extract_pdf, family:, model: route.model,
@@ -246,6 +249,12 @@ class Ai::PdfReading
     # The balances printed on the statement, by #4054's parser: from its text layer, else from the
     # text the model read (an OCR transcription). Models write figures to fit their rows, so
     # `reconciles` trusts these over the model's.
+    # Only balances failed, and nothing shows the statement prints none: no text to look in (a scan
+    # read as images), so another way (OCR) may still find them.
+    def balances_unknown?(checks, source)
+      checks.failed == %i[balances] && !text_layer? && source.blank?
+    end
+
     # A source with both balances wins over one with only one of them.
     def printed_balances(source)
       parsed = [ text_pages.join("\n"), source ].compact.uniq.map { parsed_balances(_1) }

@@ -207,7 +207,7 @@ class Assistant::Function::GetDocumentTextTest < ActiveSupport::TestCase
 
     result = @fn.call("account_statement_id" => statement.id)
 
-    assert_match(/"Read as" set to Images/, result[:note])
+    assert_match(/"Read as" set to PDF/, result[:note], "the test setup's OpenAI model reads PDFs itself")
   end
 
   test "reports a scan with no text layer as unreadable and names the reason" do

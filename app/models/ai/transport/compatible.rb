@@ -47,7 +47,7 @@ class Ai::Transport::Compatible < Ai::Transport::Base
       refuse_static_headers!
       embedding = attempt do
         mapping_errors do
-          ruby_llm_context.embed(request.texts, model: request.model.name, provider: ruby_llm_provider,
+          ruby_llm_context(timeout: within_budget(endpoint.timeout_seconds)).embed(request.texts, model: request.model.name, provider: ruby_llm_provider,
                                                 task_type: request.task_type, assume_model_exists: true)
         end
       end
