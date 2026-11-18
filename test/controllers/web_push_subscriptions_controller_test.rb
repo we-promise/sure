@@ -123,7 +123,7 @@ class WebPushSubscriptionsControllerTest < ActionDispatch::IntegrationTest
         post "/web_push_subscriptions/#{device.id}/test_notification", as: :json
         assert_response :accepted
       end
-      assert_no_difference "WebPushDelivery.count" do
+      assert_no_difference "PushDelivery.count" do
         post "/web_push_subscriptions/#{devices.last.id}/test_notification", as: :json
         assert_response :too_many_requests
         assert_equal I18n.t("web_push.errors.rate_limited"), response.parsed_body.fetch("error")

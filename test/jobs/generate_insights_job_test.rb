@@ -141,14 +141,14 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       assert_enqueued_with(
         job: DeliverInsightNotificationJob,
         args: ->(args) {
-          args.one? &&
-            args.first[:insight_id].present? &&
-            args.first[:push_subscription_id] == subscription.id
+          args.one? && args.first[:push_delivery_id].present?
         }
       ) do
         GenerateInsightsJob.perform_now(family_id: @family.id)
       end
     end
+    assert_equal [ subscription.id ],
+      PushDelivery.apns.joins(:subscription).where(insights: { id: @family.insights }).pluck("push_subscriptions.id")
   end
 
   test "browser push uses new and materially resurfaced insights but not routine refreshes" do
@@ -186,7 +186,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
     assert_equal version + 1, insight.reload.notification_version
-    assert_equal [ version, version + 1 ], WebPushDelivery.where(insight: insight).order(:insight_version).pluck(:insight_version)
+    assert_equal [ version, version + 1 ], PushDelivery.where(insight: insight).order(:insight_version).pluck(:insight_version)
   end
 
   test "deleting a device between eligibility and delivery recording preserves the insight" do
@@ -198,7 +198,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
       true
     end.returns(true)
     assert_difference "Insight.count", 1 do
-      assert_no_difference "WebPushDelivery.count" do
+      assert_no_difference "PushDelivery.count" do
         GenerateInsightsJob.perform_now(family_id: @family.id)
       end
     end
@@ -213,7 +213,7 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     assert_raises(StandardError) { GenerateInsightsJob.perform_now(family_id: @family.id) }
 
     insight = @family.insights.find_by!(dedup_key: "idle_cash:test-account:2026-07")
-    deliveries = WebPushDelivery.where(web_push_subscription: subscription, insight: insight,
+    deliveries = PushDelivery.where(subscription: subscription, insight: insight,
       insight_version: insight.notification_version)
     assert_equal 1, deliveries.count
     delivery = deliveries.first!
@@ -234,9 +234,9 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     register_web_push(user: @family.users.first)
     WebPush::Client.stubs(:configured?).returns(true)
     stub_generated([ generated_insight(priority: "high") ])
-    WebPushDelivery.stubs(:for_insight).raises(ActiveRecord::RecordInvalid.new(WebPushDelivery.new))
+    PushDelivery.stubs(:for_subscription).raises(ActiveRecord::RecordInvalid.new(PushDelivery.new))
 
-    assert_no_difference [ "Insight.count", "WebPushDelivery.count" ] do
+    assert_no_difference [ "Insight.count", "PushDelivery.count" ] do
       assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
         GenerateInsightsJob.perform_now(family_id: @family.id)
       end
@@ -252,9 +252,9 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     original_metadata = insight.metadata
     original_version = insight.notification_version
     stub_generated([ generated_insight(balance: 7500.0, priority: "high") ])
-    WebPushDelivery.stubs(:for_insight).raises(ActiveRecord::RecordInvalid.new(WebPushDelivery.new))
+    PushDelivery.stubs(:for_subscription).raises(ActiveRecord::RecordInvalid.new(PushDelivery.new))
 
-    assert_no_difference "WebPushDelivery.count" do
+    assert_no_difference "PushDelivery.count" do
       assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
         GenerateInsightsJob.perform_now(family_id: @family.id)
       end
@@ -271,10 +271,10 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     subscription = register_web_push(user: @family.users.first)
 
     assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
-      DeliverWebPushNotificationJob.enqueue_for(insight)
+      PushDelivery.enqueue_insight_deliveries(insight)
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
-    assert_empty subscription.web_push_deliveries
+    assert_empty subscription.push_deliveries
   end
 
   test "budget warning opt in after an insight event receives no backlog" do
@@ -288,10 +288,10 @@ class GenerateInsightsJobTest < ActiveJob::TestCase
     user.update!(preferences: user.preferences.merge("web_push_budget_warnings_enabled" => true))
 
     assert_no_enqueued_jobs only: DeliverWebPushNotificationJob do
-      DeliverWebPushNotificationJob.enqueue_for(insight)
+      PushDelivery.enqueue_insight_deliveries(insight)
       GenerateInsightsJob.perform_now(family_id: @family.id)
     end
-    assert_empty subscription.web_push_deliveries
+    assert_empty subscription.push_deliveries
   end
 
   test "re-running with unchanged numbers does not duplicate or rewrite" do

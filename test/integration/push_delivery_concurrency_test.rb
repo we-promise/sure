@@ -2,7 +2,7 @@ require "test_helper"
 require "timeout"
 require Rails.root.join("test/support/web_push_test_helper")
 
-class WebPushDeliveryConcurrencyTest < ActiveSupport::TestCase
+class PushDeliveryConcurrencyTest < ActiveSupport::TestCase
   include WebPushTestHelper
   self.use_transactional_tests = false
 
@@ -14,7 +14,7 @@ class WebPushDeliveryConcurrencyTest < ActiveSupport::TestCase
     new_session = user.sessions.create!
     attributes = web_push_attributes
     subscription = register_web_push(user: user, session: old_session, **attributes)
-    delivery = subscription.web_push_deliveries.create!(enqueued_at: Time.current)
+    delivery = subscription.push_deliveries.create!(enqueued_at: Time.current)
     started = Queue.new
     release = Queue.new
     errors = Queue.new
@@ -30,7 +30,7 @@ class WebPushDeliveryConcurrencyTest < ActiveSupport::TestCase
 
     worker = Thread.new do
       ActiveRecord::Base.connection_pool.with_connection do
-        DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+        DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
       end
     rescue => error
       errors << error

@@ -54,9 +54,9 @@ class GenerateInsightsJob < ApplicationJob
       # refresh) always gets its list and button restored.
       I18n.with_locale(family.locale) { broadcast_feed(family) }
       Array(notifiable_insights).each do |insight|
-        WebPushDelivery.enqueue_insight_deliveries(insight)
+        PushDelivery.enqueue_insight_deliveries(insight)
       end
-      WebPushDelivery.retry_enqueue_failures_for(family)
+      PushDelivery.retry_enqueue_failures_for(family)
     end
 
     def broadcast_feed(family)
@@ -175,7 +175,7 @@ class GenerateInsightsJob < ApplicationJob
             existing.update!(title: generated.title, body: writer.write(generated), facts: facts, generated_at: Time.current)
             nil
           end
-          WebPushDelivery.record_for_insight!(notifiable) if notifiable
+          PushDelivery.record_for_insight!(notifiable) if notifiable
           notifiable
         end
       rescue ActiveRecord::RecordNotUnique

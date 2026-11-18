@@ -18,7 +18,7 @@ class WebPushSubscriptionsController < ApplicationController
   end
 
   def show
-    delivery = @subscription.web_push_deliveries.where(insight_id: nil).order(created_at: :desc).first
+    delivery = @subscription.push_deliveries.where(insight_id: nil).order(created_at: :desc).first
     render json: { id: @subscription.id, test_status: delivery&.status }
   end
 

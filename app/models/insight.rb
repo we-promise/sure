@@ -16,7 +16,7 @@
 # migration — only the vocabulary the code and the UI speak was wrong.
 class Insight < ApplicationRecord
   belongs_to :family
-  has_many :web_push_deliveries, dependent: :destroy
+  has_many :push_deliveries, dependent: :destroy
 
   TYPES = %w[
     spending_anomaly

@@ -26,11 +26,11 @@ class WebPushNotificationsTest < ApplicationSystemTestCase
 
     click_on I18n.t("web_push.test")
     assert_text I18n.t("web_push.status.queued")
-    delivery = device.web_push_deliveries.where(insight_id: nil).last!
+    delivery = device.push_deliveries.where(insight_id: nil).last!
     client = mock
     WebPush::Client.expects(:new).returns(client)
     client.expects(:deliver).returns(:accepted)
-    DeliverWebPushNotificationJob.perform_now(web_push_delivery_id: delivery.id)
+    DeliverWebPushNotificationJob.perform_now(push_delivery_id: delivery.id)
     assert_text I18n.t("web_push.status.accepted"), wait: 10
     capture_notification_card
 

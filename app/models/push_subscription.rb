@@ -58,6 +58,31 @@ class PushSubscription < ApplicationRecord
     user.active? && last_registered_at > 90.days.ago
   end
 
+  # The APNs channel notifies high-priority insights only. Family tenancy and
+  # the shared-account visibility rule mirror the feed, so a push can never
+  # reach a device the page would not show the insight to.
+  def eligible_for?(insight)
+    return false unless eligible? && user.preview_features_enabled?
+    return false unless insight.active? && insight.family_id == user.family_id
+    return false unless Insight.about_shared_accounts.exists?(insight.id)
+    insight.priority_high?
+  end
+
+  def channel_ready?
+    Apns::Client.available?
+  end
+
+  def notification_payload(delivery:)
+    I18n.with_locale(user.family.locale) do
+      {
+        token: token,
+        title: I18n.t("insights.notification.title"),
+        body: I18n.t("insights.notification.body"),
+        insight_id: delivery.insight_id
+      }
+    end
+  end
+
   # A response may arrive after the app has registered again. Only remove the
   # exact registration sent, and respect APNs' invalidation timestamp when given.
   def invalidate_if_unchanged!(response)

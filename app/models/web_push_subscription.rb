@@ -12,7 +12,7 @@ class WebPushSubscription < ApplicationRecord
 
   belongs_to :user
   belongs_to :session
-  has_many :web_push_deliveries, dependent: :destroy
+  has_many :push_deliveries, as: :subscription, dependent: :destroy
 
   if encryption_ready?
     encrypts :endpoint, :p256dh, :auth
@@ -132,7 +132,22 @@ class WebPushSubscription < ApplicationRecord
         next nil
       end
       update!(last_test_requested_at: Time.current)
-      web_push_deliveries.create!
+      push_deliveries.create!
+    end
+  end
+
+  def channel_ready?
+    WebPush::Client.configured?
+  end
+
+  def notification_payload(delivery:)
+    I18n.with_locale(user.family.locale) do
+      {
+        title: Rails.configuration.x.product_name,
+        body: I18n.t(delivery.insight ? "web_push.notification.body" : "web_push.notification.test_body"),
+        tag: delivery.insight ? "insight-#{delivery.insight_id}" : "web-push-test-#{delivery.id}",
+        data: { path: delivery.insight ? "/insights#insight_#{delivery.insight_id}" : "/insights" }
+      }
     end
   end
 

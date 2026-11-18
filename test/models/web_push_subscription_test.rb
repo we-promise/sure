@@ -141,7 +141,7 @@ class WebPushSubscriptionTest < ActiveSupport::TestCase
     subscription = WebPushSubscription.register_for!(user: @user, session: @session, **@attributes)
     first = subscription.request_test_notification!
     assert first.persisted?
-    assert_equal subscription.id, first.web_push_subscription_id
+    assert_equal subscription.id, first.subscription_id
 
     travel WebPushSubscription::TEST_NOTIFICATION_COOLDOWN - 1.second do
       assert_nil subscription.request_test_notification!
