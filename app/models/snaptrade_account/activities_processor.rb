@@ -77,16 +77,18 @@ class SnaptradeAccount::ActivitiesProcessor
 
   def process
     activities_data = @snaptrade_account.raw_activities_payload
-    return { trades: 0, transactions: 0 } if activities_data.blank?
+    return { trades: 0, transactions: 0, failed: 0 } if activities_data.blank?
 
     Rails.logger.info "SnaptradeAccount::ActivitiesProcessor - Processing #{activities_data.size} activities"
 
     @trades_count = 0
     @transactions_count = 0
+    @failed_count = 0
 
     activities_data.each do |activity_data|
       process_activity(activity_data.with_indifferent_access)
     rescue => e
+      @failed_count += 1
       activity = activity_data.is_a?(Hash) ? activity_data.with_indifferent_access : {}
       capture_debug_log(
         category: "provider_sync_error",
@@ -101,7 +103,7 @@ class SnaptradeAccount::ActivitiesProcessor
       )
     end
 
-    { trades: @trades_count, transactions: @transactions_count }
+    { trades: @trades_count, transactions: @transactions_count, failed: @failed_count }
   end
 
   private
