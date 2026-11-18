@@ -5,6 +5,10 @@ class GeneralizeWebPushDeliveryLedgerToPushDeliveries < ActiveRecord::Migration[
     rename_column :push_deliveries, :web_push_subscription_id, :subscription_id
     add_column :push_deliveries, :subscription_type, :string, null: false, default: "WebPushSubscription"
 
+    # Polymorphic subscriptions point at different tables per channel, so the
+    # FK inherited from the web-push-only ledger cannot survive the rename.
+    remove_foreign_key :push_deliveries, :web_push_subscriptions
+
     rename_index :push_deliveries, "index_web_push_deliveries_on_insight_version",
       "index_push_deliveries_on_insight_version"
     rename_index :push_deliveries, "index_web_push_deliveries_on_status_and_updated_at",

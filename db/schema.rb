@@ -3412,7 +3412,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_11_17_120000) do
   add_foreign_key "users", "chats", column: "last_viewed_chat_id"
   add_foreign_key "users", "families"
   add_foreign_key "push_deliveries", "insights"
-  add_foreign_key "push_deliveries", "web_push_subscriptions", column: "subscription_id"
   add_foreign_key "web_push_subscriptions", "sessions"
   add_foreign_key "web_push_subscriptions", "users"
   add_foreign_key "webauthn_credentials", "users"
