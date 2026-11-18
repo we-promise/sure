@@ -612,6 +612,33 @@ class RecurringTransaction::AllocatorTest < ActiveSupport::TestCase
     assert_not other_occurrence.reload.paid?
   end
 
+  test "two equal in-band settlements on a non-manual bill record a price change" do
+    series = @family.recurring_transactions.create!(
+      name: "Price Watch", account: @account, amount: 2000, currency: "USD",
+      status: "active", bill_type: "bill", manual: false,
+      dedup_scope: "price-watch-#{SecureRandom.hex(4)}", expected_day_of_month: 29,
+      last_occurrence_date: 1.month.ago.to_date, next_expected_date: Date.current + 1.month
+    )
+    first_due = (Date.current + 1.month).beginning_of_month + 9
+    second_due = (Date.current + 2.months).beginning_of_month + 9
+    first = series.recurring_occurrences.create!(
+      family: @family, original_due_on: first_due, due_on: first_due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+    second = series.recurring_occurrences.create!(
+      family: @family, original_due_on: second_due, due_on: second_due,
+      currency: "USD", expected_amount: 2000, status: "scheduled"
+    )
+
+    Allocator.new(first).allocate!(entry: entry_for(2080))
+    Allocator.new(second).allocate!(entry: entry_for(2080))
+
+    RecurringTransaction::PriceChangeDetector.new(@family).detect!
+
+    assert_equal 2080, series.reload.amount
+    assert_equal 2080, series.recurring_price_changes.order(:effective_on).last.new_amount
+  end
+
   private
 
     def foreign_entry(amount:, currency:)
