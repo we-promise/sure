@@ -5285,6 +5285,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '422':
           description: validation error
           content:
@@ -5401,6 +5403,8 @@ paths:
                         - dashboard
                         - intro
                       ai_enabled:
+                        type: boolean
+                      email_verified:
                         type: boolean
         '401':
           description: invalid credentials, MFA required, or account deactivated
@@ -5536,6 +5540,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '401':
           description: invalid or expired code
           content:
@@ -5656,6 +5662,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '400':
           description: missing linking code
           content:
@@ -5746,6 +5754,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '400':
           description: missing linking code
           content:
@@ -5829,6 +5839,8 @@ paths:
                         - intro
                       ai_enabled:
                         type: boolean
+                      email_verified:
+                        type: boolean
         '401':
           description: unauthorized
           content:
@@ -5837,6 +5849,45 @@ paths:
                 "$ref": "#/components/schemas/ErrorResponse"
         '403':
           description: insufficient scope
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+  "/api/v1/auth/resend_email_verification":
+    post:
+      summary: Resend the current user email verification message
+      tags:
+      - Auth
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: verification state returned and email queued when needed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      email_verified:
+                        type: boolean
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
+        '429':
+          description: resend limit exceeded
           content:
             application/json:
               schema:
@@ -11157,6 +11208,48 @@ paths:
               schema:
                 "$ref": "#/components/schemas/ErrorResponse"
   "/api/v1/users/me":
+    get:
+      summary: Retrieve current user
+      tags:
+      - Users
+      description: Returns the current mobile user profile and email verification
+        state.
+      security:
+      - apiKeyAuth: []
+      responses:
+        '200':
+          description: current user returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      first_name:
+                        type: string
+                        nullable: true
+                      last_name:
+                        type: string
+                        nullable: true
+                      ui_layout:
+                        type: string
+                      ai_enabled:
+                        type: boolean
+                      email_verified:
+                        type: boolean
+        '401':
+          description: unauthorized
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ErrorResponse"
     delete:
       summary: Delete account
       tags:
