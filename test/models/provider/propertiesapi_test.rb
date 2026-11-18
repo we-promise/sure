@@ -5,8 +5,17 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
   ADDRESS = "2640 Steiner St, San Francisco, CA 94115".freeze
 
   setup do
+    # The WebMock stubs match PROPERTY_URL, so a developer's PROPERTIESAPI_URL
+    # must not send these requests elsewhere.
+    @previous_propertiesapi_url = ENV["PROPERTIESAPI_URL"]
+    ENV["PROPERTIESAPI_URL"] = "https://api.propertiesapi.com"
+
     @provider = Provider::Propertiesapi.new("test_api_key")
     @provider.stubs(:throttle_request)
+  end
+
+  teardown do
+    ENV["PROPERTIESAPI_URL"] = @previous_propertiesapi_url
   end
 
   # Trimmed to the fields this provider reads, plus the listing price, which
@@ -163,7 +172,7 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
     assert_requested :get, PROPERTY_URL, query: { "address" => ADDRESS }, times: 1
   end
 
-  test "retries connection failures, which never reached the API" do
+  test "retries a refused connection and counts both attempts against the cap" do
     with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: "100") do
       Faraday::Retry::Middleware.any_instance.stubs(:sleep)
       stub_request(:get, PROPERTY_URL)

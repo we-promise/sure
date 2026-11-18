@@ -142,6 +142,11 @@ class Provider::Propertiesapi < Provider
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         # Only connection failures are retried. Timeouts are not: each attempt
         # can take the full timeout, so the next refresh simply tries again.
+        # ConnectionFailed usually means the request never reached the API, but
+        # it can also follow a connection reset after the request was sent. If
+        # PropertiesAPI did receive the first request, a resend of the same home
+        # is normally answered from its 24-hour cache at no charge; at worst it
+        # is one extra lookup, and every attempt counts against the monthly cap.
         faraday.request(:retry, {
           max: 2,
           interval: 1.0,
