@@ -20,8 +20,16 @@ class PlaidAccount::Investments::HoldingsProcessor
       # Skip if essential values are missing
       next if quantity_bd.nil? || price_bd.nil?
 
-      # Compute amount using BigDecimal arithmetic to avoid floating point drift
-      amount_bd = quantity_bd * price_bd
+      # Institutions quote some fixed income as a percent of par and some as a
+      # fraction of it, so quantity * institution_price can be 100x the
+      # position. institution_value is the position's value either way.
+      value_bd = parse_decimal(plaid_holding["institution_value"])
+      if value_bd&.nonzero? && quantity_bd.nonzero?
+        amount_bd = value_bd
+        price_bd = value_bd / quantity_bd
+      else
+        amount_bd = quantity_bd * price_bd
+      end
 
       # Normalize date - handle string, Date, or nil
       holding_date = parse_date(plaid_holding["institution_price_as_of"]) || Date.current
