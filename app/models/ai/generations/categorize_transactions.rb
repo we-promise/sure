@@ -19,6 +19,8 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
     [ "flight", "airline", "airlines", "airfare" ], [ "hotel", "lodging", "accommodation" ]
   ].freeze
 
+  MIN_CONTAINED = 4
+
   # transactions: [{ id:, amount:, classification:, description:, merchant: }];
   # categories: the family's, [{ id:, name:, is_subcategory:, parent_id: }].
   def initialize(transactions:, categories:, family:)
@@ -62,17 +64,21 @@ class Ai::Generations::CategorizeTransactions < Ai::Generation
       names.find { _1 == name } || names.find { _1.casecmp?(name) } || fuzzy_match(name, names)
     end
 
-    # Equal once spaces and punctuation go first, then one name inside the other or a known
-    # variation: "Healthcare" is "Health Care", not "Car", whichever the family listed first.
+    # Equal once spaces and punctuation go first, then a known variation, then the longest name
+    # inside the other or holding it: "Healthcare" is "Health", not "Car". A name shorter than
+    # MIN_CONTAINED letters matches only whole, or "Carpet cleaning" would be "Car".
     def fuzzy_match(name, names)
       squeezed = squeeze(name)
       return if squeezed.empty?
 
-      names.find { squeeze(_1) == squeezed } || names.find do |candidate|
-        other = squeeze(candidate)
-        (other.present? && (squeezed.include?(other) || other.include?(squeezed))) ||
-          NAME_VARIATIONS.any? { |group| group.include?(name.downcase) && group.include?(candidate.downcase) }
-      end
+      names.find { squeeze(_1) == squeezed } ||
+        names.find { |candidate| NAME_VARIATIONS.any? { _1.include?(name.downcase) && _1.include?(candidate.downcase) } } ||
+        names.select { contains?(squeeze(_1), squeezed) }.max_by { squeeze(_1).size }
+    end
+
+    def contains?(other, squeezed)
+      shorter = [ other, squeezed ].min_by(&:size)
+      shorter.size >= MIN_CONTAINED && (squeezed.include?(other) || other.include?(squeezed))
     end
 
     def squeeze(name) = name.downcase.gsub(/[^a-z0-9]/, "")

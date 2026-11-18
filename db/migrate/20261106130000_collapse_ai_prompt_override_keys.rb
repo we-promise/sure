@@ -5,7 +5,7 @@
 #   merchant_openai,    merchant_anthropic    -> detect_merchants
 #
 # Where a family has both and they differ, the one for the provider this install calls is kept:
-# LLM_PROVIDER or the saved setting, unless that provider has no key and the other has, as
+# the saved setting or LLM_PROVIDER, unless that provider has no key and the other has, as
 # Provider::Registry.preferred_llm_provider falls back. The other goes to a DebugLogEntry that
 # the prompts page shows until the family admin next saves.
 class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
@@ -69,10 +69,12 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
 
     def setting?(var) = setting_value(var).present?
 
+    # Decoded as the settings library stores it (YAML), so a saved " " is blank, as at runtime.
     def setting_value(var)
       value = select_value(ActiveRecord::Base.sanitize_sql([ "SELECT value FROM settings WHERE var = ?", var ]))
-      value = value.to_s.delete_prefix("---").strip
-      value unless value.in?([ "", "null", "~", "''" ])
+      YAML.safe_load(value.to_s).to_s.presence
+    rescue Psych::Exception
+      nil
     end
 
     # OpenAI's own API, regional hosts included (us.api.openai.com), as Provider::Openai.hosted_endpoint?
@@ -85,11 +87,8 @@ class CollapseAiPromptOverrideKeys < ActiveRecord::Migration[8.1]
       false
     end
 
-    def llm_provider
-      ENV["LLM_PROVIDER"].presence ||
-        select_value("SELECT value FROM settings WHERE var = 'llm_provider'").to_s.delete_prefix("--- ").strip.presence ||
-        "openai"
-    end
+    # Setting.llm_provider: the saved value, with LLM_PROVIDER only as its default.
+    def llm_provider = setting_value("llm_provider") || ENV["LLM_PROVIDER"].presence || "openai"
 
     def record_dropped(family, key, text)
       execute ActiveRecord::Base.sanitize_sql([

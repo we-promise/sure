@@ -15,6 +15,13 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
     @family.reload.ai_prompt_overrides
   end
 
+  def save_setting(var, value)
+    ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql([
+      "INSERT INTO settings (var, value, created_at, updated_at) VALUES (?, ?, now(), now()) " \
+      "ON CONFLICT (var) DO UPDATE SET value = EXCLUDED.value", var, value.to_yaml
+    ]))
+  end
+
   def dropped = DebugLogEntry.where(family: @family, category: CollapseAiPromptOverrideKeys::DROPPED_CATEGORY)
 
   test "one override per provider becomes the feature's override" do
@@ -64,6 +71,25 @@ class CollapseAiPromptOverrideKeysMigrationTest < ActiveSupport::TestCase
                        "OPENAI_MODEL" => nil, "ANTHROPIC_API_KEY" => "k") do
       ActiveRecord::Base.connection.execute("DELETE FROM settings WHERE var = 'openai_model'")
       assert_equal({ "categorize_transactions" => "OpenAI version" }, run_migration)
+    end
+  end
+
+  test "a saved provider wins over LLM_PROVIDER, as Setting.llm_provider reads them" do
+    overrides!("categorizer_openai" => "OpenAI version", "categorizer_anthropic" => "Claude version")
+    save_setting("llm_provider", "anthropic")
+
+    with_env_overrides("LLM_PROVIDER" => "openai", "OPENAI_ACCESS_TOKEN" => "k", "OPENAI_URI_BASE" => nil, "ANTHROPIC_API_KEY" => "k") do
+      assert_equal({ "categorize_transactions" => "Claude version" }, run_migration)
+    end
+  end
+
+  test "a saved model of only spaces is no model, so a custom URL builds no OpenAI route" do
+    overrides!("categorizer_openai" => "OpenAI version", "categorizer_anthropic" => "Claude version")
+    save_setting("openai_model", " ")
+
+    with_env_overrides("LLM_PROVIDER" => "openai", "OPENAI_ACCESS_TOKEN" => "k", "OPENAI_URI_BASE" => "http://llm.local/v1",
+                       "OPENAI_MODEL" => nil, "ANTHROPIC_API_KEY" => "k") do
+      assert_equal({ "categorize_transactions" => "Claude version" }, run_migration)
     end
   end
 

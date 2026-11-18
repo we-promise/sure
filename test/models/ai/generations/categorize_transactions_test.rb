@@ -30,6 +30,16 @@ class Ai::Generations::CategorizeTransactionsTest < ActiveSupport::TestCase
     assert_equal "Health Care", answer[:categorizations].first[:category_name]
   end
 
+  test "a short category isn't matched inside a longer answer, and the longest contained name wins" do
+    generation = Ai::Generations::CategorizeTransactions.new(transactions: [ { id: "t1" } ], family: nil,
+                                                             categories: [ { id: "c1", name: "Car" }, { id: "c2", name: "Health" } ])
+    name = ->(answer) { generation.coerce({ "categorizations" => [ { "transaction_id" => "t1", "category_name" => answer } ] })[:categorizations].first[:category_name] }
+
+    assert_equal "Health", name.("Healthcare")
+    assert_nil name.("Carpet cleaning")
+    assert_equal "Car", name.("car")
+  end
+
   test "the model's other field names and a bare list are accepted, as today" do
     value = coerce([ { "id" => "t1", "category" => "Restaurants" }, { "category" => "Restaurants" } ])
 

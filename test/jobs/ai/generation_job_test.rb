@@ -125,6 +125,15 @@ class Ai::GenerationJobTest < ActiveJob::TestCase
     assert_equal [ [ :failed, @family.id, Ai::Error::Timeout ] ], Requester.log
   end
 
+  test "a retry whose enqueue raises tells the requester instead of leaving it waiting" do
+    stub_ai(:detect_merchants, raises: Ai::Error::Timeout.new("slow"))
+    Ai::GenerationJob.any_instance.stubs(:enqueue).raises(Redis::CannotConnectError, "queue down")
+
+    Ai::GenerationJob.perform_now(:detect_merchants, { ids: %w[a], family_id: @family.id })
+
+    assert_equal [ [ :failed, @family.id, Ai::Error::Timeout ] ], Requester.log
+  end
+
   test "a timeout that outlasts every retry tells the requester once" do
     stub_ai(:detect_merchants, raises: Ai::Error::Timeout.new("slow"))
 

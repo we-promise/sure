@@ -131,6 +131,18 @@ class AiTransportGenerateTest < ActiveSupport::TestCase
     assert_equal({ "items" => [ { "id" => "a", "name" => "<think> Coffee" } ] }, generate(json_mode: :none).json)
   end
 
+  test "fenced JSON whose text holds <think> parses as it is" do
+    stub_chat(answer("```json\n{\"items\": [{\"id\": \"a\", \"name\": \"<think> Coffee\"}]}\n```"))
+
+    assert_equal({ "items" => [ { "id" => "a", "name" => "<think> Coffee" } ] }, generate(json_mode: :none).json)
+  end
+
+  test "a closed think block with no answer after it is unusable, not read as the answer" do
+    stub_chat(answer("<think>#{FULL.to_json}</think>"))
+
+    assert_raises(Ai::Error::InvalidOutput) { generate(json_mode: :none) }
+  end
+
   test "a bare array with prose around it is the array, not the first object inside it" do
     stub_chat(answer("Here: [#{FULL[:items].first.to_json}] Done."))
 

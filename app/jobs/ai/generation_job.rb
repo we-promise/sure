@@ -48,10 +48,17 @@ class Ai::GenerationJob < ApplicationJob
     give_up(error)
   end
 
-  # retry_on doesn't check that the retry was queued, so one the queue refused would leave the
-  # requester waiting for good: it gives up instead.
+  # retry_on doesn't check that the retry was queued, so one the queue refused, or failed to take,
+  # would leave the requester waiting for good: it gives up instead.
   def retry_job(options = {})
-    super.tap { |queued| give_up(options[:error] || ActiveJob::EnqueueError.new("the retry couldn't be queued")) unless queued }
+    queued = begin
+      super
+    rescue StandardError => error
+      Rails.error.report(error, handled: true, context: { feature: arguments.first })
+      false
+    end
+    give_up(options[:error] || ActiveJob::EnqueueError.new("the retry couldn't be queued")) unless queued
+    queued
   end
 
   def give_up(error)

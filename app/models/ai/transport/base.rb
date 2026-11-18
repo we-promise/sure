@@ -81,7 +81,8 @@ class Ai::Transport::Base
       return if text.blank?
 
       cleaned = strip_thinking(text.to_s)
-      fenced = cleaned.scan(/```(?:json)?\s*([\[{][\s\S]*?[\]}])\s*```/m).flatten.reverse
+      # Fenced JSON in the raw text too: one holding "<think>" in a string loses its start when stripped.
+      fenced = [ cleaned, text.to_s ].flat_map { _1.scan(/```(?:json)?\s*([\[{][\s\S]*?[\]}])\s*```/m).flatten.reverse }
       unclosed = cleaned[/```(?:json)?\s*([\[{][\s\S]*[\]}])\s*\z/m, 1]
       # The outer container first: `Here: [{...}]` is the array, not the object inside it.
       outer = [ cleaned[/\{[\s\S]*\}/m], cleaned[/\[[\s\S]*\]/m] ].compact.sort_by { cleaned.index(_1) }
@@ -96,12 +97,13 @@ class Ai::Transport::Base
       nil
     end
 
-    # The answer after a closed <think> block; with no close (a cut-off model), what's inside it.
+    # The answer after a closed <think> block, empty when the model answered nothing after it; with no
+    # close (a cut-off model), what's inside it.
     def strip_thinking(text)
       return text unless text.include?("<think>")
 
       after = text[%r{</think>\s*([\s\S]*)}m, 1]
-      return after if after.present?
+      return after unless after.nil?
 
       text[/<think>([\s\S]*)/m, 1] || text
     end

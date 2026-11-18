@@ -30,8 +30,9 @@ class RuleRun < ApplicationRecord
   end
 
   # A failure is recorded as soon as one job fails, so the run is finished only once no job is
-  # left to change its counts.
-  def finished? = !pending? && pending_jobs_count.zero?
+  # left to change its counts. A run that failed after queuing an AI job never counted that job,
+  # so its awaited transactions say it's still out.
+  def finished? = !pending? && pending_jobs_count.zero? && transactions_awaiting_ai.zero?
 
   def transactions_blocked
     [ transactions_processed - transactions_modified, 0 ].max

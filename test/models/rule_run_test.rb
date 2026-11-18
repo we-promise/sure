@@ -43,6 +43,16 @@ class RuleRunTest < ActiveSupport::TestCase
     end
   end
 
+  test "a run that failed after queuing an AI job isn't finished until the job counts its transactions down" do
+    rule_run = create_rule_run(pending_jobs_count: 0)
+    rule_run.await_ai!(5)   # the AI action queued its job; a later action then raised
+    rule_run.update!(status: "failed")
+    assert_not rule_run.reload.finished?, "the AI job is still queued"
+
+    rule_run.ai_handled!(handled: 5)
+    assert rule_run.reload.finished?
+  end
+
   test "a run with a failed job isn't finished while another job is still pending" do
     rule_run = create_rule_run(pending_jobs_count: 2)
 

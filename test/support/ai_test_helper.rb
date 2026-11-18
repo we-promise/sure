@@ -1,8 +1,9 @@
 # Helpers for testing AI code: the transport level (endpoints, models, call contexts, captured
 # events, cassettes) and routing (use_ai_routes, use_no_ai).
 module AiTestHelper
-  # The llama.cpp server the live tests record against; LLAMA_CPP_URL points them at another.
-  LLAMA_CPP_URL = (ENV["LLAMA_CPP_URL"].presence || "http://10.72.200.61:8180/v1").freeze
+  # The llama.cpp server the live tests record against. Live and recording runs need LLAMA_CPP_URL
+  # set; the default is only the address replayed cassettes are matched on.
+  LLAMA_CPP_URL = (ENV["LLAMA_CPP_URL"].presence || "http://localhost:8180/v1").freeze
   AI_CASSETTE_KEYS = %w[OPENAI_ACCESS_TOKEN ANTHROPIC_API_KEY OPENROUTER_API_KEY LLAMA_CPP_API_KEY LANGFUSE_PUBLIC_KEY LANGFUSE_SECRET_KEY].freeze
   LLM_CAPABILITIES = %i[tools vision documents streaming structured_output].freeze
 
@@ -168,7 +169,9 @@ module AiTestHelper
 
   # True when a live test can run: it's recording or live with its key, or replaying a cassette.
   def ai_cassette_available?(preset, name, key:)
-    return ENV[key].present? if ENV["AI_LIVE"] == "1" || ENV["RECORD_CASSETTES"] == "1"
+    if ENV["AI_LIVE"] == "1" || ENV["RECORD_CASSETTES"] == "1"
+      return ENV[key].present? && (preset.to_s != "llama_cpp" || ENV["LLAMA_CPP_URL"].present?)
+    end
 
     Rails.root.join("test/vcr_cassettes/ai/#{preset}/#{name}.yml").exist?
   end
