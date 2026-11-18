@@ -138,8 +138,9 @@ class SyncTest < ActiveSupport::TestCase
     sync = Sync.create!(syncable: plaid_item)
 
     plaid_item.expects(:perform_sync).with(sync).once
-    plaid_item.expects(:perform_post_sync).once
-    plaid_item.stubs(:broadcast_sync_complete)
+    # Finalization reloads the sync (lock!), so post-sync runs on a fresh instance
+    PlaidItem.any_instance.expects(:perform_post_sync).once
+    PlaidItem.any_instance.stubs(:broadcast_sync_complete)
 
     assert_enqueued_with(job: ApplyRulesJob, args: [ plaid_item.family ]) do
       sync.perform
@@ -168,8 +169,8 @@ class SyncTest < ActiveSupport::TestCase
     sync = Sync.create!(syncable: account)
 
     account.expects(:perform_sync).with(sync).once
-    account.stubs(:perform_post_sync)
-    account.stubs(:broadcast_sync_complete)
+    Account.any_instance.stubs(:perform_post_sync)
+    Account.any_instance.stubs(:broadcast_sync_complete)
 
     assert_no_enqueued_jobs(only: ApplyRulesJob) do
       sync.perform
