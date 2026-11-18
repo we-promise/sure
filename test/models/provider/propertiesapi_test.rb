@@ -94,12 +94,11 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
     assert_equal I18n.t("providers.propertiesapi.errors.location_mismatch"), response.error.message
   end
 
-  test "maps not found, ambiguous address, unauthorized and no credits responses" do
+  test "maps not found, ambiguous address and unauthorized responses" do
     {
       404 => "providers.propertiesapi.errors.not_found",
       409 => "providers.propertiesapi.errors.ambiguous_address",
-      401 => "providers.propertiesapi.errors.unauthorized",
-      402 => "providers.propertiesapi.errors.no_credits"
+      401 => "providers.propertiesapi.errors.unauthorized"
     }.each do |status, key|
       stub_lookup(status: status, body: { "error" => { "code" => "x", "message" => "x" } }.to_json)
 
@@ -109,6 +108,33 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
       assert_instance_of Provider::Propertiesapi::Error, response.error
       assert_equal I18n.t(key), response.error.message
     end
+  end
+
+  test "maps each documented 402 error code to its own message" do
+    {
+      "credits_exhausted" => [ "providers.propertiesapi.errors.no_credits", { "upgrade_url" => "https://propertiesapi.com/pricing" } ],
+      "spend_limit_reached" => [ "providers.propertiesapi.errors.spend_limit_reached", { "dashboard_url" => "https://propertiesapi.com/dashboard" } ],
+      "payment_disputed" => [ "providers.propertiesapi.errors.payment_disputed", { "dashboard_url" => "https://propertiesapi.com/dashboard" } ],
+      "something_new" => [ "providers.propertiesapi.errors.payment_required", {} ]
+    }.each do |code, (key, details)|
+      body = { "error" => { "code" => code, "message" => "x", "details" => details }, "meta" => {} }.to_json
+      stub_lookup(status: 402, body: body)
+
+      response = fetch
+
+      assert_not response.success?, "expected #{code} to fail"
+      assert_instance_of Provider::Propertiesapi::Error, response.error
+      assert_equal I18n.t(key), response.error.message
+    end
+  end
+
+  test "maps a 402 without a JSON error body to the generic billing message" do
+    stub_lookup(status: 402, body: "Payment Required")
+
+    response = fetch
+
+    assert_not response.success?
+    assert_equal I18n.t("providers.propertiesapi.errors.payment_required"), response.error.message
   end
 
   test "maps 429 responses to a rate limit error so refreshes stop for the run" do
@@ -143,14 +169,39 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
     assert response.success?
     assert_equal 512_000, response.data.valuation
     assert_requested :get, PROPERTY_URL, query: { "address" => ADDRESS }, times: 2
+    assert_equal 2, ProviderRequestCount.count_for("propertiesapi")
+  end
+
+  test "does not send a retry that would exceed the monthly limit" do
+    Faraday::Retry::Middleware.any_instance.stubs(:sleep)
+    ProviderRequestCount.create!(provider_key: "propertiesapi", period: ProviderRequestCount.current_period, count: Provider::Propertiesapi::MAX_REQUESTS_PER_MONTH - 1)
+    stub_request(:get, PROPERTY_URL)
+      .with(query: { "address" => ADDRESS })
+      .to_raise(Faraday::ConnectionFailed.new("connection reset"))
+
+    response = with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: nil) { fetch }
+
+    assert_not response.success?
+    assert_instance_of Provider::Propertiesapi::RateLimitError, response.error
+    assert_requested :get, PROPERTY_URL, query: { "address" => ADDRESS }, times: 1
+    assert_equal Provider::Propertiesapi::MAX_REQUESTS_PER_MONTH, ProviderRequestCount.count_for("propertiesapi")
+  end
+
+  test "keeps the read timeout under a 60 second reverse proxy read timeout" do
+    client = @provider.send(:client)
+
+    assert_operator client.options.timeout, :<, 60
+    assert_equal Provider::Propertiesapi::READ_TIMEOUT, client.options.timeout
   end
 
   test "counts requests against the monthly budget" do
     stub_lookup
 
-    assert @provider.requests_remaining?
+    with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: nil) do
+      assert @provider.requests_remaining?
 
-    fetch
+      fetch
+    end
 
     assert_equal 1, ProviderRequestCount.count_for("propertiesapi")
   end
@@ -158,21 +209,22 @@ class Provider::PropertiesapiTest < ActiveSupport::TestCase
   test "monthly limit can be changed via ENV override" do
     ProviderRequestCount.create!(provider_key: "propertiesapi", period: ProviderRequestCount.current_period, count: Provider::Propertiesapi::MAX_REQUESTS_PER_MONTH)
 
-    ENV["PROPERTIESAPI_MAX_REQUESTS_PER_MONTH"] = "100"
-    assert @provider.requests_remaining?
-  ensure
-    ENV.delete("PROPERTIESAPI_MAX_REQUESTS_PER_MONTH")
+    with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: "100") do
+      assert @provider.requests_remaining?
+    end
   end
 
   test "stops issuing requests once the monthly limit is reached" do
     ProviderRequestCount.create!(provider_key: "propertiesapi", period: ProviderRequestCount.current_period, count: Provider::Propertiesapi::MAX_REQUESTS_PER_MONTH)
 
-    assert_not @provider.requests_remaining?
+    with_env_overrides(PROPERTIESAPI_MAX_REQUESTS_PER_MONTH: nil) do
+      assert_not @provider.requests_remaining?
 
-    response = fetch
+      response = fetch
 
-    assert_not response.success?
-    assert_instance_of Provider::Propertiesapi::RateLimitError, response.error
+      assert_not response.success?
+      assert_instance_of Provider::Propertiesapi::RateLimitError, response.error
+    end
     assert_not_requested :get, %r{api\.propertiesapi\.com}
   end
 

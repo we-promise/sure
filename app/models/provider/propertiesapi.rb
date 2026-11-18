@@ -9,10 +9,37 @@ class Provider::Propertiesapi < Provider
   # Minimum delay between requests to avoid rate limiting (in seconds)
   MIN_REQUEST_INTERVAL = 1.0
 
-  # PropertiesAPI is prepaid per lookup, so this is a spending guard rather
-  # than a plan limit. It matches the 50 lookups a new account gets for free.
+  # A cap on how many lookups Sure makes, not on what they cost: past a paid
+  # plan's included lookups, each one is charged at the plan's overage rate.
+  # It matches the one-time trial of 50 lookups a new account gets.
   # Override with PROPERTIESAPI_MAX_REQUESTS_PER_MONTH.
   MAX_REQUESTS_PER_MONTH = 50
+
+  # Lookups run inside web requests (the add-property preview, and linking an
+  # existing property), so the read timeout stays under the 60s default read
+  # timeout of common reverse proxies such as NGINX. A live lookup typically
+  # takes about 6s and rarely more than 20s.
+  READ_TIMEOUT = 45
+
+  # HTTP 402 error codes. None of these lookups is charged.
+  PAYMENT_REQUIRED_ERRORS = {
+    "credits_exhausted" => "no_credits",
+    "spend_limit_reached" => "spend_limit_reached",
+    "payment_disputed" => "payment_disputed"
+  }.freeze
+
+  # Runs a hook immediately before every HTTP attempt, including retries, so
+  # each one is throttled and counted against the monthly budget.
+  class BeforeEachAttempt < Faraday::Middleware
+    def initialize(app, hook)
+      super(app)
+      @hook = hook
+    end
+
+    def on_request(_env)
+      @hook.call
+    end
+  end
 
   # PropertiesAPI home types to Property::SUBTYPES keys. Unmapped types
   # (e.g. MANUFACTURED) leave the subtype unset rather than guessing.
@@ -34,9 +61,6 @@ class Provider::Propertiesapi < Provider
   # is needed.
   def fetch_property_valuation(line1:, locality: nil, region: nil, postal_code: nil)
     with_provider_response do
-      throttle_request
-      record_monthly_request!
-
       response = client.get("#{base_url}/v1/zillow/property") do |req|
         req.params["address"] = one_line_address(line1, locality, region, postal_code)
       end
@@ -89,13 +113,25 @@ class Provider::Propertiesapi < Provider
         Error.new(I18n.t("providers.propertiesapi.errors.ambiguous_address"))
       when Faraday::ClientError
         if error.response&.dig(:status) == 402
-          Error.new(I18n.t("providers.propertiesapi.errors.no_credits"))
+          Error.new(payment_required_message(error.response[:body]))
         else
           super
         end
       else
         super
       end
+    end
+
+    # A 402 says why the account can't pay for the lookup; each reason needs a
+    # different fix, so the message follows the documented error code.
+    def payment_required_message(body)
+      parsed = body.is_a?(String) ? JSON.parse(body) : body
+      error = parsed["error"] if parsed.is_a?(Hash)
+      code = error["code"] if error.is_a?(Hash)
+
+      I18n.t("providers.propertiesapi.errors.#{PAYMENT_REQUIRED_ERRORS.fetch(code.to_s, "payment_required")}")
+    rescue JSON::ParserError
+      I18n.t("providers.propertiesapi.errors.payment_required")
     end
 
     def base_url
@@ -105,8 +141,7 @@ class Provider::Propertiesapi < Provider
     def client
       @client ||= Faraday.new(url: base_url, ssl: self.class.faraday_ssl_options) do |faraday|
         # Only connection failures are retried. Timeouts are not: each attempt
-        # can take the full timeout, and failed lookups aren't charged, so the
-        # next refresh simply tries again.
+        # can take the full timeout, so the next refresh simply tries again.
         faraday.request(:retry, {
           max: 2,
           interval: 1.0,
@@ -114,11 +149,14 @@ class Provider::Propertiesapi < Provider
           backoff_factor: 2,
           exceptions: [ Faraday::ConnectionFailed ]
         })
+        # After the retry middleware, so it runs for each attempt.
+        faraday.use BeforeEachAttempt, -> {
+          throttle_request
+          record_monthly_request!
+        }
         faraday.request :json
         faraday.response :raise_error
-        # A live lookup typically takes a few seconds; the API documents an
-        # occasional one taking much longer and asks clients to wait 120s.
-        faraday.options.timeout = 120
+        faraday.options.timeout = READ_TIMEOUT
         faraday.options.open_timeout = 5
         faraday.headers["X-Api-Key"] = api_key
         faraday.headers["Accept"] = "application/json"

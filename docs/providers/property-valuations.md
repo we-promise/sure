@@ -7,7 +7,7 @@ Sure can look up a property's estimated market value when you add it, and refres
 | [RentCast](https://www.rentcast.io/api) | United States | Address | 50 requests/month | `RENTCAST_API_KEY` |
 | [Realie](https://www.realie.ai/) | United States | Address | 25 requests/month | `REALIE_API_KEY` |
 | [Chimnie](https://www.chimnie.com/) | United Kingdom (residential) | UPRN | Free valuations by UPRN (1 request/second) | `CHIMNIE_API_KEY` |
-| [PropertiesAPI](https://propertiesapi.com/) | United States | Address | 50 lookups once, then paid per lookup | `PROPERTIESAPI_API_KEY` |
+| [PropertiesAPI](https://propertiesapi.com/) | United States | Address | One-time trial of 50 lookups, then prepaid credits or a paid plan | `PROPERTIESAPI_API_KEY` |
 
 Each self-hosted instance needs its own API keys. Enter them under **Settings → Self-Hosting → Property valuation providers**, or set the environment variables on the web and worker services. A key set in the environment overrides the one saved in Settings.
 
@@ -30,12 +30,12 @@ Chimnie only covers residential properties. Commercial or mixed-use UPRNs, and p
 
 RentCast and Realie return their own estimates. If you would rather track the Zestimate you see on Zillow, PropertiesAPI returns the Zestimate shown on a home's public Zillow page. PropertiesAPI is an independent paid service and is not affiliated with Zillow.
 
-1. Create an account at [propertiesapi.com](https://propertiesapi.com) and copy an API key from its dashboard. New accounts get 50 free lookups; after that, lookups are charged to your PropertiesAPI account.
+1. Create an account at [propertiesapi.com](https://propertiesapi.com) and copy an API key from its dashboard. New accounts get a one-time trial of 50 free lookups, and a free account is never charged automatically. After the trial, lookups need prepaid credits or a paid plan; until then PropertiesAPI declines them and Sure shows the reason.
 2. Paste the key into **Settings → Self-Hosting → PropertiesAPI**, or set `PROPERTIESAPI_API_KEY`.
 3. Add a property, choose **Add via PropertiesAPI**, and enter the full US address. Include the unit number for a condo or apartment.
 4. Review the Zestimate and the home details, then confirm.
 
-Zillow doesn't show a Zestimate for every home. When there is none, the lookup reports an error and no property is created; Sure never uses the listing price instead. Sure caps PropertiesAPI at 50 lookups a month, so a misconfigured instance can't run up a bill; raise or lower it with `PROPERTIESAPI_MAX_REQUESTS_PER_MONTH`.
+Zillow doesn't show a Zestimate for every home. When there is none, the lookup reports an error and no property is created; Sure never uses the listing price instead. Sure caps PropertiesAPI at 50 lookups a month by default; raise or lower it with `PROPERTIESAPI_MAX_REQUESTS_PER_MONTH`. The cap limits how many lookups Sure makes, not what they cost: on a paid plan, lookups past the plan's included ones are charged at its overage rate. To cap spending, set a monthly spending limit in your PropertiesAPI dashboard.
 
 ## Refreshes
 
