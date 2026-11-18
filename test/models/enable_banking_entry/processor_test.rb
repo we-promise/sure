@@ -1125,8 +1125,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_out")
-    assert_equal "DE89370400440532013000", entry.transaction.counterparty_iban # pipelock:ignore IBAN
-    assert_nil entry.transaction.counterparty_account_id
+    assert_equal "3000", entry.transaction.counterparty_iban_last4
+    assert_nil entry.transaction.counterparty_reference_last4
     assert_includes entry.notes, "Bank: Deutsche Bank"
   end
 
@@ -1166,7 +1166,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_spaces")
 
-    assert_equal "DE89370400440532013000", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3000", entry.transaction.counterparty_iban_last4
   end
 
   test "normalizes a counterparty iban with dots and dashes before storing it" do
@@ -1184,7 +1184,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_punctuation")
 
-    assert_equal "DE89370400440532013000", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3000", entry.transaction.counterparty_iban_last4
   end
 
   test "stores counterparty iban from the debtor side for an incoming payment" do
@@ -1203,7 +1203,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_iban_in")
 
-    assert_equal "AT611904300234573201", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3201", entry.transaction.counterparty_iban_last4
   end
 
   test "falls back to counterparty_account_id when no iban is present" do
@@ -1220,8 +1220,8 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_other_id")
-    assert_nil entry.transaction.counterparty_iban
-    assert_equal "ACC-998877", entry.transaction.counterparty_account_id
+    assert_nil entry.transaction.counterparty_iban_last4
+    assert_equal "8877", entry.transaction.counterparty_reference_last4
   end
 
   test "does not store counterparty iban for a wallet-paid card transaction with no account data" do
@@ -1238,7 +1238,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
 
     EnableBankingEntry::Processor.new(tx, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_wallet")
-    assert entry.transaction.counterparty_iban.blank?
+    assert entry.transaction.counterparty_iban_last4.blank?
   end
 
   test "keeps the counterparty iban when the booked re-delivery of the same transaction omits it" do
@@ -1255,7 +1255,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     }
     EnableBankingEntry::Processor.new(with_iban, enable_banking_account: @enable_banking_account).process
     entry = @account.entries.find_by!(external_id: "enable_banking_ref_stale_iban")
-    assert_equal "DE89370400440532013000", entry.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3000", entry.transaction.counterparty_iban_last4
 
     # The booked re-delivery of the same transaction (same external_id) omits
     # the account data this time -- a real PSD2 pattern where the pending
@@ -1265,7 +1265,7 @@ class EnableBankingEntry::ProcessorTest < ActiveSupport::TestCase
     without_iban = with_iban.merge(status: "BOOK", _pending: false).except(:creditor_account)
     EnableBankingEntry::Processor.new(without_iban, enable_banking_account: @enable_banking_account).process
 
-    assert_equal "DE89370400440532013000", entry.reload.transaction.counterparty_iban # pipelock:ignore IBAN
+    assert_equal "3000", entry.reload.transaction.counterparty_iban_last4
   end
 
   def build_processor(data)

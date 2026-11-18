@@ -183,6 +183,27 @@ class EnableBankingEntry::Processor
     compute_external_id(raw_transaction_data.with_indifferent_access.except(:transaction_id, :entry_reference))
   end
 
+  # PSD2/Enable Banking exposes the counterparty's own account/bank details
+  # on creditor_account/creditor_agent (who we paid) or
+  # debtor_account/debtor_agent (who paid us), depending on direction.
+  # Populated for SEPA transfers/direct debits; typically blank for card
+  # and wallet payments (those aren't account-to-account), so callers must
+  # treat a blank result as "no data available", not an error.
+  def self.counterparty_account_info(raw_transaction_data)
+    data = raw_transaction_data.with_indifferent_access
+    if data[:credit_debit_indicator] == "CRDT"
+      account_key, agent_key, additional_key = :debtor_account, :debtor_agent, :debtor_account_additional_identification
+    else
+      account_key, agent_key, additional_key = :creditor_account, :creditor_agent, :creditor_account_additional_identification
+    end
+
+    {
+      iban: IbanNormalizable.normalize(data.dig(account_key, :iban)),
+      other_id: data.dig(additional_key, :identification).presence,
+      bank_name: data.dig(agent_key, :name).presence
+    }
+  end
+
   def self.party_name(data, key)
     value = data[key]
     nested = value.is_a?(Hash) ? value[:name] : (value if value.is_a?(String))
@@ -596,59 +617,22 @@ class EnableBankingEntry::Processor
 
       result = eb.empty? ? {} : { enable_banking: eb }
 
-      # Top-level, not namespaced under enable_banking: this is a
-      # provider-neutral fact about the transaction itself (who it was with),
-      # not an Enable-Banking-specific sync detail like fx_rate/mcc above.
-      # Any future provider that surfaces a counterparty IBAN writes to the
-      # same key, so consumers (rules, search, transfer matching) never need
-      # to know which provider populated it. See issue #3306 for the
-      # opposite, hardcoded-provider-list anti-pattern this avoids.
-      # Always assigned, even to nil. A nil value does not clear what an earlier sync
-      # captured: some ASPSPs drop the account data on the booked re-delivery of a
-      # transaction whose pending version had it, so Account::ProviderImportAdapter
-      # replaces a stored value only when this payload carries one.
-      #
-      # Passed through this same `extra` hash for
-      # Account::ProviderImportAdapter#import_transaction to pick up, but NOT
-      # actually stored in the plain jsonb `extra` column: the adapter pops
-      # these two keys out before merging the rest into `extra`, and assigns
-      # them to Transaction's own deterministically encrypted
-      # counterparty_iban/counterparty_account_id columns instead. A third
-      # party's bank account number must not sit at rest in plaintext, unlike
-      # fx_rate/mcc/pending above.
+      # Top-level, not namespaced under enable_banking: who the transaction was
+      # with is a provider-neutral fact. These keys never reach the jsonb
+      # column: Account::ProviderImportAdapter#import_transaction pops them and
+      # keeps only the last four characters, plus a link when the IBAN is one
+      # of the family's own accounts. Always sent, even as nil; a nil value
+      # never clears what an earlier sync captured, because some ASPSPs drop
+      # the account data on the booked re-delivery of a pending transaction.
       cp = counterparty_account_info
       result[:counterparty_iban] = cp[:iban]
-      result[:counterparty_account_id] = cp[:iban].blank? ? cp[:other_id] : nil
+      result[:counterparty_reference] = cp[:iban].blank? ? cp[:other_id] : nil
 
       result.presence
     end
 
-    # PSD2/Enable Banking exposes the counterparty's own account/bank details
-    # on creditor_account/creditor_agent (who we paid) or
-    # debtor_account/debtor_agent (who paid us), depending on direction.
-    # Populated for SEPA transfers/direct debits; typically blank for card
-    # and wallet payments (those aren't account-to-account), so callers must
-    # treat a blank result as "no data available", not an error.
     def counterparty_account_info
-      @counterparty_account_info ||= begin
-        if credit_debit_indicator == "CRDT"
-          account_key, agent_key, additional_key = :debtor_account, :debtor_agent, :debtor_account_additional_identification
-        else
-          account_key, agent_key, additional_key = :creditor_account, :creditor_agent, :creditor_account_additional_identification
-        end
-
-        {
-          # Normalized so it matches the same convention as
-          # accounts.iban/merchants.iban -- required for equality
-          # lookups/comparisons elsewhere (transfer matching, rule
-          # conditions) to actually line up, regardless of whether an ASPSP
-          # happens to include spaces or other punctuation in its IBAN
-          # formatting.
-          iban: IbanNormalizable.normalize(data.dig(account_key, :iban)),
-          other_id: data.dig(additional_key, :identification).presence,
-          bank_name: data.dig(agent_key, :name).presence
-        }
-      end
+      @counterparty_account_info ||= self.class.counterparty_account_info(data)
     end
 
     def amount_value

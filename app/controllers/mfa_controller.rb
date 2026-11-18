@@ -1,8 +1,9 @@
 class MfaController < ApplicationController
-  include WebauthnRelyingParty
+  include WebauthnRelyingParty, DemoMfaRestriction
 
   layout :determine_layout
   skip_authentication only: [ :verify, :verify_code, :webauthn_options, :verify_webauthn ]
+  before_action :require_mfa_enrollment_allowed, only: [ :new, :create ]
   before_action :require_local_password, only: [ :new, :create, :disable ]
 
   def new
@@ -191,8 +192,15 @@ class MfaController < ApplicationController
     end
 
     def complete_mfa_sign_in(user)
+      # The OIDC callback stores sso_login_provider before parking the user
+      # here; a local first factor clears it (see begin_mfa_handoff), so its
+      # presence is what tells the two flows apart.
+      came_from_oidc = session[:sso_login_provider].present?
+      # Cleared up front, as PasskeySessionsController does: a rejected user
+      # mints no session, so the rotation never runs to clear it for us.
       session.delete(:mfa_user_id)
-      @session = create_session_for(user)
+
+      @session = create_session_for(user, preserve_oidc_handoff: came_from_oidc)
       return false unless @session
 
       true

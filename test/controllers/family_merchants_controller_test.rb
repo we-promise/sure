@@ -197,16 +197,16 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_equal converted.id, transactions(:one).reload.merchant_id
   end
 
-  test "a failed iban conversion re-renders the form still targeting the original provider merchant" do
+  test "a failed conversion re-renders the form still targeting the original provider merchant" do
     # Regression: the rescue used to replace @family_merchant with the failed
     # conversion's unsaved (never persisted) FamilyMerchant. _form.html.erb
     # picks its submit URL from `persisted?`, so that form silently posted
     # to FamilyMerchant#create on the next attempt instead of back to this
     # ProviderMerchant's #update -- losing the whole conversion (transaction
     # reassignment, user_modified protection) without any visible error.
-    FamilyMerchant.create!(name: "Existing Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
     transactions(:one).update!(merchant: provider_merchant)
+    stub_failed_conversion
 
     assert_no_difference "FamilyMerchant.count" do
       patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN
@@ -216,64 +216,6 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_select "form[action=?]", family_merchant_path(provider_merchant)
     assert_match "has already been taken", response.body
     assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must still be untouched"
-  end
-
-  test "create re-renders the form instead of a 500 on a raw unique-index race" do
-    # Simulates two concurrent create requests both passing the Rails
-    # uniqueness validation before either commits -- the second one hits the
-    # raw DB constraint instead, surfacing as RecordNotUnique rather than
-    # the RecordInvalid a normal duplicate submission would raise.
-    FamilyMerchant.any_instance.stubs(:save).raises(
-      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_iban"')
-    )
-
-    assert_no_difference "FamilyMerchant.count" do
-      post family_merchants_url, params: { family_merchant: { name: "Race Landlord", iban: "AT611904300234573201" } } # pipelock:ignore IBAN
-    end
-
-    assert_response :unprocessable_entity
-    assert_match "has already been taken", response.body
-  end
-
-  test "a raw unique-index race on the merchant name is reported on the name, not the iban" do
-    FamilyMerchant.any_instance.stubs(:save).raises(
-      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_name"')
-    )
-
-    post family_merchants_url, params: { family_merchant: { name: "Race Landlord", iban: "AT611904300234573201" } } # pipelock:ignore IBAN
-
-    assert_response :unprocessable_entity
-    assert_match "Name has already been taken", response.body
-    assert_no_match "Iban has already been taken", response.body
-  end
-
-  test "a raw unique-index race on a rename is reported on the name" do
-    FamilyMerchant.any_instance.stubs(:update).raises(
-      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_name"')
-    )
-
-    patch family_merchant_url(@merchant), params: { family_merchant: { name: "Renamed" } }
-
-    assert_response :unprocessable_entity
-    assert_match "Name has already been taken", response.body
-  end
-
-  test "a raw unique-index race is reported when PostgreSQL words its errors in another language" do
-    pg_error = begin
-      FamilyMerchant.transaction(requires_new: true) do
-        FamilyMerchant.insert_all!([ { family_id: @merchant.family_id, name: @merchant.name } ])
-      end
-    rescue ActiveRecord::RecordNotUnique => e
-      e.cause
-    end
-    localized = ActiveRecord::RecordNotUnique.new("FEHLER: doppelter Schlüsselwert verletzt Unique-Constraint »index_merchants_on_family_id_and_name«")
-    localized.define_singleton_method(:cause) { pg_error }
-    FamilyMerchant.any_instance.stubs(:update).raises(localized)
-
-    patch family_merchant_url(@merchant), params: { family_merchant: { name: "Renamed" } }
-
-    assert_response :unprocessable_entity
-    assert_match "Name has already been taken", response.body
   end
 
   test "a unique violation on another index is not turned into a form error" do
@@ -295,10 +237,10 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     assert_select "input[type=checkbox][name='family_merchant[remove_iban]']", 1
   end
 
-  test "a failed iban conversion preserves the submitted color" do
-    FamilyMerchant.create!(name: "Existing Landlord", family: @user.family, iban: "AT611904300234573201") # pipelock:ignore IBAN
+  test "a failed conversion preserves the submitted color" do
     provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking", color: "#000000")
     transactions(:one).update!(merchant: provider_merchant)
+    stub_failed_conversion
 
     patch family_merchant_url(provider_merchant), params: {
       provider_merchant: { iban: "AT611904300234573201", color: "#4da568" } # pipelock:ignore IBAN
@@ -306,24 +248,6 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :unprocessable_entity
     assert_select "input[name=?][value=?][checked]", "provider_merchant[color]", "#4da568"
-  end
-
-  test "a raw unique-index race during iban conversion re-renders the form instead of a 500" do
-    # Same race as the create test above, but hit through the conversion
-    # path: two concurrent conversions in the same family both pass the
-    # Rails uniqueness validation before either commits.
-    provider_merchant = ProviderMerchant.create!(name: "Provider Payee", source: "enable_banking")
-    transactions(:one).update!(merchant: provider_merchant)
-    ProviderMerchant.any_instance.stubs(:convert_to_family_merchant_for).raises(
-      ActiveRecord::RecordNotUnique.new('duplicate key value violates unique constraint "index_merchants_on_family_id_and_iban"')
-    )
-
-    patch family_merchant_url(provider_merchant), params: { provider_merchant: { iban: "AT611904300234573201" } } # pipelock:ignore IBAN
-
-    assert_response :unprocessable_entity
-    assert_select "form[action=?]", family_merchant_path(provider_merchant)
-    assert_match "has already been taken", response.body
-    assert_nil provider_merchant.reload.iban, "the shared ProviderMerchant must still be untouched"
   end
 
   test "edit keeps return_to in the form" do
@@ -469,4 +393,11 @@ class FamilyMerchantsControllerTest < ActionDispatch::IntegrationTest
     get family_merchants_path
     assert_not_includes response.body, enhance_family_merchants_path
   end
+
+  private
+    def stub_failed_conversion
+      invalid = FamilyMerchant.new(name: "Provider Payee", family: @user.family)
+      invalid.errors.add(:name, :taken)
+      ProviderMerchant.any_instance.stubs(:convert_to_family_merchant_for).raises(ActiveRecord::RecordInvalid.new(invalid))
+    end
 end

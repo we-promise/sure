@@ -9,6 +9,9 @@ es:
     new:
       title: Introducir saldo de la cuenta
     subtypes:
+      cash:
+        long: Efectivo
+        short: Efectivo
       cd:
         long: Certificado de depósito
         short: CD

@@ -48,6 +48,7 @@ es:
       maintained_goal_depleted: Reserva
       bill_not_covered: Recibos
       loan_payment_change: Cuota del préstamo
+      bank_fees: Comisiones
     meta:
       next_n_days:
         one: Próximo día
@@ -69,6 +70,9 @@ es:
         one: "%{count} día inactivo"
         other: "%{count} días inactivos"
       short_on: faltarán el %{date}
+      fee_charges:
+        one: "%{count} cargo"
+        other: "%{count} cargos"
     actions:
       spending_anomaly: Ver transacciones de %{category}
       cash_flow_warning: Revisar transacciones recurrentes
@@ -80,6 +84,7 @@ es:
       maintained_goal_depleted: Ver reserva
       bill_not_covered: Ir a la cuenta
       loan_payment_change: Ver préstamo
+      bank_fees: Ver comisiones
     titles:
       spending_anomaly:
         above: El gasto en %{category} va en aumento
@@ -102,6 +107,7 @@ es:
       loan_payment_change:
         up: La cuota de %{account} va a subir
         down: La cuota de %{account} va a bajar
+      bank_fees: Comisiones en %{account}
     templates:
       spending_anomaly:
         above: Vas camino de gastar %{projected_spend} en %{category} este mes, aproximadamente un %{deviation_pct}% más que tu promedio mensual reciente de %{baseline_spend}.
@@ -125,3 +131,6 @@ es:
       loan_payment_change:
         up: "La cuota de %{account} pasa de %{previous_payment} a %{new_payment} el %{effective_on}, un %{change_pct}% más, según el cuadro de amortización y los tipos registrados."
         down: "La cuota de %{account} pasa de %{previous_payment} a %{new_payment} el %{effective_on}, un %{change_pct}% menos, según el cuadro de amortización y los tipos registrados."
+      bank_fees:
+        recurring: "%{account} acumula %{amount} en comisiones en los últimos %{days} días."
+        new: "%{account} acumula %{amount} en comisiones en los últimos %{days} días, y ninguna en los %{days} días anteriores."

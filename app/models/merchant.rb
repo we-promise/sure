@@ -11,12 +11,13 @@ class Merchant < ApplicationRecord
   # merchant can never collide with it, regardless of name or locale.
   NO_MERCHANT_FILTER_VALUE = "__no_merchant__"
 
-  # Deterministic so the (family_id, iban) and (source, iban) unique indexes
-  # and the matching uniqueness validations in FamilyMerchant and
-  # ProviderMerchant still compare equal values once encrypted. See
-  # Account#iban for the tradeoff.
+  # Entered by the family on its own merchants only (see
+  # FamilyMerchantsController); a ProviderMerchant is shared by every family
+  # and never holds one. Not deterministic: an IBAN is never looked up by
+  # value in SQL, Account::ProviderImportAdapter compares the family's few
+  # merchant IBANs in Ruby.
   if encryption_ready?
-    encrypts :iban, deterministic: true
+    encrypts :iban
   end
 
   has_many :transactions, dependent: :nullify
