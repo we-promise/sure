@@ -780,8 +780,8 @@ cmd_daemon() {
     log "Next backup in $((wait_s / 3600))h $((wait_s % 3600 / 60))m"
     sleep "$wait_s" &
     wait $!
-    # Not `( ... ) || warn`: the left side of `||` ignores set -e, so a failed
-    # step would let the backup finish as "Done" and prune run anyway.
+    # Run the scheduled backup with set -e and capture its exit status, so a
+    # failed step stops the run before it reports "Done" or prunes old backups.
     set +e
     ( set -e; cmd_scheduled )
     status=$?
