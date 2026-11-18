@@ -17,10 +17,12 @@ commands are in the [Docker guide](docker.md#upgrading-an-install-that-is-alread
 
 You need the `SECRET_KEY_BASE` your data was encrypted with, and the three
 Active Record encryption keys if you set them. They are in your `.env`
-(`ACTIVE_RECORD_ENCRYPTION_*`), in the `active_record_encryption` block of
-your Rails credentials if you configured them there, or, for an install
-that never set `SECRET_KEY_BASE`, in the default of the `compose.yml` it
-was started with. If that file was already
+(`SECRET_KEY_BASE`, `ACTIVE_RECORD_ENCRYPTION_*`), in your Rails
+credentials if you configured them there (Rails uses the top-level
+`secret_key_base` when the environment variable is not set, and the keys
+in the `active_record_encryption` block), or, for an install that never
+set `SECRET_KEY_BASE`, in the default of the `compose.yml` it was started
+with. If that file was already
 replaced, read the value from the old container instead. This works without
 a Compose file and also while the container is stopped:
 
@@ -99,7 +101,8 @@ bin/rails "security:rotate_setting_secrets[0]"     # writes
 unset OLD_SECRET_KEY_BASE
 ```
 
-Re-enter any key the task lists under `not_decryptable`.
+Re-enter any key the task lists under `not_decryptable`. Then start the
+app (web and worker) and check a login and a provider sync.
 
 ## What a new `SECRET_KEY_BASE` invalidates
 
@@ -128,10 +131,14 @@ before the rotation:
 2. Restore the latest backup taken before the failing step: the one from
    before step 1, or the one from before step 4. Everything written after
    that backup is lost, so roll back as early as possible.
-3. Put the old values back: `SECRET_KEY_BASE`, and the old
-   `ACTIVE_RECORD_ENCRYPTION_*` values if you had set any (remove the new
-   ones otherwise). Unset every `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*`
-   variable and `OLD_SECRET_KEY_BASE`.
+3. Put back the keys that match that backup, and unset every
+   `ACTIVE_RECORD_ENCRYPTION_PREVIOUS_*` variable and `OLD_SECRET_KEY_BASE`:
+   - Backup from before step 1: the old `SECRET_KEY_BASE`, and the old
+     `ACTIVE_RECORD_ENCRYPTION_*` values if you had set any (remove the new
+     ones otherwise).
+   - Backup from before step 4: the old `SECRET_KEY_BASE` only. Keep the
+     new `ACTIVE_RECORD_ENCRYPTION_*` values: the data in this backup is
+     already encrypted with them.
 4. Start the app and check a login and a provider sync.
 
 Do not roll back by only putting the old keys back without the backup: rows
